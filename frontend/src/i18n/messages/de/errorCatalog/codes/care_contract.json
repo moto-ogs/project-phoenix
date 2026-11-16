@@ -26,5 +26,6 @@
   "withdrawal_notice_required": "Bitte bestätigen Sie, dass Sie die Widerrufsbelehrung gelesen haben.",
   "import_file_invalid": "Die Datei lässt sich nicht lesen. Bitte wählen Sie eine CSV-Datei mit Überschriften in der ersten Zeile.",
   "import_file_too_large": "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
-  "import_changed": "Seit der Vorschau hat sich etwas geändert. Bitte prüfen Sie die Vorschau noch einmal und übernehmen Sie dann."
+  "import_changed": "Seit der Vorschau hat sich etwas geändert. Bitte prüfen Sie die Vorschau noch einmal und übernehmen Sie dann.",
+  "letterhead_missing": "Der Absender im Briefkopf fehlt. Ohne Name und Anschrift des Trägers wird kein Vertrag verschickt. Bitte tragen Sie ihn unter „Briefkopf und Vorlagen“ ein."
 }

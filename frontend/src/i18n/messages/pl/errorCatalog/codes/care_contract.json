@@ -26,5 +26,6 @@
   "withdrawal_notice_required": "Potwierdź, że przeczytałeś pouczenie o prawie odstąpienia od umowy.",
   "import_file_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "import_file_too_large": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
-  "import_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
+  "import_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "letterhead_missing": "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”."
 }

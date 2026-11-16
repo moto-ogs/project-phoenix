@@ -165,6 +165,9 @@ func (l *CareNoticeLetters) CreateCareNoticeLetters(ctx context.Context, reviewe
 	if head.BankAccount == nil && anyByTransfer(missing) {
 		return parentbilling.CareNoticeLetters{}, parentbilling.ErrBankAccountMissing
 	}
+	if missingSender(head) {
+		return parentbilling.CareNoticeLetters{}, parentbilling.ErrLetterheadMissing
+	}
 	created := make([]int64, 0, len(missing))
 	for _, notice := range missing {
 		file, err := l.renderer.RenderLetter(feeNoticeLetter(notice, head), careNoticeFilename(notice))

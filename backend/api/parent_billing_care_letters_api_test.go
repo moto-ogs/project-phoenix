@@ -161,8 +161,11 @@ func careLettersInput() map[string]any {
 func TestCareLettersSendEveryFamilyOnceAndShowTheirState(t *testing.T) {
 	t.Parallel()
 	f := newCareBillingFixture(t, "Träger Monatsschreiben")
-	brandCareTraeger(t, f)
+	administration := brandedAdministration(t, f)
 	run, contracts := releasedCareRun(t, f, "Mia", "Noah")
+	requireLettersNeedTheLetterhead(t, f.traeger, administration.token, func() *httptest.ResponseRecorder {
+		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters"), careLettersInput())
+	})
 	mia, noah := invoiceOfContract(t, run, contracts["Mia"]), invoiceOfContract(t, run, contracts["Noah"])
 
 	before := careLetters(t, f, run.ID)

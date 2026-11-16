@@ -85,6 +85,12 @@
       "legacy": "care_contract.import_file_too_large"
     },
     {
+      "code": "care_contract.letterhead_missing",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "care_contract.letterhead_missing"
+    },
+    {
       "code": "care_contract.letterhead_too_long",
       "class": "business_rejection",
       "parameters": [],

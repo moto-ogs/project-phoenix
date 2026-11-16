@@ -97,7 +97,11 @@ var (
 	ErrMailBlockUnreadable = errors.New("the mail provider's block could not be read")
 	// ErrLetterheadTooLong reports a letterhead or footer that leaves too
 	// little room for the contract.
-	ErrLetterheadTooLong     = errors.New("the letterhead leaves too little room for the contract")
+	ErrLetterheadTooLong = errors.New("the letterhead leaves too little room for the contract")
+	// ErrLetterheadMissing reports a send while the Träger has no
+	// letterhead: the withdrawal notice takes the Träger's address from it
+	// (#7177).
+	ErrLetterheadMissing     = errors.New("the Träger has no letterhead for the withdrawal notice")
 	ErrInboxDocumentNotFound = errors.New("contract not found in the inbox")
 )
 

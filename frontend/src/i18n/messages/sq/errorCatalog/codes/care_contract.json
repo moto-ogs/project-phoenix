@@ -26,5 +26,6 @@
   "withdrawal_notice_required": "Ju lutemi konfirmoni që e keni lexuar udhëzimin për të drejtën e tërheqjes.",
   "import_file_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "import_file_too_large": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
-  "import_changed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
+  "import_changed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "letterhead_missing": "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”."
 }

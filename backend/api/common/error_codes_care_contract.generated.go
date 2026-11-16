@@ -15,6 +15,7 @@ const CodeCareContractFieldInvalid = "care_contract.field_invalid"
 const CodeCareContractImportChanged = "care_contract.import_changed"
 const CodeCareContractImportFileInvalid = "care_contract.import_file_invalid"
 const CodeCareContractImportFileTooLarge = "care_contract.import_file_too_large"
+const CodeCareContractLetterheadMissing = "care_contract.letterhead_missing"
 const CodeCareContractLetterheadTooLong = "care_contract.letterhead_too_long"
 const CodeCareContractNoticeEndNotOpen = "care_contract.notice_end_not_open"
 const CodeCareContractNoticeTemplateMissing = "care_contract.notice_template_missing"
@@ -45,6 +46,7 @@ var errorCodeClassesCareContract = []errorCodeClass{
 	{CodeCareContractImportChanged, "business_rejection"},
 	{CodeCareContractImportFileInvalid, "input"},
 	{CodeCareContractImportFileTooLarge, "input"},
+	{CodeCareContractLetterheadMissing, "business_rejection"},
 	{CodeCareContractLetterheadTooLong, "business_rejection"},
 	{CodeCareContractNoticeEndNotOpen, "business_rejection"},
 	{CodeCareContractNoticeTemplateMissing, "business_rejection"},

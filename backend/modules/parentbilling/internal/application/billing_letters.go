@@ -211,6 +211,9 @@ func (b *BillingLetters) material(ctx context.Context, reviewer parentbilling.Ho
 	if head.BankAccount == nil {
 		return parentbilling.Letterhead{}, nil, parentbilling.ErrBankAccountMissing
 	}
+	if missingSender(head) {
+		return parentbilling.Letterhead{}, nil, parentbilling.ErrLetterheadMissing
+	}
 	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID)
 	if err != nil {
 		return parentbilling.Letterhead{}, nil, fmt.Errorf("parent billing: read invoices: %w", err)
@@ -368,4 +371,10 @@ func normalizeEmergencyContacts(contacts []parentbilling.BillingEmergencyContact
 		normalized = append(normalized, contact)
 	}
 	return normalized, nil
+}
+
+// missingSender tells whether the letterhead names no sender. A letter, a
+// notice and their mail name the Träger from it (#7177).
+func missingSender(head parentbilling.Letterhead) bool {
+	return strings.TrimSpace(head.SenderText) == ""
 }

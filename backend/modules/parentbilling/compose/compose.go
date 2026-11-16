@@ -113,6 +113,11 @@ func NewSEPADebitDownloadRetention() parentbilling.SEPADebitDownloadRetention {
 	return postgres.NewStore()
 }
 
+// NewRequiredDetails builds the check of the details a Träger still has to enter (#7177) over the sources the root binds.
+func NewRequiredDetails(sources parentbilling.RequiredDetailSources) parentbilling.RequiredDetailsCheck {
+	return application.NewRequiredDetails(postgres.NewStore(), sources)
+}
+
 // NewSEPADebits builds the SEPA direct debit file of the issued runs (#4697, ADR 0181) over the letterhead with the bank account of the Träger and the field cipher the root binds.
 func NewSEPADebits(letterheads parentbilling.BillingLetterheads, cipher parentbilling.BankDataCipher, fingerprint func([]byte) string, today func() calendar.Date) parentbilling.SEPADebits {
 	return application.NewSEPADebits(postgres.NewStore(), letterheads, cipher, today, calendar.Now, fingerprint)

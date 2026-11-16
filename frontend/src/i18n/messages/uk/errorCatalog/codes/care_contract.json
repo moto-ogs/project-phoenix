@@ -26,5 +26,6 @@
   "withdrawal_notice_required": "Будь ласка, підтвердьте, що ви прочитали інформацію про право відмови від договору.",
   "import_file_invalid": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "import_file_too_large": "Не вдалося зберегти: {object}. Перевірте введені дані.",
-  "import_changed": "Не вдалося змінити: {object}. Перевірте поточний стан."
+  "import_changed": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "letterhead_missing": "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”."
 }

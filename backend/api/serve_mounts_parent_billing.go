@@ -58,7 +58,9 @@ import (
 // /traeger/sepa-creditor behind the same right (#4695), and the SEPA direct
 // debit file of the issued runs at /traeger/sepa-debits (#4697), and the
 // check of the DATEV settings at /traeger/datev-export (#4694), and the
-// finance exports with their protocol at /traeger/finance-exports (#4693).
+// finance exports with their protocol at /traeger/finance-exports (#4693),
+// and the details the Träger still has to enter at
+// /traeger/required-details (#7177).
 func mountParentBillingRoutes(root, publicLink chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings, marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, today func() calendar.Date, logger *slog.Logger) {
 	rules, holiday := NewParentBillingHTTP(organizations, settings, delivery, healthData, holidayCalendar, today, logger)
 	root.Mount("/traeger/contribution-rules", rules.TraegerRouter(ProtectedTraegerRoutes))
@@ -101,6 +103,7 @@ func mountParentBillingRoutes(root, publicLink chi.Router, organizations Holiday
 	transfers := NewTraegerExportTransfers(bankData, logger)
 	root.Mount("/traeger/finance-handovers", NewExportHandoverHTTP(financeExports, debits, transfers).Router(ProtectedTraegerRoutes))
 	root.Mount("/traeger/export-recipient", NewExportRecipientHTTP(transfers).Router(ProtectedTraegerRoutes))
+	mountRequiredDetailRoutes(root, organizations, settings, schoolSettings)
 }
 
 func newSEPADebitResource(debits parentbilling.SEPADebits) *parentBillingHTTP.SEPADebitResource {

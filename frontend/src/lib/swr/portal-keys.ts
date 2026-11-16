@@ -367,6 +367,7 @@ export const traegerKeys = {
   schools: () => "traeger-schools",
   school: (id: string) => `traeger-school-${encodeURIComponent(id)}`,
   schoolsAlerts: () => "traeger-schools-alerts",
+  requiredDetails: () => "traeger-required-details",
   keyDateCounts: () => "traeger-key-date-counts",
   occupancy: () => "traeger-occupancy",
   // Ankunft und Abholung eines Zeitraums (#4714): Durchschnitte, keine Kinder.

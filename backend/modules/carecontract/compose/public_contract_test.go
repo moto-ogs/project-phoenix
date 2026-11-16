@@ -253,11 +253,12 @@ func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtThe
 	_, previewErr := unnamed.ContractDocument(ctx, reviewer, id)
 	var invalid *carecontract.ValidationError
 	assert.ErrorAs(t, previewErr, &invalid)
+	// Without a letterhead the withdrawal notice names no address: the send
+	// is refused as a whole (#7177).
 	require.NoError(t, tenant.WithinTraeger(ctx, organization, func(txCtx context.Context) error {
 		refused, sendErr := unnamed.SendContracts(txCtx, reviewer, []int64{id})
-		assert.NoError(t, sendErr)
+		assert.ErrorIs(t, sendErr, carecontract.ErrLetterheadMissing)
 		assert.Empty(t, refused.Sent)
-		assert.Equal(t, []carecontract.SendSkip{{ID: id, Reason: carecontract.SkipPartnerMissing}}, refused.Skipped)
 		return nil
 	}))
 	assert.Empty(t, post.mails)

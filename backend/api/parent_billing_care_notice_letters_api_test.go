@@ -452,7 +452,11 @@ func TestCareNoticeOriginalByTransferNeedsTheBankAccount(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "parent_billing.bank_account_missing")
 	assert.False(t, noticeLetters(t, f, run.ID).Notices[0].HasLetter, "no original without the account")
 
-	brandedAdministration(t, f)
+	administration := brandedAdministration(t, f)
+	requireLettersNeedTheLetterhead(t, f.traeger, administration.token, func() *httptest.ResponseRecorder {
+		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters"), nil)
+	})
+	assert.False(t, noticeLetters(t, f, run.ID).Notices[0].HasLetter, "no original without the letterhead")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters"), nil)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	noticePDF(t, f, run.ID, contract)

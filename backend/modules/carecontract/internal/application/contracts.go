@@ -434,13 +434,18 @@ func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer,
 	if err != nil {
 		return err
 	}
-	file, documentID, err := c.frozenDocument(ctx, reviewer, record)
-	if err != nil {
-		return err
-	}
 	head, err := c.letterheads.Letterhead(ctx, reviewer)
 	if err != nil {
 		return fmt.Errorf("care contract: letterhead: %w", err)
+	}
+	// The withdrawal notice of the contract and of its signing page takes
+	// the Träger's address from the letterhead (#7177).
+	if len(textLines(head.SenderText)) == 0 {
+		return carecontract.ErrLetterheadMissing
+	}
+	file, documentID, err := c.frozenDocument(ctx, reviewer, record)
+	if err != nil {
+		return err
 	}
 	link, err := c.signingLinkFor(ctx, reviewer.OrganizationID, record, documentID)
 	if err != nil {

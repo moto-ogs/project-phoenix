@@ -64,6 +64,8 @@ export const ERROR_CATALOG = {
         "Die Datei lässt sich nicht lesen. Bitte wählen Sie eine CSV-Datei mit Überschriften in der ersten Zeile.",
       "care_contract.import_file_too_large":
         "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
+      "care_contract.letterhead_missing":
+        "Der Absender im Briefkopf fehlt. Ohne Name und Anschrift des Trägers wird kein Vertrag verschickt. Bitte tragen Sie ihn unter „Briefkopf und Vorlagen“ ein.",
       "care_contract.letterhead_too_long":
         "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürzen Sie sie unter „Briefkopf und Vorlagen“.",
       "care_contract.notice_end_not_open":
@@ -1103,6 +1105,8 @@ export const ERROR_CATALOG = {
         "Die letzte Mail an diese Familie ist noch unterwegs. Bitte warten Sie, sonst kommt sie doppelt an.",
       "parent_billing.letter_mail_pending":
         "Die Mail an diese Familie wird gerade gesendet. Bitte warten Sie, bis sie gesendet ist oder nicht zugestellt wurde.",
+      "parent_billing.letterhead_missing":
+        "Der Absender im Briefkopf fehlt. Ohne Name und Anschrift des Trägers entstehen keine Rechnungen oder Bescheide. Bitte tragen Sie ihn unter „Briefkopf und Vorlagen“ ein.",
       "parent_billing.letterhead_too_long":
         "Absender oder Fußzeile im Briefkopf sind zu lang für ein Schreiben. Bitte lassen Sie sie unter „Briefkopf und Vorlagen“ kürzen.",
       "parent_billing.number_range_invalid":
@@ -2148,6 +2152,8 @@ export const ERROR_CATALOG = {
         "This contract is already signed or is not waiting for a signature. Please reload the page.",
       "care_contract.field_invalid":
         "Some details are not valid. Please check your entries.",
+      "care_contract.letterhead_missing":
+        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -2894,6 +2900,8 @@ export const ERROR_CATALOG = {
         "Этот договор уже подписан или не ожидает подписи. Пожалуйста, обновите страницу.",
       "care_contract.field_invalid":
         "Некоторые данные указаны неверно. Проверьте введённые данные.",
+      "care_contract.letterhead_missing":
+        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -3504,6 +3512,8 @@ export const ERROR_CATALOG = {
         "Kjo kontratë është nënshkruar tashmë ose nuk pret nënshkrim. Ju lutemi rifreskoni faqen.",
       "care_contract.field_invalid":
         "Disa të dhëna nuk janë të sakta. Kontrolloni të dhënat.",
+      "care_contract.letterhead_missing":
+        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -4130,6 +4140,8 @@ export const ERROR_CATALOG = {
         "Ta umowa jest już podpisana lub nie czeka na podpis. Odśwież stronę.",
       "care_contract.field_invalid":
         "Niektóre dane są nieprawidłowe. Sprawdź wpisane dane.",
+      "care_contract.letterhead_missing":
+        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -4741,6 +4753,8 @@ export const ERROR_CATALOG = {
         "Bu sözleşme zaten imzalandı veya imza beklemiyor. Lütfen sayfayı yenileyin.",
       "care_contract.field_invalid":
         "Bazı bilgiler doğru değil. Girdiğiniz bilgileri kontrol edin.",
+      "care_contract.letterhead_missing":
+        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":
@@ -5360,6 +5374,8 @@ export const ERROR_CATALOG = {
         "Цей договір уже підписано або він не очікує підпису. Будь ласка, оновіть сторінку.",
       "care_contract.field_invalid":
         "Деякі дані вказано неправильно. Перевірте введені дані.",
+      "care_contract.letterhead_missing":
+        "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
       "care_contract.letterhead_too_long":
         "The sender or footer is too long for the contract. Please shorten it under “Letterhead and templates”.",
       "care_contract.notice_end_not_open":

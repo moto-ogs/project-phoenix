@@ -26,5 +26,6 @@
   "withdrawal_notice_required": "Lütfen cayma hakkı bilgilendirmesini okuduğunuzu onaylayın.",
   "import_file_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "import_file_too_large": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
-  "import_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin."
+  "import_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "letterhead_missing": "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”."
 }
