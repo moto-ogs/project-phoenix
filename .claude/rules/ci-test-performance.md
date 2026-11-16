@@ -90,7 +90,7 @@ read the test rule as forbidding to thin those matrices.
 
 **State in November 2026.** Runs with backend tests: median 271 s to
 `ci-gate` (14.11.). The backend job is CPU-bound, Postgres about half; seed
-smoke `isolation` (175–292 s) ends last most often. Details: `ci-cost`
+smoke runs only `profiles` on ordinary pull requests. Details: `ci-cost`
 skill. `ci-runtime-watch.yml` opens an issue when 3 days' median exceeds
 5 min.
 
