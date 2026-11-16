@@ -10,7 +10,7 @@ import (
 )
 
 // The end of a Springer's employment after the last block (#7197, ADR
-// 0089 section 8, ADR 0252). The first block of a Springer at a school
+// 0089 section 8, ADR 0253). The first block of a Springer at a school
 // creates an employment there (ADR 0251). Once the school's last block is
 // over, the scheduler offboards that employment through the same path as
 // the immediate and the planned exit, so it becomes a former employment.

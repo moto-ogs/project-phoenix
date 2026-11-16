@@ -13,7 +13,7 @@ const springerEmploymentEndVersion = "20261116160000"
 func init() {
 	MigrationRegistry.Register(&Migration{
 		Version:     springerEmploymentEndVersion,
-		Description: "Nach der letzten Blockung wird die Beschäftigung des Springers zur früheren Beschäftigung (#7197, ADR 0252)",
+		Description: "Nach der letzten Blockung wird die Beschäftigung des Springers zur früheren Beschäftigung (#7197, ADR 0253)",
 		DependsOn: []string{
 			springerEmploymentVersion, // the pool's Einsatzorte and the windows
 			traegerStaffImportTrailVersion,
@@ -23,7 +23,7 @@ func init() {
 }
 
 // springerEmploymentEndUpSQL lets the Worker end the employment of a
-// Springer at a school after the school's last block (#7197, ADR 0252).
+// Springer at a school after the school's last block (#7197, ADR 0253).
 // Like the other pool functions, they run as their owner and answer only
 // the school of the tenant transaction whose Träger holds the release.
 //

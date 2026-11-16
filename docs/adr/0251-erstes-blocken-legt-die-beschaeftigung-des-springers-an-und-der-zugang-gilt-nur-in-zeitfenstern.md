@@ -115,7 +115,7 @@ verschoben hat:
   Blockungen findet. Das ist ein eigener Workflow; er folgt in
   [#7197](https://github.com/moto-ogs/project-phoenix/issues/7197). Die nächste Blockung nimmt eine schon frühere
   Beschäftigung wieder auf (Punkt 1). Umgesetzt in
-  [ADR 0252](0252-nach-der-letzten-blockung-endet-die-beschaeftigung-des-springers-ueber-den-austritt.md).
+  [ADR 0253](0253-nach-der-letzten-blockung-endet-die-beschaeftigung-des-springers-ueber-den-austritt.md).
 
 ## Verworfene Optionen
 

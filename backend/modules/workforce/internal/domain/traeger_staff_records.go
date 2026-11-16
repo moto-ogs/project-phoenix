@@ -59,7 +59,7 @@ type TraegerStaffLink struct {
 	StaffID  int64
 	LinkedAt time.Time
 	// ViaPool marks an Einsatzort a block of the Vertretungspool created
-	// (ADR 0251); it ends after the school's last block (ADR 0252).
+	// (ADR 0251); it ends after the school's last block (ADR 0253).
 	ViaPool bool
 }
 

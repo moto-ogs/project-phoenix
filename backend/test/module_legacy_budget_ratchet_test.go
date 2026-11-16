@@ -319,7 +319,7 @@ var moduleLegacyFileBudgets = map[string]int{
 // modules/mealplan/compose (+2) and modules/schoolcalendar/compose (+4).
 // ADR 0264: the clock field of the time-tracking cleanup in
 // modules/workforce/compose (+2).
-// ADR 0252: the Springer exits constructor of modules/workforce/compose (+6).
+// ADR 0253: the Springer exits constructor of modules/workforce/compose (+6).
 const moduleComposeBudgetTotal = 13561
 
 // moduleComposeBudgets maps every owner composition package to its production
@@ -506,7 +506,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0197: the export opener of the sealed staff bank and tax data (+5).
 	// ADR 0242: the working-time check and the Einsatzplanung sites (+11).
 	// ADR 0264: the clock field of the time-tracking cleanup (+2).
-	// ADR 0252: the Springer exits after the last block (+6).
+	// ADR 0253: the Springer exits after the last block (+6).
 	"modules/workforce/compose":       936,
 	"workflows/catererportal/compose": 37, // added by ADR 0077
 	// Raised by ADR 0224: the class follow-up port (+2).

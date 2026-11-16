@@ -50,6 +50,6 @@ type SpringerAccess interface {
 	PruneSpringerWindows(ctx context.Context) error
 	// HoldsOnlySpringerAccess reports whether the account's roles at the
 	// school are the system role springer, besides guardian at most: the
-	// school gave it no role of its own (#7197, ADR 0252).
+	// school gave it no role of its own (#7197, ADR 0253).
 	HoldsOnlySpringerAccess(ctx context.Context, accountID int64) (bool, error)
 }

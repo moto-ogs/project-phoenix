@@ -74,7 +74,7 @@ func (s *TraegerStaffStore) LinkPoolEmployment(ctx context.Context, recordID, st
 }
 
 // The end of a Springer's employment after the last block at the school
-// (#7197, ADR 0252).
+// (#7197, ADR 0253).
 
 type springerExitRow struct {
 	RecordID       int64         `bun:"staff_record_id"`

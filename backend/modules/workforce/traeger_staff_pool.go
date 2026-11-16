@@ -165,7 +165,7 @@ type SpringerEmployments interface {
 
 // SpringerExit is an employment the pool created at the school of the
 // caller's tenant transaction whose last block there is over (#7197, ADR
-// 0252): every block of the school lies before today or was lifted.
+// 0253): every block of the school lies before today or was lifted.
 // LastBlockDay is the day of the last block. The exit runs in the name of
 // the most recent blocking Leitung who still works at the school,
 // ActorAccountID with their employment ActorStaffID, else in the name of
