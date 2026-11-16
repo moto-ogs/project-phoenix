@@ -98,6 +98,9 @@ export function staffChangeText(change: StaffChange): string {
   if (change.kind === "ended") {
     return `Beschäftigung an der Schule ${school} nach der letzten Blockung beendet`;
   }
+  if (change.kind === "resumed") {
+    return `Beschäftigung an der Schule ${school} mit einer neuen Blockung wieder aufgenommen`;
+  }
   if (change.kind === "imported" || change.field === "record") {
     return importedChangeText(change);
   }

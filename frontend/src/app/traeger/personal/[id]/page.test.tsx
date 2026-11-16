@@ -166,6 +166,13 @@ describe("TraegerStaffRecordPage", () => {
       ],
       changes: [
         {
+          kind: "resumed",
+          field: "school",
+          value: "",
+          schoolName: "OGS Nord",
+          occurredAt: "2026-11-15T08:00:00Z",
+        },
+        {
           kind: "ended",
           field: "school",
           value: "",
@@ -187,6 +194,11 @@ describe("TraegerStaffRecordPage", () => {
     expect(
       screen.getByText(
         "Beschäftigung an der Schule OGS West nach der letzten Blockung beendet",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Beschäftigung an der Schule OGS Nord mit einer neuen Blockung wieder aufgenommen",
       ),
     ).toBeInTheDocument();
   });

@@ -61,7 +61,8 @@ verschoben hat, und folgt
    wenn eine Leitung die Beschäftigung von Hand beendet.
 7. **Verlauf und Protokoll.** Workforce schreibt das Ende in den Verlauf
    der Akte (`staff_record_changes`, Art `ended`, mit Schule und dem Konto
-   aus Punkt 4). Das Löschprotokoll der Schule nennt den Grund „springer
+   aus Punkt 4). Nimmt eine neue Blockung die frühere Beschäftigung
+   wieder auf, steht das als Art `resumed` daneben. Das Löschprotokoll der Schule nennt den Grund „springer
    employment ended after last block day …“.
 8. **Abgelaufene Fenster räumt der Lauf mit weg.** Vor den Austritten löscht
    Identity & Access an jeder Zuordnung der Schule die Fenster, die vorbei

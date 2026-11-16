@@ -161,6 +161,10 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 		assert.Equal(t, 1, state.Memberships)
 		assert.Equal(t, 1, state.Roles)
 		assert.True(t, mappingActive(south))
+		var trail int
+		require.NoError(t, db.NewRaw(`SELECT count(*) FROM workforce.staff_record_changes
+			WHERE staff_record_id = ? AND kind = 'resumed' AND school_id = ? AND account_id = ?`, record, south, southLead.ID).Scan(t.Context(), &trail))
+		assert.Equal(t, 1, trail, "the trail shows the resumption beside the end")
 	})
 
 	t.Run("a role of the school's own keeps the employment", func(t *testing.T) {

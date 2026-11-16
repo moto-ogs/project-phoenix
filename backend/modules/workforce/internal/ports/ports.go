@@ -470,6 +470,9 @@ type TraegerStaffPoolStore interface {
 	// LinkPoolEmployment links a live employment of the school as an
 	// Einsatzort the pool created and writes it into the record's trail.
 	LinkPoolEmployment(ctx context.Context, recordID, staffID, accountID int64) error
+	// RecordPoolResumed writes into the record's trail that a block resumed
+	// the pool's former employment at the school (#7197).
+	RecordPoolResumed(ctx context.Context, recordID, accountID int64) error
 
 	TraegerPoolSpringers(ctx context.Context, organizationID int64, from, to calendar.Date) ([]domain.PoolSpringer, error)
 	TraegerPoolBlocks(ctx context.Context, organizationID int64, recordIDs []int64, from, to calendar.Date) ([]domain.PoolBlock, error)

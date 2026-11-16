@@ -113,7 +113,7 @@ export interface StaffChange {
   /**
    * `imported`: angelegt oder ergänzt vom Personal-Import (#4724).
    * `ended`: der Einsatzort aus dem Vertretungspool endete nach der letzten
-   * Blockung (#7197).
+   * Blockung, `resumed`: eine neue Blockung nahm ihn wieder auf (#7197).
    */
   readonly kind:
     | "linked"
@@ -122,7 +122,8 @@ export interface StaffChange {
     | "added"
     | "removed"
     | "imported"
-    | "ended";
+    | "ended"
+    | "resumed";
   /** `record`: die ganze Akte, die der Personal-Import angelegt hat. */
   readonly field:
     StaffRecordField | "school" | "record" | StaffContractChangeField;

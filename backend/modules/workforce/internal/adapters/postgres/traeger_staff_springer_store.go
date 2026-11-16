@@ -132,16 +132,26 @@ func (s *TraegerStaffStore) springerExits(ctx context.Context, today calendar.Da
 
 // RecordSpringerExit writes the end into the record's trail.
 func (s *TraegerStaffStore) RecordSpringerExit(ctx context.Context, exit workforce.SpringerExit) error {
-	if exit.RecordID <= 0 || exit.ActorAccountID <= 0 {
-		return errors.New("workforce postgres: record and actor of a Springer exit are required")
+	return s.poolTrail(ctx, exit.RecordID, exit.ActorAccountID, "ended")
+}
+
+// RecordPoolResumed writes into the record's trail that a block resumed the
+// former employment of the pool at the school.
+func (s *TraegerStaffStore) RecordPoolResumed(ctx context.Context, recordID, accountID int64) error {
+	return s.poolTrail(ctx, recordID, accountID, "resumed")
+}
+
+func (s *TraegerStaffStore) poolTrail(ctx context.Context, recordID, accountID int64, kind string) error {
+	if recordID <= 0 || accountID <= 0 {
+		return errors.New("workforce postgres: record and account of a pool trail entry are required")
 	}
 	db, _, err := schoolStaffDB(ctx)
 	if err != nil {
 		return err
 	}
 	var written bool
-	if err := db.NewRaw(`SELECT workforce.pool_ended(?, ?)`, exit.RecordID, exit.ActorAccountID).Scan(ctx, &written); err != nil {
-		return fmt.Errorf("workforce postgres: record springer exit: %w", err)
+	if err := db.NewRaw(`SELECT workforce.pool_trail(?, ?, ?)`, recordID, accountID, kind).Scan(ctx, &written); err != nil {
+		return fmt.Errorf("workforce postgres: pool trail %s: %w", kind, err)
 	}
 	if !written {
 		return workforce.ErrPoolSpringerNotFound

@@ -35,8 +35,9 @@ func init() {
 //     account and employment. With p_staff_record_id it
 //     locks that record first, as the first block does, and answers only
 //     for it: a block and an exit of one Springer wait for each other.
-//   - workforce.pool_ended writes the end into the record's trail, kind
-//     'ended' with the school and the acting account.
+//   - workforce.pool_trail writes the end into the record's trail, kind
+//     'ended' with the school and the acting account, and kind 'resumed'
+//     when a later block resumes the former employment (ADR 0021).
 //
 // workforce.pool_due_exits locks the record FOR NO KEY UPDATE, like
 // workforce.pool_springer_identity (repeatable_workforce_pool_springer_identity.go).
@@ -44,7 +45,7 @@ const springerEmploymentEndUpSQL = `
 
 ALTER TABLE workforce.staff_record_changes DROP CONSTRAINT chk_workforce_staff_record_changes_kind;
 ALTER TABLE workforce.staff_record_changes ADD CONSTRAINT chk_workforce_staff_record_changes_kind
-	CHECK (kind IN ('linked', 'not_chosen', 'changed', 'added', 'removed', 'imported', 'ended'));
+	CHECK (kind IN ('linked', 'not_chosen', 'changed', 'added', 'removed', 'imported', 'ended', 'resumed'));
 
 CREATE FUNCTION workforce.pool_due_exits(p_today DATE, p_staff_record_id BIGINT DEFAULT NULL)
 RETURNS TABLE(staff_record_id BIGINT, staff_id BIGINT, last_day DATE, actor_account_id BIGINT, actor_staff_id BIGINT)
@@ -96,32 +97,36 @@ $$;
 REVOKE ALL ON FUNCTION workforce.pool_due_exits(DATE, BIGINT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION workforce.pool_due_exits(DATE, BIGINT) TO phoenix_tenant;
 
--- workforce.pool_ended answers whether it wrote the end of the pool's
--- Einsatzort of the record at the school into the record's trail.
-CREATE FUNCTION workforce.pool_ended(p_staff_record_id BIGINT, p_account_id BIGINT) RETURNS BOOLEAN
+-- workforce.pool_trail writes into the record's trail that the pool's
+-- Einsatzort of the record at the school ended or a block resumed it, and
+-- answers whether there is such an Einsatzort.
+CREATE FUNCTION workforce.pool_trail(p_staff_record_id BIGINT, p_account_id BIGINT, p_kind TEXT) RETURNS BOOLEAN
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE
 	v_school BIGINT := NULLIF(current_setting('app.current_tenant_id', true), '')::bigint;
 	v_org BIGINT := workforce.pool_school_organization();
 BEGIN
+	IF p_kind NOT IN ('ended', 'resumed') THEN
+		RAISE EXCEPTION 'workforce.pool_trail: unknown kind %', p_kind USING ERRCODE = 'invalid_parameter_value';
+	END IF;
 	IF v_org IS NULL OR NOT EXISTS (SELECT FROM workforce.staff_record_links AS link
 		WHERE link.organization_id = v_org AND link.staff_record_id = p_staff_record_id
 		  AND link.school_id = v_school AND link.via_pool) THEN
 		RETURN false;
 	END IF;
 	INSERT INTO workforce.staff_record_changes (organization_id, staff_record_id, kind, field, school_id, account_id)
-	VALUES (v_org, p_staff_record_id, 'ended', 'school', v_school, p_account_id);
+	VALUES (v_org, p_staff_record_id, p_kind, 'school', v_school, p_account_id);
 	RETURN true;
 END;
 $$;
-REVOKE ALL ON FUNCTION workforce.pool_ended(BIGINT, BIGINT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION workforce.pool_ended(BIGINT, BIGINT) TO phoenix_tenant;
+REVOKE ALL ON FUNCTION workforce.pool_trail(BIGINT, BIGINT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION workforce.pool_trail(BIGINT, BIGINT, TEXT) TO phoenix_tenant;
 `
 
 const springerEmploymentEndDownSQL = `
-DROP FUNCTION IF EXISTS workforce.pool_ended(BIGINT, BIGINT);
+DROP FUNCTION IF EXISTS workforce.pool_trail(BIGINT, BIGINT, TEXT);
 DROP FUNCTION IF EXISTS workforce.pool_due_exits(DATE, BIGINT);
-DELETE FROM workforce.staff_record_changes WHERE kind = 'ended';
+DELETE FROM workforce.staff_record_changes WHERE kind IN ('ended', 'resumed');
 ALTER TABLE workforce.staff_record_changes DROP CONSTRAINT chk_workforce_staff_record_changes_kind;
 ALTER TABLE workforce.staff_record_changes ADD CONSTRAINT chk_workforce_staff_record_changes_kind
 	CHECK (kind IN ('linked', 'not_chosen', 'changed', 'added', 'removed', 'imported'));
