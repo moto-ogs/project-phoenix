@@ -16,7 +16,10 @@ const announcementTable = `platform.announcements AS "announcement"`
 
 type Database func(context.Context) (bun.IDB, error)
 
-type Store struct{ database Database }
+type Store struct {
+	database Database
+	now      func() time.Time
+}
 
 type announcementRow struct {
 	bun.BaseModel   `bun:"table:platform.announcements,alias:announcement"`
@@ -46,11 +49,12 @@ type viewRow struct {
 	Dismissed      bool      `bun:"dismissed,notnull"`
 }
 
-func New(database Database) *Store {
-	if database == nil {
-		panic("communication postgres: database runtime is required")
+// New builds the store; now stamps when an account saw an announcement.
+func New(database Database, now func() time.Time) *Store {
+	if database == nil || now == nil {
+		panic("communication postgres: database runtime and clock are required")
 	}
-	return &Store{database: database}
+	return &Store{database: database, now: now}
 }
 
 func (s *Store) Create(ctx context.Context, value communication.Announcement) (communication.Announcement, domain.OperationStats, error) {
@@ -203,7 +207,7 @@ func (s *Store) mark(ctx context.Context, userID, announcementID int64, dismisse
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	var conflicted bool
-	row := viewRow{UserID: userID, AnnouncementID: announcementID, SeenAt: time.Now(), Dismissed: dismissed}
+	row := viewRow{UserID: userID, AnnouncementID: announcementID, SeenAt: s.now(), Dismissed: dismissed}
 	query := db.NewInsert().Model(&row).ModelTableExpr("platform.announcement_views").
 		On("CONFLICT (user_id, announcement_id) DO UPDATE").Set("seen_at = EXCLUDED.seen_at")
 	if dismissed {

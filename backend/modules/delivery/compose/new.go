@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"time"
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/adapters/postgres"
@@ -20,6 +21,7 @@ type ModuleDependencies struct {
 	People        GuardianDisplayResolver
 	Observe       func(deliveryContract.Observation)
 	EmailProvider mail.ProviderConfig
+	Now           func() time.Time // clock of the outboxes and mail events; nil is the real one
 }
 
 type Runtime application.Runtime
@@ -42,8 +44,11 @@ func NewModule(dependencies ModuleDependencies) (*Runtime, error) {
 	if dependencies.DB == nil || dependencies.People == nil || dependencies.Observe == nil {
 		return nil, errors.New("delivery compose: all dependencies are required")
 	}
-	raw := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase)
+	if dependencies.Now == nil {
+		dependencies.Now = time.Now
+	}
+	raw := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, dependencies.Now)
 	store := application.NewWorkerCommands(raw, NewTenantTransactions(dependencies.DB).WithinSystem, NewTenantTransactions(dependencies.DB).WithinTenant)
 	observe := application.NewObservationAdapter(dependencies.Observe)
-	return (*Runtime)(application.NewRuntime(application.NewService(store, dependencies.People, observe), store, observe, postgres.EmailWakeups(dependencies.DB), dependencies.EmailProvider)), nil
+	return (*Runtime)(application.NewRuntime(application.NewService(store, dependencies.People, observe, dependencies.Now), store, observe, postgres.EmailWakeups(dependencies.DB), dependencies.EmailProvider, dependencies.Now)), nil
 }

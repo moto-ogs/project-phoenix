@@ -75,7 +75,7 @@ func surveyRoute(t *testing.T, perms ...string) (*surveyContract, *announcement.
 		ID: staff.ID, Title: "Team", Audience: communication.SurveyAudienceStaff, Anonymous: true,
 		ClosesAt: time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC), Targets: []communication.SurveyTarget{}, Questions: []communication.SurveyQuestion{},
 	}}
-	return s, announcement.NewSurveyResource(s, nil), routetest.MintTestJWT(t, claims), int64(claims.ID)
+	return s, announcement.NewSurveyResource(s, nil, time.Now), routetest.MintTestJWT(t, claims), int64(claims.ID)
 }
 
 func surveyRequest(t *testing.T, r *announcement.SurveyResource, token, method, path string, body any) (int, string) {

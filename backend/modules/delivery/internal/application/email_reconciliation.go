@@ -63,7 +63,8 @@ func NewEmailReconciliation(store interface {
 // block for this deployment's provider. The webhook exists in every deployment
 // and answers 503 without a secret. On plain SMTP nothing is reconciled, and
 // lifting a block only clears the school's list.
-func NewEmailEvents(config mail.ProviderConfig, store *WorkerCommands, observe ports.Observer) (*EmailWebhooks, *EmailReconciliation) {
+// now dates what the provider reports and what reconciliation compares with.
+func NewEmailEvents(config mail.ProviderConfig, store *WorkerCommands, observe ports.Observer, now func() time.Time) (*EmailWebhooks, *EmailReconciliation) {
 	logger := config.Logger
 	if logger == nil {
 		logger = slog.Default()
@@ -75,7 +76,9 @@ func NewEmailEvents(config mail.ProviderConfig, store *WorkerCommands, observe p
 	}
 	fallback := config.UsesLettermint()
 	webhooks := NewEmailWebhooks(store, []ports.EmailWebhookProvider{newLettermintWebhook(config.WebhookSecrets)}, fallback, logger, observe)
-	return webhooks, NewEmailReconciliation(store, api, fallback, logger, observe)
+	reconciliation := NewEmailReconciliation(store, api, fallback, logger, observe)
+	webhooks.now, reconciliation.now = now, now
+	return webhooks, reconciliation
 }
 
 var (

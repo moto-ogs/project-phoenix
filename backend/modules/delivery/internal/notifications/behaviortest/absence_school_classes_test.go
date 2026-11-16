@@ -130,7 +130,7 @@ func newSchoolAbsenceWorld() (notifications.AbsenceNotifier, *schoolAbsenceWorld
 	}
 	recipients := notifications.NewStaffRecipientResolver(
 		w.consent, &fakeStudentReader{}, &fakeGroupReader{}, &fakeStaffAccountReader{},
-		&fakeAdminReader{}, &fakeOnDutySetting{}, &fakeDutyReader{})
+		&fakeAdminReader{}, &fakeOnDutySetting{}, &fakeDutyReader{}, calendar.CalendarDateClock())
 	producer := notifications.NewAbsenceNotifier(w.notifier, recipients, nil, nil,
 		notifications.WithSchoolClassRecipients(contract.SchoolClassRecipients{
 			Reach: w.reach, Consent: w.consent, Subscribers: w.subscribers,

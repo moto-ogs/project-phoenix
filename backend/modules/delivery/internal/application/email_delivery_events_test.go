@@ -54,7 +54,7 @@ func TestWorkerHoldsBackAMailToASuppressedAddress(t *testing.T) {
 	store.claimed, store.renewed, store.finalizeCancelled = []domain.Intent{eventMail(false)}, true, true
 	provider := &workerProvider{}
 
-	stats, err := NewWorker(store, provider, func(domain.Observation) {}).RunOnce(context.Background(), 1, 6)
+	stats, err := NewWorker(store, provider, func(domain.Observation) {}, time.Now).RunOnce(context.Background(), 1, 6)
 
 	require.NoError(t, err)
 	assert.Zero(t, provider.calls)
@@ -71,7 +71,7 @@ func TestWorkerHoldsBackAMailToAStoppedGuardianWithoutMarkingTheAddress(t *testi
 	store.claimed, store.renewed, store.finalizeCancelled = []domain.Intent{eventMail(false)}, true, true
 	provider := &workerProvider{}
 
-	stats, err := NewWorker(store, provider, func(domain.Observation) {}).RunOnce(context.Background(), 1, 6)
+	stats, err := NewWorker(store, provider, func(domain.Observation) {}, time.Now).RunOnce(context.Background(), 1, 6)
 
 	require.NoError(t, err)
 	assert.Zero(t, provider.calls)
@@ -92,7 +92,7 @@ func TestWorkerHoldsBackOnlyTheSchoolsMailingsToADepartedFamily(t *testing.T) {
 		store.claimed, store.renewed, store.finalizeCancelled = []domain.Intent{mail}, true, true
 		provider := &workerProvider{}
 
-		stats, err := NewWorker(store, provider, func(domain.Observation) {}).RunOnce(context.Background(), 1, 6)
+		stats, err := NewWorker(store, provider, func(domain.Observation) {}, time.Now).RunOnce(context.Background(), 1, 6)
 
 		require.NoError(t, err, template)
 		assert.Zero(t, provider.calls, template)
@@ -108,7 +108,7 @@ func TestWorkerHoldsBackOnlyTheSchoolsMailingsToADepartedFamily(t *testing.T) {
 		store.claimed, store.renewed, store.finalizeSent = []domain.Intent{mail}, true, true
 		provider := &workerProvider{}
 
-		stats, err := NewWorker(store, provider, func(domain.Observation) {}).RunOnce(context.Background(), 1, 6)
+		stats, err := NewWorker(store, provider, func(domain.Observation) {}, time.Now).RunOnce(context.Background(), 1, 6)
 
 		require.NoError(t, err, template)
 		assert.Equal(t, 1, provider.calls, "%s is needed by the family on its own", template)
@@ -125,7 +125,7 @@ func TestWorkerAsksTheTraegersSchoolsForATraegerMail(t *testing.T) {
 	store.claimed, store.renewed, store.finalizeCancelled = []domain.Intent{mail}, true, true
 	provider := &workerProvider{}
 
-	stats, err := NewWorker(store, provider, func(domain.Observation) {}).RunOnce(context.Background(), 1, 6)
+	stats, err := NewWorker(store, provider, func(domain.Observation) {}, time.Now).RunOnce(context.Background(), 1, 6)
 
 	require.NoError(t, err)
 	assert.Zero(t, provider.calls)
@@ -138,7 +138,7 @@ func TestWorkerSendsSecurityMailToASuppressedAddress(t *testing.T) {
 	store.claimed, store.renewed, store.finalizeSent = []domain.Intent{eventMail(true)}, true, true
 	provider := &workerProvider{}
 
-	stats, err := NewWorker(store, provider, func(domain.Observation) {}).RunOnce(context.Background(), 1, 6)
+	stats, err := NewWorker(store, provider, func(domain.Observation) {}, time.Now).RunOnce(context.Background(), 1, 6)
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, provider.calls)
@@ -153,7 +153,7 @@ func TestWorkerSendsStaffMailToASuppressedAddress(t *testing.T) {
 	store.claimed, store.renewed, store.finalizeSent = []domain.Intent{staffMail}, true, true
 	provider := &workerProvider{}
 
-	stats, err := NewWorker(store, provider, func(domain.Observation) {}).RunOnce(context.Background(), 1, 6)
+	stats, err := NewWorker(store, provider, func(domain.Observation) {}, time.Now).RunOnce(context.Background(), 1, 6)
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, provider.calls)
@@ -167,7 +167,7 @@ func TestWorkerSuppressesAnAddressTheServerRefused(t *testing.T) {
 	store.failureResult = domain.FinalizeResult{Finalized: true, State: string(domain.StateDeadLetter)}
 	provider := &workerProvider{err: fmt.Errorf("%w: %w: 550 <guardian@example.com> unknown", domain.ErrPermanent, domain.ErrRecipientRejected)}
 
-	stats, err := NewWorker(store, provider, func(domain.Observation) {}).RunOnce(context.Background(), 1, 6)
+	stats, err := NewWorker(store, provider, func(domain.Observation) {}, time.Now).RunOnce(context.Background(), 1, 6)
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, stats.DeadLettered)
@@ -184,7 +184,7 @@ func TestWorkerKeepsTheAddressWhenTheMailItselfIsRefused(t *testing.T) {
 	store.failureResult = domain.FinalizeResult{Finalized: true, State: string(domain.StateDeadLetter)}
 	provider := &workerProvider{err: fmt.Errorf("%w: 554 content rejected", domain.ErrPermanent)}
 
-	stats, err := NewWorker(store, provider, func(domain.Observation) {}).RunOnce(context.Background(), 1, 6)
+	stats, err := NewWorker(store, provider, func(domain.Observation) {}, time.Now).RunOnce(context.Background(), 1, 6)
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, stats.DeadLettered)

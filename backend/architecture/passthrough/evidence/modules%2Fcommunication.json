@@ -16,7 +16,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *AnnouncementsResource) GetAnnouncement(w http.ResponseWriter, r *http.Request) {\n\tid, ok := common.ParseInt64IDWithError(w, r, \"id\", \"invalid announcement ID\")\n\tif !ok {\n\t\treturn\n\t}\n\tannouncement, err := rs.announcementService.GetAnnouncement(r.Context(), id)\n\tif err != nil {\n\t\tcommon.RenderError(w, r, AnnouncementErrorRenderer(err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, newAnnouncementResponse(announcement), \"Announcement retrieved successfully\")\n}",
+      "evidence": "func (rs *AnnouncementsResource) GetAnnouncement(w http.ResponseWriter, r *http.Request) {\n\tid, ok := common.ParseInt64IDWithError(w, r, \"id\", \"invalid announcement ID\")\n\tif !ok {\n\t\treturn\n\t}\n\tannouncement, err := rs.announcementService.GetAnnouncement(r.Context(), id)\n\tif err != nil {\n\t\tcommon.RenderError(w, r, AnnouncementErrorRenderer(err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, newAnnouncementResponse(announcement, rs.now()), \"Announcement retrieved successfully\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/http/operatorannouncements/AnnouncementsResource.GetAnnouncement",
       "owner": "modules/communication"

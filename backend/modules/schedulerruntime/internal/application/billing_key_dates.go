@@ -44,7 +44,7 @@ func (s *Scheduler) checkAndRunBillingKeyDates(ctx context.Context, task *Schedu
 	ctx, cancel := s.taskContext(ctx, 5*time.Minute)
 	defer cancel()
 
-	written, err := s.schoolRepo.RecordDueBillingKeyDates(s.withUnitOfWork(ctx), time.Now())
+	written, err := s.schoolRepo.RecordDueBillingKeyDates(s.withUnitOfWork(ctx), s.clock())
 	if err != nil {
 		recordJobCommandFailure(ctx, err)
 		s.getLogger().Error("billing-key-dates: capture failed",

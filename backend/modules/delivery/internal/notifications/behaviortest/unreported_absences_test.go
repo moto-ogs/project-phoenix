@@ -65,7 +65,7 @@ func unreportedProducer(capture *captureNotifier, office fakeSchoolOffice, repo 
 	consent := notifications.NewPreferenceService(repo, allSettingsOn(), nil, nil, securityruntime.HasPermission)
 	recipients := notifications.NewStaffRecipientResolver(
 		&stubConsent{}, &fakeStudentReader{}, &fakeGroupReader{}, &fakeStaffAccountReader{},
-		&fakeAdminReader{}, &fakeOnDutySetting{}, &fakeDutyReader{})
+		&fakeAdminReader{}, &fakeOnDutySetting{}, &fakeDutyReader{}, calendar.CalendarDateClock())
 	producer := notifications.NewAbsenceNotifier(capture, recipients, nil, nil,
 		notifications.WithSchoolClassRecipients(contract.SchoolClassRecipients{
 			Reach: &fakeSchoolClassReach{}, Consent: consent, Office: office,

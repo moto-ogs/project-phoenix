@@ -55,7 +55,7 @@ import (
 // booking audit, reminder tick, document sweeps) are built here. now is the
 // root clock of Enrollment's jobs (ADR 0265); nil is the real clock.
 func NewWorker(
-	db transactionruntime.Database, logger *slog.Logger, tracer *observability.Tracer, hub *realtime.Hub,
+	db transactionruntime.Database, logger *slog.Logger, now func() time.Time, tracer *observability.Tracer, hub *realtime.Hub,
 	settings settingsCompose.BatchSettingsService, audit auditCommand, accessLog DataAccessAppender, fleet devicefleet.Capability,
 	carePlan carePlanModule.Owner, persons peopledirectory.Capability, people PeopleRows,
 	organizations organizationtenancy.Query, identity identityaccess.Owner, rooms facilitiesModule.Capability,
@@ -70,13 +70,13 @@ func NewWorker(
 	plannedExits PlannedStaffExitsBuilder, dayLog WeekProtocolDayLogBuilder, healthData enrollmentOwner.HolidayHealthCipher,
 	careContractReminders schedulerPorts.CareContractReminders,
 	careContracts schedulerPorts.CareContractConclusion,
-	holidayClosures schedulerPorts.HolidayClosureNotifications, now func() time.Time,
+	holidayClosures schedulerPorts.HolidayClosureNotifications,
 ) (schedulerPorts.Worker, error) {
 	billing, err := NewOperatorBilling(logger)
 	if err != nil {
 		return nil, fmt.Errorf("compose worker billing: %w", err)
 	}
-	lease, runtime, err := newWorkerRuntime(db.UnitOfWork())
+	lease, runtime, err := newWorkerRuntime(db.UnitOfWork(), now)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func NewWorker(
 	if err != nil {
 		return nil, err
 	}
-	retention, err := workerRetentionOf(db, logger, settings, audit, fleet, carePlan, communicationCompose.NewParentMessageRetention(db.Pool(), settingsValues.NewParentMessageRetentionValues(settings)), notices.RejectedCleanup, studentDeletion, identity, announcements, timetableRepos.Timetable, peopleOwner, now)
+	retention, err := workerRetentionOf(db, logger, settings, audit, fleet, carePlan, communicationCompose.NewParentMessageRetention(db.Pool(), settingsValues.NewParentMessageRetentionValues(settings)), notices.RejectedCleanup, studentDeletion, identity, announcements, timetableRepos.Timetable, peopleOwner, clockOrReal(now))
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func NewWorker(
 		return nil, err
 	}
 	return schedulerRuntimeCompose.NewWorker(schedulerPorts.WorkerDependencies{
-		Logger:                       logger.With("service", "scheduler"),
+		Logger: logger.With("service", "scheduler"), Now: now,
 		Getenv:                       os.Getenv,
 		SchoolRepo:                   schedulerTenantDirectory{schools: organizations, billing: billing, schoolNames: schoolNames},
 		TenantRuntime:                runtime,

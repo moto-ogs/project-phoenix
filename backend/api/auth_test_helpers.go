@@ -228,7 +228,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		option(&settingsOverrides, &mail)
 	}
 	mailer := mail.mailer
-	dispatcher := deliveryCompose.NewMailDispatcher(mailer, logger)
+	dispatcher := deliveryCompose.NewMailDispatcher(mailer, logger, time.Now)
 	defaultFrom := email.NewEmail(cfg.EmailFromName, cfg.EmailFromAddress)
 	if defaultFrom.Address == "" {
 		defaultFrom = email.NewEmail("moto", "no-reply@moto.local")

@@ -42,8 +42,14 @@ type notificationDeliverer interface {
 // hub; over a relaying hub it stores each notification for the other APIs.
 func notificationChannel(t *testing.T, db *bun.DB, hub *realtime.Hub) notificationDeliverer {
 	t.Helper()
+	return notificationChannelAt(t, db, hub, time.Now)
+}
+
+// notificationChannelAt stores the notifications with the clock now.
+func notificationChannelAt(t *testing.T, db *bun.DB, hub *realtime.Hub, now func() time.Time) notificationDeliverer {
+	t.Helper()
 	channel, err := deliveryCompose.NewTenantSSEChannel(testpkg.TenantRuntime(t, db), hub, db, everyGuardianStillPermitted{}, slog.Default(),
-		postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase))
+		postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, now))
 	require.NoError(t, err)
 	return channel
 }
@@ -116,6 +122,22 @@ func TestWorkerNotificationReachesEveryAPI(t *testing.T) {
 	requireRelayedNotification(t, parent)
 	require.Empty(t, a.Channel, "staff saw a guardian notification")
 	require.Empty(t, other.Channel)
+}
+
+// The relaying API dates the notification's lifetime on the clock that
+// stamped it: a clock far from the real day still shows a new notification.
+func TestRelayedNotificationLivesOnTheProducersClock(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	pinned := time.Date(2021, time.March, 10, 9, 30, 0, 0, time.UTC)
+	clock := func() time.Time { return pinned }
+	worker, api := transportHubAt(t, db, false, clock), transportHubAt(t, db, true, clock)
+	schoolID := testpkg.Tenant(t)
+	_, addressed := testpkg.CreateTestCalendarStaff(t, db, "Relay", "Pinned")
+	client := staffClient(t, api, schoolID, addressed.ID)
+
+	require.NoError(t, notificationChannelAt(t, db, worker, clock).Deliver(context.Background(), staffNotification(schoolID, addressed.ID)))
+	requireRelayedNotification(t, client)
 }
 
 func TestAPINotificationIsDeliveredOnceLocallyAndRelayedToOtherAPIs(t *testing.T) {

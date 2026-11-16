@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications"
@@ -15,9 +16,9 @@ import (
 
 // NewPostgresRealtimeHub builds Delivery's process-scoped transport. API roots
 // listen and publish; standalone Workers publish without a listener connection.
-// Relayed notifications load in the school transaction of runtime (#5504).
-func NewPostgresRealtimeHub(db *bun.DB, runtime tenant.UnitOfWork, logger *slog.Logger, listen bool) (*realtime.Hub, io.Closer, error) {
-	content, err := notifications.NewRelayedContent(runtime, db, postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase))
+// Relayed notifications load in the school transaction of runtime and live on now (#5504).
+func NewPostgresRealtimeHub(db *bun.DB, runtime tenant.UnitOfWork, logger *slog.Logger, listen bool, now func() time.Time) (*realtime.Hub, io.Closer, error) {
+	content, err := notifications.NewRelayedContent(runtime, db, postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, now), now)
 	if err != nil {
 		return nil, nil, err
 	}
