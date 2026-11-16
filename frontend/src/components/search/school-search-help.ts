@@ -1,41 +1,49 @@
-import {
-  getHelpTopics,
-  helpTopicMatchesRole,
-  type HelpTopic,
-} from "~/components/help/help-content";
 import { helpConcept } from "~/lib/concepts/help";
+import {
+  HELP_SEARCH_INDEX_PATH,
+  type HelpSearchIndexEntry,
+} from "~/lib/help-search-index";
+import { isHelpTopicAvailable } from "~/lib/help-topic-availability";
 import { buildHelpHref, type HelpUrlContext } from "~/lib/help-topics";
 
 import { searchEntry, type SearchEntry } from "./school-search-catalog";
 
 /**
- * Die Hilfethemen als Ziele der Suche. Die Artikeltexte sind groß; diese
- * Datei lädt die Suche deshalb erst, wenn sie offen ist, nie mit der App.
- * Gefunden wird ein Thema über Titel, Frage und Zusammenfassung, nachrangig
- * über seine Schritte und Tipps, wie in der Suche der Hilfe selbst.
+ * Lädt den kleinen Hilfe-Index (Titel, Frage, Zusammenfassung) einmal je
+ * Seitenaufruf. Die Artikeltexte selbst lädt die Suche nie: sie wären
+ * Hunderte Kilobyte für jede Seite der App.
  */
-function bodyText(topic: HelpTopic): string {
-  return [
-    topic.summary,
-    ...topic.steps,
-    ...(topic.instructionGroups?.flatMap((group) => [
-      group.title,
-      ...group.steps,
-    ]) ?? []),
-    ...(topic.notes ?? []),
-  ].join(" ");
+let indexLoad: Promise<readonly HelpSearchIndexEntry[]> | null = null;
+
+function loadHelpIndex(): Promise<readonly HelpSearchIndexEntry[]> {
+  indexLoad ??= fetch(HELP_SEARCH_INDEX_PATH).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(`help search index failed (${response.status})`);
+    }
+    return (await response.json()) as HelpSearchIndexEntry[];
+  });
+  // Ein Fehlschlag darf beim nächsten Öffnen neu laden.
+  indexLoad.catch(() => {
+    indexLoad = null;
+  });
+  return indexLoad;
 }
 
 /** Die Themen, die die Hilfe dieser Rolle mit diesen Einstellungen zeigt. */
-export function helpSearchEntries(
+export async function helpSearchEntries(
   context: HelpUrlContext,
-): readonly SearchEntry[] {
-  return getHelpTopics(
-    context.presenceMode,
-    context.groupMode,
-    context.nfcEnabled,
-  )
-    .filter((topic) => helpTopicMatchesRole(topic, context.role))
+): Promise<readonly SearchEntry[]> {
+  const index = await loadHelpIndex();
+  return index
+    .filter((topic) =>
+      isHelpTopicAvailable(
+        topic.id,
+        context.role,
+        context.presenceMode,
+        context.groupMode,
+        context.nfcEnabled,
+      ),
+    )
     .map((topic) =>
       searchEntry(
         {
@@ -46,7 +54,7 @@ export function helpSearchEntries(
           concept: helpConcept,
           newTab: true,
         },
-        bodyText(topic),
+        topic.summary,
       ),
     );
 }

@@ -49,6 +49,7 @@ import {
   useSearchableSettings,
   type SearchEntry,
 } from "./school-search-catalog";
+import { helpSearchEntries } from "./school-search-help";
 
 const logger = createLogger({ component: "SchoolSearch" });
 
@@ -152,10 +153,9 @@ function useSchoolSearch(
 }
 
 /**
- * Die Hilfethemen dieser Person, sobald die Suche offen ist. Die Artikeltexte
- * laden als eigener Teil nach, nie mit der App; bis dahin und wenn das
- * Nachladen scheitert, bleibt die Gruppe „Hilfe“ leer und alles andere
- * findet die Suche weiter.
+ * Die Hilfethemen dieser Person, sobald die Suche offen ist, aus dem kleinen
+ * Hilfe-Index (`/help/search-index`). Bis er da ist und wenn er nicht lädt,
+ * bleibt die Gruppe „Hilfe“ leer und alles andere findet die Suche weiter.
  */
 function useSearchableHelp(enabled: boolean): readonly SearchEntry[] {
   const { data: session } = useSession();
@@ -176,9 +176,9 @@ function useSearchableHelp(enabled: boolean): readonly SearchEntry[] {
       returnTo: pathname,
     };
     let live = true;
-    import("./school-search-help").then(
-      (mod) => {
-        if (live) setEntries(mod.helpSearchEntries(context));
+    helpSearchEntries(context).then(
+      (found) => {
+        if (live) setEntries(found);
       },
       (error: unknown) => {
         // Ohne Hilfethemen sucht die Suche trotzdem; ein Hinweis darauf

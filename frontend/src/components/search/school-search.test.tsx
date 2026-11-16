@@ -42,6 +42,10 @@ vi.mock("~/lib/hooks/use-school-switches", () => ({
 vi.mock("~/lib/hooks/use-settings-schema", () => ({
   useSettingsSchema: (enabled: boolean) => mockUseSettingsSchema(enabled),
 }));
+// The help path has its own test (school-search-help.test.ts).
+vi.mock("./school-search-help", () => ({
+  helpSearchEntries: async () => [],
+}));
 vi.mock("~/contexts/ToastContext", () => ({
   useApiLoadError: () => ({
     error: loadError.current,
@@ -406,22 +410,5 @@ describe("SchoolSearchDialog", () => {
     expect(
       within(settings).queryByRole("option", { name: /Datenschutz/ }),
     ).not.toBeInTheDocument();
-  });
-
-  it("finds a help topic and opens it in a new tab", async () => {
-    signIn(["users:read"]);
-    const openSpy = vi.spyOn(globalThis, "open").mockReturnValue(null);
-    render(<SchoolSearchDialog isOpen onClose={vi.fn()} />);
-    const user = await typeQuery("Urlaub beantragen");
-    const help = await screen.findByRole("group", { name: "Hilfe" });
-    await user.click(
-      within(help).getAllByRole("option", { name: /Urlaub/ })[0]!,
-    );
-    expect(openSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/^\/help\/urlaub-beantragen\?role=caregiver&/),
-      "_blank",
-      "noopener",
-    );
-    openSpy.mockRestore();
   });
 });
