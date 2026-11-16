@@ -72,4 +72,11 @@ export function mapNotificationFeedPage(
  */
 export const NOTIFICATION_FEED_ANALYTICS_TYPES = [
   "instance_cancelled",
+  "student_pickup_changed",
+  "student_absence_reported",
+  "staff_student_note_shared",
+  "staff_survey",
+  "staff_planned_exit",
+  "staff_qualification_expiry",
+  "staff_qualification_own_expiry",
 ] as const;
