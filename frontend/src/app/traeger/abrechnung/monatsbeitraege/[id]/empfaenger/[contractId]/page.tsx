@@ -15,7 +15,7 @@ import {
 import { formatMonth } from "~/components/traeger/care-billing-format";
 import { FamilyBillingForm } from "~/components/traeger/family-billing-form";
 import { useDebtorNumberFormat } from "~/components/traeger/use-debtor-number-format";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { ApiError } from "~/lib/api-error";
@@ -35,12 +35,12 @@ export default function TraegerFamilyBillingPage() {
   const invalidateFamily = useInvalidateFamily();
   const runHref = traegerPath(`/traeger/abrechnung/monatsbeitraege/${runId}`);
   const object = "die Angabe zu Empfänger und Zahlung";
-  const runRead = useTraegerResource(
+  const runRead = useFreshTraegerResource(
     runId ? traegerBillingRunKeys.careRun(runId) : null,
     () => fetchCareRun(runId),
     object,
   );
-  const familiesRead = useTraegerResource(
+  const familiesRead = useFreshTraegerResource(
     traegerBillingRunKeys.familyBillings(),
     fetchFamilyBillings,
     object,

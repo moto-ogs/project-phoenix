@@ -363,13 +363,15 @@ const keyBaseline = JSON.parse(
 const KEYED_HOOKS = new Set([
   "useSWRAuth",
   "useFreshSWR",
+  "useConfirmedSWR",
   "useImmutableSWR",
   "useTraegerResource",
   "useFreshTraegerResource",
 ]);
-// Portal readers that hand their caller's key on; the caller's key is checked.
+// Resource readers that forward their caller's key; the caller's key is checked.
 const KEY_FORWARDERS = new Set([
   "src/components/traeger/use-traeger-resource.ts",
+  "src/lib/hooks/use-confirmed-resource.ts",
 ]);
 
 function rootIdentifier(node) {
@@ -446,8 +448,8 @@ const noFreeKey = {
         KEYED_HOOKS.has(node.property.name));
     return {
       ImportDeclaration(node) {
-        if (!isSWRModule(resolveModule(paths, packageName(node.source))))
-          return;
+        const source = resolveModule(paths, packageName(node.source));
+        if (!isSWRModule(source) && !KEY_FORWARDERS.has(`${source}.ts`)) return;
         for (const specifier of node.specifiers) {
           factories.add(specifier.local.name);
           if (specifier.type === "ImportNamespaceSpecifier")

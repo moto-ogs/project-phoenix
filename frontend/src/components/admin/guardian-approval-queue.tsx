@@ -27,10 +27,9 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
-import { isAccessRefusal } from "~/lib/access-refusal";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import type { ParentInviteMode } from "~/lib/user-context-types";
 import { useTenantRouter } from "~/lib/tenant-router";
@@ -185,7 +184,6 @@ export default function GuardianApprovalQueue({
   // Requests decided in this view; a reload that still lists one does not
   // bring it back.
   const completed = useRef(new Set<string>());
-  const [accessRefused, setAccessRefused] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<PendingApproval | null>(
     null,
@@ -200,14 +198,21 @@ export default function GuardianApprovalQueue({
 
   const {
     data,
-    error,
+    failure: error,
+    refused: accessRefused,
     mutate: mutateRequests,
-  } = useSWRAuth(enrollmentKeys.pendingGuardianApprovals(), () =>
+    readCallbacks,
+  } = useConfirmedSWR(enrollmentKeys.pendingGuardianApprovals(), () =>
     listPendingApprovals(),
   );
+  useEffect(() => {
+    if (!accessRefused) return;
+    setRejectTarget(null);
+    setActingId(null);
+  }, [accessRefused]);
   // Ladefehler stehen vor Ort, mit Wiederholen (#2517).
   const loadError = useSwrResourceLoadError(
-    [{ data, error }],
+    [{ data: data ?? undefined, error }],
     "die Liste der Anfragen",
     () => mutateRequests(),
   );
@@ -221,17 +226,19 @@ export default function GuardianApprovalQueue({
   const afterDecision = useRefreshAfterWrite(
     "die Anzeige der Anfragen",
     async () => {
-      try {
-        await mutateRequests(listPendingApprovals(), { revalidate: false });
-        setAccessRefused(false);
-      } catch (err) {
-        if (isAccessRefusal(err)) {
-          setAccessRefused(true);
-          setRejectTarget(null);
-          setActingId(null);
-        }
-        throw err;
-      }
+      await mutateRequests(
+        listPendingApprovals().then(
+          (data) => {
+            readCallbacks.onSuccess();
+            return data;
+          },
+          (err: unknown) => {
+            readCallbacks.onError(err);
+            throw err;
+          },
+        ),
+        { revalidate: false },
+      );
     },
   );
 

@@ -27,7 +27,7 @@ import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { SCHOOL_VACATION_HINTS_KEY } from "~/lib/school-vacations-api";
-import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { useFreshSWR, useTenantMutateMatching } from "~/lib/swr";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type { BulkCancelResult } from "~/lib/timetable-types";
@@ -103,7 +103,7 @@ export function BulkCancelAppointmentsModal({
     data: preview,
     error: countError,
     mutate: recount,
-  } = useSWRAuth(
+  } = useFreshSWR(
     counting
       ? tenantDailyKeys.bulkCancelPreview(from, to, includeSeries)
       : null,
@@ -141,6 +141,7 @@ export function BulkCancelAppointmentsModal({
   };
 
   const handleConfirm = async () => {
+    if (!preview || countError || cancelling) return;
     setCancelling(true);
     formErrors.clear();
     let result: Awaited<ReturnType<typeof timetableService.bulkCancel>>;

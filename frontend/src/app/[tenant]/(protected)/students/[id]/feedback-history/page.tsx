@@ -27,7 +27,7 @@ import {
 } from "../student-referrer";
 import { ApiError } from "~/lib/api-error";
 import { FeedbackHistorySkeleton } from "./page-skeleton";
-import { useSWRAuth } from "~/lib/swr";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useStudentData } from "~/lib/hooks/use-student-data";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -105,17 +105,17 @@ function StudentFeedbackHistoryPageContent() {
   } = useStudentData(studentId);
   const {
     data: feedbackData,
-    error: feedbackError,
+    failure: feedbackError,
     mutate: mutateFeedback,
-  } = useSWRAuth(
-    tenantStudentKeys.feedback(studentId),
-    () => fetchStudentFeedback(studentId),
-    { keepPreviousData: false },
+  } = useConfirmedSWR(tenantStudentKeys.feedback(studentId), () =>
+    fetchStudentFeedback(studentId),
   );
   // `null` while the history never loaded: no "0 Einträge" next to a load
   // error (#2517).
-  const feedbackHistory = feedbackData ?? null;
-  const loading = studentLoading || (!feedbackData && !feedbackError);
+  const featureDisabled = student?.feedback_enabled === false;
+  const feedbackHistory = featureDisabled ? null : feedbackData;
+  const loading =
+    !featureDisabled && (studentLoading || (!feedbackData && !feedbackError));
   const studentFailure: unknown = student ? null : (studentError ?? null);
   const feedbackFailure: unknown = feedbackData
     ? null
@@ -123,15 +123,16 @@ function StudentFeedbackHistoryPageContent() {
   const failure = studentFailure ?? feedbackFailure;
   // A switched-off feature is a state, not an error. It is read from the
   // switch in the child's record, never from the text of the 403.
-  const featureDisabled =
-    failure !== null && student?.feedback_enabled === false;
   const notFound =
     !featureDisabled && failure instanceof ApiError && failure.status === 404;
   const quiet = featureDisabled || notFound;
   const pageLoad = useSwrResourceLoadError(
     [
       { data: student ?? undefined, error: quiet ? undefined : studentError },
-      { data: feedbackData, error: quiet ? undefined : feedbackError },
+      {
+        data: feedbackData ?? undefined,
+        error: quiet ? undefined : feedbackError,
+      },
     ],
     "die Feedbackhistorie",
     () => Promise.all([refreshData(), mutateFeedback()]),

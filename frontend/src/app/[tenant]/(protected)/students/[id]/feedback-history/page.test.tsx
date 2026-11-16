@@ -1,3 +1,4 @@
+import { resetSWRScope } from "~/lib/swr/scope";
 import { getStartDateForTimeRange } from "~/lib/date-helpers";
 import { schoolDateCases, setSchoolDateClock } from "~/test/school-date-cases";
 import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
@@ -10,6 +11,9 @@ import {
 } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useInvalidateFamily } from "~/lib/swr";
+import { studentKeys } from "~/lib/swr/portal-keys";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 import StudentFeedbackHistoryPage from "./page";
 import { ApiError } from "~/lib/api-error";
@@ -459,3 +463,76 @@ describe("StudentFeedbackHistoryPage", () => {
     },
   );
 });
+
+function ReloadFeedback() {
+  const invalidate = useInvalidateFamily();
+  return (
+    <button
+      onClick={() => {
+        void invalidate(studentKeys.detail("1"));
+        void invalidate(tenantStudentKeys.feedback("1"));
+      }}
+    >
+      Reload feedback
+    </button>
+  );
+}
+
+it.each([false, true])(
+  "hides cached feedback when the confirmed feature flag turns off (refused read: %s)",
+  async (refused) => {
+    vi.clearAllMocks();
+    resetSWRScope({ revalidate: false });
+    const studentRead = vi.mocked(fetchStudent).getMockImplementation()!;
+    const feedbackRead = vi
+      .mocked(fetchStudentFeedback)
+      .getMockImplementation()!;
+    try {
+      render(
+        <>
+          <ReloadFeedback />
+          <StudentFeedbackHistoryPage />
+        </>,
+      );
+      expect(await screen.findByText("Feedback-Übersicht")).toBeVisible();
+      const original = await vi.mocked(fetchStudent).mock.results[0]!.value;
+      vi.mocked(fetchStudent).mockResolvedValue({
+        ...original,
+        feedback_enabled: false,
+      });
+      if (refused)
+        vi.mocked(fetchStudentFeedback).mockRejectedValue(
+          new ApiError("disabled", 403),
+        );
+      fireEvent.click(screen.getByRole("button", { name: "Reload feedback" }));
+      expect(
+        await screen.findByText(
+          /Die Feedbackhistorie ist für Ihre Schule ausgeschaltet/,
+        ),
+      ).toBeVisible();
+      expect(screen.queryByText("Feedback-Übersicht")).not.toBeInTheDocument();
+      expect(screen.queryByText(/\d+ Einträge?/)).not.toBeInTheDocument();
+      const readsBeforeFailure =
+        vi.mocked(fetchStudentFeedback).mock.calls.length;
+      vi.mocked(fetchStudentFeedback).mockRejectedValue(
+        new ApiError("offline", 503),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Reload feedback" }));
+      await waitFor(() =>
+        expect(fetchStudentFeedback).toHaveBeenCalledTimes(
+          readsBeforeFailure + 1,
+        ),
+      );
+      expect(
+        screen.getByText(
+          /Die Feedbackhistorie ist für Ihre Schule ausgeschaltet/,
+        ),
+      ).toBeVisible();
+      expect(screen.queryByText("Feedback-Übersicht")).not.toBeInTheDocument();
+      expect(screen.queryByText(/\d+ Einträge?/)).not.toBeInTheDocument();
+    } finally {
+      vi.mocked(fetchStudent).mockImplementation(studentRead);
+      vi.mocked(fetchStudentFeedback).mockImplementation(feedbackRead);
+    }
+  },
+);

@@ -1,3 +1,4 @@
+import { resetSWRScope } from "~/lib/swr/scope";
 import {
   fireEvent,
   render as renderComponent,
@@ -135,6 +136,18 @@ vi.mock("~/components/enrollment/phase-response-overview", () => ({
   ),
 }));
 
+import { useInvalidateFamily } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+
+function ReloadPhase() {
+  const invalidate = useInvalidateFamily();
+  return (
+    <button onClick={() => void invalidate(enrollmentKeys.adminRequests("1"))}>
+      Reload phase
+    </button>
+  );
+}
+
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { AdminEnrollmentPhaseDetail } from "./admin-enrollment-phase-detail";
@@ -170,6 +183,7 @@ const emptyReport = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetSWRScope({ revalidate: false });
   mocks.listPhases.mockResolvedValue([phase]);
   mocks.listAdminRequests.mockResolvedValue([]);
   mocks.getCareUsageReport.mockResolvedValue(emptyReport);
@@ -247,4 +261,27 @@ describe("AdminEnrollmentPhaseDetail: Rücklauf (#3379)", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("Eingänge")).toBeInTheDocument();
   });
+});
+
+it("keeps refused phase data hidden through a later transient failure and recovers on success", async () => {
+  render(
+    <>
+      <ReloadPhase />
+      <AdminEnrollmentPhaseDetail phaseId="1" />
+    </>,
+  );
+  expect(await screen.findByText(phase.name)).toBeVisible();
+  mocks.listAdminRequests.mockRejectedValue(new ApiError("denied", 403));
+  fireEvent.click(screen.getByRole("button", { name: "Reload phase" }));
+  const refusalText = catalogText("general.permission", "die Anmeldephase");
+  expect(await screen.findByText(refusalText)).toBeVisible();
+  expect(screen.queryByText(phase.name)).not.toBeInTheDocument();
+  mocks.listAdminRequests.mockRejectedValue(new ApiError("offline", 503));
+  fireEvent.click(screen.getByRole("button", { name: "Reload phase" }));
+  await waitFor(() => expect(mocks.listAdminRequests).toHaveBeenCalledTimes(3));
+  expect(await screen.findByText(refusalText)).toBeVisible();
+  expect(screen.queryByText(phase.name)).not.toBeInTheDocument();
+  mocks.listAdminRequests.mockResolvedValue([]);
+  fireEvent.click(screen.getByRole("button", { name: "Reload phase" }));
+  expect(await screen.findByText(phase.name)).toBeVisible();
 });

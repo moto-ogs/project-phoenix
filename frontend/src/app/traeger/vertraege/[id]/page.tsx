@@ -102,6 +102,7 @@ export default function TraegerVertragPage() {
     refused,
     mutate,
     reload,
+    readCallbacks,
   } = useTraegerResource(
     id ? traegerContractKeys.contract(id) : null,
     () => fetchCareContract(id),
@@ -147,7 +148,19 @@ export default function TraegerVertragPage() {
     "die Anzeige des Vertrags",
     async () => {
       void invalidateFamily(traegerContractKeys.listFamily);
-      await mutate(fetchCareContract(id), { revalidate: false });
+      await mutate(
+        fetchCareContract(id).then(
+          (data) => {
+            readCallbacks.onSuccess();
+            return data;
+          },
+          (err: unknown) => {
+            readCallbacks.onError(err);
+            throw err;
+          },
+        ),
+        { revalidate: false },
+      );
     },
   );
 
@@ -430,7 +443,13 @@ export default function TraegerVertragPage() {
           </>
         ) : null
       }
-      error={contract ? loadError : (afterSend.error ?? loadError)}
+      error={
+        refused
+          ? loadError
+          : contract
+            ? loadError
+            : (afterSend.error ?? loadError)
+      }
       loading={loading && !afterSend.error}
       overlays={
         <>

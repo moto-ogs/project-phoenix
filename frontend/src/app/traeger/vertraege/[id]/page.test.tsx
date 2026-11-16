@@ -829,7 +829,7 @@ describe("TraegerVertragPage", () => {
       ),
     ).toBeInTheDocument();
   });
-  it.each([403, 503])(
+  it.each([403, 404, 503])(
     "handles a %s contract reload after sending",
     async (status) => {
       api.fetchCareContract
@@ -848,6 +848,18 @@ describe("TraegerVertragPage", () => {
           await screen.findByRole("dialog", { name: "Vertrag senden?" }),
         ).getByRole("button", { name: "Vertrag senden" }),
       );
+      if (status === 404) {
+        expect(
+          await screen.findByText(catalogText("general.input", "der Vertrag")),
+        ).toBeVisible();
+        expect(screen.queryByText("Vertragsangaben")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("pdf-preview")).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole("button", { name: "Erneut senden" }),
+        ).not.toBeInTheDocument();
+        expect(api.sendCareContracts).toHaveBeenCalledTimes(1);
+        return;
+      }
       if (status === 403) {
         // #6801: the page loads anew; its first load shows the refusal.
         await expectPageReloadedAfterRefusal();

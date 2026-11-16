@@ -18,14 +18,17 @@ afterAll(removeProbeDirectories);
 const RULE = "swr(no-direct-import)";
 
 describe.concurrent("swr/no-direct-import", () => {
-  it("rejects new free hook keys but accepts factory keys", async () => {
+  it.each([
+    ["useSWRAuth", "~/lib/swr"],
+    ["useConfirmedSWR", "~/lib/hooks/use-confirmed-resource"],
+  ])("checks forwarded keys of %s, including aliases", async (hook, source) => {
     const bad = await lintSource(
-      'import { useSWRAuth } from "~/lib/swr"; export function useProbe() { return useSWRAuth("new-key", async () => []); }',
+      `import { ${hook} as useRead } from "${source}"; export function useProbe() { return useRead("new-key", async () => []); }`,
     );
     expect(bad.status, bad.output).toBe(1);
     expect(bad.output).toContain("swr(no-free-key)");
     const good = await lintSource(
-      'import { useSWRAuth } from "~/lib/swr"; import { roomKeys } from "~/lib/swr/rooms-keys"; export function useProbe() { return useSWRAuth(roomKeys.key(), async () => []); }',
+      `import { ${hook} as useRead } from "${source}"; import { roomKeys } from "~/lib/swr/rooms-keys"; export function useProbe() { return useRead(roomKeys.key(), async () => []); }`,
     );
     expect(good.status, good.output).toBe(0);
   });

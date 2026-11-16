@@ -93,5 +93,6 @@ function useTraegerResult<T>(
     refused: resource.refused,
     reload: resource.reload,
     mutate: response.mutate,
+    readCallbacks: guard.callbacks,
   };
 }

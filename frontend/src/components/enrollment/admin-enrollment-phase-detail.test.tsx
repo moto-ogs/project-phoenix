@@ -10,6 +10,7 @@ import type { ReactElement, ReactNode } from "react";
 import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { resetSWRScope } from "~/lib/swr/scope";
 import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { SWRConfig } from "~/lib/swr/testing";
@@ -285,6 +286,7 @@ async function renderPhase() {
 }
 
 beforeEach(() => {
+  resetSWRScope({ revalidate: false });
   for (const mock of Object.values(mocks)) {
     mock.mockReset();
   }

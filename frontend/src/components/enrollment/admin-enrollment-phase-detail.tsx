@@ -99,7 +99,7 @@ import {
   ENROLLMENT_QR_CODE,
   PublicLinkCopyButton,
 } from "~/components/enrollment/public-link-copy-button";
-import { isAccessRefusal } from "~/lib/access-refusal";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import { ApiError } from "~/lib/api-error";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
@@ -142,25 +142,25 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
   >(async () => undefined);
   const showReportError = reportLoadError.show;
   const clearReportError = reportLoadError.clear;
-  const phasesRead = useSWRAuth(enrollmentKeys.phases(), () => listPhases());
-  const requestsRead = useSWRAuth(
+  const phasesRead = useConfirmedSWR(enrollmentKeys.phases(), () =>
+    listPhases(),
+  );
+  const requestsRead = useConfirmedSWR(
     enrollmentKeys.adminRequests(phaseId),
     () => listAdminRequests({ phaseId }),
-    { keepPreviousData: false },
   );
   const { mutate: mutatePhases } = phasesRead;
   const { mutate: mutateRequests } = requestsRead;
   const pageError = useSwrResourceLoadError(
     [
-      { data: phasesRead.data, error: phasesRead.error },
-      { data: requestsRead.data, error: requestsRead.error },
+      { data: phasesRead.data ?? undefined, error: phasesRead.failure },
+      { data: requestsRead.data ?? undefined, error: requestsRead.failure },
     ],
     "die Anmeldephase",
     () => Promise.all([mutatePhases(), mutateRequests()]),
   );
   // A refused read shows nothing of the phase, its list or its report.
-  const accessRefused =
-    isAccessRefusal(phasesRead.error) || isAccessRefusal(requestsRead.error);
+  const accessRefused = phasesRead.refused || requestsRead.refused;
   const phase = accessRefused
     ? null
     : (phasesRead.data?.find((item) => item.id === phaseId) ?? null);
@@ -442,8 +442,32 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
     "die Anzeige der Anmeldephase",
     async () => {
       await Promise.all([
-        mutatePhases(listPhases(), { revalidate: false }),
-        mutateRequests(listAdminRequests({ phaseId }), { revalidate: false }),
+        mutatePhases(
+          listPhases().then(
+            (data) => {
+              phasesRead.readCallbacks.onSuccess();
+              return data;
+            },
+            (err: unknown) => {
+              phasesRead.readCallbacks.onError(err);
+              throw err;
+            },
+          ),
+          { revalidate: false },
+        ),
+        mutateRequests(
+          listAdminRequests({ phaseId }).then(
+            (data) => {
+              requestsRead.readCallbacks.onSuccess();
+              return data;
+            },
+            (err: unknown) => {
+              requestsRead.readCallbacks.onError(err);
+              throw err;
+            },
+          ),
+          { revalidate: false },
+        ),
       ]);
       await loadReport(reportFiltersRef.current, undefined, { rethrow: true });
     },
