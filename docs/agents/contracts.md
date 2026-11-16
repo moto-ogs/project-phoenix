@@ -65,7 +65,7 @@ PIN-protected requests with the existing `401 / iot.device_pin_invalid` envelope
 no `OGS_DEVICE_PIN` fallback exists. Missing resolver wiring fails at construction.
 Device-only routes remain PIN-free. Already deployed kiosks handle the same code
 and headers, so no wire transition or compatibility-removal slice is needed.
-Migration `20261116150500` stored the former default 1234 for every school
+Migration `20261116150500` stored the former default 1234 for every NFC school
 without a PIN, so no tablet stopped on that deployment. Writes refuse PINs
 that are easy to guess (`settings.device_pin_too_simple`), and
 `GET /api/settings/device-pin-status` (`config:manage`) tells the tenant portal

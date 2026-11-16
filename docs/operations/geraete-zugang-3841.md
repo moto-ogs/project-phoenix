@@ -123,7 +123,7 @@ und Speicherung bleiben nach Nutzerentscheidung vom 23.10.2026 unverändert.
 Dieser Slice erfüllt nur den Teil „Schul-Settings ohne Env-Fallback“ von AK1.
 Er erfüllt weder individuelle Einrichtung ohne Standard-PIN noch Hashing.
 Nachtrag #7175: Der Registry-Standard ist jetzt leer; leicht zu ratende PINs
-werden abgelehnt. Schulen ohne eigene PIN behielten per Migration 1234 und
+werden abgelehnt. NFC-Schulen ohne eigene PIN behielten per Migration 1234 und
 sehen einen Hinweis, bis sie eine eigene PIN setzen. Hashing bleibt offen.
 Anmeldeversuchsschutz (3841-c), MFA (3841-f) und produktive Nachweise sind
 nicht Gegenstand dieses Slices.

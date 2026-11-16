@@ -28,6 +28,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken/tokentest"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
+	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -326,7 +327,7 @@ func setupSettingsCallbackRoute(t *testing.T) *settingsCallbackRoute {
 		SetHomeBlockPolicies(context.Context, int64, int64, []string, map[string]string) error
 	})
 	require.True(t, ok)
-	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, repos.Enrollment().SchemaReferencesLegalDocument).SettingsRouter(), hub: hub}
+	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, settingsCompose.NewDevicePINStatus(module.Settings), repos.Enrollment().SchemaReferencesLegalDocument).SettingsRouter(), hub: hub}
 }
 
 func setupOperatorInvitationRoute(t *testing.T, graph *goldenRuntime) chi.Router {

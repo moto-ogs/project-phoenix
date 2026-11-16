@@ -17,14 +17,17 @@ func init() {
 	MigrationRegistry.Register(&Migration{
 		Version:     devicePINKeepsFormerDefaultVersion,
 		Description: devicePINKeepsFormerDefaultDescription,
-		DependsOn:   []string{configSettingValuesVersion},
+		DependsOn:   []string{configSettingValuesVersion, moduleNFCSwitchVersion},
 	})
 
 	Migrations.MustRegister(devicePINKeepsFormerDefaultUp, devicePINKeepsFormerDefaultDown)
 }
 
-// devicePINKeepsFormerDefaultUp gives every school without a device PIN of its
-// own the former registry default 1234 as an explicit value (#7175). The
+// devicePINKeepsFormerDefaultUp gives every school that uses NFC-Anwesenheit
+// and has no device PIN of its own the former registry default 1234 as an
+// explicit value (#7175). The module switch defaults to booked, so only an
+// explicit false leaves a school out; such a school sets its own PIN when it
+// books NFC later. The
 // registry default becomes empty, and an empty PIN locks the tablets. With the
 // explicit value no tablet stops working on the deployment; the school admins
 // see a notice until they choose a PIN that is not easy to guess. Each value
@@ -46,6 +49,12 @@ func devicePINKeepsFormerDefaultUp(ctx context.Context, db *bun.DB) error {
 			INSERT INTO config.setting_values (tenant_id, setting_key, value)
 			SELECT s.id, 'security.ogs_device_pin', '"1234"'::jsonb
 			FROM platform.schools s
+			WHERE NOT EXISTS (
+				SELECT 1 FROM config.setting_values nfc
+				WHERE nfc.tenant_id = s.id
+				  AND nfc.setting_key = 'module.nfc_anwesenheit'
+				  AND nfc.value = 'false'::jsonb
+			)
 			ON CONFLICT (tenant_id, setting_key) DO NOTHING
 			RETURNING tenant_id, setting_key
 		)

@@ -9,8 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Schools without a PIN of their own keep 1234, so no tablet stops on the
-// deployment; a school's own PIN, even an empty one, stays (#7175).
+// Schools using NFC without a PIN of their own keep 1234, so no tablet stops
+// on the deployment; a school's own PIN, even an empty one, stays, and a school
+// without NFC gets no PIN (#7175).
 func TestDevicePINKeepsFormerDefault(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -18,12 +19,14 @@ func TestDevicePINKeepsFormerDefault(t *testing.T) {
 	noPIN := testpkg.Tenant(t)
 	ownPIN, _ := testpkg.CreateTestTenant(t, db)
 	emptyPIN, _ := testpkg.CreateTestTenant(t, db)
+	noNFC, _ := testpkg.CreateTestTenant(t, db)
 
 	_, err := db.ExecContext(ctx, `
 		INSERT INTO config.setting_values (tenant_id, setting_key, value)
 		VALUES (?, 'security.ogs_device_pin', '"4729"'::jsonb),
-		       (?, 'security.ogs_device_pin', '""'::jsonb)`,
-		ownPIN, emptyPIN)
+		       (?, 'security.ogs_device_pin', '""'::jsonb),
+		       (?, 'module.nfc_anwesenheit', 'false'::jsonb)`,
+		ownPIN, emptyPIN, noNFC)
 	require.NoError(t, err)
 
 	require.NoError(t, devicePINKeepsFormerDefaultUp(ctx, db))
@@ -39,6 +42,10 @@ func TestDevicePINKeepsFormerDefault(t *testing.T) {
 	assert.Equal(t, "1234", pin(noPIN), "a school on the former default keeps it")
 	assert.Equal(t, "4729", pin(ownPIN), "a school's own PIN stays")
 	assert.Equal(t, "", pin(emptyPIN), "an explicit empty PIN stays")
+	var noNFCPins int
+	require.NoError(t, db.NewRaw(`SELECT count(*) FROM config.setting_values
+		WHERE tenant_id = ? AND setting_key = 'security.ogs_device_pin'`, noNFC).Scan(ctx, &noNFCPins))
+	assert.Zero(t, noNFCPins, "a school without NFC sets its own PIN when it books NFC")
 
 	var audited []struct {
 		TenantID int64  `bun:"tenant_id"`

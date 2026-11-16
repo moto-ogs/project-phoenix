@@ -278,7 +278,7 @@ func mountSchoolRoutes(
 	tenant.Mount("/schedules", timetableHTTPAdapter.NewSchedulesResource(timetableOwner).Router(ProtectedTenantRoutes))
 	// The schema-driven settings system.
 	homeLayouts := requireHomeLayoutOperations(settings)
-	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, owners.NewEnrollmentBookings().SchemaReferencesLegalDocument).SettingsRouter())
+	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, settingsCompose.NewDevicePINStatus(settings), owners.NewEnrollmentBookings().SchemaReferencesLegalDocument).SettingsRouter())
 	// Class-list-only entries (#2382).
 	tenant.Mount("/class-list-entries", newClassListEntriesResource(classListEntries, logger.With("handler", "class-list-entries")).Router())
 	tenant.Mount("/database", newDatabaseStatsRouter(databaseStats, logger.With("handler", "database")))

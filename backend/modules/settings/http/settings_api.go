@@ -32,6 +32,7 @@ const (
 type SettingsResource struct {
 	operations  Operations
 	homeLayouts HomeLayoutOperations
+	devicePIN   DevicePINOperations
 	runtime     Runtime
 }
 
@@ -41,7 +42,6 @@ type Operations interface {
 	SetValue(context.Context, int64, int64, []string, string, any) error
 	ResetValue(context.Context, int64, int64, []string, string) error
 	PayrollStatus(context.Context) (any, error)
-	DevicePINStatus(context.Context) (any, error)
 	GetLoginImageURL(context.Context, int64) (string, error)
 	SetLoginImageURL(context.Context, int64, string) (string, error)
 	ClearLoginImageURL(context.Context, int64) (string, error)
@@ -73,8 +73,15 @@ const (
 	settingsErrorForbidden = "forbidden"
 )
 
-func NewSettingsResource(operations Operations, homeLayouts HomeLayoutOperations, runtime Runtime) *SettingsResource {
-	return &SettingsResource{operations: operations, homeLayouts: homeLayouts, runtime: runtime}
+// DevicePINOperations reports whether the school still needs a device PIN of
+// its own (#7175). Like HomeLayoutOperations it stays apart from the legacy
+// operations graph.
+type DevicePINOperations interface {
+	DevicePINStatus(context.Context) (any, error)
+}
+
+func NewSettingsResource(operations Operations, homeLayouts HomeLayoutOperations, devicePIN DevicePINOperations, runtime Runtime) *SettingsResource {
+	return &SettingsResource{operations: operations, homeLayouts: homeLayouts, devicePIN: devicePIN, runtime: runtime}
 }
 
 // SettingsRouter returns a configured router for settings endpoints.

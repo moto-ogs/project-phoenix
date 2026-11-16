@@ -18,7 +18,7 @@ import (
 	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
 )
 
-func newSettingsResource(db transactionruntime.Database, operations settingsHTTP.Operations, homeLayouts settingsHTTP.HomeLayoutOperations, references func(context.Context, string, string) (bool, error)) *settingsHTTP.SettingsResource {
+func newSettingsResource(db transactionruntime.Database, operations settingsHTTP.Operations, homeLayouts settingsHTTP.HomeLayoutOperations, devicePIN settingsHTTP.DevicePINOperations, references func(context.Context, string, string) (bool, error)) *settingsHTTP.SettingsResource {
 	settingsRuntime := settingsHTTP.NewRuntime(settingsHTTP.RuntimeDependencies{
 		DocumentCleanup: fileStorageCompose.NewUploadCleanup(db.Pool(), "enrollment-legal-documents").Queue,
 		Protected: func(r chi.Router, fn func(chi.Router, settingsHTTP.Middleware)) {
@@ -77,7 +77,7 @@ func newSettingsResource(db transactionruntime.Database, operations settingsHTTP
 			return referenced, nil
 		},
 	})
-	return settingsHTTP.NewSettingsResource(operations, homeLayouts, settingsRuntime)
+	return settingsHTTP.NewSettingsResource(operations, homeLayouts, devicePIN, settingsRuntime)
 }
 
 // settingsInputError renders a rejected setting value. A visible attendance

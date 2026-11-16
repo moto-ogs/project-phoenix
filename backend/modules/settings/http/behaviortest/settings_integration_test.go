@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/settings"
+	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 
@@ -63,7 +64,7 @@ func setupSettingsModuleWithHook(t *testing.T, hook *settingsValueSetHook) *sett
 		}
 		return hook.run(hookCtx, tenantID, key, value)
 	})
-	ctx.resource = settingsHTTP.NewSettingsResource(operations, homeLayouts, runtime)
+	ctx.resource = settingsHTTP.NewSettingsResource(operations, homeLayouts, settingsCompose.NewDevicePINStatus(svc.Settings), runtime)
 	return ctx
 }
 

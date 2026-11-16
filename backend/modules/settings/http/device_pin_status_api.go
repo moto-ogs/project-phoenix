@@ -8,7 +8,7 @@ import (
 // device PIN of the school's own (#7175). The tenant portal shows a notice
 // that cannot be dismissed until the PIN is set.
 func (rs *SettingsResource) getDevicePINStatus(w http.ResponseWriter, r *http.Request) {
-	status, err := rs.operations.DevicePINStatus(r.Context())
+	status, err := rs.devicePIN.DevicePINStatus(r.Context())
 	if err != nil {
 		rs.runtime.RenderError(w, r, http.StatusInternalServerError, err)
 		return
