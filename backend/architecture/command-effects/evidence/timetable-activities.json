@@ -20265,6 +20265,22 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeService.StaffNoticeFor",
+      "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.StaffNotices.StaffNoticeFor",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeService.StaffNoticeFor",
+      "binding_digest": "72588c72a13f12f76057f35e332960ee",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.StaffNotices.StaffNoticeFor",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeService.StaffNoticesOn",
       "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.StaffNotices.StaffNoticesOn",
@@ -31399,6 +31415,46 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "binding_digest": "d1307be551b88102af9b24f980f01bd1",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "source_owner": "timetable-activities",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.StaffWithPermission",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "binding_digest": "89913782457aae6b12db7d640534390e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "binding_digest": "b8b03d4c5b0a7d8f7a3d6358597c7052",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "binding_digest": "7e47942047e89a976f40946d5edd73c9",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.ListStaffWithPermission",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "binding_digest": "c2ef6537b6d30c6dafd5180656d22acf",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeRecords.Acknowledge",

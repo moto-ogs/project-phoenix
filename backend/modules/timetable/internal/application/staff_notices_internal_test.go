@@ -439,7 +439,7 @@ func TestStaffNoticeUpdateAcknowledgesForTheAuthor(t *testing.T) {
 	repo := &fakeNoticeRepo{notices: []*scheduleModels.StaffNotice{notice}}
 	svc := newStaffNotices(repo, StaffNoticeDependencies{})
 
-	_, err := svc.UpdateStaffNotice(context.Background(), 61, timetable.StaffNoticeInput{
+	_, err := svc.UpdateStaffNotice(context.Background(), 61, 0, timetable.StaffNoticeInput{
 		Title:                   "Hinweis",
 		ValidFrom:               "2026-08-01",
 		RequiresAcknowledgement: true,

@@ -231,6 +231,18 @@ without the person who cancelled; feed and push from today up to 14 days
 ahead, feed only later, nothing for the past. A bulk cancellation of a
 period writes no entries per block.
 
+A new Hinweis der Leitung (`staff_notice_published`, #7143) reaches the
+readers of the Tagesinformationen in the OGS portal: the school's staff whose
+account holds `users:read`, without the person who saved it. It is written
+when a saved notice newly reaches them: created active, switched on again or
+its audience widened to include them; never for another edit. A notice only for the Lehrkräfte of moto schule writes no
+entries until the school portal has its feed (#7139). Feed and push while the
+notice starts within 14 days, feed only later, nothing once it has ended. The
+push is off by default (`FilterOptedIn`); the school switch is
+`notifications.staff_notice_published_enabled`. The link
+`/tagesinformationen?hinweis=<id>` opens the notice through
+`GET /api/staff-notices/{id}`, also before it applies.
+
 ### Web Push (#2003)
 
 - **Keys**: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBSCRIBER`

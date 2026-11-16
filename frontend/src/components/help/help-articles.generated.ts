@@ -8509,10 +8509,13 @@ export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
       "Wählen Sie unter `Wochentage` die Tage aus, an denen der Hinweis erscheint.",
       "Wählen Sie `Speichern`.",
     ],
-    result: "Der Hinweis steht sofort unter `Heute` für die gewählte Gruppe.",
+    result:
+      "Der Hinweis steht an seinen Tagen unter `Heute` für die gewählte Gruppe. Bei `Alle` und `Nur Betreuung` steht er außerdem sofort bei den Benachrichtigungen der Betreuung.",
     notes: [
       "Mit `Kenntnisnahme verlangen` sehen Sie später, wer den Hinweis bestätigt hat.",
       "`Nur Lehrkräfte` erreicht die Lehrkräfte in moto schule. Unter `Für wen` steht das auch im Fenster.",
+      "Sie selbst bekommen zu Ihrem eigenen Hinweis keine Benachrichtigung. Ein Hinweis, der schon vorbei ist, auch nicht.",
+      "Speichern Sie einen Hinweis ohne Haken bei `Aktiv`, kommt die Benachrichtigung erst, wenn Sie den Haken setzen.",
     ],
     differences: [
       "Ein wichtiger Hinweis trägt `Wichtig`, ein abgeschalteter `Abgeschaltet`.",
@@ -8533,7 +8536,8 @@ export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
 /**
  * Die Glocke oben rechts im Staff-Portal (#7148): oben `Erinnerungen`, darunter
  * `Hinweise` (der Benachrichtigungs-Feed). Hinweise kommen zur Absage eines
- * Termins und zu den bisherigen Mitteilungs-Arten außer Nachrichten (#7137).
+ * Termins, zu neuen Hinweisen der Leitung und zu den bisherigen
+ * Mitteilungs-Arten außer Nachrichten (#7137, #7143).
  */
 export const staffNotificationsTopic =
   function staffNotificationsTopic(): HelpTopic {
@@ -8557,6 +8561,7 @@ export const staffNotificationsTopic =
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder alle als gelesen markieren. Das Öffnen der Glocke allein ändert nichts.",
       notes: [
         "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis. Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
+        "Schreibt die Leitung unter `Hinweise der Leitung` etwas Neues für die Betreuung, steht es hier als `Neuer Hinweis der Leitung`. Ein Klick darauf öffnet die Seite `Hinweise der Leitung` mit diesem Text, auch wenn er erst später gilt.",
         "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
         "Die Leitung bekommt außerdem `Austritte aus dem Team` und `Ablaufende Nachweise im Team`. Für Ihre eigenen Nachweise gibt es `Eigene Nachweise`.",
         "Nachrichten stehen nicht in der Glocke. Neue Nachrichten zählt moto bei `Nachrichten` und `Team-Chat`.",
@@ -8566,6 +8571,7 @@ export const staffNotificationsTopic =
         "Weiter unten in der Liste lädt moto ältere Hinweise nach. Sie können auch `Weitere laden` wählen.",
         "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Bei Absagen passiert das nur von heute bis in 14 Tagen.",
         "Die Mitteilung aufs Handy stellen Sie in Ihrem `Profil` unter `Benachrichtigungen` für jede Art ein. Schalten Sie sie aus, kommt der Hinweis in der Glocke trotzdem.",
+        "Zu neuen Hinweisen der Leitung kommt keine Mitteilung aufs Handy. Sie können sie im `Profil` unter `Benachrichtigungen` bei `Hinweise der Leitung` einschalten. Dann kommt sie, wenn der Hinweis schon gilt oder in den nächsten 14 Tagen beginnt.",
         "Die Einstellung für `Absage eines Termins` gilt auch, wenn die Absage zurückgenommen wird.",
       ],
       differences: [
@@ -8576,6 +8582,8 @@ export const staffNotificationsTopic =
       ],
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einer Absage? Ihre Schule kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder einen Hinweis noch eine Mitteilung aufs Handy. Fragen Sie Ihre Leitung.",
+        "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Ihre Schule kann `Benachrichtigung bei neuem Hinweis der Leitung` ausschalten. Fragen Sie Ihre Leitung.",
+        "Die Seite `Hinweise der Leitung` zeigt `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder abgeschaltet.",
         "Es kommt kein Hinweis zu einer Krankmeldung? Ihre Schule kann `Hinweis bei Krankmeldung` ausschalten. Manche Schulen melden sie auch nur Personen, die gerade im Dienst sind. Fragen Sie Ihre Leitung.",
         "Ein Hinweis öffnet eine Seite mit `Sie haben keinen Zugriff auf einen eigenen Dienstplan.`? Dann führt Ihre Schule für Sie keinen eigenen Dienstplan in moto. Fragen Sie Ihre Leitung.",
       ],

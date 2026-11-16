@@ -152,6 +152,10 @@ const (
 	// staffing that it was cancelled (#7148). It writes the notification feed
 	// and pushes while the cancellation takes effect within 14 days.
 	TypeInstanceCancelled = contract.NotificationInstanceCancelled
+	// TypeStaffNoticePublished tells the audience of a Hinweis der Leitung
+	// (Tagesinformation) that it was published (#7143). It writes the
+	// notification feed; the push is off until the person switches it on.
+	TypeStaffNoticePublished = contract.NotificationStaffNoticePublished
 	// TypeInstanceReinstated tells the same staff that a cancellation was
 	// taken back (#7151). It takes back TypeInstanceCancelled.
 	TypeInstanceReinstated = contract.NotificationInstanceReinstated
@@ -328,6 +332,7 @@ func init() {
 	registerParentStatusTypes()
 	registerSchoolTypes()
 	registerStaffAppointmentTypes()
+	registerStaffNoticeTypes()
 }
 
 // registerStaffAppointmentTypes registers the staff notices about the
@@ -357,6 +362,26 @@ func registerStaffAppointmentTypes() {
 		Permission:  permissionActivitiesRead,
 		DefaultOn:   true,
 		Reverses:    TypeInstanceCancelled,
+		Feed:        true,
+	})
+}
+
+// registerStaffNoticeTypes registers the notice about a new Hinweis der
+// Leitung (#7143). It writes the notification feed; the person's switch
+// decides only the push.
+func registerStaffNoticeTypes() {
+	// A Hinweis der Leitung (#7143) reaches the readers of the
+	// Tagesinformationen, who hold users:read. The feed entry always comes;
+	// the push only for who switched it on.
+	RegisterType(TypeDefinition{
+		Key:         TypeStaffNoticePublished,
+		Label:       "Hinweise der Leitung",
+		Description: "Wenn die Leitung einen neuen Hinweis für das Team anlegt. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten.",
+		Group:       GroupMessages,
+		Portal:      PortalStaff,
+		TenantGate:  settingStaffNoticePublishedEnabled,
+		Permission:  permissionUsersRead,
+		SortOrder:   7,
 		Feed:        true,
 	})
 }
