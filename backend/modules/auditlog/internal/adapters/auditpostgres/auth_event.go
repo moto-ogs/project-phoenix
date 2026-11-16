@@ -20,16 +20,17 @@ const (
 // AuthEventRepository implements the audit.AuthEventRepository interface
 type AuthEventRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
 // NewAuthEventRepository creates a new auth event repository
-func NewAuthEventRepository(runtime Runtime) *AuthEventRepository {
-	return &AuthEventRepository{runtime: requireRuntime(runtime)}
+func NewAuthEventRepository(runtime Runtime, now func() time.Time) *AuthEventRepository {
+	return &AuthEventRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 // Create creates a new auth event
 func (r *AuthEventRepository) Create(ctx context.Context, event *audit.AuthEvent) error {
-	return NewAppender(r.runtime).Append(ctx, event)
+	return NewAppender(r.runtime, r.now).Append(ctx, event)
 }
 
 // FindByID finds an auth event by ID
@@ -136,7 +137,7 @@ func (r *AuthEventRepository) CreateStaffPreviewEndOnce(ctx context.Context, eve
 	if event == nil || event.EventType != audit.EventTypeStaffPreviewEnded {
 		return false, errors.New("staff preview end event is required")
 	}
-	return NewAppender(r.runtime).AppendOnce(ctx, event)
+	return NewAppender(r.runtime, r.now).AppendOnce(ctx, event)
 }
 
 // StaffPreviewEnded reports whether the preview instance previewID of

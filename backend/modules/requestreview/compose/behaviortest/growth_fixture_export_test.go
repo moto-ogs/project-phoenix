@@ -29,6 +29,7 @@ func NewGrowthQuery(t *testing.T, db *bun.DB, svc ReviewComposition, master care
 		Queues: requestreview.Queues{DirectCorrections: corrections, MasterData: nativeMasterQueue(master), CareSchedule: nativeCareQueue(schedule, reviewToday), Offering: nativeOfferingQueue(offering, reviewToday), Excused: nativeExcusedQueue(svc.ExcusedRequests, reviewToday)},
 		Access: queueTestAccess{}, Students: students, FamilyProtection: svc.FamilyProtection,
 		Submitters: reviewbindings.NewSubmitterDirectory(svc.PeopleDirectory),
+		Today:      func() requestreview.Date { return requestreview.Date(reviewToday()) },
 	})
 }
 

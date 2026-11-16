@@ -13,7 +13,8 @@ import (
 // „Personal beim Träger“ in the Operator portal, then the Personalverwaltung
 // confirms the proposals of the overview, choosing the first value where the
 // schools disagree, and keeps an invented IBAN for the first record; then
-// it imports invented people from a file (#4724) and seeds
+// it imports invented people from a file (#4724), hires one new person
+// (#7206) and seeds
 // the Abwesenheitsarten and Kontingente of the Träger (#4710). Several
 // demo schools seed the same Träger; a release or link another school's run
 // made is no error.
@@ -50,7 +51,7 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
-	linked, first, records, err := seedTraegerStaffLinkAll(rt.Client, auth, suggestions)
+	linked, first, records, err := seedTraegerStaffLinkAll(rt.Client, auth, withoutVisitorStaff(rt, suggestions))
 	if err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 			return fmt.Errorf("keep the bank values of a Träger staff record: %w", err)
 		}
 	}
-	imported, err := seedTraegerStaffImport(rt.Client, auth)
+	imported, hired, err := seedTraegerStaffIntake(rt.Client, auth, rt.Bootstrap.SchoolID)
 	if err != nil {
 		return err
 	}
@@ -84,8 +85,8 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, %d planned shifts, Springer blocked: %t, month closed: %t, %d contracts in the payroll file\n",
-		linked, contracts, imported, planned, blocked, closed, paid)
+	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, person hired: %t, %d planned shifts, Springer blocked: %t, month closed: %t, %d contracts in the payroll file\n",
+		linked, contracts, imported, hired, planned, blocked, closed, paid)
 	return seedTraegerAbsences(ctx, rt, auth)
 }
 
@@ -134,6 +135,30 @@ type seedTraegerStaffSuggestion struct {
 		SchoolID int64 `json:"school_id"`
 		StaffID  int64 `json:"staff_id"`
 	} `json:"members"`
+}
+
+// withoutVisitorStaff drops the proposals that name the visitor's
+// employment: the visitor's name never reaches a record of the Träger, which
+// outlives the visit (ADR 0233 point 9, ADR 0271).
+func withoutVisitorStaff(rt *Runtime, suggestions []seedTraegerStaffSuggestion) []seedTraegerStaffSuggestion {
+	if rt.seedVisitor().empty() || rt.Bootstrap == nil || rt.FixedSeeder == nil {
+		return suggestions
+	}
+	staff := DemoStaff[visitorStaffIndex]
+	visitorStaffID := rt.FixedSeeder.staffIDs[staff.FirstName+" "+staff.LastName]
+	kept := make([]seedTraegerStaffSuggestion, 0, len(suggestions))
+	for _, suggestion := range suggestions {
+		named := false
+		for _, member := range suggestion.Members {
+			if member.SchoolID == rt.Bootstrap.SchoolID && member.StaffID == visitorStaffID {
+				named = true
+			}
+		}
+		if !named {
+			kept = append(kept, suggestion)
+		}
+	}
+	return kept
 }
 
 func seedTraegerStaffSuggestions(client *Client, auth AuthRef) ([]seedTraegerStaffSuggestion, error) {

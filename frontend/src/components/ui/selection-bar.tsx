@@ -22,7 +22,7 @@ function placementClass(placement: SelectionBarPlacement, count: number) {
   }
   if (placement === "inline") return "moto-content-surface";
   return count > 0
-    ? `${STICKY_ABOVE_BOTTOM_NAV} ${Z_LAYER.sticky} border-gray-200 bg-white/95 shadow-sm backdrop-blur`
+    ? `${STICKY_ABOVE_BOTTOM_NAV} ${Z_LAYER.sticky} border-gray-200 bg-white shadow-sm`
     : "border-transparent bg-gray-50/80 shadow-none";
 }
 

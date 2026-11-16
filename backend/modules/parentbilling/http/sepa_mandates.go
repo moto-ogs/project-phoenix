@@ -24,15 +24,17 @@ import (
 type SEPAMandateResource struct {
 	mandates       capability.SEPAMandates
 	requireBilling common.Middleware
+	lists          common.ListRenderer
+	today          func() calendar.Date
 }
 
 // NewSEPAMandateResource builds the resource. requireBilling admits only a
 // session with the Träger right "Abrechnung".
-func NewSEPAMandateResource(mandates capability.SEPAMandates, requireBilling common.Middleware) *SEPAMandateResource {
-	if mandates == nil || requireBilling == nil {
-		panic("parent billing http: the SEPA mandates and the right check are required")
+func NewSEPAMandateResource(mandates capability.SEPAMandates, requireBilling common.Middleware, lists common.ListRenderer, today func() calendar.Date) *SEPAMandateResource {
+	if mandates == nil || requireBilling == nil || lists == nil || today == nil {
+		panic("parent billing http: the SEPA mandates, the right check, the list export and the day clock are required")
 	}
-	return &SEPAMandateResource{mandates: mandates, requireBilling: requireBilling}
+	return &SEPAMandateResource{mandates: mandates, requireBilling: requireBilling, lists: lists, today: today}
 }
 
 // CreditorRouter returns the routes mounted at /traeger/sepa-creditor.
@@ -54,6 +56,7 @@ func (rs *SEPAMandateResource) MandateRouter(protectedTraegerRoutes func(chi.Rou
 	protectedTraegerRoutes(r, func(r chi.Router, withTx common.Middleware) {
 		billing := r.With(rs.requireBilling, withTx)
 		billing.Get("/", rs.listMandates)
+		billing.Get("/export", rs.exportMandates)
 		billing.Post("/", rs.createMandate)
 		billing.Get("/imports", rs.importLog)
 		billing.Post("/imports", rs.applyImport)

@@ -122,7 +122,7 @@ describe("PortalBottomNav (#5603)", () => {
 
     const { rerender } = render(<BarWithIndicator activeKey="start" />);
     await waitFor(() => {
-      expect(indicatorElement()?.style.left).toBe("12px");
+      expect(indicatorElement()?.style.transform).toBe("translateX(12px)");
     });
     expect(indicatorElement()?.style.width).toBe("80px");
 

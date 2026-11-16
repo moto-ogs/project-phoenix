@@ -144,28 +144,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "classification": "platform",
-      "effect": "durable",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.CareCancellationPublisher.PublishCareCancellation",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "classification": "platform",
-      "effect": "durable",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.CareCancellationPublisher.PublishCareCancellation",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CommunicationSignatures.DeclarationSignatures",
       "classification": "query",
       "effect": "query",
@@ -230,55 +208,11 @@
     },
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentAnnouncements.PublishCareCancellation",
-      "classification": "platform",
-      "effect": "durable",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentAnnouncements.PublishCareCancellation",
-      "classification": "platform",
-      "effect": "durable",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.announcementsWithSurveys.PublishCareCancellation",
-      "classification": "platform",
-      "effect": "durable",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.announcementsWithSurveys.PublishCareCancellation",
-      "classification": "platform",
-      "effect": "durable",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentAnnouncements.PublishParentAnnouncement",
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishParentAnnouncement",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -289,7 +223,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishParentAnnouncement",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -330,7 +264,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishParentAnnouncement",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -341,7 +275,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishParentAnnouncement",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -382,7 +316,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.RemindParentAnnouncement",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -393,7 +327,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.RemindParentAnnouncement",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -404,7 +338,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.RemindParentAnnouncement",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -415,7 +349,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.RemindParentAnnouncement",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -470,7 +404,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.SendDueParentAnnouncementReminders",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably",
       "target_owner": "delivery-platform"
@@ -481,7 +415,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.SendDueParentAnnouncementReminders",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEventsDurably",
       "target_owner": "delivery-platform"
@@ -492,7 +426,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.SendDueParentAnnouncementReminders",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably",
       "target_owner": "delivery-platform"
@@ -503,7 +437,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.SendDueParentAnnouncementReminders",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEventsDurably",
       "target_owner": "delivery-platform"
@@ -536,7 +470,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementReminders.RemindParentAnnouncement",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -547,7 +481,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementReminders.RemindParentAnnouncement",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -580,7 +514,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementReminders.SendDueParentAnnouncementReminders",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably",
       "target_owner": "delivery-platform"
@@ -591,7 +525,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementReminders.SendDueParentAnnouncementReminders",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEventsDurably",
       "target_owner": "delivery-platform"
@@ -977,7 +911,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentThreadRecords.ParentThreadListGuardiansForStudent",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
       "target_owner": "people-directory"
@@ -987,7 +921,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentThreadRecords.ParentThreadListStudentIDsWithMessageableGuardian",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
       "target_owner": "people-directory"
@@ -1262,7 +1196,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.SurveyCapability.PublishSurvey",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -1273,7 +1207,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.SurveyCapability.PublishSurvey",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -1284,7 +1218,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.SurveyCapability.RemindSurvey",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -1295,7 +1229,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.SurveyCapability.RemindSurvey",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -1964,7 +1898,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListGuardiansForStudent",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication.ParentThreadRecords.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication.ParentThreadRecords.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
       "target_owner": "people-directory"
@@ -1974,7 +1908,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListGuardiansForStudent",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
       "target_owner": "people-directory"
@@ -1984,7 +1918,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListStudentIDsWithMessageableGuardian",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication.ParentThreadRecords.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication.ParentThreadRecords.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
       "target_owner": "people-directory"
@@ -1994,7 +1928,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListStudentIDsWithMessageableGuardian",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
       "target_owner": "people-directory"
@@ -2158,7 +2092,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.Publish",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -2169,7 +2103,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.Publish",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -2206,33 +2140,11 @@
     },
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.PublishCareCancellation",
-      "classification": "platform",
-      "effect": "durable",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.PublishCareCancellation",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.PublishCareCancellation",
-      "classification": "platform",
-      "effect": "durable",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.PublishCareCancellation",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.RemindOutstanding",
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.RemindOutstanding",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -2243,7 +2155,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.RemindOutstanding",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -2254,7 +2166,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.RemindUnanswered",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -2265,7 +2177,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.RemindUnanswered",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEvents (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
       "target_owner": "delivery-platform"
@@ -2298,7 +2210,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.SendDueReminders",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably",
       "target_owner": "delivery-platform"
@@ -2309,7 +2221,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.SendDueReminders",
-      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the shared event mapping now carries the optional notification feed delivery; these events set none, so the effect is unchanged.",
+      "reason": "Platform protocol participation (durable): communication reaches modules/delivery/internal/notifications.Notifier.NotifyEventsDurably (delivery-platform) through roots/owners.BindCommunicationNotificationSeries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #7140 the public event also carries an optional notification feed request; these sends leave it nil and keep their push-only behavior.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEventsDurably",
       "target_owner": "delivery-platform"
@@ -4570,7 +4482,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ListGuardiansForStudent",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
       "target_owner": "people-directory"
@@ -4580,7 +4492,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ListStudentIDsWithMessageableGuardian",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
       "target_owner": "people-directory"
@@ -4590,7 +4502,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
       "target_owner": "people-directory"
@@ -4600,7 +4512,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
       "target_owner": "people-directory"

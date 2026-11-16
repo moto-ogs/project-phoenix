@@ -88,9 +88,10 @@ func (n holidayHostSchoolNames) HolidayHostSchoolNames(ctx context.Context, scho
 }
 
 // schedulerHolidayGuests binds the Worker's hourly reconciliation to the
-// holiday guests of the school whose tenant transaction the Worker opened.
-func schedulerHolidayGuests(people HolidayGuestDirectory, students HolidayOwnChildStudents, schools HolidayHostSchools, care HolidayGuestCarePlan, accessLog DataAccessAppender, health enrollmentOwner.HolidayHealthCipher) schedulerPorts.HolidayGuestReconciliation {
-	guests := NewHolidayGuests(people, students, schools, care, accessLog, health, nil)
+// holiday guests of the school whose tenant transaction the Worker opened,
+// on the root's day today.
+func schedulerHolidayGuests(people HolidayGuestDirectory, students HolidayOwnChildStudents, schools HolidayHostSchools, care HolidayGuestCarePlan, accessLog DataAccessAppender, health enrollmentOwner.HolidayHealthCipher, today func() calendar.Date) schedulerPorts.HolidayGuestReconciliation {
+	guests := NewHolidayGuests(people, students, schools, care, accessLog, health, today)
 	return func(ctx context.Context) error {
 		return guests.ReconcileHolidayGuests(ctx, tenant.FromContext(ctx))
 	}

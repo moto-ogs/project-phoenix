@@ -190,7 +190,7 @@ func TestHolidayRegistrationRetentionTakesTheAccountLinkAlong(t *testing.T) {
 
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, tenant.WithinAdmin(ctx, func(adminCtx context.Context) error {
-		_, err := owners.NewHolidayRegistrationRetention(nil).DeleteExpiredHolidayRegistrations(adminCtx)
+		_, err := owners.NewHolidayRegistrationRetention(holidayFixtureToday).DeleteExpiredHolidayRegistrations(adminCtx)
 		return err
 	}))
 

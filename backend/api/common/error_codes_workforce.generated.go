@@ -108,6 +108,9 @@ const CodeWorkforceTraegerProofNotFound = "workforce.traeger_proof_not_found"
 const CodeWorkforceTraegerProofTypeNameTaken = "workforce.traeger_proof_type_name_taken"
 const CodeWorkforceTraegerProofTypeNotFound = "workforce.traeger_proof_type_not_found"
 const CodeWorkforceTraegerStaffAlreadyLinked = "workforce.traeger_staff_already_linked"
+const CodeWorkforceTraegerStaffHireDuplicate = "workforce.traeger_staff_hire_duplicate"
+const CodeWorkforceTraegerStaffHireIncomplete = "workforce.traeger_staff_hire_incomplete"
+const CodeWorkforceTraegerStaffHireInvalid = "workforce.traeger_staff_hire_invalid"
 const CodeWorkforceTraegerStaffImportChanged = "workforce.traeger_staff_import_changed"
 const CodeWorkforceTraegerStaffImportFileInvalid = "workforce.traeger_staff_import_file_invalid"
 const CodeWorkforceTraegerStaffImportFileTooLarge = "workforce.traeger_staff_import_file_too_large"
@@ -236,6 +239,9 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceTraegerProofTypeNameTaken, "business_rejection"},
 	{CodeWorkforceTraegerProofTypeNotFound, "input"},
 	{CodeWorkforceTraegerStaffAlreadyLinked, "business_rejection"},
+	{CodeWorkforceTraegerStaffHireDuplicate, "business_rejection"},
+	{CodeWorkforceTraegerStaffHireIncomplete, "business_rejection"},
+	{CodeWorkforceTraegerStaffHireInvalid, "input"},
 	{CodeWorkforceTraegerStaffImportChanged, "business_rejection"},
 	{CodeWorkforceTraegerStaffImportFileInvalid, "input"},
 	{CodeWorkforceTraegerStaffImportFileTooLarge, "input"},

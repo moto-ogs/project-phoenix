@@ -26,7 +26,7 @@ func (r *ClassListEntryChangeRepository) Create(ctx context.Context, change *aud
 	if err := change.Validate(); err != nil {
 		return fmt.Errorf("invalid class list entry change audit event: %w", err)
 	}
-	return NewAppender(r.runtime).Append(ctx, change)
+	return NewAppender(r.runtime, nil).Append(ctx, change)
 }
 
 // ListByEntryID returns the trail of one entry, newest first.

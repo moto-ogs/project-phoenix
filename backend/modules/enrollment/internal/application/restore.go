@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -86,7 +85,7 @@ func (d *Decisions) restoreWithdrawn(ctx context.Context, requestID, restoredBy 
 		RequestID:      requestID,
 		ChildIDs:       restoredIDs,
 		ActorAccountID: actor,
-		RestoredAt:     time.Now(),
+		RestoredAt:     d.deps.Now(),
 	}); err != nil {
 		return nil, fmt.Errorf("restore: write audit event: %w", err)
 	}

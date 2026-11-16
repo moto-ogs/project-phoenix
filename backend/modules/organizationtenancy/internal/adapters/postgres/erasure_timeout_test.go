@@ -16,7 +16,7 @@ func TestErasureSchoolLockSurvivesStatementTimeout(t *testing.T) {
 	db := testpkg.SetupIsolatedTestDB(t)
 	id := testpkg.Tenant(t)
 	operator := testpkg.CreateTestOperator(t, db)
-	store, err := NewErasureStore(db)
+	store, err := NewErasureStore(db, time.Now)
 	require.NoError(t, err)
 	// Inject the exact server error that pgdriver treats as a broken socket in
 	// begin, outside erase_school's query_canceled exception handler.
@@ -62,7 +62,7 @@ func TestErasureSchoolLockSurvivesRealStatementTimeout(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	id := testpkg.Tenant(t)
-	store, err := NewErasureStore(db)
+	store, err := NewErasureStore(db, time.Now)
 	require.NoError(t, err)
 	err = store.WithSchoolLock(t.Context(), id, func(ctx context.Context) error {
 		stepErr := store.withConnection(ctx, func(ctx context.Context, conn bun.Conn) error {
@@ -90,6 +90,6 @@ func TestErasureRejectsSingleConnectionPool(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	db.SetMaxOpenConns(1)
-	_, err := NewErasureStore(db)
+	_, err := NewErasureStore(db, time.Now)
 	require.ErrorContains(t, err, "at least two connections")
 }

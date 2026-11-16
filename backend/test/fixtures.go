@@ -1601,7 +1601,7 @@ func ensureTestTenant(ctx context.Context, db *bun.DB, tenantID int64) error {
 		return fmt.Errorf("ensure test school: %w", err)
 	}
 
-	return nil
+	return setTestSchoolFederalState(ctx, db, tenantID)
 }
 
 // CreateTestTenant creates an organization + school pair that nobody else
@@ -1641,7 +1641,7 @@ func CreateTestTenant(tb testing.TB, db *bun.DB) (tenantID int64, subdomain stri
 		VALUES (?, ?, ?, ?, ?, true)`,
 		tenantID, tenantID, "Test School "+token, "test-school-"+token, subdomain)
 	require.NoError(tb, err, "Failed to create test school")
-
+	require.NoError(tb, setTestSchoolFederalState(ctx, db, tenantID))
 	return tenantID, subdomain
 }
 

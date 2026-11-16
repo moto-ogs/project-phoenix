@@ -8,7 +8,7 @@ import { TRAEGER_LIST_FORMATS } from "~/lib/traeger-list-export";
 // Jede Liste und jeder Bericht des Träger-Portals ist als PDF, Excel und CSV
 // herunterladbar, für eine Schule oder alle (#4718). Der Test liest den
 // Quelltext jeder Seite unter app/traeger: Eine neue Seite steht in genau einem
-// der drei Register, und eine Liste mit Download nutzt das gemeinsame Menü,
+// der zwei Register, und eine Liste mit Download nutzt das gemeinsame Menü,
 // sodass sie alle drei Formate anbietet. Eine neue Liste ohne Download lässt
 // den Test rot werden.
 
@@ -25,61 +25,46 @@ const TRAEGER_DIR = path.join(SRC_DIR, "app", "traeger");
  * Wert die Komponente unter `src/`, die den Download der Liste trägt.
  */
 const LIST_EXPORTS: Readonly<Record<string, string>> = {
+  "/": "page",
+  "/abrechnung": "page",
   "/abrechnung/[id]": "components/traeger/billing-run-overview-card.tsx",
+  "/abrechnung/exporte": "page",
+  "/abrechnung/familien": "page",
+  "/abrechnung/familien/[id]": "page",
+  "/abrechnung/jahresbescheide": "page",
+  "/abrechnung/jahresbescheide/[id]": "page",
+  "/abrechnung/jahresbescheide/[id]/versand": "page",
+  "/abrechnung/kinderzahl": "page",
+  "/abrechnung/kostentraeger": "page",
+  "/abrechnung/lastschrift": "page",
+  "/abrechnung/monatsbeitraege": "page",
+  "/abrechnung/monatsbeitraege/[id]": "page",
+  "/abrechnung/nachweise": "page",
   "/ankunft-abholung": "page",
+  "/anmeldephasen": "page",
   "/auslastung": "page",
   "/belegung": "page",
   "/berichte": "page",
+  "/dokumente": "page",
+  "/einstellungen/briefkopf/vorlagen": "page",
+  "/einstellungen/mitglieder": "page",
   "/einstellungen/zugriffsprotokoll": "page",
+  "/ferien": "page",
   "/ferien/[id]/anmeldungen": "page",
+  "/ferien/[id]/plaetze": "page",
+  "/ferien/[id]/vergabe": "page",
   "/nachweise": "page",
+  "/personal": "page",
+  "/personal/einsatzplanung": "page",
   "/personal/vertretungspool": "page",
+  "/schliesstage": "page",
   "/standortvergleich": "page",
   "/stichtagszahlen": "page",
   "/tagesmeldung": "page",
+  "/uebersicht": "page",
   "/vertraege": "page",
   "/zeitvergleich": "page",
 };
-
-/**
- * Listen, deren Download noch fehlt, mit dem Issue, das ihn nachliefert. Das
- * Register darf nur schrumpfen: Eine Liste bekommt ihren Download und zieht
- * nach `LIST_EXPORTS` um. Eine neue Liste kommt nie hierher.
- */
-const PENDING_EXPORTS: Readonly<Record<string, string>> = {
-  "/": "#4718",
-  "/abrechnung": "#4718",
-  "/abrechnung/exporte": "#4718",
-  "/abrechnung/familien": "#4718",
-  "/abrechnung/familien/[id]": "#4718",
-  "/abrechnung/jahresbescheide": "#4718",
-  "/abrechnung/jahresbescheide/[id]": "#4718",
-  "/abrechnung/jahresbescheide/[id]/versand": "#4718",
-  "/abrechnung/kinderzahl": "#4718",
-  "/abrechnung/kostentraeger": "#4718",
-  "/abrechnung/lastschrift": "#4718",
-  "/abrechnung/monatsbeitraege": "#4718",
-  "/abrechnung/monatsbeitraege/[id]": "#4718",
-  "/abrechnung/nachweise": "#4718",
-  "/anmeldephasen": "#4718",
-  "/dokumente": "#4718",
-  "/einstellungen/briefkopf/vorlagen": "#4718",
-  "/einstellungen/mitglieder": "#4718",
-  "/ferien": "#4718",
-  "/ferien/[id]/plaetze": "#4718",
-  "/ferien/[id]/vergabe": "#4718",
-  "/personal": "#4718",
-  "/personal/einsatzplanung": "#4718",
-  "/schliesstage": "#4718",
-  "/uebersicht": "#4718",
-};
-
-/**
- * Die Obergrenze von `PENDING_EXPORTS`: Sie sinkt mit jeder Liste, die ihren
- * Download bekommt, und steigt nie. Eine neue Liste ohne Download passt so
- * nicht in das Register.
- */
-const PENDING_CEILING = 25;
 
 /**
  * Seiten ohne Liste: Formulare, Einstellungen, Einzelansichten, Anmeldung.
@@ -111,6 +96,7 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/anmeldephasen/neu": "Formular",
   "/berichte/vorlagen/[id]": "Formular",
   "/berichte/vorlagen/neu": "Formular",
+  "/demo": "Anmeldung",
   "/dokumente/[id]": "Einzelansicht",
   "/einstellungen": "Einstellungen",
   "/einstellungen/abrechnung": "Einstellungen",
@@ -127,6 +113,7 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/login": "Anmeldung",
   "/personal/[id]": "Einzelansicht",
   "/personal/abwesenheitsarten": "Einstellungen",
+  "/personal/einstellen": "Formular",
   "/personal/import": "Import",
   "/personal/lohnexport": "Export in eigenen Formaten (DATEV, Zeitexport)",
   "/reset-password": "Anmeldung",
@@ -170,7 +157,7 @@ describe("Downloads der Listen im Träger-Portal (#4718)", () => {
     const unclassified = pages
       .map((page) => page.route)
       .filter((route) => {
-        const registers = [LIST_EXPORTS, PENDING_EXPORTS, NOT_A_LIST].filter(
+        const registers = [LIST_EXPORTS, NOT_A_LIST].filter(
           (register) => route in register,
         );
         return registers.length !== 1;
@@ -183,7 +170,7 @@ describe("Downloads der Listen im Träger-Portal (#4718)", () => {
 
   it("keeps no entry for a page that is gone", () => {
     const routes = new Set(pages.map((page) => page.route));
-    const stale = [LIST_EXPORTS, PENDING_EXPORTS, NOT_A_LIST]
+    const stale = [LIST_EXPORTS, NOT_A_LIST]
       .flatMap((register) => Object.keys(register))
       .filter((route) => !routes.has(route));
     expect(stale).toEqual([]);
@@ -204,12 +191,6 @@ describe("Downloads der Listen im Träger-Portal (#4718)", () => {
     expect(missing).toEqual([]);
   });
 
-  it("only shrinks the pending register", () => {
-    expect(Object.keys(PENDING_EXPORTS).length).toBeLessThanOrEqual(
-      PENDING_CEILING,
-    );
-  });
-
   it("keeps every page with a table out of NOT_A_LIST", () => {
     const tables = pages
       .filter((page) => page.route in NOT_A_LIST)
@@ -219,13 +200,5 @@ describe("Downloads der Listen im Träger-Portal (#4718)", () => {
       tables,
       "Eine Seite mit Tabelle ist eine Liste: Sie bekommt den Download.",
     ).toEqual([]);
-  });
-
-  it("moves a pending list once it has its download", () => {
-    const done = pages
-      .filter((page) => page.route in PENDING_EXPORTS)
-      .filter((page) => offersEveryFormat(page.source))
-      .map((page) => page.route);
-    expect(done, "Diese Seiten gehören jetzt nach LIST_EXPORTS.").toEqual([]);
   });
 });

@@ -1,5 +1,5 @@
 /**
- * Vertretungspool des Trägers (#4709, ADR 0089 §9, ADR 0250).
+ * Vertretungspool des Trägers (#4709, ADR 0089 §9, ADR 0252).
  *
  * Ein Arbeitsvertrag mit dem Merkmal „Vertretungspool“ macht die Person zum
  * Springer. Jede Schule des Trägers sieht die Springer mit Name, Stand der

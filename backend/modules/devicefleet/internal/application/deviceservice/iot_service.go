@@ -11,10 +11,11 @@ import (
 // administration behavior and its stable error contract.
 type service struct {
 	devicefleet.Administration
+	now func() time.Time
 }
 
-func NewService(devices devicefleet.Capability) Service {
-	return &service{Administration: devicefleet.NewAdministration(devices)}
+func NewService(devices devicefleet.Capability, now func() time.Time) Service {
+	return &service{Administration: devicefleet.NewAdministration(devices, now), now: now}
 }
 
 func (s *service) CreateDevice(ctx context.Context, row *devicefleet.Device) error {
@@ -133,7 +134,7 @@ func (s *service) UpdateDeviceStatus(ctx context.Context, id string, status devi
 }
 
 func (s *service) IsDeviceOnline(ctx context.Context, row *devicefleet.Device) bool {
-	return s.IsDeviceOnlineAt(ctx, row, time.Now())
+	return s.IsDeviceOnlineAt(ctx, row, s.now())
 }
 func (s *service) IsDeviceOnlineAt(ctx context.Context, row *devicefleet.Device, now time.Time) bool {
 	if row == nil {

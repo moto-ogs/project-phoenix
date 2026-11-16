@@ -966,6 +966,11 @@
       "reason": "ADR 0121 addendum (#5622): Consumer-port adapter of the Elternabrechnung's settings port; it reads the payment text of the Träger through the Settings Platform's Träger level in the caller's Träger transaction and translates the keyed text into the port's answer."
     },
     {
+      "decision": "0075",
+      "id": "api/parentNotificationFeed.Page",
+      "reason": "ADR 0075 consumer-port adapter (#7140): translates Delivery's guardian notification feed page onto the feed port of the parents portal's HTTP adapter; the count and read-state calls reach Delivery's guardian feed unchanged through the embedded interface. No decision or SQL."
+    },
+    {
       "decision": "0090",
       "id": "api/parentPreferences.DisableAllForParent",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
@@ -1269,6 +1274,16 @@
       "decision": "0084",
       "id": "api/traegerGroupNames.GroupsByTenant",
       "reason": "ADR 0084 (#4676): Consumer-port adapter of the Träger projection's group names port; it translates School Structure's named groups of each school into the projection's NamedGroup vocabulary."
+    },
+    {
+      "decision": "0254",
+      "id": "api/traegerHireEmployments.CreateSchoolEmployment",
+      "reason": "ADR 0254 (#7206): Consumer-port adapter that translates Workforce's TraegerSchoolEmploymentInput into School Membership's CreateStaff and returns only the employment's ID."
+    },
+    {
+      "decision": "0254",
+      "id": "api/traegerHirePersons.CreateSchoolPerson",
+      "reason": "ADR 0254 (#7206): Consumer-port adapter that translates Workforce's TraegerSchoolPersonInput into the People Directory's CreatePerson and returns only the person's ID."
     },
     {
       "decision": "0137",
@@ -2608,11 +2623,6 @@
     {
       "decision": "0090",
       "id": "roots/owners/StudentConsents.CurrentStudentConsents",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/StudentPhotoRuntime.PhotoFeatureEnabled",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

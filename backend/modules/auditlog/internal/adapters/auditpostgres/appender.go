@@ -2,8 +2,10 @@ package audit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/auditlog/classlist"
 	"github.com/moto-ogs/project-phoenix/modules/auditlog/consents"
@@ -13,11 +15,16 @@ import (
 )
 
 // Appender is the only Audit persistence adapter allowed to insert ledger
-// rows. Read repositories stay table-specific.
-type Appender struct{ runtime Runtime }
+// rows. Read repositories stay table-specific. now is the Audit clock: an
+// auth event, data deletion or field edit without its time is stamped from
+// it (ADR 0239). A repository that appends none of these passes nil.
+type Appender struct {
+	runtime Runtime
+	now     func() time.Time
+}
 
-func NewAppender(runtime Runtime) *Appender {
-	return &Appender{runtime: requireRuntime(runtime)}
+func NewAppender(runtime Runtime, now func() time.Time) *Appender {
+	return &Appender{runtime: requireRuntime(runtime), now: now}
 }
 
 func (a *Appender) Append(ctx context.Context, event any) error {
@@ -29,8 +36,8 @@ func (a *Appender) Append(ctx context.Context, event any) error {
 	return wrapDatabase("append "+table, err)
 }
 
-// AppendAll inserts class-list entry changes, consent changes or data
-// deletions in one statement with the same columns as Append; any other event
+// AppendAll inserts class-list entry changes, consent changes (either shape)
+// or data deletions in one statement with the same columns as Append; any other event
 // type, or a mix, is appended one by one.
 func (a *Appender) AppendAll(ctx context.Context, events []any) error {
 	if len(events) == 0 {
@@ -46,6 +53,13 @@ func (a *Appender) AppendAll(ctx context.Context, events []any) error {
 		return wrapDatabase("append audit.class_list_entry_changes", err)
 	case *consents.ConsentChange:
 		db, rows, err := prepareAll(ctx, a, events, consentChangeRow)
+		if err != nil || rows == nil {
+			return err
+		}
+		_, err = db.NewInsert().Model(&rows).ModelTableExpr("audit.student_consent_changes").Exec(ctx)
+		return wrapDatabase("append audit.student_consent_changes", err)
+	case *auditModels.StudentConsentChange:
+		db, rows, err := prepareAll(ctx, a, events, func(value *auditModels.StudentConsentChange) *auditModels.StudentConsentChange { return value })
 		if err != nil || rows == nil {
 			return err
 		}
@@ -122,6 +136,9 @@ func (a *Appender) prepare(ctx context.Context, event any) (bun.IDB, error) {
 	})
 	if !ok {
 		return nil, fmt.Errorf("audit event %T is not tenant scoped", event)
+	}
+	if err := a.stampRecordedAt(event); err != nil {
+		return nil, err
 	}
 	if err := validateEvent(event); err != nil {
 		return nil, err
@@ -236,6 +253,30 @@ func importEventRow(value *auditImports.DataImport) *auditModels.DataImport {
 		row.Metadata["import_checkpoint"] = value.Checkpoint
 	}
 	return row
+}
+
+// stampRecordedAt gives an event without its time the instant of the Audit
+// clock. A set time stays: the producer recorded when it happened.
+func (a *Appender) stampRecordedAt(event any) error {
+	var stamp *time.Time
+	switch value := event.(type) {
+	case *auditModels.AuthEvent:
+		stamp = &value.CreatedAt
+	case *auditModels.DataDeletion:
+		stamp = &value.DeletedAt
+	case *auditModels.StudentFieldEdit:
+		stamp = &value.CreatedAt
+	case *auditModels.WorkSessionEdit:
+		stamp = &value.CreatedAt
+	}
+	if stamp == nil || !stamp.IsZero() {
+		return nil
+	}
+	if a.now == nil {
+		return errors.New("audit appender: clock is required to stamp the event")
+	}
+	*stamp = a.now()
+	return nil
 }
 
 func validateEvent(event any) error {

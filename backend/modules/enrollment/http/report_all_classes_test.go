@@ -4,6 +4,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -130,7 +131,7 @@ func TestBuildClassRosterTableDocumentSingleClassHasNoGroupHeadings(t *testing.T
 func TestBuildClassRosterExportFileAllClassesFilename(t *testing.T) {
 	t.Parallel()
 
-	file, err := buildClassRosterExportFile(newTestDocumentRenderer(), allClassesTestReport(), lists.FormatPDF)
+	file, err := buildClassRosterExportFile(newTestDocumentRenderer(), allClassesTestReport(), lists.FormatPDF, time.Time{})
 
 	require.NoError(t, err)
 	assert.True(t, strings.HasPrefix(file.Filename, "klassenlisten"), "filename = %q", file.Filename)

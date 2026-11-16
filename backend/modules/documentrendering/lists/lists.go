@@ -100,6 +100,8 @@ type (
 	LetterFact = records.LetterFact
 	// LetterBlock is a part of the body.
 	LetterBlock = records.LetterBlock
+	// LetterPaymentCode is a QR code to pay with and the words beside it.
+	LetterPaymentCode = records.LetterPaymentCode
 )
 
 // ErrLetterheadTooLong reports a letterhead or footer that leaves too

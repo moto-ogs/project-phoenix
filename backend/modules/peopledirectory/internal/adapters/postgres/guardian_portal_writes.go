@@ -82,8 +82,9 @@ func newGuardianContactRow(contact domain.GuardianContact, tenantID int64) *guar
 	}
 }
 
-// InsertContact inserts a profile without an account; has_account, the
-// timestamps and the ID are the database's defaults.
+// InsertContact inserts a profile without an account, childless since the
+// store's clock; has_account, the timestamps and the ID are the database's
+// defaults.
 func (s *GuardianStore) InsertContact(ctx context.Context, contact domain.GuardianContact) (int64, domain.OperationStats, error) {
 	db, scope, err := s.tenantDB(ctx)
 	if err != nil {
@@ -94,6 +95,7 @@ func (s *GuardianStore) InsertContact(ctx context.Context, contact domain.Guardi
 	started := time.Now()
 	err = db.NewInsert().Model(row).ModelTableExpr("users.guardian_profiles").
 		Column(append([]string{"tenant_id"}, guardianContactColumns...)...).
+		Value("childless_since", "?", s.now()).
 		Returning("id").Scan(ctx, &row.ID)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {

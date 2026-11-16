@@ -629,7 +629,7 @@ describe("Kopf der Kindakte", () => {
 describe("SupervisorsCard", () => {
   const mockSupervisors: SupervisorContact[] = [
     {
-      id: 1,
+      id: "1",
       first_name: "Anna",
       last_name: "Schmidt",
       email: "anna.schmidt@example.com",
@@ -717,14 +717,14 @@ describe("SupervisorsCard", () => {
   it("renders multiple supervisors with divider", () => {
     const multipleSupervisors: SupervisorContact[] = [
       {
-        id: 1,
+        id: "1",
         first_name: "Anna",
         last_name: "Schmidt",
         email: "anna@example.com",
         role: "supervisor",
       },
       {
-        id: 2,
+        id: "2",
         first_name: "Peter",
         last_name: "Müller",
         email: "peter@example.com",
@@ -756,7 +756,7 @@ describe("SupervisorsCard", () => {
   it("does not render contact button when supervisor has no email", () => {
     const supervisorWithoutEmail: SupervisorContact[] = [
       {
-        id: 1,
+        id: "1",
         first_name: "Anna",
         last_name: "Schmidt",
         email: undefined,

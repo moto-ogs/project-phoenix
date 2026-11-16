@@ -61,7 +61,7 @@ func (s *Scheduler) checkAndRunReminderNotifications(ctx context.Context, task *
 		if err != nil {
 			return fmt.Errorf("resolve notification duty scope: %w", err)
 		}
-		s.reminderNotifications(tenantCtx, tenantID, time.Now(), onDutyOnly)
+		s.reminderNotifications(tenantCtx, tenantID, s.clock(), onDutyOnly)
 		return nil
 	})
 }

@@ -3826,7 +3826,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -3859,7 +3859,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Owner.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Owner.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -6720,7 +6720,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.StudentsWithPortalGuardian",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -6753,7 +6753,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.StudentsWithPortalGuardian",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Owner.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Owner.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -6868,7 +6868,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardian",
-      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation).",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"
@@ -6891,7 +6891,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardian",
-      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation).",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"
@@ -7413,7 +7413,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -7568,7 +7568,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianProvider.UpdateGuardian",
-      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation).",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"
@@ -9534,7 +9534,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/internal/application.Service.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/internal/application.Service.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -11004,7 +11004,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.StudentsWithPortalGuardian",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/internal/application.Service.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/internal/application.Service.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -11073,7 +11073,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardian",
-      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation).",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"
@@ -12362,7 +12362,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -12395,7 +12395,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Capability.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Capability.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -13972,7 +13972,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.StudentsWithPortalGuardian",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -14005,7 +14005,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.StudentsWithPortalGuardian",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Capability.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Capability.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -15154,7 +15154,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.ActingAccountID",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope (identity-access) through roots/owners.StudentPhotoRuntime.ActingAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only request identity mapping for photo-consent attribution: RequestClaims.AccountReferenceID excludes platform operator IDs from auth.accounts references. IsSchoolScope only reads the verified claims; no persistent write, lock or tenant-scope change. Operator attribution stays in the operator audit path.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
       "target_owner": "identity-access"
@@ -15175,7 +15175,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
       "target_owner": "settings-platform"
@@ -15185,9 +15185,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.SettingsService.ResolveBoolForTenantInTx (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {
@@ -15222,6 +15242,17 @@
       "reason": "Platform protocol participation (mutation): people-directory reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through roots/owners.StudentPhotoRuntime.RecordPhotoConsent. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "reason": "Platform protocol participation (mutation): people-directory reaches modules/auditlog/records.StudentConsentChangeRepository.CreateAll (audit-platform) through roots/owners.StudentPhotoRuntime.RecordPhotoConsentsEnded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
       "target_owner": "audit-platform"
     },
     {
@@ -16740,7 +16771,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.ActingAccountID",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope (identity-access) through modules/peopledirectory/compose.StudentPhotoRuntime.ActingAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only request identity mapping for photo-consent attribution: RequestClaims.AccountReferenceID excludes platform operator IDs from auth.accounts references. IsSchoolScope only reads the verified claims; no persistent write, lock or tenant-scope change. Operator attribution stays in the operator audit path.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
       "target_owner": "identity-access"
@@ -16761,7 +16792,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
       "target_owner": "settings-platform"
@@ -16771,9 +16802,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.SettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {
@@ -16808,6 +16859,17 @@
       "reason": "Platform protocol participation (mutation): people-directory reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsent. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "reason": "Platform protocol participation (mutation): people-directory reaches modules/auditlog/records.StudentConsentChangeRepository.CreateAll (audit-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsentsEnded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
       "target_owner": "audit-platform"
     },
     {
@@ -17444,7 +17506,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.BirthdayStore.StudentBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
       "target_owner": "school-structure"
@@ -17454,7 +17516,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.BirthdayStore.StudentBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
       "target_owner": "school-structure"
@@ -17464,7 +17526,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.BirthdayStore.StudentBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
       "target_owner": "school-structure"
@@ -17551,7 +17613,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.GuardianStore.FindPortalMemberships",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory/internal/adapters/postgres.GuardianStore.FindPortalMemberships. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory/internal/adapters/postgres.GuardianStore.FindPortalMemberships. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -17561,7 +17623,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.GuardianStore.ListAccountLinksByStudents",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory/internal/adapters/postgres.GuardianStore.ListAccountLinksByStudents. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory/internal/adapters/postgres.GuardianStore.ListAccountLinksByStudents. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -17613,7 +17675,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.ActingAccountID",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope (identity-access) through modules/peopledirectory/internal/application.StudentPhotoRuntime.ActingAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only request identity mapping for photo-consent attribution: RequestClaims.AccountReferenceID excludes platform operator IDs from auth.accounts references. IsSchoolScope only reads the verified claims; no persistent write, lock or tenant-scope change. Operator attribution stays in the operator audit path.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
       "target_owner": "identity-access"
@@ -17634,7 +17696,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
       "target_owner": "settings-platform"
@@ -17644,9 +17706,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.SettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {
@@ -17681,6 +17763,17 @@
       "reason": "Platform protocol participation (mutation): people-directory reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsent. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "reason": "Platform protocol participation (mutation): people-directory reaches modules/auditlog/records.StudentConsentChangeRepository.CreateAll (audit-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsentsEnded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
       "target_owner": "audit-platform"
     },
     {
@@ -18540,7 +18633,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.GuardianService.UpdateGuardian",
-      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation).",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"
@@ -18970,6 +19063,36 @@
       "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through modules/settings/records.SettingsService.ResolveBool. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PhotoSettings.ResolveBoolForTenantInTx",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PhotoSettings.ResolveBoolForTenantInTx",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/settings/records.SettingsService.ResolveBoolForTenantInTx. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PhotoSettings.ResolveBoolForTenantInTx",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.SettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/settings/records.SettingsService.ResolveBoolForTenantInTx. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {
@@ -21197,7 +21320,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Capability.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Capability.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21207,7 +21330,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Owner.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Owner.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21217,7 +21340,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Query.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Query.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21227,7 +21350,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21237,7 +21360,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21247,7 +21370,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21257,7 +21380,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21267,7 +21390,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21277,7 +21400,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
       "target_owner": "school-structure"

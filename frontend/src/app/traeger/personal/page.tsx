@@ -10,10 +10,12 @@ import {
   LinkSimpleIcon,
   LockKeyIcon,
   UploadSimpleIcon,
+  UserPlusIcon,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StaffLinkModal } from "~/components/traeger/staff/staff-link-modal";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import {
   STAFF_MATCH_LABELS,
   STAFF_MATCH_TONES,
@@ -31,6 +33,7 @@ import { staffConcept } from "~/lib/concepts/staff";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import {
+  downloadStaffRecordList,
   fetchStaffOverview,
   staffName,
   type StaffCandidate,
@@ -296,17 +299,38 @@ export default function TraegerStaffRecordsPage() {
       }
       statsLoading={!overview && !pageLoad.error}
       actions={
-        released ? (
-          <ButtonLink
-            href={traegerPath("/traeger/personal/import")}
-            className="gap-2"
-            variant="outline"
-            size="md"
-            tooltip="Öffnet den Import für Personal aus einer CSV-Datei."
-          >
-            <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
-            Personal importieren
-          </ButtonLink>
+        overview && released ? (
+          <>
+            <TraegerListExportMenu
+              download={downloadStaffRecordList}
+              scope="Alle Akten"
+              ariaLabel="Personalakten herunterladen"
+              tooltip="Zeigt die Formate für alle Akten. Jeder Download steht im Zugriffsprotokoll der Schulen."
+              fallbackName="personalakten"
+              errorObject="die Personalakten"
+              unavailable={overview.records.length === 0}
+            />
+            <ButtonLink
+              href={traegerPath("/traeger/personal/import")}
+              className="gap-2"
+              variant="outline"
+              size="md"
+              tooltip="Öffnet den Import für Personal aus einer CSV-Datei."
+            >
+              <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
+              Personal importieren
+            </ButtonLink>
+            <ButtonLink
+              href={traegerPath("/traeger/personal/einstellen")}
+              className="gap-2"
+              variant="primary"
+              size="md"
+              tooltip="Öffnet das Formular für eine neue Person mit Akte, Vertrag und Schulen."
+            >
+              <UserPlusIcon className="h-4 w-4" aria-hidden="true" />
+              Person einstellen
+            </ButtonLink>
+          </>
         ) : undefined
       }
       error={pageLoad.error}
@@ -410,7 +434,7 @@ export default function TraegerStaffRecordsPage() {
                   />
                 }
                 title="Noch keine Akte."
-                description="Verknüpfen Sie einen Vorschlag, legen Sie unter „Ohne Akte“ eine Akte an, oder importieren Sie Ihr Personal oben mit „Personal importieren“."
+                description="Stellen Sie oben mit „Person einstellen“ eine neue Person ein. Für Personal, das schon an einer Schule arbeitet: Verknüpfen Sie einen Vorschlag, legen Sie unter „Ohne Akte“ eine Akte an, oder nutzen Sie „Personal importieren“."
               />
             }
           />
@@ -441,7 +465,7 @@ export default function TraegerStaffRecordsPage() {
             emptyState={
               <EmptyState
                 title="Alle Personen haben eine Akte."
-                description="Neues Personal einer Schule erscheint hier."
+                description="Personal, das eine Schule selbst anlegt, erscheint hier."
               />
             }
           />

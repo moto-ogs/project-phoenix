@@ -33,7 +33,7 @@ type GuardianEnrollmentClaims interface {
 func GuardianInvitationDependencies(settings interface {
 	welcomeHelpSettings
 	ResolveInt(context.Context, string) (int, error)
-}, schools organizationtenancy.SchoolQuery, outbox MailResultOutbox, outcomes deliveryRuntime.EmailOutcomes, enrollments GuardianEnrollmentClaims, parentsURL string, logger *slog.Logger) (identityPorts.GuardianInvitationDelivery, identityPorts.GuardianEnrollments, error) {
+}, schools organizationtenancy.SchoolQuery, outbox MailResultOutbox, outcomes deliveryRuntime.EmailOutcomes, enrollments GuardianEnrollmentClaims, parentsURL string, logger *slog.Logger, now func() time.Time) (identityPorts.GuardianInvitationDelivery, identityPorts.GuardianEnrollments, error) {
 	if schools == nil || outbox == nil || outcomes == nil || enrollments == nil {
 		return nil, nil, errors.New("identity access composition: the guardian invitation seams need the school directory, the e-mail outbox and the enrollment claim")
 	}
@@ -45,7 +45,7 @@ func GuardianInvitationDependencies(settings interface {
 	}
 	return guardianInvitationDelivery{
 		settings: settings, schools: schools, outbox: outbox, outcomes: outcomes,
-		parentsURL: parentsURL, logger: logger,
+		parentsURL: parentsURL, logger: logger, now: now,
 	}, identityaccessCompose.NewSavepointGuardianEnrollments(enrollments), nil
 }
 
@@ -61,6 +61,8 @@ type guardianInvitationDelivery struct {
 	outcomes   deliveryRuntime.EmailOutcomes
 	parentsURL string
 	logger     *slog.Logger
+	// now counts the hours the invitation mail states (nil: the real clock).
+	now func() time.Time
 }
 
 // InvitationExpiry reads the school's token lifetime (tenant override, then
@@ -126,7 +128,7 @@ func (d guardianInvitationDelivery) GuardianMailBlocks(ctx context.Context, tena
 
 func (d guardianInvitationDelivery) mailer() GuardianInvitationMailer {
 	return NewGuardianInvitationMailer(GuardianInvitationMailerConfig{
-		Outbox: d.outbox, FrontendURL: d.parentsURL, Logger: d.logger,
+		Outbox: d.outbox, FrontendURL: d.parentsURL, Logger: d.logger, Now: d.now,
 	})
 }
 
@@ -322,9 +324,10 @@ func NewParentInvitationAccountLock(db transactionruntime.Database) parentportal
 }
 
 // NewGuardianInvitationInvalidation binds a transaction-participating identity
-// command without composing the account lifecycle or introducing late binding.
-func NewGuardianInvitationInvalidation(db transactionruntime.Database) identityaccess.GuardianInvitationInvalidation {
-	invalidate, err := identityaccessCompose.NewGuardianInvitationInvalidation(db.Pool())
+// command without composing the account lifecycle or introducing late
+// binding; now is the root's clock (nil: the real one).
+func NewGuardianInvitationInvalidation(db transactionruntime.Database, now func() time.Time) identityaccess.GuardianInvitationInvalidation {
+	invalidate, err := identityaccessCompose.NewGuardianInvitationInvalidation(db.Pool(), now)
 	if err != nil {
 		panic(err)
 	}

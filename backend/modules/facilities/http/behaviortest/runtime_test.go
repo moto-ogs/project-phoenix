@@ -502,8 +502,8 @@ func TestGetRoomHistory(t *testing.T) {
 
 	t.Run("success_with_date_range", func(t *testing.T) {
 		// Use URL-safe format (no colons in time portion) - RFC3339 is supported but needs encoding
-		start := time.Now().AddDate(0, 0, -7).UTC().Format(time.RFC3339)
-		end := time.Now().UTC().Format(time.RFC3339)
+		start := time.Date(2026, time.October, 26, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)
+		end := time.Date(2026, time.November, 2, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)
 		// Create request with properly encoded query params
 		req := httptest.NewRequest("GET", fmt.Sprintf("/%d/history", room.ID), nil)
 		q := req.URL.Query()
@@ -711,20 +711,27 @@ func TestGetRoomHistory_RangeCapClamped(t *testing.T) {
 	old := testpkg.CreateTestActiveGroup(t, tc.db, activityGroup.ID, room.ID)
 
 	// CreateTestActiveGroup stamps start_time = now and leaves end_time
-	// NULL. Backdate the second session AND close it before the 1-day cap,
-	// so the active-in-window filter cannot pull it in via end_time IS
-	// NULL. Direct UPDATE is unavoidable — there's no fixture knob for
-	// start_time / end_time today.
+	// NULL. Move the recent session to a fixed day, backdate the second
+	// session AND close it before the 1-day cap, so the active-in-window
+	// filter cannot pull it in via end_time IS NULL. Direct UPDATE is
+	// unavoidable — there's no fixture knob for start_time / end_time today.
+	day := time.Date(2026, time.November, 2, 10, 0, 0, 0, time.UTC)
 	_, err := tc.db.NewUpdate().
 		Table("active.groups").
-		Set("start_time = ?", time.Now().Add(-5*24*time.Hour)).
-		Set("end_time = ?", time.Now().Add(-4*24*time.Hour)).
+		Set("start_time = ?", day).
+		Where("id = ?", recent.ID).
+		Exec(context.Background())
+	require.NoError(t, err)
+	_, err = tc.db.NewUpdate().
+		Table("active.groups").
+		Set("start_time = ?", day.Add(-5*24*time.Hour)).
+		Set("end_time = ?", day.Add(-4*24*time.Hour)).
 		Where("id = ?", old.ID).
 		Exec(context.Background())
 	require.NoError(t, err)
 
-	start := time.Now().AddDate(0, 0, -30).Format(time.RFC3339)
-	end := time.Now().Add(time.Hour).Format(time.RFC3339)
+	start := time.Date(2026, time.October, 3, 10, 0, 0, 0, time.UTC).Format(time.RFC3339)
+	end := day.Add(time.Hour).Format(time.RFC3339)
 	req := httptest.NewRequest("GET", fmt.Sprintf("/%d/history", room.ID), nil)
 	q := req.URL.Query()
 	q.Set("start", start)

@@ -17,11 +17,11 @@ type Retention struct {
 	now   func() time.Time
 }
 
-func NewRetention(store ports.RetentionStore) *Retention {
-	if store == nil {
-		panic("delivery application: retention requires its store")
+func NewRetention(store ports.RetentionStore, now func() time.Time) *Retention {
+	if store == nil || now == nil {
+		panic("delivery application: retention requires its store and clock")
 	}
-	return &Retention{store: store, now: time.Now}
+	return &Retention{store: store, now: now}
 }
 
 // DeleteExpiredDeliveries removes the school's mail and push intents and mail delivery

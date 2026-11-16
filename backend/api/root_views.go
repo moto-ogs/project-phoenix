@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"time"
 
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -49,11 +50,11 @@ type StructureServices struct {
 // buildGroupManagement binds School Structure's group management over the
 // People Directory, School Membership and Facilities directories; its group
 // events wake the open views.
-func buildGroupManagement(db transactionruntime.Database, hub *realtime.Hub, structure owners.StructureRows, people owners.PeopleRows, substitutions owners.GroupSubstitutions, audit owners.AuditOwner) schoolstructure.GroupManagement {
+func buildGroupManagement(db transactionruntime.Database, hub *realtime.Hub, structure owners.StructureRows, people owners.PeopleRows, substitutions owners.GroupSubstitutions, audit owners.AuditOwner, now func() time.Time) schoolstructure.GroupManagement {
 	return education.NewGroupManagement(
 		structure.Groups, structure.GroupTeachers, structure.ClassTeachers, structure.GroupRooms, structure.GroupTeacherDirectory,
 		structure.StaffChecks, people.Students, substitutions, education.NewLegacyRepositoryRuntime(db.Pool()),
-		education.GroupServiceOptions{Broadcaster: NewGroupEvents(hub, nil), Audit: NewEducationClassAssignmentAudit(audit.Persistence.StaffMasterDataChange)},
+		education.GroupServiceOptions{Broadcaster: NewGroupEvents(hub, nil), Audit: NewEducationClassAssignmentAudit(audit.Persistence.StaffMasterDataChange), Now: now},
 	)
 }
 
@@ -163,6 +164,8 @@ func buildEmergencySnapshot(env owners.RootEnvironment, presence owners.Presence
 type ClassDayViews struct {
 	ClassDay  classday.ClassDay
 	SlotLists classday.SlotLists
+	// Today is the day the class-day routes read without ?date= (ADR 0239).
+	Today func() calendar.Date
 }
 
 // buildClassDayViews binds the class day and the slot lists.
@@ -214,9 +217,9 @@ func buildClassDayViews(
 		Students: persons, Persons: persons, Groups: groups, Rooms: rooms, CareDays: schedules.CareDay,
 		PickupTimes: schedules.Pickups, ArrivalTimes: schedules.Arrivals, PickupBaselines: schedules.PickupBaselines,
 		Settings: settingsCompose.NewSlotListSettings(settings), Access: ClassDaySlotListAccess{Staff: caller},
-		ListExport: ClassDaySlotListRenderer{Renderer: renderer}, EnrolledOn: ClassDayEnrolledOn,
+		ListExport: ClassDaySlotListRenderer{Renderer: renderer}, EnrolledOn: ClassDayEnrolledOn, Now: env.Now,
 	})
-	return ClassDayViews{ClassDay: classDay, SlotLists: slotLists}, nil
+	return ClassDayViews{ClassDay: classDay, SlotLists: slotLists, Today: env.Today}, nil
 }
 
 // buildGroupLive binds the live group view (#2253).

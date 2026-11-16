@@ -184,7 +184,7 @@ mechanical: **no row means off**.
 |---|---|---|
 | SSE / in-app | active | `realtime.Broadcaster` → SSE event `notification` → toast |
 | Web Push | active (#2003/#2657) | leased `platform.push_outbox` → `webpush-go` (VAPID) → browser push service → service worker notification |
-| Feed | active (#7148 staff portal, #7139 moto schule) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
+| Feed | active (#7148 staff portal, #7139 moto schule, #7140 parents portal; class timetable #7142) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
 | E-Mail | future | wrap `email.Mailer` + audience→address resolution as a `Channel` |
 
 E-mail is still not a `Channel`: features that mail enqueue through the same
@@ -295,6 +295,52 @@ push is off by default (`FilterOptedIn`); the school switch is
 `notifications.staff_notice_published_enabled`. The link
 `/tagesinformationen?hinweis=<id>` opens the notice through
 `GET /api/staff-notices/{id}`, also before it applies.
+
+A changed Stundenplan of a class (#7142) comes from Care Plan's writes of the
+class's Unterrichtsschluss: a weekly save that changes at least one
+weekday's time (the first day ahead it takes effect on decides the lead
+time), and setting, changing or taking back a class-wide change on one day.
+A save that changes nothing tells nobody. The people of the class are the
+staff assigned to it (`education.class_teachers`), the teachers of the OGS
+groups of its children and the guardians with `parent_portal.access` to a
+child of the class (the parent audience projection's `class` target); the
+account of the request gets nothing. Staff get `class_timetable_changed`
+(link `/tagesplan?d=…`, in moto schule `/school/klasse?klasse=…&tag=…`),
+families `parent_class_timetable_changed` (link `/children`, the lock-screen
+push names no class). Push: today or tomorrow by default
+(`FilterNotOptedOut`), 2 to 14 days ahead only for staff who switched on
+`class_timetable_changed_ahead`, a preference-only type no event carries;
+families push only with their own yes, within 14 days. Later changes reach
+the feed only. Bundling object: the class (`school_class`, a hash of its
+normalized name, since a class has no row), so the many saves of the
+Stundenplanpflege stay one unread entry per class. The text never carries
+the reason of a day's change. All three share the school switch
+`notifications.class_timetable_changed_enabled`.
+
+#### Parents portal (#7140)
+
+A guardian-scoped event with `Feed` and `Audience.StudentIDs` writes one
+entry per guardian account of its audience, with the children it is about
+(`student_ids`). Only parent types (`PortalParent`) reach the feed of a
+guardian; staff types such as substitutions or Dienstplan changes never do.
+
+- Reading: `GET /parent/me/notifications/feed/` and the same three routes
+  below it, across every school of the family in one administrative
+  transaction. Every read checks again that the account is an active guardian
+  member of the entry's school and still holds `parent_portal.access` for at
+  least one of its children (`platform.delivery_realtime_recipients`). Losing
+  the right hides the entries; nothing is deleted. A staff session never
+  reads an entry of a guardian, and a guardian never one of staff.
+- `Feed.Title`/`Feed.Body` carry the entry's text when it may say more than
+  the push: the entry is read only after login, the push keeps its
+  lock-screen copy without child data.
+- `notification_feed_changed` reaches the account's parents-portal sessions
+  (`BroadcastToGuardian`), once per school whose entries changed.
+
+The first parent producer is Communication's cancellation notice
+(`parent_care_cancelled`, #2601): the one notice the person cancelling sends
+to the families writes the feed next to its push and its news entry; there is
+no second message. The family's switch decides only the push.
 
 ### Web Push (#2003)
 

@@ -65,7 +65,7 @@ func (r *targetedFieldSync) applyConsentFlags() {
 	if flags.IsZero() || r.options.Scope == weeklyPlanOnly {
 		return
 	}
-	now := time.Now()
+	now := r.d.deps.Now()
 	for _, stamp := range consentStamps {
 		if given, ok := formValue(flags, stamp.key).(bool); ok && given {
 			stamp.apply(r.student, &now, r.reviewedBy)
@@ -101,7 +101,7 @@ func (r *targetedFieldSync) persist(before *Student) (bool, error) {
 			actor := r.reviewedBy
 			actorAccountID = &actor
 		}
-		if err := r.d.deps.StudentConsents.RecordEnrollmentConsentTransitions(r.ctx, before, r.student, actorAccountID, time.Now()); err != nil {
+		if err := r.d.deps.StudentConsents.RecordEnrollmentConsentTransitions(r.ctx, before, r.student, actorAccountID, r.d.deps.Now()); err != nil {
 			return departurePlanSynced, fmt.Errorf("%w: %w", errStudentConsentAuditRequired, err)
 		}
 	}

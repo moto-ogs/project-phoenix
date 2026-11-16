@@ -226,9 +226,13 @@ type router struct {
 	channels []Channel
 	logger   *slog.Logger
 	observe  DeliveryObserver
+	// clock tells whether an event falls in the school's delivery window.
+	clock func() time.Time
 	// feedReader is the notification feed (#7148): its store and clock, and
 	// the read side the router serves; nil rejects feed events.
 	*feedReader
+	// guardian serves the feed of the parents portal (#7140).
+	guardian *guardianFeed
 }
 
 // DeliveryObserver records one synchronous transport outcome. All arguments
@@ -243,7 +247,7 @@ const TypeTest = "test"
 // It returns Notifier so wiring can reach NotifyBatch; the value stays
 // assignable to Service for consumers that only notify one audience.
 func NewService(settings RouterSettings, logger *slog.Logger, channels ...Channel) Notifier {
-	return &router{settings: settings, channels: channels, logger: logger}
+	return &router{settings: settings, channels: channels, logger: logger, clock: time.Now}
 }
 
 // NewServiceWithDeliveryObserver builds the production router with runtime
@@ -262,6 +266,9 @@ func NewServiceWithDeliveryObserver(settings RouterSettings, logger *slog.Logger
 // nil store leaves the feed out.
 func NewServiceWithFeed(settings RouterSettings, logger *slog.Logger, observe DeliveryObserver, feed deliveryPorts.FeedStore, now func() time.Time, channels ...Channel) Notifier {
 	service := NewServiceWithDeliveryObserver(settings, logger, observe, channels...).(*router)
+	if now != nil {
+		service.clock = now
+	}
 	if feed == nil {
 		return service
 	}
@@ -269,6 +276,9 @@ func NewServiceWithFeed(settings RouterSettings, logger *slog.Logger, observe De
 	for _, channel := range channels {
 		if signal, ok := channel.(feedSignalChannel); ok {
 			service.signal = signal.signalFeed
+		}
+		if sse, ok := channel.(*sseChannel); ok {
+			service.guardian = newGuardianFeed(sse, feed, logger, now)
 		}
 	}
 	return service

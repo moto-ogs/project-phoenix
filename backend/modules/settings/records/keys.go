@@ -18,10 +18,10 @@ const (
 	KeyMFATrustedDeviceEnabled = "security.mfa_trusted_device_enabled"
 	KeyMFATrustedDeviceDays    = "security.mfa_trusted_device_days"
 
-	// Account brute-force lockout policy (issue #586 — Rule 12 extraction).
-	// Shared by the PIN and MFA failure counters: after
-	// KeyAccountLockoutThreshold failed attempts the account is locked for
-	// KeyAccountLockoutDurationMinutes minutes.
+	// Brute-force lockout (#586). A school's values govern its MFA code check:
+	// after KeyAccountLockoutThreshold wrong codes it pauses for
+	// KeyAccountLockoutDurationMinutes. Password locks use only the registry
+	// defaults; their failures decay after that duration (#7214).
 	KeyAccountLockoutThreshold       = "security.account_lockout_threshold"
 	KeyAccountLockoutDurationMinutes = "security.account_lockout_duration_minutes"
 )

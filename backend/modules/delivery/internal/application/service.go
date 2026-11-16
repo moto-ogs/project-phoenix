@@ -21,13 +21,16 @@ type Service struct {
 	store   ports.Store
 	people  ports.GuardianDirectory
 	observe ports.Observer
+	now     func() time.Time
 }
 
-func NewService(store ports.Store, people ports.GuardianDirectory, observe ports.Observer) *Service {
-	if store == nil || people == nil || observe == nil {
-		panic("delivery application: store, guardian directory, and observer are required")
+// NewService builds the capability; now dates new intents, cancellations and
+// the outcome of a mail.
+func NewService(store ports.Store, people ports.GuardianDirectory, observe ports.Observer, now func() time.Time) *Service {
+	if store == nil || people == nil || observe == nil || now == nil {
+		panic("delivery application: store, guardian directory, observer, and clock are required")
 	}
-	return &Service{store: store, people: people, observe: observe}
+	return &Service{store: store, people: people, observe: observe, now: now}
 }
 
 // enqueueInput is one validated intent with its encoded recipient and payload.
@@ -181,7 +184,7 @@ func (s *Service) record(ctx context.Context, input enqueueInput) (result domain
 	defer func() {
 		s.observe(domain.Observation{Operation: "enqueue", Transport: string(input.Transport), Template: input.Template, Duration: time.Since(started), Count: boolCount(err == nil), Err: err})
 	}()
-	nextRetryAt := time.Now()
+	nextRetryAt := s.now()
 	if input.DeliverAfter.After(nextRetryAt) {
 		nextRetryAt = input.DeliverAfter
 	}
@@ -225,7 +228,7 @@ func (s *Service) Cancel(ctx context.Context, tenantID int64, transport delivery
 	defer func() {
 		s.observe(domain.Observation{Operation: "cancel", Transport: string(transport), Duration: time.Since(started), Count: int(count), Err: err})
 	}()
-	return s.store.Cancel(ctx, tenantID, domain.Transport(transport), related.Type, related.ID, reason, time.Now())
+	return s.store.Cancel(ctx, tenantID, domain.Transport(transport), related.Type, related.ID, reason, s.now())
 }
 
 func (s *Service) Statuses(ctx context.Context, tenantID int64, transport deliveryContract.Transport, related deliveryContract.RelatedEntity) ([]deliveryContract.Status, error) {
@@ -243,7 +246,7 @@ func (s *Service) Statuses(ctx context.Context, tenantID int64, transport delive
 	if err != nil {
 		return nil, err
 	}
-	return intentStatuses(transport, rows)
+	return intentStatuses(transport, rows, s.now())
 }
 
 // TraegerEmailStatuses reports the mails of a Träger for one related entity
@@ -266,7 +269,7 @@ func (s *Service) TraegerEmailStatuses(ctx context.Context, organizationID int64
 	if err != nil {
 		return nil, err
 	}
-	return intentStatuses(deliveryContract.TransportEmail, rows)
+	return intentStatuses(deliveryContract.TransportEmail, rows, s.now())
 }
 
 // TraegerEmailStatusesByKey reports the mails of a Träger by idempotency
@@ -287,7 +290,7 @@ func (s *Service) TraegerEmailStatusesByKey(ctx context.Context, organizationID 
 	if err != nil {
 		return nil, err
 	}
-	return intentStatuses(deliveryContract.TransportEmail, rows)
+	return intentStatuses(deliveryContract.TransportEmail, rows, s.now())
 }
 
 // TraegerEmailStatusesOf reports the mails of a Träger for the related
@@ -313,7 +316,7 @@ func (s *Service) TraegerEmailStatusesOf(ctx context.Context, organizationID int
 	if err != nil {
 		return nil, err
 	}
-	return intentStatuses(deliveryContract.TransportEmail, rows)
+	return intentStatuses(deliveryContract.TransportEmail, rows, s.now())
 }
 
 // RetryFailedTraegerEmails makes the Träger's dead letters of keys with a
@@ -338,7 +341,7 @@ func (s *Service) RetryFailedTraegerEmails(ctx context.Context, organizationID i
 }
 
 // intentStatuses reports stored intents in the public status shape.
-func intentStatuses(transport deliveryContract.Transport, rows []domain.Intent) ([]deliveryContract.Status, error) {
+func intentStatuses(transport deliveryContract.Transport, rows []domain.Intent, now time.Time) ([]deliveryContract.Status, error) {
 	statuses := make([]deliveryContract.Status, 0, len(rows))
 	for _, row := range rows {
 		var providerResult *deliveryContract.ProviderResult
@@ -354,7 +357,7 @@ func intentStatuses(transport deliveryContract.Transport, rows []domain.Intent) 
 			LastError: row.LastError, ProviderResult: providerResult, NextAttemptAt: row.NextRetryAt,
 			SentAt: row.SentAt, DeadLetterAt: row.DeadLetterAt, CancelledAt: row.CancelledAt,
 			DeliveryState: row.DeliveryState, DeliveryStateAt: row.DeliveryStateAt,
-			Outcome: intentOutcome(transport, row),
+			Outcome: intentOutcome(transport, row, now),
 		})
 	}
 	return statuses, nil
@@ -362,11 +365,11 @@ func intentStatuses(transport deliveryContract.Transport, rows []domain.Intent) 
 
 // intentOutcome is the outcome of a mail. A Träger has no school list, so a mail
 // of a Träger never carries a mark.
-func intentOutcome(transport deliveryContract.Transport, row domain.Intent) deliveryContract.EmailOutcome {
+func intentOutcome(transport deliveryContract.Transport, row domain.Intent, now time.Time) deliveryContract.EmailOutcome {
 	if transport != deliveryContract.TransportEmail {
 		return ""
 	}
-	return deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(row.Status, &row.DeliveryState, row.LastError, ""), row.DeliveryStateAt, time.Now())
+	return deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(row.Status, &row.DeliveryState, row.LastError, ""), row.DeliveryStateAt, now)
 }
 
 // intents reads the intents of one related entity and observes the store's answer.

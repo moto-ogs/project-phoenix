@@ -276,6 +276,12 @@ test('the architecture step runs the existing checker on the working tree, only 
   assert.deepEqual(steps[1].command, ['bash', 'scripts/backend-architecture.sh', 'check', '--baseline', '/repo/backend/architecture/legacy.jsonl']);
 });
 
+test('a changed contract model is compared with the base', () => {
+  const steps = stepsFor('/repo', 'origin/development', ['backend/api/contract/contract.json']);
+  assert.deepEqual(steps.map(step => step.name), ['static', 'contract', 'tests']);
+  assert.deepEqual(steps[1].command, ['node', 'scripts/check-contract-compat.mjs', 'origin/development']);
+});
+
 test('steps run side by side only on a machine with room', () => {
   assert.equal(concurrencyFor(16, 64 * 1024 ** 3, 3), 2);
   assert.equal(concurrencyFor(4, 64 * 1024 ** 3, 0), 1);

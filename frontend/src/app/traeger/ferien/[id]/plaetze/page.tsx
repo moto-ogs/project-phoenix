@@ -18,6 +18,10 @@ import {
 } from "~/components/traeger/holiday-week-places";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useApiLoadError } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
@@ -25,6 +29,7 @@ import {
   fetchHolidayWeekPlaces,
   type HolidayWeekPlaces,
 } from "~/lib/traeger-holiday-registrations-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerHolidayPlacesPage" });
@@ -126,6 +131,21 @@ export default function TraegerHolidayPlacesPage() {
         period?.registrationCount,
         period?.allocationMode,
       )}
+      actions={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList(
+              `/api/traeger/holiday-periods/${id}/places/export`,
+              format,
+            )
+          }
+          scope={traegerExportScope()}
+          ariaLabel="Plätze und Warteliste herunterladen"
+          fallbackName="plaetze"
+          errorObject="die Plätze"
+          unavailable={!weeks || weeks.length === 0}
+        />
+      }
       error={loadError}
       loading={!loadError && !weeks}
       empty={

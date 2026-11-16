@@ -64,6 +64,6 @@ func TestDemoRoutesAnswerTheWebsitesPreflight(t *testing.T) {
 // other environment mounts nothing and needs none.
 func TestDemoMountFailsWithoutTheCapability(t *testing.T) {
 	t.Parallel()
-	assert.Error(t, mountDemoAccess(chi.NewRouter(), nil, " Demo ", "https://demo.example", "demo.example"))
-	assert.NoError(t, mountDemoAccess(chi.NewRouter(), nil, "production", "https://demo.example", "demo.example"))
+	assert.Error(t, mountDemoAccess(chi.NewRouter(), nil, " Demo ", "https://demo.example", "demo.example", nil))
+	assert.NoError(t, mountDemoAccess(chi.NewRouter(), nil, "production", "https://demo.example", "demo.example", nil))
 }

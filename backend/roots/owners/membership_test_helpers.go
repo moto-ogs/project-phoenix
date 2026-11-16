@@ -15,6 +15,7 @@ import (
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // NewMembershipTestRepositories composes the People Directory and School
@@ -47,7 +48,7 @@ func NewMembershipTestRepositories(db transactionruntime.Database) (MembershipTe
 	members.Student = NewStudentRepository(db, membership, groups)
 	members.GuardianProfile = NewGuardianProfileRepository(db)
 	members.StudentGuardian = NewStudentGuardianRepository(db)
-	members.GroupSubstitution = NewGroupSubstitutionRepository(NewSchoolStructureRepositories(db, persons, identity, membership, rooms, workTime).Group, membership, workTime)
+	members.GroupSubstitution = NewGroupSubstitutionRepository(NewSchoolStructureRepositories(db, persons, identity, membership, rooms, workTime).Group, membership, workTime, timezone.TodayDate)
 	return members, nil
 }
 

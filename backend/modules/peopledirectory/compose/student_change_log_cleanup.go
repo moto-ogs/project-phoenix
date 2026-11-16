@@ -2,6 +2,7 @@ package compose
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
@@ -16,6 +17,7 @@ func NewStudentChangeLogCleanupService(
 	deletions ports.StudentChangeLogDeletionLog,
 	retention ports.StudentChangeLogRetention,
 	logger *slog.Logger,
+	now func() time.Time,
 ) ports.StudentChangeLogCleanupService {
-	return application.NewStudentChangeLogCleanupService(transaction{}, store, deletions, retention, logger)
+	return application.NewStudentChangeLogCleanupService(transaction{}, store, deletions, retention, logger, now)
 }

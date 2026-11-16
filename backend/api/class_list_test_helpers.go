@@ -3,6 +3,8 @@
 package api
 
 import (
+	"time"
+
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -22,7 +24,7 @@ func NewClassListTestModule(db transactionruntime.Database) (ClassListTestModule
 	if err != nil {
 		return ClassListTestModule{}, err
 	}
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return ClassListTestModule{}, err
 	}

@@ -45,6 +45,7 @@
 # Uses respond with 200 so Cloudflare does not replace the response.
 # The page follows the frontend's 404 screen (frontend/src/app/not-found.tsx)
 # and the kit's Loading row (spinner from frontend/src/components/ui/icons.tsx)
+# inside the login card's white surface (SectionCard in components/auth/auth-shell.tsx)
 # and carries logo and wordmark inline: no upstream serves assets now.
 # Its script asks /api/health every 5 s and reopens the address once the
 # answer lacks X-Moto-Maintenance, which only this snippet sets.
@@ -97,7 +98,7 @@
 			  -webkit-mask-image: radial-gradient(circle at center, black 0, black 58%, rgba(0, 0, 0, 0.62) 80%, transparent 100%);
 			  mask-image: radial-gradient(circle at center, black 0, black 58%, rgba(0, 0, 0, 0.62) 80%, transparent 100%);
 			}
-			main { position: relative; display: flex; flex-direction: column; align-items: center; }
+			main { position: relative; display: flex; width: 100%; max-width: 29rem; flex-direction: column; align-items: center; padding: 2.5rem 1.5rem; border: 1px solid #e5e7eb; border-radius: 1rem; background: #fff; box-shadow: 0 1px 2px rgba(3, 7, 18, 0.06); }
 			.brand { display: flex; align-items: center; justify-content: center; gap: 0.75rem; }
 			.brand img { width: 2.75rem; height: 2rem; object-fit: contain; }
 			.brand svg { width: 4.28rem; height: 1.36rem; fill: #030712; }
@@ -107,6 +108,7 @@
 			.status svg { flex: none; width: 1.5rem; height: 1.5rem; animation: turn 1s linear infinite; }
 			@keyframes turn { to { transform: rotate(360deg); } }
 			@media (min-width: 40rem) {
+			  main { padding: 2rem; }
 			  h1 { font-size: 2.25rem; }
 			  .lead { font-size: 1rem; }
 			}

@@ -163,6 +163,13 @@
       ".storybook/mocks/**"
     ],
     "ignoreIssues": {
+      "src/lib/contract/*.generated.ts": [
+        "exports",
+        "types"
+      ],
+      "src/lib/contract/runtime.ts": [
+        "exports"
+      ],
       "playwright*.config.ts": [
         "exports"
       ],

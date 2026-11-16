@@ -8,6 +8,10 @@
 import { FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -21,6 +25,7 @@ import {
   type DocumentTemplateSummary,
   fetchDocumentTemplates,
 } from "~/lib/traeger-document-templates";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerVorlagenPage" });
@@ -127,6 +132,21 @@ export default function TraegerVorlagenPage() {
         ) : null
       }
       statsLoading={!templates && !pageLoad.error}
+      actions={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList(
+              "/api/traeger/master-data/document-templates/export",
+              format,
+            )
+          }
+          scope={traegerExportScope()}
+          ariaLabel="Vorlagen herunterladen"
+          fallbackName="vorlagen"
+          errorObject="die Liste der Vorlagen"
+          unavailable={!templates || templates.length === 0}
+        />
+      }
       error={pageLoad.error}
       loading={!pageLoad.error && !templates}
     >

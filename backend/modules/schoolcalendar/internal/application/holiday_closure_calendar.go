@@ -12,17 +12,16 @@ import (
 
 // HolidayClosureCalendar owns revision checks and no-care date resolution.
 type HolidayClosureCalendar struct {
-	reads         ports.HolidayClosureCalendarReads
-	holidays      ports.HolidayClosureHolidays
-	defaultRegion string
+	reads    ports.HolidayClosureCalendarReads
+	holidays ports.HolidayClosureHolidays
 }
 
-// NewHolidayClosureCalendar binds calendar reads, local holidays and the registry default.
-func NewHolidayClosureCalendar(reads ports.HolidayClosureCalendarReads, holidays ports.HolidayClosureHolidays, defaultRegion string) *HolidayClosureCalendar {
+// NewHolidayClosureCalendar binds calendar reads and local holidays.
+func NewHolidayClosureCalendar(reads ports.HolidayClosureCalendarReads, holidays ports.HolidayClosureHolidays) *HolidayClosureCalendar {
 	if reads == nil || holidays == nil {
 		panic("holiday closure calendar: calendar reads and holidays are required")
 	}
-	return &HolidayClosureCalendar{reads: reads, holidays: holidays, defaultRegion: defaultRegion}
+	return &HolidayClosureCalendar{reads: reads, holidays: holidays}
 }
 
 // HolidayClosureNoCareDays validates the calendar and computes no-care dates in one school batch.
@@ -89,15 +88,13 @@ func closingNoCareDays(closingDays []schoolcalendar.HolidayClosureCalendarDay, f
 	return closing
 }
 
-// region uses the stored state or the bound registry default, never an env value.
+// region is the school's stored federal state. There is no default: a
+// school without one fails instead of getting another state's holidays.
 func (c HolidayClosureCalendar) region(stored string) (string, error) {
-	if stored != "" {
-		return stored, nil
+	if stored == "" {
+		return "", fmt.Errorf("%w: not set", schoolcalendar.ErrFederalStateUnavailable)
 	}
-	if c.defaultRegion == "" {
-		return "", fmt.Errorf("%w: no registry default", schoolcalendar.ErrFederalStateUnavailable)
-	}
-	return c.defaultRegion, nil
+	return stored, nil
 }
 
 func mergeClosureNoCareDays(holidays, closing []schoolcalendar.HolidayClosureNoCareDay) []schoolcalendar.HolidayClosureNoCareDay {

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
+import { SignOutIcon } from "@phosphor-icons/react";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
-import { Modal } from "~/components/ui/modal";
-import { Button } from "~/components/ui/button";
+import { ConfirmationModal } from "~/components/ui/modal";
+import { IconTile } from "~/components/ui/icon-tile";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "LogoutModal" });
@@ -14,25 +15,10 @@ interface LogoutModalProps {
   readonly onClose: () => void;
 }
 
-const LogOutIcon = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="48"
-    height="48"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" x2="9" y1="12" y2="12" />
-  </svg>
-);
-
+/**
+ * Confirms the logout in the kit's confirmation dialog: named by its title,
+ * with a way back, and locked while the logout runs (#7112, #7209).
+ */
 export function LogoutModal({ isOpen, onClose }: LogoutModalProps) {
   const { logout } = useShellAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -59,33 +45,21 @@ export function LogoutModal({ isOpen, onClose }: LogoutModalProps) {
   };
 
   return (
-    <Modal
+    <ConfirmationModal
       isOpen={isOpen}
-      onClose={isLoggingOut ? () => undefined : onClose}
-      title=""
-      ariaLabel="Abmelden"
-      footer={undefined}
+      onClose={onClose}
+      onConfirm={() => void handleConfirmLogout()}
+      title="Abmelden"
+      icon={<IconTile icon={<SignOutIcon aria-hidden />} size="sm" />}
+      confirmText="Abmelden"
+      loadingText="Abmeldung läuft …"
+      confirmTooltip="Meldet Sie auf diesem Gerät von moto ab."
+      isConfirmLoading={isLoggingOut}
+      mobileSheet
     >
-      <div className="py-4 text-center">
-        <LogOutIcon className="mx-auto mb-4 h-12 w-12 text-gray-700" />
-        <h2 className="mt-4 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-          Abmelden
-        </h2>
-        <p className="mt-4 text-gray-600">
-          Möchten Sie sich wirklich von Ihrem Konto abmelden?
-        </p>
-        <div className="mt-6">
-          <Button
-            type="button"
-            size="md"
-            onClick={handleConfirmLogout}
-            disabled={isLoggingOut}
-            tooltip="Meldet Sie auf diesem Gerät von moto ab."
-          >
-            {isLoggingOut ? "Abmeldung läuft..." : "Abmelden"}
-          </Button>
-        </div>
-      </div>
-    </Modal>
+      <p className="text-sm text-gray-600">
+        Möchten Sie sich wirklich von Ihrem Konto abmelden?
+      </p>
+    </ConfirmationModal>
   );
 }

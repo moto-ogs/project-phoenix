@@ -27,14 +27,20 @@ type NotificationEvent struct {
 	SchoolDeepLink string
 	Data           map[string]string
 	Portal         string
-	// Feed also writes the event into the staff notification feed (#7137).
+	// Feed also writes the event into the notification feed (#7137, #7140).
+	// Nil leaves the feed untouched.
 	Feed *NotificationFeed
 }
 
-// NotificationFeed hands Delivery the feed side of a staff notice: the
-// audience gets a feed entry, PushAccountIDs a push as well (#7137).
+// NotificationFeed hands Delivery the feed side of a notice: its audience
+// gets a feed entry and PushAccountIDs a push as well. Title and Body may
+// differ from the display-safe push for a guardian entry read after login.
 type NotificationFeed struct {
-	PushAccountIDs []int64
+	PushAccountIDs    []int64
+	Title             string
+	Body              string
+	DeepLink          string
+	HoldOutsideWindow bool
 }
 
 // Notification protocol vocabulary is independent of dispatch policy.

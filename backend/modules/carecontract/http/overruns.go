@@ -21,12 +21,12 @@ type OverrunResource struct {
 	evaluations   carecontract.OverrunEvaluations
 	requireReport common.Middleware
 	requireNames  common.Middleware
-	lists         ListRenderer
+	lists         common.ListRenderer
 }
 
 // NewOverrunResource builds the resource; lists renders both exports
 // (#4718).
-func NewOverrunResource(evaluations carecontract.OverrunEvaluations, requireReport, requireNames common.Middleware, lists ListRenderer) *OverrunResource {
+func NewOverrunResource(evaluations carecontract.OverrunEvaluations, requireReport, requireNames common.Middleware, lists common.ListRenderer) *OverrunResource {
 	if evaluations == nil || requireReport == nil || requireNames == nil || lists == nil {
 		panic("care contract http: the evaluation, both right checks and the list renderer are required")
 	}
@@ -78,8 +78,8 @@ func (rs *OverrunResource) exportChildren(w http.ResponseWriter, r *http.Request
 	rs.export(w, r, rs.evaluations.OverrunChildren, overrunChildrenTable)
 }
 
-func (rs *OverrunResource) export(w http.ResponseWriter, r *http.Request, read evaluation, table func(carecontract.OverrunEvaluation, carecontract.OverrunFilter) ListTable) {
-	format, err := listFormat(r)
+func (rs *OverrunResource) export(w http.ResponseWriter, r *http.Request, read evaluation, table func(carecontract.OverrunEvaluation, carecontract.OverrunFilter) common.ListTable) {
+	format, err := common.ParseListFormat(r)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -88,7 +88,7 @@ func (rs *OverrunResource) export(w http.ResponseWriter, r *http.Request, read e
 	if !ok {
 		return
 	}
-	writeList(w, r, rs.lists, format, table(result, filter))
+	common.WriteList(w, r, rs.lists, format, table(result, filter))
 }
 
 func (rs *OverrunResource) evaluate(w http.ResponseWriter, r *http.Request, read evaluation) (carecontract.OverrunEvaluation, carecontract.OverrunFilter, bool) {

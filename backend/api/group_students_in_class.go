@@ -20,8 +20,8 @@ type careDayEndSettings interface {
 	ResolveString(ctx context.Context, key string) (string, error)
 }
 
-func newGroupStudentsInClassDay(settings careDayEndSettings) groupStudentsInClassDay {
-	return groupStudentsInClassDay{settings: settings, now: time.Now}
+func newGroupStudentsInClassDay(settings careDayEndSettings, now func() time.Time) groupStudentsInClassDay {
+	return groupStudentsInClassDay{settings: settings, now: now}
 }
 
 func (d groupStudentsInClassDay) InClassStillHolds(ctx context.Context) (bool, error) {

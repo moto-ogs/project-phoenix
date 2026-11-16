@@ -43,11 +43,19 @@ func insertAbsenceType(t *testing.T, tc *testContext, name string, allowanceEnab
 	return id
 }
 
+// absenceAdminDay is the school Tuesday the absence admin routes run on
+// when a test pins no clock of its own.
+var absenceAdminDay = testpkg.Date(2026, time.November, 10)
+
 // setupAbsenceAdminTest builds the router context plus an editor (admin
 // account linked to a staff row, required by resolveEditorStaffID) and a
-// subject staff member with one plain shift tomorrow.
+// subject staff member with one plain shift tomorrow. Without a clock the
+// routes run at noon of absenceAdminDay.
 func setupAbsenceAdminTest(t *testing.T, clocks ...func() time.Time) (tc *testContext, token string, subjectID int64, shiftID int64) {
 	t.Helper()
+	if len(clocks) == 0 {
+		clocks = []func() time.Time{func() time.Time { return absenceAdminDay.BerlinMidnight().Add(12 * time.Hour) }}
+	}
 	tc = setupStaffRoute(t, clocks...)
 	suffix := time.Now().UnixNano()
 
@@ -55,14 +63,10 @@ func setupAbsenceAdminTest(t *testing.T, clocks ...func() time.Time) (tc *testCo
 	testpkg.CreateTestStaffForPerson(t, tc.db, editorPerson.ID)
 	subject := testpkg.CreateTestStaff(t, tc.db, "Absence", fmt.Sprintf("Subject-%d", suffix))
 
-	today := testpkg.TodayDate()
-	if len(clocks) > 0 {
-		berlin, err := time.LoadLocation("Europe/Berlin")
-		require.NoError(t, err)
-		year, month, day := clocks[0]().In(berlin).Date()
-		today = testpkg.Date(year, month, day)
-	}
-	tomorrow := today.AddDays(1)
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	require.NoError(t, err)
+	year, month, day := clocks[0]().In(berlin).Date()
+	tomorrow := testpkg.Date(year, month, day).AddDays(1)
 	shift := testpkg.CreateTestStaffShift(t, tc.db, subject.ID, isoDay(tomorrow.String()), testpkg.StaffShiftOpts{
 		StartHHMM: "08:00",
 		EndHHMM:   "12:00",
@@ -162,7 +166,7 @@ func TestAdminCreateStaffAbsence_RejectsMultiDayHalfDayCompTime(t *testing.T) {
 	t.Parallel()
 
 	tc, token, subjectID, _ := setupAbsenceAdminTest(t)
-	tomorrow := testpkg.TodayDate().AddDays(1)
+	tomorrow := absenceAdminDay.AddDays(1)
 
 	rec := postAbsence(t, tc, token, subjectID, map[string]any{
 		"absence_type": "comp_time",
@@ -179,7 +183,7 @@ func TestAdminCreateStaffAbsence_RequiresPermission(t *testing.T) {
 	t.Parallel()
 
 	tc, _, subjectID, _ := setupAbsenceAdminTest(t)
-	tomorrow := testpkg.TodayDate().AddDays(1)
+	tomorrow := absenceAdminDay.AddDays(1)
 
 	noPermToken := authToken(t, "schedules:read")
 	rec := postAbsence(t, tc, noPermToken, subjectID, map[string]any{
@@ -215,7 +219,7 @@ func TestAdminCreateStaffAbsence_UnknownStaff(t *testing.T) {
 	t.Parallel()
 
 	tc, token, _, _ := setupAbsenceAdminTest(t)
-	tomorrow := testpkg.TodayDate().AddDays(1)
+	tomorrow := absenceAdminDay.AddDays(1)
 
 	rec := postAbsence(t, tc, token, 99999999, map[string]any{
 		"absence_type": "sick",

@@ -30,8 +30,9 @@ type CatererMail struct {
 }
 
 // CatererInvitationMailOf builds the mail of a school's invitation. The link
-// names the school, so the caterer portal opens only that school.
-func CatererInvitationMailOf(recipient, catererName, schoolName, origin string, schoolID int64, token string, expiresAt time.Time) CatererMail {
+// names the school, so the caterer portal opens only that school; the days
+// it states count from now to expiresAt.
+func CatererInvitationMailOf(recipient, catererName, schoolName, origin string, schoolID int64, token string, expiresAt, now time.Time) CatererMail {
 	origin = MailOrigin(origin)
 	return CatererMail{
 		Recipient:     strings.TrimSpace(recipient),
@@ -39,7 +40,7 @@ func CatererInvitationMailOf(recipient, catererName, schoolName, origin string, 
 		SchoolName:    strings.TrimSpace(schoolName),
 		InvitationURL: fmt.Sprintf("%s/einladung/%d/%s", origin, schoolID, token),
 		LogoURL:       origin + motoLogoPath,
-		ExpiryDays:    max(int(math.Ceil(time.Until(expiresAt).Hours()/24)), 1),
+		ExpiryDays:    max(int(math.Ceil(expiresAt.Sub(now).Hours()/24)), 1),
 	}
 }
 

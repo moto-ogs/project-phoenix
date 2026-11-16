@@ -79,7 +79,7 @@ func (s *BirthdayService) Overview(ctx context.Context, visibility domain.Birthd
 	overview.IncludeStaff = includeStaff
 
 	days, byMonthDay := domain.BirthdayWindow(week)
-	students, err := s.store.StudentBirthdaysOn(ctx, days)
+	students, err := s.store.StudentBirthdaysOn(ctx, days, today)
 	if err != nil {
 		return BirthdayOverview{}, &userscontract.UsersError{Op: "find student birthdays", Err: err}
 	}

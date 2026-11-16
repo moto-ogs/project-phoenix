@@ -205,6 +205,13 @@ func TestCareMonthlyRunBillsTheContractByTheTariffsOfItsSchool(t *testing.T) {
 	preview := f.run(t, run.ID)
 	assert.Equal(t, "calculated", preview.Status)
 	assert.Equal(t, "version_on_first", preview.MonthRule, "the default bills the full month by the version on the 1st")
+
+	// #4718: the list of the runs as a file, the schools by name.
+	lines := billingListCSV(t, f.traeger, f.office.token, careRunsPath+"/export")
+	require.Len(t, lines, 2, "the header and the run")
+	assert.Equal(t, "Monat;Status;Schulen;Rechnungen;Summe (Euro);Ausgestellt am;Bei Vertragsänderung im Monat", lines[0])
+	assert.Contains(t, lines[1], ";Vorschau;Alle 2 Schulen;noch nicht ausgestellt;")
+	assertTraegerListFormats(t, f.traeger, f.office.token, careRunsPath+"/export", "monatsbeitraege")
 	require.Len(t, preview.Invoices, 2)
 	totals := map[int64]int64{}
 	for _, invoice := range preview.Invoices {
@@ -346,8 +353,11 @@ func TestCareMonthlyBillingNeedsTheRightAndStaysWithItsTraeger(t *testing.T) {
 		rec := traegerJSON(t, f.traeger, answer.AccessToken, request.method, request.path, request.body)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "%s %s without the right: %s", request.method, request.path, rec.Body.String())
 	}
+	rec = traegerJSON(t, f.traeger, answer.AccessToken, http.MethodGet, careRunsPath+"/export", nil)
+	assert.Equal(t, http.StatusForbidden, rec.Code, "the file of the runs without the right: %s", rec.Body.String())
 
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Monatsbeitrag Fremd", identityaccess.TraegerRoleBilling)
+	assert.Len(t, billingListCSV(t, f.traeger, foreign.token, careRunsPath+"/export"), 1, "the file of another Träger holds no run")
 	for _, request := range requests[5:] {
 		rec := traegerJSON(t, f.traeger, foreign.token, request.method, request.path, request.body)
 		assert.Equal(t, http.StatusNotFound, rec.Code, "%s %s of another Träger: %s", request.method, request.path, rec.Body.String())

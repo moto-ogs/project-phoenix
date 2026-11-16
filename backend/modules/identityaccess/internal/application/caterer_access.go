@@ -77,7 +77,7 @@ func NewCatererAccess(auth *AccountAuthentication, deps CatererAccessDependencie
 	caterers := &CatererAccess{
 		auth: auth, store: deps.Store, delivery: deps.Delivery, passwords: deps.Passwords, verifier: deps.Verifier,
 		schools: deps.Schools, runtime: deps.Runtime, mfa: deps.MFA, passkeys: deps.Passkeys,
-		attach: attach, now: time.Now, logger: logger,
+		attach: attach, now: auth.sessions.now, logger: logger,
 	}
 	caterers.factor = voluntaryFactor{
 		portal: domain.PortalCaterer, auth: auth, mfa: deps.MFA, verifier: deps.Verifier, runtime: deps.Runtime, logger: logger,

@@ -3,6 +3,7 @@ package contracttest_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
 
@@ -27,7 +28,9 @@ func TestStudentRepository_EndedCareExcludedFromRosterReads(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repos := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
+	// The rosters list the children of a fixed school day (#7104).
+	today := calendar.NewDate(2026, 11, 2)
+	repos := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db), func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) })
 	ctx := testpkg.Ctx(t)
 
 	suffix := uuid.Must(uuid.NewV4()).String()[:8]
@@ -44,7 +47,6 @@ func TestStudentRepository_EndedCareExcludedFromRosterReads(t *testing.T) {
 	assignGroup(t, db, lastDayToday.ID, group.ID)
 	assignGroup(t, db, departed.ID, group.ID)
 
-	today := calendar.TodayDate()
 	yesterday := today.AddDays(-1)
 	// The interval's upper bound is INCLUSIVE: a child whose last care day is
 	// today is still there today and leaves tomorrow.

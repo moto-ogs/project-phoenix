@@ -407,7 +407,7 @@ describe("ParentLoginPage i18n", () => {
     expect(resetDialog.getByText("Reset password")).toBeVisible();
     expect(
       resetDialog.getByText(
-        "Enter your email address and we will send you a link to reset your password.",
+        "We will send you a link. With it, you set a new password.",
       ),
     ).toBeVisible();
     expect(resetDialog.getByLabelText("Email address")).toBeVisible();

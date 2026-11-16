@@ -17,13 +17,17 @@ import { catalogText } from "~/test/error-catalog-text";
 // Echtes SWR: Senden, Verwerfen und Zurücknehmen laufen über den Cache.
 vi.unmock("swr");
 
-const { mockFetchGroupThread, mockPostGroupMessage, tenantFlags } = vi.hoisted(
-  () => ({
-    mockFetchGroupThread: vi.fn(),
-    mockPostGroupMessage: vi.fn(),
-    tenantFlags: { messagingEnabled: true },
-  }),
-);
+const {
+  mockFetchGroupThread,
+  mockFetchGroupThreadMails,
+  mockPostGroupMessage,
+  tenantFlags,
+} = vi.hoisted(() => ({
+  mockFetchGroupThread: vi.fn(),
+  mockFetchGroupThreadMails: vi.fn(),
+  mockPostGroupMessage: vi.fn(),
+  tenantFlags: { messagingEnabled: true },
+}));
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ groupThreadId: "4" }),
@@ -73,6 +77,7 @@ vi.mock("~/components/ui/tenant-page", () => ({
 vi.mock("~/lib/parent-group-threads-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-group-threads-api")>()),
   fetchGroupThread: mockFetchGroupThread,
+  fetchGroupThreadMails: mockFetchGroupThreadMails,
   postGroupMessage: mockPostGroupMessage,
 }));
 
@@ -130,6 +135,8 @@ async function typeAndSend(text: string) {
 describe("Gruppennachricht senden: Ablehnung je Code", () => {
   beforeEach(() => {
     mockFetchGroupThread.mockReset().mockResolvedValue(detail);
+    // No message has an e-mail: the mail status side-load stays empty.
+    mockFetchGroupThreadMails.mockReset().mockResolvedValue({});
     mockPostGroupMessage.mockReset();
     tenantFlags.messagingEnabled = true;
   });

@@ -21,9 +21,11 @@ const schoolContentUntil5559 = "content of the retired demo school, which stays 
 // Sign-in events keep the period every sign-in event has.
 const signInEventsKeepTheirPeriod = "sign-in events (IP address, user agent) keep the 90 days of every sign-in event, decision of the product owner of 02.11.2026 (#5543); the nightly run deletes them in retired demo schools too (#4728)"
 
-// The Träger-Büro of the shared demo Träger is the bootstrap admin of the
-// seed (seedTraegerBueroStep); no visitor account is ever a member of it.
-const traegerBueroOnly = "Träger-Büro of the shared demo Träger: the seed assigns only its bootstrap admin, never a visitor account (seedTraegerBueroStep)"
+// The Träger-Büro of a demo Träger is the bootstrap admin of the seed
+// (seedTraegerBueroStep). A visitor joins only the office of the order's own
+// Träger (ADR 0271); that membership, its roles and its ledger go with the
+// visit, the Träger with its last school.
+const traegerBueroOnly = "Träger-Büro of a demo Träger: the seed's bootstrap admin, never a visitor of the shared Träger; a visitor's membership in its own Träger goes with the visit and the Träger with its last school (ADR 0271)"
 
 // demoErasureExceptions are the tables in scope the erasure leaves on
 // purpose, each with its reason. A new table with personal data gets an
@@ -36,7 +38,7 @@ const traegerBueroOnly = "Träger-Büro of the shared demo Träger: the seed ass
 // records of the Träger-Büro with their links and trail, ADR 0236 the
 // Abwesenheitsarten of the Träger and the Kontingente of its staff records,
 // ADR 0237 their contracts with Soll and holiday weeks, ADR 0238 their
-// Nachweise, ADR 0246 the report templates of the Träger-Büro, ADR 0250
+// Nachweise, ADR 0246 the report templates of the Träger-Büro, ADR 0252
 // the blocks of the Springer of the Vertretungspool.
 var demoErasureExceptions = map[string]string{
 	"active.activity_session_attendance":             schoolContentUntil5559,
@@ -83,7 +85,6 @@ var demoErasureExceptions = map[string]string{
 	"audit.student_field_edits":                      schoolContentUntil5559,
 	"audit.substitution_changes":                     schoolContentUntil5559,
 	"audit.time_tracking_deletions":                  schoolContentUntil5559,
-	"audit.traeger_account_changes":                  traegerBueroOnly,
 	"audit.traeger_export_transfers":                 traegerBueroOnly + "; only the Träger-Büro hands finance exports over (ADR 0218)",
 	"audit.traeger_document_downloads":               traegerBueroOnly + "; only the Träger-Büro downloads",
 	"audit.unregistered_tag_scans":                   schoolContentUntil5559,
@@ -93,7 +94,6 @@ var demoErasureExceptions = map[string]string{
 	"auth.caterer_invitations":                       schoolContentUntil5559,
 	"auth.guardian_invitations":                      schoolContentUntil5559,
 	"auth.invitation_tokens":                         schoolContentUntil5559,
-	"auth.organization_account_roles":                traegerBueroOnly,
 	"auth.parent_declaration_permission_grants":      schoolContentUntil5559,
 	"auth.traeger_invitations":                       traegerBueroOnly + "; invitations name synthetic example.org addresses",
 	"calendar.appointment_occurrence_overrides":      schoolContentUntil5559,
@@ -146,7 +146,6 @@ var demoErasureExceptions = map[string]string{
 	"parent_billing.sepa_debit_files":                "ADR 0187: the stored PAIN.008 file of a message drops by trigger (drop_sepa_debit_files_with_their_members), an unsubmitted download with the first of its debits, installment notices or mandates, a submitted original with the last of its debits and notices, and those go with the demo visitor's contracts",
 	"platform.billing_key_date_counts":               "school name and counts of an invoice key date, no person",
 	"platform.email_suppressions":                    schoolContentUntil5559,
-	"platform.organization_accounts":                 traegerBueroOnly,
 	"platform.traeger_bank_accounts":                 traegerBueroOnly + "; invented bank details of the demo Träger",
 	"platform.traeger_document_reads":                "an opening keeps only the school ID and the account ID, which the erasure anonymizes; expires three years after the opening (#4692)",
 	"platform.traeger_document_releases":             traegerBueroOnly + "; a release names the school, not a person",
@@ -162,7 +161,7 @@ var demoErasureExceptions = map[string]string{
 	"workforce.staff_contract_holiday_weeks":         traegerBueroOnly + "; the Ferien-Soll of a contract of the Träger names a school by plain id and goes with its contract (ADR 0237)",
 	"workforce.staff_contract_targets":               traegerBueroOnly + "; the Soll of a contract of the Träger names a school by plain id and goes with its contract (ADR 0237)",
 	"workforce.staff_contracts":                      traegerBueroOnly + "; the contracts of a staff record go with the record or the Träger (ADR 0237)",
-	"workforce.staff_pool_blocks":                    traegerBueroOnly + "; a block of a Springer names the blocking school by plain id and goes with its record (ADR 0250)",
+	"workforce.staff_pool_blocks":                    traegerBueroOnly + "; a block of a Springer names the blocking school by plain id and goes with its record (ADR 0252)",
 	"workforce.staff_record_changes":                 traegerBueroOnly + "; the trail of a staff record of the Träger goes with its record (ADR 0233)",
 	"workforce.staff_record_links":                   traegerBueroOnly + "; an Einsatzort of a staff record names a school by plain id and goes with its record (ADR 0233)",
 	"workforce.staff_records":                        traegerBueroOnly + "; the staff records of the Träger go with the Träger or when the Personalverwaltung dissolves them (ADR 0233)",
@@ -259,8 +258,10 @@ var demoErasureExceptions = map[string]string{
 // ADR 0237: the contracts of those staff records with their Soll and
 // holiday weeks (+3). ADR 0238: the Nachweise of those staff records (+1).
 // ADR 0246: the report templates of the Träger-Büro (+1).
-// ADR 0250: the blocks of the Springer of the Vertretungspool (+1).
-const demoErasureExceptionBudget = 204
+// ADR 0252: the blocks of the Springer of the Vertretungspool (+1).
+// ADR 0271: the visitor's membership in the office of its own Träger, its
+// roles and its ledger go with the visit (-3).
+const demoErasureExceptionBudget = 201
 
 func TestDemoErasureExceptionsKeepTheirBudget(t *testing.T) {
 	t.Parallel()

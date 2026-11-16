@@ -42,7 +42,7 @@ func newRetentionCleanupService(db transactionruntime.Database, schools organiza
 	_, supervisors := presenceCompose.SessionRepositories(repos.Sessions)
 	return presenceservice.NewPresenceCleanup(
 		owners.NewLoggedStudentPresence(db, logger), supervisors, owners.NewDeletionAudit(repos.Deletion),
-		settingsCompose.PresenceSettings(newCleanupSettingsService(db, schools, logger)),
+		settingsCompose.PresenceSettings(newCleanupSettingsService(db, schools, logger)), time.Now,
 	)
 }
 
@@ -58,7 +58,7 @@ func newTimetableCleanupService(db transactionruntime.Database, schools organiza
 func newTimeTrackingCleanupService(db transactionruntime.Database, schools organizationtenancy.Capability, workTime workforce.Capability, logger *slog.Logger, command auditModels.Command) workforceCompose.TimeTrackingCleanupService {
 	service, err := workforceCompose.NewTimeTrackingCleanup(workforceCompose.TimeTrackingCleanupDependencies{
 		Workforce: workTime, Absences: workTime, Audit: owners.NewTimeTrackingRetentionAudit(newCleanupAudits(db, command).DataDeletion),
-		Settings: settingsCompose.PresenceSettings(newCleanupSettingsService(db, schools, logger)), Logger: logger,
+		Settings: settingsCompose.PresenceSettings(newCleanupSettingsService(db, schools, logger)), Logger: logger, Now: time.Now,
 	})
 	if err != nil {
 		panic(fmt.Sprintf("time tracking cleanup: %v", err))

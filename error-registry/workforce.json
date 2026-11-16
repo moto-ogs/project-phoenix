@@ -685,6 +685,24 @@
       "legacy": "workforce.traeger_staff_already_linked"
     },
     {
+      "code": "workforce.traeger_staff_hire_duplicate",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_hire_duplicate"
+    },
+    {
+      "code": "workforce.traeger_staff_hire_incomplete",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_hire_incomplete"
+    },
+    {
+      "code": "workforce.traeger_staff_hire_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_hire_invalid"
+    },
+    {
       "code": "workforce.traeger_staff_import_changed",
       "class": "business_rejection",
       "parameters": [],

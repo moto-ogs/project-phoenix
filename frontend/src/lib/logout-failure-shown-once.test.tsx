@@ -33,18 +33,13 @@ vi.mock("~/lib/profile-context", () => ({
 vi.mock("~/lib/push-api", () => ({ unsubscribePushSilently: vi.fn() }));
 
 beforeEach(() => {
+  // No answer at all: the session stays (#5194). A server that answers
+  // that it could not revoke ends the session on this device (#7209).
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () =>
-      Response.json(
-        {
-          status: 503,
-          detail: "logout could not revoke the session",
-          code: "general.unavailable",
-        },
-        { status: 503 },
-      ),
-    ),
+    vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    }),
   );
 });
 
@@ -52,7 +47,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// #5194: a failed revocation keeps the session and is shown
+// #5194: a logout without an answer keeps the session and is shown
 // exactly once, by the shell, with a retry; the confirmation only closes.
 it.each([
   ["OGS", TeacherShellProvider],

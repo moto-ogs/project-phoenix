@@ -32,7 +32,9 @@ func (rs *Resource) accountRouter(protectedTraegerRoutes func(chi.Router, func(c
 	protectedTraegerRoutes(r, func(r chi.Router, _ common.Middleware) {
 		r.Use(common.RequiresPermission(identityaccess.TraegerRightAccountsManage))
 		r.Get("/", rs.listAccounts)
+		r.Get("/export", rs.exportAccounts)
 		r.Get("/history", rs.listHistory)
+		r.Get("/history/export", rs.exportHistory)
 		r.Post("/invitations", rs.inviteAccount)
 		r.Delete("/invitations/{invitationId}", rs.revokeInvitation)
 		r.Put("/{accountId}/roles", rs.changeRoles)
@@ -186,7 +188,7 @@ func (rs *Resource) listHistory(w http.ResponseWriter, r *http.Request) {
 		}
 		before = parsed
 	}
-	history, err := rs.accounts.ListTraegerAccountHistory(r.Context(), actor, before)
+	history, err := rs.accounts.ListTraegerAccountHistory(r.Context(), actor, identityaccess.TraegerAccountHistoryQuery{BeforeID: before})
 	if err != nil {
 		common.RenderError(w, r, renderAccountError(err))
 		return

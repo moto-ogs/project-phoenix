@@ -83,7 +83,7 @@ func TestCleanupStaleAttendance_ClosesStaleRecords(t *testing.T) {
 	device := testpkg.CreateTestDevice(t, db, "cleanup-device-001")
 
 	// Create a stale attendance record (yesterday, no checkout)
-	yesterday := calendar.Today().AddDate(0, 0, -1)
+	yesterday := calendar.DateOf(time.Now()).AddDate(0, 0, -1)
 	checkInTime := yesterday.Add(8 * time.Hour) // 8:00 AM yesterday
 
 	var attendanceID int64
@@ -151,7 +151,7 @@ func TestPreviewAttendanceCleanup_ShowsStaleRecords(t *testing.T) {
 	device := testpkg.CreateTestDevice(t, db, "preview-device-001")
 
 	// Create a stale attendance record (2 days ago, no checkout)
-	twoDaysAgo := calendar.Today().AddDate(0, 0, -2)
+	twoDaysAgo := calendar.DateOf(time.Now()).AddDate(0, 0, -2)
 	checkInTime := twoDaysAgo.Add(9 * time.Hour) // 9:00 AM
 
 	var attendanceID int64
@@ -523,7 +523,7 @@ func TestCleanupStaleAttendance_CheckInAfterEndOfDay(t *testing.T) {
 	// Create a stale attendance record with check_in_time AFTER end-of-day
 	// Set date to 2 days ago, but check_in_time to 2 days ago at 23:59:59 + 10 seconds
 	// This simulates a data integrity issue where check-in happened after midnight
-	twoDaysAgo := calendar.Today().AddDate(0, 0, -2)
+	twoDaysAgo := calendar.DateOf(time.Now()).AddDate(0, 0, -2)
 	checkInTime := twoDaysAgo.Add(23*time.Hour + 59*time.Minute + 59*time.Second + 10*time.Second)
 
 	var attendanceID int64

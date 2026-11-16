@@ -57,11 +57,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/visitAccessQuery.SupervisedActiveGroupIDs",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/inbound/presence/visitAccessQuery.TeacherGroupIDs",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

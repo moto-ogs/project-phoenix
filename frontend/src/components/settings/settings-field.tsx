@@ -14,7 +14,10 @@ import {
   ExternalLink,
   FileText,
   FileUp,
+  FileX2,
+  ImageOff,
   Pencil,
+  RefreshCcw,
   RotateCcw,
   TextAlignStart,
   Trash2,
@@ -91,11 +94,6 @@ const CONFIRM_ON_DISABLE: Record<
   string,
   { title: string; body: string; confirmText?: string }
 > = {
-  "operations.student_photos_enabled": {
-    title: "Kinderfotos deaktivieren?",
-    body: "Beim Ausschalten werden ALLE bereits hochgeladenen Kinderfotos sofort und unwiderruflich gelöscht. Die elterliche Einwilligung bleibt dokumentiert. Diese Aktion kann nicht rückgängig gemacht werden.",
-    confirmText: "Deaktivieren und Fotos löschen",
-  },
   // Die Einsatzplanung des Trägers (#4708, ADR 0242 Punkt 6): Ausschalten
   // sperrt neue Schichten in allen Schulen und löscht nichts. Der Aufrufer
   // nennt im Dialog die Schulen mit künftigen Schichten (`renderConfirmDetail`).
@@ -105,6 +103,95 @@ const CONFIRM_ON_DISABLE: Record<
     confirmText: "Ausschalten",
   },
 };
+
+/**
+ * Switches whose „aus“ deletes data for good. Like every irreversible
+ * deletion they confirm through the kit's delete dialog with a typed
+ * „LÖSCHEN“ (ConfirmDeleteModal, textConfirm); a reset to an „aus“ default
+ * asks the same way.
+ */
+interface DestructiveSwitchOff {
+  readonly title: string;
+  readonly description: (mode: "save" | "reset") => ReactNode;
+  readonly gateLabel: string;
+  readonly confirmTooltip?: string;
+}
+
+const DESTRUCTIVE_SWITCH_OFF: Record<string, DestructiveSwitchOff> = {
+  "gdpr.attendance_log_enabled": {
+    title: "Anwesenheitsprotokoll ausschalten?",
+    description: (mode) => (
+      <>
+        <p>
+          Alle abgeschlossenen Raumbesuche vor heute werden sofort gelöscht.
+        </p>
+        <p>
+          Das lässt sich nicht rückgängig machen. Auch erneutes Einschalten
+          stellt nichts wieder her.
+        </p>
+        <p>
+          Heutige Raumbesuche bleiben bis zum nächtlichen Löschen erhalten. Der
+          aktuelle Raum und die Anwesenheitszeiten bleiben erhalten.
+        </p>
+        {mode === "reset" && <p>Der Standard ist ausgeschaltet.</p>}
+      </>
+    ),
+    gateLabel:
+      "Geben Sie LÖSCHEN ein, um ältere Raumbesuche endgültig zu löschen.",
+  },
+  // #7208: Ausschalten löscht die Fotos und beendet jede Foto-Einwilligung.
+  // Nach dem Wiedereinschalten braucht jedes Foto eine neue Einwilligung.
+  "operations.student_photos_enabled": {
+    title: "Kinderfotos ausschalten?",
+    description: (mode) => (
+      <>
+        <InsetPanel as="ul" padding="sm" className="flex flex-col gap-3">
+          <SwitchOffConsequence
+            icon={<ImageOff aria-hidden="true" />}
+            tone="red"
+            text="moto löscht sofort alle Kinderfotos."
+          />
+          <SwitchOffConsequence
+            icon={<FileX2 aria-hidden="true" />}
+            tone="red"
+            text="Alle Foto-Einwilligungen der Eltern enden."
+          />
+          <SwitchOffConsequence
+            icon={<RefreshCcw aria-hidden="true" />}
+            tone="neutral"
+            text="Schalten Sie Fotos wieder ein, braucht jedes Foto eine neue Einwilligung."
+          />
+        </InsetPanel>
+        <p className="mt-3">
+          Das lässt sich nicht rückgängig machen.
+          {mode === "reset" ? " Der Standard ist ausgeschaltet." : null}
+        </p>
+      </>
+    ),
+    gateLabel:
+      "Geben Sie LÖSCHEN ein, um alle Kinderfotos endgültig zu löschen.",
+    confirmTooltip:
+      "Schaltet Kinderfotos aus. Löscht alle Fotos sofort, die Einwilligungen enden.",
+  },
+};
+
+/** One consequence of a destructive switch-off: symbol and one sentence. */
+function SwitchOffConsequence({
+  icon,
+  tone,
+  text,
+}: {
+  readonly icon: ReactNode;
+  readonly tone: "red" | "neutral";
+  readonly text: string;
+}) {
+  return (
+    <li className="flex items-center gap-3">
+      <IconTile icon={icon} size="xs" tone={tone} />
+      <span className="text-sm text-gray-900">{text}</span>
+    </li>
+  );
+}
 
 // operator_managed settings (ADR 0048) say who decides them: the moto team,
 // by contract. Module switches (#4892) name the booking, the federal state
@@ -452,6 +539,13 @@ export function SettingsField({
   const historyDeletionRef = useRef<HTMLDivElement | null>(null);
   const historyDeletionErrors = useApiFormError(historyDeletionRef);
   const deletesRoomHistory = setting.key === "gdpr.attendance_log_enabled";
+  const destructiveSwitchOff = DESTRUCTIVE_SWITCH_OFF[setting.key];
+  // Only a reset that switches a running switch off deletes (#7218): a
+  // stored „aus“ already deleted its data when it was switched off.
+  const resetSwitchesOffDestructively =
+    destructiveSwitchOff !== undefined &&
+    setting.default === false &&
+    localValue === true;
   // A shorter retention window waits here for the operator's confirmation
   // (ADR 0048): the next nightly run deletes everything older for good.
   const [pendingShortening, setPendingShortening] = useState<{
@@ -787,7 +881,7 @@ export function SettingsField({
         setLegalActivationOpen(true);
         return;
       }
-      if (deletesRoomHistory && value === false) {
+      if (destructiveSwitchOff && value === false) {
         historyDeletionErrors.clear();
         setHistoryDeletion("save");
         return;
@@ -816,7 +910,7 @@ export function SettingsField({
       activationErrors,
       saveOrConfirm,
       categoryItems,
-      deletesRoomHistory,
+      destructiveSwitchOff,
       historyDeletionErrors,
       enableConfig,
       disableConfig,
@@ -1087,7 +1181,7 @@ export function SettingsField({
 
   /** Destructive defaults follow the same confirmation as an explicit save. */
   const handleReset = useCallback(async () => {
-    if (deletesRoomHistory && setting.default === false) {
+    if (resetSwitchesOffDestructively) {
       historyDeletionErrors.clear();
       setHistoryDeletion("reset");
       return;
@@ -1114,10 +1208,10 @@ export function SettingsField({
   }, [
     audience,
     confirmTextReset,
-    deletesRoomHistory,
     historyDeletionErrors,
     localValue,
     performReset,
+    resetSwitchesOffDestructively,
     setting,
   ]);
 
@@ -1271,7 +1365,7 @@ export function SettingsField({
             tooltip={
               restoresTraegerValue
                 ? "Übernimmt wieder den Wert, den Ihr Träger vorgibt."
-                : (deletesRoomHistory && setting.default === false) ||
+                : resetSwitchesOffDestructively ||
                     shortenedRetentionDays(
                       setting,
                       setting.default,
@@ -1289,42 +1383,31 @@ export function SettingsField({
         )}
       </div>
 
-      <ConfirmDeleteModal
-        isOpen={historyDeletion !== null}
-        title="Anwesenheitsprotokoll ausschalten?"
-        description={
-          <div ref={historyDeletionRef}>
-            <p>
-              Alle abgeschlossenen Raumbesuche vor heute werden sofort gelöscht.
-            </p>
-            <p>
-              Das lässt sich nicht rückgängig machen. Auch erneutes Einschalten
-              stellt nichts wieder her.
-            </p>
-            <p>
-              Heutige Raumbesuche bleiben bis zum nächtlichen Löschen erhalten.
-              Der aktuelle Raum und die Anwesenheitszeiten bleiben erhalten.
-            </p>
-            {historyDeletion === "reset" && (
-              <p>Der Standard ist ausgeschaltet.</p>
-            )}
-          </div>
-        }
-        gate={{
-          mode: "textConfirm",
-          expected: "LÖSCHEN",
-          inputId: `history-deletion-${audience}`,
-          label:
-            "Geben Sie LÖSCHEN ein, um ältere Raumbesuche endgültig zu löschen.",
-        }}
-        onClose={() => {
-          if (!historyDeletionSaving) setHistoryDeletion(null);
-        }}
-        onConfirm={handleHistoryDeletionConfirm}
-        loading={historyDeletionSaving}
-        error={historyDeletionErrors.error}
-        confirmLabel="Ausschalten und löschen"
-      />
+      {destructiveSwitchOff && (
+        <ConfirmDeleteModal
+          isOpen={historyDeletion !== null}
+          title={destructiveSwitchOff.title}
+          description={
+            <div ref={historyDeletionRef}>
+              {destructiveSwitchOff.description(historyDeletion ?? "save")}
+            </div>
+          }
+          gate={{
+            mode: "textConfirm",
+            expected: "LÖSCHEN",
+            inputId: `switch-off-deletion-${settingsFieldId(setting.key)}-${audience}`,
+            label: destructiveSwitchOff.gateLabel,
+          }}
+          onClose={() => {
+            if (!historyDeletionSaving) setHistoryDeletion(null);
+          }}
+          onConfirm={handleHistoryDeletionConfirm}
+          loading={historyDeletionSaving}
+          error={historyDeletionErrors.error}
+          confirmLabel="Ausschalten und löschen"
+          confirmTooltip={destructiveSwitchOff.confirmTooltip}
+        />
+      )}
 
       {activeConfirmConfig && (
         <ConfirmationModal

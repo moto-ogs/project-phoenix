@@ -45,16 +45,16 @@ func New(store ports.Store, audience ports.Audience, targets ports.Targets, view
 func (s *Service) CreateAnnouncement(ctx context.Context, value *communication.Announcement, operatorID int64, clientIP net.IP) error {
 	started := time.Now()
 	if value == nil {
-		return s.reject("create", started, errors.New("announcement cannot be nil"))
+		return s.reject("create", time.Since(started), errors.New("announcement cannot be nil"))
 	}
 	// A stored announcement may have lost its author with the operator
 	// account (#4047); a new one always names the operator creating it.
 	if operatorID <= 0 {
-		return s.reject("create", started, errors.New("created_by is required"))
+		return s.reject("create", time.Since(started), errors.New("created_by is required"))
 	}
 	value.CreatedBy = operatorID
 	if err := value.Validate(); err != nil {
-		return s.reject("create", started, err)
+		return s.reject("create", time.Since(started), err)
 	}
 	audit := auditEntry(operatorID, clientIP)
 	var result communication.Announcement
@@ -97,10 +97,10 @@ func (s *Service) GetAnnouncement(ctx context.Context, id int64) (*communication
 func (s *Service) UpdateAnnouncement(ctx context.Context, value *communication.Announcement, operatorID int64, clientIP net.IP) error {
 	started := time.Now()
 	if value == nil {
-		return s.reject("update", started, errors.New("announcement cannot be nil"))
+		return s.reject("update", time.Since(started), errors.New("announcement cannot be nil"))
 	}
 	if err := value.Validate(); err != nil {
-		return s.reject("update", started, err)
+		return s.reject("update", time.Since(started), err)
 	}
 	audit := auditEntry(operatorID, clientIP)
 	var result communication.Announcement
@@ -321,9 +321,9 @@ func invalidTarget(err error) error {
 }
 
 // reject observes and returns input the operation refused before it ran.
-func (s *Service) reject(operation string, started time.Time, err error) error {
+func (s *Service) reject(operation string, elapsed time.Duration, err error) error {
 	invalid := &communication.InvalidDataError{Err: err}
-	s.observe(ports.Observation{Operation: operation, Duration: time.Since(started), Err: invalid})
+	s.observe(ports.Observation{Operation: operation, Duration: elapsed, Err: invalid})
 	return invalid
 }
 

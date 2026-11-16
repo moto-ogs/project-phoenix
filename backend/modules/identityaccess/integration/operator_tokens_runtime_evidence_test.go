@@ -27,7 +27,7 @@ func TestOperatorTokenRuntimeEvidence(t *testing.T) {
 	t.Parallel()
 	testpkg.RequireRuntimeEvidence(t)
 	db := testpkg.SetupIsolatedTestDB(t)
-	owner, err := identityCompose.New(identityCompose.Dependencies{DB: db, TenantRuntime: testpkg.TenantRuntime(t, db), Observe: func(identityCompose.Observation) {}})
+	owner, err := identityCompose.New(identityCompose.Dependencies{DB: db, TenantRuntime: testpkg.TenantRuntime(t, db), Observe: func(identityCompose.Observation) {}, Now: operatorTokenTestClock})
 	require.NoError(t, err)
 	tokens := owner.(ports.Records)
 	inviter := testpkg.CreateTestOperator(t, db)
@@ -81,7 +81,7 @@ func TestOperatorTokenRuntimeEvidence(t *testing.T) {
 		if _, err := tokens.FindOperatorForUpdate(txCtx, inviter.ID); err != nil {
 			return err
 		}
-		if _, err := tokens.CountOperatorInvitationsCreatedAfter(txCtx, inviter.ID, time.Now().Add(-time.Hour)); err != nil {
+		if _, err := tokens.CountOperatorInvitationsCreatedAfter(txCtx, inviter.ID, operatorTokenTestNow.Add(-time.Hour)); err != nil {
 			return err
 		}
 		if _, err := tokens.RevokeOperatorInvitationsForEmail(txCtx, invitation.Email); err != nil {
@@ -94,7 +94,7 @@ func TestOperatorTokenRuntimeEvidence(t *testing.T) {
 		if _, err := tokens.FindOperatorForUpdate(txCtx, operator.ID); err != nil {
 			return err
 		}
-		if _, err := tokens.CountOperatorEmailChangesCreatedAfter(txCtx, operator.ID, time.Now().Add(-time.Hour)); err != nil {
+		if _, err := tokens.CountOperatorEmailChangesCreatedAfter(txCtx, operator.ID, operatorTokenTestNow.Add(-time.Hour)); err != nil {
 			return err
 		}
 		if err := tokens.RevokeOperatorEmailChanges(txCtx, operator.ID); err != nil {
@@ -131,7 +131,7 @@ func TestOperatorTokenRuntimeEvidence(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			sentAt := time.Now()
+			sentAt := operatorTokenTestNow
 			return tokens.RecordOperatorInvitationDelivery(ctx, stored.ID, identityaccess.TokenDelivery{SentAt: &sentAt, RetryCount: 1})
 		})
 		measure("list_pending_invitations", iteration, func() error {
@@ -143,7 +143,7 @@ func TestOperatorTokenRuntimeEvidence(t *testing.T) {
 				return err
 			}
 			// A resend replaces the link; the acceptance below follows the new one.
-			reissued, err := tokens.ExtendOperatorInvitation(ctx, stored.ID, time.Now().Add(48*time.Hour))
+			reissued, err := tokens.ExtendOperatorInvitation(ctx, stored.ID, operatorTokenTestNow.Add(48*time.Hour))
 			if err != nil {
 				return err
 			}

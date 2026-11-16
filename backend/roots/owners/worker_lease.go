@@ -2,6 +2,7 @@ package owners
 
 import (
 	"fmt"
+	"time"
 
 	schedulerRuntimeCompose "github.com/moto-ogs/project-phoenix/modules/schedulerruntime/compose"
 	schedulerPorts "github.com/moto-ogs/project-phoenix/modules/schedulerruntime/ports"
@@ -11,11 +12,15 @@ import (
 
 // newWorkerLease binds the Worker's leadership (#2726) to
 // platform.worker_leases and its evidence to the metrics. Scheduler Runtime
-// owns the lease timing and the holder ID.
-func newWorkerLease(runtime tenant.UnitOfWork) (schedulerPorts.WorkerLease, error) {
+// owns the lease timing and the holder ID; a nil clock is the real one
+// (RootEnvironment.Now).
+func newWorkerLease(runtime tenant.UnitOfWork, now func() time.Time) (schedulerPorts.WorkerLease, error) {
 	store, err := schedulerRuntimeCompose.NewWorkerLeaseStore(runtime)
 	if err != nil {
 		return schedulerPorts.WorkerLease{}, err
+	}
+	if now == nil {
+		now = time.Now
 	}
 	return schedulerPorts.NewWorkerLease(store, schedulerPorts.LeaseEvidence{
 		Term:       observability.SetWorkerLeaseTerm,
@@ -25,15 +30,15 @@ func newWorkerLease(runtime tenant.UnitOfWork) (schedulerPorts.WorkerLease, erro
 		Suppressed: observability.RecordWorkerDuplicateSuppression,
 		Ready:      observability.SetWorkerReady,
 		Drain:      observability.ObserveWorkerDrain,
-	})
+	}, now)
 }
 
 // workerLeaseName is the lease name Scheduler Runtime gives the Worker.
 const workerLeaseName = schedulerPorts.WorkerLeaseName
 
 // newWorkerRuntime constructs the lease and tenant transactions for the Worker.
-func newWorkerRuntime(unitOfWork tenant.UnitOfWork) (schedulerPorts.WorkerLease, schedulerPorts.TenantRuntime, error) {
-	lease, err := newWorkerLease(unitOfWork)
+func newWorkerRuntime(unitOfWork tenant.UnitOfWork, now func() time.Time) (schedulerPorts.WorkerLease, schedulerPorts.TenantRuntime, error) {
+	lease, err := newWorkerLease(unitOfWork, now)
 	if err != nil {
 		return schedulerPorts.WorkerLease{}, nil, fmt.Errorf("compose worker lease: %w", err)
 	}

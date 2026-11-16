@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "e5b36d8c51e8e76041027ddbb62a9f9e9d383bdc0f17167aa210dd1c3000128f",
+  "catalogSHA256": "6a171468f6ce8605ef7939103eeb53ca077764076d489099c225841d7b3071e1",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -6704,6 +6704,7 @@
         "is_password_otp": "Authentication or operational secret/credential material; not customer export content.",
         "mfa_reset_generation": "Credential-proof revocation generation, not customer export content.",
         "password_attempts": "Operational authentication abuse counter, not customer export content.",
+        "password_failed_at": "Time of the last refused password; operational authentication abuse state, not customer export content.",
         "password_hash": "Authentication or operational secret/credential material; not customer export content.",
         "password_locked_until": "Operational authentication lock deadline, not customer export content."
       }
@@ -26907,6 +26908,12 @@
           "type": "text",
           "udt": "text",
           "nullable": true
+        },
+        {
+          "name": "student_ids",
+          "type": "ARRAY",
+          "udt": "_int8",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -39118,6 +39125,11 @@
       "name": "platform.demo_school_origins",
       "classification": "excludeInternal",
       "reason": "Internal demo-process provenance with school IDs only; not customer content."
+    },
+    {
+      "name": "platform.demo_traeger_origins",
+      "classification": "excludeInternal",
+      "reason": "Internal demo-process provenance with Träger IDs and counts only; not customer content."
     },
     {
       "name": "platform.demo_school_states",

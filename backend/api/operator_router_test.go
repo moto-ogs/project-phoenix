@@ -166,7 +166,7 @@ func TestRouter(t *testing.T) {
 	})
 
 	t.Run("billing seed route is mounted with the billing report", func(t *testing.T) {
-		billing := provisioningoperator.NewBillingResource(stubBillingReport{}, nil, nil)
+		billing := provisioningoperator.NewBillingResource(stubBillingReport{}, nil, nil, nil)
 		router := operatorRouter(operatorIdentity{sessions: operatorTestSessions(t, nil)},
 			provisioningoperator.ProvisioningConfig{ErasureOrderRecords: stubErasureOrderRecords{}}, billing, nil, nil, nil, authRateLimiters{}, http.NotFoundHandler(), nil, nil)
 
@@ -212,15 +212,22 @@ func TestRouter(t *testing.T) {
 
 // TestUnregisteredTagScanRoutesSitBehindOperatorAuth pins the mount of the
 // Device Fleet scan review (#3232): the router hands it the rest of the path
-// only after the operator auth chain accepted the caller.
+// only after the operator auth chain accepted the caller, and the audit of a
+// resolution names the scan (#7212) under one unrepeated route pattern.
 func TestUnregisteredTagScanRoutesSitBehindOperatorAuth(t *testing.T) {
 	t.Parallel()
 
 	var reached []string
-	review := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reached = append(reached, r.Method+" "+chi.RouteContext(r.Context()).RoutePath)
-		w.WriteHeader(http.StatusTeapot)
-	})
+	review := func(routeMiddleware ...func(http.Handler) http.Handler) chi.Router {
+		handler := func(w http.ResponseWriter, r *http.Request) {
+			reached = append(reached, r.Method+" "+chi.RouteContext(r.Context()).RoutePattern())
+			w.WriteHeader(http.StatusTeapot)
+		}
+		r := chi.NewRouter()
+		r.With(routeMiddleware...).Get("/", handler)
+		r.With(routeMiddleware...).Post("/{id}/resolve", handler)
+		return r
+	}
 	authService := &mockOperatorAuthService{
 		getOperatorFn: func(_ context.Context, id int64) (*identityaccess.Operator, error) {
 			op := &identityaccess.Operator{Active: true}
@@ -238,9 +245,13 @@ func TestUnregisteredTagScanRoutesSitBehindOperatorAuth(t *testing.T) {
 	assert.Empty(t, reached)
 	assert.Empty(t, provisioning.reads)
 
-	for i, target := range []struct{ method, path, routePath string }{
-		{method: http.MethodGet, path: "/unregistered-tag-scans/", routePath: "/"},
-		{method: http.MethodPost, path: "/unregistered-tag-scans/123/resolve", routePath: "/123/resolve"},
+	for i, target := range []struct {
+		method, path, routePath string
+		scanID                  int64
+	}{
+		{method: http.MethodGet, path: "/unregistered-tag-scans/", routePath: "/unregistered-tag-scans"},
+		{method: http.MethodGet, path: "/unregistered-tag-scans", routePath: "/unregistered-tag-scans"},
+		{method: http.MethodPost, path: "/unregistered-tag-scans/123/resolve", routePath: "/unregistered-tag-scans/{id}/resolve", scanID: 123},
 	} {
 		req := httptest.NewRequest(target.method, target.path, nil)
 		req.Header.Set("Authorization", "Bearer "+operatorRouteAccessToken(t, 42))
@@ -249,6 +260,7 @@ func TestUnregisteredTagScanRoutesSitBehindOperatorAuth(t *testing.T) {
 		assert.Equal(t, http.StatusTeapot, rr.Code, target.path)
 		require.Len(t, provisioning.reads, i+1)
 		assert.Equal(t, organizationtenancy.ReadUnregisteredTagScans, provisioning.reads[i].View)
+		assert.Equal(t, target.scanID, provisioning.reads[i].TagScanID, "the audit names the resolved scan (#7212)")
 		assert.Contains(t, reached, target.method+" "+target.routePath)
 	}
 }
@@ -393,7 +405,7 @@ func operatorRouteAccessToken(t *testing.T, operatorID int) string {
 }
 
 func newCreateSchoolRequest(accessToken string, organizationID int) *http.Request {
-	body := fmt.Sprintf(`{"organization_id":%d,"name":"Test School","slug":"test-school","subdomain":"test-sub","email":"school@example.com"}`, organizationID)
+	body := fmt.Sprintf(`{"organization_id":%d,"name":"Test School","slug":"test-school","subdomain":"test-sub","email":"school@example.com","federal_state":"DE-NW"}`, organizationID)
 	req := httptest.NewRequest(http.MethodPost, "/schools", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+accessToken)

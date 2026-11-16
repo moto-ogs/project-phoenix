@@ -2,7 +2,7 @@ import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
 
 /**
- * `/traeger/personal/vertretungspool` (#4709, ADR 0250): wer Springer ist,
+ * `/traeger/personal/vertretungspool` (#4709, ADR 0252): wer Springer ist,
  * jede Blockung der Woche, ihr Download (#4718) und das Aufheben einer
  * Blockung.
  */
@@ -55,6 +55,8 @@ export function traegerStaffPoolTopic(): HelpTopic {
       "Jedes Anzeigen und jeder Download der Woche steht im Zugriffsprotokoll jeder betroffenen Schule.",
       "Blockt eine Schule die Person zum ersten Mal, wird die Schule ein Einsatzort in der Akte. Die Schule plant sie dann im Dienstplan ein.",
       "An dieser Schule meldet sich die Person nur in den geblockten Zeiten an. Heben Sie eine Blockung auf, endet auch dieser Zugang.",
+      "Am Tag nach der letzten Blockung einer Schule endet die Beschäftigung dort. In der Akte steht der Einsatzort dann als `Beendet`. Die nächste Blockung beschäftigt die Person dort wieder. Ihr Konto bleibt bestehen.",
+      "Hat die Schule der Person eine eigene Rolle gegeben, bleibt sie dort auch nach der letzten Blockung beschäftigt.",
       "Die Person braucht dafür ein Konto bei moto. Hat sie keins, laden Sie sie an einer Schule ein.",
     ],
     differences: [

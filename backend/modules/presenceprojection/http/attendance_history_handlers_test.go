@@ -52,8 +52,8 @@ func TestGetStudentAttendanceHistory_FeatureEnabled_ReturnsData(t *testing.T) {
 	device := testpkg.CreateTestDevice(t, tc.db, "enabled-feat-dev")
 
 	// Create today's attendance
-	checkIn := calendar.Today().Add(8 * time.Hour)
-	checkOut := calendar.Today().Add(15 * time.Hour)
+	checkIn := calendar.DateOf(time.Now()).Add(8 * time.Hour)
+	checkOut := calendar.DateOf(time.Now()).Add(15 * time.Hour)
 	testpkg.CreateTestAttendance(t, tc.db, student.ID, staff.ID, device.ID, checkIn, &checkOut)
 
 	req := testutil.NewRequest("GET", fmt.Sprintf("/%d/attendance-history", student.ID), nil)
@@ -207,7 +207,7 @@ func TestGetStudentAttendanceHistory_FullyFutureRangeRejected(t *testing.T) {
 	enableAttendanceLog(t, tc)
 	student := testpkg.CreateTestStudent(t, tc.db, "FutureOnly", "Student", "2c")
 
-	today := calendar.Today()
+	today := calendar.DateOf(time.Now())
 	start := today.AddDate(0, 0, 1)
 	end := today.AddDate(0, 0, 2)
 	req := testutil.NewRequest("GET", fmt.Sprintf(

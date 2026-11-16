@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"testing"
+	"time"
 
 	settingsFacts "github.com/moto-ogs/project-phoenix/modules/settings"
 
@@ -25,6 +26,9 @@ func resourceForTest(resource Resource) *Resource {
 	resource.authorization = authorizationForTest()
 	resource.runtime.TenantID = tenant.FromContext
 	resource.runtime.MarkRollback = tenant.MarkRollback
+	if resource.runtime.Now == nil {
+		resource.runtime.Now = time.Now
+	}
 	return &resource
 }
 
@@ -45,7 +49,7 @@ func authorizationForTest() Authorization {
 }
 
 func requestRuntimeForTest(withStaff func(context.Context, int64, int64) context.Context) RequestRuntime {
-	return RequestRuntime{WithStaff: withStaff, TenantID: tenant.FromContext, MarkRollback: tenant.MarkRollback}
+	return RequestRuntime{WithStaff: withStaff, TenantID: tenant.FromContext, MarkRollback: tenant.MarkRollback, Now: time.Now}
 }
 
 func TestResourceRequiresLogger(t *testing.T) {
@@ -84,14 +88,17 @@ func TestResourceRequiresOverviewAuthorization(t *testing.T) {
 
 func TestResourceRequiresTenantRequestRuntime(t *testing.T) {
 	t.Parallel()
-	for _, missing := range []string{"tenant ID", "rollback marker"} {
+	for _, missing := range []string{"tenant ID", "rollback marker", "clock"} {
 		t.Run(missing, func(t *testing.T) {
 			t.Parallel()
 			runtime := requestRuntimeForTest(func(ctx context.Context, _, _ int64) context.Context { return ctx })
-			if missing == "tenant ID" {
+			switch missing {
+			case "tenant ID":
 				runtime.TenantID = nil
-			} else {
+			case "rollback marker":
 				runtime.MarkRollback = nil
+			default:
+				runtime.Now = nil
 			}
 			require.PanicsWithValue(t, "active API: tenant request runtime is required", func() {
 				NewResource(nil, nil, nil, nil, nil,

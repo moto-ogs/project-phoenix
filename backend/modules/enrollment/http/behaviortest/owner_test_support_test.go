@@ -39,7 +39,7 @@ type (
 
 // Owner compositions the suites drive.
 var (
-	NewTestModule                     = enrollmentCompose.New
+	NewTestModule                     = func() capability.Owner { return enrollmentCompose.NewClocked(nil) }
 	NewTestPhases                     = enrollmentTest.NewPhases
 	NewTestPhaseExpirySnapshots       = enrollmentTest.NewPhaseExpirySnapshots
 	NewTestPhaseExpiryWarnings        = enrollmentTest.NewPhaseExpiryWarnings

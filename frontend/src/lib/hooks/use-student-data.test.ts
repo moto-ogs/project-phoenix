@@ -42,7 +42,7 @@ describe("useStudentData", () => {
 
   const mockSupervisors = [
     {
-      id: 1,
+      id: "1",
       first_name: "Teacher",
       last_name: "One",
       name: "Teacher One",

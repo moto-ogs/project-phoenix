@@ -22,6 +22,12 @@ vi.mock("~/lib/traeger-care-billing-api", async (original) => ({
   ...api,
 }));
 vi.mock("~/lib/traeger-care-amendments-api", () => amend);
+// The history of an issued invoice (#4693) is tested on its own.
+vi.mock("~/lib/traeger-finance-exports-api", async (original) => ({
+  ...(await original<typeof import("~/lib/traeger-finance-exports-api")>()),
+  fetchInvoiceHistory: () =>
+    Promise.resolve({ number: "MB-2026-0007", steps: [] }),
+}));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "7", contractId: "22" }),
   useSearchParams: () => new URLSearchParams(),

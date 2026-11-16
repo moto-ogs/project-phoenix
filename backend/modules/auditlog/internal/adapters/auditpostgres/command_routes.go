@@ -133,6 +133,26 @@ func (r studentConsentChangeCommand) Create(ctx context.Context, event *auditMod
 	return r.command.Append(ctx, event)
 }
 
+// CreateAll routes the entries through the command's AppendAll where it has
+// one, one Append per entry otherwise; the first failure fails the call.
+func (r studentConsentChangeCommand) CreateAll(ctx context.Context, events []*auditModel.StudentConsentChange) error {
+	all, err := studentConsentChangeEvents(events)
+	if err != nil || len(all) == 0 {
+		return err
+	}
+	if batch, ok := r.command.(interface {
+		AppendAll(context.Context, []any) error
+	}); ok {
+		return batch.AppendAll(ctx, all)
+	}
+	for _, event := range all {
+		if err := r.command.Append(ctx, event); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type deviationEventCommand struct {
 	auditModel.DeviationEventRepository
 	command auditModel.Command

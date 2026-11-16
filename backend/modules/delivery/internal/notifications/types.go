@@ -259,9 +259,8 @@ func validateTypeChannel(def TypeDefinition) {
 		if def.DefaultOn && def.Permission == "" {
 			panic("notifications: default-on type " + def.Key + " needs a permission")
 		}
-		// The feed exists in the staff portal only so far (#7148).
-		if def.Feed && def.Portal != PortalStaff {
-			panic("notifications: feed type " + def.Key + " needs the staff portal")
+		if def.Feed && def.Portal != PortalStaff && def.Portal != PortalParent {
+			panic("notifications: feed type " + def.Key + " needs the staff or parent portal")
 		}
 	case ChannelEmail:
 		// An e-mail type is addressed by permission, not by a relation to a
@@ -379,6 +378,7 @@ func init() {
 	registerSchoolTypes()
 	registerStaffAppointmentTypes()
 	registerStaffingTypes()
+	registerClassTimetableTypes()
 	registerStaffNoticeTypes()
 }
 
@@ -674,6 +674,7 @@ func registerParentStatusTypes() {
 		Description: "Wenn die OGS einen Betreuungstermin Ihres Kindes absagt.",
 		Group:       GroupAppointments,
 		Portal:      PortalParent,
+		Feed:        true,
 		SortOrder:   3,
 	})
 

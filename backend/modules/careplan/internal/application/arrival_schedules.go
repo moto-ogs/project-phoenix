@@ -23,13 +23,16 @@ type arrivalScheduleService struct {
 	tx           ports.EffectiveTimeTransaction
 	students     ports.ArrivalBulkStudents
 	classes      ports.ArrivalClassPlans
-	logger       *slog.Logger
+	// notices tells the people of a class about a change to its
+	// Stundenplan (#7142); nil tells nobody.
+	notices careplan.ClassTimetableNotices
+	logger  *slog.Logger
 	// today is the school day the weekly plan is projected and written on.
 	today func() calendar.Date
 }
 
 func NewArrivalSchedules(schedules ports.ArrivalScheduleRepository, exceptions ports.EffectiveExceptionRepository[*careplan.ArrivalException],
-	notes ports.EffectiveNoteRepository[*careplan.ArrivalNote], baselines careplan.ArrivalBaselineReader, rules ports.ArrivalScheduleRules, tx ports.EffectiveTimeTransaction, students ports.ArrivalBulkStudents, classes ports.ArrivalClassPlans, classExceptions careplan.ClassArrivalExceptions, logger *slog.Logger, today func() calendar.Date) careplan.ArrivalScheduleService {
+	notes ports.EffectiveNoteRepository[*careplan.ArrivalNote], baselines careplan.ArrivalBaselineReader, rules ports.ArrivalScheduleRules, tx ports.EffectiveTimeTransaction, students ports.ArrivalBulkStudents, classes ports.ArrivalClassPlans, classExceptions careplan.ClassArrivalExceptions, notices careplan.ClassTimetableNotices, logger *slog.Logger, today func() calendar.Date) careplan.ArrivalScheduleService {
 	if classExceptions == nil {
 		classExceptions = NewClassArrivalExceptions(nil, nil, today)
 	}
@@ -40,7 +43,7 @@ func NewArrivalSchedules(schedules ports.ArrivalScheduleRepository, exceptions p
 		logger = slog.Default()
 	}
 	return &arrivalScheduleService{effectiveTimeCore: newEffectiveTimeCore(schedules, exceptions, notes, tx, ArrivalTimeDomain{}),
-		scheduleRepo: schedules, baselines: baselines, rules: rules, tx: tx, students: students, classes: classes, ClassArrivalExceptions: classExceptions, logger: logger, today: today}
+		scheduleRepo: schedules, baselines: baselines, rules: rules, tx: tx, students: students, classes: classes, ClassArrivalExceptions: classExceptions, notices: notices, logger: logger, today: today}
 }
 
 // projectedWeeklySchedules flattens the projected week into the sorted row

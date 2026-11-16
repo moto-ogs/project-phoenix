@@ -27,7 +27,12 @@ func fileTraegerLock(path string) func(context.Context) (func(), error) {
 		for {
 			err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
 			if err == nil {
-				return func() { _ = file.Close() }, nil
+				// Unlock before closing: a subprocess forked meanwhile
+				// shares the lock until it execs (#7216).
+				return func() {
+					_ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+					_ = file.Close()
+				}, nil
 			}
 			if !errors.Is(err, syscall.EWOULDBLOCK) && !errors.Is(err, syscall.EINTR) {
 				_ = file.Close()

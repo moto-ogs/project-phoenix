@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	devicefleetRepositoryAdapter "github.com/moto-ogs/project-phoenix/modules/devicefleet/compose/repositoryadapter"
@@ -16,7 +17,7 @@ import (
 // themselves (NewFactory, NewSessionCleanupRepositories); test graphs that
 // only need the repository shape use this.
 func NewDeviceRepository(db transactionruntime.Database) (DeviceTestRecords, error) {
-	fleet, err := owners.NewDeviceFleet(db)
+	fleet, err := owners.NewDeviceFleet(db, time.Now)
 	if err != nil {
 		return nil, err
 	}

@@ -50,7 +50,9 @@ const (
 )
 
 // OperatorReadAccess records an attempted disclosure, before reading its data.
-// No returned rows, names, addresses, search strings or credentials belong here.
+// The IDs name the object of the route, including the school of one account
+// access and the scan being resolved (#7212). No returned rows, names,
+// addresses, search strings or credentials belong here.
 type OperatorReadAccess struct {
 	View           OperatorReadView
 	OperatorID     int64
@@ -58,7 +60,9 @@ type OperatorReadAccess struct {
 	OrganizationID int64
 	AccountID      int64
 	AnnouncementID int64
-	ClientIP       net.IP
+	// TagScanID names the unregistered RFID scan an operator resolves.
+	TagScanID int64
+	ClientIP  net.IP
 }
 
 type OperatorReadAudit interface {

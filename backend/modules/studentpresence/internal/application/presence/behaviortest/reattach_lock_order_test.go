@@ -42,7 +42,8 @@ func TestReattachAndWebVisitMoveIntoTheStayDoNotDeadlock(t *testing.T) {
 	takenOver := testpkg.CreateTestStudent(t, db, "Uebernommen", "Web", "2a")
 	movedVisit := testpkg.CreateTestVisit(t, db, moved.ID, ended.ID, time.Now().Add(-time.Hour), nil)
 	testpkg.CreateTestVisit(t, db, takenOver.ID, ended.ID, time.Now().Add(-time.Hour), nil)
-	_, err := db.NewUpdate().TableExpr("active.groups").Set("end_time = NOW() - INTERVAL '5 minutes'").
+	// Ended on the service's clock, which also decides what is recent.
+	_, err := db.NewUpdate().TableExpr("active.groups").Set("end_time = ?", time.Now().Add(-5*time.Minute)).
 		Where("id = ?", ended.ID).Where("tenant_id = ?", testpkg.Tenant(t)).Exec(ctx)
 	require.NoError(t, err)
 

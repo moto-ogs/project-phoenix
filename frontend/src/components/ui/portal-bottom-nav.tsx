@@ -263,7 +263,7 @@ export function PortalBottomNav({
       ) : null}
       <div className="relative px-4 pb-4">
         <div
-          className={`rounded-full border border-gray-200/50 bg-white/95 ${barClassName} py-2 shadow-[0_-2px_20px_rgba(0,0,0,0.08)] backdrop-blur-md`}
+          className={`rounded-full border border-gray-200/50 bg-white ${barClassName} py-2 shadow-[0_-2px_20px_rgba(0,0,0,0.08)]`}
         >
           <ul
             ref={indicator?.listRef}
@@ -272,13 +272,13 @@ export function PortalBottomNav({
             {indicator?.position ? (
               <li
                 aria-hidden="true"
-                className={`absolute top-0 h-full rounded-full bg-gray-100 ${
+                className={`absolute top-0 left-0 h-full rounded-full bg-gray-100 ${
                   indicator.animated
-                    ? "transition-[left,width] duration-150 ease-out"
+                    ? "transition-transform duration-150 ease-out"
                     : ""
                 }`}
                 style={{
-                  left: `${indicator.position.left}px`,
+                  transform: `translateX(${indicator.position.left}px)`,
                   width: `${indicator.position.width}px`,
                 }}
               />
@@ -452,6 +452,7 @@ export function PortalNavSheetLink({
 export function PortalNavSheetButton({
   label,
   concept,
+  badge,
   ...buttonProps
 }: Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
@@ -459,6 +460,8 @@ export function PortalNavSheetButton({
 > & {
   readonly label: string;
   readonly concept: MotoConcept;
+  /** Zähler hinter dem Namen, wie bei `PortalNavSheetLink`. */
+  readonly badge?: ReactNode;
 }) {
   return (
     <button
@@ -471,7 +474,14 @@ export function PortalNavSheetButton({
         active={false}
         className="h-5 w-5 text-gray-600"
       />
-      {label}
+      {badge ? (
+        <>
+          <span className="flex-1">{label}</span>
+          {badge}
+        </>
+      ) : (
+        label
+      )}
     </button>
   );
 }

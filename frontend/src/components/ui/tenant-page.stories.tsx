@@ -170,6 +170,8 @@ const quietFilterArgs = {
       Anmelden
     </Button>
   ),
+  // Wie die Kinderseite: Unter `xl` hat sie eigene Auslöser für die Aktion.
+  primaryActionDesktopOnly: true,
   children: pageContent,
 };
 
@@ -189,6 +191,35 @@ export const QuietFiltersOpened: Story = {
     if (!visibleFilterButton) throw new Error("Kein sichtbarer Filterknopf");
     await userEvent.click(visibleFilterButton);
     await expect(visibleFilterButton).toHaveAttribute("aria-expanded", "true");
+  },
+};
+
+/**
+ * Wertauswahl als Hauptaktion wie auf „Bankverbindungen“: auf dem Desktop
+ * neben der Suche, darunter in einer eigenen Zeile unter ihr, unter `sm` über
+ * die volle Breite (#7132).
+ */
+export const PrimaryActionChoice: Story = {
+  args: {
+    title: "Bankverbindungen",
+    stats: "124 Kinder · 62 mit Bankverbindung · 62 ohne",
+    search: {
+      value: "",
+      onChange: fn(),
+      placeholder: "Kind, Klasse oder Kontoinhaber suchen",
+    },
+    primaryAction: (
+      <SegmentedControl
+        ariaLabel="Auswahl der angezeigten Kinder"
+        value="all"
+        onChange={fn()}
+        items={[
+          { value: "all", label: "Alle Kinder (124)" },
+          { value: "missing", label: "Ohne IBAN (62)" },
+        ]}
+      />
+    ),
+    children: pageContent,
   },
 };
 

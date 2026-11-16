@@ -3,3 +3,5 @@
 # so Prettier must not reformat it (trailing commas etc. would break the check).
 src/i18n/locales.generated.ts
 storybook-static
+# Written by the backend generator and byte-compared with its output (ADR 0270).
+src/lib/contract/*.generated.ts

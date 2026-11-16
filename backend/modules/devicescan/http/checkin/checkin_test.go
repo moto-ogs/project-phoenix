@@ -30,7 +30,8 @@ type kiosk struct {
 }
 
 func testRuntime() checkinAPI.Runtime {
-	return checkinAPI.Runtime{Success: testutil.RespondSuccess, Failure: testutil.RespondCoded}
+	// The answers carry the real instant, like the scans the fixtures stamp.
+	return checkinAPI.Runtime{Success: testutil.RespondSuccess, Failure: testutil.RespondCoded, Now: time.Now}
 }
 
 // setupCheckinRoute composes the production check-in resource. An optional

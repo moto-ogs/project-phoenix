@@ -34,6 +34,9 @@ type Dependencies struct {
 	Users               Students
 	Education           SchoolGroups
 	ListExport          listexport.Renderer
+	// Now is the root's clock: the default history window is its Berlin day
+	// and the snapshot export is stamped with it.
+	Now func() time.Time
 }
 
 func NewResource(
@@ -45,7 +48,7 @@ func NewResource(
 ) *Resource {
 	if dependencies.Facilities == nil || dependencies.RoomHistorySettings == nil || dependencies.UserContext == nil ||
 		dependencies.Active == nil || dependencies.Users == nil || dependencies.Education == nil ||
-		dependencies.ListExport == nil || logger == nil || protectedTenantRoutes == nil || constraintViolation == nil {
+		dependencies.ListExport == nil || dependencies.Now == nil || logger == nil || protectedTenantRoutes == nil || constraintViolation == nil {
 		panic("rooms HTTP composition: all dependencies are required")
 	}
 	return newRoomResource(rooms, Runtime{
@@ -66,7 +69,7 @@ func NewResource(
 		HistoryConfig:    dependencies.RoomHistorySettings,
 		HistoryAllowed:   historyAllowed(dependencies.UserContext),
 		History:          roomHistory(dependencies.Facilities),
-		TodayBounds:      todayBounds,
+		TodayBounds:      todayBounds(dependencies.Now),
 		ExportSnapshot:   snapshotExporter(dependencies),
 		ConstraintFailed: constraintViolation,
 		Log:              logger,
@@ -189,9 +192,11 @@ func roomHistory(service RoomReads) func(context.Context, int64, time.Time, time
 	}
 }
 
-func todayBounds() (time.Time, time.Time) {
-	today := calendar.Today()
-	return today, calendar.EndOfDay(today)
+func todayBounds(now func() time.Time) func() (time.Time, time.Time) {
+	return func() (time.Time, time.Time) {
+		today := calendar.DateOf(now())
+		return today, calendar.EndOfDay(today)
+	}
 }
 
 func snapshotExporter(dependencies Dependencies) func(context.Context, SnapshotRequest) (ExportFile, error) {

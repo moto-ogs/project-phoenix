@@ -109,7 +109,7 @@ func (s *Service) DeleteExpiredMorningAttendance(ctx context.Context, retentionD
 	if retentionDays <= 0 {
 		return 0, fmt.Errorf("%w, got %d", studentpresence.ErrAttendanceRetentionWindow, retentionDays)
 	}
-	cutoff := calendar.TodayDate().AddDays(-retentionDays)
+	cutoff := calendar.DateFromTime(s.now()).AddDays(-retentionDays)
 	err = s.run("delete_morning_attendance_before", func() (ports.Stats, error) {
 		if err := s.tx.Require(ctx); err != nil {
 			return ports.Stats{}, err

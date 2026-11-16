@@ -268,7 +268,7 @@ func (s *InstanceLifecycleService) activeSupervisionsByStaff(ctx context.Context
 	if len(staffIDs) == 0 {
 		return activeByStaff, nil
 	}
-	day := calendar.TodayDate().String()
+	day := calendar.DateFromTime(s.now()).String()
 	activeRows, err := s.deps.Presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{ActiveOn: &day, StaffIDs: staffIDs})
 	if err != nil {
 		return nil, &ports.ScheduleError{Op: "reopen instance: load staff supervisions", Err: err}

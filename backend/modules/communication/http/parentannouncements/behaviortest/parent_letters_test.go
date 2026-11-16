@@ -151,7 +151,7 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 	_, foreign := testpkg.CreateTestStaffWithAccountForTenant(t, db, foreignTenant, "Fremd", "Schule")
 	foreignAdmin := testutil.MintTestJWT(t, sessiontoken.AppClaims{ID: int(foreign.ID), Sub: foreign.Email, TenantID: foreignTenant, Roles: []string{"user"}, Permissions: []string{permissions.AdminWildcard}})
 
-	resource := announcement.NewResource(service, nil)
+	resource := announcement.NewResource(service, nil, time.Now)
 	resource.Letters = owners.NewParentLetterPrinter()
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))

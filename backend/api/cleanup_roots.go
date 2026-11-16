@@ -32,11 +32,11 @@ func NewCleanupAuditCommand(logger *slog.Logger) (auditModels.Command, error) {
 	if logger == nil {
 		return nil, errors.New("cleanup audit command logger is required")
 	}
-	audits, err := auditCompose.NewHandoffPersistence()
+	audits, err := auditCompose.NewHandoffPersistence(time.Now)
 	if err != nil {
 		return nil, err
 	}
-	command, err := auditCompose.NewObservedCommand(audits.AppendStore, logger.With("component", "audit-command"), func(string, time.Duration, int, error) {})
+	command, err := auditCompose.NewObservedCommand(audits.AppendStore, logger.With("component", "audit-command"), func(string, time.Duration, int, error) {}, time.Now)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func NewSessionCleanupRepositories(db transactionruntime.Database, timetableCapa
 	if timetableCapability == nil {
 		panic("session cleanup repositories: timetable capability is required")
 	}
-	fleet, err := owners.NewDeviceFleet(db)
+	fleet, err := owners.NewDeviceFleet(db, time.Now)
 	if err != nil {
 		panic(fmt.Sprintf("session cleanup repositories: compose device fleet: %v", err))
 	}

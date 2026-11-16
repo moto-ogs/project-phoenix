@@ -53,18 +53,10 @@ GROUP BY tenant_id`
 // ("kont"); the second key is the tenant.
 const childQuotaLockKey = int32(0x6b6f6e74)
 
-// BerlinToday is the calendar day (YYYY-MM-DD) the Kontingentzahl is counted
-// on: the school's day, not the database server's.
-func BerlinToday() string {
-	return calendar.DateFromTime(time.Now()).String()
-}
-
-// SchoolDay is the clock School Membership's writes decide on: the pinned
-// day when one is given (tests), the Berlin day otherwise.
+// SchoolDay is the clock School Membership's writes and the Kontingentzahl
+// decide on, in its YYYY-MM-DD form: the composition's Berlin day, the
+// school's day, not the database server's.
 func SchoolDay(today func() calendar.Date) func() string {
-	if today == nil {
-		return BerlinToday
-	}
 	return func() string { return today().String() }
 }
 

@@ -22,7 +22,7 @@ const schoolVacationSyncMaxDays = 1095
 // SchoolVacationDependencies wire the school vacations (#5345). FederalState
 // resolves the tenant's operations.federal_state; nil serves only the sync,
 // and every school read answers schoolcalendar.ErrFederalStateUnavailable.
-// Today names the Berlin calendar day, nil means BerlinToday.
+// Today names the Berlin calendar day; the composition binds it.
 // AdminTransaction opens the cross-tenant transaction of the sync.
 type SchoolVacationDependencies struct {
 	Store            ports.SchoolVacationStore
@@ -45,16 +45,13 @@ var (
 )
 
 func NewSchoolVacations(deps SchoolVacationDependencies) (*SchoolVacationService, error) {
-	if deps.Store == nil || deps.Source == nil || deps.AdminTransaction == nil {
-		return nil, errors.New("school calendar school vacations: store, source and transaction are required")
+	if deps.Store == nil || deps.Source == nil || deps.AdminTransaction == nil || deps.Today == nil {
+		return nil, errors.New("school calendar school vacations: store, source, day and transaction are required")
 	}
 	if deps.FederalState == nil {
 		deps.FederalState = func(context.Context) (string, error) {
 			return "", errors.New("school vacations: no federal state in this composition")
 		}
-	}
-	if deps.Today == nil {
-		deps.Today = BerlinToday
 	}
 	return &SchoolVacationService{deps: deps}, nil
 }

@@ -19,13 +19,18 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/compose/presenceservice"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // NewSchedulerCleanupTestDependencies binds the same directory, settings,
 // presence cleanup, ledger and tenant runtime as the Worker, without unrelated jobs.
 func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit tenant.UnitOfWork, now func() time.Time) (schedulerPorts.WorkerDependencies, error) {
+	// One clock for the whole composition (ADR 0262): the retention selection
+	// in Presence and the deletion in the cleanup read the same instant. A
+	// test without one runs on the wall clock.
+	if now == nil {
+		now = time.Now
+	}
 	settings, err := NewSettingsTestModule(db, unit)
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
@@ -38,7 +43,7 @@ func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit te
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
-	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: func(presenceCompose.Observation) {}})
+	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: func(presenceCompose.Observation) {}, Now: now})
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
@@ -46,11 +51,11 @@ func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit te
 		DB: db.Pool(), Now: now,
 	})
 	_, supervisors := presenceCompose.SessionRepositories(records)
-	audit, err := auditCompose.NewTenantPersistence(db.Pool())
+	audit, err := auditCompose.NewTenantPersistence(db.Pool(), auditTestClock(now))
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
-	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, auditTestClock(now))
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
@@ -59,7 +64,7 @@ func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit te
 		return schedulerPorts.WorkerDependencies{}, err
 	}
 	cleanup := presenceservice.NewPresenceCleanup(presence, supervisors, NewDeletionAudit(audit.DataDeletion),
-		settingsCompose.PresenceSettings(settings.Settings), func() calendar.Date { return calendar.DateFromTime(now()) })
+		settingsCompose.PresenceSettings(settings.Settings), now)
 	return schedulerPorts.WorkerDependencies{
 		Logger: slog.New(slog.DiscardHandler), Now: now,
 		SchoolRepo: schedulerTenantDirectory{schools: schools}, Settings: resolver,
@@ -114,3 +119,11 @@ func NewSchedulerFileRetentionTestDependencies(db transactionruntime.Database, u
 type cleanupTestUploads struct{ dir string }
 
 func (u cleanupTestUploads) PublicDir() (string, error) { return u.dir, nil }
+
+// auditTestClock is now, or the real clock for callers that pass none.
+func auditTestClock(now func() time.Time) func() time.Time {
+	if now == nil {
+		return time.Now
+	}
+	return now
+}

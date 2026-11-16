@@ -25,7 +25,7 @@ func TestRuntimeRealtimeListenerWiring(t *testing.T) {
 		if !ok || selector.Sel.Name != "NewPostgresRealtimeHub" {
 			return true
 		}
-		require.Len(t, call.Args, 4)
+		require.Len(t, call.Args, 5) // the fifth is the clock of the relayed notifications
 		condition, ok := call.Args[3].(*ast.BinaryExpr)
 		require.True(t, ok, "listener must depend on process mode")
 		require.Equal(t, token.NEQ, condition.Op)

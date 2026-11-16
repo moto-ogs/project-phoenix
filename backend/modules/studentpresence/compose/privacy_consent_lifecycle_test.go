@@ -46,7 +46,7 @@ func TestPrivacyConsentRejectsIncompleteRecords(t *testing.T) {
 func TestPrivacyConsentLifecycle(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}})
+	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}, Now: presenceClock})
 	require.NoError(t, err)
 	ctx := testpkg.Ctx(t)
 	student := testpkg.CreateTestStudent(t, db, "Consent", "Lifecycle", "1a")
@@ -63,6 +63,9 @@ func TestPrivacyConsentLifecycle(t *testing.T) {
 		return err
 	}))
 	require.NotZero(t, consent.ID)
+	// Inserts stamp created_at from the module's clock, the clock the
+	// expiry check below compares against.
+	require.True(t, consent.CreatedAt.Equal(presenceClock()), "created_at %s", consent.CreatedAt)
 	found, err = module.ListPrivacyConsents(ctx, student.ID)
 	require.NoError(t, err)
 	require.Len(t, found, 1)
@@ -71,20 +74,23 @@ func TestPrivacyConsentLifecycle(t *testing.T) {
 	require.Equal(t, "v1.0", found[0].PolicyVersion)
 	require.False(t, found[0].Accepted)
 
-	now := time.Now()
+	now := presenceClock()
 	expires := now.AddDate(1, 0, 0)
 	consent.Accepted = true
 	consent.AcceptedAt = &now
 	consent.ExpiresAt = &expires
 	consent.RenewalRequired = true
 	consent.DataRetentionDays = 15
+	var revised studentpresence.PrivacyConsent
 	require.NoError(t, tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
-		_, err := module.RevisePrivacyConsent(txCtx, consent)
+		revised, err = module.RevisePrivacyConsent(txCtx, consent)
 		return err
 	}))
 	found, err = module.ListPrivacyConsents(ctx, student.ID)
 	require.NoError(t, err)
 	require.Len(t, found, 1)
+	// The update trigger owns updated_at; the revision returns the stored value.
+	require.True(t, revised.UpdatedAt.Equal(found[0].UpdatedAt), "returned %s, stored %s", revised.UpdatedAt, found[0].UpdatedAt)
 	require.True(t, found[0].Accepted)
 	require.NotNil(t, found[0].AcceptedAt)
 	require.WithinDuration(t, now, *found[0].AcceptedAt, time.Microsecond)
@@ -106,11 +112,11 @@ func TestPrivacyConsentLifecycle(t *testing.T) {
 func TestPrivacyConsentKeepsExpiryAndRejectsMissingRevision(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}})
+	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}, Now: presenceClock})
 	require.NoError(t, err)
 	ctx := testpkg.Ctx(t)
 	student := testpkg.CreateTestStudent(t, db, "Consent", "Expiry", "1a")
-	now := time.Now()
+	now := presenceClock()
 	expires := now.AddDate(1, 0, 0)
 	value := studentpresence.PrivacyConsent{
 		StudentID: student.ID, PolicyVersion: "v1.0", Accepted: true,

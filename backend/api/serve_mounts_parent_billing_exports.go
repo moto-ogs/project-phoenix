@@ -21,7 +21,7 @@ import (
 func NewFinanceExportHTTP(exports parentbilling.FinanceExports, accounts parentbilling.BookingAccountService) *parentBillingHTTP.FinanceExportResource {
 	return parentBillingHTTP.NewFinanceExportResource(exports, accounts,
 		common.RequiresPermission(identityaccess.TraegerRightFinanceExport),
-		common.RequiresPermission(identityaccess.TraegerRightBillingManage))
+		common.RequiresPermission(identityaccess.TraegerRightBillingManage), traegerListRenderer(NewSimpleListRenderer()))
 }
 
 // NewExportHandoverHTTP binds the handover of the finance exports to the

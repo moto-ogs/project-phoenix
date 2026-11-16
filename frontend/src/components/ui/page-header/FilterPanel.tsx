@@ -226,7 +226,7 @@ export function FilterPanel({
       type="button"
       aria-pressed={selectedValues.includes(option.value)}
       onClick={() => selectOption(filter, option.value, selectedValues)}
-      className={`flex h-9 min-w-[84px] items-center justify-center rounded-md px-3 text-xs font-medium transition-all ${extraClass} ${
+      className={`flex h-9 min-w-[84px] items-center justify-center rounded-md px-3 text-xs font-medium transition ${extraClass} ${
         selectedValues.includes(option.value)
           ? selectedOptionClass
           : "text-gray-600 hover:text-gray-900"
@@ -435,7 +435,7 @@ export function FilterPanel({
         </div>
 
         {(onApply ?? onReset) && (
-          <div className="flex gap-2 border-t border-gray-100 bg-white/95 p-3 backdrop-blur-sm">
+          <div className="flex gap-2 border-t border-gray-100 bg-white p-3">
             {onReset && (
               <Button
                 type="button"

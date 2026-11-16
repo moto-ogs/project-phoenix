@@ -134,21 +134,24 @@ func TestNewPresenceVisitResponse_ActiveVisit(t *testing.T) {
 	assert.Nil(t, response.CheckOutTime)
 }
 
+// supervisionRowDay is the day the supervision row tests read on, a Monday.
+var supervisionRowDay = calendar.NewDate(2026, 11, 2)
+
 func TestSupervisionRowResponse_BasicFields(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
-	endDate := calendar.TodayDate().AddDays(-1).String() // End date in the past = inactive
+	now := supervisionRowDay.BerlinMidnight().Add(12 * time.Hour)
+	endDate := supervisionRowDay.AddDays(-1).String() // End date in the past = inactive
 
 	supervisor := studentpresence.GroupSupervision{
 		ID: 1, CreatedAt: now, UpdatedAt: now,
 		StaffID:   100,
 		GroupID:   200,
-		StartDate: calendar.TodayDate().AddDays(-1).String(),
+		StartDate: supervisionRowDay.AddDays(-1).String(),
 		EndDate:   &endDate,
 	}
 
-	response := supervisionRowResponse(supervisor)
+	response := supervisionRowResponse(supervisor, supervisionRowDay)
 
 	assert.Equal(t, int64(1), response.ID)
 	assert.Equal(t, int64(100), response.StaffID)
@@ -164,11 +167,11 @@ func TestSupervisionRowResponse_ActiveSupervisor(t *testing.T) {
 		ID:        1,
 		StaffID:   100,
 		GroupID:   200,
-		StartDate: calendar.TodayDate().AddDays(-1).String(),
+		StartDate: supervisionRowDay.AddDays(-1).String(),
 		EndDate:   nil, // Active
 	}
 
-	response := supervisionRowResponse(supervisor)
+	response := supervisionRowResponse(supervisor, supervisionRowDay)
 
 	assert.True(t, response.IsActive)
 }
@@ -178,7 +181,7 @@ func TestSupervisionRowResponse_InvalidDateKeepsIdentity(t *testing.T) {
 
 	supervisor := studentpresence.GroupSupervision{ID: 1, StaffID: 100, GroupID: 200, StartDate: "invalid"}
 
-	response := supervisionRowResponse(supervisor)
+	response := supervisionRowResponse(supervisor, supervisionRowDay)
 
 	assert.Equal(t, int64(1), response.ID)
 	assert.Equal(t, int64(100), response.StaffID)
@@ -195,7 +198,7 @@ func TestNewCombinationWithGroupsResponse_BasicFields(t *testing.T) {
 	group := studentpresence.CombinedGroup{ID: 1, CreatedAt: now, UpdatedAt: now,
 		StartTime: now.Add(-2 * time.Hour), EndTime: &endTime}
 
-	response := newCombinationWithGroupsResponse(group, nil)
+	response := newCombinationWithGroupsResponse(group, nil, now)
 
 	assert.Equal(t, int64(1), response.ID)
 	assert.Equal(t, "Combined Group #1", response.Name)
@@ -215,7 +218,7 @@ func TestNewCombinationWithGroupsResponse_ActiveWithGroups(t *testing.T) {
 	group := studentpresence.CombinedGroup{ID: 5, StartTime: now}
 	groups := []studentpresence.LiveGroup{{ID: 1}, {ID: 2}}
 
-	response := newCombinationWithGroupsResponse(group, groups)
+	response := newCombinationWithGroupsResponse(group, groups, now)
 
 	assert.True(t, response.IsActive)
 	assert.Equal(t, 2, response.GroupCount)

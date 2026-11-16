@@ -8,7 +8,7 @@ import (
 )
 
 // The exports of the Personalverwaltung over all schools (#4712, ADR 0089
-// section 11, ADR 0249): the DATEV payroll file of the Träger, one file over
+// section 11, ADR 0250): the DATEV payroll file of the Träger, one file over
 // every Arbeitsvertrag the Träger closes, and the time export for a Träger
 // with its own time system, one CSV row per person, day and Einsatzort. Each
 // school computes its month and its days in its own tenant transaction and

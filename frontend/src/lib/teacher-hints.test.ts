@@ -28,7 +28,7 @@ describe("teacher hints on the child", () => {
   it("reaches the Kindersuche row from the slim list", () => {
     const student = mapStudentListRow(
       {
-        id: 7,
+        id: "7",
         first_name: "Ida",
         last_name: "Hinweis",
         school_class: "4a",

@@ -39,7 +39,7 @@ func lifecycleTestModule(db transactionruntime.Database, unit tenant.UnitOfWork,
 	}
 	audit := cfg.Audit
 	if audit == nil {
-		command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+		command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 		if err != nil {
 			return nil, err
 		}
@@ -55,7 +55,7 @@ func lifecycleTestModule(db transactionruntime.Database, unit tenant.UnitOfWork,
 	}
 	audits := auditCompose.MustNewPersistence(auditCompose.PersistenceDependencies{DB: db.Pool()})
 	audits = audits.WithRoutedWrites(audit)
-	tokens, err := newLegacyTokenAdapter()
+	tokens, err := newLegacyTokenAdapter(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func lifecycleTestModule(db transactionruntime.Database, unit tenant.UnitOfWork,
 		return nil, err
 	}
 	sessionRepos := owners.SessionRepositoriesOf(repos, organizations, audits.AuthEvent, deliveryCompose.NewPushSubscriptionRepository(db.Pool()))
-	guardianMail, enrollmentClaims, err := owners.GuardianInvitationDependencies(guardianInvitationTestHours(expiry/time.Hour), organizations, outbox, owners.NoEmailOutcomes{}, claims, "http://localhost:3000", logger)
+	guardianMail, enrollmentClaims, err := owners.GuardianInvitationDependencies(guardianInvitationTestHours(expiry/time.Hour), organizations, outbox, owners.NoEmailOutcomes{}, claims, "http://localhost:3000", logger, nil)
 	if err != nil {
 		return nil, err
 	}

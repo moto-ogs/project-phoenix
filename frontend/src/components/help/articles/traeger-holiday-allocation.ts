@@ -51,6 +51,15 @@ export function traegerHolidayAllocationTopic(): HelpTopic {
         ],
       },
       {
+        title: "Vergabe herunterladen",
+        description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+        steps: [
+          "Öffnen Sie den Ferienzeitraum und wählen Sie den Reiter `Vergabe`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Die Datei enthält die offenen Anmeldungen im Vorschlag und alle Entscheidungen Ihres Büros.",
+        ],
+      },
+      {
         title: "Angaben einer Familie prüfen",
         steps: [
           "Öffnen Sie die Anmeldung.",

@@ -135,12 +135,12 @@ func addJobBreadcrumb(ctx context.Context, message string, err error, data map[s
 		data = withBreadcrumbValue(data, "error", err.Error())
 	}
 	jobHub(ctx).AddBreadcrumb(&sentry.Breadcrumb{
-		Type:      "error",
-		Category:  jobAttemptBreadcrumbCategory,
-		Message:   message,
-		Data:      data,
-		Level:     sentry.LevelWarning,
-		Timestamp: time.Now(),
+		Type:     "error",
+		Category: jobAttemptBreadcrumbCategory,
+		Message:  message,
+		Data:     data,
+		Level:    sentry.LevelWarning,
+		// The hub stamps the breadcrumb when it is added.
 	}, nil)
 }
 

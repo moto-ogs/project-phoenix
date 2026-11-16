@@ -87,11 +87,13 @@ func NewResource(cfg Config) *Resource {
 	return &Resource{scans: cfg.Scans, directory: cfg.Directory, surface: cfg.Surface, withinAdmin: withinAdmin}
 }
 
-// Router serves GET / and POST /{id}/resolve.
-func (rs *Resource) Router() chi.Router {
+// Router serves GET / and POST /{id}/resolve. routeMiddleware runs after
+// the route matched, so it sees the scan ID of a resolution; the operator
+// router passes its disclosure audit here (#7212).
+func (rs *Resource) Router(routeMiddleware ...func(http.Handler) http.Handler) chi.Router {
 	r := chi.NewRouter()
-	r.Get("/", rs.ListUnregisteredTagScans)
-	r.Post("/{id}/resolve", rs.ResolveUnregisteredTagScan)
+	r.With(routeMiddleware...).Get("/", rs.ListUnregisteredTagScans)
+	r.With(routeMiddleware...).Post("/{id}/resolve", rs.ResolveUnregisteredTagScan)
 	return r
 }
 

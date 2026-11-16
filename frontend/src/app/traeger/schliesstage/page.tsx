@@ -23,6 +23,10 @@ import {
 } from "~/components/traeger/closing-day-holiday-impact";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
 import { TraegerHolidayClosureNotices } from "~/components/traeger/traeger-holiday-closure-notices";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { useClosingDayHolidayImpact } from "~/components/traeger/use-closing-day-holiday-impact";
 import { ClosingDayModal } from "~/components/planning/closing-day-modal";
 import { TraegerYearCalendar } from "~/components/traeger/traeger-year-calendar";
@@ -55,6 +59,7 @@ import {
   fetchTraegerCalendar,
   type TraegerClosingDay,
 } from "~/lib/traeger-closing-days";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 
 const logger = createLogger({ component: "TraegerClosingDaysPage" });
 
@@ -315,24 +320,39 @@ export default function TraegerClosingDaysPage() {
         />
       }
       actions={
-        canManage ? (
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            onClick={beginCreate}
-            disabled={schools.length === 0}
-            tooltip="Plant einen Schließtag für eine oder alle Schulen und informiert betroffene Familien."
-            disabledReason={
-              data
-                ? "Ihrem Träger ist noch keine Schule zugeordnet. Das übernimmt das moto-Team."
-                : undefined
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList("/api/traeger/closing-days/export", format, {
+                from,
+                to,
+              })
             }
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Schließtag anlegen
-          </Button>
-        ) : null
+            scope={traegerExportScope()}
+            ariaLabel={`Schließtage ${year} herunterladen`}
+            fallbackName={`schliesstage-${year}`}
+            errorObject="die Schließtage"
+            unavailable={closingDays.length === 0}
+          />
+          {canManage ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={beginCreate}
+              disabled={schools.length === 0}
+              tooltip="Plant einen Schließtag für eine oder alle Schulen und informiert betroffene Familien."
+              disabledReason={
+                data
+                  ? "Ihrem Träger ist noch keine Schule zugeordnet. Das übernimmt das moto-Team."
+                  : undefined
+              }
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Schließtag anlegen
+            </Button>
+          ) : null}
+        </>
       }
       overlays={
         <>

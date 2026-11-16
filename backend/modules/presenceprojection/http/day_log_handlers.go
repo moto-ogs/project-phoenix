@@ -173,7 +173,7 @@ func (rs *Resource) dayLogLogger() *slog.Logger {
 }
 
 func (rs *Resource) dayLogClock() dayLogClock {
-	now := rs.dayLogNow()
+	now := rs.Now()
 	return dayLogClock{now: now, today: calendar.DateFromTime(now)}
 }
 
@@ -427,13 +427,6 @@ func (rs *Resource) loadDayLogSignOffs(ctx context.Context, data *dayLogData, st
 		data.arrivalTimes = arrivalTimes
 	}
 	return nil
-}
-
-func (rs *Resource) dayLogNow() time.Time {
-	if rs.Now != nil {
-		return rs.Now()
-	}
-	return time.Now()
 }
 
 func buildDayLogResponse(date calendar.Date, groups []*SchoolGroup, data *dayLogData) dayLogResponse {
@@ -710,7 +703,7 @@ func (rs *Resource) writeDayLogAudit(r *http.Request, date calendar.Date, groups
 		ResourceType:   dataAccessAttendanceDayLog,
 		RangeStart:     date.BerlinMidnight(),
 		RangeEnd:       date.EndOfDay(),
-		AccessedAt:     time.Now(),
+		AccessedAt:     rs.Now(),
 	}
 	entry.Scope = &studentpresence.DataAccessScope{GroupIDs: groupIDs, Date: date.String()}
 

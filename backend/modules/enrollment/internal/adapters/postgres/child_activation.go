@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
@@ -19,7 +18,7 @@ func (r *Store) UpdateChildActivationPlan(ctx context.Context, id int64, mode st
 	}
 	result, err := db.NewUpdate().TableExpr("enrollment.request_children").
 		Set("activation_mode = ?", mode).Set("activate_on = ?", on).
-		Set("updated_at = ?", time.Now()).Where("tenant_id = ? AND id = ?", tenantID, id).Exec(ctx)
+		Set("updated_at = ?", r.currentTime()).Where("tenant_id = ? AND id = ?", tenantID, id).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update request child activation plan: %w", err)
 	}

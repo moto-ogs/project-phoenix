@@ -3,7 +3,10 @@
 import { useParentResourceEvents } from "~/lib/hooks/use-parent-resources";
 import { useCallback } from "react";
 import { useSSE } from "~/lib/hooks/use-sse";
-import { dispatchPhoenixNotification } from "~/lib/notification-events";
+import {
+  dispatchPhoenixNotification,
+  NOTIFICATION_FEED_REFRESH_EVENT,
+} from "~/lib/notification-events";
 import type { SSEEvent } from "~/lib/sse-types";
 
 /**
@@ -35,6 +38,13 @@ export function ParentRealtimeBridge() {
     if (typeof window === "undefined") return;
     if (event.type === "notification") {
       dispatchPhoenixNotification(event);
+      return;
+    }
+    // Der Feed des Kontos änderte sich (#7140): neuer Hinweis oder ein
+    // Gelesen-Status, auch von einem anderen Gerät. Die Glocke lädt Zähler
+    // und Liste neu.
+    if (event.type === "notification_feed_changed") {
+      window.dispatchEvent(new CustomEvent(NOTIFICATION_FEED_REFRESH_EVENT));
       return;
     }
     if (event.type === "parent_message") {

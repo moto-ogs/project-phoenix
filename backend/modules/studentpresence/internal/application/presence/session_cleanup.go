@@ -24,7 +24,7 @@ import (
 // checks children in through the app, which needs the running session (#6977).
 func (s *service) CleanupAbandonedSessions(ctx context.Context, threshold time.Duration) (int, error) {
 	// Find sessions with no activity since the threshold
-	cutoffTime := time.Now().Add(-threshold)
+	cutoffTime := s.now().Add(-threshold)
 	var sessions []*ports.ActiveGroup
 	err := s.runInSessionTx(ctx, func(txCtx context.Context) error {
 		var readErr error
@@ -39,7 +39,7 @@ func (s *service) CleanupAbandonedSessions(ctx context.Context, threshold time.D
 	// across the whole sweep, so acquire every visit before its first session.
 	ids := make([]int64, 0, len(sessions))
 	for _, session := range sessions {
-		if !s.isDeviceOnline(ctx, session.Device, time.Now()) {
+		if !s.isDeviceOnline(ctx, session.Device, s.now()) {
 			ids = append(ids, session.ID)
 		}
 	}
@@ -97,7 +97,7 @@ func (s *service) stillAbandoned(cutoff time.Time) sessionTimeoutCheck {
 			return err
 		}
 		for _, candidate := range candidates {
-			if candidate.ID == session.ID && !s.isDeviceOnline(ctx, candidate.Device, time.Now()) {
+			if candidate.ID == session.ID && !s.isDeviceOnline(ctx, candidate.Device, s.now()) {
 				return nil
 			}
 		}
@@ -137,19 +137,19 @@ func (s *service) EndDailySessions(ctx context.Context) (*DailySessionCleanupRes
 	// scheduler tick and keeps the result shape unchanged for callers.
 	mode, err := s.GetPresenceMode(ctx)
 	if err != nil {
-		result := newDailySessionCleanupResult()
+		result := newDailySessionCleanupResult(s.now())
 		result.Success = false
 		return result, &ActiveError{Op: "EndDailySessions", Err: errors.Join(ErrDatabaseOperation, err)}
 	}
 	if mode == PresenceModeBinary {
 		return &DailySessionCleanupResult{
-			ExecutedAt: time.Now(),
+			ExecutedAt: s.now(),
 			Success:    true,
 			Errors:     make([]string, 0),
 		}, nil
 	}
 
-	result := newDailySessionCleanupResult()
+	result := newDailySessionCleanupResult(s.now())
 	activeIDs, err := s.activeSessionIDs(ctx)
 	if err != nil {
 		result.Success = false
@@ -185,9 +185,9 @@ func (s *service) EndDailySessions(ctx context.Context) (*DailySessionCleanupRes
 	return result, nil
 }
 
-func newDailySessionCleanupResult() *DailySessionCleanupResult {
+func newDailySessionCleanupResult(executedAt time.Time) *DailySessionCleanupResult {
 	return &DailySessionCleanupResult{
-		ExecutedAt: time.Now(),
+		ExecutedAt: executedAt,
 		Success:    true,
 		Errors:     make([]string, 0),
 	}
@@ -241,7 +241,7 @@ func (s *service) endDailySessionsLocked(ctx context.Context, activeIDs []int64,
 // cleanupOrphanedSupervisors closes supervisor records from previous days
 // that the per-group loop wouldn't find (e.g., groups already ended but supervisors left open)
 func (s *service) cleanupOrphanedSupervisors(ctx context.Context, result *DailySessionCleanupResult) {
-	today := calendar.TodayDate()
+	today := s.todayDate()
 
 	// Find orphaned supervisor records from before today with no end_date
 	staleRecords, err := s.SupervisorRepo.FindStaleOpen(ctx, today)
@@ -282,7 +282,7 @@ func (s *service) closeStaleSupervisor(ctx context.Context, record *ports.GroupS
 		}
 		endDate := current.StartDate
 		current.EndDate = &endDate
-		current.UpdatedAt = time.Now()
+		current.UpdatedAt = s.now()
 		_, err = s.SupervisorRepo.SetEndDate(txCtx, current)
 		closed = err == nil
 		return err

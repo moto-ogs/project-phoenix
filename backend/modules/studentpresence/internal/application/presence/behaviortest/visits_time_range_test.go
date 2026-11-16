@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -67,7 +68,8 @@ func TestVisitRepository_FindByStudentAndTimeRange(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	data := createVisitTestData(t, db)
 
-	now := time.Now()
+	// A fixed instant: the read takes its range from the caller.
+	now := calendar.NewDate(2026, 11, 2).BerlinMidnight().Add(12 * time.Hour)
 	yesterday := now.Add(-24 * time.Hour)
 	twoDaysAgo := now.Add(-48 * time.Hour)
 

@@ -8,7 +8,7 @@ import (
 
 func TestNewWorkerLeaseOwnsTheTimingAndAFreshHolder(t *testing.T) {
 	t.Parallel()
-	lease, err := NewWorkerLease(nil, LeaseEvidence{})
+	lease, err := NewWorkerLease(nil, LeaseEvidence{}, time.Now)
 	if err != nil {
 		t.Fatalf("new worker lease: %v", err)
 	}
@@ -19,7 +19,7 @@ func TestNewWorkerLeaseOwnsTheTimingAndAFreshHolder(t *testing.T) {
 	if segments := strings.Count(lease.Holder, "/") + 1; segments != 3 {
 		t.Errorf("holder %q has %d segments, want host, process and start time", lease.Holder, segments)
 	}
-	other, err := NewWorkerLease(nil, LeaseEvidence{})
+	other, err := NewWorkerLease(nil, LeaseEvidence{}, time.Now)
 	if err != nil {
 		t.Fatalf("second worker lease: %v", err)
 	}

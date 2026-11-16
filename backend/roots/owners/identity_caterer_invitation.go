@@ -26,11 +26,14 @@ const (
 // CatererInvitationDelivery queues a school's invitation to its caterer in
 // the outbox (ADR 0077) and reads what became of those mails (#5960). The
 // link points at the caterer portal; the school never sees it.
-func CatererInvitationDelivery(schools schoolFinder, outbox MailResultOutbox, outcomes deliveryRuntime.EmailOutcomes, catererURL string) (identityPorts.CatererInvitationDelivery, error) {
+func CatererInvitationDelivery(schools schoolFinder, outbox MailResultOutbox, outcomes deliveryRuntime.EmailOutcomes, catererURL string, now func() time.Time) (identityPorts.CatererInvitationDelivery, error) {
 	if schools == nil || outbox == nil || outcomes == nil {
 		return nil, errors.New("identity access composition: the caterer invitation needs the school directory, the e-mail outbox and the mail outcomes")
 	}
-	return catererInvitationDelivery{schools: schools, outbox: outbox, outcomes: outcomes, catererURL: catererURL}, nil
+	if now == nil {
+		now = time.Now
+	}
+	return catererInvitationDelivery{schools: schools, outbox: outbox, outcomes: outcomes, catererURL: catererURL, now: now}, nil
 }
 
 type catererInvitationDelivery struct {
@@ -38,6 +41,8 @@ type catererInvitationDelivery struct {
 	outbox     MailResultOutbox
 	outcomes   deliveryRuntime.EmailOutcomes
 	catererURL string
+	// now counts the days the mail states (nil at composition: the real clock).
+	now func() time.Time
 }
 
 // CatererInvitationMailStates reads the last mail of each invitation in one
@@ -75,7 +80,7 @@ func (d catererInvitationDelivery) EnqueueCatererInvitation(ctx context.Context,
 	if school, found, err := LookupSchool(ctx, d.schools, schoolID); err == nil && found && !school.IsDeleted() {
 		schoolName = school.Name
 	}
-	mail := identityaccess.CatererInvitationMailOf(recipient, catererName, schoolName, d.catererURL, schoolID, token, expiresAt)
+	mail := identityaccess.CatererInvitationMailOf(recipient, catererName, schoolName, d.catererURL, schoolID, token, expiresAt, d.now())
 	_, err := d.outbox.EnqueueOutboxWithResult(ctx, deliveryCompose.MailEnqueueRequest{
 		Kind: identityaccess.MailKindCatererInvitation,
 		Payload: map[string]any{

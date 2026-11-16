@@ -7,16 +7,20 @@ import { KlassenTab } from "./klassen-tab";
 
 const OBJECT = "die Zuweisung der Schulklassen";
 
-const { mockAuthFetch } = vi.hoisted(() => ({ mockAuthFetch: vi.fn() }));
+const { mockAuthFetch, mockFetchSchoolClasses } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockFetchSchoolClasses: vi.fn(),
+}));
 
 vi.mock("~/lib/api-helpers", () => ({ authFetch: mockAuthFetch }));
+vi.mock("~/lib/student-api", () => ({
+  fetchSchoolClasses: mockFetchSchoolClasses,
+}));
 
 function mockLoad(assigned: string[], known: string[] = ["1a", "2b", "3c"]) {
+  mockFetchSchoolClasses.mockResolvedValue(known);
   mockAuthFetch.mockImplementation(
-    (url: string, init?: { method?: string }) => {
-      if (url === "/api/students/school-classes") {
-        return Promise.resolve({ success: true, data: known });
-      }
+    (_url: string, init?: { method?: string }) => {
       if (init?.method === "PUT") {
         const body = (init as { body: { school_classes: string[] } }).body;
         return Promise.resolve({
@@ -40,6 +44,8 @@ const putCalls = () =>
 describe("KlassenTab", () => {
   beforeEach(() => {
     mockAuthFetch.mockReset();
+    mockFetchSchoolClasses.mockReset();
+    mockFetchSchoolClasses.mockResolvedValue([]);
   });
 
   it("shows the assignment read-only and offers Bearbeiten only with the right", async () => {

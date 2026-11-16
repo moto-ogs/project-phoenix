@@ -263,7 +263,7 @@ func newOperatorMFAFixture(t *testing.T, operator domain.Operator, store *fakeOp
 		operatorStore.operators[operator.ID] = operator
 	}
 	runtime := &fakeRuntime{}
-	service := New(operatorStore, operatorStore, operatorStore, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {})
+	service := New(operatorStore, operatorStore, operatorStore, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {}, time.Now)
 	codec := &fakeMFAChallengeCodec{parse: map[string]domain.MFAChallengeClaims{}}
 	mail := &fakeMFAMail{}
 	audit := &fakeMFAAudit{}

@@ -325,7 +325,16 @@ func seedStudentGroupID(rt *Runtime, studentID int64) (int64, error) {
 	return groupID, nil
 }
 
+// seedParentPhotoConsentHistory leaves a photo consent the parent withdrew,
+// so the parents portal offers to give it again. A new consent needs child
+// photos switched on (#7208); the seeded school keeps them off, so the step
+// switches them on for the grant and back to the default afterwards. The
+// parent's withdrawal ended the only consent, so the reset ends none.
 func seedParentPhotoConsentHistory(rt *Runtime, auth AuthRef, studentID int64) error {
+	photosSetting := "/api/settings/values/" + profileSettingStudentPhotos
+	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, photosSetting, map[string]any{"value": true}); err != nil {
+		return fmt.Errorf("switch child photos on for the photo consent: %w", err)
+	}
 	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, fmt.Sprintf("/api/students/%d", studentID), map[string]any{
 		"photo_consent_given": true,
 	}); err != nil {
@@ -333,6 +342,9 @@ func seedParentPhotoConsentHistory(rt *Runtime, auth AuthRef, studentID int64) e
 	}
 	if _, err := rt.Client.DeleteWithAuth(auth, fmt.Sprintf("/parent/me/children/%d/consents/photo", studentID)); err != nil {
 		return fmt.Errorf("seed withdrawn parent photo consent: %w", err)
+	}
+	if _, err := rt.Client.DeleteWithAuth(rt.TenantAuth, photosSetting); err != nil {
+		return fmt.Errorf("reset child photos after the photo consent: %w", err)
 	}
 	return nil
 }

@@ -194,6 +194,16 @@ export function traegerBillingRunTopic(): HelpTopic {
           "Wählen Sie ein Dokument, um seinen Abrechnungslauf zu öffnen. Dort stornieren Sie oder schreiben gut.",
         ],
       },
+      {
+        title: "Listen herunterladen",
+        description:
+          "Die Liste der Läufe, die Familien und die Dokumente einer Familie laden Sie als Datei herunter.",
+        steps: [
+          "Für die Läufe wählen Sie `Abrechnungsläufe` und dann den Reiter `Ferien`. Für die Familien wählen Sie `Familien und Zahlung`. Für die Dokumente einer Familie öffnen Sie die Familie.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Bei den Abrechnungsläufen gilt der gewählte Ferienzeitraum. Bei den Familien enthält die Datei alle Familien, ohne Suche und Filter.",
+          "Die Liste der Familien und die Dokumente einer Familie enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
+        ],
+      },
     ],
     result:
       "Jede Rechnung hat ihre Nummer. Die Nummern sind lückenlos. Ausgestellte Rechnungen und ihre Schreiben lassen sich nicht mehr ändern. Die Übersicht zeigt jede Position je Familie, die Summe jeder Rechnung und die Gesamtsumme. Storno und Gutschrift stehen dort als eigene Zeilen mit Minusbetrag und der Nummer der Rechnung.",
