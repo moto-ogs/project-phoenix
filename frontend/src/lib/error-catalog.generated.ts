@@ -772,6 +772,8 @@ export const ERROR_CATALOG = {
         "Es wurden zu viele Einladungen verschickt. Bitte versuchen Sie es in einer Stunde erneut.",
       "identity.lehrkraft_role_immutable":
         "Ein Lehrkraft-Konto behält seine Rolle. Für eine andere Rolle braucht die Person ein neues Konto.",
+      "identity.logout_not_revoked":
+        "Sie sind auf diesem Gerät abgemeldet. moto konnte Ihre Anmeldung aber nicht ganz beenden. Sie endet später von selbst. Haben Sie ein fremdes Gerät benutzt? Dann ändern Sie bitte Ihr Passwort.",
       "identity.mail_block_unreadable":
         "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuchen Sie es später noch einmal.",
       "identity.mail_blocked_at_provider":
@@ -2590,6 +2592,8 @@ export const ERROR_CATALOG = {
         "The invitation could not be sent right now. Please try again.",
       "identity.invitation_not_found":
         "This invitation does not exist. Please check the link in the email.",
+      "identity.logout_not_revoked":
+        "You are signed out on this device. But moto could not fully end your sign-in. It will end on its own later. Did you use someone else's device? Then please change your password.",
       "identity.mail_block_unreadable":
         "We cannot check right now whether this address is blocked. Please try again later.",
       "identity.mail_blocked_at_provider":
@@ -3279,6 +3283,8 @@ export const ERROR_CATALOG = {
         "Сейчас не удалось отправить приглашение. Повторите попытку.",
       "identity.invitation_not_found":
         "Такого приглашения нет. Проверьте ссылку в письме.",
+      "identity.logout_not_revoked":
+        "Вы вышли на этом устройстве. Но moto не смогло полностью завершить вход. Он закончится позже сам. Вы пользовались чужим устройством? Тогда смените пароль.",
       "identity.mail_block_unreadable":
         "Сейчас нельзя проверить, заблокирован ли этот адрес. Попробуйте позже.",
       "identity.mail_blocked_at_provider":
@@ -3902,6 +3908,8 @@ export const ERROR_CATALOG = {
         "Ftesa nuk mund të dërgohej tani. Provoni përsëri.",
       "identity.invitation_not_found":
         "Kjo ftesë nuk ekziston. Kontrolloni lidhjen në e-mail.",
+      "identity.logout_not_revoked":
+        "Keni dalë nga llogaria në këtë pajisje. Por moto nuk mundi ta mbyllë plotësisht hyrjen tuaj. Ajo do të mbyllet më vonë vetë. A keni përdorur pajisjen e dikujt tjetër? Atëherë ju lutemi ndryshoni fjalëkalimin.",
       "identity.mail_block_unreadable":
         "Tani nuk mund të kontrollohet nëse kjo adresë është e bllokuar. Ju lutemi provoni përsëri më vonë.",
       "identity.mail_blocked_at_provider":
@@ -4515,6 +4523,8 @@ export const ERROR_CATALOG = {
         "Nie udało się teraz wysłać zaproszenia. Spróbuj ponownie.",
       "identity.invitation_not_found":
         "To zaproszenie nie istnieje. Sprawdź link w e-mailu.",
+      "identity.logout_not_revoked":
+        "Wylogowano Cię na tym urządzeniu. moto nie mogło jednak całkiem zakończyć logowania. Zakończy się ono później samo. Korzystasz z cudzego urządzenia? Zmień wtedy hasło.",
       "identity.mail_block_unreadable":
         "Nie można teraz sprawdzić, czy ten adres jest zablokowany. Spróbuj ponownie później.",
       "identity.mail_blocked_at_provider":
@@ -5133,6 +5143,8 @@ export const ERROR_CATALOG = {
         "Davet şu anda gönderilemedi. Yeniden deneyin.",
       "identity.invitation_not_found":
         "Bu davet mevcut değil. Lütfen e-postadaki bağlantıyı kontrol edin.",
+      "identity.logout_not_revoked":
+        "Bu cihazda oturumunuz kapatıldı. Ancak moto girişinizi tamamen sonlandıramadı. Giriş daha sonra kendiliğinden sona erecek. Başkasının cihazını mı kullandınız? O zaman lütfen şifrenizi değiştirin.",
       "identity.mail_block_unreadable":
         "Bu adresin engelli olup olmadığı şu anda kontrol edilemiyor. Lütfen daha sonra tekrar deneyin.",
       "identity.mail_blocked_at_provider":
@@ -5744,6 +5756,8 @@ export const ERROR_CATALOG = {
         "Зараз не вдалося надіслати запрошення. Спробуйте ще раз.",
       "identity.invitation_not_found":
         "Такого запрошення немає. Перевірте посилання в листі.",
+      "identity.logout_not_revoked":
+        "Ви вийшли на цьому пристрої. Але moto не змогло повністю завершити вхід. Він закінчиться пізніше сам. Ви користувалися чужим пристроєм? Тоді змініть пароль.",
       "identity.mail_block_unreadable":
         "Зараз неможливо перевірити, чи заблоковано цю адресу. Спробуйте пізніше.",
       "identity.mail_blocked_at_provider":

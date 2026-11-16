@@ -60,5 +60,6 @@
   "guardian_email_address_blocked": "Ftesa nuk mund të dërgohej tani. Provoni përsëri.",
   "invitation_mail_delayed": "Ftesa nuk mund të dërgohej tani. Provoni përsëri.",
   "mail_blocked_at_provider": "Kjo adresë është e bllokuar. Dërgimi përsëri nuk ndihmon. Këtë duhet ta sqarojë mbështetja e moto.",
-  "mail_block_unreadable": "Tani nuk mund të kontrollohet nëse kjo adresë është e bllokuar. Ju lutemi provoni përsëri më vonë."
+  "mail_block_unreadable": "Tani nuk mund të kontrollohet nëse kjo adresë është e bllokuar. Ju lutemi provoni përsëri më vonë.",
+  "logout_not_revoked": "Keni dalë nga llogaria në këtë pajisje. Por moto nuk mundi ta mbyllë plotësisht hyrjen tuaj. Ajo do të mbyllet më vonë vetë. A keni përdorur pajisjen e dikujt tjetër? Atëherë ju lutemi ndryshoni fjalëkalimin."
 }

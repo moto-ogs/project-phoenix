@@ -300,7 +300,8 @@ func (rs *Resource) logout(w http.ResponseWriter, r *http.Request) {
 	client := portalauth.ClientOf(r)
 	// The audit rows commit with the revocation (#6989). An error here means
 	// the family was not revoked: its access tokens stay valid, so the
-	// browser must not take the logout for done (#5194).
+	// answer names the failure (#5194, #7209). The browser still drops its
+	// cookies and tells the person the session ends at its expiry.
 	if err := rs.Sessions.LogoutWithAudit(r.Context(), refreshToken, client.IP, client.UserAgent); err != nil {
 		if errors.Is(err, identityaccess.ErrInvalidToken) {
 			// Not a refresh token of any session: nothing is left to revoke.
@@ -311,7 +312,7 @@ func (rs *Resource) logout(w http.ResponseWriter, r *http.Request) {
 			slog.String("ip", client.IP),
 			slog.String("error", err.Error()),
 		)
-		common.RenderError(w, r, common.ErrorServiceUnavailable(errors.New("logout could not revoke the session, please retry")))
+		common.RenderError(w, r, common.ErrorServiceUnavailableWithCode(errors.New("logout could not revoke the session"), common.CodeIdentityLogoutNotRevoked))
 		return
 	}
 

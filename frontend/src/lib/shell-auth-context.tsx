@@ -14,6 +14,7 @@ import { schoolPath } from "~/lib/school-url";
 import { catererPath } from "~/lib/caterer-url";
 import { traegerPath } from "~/lib/traeger-url";
 import { clearSessionCache, DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
+import { markLogoutNotRevoked } from "~/lib/login-session-notice";
 import { clearPersonalStorage } from "~/lib/personal-storage";
 import { createLogger } from "~/lib/logger";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
@@ -32,7 +33,8 @@ type ShowLogoutError = ReturnType<typeof useApiErrorDisplay>["show"];
 
 /**
  * Wraps a portal's logout. A failure keeps the session signed in, is shown
- * once with a retry, and still reaches the caller, which only closes its
+ * once with a retry (a revocation the server refused is no failure here,
+ * see revokeSessionFamily), and still reaches the caller, which only closes its
  * confirmation (#5194).
  */
 function reportingLogout(
@@ -51,6 +53,8 @@ function reportingLogout(
       } catch {
         // sessionStorage unavailable: the login page then shows its notice.
       }
+      // The session stays signed in, so no login page may claim it ended.
+      markLogoutNotRevoked(false);
       void showLogoutError(err, {
         object: "die Abmeldung",
         retry: () => void (retryLogout ?? logout)().catch(() => undefined),
@@ -81,12 +85,6 @@ function behindSessionBarrier(
 }
 
 /**
- * Revokes the portal session's refresh-token family on the server (#5194).
- * Only the revoked family ends the session's access tokens, also in a cookie
- * a late response writes back; a failed revocation therefore throws and the
- * caller keeps the session. 401 means nothing is left to revoke.
- */
-/**
  * Clears the portal's cookie and opens its login on the portal's own host.
  * Auth.js resolves a callbackUrl against NEXTAUTH_URL, the tenant origin, so
  * a redirecting signOut would land on the tenant's host root instead.
@@ -96,10 +94,22 @@ async function signOutToLogin(portal: HostedPortalKey): Promise<void> {
   window.location.assign(portalLoginPath(portal));
 }
 
+/**
+ * Revokes the portal session's refresh-token family on the server (#5194).
+ * Only the revoked family ends the session's access tokens, also in a cookie
+ * a late response writes back. 401 means nothing is left to revoke.
+ *
+ * When the server answers that it could not revoke the family, the logout
+ * still goes on and drops the cookie: the person walks away believing they
+ * are signed out, so this device must not stay signed in (#7209). The login
+ * page then says that the session ends at its expiry. Without an answer
+ * (offline, timeout) the call throws and the session stays, with a retry.
+ */
 async function revokeSessionFamily(
   path: string,
   signal?: AbortSignal,
 ): Promise<void> {
+  markLogoutNotRevoked(false);
   const response = await transportFetch(path, {
     method: "POST",
     signal: signal
@@ -107,9 +117,14 @@ async function revokeSessionFamily(
       : AbortSignal.timeout(5000),
   });
   signal?.throwIfAborted();
-  if (!response.ok && response.status !== 401) {
-    throw await apiErrorFromResponse(response, "Logout failed");
-  }
+  if (response.ok || response.status === 401) return;
+  const refusal = await apiErrorFromResponse(response, "Logout failed");
+  signal?.throwIfAborted();
+  logger.warn("logout_not_revoked", {
+    status: response.status,
+    code: refusal.code,
+  });
+  markLogoutNotRevoked(true);
 }
 
 interface ShellUser {
