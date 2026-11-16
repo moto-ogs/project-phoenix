@@ -27330,6 +27330,7 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeService.StaffNoticeFor",
       "classification": "platform",
       "effect": "scope",
@@ -27340,6 +27341,7 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeService.StaffNoticeFor",
       "classification": "platform",
       "effect": "scope",
@@ -41934,6 +41936,7 @@
       "target_owner": "staff-directory-view"
     },
     {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
       "classification": "platform",
       "effect": "durable",
