@@ -1,8 +1,9 @@
-# Frontend tests: clock, timers, absence assertions, kit pixel comparison, Storybook a11y
+# Frontend tests: clock, timers, network, absence assertions, kit pixel comparison, Storybook a11y
 
 Read before writing or diagnosing a date- or time-sensitive Vitest test, a
 test that asserts something is absent, or before proving that a kit change
-is invisible, or when a Storybook a11y test fails.
+is invisible, or when a Storybook a11y test fails or a test reports a
+request that reached the network.
 Paths start at `frontend/`; commands run from `frontend/`.
 
 ## Projects
@@ -69,6 +70,16 @@ replaces a thread after a file that leaves more than 200 MB of heap.
   keyed by file content, Vite config and lockfile. A Vite plugin whose output
   depends on other files must add them to the cache key; after a suspected
   stale transform, `pnpm vitest --clearCache` empties the cache.
+
+## No network
+
+`src/test/network-guard.ts` (installed by `setup.ts`, both DOM projects)
+answers every `fetch` no mock handles with a network error and fails the
+test that sent it, naming the request and the calling code (#7216). Such a
+request went to `http://localhost:3000`: refused in CI, answered by a local
+dev server, possibly after the test ended. Mock the API module function the
+component calls, with the neutral value its type declares (empty list, no
+data); a test of the failure path mocks the rejection itself.
 
 ## Scope
 
