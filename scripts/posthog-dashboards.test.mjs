@@ -204,6 +204,26 @@ test('the caterer portal counts its core actions per school, since its browser s
   }
 });
 
+test('the caterer never makes its school look active, and its idempotent writes count once per school and day', () => {
+  const school = definitions.filter((d) => d.name !== 'Nutzungsanalyse: Caterer-Portal' && !d.name.includes('Demo'));
+  const notCaterer = "coalesce(properties.surface, '') != 'caterer'";
+  let checked = 0;
+  for (const insight of school.flatMap((d) => d.insights)) {
+    const query = JSON.stringify(insight.query);
+    // ACTIVE_USE, or a scan of the schools' events (schoolDays, schoolFeatureEvents).
+    if (!/event != 'login_failed'|as Schule\b/.test(query)) continue;
+    checked++;
+    assert.ok(query.includes(notCaterer), `${insight.name}: a caterer action is no use by the school`);
+  }
+  assert.ok(checked >= 10, `${checked} school activity insights`);
+  const tiles = definitions.find((d) => d.name === 'Nutzungsanalyse: Caterer-Portal').insights;
+  for (const insight of tiles.filter((tile) => tile.query.kind === 'InsightVizNode')) {
+    for (const step of insight.query.source.series) {
+      assert.equal(step.math_hogql, 'uniq(concat(toString(properties.school_id), toString(toDate(timestamp))))', `${insight.name} ${step.event}`);
+    }
+  }
+});
+
 test('next pages count page changes from the start page, not people', () => {
   const ogs = insights.find((insight) => insight.name.startsWith('OGS-App: Wohin'));
   assert.match(ogs.query.source.query, /properties\.\$prev_pageview_pathname = '\/home'/);
