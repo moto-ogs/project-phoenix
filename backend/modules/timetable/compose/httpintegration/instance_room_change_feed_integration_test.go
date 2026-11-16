@@ -18,6 +18,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun/dialect/pgdialect"
 )
 
 // A block that moves to another room (#7141) is tested from the outside:
@@ -189,6 +190,14 @@ func TestRoomChangeReachesTheStaffingAndTheFamilies(t *testing.T) {
 	assert.Empty(t, f.parentFeed(t, withoutAccess.AccountID).Data.Entries, "a guardian without parent_portal.access gets nothing")
 	assert.Empty(t, f.parentPushes(t, withoutAccess.AccountID, "parent_room_changed"))
 	assert.Empty(t, f.parentFeed(t, notBooked.AccountID).Data.Entries, "a family whose child is not booked gets nothing")
+
+	// The audience scope is relationship-specific: a parent's entry must not
+	// carry a co-booked child for whom that parent has no portal access.
+	var parentStudentIDs []int64
+	require.NoError(t, f.s.db.NewRaw(`SELECT student_ids FROM platform.notification_feed_entries
+		WHERE tenant_id = ? AND account_id = ? AND type = 'parent_room_changed'`, testpkg.Tenant(t), parent.AccountID).
+		Scan(context.Background(), pgdialect.Array(&parentStudentIDs)))
+	assert.Equal(t, []int64{parent.StudentID}, parentStudentIDs)
 
 	// Losing the right after the entry was written hides it.
 	_, err = f.s.db.ExecContext(context.Background(), `UPDATE auth.guardian_student_access SET permissions = '{}'::jsonb

@@ -29522,7 +29522,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
-      "binding_digest": "6361a15d12ead9a81348761b660fef66",
+      "binding_digest": "1f305b0d64c038eb3a2ce07fc8f606b5",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
@@ -29530,7 +29530,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
-      "binding_digest": "22ce7b6b3fca9816b35632d921d8e4cf",
+      "binding_digest": "c9088e550447be01de6e5f575e794296",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
@@ -29538,7 +29538,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
-      "binding_digest": "ee6688a96bb50048161cb4acff0690e5",
+      "binding_digest": "3e779e8ccd85641956d27213f611dbf4",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
@@ -29546,7 +29546,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
-      "binding_digest": "c2f34b2baea439bdb5f0d761114ea259",
+      "binding_digest": "84df9f09294b208151ab8cffae0f6b06",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",

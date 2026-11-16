@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -112,7 +114,12 @@ func (n timetableRoomChangeNotices) notifyGuardians(ctx context.Context, notice 
 	if n.guardians == nil || len(notice.StudentIDs) == 0 {
 		return nil
 	}
-	accountIDs, localeOf, err := n.portalGuardians(ctx, notice.StudentIDs, notice.ActorAccountID)
+	guardianStudentIDs, localeOf, err := n.portalGuardians(ctx, notice.StudentIDs, notice.ActorAccountID)
+	accountIDs := make([]int64, 0, len(guardianStudentIDs))
+	for accountID := range guardianStudentIDs {
+		accountIDs = append(accountIDs, accountID)
+	}
+	slices.Sort(accountIDs)
 	if err != nil || len(accountIDs) == 0 {
 		return err
 	}
@@ -121,30 +128,38 @@ func (n timetableRoomChangeNotices) notifyGuardians(ctx context.Context, notice 
 	if err != nil {
 		return fmt.Errorf("room change notice: filter guardians: %w", err)
 	}
-	byLocale := map[string][]int64{}
+	byAudience := map[string]*guardianRoomChangeAudience{}
 	for _, accountID := range accountIDs {
-		byLocale[localeOf[accountID]] = append(byLocale[localeOf[accountID]], accountID)
+		studentIDs := guardianStudentIDs[accountID]
+		key := roomChangeStudentScopeKey(studentIDs) + ":" + localeOf[accountID]
+		if audience, ok := byAudience[key]; ok {
+			audience.accountIDs = append(audience.accountIDs, accountID)
+			continue
+		}
+		byAudience[key] = &guardianRoomChangeAudience{
+			locale: localeOf[accountID], studentIDs: studentIDs, accountIDs: []int64{accountID},
+		}
 	}
-	locales := make([]string, 0, len(byLocale))
-	for locale := range byLocale {
-		locales = append(locales, locale)
+	audienceKeys := make([]string, 0, len(byAudience))
+	for key := range byAudience {
+		audienceKeys = append(audienceKeys, key)
 	}
-	slices.Sort(locales)
+	slices.Sort(audienceKeys)
 	moment := n.now().UnixNano()
-	for _, locale := range locales {
-		recipients := byLocale[locale]
-		pushTitle, pushBody := deliveryCompose.ParentRoomChangedCopy(locale)
+	for _, key := range audienceKeys {
+		audience := byAudience[key]
+		pushTitle, pushBody := deliveryCompose.ParentRoomChangedCopy(audience.locale)
 		err := n.notifier.Notify(ctx, deliveryCompose.NotificationEvent{
 			Type:           notificationType,
-			IdempotencyKey: fmt.Sprintf("%s:%d:%d:%s", notificationType, notice.InstanceID, moment, locale),
+			IdempotencyKey: fmt.Sprintf("%s:%d:%d:%s:%s", notificationType, notice.InstanceID, moment, roomChangeStudentScopeDigest(audience.studentIDs), audience.locale),
 			RelatedType:    "activity_instance", RelatedID: notice.InstanceID,
 			Title: pushTitle, Body: pushBody, DeepLink: roomChangeParentLink,
 			Audience: deliveryCompose.NotificationAudience{
 				TenantID: tenant.FromContext(ctx), Scope: deliveryCompose.NotificationAudienceScope("guardian"),
-				GuardianAccountIDs: recipients, StudentIDs: notice.StudentIDs,
+				GuardianAccountIDs: audience.accountIDs, StudentIDs: audience.studentIDs,
 			},
 			Feed: &deliveryContract.NotificationFeedDelivery{
-				PushAccountIDs: slices.DeleteFunc(slices.Clone(recipients), func(id int64) bool { return !slices.Contains(push, id) }),
+				PushAccountIDs: slices.DeleteFunc(slices.Clone(audience.accountIDs), func(id int64) bool { return !slices.Contains(push, id) }),
 				Title:          title, Body: body,
 			},
 		})
@@ -155,39 +170,73 @@ func (n timetableRoomChangeNotices) notifyGuardians(ctx context.Context, notice 
 	return nil
 }
 
-// portalGuardians are the accounts holding parent_portal.access for at
-// least one of the children, without the person who made the change, with
-// the language of their portal. One batched read.
-func (n timetableRoomChangeNotices) portalGuardians(ctx context.Context, studentIDs []int64, actorAccountID int64) ([]int64, map[int64]string, error) {
+// guardianRoomChangeAudience shares an event only between guardians with the
+// same portal language and exactly the same authorized booked children.
+type guardianRoomChangeAudience struct {
+	locale                 string
+	studentIDs, accountIDs []int64
+}
+
+func roomChangeStudentScopeKey(studentIDs []int64) string {
+	parts := make([]string, len(studentIDs))
+	for i, studentID := range studentIDs {
+		parts[i] = strconv.FormatInt(studentID, 10)
+	}
+	return strings.Join(parts, ",")
+}
+
+// roomChangeStudentScopeDigest keeps the persisted idempotency key bounded
+// while distinguishing every canonical authorized-child scope.
+func roomChangeStudentScopeDigest(studentIDs []int64) string {
+	canonical := slices.Clone(studentIDs)
+	slices.Sort(canonical)
+	return securityruntime.Fingerprint([]byte(roomChangeStudentScopeKey(canonical)))
+}
+
+// portalGuardians returns every account holding parent_portal.access for a
+// booked child, with only the children it can access and the portal language.
+// The actor is excluded. One batched read.
+func (n timetableRoomChangeNotices) portalGuardians(ctx context.Context, studentIDs []int64, actorAccountID int64) (map[int64][]int64, map[int64]string, error) {
 	contacts, err := n.guardians.ListGuardianPortalContacts(ctx, nil, studentIDs)
 	if err != nil {
 		return nil, nil, fmt.Errorf("room change notice: guardians: %w", err)
 	}
 	localeOf := map[int64]string{}
-	var accountIDs []int64
+	guardianStudentIDs := map[int64][]int64{}
 	for _, contact := range contacts {
-		if contact.StudentID == nil || contact.AccountID <= 0 || contact.AccountID == actorAccountID {
-			continue
-		}
-		granted, err := guardianPortalAccessGranted(contact.PortalPermission)
+		studentID, granted, err := roomChangeGuardianStudent(contact, actorAccountID)
 		if err != nil {
 			return nil, nil, err
 		}
 		if !granted {
 			continue
 		}
-		if _, seen := localeOf[contact.AccountID]; seen {
-			continue
+		if !slices.Contains(guardianStudentIDs[contact.AccountID], studentID) {
+			guardianStudentIDs[contact.AccountID] = append(guardianStudentIDs[contact.AccountID], studentID)
 		}
-		locale := ""
-		if contact.PortalLocale != nil {
-			locale = *contact.PortalLocale
+		if _, seen := localeOf[contact.AccountID]; !seen {
+			locale := ""
+			if contact.PortalLocale != nil {
+				locale = *contact.PortalLocale
+			}
+			localeOf[contact.AccountID] = locale
 		}
-		localeOf[contact.AccountID] = locale
-		accountIDs = append(accountIDs, contact.AccountID)
 	}
-	slices.Sort(accountIDs)
-	return accountIDs, localeOf, nil
+	for accountID := range guardianStudentIDs {
+		slices.Sort(guardianStudentIDs[accountID])
+	}
+	return guardianStudentIDs, localeOf, nil
+}
+
+func roomChangeGuardianStudent(contact peopledirectory.GuardianPortalContact, actorAccountID int64) (int64, bool, error) {
+	if contact.StudentID == nil || contact.AccountID <= 0 || contact.AccountID == actorAccountID {
+		return 0, false, nil
+	}
+	granted, err := guardianPortalAccessGranted(contact.PortalPermission)
+	if err != nil || !granted {
+		return 0, false, err
+	}
+	return *contact.StudentID, true, nil
 }
 
 // roomChangeNotifyError keeps a school's switched-off notifications a
