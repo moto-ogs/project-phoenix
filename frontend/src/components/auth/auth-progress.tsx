@@ -17,17 +17,26 @@ interface AuthProgressProps {
 /**
  * Was eine Login-Karte zeigt, solange niemand etwas eingeben muss: erst das
  * Prüfen der Anmeldung, dann die Weiterleitung. Beide Zustände haben denselben
- * Aufbau (Medaillon, Satz, Balkenzeile), damit die Karte beim Wechsel nicht
- * springt; nur Medaillon und Balken wechseln. Der Bereich ist eine höfliche
+ * Aufbau (Bildfeld, Satz, Balkenzeile), damit die Karte beim Wechsel nicht
+ * springt; nur Bild und Balken wechseln. Der Bereich ist eine höfliche
  * Statusmeldung, damit Screenreader den Wechsel vorlesen.
  */
 export function AuthProgress({ state, title, description }: AuthProgressProps) {
   const redirecting = state === "redirecting";
   return (
     <output aria-live="polite" data-auth-progress={state} className="block">
+      {/* Der Haken steht im grünen Ergebnis-Medaillon; der Spinner steht frei
+          in einem gleich großen Feld, damit die Höhe beim Wechsel bleibt. */}
       <EmptyState
-        tone={redirecting ? "success" : "neutral"}
-        icon={redirecting ? <CheckIcon /> : <SpinnerIcon />}
+        {...(redirecting
+          ? { tone: "success" as const, icon: <CheckIcon /> }
+          : {
+              icon: (
+                <span className="flex h-14 w-14 items-center justify-center">
+                  <SpinnerIcon className="h-7 w-7 text-gray-400" />
+                </span>
+              ),
+            })}
         title={title}
         description={description}
         // Die Zeile steht in beiden Zuständen, damit die Höhe gleich bleibt.

@@ -17,7 +17,7 @@ import { schoolPath } from "~/lib/school-url";
 function FullPageLoading() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
-      <Loading fullPage message="Wird geladen …" />
+      <Loading fullPage message="moto schule wird geöffnet …" />
     </div>
   );
 }

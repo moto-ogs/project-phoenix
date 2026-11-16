@@ -25,7 +25,9 @@ export function Loading({
 }: LoadingProps) {
   const containerClasses =
     fullPage && !compact
-      ? `fixed inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm ${Z_LAYER.sheet}`
+      ? // Ruhige, deckende Fläche statt Milchglas: dahinter steht noch nichts,
+        // was durchscheinen sollte.
+        `fixed inset-0 flex items-center justify-center bg-white px-4 ${Z_LAYER.sheet}`
       : compact
         ? "flex min-h-0 items-center justify-center py-3"
         : "flex min-h-40 items-center justify-center py-8";
@@ -37,10 +39,20 @@ export function Loading({
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="flex items-center gap-3 text-gray-600">
-        <SpinnerIcon className="h-6 w-6" />
-        <span className="text-sm font-medium">{message}</span>
-      </div>
+      {compact ? (
+        <div className="flex items-center gap-3 text-gray-600">
+          <SpinnerIcon className="h-6 w-6" />
+          <span className="text-sm font-medium">{message}</span>
+        </div>
+      ) : (
+        // In einer Fläche oder über die ganze Seite steht der Satz mittig unter
+        // dem Spinner, wie in den Login-Karten; eine Zeile daneben wirkt dort
+        // verloren.
+        <div className="flex flex-col items-center gap-4 text-center">
+          <SpinnerIcon className="h-7 w-7 text-gray-400" />
+          <span className="text-sm font-medium text-gray-600">{message}</span>
+        </div>
+      )}
     </output>
   );
 }
