@@ -272,10 +272,17 @@ func TestMenuChangeFollowsWindowAndSchoolSwitch(t *testing.T) {
 	}
 	assert.Len(t, f.entries(t, family.AccountID), 1, "the person who changed the menu gets nothing")
 
+	// A school that sets the switch to its default keeps the notice.
+	require.NoError(t, f.settings.SetValue(testpkg.Ctx(t), "notifications.meal_plan_changed_enabled", true, nil, nil))
+	f.setMenu(t, "2030-06-18", "Fisch")
+	f.setMenu(t, "2030-06-18", "Gemüse")
+	assert.Len(t, f.entries(t, family.AccountID), 2, "an explicit default keeps the notice")
+	require.Len(t, f.pushes(t, family.AccountID), 1, "and its push within 14 days")
+
 	// The school switch stops feed entry and push.
 	require.NoError(t, f.settings.SetValue(testpkg.Ctx(t), "notifications.meal_plan_changed_enabled", false, nil, nil))
 	f.setMenu(t, "2030-06-12", "Fisch")
 	f.setMenu(t, "2030-06-12", "Gemüse")
-	assert.Len(t, f.entries(t, family.AccountID), 1, "a school that switched it off writes no entry")
-	assert.Empty(t, f.pushes(t, family.AccountID))
+	assert.Len(t, f.entries(t, family.AccountID), 2, "a school that switched it off writes no entry")
+	assert.Len(t, f.pushes(t, family.AccountID), 1, "and no push")
 }

@@ -254,6 +254,7 @@ describe("ParentMealPlanPage", () => {
     expect(weekOffsetFromParam("2026-08-12", "2026-08-03")).toBe(0);
     expect(weekOffsetFromParam("2026-08-12", "2026-09-07")).toBe(0);
     expect(weekOffsetFromParam("2026-08-12", "kw34")).toBe(0);
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-32")).toBe(0);
     expect(weekOffsetFromParam("2026-08-12", undefined)).toBe(0);
   });
 

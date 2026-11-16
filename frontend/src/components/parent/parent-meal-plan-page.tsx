@@ -35,7 +35,7 @@ import { ChoiceTile } from "~/components/ui/choice-tile";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { ParentSubsection } from "~/components/parent/shell/parent-section";
-import { parseISODate, toISODate } from "~/lib/date-helpers";
+import { isValidISODate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
   getChildFeatures,
@@ -93,21 +93,29 @@ function mondayISOFromOffset(todayISO: string, weekOffset: number): string {
 
 /**
  * Die Woche, die ein Link aus den Hinweisen öffnet (`?week=<Montag>`, #7145):
- * ihr Abstand zur aktuellen Woche. Ein ungültiger Wert, eine vergangene Woche
- * oder eine Woche hinter der letzten erreichbaren öffnet die aktuelle Woche.
+ * ihr Abstand zur aktuellen Woche, oder null für einen ungültigen Wert, eine
+ * vergangene Woche oder eine Woche hinter der letzten erreichbaren.
  */
-export function weekOffsetFromParam(
+function linkedWeekOffset(
   todayISO: string,
   week: string | undefined,
-): WeekOffset {
-  if (!week || !/^\d{4}-\d{2}-\d{2}$/.test(week)) return 0;
+): WeekOffset | null {
+  if (!week || !isValidISODate(week)) return null;
   const monday = mondayISOFromOffset(week, 0);
   for (let offset = 0; offset <= LAST_PARTICIPATION_WEEK; offset++) {
     if (mondayISOFromOffset(todayISO, offset) === monday) {
       return offset as WeekOffset;
     }
   }
-  return 0;
+  return null;
+}
+
+/** Wie `linkedWeekOffset`; ohne erreichbare Woche öffnet die aktuelle. */
+export function weekOffsetFromParam(
+  todayISO: string,
+  week: string | undefined,
+): WeekOffset {
+  return linkedWeekOffset(todayISO, week) ?? 0;
 }
 
 function workWeekDates(mondayISO: string): string[] {
@@ -1550,7 +1558,7 @@ export function ParentMealPlanPage({
             weekError={weekError}
             dishesByDate={dishesByDate}
             planLater={planLater}
-            weekFromLink={initialWeek !== undefined}
+            weekFromLink={linkedWeekOffset(today, initialWeek) !== null}
             onWeekChange={setWeekOffset}
             onEditingChange={setParticipationEditing}
           />

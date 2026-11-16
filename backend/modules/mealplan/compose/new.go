@@ -37,9 +37,7 @@ type Dependencies struct {
 	ParticipantDays mealplan.ParticipantDaysFinder
 	StudentNames    mealplan.StudentNameFinder
 	Calendar        mealplan.CalendarFinder
-	// Notices tells the families about a changed menu (#7145). Nil tells
-	// nobody: the worker settles orders and never changes the menu.
-	Notices mealplan.MenuChangeNotices
+	Notices         mealplan.MenuChangeNotices // changed menu to the families (#7145); nil in the worker, which never changes it
 }
 
 func New(dependencies Dependencies) (mealplan.Capability, error) {
