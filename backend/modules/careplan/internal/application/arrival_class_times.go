@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 
@@ -83,12 +84,15 @@ func (s *arrivalScheduleService) writeClassArrivalTimes(
 		if lockErr := s.classes.LockClass(txCtx, schoolClass); lockErr != nil {
 			return fmt.Errorf("lock class arrival times for %s: %w", schoolClass, lockErr)
 		}
-		row, mergeErr := s.mergedClassRow(txCtx, schoolClass, touched, updatedBy)
+		row, before, mergeErr := s.mergedClassRow(txCtx, schoolClass, touched, updatedBy)
 		if mergeErr != nil {
 			return mergeErr
 		}
 		if upsertErr := s.classes.Upsert(txCtx, row); upsertErr != nil {
 			return fmt.Errorf("upsert class arrival times for %s: %w", schoolClass, upsertErr)
+		}
+		if notice, changed := weeklyClassTimetableNotice(schoolClass, before, normalizedClassTimes(row.ArrivalTimes), s.today()); changed {
+			return s.notifyClassTimetable(txCtx, notice)
 		}
 		return nil
 	})
@@ -132,21 +136,24 @@ func (s *arrivalScheduleService) lockClassArrivalStudents(
 }
 
 // mergedClassRow folds the touched weekdays into whatever the class already
-// carries. An empty time clears that weekday.
+// carries. An empty time clears that weekday. It also returns the times the
+// class carried before, normalized, so a save can tell what it changed.
 func (s *arrivalScheduleService) mergedClassRow(
 	ctx context.Context,
 	schoolClass string,
 	touched map[int]string,
 	updatedBy int64,
-) (*ports.ArrivalClassPlan, error) {
+) (*ports.ArrivalClassPlan, map[string]string, error) {
 	existing, err := s.classes.FindByClasses(ctx, []string{schoolClass})
 	if err != nil {
-		return nil, fmt.Errorf("load class arrival times for %s: %w", schoolClass, err)
+		return nil, nil, fmt.Errorf("load class arrival times for %s: %w", schoolClass, err)
 	}
 	row := &ports.ArrivalClassPlan{SchoolClass: schoolClass, ArrivalTimes: map[string]string{}}
+	var before map[string]string
 	if len(existing) > 0 && existing[0] != nil {
 		row = existing[0]
 		row.SchoolClass = schoolClass
+		before = normalizedClassTimes(maps.Clone(row.ArrivalTimes))
 		if row.ArrivalTimes == nil {
 			row.ArrivalTimes = map[string]string{}
 		}
@@ -167,13 +174,13 @@ func (s *arrivalScheduleService) mergedClassRow(
 	}
 	normalized, err := domain.NormalizeClassArrivalTimes(row.ArrivalTimes)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	row.ArrivalTimes = normalized
 	if strings.TrimSpace(row.SchoolClass) == "" {
-		return nil, errors.New("school class is required")
+		return nil, nil, errors.New("school class is required")
 	}
-	return row, nil
+	return row, before, nil
 }
 
 // GetClassArrivalTimes returns what a class currently carries, so the

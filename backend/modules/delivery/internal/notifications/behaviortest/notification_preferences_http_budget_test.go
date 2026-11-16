@@ -393,6 +393,22 @@ var notificationBudgetCatalogues = map[string]string{
     "available": true
   },
   {
+    "key": "class_timetable_changed",
+    "label": "Stundenplan Ihrer Klassen: heute und morgen",
+    "description": "Wenn sich der Unterrichtsschluss einer Klasse, der Sie zugeordnet sind oder deren Kinder in Ihrer Gruppe sind, für heute oder morgen ändert. Der Hinweis in moto kommt immer.",
+    "group": "kinder",
+    "enabled": true,
+    "available": true
+  },
+  {
+    "key": "class_timetable_changed_ahead",
+    "label": "Stundenplan Ihrer Klassen: spätere Tage",
+    "description": "Mitteilung aufs Handy auch, wenn sich der Unterrichtsschluss einer Ihrer Klassen in 2 bis 14 Tagen ändert. Der Hinweis in moto kommt immer.",
+    "group": "kinder",
+    "enabled": false,
+    "available": true
+  },
+  {
     "key": "staff_message",
     "label": "Nachrichten von Kolleginnen und Kollegen",
     "description": "Wenn Ihnen jemand aus dem Team eine Nachricht im Team-Chat schreibt.",
@@ -425,6 +441,14 @@ var notificationBudgetCatalogues = map[string]string{
     "group": "kinder",
     "enabled": false,
     "available": false
+  },
+  {
+    "key": "parent_class_timetable_changed",
+    "label": "Stundenplan der Klasse",
+    "description": "Wenn sich der Unterrichtsschluss in der Klasse Ihres Kindes ändert. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy bei Änderungen in den nächsten 14 Tagen.",
+    "group": "kinder",
+    "enabled": false,
+    "available": true
   },
   {
     "key": "parent_announcement",
