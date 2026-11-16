@@ -69,10 +69,18 @@ export function breakingChanges(base, head) {
       if (!next.portals.includes(portal)) breaking.push(`${key}: portal ${portal} removed`);
     }
     if (route.request && next.request) compare(`${key} request`, route.request, next.request);
-    const cases = route.variants ? Object.entries(route.variants.cases) : [["", route.response]];
+    // Both envelopes require status and data; only the paginated one also
+    // requires pagination. Adding it is safe because readers ignore extras.
+    if (route.paginated && !next.paginated) breaking.push(`${key}.pagination: may now be absent`);
+    const defaultResponse = (entry) => entry.variants
+      ? entry.variants.cases[entry.variants.default] : entry.response;
+    // Compare what an existing request selects, not just equal case names.
+    // No selector uses the default; a renamed selector ignores the old key.
+    const cases = [["", defaultResponse(route)], ...(route.variants ? Object.entries(route.variants.cases) : [])];
     for (const [value, schema] of cases) {
       const where = value ? `${key} ?${route.variants.query_param}=${value}` : key;
-      const after = value ? next.variants?.cases[value] : next.response;
+      const after = value && route.variants.query_param === next.variants?.query_param
+        ? next.variants.cases[value] : defaultResponse(next);
       if (!after) breaking.push(`${where}: response removed`);
       else compare(where, schema, after);
     }

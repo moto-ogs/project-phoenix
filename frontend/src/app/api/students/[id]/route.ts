@@ -1,7 +1,8 @@
-import { apiDelete, apiPut } from "~/lib/api-helpers.server";
+import { NextResponse } from "next/server";
+import { apiDelete, apiPut, handleApiError } from "~/lib/api-helpers.server";
 import { contractGet, decodeContract } from "~/lib/contract/client.server";
 import { routes } from "~/lib/contract/students.generated";
-import { problemBody } from "~/lib/api-error";
+import { problemBody, type ProblemBody } from "~/lib/api-error";
 import {
   ApiResponseError,
   isApiResponseError,
@@ -48,7 +49,10 @@ const DETAIL = routes["GET /api/students/{id}"];
  * from. So the backend payload is parsed and re-emitted rather than replaced,
  * and only `details` grows a key.
  */
-function markPrivacyConsentSaved(error: unknown): ApiResponseError {
+async function markPrivacyConsentSaved(
+  error: unknown,
+  request: Request,
+): Promise<Response> {
   const original = error instanceof Error ? error : new Error(String(error));
   const status = isApiResponseError(original) ? original.status : 500;
   const parsed = isApiResponseError(original)
@@ -66,7 +70,7 @@ function markPrivacyConsentSaved(error: unknown): ApiResponseError {
     [PRIVACY_CONSENT_SAVED_DETAIL]: true,
   };
 
-  return new ApiResponseError(
+  const marked = new ApiResponseError(
     status,
     JSON.stringify({ ...envelope, details }),
     {
@@ -74,6 +78,15 @@ function markPrivacyConsentSaved(error: unknown): ApiResponseError {
       contentType: "application/problem+json",
       retryAfter: isApiResponseError(original) ? original.retryAfter : null,
     },
+  );
+  // Keep thrown 4xx errors on the session-renewal path. For 5xx, sanitize
+  // upstream diagnostics first, then attach only the locally known outcome.
+  if (status < 500) throw marked;
+  const response = handleApiError(marked, request);
+  const sanitized = (await response.json()) as ProblemBody;
+  return NextResponse.json(
+    { ...sanitized, details: { [PRIVACY_CONSENT_SAVED_DETAIL]: true } },
+    { status: response.status, headers: response.headers },
   );
 }
 
@@ -126,8 +139,8 @@ export const GET = createGetHandler<Student>(async (request, token, params) => {
  * overwrite somebody else's newer consent while the user is told nothing was
  * saved.
  */
-export const PUT = createPutHandler<Student, StudentUpdateBody>(
-  async (_request, body, token, params) => {
+export const PUT = createPutHandler<Student | Response, StudentUpdateBody>(
+  async (request, body, token, params) => {
     const id = requirePathSegmentParam(params);
     try {
       rejectRetiredStudentContacts(body);
@@ -150,14 +163,20 @@ export const PUT = createPutHandler<Student, StudentUpdateBody>(
           prepareStudentForBackend(body),
         );
       } catch (studentError) {
-        throw consent ? markPrivacyConsentSaved(studentError) : studentError;
+        if (consent)
+          return await markPrivacyConsentSaved(studentError, request);
+        throw studentError;
       }
       const updated = decodeContract(
         "PUT /api/students/{id}",
         studentWriteResponse,
         answer,
       );
-      if (!updated.ok) throw updated.error.cause;
+      if (!updated.ok) {
+        if (consent)
+          return await markPrivacyConsentSaved(updated.error.cause, request);
+        throw updated.error.cause;
+      }
       const response = updated.value;
 
       // Whether the write changed the "läuft mit" links (#1694): the
