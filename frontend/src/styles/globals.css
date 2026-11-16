@@ -1087,3 +1087,27 @@ html[data-chat-page-lock] body {
     transform: none;
   }
 }
+
+/* Ganzseitige Ladeanzeige (Loading fullPage): erst nach 400 ms sichtbar.
+   Kürzere Wartezeiten, etwa ein Neuladen, zeigen sonst einen weißen Schirm
+   mit Spinner, der sofort wieder verschwindet. Solange nichts Sichtbares
+   gezeichnet ist, hält der Browser beim Neuladen die alte Seite stehen
+   (Paint Holding). Bei reduzierter Bewegung erscheint sie ohne Überblendung. */
+.moto-loading-delayed {
+  animation: moto-loading-appear 200ms ease-out 400ms both;
+}
+
+@keyframes moto-loading-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moto-loading-delayed {
+    animation-duration: 1ms;
+  }
+}

@@ -656,6 +656,11 @@ function TenantPageView({
             <div className="min-w-0">
               <div className="flex items-center gap-1">
                 <h1
+                  // Ein Tageszeit-Gruß kann zwischen Server-Render und
+                  // Hydration genau die Stunde wechseln (12 oder 17 Uhr);
+                  // React behält dann den Servertext, statt die Seite zu
+                  // verwerfen (greeting.ts).
+                  suppressHydrationWarning
                   className={cn(
                     "min-w-0 font-semibold tracking-tight text-balance break-words text-gray-900",
                     // Auch auf dem Telefon sichtbar: unter lg gibt es keine

@@ -29,8 +29,16 @@ describe("Loading", () => {
     render(<Loading fullPage />);
 
     const output = screen.getByLabelText("Lädt...");
-    expect(output).toHaveClass("bg-white");
+    expect(output).toHaveClass("bg-gray-50", "moto-loading-delayed");
     expect(output.className).not.toContain("backdrop-blur");
+  });
+
+  it("shows a region loader at once; only the full page waits a moment", () => {
+    render(<Loading />);
+
+    expect(screen.getByLabelText("Lädt...")).not.toHaveClass(
+      "moto-loading-delayed",
+    );
   });
 
   it("stacks the message under the spinner outside compact rows", () => {
