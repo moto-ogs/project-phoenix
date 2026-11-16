@@ -161,9 +161,10 @@ jobs:
   frontend:
     name: Frontend tests at moved clocks
     # A hosted runner: free in this public repository, and nothing waits for
-    # this job. Measurement pending on this branch.
+    # this job. Two times took 571 s there (run 43978202336), 35 s of setup:
+    # about 62 min for thirteen times.
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 180
     permissions:
       contents: read
       issues: write
