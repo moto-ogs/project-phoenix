@@ -15,28 +15,6 @@ func TestBerlinTimezoneLoaded(t *testing.T) {
 	assert.Equal(t, "Europe/Berlin", Berlin.String())
 }
 
-func TestToday(t *testing.T) {
-	t.Parallel()
-
-	// Get today's date
-	today := Today()
-
-	// Should be midnight
-	assert.Equal(t, 0, today.Hour())
-	assert.Equal(t, 0, today.Minute())
-	assert.Equal(t, 0, today.Second())
-	assert.Equal(t, 0, today.Nanosecond())
-
-	// Should be in Berlin timezone
-	assert.Equal(t, Berlin, today.Location())
-
-	// Should be today's date
-	now := time.Now().In(Berlin)
-	assert.Equal(t, now.Year(), today.Year())
-	assert.Equal(t, now.Month(), today.Month())
-	assert.Equal(t, now.Day(), today.Day())
-}
-
 func TestDateOf(t *testing.T) {
 	t.Parallel()
 

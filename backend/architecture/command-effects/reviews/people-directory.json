@@ -17444,7 +17444,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.BirthdayStore.StudentBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
       "target_owner": "school-structure"
@@ -17454,7 +17454,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.BirthdayStore.StudentBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
       "target_owner": "school-structure"
@@ -17464,7 +17464,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.BirthdayStore.StudentBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21197,7 +21197,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Capability.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Capability.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21207,7 +21207,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Owner.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Owner.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21217,7 +21217,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Query.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure.Query.ListGroupsByID (school-structure) through modules/peopledirectory/internal/application.StudentRecords.FindBirthdaysOn. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21227,7 +21227,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21237,7 +21237,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21247,7 +21247,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21257,7 +21257,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21267,7 +21267,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
       "target_owner": "school-structure"
@@ -21277,7 +21277,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindBirthdaysOn",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
       "target_owner": "school-structure"

@@ -2,6 +2,7 @@ package compose
 
 import (
 	"context"
+	"time"
 
 	usersRepo "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application"
@@ -40,14 +41,13 @@ func NewPersonRepository(db *bun.DB, accounts AccountLookup) peoplePorts.PersonR
 	return usersRepo.NewPersonRepository(NewLegacyRepositoryRuntime(db), usersRepo.WithAccountLookup(accounts))
 }
 
-// NewGuardianProfileRepository is the guardian profile repository with the
-// portal reachability queries its check joins: the schools in which an account
-// holds an active guardian membership, and those in which it can also log in
-// with a password (#2720, #2721).
-func NewGuardianProfileRepository(db *bun.DB, students usersRepo.StudentDirectoryRows, links usersRepo.GuardianLinkRows, portal, loginReady func(context.Context, []int64) (map[int64][]int64, error)) peoplePorts.GuardianProfileRepository {
+// NewGuardianProfileRepository joins the schools in which an account holds an
+// active guardian membership and those it can log in to (#2720, #2721); a new
+// profile counts as childless from now, time.Now when nil.
+func NewGuardianProfileRepository(db *bun.DB, students usersRepo.StudentDirectoryRows, links usersRepo.GuardianLinkRows, portal, loginReady func(context.Context, []int64) (map[int64][]int64, error), now func() time.Time) peoplePorts.GuardianProfileRepository {
 	return application.NewGuardianProfileCommands(usersRepo.NewGuardianProfileRepository(NewLegacyRepositoryRuntime(db), students, links,
 		usersRepo.WithPortalMemberships(portal),
-		usersRepo.WithPortalLoginMemberships(loginReady),
+		usersRepo.WithPortalLoginMemberships(loginReady), usersRepo.WithClock(now),
 	), NewLegacyRepositoryRuntime(db))
 }
 

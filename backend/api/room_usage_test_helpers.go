@@ -5,6 +5,7 @@ package api
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -18,7 +19,7 @@ func NewRoomReferencesForTest(db transactionruntime.Database) (func(context.Cont
 	if err != nil {
 		return nil, err
 	}
-	devices, err := owners.NewDeviceFleet(db)
+	devices, err := owners.NewDeviceFleet(db, time.Now)
 	if err != nil {
 		return nil, err
 	}

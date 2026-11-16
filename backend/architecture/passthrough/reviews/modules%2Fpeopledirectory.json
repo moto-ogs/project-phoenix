@@ -872,11 +872,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/Service.DeleteExpiredChildlessGuardians",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/application/Service.DeleteGuardianPhoneRecord",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1233,11 +1228,6 @@
     {
       "decision": "0090",
       "id": "modules/peopledirectory/internal/application/StudentRecords.FindActiveDueForDeactivation",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/StudentRecords.FindAllWithGroups",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

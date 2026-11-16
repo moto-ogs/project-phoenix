@@ -26,13 +26,13 @@ import (
 // settings.
 func newOperatorProvisioning(
 	organizations organizationtenancy.Capability, identity identityaccess.Owner, accounts OperatorAccountDirectory,
-	adapters OperatorProvisioningAdapters, schoolSettings settingsCompose.SettingsService, logger *slog.Logger,
+	adapters OperatorProvisioningAdapters, schoolSettings settingsCompose.SettingsService, logger *slog.Logger, now func() time.Time,
 ) (organizationtenancy.OperatorProvisioning, error) {
 	// The zero runtime reads only the caller's transaction: the rows run in
 	// the administrative unit of the school creation or fail.
 	callerUnit := settingsCompose.TenantSettingsRuntime{}
 	schoolCreation, err := settingsCompose.NewSchoolCreationSettings(configModels.DefaultRegistry(),
-		settingsCompose.NewSettingValueRepository(callerUnit), settingsCompose.NewSettingAuditRepository(callerUnit), tenant.IsAdminTx)
+		settingsCompose.NewSettingValueRepository(callerUnit), settingsCompose.NewSettingAuditRepository(callerUnit), tenant.IsAdminTx, now)
 	if err != nil {
 		return organizationtenancy.OperatorProvisioning{}, err
 	}
@@ -54,6 +54,7 @@ func newOperatorProvisioning(
 		Audit:      adapters.Audit,
 		Secrets:    provisioningSecrets{},
 		Logger:     logger,
+		Now:        now,
 	}, newOperatorDashboard(adapters.ActiveAccountCounts))
 }
 

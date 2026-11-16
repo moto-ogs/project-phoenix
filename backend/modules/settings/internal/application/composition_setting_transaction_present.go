@@ -54,8 +54,9 @@ func OperatorSettingReveal(ctx context.Context, schoolID int64, key string, exec
 	err := execute(ctx, schoolID, func(ctx context.Context) error { var err error; value, err = source().Resolve(ctx, key); return err })
 	return value, err
 }
-func OperatorSettingToday() configModel.CalendarDate {
-	today := calendar.TodayDate()
+
+// OperatorSettingDay converts the composition's day to the settings' date.
+func OperatorSettingDay(today calendar.Date) configModel.CalendarDate {
 	return configModel.NewCalendarDate(today.Year(), today.Month(), today.Day())
 }
 func NewAnalyseFreigabeReader(reader interface {

@@ -37,8 +37,8 @@ func TestAttendanceRepository_GetTodayByStudentIDs(t *testing.T) {
 		device := testpkg.CreateTestDevice(t, db, "attendance-device-001")
 
 		// Create multiple attendance records for student1 (different check-in times)
-		// Use timezone.Today() for consistent Europe/Berlin timezone handling
-		today := calendar.Today()
+		// Use timezone.DateOf(time.Now()) for consistent Europe/Berlin timezone handling
+		today := calendar.DateOf(time.Now())
 
 		// Earlier check-in/out cycle for student1 — closed so the partial
 		// unique index on (student_id, date) WHERE check_out_time IS NULL

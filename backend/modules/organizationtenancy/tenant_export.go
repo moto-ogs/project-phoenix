@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"time"
 )
 
 // ExportFingerprints supplies the platform's SHA-256 content identities.
@@ -72,6 +73,8 @@ type TenantExportDependencies struct {
 	Projected      TenantExportProjectedFields
 	SEPADebitFiles TenantExportSEPADebitFiles
 	Audit          TenantExportAudit
+	// Now is the root's clock the audit stamps each attempt with.
+	Now func() time.Time
 }
 
 // TenantExportSEPADebitFiles hands the PAIN.008 file of each submitted

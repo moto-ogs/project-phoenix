@@ -187,11 +187,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/devicefleet/internal/application/Service.UpdateRoomID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/devicefleet/internal/application/deviceservice/service.DetectNewDevices",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

@@ -212,7 +212,7 @@ func mountStudentRoutes(
 			Persons:                peopleCompose.NewStudentRoutePersons(services.Users),
 			StudentAuditService:    persons,
 			StudentDocumentService: requests.Documents,
-			StudentNotes:           persons, StudentNoteTeam: noteTeam, NoteTeamReach: noteTeamReach,
+			StudentNotes:           persons, StudentNoteTeam: noteTeam, NoteTeamReach: noteTeamReach, Now: now,
 			StudentPhotos:      persons,
 			Uploads:            nativeUploads.UploadFiles{},
 			UserContextService: caller,

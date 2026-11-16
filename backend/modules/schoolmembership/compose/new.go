@@ -59,7 +59,7 @@ func New(dependencies Dependencies) (schoolmembership.Owner, error) {
 }
 
 func NewStaffPersonMerge() schoolmembership.StaffPersonMerge {
-	return application.StaffPersonMerge{StaffPersonMerge: postgres.New(postgres.NewContextDatabase(tenant.TenantFromContext, tenant.TransactionFromContext, tenant.IsAdminTx))}
+	return application.StaffPersonMerge{StaffPersonMerge: postgres.New(postgres.NewContextDatabase(tenant.TenantFromContext, tenant.TransactionFromContext, tenant.IsAdminTx), calendar.TodayDate)}
 }
 
 // NewPendingWindows composes the pending-window command of a phase edit.
@@ -81,7 +81,11 @@ func newApplication(dependencies Dependencies) (*application.Service, error) {
 	case dependencies.ClassListStudents != nil || dependencies.ClassListTrail != nil:
 		return nil, errors.New("school membership compose: the class list entries need a student directory and an audit trail")
 	}
-	store := postgres.New(postgres.NewContextDatabase(tenant.TenantFromContext, tenant.TransactionFromContext, tenant.IsAdminTx))
-	service := application.New(store, application.NewStaffEmployment(dependencies.Employment), dependencies.ChildQuota, postgres.SchoolDay(dependencies.Today), application.TenantTransaction{}, dependencies.Observe, classList)
+	today := dependencies.Today
+	if today == nil {
+		today = calendar.TodayDate
+	}
+	store := postgres.New(postgres.NewContextDatabase(tenant.TenantFromContext, tenant.TransactionFromContext, tenant.IsAdminTx), today)
+	service := application.New(store, application.NewStaffEmployment(dependencies.Employment), dependencies.ChildQuota, postgres.SchoolDay(today), application.TenantTransaction{}, dependencies.Observe, classList)
 	return service, nil
 }

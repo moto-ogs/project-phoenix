@@ -307,10 +307,10 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			mailSender, mailDispatcher, mailFrom, pushVAPID, err = BuildMailTransport(env)
 			return
 		},
-		func() (err error) { organizations, err = BuildServeOrganizations(db); return },
-		func() (err error) { groups, err = BuildServeSchoolStructure(db); return },
+		func() (err error) { organizations, err = BuildServeOrganizations(db, env.Now); return },
+		func() (err error) { groups, err = BuildServeSchoolStructure(db, env.Now); return },
 		func() (err error) { rooms, err = BuildServeRooms(db); return },
-		func() (err error) { membership, err = ComposeSchoolMembership(db); return },
+		func() (err error) { membership, err = ComposeSchoolMembership(db, env.Now); return },
 		func() error { bookings = NewEnrollmentBookings(env.Now); return nil },
 		func() (err error) {
 			settings, tracker, err = buildWorkerAnalyticsSettings(db, unit, env, organizations, hub, bookings, tracker, buildAnalytics)
@@ -332,7 +332,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return nil
 		},
 		func() (err error) {
-			persons, err = BuildPeopleDirectory(db, ObservePeopleDirectory, photoRuntime, GuardianDirectoryProvider(db, guardian))
+			persons, err = BuildPeopleDirectory(db, ObservePeopleDirectory, photoRuntime, GuardianDirectoryProvider(db, guardian), env.Now)
 			return
 		},
 		func() (err error) {
@@ -356,7 +356,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			structure = BuildStructureRows(db, persons, people, peopleIdentity, rooms, membership, workTime)
 			presencePeople = BuildPresencePeopleReads(db, env.Logger, persons, groups, organizations, people)
 			careRows = BuildTimetableCareRows(carePlan)
-			devices, err = NewDeviceFleet(db)
+			devices, err = NewDeviceFleet(db, env.Now)
 			return StepError("compose device fleet", err)
 		},
 		func() error {

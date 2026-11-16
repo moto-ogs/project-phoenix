@@ -50,7 +50,7 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	fleet, err := NewDeviceFleet(db)
+	fleet, err := NewDeviceFleet(db, time.Now)
 	if err != nil {
 		return nil, nil, nil, err
 	}

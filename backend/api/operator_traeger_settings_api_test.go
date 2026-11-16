@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +43,7 @@ func TestOperatorChangesTheSettingsOfOneTraeger(t *testing.T) {
 
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
-	traegerSettings, err := owners.BuildTraegerSettings(testpkg.NewDatabase(t, db), unit, slog.Default(), organizations, nil)
+	traegerSettings, err := owners.BuildTraegerSettings(testpkg.NewDatabase(t, db), unit, slog.Default(), organizations, nil, time.Now)
 	require.NoError(t, err)
 	operator := chi.NewRouter()
 	mountOperatorTraegerSettingsRoutes(operator,

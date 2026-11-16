@@ -16221,7 +16221,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerStructure.SubstitutedGroups",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.ListSubstitutedGroupsToday; modules/schoolstructure/staff_groups.go:50. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.ListSubstitutedGroupsToday; modules/schoolstructure/staff_groups.go:50. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.ListSubstitutedGroupsToday",
       "target_owner": "school-structure"
@@ -22594,7 +22594,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerStructure.SubstitutedGroups",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.ListSubstitutedGroupsToday; modules/schoolstructure/staff_groups.go:50. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.ListSubstitutedGroupsToday; modules/schoolstructure/staff_groups.go:50. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.ListSubstitutedGroupsToday",
       "target_owner": "school-structure"

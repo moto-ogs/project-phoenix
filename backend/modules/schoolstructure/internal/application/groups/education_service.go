@@ -30,6 +30,10 @@ type service struct {
 	// masterDataAudit records class assignment rewrites (#1772) in
 	// audit.staff_master_data_changes. Optional like the broadcaster.
 	masterDataAudit ClassAssignmentAudit
+
+	// today is the composition's day clock; a group with a running or
+	// coming handover is not deleted.
+	today func() calendar.Date
 }
 
 // announceGroupAccessChanged queues the tenant-wide invalidation for a write
@@ -54,14 +58,19 @@ func NewService(
 	runtime Runtime,
 	broadcaster GroupPublisher,
 	audit ClassAssignmentAudit,
+	today func() calendar.Date,
 ) Service {
 	if runtime == nil {
 		panic("education service: runtime is required")
+	}
+	if today == nil {
+		panic("education service: the day clock is required")
 	}
 	return &service{
 		groupRepo:        groupRepo,
 		broadcaster:      broadcaster,
 		masterDataAudit:  audit,
+		today:            today,
 		groupTeacherRepo: groupTeacherRepo,
 		classTeacherRepo: classTeacherRepo,
 		rooms:            rooms,
@@ -232,7 +241,7 @@ func (s *service) validateGroupDeletion(ctx context.Context, id int64) error {
 	if err != nil {
 		return &EducationError{Op: "DeleteGroup", Err: err}
 	}
-	today := calendar.TodayDate()
+	today := s.today()
 	for _, handover := range handovers {
 		if handover.TargetType == domain.GroupSubstitutionTypeGroupHandover && !handover.EndDate.Before(today) {
 			return &EducationError{Op: "DeleteGroup", Err: ErrGroupHasHandover}

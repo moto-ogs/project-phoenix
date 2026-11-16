@@ -83,26 +83,18 @@ var moduleLiveClockBudget = map[string]int{
 	// pinned clock would never re-check. RealtimePublisher.recordDrop: the
 	// interval between two drop log lines. usageService.SnapshotUsage: the
 	// age of the cached usage snapshot (time.Since).
-	"modules/delivery":    5,
-	"modules/devicefleet": 12,
-	"modules/devicescan":  6,
+	"modules/delivery": 5,
 	// records.GeneratedAtLabel: the public formatting function prints the
 	// moment of rendering for a zero creation time, and the renderer is also
 	// built bare (&RendererService{}), so it holds no clock to pass.
-	"modules/documentrendering":   1,
-	"modules/facilities":          2,
-	"modules/identityaccess":      14,
-	"modules/organizationtenancy": 7,
-	"modules/peopledirectory":     12,
+	"modules/documentrendering": 1,
+	"modules/identityaccess":    14,
 	// leadership (acquire, renew, step, expire, current, stepDown and
 	// newLeadership): the lease term is a local monotonic deadline armed as
 	// timers, and the standby time is measured since the last term.
 	// Scheduler.waitUntilNextMinute: the timer that aligns the minute tick
 	// with the wall clock. A pinned clock would stop both.
 	"modules/schedulerruntime":             11,
-	"modules/schoolmembership":             2,
-	"modules/schoolstructure":              3,
-	"modules/settings":                     3,
 	"workflows/catererportal":              2,
 	"workflows/holidayclosurenotification": 1,
 	"workflows/parentportal":               19,

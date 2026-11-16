@@ -68,6 +68,7 @@ func BuildGuardianService(db transactionruntime.Database, people PeopleRows, aud
 		GuardianFinancialAudit: NewGuardianFinancialAudit(audit.Persistence.GuardianFinancialChange),
 		DataAccessLog:          NewGuardianDataAccessLog(audit.Persistence.DataAccessLog),
 		BankData:               env.BankData,
+		Now:                    env.Now,
 		RolePresets: peoplePorts.GuardianRolePresetFuncs{
 			Default: securityruntime.DefaultStudentGuardianRole, Presets: securityruntime.StudentGuardianRolePreset,
 		}}, db.Pool()), nil
@@ -123,7 +124,7 @@ func BuildPeopleServices(
 		StudentConsents: NewStudentConsentsFor(persons, audit.Persistence.StudentConsentChange),
 		StudentPhotos:   StudentPhotos{Directory: persons, Runtime: photos},
 		StudentChangeLogCleanup: NewStudentChangeLogCleanup(audit.Persistence.StudentFieldEdit, audit.Persistence.DataDeletion,
-			settings, env.Logger.With("service", "student-change-log-cleanup")),
+			settings, env.Logger.With("service", "student-change-log-cleanup"), env.Now),
 	}
 }
 

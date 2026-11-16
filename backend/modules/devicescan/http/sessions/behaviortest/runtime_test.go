@@ -3,6 +3,7 @@ package sessions_test
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/render"
 
@@ -15,6 +16,7 @@ import (
 func testRuntime() sessionsAPI.Runtime {
 	return sessionsAPI.Runtime{
 		ParseID:       testpkg.ParseHTTPIDParam,
+		Now:           time.Now,
 		Authenticated: func(ctx context.Context) bool { _, _, ok := testutil.DeviceIdentity(ctx); return ok },
 		Success:       testutil.RespondSuccess,
 		Failure: func(w testpkg.HTTPResponseWriter, r *testpkg.HTTPRequest, status int, err error, message string) {

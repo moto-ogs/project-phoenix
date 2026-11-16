@@ -10,6 +10,7 @@ package test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 
@@ -287,7 +288,7 @@ func TestTenantIsolation_DisplayVisibility(t *testing.T) {
 	db := SetupTestDB(t)
 	tenantA, tenantB := isolationTenants(t, db)
 
-	fleet, err := owners.NewDeviceFleet(NewDatabase(t, db))
+	fleet, err := owners.NewDeviceFleet(NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
 
 	ctxA := ctxForTenant(tenantA)
