@@ -24,6 +24,26 @@ func TestAccessSessionLive(t *testing.T) {
 		{name: "another family", head: func(h AccountSession) AccountSession { h.FamilyID = "family-b"; return h }},
 		{name: "token without family", token: func(a AccessSession) AccessSession { a.FamilyID = ""; return a }},
 		{name: "token of another portal", token: func(a AccessSession) AccessSession { a.Scope = PortalParent.Claim; return a }},
+		{name: "a Springer's school outside every window (ADR 0251)", head: func(h AccountSession) AccountSession { h.OutsideAccessWindow = true; return h }},
+		{
+			name: "a parent session of a Springer outside every window",
+			head: func(h AccountSession) AccountSession {
+				h.OutsideAccessWindow = true
+				h.PortalScope = PortalParent.Name
+				return h
+			},
+			token: func(a AccessSession) AccessSession { a.Scope = PortalParent.Claim; return a },
+			want:  true,
+		},
+		{
+			name: "an Absprung of a Springer outside every window",
+			head: func(h AccountSession) AccountSession {
+				h.OutsideAccessWindow = true
+				h.OrganizationID = 7
+				return h
+			},
+			want: true,
+		},
 		{name: "legacy row without portal scope", head: func(h AccountSession) AccountSession { h.PortalScope = PortalScopeUnknown; return h }, want: true},
 		{
 			name:  "preview rests on the acting admin's family",

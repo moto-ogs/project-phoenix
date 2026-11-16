@@ -65,6 +65,7 @@ var systemRoleDisplayNames = map[string]string{
 	"lehrkraft":       "Lehrkraft",
 	"ag-leitung":      "AG-Leitung",
 	"schulverwaltung": "Schulverwaltung",
+	"springer":        "Springer",
 }
 
 // RoleDisplayName is the German name the invitation mail shows for a role;

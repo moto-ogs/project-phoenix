@@ -1,0 +1,8 @@
+{
+  "api/traeger/staff-pool": [
+    "GET traeger /traeger/staff-pool/ query=week"
+  ],
+  "api/traeger/staff-pool/blocks/[id]": [
+    "DELETE traeger /traeger/staff-pool/blocks/id%2F1"
+  ]
+}

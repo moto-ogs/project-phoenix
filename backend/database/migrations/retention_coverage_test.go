@@ -532,6 +532,7 @@ var tableRetentions = map[string]tableRetention{
 	"workforce.staff_contract_holiday_weeks":                parent("workforce.staff_contracts"),
 	"workforce.staff_contract_targets":                      parent("workforce.staff_contracts"),
 	"workforce.staff_contracts":                             parent("workforce.staff_records"),
+	"workforce.staff_pool_blocks":                           parent("workforce.staff_records"),
 	"workforce.staff_record_changes":                        parent("workforce.staff_records"),
 	"workforce.staff_record_links":                          parent("workforce.staff_records"),
 	"workforce.staff_records":                               own("the Personalverwaltung dissolves a staff record in the Träger-Portal (DELETE /traeger/staff-records/{id}, #4705), which gives each live Einsatzort its bank and tax values back; the deletion after the end of the last Arbeitsvertrag comes with the contracts (ADR 0089 section 12, #4706); rows go with platform.organizations when the Träger is erased (#4657)"),

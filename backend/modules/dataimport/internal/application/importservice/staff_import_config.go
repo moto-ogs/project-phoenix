@@ -27,6 +27,7 @@ var systemRoleDisplayNames = map[string]string{
 	"lehrkraft":       "Lehrkraft",
 	"ag-leitung":      "AG-Leitung",
 	"schulverwaltung": "Schulverwaltung",
+	"springer":        "Springer",
 }
 
 // legacyRoleDisplayNames are the display names the roles page showed before

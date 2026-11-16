@@ -1241,6 +1241,11 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"people": []any{}}})
 			return
 		}
+		// The Vertretungspool (#4709): this fake Träger keeps no Springer.
+		if r.Method == seedHTTPMethodGet && r.URL.Path == "/api/staff-pool/" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"available": true, "springers": []any{}}})
+			return
+		}
 		if r.Method == seedHTTPMethodGet && r.URL.Path == "/api/absence-types" {
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
 			return

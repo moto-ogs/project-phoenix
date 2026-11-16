@@ -1,0 +1,3 @@
+DELETE /api/staff-pool/blocks/{id} -> dienstplan
+GET /api/staff-pool/ -> dienstplan
+POST /api/staff-pool/blocks -> dienstplan
