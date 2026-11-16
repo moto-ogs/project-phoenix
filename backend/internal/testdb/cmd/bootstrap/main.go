@@ -23,42 +23,62 @@ import (
 )
 
 func main() {
-	// Dispatch before loading .env: the detached watcher needs no credentials.
+	var err error
 	if len(os.Args) > 1 {
-		var err error
-		switch {
-		case len(os.Args) == 2 && os.Args[1] == "--idle-status":
-			err = testdb.IdleStatus(context.Background())
-		case len(os.Args) == 3 && os.Args[1] == "--idle-watch":
-			lock := os.NewFile(3, "watcher.lock")
-			if lock == nil {
-				fail(fmt.Errorf("watcher requires an inherited lock"))
-			}
-			if _, err := lock.Stat(); err != nil {
-				fail(err)
-			}
-			defer func() { _ = lock.Close() }()
-			err = testdb.WatchIdle(context.Background(), os.Args[2], lock, 15*time.Minute, 30*time.Second)
-		default:
-			err = fmt.Errorf("usage: bootstrap [--idle-status]")
-		}
-		if err != nil {
-			fail(err)
-		}
-		return
+		// Dispatch before loading .env: the detached watcher needs no credentials.
+		err = runCommand(os.Args[1:])
+	} else {
+		err = bootstrap()
 	}
+	if err != nil {
+		fail(err)
+	}
+}
 
-	if root, err := testdb.ProjectRoot(); err == nil {
-		_ = gotenv.Load(filepath.Join(root, ".env"))
+func runCommand(args []string) error {
+	switch {
+	case len(args) == 1 && args[0] == "--resolve-dsn":
+		return printResolvedDSN(context.Background())
+	case len(args) == 1 && args[0] == "--idle-status":
+		return testdb.IdleStatus(context.Background())
+	case len(args) == 2 && args[0] == "--idle-watch":
+		return watchIdle(args[1])
+	default:
+		return fmt.Errorf("usage: bootstrap [--idle-status|--resolve-dsn]")
 	}
+}
+
+func printResolvedDSN(ctx context.Context) error {
+	dsn, err := resolveDSN(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Println(dsn)
+	return nil
+}
+
+func watchIdle(dir string) error {
+	lock := os.NewFile(3, "watcher.lock")
+	if lock == nil {
+		return fmt.Errorf("watcher requires an inherited lock")
+	}
+	if _, err := lock.Stat(); err != nil {
+		return err
+	}
+	defer func() { _ = lock.Close() }()
+	return testdb.WatchIdle(context.Background(), dir, lock, 15*time.Minute, 30*time.Second)
+}
+
+func bootstrap() error {
+	loadDotEnv()
 
 	dsn := os.Getenv("TEST_DB_DSN")
 	if dsn == "" {
-		fail(fmt.Errorf("TEST_DB_DSN not set"))
+		return fmt.Errorf("TEST_DB_DSN not set")
 	}
 	cfg, err := testdb.NewConfig(dsn)
 	if err != nil {
-		fail(err)
+		return err
 	}
 
 	// A template rebuild runs every migration (~25s).
@@ -66,13 +86,39 @@ func main() {
 	defer cancel()
 
 	if err := testdb.EnsureServer(ctx, cfg); err != nil {
-		fail(err)
+		return err
 	}
 	templateCfg, err := testdb.EnsureTemplate(ctx, cfg)
 	if err != nil {
-		fail(err)
+		return err
 	}
 	fmt.Println(templateCfg.TemplateName())
+	return nil
+}
+
+// resolveDSN preserves an explicitly configured shared test server. Detached
+// test worktrees without runtime configuration receive a private, credentialed
+// loopback postgres-test service; stdout is only used for command substitution.
+func resolveDSN(ctx context.Context) (string, error) {
+	loadDotEnv()
+	if dsn := os.Getenv("TEST_DB_DSN"); dsn != "" {
+		return dsn, nil
+	}
+
+	cfg, err := testdb.NewEphemeralLocalConfig()
+	if err != nil {
+		return "", err
+	}
+	if err := testdb.EnsureServer(ctx, cfg); err != nil {
+		return "", err
+	}
+	return cfg.TemplateDSN(), nil
+}
+
+func loadDotEnv() {
+	if root, err := testdb.ProjectRoot(); err == nil {
+		_ = gotenv.Load(filepath.Join(root, ".env"))
+	}
 }
 
 func fail(err error) {

@@ -75,6 +75,10 @@ case "$*" in
   'env GOCACHE')
     echo "$PHX_FIXTURE_GO_CACHE"
     ;;
+  'run ./internal/testdb/cmd/bootstrap --resolve-dsn')
+    echo resolve-dsn >>"$TEST_CHANGED_CALL_LOG"
+    echo postgres://postgres:fixture@127.0.0.1:15432/phoenix_test?sslmode=disable
+    ;;
   'run ./internal/testdb/cmd/bootstrap')
     echo bootstrap >>"$TEST_CHANGED_CALL_LOG"
     if [ "${PHX_FIXTURE_BOOTSTRAP_STATUS:-0}" -ne 0 ]; then
@@ -111,6 +115,10 @@ case "$*" in
     fi
     if [ "${PHX_TEST_TEMPLATE:-}" != phoenix_test_template_regression ]; then
       echo 'go test did not receive the bootstrapped template' >&2
+      exit 1
+    fi
+    if [ "${TEST_DB_DSN:-}" != 'postgres://postgres:fixture@127.0.0.1:15432/phoenix_test?sslmode=disable' ]; then
+      echo 'go test did not receive the resolved test database DSN' >&2
       exit 1
     fi
     echo "test:$PHX_TEST_TEMPLATE:$*" >>"$TEST_CHANGED_CALL_LOG"
@@ -294,7 +302,7 @@ while read -r os cpus ram workers; do
     else
       run_wrapper "$wrapper" 0 origin/development
     fi
-    expected=$'bootstrap\n'"$(go_test_call "$wrapper" "$workers" ./probe)"
+    expected=$'resolve-dsn\nbootstrap\n'"$(go_test_call "$wrapper" "$workers" ./probe)"
     if [ "$wrapper" = test-changed.sh ]; then expected+=$'\n'"$frontend_calls"; fi
     assert_calls "$expected"$'\nsweep'
   done
@@ -343,24 +351,24 @@ PHX_FIXTURE_PACKAGES=example.test/project/nested/test run_wrapper test-changed.s
 grep -q '^source:' "$call_log"
 
 run_wrapper test-backend.sh 0
-assert_calls $'bootstrap\n'"$(go_test_call test-backend.sh 2 ./...)"$'\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\n'"$(go_test_call test-backend.sh 2 ./...)"$'\nsweep'
 
 # A forced rebuild and a GOFLAGS-owned tool adapter retain native semantics.
 run_wrapper test-backend.sh 0 -a ./probe
-assert_calls $'bootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -a ./probe\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -a ./probe\nsweep'
 GOFLAGS='-toolexec=caller-tool' run_wrapper test-backend.sh 0 ./probe
-assert_calls $'bootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' ./probe\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' ./probe\nsweep'
 run_wrapper test-backend.sh 0 -toolexec caller-tool ./probe
-assert_calls $'bootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -toolexec caller-tool ./probe\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -toolexec caller-tool ./probe\nsweep'
 GOGC=123 run_wrapper test-backend.sh 0 ./probe
-expected=$'bootstrap\n'"$(go_test_call test-backend.sh 2 ./probe)"$'\nsweep'
+expected=$'resolve-dsn\nbootstrap\n'"$(go_test_call test-backend.sh 2 ./probe)"$'\nsweep'
 assert_calls "$expected"
 
 # Defaults precede explicit CLI flags so users retain their existing override.
 for gotestsum_status in 0 1; do
   export PHX_FIXTURE_GOTESTSUM_STATUS=$gotestsum_status
   run_wrapper test-backend.sh 0 -p 3 ./probe
-  expected=$'bootstrap\n'
+  expected=$'resolve-dsn\nbootstrap\n'
   if [ "$gotestsum_status" -eq 0 ]; then expected+=$'gotestsum\n'; fi
   expected+="$(go_test_call test-backend.sh 2 -p 3 ./probe)"$'\nsweep'
   assert_calls "$expected"
@@ -375,12 +383,12 @@ for wrapper in test-backend.sh test-changed.sh; do
 
   export PHX_FIXTURE_BOOTSTRAP_STATUS=5
   run_wrapper "$wrapper" 5 "${args[@]}"
-  assert_calls $'bootstrap\nsweep'
+  assert_calls $'resolve-dsn\nbootstrap\nsweep'
   unset PHX_FIXTURE_BOOTSTRAP_STATUS
 
   export PHX_FIXTURE_TEST_STATUS=7 PHX_FIXTURE_SWEEP_STATUS=9
   run_wrapper "$wrapper" 7 "${args[@]}"
-  assert_calls $'bootstrap\n'"$(go_test_call "$wrapper" 2 ./probe)"$'\nsweep'
+  assert_calls $'resolve-dsn\nbootstrap\n'"$(go_test_call "$wrapper" 2 ./probe)"$'\nsweep'
   if [ "$wrapper" = test-changed.sh ]; then
     grep -q 'go test failure summary' "$output_log"
     grep -q '^FAIL github.com/moto-ogs/project-phoenix/probe$' "$output_log"
@@ -398,7 +406,7 @@ for wrapper in test-backend.sh test-changed.sh; do
 
   export PHX_FIXTURE_SWEEP_STATUS=9
   run_wrapper "$wrapper" 1 "${args[@]}"
-  expected=$'bootstrap\n'"$(go_test_call "$wrapper" 2 ./probe)"
+  expected=$'resolve-dsn\nbootstrap\n'"$(go_test_call "$wrapper" 2 ./probe)"
   if [ "$wrapper" = test-changed.sh ]; then expected+=$'\n'"$frontend_calls"; fi
   assert_calls "$expected"$'\nsweep'
   unset PHX_FIXTURE_SWEEP_STATUS
@@ -454,7 +462,7 @@ for no_backend in 0 1; do
       fi
       expected_calls=
       if [ "$no_backend" -eq 0 ]; then
-        expected_calls=$'bootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks ./probe\n'
+        expected_calls=$'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks ./probe\n'
       fi
       expected_calls+='pnpm:install --frozen-lockfile'
       if [ "$failure" != install ]; then expected_calls+=$'\n'"$vitest_call"; fi

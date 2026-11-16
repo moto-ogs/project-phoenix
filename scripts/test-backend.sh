@@ -43,6 +43,12 @@ source "$repo_root/scripts/test-run-id.sh"
 trap sweep EXIT
 prepare_go_test_workspace
 
+# An inherited or root-.env DSN remains authoritative. Detached test
+# worktrees without runtime configuration receive a private local test server
+# from the lifecycle command; the DSN stays in this process environment.
+TEST_DB_DSN=$(go run ./internal/testdb/cmd/bootstrap --resolve-dsn)
+export TEST_DB_DSN
+
 # Handshake once per run instead of once per test binary: server erreichbar,
 # Template zum Migrations-Hash gebaut. Die Binaries bekommen das Ergebnis
 # ueber PHX_TEST_TEMPLATE und ueberspringen beide Schritte (#2419). Ein

@@ -2,7 +2,11 @@ package testdb
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
+	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -67,6 +71,35 @@ func NewConfig(dsn string) (*Config, error) {
 	query.Set("timezone", testConnectionTimezone)
 	parsed.RawQuery = query.Encode()
 	return &Config{templateURL: parsed}, nil
+}
+
+// NewEphemeralLocalConfig creates credentials and a loopback endpoint for a
+// disposable postgres-test server. It is for the wrapper-managed test
+// lifecycle only: application configuration and direct go test invocations
+// must still provide their configured DSN.
+func NewEphemeralLocalConfig() (*Config, error) {
+	passwordBytes := make([]byte, 24)
+	if _, err := rand.Read(passwordBytes); err != nil {
+		return nil, fmt.Errorf("generate test database password: %w", err)
+	}
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return nil, fmt.Errorf("reserve test database port: %w", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := listener.Close(); err != nil {
+		return nil, fmt.Errorf("release test database port: %w", err)
+	}
+
+	dsn := (&url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword("postgres", base64.RawURLEncoding.EncodeToString(passwordBytes)),
+		Host:     net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", port)),
+		Path:     "/phoenix_test",
+		RawQuery: "sslmode=disable",
+	}).String()
+	return NewConfig(dsn)
 }
 
 // BaseTemplateName returns the database name from TEST_DB_DSN (e.g.
