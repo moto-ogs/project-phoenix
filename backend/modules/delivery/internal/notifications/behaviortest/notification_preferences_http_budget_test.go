@@ -164,7 +164,9 @@ func TestParentNotificationPreferencesHTTPQueryBudget(t *testing.T) {
 			require.NoError(t, testpkg.TenantCommand3(t, ctx, db, consent.RecordConsent, chain.AccountID, row.key, row.enabled))
 		}
 		for _, row := range expected {
-			row["enabled"] = (n >= 3 && row["key"] == "parent_announcement") || (n == 8 && row["key"] == "parent_appointment")
+			// The closing day is on until the family switches it off (#7144).
+			row["enabled"] = (n >= 3 && row["key"] == "parent_announcement") || (n == 8 && row["key"] == "parent_appointment") ||
+				row["key"] == "parent_school_closing_day_changed"
 		}
 		count, countErr := db.NewSelect().TableExpr("users.notification_preferences").Where("account_id = ?", chain.AccountID).Where("tenant_id IN (?, ?)", chain.TenantID, second.TenantID).Count(context.Background())
 		require.NoError(t, countErr)
@@ -193,7 +195,7 @@ func TestParentNotificationPreferencesHTTPQueryBudget(t *testing.T) {
 	empty := testpkg.CreateTestAccount(t, db, "no-guardian-school")
 	emptyExpected := notificationBudgetCatalogue(t, "parent")
 	for _, row := range emptyExpected {
-		row["available"] = false
+		row["available"], row["enabled"] = false, false
 	}
 	counter.Reset()
 	counter.Start()

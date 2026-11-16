@@ -49,8 +49,7 @@ func NewRecords(dependencies RecordsDependencies) (schoolcalendar.Days, error) {
 	if dependencies.DB == nil || dependencies.Observe == nil || dependencies.FederalState == nil || dependencies.ClosingDayReads == nil {
 		return nil, errors.New("school calendar compose: all dependencies are required")
 	}
-	// The records serve no period administration, so its gate and guard
-	// are never asked.
+	// The records serve no period administration: gate and guard are never asked.
 	return application.New(postgres.New(postgres.NewCompositionDatabase(), dependencies.ClosingDayReads), ports.Observer(dependencies.Observe), application.Administration{Transaction: writeTransaction, Today: application.BerlinToday, FederalState: dependencies.FederalState}, application.LocalCalendar{}), nil
 }
 
@@ -59,8 +58,7 @@ type AdministrationDependencies struct {
 	DB      *bun.DB
 	Observe func(Observation)
 	// RecurrenceGate serializes period administration against every
-	// recurrence-derived write of the tenant: the shared tenant recurrence
-	// lock.
+	// recurrence-derived write of the tenant (shared recurrence lock).
 	RecurrenceGate func(context.Context) error
 	// CareOfferingGuard refuses a period change (replacement set) or
 	// removal (replacement nil) a linked care offering still needs, as
@@ -69,8 +67,7 @@ type AdministrationDependencies struct {
 	// Today names the current calendar day in YYYY-MM-DD. Nil means the
 	// Berlin calendar day, the school's day.
 	Today func() string
-	// ClosingDayNotices tells the school about a planned, changed or
-	// cancelled closing day (#7144); nil tells nobody.
+	// ClosingDayNotices tells the school of a changed closing day (#7144).
 	ClosingDayNotices schoolcalendar.ClosingDayNotices
 }
 

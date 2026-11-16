@@ -108,17 +108,9 @@ func BuildDeliveryNotifications(
 	if err != nil {
 		return DeliveryNotifications{}, err
 	}
-	unreported, ok := absences.(deliveryContract.UnreportedAbsenceNotifier)
-	if !ok {
-		return DeliveryNotifications{}, fmt.Errorf("absence notifier does not send the notice about children missing without a report")
-	}
-	responsible, ok := recipients.(deliveryContract.ResponsibleStaff)
-	if !ok {
-		return DeliveryNotifications{}, fmt.Errorf("staff recipients do not name the staff responsible for a child")
-	}
-	schoolAudience, ok := notifier.(deliveryContract.SchoolAudience)
-	if !ok {
-		return DeliveryNotifications{}, fmt.Errorf("notification router does not name the audience of the whole school")
+	unreported, responsible, schoolAudience, err := deliveryCapabilities(absences, recipients, notifier)
+	if err != nil {
+		return DeliveryNotifications{}, err
 	}
 	return DeliveryNotifications{
 		UnreportedAbsences: unreported,
@@ -218,6 +210,25 @@ func buildDeliveryWorker(
 // deliveryFeeds are the two read sides of the router's notification feed:
 // the feed of a staff account in its school (#7148) and the feed of a
 // guardian across the family's schools (#7140).
+// deliveryCapabilities are the further contracts of the composed Delivery:
+// the notice about children missing without a report, the staff responsible
+// for a child and the audience of the whole school (#7144).
+func deliveryCapabilities(absences, recipients any, notifier deliveryCompose.Notifier) (deliveryContract.UnreportedAbsenceNotifier, deliveryContract.ResponsibleStaff, deliveryContract.SchoolAudience, error) {
+	unreported, ok := absences.(deliveryContract.UnreportedAbsenceNotifier)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("absence notifier does not send the notice about children missing without a report")
+	}
+	responsible, ok := recipients.(deliveryContract.ResponsibleStaff)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("staff recipients do not name the staff responsible for a child")
+	}
+	audience, ok := notifier.(deliveryContract.SchoolAudience)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("notification router does not name the audience of the whole school")
+	}
+	return unreported, responsible, audience, nil
+}
+
 func deliveryFeeds(notifier deliveryCompose.Notifier) (deliveryContract.NotificationFeed, deliveryContract.GuardianNotificationFeed, error) {
 	feed, ok := notifier.(deliveryContract.NotificationFeed)
 	guardians, served := notifier.(interface {
