@@ -29,12 +29,15 @@ describe("LogoutModal", () => {
     mockLogout.mockResolvedValue(undefined);
   });
 
-  it("renders nothing when closed", () => {
-    render(<LogoutModal isOpen={false} onClose={vi.fn()} />);
-
-    // Anker: der Körper steht, ein Dialog fehlt.
-    expect(document.body).toBeInTheDocument();
+  it("shows the dialog only while open", () => {
+    const { rerender } = render(
+      <LogoutModal isOpen={false} onClose={vi.fn()} />,
+    );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // Gegenprobe: dieselbe Instanz zeigt den Dialog, sobald sie offen ist.
+    rerender(<LogoutModal isOpen={true} onClose={vi.fn()} />);
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Abmelden");
   });
 
   // #7112: the dialog was nameless and carried its own <h1>.

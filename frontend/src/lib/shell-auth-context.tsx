@@ -47,14 +47,14 @@ function reportingLogout(
     try {
       await endSession();
     } catch (err: unknown) {
+      // The session stays signed in, so no login page may claim it ended.
+      markLogoutNotRevoked(false);
       if (signal?.aborted) return;
       try {
         sessionStorage.removeItem(DELIBERATE_LOGOUT_KEY);
       } catch {
         // sessionStorage unavailable: the login page then shows its notice.
       }
-      // The session stays signed in, so no login page may claim it ended.
-      markLogoutNotRevoked(false);
       void showLogoutError(err, {
         object: "die Abmeldung",
         retry: () => void (retryLogout ?? logout)().catch(() => undefined),
@@ -538,7 +538,8 @@ export function CatererShellProvider({
  * Ends the Träger session (#4649) and opens the Träger login: behind the
  * session barrier (#5399), the server revokes the refresh family first
  * (#5194), then this account's local data goes (#5000) and the cookie with
- * it. A failed revocation throws and keeps the session. The shell's logout
+ * it. A revocation the server refused still ends the session here (#7209);
+ * without an answer the call throws and keeps the session. The shell's logout
  * and the way back to a sign-in with code (#6955) both run exactly this.
  */
 export const endTraegerSession: () => Promise<void> = behindSessionBarrier(

@@ -514,6 +514,37 @@ describe("TeacherShellProvider", () => {
     sessionStorage.removeItem(LOGOUT_NOT_REVOKED_KEY);
   });
 
+  it("claims no ended session when the page leaves during the logout", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { status: 503, detail: "x", code: "identity.logout_not_revoked" },
+            { status: 503 },
+          ),
+        ),
+    );
+    // The page leaves while the cookie deletion runs: the exit is cancelled.
+    mockSignOut.mockImplementationOnce(() => {
+      window.dispatchEvent(new Event("pagehide"));
+      return Promise.reject(new DOMException("aborted", "AbortError"));
+    });
+    mockUseSession.mockReturnValue({
+      data: { user: { name: "User", email: "user@example.com", roles: [] } },
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useShellAuth(), { wrapper });
+    await result.current.logout();
+
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem(LOGOUT_NOT_REVOKED_KEY)).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
   it("claims no ended session when the cookie deletion fails after a refused revocation", async () => {
     vi.stubGlobal(
       "fetch",

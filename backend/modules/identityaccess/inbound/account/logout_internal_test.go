@@ -35,7 +35,7 @@ func runLogout(t *testing.T, sessions *logoutStub) *httptest.ResponseRecorder {
 }
 
 // A logout whose revocation fails must not pass for done (#7209): the
-// browser branches on the code, so the answer names the failed revocation.
+// answer is an error with its own code, and the cause stays in the log.
 func TestLogoutAnswersFailedRevocationWithItsCode(t *testing.T) {
 	t.Parallel()
 
