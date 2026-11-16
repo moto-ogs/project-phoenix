@@ -361,7 +361,7 @@ function MobileSearchSection({
           wie auf dem Desktop die Filter unter der Suche. */}
       {primaryAction != null && (
         <div
-          data-search-row-primary-action=""
+          data-testid="search-row-primary-action"
           className="mb-3 flex max-sm:*:w-full"
         >
           {primaryAction}

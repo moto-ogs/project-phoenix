@@ -1127,7 +1127,8 @@ export const bankDetailsTopic = function bankDetailsTopic(): HelpTopic {
       "`Ohne IBAN` zeigt, bei welchen Kindern noch etwas fehlt.",
     ],
     differences: [
-      "Fehlt bei einem Kind die IBAN, steht dort `Nicht zugeordnet`.",
+      "Fehlt bei einem Kind die IBAN, steht dort `Fehlt`.",
+      "Steht beim Kontoinhaber `Nicht zugeordnet`, ist beim Kind noch niemand als Kontoinhaber eingetragen.",
     ],
     troubleshootingDetails: [
       "Fehlt `Bankverbindungen` in der Seitenleiste? Dafür braucht es ein eigenes Recht. Fragen Sie Ihre Leitung.",

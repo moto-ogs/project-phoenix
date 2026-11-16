@@ -448,7 +448,8 @@ describe("TenantPageSearchRow", () => {
       expect(mobileSection).toContainElement(mobileAction ?? null);
       // Eine eigene Zeile, nicht neben das Suchfeld gequetscht.
       expect(mobileAction?.parentElement).toHaveAttribute(
-        "data-search-row-primary-action",
+        "data-testid",
+        "search-row-primary-action",
       );
       expect(mobileAction?.parentElement).not.toContainElement(
         screen.getAllByTestId("search-bar")[0] ?? null,

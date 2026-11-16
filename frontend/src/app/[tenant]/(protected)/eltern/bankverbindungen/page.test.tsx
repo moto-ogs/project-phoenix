@@ -110,7 +110,8 @@ describe("BankverbindungenPage", () => {
       .getAllByRole("button", { name: "Ohne IBAN (1)" })
       .find(
         (button) =>
-          (button.closest("[data-search-row-primary-action]") !== null) ===
+          (button.closest('[data-testid="search-row-primary-action"]') !==
+            null) ===
           (layout === "phone"),
       );
     if (!choice) throw new Error(`Keine Auswahl „Ohne IBAN“ (${layout})`);
