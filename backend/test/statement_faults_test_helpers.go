@@ -144,9 +144,13 @@ func (f *StatementFaults) takeStatement(site FaultSite, query string) (held bool
 func NewStatementFaultPool(tb testing.TB) (*bun.DB, *StatementFaults) {
 	tb.Helper()
 	faults := &StatementFaults{}
-	pool := AdoptPrivatePool(tb, NewBunDB(sql.OpenDB(faultingConnector{
+	sqlDB := sql.OpenDB(faultingConnector{
 		Connector: pgdriver.NewConnector(pgdriver.WithDSN(IsolatedTestDSN(tb))), faults: faults,
-	})))
+	})
+	// A batch retry can hold a worker and a lock-monitor connection while a
+	// deliberately discarded connection is replaced.
+	sqlDB.SetMaxIdleConns(3)
+	pool := AdoptPrivatePool(tb, NewBunDB(sqlDB))
 	tb.Cleanup(func() { _ = pool.Close() })
 	return pool, faults
 }
