@@ -92,46 +92,41 @@ func normalizedClassTimes(times map[string]string) map[string]string {
 }
 
 // UpsertClassArrivalException stores the class-wide change of one day and
-// tells the people of the class when the time is new or different.
+// tells the people of the class when the time is new or different. It runs
+// in the caller's unit, the request's tenant transaction, so the notice
+// commits or rolls back with the change.
 func (s *arrivalScheduleService) UpsertClassArrivalException(ctx context.Context, input careplan.ClassArrivalExceptionInput, createdBy int64) (*careplan.ClassArrivalException, error) {
 	if s.notices == nil {
 		return s.ClassArrivalExceptions.UpsertClassArrivalException(ctx, input, createdBy)
 	}
-	var row *careplan.ClassArrivalException
-	err := s.tx.WithinTenant(ctx, func(txCtx context.Context) error {
-		before, err := s.ListClassArrivalExceptions(txCtx, input.SchoolClass, input.Date, input.Date)
-		if err != nil {
-			return err
-		}
-		if row, err = s.ClassArrivalExceptions.UpsertClassArrivalException(txCtx, input, createdBy); err != nil {
-			return err
-		}
-		arrival := row.ArrivalTime.Format("15:04")
-		if len(before) > 0 && before[0] != nil && before[0].ArrivalTime.Format("15:04") == arrival {
-			return nil
-		}
-		return s.notifyClassTimetable(txCtx, careplan.ClassTimetableNotice{
-			Kind: careplan.ClassTimetableDay, SchoolClass: row.SchoolClass, Day: row.Date, ArrivalTime: arrival,
-		})
-	})
+	before, err := s.ListClassArrivalExceptions(ctx, input.SchoolClass, input.Date, input.Date)
 	if err != nil {
+		return nil, err
+	}
+	row, err := s.ClassArrivalExceptions.UpsertClassArrivalException(ctx, input, createdBy)
+	if err != nil {
+		return nil, err
+	}
+	arrival := row.ArrivalTime.Format("15:04")
+	if len(before) > 0 && before[0] != nil && before[0].ArrivalTime.Format("15:04") == arrival {
+		return row, nil
+	}
+	if err := s.notifyClassTimetable(ctx, careplan.ClassTimetableNotice{
+		Kind: careplan.ClassTimetableDay, SchoolClass: row.SchoolClass, Day: row.Date, ArrivalTime: arrival,
+	}); err != nil {
 		return nil, err
 	}
 	return row, nil
 }
 
 // DeleteClassArrivalException takes the class-wide change of one day back
-// and tells the people of the class that the weekly time applies again.
+// and tells the people of the class that the weekly time applies again, in
+// the caller's unit like the upsert.
 func (s *arrivalScheduleService) DeleteClassArrivalException(ctx context.Context, schoolClass string, date calendar.Date) error {
-	if s.notices == nil {
-		return s.ClassArrivalExceptions.DeleteClassArrivalException(ctx, schoolClass, date)
+	if err := s.ClassArrivalExceptions.DeleteClassArrivalException(ctx, schoolClass, date); err != nil || s.notices == nil {
+		return err
 	}
-	return s.tx.WithinTenant(ctx, func(txCtx context.Context) error {
-		if err := s.ClassArrivalExceptions.DeleteClassArrivalException(txCtx, schoolClass, date); err != nil {
-			return err
-		}
-		return s.notifyClassTimetable(txCtx, careplan.ClassTimetableNotice{
-			Kind: careplan.ClassTimetableDayRemoved, SchoolClass: strings.TrimSpace(schoolClass), Day: date,
-		})
+	return s.notifyClassTimetable(ctx, careplan.ClassTimetableNotice{
+		Kind: careplan.ClassTimetableDayRemoved, SchoolClass: strings.TrimSpace(schoolClass), Day: date,
 	})
 }

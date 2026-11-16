@@ -318,8 +318,7 @@ func composeServeRoot(
 		},
 		func() (err error) {
 			schedules, err = owners.BuildCarePlanSchedules(db, env.Logger, carePlan, persons, carePlanRows, classArrivals,
-				enrollment.ApprovedOfferings, settings.Service, timetableRows.RecurrenceLock.LockRecurrenceWrites, presence.Presence, timetableRows.StudentTemplateDays,
-				owners.CarePlanClassTimetableNotices(db, notifications, people, membership, tokens.AuditActor))
+				enrollment.ApprovedOfferings, settings.Service, timetableRows.RecurrenceLock.LockRecurrenceWrites, presence.Presence, timetableRows.StudentTemplateDays, owners.CarePlanClassTimetableNotices(db, notifications, people, membership, tokens.AuditActor))
 			return
 		},
 		func() (err error) {

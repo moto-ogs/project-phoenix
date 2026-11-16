@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -316,10 +317,7 @@ func classTimetableBody(class string, notice careplan.ClassTimetableNotice) stri
 // classTimetableClassLabel names the class as "Klasse 3a", also when the
 // school entered the word itself.
 func classTimetableClassLabel(class string) string {
-	if strings.HasPrefix(strings.ToLower(class), "klasse") {
-		return class
-	}
-	return "Klasse " + class
+	return collation.SchoolClassLabel(class)
 }
 
 // classTimetableRelatedID is the stable object id of a class: a class has no

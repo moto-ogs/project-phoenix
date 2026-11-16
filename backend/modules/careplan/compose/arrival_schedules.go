@@ -27,11 +27,9 @@ type ArrivalScheduleDependencies struct {
 	Students        ArrivalBulkStudents
 	Classes         ArrivalClassPlans
 	ClassExceptions careplan.ClassArrivalExceptions
-	// Notices tells the people of a class about a change to its Stundenplan
-	// (#7142); nil tells nobody.
-	Notices careplan.ClassTimetableNotices
-	Logger  *slog.Logger
-	Today   func() calendar.Date
+	Notices         careplan.ClassTimetableNotices // #7142: a changed class Stundenplan; nil tells nobody
+	Logger          *slog.Logger
+	Today           func() calendar.Date
 }
 
 func NewArrivalSchedules(db *bun.DB, records carePlanBindingPorts.ArrivalScheduleRecords, baselines careplan.ArrivalBaselineReader, rules ArrivalScheduleRules, deps ArrivalScheduleDependencies) (careplan.ArrivalScheduleService, error) {
