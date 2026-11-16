@@ -114,6 +114,7 @@ function loginCopy(
       successTitle: tReset("successTitle"),
       successMessage: tReset("successMessage"),
       successHint: tReset("successHint"),
+      changeAddress: tReset("changeAddress"),
       close: tReset("close"),
       errorObject: tReset("errorObject"),
       rateLimitWait: (countdown) => tReset("rateLimitWait", { countdown }),

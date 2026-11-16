@@ -110,8 +110,11 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   "moto.traeger.sign-in-with-code",
   "lastSuccessfulRefresh",
   "tagesplan-scroll",
-  // Sperrzeit für die nächste Anfrage „Passwort vergessen“; entsteht vor der
-  // Anmeldung und trägt nur einen Zeitpunkt, weder Konto noch Adresse.
+  // Sperrzeiten für „Passwort vergessen“ je Adresse (#7213); entstehen vor
+  // der Anmeldung. Je Eintrag nur ein Zeitpunkt unter einem kurzen Hash der
+  // Adresse, den viele Adressen teilen: kein Konto, keine Adresse.
+  "passwordResetWaits",
+  // Die frühere Sperrzeit ohne Adresse; das Fenster räumt sie beim Lesen weg.
   "passwordResetRateLimitUntil",
   // Hinweise auf diesem Gerät und die öffentliche Demo.
   "schulhof-banner-dismissed",
