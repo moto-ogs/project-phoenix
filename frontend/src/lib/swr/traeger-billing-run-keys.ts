@@ -32,6 +32,7 @@ export const traegerBillingRunKeys = {
   letterFile: (file: string) =>
     `traeger-letter-file-${encodeURIComponent(file)}`,
   // Ausstellung, Versand und Exporte einer Rechnung.
+  invoiceHistoryFamily: "traeger-invoice-history-",
   invoiceHistory: (kind: string, invoiceId: string) =>
     `traeger-invoice-history-${encodeURIComponent(kind)}-${encodeURIComponent(invoiceId)}`,
   // SEPA-Mandate (#4695), ihre Abbuchungen (#4697) und Importe (#6198):

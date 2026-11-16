@@ -7,7 +7,7 @@
 import { useCallback, useEffect } from "react";
 
 import { formatSignedDuration } from "~/components/staff/staff-time-views";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
 import { useSWRAuth } from "~/lib/swr";

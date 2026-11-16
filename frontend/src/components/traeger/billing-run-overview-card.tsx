@@ -33,7 +33,7 @@ import {
   exportFormatOptions,
   exportMenuItems,
 } from "~/components/ui/export-menu";
-import { useIsMobile } from "~/components/ui/hooks/useIsMobile";
+import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import {
   OverflowMenu,
   type OverflowMenuItem,
@@ -274,7 +274,7 @@ export function BillingRunOverviewCard({
   const [shownKey, setShownKey] = useState<string | null>(null);
   // Below md the table shows its rows stacked, with the row menu in the
   // row's head (DataTable `stackedOnMobile`).
-  const isPhoneRow = useIsMobile();
+  const isPhoneRow = useMediaQuery(BELOW_MD);
   const [breakdownShown, setBreakdownShown] = useState(false);
   // The issued document whose letter shows beside the list (#5692).
   const [previewId, setPreviewId] = useState<string | null>(null);

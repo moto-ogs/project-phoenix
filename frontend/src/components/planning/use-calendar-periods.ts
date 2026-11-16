@@ -24,9 +24,10 @@ import {
 } from "~/lib/enrollment-phase-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { databaseKeys } from "~/lib/swr/portal-keys";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 
 const logger = createLogger({ component: "CalendarPeriodsEditor" });
 
@@ -157,11 +158,16 @@ export function useCalendarPeriods(): CalendarPeriodsState {
     useState<Partial<SemesterDefaults>>();
   const { success: toastSuccess } = useToast();
 
+  const invalidateFamily = useInvalidateFamily();
   // Lädt nach einem Schreiben neu; die Seite bleibt dabei stehen, damit ein
   // offener Dialog nicht verschwindet.
   const reload = useCallback(async () => {
-    await Promise.all([mutatePeriods(), mutatePhases()]);
-  }, [mutatePeriods, mutatePhases]);
+    await Promise.all([
+      mutatePeriods(),
+      mutatePhases(),
+      invalidateFamily(tenantAdminKeys.enrollmentPhaseFamily),
+    ]);
+  }, [mutatePeriods, mutatePhases, invalidateFamily]);
 
   const beginCreate = useCallback(() => {
     setEditing(null);

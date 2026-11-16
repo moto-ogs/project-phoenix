@@ -22,7 +22,7 @@ import { ParentSection } from "~/components/parent/shell/parent-section";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   FormErrorAlert,
   LoadErrorAlert,

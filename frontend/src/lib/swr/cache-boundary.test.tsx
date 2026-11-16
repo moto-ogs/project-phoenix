@@ -199,7 +199,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
     "traegerMonthStaffKeys",
     "workTimeModelKeys",
   ],
-  "me-keys": ["meKeys"],
+  "me-keys": ["meKeys", "profileKeys"],
   rooms: ["rooms"],
   groups: ["groups"],
   staff: ["staff"],

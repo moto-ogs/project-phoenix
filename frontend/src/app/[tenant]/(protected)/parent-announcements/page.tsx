@@ -1841,7 +1841,6 @@ function AnnouncementFormModal({
                           value={deadline}
                           onChange={setDeadline}
                           placeholder="Keine Frist"
-                          dropdownPlacement="down"
                           hint={
                             isDeclarationForm
                               ? "Danach können Eltern nicht mehr antworten. Eine Zustimmung widerrufen geht weiter."
@@ -1859,7 +1858,6 @@ function AnnouncementFormModal({
                         value={expiresAt}
                         onChange={setExpiresAt}
                         placeholder="Kein Ablaufdatum"
-                        dropdownPlacement="down"
                         hint={`Danach wird ${
                           isPollForm
                             ? "die Umfrage"

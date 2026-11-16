@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ChoiceTile } from "~/components/ui/choice-tile";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FieldLabel } from "~/components/ui/field-label";

@@ -39,7 +39,7 @@ import { formatCustomValue } from "~/lib/enrollment-custom-value-format";
 import { AllowedDepartureModesDisplay } from "~/components/students/allowed-departure-modes-display";
 import { AnchoredPopover } from "~/components/ui/anchored-popover";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { SectionCard } from "~/components/ui/section-card";

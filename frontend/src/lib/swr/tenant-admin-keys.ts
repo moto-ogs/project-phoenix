@@ -6,6 +6,7 @@ export const tenantAdminKeys = {
   /** The signed-in person's own e-mail subscription of one type (#3780). */
   emailSubscription: (type: string) =>
     `email-subscription-${encodeURIComponent(type)}`,
+  enrollmentPhaseFamily: "enrollment-phase-detail-",
   /** One enrollment phase (`getPhase`). */
   enrollmentPhase: (id: string) =>
     `enrollment-phase-detail-${encodeURIComponent(id)}`,

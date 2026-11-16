@@ -15,7 +15,7 @@ import {
 import { credentialError } from "~/components/auth/credential-error";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   FormErrorAlert,
   LoadErrorAlert,

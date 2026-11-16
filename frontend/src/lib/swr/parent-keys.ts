@@ -10,6 +10,9 @@ function relationships(children: readonly Child[]): string {
     .join(",");
 }
 
+const GROUP_THREAD_FAMILY = "parent-group-thread-";
+const CHILD_THREADS_FAMILY = "parent-child-threads-";
+
 /**
  * Keys of the parents portal shell (#5007). Kept apart from portal-keys.ts,
  * which bundles as a whole, so the parents' and the public enrollment
@@ -37,8 +40,14 @@ export const parentKeys = {
     key === "parent-shell-children" ||
     key.startsWith("parent-features-") ||
     key.startsWith("parent-today-"),
+  /** Prefixes of `parentInboxKeys.groupThread` / `childThreads`. */
+  groupThreadFamily: GROUP_THREAD_FAMILY,
+  childThreadsFamily: CHILD_THREADS_FAMILY,
   isMessagesResource: (key: string) =>
-    key === "parent-messages" || key === "parent-group-threads",
+    key === "parent-messages" ||
+    key === "parent-group-threads" ||
+    key.startsWith(GROUP_THREAD_FAMILY) ||
+    key.startsWith(CHILD_THREADS_FAMILY),
   isNewsResource: (key: string) => key === "parent-announcements",
   isResource: (key: string) =>
     key.startsWith("parent-") && !key.startsWith("parent-profile"),

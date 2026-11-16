@@ -21,10 +21,6 @@ vi.mock("~/lib/tenant-path", () => ({
   useTenantAwarePath: () => (path: string) => path,
 }));
 
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: () => false,
-}));
-
 interface SwrSlot {
   data: unknown;
   error: unknown;

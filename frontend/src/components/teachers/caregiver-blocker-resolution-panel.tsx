@@ -13,7 +13,7 @@ import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { ConfirmationModal } from "~/components/ui/modal";
-import { InfoSection } from "~/components/ui/detail-modal-components";
+import { InfoSection } from "~/components/ui/info-section";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import {
   OverflowMenu,

@@ -333,6 +333,7 @@ vi.mock("~/lib/swr", () => ({
     isValidating: false,
   })),
   useTenantMutate: vi.fn(() => vi.fn()),
+  useInvalidateMatching: () => () => Promise.resolve([]),
 }));
 
 import { useSWRAuth } from "~/lib/swr";

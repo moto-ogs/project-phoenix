@@ -30,10 +30,10 @@ export const parentInboxKeys = {
   enrollableSchools: () => "parent-enrollable-schools",
   /** One group message of the OGS with the guardian's children it reached (#4784). */
   groupThread: (groupThreadId: string) =>
-    `parent-group-thread-${encodeURIComponent(groupThreadId)}`,
+    `${parentKeys.groupThreadFamily}${encodeURIComponent(groupThreadId)}`,
   /** Both conversations of one child with the OGS, with unread counts (#5200). */
   childThreads: (studentId: string) =>
-    `parent-child-threads-${encodeURIComponent(studentId)}`,
+    `${parentKeys.childThreadsFamily}${encodeURIComponent(studentId)}`,
   /**
    * The coming Elternsprechtage of one child's class (#4801). The child page
    * reads the same response, so a booking refreshes both.

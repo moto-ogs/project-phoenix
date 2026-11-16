@@ -40,7 +40,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/date-picker.tsx",
-    lines: [393],
+    lines: [385],
     reason: "Auslöser des Datumsfelds (Eingabefeld, sieht aus wie ein Select)",
   },
   {
@@ -138,7 +138,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/planned-status-days-modal.tsx",
-    lines: [1107],
+    lines: [1106],
     reason: "Kalendertag zum Umschalten: Kalender-/Auswahlzelle",
   },
   {

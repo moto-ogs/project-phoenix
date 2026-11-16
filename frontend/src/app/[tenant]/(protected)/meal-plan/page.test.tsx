@@ -89,19 +89,15 @@ vi.mock("~/components/meal-plan/meal-participant-list", () => ({
   MealParticipantList: ({
     canRegister,
     canExport,
-    onRegistrationChanged,
   }: {
     canRegister: boolean;
     canExport: boolean;
-    onRegistrationChanged: () => void;
   }) => (
     <div
       data-testid="participants"
       data-register={String(canRegister)}
       data-export={String(canExport)}
-    >
-      <button onClick={onRegistrationChanged}>Save registration</button>
-    </div>
+    />
   ),
 }));
 
@@ -125,16 +121,6 @@ describe("Speiseplan: Statuszeile bei Ladefehler (#2517)", () => {
     });
     rights.admin = true;
     rights.permissions = [];
-  });
-
-  it("reloads the order overview after saving a registration", async () => {
-    getMealPlanWeek.mockResolvedValue([]);
-    renderPage();
-    await waitFor(() => expect(getMealOrders).toHaveBeenCalledTimes(1));
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Save registration" }),
-    );
-    await waitFor(() => expect(getMealOrders).toHaveBeenCalledTimes(2));
   });
 
   it("shows the catalog load error and no planned-days count", async () => {

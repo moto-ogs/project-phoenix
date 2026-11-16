@@ -36,7 +36,8 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { ApiError } from "~/lib/api-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { rolesConcept } from "~/lib/concepts/roles";
@@ -123,10 +124,13 @@ function RolesPageContent() {
   const loading =
     (!allRoles && !rolesError) ||
     (rolesLoad.failure !== undefined && rolesLoad.error === null);
-  // A write's reload stands above the list as a load error (#6652).
+  const invalidateFamily = useInvalidateFamily();
+  // A write's reload stands above the list as a load error (#6652). The
+  // invitation form reads the roles in its own projection.
   const rolesAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Rollen",
     async () => {
+      void invalidateFamily(enrollmentKeys.roles());
       await mutateRoles(readRoles(), { revalidate: false });
     },
   );

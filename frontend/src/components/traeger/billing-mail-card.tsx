@@ -15,6 +15,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
 import {
   REFRESH_WHILE_QUEUED_MS,
   traegerBillingRunKeys,
@@ -80,6 +81,12 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
   const [printing, setPrinting] = useState(false);
   const actionErrors = useApiErrorDisplay();
   const { success } = useToast();
+  const invalidateFamily = useInvalidateFamily();
+  // The history of an invoice lists its mails.
+  const refreshAfterSend = () => {
+    refresh();
+    void invalidateFamily(traegerBillingRunKeys.invoiceHistoryFamily);
+  };
 
   const sendAll = async () => {
     setSendingAll(true);
@@ -92,7 +99,7 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
       void actionErrors.show(err, { object: "die Mails" });
     } finally {
       setSendingAll(false);
-      refresh();
+      refreshAfterSend();
     }
   };
 
@@ -110,7 +117,7 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
       void actionErrors.show(err, { object: "die Mail" });
     } finally {
       setSendingOne(null);
-      refresh();
+      refreshAfterSend();
     }
   };
 

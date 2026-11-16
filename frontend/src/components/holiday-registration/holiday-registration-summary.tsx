@@ -11,7 +11,7 @@ import {
   useEnrollmentUploadTarget,
 } from "~/components/enrollment/enrollment-file-upload";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatDate } from "~/lib/date-helpers";
 import type { HolidayFormField } from "~/lib/holiday-form-field";

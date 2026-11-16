@@ -8,6 +8,8 @@ import {
 } from "@testing-library/react";
 import { useState, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 import RolesPage from "./page";
 import { ApiError } from "~/lib/api-error";
@@ -78,10 +80,6 @@ vi.mock("@/lib/database/service-factory", () => {
     createCrudService: vi.fn(service),
   };
 });
-
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => false),
-}));
 
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
@@ -771,6 +769,28 @@ describe("RolesPage", () => {
         expect.objectContaining({ name: "Updated" }),
       );
     });
+  });
+
+  it("refreshes the roles of the invitation form after saving a role", async () => {
+    setSelectedRole("1");
+    mockUpdate.mockResolvedValueOnce(undefined);
+    const readInvitationRoles = vi.fn(() => Promise.resolve([]));
+    function InvitationRoles() {
+      useSWRAuth(enrollmentKeys.roles(), readInvitationRoles);
+      return null;
+    }
+
+    render(
+      <>
+        <RolesPage />
+        <InvitationRoles />
+      </>,
+    );
+    await waitFor(() => expect(readInvitationRoles).toHaveBeenCalledTimes(1));
+    fireEvent.click(await screen.findByTestId("trigger-edit"));
+    fireEvent.click(await screen.findByTestId("submit-edit"));
+
+    await waitFor(() => expect(readInvitationRoles).toHaveBeenCalledTimes(2));
   });
 
   it("calls delete service after confirming deletion from the detail panel", async () => {

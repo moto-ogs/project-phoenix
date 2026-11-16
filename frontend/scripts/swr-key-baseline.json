@@ -19,7 +19,7 @@
   "src/app/[tenant]/(protected)/staff/page.tsx": 4,
   "src/app/[tenant]/(protected)/students/[id]/page.tsx": 1,
   "src/app/[tenant]/(protected)/students/search/page.tsx": 1,
-  "src/app/[tenant]/(protected)/substitutions/page.tsx": 2,
+  "src/app/[tenant]/(protected)/substitutions/page.tsx": 1,
   "src/app/[tenant]/(protected)/tagesinformationen/page.tsx": 2,
   "src/app/[tenant]/(protected)/time-tracking/page.tsx": 11,
   "src/app/[tenant]/(protected)/umfragen/[id]/page.tsx": 3,

@@ -3,37 +3,41 @@
 import React, {
   createContext,
   useContext,
-  useEffect,
   useState,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import { useSession } from "next-auth/react";
 import { sessionIdentityKey } from "~/lib/session-access";
-import { fetchProfile as apiFetchProfile } from "~/lib/profile-api";
+import { fetchProfile } from "~/lib/profile-api";
 import { createLogger } from "~/lib/logger";
 import { useLatest } from "~/lib/hooks/use-latest";
-
-const logger = createLogger({ component: "ProfileContext" });
+import { useSWRAuth } from "~/lib/swr";
+import { profileKeys } from "~/lib/swr/me-keys";
 import type { Profile } from "~/lib/profile-helpers";
 
-interface ProfileState {
+const logger = createLogger({ component: "ProfileContext" });
+
+const REFRESH_MIN_GAP_MS = 5000;
+
+interface ProfileContextType {
   profile: Profile | null;
   isLoading: boolean;
-}
-
-interface ProfileContextType extends ProfileState {
   refreshProfile: (silent?: boolean) => Promise<void>;
   updateProfileData: (data: Partial<Profile>) => void;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
+function logProfileError(error: unknown) {
+  // fetchProfile already reports the cause; a missing token is expected.
+  logger.warn("failed to load profile", { error: String(error) });
+}
+
 /**
- * Provider that manages user profile data with caching
- * Fetches profile once on mount and caches it across navigations
- *
- * Pattern inspired by SupervisionProvider for consistency
+ * The signed-in user's profile from the shared SWR cache. The cache scope
+ * follows the account and school, so a session change loads it again.
  */
 export function ProfileProvider({
   children,
@@ -44,157 +48,70 @@ export function ProfileProvider({
   initialProfile?: Profile | null;
 }>) {
   const { data: session } = useSession();
-
-  const [state, setState] = useState<ProfileState>(() => ({
-    profile: initialProfile,
-    isLoading: initialProfile === null,
-  }));
-  const seededRef = React.useRef(initialProfile !== null);
-
-  // Debounce mechanism to prevent rapid successive calls
-  const isRefreshingRef = React.useRef<boolean>(false);
-  const lastRefreshRef = React.useRef<number>(0);
-
-  // The signed-in identity the profile belongs to (the browser session
-  // carries no token, #5005). Stored in a ref to avoid dependency loops.
   const sessionKey = sessionIdentityKey(session);
-  const sessionKeyRef = useLatest(sessionKey);
+  // The server snapshot belongs to the identity it was rendered for.
+  const [seedIdentity] = useState(sessionKey);
+  const seed =
+    initialProfile !== null &&
+    sessionKey !== null &&
+    sessionKey === seedIdentity
+      ? initialProfile
+      : undefined;
 
-  // Use a ref for the refresh function to break dependency cycles
-  const refreshRef = React.useRef<((silent?: boolean) => Promise<void>) | null>(
-    null,
+  const { data, error, mutate } = useSWRAuth<Profile>(
+    sessionKey ? profileKeys.own() : null,
+    fetchProfile,
+    {
+      fallbackData: seed,
+      // A complete server snapshot is the mount load.
+      revalidateIfStale: seed === undefined,
+      revalidateOnReconnect: false,
+      shouldRetryOnError: false,
+      onError: logProfileError,
+    },
   );
+  const profile = error === undefined ? (data ?? null) : null;
+  const profileRef = useLatest(profile);
 
-  // Fetch profile data from API
-  const fetchProfileData = useCallback(async () => {
-    if (!sessionKeyRef.current) {
-      setState((prev) => ({
-        ...prev,
-        profile: null,
-        isLoading: false,
-      }));
-      return;
-    }
+  const [visibleRefresh, setVisibleRefresh] = useState(false);
+  const refreshingRef = useRef(false);
+  const lastRefreshRef = useRef(0);
 
-    try {
-      const profileData = await apiFetchProfile();
-      setState((prev) => {
-        // Only update if data actually changed
-        if (
-          prev.profile?.id === profileData.id &&
-          prev.profile?.avatar === profileData.avatar &&
-          prev.profile?.firstName === profileData.firstName &&
-          prev.profile?.lastName === profileData.lastName &&
-          !prev.isLoading
-        ) {
-          return prev;
-        }
-        return {
-          profile: profileData,
-          isLoading: false,
-        };
-      });
-    } catch (error) {
-      // fetchProfile already reports the cause; a missing token is expected.
-      logger.warn("failed to load profile", { error: String(error) });
-      setState((prev) => ({
-        ...prev,
-        profile: null,
-        isLoading: false,
-      }));
-    }
-  }, [sessionKeyRef]);
-
-  // Refresh profile with debouncing
   const refreshProfile = useCallback(
     async (silent = false) => {
-      // Prevent rapid successive refreshes (min 5 seconds between refreshes)
       const now = Date.now();
-      if (now - lastRefreshRef.current < 5000) {
-        return;
-      }
-
-      // Already refreshing, don't start another
-      if (isRefreshingRef.current) {
-        return;
-      }
-
+      if (now - lastRefreshRef.current < REFRESH_MIN_GAP_MS) return;
+      if (refreshingRef.current) return;
       lastRefreshRef.current = now;
-      isRefreshingRef.current = true;
-
-      // Only show loading state if not a silent refresh
-      if (!silent) {
-        setState((s) => ({
-          ...s,
-          isLoading: true,
-        }));
+      refreshingRef.current = true;
+      if (!silent) setVisibleRefresh(true);
+      try {
+        await mutate();
+      } finally {
+        refreshingRef.current = false;
+        if (!silent) setVisibleRefresh(false);
       }
-
-      await fetchProfileData();
-      isRefreshingRef.current = false;
     },
-    [fetchProfileData],
+    [mutate],
   );
 
-  // Manual update function for optimistic updates
-  const updateProfileData = useCallback((data: Partial<Profile>) => {
-    setState((prev) => {
-      if (!prev.profile) return prev;
+  // Optimistic local update after a save; the following refresh confirms it.
+  const updateProfileData = useCallback(
+    (patch: Partial<Profile>) => {
+      const shown = profileRef.current;
+      if (!shown) return;
+      void mutate({ ...shown, ...patch }, { revalidate: false });
+    },
+    [mutate, profileRef],
+  );
 
-      return {
-        ...prev,
-        profile: {
-          ...prev.profile,
-          ...data,
-        },
-      };
-    });
-  }, []);
-
-  // Store the refresh function only after its render commits.
-  useEffect(() => {
-    refreshRef.current = refreshProfile;
-  }, [refreshProfile]);
-
-  // Reset debounce when tenant changes so profile refreshes immediately after switch
-  const tenantId = session?.user?.tenantId;
-  const prevTenantIdRef = React.useRef(tenantId);
-  useEffect(() => {
-    if (prevTenantIdRef.current !== tenantId) {
-      if (tenantId !== undefined) {
-        lastRefreshRef.current = 0;
-      }
-      prevTenantIdRef.current = tenantId;
-    }
-  }, [tenantId]);
-
-  // Initial load and refresh on session changes only
-  useEffect(() => {
-    // Only refresh when the identity actually changes (not on every render)
-    if (sessionKey) {
-      // The server snapshot IS the initial load; the debounce starts now, as
-      // it would after a fetched load.
-      if (seededRef.current) {
-        seededRef.current = false;
-        lastRefreshRef.current = Date.now();
-        return;
-      }
-      refreshRef.current?.()?.catch(() => {
-        // Errors already handled in fetchProfileData
-      });
-    } else {
-      // Clear state when no session
-      seededRef.current = false;
-      setState({
-        profile: null,
-        isLoading: false,
-      });
-    }
-  }, [sessionKey]); // Only depend on the identity
+  const isLoading =
+    visibleRefresh ||
+    (sessionKey !== null && data === undefined && error === undefined);
 
   const contextValue = useMemo(
-    () => ({ ...state, refreshProfile, updateProfileData }),
-    [state, refreshProfile, updateProfileData],
+    () => ({ profile, isLoading, refreshProfile, updateProfileData }),
+    [profile, isLoading, refreshProfile, updateProfileData],
   );
 
   return (

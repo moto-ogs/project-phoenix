@@ -12,12 +12,9 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiFormError } from "~/contexts/ToastContext";
-import {
-  DataField,
-  DataGrid,
-  InfoSection,
-  InfoText,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoSection } from "~/components/ui/info-section";
+import { InfoText } from "~/components/ui/detail-modal-components";
 import {
   deleteStudentWithData,
   fetchStudentDeletionImpact,

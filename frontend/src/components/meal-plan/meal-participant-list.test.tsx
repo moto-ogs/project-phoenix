@@ -59,6 +59,8 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { MealParticipantList } from "./meal-participant-list";
 
 function render(ui: ReactElement) {
@@ -75,6 +77,28 @@ function render(ui: ReactElement) {
       </NextIntlClientProvider>
     ),
   });
+}
+
+/**
+ * The list next to a reader of the week's meal orders: a registration change
+ * reloads them. Returns the orders' fetcher.
+ */
+function renderWithOrderWeek() {
+  const readOrders = vi.fn(() => Promise.resolve(null));
+  function OrderWeek() {
+    useSWRAuth(
+      tenantContactKeys.mealOrders("2026-09-07", "2026-09-11"),
+      readOrders,
+    );
+    return null;
+  }
+  render(
+    <>
+      <MealParticipantList canRegister />
+      <OrderWeek />
+    </>,
+  );
+  return readOrders;
 }
 
 /** The download menu stays disabled until the list has loaded. */
@@ -402,13 +426,7 @@ describe("MealParticipantList", () => {
   // #3873: the school changes a registration, also after the deadline.
   describe("Anmeldung ändern", () => {
     it("registers a child for the day after the deadline", async () => {
-      const onRegistrationChanged = vi.fn();
-      render(
-        <MealParticipantList
-          canRegister
-          onRegistrationChanged={onRegistrationChanged}
-        />,
-      );
+      const orders = renderWithOrderWeek();
 
       const dialog = await openChangeFromHead();
       fireEvent.click(within(dialog).getByRole("combobox", { name: "Kind" }));
@@ -443,7 +461,7 @@ describe("MealParticipantList", () => {
       expect(
         await screen.findByText("Die Anmeldung von Ben Bauer ist geändert."),
       ).toBeInTheDocument();
-      expect(onRegistrationChanged).toHaveBeenCalledOnce();
+      await waitFor(() => expect(orders).toHaveBeenCalledTimes(2));
     });
 
     it("returns a day to the regular days", async () => {
@@ -691,13 +709,7 @@ describe("MealParticipantList", () => {
 
     // Das Menü einer Zeile öffnet dasselbe Fenster mit diesem Kind.
     it("opens the change for one child from its row menu", async () => {
-      const onRegistrationChanged = vi.fn();
-      render(
-        <MealParticipantList
-          canRegister
-          onRegistrationChanged={onRegistrationChanged}
-        />,
-      );
+      const orders = renderWithOrderWeek();
 
       await screen.findAllByText("Muster, Mia");
       fireEvent.click(
@@ -736,7 +748,7 @@ describe("MealParticipantList", () => {
       expect(
         await screen.findByText("Die Anmeldung von Mia Muster ist geändert."),
       ).toBeInTheDocument();
-      expect(onRegistrationChanged).toHaveBeenCalledOnce();
+      await waitFor(() => expect(orders).toHaveBeenCalledTimes(2));
     });
 
     it("offers no change for a past day", async () => {

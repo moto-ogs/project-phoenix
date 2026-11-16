@@ -104,7 +104,7 @@ import { ApiError } from "~/lib/api-error";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { fetchSchoolClasses } from "~/lib/student-api";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import {
   CHILD_STATUS_LABELS,
@@ -485,6 +485,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
       ),
     [phase?.is_active, requests],
   );
+  const invalidateFamily = useInvalidateFamily();
   const handleToggleRead = useCallback(
     async (requestId: string, read: boolean) => {
       try {
@@ -498,6 +499,8 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
             ),
           { revalidate: false },
         );
+        // The overview lists the requests of every phase.
+        void invalidateFamily(enrollmentKeys.adminRequests());
       } catch (err) {
         logger.error("admin_enrollment_toggle_read_failed", {
           error: err instanceof Error ? err.message : "unknown",
@@ -509,7 +512,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
         });
       }
     },
-    [mutateRequests, showActionError],
+    [invalidateFamily, mutateRequests, showActionError],
   );
   useLayoutEffect(() => {
     handleToggleReadRef.current = handleToggleRead;

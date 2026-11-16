@@ -48,7 +48,7 @@ import { useHolidayPeriodBillingHref } from "~/components/traeger/use-holiday-pe
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   DocumentAttachmentList,
   type AttachmentLabels,

@@ -56,10 +56,6 @@ vi.mock("~/components/messaging/new-message-modal", () => ({
   NewMessageModal: () => null,
 }));
 
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: () => false,
-}));
-
 import MessagesPage from "./page";
 
 describe("Nachrichten: Statuszeile bei Ladefehler (#2517)", () => {

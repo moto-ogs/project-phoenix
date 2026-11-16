@@ -92,11 +92,9 @@ function weeklyRows(week: WeeklyMealList | null): WeeklyMealRow[] {
 export function MealParticipantList({
   canRegister,
   canExport = true,
-  onRegistrationChanged,
 }: Readonly<{
   canRegister: boolean;
   canExport?: boolean;
-  onRegistrationChanged?: () => void;
 }>) {
   const t = useCareTermTranslations("mealParticipantList");
   const locale = useLocale();
@@ -477,7 +475,6 @@ export function MealParticipantList({
           void invalidateFamily(
             tenantContactKeys.childMealScheduleFamily(studentId),
           );
-          onRegistrationChanged?.();
         }}
         date={date}
         participants={participants}

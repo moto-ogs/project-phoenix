@@ -45,8 +45,7 @@ import { createLogger } from "~/lib/logger";
 import { useNavigationGuard } from "~/lib/hooks/use-navigation-guard";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
-import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import {
   useMealPlanEnabled,
@@ -196,7 +195,6 @@ export default function MealPlanPage() {
   // weekOffset: number of weeks from the current week (0 = this week, can go
   // negative for past weeks or beyond +1 for planning ahead).
   const [weekOffset, setWeekOffset] = useState(0);
-  const invalidateFamily = useInvalidateFamily();
   // An explicit read of the shown week (after a save, „Verwerfen & neu laden“).
   const [reloading, setReloading] = useState(false);
   // True once the first week has loaded. Subsequent week switches keep the
@@ -943,9 +941,6 @@ export default function MealPlanPage() {
         <MealParticipantList
           canRegister={canRegister}
           canExport={canReadParticipants}
-          onRegistrationChanged={() =>
-            void invalidateFamily(tenantContactKeys.mealOrdersFamily)
-          }
         />
       ) : null}
 

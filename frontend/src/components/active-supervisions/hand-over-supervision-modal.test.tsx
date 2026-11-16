@@ -219,6 +219,19 @@ describe("HandOverSupervisionModal", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it("reloads the running supervision after releasing it", async () => {
+    renderModal();
+
+    await screen.findByLabelText("An wen übergeben Sie?");
+    expect(fetchRunningSupervision).toHaveBeenCalledTimes(1);
+    chooseRelease();
+    fireEvent.click(screen.getByRole("button", { name: "Abgeben" }));
+
+    await waitFor(() =>
+      expect(fetchRunningSupervision).toHaveBeenCalledTimes(2),
+    );
+  });
+
   it("disables releasing with an explanation for the only supervisor", async () => {
     fetchRunningSupervision.mockResolvedValue({
       ...overview,

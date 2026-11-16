@@ -6,6 +6,8 @@ import {
 } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 
 import type { GuardianWithRelationship } from "@/lib/guardian-helpers";
@@ -263,6 +265,37 @@ describe("StudentPaymentCard", () => {
 
     await waitFor(() => expect(mockSetPayer).toHaveBeenCalledWith("7", "11"));
     expect(onChanged).toHaveBeenCalled();
+  });
+
+  it("reloads the bank overview after assigning the payer", async () => {
+    mockSetPayer.mockResolvedValue(undefined);
+    const readOverview = vi.fn(() => Promise.resolve([]));
+    function BankOverview() {
+      useSWRAuth(tenantAdminKeys.paymentOverview(), readOverview);
+      return null;
+    }
+    render(
+      <>
+        <StudentPaymentCard
+          studentId="7"
+          guardians={[
+            guardian("10", "Sabine", false),
+            guardian("11", "Klaus", false),
+          ]}
+        />
+        <BankOverview />
+      </>,
+    );
+    await waitFor(() => expect(readOverview).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.click(screen.getByRole("combobox"));
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Klaus Schneider" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(readOverview).toHaveBeenCalledTimes(2));
   });
 
   it("leaves edit mode when the payer changes outside the card", async () => {

@@ -6,7 +6,7 @@
 // Passwort und Code gehören zum moto-Konto und haben hier keine Karte.
 
 import { useRef, useState } from "react";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";

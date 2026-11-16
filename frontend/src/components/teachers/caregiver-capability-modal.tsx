@@ -6,12 +6,9 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
-import {
-  DataField,
-  DataGrid,
-  DetailIcons,
-  InfoSection,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoSection } from "~/components/ui/info-section";
+import { DetailIcons } from "~/components/ui/detail-modal-components";
 import {
   useApiFormError,
   useApiLoadError,
@@ -130,7 +127,6 @@ export function CaregiverCapabilityModal({
     // Ein anderes Konto zeigt nie den Stand des vorigen.
     { keepPreviousData: false },
   );
-  // Lädt nur, solange noch keine Antwort und kein Fehler da ist.
   const loading = capabilityKey !== null && !state && !stateError;
   // Ladefehler im Dialog, Speicherfehler oben im Dialog, beide mit
   // Wiederholen (#2517).
@@ -158,7 +154,6 @@ export function CaregiverCapabilityModal({
   }, [missingSchool, showMissingSchool, clearMissingSchool]);
   const loadError = missingSchool ? missingSchoolError : stateLoadError;
 
-  // Jedes Öffnen beginnt in der Übersicht.
   const seededFor = useRef<string | null>(null);
   useEffect(() => {
     if (!isOpen) {

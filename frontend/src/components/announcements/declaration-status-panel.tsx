@@ -6,7 +6,7 @@ import { BellRing, CheckCircle2 } from "lucide-react";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { ExportMenu, type ExportMenuOption } from "~/components/ui/export-menu";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { InsetPanel } from "~/components/ui/inset-panel";

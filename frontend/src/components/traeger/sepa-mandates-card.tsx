@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ConfirmationModal, Modal } from "~/components/ui/modal";

@@ -56,10 +56,6 @@ vi.mock("@/lib/database/service-factory", () => ({
   })),
 }));
 
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => false),
-}));
-
 vi.mock("~/components/database/database-page-layout", async () => {
   const { TenantPageSearchRow } =
     await import("~/components/ui/tenant-page-search-row");

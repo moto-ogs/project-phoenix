@@ -131,22 +131,17 @@ describe("AnchoredPopover", () => {
           </button>
         )}
       >
-        {({ overflowMenuPortal }) => (
-          <OverflowMenu
-            items={[{ label: "Bearbeiten", onClick: onAction }]}
-            portalOwnerId={overflowMenuPortal.ownerId}
-            portalZIndex={overflowMenuPortal.zIndex}
-          />
+        {() => (
+          <OverflowMenu items={[{ label: "Bearbeiten", onClick: onAction }]} />
         )}
       </AnchoredPopover>,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
     const action = screen.getByRole("menuitem", { name: "Bearbeiten" });
-    expect(action.closest("[data-overflow-menu-owner]")).toHaveAttribute(
-      "data-overflow-menu-owner",
-      screen.getByRole("dialog", { name: "Testauswahl" }).id,
-    );
+    expect(
+      screen.getByRole("dialog", { name: "Testauswahl" }),
+    ).toContainElement(action);
 
     fireEvent.mouseDown(action);
     fireEvent.click(action);
@@ -167,12 +162,8 @@ describe("AnchoredPopover", () => {
           </button>
         )}
       >
-        {({ overflowMenuPortal }) => (
-          <OverflowMenu
-            items={[{ label: "Bearbeiten", onClick: vi.fn() }]}
-            portalOwnerId={overflowMenuPortal.ownerId}
-            portalZIndex={overflowMenuPortal.zIndex}
-          />
+        {() => (
+          <OverflowMenu items={[{ label: "Bearbeiten", onClick: vi.fn() }]} />
         )}
       </AnchoredPopover>,
     );
@@ -182,11 +173,9 @@ describe("AnchoredPopover", () => {
     // liegen, sonst entscheidet die DOM-Reihenfolge.
     expect(panel).toHaveStyle({ zIndex: "10001" });
 
+    // Das Menü liegt im Panel und damit in dessen Stapelebene.
     fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
-    const menu = screen
-      .getByRole("menuitem", { name: "Bearbeiten" })
-      .closest<HTMLElement>("[data-overflow-menu-owner]");
-    expect(menu).toHaveStyle({ zIndex: "10002" });
+    expect(panel).toContainElement(screen.getByRole("menu"));
   });
 
   it("uses a preferred panel width independently from the trigger", () => {

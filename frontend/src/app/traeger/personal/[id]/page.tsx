@@ -21,7 +21,7 @@ import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Button } from "~/components/ui/button";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FramedList } from "~/components/ui/framed-list";

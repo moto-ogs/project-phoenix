@@ -1,16 +1,15 @@
 "use client";
 
 import { parentKeys } from "~/lib/swr/parent-keys";
-import { redirect, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useLocale } from "next-intl";
 import { useSWRAuth } from "~/lib/swr";
+import { PortalAuthGuard } from "~/components/auth/portal-auth-guard";
 import { Alert } from "~/components/ui/alert";
 import { normalizeLocale } from "~/i18n/locales";
 import { notBookedModuleOf } from "~/lib/module-not-booked";
 import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
 import { fetchParentProfile } from "~/lib/parent-api";
-import { parentPath } from "~/lib/parent-url";
 import { ParentShellProvider } from "~/lib/shell-auth-context";
 import { BreadcrumbProvider } from "~/lib/breadcrumb-context";
 import { ParentShell } from "~/components/parent/shell/parent-shell";
@@ -18,46 +17,30 @@ import { ParentPageSkeleton } from "~/components/parent/parent-page";
 import { ParentRealtimeBridge } from "~/components/parent/parent-realtime-bridge";
 import { ParentNotificationOnboarding } from "~/components/parent/parent-notification-onboarding";
 
-/**
- * Client-side auth guard for parent routes. Mirrors OperatorAuthGuard.
- *
- * Reads the parent session (via ParentProviders SessionProvider) and
- * redirects non-parent or unauthenticated users. Tenant + operator
- * tokens never reach the parent app — host-only cookies + the proxy
- * make them invisible — so the only redirects this guard handles are
- * "session loading" → spinner and "session missing" → /parents/login.
- */
 const PARENT_PUBLIC_PAGES = [
   "/invite",
-  "/parents/invite",
-  "/parents/login",
   "/login",
-  "/parents/reset-password",
   "/reset-password",
-  "/parents/email-confirm",
-  "/email-confirm",
-  "/parents/accept-guardian-invite",
   "/accept-guardian-invite",
   // Status page is gated by the random token — same trust model as
   // the tenant version. Email links should land here directly even
   // when the parent isn't logged in.
-  "/parents/anmeldung/status",
   "/anmeldung/status",
   // The public holiday registration of a Träger, gated by its link (#4661).
-  "/parents/ferienanmeldung",
   "/ferienanmeldung",
   // Setting up the parent account from the holiday registration's mail,
   // gated by its link (#6673).
-  "/parents/ferienkonto",
   "/ferienkonto",
   // The one-time link of a care contract mail, gated by its link (#4679).
-  "/parents/vertrag-unterschreiben",
   "/vertrag-unterschreiben",
   // The public demo's entry page signs the visitor in itself (#3468).
-  "/parents/demo",
   "/demo",
 ];
 
+/**
+ * Client-side auth guard for parent routes. Unlike the other portals it
+ * renders the shell while the session loads, with a skeleton for the page.
+ */
 export function ParentAuthGuard({
   children,
   notBooked = false,
@@ -66,31 +49,38 @@ export function ParentAuthGuard({
   /** The page load's session check found the portal's module not booked. */
   readonly notBooked?: boolean;
 }) {
-  const pathname = usePathname();
-  const isPublicPage = PARENT_PUBLIC_PAGES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  return (
+    <PortalAuthGuard
+      portal="parent"
+      publicPages={PARENT_PUBLIC_PAGES}
+      wrongScope="root"
+      loading="shell"
+      renderShell={(page) => (
+        <ParentPortal notBooked={notBooked}>{page}</ParentPortal>
+      )}
+    >
+      {children}
+    </PortalAuthGuard>
   );
+}
+
+function ParentPortal({
+  children,
+  notBooked,
+}: {
+  readonly children: React.ReactNode;
+  readonly notBooked: boolean;
+}) {
   const { data: session, status } = useSession();
   // Der Name der Kopfzeile kommt aus dem Elternprofil (#3891).
   const locale = normalizeLocale(useLocale());
   const { data: profile, error: profileError } = useSWRAuth(
-    !isPublicPage && status === "authenticated" && session?.user?.id
+    status === "authenticated" && session?.user?.id
       ? parentKeys.profile()
       : null,
     fetchParentProfile,
     { keepPreviousData: false },
   );
-
-  if (isPublicPage) {
-    return <>{children}</>;
-  }
-
-  if (status === "authenticated" && session?.user?.scope !== "parent") {
-    redirect("/");
-  }
-  if (status === "unauthenticated") {
-    redirect(parentPath("/parents/login"));
-  }
 
   const sessionLoading = status === "loading" || !session;
 

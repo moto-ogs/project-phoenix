@@ -27,7 +27,7 @@ import {
 import type { SickReportStaff } from "~/components/staff/sick-report-modal";
 import { formatSignedDuration } from "~/components/staff/staff-time-views";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { Modal } from "~/components/ui/modal";

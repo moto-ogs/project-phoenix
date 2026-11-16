@@ -26,7 +26,7 @@ import { formatDateRange } from "~/components/traeger/holiday-period-format";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";

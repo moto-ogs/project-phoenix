@@ -16,7 +16,8 @@ import {
   fetchEmailSubscription,
   setEmailSubscription,
 } from "~/lib/notification-preferences-api";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 
 /** E-Mail „Neue Anmeldung" an die Person selbst, zum Einschalten (#3780). */
@@ -33,13 +34,17 @@ export default function AdminEnrollmentsPage() {
   const { show: showError } = useApiErrorDisplay();
   // Lesestatus pro Person (#3778): markiert die ungelesenen Anmeldungen der
   // aktiven Phasen für die angemeldete Person.
+  const invalidateFamily = useInvalidateFamily();
   const handleMarkAllRead = useCallback(() => {
     markAllAdminRequestsRead()
-      .then(() => toastSuccess("Alle Anmeldungen sind als gelesen markiert."))
+      .then(() => {
+        void invalidateFamily(enrollmentKeys.adminRequestsFamily);
+        toastSuccess("Alle Anmeldungen sind als gelesen markiert.");
+      })
       .catch((err: unknown) => {
         void showError(err, { object: "die Markierung als gelesen" });
       });
-  }, [toastSuccess, showError]);
+  }, [invalidateFamily, toastSuccess, showError]);
   // Eigener Stand der E-Mail bei neuer Anmeldung. Lässt er sich nicht laden,
   // fehlt der Eintrag, statt einen falschen Haken zu zeigen.
   const subscription = useSWRAuth(

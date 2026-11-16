@@ -45,7 +45,7 @@ import {
   restoreAdminRequest,
 } from "~/lib/enrollment-admin-api";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";

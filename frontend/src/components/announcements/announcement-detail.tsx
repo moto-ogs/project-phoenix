@@ -12,7 +12,7 @@ import {
   Send,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { LinkifiedText } from "~/components/ui/linkified-text";

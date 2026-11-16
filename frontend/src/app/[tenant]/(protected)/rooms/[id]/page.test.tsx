@@ -101,6 +101,7 @@ vi.mock("~/lib/swr", () => ({
     mutate: () => Promise.resolve(undefined),
   }),
   useSWRSeedFrom: () => () => undefined,
+  useInvalidateMatching: () => () => Promise.resolve([]),
   useTenantMutate: () => vi.fn(() => Promise.resolve()),
   useTenantMutateMatching: () => vi.fn(() => Promise.resolve()),
 }));

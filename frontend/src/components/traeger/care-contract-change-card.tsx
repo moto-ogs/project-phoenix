@@ -10,7 +10,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { NoticeCardJump } from "~/components/traeger/care-contract-notice-card";
 import { OfferingRequestChanges } from "~/components/students/offering-request-changes";

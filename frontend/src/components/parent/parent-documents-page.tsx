@@ -20,7 +20,7 @@ import { ParentSepaMandateEntry } from "~/components/parent/parent-sepa-mandate-
 import { ParentSection } from "~/components/parent/shell/parent-section";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { StatusBadge } from "~/components/ui/status-badge";

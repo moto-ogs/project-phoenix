@@ -14,11 +14,8 @@ import { useCallback, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ConsentCheckbox } from "~/components/ui/consent-checkbox";
-import {
-  DataField,
-  DataGrid,
-  InfoText,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoText } from "~/components/ui/detail-modal-components";
 import {
   FormErrorAlert,
   LoadErrorAlert,

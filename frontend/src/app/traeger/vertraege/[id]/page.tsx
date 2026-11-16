@@ -43,7 +43,7 @@ import {
 } from "~/components/ui/page-header/OverflowMenu";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { ConfirmationModal } from "~/components/ui/modal";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { Input } from "~/components/ui/input";
 import {
   FormErrorAlert,

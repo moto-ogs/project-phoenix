@@ -15,10 +15,9 @@ import {
   DataField,
   DataFieldSkeleton,
   DataGrid,
-  DetailIcons,
-  InfoSection,
-  InfoText,
-} from "~/components/ui/detail-modal-components";
+} from "~/components/ui/data-field";
+import { InfoSection } from "~/components/ui/info-section";
+import { DetailIcons, InfoText } from "~/components/ui/detail-modal-components";
 import { Modal } from "~/components/ui/modal";
 import {
   StatusBadge,

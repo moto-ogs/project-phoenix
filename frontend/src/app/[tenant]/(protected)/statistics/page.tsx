@@ -25,7 +25,7 @@ import {
 import type { DateRange } from "react-day-picker";
 import { Alert } from "~/components/ui/alert";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   buildDefaultPresets,
   DateRangePicker,

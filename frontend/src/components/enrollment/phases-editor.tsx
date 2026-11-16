@@ -73,9 +73,10 @@ import {
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { databaseKeys } from "~/lib/swr/portal-keys";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { createLogger } from "~/lib/logger";
 import { RolloverForm } from "./rollover-form";
 import {
@@ -153,9 +154,6 @@ import {
 
 const logger = createLogger({ component: "PhasesEditor" });
 
-// Stable empty lists while a read is pending: a fresh `[]` on every render
-// would recompute each memo built on them (template names, period names,
-// the list rows).
 const NO_PHASES: Phase[] = [];
 const NO_SCHEMAS: FormSchema[] = [];
 const NO_PERIODS: CalendarPeriod[] = [];
@@ -378,11 +376,14 @@ export function PhasesEditor() {
     return names;
   }, [schemas]);
 
+  const invalidateFamily = useInvalidateFamily();
   // Nachladen nach Speichern, Löschen oder Umschalten: ein Fehler dabei ist
-  // ein Ladefehler, kein Fehler der Aktion (#6652).
+  // ein Ladefehler, kein Fehler der Aktion (#6652). Die Übertragen-Seite liest
+  // eine Phase einzeln.
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige der Anmeldephasen",
     async () => {
+      void invalidateFamily(tenantAdminKeys.enrollmentPhaseFamily);
       await Promise.all([
         mutatePhases(listPhases(), { revalidate: false }),
         mutateSchemas(listSchemas(), { revalidate: false }),

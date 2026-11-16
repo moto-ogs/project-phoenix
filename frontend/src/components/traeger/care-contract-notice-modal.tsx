@@ -7,7 +7,7 @@
 import { useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { DatePicker } from "~/components/ui/date-picker";
 import { FieldLabel } from "~/components/ui/field-label";

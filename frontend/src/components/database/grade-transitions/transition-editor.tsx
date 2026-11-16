@@ -63,10 +63,6 @@ function suggestAcademicYear(now: Date): string {
   return `${year}-${year + 1}`;
 }
 
-/**
- * Rows of a new transition from the backend's suggestions: every class with
- * children, its proposed next class or Abgang, and how many children it has.
- */
 function rowsFromSuggestions(suggestions: SuggestedMapping[]): EditorRow[] {
   return suggestions.map((s) => ({
     fromClass: s.fromClass,
@@ -94,9 +90,7 @@ function rowsFromTransition(transition: GradeTransition): EditorRow[] {
 }
 
 interface TransitionEditorProps {
-  /**
-   * The draft to edit; null starts a new transition from the suggestions.
-   */
+  /** The draft to edit; null starts a new transition from the suggestions. */
   readonly existingDraft: GradeTransition | null;
   readonly onClose: () => void;
   readonly onReadyForPreview: (transition: GradeTransition) => void;

@@ -42,7 +42,7 @@ import {
 } from "~/components/ui/drawer";
 import { Alert } from "~/components/ui/alert";
 import { CustomSelect } from "~/components/ui/custom-select";
-import { DataField } from "~/components/ui/detail-modal-components";
+import { DataField } from "~/components/ui/data-field";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { FieldLabel } from "~/components/ui/field-label";
 import { Input } from "~/components/ui/input";

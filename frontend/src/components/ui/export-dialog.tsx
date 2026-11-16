@@ -59,8 +59,6 @@ interface ExportDialogProps<F extends ExportFileFormat> {
   readonly appliedFilters?: readonly string[];
   /** Offered formats in display order. One format shows no choice. */
   readonly formats: readonly F[];
-  /** Preselected format; defaults to the first one. */
-  readonly defaultFormat?: F;
   readonly run: ExportDialogRun<F>;
   /**
    * The options cannot produce a file right now (an invalid period). The
@@ -92,16 +90,15 @@ export function ExportDialog<F extends ExportFileFormat>({
   description,
   appliedFilters,
   formats,
-  defaultFormat,
   run,
   blocked = false,
   isDismissDisabled = false,
   children,
 }: ExportDialogProps<F>) {
-  const initialFormat = defaultFormat ?? formats[0];
+  const initialFormat = formats[0];
   const [format, setFormat] = useState<F | undefined>(initialFormat);
 
-  // Ein neu geöffneter Dialog beginnt wieder beim voreingestellten Format.
+  // Ein neu geöffneter Dialog beginnt wieder beim ersten Format.
   useEffect(() => {
     if (isOpen) setFormat(initialFormat);
   }, [isOpen, initialFormat]);

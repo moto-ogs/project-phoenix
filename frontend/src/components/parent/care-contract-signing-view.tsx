@@ -14,7 +14,7 @@ import { useSignaturePadLabels } from "~/components/parent/news/signature-pad-la
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ConsentCheckbox } from "~/components/ui/consent-checkbox";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   FormErrorAlert,
   LoadErrorAlert,

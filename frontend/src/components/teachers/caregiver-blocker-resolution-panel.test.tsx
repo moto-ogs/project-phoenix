@@ -48,7 +48,7 @@ vi.mock("~/components/ui/alert", async () => {
   };
 });
 
-vi.mock("~/components/ui/detail-modal-components", async () => {
+vi.mock("~/components/ui/info-section", async () => {
   const { createElement } = await import("react");
 
   return {
@@ -65,12 +65,6 @@ vi.mock("~/components/ui/detail-modal-components", async () => {
         createElement("h2", null, title),
         children,
       ),
-    DetailIcons: {
-      group: createElement("span", null, "group"),
-      bus: createElement("span", null, "bus"),
-      heart: createElement("span", null, "heart"),
-      home: createElement("span", null, "home"),
-    },
   };
 });
 

@@ -141,7 +141,7 @@ vi.mock("~/components/ui/input", async () => {
   };
 });
 
-vi.mock("~/components/ui/detail-modal-components", async () => {
+vi.mock("~/components/ui/data-field", async () => {
   const { createElement } = await import("react");
 
   return {
@@ -154,6 +154,13 @@ vi.mock("~/components/ui/detail-modal-components", async () => {
       ),
     DataGrid: ({ children }: { children: ReactNode }) =>
       createElement("div", null, children),
+  };
+});
+
+vi.mock("~/components/ui/info-section", async () => {
+  const { createElement } = await import("react");
+
+  return {
     InfoSection: ({
       title,
       children,
@@ -167,9 +174,14 @@ vi.mock("~/components/ui/detail-modal-components", async () => {
         createElement("h2", null, title),
         children,
       ),
+  };
+});
+
+vi.mock("~/components/ui/detail-modal-components", async () => {
+  const { createElement } = await import("react");
+
+  return {
     DetailIcons: {
-      person: createElement("span", null, "person"),
-      group: createElement("span", null, "group"),
       x: createElement("span", null, "x"),
     },
   };

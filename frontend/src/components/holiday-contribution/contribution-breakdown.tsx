@@ -4,7 +4,7 @@
 // Träger-Büro in der Anmeldung; die Texte bringt der Aufrufer in seiner
 // Sprache mit.
 
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 
 export interface ContributionBreakdownChild {
   readonly key: string;

@@ -50,11 +50,6 @@ export function MealOrderWeek({
 }: Readonly<{
   mondayISO: string;
   canExportMonth: boolean;
-  /**
-   * @deprecated A registration change refreshes the orders through
-   * `tenantContactKeys.mealOrdersFamily`; the value is ignored.
-   */
-  refreshVersion?: number;
 }>) {
   const t = useCareTermTranslations("mealOrders");
   const locale = useLocale();

@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 
 vi.unmock("swr");
@@ -40,7 +43,7 @@ vi.mock("~/contexts/ToastContext", () => ({
 
 import AdminEnrollmentsPage from "./page";
 
-function Page() {
+function Page({ children }: Readonly<{ children?: ReactNode }>) {
   return (
     <SessionProvider
       session={{
@@ -51,6 +54,7 @@ function Page() {
     >
       <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
         <AdminEnrollmentsPage />
+        {children}
       </SWRConfig>
     </SessionProvider>
   );
@@ -83,6 +87,32 @@ describe("AdminEnrollmentsPage (#3778)", () => {
         "Alle Anmeldungen sind als gelesen markiert.",
       );
     });
+  });
+
+  it("lädt die Anmeldungen nach dem Markieren neu", async () => {
+    mocks.markAllAdminRequestsRead.mockResolvedValue(undefined);
+    const readRequests = vi.fn(() => Promise.resolve([]));
+    function PhaseRequests() {
+      useSWRAuth(enrollmentKeys.adminRequests("3"), readRequests);
+      return null;
+    }
+    render(
+      <Page>
+        <PhaseRequests />
+      </Page>,
+    );
+    await waitFor(() => expect(readRequests).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weitere Aktionen für Anmeldungen" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: "Alle als gelesen markieren",
+      }),
+    );
+
+    await waitFor(() => expect(readRequests).toHaveBeenCalledTimes(2));
   });
 
   it("meldet einen Fehler beim Markieren", async () => {

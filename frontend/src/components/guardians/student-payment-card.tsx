@@ -5,7 +5,7 @@ import { Eye, Landmark } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import {
   FormErrorAlert,
@@ -202,6 +202,7 @@ export function StudentPaymentCard({
       if (payerChanged) {
         await setStudentPayer(studentId, draft.payerId);
         setDraft(null);
+        void invalidateFamily(tenantAdminKeys.paymentOverview());
         toast.success("Das Zahlungskonto ist gespeichert.");
         onChanged?.();
         return;

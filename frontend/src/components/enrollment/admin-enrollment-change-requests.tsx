@@ -21,7 +21,7 @@ import { CarePlanImpact } from "~/components/students/care-plan-impact";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EnrollmentChangeRequestDiff } from "~/components/enrollment/enrollment-change-request-diff";
 import { enrollmentChangeRequestStatusMeta } from "~/components/enrollment/enrollment-change-request-status";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";

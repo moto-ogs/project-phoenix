@@ -1,10 +1,12 @@
 "use client";
 
+import { useCallback } from "react";
+
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { externalStaffNote } from "~/lib/staff-helpers";
 import { substitutionService } from "~/lib/substitution-api";
 import type { RunningSupervision } from "~/lib/substitution-helpers";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 export type SupervisionTarget = RunningSupervision["availableTargets"][number];
@@ -37,6 +39,24 @@ export function useRunningSupervision(
     loadError,
     isLoading: key !== null && data === undefined && !error,
   };
+}
+
+/**
+ * After adding, handing over or leaving a supervision: its overview and the
+ * supervisor list of the Schulhof banner read the changed supervisors.
+ */
+export function useRefreshSupervisors() {
+  const invalidate = useInvalidateMatching();
+  return useCallback(
+    (activeGroupId: string) => {
+      const keys = [
+        tenantDailyKeys.runningSupervision(activeGroupId),
+        tenantDailyKeys.activeGroupSupervisors(activeGroupId),
+      ];
+      return invalidate((key) => keys.includes(key));
+    },
+    [invalidate],
+  );
 }
 
 // Wie in den anderen Auswahllisten: „Name (Extern · Musikschule, Einladung

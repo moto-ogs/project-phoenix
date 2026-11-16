@@ -10,6 +10,8 @@ import type { ReactElement, ReactNode } from "react";
 import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 
 vi.unmock("swr");
@@ -339,6 +341,36 @@ describe("AdminEnrollmentPhaseDetail", () => {
     await waitFor(() => {
       expect(mocks.setAdminRequestRead).toHaveBeenCalledWith("10", false);
     });
+  });
+
+  it("lädt die Übersicht aller Anmeldungen nach dem Umschalten neu", async () => {
+    mocks.listAdminRequests.mockResolvedValue([
+      { ...requests[0], is_unread: true },
+    ]);
+    mocks.setAdminRequestRead.mockResolvedValue(undefined);
+    const readAll = vi.fn(() => Promise.resolve([]));
+    function Overview() {
+      useSWRAuth(enrollmentKeys.adminRequests(), readAll);
+      return null;
+    }
+    render(
+      <>
+        <AdminEnrollmentPhaseDetail phaseId="1" />
+        <Overview />
+      </>,
+    );
+    await waitFor(() => expect(readAll).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für die Anmeldung von Lina Muster",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Als gelesen markieren" }),
+    );
+
+    await waitFor(() => expect(readAll).toHaveBeenCalledTimes(2));
   });
 
   it.each([

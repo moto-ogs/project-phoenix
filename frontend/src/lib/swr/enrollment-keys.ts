@@ -70,6 +70,7 @@ export const enrollmentKeys = {
    */
   allPhasesCareOfferings: (phaseIds: readonly string[]) =>
     `care-offerings-of-phases-${phaseIds.map(encodeURIComponent).join(",")}`,
+  adminRequestsFamily: "enrollment-requests-",
   /** The enrollment requests of the school, or of one phase (`listAdminRequests`). */
   adminRequests: (phaseId?: string) =>
     `enrollment-requests-${phaseId ? encodeURIComponent(phaseId) : "all"}`,
