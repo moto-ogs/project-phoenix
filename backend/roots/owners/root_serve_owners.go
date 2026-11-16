@@ -194,8 +194,9 @@ func ObservePeopleDirectory(observation peopleCompose.Observation) {
 }
 
 // BuildServeMealPlan composes the Meal Plan over its settings and the
-// participants of the day.
-func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompose.Settings, students StudentRootReads, names peopledirectory.Capability, calendarRecords schoolcalendar.Days) (mealplanModule.Capability, error) {
+// participants of the day. notices tells the families about a changed menu
+// (#7145); nil tells nobody.
+func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompose.Settings, students StudentRootReads, names peopledirectory.Capability, calendarRecords schoolcalendar.Days, notices mealplanModule.MenuChangeNotices) (mealplanModule.Capability, error) {
 	if calendarRecords == nil {
 		return nil, errors.New("meal plan: the school calendar is required")
 	}
@@ -210,6 +211,7 @@ func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompos
 		ParticipantDays: mealPlanParticipantDaysFinder(names, time.Now),
 		StudentNames:    mealPlanStudentNames(names),
 		Calendar:        mealPlanCalendar(calendarRecords),
+		Notices:         notices,
 	})
 }
 

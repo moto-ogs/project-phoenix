@@ -50,7 +50,7 @@ func TestParentListsPositiveGrowthQueryBudget(t *testing.T) {
 	require.NoError(t, err)
 	schoolCalendar, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings)
 	require.NoError(t, err)
-	meals, err := owners.BuildServeMealPlan(database, mealSettings, owners.NewStudentRootReads(people.Student), directory, schoolCalendar)
+	meals, err := owners.BuildServeMealPlan(database, mealSettings, owners.NewStudentRootReads(people.Student), directory, schoolCalendar, nil)
 	require.NoError(t, err)
 	require.NoError(t, settings.Settings.SetValue(testpkg.Ctx(t), settingsModule.KeyMealPlanEnabled, true, nil, nil))
 	require.NoError(t, settings.Settings.SetValue(testpkg.Ctx(t), settingsModule.KeyMealRegistrationEnabled, true, nil, nil))

@@ -456,6 +456,10 @@ func (s *preferenceService) GetForParent(ctx context.Context, accountID int64) (
 
 	err := s.forEachGuardianTenant(ctx, accountID, func(tenantCtx context.Context, _ int64) error {
 		tenantCount++
+		// One read per school for the dispatch switch and every gate of the
+		// parents' catalogue, as the staff page does (#5699): a new gated
+		// type such as the meal plan notice (#7145) adds no statement.
+		tenantCtx = s.withGateSnapshot(tenantCtx, PortalParent)
 		if err := s.countParentConsents(tenantCtx, accountID, enabledTenantCount); err != nil {
 			return err
 		}

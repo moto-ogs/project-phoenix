@@ -251,10 +251,6 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) { mealPlanSettings, err = owners.BuildMealPlanSettings(settings.Service); return },
-		func() (err error) {
-			mealPlan, err = owners.BuildServeMealPlan(db, mealPlanSettings, owners.NewStudentRootReads(people.Students), persons, calendar)
-			return
-		},
 		func() (err error) { feedbackSettings, err = owners.BuildFeedbackSettings(settings.Service); return },
 		func() (err error) { feedback, err = owners.BuildServeFeedback(db, feedbackSettings); return },
 		func() (err error) {
@@ -309,6 +305,12 @@ func composeServeRoot(
 		func() (err error) {
 			notifications, err = owners.BuildDeliveryNotifications(db, unit, env, pushVAPID, hub, delivery, settings.Service,
 				consent, identity, people, structure, workTime, messaging, membership)
+			return
+		},
+		func() (err error) {
+			// After Delivery: a changed menu tells the families (#7145).
+			mealPlan, err = owners.BuildServeMealPlan(db, mealPlanSettings, owners.NewStudentRootReads(people.Students), persons, calendar,
+				owners.NewMealPlanChangeNotices(persons, notifications))
 			return
 		},
 		func() (err error) {

@@ -200,7 +200,7 @@ func (p calendarGuardianPort) ListPortalContacts(ctx context.Context, guardianID
 			FirstName: value.FirstName, LastName: value.LastName, PortalLocale: value.PortalLocale,
 		}}
 		if value.StudentID != nil {
-			portalAccess, permissionErr := calendarPortalPermission(value.PortalPermission)
+			portalAccess, permissionErr := guardianPortalAccessGranted(value.PortalPermission)
 			if permissionErr != nil {
 				return nil, permissionErr
 			}
@@ -214,12 +214,14 @@ func (p calendarGuardianPort) ListPortalContacts(ctx context.Context, guardianID
 	return result, nil
 }
 
-// Preserve the shared helper's interpretation of historical JSON values.
-func calendarPortalPermission(raw json.RawMessage) (bool, error) {
+// guardianPortalAccessGranted reads a stored parent_portal.access value of a
+// GuardianPortalContact with the shared helper's interpretation of historical
+// JSON values.
+func guardianPortalAccessGranted(raw json.RawMessage) (bool, error) {
 	var value any
 	if len(raw) > 0 {
 		if err := json.Unmarshal(raw, &value); err != nil {
-			return false, fmt.Errorf("calendar guardian portal permission: %w", err)
+			return false, fmt.Errorf("guardian portal permission: %w", err)
 		}
 	}
 	return securityruntime.GuardianPermissionGranted(value), nil

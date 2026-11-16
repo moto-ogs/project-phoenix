@@ -149,6 +149,11 @@ const (
 	// TypeParentBillingDocument announces a document of the Träger in the
 	// inbox of the parents portal (#4671), such as a confirmation letter.
 	TypeParentBillingDocument = "parent_billing_document"
+	// TypeMealPlanChanged tells the guardians of the children with a meal
+	// booked on a changed day that the meal plan changed (#7145). It writes
+	// the notification feed of the parents portal; the push is off until the
+	// guardian switches it on.
+	TypeMealPlanChanged = contract.NotificationMealPlanChanged
 
 	// TypeInstanceCancelled tells the staff of an appointment's or offering's
 	// staffing that it was cancelled (#7148). It writes the notification feed
@@ -685,6 +690,20 @@ func registerParentStatusTypes() {
 		Portal:      PortalParent,
 		TenantGate:  settingParentNotesEnabled,
 		SortOrder:   1,
+	})
+
+	// A changed meal plan (#7145) reaches the families whose child has a
+	// meal booked on the changed day. The feed entry always comes, unless the
+	// school switched the notice off; the push only for who switched it on.
+	RegisterType(TypeDefinition{
+		Key:         TypeMealPlanChanged,
+		Label:       "Speiseplan geändert",
+		Description: "Wenn sich das Essen an einem Tag ändert, an dem Ihr Kind ein Essen gebucht hat. Der Hinweis im Elternportal kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten.",
+		Group:       GroupChildren,
+		Portal:      PortalParent,
+		TenantGate:  settingMealPlanChangedEnabled,
+		SortOrder:   2,
+		Feed:        true,
 	})
 }
 

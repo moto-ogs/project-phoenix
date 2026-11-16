@@ -35,5 +35,5 @@ func (seamSettings) MealOrderingSettings(context.Context) (ports.OrderingSetting
 	return ports.OrderingSettings{}, nil
 }
 func newTestModule(e *recordingEngine) *Service {
-	return New(seamStore{e: e}, struct{ ports.Directory }{}, struct{ ports.Calendar }{}, seamSettings{e}, seamTransaction{}, func(ports.Observation) {}, func() time.Time { return time.Date(2026, 9, 7, 8, 0, 0, 0, calendar.Berlin) })
+	return New(seamStore{e: e}, struct{ ports.Directory }{}, struct{ ports.Calendar }{}, seamSettings{e}, seamTransaction{}, func(ports.Observation) {}, func() time.Time { return time.Date(2026, 9, 7, 8, 0, 0, 0, calendar.Berlin) }, nil)
 }

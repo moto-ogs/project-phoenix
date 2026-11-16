@@ -141,4 +141,16 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		Category:        "benachrichtigungen",
 		SortOrder:       8,
 	},
+	{
+		Key:             config.KeyNotificationsMealPlanChangedEnabled,
+		Label:           "Hinweis an Eltern bei geändertem Speiseplan",
+		Description:     "Ändert sich der Speiseplan für einen Tag, bekommen die Eltern einen Hinweis im Elternportal, wenn ihr Kind an dem Tag ein Essen gebucht hat. Eine Mitteilung aufs Handy bekommt nur, wer sie selbst einschaltet.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       9,
+	},
 }

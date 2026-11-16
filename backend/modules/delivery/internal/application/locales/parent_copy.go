@@ -174,3 +174,25 @@ func ParentBillingDocumentCopy(locale string) (string, string) {
 		return "Neues Dokument vom Träger", "Sie haben ein neues Dokument im Elternportal."
 	}
 }
+
+// ParentMealPlanChangedCopy is the push that the meal plan changed on a day
+// a child has a meal booked (#7145). Like every parent push it names no child
+// and no dish; the notice in the parents portal says which week changed.
+func ParentMealPlanChangedCopy(locale string) (string, string) {
+	switch Normalize(locale) {
+	case "en":
+		return "Meal plan changed", "The meal plan has changed. Please check your meal booking in the parent portal."
+	case "ru":
+		return "Меню изменено", "Меню изменилось. Пожалуйста, проверьте заказ питания в родительском портале."
+	case "sq":
+		return "Menyja ndryshoi", "Menyja e ushqimit ka ndryshuar. Ju lutemi kontrolloni rezervimin e ushqimit në portalin e prindërve."
+	case "pl":
+		return "Zmiana jadłospisu", "Jadłospis się zmienił. Prosimy sprawdzić zamówienie posiłków w portalu dla rodziców."
+	case "tr":
+		return "Yemek planı değişti", "Yemek planı değişti. Lütfen veli portalında yemek rezervasyonunuzu kontrol edin."
+	case "uk":
+		return "Меню змінено", "Меню змінилося. Будь ласка, перевірте замовлення харчування в батьківському порталі."
+	default:
+		return "Speiseplan geändert", "Der Speiseplan hat sich geändert. Bitte prüfen Sie die Essensbuchung im Elternportal."
+	}
+}

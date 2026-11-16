@@ -427,6 +427,14 @@ var notificationBudgetCatalogues = map[string]string{
     "available": false
   },
   {
+    "key": "meal_plan_changed",
+    "label": "Speiseplan geändert",
+    "description": "Wenn sich das Essen an einem Tag ändert, an dem Ihr Kind ein Essen gebucht hat. Der Hinweis im Elternportal kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten.",
+    "group": "kinder",
+    "enabled": false,
+    "available": true
+  },
+  {
     "key": "parent_announcement",
     "label": "Neue Mitteilung der Schule",
     "description": "Wenn die Schule eine neue Mitteilung im Elternportal veröffentlicht.",
