@@ -122,10 +122,10 @@ func ComposeParentMessagingRepositories(
 }
 
 // NewDeviceFleet composes the device owner for graphs that do not record
-// observations and never serve the info-point dashboard. The serving root
-// composes the observed module where it mounts the IoT routes, so runtime
-// evidence and the dashboard collaborators are kept.
-func NewDeviceFleet(db transactionruntime.Database, onlineWindowMinutes ...func(context.Context) int) (devicefleet.Capability, error) {
+// observations and never serve the info-point dashboard, on the root's clock
+// now. The serving root composes the observed module where it mounts the IoT
+// routes, so runtime evidence and the dashboard collaborators are kept.
+func NewDeviceFleet(db transactionruntime.Database, now func() time.Time, onlineWindowMinutes ...func(context.Context) int) (devicefleet.Capability, error) {
 	rooms, err := facilitiesCompose.NewUnobserved(db.Pool())
 	if err != nil {
 		return nil, err
@@ -137,9 +137,9 @@ func NewDeviceFleet(db transactionruntime.Database, onlineWindowMinutes ...func(
 	return devicefleetCompose.New(devicefleetCompose.Dependencies{
 		DB:                  db.Pool(),
 		Rooms:               rooms,
-		OnlineWindowMinutes: minutes,
-		APIKeys:             DeviceAPIKeys{},
-		Observe:             func(devicefleetCompose.Observation) {},
+		OnlineWindowMinutes: minutes, Now: now,
+		APIKeys: DeviceAPIKeys{},
+		Observe: func(devicefleetCompose.Observation) {},
 	})
 }
 

@@ -21,7 +21,7 @@ import (
 // which is the only provider over audit.unregistered_tag_scans.
 func newScanFleet(t *testing.T, db *bun.DB) devicefleet.Capability {
 	t.Helper()
-	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db))
+	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err, "Failed to compose the device fleet")
 	return fleet
 }

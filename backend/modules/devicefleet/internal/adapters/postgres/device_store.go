@@ -40,21 +40,14 @@ type deviceRow struct {
 }
 
 // DeviceStore reads and writes iot.devices for the Device Fleet owner.
-type DeviceStore struct {
-	database Database
-	// now is the owner's clock an update stamps updated_at with.
-	now func() time.Time
-}
+type DeviceStore struct{ database Database }
 
 // NewDeviceStore builds the device adapter over the supplied runtime.
-func NewDeviceStore(database Database, now func() time.Time) *DeviceStore {
+func NewDeviceStore(database Database) *DeviceStore {
 	if database == nil {
 		panic("devicefleet postgres: database runtime is required")
 	}
-	if now == nil {
-		panic("devicefleet postgres: the clock is required")
-	}
-	return &DeviceStore{database: database, now: now}
+	return &DeviceStore{database: database}
 }
 
 func (s *DeviceStore) selectDevices(db bun.IDB, scope TenantScope, model any) *bun.SelectQuery {
@@ -91,20 +84,18 @@ func (s *DeviceStore) Create(ctx context.Context, input devicefleet.CreateDevice
 	return toDeviceDomain(row), stats, nil
 }
 
-// Update replaces every writable column of one device.
+// Update replaces every writable column of one device. Trigger
+// update_iot_devices_updated_at stamps updated_at; RETURNING reads it back.
 func (s *DeviceStore) Update(ctx context.Context, input domain.UpdateDevice) (devicefleet.Device, domain.OperationStats, error) {
 	columns := []string{
 		"device_id", "device_type", "name", "status", "api_key_hash", "masked_api_key", "last_seen",
-		"registered_by_id", "room_id", "archived_at", "transferred_to_device_id", "updated_at",
+		"registered_by_id", "room_id", "archived_at", "transferred_to_device_id",
 	}
 	db, scope, err := s.database(ctx)
 	if err != nil {
 		return devicefleet.Device{}, domain.OperationStats{}, err
 	}
 	row := deviceRowFromUpdate(input)
-	if row.UpdatedAt.IsZero() {
-		row.UpdatedAt = s.now()
-	}
 	query := db.NewUpdate().Model(&row).
 		ModelTableExpr(deviceTableExpr).
 		Column(columns...).
@@ -481,7 +472,7 @@ func applyDeviceFilter(query *bun.SelectQuery, filter devicefleet.DeviceFilter) 
 
 func deviceRowFromUpdate(input domain.UpdateDevice) deviceRow {
 	row := deviceRow{
-		ID: input.ID, UpdatedAt: input.UpdatedAt, DeviceID: input.DeviceID, DeviceType: input.DeviceType, Name: input.Name,
+		ID: input.ID, DeviceID: input.DeviceID, DeviceType: input.DeviceType, Name: input.Name,
 		Status: string(input.Status), APIKeyHash: input.APIKeyHash, MaskedAPIKey: input.MaskedAPIKey, LastSeen: input.LastSeen,
 		RegisteredByID: input.RegisteredByID, RoomID: input.RoomID, ArchivedAt: input.ArchivedAt,
 		TransferredToDeviceID: input.TransferredToDeviceID,

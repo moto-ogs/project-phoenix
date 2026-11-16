@@ -190,7 +190,7 @@ type PresenceSuiteRepositories struct {
 // NewPresenceSuiteRepositories composes the session rows over the unobserved
 // owners of db and the given clock.
 func NewPresenceSuiteRepositories(db transactionruntime.Database, clocks ...func() time.Time) *PresenceSuiteRepositories {
-	devices, err := owners.NewDeviceFleet(db)
+	devices, err := owners.NewDeviceFleet(db, time.Now)
 	if err != nil {
 		panic(fmt.Sprintf("repository test factory: compose device fleet: %v", err))
 	}

@@ -35,6 +35,6 @@ func (c clock) Now() time.Time                      { return c.now() }
 func (c clock) Day(instant time.Time) calendar.Date { return calendar.DateFromTime(instant) }
 func NewSessionLifecycle(active studentpresence.Presence, counts OpenVisitCounts, presence devicescan.SupervisionQuery, people scanCompose.PersonDirectory, heartbeat interface {
 	Fleet() devicefleet.Capability
-}, mirror scanCompose.SessionMirror, logger *slog.Logger, principal devicescan.DevicePrincipal) devicescan.SessionLifecycle {
-	return scanCompose.NewSessionLifecycle(lifecycleStore{OpenVisitCounts: counts, active: active, presence: presence}, scanCompose.NewLifecyclePeople(people), heartbeat.Fleet(), mirror, logger, principal)
+}, mirror scanCompose.SessionMirror, logger *slog.Logger, principal devicescan.DevicePrincipal, now func() time.Time) devicescan.SessionLifecycle {
+	return scanCompose.NewSessionLifecycle(lifecycleStore{OpenVisitCounts: counts, active: active, presence: presence}, scanCompose.NewLifecyclePeople(people), heartbeat.Fleet(), mirror, logger, principal, now)
 }

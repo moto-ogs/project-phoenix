@@ -261,13 +261,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) UpdateRoomID(ctx context.Context, id, roomID int64) error {\n\tif id \u003c= 0 || roomID \u003c= 0 {\n\t\treturn s.reject(\"update_device_room\", devicefleet.ErrInvalidDevice)\n\t}\n\treturn s.updateOneColumnSet(ctx, \"update_device_room\", domain.UpdateDevice{ID: id, RoomID: \u0026roomID, UpdatedAt: s.deps.Now()}, []string{\"room_id\", \"updated_at\"})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/devicefleet/internal/application/Service.UpdateRoomID",
-      "owner": "modules/devicefleet"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *service) DetectNewDevices(ctx context.Context) ([]*devicefleet.Device, error) {\n\trows, err := s.Administration.DetectNewDevices(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn administrationToModels(rows), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/devicefleet/internal/application/deviceservice/service.DetectNewDevices",

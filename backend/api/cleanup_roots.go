@@ -83,7 +83,7 @@ func NewSessionCleanupRepositories(db transactionruntime.Database, timetableCapa
 	if timetableCapability == nil {
 		panic("session cleanup repositories: timetable capability is required")
 	}
-	fleet, err := owners.NewDeviceFleet(db)
+	fleet, err := owners.NewDeviceFleet(db, time.Now)
 	if err != nil {
 		panic(fmt.Sprintf("session cleanup repositories: compose device fleet: %v", err))
 	}

@@ -69,7 +69,7 @@ func setupTestSessionCleanup(t *testing.T) (transactionruntime.Database, organiz
 	students := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db))
 	rooms := owners.MustNewUnobservedRooms(testpkg.NewDatabase(t, db))
 	membership := owners.MustNewSchoolMembership(testpkg.NewDatabase(t, db))
-	sessionDevices, err := owners.NewDeviceFleet(testpkg.NewDatabase(t, db))
+	sessionDevices, err := owners.NewDeviceFleet(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
 	sessions := owners.NewSessionRecords(testpkg.NewDatabase(t, db), nil, sessionDevices, rooms, timetableOwner, membership, students)
 	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db, Observe: func(presenceCompose.Observation) {}})

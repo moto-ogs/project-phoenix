@@ -150,7 +150,7 @@ func newIoTResource(
 		// move (#3067).
 		OpenRooms: newDeviceOpenRoomMover(openRoomMove),
 		Settings:  newDeviceScanSettings(settings),
-		Logger:    logger.With("service", "device-scan"),
+		Logger:    logger.With("service", "device-scan"), Now: now,
 	})
 	return iotAPI.NewResource(iotAPI.ServiceDependencies{
 		Administration:   NewIoTAdministration(devicefleetCompose.NewAdministration(iot.Fleet(), now), now),
@@ -161,7 +161,7 @@ func newIoTResource(
 		Configuration:    devicescanCompose.NewConfiguration(DeviceConfiguration{Settings: settings}, DeviceScanPrincipal),
 		Rooms:            devicescanCompose.NewRoomAvailability(rooms.RoomService, DeviceScanPrincipal),
 		Directory:        devicescanCompose.NewDirectory(NewDeviceScanDirectoryPeople(users, invitations), DeviceActivityCatalog(activities), NewDeviceScanHolidayGuestSchools(nil), logger, DeviceScanPrincipal),
-		TagAssignments:   devicescanCompose.NewTagAssignments(NewDeviceScanPeople(users), logger, DeviceScanPrincipal),
+		TagAssignments:   devicescanCompose.NewTagAssignments(NewDeviceScanPeople(users), logger, DeviceScanPrincipal, now),
 		FeedbackStudents: devicescanCompose.NewFeedbackStudents(NewDeviceScanPeople(users)),
 		FeedbackService:  feedback,
 		FeedbackResponseObserver: func(status int, code string) {
@@ -170,7 +170,7 @@ func newIoTResource(
 		SchoolName:              devicescanCompose.NewSchoolName(schoolName(organizations), DeviceScanPrincipal),
 		ErrorReports:            NewIoTErrorReporter(errorReports),
 		SessionEnd:              bindIoTHostSessionEnd(BindIoTSessionEnd(sessionEnd)),
-		SessionLifecycle:        scanBindings.NewSessionLifecycle(active, presence, scanBindings.NewSupervisionQuery(presence), NewDeviceScanPeople(users), iot, NewKioskSessionMirror(timetableRepos, activities, KioskMirrorPublisher(hub, logger), logger), logger, DeviceScanPrincipal),
+		SessionLifecycle:        scanBindings.NewSessionLifecycle(active, presence, scanBindings.NewSupervisionQuery(presence), NewDeviceScanPeople(users), iot, NewKioskSessionMirror(timetableRepos, activities, KioskMirrorPublisher(hub, logger), logger), logger, DeviceScanPrincipal, now),
 		Logger:                  logger.With("handler", "iot"),
 		DeviceAuthenticator:     gateDeviceAuthentication(deviceAuth.Device()),
 		DeviceOnlyAuthenticator: gateDeviceAuthentication(deviceAuth.DeviceOnly()),

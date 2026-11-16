@@ -116,7 +116,7 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	require.NoError(t, err)
 	membership, err := owners.ComposeSchoolMembership(database, time.Now)
 	require.NoError(t, err)
-	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
+	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil, time.Now)
 	require.NoError(t, err)
 	delivery, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
 		DB: db, People: owners.EnrollmentFlowGuardianDirectory{}, Observe: func(deliveryContract.Observation) {},

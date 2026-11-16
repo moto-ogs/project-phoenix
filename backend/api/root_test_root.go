@@ -189,7 +189,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			structure = owners.BuildStructureRows(db, persons, people, peopleIdentity, rooms, membership, workTime)
 			presencePeople = owners.BuildPresencePeopleReads(db, env.Logger, persons, groups, organizations, people)
 			careRows = owners.BuildTimetableCareRows(carePlan)
-			devices, err = owners.NewDeviceFleet(db)
+			devices, err = owners.NewDeviceFleet(db, env.Now)
 			return owners.StepError("compose device fleet", err)
 		},
 		func() error {

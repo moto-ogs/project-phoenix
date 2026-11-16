@@ -36,9 +36,13 @@ musste den Fall selbst abfangen.
 2. **Die acht Owner lesen die Uhr aus ihrer Komposition.** Die Wurzel reicht
    `env.Now`/`env.Today` an die Kompositionen weiter (Organisation & Tenancy,
    Provisionierung, School Structure, School Membership, People Directory mit
-   Guardian-Service und Retention, Settings, Device-Authentifizierung,
-   IoT-Laufzeiten, Facilities-Routen, Geburtstags- und Schülerrouten,
-   Operator-Router). Pflichtabhängigkeiten scheitern beim Bau; einen
+   Guardian-Service und Retention, Settings mit Träger-Ebene,
+   Device Fleet samt Berliner Dashboard-Uhr und gerätebezogenem Fleet der
+   Provisionierung, Device-Authentifizierung, Device-Scan mit
+   Armband-Zuordnung und Sitzungssteuerung, IoT-Laufzeiten, Facilities- und
+   Gruppenrouten, Geburtstags- und Schülerrouten, Operator-Router). Wo keine
+   Wurzelumgebung erreichbar ist (CLI, Session-Cleanup, nächtliche
+   Retention), bindet die Wurzel die echte Uhr. Pflichtabhängigkeiten scheitern beim Bau; einen
    Nil-Default auf die echte Uhr haben nur Kompositionen, die Tests heute
    ohne Uhr bauen, und er liegt in der Komposition oder im Konstruktor.
 3. **Signaturen, die einen Tag tragen.** Wo ein Port den Tag nicht kannte,
@@ -51,7 +55,14 @@ musste den Fall selbst abfangen.
    Importe und die Nil-Defaults: Device Fleet +6, Organisation & Tenancy +10,
    People Directory +6, School Membership +5, School Structure +8,
    Settings +3, Summe 13.540 auf 13.578.
-5. Die 59 Effekt-Bindungen, deren Körper oder Aufrufspur sich nur durch ihre
+5. **Eine Uhr je Entscheidung.** Wo die Datenbank `updated_at` per Trigger
+   (`update_modified_column()`) setzt, schreibt der Owner die Spalte beim
+   UPDATE nicht aus Go, sondern liest den gespeicherten Wert zurück; INSERTs
+   und Spalten ohne Trigger stempeln mit der Uhr der Komposition. In diesem
+   Schnitt betrifft das `iot.devices`. Eine Markierung, die eine Frist
+   startet, und die Frist selbst kommen aus demselben Zeitpunkt
+   (`childless_since` der Guardian-Retention).
+6. Die 59 Effekt-Bindungen, deren Körper oder Aufrufspur sich nur durch ihre
    Uhr geändert haben, sind mit dieser ADR neu bestätigt, die 14 Ausnahmen
    darunter per `approval_adr`. Effekt und Einstufung bleiben gleich.
 
@@ -66,5 +77,6 @@ musste den Fall selbst abfangen.
   Mitarbeiter-Offboarding (sechs Funde), weil Workforce, Timetable und die
   Wurzelbindung des Offboarding-Workflows ihren Tag selbst lesen.
 - People Directorys Rosters und Guardian-Retention leiten nicht mehr nur
-  weiter; das Pass-through-Budget sinkt um 2.
+  weiter, Device Fleets Raumwechsel stempelt `updated_at` nicht mehr; das
+  Pass-through-Budget sinkt um 3 (1.400 auf 1.397).
 - Die übrigen Owner folgen in eigenen Pull Requests nach #7104.

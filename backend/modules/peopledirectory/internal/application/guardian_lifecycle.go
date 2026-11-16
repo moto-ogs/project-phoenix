@@ -54,17 +54,18 @@ func (s *GuardianLifecycle) DeleteGuardianProfile(ctx context.Context, guardianI
 // without a child since before cutoff (#4043), except those openInvitations
 // still names: an invitation in flight would otherwise lose its contact. It
 // runs in a savepoint of the nightly cleanup's tenant transaction and never
-// opens its own, so the deletion commits with its deletion-log entry.
-func (s *GuardianLifecycle) DeleteChildlessGuardiansBefore(ctx context.Context, cutoff time.Time, openInvitations peopledirectory.OpenGuardianInvitations) (deleted int, err error) {
-	if cutoff.IsZero() || openInvitations == nil {
-		return 0, errors.New("people directory: a cutoff and the invitation check are required to delete childless guardians")
+// opens its own, so the deletion commits with its deletion-log entry. A
+// profile first seen without a child is marked childless since now.
+func (s *GuardianLifecycle) DeleteChildlessGuardiansBefore(ctx context.Context, now, cutoff time.Time, openInvitations peopledirectory.OpenGuardianInvitations) (deleted int, err error) {
+	if now.IsZero() || cutoff.IsZero() || openInvitations == nil {
+		return 0, errors.New("people directory: the run's instant, a cutoff and the invitation check are required to delete childless guardians")
 	}
 	g := s.guardians
 	if g.tx.TenantID(ctx) <= 0 {
 		return 0, domain.ErrTenantRequired
 	}
 	err = observeRun(ctx, g.observe, "delete_childless_guardians", g.tx.RunSavepoint, func(txCtx context.Context, stats *domain.OperationStats) error {
-		deleted, err = s.deleteChildlessGuardians(txCtx, cutoff, openInvitations, stats)
+		deleted, err = s.deleteChildlessGuardians(txCtx, now, cutoff, openInvitations, stats)
 		return err
 	})
 	if err != nil {
@@ -74,9 +75,9 @@ func (s *GuardianLifecycle) DeleteChildlessGuardiansBefore(ctx context.Context, 
 }
 
 // deleteChildlessGuardians marks, locks and deletes inside the savepoint.
-func (s *GuardianLifecycle) deleteChildlessGuardians(ctx context.Context, cutoff time.Time, openInvitations peopledirectory.OpenGuardianInvitations, stats *domain.OperationStats) (int, error) {
+func (s *GuardianLifecycle) deleteChildlessGuardians(ctx context.Context, now, cutoff time.Time, openInvitations peopledirectory.OpenGuardianInvitations, stats *domain.OperationStats) (int, error) {
 	store := s.guardians.store
-	markStats, err := store.MarkChildlessGuardians(ctx)
+	markStats, err := store.MarkChildlessGuardians(ctx, now)
 	stats.Add(markStats)
 	if err != nil {
 		return 0, err

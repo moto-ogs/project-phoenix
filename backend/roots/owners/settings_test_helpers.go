@@ -49,7 +49,7 @@ func NewSettingsTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return SettingsTestModule{}, err
 	}
-	traeger, err := BuildTraegerSettings(db, unit, slog.Default(), organizations, nil)
+	traeger, err := BuildTraegerSettings(db, unit, slog.Default(), organizations, nil, time.Now)
 	if err != nil {
 		return SettingsTestModule{}, err
 	}
