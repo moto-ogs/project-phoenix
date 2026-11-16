@@ -408,6 +408,12 @@ async function renderPage() {
   return result;
 }
 
+// The Bundesland has no default (#7174): every new school names it.
+function chooseFederalState() {
+  fireEvent.click(screen.getByLabelText(/^Bundesland/));
+  fireEvent.click(screen.getByRole("option", { name: "Nordrhein-Westfalen" }));
+}
+
 describe("OperatorOrganizationDetailPage", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -626,6 +632,8 @@ describe("OperatorOrganizationDetailPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     await waitFor(() => {
@@ -661,6 +669,8 @@ describe("OperatorOrganizationDetailPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     await waitFor(() => {
@@ -698,6 +708,7 @@ describe("OperatorOrganizationDetailPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     expect(
@@ -726,6 +737,7 @@ describe("OperatorOrganizationDetailPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     await waitFor(() => {
@@ -1699,6 +1711,7 @@ describe("OperatorOrganizationDetailPage", () => {
       fireEvent.change(screen.getByLabelText(/E-Mail/), {
         target: { value: "info@new-school.example" },
       });
+      chooseFederalState();
       fireEvent.click(screen.getByText("Erstellen"));
 
       expect(

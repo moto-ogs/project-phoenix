@@ -62,11 +62,21 @@ func (p *Provisioning) createSchool(adminCtx context.Context, school organizatio
 	if err := p.createWebManualDevice(adminCtx, created.ID); err != nil {
 		return nil, err
 	}
+	// Settings records the state in this unit (#7174): the school exists
+	// with its federal state or not at all.
+	recorded, err := p.settings.RecordFederalState(adminCtx, created.ID, school.FederalState)
+	if err != nil {
+		return nil, fmt.Errorf("record federal state of school %d: %w", created.ID, err)
+	}
+	if !recorded {
+		return nil, &organizationtenancy.InvalidProvisioningDataError{Err: &organizationtenancy.InvalidSchoolError{Reason: "federal state is not supported"}}
+	}
 	if err := p.recordAction(adminCtx, operatorID, domain.AuditActionCreate, domain.AuditResourceSchool, &created.ID, clientIP, map[string]any{
 		"name":           created.Name,
 		"slug":           created.Slug,
 		"subdomain":      created.Subdomain,
 		"organizationID": created.OrganizationID,
+		"federalState":   school.FederalState,
 	}); err != nil {
 		return nil, err
 	}

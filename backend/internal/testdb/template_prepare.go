@@ -36,6 +36,10 @@ var templateBootstrapStatements = []string{
 		ON CONFLICT (id) DO UPDATE
 		SET organization_id = EXCLUDED.organization_id, name = EXCLUDED.name,
 			slug = EXCLUDED.slug, subdomain = EXCLUDED.subdomain, active = EXCLUDED.active`,
+	// Every school has a federal state; the setting has no default (#7174).
+	`INSERT INTO config.setting_values (tenant_id, setting_key, value)
+		VALUES (1, 'operations.federal_state', '"DE-NW"')
+		ON CONFLICT (tenant_id, setting_key) DO NOTHING`,
 	// Lift both tenant sequences clear of the test-tenant band before the
 	// first test runs. Two things depend on it: a service-path school
 	// (platform.CreateSchool) can never collide with an ID CreateTestTenant

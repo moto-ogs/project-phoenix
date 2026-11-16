@@ -118,6 +118,6 @@ func NewHolidayClosureEvents() *postgres.HolidayClosureEventStore {
 }
 
 // NewHolidayClosureCalendar composes revision-guarded no-care days over the narrow read channel.
-func NewHolidayClosureCalendar(holidays ports.HolidayClosureHolidays, defaultRegion string) schoolcalendar.HolidayClosureCareCalendar {
-	return application.NewHolidayClosureCalendar(NewHolidayClosureEvents(), holidays, defaultRegion)
+func NewHolidayClosureCalendar(holidays ports.HolidayClosureHolidays) schoolcalendar.HolidayClosureCareCalendar {
+	return application.NewHolidayClosureCalendar(NewHolidayClosureEvents(), holidays)
 }

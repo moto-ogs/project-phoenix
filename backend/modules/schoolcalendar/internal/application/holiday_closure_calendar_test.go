@@ -38,16 +38,16 @@ func TestHolidayClosureCalendarOwnsRevisionAndRegionGuards(t *testing.T) {
 	organization := testpkg.UniqueTestTenantID(t)
 	from, to := calendar.NewDate(2030, 7, 8), calendar.NewDate(2030, 7, 9)
 	for _, tc := range []struct {
-		name, region, fallback string
-		present                bool
-		revision               int64
-		want                   error
+		name, region string
+		present      bool
+		revision     int64
+		want         error
 	}{
-		{name: "foreign school", fallback: "DE-NW", revision: 4, want: schoolcalendar.ErrHolidayClosureNoticeNotFound},
+		{name: "foreign school", revision: 4, want: schoolcalendar.ErrHolidayClosureNoticeNotFound},
 		{name: "changed revision", present: true, region: "DE-NW", revision: 3, want: schoolcalendar.ErrHolidayClosureCalendarChanged},
-		{name: "unknown state", present: true, region: "unknown", fallback: "DE-NW", revision: 4, want: schoolcalendar.ErrFederalStateUnavailable},
-		{name: "missing default", present: true, revision: 4, want: schoolcalendar.ErrFederalStateUnavailable},
-		{name: "registry default", present: true, fallback: "DE-NW", revision: 4},
+		{name: "unknown state", present: true, region: "unknown", revision: 4, want: schoolcalendar.ErrFederalStateUnavailable},
+		// No default state (#7174): a school without one fails visibly.
+		{name: "missing state", present: true, revision: 4, want: schoolcalendar.ErrFederalStateUnavailable},
 		{name: "stored state", present: true, region: "DE-SN", revision: 4},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -56,7 +56,7 @@ func TestHolidayClosureCalendarOwnsRevisionAndRegionGuards(t *testing.T) {
 				reads.schools[school] = schoolcalendar.HolidayClosureCalendar{SchoolID: school, FederalState: tc.region, Revision: tc.revision}
 			}
 			holidays := &closureCalendarHolidays{}
-			query := NewHolidayClosureCalendar(reads, holidays, tc.fallback)
+			query := NewHolidayClosureCalendar(reads, holidays)
 			_, err := query.HolidayClosureNoCareDays(t.Context(), organization, []int64{school}, from, to, map[int64]int64{school: 4})
 			if tc.want != nil {
 				require.ErrorIs(t, err, tc.want)
@@ -75,14 +75,14 @@ func TestHolidayClosureCalendarMergesSourcesWithinTheRequestedDates(t *testing.T
 	source, traegerSource := testpkg.UniqueTestTenantID(t), testpkg.UniqueTestTenantID(t)
 	from, to := calendar.NewDate(2030, 7, 8), calendar.NewDate(2030, 7, 9)
 	reads := &closureCalendarReads{schools: map[int64]schoolcalendar.HolidayClosureCalendar{
-		school: {SchoolID: school, Revision: 4, ClosingDays: []schoolcalendar.HolidayClosureCalendarDay{
+		school: {SchoolID: school, FederalState: "DE-NW", Revision: 4, ClosingDays: []schoolcalendar.HolidayClosureCalendarDay{
 			{SourceID: source, StartsOn: from.AddDays(-1), EndsOn: to.AddDays(1), Reason: "School closure"},
 			{SourceID: traegerSource, Traeger: true, StartsOn: from, EndsOn: from, Reason: "Office closure"},
 		}},
 		other: {SchoolID: other, FederalState: "DE-NW"},
 	}}
 	holidays := &closureCalendarHolidays{calendarDaysEngine: calendarDaysEngine{holidays: []schoolcalendar.Holiday{{Date: from.String(), Name: "Holiday"}}}}
-	result, err := NewHolidayClosureCalendar(reads, holidays, "DE-NW").HolidayClosureNoCareDays(t.Context(), organization, []int64{school, other}, from, to, map[int64]int64{school: 4})
+	result, err := NewHolidayClosureCalendar(reads, holidays).HolidayClosureNoCareDays(t.Context(), organization, []int64{school, other}, from, to, map[int64]int64{school: 4})
 	require.NoError(t, err)
 	require.Len(t, result[school], 2)
 	assert.Equal(t, from, result[school][0].Date)

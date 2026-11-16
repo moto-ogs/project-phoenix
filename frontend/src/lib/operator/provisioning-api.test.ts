@@ -170,6 +170,7 @@ describe("OperatorProvisioningService", () => {
         slug: "test-traeger",
         school_count: 1,
         contact_email: "buero@traeger.example",
+        federal_state: "DE-NI",
       };
 
       const result = await operatorProvisioningService.createTestTraeger(order);
@@ -324,6 +325,7 @@ describe("OperatorProvisioningService", () => {
         slug: "ggs-europa",
         subdomain: "ggs-europa",
         email: "info@ggs-europa.example",
+        federal_state: "DE-NW",
       });
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
@@ -336,6 +338,7 @@ describe("OperatorProvisioningService", () => {
             slug: "ggs-europa",
             subdomain: "ggs-europa",
             email: "info@ggs-europa.example",
+            federal_state: "DE-NW",
           },
         },
       );
