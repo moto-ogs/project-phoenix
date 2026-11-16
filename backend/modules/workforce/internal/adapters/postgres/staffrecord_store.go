@@ -42,8 +42,8 @@ type staffMasterDataRow struct {
 	ContractEndDate       *calendarDate `bun:"contract_end_date,type:date"`
 	ProbationEndDate      *calendarDate `bun:"probation_end_date,type:date"`
 	WeeklyHours           *float64      `bun:"weekly_hours"`
-	CreatedAt             time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt             time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt             time.Time     `bun:"created_at,nullzero,notnull"`
+	UpdatedAt             time.Time     `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffQualificationRow struct {
@@ -60,8 +60,8 @@ type staffQualificationRow struct {
 	LeadRemindedFor   *calendarDate `bun:"lead_reminded_for,type:date"`
 	ExpiryRemindedFor *calendarDate `bun:"expiry_reminded_for,type:date"`
 	DeletedAt         *time.Time    `bun:"deleted_at"`
-	CreatedAt         time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time     `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time     `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffFinancialDataRow struct {
@@ -73,8 +73,8 @@ type staffFinancialDataRow struct {
 	IBANMasked                 *string   `bun:"iban_masked"`
 	TaxIDSealed                []byte    `bun:"tax_id_sealed"`
 	SocialSecurityNumberSealed []byte    `bun:"social_security_number_sealed"`
-	CreatedAt                  time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt                  time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt                  time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt                  time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffDocumentRow struct {
@@ -91,8 +91,8 @@ type staffDocumentRow struct {
 	DeletedAt       *time.Time `bun:"deleted_at"`
 	DeletedBy       *int64     `bun:"deleted_by"`
 	FileDeletedAt   *time.Time `bun:"file_deleted_at"`
-	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffDocumentFileCleanupRow struct {
@@ -103,8 +103,8 @@ type staffDocumentFileCleanupRow struct {
 	FilenameStored string     `bun:"filename_stored,notnull"`
 	RetryAfter     time.Time  `bun:"retry_after,notnull"`
 	CleanedAt      *time.Time `bun:"cleaned_at"`
-	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 // --- master data ---

@@ -26,8 +26,8 @@ type groupSubstitutionRow struct {
 	StartDate         calendarDate `bun:"start_date,notnull,type:date"`
 	EndDate           calendarDate `bun:"end_date,notnull,type:date"`
 	Reason            string       `bun:"reason"`
-	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull"`
 }
 
 func (s *Store) FindGroupSubstitution(ctx context.Context, id int64, lock bool) (domain.GroupSubstitution, bool, domain.OperationStats, error) {

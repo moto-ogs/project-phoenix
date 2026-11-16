@@ -35,7 +35,7 @@ type careRunLettersRow struct {
 	PaymentDueOn       calendar.Date `bun:"payment_due_on,type:date"`
 	Notes              string        `bun:"notes"`
 	CreatedByAccountID *int64        `bun:"created_by_account_id"`
-	CreatedAt          time.Time     `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt          time.Time     `bun:"created_at,nullzero"`
 }
 
 func (r careRunLettersRow) set() parentbilling.CareLetterSet {
@@ -54,7 +54,7 @@ type careLetterRow struct {
 	PDF            []byte    `bun:"pdf"`
 	SHA256         string    `bun:"sha256,scanonly"`
 	Printed        bool      `bun:"printed,scanonly"`
-	CreatedAt      time.Time `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt      time.Time `bun:"created_at,nullzero"`
 }
 
 type careLetterMailingRow struct {
@@ -67,7 +67,7 @@ type careLetterMailingRow struct {
 	DeliveryID           int64     `bun:"delivery_id"`
 	RecipientEmail       string    `bun:"recipient_email"`
 	RequestedByAccountID *int64    `bun:"requested_by_account_id"`
-	CreatedAt            time.Time `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt            time.Time `bun:"created_at,nullzero"`
 }
 
 func (r careLetterMailingRow) send() parentbilling.CareLetterSend {

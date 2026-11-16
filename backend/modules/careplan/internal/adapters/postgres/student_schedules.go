@@ -14,8 +14,8 @@ type arrivalScheduleRow struct {
 	bun.BaseModel   `bun:"table:student_arrival_schedules,alias:student_arrival_schedule"`
 	ID              int64     `bun:"id,pk,autoincrement"`
 	TenantID        int64     `bun:"tenant_id,notnull"`
-	CreatedAt       time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time `bun:"updated_at,nullzero,notnull"`
 	StudentID       int64     `bun:"student_id,notnull"`
 	Weekday         int       `bun:"weekday,notnull"`
 	ExpectedArrival time.Time `bun:"expected_arrival,nullzero"`
@@ -27,8 +27,8 @@ type arrivalExceptionRow struct {
 	bun.BaseModel     `bun:"table:student_arrival_exceptions,alias:student_arrival_exception"`
 	ID                int64        `bun:"id,pk,autoincrement"`
 	TenantID          int64        `bun:"tenant_id,notnull"`
-	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull"`
 	StudentID         int64        `bun:"student_id,notnull"`
 	ExceptionDate     calendarDate `bun:"exception_date,notnull,type:date"`
 	ExpectedArrival   *time.Time   `bun:"expected_arrival"`
@@ -42,8 +42,8 @@ type arrivalNoteRow struct {
 	bun.BaseModel `bun:"table:student_arrival_notes,alias:student_arrival_note"`
 	ID            int64        `bun:"id,pk,autoincrement"`
 	TenantID      int64        `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull"`
 	StudentID     int64        `bun:"student_id,notnull"`
 	NoteDate      calendarDate `bun:"note_date,notnull,type:date"`
 	Content       string       `bun:"content,notnull"`
@@ -54,8 +54,8 @@ type pickupScheduleRow struct {
 	bun.BaseModel  `bun:"table:student_pickup_schedules,alias:student_pickup_schedule"`
 	ID             int64     `bun:"id,pk,autoincrement"`
 	TenantID       int64     `bun:"tenant_id,notnull"`
-	CreatedAt      time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time `bun:"updated_at,nullzero,notnull"`
 	StudentID      int64     `bun:"student_id,notnull"`
 	Weekday        int       `bun:"weekday,notnull"`
 	PickupTime     time.Time `bun:"pickup_time,notnull"`
@@ -69,8 +69,8 @@ type pickupExceptionRow struct {
 	bun.BaseModel         `bun:"table:student_pickup_exceptions,alias:student_pickup_exception"`
 	ID                    int64        `bun:"id,pk,autoincrement"`
 	TenantID              int64        `bun:"tenant_id,notnull"`
-	CreatedAt             time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt             time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt             time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt             time.Time    `bun:"updated_at,nullzero,notnull"`
 	StudentID             int64        `bun:"student_id,notnull"`
 	ExceptionDate         calendarDate `bun:"exception_date,notnull,type:date"`
 	PickupTime            *time.Time   `bun:"pickup_time"`

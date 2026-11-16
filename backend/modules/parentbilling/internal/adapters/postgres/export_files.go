@@ -74,7 +74,7 @@ type exportMappingRow struct {
 	Format             string          `bun:"format,pk"`
 	Settings           json.RawMessage `bun:"settings,type:jsonb"`
 	UpdatedByAccountID *int64          `bun:"updated_by_account_id"`
-	UpdatedAt          time.Time       `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt          time.Time       `bun:"updated_at,nullzero"`
 }
 
 // ExportMapping reads the stored mapping of a format, nil without one.
@@ -138,7 +138,7 @@ type exportFileRow struct {
 	TotalCents           int64      `bun:"total_cents"`
 	Reference            *string    `bun:"reference"`
 	ExportedByAccountID  *int64     `bun:"exported_by_account_id"`
-	ExportedAt           time.Time  `bun:"exported_at,nullzero,default:current_timestamp"`
+	ExportedAt           time.Time  `bun:"exported_at,nullzero"`
 	SubmittedAt          *time.Time `bun:"submitted_at"`
 	SubmittedByAccountID *int64     `bun:"submitted_by_account_id"`
 	DatevAll             bool       `bun:"datev_all"`

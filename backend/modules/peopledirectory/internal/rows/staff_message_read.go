@@ -12,7 +12,7 @@ type StaffMessageParticipant struct {
 	TenantModel `bun:"table:users.staff_message_participants,alias:smp"`
 	ThreadID    int64     `bun:"thread_id,pk" json:"thread_id"`
 	AccountID   int64     `bun:"account_id,pk" json:"account_id"`
-	CreatedAt   time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	CreatedAt   time.Time `bun:"created_at,nullzero,notnull" json:"created_at"`
 }
 
 // StaffMessageRead is one reader's cursor in one conversation. Unread is every

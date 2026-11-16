@@ -20,8 +20,8 @@ type Store struct{ database Database }
 type organizationRow struct {
 	bun.BaseModel `bun:"table:organizations,alias:organization"`
 	ID            int64      `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull"`
 	Name          string     `bun:"name,notnull"`
 	Slug          string     `bun:"slug,notnull"`
 	Active        bool       `bun:"active,notnull"`

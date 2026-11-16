@@ -25,7 +25,7 @@ type serviceTermsRow struct {
 	DueDays            int       `bun:"due_days" json:"due_days"`
 	BundleWith         *string   `bun:"bundle_with" json:"bundle_with"`
 	UpdatedByAccountID *int64    `bun:"updated_by_account_id" json:"-"`
-	UpdatedAt          time.Time `bun:"updated_at,nullzero,default:current_timestamp" json:"updated_at"`
+	UpdatedAt          time.Time `bun:"updated_at,nullzero" json:"updated_at"`
 }
 
 func (r serviceTermsRow) terms() parentbilling.ServiceTerms {
@@ -68,7 +68,7 @@ type familyBillingRow struct {
 	// registration used, which goes with it by cascade (#6692).
 	CascadeContractID  *int64    `bun:"cascade_contract_id,scanonly" json:"-"`
 	UpdatedByAccountID *int64    `bun:"updated_by_account_id" json:"-"`
-	UpdatedAt          time.Time `bun:"updated_at,nullzero,default:current_timestamp" json:"updated_at"`
+	UpdatedAt          time.Time `bun:"updated_at,nullzero" json:"updated_at"`
 }
 
 func (r familyBillingRow) family() parentbilling.FamilyBilling {

@@ -40,8 +40,8 @@ type accountSessionRow struct {
 	RotatedAt            *time.Time `bun:"rotated_at"`
 	ReplacementTokenHash *string    `bun:"replacement_token"`
 	RecoveryProofHash    []byte     `bun:"recovery_proof_hash"`
-	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt            time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt            time.Time  `bun:"updated_at,nullzero,notnull"`
 	// OutsideAccessWindow is no column: only the family lookup selects it
 	// (ADR 0251), every other read leaves it false.
 	OutsideAccessWindow bool `bun:"outside_access_window,scanonly"`

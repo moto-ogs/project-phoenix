@@ -14,8 +14,8 @@ type conflictAckRow struct {
 	bun.BaseModel `bun:"table:timetable_conflict_acks,alias:conflict_ack"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	AccountID     int64     `bun:"account_id,notnull"`
 	Fingerprint   string    `bun:"fingerprint,notnull"`
 }

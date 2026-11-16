@@ -43,8 +43,8 @@ type guardianInvitationRow struct {
 	// Email is the address the link in the token column was issued for
 	// (#6294); it changes only together with the token.
 	Email     string    `bun:"email,nullzero"`
-	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 // LockGuardianAccountEmail closes the missing-row gap before the account lookup.

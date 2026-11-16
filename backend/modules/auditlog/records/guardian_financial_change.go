@@ -33,7 +33,7 @@ type GuardianFinancialChange struct {
 	OldValue          string    `bun:"old_value,notnull" json:"old_value"`
 	NewValue          string    `bun:"new_value,notnull" json:"new_value"`
 	Note              string    `bun:"note,notnull" json:"note"`
-	OccurredAt        time.Time `bun:"occurred_at,nullzero,notnull,default:now()" json:"occurred_at"`
+	OccurredAt        time.Time `bun:"occurred_at,nullzero,notnull" json:"occurred_at"`
 }
 
 // Validate rejects rows that would make the trail unreadable or untraceable.

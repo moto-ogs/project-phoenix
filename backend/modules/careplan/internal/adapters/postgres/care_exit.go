@@ -13,8 +13,8 @@ type careExitRow struct {
 	bun.BaseModel          `bun:"table:users.student_care_exits,alias:care_exit"`
 	ID                     int64         `bun:"id,pk,autoincrement"`
 	TenantID               int64         `bun:"tenant_id,notnull"`
-	CreatedAt              time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt              time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt              time.Time     `bun:"created_at,nullzero,notnull"`
+	UpdatedAt              time.Time     `bun:"updated_at,nullzero,notnull"`
 	StudentID              int64         `bun:"student_id,notnull"`
 	PreviousEnrolledUntil  *calendarDate `bun:"previous_enrolled_until,type:date"`
 	Reason                 string        `bun:"reason,notnull"`

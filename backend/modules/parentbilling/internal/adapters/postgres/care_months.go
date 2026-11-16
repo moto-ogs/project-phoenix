@@ -48,7 +48,7 @@ type careTariffRow struct {
 	SiblingCents       *int64        `bun:"sibling_cents"`
 	MealExtra          bool          `bun:"meal_extra"`
 	CreatedByAccountID *int64        `bun:"created_by_account_id"`
-	CreatedAt          time.Time     `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt          time.Time     `bun:"created_at,nullzero"`
 }
 
 type careRunRow struct {
@@ -58,7 +58,7 @@ type careRunRow struct {
 	OrganizationID     int64          `bun:"organization_id"`
 	BillingMonth       calendar.Date  `bun:"billing_month,type:date"`
 	Status             string         `bun:"status"`
-	CreatedAt          time.Time      `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt          time.Time      `bun:"created_at,nullzero"`
 	CreatedByAccountID *int64         `bun:"created_by_account_id"`
 	ReleasedAt         *time.Time     `bun:"released_at"`
 	IssuedOn           *calendar.Date `bun:"issued_on,type:date"`

@@ -26,7 +26,7 @@ type careNoticeLetterRow struct {
 	Filename       string    `bun:"filename"`
 	PDF            []byte    `bun:"pdf"`
 	SHA256         string    `bun:"sha256,scanonly"`
-	CreatedAt      time.Time `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt      time.Time `bun:"created_at,nullzero"`
 }
 
 func (r careNoticeLetterRow) record(withFile bool) parentbilling.CareNoticeLetterRecord {
@@ -47,7 +47,7 @@ type careNoticeLetterMailingRow struct {
 	DeliveryID           int64     `bun:"delivery_id"`
 	RecipientEmail       string    `bun:"recipient_email"`
 	RequestedByAccountID *int64    `bun:"requested_by_account_id"`
-	CreatedAt            time.Time `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt            time.Time `bun:"created_at,nullzero"`
 }
 
 func (r careNoticeLetterMailingRow) send() parentbilling.CareNoticeLetterSend {

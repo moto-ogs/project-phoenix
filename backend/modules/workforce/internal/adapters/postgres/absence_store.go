@@ -50,8 +50,8 @@ type staffAbsenceRow struct {
 	DecisionNote      string       `bun:"decision_note"`
 	RequestedAt       time.Time    `bun:"requested_at,notnull,default:current_timestamp"`
 	SubstituteStaffID *int64       `bun:"substitute_staff_id"`
-	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffAbsenceTypeRow struct {
@@ -71,8 +71,8 @@ type staffAbsenceTypeRow struct {
 	// WageTypeID is written by the payroll rules (#4807) only; the absence
 	// type writes leave it out of their column lists.
 	WageTypeID *int64    `bun:"wage_type_id"`
-	CreatedAt  time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt  time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt  time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt  time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffAbsenceAuditRow struct {
@@ -84,7 +84,7 @@ type staffAbsenceAuditRow struct {
 	ToStatus      string    `bun:"to_status,notnull"`
 	ActorID       int64     `bun:"actor_id,notnull"`
 	Note          string    `bun:"note"`
-	ChangedAt     time.Time `bun:"changed_at,nullzero,notnull,default:current_timestamp"`
+	ChangedAt     time.Time `bun:"changed_at,nullzero,notnull"`
 	// The type columns are only set on a rebooking (#3258).
 	FromAbsenceType   *string `bun:"from_absence_type"`
 	ToAbsenceType     *string `bun:"to_absence_type"`

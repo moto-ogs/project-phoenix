@@ -22,8 +22,8 @@ const tableExprWithdrawalCompletions = `users.care_withdrawal_completions AS "ca
 type withdrawalCompletionRow struct {
 	bun.BaseModel           `bun:"table:users.care_withdrawal_completions,alias:care_withdrawal_completion"`
 	ID                      int64                             `bun:"id,pk,autoincrement"`
-	CreatedAt               time.Time                         `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt               time.Time                         `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt               time.Time                         `bun:"created_at,nullzero,notnull"`
+	UpdatedAt               time.Time                         `bun:"updated_at,nullzero,notnull"`
 	TenantID                int64                             `bun:"tenant_id,notnull"`
 	StudentID               *int64                            `bun:"student_id"`
 	FirstBookinglessDay     calendarDate                      `bun:"first_bookingless_day,type:date,notnull"`

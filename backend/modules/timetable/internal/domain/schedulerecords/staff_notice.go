@@ -172,7 +172,7 @@ type StaffNoticeAck struct {
 	TenantModel    `bun:"table:users.staff_notice_acks,alias:sna"`
 	NoticeID       int64     `bun:"notice_id,pk" json:"notice_id"`
 	AccountID      int64     `bun:"account_id,pk" json:"account_id"`
-	AcknowledgedAt time.Time `bun:"acknowledged_at,nullzero,notnull,default:current_timestamp" json:"acknowledged_at"`
+	AcknowledgedAt time.Time `bun:"acknowledged_at,nullzero,notnull" json:"acknowledged_at"`
 }
 
 // StaffNoticeView ist die Sicht einer Person auf einen Hinweis: der Hinweis
