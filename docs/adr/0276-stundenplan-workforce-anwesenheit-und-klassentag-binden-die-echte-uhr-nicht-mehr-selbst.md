@@ -56,9 +56,13 @@ echte Uhr für offene Sitzungen).
    `WeekProtocolDayLog(env.Now)` für den Worker, die Abwesenheitsmeldungen
    und Klassenfahrten des Klassentags und der Student-Presence-Owner in den
    Wurzeln von Care Plan, Elternanträgen, Reminders, Timetable-Repositories
-   und Server.
-   Wo keine Umgebung erreichbar ist (CLI-Cleanup, Mitarbeiter-Laufzeit,
-   geplante Austritte, Personen-Lesepfade), bindet die Wurzel `time.Now`.
+   und Server. Die Mitarbeiter-Laufzeit der Route, die geplanten Austritte
+   des Workers (`PlannedStaffExitsJob`, samt `DueExitDependencies.Now` und
+   der Uhr des Austrittsplaners), die Personen-Lesepfade
+   (`BuildPresencePeopleReads`) und das Seed-Tagesprotokoll erhalten
+   `env.Now` ebenfalls. `time.Now` bindet nur noch das CLI-Cleanup
+   (`cmd/cleanup_roots.go`), das keine Umgebung hat; es reicht die Uhr an
+   `NewSessionCleanupRepositories` weiter.
 4. **Das Mitarbeiter-Offboarding liest die Uhr der Wurzel.**
    `staffoffboarding/compose.Dependencies` erhält `Now`;
    `NewStaffOffboardingOwners` reicht sie an School Membership, Student
@@ -70,7 +74,10 @@ echte Uhr für offene Sitzungen).
    Timetable-Graphen auf ihren festen Tag. Die Zeiterfassungs- und
    Anwesenheits-Einheitentests laufen auf festen Tagen; die
    Statustag-Ressource der Schüler-Testwurzel liest dieselbe Uhr wie die
-   übrigen Ressourcen.
+   übrigen Ressourcen. Student Presence misst „zuletzt gestartet“ im
+   Dashboard, die Inaktivität einer Timeout-Anfrage und die Dauer einer
+   laufenden Sitzung an der Uhr, die Start und letzte Aktivität gestempelt
+   hat, statt mit `time.Since`.
 6. **`updated_at` und Trigger.** In Workforce setzt kein UPDATE `updated_at`
    aus Go auf einer Tabelle mit `update_modified_column()`: Die drei
    Go-gestempelten UPDATEs treffen `users.staff_offboarding_cleanup`,

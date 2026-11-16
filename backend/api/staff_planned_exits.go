@@ -37,13 +37,14 @@ import (
 // the offboarding workflow the DELETE route uses, so a planned exit runs the
 // same owners in the same order. The Worker has no request principal: the
 // planner acts in the name of the person who planned the exit, and the
-// request authorization of the workflow refuses everything else.
-func PlannedStaffExitsJob(db transactionruntime.Database, hub *realtime.Hub, logger *slog.Logger) owners.PlannedStaffExitsBuilder {
+// request authorization of the workflow refuses everything else. now is the
+// root's clock: it decides which exits are due and where they take effect.
+func PlannedStaffExitsJob(db transactionruntime.Database, hub *realtime.Hub, logger *slog.Logger, now func() time.Time) owners.PlannedStaffExitsBuilder {
 	return func(identity identityaccess.Owner, notifications owners.DeliveryNotifications, staff owners.StaffPermissionHolders) schedulerPorts.PlannedStaffExits {
 		if identity == nil || notifications.Notifier == nil || notifications.Preferences == nil || staff == nil {
 			panic("planned staff exits: identity, notifications and staff are required")
 		}
-		offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()), owners.MembershipStaffEmployment(workforceCompose.MustNewStaffEmployment(db.Pool())), logger, time.Now)
+		offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()), owners.MembershipStaffEmployment(workforceCompose.MustNewStaffEmployment(db.Pool())), logger, now)
 		if err != nil {
 			panic(err)
 		}
@@ -59,7 +60,7 @@ func PlannedStaffExitsJob(db transactionruntime.Database, hub *realtime.Hub, log
 		})
 		due, err := staffoffboarding.NewDueExits(newStaffExitPlanner(workflow, offboarding), staffoffboarding.DueExitDependencies{
 			Notify: staffExitNotifier(notifications, staff, logger), Within: PlannedExitTransaction, BoundLockWaits: BoundPlannedExitLockWaits(plannedExitLockWait),
-			Isolate: isolatePlannedExit, Now: time.Now, Logger: logger,
+			Isolate: isolatePlannedExit, Now: now, Logger: logger,
 		})
 		if err != nil {
 			panic(err)

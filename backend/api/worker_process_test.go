@@ -154,7 +154,7 @@ func TestStandaloneWorkerComposesItsJobsWithoutTheAPIRouter(t *testing.T) {
 	worker, err := owners.ComposeWorker(db, env, hub, newRuntimeTracer(logger), tracker,
 		func() (owners.TokenAdapter, error) { return newLegacyTokenAdapter(env.Now) }, CommunicationSession{}, TimetableRequestSession{}, AttendancePrincipal,
 		deviceauth.WithAttendanceStaff, studentDocumentPermissions(),
-		workerAnalytics, analyticsSchoolNames, PlannedStaffExitsJob(db, hub, logger), WeekProtocolDayLog(env.Now), CareContractConclusionJob(logger, nil))
+		workerAnalytics, analyticsSchoolNames, PlannedStaffExitsJob(db, hub, logger, env.Now), WeekProtocolDayLog(env.Now), CareContractConclusionJob(logger, nil))
 	require.NoError(t, err)
 	require.NotNil(t, worker)
 	handler := workerProbeHandler(worker.Ready, "metrics-token")

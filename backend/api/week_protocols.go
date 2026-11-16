@@ -88,15 +88,18 @@ func WeekProtocolDayLog(now func() time.Time) owners.WeekProtocolDayLogBuilder {
 // day the local seed records. The seed advances the protocol to Sunday so it
 // can demonstrate the draft and PDF states; the live projection deliberately
 // refuses that historical day because group membership is current-day only.
-// The production Worker always receives WeekProtocolDayLog instead.
-func seedWeekProtocolDayLog(
-	logger *slog.Logger, persons peopledirectory.Capability, users peoplePorts.PersonDirectory,
-	history studentpresence.StudentHistory, careDays carePlanModule.CareDayQuery,
-	arrivals carePlanModule.ArrivalScheduleService, statusDays studentpresence.StatusDayReads,
-) timetableModule.WeekProtocolAttendance {
-	return weekProtocolSeedAttendance{
-		source: WeekProtocolDayLog(time.Now)(logger, persons, users, history, careDays, arrivals, statusDays),
-		today:  calendar.TodayDate,
+// The production Worker always receives WeekProtocolDayLog instead. Both
+// days come from the root's clock now.
+func seedWeekProtocolDayLog(now func() time.Time) owners.WeekProtocolDayLogBuilder {
+	return func(
+		logger *slog.Logger, persons peopledirectory.Capability, users peoplePorts.PersonDirectory,
+		history studentpresence.StudentHistory, careDays carePlanModule.CareDayQuery,
+		arrivals carePlanModule.ArrivalScheduleService, statusDays studentpresence.StatusDayReads,
+	) timetableModule.WeekProtocolAttendance {
+		return weekProtocolSeedAttendance{
+			source: WeekProtocolDayLog(now)(logger, persons, users, history, careDays, arrivals, statusDays),
+			today:  calendar.CalendarDateClock(now),
+		}
 	}
 }
 

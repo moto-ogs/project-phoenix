@@ -25,9 +25,9 @@ import (
 // NewStaffMembershipRuntime composes the staff membership closures over the
 // service graph and the root's Identity & Access module, with the
 // offboarding workflow over db and an unobserved Workforce employment owner
-// (#4007).
-func NewStaffMembershipRuntime(users peoplePorts.PersonDirectory, education schoolstructure.GroupManagement, staffDay workforceCompose.StaffDayStatus, hub *realtime.Hub, db transactionruntime.Database, identity identityaccess.Owner, logger *slog.Logger, hooks StaffMembershipHooks) StaffMembershipRuntime {
-	offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()), owners.MembershipStaffEmployment(workforceCompose.MustNewStaffEmployment(db.Pool())), logger, time.Now)
+// (#4007), on the root's clock now.
+func NewStaffMembershipRuntime(users peoplePorts.PersonDirectory, education schoolstructure.GroupManagement, staffDay workforceCompose.StaffDayStatus, hub *realtime.Hub, db transactionruntime.Database, identity identityaccess.Owner, logger *slog.Logger, hooks StaffMembershipHooks, now func() time.Time) StaffMembershipRuntime {
+	offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()), owners.MembershipStaffEmployment(workforceCompose.MustNewStaffEmployment(db.Pool())), logger, now)
 	if err != nil {
 		panic(err)
 	}
