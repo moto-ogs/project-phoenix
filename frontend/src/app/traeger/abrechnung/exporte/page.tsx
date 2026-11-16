@@ -29,6 +29,10 @@ import {
   type RunFileFormat,
   runFileKey,
 } from "~/components/traeger/finance-export-tables";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -40,6 +44,7 @@ import {
 import { ApiError } from "~/lib/api-error";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import {
   type DatevBookingProblem,
   type DatevDownloadOptions,
@@ -444,6 +449,21 @@ export default function TraegerFinanceExportsPage() {
           <SectionCard
             title="Dateien je Lauf"
             description="Die Sollstellung ist für Ihre Kämmerei, die DATEV-Datei für Ihr Steuerbüro. Die DATEV-Datei enthält nur neue Buchungen."
+            action={
+              <TraegerListExportMenu
+                download={(format) =>
+                  downloadTraegerList(
+                    "/api/traeger/finance-exports/runs/export",
+                    format,
+                  )
+                }
+                scope={traegerExportScope()}
+                ariaLabel="Läufe der Exporte herunterladen"
+                fallbackName="exportlaeufe"
+                errorObject="die Läufe der Exporte"
+                unavailable={data.runs.total === 0}
+              />
+            }
             flush
             footer={
               data.runs.nextOffset === null ? null : (
@@ -493,6 +513,21 @@ export default function TraegerFinanceExportsPage() {
           <SectionCard
             title="Exportprotokoll"
             description="Jede Datei, die moto verlassen hat: Sollstellungen, DATEV-Dateien und Lastschriftdateien."
+            action={
+              <TraegerListExportMenu
+                download={(format) =>
+                  downloadTraegerList(
+                    "/api/traeger/finance-exports/files/export",
+                    format,
+                  )
+                }
+                scope={traegerExportScope()}
+                ariaLabel="Exportprotokoll herunterladen"
+                fallbackName="exportprotokoll"
+                errorObject="das Exportprotokoll"
+                unavailable={data.protocol.total === 0}
+              />
+            }
             flush
             footer={
               data.protocol.nextOffset === null ? null : (

@@ -168,6 +168,25 @@ func TestTraegerSchoolsAlertsCheckEverySchoolAgainstTheTraegerThresholds(t *test
 	assert.Equal(t, 2, linden.OpenEnrollments, "only the waiting children of a request still open")
 	assert.Equal(t, []string{traegerview.AlertOpenEnrollments}, linden.Alerts)
 
+	// The dashboard and the school list as files (#4718).
+	export := traegerOccupancyRequest(t, router, "/traeger/schools/alerts/export", answer.AccessToken, nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Equal(t, "text/csv; charset=utf-8", export.Header().Get("Content-Type"))
+	assert.Contains(t, export.Body.String(), "OGS Am Bach;;4;3;1;1;1;1 : 3;0;Viele Krankmeldungen\n")
+	assert.NotContains(t, export.Body.String(), "OGS Fremd Hinweise")
+	single := traegerOccupancyRequest(t, router, fmt.Sprintf("/traeger/schools/alerts/export?school=%d", quiet), answer.AccessToken, nil)
+	require.Equal(t, http.StatusOK, single.Code, single.Body.String())
+	assert.Contains(t, single.Body.String(), "OGS Lindenweg;;1;0;0;0;0;;2;Offene Anmeldungen\n")
+	assert.NotContains(t, single.Body.String(), "OGS Am Bach", "the export of one school holds that school only")
+	stranger := traegerOccupancyRequest(t, router, fmt.Sprintf("/traeger/schools/alerts/export?school=%d", foreign), answer.AccessToken, nil)
+	assert.Equal(t, http.StatusNotFound, stranger.Code, "a school of another Träger: "+stranger.Body.String())
+	assertTraegerListFormats(t, router, answer.AccessToken, "/traeger/schools/alerts/export", "dashboard-"+today.String())
+	schools := traegerOccupancyRequest(t, router, "/traeger/schools/export", answer.AccessToken, nil)
+	require.Equal(t, http.StatusOK, schools.Code, schools.Body.String())
+	assert.Contains(t, schools.Body.String(), "OGS Lindenweg;\n")
+	assert.NotContains(t, schools.Body.String(), "OGS Fremd Hinweise")
+	assertTraegerListFormats(t, router, answer.AccessToken, "/traeger/schools/export", "schulen")
+
 	// The Träger tightens the care ratio and switches the sick hint off.
 	for key, value := range map[string]int{configModels.KeyTraegerAlertChildrenPerStaff: 2, configModels.KeyTraegerAlertSickPercent: 0} {
 		set := traegerJSON(t, router, answer.AccessToken, http.MethodPut, "/traeger/settings/values/"+key, map[string]any{"value": value})
@@ -195,6 +214,8 @@ func TestTraegerSchoolsAlertsNeedTheOverviewRight(t *testing.T) {
 	rec := traegerSchoolsAlerts(t, router, answer.AccessToken, nil)
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 	assert.NotContains(t, rec.Body.String(), "OGS Hinweise Ohne Recht")
+	export := traegerOccupancyRequest(t, router, "/traeger/schools/alerts/export", answer.AccessToken, nil)
+	assert.Equal(t, http.StatusForbidden, export.Code, "the export needs the right of the list: "+export.Body.String())
 }
 
 func TestTraegerSchoolsAlertsQueryBudgetIsFlat(t *testing.T) {

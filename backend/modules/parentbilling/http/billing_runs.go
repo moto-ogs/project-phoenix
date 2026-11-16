@@ -29,17 +29,18 @@ type BillingRunResource struct {
 	letters        capability.BillingLetterService
 	mail           capability.BillingLetterMailService
 	requireBilling common.Middleware
+	lists          common.ListRenderer
 }
 
 // NewBillingRunResource builds the resource with the discard of an empty
 // open run (#6628). requireBilling admits only a session with the Träger
 // right "Abrechnung".
 func NewBillingRunResource(runs capability.BillingRuns, discard capability.HolidayRunDiscard, letters capability.BillingLetterService,
-	mail capability.BillingLetterMailService, requireBilling common.Middleware) *BillingRunResource {
-	if runs == nil || discard == nil || letters == nil || mail == nil || requireBilling == nil {
-		panic("parent billing http: the billing runs, their discard, the letters, their mail and the right check are required")
+	mail capability.BillingLetterMailService, requireBilling common.Middleware, lists common.ListRenderer) *BillingRunResource {
+	if runs == nil || discard == nil || letters == nil || mail == nil || requireBilling == nil || lists == nil {
+		panic("parent billing http: the billing runs, their discard, the letters, their mail, the right check and the list export are required")
 	}
-	return &BillingRunResource{runs: runs, discard: discard, letters: letters, mail: mail, requireBilling: requireBilling}
+	return &BillingRunResource{runs: runs, discard: discard, letters: letters, mail: mail, requireBilling: requireBilling, lists: lists}
 }
 
 // RunRouter returns the routes mounted at /traeger/billing-runs.
@@ -51,6 +52,7 @@ func (rs *BillingRunResource) RunRouter(protectedTraegerRoutes func(chi.Router, 
 		billing.Get("/", rs.list)
 		billing.Post("/", rs.start)
 		billing.Get("/periods", rs.periods)
+		billing.Get("/export", rs.exportList)
 		billing.Get("/{id}", rs.detail)
 		billing.Post("/{id}/corrections", rs.correct)
 		billing.Post("/{id}/release", rs.release)

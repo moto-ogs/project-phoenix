@@ -7,6 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "~/contexts/ToastContext";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 
 const { mockFetchPeriods, mockPush } = vi.hoisted(() => ({
@@ -101,7 +102,9 @@ describe("TraegerHolidayPeriodsPage", () => {
 
 function render(ui: React.ReactElement) {
   return rtlRender(
-    <SWRConfig value={{ provider: () => new Map() }}>{ui}</SWRConfig>,
+    <ToastProvider>
+      <SWRConfig value={{ provider: () => new Map() }}>{ui}</SWRConfig>
+    </ToastProvider>,
   );
 }
 

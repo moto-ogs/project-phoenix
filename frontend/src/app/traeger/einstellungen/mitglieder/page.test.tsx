@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  waitForElementToBeRemoved,
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +14,12 @@ import { ApiError } from "~/lib/api-error";
 import { ErrorContactProvider } from "~/lib/error-contact";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
+
+vi.mock("~/lib/traeger-list-export", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/traeger-list-export")>()),
+  downloadTraegerList: vi.fn(),
+}));
 
 const api = vi.hoisted(() => ({
   fetchTraegerBuero: vi.fn(),
@@ -528,6 +535,51 @@ describe("TraegerAccountsPage", () => {
     ).toBeInTheDocument();
     expect(await screen.findByText("Verlauf")).toBeInTheDocument();
   });
+
+  it.each([
+    [403, "Mitglieder und Einladungen herunterladen"],
+    [403, "Verlauf herunterladen"],
+    [503, "Mitglieder und Einladungen herunterladen"],
+  ] as const)(
+    "keeps the page usable after a %s from %s",
+    async (status, downloadLabel) => {
+      vi.mocked(downloadTraegerList).mockRejectedValue(
+        new ApiError("download failed", status),
+      );
+      renderPage();
+      await screen.findAllByText("kasse@traeger.example");
+      await screen.findAllByText("Rollen geändert");
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: downloadLabel,
+        }),
+      );
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Excel" }));
+      const closeToast = await screen.findByRole("button", {
+        name: "Schließen",
+      });
+      fireEvent.click(closeToast);
+      await waitForElementToBeRemoved(closeToast);
+
+      if (status === 403) {
+        // Anker: nach dem Schließen des Toasts bleibt der Seitenfehler sichtbar.
+        expect(
+          await screen.findByText(
+            catalogText("general.permission", "die Liste der Personen"),
+          ),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByText("kasse@traeger.example"),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByText("Verlauf")).not.toBeInTheDocument();
+      } else {
+        expect(
+          screen.getAllByText("kasse@traeger.example")[0],
+        ).toBeInTheDocument();
+        expect(screen.getByText("Verlauf")).toBeInTheDocument();
+      }
+    },
+  );
 
   it("reads the history again after a change", async () => {
     api.changeTraegerRoles.mockResolvedValue(undefined);

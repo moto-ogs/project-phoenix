@@ -62,7 +62,7 @@ func (c schedulerPresenceCleanup) CleanupExpiredVisits(ctx context.Context) (*sc
 	if result == nil {
 		return nil, err
 	}
-	return &schedulerPorts.ExpiredVisitCleanup{StudentsProcessed: result.StudentsProcessed, RecordsDeleted: result.RecordsDeleted, Success: result.Success}, err
+	return &schedulerPorts.ExpiredVisitCleanup{StudentsProcessed: result.StudentsProcessed, RecordsDeleted: result.RecordsDeleted, StudentsFailed: len(result.Errors), Success: result.Success}, err
 }
 
 func (c schedulerPresenceCleanup) CleanupStaleSupervisors(ctx context.Context) (*schedulerPorts.StaleSupervisorCleanup, error) {
@@ -70,7 +70,7 @@ func (c schedulerPresenceCleanup) CleanupStaleSupervisors(ctx context.Context) (
 	if result == nil {
 		return nil, err
 	}
-	return &schedulerPorts.StaleSupervisorCleanup{RecordsClosed: result.RecordsClosed, Success: result.Success}, err
+	return &schedulerPorts.StaleSupervisorCleanup{RecordsClosed: result.RecordsClosed, RecordsFailed: len(result.Errors), Success: result.Success}, err
 }
 
 func (c schedulerPresenceCleanup) CleanupStaleAttendance(ctx context.Context) (*schedulerPorts.StaleAttendanceCleanup, error) {

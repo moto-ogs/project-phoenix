@@ -19333,7 +19333,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
-      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -19343,7 +19343,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
-      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -19353,7 +19353,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
-      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindWithPersonByIDs",
       "target_owner": "people-directory"
@@ -19363,7 +19363,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
-      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -19373,7 +19373,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
-      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -19383,7 +19383,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
-      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0250) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"

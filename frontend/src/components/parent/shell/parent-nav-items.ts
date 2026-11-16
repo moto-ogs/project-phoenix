@@ -34,7 +34,7 @@ import { signInConcept } from "~/lib/concepts/signIn";
  * Woher ein Zaehler kommt. Die Huelle loest das zu einer Zahl auf, damit diese
  * Datei frei von Datenzugriff bleibt.
  */
-export type ParentNavBadgeSource = "messages" | "news";
+export type ParentNavBadgeSource = "messages" | "news" | "notifications";
 
 /**
  * Ob ein Ziel ueberhaupt angeboten wird. Elternbriefe und Essensplan gibt es
@@ -64,7 +64,8 @@ export type ParentMoreItem =
   | {
       readonly kind: "action";
       readonly key: string;
-      readonly action: "logout";
+      readonly action: "logout" | "notifications";
+      readonly badge?: ParentNavBadgeSource;
       readonly tKey: string;
       readonly concept: MotoConcept;
     };
@@ -106,6 +107,16 @@ export const PARENT_PRIMARY_NAV: readonly ParentNavItem[] = [
  * Eintrag im Sheet liegt und die Bottom-Navigation ihn nicht zeigt.
  */
 export const PARENT_MORE_NAV: readonly ParentMoreItem[] = [
+  {
+    // Die Glocke auf dem Telefon (#7140): unter 1024 px fehlt die Kopfzeile.
+    // Öffnet dasselbe Vollbild-Blatt wie die Glocke dort.
+    kind: "action",
+    key: "notices",
+    action: "notifications",
+    tKey: "notices",
+    concept: notificationsConcept,
+    badge: "notifications",
+  },
   {
     kind: "link",
     key: "news",
@@ -185,6 +196,7 @@ export const PARENT_MORE_ENTRY = {
 /** Zaehler, die auf das "Mehr"-Symbol aufaddiert werden. */
 export const PARENT_MORE_BADGE_SOURCES: readonly ParentNavBadgeSource[] = [
   "news",
+  "notifications",
 ];
 
 export interface ParentSettingsSection {

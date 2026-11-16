@@ -181,6 +181,13 @@ func (s *Scheduler) cleanupExpiredVisits(ctx context.Context, tenantID int64) er
 		return nil
 	}
 	if !result.Success {
+		// Counts only, never who failed (#7211). The step's savepoint undoes
+		// the deletions that did succeed.
+		s.getLogger().Warn("visit cleanup partial failure",
+			slog.Int64("tenant_id", tenantID),
+			slog.Int("students_failed", result.StudentsFailed),
+			slog.Int64("deletions_rolled_back", result.RecordsDeleted),
+		)
 		return errCleanupStepPartial
 	}
 	s.getLogger().Info("cleanup completed for tenant",
@@ -355,6 +362,12 @@ func (s *Scheduler) cleanupStaleSupervisors(ctx context.Context, tenantID int64)
 		return nil
 	}
 	if !supervisorResult.Success {
+		// Counts only (#7211); the savepoint undoes the closures that succeeded.
+		s.getLogger().Warn("supervisor cleanup partial failure",
+			slog.Int64("tenant_id", tenantID),
+			slog.Int("records_failed", supervisorResult.RecordsFailed),
+			slog.Int("closures_rolled_back", supervisorResult.RecordsClosed),
+		)
 		return errCleanupStepPartial
 	}
 	if supervisorResult.RecordsClosed > 0 {
@@ -380,10 +393,11 @@ func (s *Scheduler) cleanupStaleAttendance(ctx context.Context, tenantID int64) 
 	switch {
 	case attendanceResult == nil:
 	case !attendanceResult.Success:
+		// Counts only (#7211); the savepoint undoes the closures that succeeded.
 		s.getLogger().Warn("attendance cleanup partial failure",
 			slog.Int64("tenant_id", tenantID),
-			slog.Int("records_closed", attendanceResult.RecordsClosed),
-			slog.Int("errors", len(attendanceResult.Errors)),
+			slog.Int("records_failed", len(attendanceResult.Errors)),
+			slog.Int("closures_rolled_back", attendanceResult.RecordsClosed),
 		)
 		return errCleanupStepPartial
 	case attendanceResult.RecordsClosed > 0:

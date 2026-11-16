@@ -47,7 +47,7 @@ func (rs *Resource) utilizationExport(w http.ResponseWriter, r *http.Request) {
 		}
 		utilization.Schools, schoolName = []traegerview.SchoolUtilization{school}, school.Name
 	}
-	writeList(w, r, rs.lists, format, utilizationTable(utilization, schoolName))
+	common.WriteList(w, r, rs.lists, format, utilizationTable(utilization, schoolName))
 }
 
 // utilizationChildren answers GET /traeger/schools/{id}/utilization/children:
@@ -135,7 +135,7 @@ const (
 )
 
 // utilizationColumns are the columns of the utilization export.
-var utilizationColumns = []ListColumn{
+var utilizationColumns = []common.ListColumn{
 	{ID: "day", Label: "Datum"}, {ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"}, {ID: "kind", Label: "Art"},
 	{ID: "name", Label: "Name"}, {ID: "places", Label: "Plätze", Numeric: true}, {ID: "booked", Label: "Kinder gebucht", Numeric: true},
 	{ID: "booked_places", Label: "Plätze belegt", Numeric: true}, {ID: "present", Label: "Kinder anwesend", Numeric: true},
@@ -145,7 +145,7 @@ var utilizationColumns = []ListColumn{
 // utilizationTable is one row per day and school, offering or room. A
 // figure that does not apply to the kind, or that is missing on a day,
 // stays empty, so a spreadsheet never reads a gap as 0.
-func utilizationTable(utilization traegerview.Utilization, schoolName string) ListTable {
+func utilizationTable(utilization traegerview.Utilization, schoolName string) common.ListTable {
 	var rows [][]string
 	for i, day := range utilization.Days {
 		date := day.Format("02.01.2006")
@@ -164,9 +164,9 @@ func utilizationTable(utilization traegerview.Utilization, schoolName string) Li
 		}
 	}
 	from, to := utilization.From.Format("02.01.2006"), utilization.To.Format("02.01.2006")
-	return ListTable{
+	return common.ListTable{
 		Title: "Auslastung", Subtitle: from + " bis " + to,
-		Filters: []string{schoolFilterLabel(schoolName), periodLabel(from, to)},
+		Filters: []string{common.ListSchoolLabel(schoolName), common.ListPeriodLabel(from, to)},
 		Columns: utilizationColumns, Rows: rows,
 		Filename: fmt.Sprintf("auslastung-%s-bis-%s", utilization.From, utilization.To),
 	}

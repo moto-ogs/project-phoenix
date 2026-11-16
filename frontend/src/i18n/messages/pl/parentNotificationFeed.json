@@ -1,0 +1,21 @@
+{
+  "bell": "Komunikaty",
+  "bellCount": "Komunikaty ({count})",
+  "badge": "Nowe komunikaty: {count}",
+  "bellTooltip": "Pokazuje komunikaty szkoły dotyczące Państwa dzieci.",
+  "description": "Komunikaty szkoły dotyczące Państwa dzieci, na przykład gdy opieka zostaje odwołana.",
+  "close": "Zamknij",
+  "closeTooltip": "Zamyka komunikaty.",
+  "section": "Dla Państwa dzieci",
+  "markAllRead": "Oznacz wszystkie jako przeczytane",
+  "markAllReadTooltip": "Od razu oznacza wszystkie komunikaty jako przeczytane.",
+  "markAllReadErrorObject": "oznaczanie jako przeczytane",
+  "loadErrorObject": "komunikaty",
+  "loading": "Ładowanie komunikatów.",
+  "emptyTitle": "Brak komunikatów.",
+  "emptyDescription": "Tutaj zobaczą Państwo na przykład, że opieka nad dzieckiem została odwołana.",
+  "unread": "Nowe",
+  "loadMore": "Wczytaj więcej",
+  "loadingMore": "Ładowanie kolejnych komunikatów.",
+  "loadMoreTooltip": "Pokazuje starsze komunikaty."
+}

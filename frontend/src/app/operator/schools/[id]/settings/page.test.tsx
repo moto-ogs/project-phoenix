@@ -96,13 +96,28 @@ vi.mock("~/components/settings/settings-category", () => ({
     onReset,
     onBookingAuthorityEnable,
   }: {
-    category: { key: string; label: string };
+    category: {
+      key: string;
+      label: string;
+      items?: { key: string; value: unknown; is_default: boolean }[];
+    };
     onSave: (key: string, value: unknown) => Promise<void>;
     onReset: (key: string) => Promise<void>;
     onBookingAuthorityEnable?: () => Promise<void>;
   }) => (
     <div data-testid={`category-${category.key}`}>
       <span>{category.label}</span>
+      {category.items?.map((item) => (
+        <span key={item.key} data-testid={`item-${item.key}`}>
+          {`${JSON.stringify(item.value)} ${item.is_default ? "Standard" : "eigener Wert"}`}
+        </span>
+      ))}
+      <button
+        type="button"
+        onClick={() => void onSave("gdpr.attendance_log_enabled", false)}
+      >
+        switch-off-{category.key}
+      </button>
       <button
         type="button"
         onClick={() => void onSave("operations.session_end_time", "18:30")}
@@ -265,6 +280,55 @@ describe("OperatorSchoolSettingsPage", () => {
         catalogText("general.unavailable", "die Liste der Einstellungen"),
       ),
     ).toBeNull();
+  });
+
+  // #7218: until the refresh arrives, a switched-off field must not keep the
+  // stale „eigener Wert“ state that offers „Zurücksetzen“ and its deletion
+  // dialog; the school page applies the same optimistic update.
+  it("shows a saved switch at once, before the refreshed schema arrives", async () => {
+    mockFetchSchema
+      .mockResolvedValueOnce({
+        tabs: [
+          {
+            key: "gdpr",
+            label: "GDPR",
+            categories: [
+              {
+                key: "bewegungsdaten",
+                label: "Bewegungsdaten",
+                items: [
+                  {
+                    key: "gdpr.attendance_log_enabled",
+                    type: "boolean",
+                    default: false,
+                    value: true,
+                    is_default: false,
+                    levels: "schule",
+                    source: "school",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+      .mockImplementation(() => new Promise(() => undefined));
+    mockSetValue.mockResolvedValue(undefined);
+
+    await renderPage();
+    const item = await screen.findByTestId("item-gdpr.attendance_log_enabled");
+    expect(item).toHaveTextContent("true eigener Wert");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "switch-off-bewegungsdaten" }),
+    );
+
+    await waitFor(() => expect(item).toHaveTextContent("false Standard"));
+    expect(mockSetValue).toHaveBeenCalledExactlyOnceWith(
+      "42",
+      "gdpr.attendance_log_enabled",
+      false,
+    );
   });
 
   it("shows a failed impact check inside the dialog and keeps activation off", async () => {

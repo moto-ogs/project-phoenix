@@ -8,7 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The Vertretungspool of the Träger (#4709, ADR 0089 section 9, ADR 0250):
+// The Vertretungspool of the Träger (#4709, ADR 0089 section 9, ADR 0252):
 // an Arbeitsvertrag with the Merkmal „Vertretungspool“ makes its person a
 // Springer every school of the Träger may block for a day and a time. Two
 // live blocks of one Springer never overlap, also when two schools block at

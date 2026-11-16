@@ -1,6 +1,9 @@
 GET /traeger/care-notice-runs/
+GET /traeger/care-notice-runs/export
 GET /traeger/care-notice-runs/{id}
+GET /traeger/care-notice-runs/{id}/export
 GET /traeger/care-notice-runs/{id}/letters
+GET /traeger/care-notice-runs/{id}/letters/export
 GET /traeger/care-notice-runs/{id}/letters/print
 GET /traeger/care-notice-runs/{id}/notices/{contractID}/letter
 GET /traeger/care-notice-runs/{id}/notices/{contractID}/pdf

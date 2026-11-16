@@ -96,6 +96,8 @@ if [[ "$*" == *quality.sh* && "\${MUTATE_SOURCE:-}" == 1 ]]; then echo changed >
   write('.devbox/nix/profile/default/bin/go', '#!/bin/bash\nif [[ "$*" == *-json* ]]; then echo \'{"GOVERSION":"go1.27.0","GOWORK":"off"}\'; else echo go1.27.0; fi\n');
   for (const tool of ['gofmt', 'golangci-lint', 'govulncheck']) write(`.devbox/nix/profile/default/bin/${tool}`, '#!/bin/bash\nexit 0\n');
   for (const file of ['check-agent-context.mjs', 'check-agent-context.test.mjs', 'pre-push.test.mjs', 'check-secrets.test.mjs']) write(`scripts/${file}`, '// fixture\n');
+  write('scripts/generate-error-codes.mjs', "console.log(`generator ${process.argv.slice(2).join(' ')}`);\nprocess.exit(Number(process.env.FAIL_ERROR_CODES ?? 0));\n");
+  write('scripts/generate-error-codes.test.mjs', '// fixture\n');
   write('.devbox/nix/profile/default/bin/pnpm', '#!/bin/bash\necho "pnpm $*"\n');
   write('.devbox/nix/profile/default/bin/npx', '#!/bin/bash\nexit 0\n');
   write('scripts/check-quality.sh', '#!/bin/bash\necho "quality $*"\n');
@@ -563,4 +565,58 @@ test('conflict-free base merge onto the pushed branch skips checks, own changes 
   f.git('commit', '-qm', 'merge with edit');
   result = push();
   assert.equal(result.status, 9, result.stdout + result.stderr);
+});
+
+// The pre-push selection mirrors the CI path filter, so a stale generated
+// file fails locally instead of one CI round trip later.
+function ciErrorCodePaths() {
+  const main = readFileSync(join(source, '../.github/workflows/main.yml'), 'utf8');
+  const lines = main.split(/\n\s+error-codes:\n/)[1].split('\n');
+  const globs = [];
+  let indent;
+  // Comments and blank lines stay inside the list; a dedent or key ends it.
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const depth = line.length - line.trimStart().length;
+    indent ??= depth;
+    if (depth < indent) break;
+    if (line.trimStart().startsWith('#')) continue;
+    const item = line.match(/^\s+-\s+(['"]?)(.+)\1\s*$/);
+    if (!item) break;
+    globs.push(item[2]);
+  }
+  return globs;
+}
+
+test('every CI error-code path runs the generator check before the push', async t => {
+  const globs = ciErrorCodePaths();
+  assert.ok(globs.includes('error-registry/**'), globs.join(', '));
+  for (const glob of globs) {
+    const path = glob.replace('**', 'domain/example.json').replace('*', 'example');
+    await t.test(path, t => {
+      const f = fixture(t);
+      f.commit(path, 'changed\n');
+      const result = f.check();
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stdout, /\[error-code-tests\] passed/);
+      assert.match(result.stdout, /generator --check/);
+    });
+  }
+});
+
+test('stale generated error codes fail the push', t => {
+  const f = fixture(t);
+  f.commit('error-registry/rooms.json', '{}\n');
+  const result = f.check({ FAIL_ERROR_CODES: '3' });
+  assert.equal(result.status, 3, result.stdout + result.stderr);
+  assert.doesNotMatch(result.stdout, /quality checks passed/);
+});
+
+test('changes outside the error registry skip the generator check', t => {
+  const f = fixture(t);
+  f.commit('frontend/example.ts', 'export {};\n');
+  const result = f.check();
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /error-codes=false/);
+  assert.doesNotMatch(result.stdout, /\[error-code|generator/);
 });
