@@ -987,7 +987,7 @@ order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undef
         },
         {
           name: 'Caterer-Portal: Tage mit bestätigter Bestellung pro Woche',
-          description: 'Alle Schulen zusammen: Tage je Schule einer Woche, an denen ihr Caterer mindestens eine Bestellung bestätigt hat. Zwei Schulen mit je fünf Tagen ergeben 10. Die Aufteilung je Schule zeigt die Tabelle darüber, für die letzten 30 Tage.',
+          description: 'Alle Schulen zusammen: Tage je Schule einer Woche, an denen ihr Caterer mindestens eine Bestellung bestätigt hat. Zwei Schulen mit je fünf Tagen ergeben 10. Die Aufteilung je Schule zeigt die Tabelle „Tage mit bestätigter Bestellung je Schule (30 Tage)“.',
           ...trends('production', {
             series: [series('meal_order_confirmed', 'Tage je Schule mit Bestätigung', { math: 'hogql', math_hogql: SCHOOL_DAYS })],
             dateFrom: '-180d',

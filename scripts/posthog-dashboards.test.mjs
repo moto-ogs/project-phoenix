@@ -242,6 +242,20 @@ test('the caterer never makes its school look active, and its idempotent writes 
     }
   }
   assert.ok(checked >= 10, `${checked} school activity insights`);
+  // Every other insight that reads school_id is bound to a school portal or to
+  // events no caterer sends (kiosk bookings, a login with a school).
+  const fixedSurface = /properties\.surface = '(ogs|parents|school)'/;
+  const attendance = "event in ('student_checked_in', 'student_checked_out')";
+  for (const insight of school.flatMap((d) => d.insights)) {
+    const query = JSON.stringify(insight.query);
+    if (!query.includes('school_id') || query.includes(notCaterer) || fixedSurface.test(query)) continue;
+    const source = insight.query.source;
+    assert.equal(source.kind, 'TrendsQuery', `${insight.name}: reads school_id without leaving out the caterer`);
+    for (const step of source.series) {
+      assert.ok(step.event === 'login_success' || step.properties?.some((p) => p.key === attendance),
+        `${insight.name}: reads school_id without leaving out the caterer`);
+    }
+  }
   const tiles = definitions.find((d) => d.name === 'Nutzungsanalyse: Caterer-Portal').insights;
   const perSchool = tiles.find((insight) => insight.name.endsWith('je Schule (30 Tage)')).query.source.query;
   assert.match(perSchool, /uniq\(Tag\) as `Tage mit Bestätigung`/);
