@@ -270,7 +270,7 @@ interface AbsenceTypeAllowanceCarry {
   readonly expiresOn: string;
 }
 
-export interface AbsenceTypeAllowancePreview {
+interface AbsenceTypeAllowancePreview {
   readonly years: readonly AbsenceTypeAllowanceSummary[];
   readonly blocked: boolean;
   /**

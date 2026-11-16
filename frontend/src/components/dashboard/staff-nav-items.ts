@@ -281,7 +281,7 @@ export interface StaffNavViewer {
 }
 
 /** Ein Einstieg der Betreuungskräfte, den eine Admin-Rolle nicht sieht. */
-export function staffNavHiddenForAdmin(
+function staffNavHiddenForAdmin(
   item: Pick<StaffNavItem, "hideForAdmin">,
   viewer: StaffNavViewer,
 ): boolean {
