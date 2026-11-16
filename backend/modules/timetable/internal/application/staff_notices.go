@@ -276,7 +276,7 @@ func (s *staffNoticeService) UpdateStaffNotice(ctx context.Context, id, updatedB
 	if err != nil {
 		return timetable.StaffNotice{}, err
 	}
-	reachedStaff := reachesStaff(existing)
+	reachedStaff := reachesStaffOn(existing, s.currentDate())
 	notice, err := s.apply(existing, in)
 	if err != nil {
 		return timetable.StaffNotice{}, err

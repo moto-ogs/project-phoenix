@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // staffNoticePublishPushDays is how far ahead a Hinweis der Leitung may start
@@ -18,6 +19,14 @@ const staffNoticePublishPushDays = 14
 // portal, the only audience the feed serves until moto schule has one (#7139).
 func reachesStaff(notice *scheduleModels.StaffNotice) bool {
 	return notice.Active && notice.AppliesTo(scheduleModels.StaffNoticeAudienceStaff)
+}
+
+// reachesStaffOn reports whether the notice reached OGS readers on a day when
+// it could have produced a feed entry. Already ended notices do not reach the
+// feed, even though their saved target audience still includes the staff.
+func reachesStaffOn(notice *scheduleModels.StaffNotice, today calendar.Date) bool {
+	return reachesStaff(notice) &&
+		(notice.ValidUntil == nil || !notice.ValidUntil.Before(today))
 }
 
 // publishes reports whether saving the notice publishes it to the OGS
@@ -54,7 +63,7 @@ func (s *staffNoticeService) noticeAudienceOfPublication(ctx context.Context, no
 		return nil
 	}
 	today := s.currentDate()
-	if notice.ValidUntil != nil && notice.ValidUntil.Before(today) {
+	if !reachesStaffOn(notice, today) {
 		return nil
 	}
 	publication := ports.StaffNoticePublication{

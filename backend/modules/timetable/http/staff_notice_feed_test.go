@@ -288,3 +288,20 @@ func TestStaffNoticeFeedFollowsTheWindowTheSwitchAndActivation(t *testing.T) {
 	assert.Len(t, f.entries(t, pushed, f.tenantID), 5)
 	assert.Equal(t, 4, f.pushes(t, pushed))
 }
+
+func TestStaffNoticeFeedPublishesWhenAnExpiredNoticeIsExtended(t *testing.T) {
+	t.Parallel()
+	f := newNoticeFeedFixture(t)
+	author, pushed := f.reader(t, "Leitung"), f.reader(t, "Handy")
+	f.consent(pushed.accountID, true)
+
+	expired := f.save(t, author, 0, noticeBody("Vorbei", "all", "2030-06-01", "2030-06-09", true))
+	assert.Empty(t, f.entries(t, pushed, f.tenantID))
+	assert.Zero(t, f.pushes(t, pushed))
+
+	f.save(t, author, expired, noticeBody("Vorbei", "all", "2030-06-01", "2030-06-12", true))
+	entries := f.entries(t, pushed, f.tenantID)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "„Vorbei“ gilt vom 01.06.2030 bis 12.06.2030.", entries[0].Body)
+	assert.Equal(t, 1, f.pushes(t, pushed))
+}
