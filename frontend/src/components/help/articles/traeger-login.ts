@@ -45,6 +45,7 @@ export function traegerLoginTopic(): HelpTopic {
     result: "moto öffnet die Seite `Schulen` mit allen Schulen Ihres Trägers.",
     notes: [
       "Legen Sie sich die Adresse als Lesezeichen an.",
+      "Die Liste der Schulen laden Sie mit `Herunterladen` als `PDF`, `Excel` oder `CSV` herunter.",
       "Ein neues Passwort gilt auch für Ihr Konto in der OGS.",
     ],
     differences: [

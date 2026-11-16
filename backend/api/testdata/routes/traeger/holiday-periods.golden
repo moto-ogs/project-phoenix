@@ -1,11 +1,14 @@
 DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}
 GET /traeger/holiday-periods/
 GET /traeger/holiday-periods/criteria
+GET /traeger/holiday-periods/export
 GET /traeger/holiday-periods/{id}
 GET /traeger/holiday-periods/{id}/allocation
+GET /traeger/holiday-periods/{id}/allocation/export
 GET /traeger/holiday-periods/{id}/form
 GET /traeger/holiday-periods/{id}/form/documents/{documentId}
 GET /traeger/holiday-periods/{id}/places
+GET /traeger/holiday-periods/{id}/places/export
 GET /traeger/holiday-periods/{id}/registrations
 GET /traeger/holiday-periods/{id}/registrations/export
 GET /traeger/holiday-periods/{id}/registrations/known-children

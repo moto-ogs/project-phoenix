@@ -5,6 +5,8 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /traeger/billing-families/
 	GET /traeger/billing-families/children
 	GET /traeger/billing-families/debtor-number-format
+	GET /traeger/billing-families/export
 	GET /traeger/billing-families/{id}
+	GET /traeger/billing-families/{id}/export
 	PUT /traeger/billing-families/child-debtor-number
 	PUT /traeger/billing-families/debtor-number

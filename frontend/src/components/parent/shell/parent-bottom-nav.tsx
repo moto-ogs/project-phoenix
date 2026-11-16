@@ -26,6 +26,8 @@ import {
   type ParentNavGate,
 } from "./parent-nav-items";
 import { groupsConcept } from "~/lib/concepts/groups";
+import { openNotificationsSheet } from "~/components/dashboard/header/notifications-sheet-state";
+import { trackParentBellOpened } from "~/components/parent/notifications/parent-notifications-analytics";
 
 export interface ParentNavCounts {
   readonly badges: Readonly<Record<ParentNavBadgeSource, number>>;
@@ -144,14 +146,29 @@ function ParentMainBottomNav({ badges, gates, childCount }: ParentNavCounts) {
           <ul className="space-y-2 px-4 pt-6 pb-[calc(2rem+env(safe-area-inset-bottom))]">
             {moreItems.map((item) => {
               if (item.kind === "action") {
+                const count = item.badge ? (badges[item.badge] ?? 0) : 0;
                 return (
                   <li key={item.key}>
                     <PortalNavSheetButton
                       label={t(item.tKey)}
                       concept={item.concept}
                       data-parent-nav-item={item.key}
+                      badge={
+                        count > 0 ? (
+                          <NotificationBadge
+                            count={count}
+                            tone={COUNTER_TONE.parents}
+                            ariaLabel={t("unreadCount", { count })}
+                          />
+                        ) : null
+                      }
                       onClick={() => {
                         setMoreOpen(false);
+                        if (item.action === "notifications") {
+                          trackParentBellOpened();
+                          openNotificationsSheet();
+                          return;
+                        }
                         setLogoutModalOpen(true);
                       }}
                     />

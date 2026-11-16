@@ -10,6 +10,10 @@ import {
   serviceRange,
   targetSchoolIds,
 } from "~/components/traeger/catalog-format";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerCatalogPhases } from "~/components/traeger/use-traeger-catalog";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { ButtonLink } from "~/components/ui/button";
@@ -18,6 +22,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import type { TraegerPhase } from "~/lib/traeger-catalog-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 /** „Alle Schulen“ or the number of chosen schools. */
@@ -111,15 +116,27 @@ export default function TraegerCatalogPhasesPage() {
       statsLoading={isLoading}
       error={loadError}
       actions={
-        <ButtonLink
-          href={traegerPath("/traeger/anmeldephasen/neu")}
-          variant="primary"
-          size="md"
-          tooltip="Öffnet eine neue Anmeldephase, die Schulen sehen sie erst nach der Freigabe."
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Anmeldephase anlegen
-        </ButtonLink>
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList("/api/traeger/catalog/phases/export", format)
+            }
+            scope={traegerExportScope()}
+            ariaLabel="Anmeldephasen herunterladen"
+            fallbackName="anmeldephasen"
+            errorObject="die Anmeldephasen"
+            unavailable={phases.length === 0}
+          />
+          <ButtonLink
+            href={traegerPath("/traeger/anmeldephasen/neu")}
+            variant="primary"
+            size="md"
+            tooltip="Öffnet eine neue Anmeldephase, die Schulen sehen sie erst nach der Freigabe."
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Anmeldephase anlegen
+          </ButtonLink>
+        </>
       }
     >
       <DataTable

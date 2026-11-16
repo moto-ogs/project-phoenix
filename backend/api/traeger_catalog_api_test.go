@@ -189,6 +189,12 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 	rollout := catalogRollout(t, router, office.token, phasePath, preview.Fingerprint)
 	assert.Equal(t, []catalogResult{{SchoolID: office.schools[0], Outcome: "applied"}, {SchoolID: office.schools[1], Outcome: "applied"}}, rollout.Schools)
 
+	// The list of the phases as a file (#4718).
+	export := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/catalog/phases/export", nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Contains(t, export.Body.String(), "Schuljahr 2027/28;01.08.2027;31.07.2028;Alle Schulen;0;Übertragen\n")
+	assertTraegerListFormats(t, router, office.token, "/traeger/catalog/phases/export", "anmeldephasen")
+
 	ctx := context.Background()
 	for _, school := range office.schools {
 		var copyID int64
@@ -240,6 +246,11 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 	billingOffice := newTraegerOffice(t, db, portal, "Träger Katalog Abrechnung", identityaccess.TraegerRoleBilling)
 	rec = traegerJSON(t, router, billingOffice.token, http.MethodGet, "/traeger/catalog/phases", nil)
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, router, billingOffice.token, http.MethodGet, "/traeger/catalog/phases/export", nil)
+	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, router, foreign.token, http.MethodGet, "/traeger/catalog/phases/export", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.NotContains(t, rec.Body.String(), "Schuljahr 2027/28", "another Träger exports none of these phases")
 
 	// The office withdraws the offering: copies without bookings go.
 	rec = traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/catalog/offerings/%d/withdraw", offering.ID), nil)

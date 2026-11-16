@@ -47,7 +47,9 @@ type Resource struct {
 	HolidayLinks      HolidayRegistrationLinks
 	PushService       PushSubscriptions
 	PreferenceService NotificationPreferences
-	PWAUsageService   PWAUsage
+	// FeedService is the notification feed of the bell (#7140).
+	FeedService     NotificationFeed
+	PWAUsageService PWAUsage
 	// Reports renders the Erklärung proof PDF (#3430).
 	Reports ReportRenderer
 	// SupportedLocale is bound to the shared language catalog by the root.
@@ -84,6 +86,9 @@ type ResourceConfig struct {
 	Push PushSubscriptions
 	// Preferences is the notification consent service.
 	Preferences NotificationPreferences
+	// Feed is the notification feed of the bell across the family's schools
+	// (#7140).
+	Feed NotificationFeed
 	// PWAUsage is the PWA standalone-usage service (#2189).
 	PWAUsage PWAUsage
 	// Reports renders the Erklärung proof PDF (#3430).
@@ -118,6 +123,7 @@ func NewResource(cfg ResourceConfig) *Resource {
 		HolidayLinks:           cfg.HolidayLinks,
 		PushService:            cfg.Push,
 		PreferenceService:      cfg.Preferences,
+		FeedService:            cfg.Feed,
 		PWAUsageService:        cfg.PWAUsage,
 		Reports:                cfg.Reports,
 		SupportedLocale:        cfg.SupportedLocale,

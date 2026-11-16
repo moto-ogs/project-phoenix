@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sort"
+	"strings"
 	"sync"
 	"testing"
 
@@ -28,6 +29,17 @@ const (
 	billingRunsPath  = "/traeger/billing-runs"
 	numberRangesPath = "/traeger/number-ranges"
 )
+
+// billingListCSV downloads a list of the Elternabrechnung as CSV (#4718)
+// and answers its lines, the header first.
+func billingListCSV(t *testing.T, router http.Handler, token, path string) []string {
+	t.Helper()
+	rec := traegerJSON(t, router, token, http.MethodGet, path, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
+	assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
+	return strings.Split(strings.TrimSpace(strings.TrimPrefix(rec.Body.String(), "\xEF\xBB\xBF")), "\n")
+}
 
 type billingPositionBody struct {
 	Kind        string `json:"kind"`
@@ -267,6 +279,15 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Len(t, decodeSchoolPortalData[[]billingRunBody](t, rec.Body.Bytes()), 2)
 
+	// #4718: the list as a file, of the chosen period too.
+	lines := billingListCSV(t, f.traeger, billing, fmt.Sprintf("%s/export?holiday_period_id=%d", billingRunsPath, f.period.ID))
+	require.Len(t, lines, 3, "the header and both runs of the period")
+	assert.Equal(t, "Ferienzeitraum;Betreuung;Status;Rechnungen;Summe (Euro);Ausgestellt am", lines[0])
+	assert.Contains(t, strings.Join(lines, "\n"), "Winterferien 2027;04.01.2027 bis ")
+	assert.Contains(t, strings.Join(lines, "\n"), ";Freigegeben;2 Rechnungen;")
+	assert.Len(t, billingListCSV(t, f.traeger, billing, billingRunsPath+"/export?holiday_period_id=999999999"), 1, "another period: the header alone")
+	assertTraegerListFormats(t, f.traeger, billing, billingRunsPath+"/export", "abrechnungslaeufe")
+
 	// Every read of personal data and every change stands in the trail, the
 	// read of the registrations also in Enrollment's.
 	actions := runActions(t, f, run.ID)
@@ -295,6 +316,7 @@ func TestHolidayBillingRunNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.
 	}{
 		{http.MethodGet, billingRunsPath, nil},
 		{http.MethodGet, billingRunsPath + "/periods", nil},
+		{http.MethodGet, billingRunsPath + "/export", nil},
 		{http.MethodPost, billingRunsPath, map[string]any{"holiday_period_id": f.period.ID}},
 		{http.MethodGet, billingRunPath(run.ID, ""), nil},
 		{http.MethodPost, billingRunPath(run.ID, "/corrections"), correction},
@@ -311,6 +333,7 @@ func TestHolidayBillingRunNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.
 	rec := traegerJSON(t, f.traeger, foreign.token, http.MethodGet, billingRunsPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, decodeSchoolPortalData[[]billingRunBody](t, rec.Body.Bytes()))
+	assert.Len(t, billingListCSV(t, f.traeger, foreign.token, billingRunsPath+"/export"), 1, "the file of another Träger holds no run")
 	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, billingRunsPath+"/periods", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, decodeSchoolPortalData[[]billingPeriodBody](t, rec.Body.Bytes()), "another Träger lists none of these periods")

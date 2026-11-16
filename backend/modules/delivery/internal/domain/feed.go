@@ -20,6 +20,10 @@ type FeedEntryContent struct {
 	SchoolDeepLink string
 	RelatedType    string
 	RelatedID      int64
+	// StudentIDs are the children an entry of a guardian is about (#7140).
+	// The guardian reads it only while holding parent_portal.access for at
+	// least one of them. A staff entry names no child.
+	StudentIDs []int64
 }
 
 // FeedEntry is one entry of an account's notification feed in one school.

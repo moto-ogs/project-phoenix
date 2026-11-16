@@ -49,6 +49,14 @@ export function traegerStaffPlanningTopic(): HelpTopic {
         ],
       },
       {
+        title: "Die Woche herunterladen",
+        steps: [
+          "Wählen Sie die Woche mit den Pfeilen.",
+          "Wählen Sie oben `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Die Datei hat eine Zeile je Person und eine Spalte je Tag.",
+        ],
+      },
+      {
         title: "Die Regeln ändern",
         steps: [
           "Wählen Sie `Einstellungen` und dort `Einsatzplanung`.",
@@ -63,7 +71,7 @@ export function traegerStaffPlanningTopic(): HelpTopic {
       "moto zählt alle Schulen der Person zusammen: die Stunden am Tag, die Ruhezeit, die Pausen und das Soll der Woche.",
       "Dieselbe Prüfung läuft, wenn eine Schule selbst eine Schicht plant.",
       "Das Soll kommt aus dem Arbeitsvertrag. Feiertage und Schließtage zählen nicht.",
-      "Jedes Anzeigen der Woche steht im Zugriffsprotokoll jeder Schule.",
+      "Jedes Anzeigen und jeder Download der Woche steht im Zugriffsprotokoll jeder Schule.",
       "moto prüft die Regeln als Hilfe. Ob eine Planung erlaubt ist, entscheiden Sie.",
     ],
     differences: [

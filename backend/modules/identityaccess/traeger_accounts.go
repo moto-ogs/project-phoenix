@@ -147,6 +147,18 @@ type TraegerAccountHistory struct {
 // TraegerAccountHistoryPageSize is the number of entries on one page.
 const TraegerAccountHistoryPageSize = 25
 
+// TraegerAccountHistoryExportLimit bounds the entries of the whole history
+// an export reads at once (#4718).
+const TraegerAccountHistoryExportLimit = 10000
+
+// TraegerAccountHistoryQuery names the page of the history: the entries
+// older than BeforeID, 0 for the newest. All reads the whole history, up to
+// TraegerAccountHistoryExportLimit entries, for its export (#4718).
+type TraegerAccountHistoryQuery struct {
+	BeforeID int64
+	All      bool
+}
+
 // TraegerAccountChangeNotice is the mail to the person whose roles another
 // person changed or who was removed from the Träger-Büro (#5474). It goes
 // also when a person changes their own roles: a taken-over account would do
@@ -172,7 +184,9 @@ const (
 	TraegerAccountRolesChanged       = "roles_changed"
 	TraegerAccountMemberRemoved      = "member_removed"
 	TraegerAccountMembersListed      = "members_listed"
-	TraegerAccountNameChanged        = "name_changed"
+	// TraegerAccountHistoryExported records a download of the history (#4718).
+	TraegerAccountHistoryExported = "history_exported"
+	TraegerAccountNameChanged     = "name_changed"
 )
 
 // TraegerAccountManagement serves the Träger-Büro account routes. Role sets
@@ -188,9 +202,9 @@ type TraegerAccountManagement interface {
 	RevokeTraegerInvitation(ctx context.Context, actor TraegerActor, invitationID int64) error
 	ChangeTraegerRoles(ctx context.Context, actor TraegerActor, accountID int64, roles []string) (TraegerMember, error)
 	RemoveTraegerMember(ctx context.Context, actor TraegerActor, accountID int64) error
-	// ListTraegerAccountHistory lists the changes of the Träger-Büro older
-	// than the entry beforeID, newest first; beforeID 0 starts at the newest.
-	ListTraegerAccountHistory(ctx context.Context, actor TraegerActor, beforeID int64) (TraegerAccountHistory, error)
+	// ListTraegerAccountHistory lists the changes of the Träger-Büro of the
+	// query, newest first.
+	ListTraegerAccountHistory(ctx context.Context, actor TraegerActor, query TraegerAccountHistoryQuery) (TraegerAccountHistory, error)
 	PreviewTraegerInvitation(ctx context.Context, token string) (TraegerInvitationPreview, error)
 	// AcceptTraegerInvitation returns the address the invitee signs in with.
 	AcceptTraegerInvitation(ctx context.Context, token string, acceptance TraegerInvitationAcceptance) (string, error)

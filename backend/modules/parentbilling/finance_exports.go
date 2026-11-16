@@ -374,9 +374,22 @@ type DatevRunOverviews struct {
 const ExportPageSize = 50
 
 // ExportPage names one page of a list, newest first: Offset entries of the
-// list come before it.
+// list come before it. All reads the whole list from the start for its
+// download (#4718), at most MaxExportListRows entries.
 type ExportPage struct {
 	Offset int
+	All    bool
+}
+
+// MaxExportListRows bounds the download of a whole export list.
+const MaxExportListRows = 10000
+
+// Limit is the offset and size of the page.
+func (p ExportPage) Limit() (offset, size int) {
+	if p.All {
+		return 0, MaxExportListRows
+	}
+	return max(p.Offset, 0), ExportPageSize
 }
 
 // ExportRunPage is one page of the released runs. Total and NotExported
