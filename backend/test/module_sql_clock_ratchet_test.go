@@ -38,9 +38,42 @@ import (
 // Same budget semantics as moduleLiveClockBudget; shrink-only. A raise needs
 // an ADR the entry cites.
 //
-// Seed: measured 2026-11-16 on development after the owner slices of #7104;
-// a mismatch prints the measured values.
-var moduleSQLClockBudget = map[string]int{}
+// Seed: measured 2026-11-16 on development 436cec0402, after the owner
+// slices of #7104 (805 reads in 27 owners); a mismatch prints the measured
+// values.
+var moduleSQLClockBudget = map[string]int{
+	"modules/appointments": 15,
+	"modules/auditlog":     24,
+	"modules/carecontract": 2,
+	"modules/careplan":     71,
+	// Includes the message retention of ADR 0277: the database stamps and
+	// orders messages, so their retention compares on its clock too.
+	"modules/communication":  42,
+	"modules/delivery":       6,
+	"modules/devicefleet":    6,
+	"modules/devicescan":     1,
+	"modules/enrollment":     75,
+	"modules/exporttransfer": 10,
+	"modules/facilities":     3,
+	"modules/filestorage":    11,
+	"modules/identityaccess": 83,
+	"modules/mealplan":       4,
+	// Includes the data return of ADR 0274: the database clock is the security
+	// boundary of the release functions.
+	"modules/organizationtenancy":        24,
+	"modules/parentannouncementaudience": 3,
+	"modules/parentbilling":              79,
+	"modules/peopledirectory":            43,
+	"modules/schedulerruntime":           11,
+	"modules/schoolcalendar":             36,
+	"modules/schoolmembership":           28,
+	"modules/schoolstructure":            13,
+	"modules/settings":                   26,
+	"modules/staffannouncementaudience":  2,
+	"modules/studentpresence":            32,
+	"modules/timetable":                  51,
+	"modules/workforce":                  104,
+}
 
 var sqlClockRead = regexp.MustCompile(`(?i)\b(?:now|clock_timestamp|statement_timestamp|transaction_timestamp)\s*\(\s*\)|\b(?:current_timestamp|current_date|current_time|localtimestamp|localtime)\b`)
 
