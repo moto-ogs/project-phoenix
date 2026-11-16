@@ -7381,7 +7381,8 @@ export const parentNewsTopic = function parentNewsTopic(): HelpTopic {
  *
  * Die `Hinweise` (#7140) stehen ohne Einstellung in moto: am Computer hinter
  * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Erster Hinweis ist
- * die Absage einer Betreuung des Kindes.
+ * die Absage einer Betreuung des Kindes, dann die Raumänderung eines Termins
+ * des Kindes (#7141).
  */
 export const parentNotificationsTopic =
   function parentNotificationsTopic(): HelpTopic {
@@ -7408,6 +7409,8 @@ export const parentNotificationsTopic =
         "moto meldet sich ab jetzt bei den gewählten Themen. Auch wenn die App geschlossen ist.",
       notes: [
         "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
+        "Findet ein Termin Ihres Kindes in einem anderen Raum statt, steht das auch unter `Hinweise`. Für heute und morgen bekommen Sie dazu eine Benachrichtigung, solange Sie `Raumänderung heute oder morgen` nicht ausschalten.",
+        "Für spätere Tage schalten Sie `Raumänderung an späteren Tagen` selbst ein. Sie gilt bis 14 Tage im Voraus.",
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder `Alle als gelesen markieren` wählen.",
         "Auf dem Sperrbildschirm steht nie der Name Ihres Kindes. Was genau los ist, lesen Sie nach der Anmeldung in moto.",
         "Die Themen stehen unter `Kinder`, `Mitteilungen` und `Termine`.",
@@ -8619,8 +8622,8 @@ export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
  * Die Glocke oben rechts im Staff-Portal (#7148): oben `Erinnerungen`, darunter
  * `Hinweise` (der Benachrichtigungs-Feed). Hinweise kommen zur Absage eines
  * Termins, zu Vertretungen, Änderungen im Dienstplan, neuen Hinweisen der
- * Leitung, zum Ausfall im Team und zu weiteren Mitteilungs-Arten außer
- * Nachrichten (#7136, #7137, #7138, #7143).
+ * Leitung, zum Ausfall im Team, zu Raumänderungen und zu weiteren
+ * Mitteilungs-Arten außer Nachrichten (#7136, #7137, #7138, #7141, #7143).
  */
 export const staffNotificationsTopic =
   function staffNotificationsTopic(): HelpTopic {
@@ -8644,6 +8647,7 @@ export const staffNotificationsTopic =
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder alle als gelesen markieren. Das Öffnen der Glocke allein ändert nichts.",
       notes: [
         "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis. Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
+        "Findet ein Termin, bei dem Sie eingeplant sind, in einem anderen Raum statt, sehen Sie es hier. Im Hinweis stehen der neue und der alte Raum.",
         "Vertreten Sie jemanden, werden Sie vertreten oder sind Sie an einem Tag als nicht da eingetragen, sehen Sie es hier. Eine Vertretung über mehrere Tage ist ein einziger Hinweis. Der Hinweis öffnet `Mein Dienstplan` an dem Tag.",
         "Sind Sie einer Gruppe zugeordnet, sehen Sie auch, wer in Ihrer Gruppe fehlt oder vertritt. Der Hinweis öffnet den `Vertretungsplan` an dem Tag. Einen Grund nennt moto nie, auch keine Krankheit.",
         "Wurde Ihnen eine Gruppe übergeben, sehen Sie unter `Ausfall im Team`, wer in dieser Gruppe nicht da ist. Der Hinweis öffnet `Heute` an dem Tag.",
@@ -8660,6 +8664,7 @@ export const staffNotificationsTopic =
         "Die Mitteilung aufs Handy stellen Sie in Ihrem `Profil` unter `Benachrichtigungen` für jede Art ein. Schalten Sie sie aus, kommt der Hinweis in der Glocke trotzdem.",
         "Zu neuen Hinweisen der Leitung kommt keine Mitteilung aufs Handy. Sie können sie im `Profil` unter `Benachrichtigungen` bei `Hinweise der Leitung` einschalten. Dann kommt sie, wenn der Hinweis schon gilt oder in den nächsten 14 Tagen beginnt.",
         "Die Einstellung für `Absage eines Termins` gilt auch, wenn die Absage zurückgenommen wird.",
+        "Bei Raumänderungen gibt es zwei Einstellungen. `Raumänderung heute oder morgen` ist eingeschaltet. `Raumänderung an späteren Tagen` schalten Sie selbst ein. Sie gilt bis 14 Tage im Voraus.",
       ],
       differences: [
         "Auf dem Handy und auf kleinen Tablets fehlt oben die Glocke. Tippen Sie unten auf `Mehr` und dann auf `Benachrichtigungen`. Die Zahl an `Mehr` zählt neue Hinweise mit.",
@@ -8669,6 +8674,7 @@ export const staffNotificationsTopic =
       ],
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einer Absage? Ihre Schule kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder einen Hinweis noch eine Mitteilung aufs Handy. Fragen Sie Ihre Leitung.",
+        "Es kommt kein Hinweis zu einer Raumänderung? Ihre Schule kann `Hinweis bei Raumänderung` ausschalten. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu einer Vertretung? Ihre Schule kann `Hinweis bei Vertretung und Dienstplanänderung` ausschalten. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Ihre Schule kann `Benachrichtigung bei neuem Hinweis der Leitung` ausschalten. Fragen Sie Ihre Leitung.",
         "Die Seite `Hinweise der Leitung` zeigt `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder abgeschaltet.",
@@ -10382,18 +10388,21 @@ export const teacherNotificationFeedTopic =
       notes: [
         "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis.",
         "Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
+        "Findet ein Termin, bei dem Sie eingeplant sind, in einem anderen Raum statt, sehen Sie es auch hier. Im Hinweis stehen der neue und der alte Raum.",
         "`Meine Aufsichten` zeigt den heutigen Tag. Liegt der Termin später, steht der Tag im Hinweis.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was Sie auf dem Handy gelesen haben, ist auch am Computer gelesen.",
         "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen von heute bis in 14 Tagen.",
         "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
         "Die Einstellung gilt auch, wenn eine Absage zurückgenommen wird.",
+        "Bei Raumänderungen gibt es zwei Einstellungen. `Raumänderung heute oder morgen` ist eingeschaltet. `Raumänderung an späteren Tagen` schalten Sie selbst ein. Sie gilt bis 14 Tage im Voraus.",
       ],
       differences: [
         "Auf dem Handy öffnen sich die Hinweise über den ganzen Bildschirm. Mit dem X schließen Sie sie wieder.",
         "Sie arbeiten auch in der OGS mit moto? Dort sehen Sie dieselben Hinweise. Was Sie hier lesen, ist dort auch gelesen.",
       ],
       troubleshootingDetails: [
+        "Es kommt kein Hinweis zu einer Raumänderung? Die OGS-Leitung kann `Hinweis bei Raumänderung` ausschalten. Fragen Sie dort nach.",
         "Es kommt kein Hinweis zu einer Absage? Die OGS-Leitung kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder Hinweis noch Mitteilung aufs Handy. Fragen Sie dort nach.",
       ],
       related: [HELP_TOPICS.teacherSettings, HELP_TOPICS.teacherSupervision],

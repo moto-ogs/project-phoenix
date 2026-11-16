@@ -184,7 +184,7 @@ mechanical: **no row means off**.
 |---|---|---|
 | SSE / in-app | active | `realtime.Broadcaster` → SSE event `notification` → toast |
 | Web Push | active (#2003/#2657) | leased `platform.push_outbox` → `webpush-go` (VAPID) → browser push service → service worker notification |
-| Feed | active (#7148 staff portal, #7139 moto schule, #7140 parents portal) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
+| Feed | active (#7148 staff portal, #7139 moto schule, #7140 parents portal; room changes #7141) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
 | E-Mail | future | wrap `email.Mailer` + audience→address resolution as a `Channel` |
 
 E-mail is still not a `Channel`: features that mail enqueue through the same
@@ -295,6 +295,28 @@ push is off by default (`FilterOptedIn`); the school switch is
 `notifications.staff_notice_published_enabled`. The link
 `/tagesinformationen?hinweis=<id>` opens the notice through
 `GET /api/staff-notices/{id}`, also before it applies.
+
+A block that moves to another room (#7141) comes from Timetable's edit of a
+planned block (`UpdatePlanned`, also its series conversion): only a change
+from one room to another counts, not a first room or a removed one. The
+staff of the block after the edit, without absent people and without the
+person who made the change, get a feed entry, in moto schule too
+(`/school/aufsichten`); their link is the own Dienstplan on that day. The
+guardians who hold `parent_portal.access` for one of the booked children
+(People Directory's `GuardianPortalContacts`) get the same entry in the
+parents portal, linked to `/children`. Its text names the block, its day and
+both rooms, never a child; the families' push keeps a lock-screen copy in
+their portal language without block, room or child. The day decides the
+type: a move for today or tomorrow is `instance_room_changed` /
+`parent_room_changed`, on by default (`FilterNotOptedOut`); a later move is
+`instance_room_changed_later` / `parent_room_changed_later`, pushed within
+14 days only for who switched it on (`FilterOptedIn`), feed only beyond;
+nothing for the past. All four share the school switch
+`notifications.instance_room_changed_enabled`. Bundling object: the block
+(`activity_instance`), so a second move within ten minutes updates the
+unread entry. A room changed on the series replans its future blocks and
+tells nobody; a parent type that is on by default reads as on in the
+parents portal until the family switches it off.
 
 #### Parents portal (#7140)
 
