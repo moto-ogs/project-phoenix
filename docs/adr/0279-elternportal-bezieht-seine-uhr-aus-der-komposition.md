@@ -10,7 +10,7 @@ Workflows Parent Portal (`workflows/parentportal`) und der Projektion
 Parent Request Feed. Sie wendet
 [ADR 0239](0239-owner-beziehen-ihre-uhr-aus-der-komposition.md),
 [ADR 0240](0240-stoppuhren-sind-keine-uhr-und-care-plan-bezieht-seine-uhr-aus-der-komposition.md)
-und [ADR 0271](0271-die-echte-uhr-wird-nur-in-wurzeln-und-kompositionen-benannt.md)
+und [ADR 0272](0272-die-echte-uhr-wird-nur-in-wurzeln-und-kompositionen-benannt.md)
 auf diesen Workflow an und führt keinen neuen Owner ein.
 
 ## Kontext
@@ -43,7 +43,7 @@ Request Feed.
    `BuildParentDocumentNotices` reichen `env.Now`, `newParentResource` die
    Uhr der Wurzel. `compose.New` belegt eine fehlende Uhr mit `time.Now` vor,
    weil rund 70 Tests das Portal ohne Uhr bauen; diese Vorbelegung steht nur
-   in der Komposition (ADR 0271).
+   in der Komposition (ADR 0272).
 3. **Tests auf festem Tag.** Die Tests der 17 Schuldendateien stehen auf
    Montag, dem 24. August 2026 (`careFixtureToday`/`careFixtureNow` und
    Gegenstücke in den Testpaketen), und reichen diese Uhr auch an Care Plans
