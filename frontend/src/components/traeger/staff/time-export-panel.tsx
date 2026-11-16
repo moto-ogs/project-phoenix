@@ -1,6 +1,6 @@
 "use client";
 
-// Der Zeitexport des Trägers (#4712, ADR 0249 Punkt 8): ein festes CSV für
+// Der Zeitexport des Trägers (#4712, ADR 0250 Punkt 8): ein festes CSV für
 // Träger mit eigenem Zeiterfassungssystem, eine Zeile je Person, Tag und
 // Schule. Die Spalten stehen hier und in der Hilfe; Personen ohne
 // Personalnummer fehlen in der Datei, die Seite nennt sie.

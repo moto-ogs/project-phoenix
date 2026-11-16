@@ -199,6 +199,7 @@ func newParentResource(
 		HolidayLinks:          newParentHolidayRegistrationLinks(organizations, delivery, healthData, traegerSettings, logger),
 		Push:                  bindParentPushSubscriptions(devices.PushSubscriptions),
 		Preferences:           bindParentPreferences(notifications.Preferences),
+		Feed:                  bindParentNotificationFeed(notifications.GuardianFeed),
 		PWAUsage:              devices.PWAUsage,
 		Reports:               newDeclarationReports(),
 		SupportedLocale:       bindParentLocale(notifications.Preferences),

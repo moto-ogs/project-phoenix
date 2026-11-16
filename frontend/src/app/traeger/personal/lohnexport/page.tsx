@@ -1,7 +1,7 @@
 "use client";
 
 // Lohnexport des Trägers über alle Schulen (#4712, ADR 0089 Abschnitt 11,
-// ADR 0249): die DATEV-Lohndatei für alle Arbeitsverträge des Trägers, der
+// ADR 0250): die DATEV-Lohndatei für alle Arbeitsverträge des Trägers, der
 // Zeitexport für ein eigenes Zeiterfassungssystem und die Lohnarten je Art
 // des Vertrags. Ein Monat gilt für alle drei Reiter; Standard ist der
 // Vormonat, denn den rechnet das Lohnbüro ab.
