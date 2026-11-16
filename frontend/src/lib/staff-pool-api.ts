@@ -11,6 +11,11 @@
 import { apiErrorFromResponse } from "~/lib/api-error";
 import { sessionFetch } from "~/lib/session-cache";
 import { traegerRequest } from "~/lib/traeger-api";
+import {
+  downloadTraegerList,
+  type TraegerListFile,
+  type TraegerListFormat,
+} from "~/lib/traeger-list-export";
 
 type PoolProofState = "complete" | "missing" | "expiring";
 
@@ -202,6 +207,16 @@ export async function fetchTraegerPoolWeek(
     `/api/traeger/staff-pool?week=${encodeURIComponent(weekStart)}`,
   );
   return mapPoolWeek(week);
+}
+
+/** Die Blockungen der Woche als PDF, Excel oder CSV (#4718). */
+export function downloadTraegerPoolWeek(
+  weekStart: string,
+  format: TraegerListFormat,
+): Promise<TraegerListFile> {
+  return downloadTraegerList("/api/traeger/staff-pool/export", format, {
+    week: weekStart,
+  });
 }
 
 export async function liftTraegerBlock(blockId: string): Promise<void> {

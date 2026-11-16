@@ -26,6 +26,10 @@ const TraegerStaffViewPool = "staff_pool"
 // lifting a block of the school.
 const TraegerStaffViewPoolLift = "staff_pool_lift"
 
+// TraegerStaffViewPoolExport is the access log view of the Personalverwaltung
+// downloading the week's blocks as PDF, Excel or CSV (#4718).
+const TraegerStaffViewPoolExport = "staff_pool_export"
+
 // StaffDataAccessPool is the access log resource of a school reading the
 // Springer of its Träger.
 const StaffDataAccessPool = "traeger_staff_pool"
@@ -129,9 +133,10 @@ type SchoolStaffPool interface {
 // TraegerStaffPool is the Vertretungspool in the Träger-Portal: every
 // Springer with every block of the week, and lifting a block. Reading
 // writes an access entry at each school a listed Springer works at or was
-// blocked by (ADR 0089 section 6).
+// blocked by (ADR 0089 section 6), under view: TraegerStaffViewPool for
+// the page, TraegerStaffViewPoolExport for a download.
 type TraegerStaffPool interface {
-	TraegerPoolWeek(ctx context.Context, actor TraegerStaffActor, weekStart calendar.Date) (PoolWeek, error)
+	TraegerPoolWeek(ctx context.Context, actor TraegerStaffActor, weekStart calendar.Date, view string) (PoolWeek, error)
 	LiftTraegerBlock(ctx context.Context, actor TraegerStaffActor, blockID int64) error
 }
 

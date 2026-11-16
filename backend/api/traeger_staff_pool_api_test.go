@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -212,6 +213,24 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 			assert.Equal(t, before[schoolID]+1, after[schoolID], "the Einsatzort and each blocking school log the read: school %d", schoolID)
 		}
 
+		// #4718: the week's blocks download as PDF, Excel or CSV, logged at
+		// the same schools as an export.
+		rec = traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-pool/export?week=2026-11-16", nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
+		lines := strings.Split(strings.TrimSpace(strings.TrimPrefix(rec.Body.String(), "\xEF\xBB\xBF")), "\n")
+		require.Len(t, lines, 3, rec.Body.String())
+		assert.Equal(t, "Nachname;Vorname;Tag;Beginn;Ende;Schule", strings.TrimSpace(lines[0]))
+		assert.Equal(t, "Springer;Mira;19.11.2026;08:00;12:00;Träger Personal OGS Süd", strings.TrimSpace(lines[1]))
+		assert.Equal(t, "Springer;Mira;19.11.2026;12:00;14:00;Träger Personal OGS West", strings.TrimSpace(lines[2]))
+		assertTraegerListFormats(t, router, office.token, "/traeger/staff-pool/export?week=2026-11-16", "vertretungspool-2026-11-16")
+		exported := staffAccessEntries(t, db, office.organization, "traeger_staff_records")
+		for _, schoolID := range []int64{north, south, west} {
+			assert.Equal(t, after[schoolID]+3, exported[schoolID], "CSV, PDF and Excel are logged at school %d", schoolID)
+		}
+		assert.Equal(t, 3, staffSchoolValue(t, db, `SELECT COUNT(*) FROM audit.data_access_log WHERE tenant_id = ? AND actor_role = 'traeger'
+			AND metadata->>'view' = 'staff_pool_export'`, south), "the access log names the download")
+
 		rec = traegerJSON(t, router, office.token, http.MethodDelete, fmt.Sprintf("/traeger/staff-pool/blocks/%d", southBlock), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM audit.data_access_log WHERE tenant_id = ? AND actor_role = 'traeger'
@@ -341,12 +360,19 @@ func TestStaffPoolWeekQueryBudget(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer "+office.token)
 		return measure(router, req)
 	}
+	exportTraeger := func() testpkg.QueryMeasurement {
+		req := httptest.NewRequest(http.MethodGet, "/traeger/staff-pool/export?week=2026-11-23&format=csv", nil)
+		req.Header.Set("Authorization", "Bearer "+office.token)
+		return measure(router, req)
+	}
 	springer("Eins", "2026-11-23")
-	fewSchool, fewTraeger := readSchool(), readTraeger()
+	fewSchool, fewTraeger, fewExport := readSchool(), readTraeger(), exportTraeger()
 	springer("Zwei", "2026-11-24")
 	springer("Drei", "2026-11-25")
 	assert.Len(t, readSchool().Statements, len(fewSchool.Statements), "the school's week loads set-based")
 	assert.Len(t, readTraeger().Statements, len(fewTraeger.Statements), "the Träger's week loads set-based")
+	assert.Len(t, exportTraeger().Statements, len(fewExport.Statements), "the Träger's download loads set-based")
 	querybudgets.AssertQueryBudget(t, "api.staff_pool.week", fewSchool)
 	querybudgets.AssertQueryBudget(t, "api.traeger.staff_pool_week", fewTraeger)
+	querybudgets.AssertQueryBudget(t, "api.traeger.staff_pool_export", fewExport)
 }

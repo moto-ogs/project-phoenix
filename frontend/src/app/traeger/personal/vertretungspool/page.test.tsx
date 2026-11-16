@@ -5,14 +5,22 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { PoolWeek } from "~/lib/staff-pool-api";
 
-const api = vi.hoisted(() => ({
-  fetchTraegerPoolWeek: vi.fn(),
-  liftTraegerBlock: vi.fn(),
+const { api, download } = vi.hoisted(() => ({
+  api: {
+    downloadTraegerPoolWeek: vi.fn(),
+    fetchTraegerPoolWeek: vi.fn(),
+    liftTraegerBlock: vi.fn(),
+  },
+  download: vi.fn(),
 }));
 
 vi.mock("~/lib/staff-pool-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/staff-pool-api")>()),
   ...api,
+}));
+vi.mock("~/lib/file-download", async (original) => ({
+  ...(await original<typeof import("~/lib/file-download")>()),
+  downloadBlob: download,
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -83,6 +91,30 @@ describe("TraegerStaffPoolPage", () => {
     expect(await screen.findByText(/ist aufgehoben/)).toBeVisible();
     expect(api.liftTraegerBlock).toHaveBeenCalledWith("41");
     expect(api.fetchTraegerPoolWeek).toHaveBeenCalledTimes(2);
+  });
+
+  it("downloads the blocks of the shown week from the backend", async () => {
+    api.downloadTraegerPoolWeek.mockResolvedValue({
+      blob: new Blob(["x"]),
+      filename: "vertretungspool-2026-09-07.csv",
+    });
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Blockungen der Woche herunterladen",
+      }),
+    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
+    await vi.waitFor(() =>
+      expect(download).toHaveBeenCalledWith(
+        expect.any(Blob),
+        "vertretungspool-2026-09-07.csv",
+      ),
+    );
+    expect(api.downloadTraegerPoolWeek).toHaveBeenCalledWith(
+      "2026-09-07",
+      "csv",
+    );
   });
 
   it("explains a Träger without the release", async () => {

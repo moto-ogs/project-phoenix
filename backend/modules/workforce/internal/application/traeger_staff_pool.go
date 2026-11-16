@@ -113,9 +113,9 @@ func (t *TraegerStaff) schoolPoolOpen(ctx context.Context) error {
 
 // TraegerPoolWeek lists every Springer of the Träger in the week with every
 // live block. Before it answers, each school a listed Springer works at or
-// was ever blocked by gets an access entry; a school that cannot take it
-// fails the read.
-func (t *TraegerStaff) TraegerPoolWeek(ctx context.Context, actor workforce.TraegerStaffActor, weekStart calendar.Date) (workforce.PoolWeek, error) {
+// was ever blocked by gets an access entry under view; a school that cannot
+// take it fails the read.
+func (t *TraegerStaff) TraegerPoolWeek(ctx context.Context, actor workforce.TraegerStaffActor, weekStart calendar.Date, view string) (workforce.PoolWeek, error) {
 	today := t.today()
 	monday := poolMonday(weekStart, today)
 	week := workforce.PoolWeek{WeekStart: monday, Today: today, Available: true, Springers: []workforce.PoolSpringer{}}
@@ -147,7 +147,7 @@ func (t *TraegerStaff) TraegerPoolWeek(ctx context.Context, actor workforce.Trae
 	if err != nil || len(springers) == 0 {
 		return week, err
 	}
-	if err := t.recordPoolAccess(ctx, actor, sites); err != nil {
+	if err := t.recordPoolAccess(ctx, actor, view, sites); err != nil {
 		return workforce.PoolWeek{}, err
 	}
 	names := schoolNames(schools)
@@ -192,12 +192,12 @@ func (t *TraegerStaff) poolAccessSites(ctx context.Context, organizationID int64
 
 // recordPoolAccess writes one access entry per school, in its tenant
 // transaction (ADR 0084 section 7, ADR 0089 section 6).
-func (t *TraegerStaff) recordPoolAccess(ctx context.Context, actor workforce.TraegerStaffActor, sites map[int64][]int64) error {
+func (t *TraegerStaff) recordPoolAccess(ctx context.Context, actor workforce.TraegerStaffActor, view string, sites map[int64][]int64) error {
 	for _, schoolID := range slices.Sorted(maps.Keys(sites)) {
 		recordIDs := slices.Sorted(slices.Values(sites[schoolID]))
 		err := t.ports.Runtime.WithinSchool(ctx, schoolID, func(ctx context.Context) error {
 			return t.ports.Access.RecordTraegerStaffAccess(ctx, workforce.TraegerStaffAccess{
-				OrganizationID: actor.OrganizationID, AccountID: actor.AccountID, View: workforce.TraegerStaffViewPool,
+				OrganizationID: actor.OrganizationID, AccountID: actor.AccountID, View: view,
 				Rows: len(recordIDs), RecordIDs: recordIDs,
 			})
 		})

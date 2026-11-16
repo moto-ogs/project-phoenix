@@ -153,15 +153,17 @@ func (rs *SchoolPoolResource) lift(w http.ResponseWriter, r *http.Request) {
 type TraegerPoolResource struct {
 	pool         workforce.TraegerStaffPool
 	requireStaff common.Middleware
+	lists        ListRenderer
 }
 
 // NewTraegerPoolResource builds the Träger's routes; the root binds
-// requireStaff to the Träger right traeger_staff:manage.
-func NewTraegerPoolResource(pool workforce.TraegerStaffPool, requireStaff common.Middleware) *TraegerPoolResource {
-	if pool == nil || requireStaff == nil {
-		panic("workforce traeger staff pool: the pool and the right check are required")
+// requireStaff to the Träger right traeger_staff:manage and lists to
+// Document Rendering (#4718).
+func NewTraegerPoolResource(pool workforce.TraegerStaffPool, requireStaff common.Middleware, lists ListRenderer) *TraegerPoolResource {
+	if pool == nil || requireStaff == nil || lists == nil {
+		panic("workforce traeger staff pool: the pool, the right check and the list renderer are required")
 	}
-	return &TraegerPoolResource{pool: pool, requireStaff: requireStaff}
+	return &TraegerPoolResource{pool: pool, requireStaff: requireStaff, lists: lists}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/staff-pool; the
@@ -172,6 +174,7 @@ func (rs *TraegerPoolResource) TraegerRouter(protectedTraegerRoutes func(chi.Rou
 	protectedTraegerRoutes(r, func(r chi.Router, _ common.Middleware) {
 		staff := r.With(rs.requireStaff)
 		staff.Get("/", rs.week)
+		staff.Get("/export", rs.export)
 		staff.Delete("/blocks/{id}", rs.lift)
 	})
 	return r
@@ -186,12 +189,61 @@ func (rs *TraegerPoolResource) week(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	week, err := rs.pool.TraegerPoolWeek(r.Context(), session, weekStart)
+	week, err := rs.pool.TraegerPoolWeek(r.Context(), session, weekStart, workforce.TraegerStaffViewPool)
 	if err != nil {
 		common.RenderError(w, r, poolErrors(err))
 		return
 	}
 	common.Respond(w, r, http.StatusOK, week, "Staff pool retrieved successfully")
+}
+
+// export answers the week's blocks as PDF, Excel or CSV (format=, CSV
+// without one), logged at the same schools as the page (#4718).
+func (rs *TraegerPoolResource) export(w http.ResponseWriter, r *http.Request) {
+	session, ok := actor(w, r)
+	if !ok {
+		return
+	}
+	weekStart, ok := weekParam(w, r)
+	if !ok {
+		return
+	}
+	format, err := listFormat(r)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	week, err := rs.pool.TraegerPoolWeek(r.Context(), session, weekStart, workforce.TraegerStaffViewPoolExport)
+	if err != nil {
+		common.RenderError(w, r, poolErrors(err))
+		return
+	}
+	writeList(w, r, rs.lists, format, poolWeekTable(week))
+}
+
+// poolWeekTable lists the live blocks of the week, one row each, by
+// Springer and time as the page shows them.
+func poolWeekTable(week workforce.PoolWeek) ListTable {
+	rows := [][]string{}
+	for _, springer := range week.Springers {
+		for _, block := range springer.Blocks {
+			rows = append(rows, []string{
+				springer.LastName, springer.FirstName, germanDay(block.Date.String()),
+				block.StartTime, block.EndTime, block.SchoolName,
+			})
+		}
+	}
+	return ListTable{
+		Title:    "Vertretungspool",
+		Subtitle: "Woche " + germanDay(week.WeekStart.String()) + " bis " + germanDay(week.WeekStart.AddDays(6).String()),
+		Filters:  []string{"Alle Springer und Schulen"},
+		Columns: []ListColumn{
+			{ID: "last_name", Label: "Nachname"}, {ID: "first_name", Label: "Vorname"}, {ID: "date", Label: "Tag"},
+			{ID: "start_time", Label: "Beginn"}, {ID: "end_time", Label: "Ende"}, {ID: "school", Label: "Schule"},
+		},
+		Rows: rows, Footer: "Vertraulich. Enthält personenbezogene Daten.",
+		Filename: "vertretungspool-" + week.WeekStart.String(),
+	}
 }
 
 func (rs *TraegerPoolResource) lift(w http.ResponseWriter, r *http.Request) {

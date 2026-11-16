@@ -20,6 +20,7 @@ import {
   planningWeekLabel,
   schoolColors,
 } from "~/components/traeger/planning/planning-format";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { EmptyState } from "~/components/ui/empty-state";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
 import { SectionCard } from "~/components/ui/section-card";
@@ -29,6 +30,7 @@ import { ApiError } from "~/lib/api-error";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import {
+  downloadTraegerPoolWeek,
   fetchTraegerPoolWeek,
   liftTraegerBlock,
   type PoolWeek,
@@ -140,6 +142,19 @@ export default function TraegerStaffPoolPage() {
         ) : null
       }
       statsLoading={loading}
+      actions={
+        notReleased ? undefined : (
+          <TraegerListExportMenu
+            download={(format) => downloadTraegerPoolWeek(weekStart, format)}
+            scope="Alle Blockungen der Woche"
+            ariaLabel="Blockungen der Woche herunterladen"
+            tooltip="Zeigt die Formate für die Blockungen dieser Woche. Jeder Download steht im Zugriffsprotokoll der Schulen."
+            fallbackName={`vertretungspool-${weekStart}`}
+            errorObject="die Blockungen der Woche"
+            unavailable={blockCount === 0}
+          />
+        )
+      }
       searchSlot={
         notReleased ? undefined : (
           <PlanningContextBar

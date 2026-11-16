@@ -14769,7 +14769,8 @@ export const traegerStaffPlanningTopic =
 
 /**
  * `/traeger/personal/vertretungspool` (#4709, ADR 0250): wer Springer ist,
- * jede Blockung der Woche und das Aufheben einer Blockung.
+ * jede Blockung der Woche, ihr Download (#4718) und das Aufheben einer
+ * Blockung.
  */
 export const traegerStaffPoolTopic =
   function traegerStaffPoolTopic(): HelpTopic {
@@ -14803,6 +14804,13 @@ export const traegerStaffPoolTopic =
             "Wählen Sie eine Blockung und dann `Aufheben`.",
           ],
         },
+        {
+          title: "Blockungen herunterladen",
+          steps: [
+            "Wählen Sie mit den Pfeilen die Woche.",
+            "Wählen Sie oben rechts `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Blockungen dieser Woche.",
+          ],
+        },
       ],
       steps: [],
       result:
@@ -14811,7 +14819,7 @@ export const traegerStaffPoolTopic =
         "Eine Person ist zu jeder Zeit nur für eine Schule geblockt.",
         "Eine Schule sieht vom Springer nur den Namen, ob die Nachweise vollständig sind, und die geblockten Zeiten.",
         "Andere Schulen sehen nur, welche Schule geblockt hat. Einen Grund oder eine Gruppe speichert moto nicht.",
-        "Jedes Anzeigen der Woche steht im Zugriffsprotokoll jeder betroffenen Schule.",
+        "Jedes Anzeigen und jeder Download der Woche steht im Zugriffsprotokoll jeder betroffenen Schule.",
         "Blockt eine Schule die Person zum ersten Mal, wird die Schule ein Einsatzort in der Akte. Die Schule plant sie dann im Dienstplan ein.",
         "An dieser Schule meldet sich die Person nur in den geblockten Zeiten an. Heben Sie eine Blockung auf, endet auch dieser Zugang.",
         "Die Person braucht dafür ein Konto bei moto. Hat sie keins, laden Sie sie an einer Schule ein.",

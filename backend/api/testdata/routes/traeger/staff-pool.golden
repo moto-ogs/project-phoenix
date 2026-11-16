@@ -1,2 +1,3 @@
 DELETE /traeger/staff-pool/blocks/{id}
 GET /traeger/staff-pool/
+GET /traeger/staff-pool/export

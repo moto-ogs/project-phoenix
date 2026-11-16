@@ -100,7 +100,7 @@ func mountTraegerStaffPool(root, tenant chi.Router, records workforce.TraegerSta
 	if !ok || !schoolOK {
 		return errors.New("traeger staff records: the Personalstamm serves no Vertretungspool")
 	}
-	root.Mount("/traeger/staff-pool", traegerstaff.NewTraegerPoolResource(pool, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
+	root.Mount("/traeger/staff-pool", traegerstaff.NewTraegerPoolResource(pool, requireStaff, traegerStaffListRenderer(NewSimpleListRenderer())).TraegerRouter(ProtectedTraegerRoutes))
 	tenant.Mount("/staff-pool", traegerstaff.NewSchoolPoolResource(schoolPool,
 		common.RequiresPermission(permissions.TimeTrackingManage)).Router(ProtectedTenantRoutes))
 	return nil
