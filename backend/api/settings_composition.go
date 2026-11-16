@@ -82,8 +82,12 @@ func newSettingsResource(db transactionruntime.Database, operations settingsHTTP
 
 // settingsInputError renders a rejected setting value. A visible attendance
 // window longer than its retention names the window that blocks it (#3957),
-// so the person reads which value is allowed.
+// so the person reads which value is allowed. A device PIN that is easy to
+// guess gets its own code, so the person reads why (#7175).
 func settingsInputError(err error) render.Renderer {
+	if _, ok := errors.AsType[*settingsModule.DevicePINTooSimpleError](err); ok {
+		return apiCommon.ErrorInvalidRequestWithCode(err, apiCommon.CodeSettingsDevicePinTooSimple)
+	}
 	window, ok := errors.AsType[*settingsModule.AttendanceWindowError](err)
 	if !ok {
 		return apiCommon.ErrorInvalidRequest(err)

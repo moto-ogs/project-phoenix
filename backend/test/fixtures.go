@@ -238,6 +238,7 @@ func CreateTestDevice(tb testing.TB, db *bun.DB, deviceID string) *Device {
 		ModelTableExpr(`iot.devices`).
 		Scan(ctx)
 	require.NoError(tb, err, "Failed to create test device")
+	ensureFixtureDevicePIN(tb, db, device.TenantID)
 
 	return device
 }
@@ -1844,6 +1845,7 @@ func CreateTestDeviceForTenant(tb testing.TB, db *bun.DB, tenantID int64, device
 		ModelTableExpr(`iot.devices`).
 		Scan(ctx)
 	require.NoError(tb, err, "Failed to create test device for tenant")
+	ensureFixtureDevicePIN(tb, db, tenantID)
 
 	return device
 }

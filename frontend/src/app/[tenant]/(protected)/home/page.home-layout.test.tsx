@@ -80,6 +80,9 @@ vi.mock("~/lib/usercontext-context", () => ({
   ),
 }));
 
+vi.mock("~/components/devices/device-pin-warning", () => ({
+  DevicePinWarning: () => <div data-testid="device-pin-warning" />,
+}));
 vi.mock("~/components/enrollment/phase-expiry-warnings", () => ({
   PhaseExpiryWarnings: () => <div data-testid="phase-expiry-warnings" />,
 }));

@@ -16,11 +16,13 @@ func init() {
 
 var security_init_pin_0Definitions = []config.Definition{
 	{
-		Key:             config.KeyOGSDevicePIN,
-		Label:           "Geräte-PIN",
-		Description:     "Mit dieser PIN meldet sich Ihr Team am Tablet an. Nutzen Sie keine PIN, die Sie auch anderswo verwenden.",
-		Type:            config.FieldPassword,
-		Default:         "1234",
+		Key:         config.KeyOGSDevicePIN,
+		Label:       "Geräte-PIN",
+		Description: "Mit dieser PIN meldet sich Ihr Team am Tablet an. Ohne PIN geht die Anmeldung am Tablet nicht. Nehmen Sie keine leichte PIN wie 1234 oder 1111.",
+		Type:        config.FieldPassword,
+		// No default PIN (#7175): every school sets its own. Until it does,
+		// device authentication rejects the empty PIN and admins see a notice.
+		Default:         "",
 		ReadPermission:  "config:read",
 		WritePermission: "config:manage",
 		Tab:             "devices",

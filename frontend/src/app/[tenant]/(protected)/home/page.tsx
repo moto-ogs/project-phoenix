@@ -24,6 +24,7 @@ import { BookingLeftoverTodos } from "~/components/home/booking-leftover-todos";
 import { RosterDeviationTodos } from "~/components/home/roster-deviation-todos";
 import { SchoolVacationHintsCore } from "~/components/timetable/school-vacation-hints-core";
 import { PhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
+import { DevicePinWarning } from "~/components/devices/device-pin-warning";
 import { Button } from "~/components/ui/button";
 import { ICON_ONLY } from "~/components/ui/control-geometry";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -522,6 +523,10 @@ function HomeContent() {
       }
     >
       {canReadPhaseExpiryWarnings && !editing ? <PhaseExpiryWarnings /> : null}
+
+      {/* Geräte-PIN (#7175): ohne eigene PIN fallen die Tablets aus oder
+          bleiben leicht zu öffnen. Der Hinweis bleibt, bis die PIN steht. */}
+      {canReadPhaseExpiryWarnings && !editing ? <DevicePinWarning /> : null}
 
       {/* Spätere Abholzeit ohne Termin (#3261): eine Aufgabe, keine
           Kennzahl, deshalb fest über dem Brett wie die Hinweise davor. */}

@@ -2,6 +2,7 @@ DELETE /api/settings/enrollment/legal-agb-document -> basis
 DELETE /api/settings/home-layout -> basis
 DELETE /api/settings/login-image -> basis
 DELETE /api/settings/values/{key} -> basis
+GET /api/settings/device-pin-status -> basis
 GET /api/settings/home-layout -> basis
 GET /api/settings/login-image -> basis
 GET /api/settings/payroll-status -> zeiterfassung

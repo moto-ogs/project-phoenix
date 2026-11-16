@@ -283,6 +283,10 @@ export const payrollKeys = {
   targetCoverage: () => "payroll-target-coverage",
 } as const;
 
+export const devicePinKeys = {
+  status: () => "settings-device-pin-status",
+} as const;
+
 export const databaseKeys = {
   counts: () => "/api/database/counts",
   // The SSE hook revalidates every key containing this name.

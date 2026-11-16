@@ -197,6 +197,9 @@ type (
 // attendance retention window (#3957).
 type AttendanceWindowError = configModel.AttendanceWindowError
 
+// DevicePINTooSimpleError rejects a device PIN that is easy to guess (#7175).
+type DevicePINTooSimpleError = configModel.DevicePINTooSimpleError
+
 // ErrPresenceModeSwitchBlocked reports a presence-mode switch while
 // attendance of the day is still open.
 var ErrPresenceModeSwitchBlocked = configModel.ErrPresenceModeSwitchBlocked

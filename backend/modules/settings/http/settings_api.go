@@ -41,6 +41,7 @@ type Operations interface {
 	SetValue(context.Context, int64, int64, []string, string, any) error
 	ResetValue(context.Context, int64, int64, []string, string) error
 	PayrollStatus(context.Context) (any, error)
+	DevicePINStatus(context.Context) (any, error)
 	GetLoginImageURL(context.Context, int64) (string, error)
 	SetLoginImageURL(context.Context, int64, string) (string, error)
 	ClearLoginImageURL(context.Context, int64) (string, error)
@@ -92,6 +93,9 @@ func (rs *SettingsResource) SettingsRouter() chi.Router {
 		// same tier that writes the payroll settings; carries a per-tenant
 		// staff-without-Personalnummer count (count only, no names).
 		r.With(rs.runtime.Require(AccessManage), withTx).Get("/payroll-status", rs.getPayrollStatus)
+		// Device PIN notice (#7175): config:manage only — the tier that
+		// writes security.ogs_device_pin. A flag only, never the PIN.
+		r.With(rs.runtime.Require(AccessManage), withTx).Get("/device-pin-status", rs.getDevicePINStatus)
 
 		r.With(settingsWrite, withTx).Get("/values/{key}/reveal", rs.revealValue)
 		r.With(settingsWrite, withTx).Put("/values/{key}", rs.setValue)

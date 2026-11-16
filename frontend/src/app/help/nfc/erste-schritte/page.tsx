@@ -35,9 +35,9 @@ const steps = [
     number: "2",
     title: "Mit Geräte-PIN anmelden",
     icon: KeyRound,
-    text: "Auf dem Startbildschirm auf Anmelden tippen und die 4-stellige PIN eingeben. Die Standard-PIN bei Auslieferung ist 1234. Nach der vierten Ziffer prüft das Tablet automatisch.",
+    text: "Auf dem Startbildschirm auf Anmelden tippen und die 4-stellige PIN eingeben. Nach der vierten Ziffer prüft das Tablet automatisch.",
     detail:
-      "Wir empfehlen, die Standard-PIN nach der ersten Anmeldung unter Einstellungen, Geräte, Geräte-PIN zu ändern.",
+      "Die PIN legt die Leitung Ihrer OGS fest: unter Einstellungen, Geräte, Geräte-PIN. Ohne diese PIN geht die Anmeldung nicht.",
   },
   {
     id: "armbaender-zuweisen",

@@ -455,7 +455,7 @@ does not make it a dry-run.
 ```bash
 # CLI (run inside the container via `docker compose run server go run . <cmd>`)
 go run . migrate status|validate|reset
-go run ./cmd/devtools seed --email <op-email> --password <pw> --pin 1234   # flags required; seeds via the HTTP API, server must be running
+go run ./cmd/devtools seed --email <op-email> --password <pw> --pin 4729   # flags required; seeds via the HTTP API, server must be running
 go run . cleanup preview|stats      # visit-retention dry-run / statistics
 go run . cleanup visits             # REAL deletion — there is no `cleanup visits preview`; extra args are silently ignored
 go run . cleanup timetable|time-tracking [preview|stats]      # nested dry-runs exist only for these two

@@ -29,6 +29,12 @@
       "legacy": "settings.booking_authority_blocked"
     },
     {
+      "code": "settings.device_pin_too_simple",
+      "class": "input",
+      "parameters": [],
+      "legacy": "settings.device_pin_too_simple"
+    },
+    {
       "code": "settings.invalid_value",
       "class": "input",
       "parameters": [],

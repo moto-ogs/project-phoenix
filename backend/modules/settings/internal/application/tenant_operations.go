@@ -116,6 +116,27 @@ func (o *TenantOperations) PayrollStatus(ctx context.Context) (any, error) {
 	return o.payroll.GetPayrollStatus(ctx)
 }
 
+// DevicePINStatus reports whether the school's tablets still need a device PIN
+// of the school's own (#7175): NFC-Anwesenheit is booked and the PIN is empty
+// or easy to guess. The answer carries a flag only, never the PIN.
+func (o *TenantOperations) DevicePINStatus(ctx context.Context) (any, error) {
+	if o == nil || o.settings == nil {
+		return nil, configModel.ErrRuntimeUnavailable
+	}
+	booked, err := o.settings.ResolveBool(ctx, configModel.KeyModuleNFCAnwesenheit)
+	if err != nil {
+		return nil, err
+	}
+	if !booked {
+		return configModel.DevicePINStatusOf(false, ""), nil
+	}
+	pin, err := o.settings.ResolveString(ctx, configModel.KeyOGSDevicePIN)
+	if err != nil {
+		return nil, err
+	}
+	return configModel.DevicePINStatusOf(true, pin), nil
+}
+
 func (o *TenantOperations) SetLegalDocument(ctx context.Context, tenantID, accountID int64, permissions []string, documentURL string, cleanup func(context.Context, int64, string, string) (func(), error)) error {
 	return o.withLegalDocumentWrite(ctx, tenantID, accountID, permissions, documentURL, cleanup, false)
 }

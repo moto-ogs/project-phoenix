@@ -8,5 +8,6 @@
   "attendance_visible_exceeds_retention": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "attendance_retention_below_visible": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "module_requires": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
-  "module_required_by": "Nie udało się zapisać: {object}. Sprawdź wpisane dane."
+  "module_required_by": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "device_pin_too_simple": "Nie udało się zapisać: {object}. Sprawdź wpisane dane."
 }

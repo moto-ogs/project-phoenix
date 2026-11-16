@@ -169,10 +169,11 @@ module.
 
 The first run needs `OPERATOR_EMAIL`, `OPERATOR_PASSWORD` and `OGS_DEVICE_PIN`
 from the normal local environment. `OGS_DEVICE_PIN` must be exactly four
-digits: the seeder writes it into the school's `security.ogs_device_pin`
-setting before the first device request, because device auth checks that
-setting (default 1234) and uses the variable only when the setting is empty.
-The demo process refuses to start with any other shape. Staff/admin passwords
+digits that are not easy to guess (no 1234, 1111, 1212): the seeder writes it
+into the school's `security.ogs_device_pin` setting before the first device
+request, because device auth checks only that setting, which has no default.
+The demo process refuses to start with any other shape; an easy PIN fails the
+seed at that write with `settings.device_pin_too_simple`. Staff/admin passwords
 are generated for this school. A restart reads the existing state and does not seed another
 school. Ctrl+C stops the runner; it does not delete the school.
 
@@ -251,7 +252,8 @@ introduced.
   that header, because the server takes the client address from it.
   `scripts/check-runtime-env.py` pins the sidecar command to the loopback URL.
 - **Device PIN:** `OGS_DEVICE_PIN` in `demo.sops.env` must be exactly four
-  digits (`^\d{4}$`, the pattern of `security.ogs_device_pin`). The seeder
+  digits (`^\d{4}$`, the pattern of `security.ogs_device_pin`) and not easy to
+  guess (same digit, run up or down, repeated pair; #7175). The seeder
   writes it into every demo school it creates; a six-digit value stops the
   demo process at start. Rotate it with `sops set` only; schools seeded
   earlier keep the PIN they were seeded with.
