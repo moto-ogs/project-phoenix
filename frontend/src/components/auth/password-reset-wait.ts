@@ -8,8 +8,10 @@
  *
  * Storage is per origin and every portal has its own host, so one key serves
  * them all. The entry survives logout (`KEPT_STORAGE_KEYS`), so it holds no
- * address: each address is stored as a 32-bit FNV-1a hash. Many addresses
- * share a hash, so an entry cannot tell which address was entered; a rare
+ * address in plain text, only a 32-bit FNV-1a hash of it. That is a
+ * pseudonym, not a secret: someone at this device who already suspects an
+ * address can test whether it was entered here within the last hour. An
+ * entry is dropped once its wait ran out, at most one hour later. A rare
  * collision only shows a wait the backend would not enforce.
  */
 const STORAGE_KEY = "passwordResetWaits";

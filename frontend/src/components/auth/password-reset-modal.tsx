@@ -97,7 +97,7 @@ export const DEFAULT_PASSWORD_RESET_MODAL_COPY: PasswordResetModalCopy = {
   close: "Schließen",
   errorObject: "das Senden des Links",
   rateLimitWait: (countdown) =>
-    `Für diese Adresse wurde schon mehrmals ein Link angefordert. Einen neuen Link können Sie in ${countdown} Minuten anfordern.`,
+    `Für diese Adresse wurde schon mehrmals ein Link angefordert. Einen neuen Link können Sie in ${countdown} anfordern.`,
 };
 
 const formatCountdown = (totalSeconds: number): string => {
@@ -141,8 +141,12 @@ export function PasswordResetModal({
   }, []);
 
   const waitUntil = resetWaitUntil(waits, email, now);
-  const secondsLeft =
-    waitUntil === null ? 0 : Math.max(1, Math.ceil((waitUntil - now) / 1000));
+  const waitText =
+    waitUntil === null
+      ? null
+      : copy.rateLimitWait(
+          formatCountdown(Math.max(1, Math.ceil((waitUntil - now) / 1000))),
+        );
 
   useEffect(() => {
     if (waitUntil === null) return;
@@ -318,12 +322,8 @@ export function PasswordResetModal({
             size="md"
             isLoading={isLoading}
             loadingText={copy.submitting}
-            disabled={waitUntil !== null}
-            disabledReason={
-              waitUntil === null
-                ? undefined
-                : copy.rateLimitWait(formatCountdown(secondsLeft))
-            }
+            disabled={waitText !== null}
+            disabledReason={waitText ?? undefined}
           >
             {copy.submit}
           </Button>
@@ -351,6 +351,8 @@ export function PasswordResetModal({
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
+            // A wait that ran out while no countdown ticked ends here.
+            setNow(Date.now());
             // The announcement belonged to the address just replaced.
             setWaitAnnouncement("");
           }}
@@ -359,18 +361,14 @@ export function PasswordResetModal({
           disabled={isLoading}
           error={errorPath.fieldError("email")}
         />
-        {waitUntil === null ? null : (
+        {waitText === null ? null : (
           <Alert
             type="warning"
             // The countdown changes every second; a live region would read
             // it out every second. The status below announces it once.
             announce="off"
             icon={<HourglassMediumIcon weight="duotone" aria-hidden />}
-            message={
-              <span className="tabular-nums">
-                {copy.rateLimitWait(formatCountdown(secondsLeft))}
-              </span>
-            }
+            message={<span className="tabular-nums">{waitText}</span>}
           />
         )}
         <p className="sr-only" role="status">

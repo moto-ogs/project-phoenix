@@ -2,6 +2,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ApiError } from "~/lib/api-error";
+import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import { PasswordResetModal } from "./password-reset-modal";
 import { readResetWaits, rememberResetWait } from "./password-reset-wait";
@@ -274,11 +275,11 @@ describe("PasswordResetModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Link senden/i }));
 
     expect(await screen.findByTestId("alert-warning")).toHaveTextContent(
-      "Für diese Adresse wurde schon mehrmals ein Link angefordert. Einen neuen Link können Sie in 01:00 Minuten anfordern.",
+      "Für diese Adresse wurde schon mehrmals ein Link angefordert. Einen neuen Link können Sie in 01:00 anfordern.",
     );
     // A wait is no failure of the dialog: no error alert.
     expect(screen.queryByTestId("alert-error")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(/01:00 Minuten/);
+    expect(screen.getByRole("status")).toHaveTextContent(/01:00/);
     expect(
       screen.getByRole("button", { name: /Link senden/i }),
     ).toHaveAttribute("aria-disabled", "true");
@@ -348,12 +349,31 @@ describe("PasswordResetModal", () => {
       />,
     );
 
-    expect(screen.getByTestId("alert-warning")).toHaveTextContent(
-      /in 01:00 Minuten/,
-    );
+    expect(screen.getByTestId("alert-warning")).toHaveTextContent(/in 01:00/);
     expect(
       screen.getByRole("button", { name: /Link senden/i }),
     ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("frees an address whose wait ran out while the dialog was open", () => {
+    const start = Date.now();
+    rememberResetWait({}, "test@example.com", start + 1000, start);
+    render(
+      <ResetModal
+        isOpen={true}
+        onClose={mockOnClose}
+        initialEmail="other@example.com"
+      />,
+    );
+
+    setTestClock(new Date(start + 2000));
+    fireEvent.change(screen.getByTestId("input-reset-email"), {
+      target: { value: "test@example.com" },
+    });
+
+    // Anker: der Knopf ist frei, obwohl kein Countdown lief.
+    expect(screen.getByRole("button", { name: /Link senden/i })).toBeEnabled();
+    expect(screen.queryByTestId("alert-warning")).not.toBeInTheDocument();
   });
 
   it("drops expired waits and the old address-less wait", () => {
