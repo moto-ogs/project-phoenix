@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	marshalerType = reflect.TypeFor[json.Marshaler]()
-	timeType      = reflect.TypeFor[time.Time]()
-	dateType      = reflect.TypeFor[calendar.Date]()
+	marshalerType   = reflect.TypeFor[json.Marshaler]()
+	unmarshalerType = reflect.TypeFor[json.Unmarshaler]()
+	timeType        = reflect.TypeFor[time.Time]()
+	dateType        = reflect.TypeFor[calendar.Date]()
 )
 
 type builder struct {
@@ -28,6 +29,7 @@ type builder struct {
 	deprecated   map[string]bool
 	numericIDs   map[string]bool
 	identifiers  map[reflect.Type]string
+	readers      map[reflect.Type]string
 	used         map[string]bool
 	requestTypes map[string]bool
 }
@@ -39,7 +41,7 @@ func Build(routes []Registration, options Options) (Document, error) {
 		types: map[string]Object{}, names: map[reflect.Type]string{}, enums: map[string]Enum{},
 		enumByType: map[reflect.Type]string{}, enumByField: map[string]string{},
 		deprecated: map[string]bool{}, numericIDs: map[string]bool{}, used: map[string]bool{},
-		requestTypes: map[string]bool{}, identifiers: options.Identifiers,
+		requestTypes: map[string]bool{}, identifiers: options.Identifiers, readers: options.Readers,
 	}
 	for _, key := range options.NumericIDs {
 		b.numericIDs[key] = true
@@ -201,6 +203,11 @@ func (b *builder) unused(options Options) error {
 			stale = append(stale, "query variant "+key)
 		}
 	}
+	for t := range options.Readers {
+		if !b.used["reader:"+t.String()] {
+			stale = append(stale, "reader "+t.String())
+		}
+	}
 	for key := range b.enumByField {
 		if !b.used["enum:"+key] {
 			stale = append(stale, "enum field "+key)
@@ -248,6 +255,14 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 	}
 	if t.Implements(marshalerType) || reflect.PointerTo(t).Implements(marshalerType) {
 		return Schema{}, fmt.Errorf("%s: %s has its own MarshalJSON and no entry in the contract generator", where, t)
+	}
+	if request && reflect.PointerTo(t).Implements(unmarshalerType) {
+		// Reflection describes the fields, the type's own reader decides what
+		// it takes; only an entry can say how the two agree.
+		if _, known := b.readers[t]; !known {
+			return Schema{}, fmt.Errorf("%s: %s has its own UnmarshalJSON and no entry in the contract generator", where, t)
+		}
+		b.used["reader:"+t.String()] = true
 	}
 	switch t.Kind() {
 	case reflect.String:

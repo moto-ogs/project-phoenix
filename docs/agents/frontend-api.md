@@ -313,6 +313,15 @@ or write a `Backend*` interface for a registered route.
   and request ID; rethrow `error.cause` so the handler boundary forwards the
   backend error unchanged. An answer outside the contract is a 502, never an
   empty value.
+- Write to a registered route with `contractWrite` (same file): it takes the
+  generated route entry, checks the body against the route's request type at
+  compile time and decodes the answer like `contractGet`. A request type has
+  only optional fields, because Go reads an absent key as the zero value;
+  what is required stays Go's `Bind` and reaches the client through the error
+  contract.
+- A portal other than `tenant` reads through its own route wrapper
+  (`createParentGetHandler`) and the same `contractGet`; the route entry
+  names its portals.
 - Identifiers leave the decoder as strings. A registered enum is typed as its
   known values but decodes any string; narrow it with `knownEnum`.
 - A day is a `calendar.Date`, an instant a `time.Time`. A string field that
@@ -321,11 +330,17 @@ or write a `Backend*` interface for a registered route.
   another form. Closed value sets are registered in `Enums`.
 - A new identifier is a `common.ID`, a count an `int`; the generator rejects a
   bare `int64` and a response shape that depends on a query parameter.
+- In a request type an identifier is a `string`, except a field Go still
+  reads only as a JSON number (`NumericIDs`): that one is a `number`. A
+  request type with its own `UnmarshalJSON` needs an entry in `Readers`
+  (`backend/api/route_contracts.go`), or the generator stops.
 - Removing or renaming a registered field or route needs one release as
   deprecated (`DeprecatedFields`, `Deprecated`);
   `scripts/check-contract-compat.mjs <base>` fails otherwise.
 
-Registered today: `GET /api/students/` and `GET /api/students/{id}`.
+Registered today: `GET /api/students/`, `GET /api/students/{id}`,
+`POST /api/students/`, `PUT /api/students/{id}` (portal `tenant`) and
+`GET /parent/me/enrollable-schools` (portal `parent`).
 
 ### Auth Token Flow
 
