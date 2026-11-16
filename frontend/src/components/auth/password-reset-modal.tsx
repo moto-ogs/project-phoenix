@@ -273,7 +273,7 @@ export function PasswordResetModal({
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-700">{copy.successMessage}</p>
-          <InsetPanel padding="sm" className="flex items-center gap-3">
+          <InsetPanel framed padding="sm" className="flex items-center gap-3">
             <EnvelopeSimpleIcon
               className="size-5 shrink-0 text-gray-500"
               aria-hidden
@@ -358,7 +358,6 @@ export function PasswordResetModal({
         {waitUntil === null ? null : (
           <Alert
             type="warning"
-            size="compact"
             // The countdown changes every second; a live region would read
             // it out every second. The status below announces it once.
             announce="off"
