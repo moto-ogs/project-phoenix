@@ -52,10 +52,24 @@ Request Feed.
    `api.NewParentRouteTestRepositories`) und Communications Zielgruppe weiter.
    Die Projektion Parent Request Feed liest ab einem festen Zeitpunkt vor
    allen Testzeilen, die PostgreSQL beim Insert stempelt.
-4. **Budget.** Das Compose-LOC-Budget von `workflows/parentportal/compose`
-   steigt um die drei Zeilen der Vorbelegung (336 auf 339, Summe 13.643 auf
-   13.646). Die Uhr selbst war schon Teil der Abhängigkeiten.
-5. Keine Effekt-Bindung ändert sich; die Uhr ist nach ADR 0239 effektfrei.
+4. **Eine Entscheidung, eine Uhr im Schreib-Rig.** Das Rig der
+   Schreib- und Lesewege (`newChildReadRigOn`, Grundlage der Sperr- und
+   Widerrufstests wie `TestParentChildWritesHoldTheGuardUntilCommit`) stand
+   schon auf dem 31. August 2026, las aber für die Sichtbarkeit von
+   Mitteilungen und das Zwei-Wochen-Fenster der Entschuldigungsanfragen die
+   echte Uhr. Mit Schritt 1 lesen beide die Portaluhr; die Testmitteilungen
+   waren aber auf der echten Uhr veröffentlicht und galten damit als
+   zukünftig (404 statt Sperrprüfung). Das Rig gibt seine Uhr jetzt an
+   Portal, HTTP-Ressource und Entschuldigungsanfragen gleichermaßen weiter
+   und veröffentlicht die Testmitteilungen eine Minute vor dieser Uhr. Die
+   Uhr beginnt um 10:00 Uhr des festen Tags und läuft mit der echten Zeit
+   weiter, damit `TestParentExcusedRequestsStartTheirWindowAfterTheChildCheck`
+   weiter belegt, dass das Fenster erst nach der langsamen Kinderprüfung
+   beginnt. Keine Zusicherung entfällt.
+5. **Budget.** Das Compose-LOC-Budget von `workflows/parentportal/compose`
+   steigt um die drei Zeilen der Vorbelegung (336 auf 339, Summe 13.651 auf
+   13.654). Die Uhr selbst war schon Teil der Abhängigkeiten.
+6. Keine Effekt-Bindung ändert sich; die Uhr ist nach ADR 0239 effektfrei.
 
 ## Folgen
 
@@ -65,4 +79,9 @@ Request Feed.
 - Tests mit Mitteilungen, die Communication auf der echten Uhr veröffentlicht
   und mit PostgreSQLs `now()` filtert, reichen dem Portal ausdrücklich
   `time.Now`; die Testdaten liegen dort auf der echten Uhr.
+- Die Sichtbarkeit einer Mitteilung entscheidet das Portal in Go auf seiner
+  Uhr, Communications Zielgruppen-SQL (`published_at <= clock_timestamp()`
+  bzw. `<= NOW()`) auf der Uhr der Datenbank. In Produktion ist beides die
+  echte Uhr; die Vereinheitlichung gehört zu Communication und zur
+  SQL-Uhr-Phase von #7104, nicht zu diesem Schnitt.
 - Die übrigen Owner folgen in eigenen Pull Requests nach #7104.
