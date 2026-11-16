@@ -636,3 +636,33 @@ func TestRevokedCatererInvitationMailIsNotSent(t *testing.T) {
 	assert.Equal(t, "cancelled", mailStatus(replaced), "a new invitation stops the mail of the one it takes back")
 	assert.Equal(t, "pending", mailStatus(renewed), "the new invitation's mail goes out")
 }
+
+// #4496: the refused acceptance's audit event is written in a savepoint of
+// the school's transaction. A failing audit write (here an address the
+// INET column refuses) leaves the transaction usable, so the counted wrong
+// password still commits and is still answered as one.
+func TestCatererAcceptanceKeepsTheCountWhenTheAuditFails(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	caterers := setupAuthFactory(t, db).Caterers()
+	first := testpkg.Tenant(t)
+	second, _ := testpkg.CreateTestTenant(t, db)
+	staff := testpkg.CreateTestAccount(t, db, "caterer-accept-audit")
+	email := fmt.Sprintf("kueche-audit-%d@example.com", time.Now().UnixNano())
+	acceptance, err := accept(t, db, caterers, first, invite(t, db, caterers, first, staff.ID, email), identityaccess.CatererRegistration{Password: catererPassword, ConfirmPassword: catererPassword})
+	require.NoError(t, err)
+	forgetCaterer(t, db, acceptance)
+	secondToken := invite(t, db, caterers, second, staff.ID, email)
+	var refused error
+	require.NoError(t, inSchool(t, db, second, func(ctx context.Context) error {
+		_, refused = caterers.AcceptCatererInvitation(ctx, secondToken, identityaccess.CatererRegistration{Password: testpkg.NewTestPassword(), IPAddress: "keine-adresse", UserAgent: "test"})
+		if errors.Is(refused, identityaccess.ErrInvalidCredentials) {
+			return nil
+		}
+		return refused
+	}), "the school's transaction stays usable and commits")
+	require.ErrorIs(t, refused, identityaccess.ErrInvalidCredentials)
+	var attempts int
+	require.NoError(t, db.NewRaw(`SELECT password_attempts FROM auth.accounts WHERE id = ?`, acceptance.AccountID).Scan(context.Background(), &attempts))
+	assert.Equal(t, 1, attempts, "the wrong password stays counted")
+}
