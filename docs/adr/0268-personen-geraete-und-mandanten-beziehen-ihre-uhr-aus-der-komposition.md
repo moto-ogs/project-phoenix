@@ -48,9 +48,9 @@ musste den Fall selbst abfangen.
    behalten Felder, Codes und Header; nur die Uhr hinter den Zeitstempeln
    wechselt.
 4. **Budgets.** Die Compose-LOC-Budgets steigen nur um die Uhrfelder, ihre
-   Importe und die Nil-Defaults: Device Fleet +5, Organisation & Tenancy +9,
-   People Directory +6, School Membership +5, School Structure +6,
-   Settings +2, Summe 13.540 auf 13.573.
+   Importe und die Nil-Defaults: Device Fleet +6, Organisation & Tenancy +10,
+   People Directory +6, School Membership +5, School Structure +8,
+   Settings +3, Summe 13.540 auf 13.578.
 5. Die 59 Effekt-Bindungen, deren Körper oder Aufrufspur sich nur durch ihre
    Uhr geändert haben, sind mit dieser ADR neu bestätigt, die 14 Ausnahmen
    darunter per `approval_adr`. Effekt und Einstufung bleiben gleich.

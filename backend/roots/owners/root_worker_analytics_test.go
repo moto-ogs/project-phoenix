@@ -39,7 +39,7 @@ func TestWorkerAnalyticsNormalizesDemoEnvironment(t *testing.T) {
 				return tracker
 			}
 			env := RootEnvironment{
-				Logger: slog.Default(), Config: ServiceConfig{AppEnv: tc.appEnv},
+				Logger: slog.Default(), Config: ServiceConfig{AppEnv: tc.appEnv}, Now: time.Now,
 				Observe: RootObservers{SettingsLookup: func(string, string, string, time.Duration) {}},
 			}
 			values, tracker, err := buildWorkerAnalyticsSettings(database, testpkg.TenantRuntime(t, db), env,

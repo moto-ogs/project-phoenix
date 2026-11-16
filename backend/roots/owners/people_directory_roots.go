@@ -38,8 +38,8 @@ func NewPeopleDirectory(db transactionruntime.Database, clocks ...func() time.Ti
 // MustNewPeopleDirectory is NewPeopleDirectory for composition seams that
 // cannot return an error; composing only fails on missing dependencies, which
 // is a programming error at wiring time.
-func MustNewPeopleDirectory(db transactionruntime.Database) *peopleCompose.Directory {
-	capability, err := NewPeopleDirectory(db)
+func MustNewPeopleDirectory(db transactionruntime.Database, clocks ...func() time.Time) *peopleCompose.Directory {
+	capability, err := NewPeopleDirectory(db, clocks...)
 	if err != nil {
 		panic(fmt.Sprintf("compose people directory: %v", err))
 	}
@@ -175,12 +175,8 @@ func NewStudentRepository(db transactionruntime.Database, membership groupAssign
 	if err != nil {
 		panic(fmt.Sprintf("student repository: compose membership: %v", err))
 	}
-	directory, err := NewPeopleDirectory(db, clocks...)
-	if err != nil {
-		panic(fmt.Sprintf("student repository: compose people directory: %v", err))
-	}
 	return BindStudentRepository(peopleCompose.StudentRepositoryDependencies{
-		DB: db.Pool(), Directory: directory, Enrollment: enrollment,
+		DB: db.Pool(), Directory: MustNewPeopleDirectory(db, clocks...), Enrollment: enrollment,
 	}, membership, groups)
 }
 

@@ -38,8 +38,11 @@ func NewCallerContext(
 	presence studentpresence.Owner, settings CallerSettings, logger *slog.Logger, today func() timezone.Date,
 ) (identityaccess.CallerContext, error) {
 	if accounts == nil || persons.Rows == nil || persons.People == nil || membership == nil || staffGroups == nil ||
-		classes == nil || activities == nil || presence == nil || logger == nil || today == nil {
-		return identityaccess.CallerContext{}, errors.New("compose caller context: the accounts, persons, membership, staff groups, school classes, supervised activities, presence, a logger and the day clock are required")
+		classes == nil || activities == nil || presence == nil || logger == nil {
+		return identityaccess.CallerContext{}, errors.New("compose caller context: the accounts, persons, membership, staff groups, school classes, supervised activities, presence and a logger are required")
+	}
+	if today == nil {
+		return identityaccess.CallerContext{}, errors.New("compose caller context: the day clock is required")
 	}
 	review := &identityCompose.ParentRequestReviewDependencies{
 		Permissions:           ReviewPermissions,

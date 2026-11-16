@@ -56,7 +56,7 @@ func NewSettingsService(
 	logger *slog.Logger,
 	registries ...*config.Registry,
 ) config.SettingsService {
-	return newSettingsService(valueRepo, auditRepo, schoolStore, runtime, logger, nil, config.ServiceOptions{Now: time.Now}, registries...)
+	return newSettingsService(valueRepo, auditRepo, schoolStore, runtime, logger, nil, config.ServiceOptions{}, registries...)
 }
 
 // SettingsServiceDependencies are every collaborator of the settings service,
@@ -123,6 +123,10 @@ func newSettingsService(
 	if len(registries) > 0 && registries[0] != nil {
 		registry = registries[0]
 	}
+	now := options.Now
+	if now == nil {
+		now = time.Now
+	}
 	return &settingsService{
 		OperatorWritePolicy:   registry,
 		valueRepo:             valueRepo,
@@ -138,7 +142,7 @@ func newSettingsService(
 		classRestrictionGuard: options.ClassRestrictionGuard,
 		gradeRestrictionGuard: options.GradeRestrictionGuard,
 		gradeCapGuard:         options.GradeCapGuard,
-		now:                   options.Now,
+		now:                   now,
 	}
 }
 
