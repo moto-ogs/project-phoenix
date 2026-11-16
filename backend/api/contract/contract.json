@@ -217,6 +217,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/notifications/feed/unread-count",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/school/staff-messages/unread-count",
       "portals": [
         "school"

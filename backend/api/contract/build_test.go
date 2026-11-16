@@ -308,9 +308,34 @@ func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
 		assert.Contains(t, table, line)
 	}
 
-	taken := get("/api/portals/", inner{})
-	doc, err = Build([]Registration{taken}, Options{Identifiers: identifiers})
+	for _, pattern := range []string{"/api/portals/", "/api/shared/"} {
+		doc, err = Build([]Registration{get(pattern, inner{})}, Options{Identifiers: identifiers})
+		require.NoError(t, err)
+		_, err = TypeScript(doc)
+		assert.ErrorContains(t, err, "taken by a generated table")
+	}
+}
+
+// Two portals mount the same handlers, so two resources answer with one Go
+// type. It is written once and both files import it.
+func TestTypeScriptWritesATypeOfTwoResourcesOnce(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{rowRoute(), get("/school/rows/{id}", row{}), get("/api/others/", inner{})}, rowOptions)
 	require.NoError(t, err)
-	_, err = TypeScript(doc)
-	assert.ErrorContains(t, err, "taken by the portal table")
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	shared := files["shared.generated.ts"]
+	assert.Contains(t, shared, `export const MODE_VALUES = ["a", "b"] as const;`)
+	assert.Contains(t, shared, "export const rowSchema: z.ZodType<row, unknown> = z.object({")
+	assert.NotContains(t, shared, "export const routes")
+	for _, name := range []string{"rows.generated.ts", "school-rows.generated.ts"} {
+		assert.Contains(t, files[name], "import {\n  rowSchema,\n} from \"./shared.generated\";", name)
+		assert.NotContains(t, files[name], "export interface row ", name)
+		assert.NotContains(t, files[name], `from "zod"`, name)
+		assert.Contains(t, files[name], "    response: success(rowSchema),", name)
+	}
+	// A type of one resource stays in its file.
+	assert.Contains(t, files["others.generated.ts"], "export interface inner {")
+	assert.NotContains(t, shared, "interface inner ")
 }
