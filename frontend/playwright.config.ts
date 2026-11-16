@@ -76,7 +76,7 @@ export default defineConfig({
   // CI (.github/workflows/e2e.yml) braucht die Fehler im Log; der HTML-Report
   // landet bei einem Fehlschlag als Artefakt. Aus dem JSON-Bericht prüft der
   // Workflow, dass Tests gelaufen und keine übersprungen sind.
-  // e2e/a11y/reporter.ts meldet, wo die A11y-Baseline sinken kann (#7107).
+  // e2e/a11y/reporter.ts meldet, welche Einträge der A11y-Baseline entfallen können (#7107).
   reporter: process.env.CI
     ? [
         ["list"],
