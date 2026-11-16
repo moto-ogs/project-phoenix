@@ -34,6 +34,7 @@ import { settingsConcept } from "~/lib/concepts/settings";
 import { staffConcept } from "~/lib/concepts/staff";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
 import { stateReportConcept } from "~/lib/concepts/stateReport";
+import { substitutionConcept } from "~/lib/concepts/substitution";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 
@@ -247,6 +248,15 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Einsatzplanung",
         shortLabel: "Planung",
         concept: staffPlanConcept,
+        right: STAFF_RIGHT,
+      },
+      {
+        // Die Springer und wer sie geblockt hat, über alle Schulen (#4709).
+        key: "vertretungspool",
+        href: "/traeger/personal/vertretungspool",
+        label: "Vertretungspool",
+        shortLabel: "Springer",
+        concept: substitutionConcept,
         right: STAFF_RIGHT,
       },
       {

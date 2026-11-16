@@ -1924,6 +1924,16 @@ export const ERROR_CATALOG = {
         "Die Personalnummer darf nur Ziffern haben, höchstens 9. Bitte prüfen Sie die Eingabe.",
       "workforce.personnel_number_taken":
         "Diese Personalnummer ist schon vergeben. Bitte wählen Sie eine andere.",
+      "workforce.pool_block_invalid":
+        "Bitte wählen Sie einen Tag ab heute. Das Ende muss nach dem Beginn liegen.",
+      "workforce.pool_block_not_found":
+        "Diese Blockung gibt es nicht mehr. Bitte laden Sie die Woche neu.",
+      "workforce.pool_block_taken":
+        "Diese Person ist zu dieser Zeit schon geblockt. Bitte wählen Sie eine andere Zeit.",
+      "workforce.pool_springer_busy":
+        "Die Person arbeitet zu dieser Zeit an einer anderen Schule. Bitte wählen Sie eine andere Zeit.",
+      "workforce.pool_springer_not_found":
+        "Diese Person ist an diesem Tag nicht im Vertretungspool. Bitte laden Sie die Woche neu.",
       "workforce.qualification_type_name_taken":
         "Es gibt schon eine Nachweisart mit diesem Namen. Bitte wählen Sie einen anderen Namen.",
       "workforce.qualification_type_not_found":

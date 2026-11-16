@@ -24,6 +24,12 @@ func AccessSessionLive(head AccountSession, token AccessSession, now time.Time) 
 		owner = token.ActingAdminID
 	}
 	scopeMatches := head.PortalScope == PortalScopeUnknown || head.PortalScope == PersistedPortalScope(token.Scope)
+	// A Springer's window gates only a session that rests on the account's
+	// own role at the school (ADR 0251): a parent session or an Absprung of
+	// the same account stays.
+	kind := head.SessionKind()
+	outside := head.OutsideAccessWindow && kind != SessionKind(PortalParent.Name) &&
+		kind != SessionKindTraegerSchool && kind != SessionKindTraegerParent
 	return token.FamilyID != "" && head.FamilyID == token.FamilyID && owner > 0 && head.AccountID == owner &&
-		scopeMatches && head.Expiry.After(now)
+		scopeMatches && head.Expiry.After(now) && !outside
 }

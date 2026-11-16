@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/csv"
 	"fmt"
-	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"

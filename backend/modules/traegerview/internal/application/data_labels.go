@@ -54,6 +54,7 @@ var dataLabels = map[string]string{
 	"traeger_document_download":           "Dokument des Trägers (heruntergeladen)",
 	"traeger_staff_records":               "Personalakten des Trägers",
 	"traeger_staff_financial":             "Bank- und Steuerdaten einer Personalakte",
+	"traeger_staff_pool":                  "Springer aus dem Vertretungspool des Trägers",
 	"student_record":                      "Angaben zu einem Kind",
 	"guardian_record":                     "Angaben zu Eltern",
 	"guardian_bank_details":               "Bankverbindung von Eltern",
