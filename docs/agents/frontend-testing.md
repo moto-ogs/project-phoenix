@@ -75,7 +75,9 @@ replaces a thread after a file that leaves more than 200 MB of heap.
 
 `src/test/network-guard.ts` (installed by `setup.ts`, both DOM projects)
 answers every `fetch` no mock handles with a network error and fails the
-test that sent it, naming the request and the calling code (#7216). Such a
+test that sent it, naming the request and the calling code (#7216). A
+request sent after its test ended fails the next check (next test or the
+file's `afterAll`), still under the sending test's name. Such a
 request went to `http://localhost:3000`: refused in CI, answered by a local
 dev server, possibly after the test ended. Mock the API module function the
 component calls, with the neutral value its type declares (empty list, no

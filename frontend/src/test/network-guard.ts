@@ -1,4 +1,4 @@
-import { afterEach, expect } from "vitest";
+import { afterAll, afterEach, expect } from "vitest";
 
 /**
  * Component tests answer every request with a mock, never the network
@@ -47,11 +47,26 @@ export function installNetworkGuard(): void {
   globalThis.fetch = unmockedFetch;
 }
 
-afterEach(() => {
+// Captured before a test file can install fake timers.
+const realSetTimeout = globalThis.setTimeout;
+const realSetImmediate = globalThis.setImmediate;
+
+function failOnUnmockedRequests(): void {
   if (unmockedRequests.length === 0) return;
   const requests = unmockedRequests.splice(0);
   throw new Error(
     `${requests.length} request(s) reached the network instead of a mock. ` +
       `Mock the API module or fetch for:\n${requests.join("\n")}`,
   );
+}
+
+// Each entry names the test that sent it. A request an effect sends after
+// its test ended is reported by the next check, still under its own name.
+afterEach(failOnUnmockedRequests);
+// After the file's last test, wait for zero-delay timers once so a late
+// request is still reported before the worker moves on to the next file.
+afterAll(async () => {
+  await new Promise<void>((resolve) => realSetTimeout(resolve, 0));
+  await new Promise<void>((resolve) => realSetImmediate(resolve));
+  failOnUnmockedRequests();
 });

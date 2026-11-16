@@ -91,7 +91,7 @@ func (l *Ledger) open() (*os.File, error) {
 	}
 	current, err := os.Lstat(l.path)
 	if err != nil || !os.SameFile(info, current) {
-		_ = file.Close()
+		release(file)
 		return nil, errLedger
 	}
 	return file, nil

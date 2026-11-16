@@ -225,6 +225,7 @@ func confirmShortTerm(t *testing.T, store *Store, db *bun.DB) (Term, bun.Tx) {
 			return term, tx
 		}
 		require.ErrorIs(t, err, ErrNotHeld, "the job confirms its term as its last statement")
+		require.False(t, databaseNow(t, db).Before(term.Until), "a running term was refused")
 		require.Less(t, attempt, attempts, "every term expired before its confirmation")
 		require.NoError(t, tx.Rollback())
 	}
