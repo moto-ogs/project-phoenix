@@ -967,6 +967,73 @@ describe("CareOfferingsEditor", () => {
     );
   });
 
+  it("hides old occupancy after a failed post-save statistics refresh and restores fresh counts", async () => {
+    const item = offering({
+      id: "offer-1",
+      name: "Regelbetreuung",
+      capacity: 10,
+    });
+    mocks.listPhases.mockResolvedValue([phase()]);
+    mocks.listCareOfferings.mockResolvedValue([item]);
+    mocks.updateCareOffering.mockResolvedValue(item);
+    const stats = {
+      "offer-1": {
+        offering_id: "offer-1",
+        capacity: 10,
+        booked: 3,
+        grade_levels: {},
+        unknown_grade_count: 0,
+      },
+    };
+    mocks.fetchCareOfferingBookingStats.mockResolvedValue(stats);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(
+        enrollmentKeys.bookingStats(phase().id),
+        () => mocks.fetchCareOfferingBookingStats(phase().id),
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <>
+        <CareOfferingsEditor />
+        <Probe />
+      </>,
+    );
+    expect(await screen.findByText("3 von 10")).toBeVisible();
+    mocks.fetchCareOfferingBookingStats.mockRejectedValue(
+      new Error("stats down"),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Aktionen für Regelbetreuung" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.updateCareOffering).toHaveBeenCalledTimes(1),
+    );
+    await waitFor(() =>
+      expect(mocks.fetchCareOfferingBookingStats).toHaveBeenCalledTimes(2),
+    );
+    expect(await screen.findByRole("button", { name: /^Preis/ })).toBeVisible();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /^Belegt/ }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText("3 von 10")).not.toBeInTheDocument();
+    mocks.fetchCareOfferingBookingStats.mockResolvedValue({
+      "offer-1": { ...stats["offer-1"], booked: 4 },
+    });
+    await act(async () => {
+      await reload();
+    });
+    expect(await screen.findByText("4 von 10")).toBeVisible();
+  });
+
   it("hides the occupancy when it fails to load and keeps the list usable", async () => {
     mocks.listPhases.mockResolvedValue([phase()]);
     mocks.listCareOfferings.mockResolvedValue([

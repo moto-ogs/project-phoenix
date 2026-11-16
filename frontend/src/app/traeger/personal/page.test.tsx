@@ -1,5 +1,9 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { deferred } from "~/test/helpers/form-modal-pending";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
+import { StaffLinkModal } from "~/components/traeger/staff/staff-link-modal";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   StaffLinkPreview,
@@ -198,4 +202,42 @@ describe("TraegerStaffRecordsPage", () => {
     fireEvent.click(await screen.findByRole("tab", { name: /Ohne Akte/ }));
     expect(await screen.findByText("Jonas Keller")).toBeInTheDocument();
   });
+});
+
+it("requires a successful fresh link preview on each opening", async () => {
+  api.linkStaff.mockReset().mockResolvedValue(RECORD);
+  api.previewStaffLink.mockReset().mockResolvedValue({
+    ...PREVIEW,
+    fields: PREVIEW.fields.map((f) => ({ ...f, conflict: false })),
+  });
+  const request = {
+    recordId: null,
+    members: [
+      { schoolId: "1", staffId: "11" },
+      { schoolId: "2", staffId: "22" },
+    ],
+  };
+  const props = { onClose: vi.fn(), onLinked: vi.fn() };
+  const view = render(<StaffLinkModal {...props} request={request} />, {
+    wrapper: TraegerResourceTestProvider,
+  });
+  expect(await screen.findByText("•••• 3000")).toBeVisible();
+  view.rerender(<StaffLinkModal {...props} request={null} />);
+  const fresh = deferred<StaffLinkPreview>();
+  api.previewStaffLink.mockReturnValue(fresh.promise);
+  view.rerender(<StaffLinkModal {...props} request={request} />);
+  expect(screen.getByRole("button", { name: "Akte anlegen" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Akte anlegen" }));
+  expect(api.linkStaff).not.toHaveBeenCalled();
+  await act(async () => fresh.reject(new ApiError("offline", 503)));
+  expect(
+    await screen.findByText(catalogText("general.unavailable", "die Vorschau")),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "Akte anlegen" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
 });

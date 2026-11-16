@@ -9,7 +9,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { AllowanceCard } from "~/components/staff/allowance-card";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ButtonLink } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -239,7 +239,7 @@ export function StaffAbsenceAccountsCard({
   const today = useBerlinToday();
   const thisYear = Number(today.slice(0, 4));
   const [year, setYear] = useState(thisYear);
-  const { data: accounts, error } = useTraegerResource(
+  const { data: accounts, error } = useFreshTraegerResource(
     traegerStaffKeys.absenceAccounts(recordId, year),
     () => fetchTraegerAbsenceAccounts(recordId, year),
     "die Kontingente",

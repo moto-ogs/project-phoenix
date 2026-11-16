@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -7,6 +8,8 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionProvider } from "next-auth/react";
+import { useInvalidateFamily } from "~/lib/swr";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 
 vi.unmock("swr");
@@ -336,3 +339,48 @@ function TenantSWR({ children }: { children: React.ReactNode }) {
 }
 const renderWithCache = (ui: React.ReactElement) =>
   render(ui, { wrapper: TenantSWR });
+
+it("withdraws a cached rebooking preview when a later dry run is rejected", async () => {
+  mocks.rebookAbsences.mockReset().mockResolvedValue(rebooking());
+  let reload!: () => Promise<unknown>;
+  function Probe() {
+    const invalidate = useInvalidateFamily();
+    reload = () =>
+      invalidate(
+        staffAbsenceKeys.rebookingPreview(staff.id, [71, 72], "custom:12"),
+      );
+    return null;
+  }
+  renderWithCache(
+    <>
+      <AbsenceRebookModal
+        staff={staff}
+        types={[sickLeave]}
+        absences={fridays}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+      <Probe />
+    </>,
+  );
+  fireEvent.click(screen.getByRole("radio", { name: /Krank-Urlaubstag/ }));
+  expect(await screen.findByText("+16h")).toBeVisible();
+  mocks.rebookAbsences.mockRejectedValue(
+    new ApiError("blocked", 409, {
+      code: "workforce.rebooking_into_sick_report",
+    }),
+  );
+  await act(async () => {
+    await reload();
+  });
+  expect(
+    await screen.findByText(
+      catalogText(
+        "workforce.rebooking_into_sick_report",
+        "die Änderung der Art",
+      ),
+    ),
+  ).toBeVisible();
+  expect(screen.queryByText("+16h")).not.toBeInTheDocument();
+  expect(submitButton()).toHaveAttribute("aria-disabled", "true");
+});

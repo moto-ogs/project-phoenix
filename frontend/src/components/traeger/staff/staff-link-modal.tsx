@@ -7,7 +7,7 @@
 // Steuerdaten erscheinen nur maskiert und ziehen in die Akte um.
 
 import { useEffect, useRef, useState } from "react";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
@@ -54,7 +54,7 @@ export function StaffLinkModal({
   onLinked: (record: StaffRecordDetail) => void;
 }>) {
   const isOpen = request !== null;
-  const { data: preview, error: previewError } = useTraegerResource(
+  const { data: preview, error: previewError } = useFreshTraegerResource(
     request
       ? traegerStaffKeys.linkPreview(request.recordId, request.members)
       : null,

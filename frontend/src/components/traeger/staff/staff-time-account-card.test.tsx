@@ -199,3 +199,17 @@ describe("StaffTimeAccountCard", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+it("performs a new audited read on immediate reopening", async () => {
+  api.fetchTraegerTimeAccount.mockReset().mockResolvedValue(account());
+  const view = render(<StaffTimeAccountCard recordId="5" />, {
+    wrapper: TraegerResourceTestProvider,
+  });
+  expect(await screen.findByText("Saldo des Monats")).toBeVisible();
+  expect(api.fetchTraegerTimeAccount).toHaveBeenCalledTimes(1);
+  view.rerender(<div>away</div>);
+  view.rerender(<StaffTimeAccountCard recordId="5" />);
+  await vi.waitFor(() =>
+    expect(api.fetchTraegerTimeAccount).toHaveBeenCalledTimes(2),
+  );
+});

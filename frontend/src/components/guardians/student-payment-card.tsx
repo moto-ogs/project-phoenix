@@ -19,7 +19,8 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
+import { useInvalidateFamily, useSWRCacheKey } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import type { GuardianWithRelationship } from "@/lib/guardian-helpers";
@@ -79,21 +80,24 @@ export function StudentPaymentCard({
 
   const payerId = payer?.id ?? null;
   const invalidateFamily = useInvalidateFamily();
-  const payment = useSWRAuth(
+  const cacheKey = useSWRCacheKey();
+  const paymentScope = cacheKey(
+    tenantContactKeys.guardianPayment(payerId ?? ""),
+  );
+  const payment = useConfirmedSWR(
     payerId ? tenantContactKeys.guardianPayment(payerId) : null,
     () => fetchGuardianPayment(payerId ?? ""),
-    { keepPreviousData: false },
   );
   // Ladefehler stehen in der Karte, mit Wiederholen (#2517). Ohne geladene
   // Daten heißt es „Nicht geladen“, nie „Noch keine IBAN gespeichert“.
   const loadError = useSwrResourceLoadError(
-    [payment],
+    [{ data: payment.data ?? undefined, error: payment.failure }],
     "die Bankverbindung",
     () => payment.mutate(),
   );
   const loadFailed = loadError.failure !== undefined;
   const isLoading =
-    payerId !== null && payment.data === undefined && !payment.error;
+    payerId !== null && payment.data === null && !payment.failure;
   const ibanMasked = payment.data?.ibanMasked ?? null;
   const accountHolder = payment.data?.accountHolder ?? null;
   // The full IBAN of one payer, shown after the audited „Anzeigen“ only.
@@ -103,6 +107,7 @@ export function StudentPaymentCard({
     source: typeof payment.data;
   } | null>(null);
   const revealedIban =
+    !payment.refused &&
     revealed !== null &&
     revealed.payerId === payerId &&
     revealed.source === payment.data
@@ -133,13 +138,28 @@ export function StudentPaymentCard({
     }
   }, [baseline?.payerId, draft, payerId, clearEditError]);
 
+  // Late reveal/edit answers must not restore data after a refusal or a
+  // payer/account change. A new audited read owns a new attempt.
+  const readAttempt = useRef(0);
+  useLayoutEffect(() => {
+    readAttempt.current++;
+    setIsRevealing(false);
+    setRevealed(null);
+    setDraft(null);
+    setBaseline(null);
+    clearEditError();
+  }, [paymentScope, payment.refused, clearEditError]);
+
   const handleReveal = async () => {
-    if (!payerId) return;
+    if (!payerId || payment.refused) return;
+    const attempt = ++readAttempt.current;
     setIsRevealing(true);
     try {
       const data = await revealGuardianPayment(payerId);
+      if (attempt !== readAttempt.current) return;
       setRevealed({ payerId, iban: data.iban, source: payment.data });
     } catch (error) {
+      if (attempt !== readAttempt.current) return;
       logger.error("reveal_guardian_payment_failed", {
         error: error instanceof Error ? error.message : String(error),
       });
@@ -148,11 +168,12 @@ export function StudentPaymentCard({
         retry: () => void handleReveal(),
       });
     } finally {
-      setIsRevealing(false);
+      if (attempt === readAttempt.current) setIsRevealing(false);
     }
   };
 
   const handleStartEdit = async () => {
+    if (payment.refused) return;
     clearEditError();
     if (!payerId) {
       const empty = { payerId: null, iban: "", holder: "" };
@@ -160,11 +181,13 @@ export function StudentPaymentCard({
       setDraft(empty);
       return;
     }
+    const attempt = ++readAttempt.current;
     setIsRevealing(true);
     try {
       // Edit starts from the real value: a form prefilled with a masked string
       // would silently overwrite the stored IBAN with dots on save.
       const data = await revealGuardianPayment(payerId);
+      if (attempt !== readAttempt.current) return;
       const opened = {
         payerId,
         iban: data.iban ?? "",
@@ -173,6 +196,7 @@ export function StudentPaymentCard({
       setBaseline(opened);
       setDraft(opened);
     } catch (error) {
+      if (attempt !== readAttempt.current) return;
       logger.error("open_guardian_payment_failed", {
         error: error instanceof Error ? error.message : String(error),
       });
@@ -181,7 +205,7 @@ export function StudentPaymentCard({
         retry: () => latestStartEditRef.current(),
       });
     } finally {
-      setIsRevealing(false);
+      if (attempt === readAttempt.current) setIsRevealing(false);
     }
   };
 
@@ -200,7 +224,7 @@ export function StudentPaymentCard({
       draft.holder.trim() !== baseline.holder.trim());
 
   const handleSave = async () => {
-    if (!draft) return;
+    if (!draft || payment.refused) return;
     setIsSaving(true);
     clearEditError();
     try {
@@ -255,7 +279,7 @@ export function StudentPaymentCard({
   const draftPayer = draft?.payerId
     ? (guardians.find((g) => g.id === draft.payerId) ?? null)
     : null;
-  const editing = draft !== null;
+  const editing = draft !== null && !payment.refused;
 
   return (
     <SectionCard
@@ -270,7 +294,7 @@ export function StudentPaymentCard({
             size="md"
             variant="surface"
             onClick={() => void handleStartEdit()}
-            disabled={isRevealing || isLoading}
+            disabled={isRevealing || isLoading || payment.refused}
             tooltip="Öffnet das Zahlungskonto zum Ändern und protokolliert das Anzeigen der IBAN."
           >
             Bearbeiten

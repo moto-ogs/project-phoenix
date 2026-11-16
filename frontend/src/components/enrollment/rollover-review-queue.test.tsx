@@ -9,6 +9,9 @@ import {
 import "@testing-library/jest-dom/vitest";
 import type { ReactElement, ReactNode } from "react";
 import { SessionProvider } from "next-auth/react";
+import { resetSWRScope } from "~/lib/swr/scope";
+import { useInvalidateFamily } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 
 vi.unmock("swr");
@@ -498,3 +501,55 @@ describe("RolloverReviewQueue", () => {
     });
   });
 });
+
+beforeEach(() => resetSWRScope({ revalidate: false }));
+it.each([401, 403])(
+  "hides cached rollover entries and decisions on a reader %s",
+  async (status) => {
+    mockListReview.mockReset().mockResolvedValue([makeItem()]);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const invalidate = useInvalidateFamily();
+      reload = () => invalidate(enrollmentKeys.rolloverReview("77"));
+      return null;
+    }
+    render(
+      <>
+        <RolloverReviewQueue phaseID="77" />
+        <Probe />
+      </>,
+    );
+    expect(await screen.findByText(/Lina Beispiel/)).toBeVisible();
+    mockListReview.mockRejectedValue(new ApiError("refused", status));
+    await act(async () => {
+      await reload();
+    });
+    if (status === 403)
+      expect(
+        await screen.findByText(
+          catalogText("general.permission", "die Prüfliste"),
+        ),
+      ).toBeVisible();
+    else
+      await waitFor(() =>
+        expect(
+          document.querySelector('[aria-busy="true"]'),
+        ).toBeInTheDocument(),
+      );
+    expect(screen.queryByText(/Lina Beispiel/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/anna@example.com/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Behalten/ }),
+    ).not.toBeInTheDocument();
+    mockListReview.mockRejectedValue(new ApiError("offline", 503));
+    await act(async () => {
+      await reload();
+    });
+    expect(screen.queryByText(/Lina Beispiel/)).not.toBeInTheDocument();
+    mockListReview.mockResolvedValue([makeItem()]);
+    await act(async () => {
+      await reload();
+    });
+    expect(await screen.findByText(/Lina Beispiel/)).toBeVisible();
+  },
+);

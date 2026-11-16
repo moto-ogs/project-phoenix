@@ -8,7 +8,9 @@ import {
 } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useSWRAuth } from "~/lib/swr";
+import { resetSWRScope } from "~/lib/swr/scope";
+import { deferred } from "~/test/helpers/form-modal-pending";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 
@@ -25,9 +27,15 @@ const mockSetPayer = vi.fn();
 // Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
 vi.unmock("swr");
 
+const sessionUser = vi.hoisted(() => ({
+  id: "account-1",
+  tenantId: 1,
+  scope: "tenant",
+}));
+
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    data: { user: sessionUser },
     status: "authenticated",
   }),
 }));
@@ -97,6 +105,8 @@ function guardian(
 
 describe("StudentPaymentCard", () => {
   beforeEach(() => {
+    sessionUser.id = "account-1";
+    resetSWRScope({ revalidate: false });
     mockFetchPayment.mockReset();
     mockRevealPayment.mockReset();
     mockUpdatePayment.mockReset();
@@ -109,6 +119,147 @@ describe("StudentPaymentCard", () => {
       ibanMasked: "•••• 3000",
       accountHolder: null,
     });
+  });
+
+  it.each(["revealed", "draft"])(
+    "removes %s bank data after a reader refusal and keeps it gone on reopening",
+    async (mode) => {
+      const masked = {
+        guardianId: "10",
+        ibanMasked: "•••• 3000",
+        accountHolder: "Bankinhaber",
+      };
+      mockFetchPayment.mockResolvedValue(masked);
+      mockRevealPayment.mockResolvedValue({
+        guardianId: "10",
+        iban: FULL_IBAN,
+        accountHolder: "Bankinhaber",
+      });
+      let reload!: () => Promise<unknown>;
+      function Probe() {
+        const invalidate = useInvalidateFamily();
+        reload = () => invalidate(tenantContactKeys.guardianPayment("10"));
+        return null;
+      }
+      const card = (
+        <StudentPaymentCard
+          studentId="7"
+          guardians={[guardian("10", "Sabine", true)]}
+        />
+      );
+      const view = render(
+        <>
+          {card}
+          <Probe />
+        </>,
+      );
+      expect(await screen.findByText(masked.ibanMasked)).toBeVisible();
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: mode === "revealed" ? /Anzeigen/ : "Bearbeiten",
+        }),
+      );
+      if (mode === "revealed")
+        expect(await screen.findByText(FULL_IBAN)).toBeVisible();
+      else
+        await waitFor(() =>
+          expect(screen.getByLabelText("IBAN")).toHaveValue(FULL_IBAN),
+        );
+      mockFetchPayment.mockRejectedValue(new ApiError("refused", 403));
+      await act(async () => {
+        await reload();
+      });
+      const refusal = catalogText("general.permission", "die Bankverbindung");
+      expect(await screen.findByText(refusal)).toBeVisible();
+      expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("IBAN")).not.toBeInTheDocument();
+      expect(screen.queryByText(masked.ibanMasked)).not.toBeInTheDocument();
+      view.rerender(<Probe />);
+      mockFetchPayment.mockRejectedValue(new ApiError("offline", 503));
+      view.rerender(
+        <>
+          {card}
+          <Probe />
+        </>,
+      );
+      expect(await screen.findByText(refusal)).toBeVisible();
+      expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
+      mockFetchPayment.mockResolvedValue(masked);
+      await act(async () => {
+        await reload();
+      });
+      expect(await screen.findByText(masked.ibanMasked)).toBeVisible();
+      expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("IBAN")).not.toBeInTheDocument();
+    },
+  );
+
+  it("does not reopen a payment draft from a late reveal after a refusal", async () => {
+    const late = deferred<{
+      guardianId: string;
+      iban: string;
+      accountHolder: null;
+    }>();
+    mockRevealPayment.mockReturnValue(late.promise);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const invalidate = useInvalidateFamily();
+      reload = () => invalidate(tenantContactKeys.guardianPayment("10"));
+      return null;
+    }
+    render(
+      <>
+        <StudentPaymentCard
+          studentId="7"
+          guardians={[guardian("10", "Sabine", true)]}
+        />
+        <Probe />
+      </>,
+    );
+    expect(await screen.findByText("•••• 3000")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await waitFor(() => expect(mockRevealPayment).toHaveBeenCalled());
+    mockFetchPayment.mockRejectedValue(new ApiError("refused", 403));
+    await act(async () => {
+      await reload();
+    });
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Bankverbindung"),
+      ),
+    ).toBeVisible();
+    await act(async () =>
+      late.resolve({ guardianId: "10", iban: FULL_IBAN, accountHolder: null }),
+    );
+    expect(screen.queryByLabelText("IBAN")).not.toBeInTheDocument();
+    expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
+  });
+
+  it("discards a late payment draft after the signed-in account changes", async () => {
+    const late = deferred<{
+      guardianId: string;
+      iban: string;
+      accountHolder: null;
+    }>();
+    mockRevealPayment.mockReturnValue(late.promise);
+    const card = () => (
+      <StudentPaymentCard
+        studentId="7"
+        guardians={[guardian("10", "Sabine", true)]}
+      />
+    );
+    const view = render(card());
+    expect(await screen.findByText("•••• 3000")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await waitFor(() => expect(mockRevealPayment).toHaveBeenCalled());
+    sessionUser.id = "account-2";
+    view.rerender(card());
+    expect(await screen.findByText("•••• 3000")).toBeVisible();
+    await act(async () =>
+      late.resolve({ guardianId: "10", iban: FULL_IBAN, accountHolder: null }),
+    );
+    expect(screen.queryByLabelText("IBAN")).not.toBeInTheDocument();
+    expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
   });
 
   it("withdraws the revealed IBAN when the same payer's payment details change", async () => {

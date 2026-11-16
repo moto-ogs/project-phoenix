@@ -524,8 +524,11 @@ export function CareOfferingsEditor({
     { keepPreviousData: false },
   );
   const { mutate: mutateStats } = statsRead;
-  const bookingStats = accessRefused ? NO_STATS : (statsRead.data ?? NO_STATS);
-  const bookingStatsUnavailable = !statsRead.data && Boolean(statsRead.error);
+  const bookingStatsUnavailable = Boolean(statsRead.error);
+  const bookingStats =
+    accessRefused || bookingStatsUnavailable
+      ? NO_STATS
+      : (statsRead.data ?? NO_STATS);
   const invalidateMatching = useInvalidateMatching();
   const toast = useToast();
 
@@ -656,12 +659,9 @@ export function CareOfferingsEditor({
               revalidate: false,
             })
           : undefined,
+        // Revalidate through the reader so SWR records any failure.
         // Display-only: a failed occupancy reload hides the numbers.
-        selectedPhaseId
-          ? mutateStats(fetchCareOfferingBookingStats(selectedPhaseId), {
-              revalidate: false,
-            }).catch(() => undefined)
-          : undefined,
+        selectedPhaseId ? mutateStats() : undefined,
       ]);
     },
   );

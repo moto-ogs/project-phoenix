@@ -122,3 +122,19 @@ describe("StaffAbsenceAccountsCard", () => {
     ).toHaveAttribute("href", "/personal/abwesenheitsarten");
   });
 });
+
+it("performs a new audited read on immediate reopening", async () => {
+  api.fetchTraegerAbsenceAccounts.mockReset().mockResolvedValue([ACCOUNT]);
+  const view = render(<StaffAbsenceAccountsCard recordId="5" />, {
+    wrapper: TraegerResourceTestProvider,
+  });
+  expect(
+    await screen.findByRole("region", { name: "Regenerationstag 2026" }),
+  ).toBeVisible();
+  expect(api.fetchTraegerAbsenceAccounts).toHaveBeenCalledTimes(1);
+  view.rerender(<div>away</div>);
+  view.rerender(<StaffAbsenceAccountsCard recordId="5" />);
+  await vi.waitFor(() =>
+    expect(api.fetchTraegerAbsenceAccounts).toHaveBeenCalledTimes(2),
+  );
+});

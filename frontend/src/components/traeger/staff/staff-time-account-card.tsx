@@ -10,7 +10,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Lock, LockOpen } from "lucide-react";
 
 import { MonthCloseReasonModal } from "~/components/staff/month-close-modal";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -143,7 +143,7 @@ export function StaffTimeAccountCard({
     error,
     mutate,
     reload,
-  } = useTraegerResource(
+  } = useFreshTraegerResource(
     traegerStaffKeys.timeAccount(recordId, shown.year, shown.month),
     () => fetchTraegerTimeAccount(recordId, shown.year, shown.month),
     "das Stundenkonto",

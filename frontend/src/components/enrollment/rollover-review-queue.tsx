@@ -2,20 +2,19 @@
 
 import { useRefreshPhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
 import { MAX_SUPPORTED_GRADE_LEVEL } from "~/lib/grade-level";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import {
   decideRolloverReview,
   listRolloverReview,
   type ReviewQueueItem,
 } from "~/lib/enrollment-phase-api";
-import { isAccessRefusal } from "~/lib/access-refusal";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { createLogger } from "~/lib/logger";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Button } from "~/components/ui/button";
@@ -48,23 +47,23 @@ export function RolloverReviewQueue({ phaseID }: Props) {
   // Entries decided in this view; a reload that still lists one does not
   // bring it back.
   const completed = useRef(new Set<string>());
-  // The phase whose list the account may no longer read (refused reload).
-  const [refusedPhase, setRefusedPhase] = useState<string | null>(null);
-  const accessRefused = refusedPhase === phaseID;
   const decision = useApiErrorDisplay();
   const [busyChild, setBusyChild] = useState<string | null>(null);
   const [classOverrides, setClassOverrides] = useState<Record<string, string>>(
     {},
   );
 
-  const queue = useSWRAuth(
-    enrollmentKeys.rolloverReview(phaseID),
-    () => listRolloverReview(phaseID),
-    { keepPreviousData: false },
+  const queue = useConfirmedSWR(enrollmentKeys.rolloverReview(phaseID), () =>
+    listRolloverReview(phaseID),
   );
-  const { mutate: mutateQueue } = queue;
+  const { mutate: mutateQueue, refused: accessRefused } = queue;
+  useEffect(() => {
+    if (!accessRefused) return;
+    setClassOverrides({});
+    setBusyChild(null);
+  }, [accessRefused]);
   const listLoad = useSwrResourceLoadError(
-    [{ data: queue.data, error: queue.error }],
+    [{ data: queue.data ?? undefined, error: queue.failure }],
     "die Prüfliste",
     () => mutateQueue(),
   );
@@ -83,16 +82,19 @@ export function RolloverReviewQueue({ phaseID }: Props) {
   const afterDecide = useRefreshAfterWrite(
     "die Anzeige der Prüfliste",
     async () => {
-      try {
-        await mutateQueue(listRolloverReview(phaseID), { revalidate: false });
-      } catch (error) {
-        if (isAccessRefusal(error)) {
-          setRefusedPhase(phaseID);
-          setClassOverrides({});
-          setBusyChild(null);
-        }
-        throw error;
-      }
+      await mutateQueue(
+        listRolloverReview(phaseID).then(
+          (data) => {
+            queue.readCallbacks.onSuccess();
+            return data;
+          },
+          (error: unknown) => {
+            queue.readCallbacks.onError(error);
+            throw error;
+          },
+        ),
+        { revalidate: false },
+      );
     },
   );
 
@@ -109,7 +111,7 @@ export function RolloverReviewQueue({ phaseID }: Props) {
     item: ReviewQueueItem,
     choice: "keep" | "drop" | "defer",
   ) => {
-    if (completed.current.has(item.child_id)) return;
+    if (accessRefused || completed.current.has(item.child_id)) return;
     decision.clearFieldErrors();
     const overrideRaw = classOverrides[item.child_id]?.trim() ?? "";
     const overrideNumber =
