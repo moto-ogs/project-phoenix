@@ -79,7 +79,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
   "~/lib/parent/route-wrapper.server": [
     ...PORTAL_PROXIES,
     "proxyDelete",
-    "createParentGetHandler",
+    "catalogProxy",
     "createParentDeleteHandler",
     "createParentPutHandler",
     "createParentPatchHandler",

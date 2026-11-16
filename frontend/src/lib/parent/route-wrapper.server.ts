@@ -1,5 +1,10 @@
 import { parentPortal } from "~/server/auth/parent";
 import { unwrapEnvelope } from "../backend-client.server";
+import {
+  makeCatalogProxy,
+  type CatalogMethod,
+  type CatalogRoute,
+} from "../contract/catalog-proxy.server";
 import { makePortalHandlers } from "../portal-handlers.server";
 
 /** The parents portal's route handlers, on the parent session only. */
@@ -13,7 +18,6 @@ export const {
   proxyPut,
   proxyPatch,
   proxyDelete,
-  get: createParentGetHandler,
   del: createParentDeleteHandler,
   put: createParentPutHandler,
   patch: createParentPatchHandler,
@@ -28,3 +32,12 @@ export const parentApiPut = async <T, B = unknown>(
   token: string,
   body?: B,
 ) => unwrapEnvelope<T>(await parent.api("PUT", endpoint, token, body));
+
+/**
+ * The guardians' portal proxy: forwards `/api/parent/…` to the backend's
+ * `/parent/…` for the routes the contract registers for this portal.
+ */
+export const catalogProxy = (
+  routes: readonly CatalogRoute[],
+  method: CatalogMethod,
+) => makeCatalogProxy(parent, "/parent", routes, method);

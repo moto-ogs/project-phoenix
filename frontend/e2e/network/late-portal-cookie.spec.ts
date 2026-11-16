@@ -300,3 +300,55 @@ for (const portal of portals) {
     await device2.close();
   });
 }
+
+// #2352: the guardians' portal answers `/api/parent/…` paths without a route
+// file through one catalog proxy. Next must prefer the route files that
+// exist, and the proxy must forward nothing the contract does not register.
+test("Eltern: the catalog proxy serves only registered routes", async ({
+  browser,
+}) => {
+  const portal = portals[0];
+  const context = await browser.newContext();
+  await isolate(context);
+  const page = await context.newPage();
+  const read = (path: string) =>
+    page.evaluate(async (target) => {
+      const response = await fetch(target);
+      return {
+        status: response.status,
+        cache: response.headers.get("Cache-Control"),
+        body: (await response.json().catch(() => null)) as {
+          data?: Record<string, unknown>[];
+          detail?: string;
+          code?: string;
+        } | null,
+      };
+    }, path);
+  const registered = "/api/parent/me/enrollable-schools";
+  const unregistered = "/api/parent/me/enrollable-schools/3";
+
+  // Without a session the registered route asks for one; a path the
+  // contract does not name does not exist, session or not.
+  await page.goto(`${portal.origin}${portal.basePath}/providers`);
+  expect((await read(registered)).status).toBe(401);
+  expect((await read(unregistered)).status).toBe(404);
+
+  await signIn(page, portal);
+  const phases = await read(registered);
+  expect(phases.status).toBe(200);
+  expect(phases.cache).toBe("private, no-store");
+  // Decoded against the contract: the identifier stays exact, and a field
+  // the contract does not know is dropped.
+  expect(phases.body?.data?.[0]?.school_id).toBe("9007199254740993");
+  expect(phases.body?.data?.[0]).not.toHaveProperty("internal_note");
+
+  const refused = await read(unregistered);
+  expect(refused.status).toBe(404);
+  // The proxy's own answer; the fixture API would say fixture.not_configured.
+  expect(refused.body?.detail).toBe("route not found");
+  expect(refused.cache).toBe("private, no-store");
+
+  // A route with its own file still answers through that file.
+  expect(await readStatus(page, portal.read)).toBe(200);
+  await context.close();
+});

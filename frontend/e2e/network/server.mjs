@@ -123,6 +123,24 @@ const api = createServer(async (req, res) => {
     });
   } else if (sharedTenantCookie && portalReads.has(path)) {
     data = envelope([]);
+  } else if (sharedTenantCookie && path === "/parent/me/enrollable-schools") {
+    // Reached through the guardians' catalog proxy, not a route file.
+    data = envelope([
+      {
+        school_id: "9007199254740993",
+        school_name: "Fixture-Schule",
+        school_slug: "school-a",
+        school_subdomain: "school-a",
+        phase_id: "12",
+        phase_name: "Schuljahr",
+        phase_kind: "school_year",
+        service_start_date: "2026-08-01",
+        service_end_date: "2027-07-31",
+        already_linked: false,
+        audience: "open",
+        internal_note: "not in the contract",
+      },
+    ]);
   } else if (sharedTenantCookie && path === "/operator/auth/logout") {
     logoutRequests++;
     liveFamilies.delete(bearerClaims(req)?.family_id);

@@ -319,9 +319,8 @@ or write a `Backend*` interface for a registered route.
   only optional fields, because Go reads an absent key as the zero value;
   what is required stays Go's `Bind` and reaches the client through the error
   contract.
-- A portal other than `tenant` reads through its own route wrapper
-  (`createParentGetHandler`) and the same `contractGet`; the route entry
-  names its portals.
+- A portal other than `tenant` uses its own route wrapper with the same
+  helpers; the route entry names its portals.
 - Identifiers leave the decoder as strings. A registered enum is typed as its
   known values but decodes any string; narrow it with `knownEnum`.
 - A day is a `calendar.Date`, an instant a `time.Time`. A string field that
@@ -337,6 +336,32 @@ or write a `Backend*` interface for a registered route.
 - Removing or renaming a registered field or route needs one release as
   deprecated (`DeprecatedFields`, `Deprecated`);
   `scripts/check-contract-compat.mjs <base>` fails otherwise.
+
+#### Portal proxy (#2352)
+
+A registered route without behavior of its own in the BFF needs no route
+file. `app/api/parent/[...path]/route.ts` is the guardians' portal proxy,
+built by `catalogProxy` (`lib/parent/route-wrapper.server.ts`,
+`lib/contract/catalog-proxy.server.ts`):
+
+- Its allowlist is `portalRoutes.parent` in the generated
+  `lib/contract/portals.generated.ts`: the routes whose registration names
+  the portal. A path outside it is a 404 before the session is read and
+  before any backend call.
+- Only the registered query parameters are forwarded, every path segment is
+  encoded again, and the answer is checked against the route's decoder.
+  Session, the single 401 renewal, body limit, `Idempotency-Key` and the
+  response envelope come from the portal's handlers (`makePortalHandlers`).
+- Next prefers an existing route file over the proxy. Keep a file only for
+  what is specific to the browser: portal policy, session handling, files,
+  uploads, login/MFA, the SSE pipe, or an aggregation without a Go view.
+- To move a pure proxy route: register its Go route for the portal,
+  regenerate, delete the route file and its row in
+  `src/test/proxy-routes/**`. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
+  (`backend/api`) fails when the route does not run behind that portal's
+  scope middleware.
+- The other five portals have no proxy yet; a route with response variants
+  (`GET /api/students/`) is not served by a proxy.
 
 Registered today: `GET /api/students/`, `GET /api/students/{id}`,
 `POST /api/students/`, `PUT /api/students/{id}` (portal `tenant`) and
