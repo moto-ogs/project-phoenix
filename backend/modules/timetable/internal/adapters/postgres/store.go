@@ -362,7 +362,7 @@ func listCappedEnrollments(ctx context.Context, db bun.IDB, tenantID int64, stud
 func capStudentEnrollments(ctx context.Context, db bun.IDB, tenantID int64, studentIDs []int64, validUntil string, stats *domain.OperationStats) error {
 	started := time.Now()
 	result, err := db.ExecContext(ctx, `UPDATE activities.student_enrollments AS enrollment
-		SET valid_until = ?::date, updated_at = NOW()
+		SET valid_until = ?::date
 		WHERE `+cappedEnrollmentPredicate, validUntil, tenantID, bun.List(studentIDs), validUntil, validUntil)
 	stats.Queries++
 	stats.StatementDuration += time.Since(started)
@@ -410,7 +410,7 @@ func (s *ProvenanceStore) RestoreStudentEnrollmentsForCareExit(ctx context.Conte
 func restoreCappedEnrollments(ctx context.Context, db bun.IDB, tenantID int64, studentIDs []int64, payload []byte, stats *domain.OperationStats) (int64, error) {
 	started := time.Now()
 	result, err := db.ExecContext(ctx, `UPDATE activities.student_enrollments AS enrollment
-		SET valid_until = NULLIF(removal.previous_valid_until, '')::date, updated_at = NOW()
+		SET valid_until = NULLIF(removal.previous_valid_until, '')::date
 		FROM jsonb_to_recordset(?::jsonb) AS removal(
 			tenant_id bigint, student_id bigint, enrollment_id bigint, was_deleted boolean,
 			previous_valid_until text, activity_group_id bigint, valid_from text,

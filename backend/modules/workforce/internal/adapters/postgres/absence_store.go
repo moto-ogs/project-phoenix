@@ -510,7 +510,6 @@ func (s *Store) UpdateStaffAbsenceType(ctx context.Context, value domain.StaffAb
 		Model(row).
 		ModelTableExpr(tableStaffAbsenceTypes+` AS "staff_absence_type"`).
 		Column("name", "is_active", "allowance_enabled", "carryover_until", "requestable", "offered", "school_limit_days").
-		Set("updated_at = NOW()").
 		Where(`"staff_absence_type".id = ?`, value.ID).
 		Returning("*")
 	query = scopeQuery(scope, query, `"staff_absence_type".tenant_id = ?`)

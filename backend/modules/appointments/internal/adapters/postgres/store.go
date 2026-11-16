@@ -601,7 +601,6 @@ func (s *Store) CancelOccurrence(ctx context.Context, appointmentID int64, occur
 		ModelTableExpr(`calendar.appointment_occurrence_overrides`).
 		On("CONFLICT (tenant_id, appointment_id, occurrence_date) DO UPDATE").
 		Set("cancelled = TRUE").
-		Set("updated_at = NOW()").
 		Where("NOT appointment_occurrence_overrides.cancelled")
 	stats, rows, err := execute(ctx, query, "cancel occurrence")
 	if err == nil && rows == 0 {

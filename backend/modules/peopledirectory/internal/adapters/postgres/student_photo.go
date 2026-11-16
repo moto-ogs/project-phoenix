@@ -96,7 +96,6 @@ func (s *StudentStore) SavePhoto(ctx context.Context, photo domain.StudentPhoto)
 		Set("photo_path = ?", photo.PhotoPath).
 		Set("photo_consent_given_at = ?", photo.PhotoConsentGivenAt).
 		Set("photo_consent_given_by = ?", photo.PhotoConsentGivenBy).
-		Set("updated_at = NOW()").
 		Where(`"student".id = ?`, photo.StudentID).
 		Where(`"student".tenant_id = ?`, scope.TenantID).
 		Exec(ctx)
@@ -137,7 +136,7 @@ func (s *StudentStore) PurgePhotos(ctx context.Context) ([]domain.StudentPhoto, 
 			FOR UPDATE
 		)
 		UPDATE users.student_profiles AS student
-		SET photo_path = NULL, photo_consent_given_at = NULL, photo_consent_given_by = NULL, updated_at = NOW()
+		SET photo_path = NULL, photo_consent_given_at = NULL, photo_consent_given_by = NULL
 		FROM locked
 		WHERE student.id = locked.id
 		RETURNING locked.id, locked.photo_path, locked.photo_consent_given_at, locked.photo_consent_given_by
@@ -257,7 +256,7 @@ func (s *StudentStore) ClearPhotos(ctx context.Context, ids []int64) (domain.Ope
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	result, err := db.NewUpdate().TableExpr(`users.student_profiles AS "student"`).
-		Set("photo_path = NULL").Set("photo_consent_given_at = NULL").Set("photo_consent_given_by = NULL").Set("updated_at = NOW()").
+		Set("photo_path = NULL").Set("photo_consent_given_at = NULL").Set("photo_consent_given_by = NULL").
 		Where(`"student".tenant_id = ?`, scope.TenantID).Where(`"student".id IN (?)`, bun.List(ids)).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {

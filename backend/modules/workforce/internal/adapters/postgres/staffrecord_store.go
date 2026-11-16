@@ -157,7 +157,6 @@ func (s *Store) UpdateStaffMasterData(ctx context.Context, value domain.StaffMas
 	query := withTenant(db.NewUpdate().Model(row).
 		ModelTableExpr(tableStaffMasterData+` AS "staff_master_data"`).
 		ExcludeColumn("created_at", "updated_at").
-		Set("updated_at = NOW()").
 		WherePK().
 		Returning("*"), aliasStaffMasterData, scope)
 	stats, err := execAffected(ctx, query, "update staff master data")
@@ -203,7 +202,6 @@ func (s *Store) RetireStaffQualifications(ctx context.Context, staffID int64, id
 	query := withTenant(db.NewUpdate().Model((*staffQualificationRow)(nil)).
 		ModelTableExpr(tableStaffQualifications+` AS "staff_qualification"`).
 		Set("deleted_at = NOW()").
-		Set("updated_at = NOW()").
 		Where(`"staff_qualification".staff_id = ?`, staffID).
 		Where(`"staff_qualification".id IN (?)`, bun.List(ids)).
 		Where(`"staff_qualification".deleted_at IS NULL`), aliasStaffQualification, scope)
@@ -219,7 +217,6 @@ func (s *Store) UpdateStaffQualification(ctx context.Context, value domain.Staff
 	query := withTenant(db.NewUpdate().Model(row).
 		ModelTableExpr(tableStaffQualifications+` AS "staff_qualification"`).
 		Column("type_id", "name", "acquired_on", "expires_on", "sort_order").
-		Set("updated_at = NOW()").
 		WherePK().
 		Where(`"staff_qualification".staff_id = ?`, value.StaffID).
 		Where(`"staff_qualification".deleted_at IS NULL`).
@@ -312,7 +309,6 @@ func (s *Store) UpdateStaffFinancialData(ctx context.Context, value domain.Staff
 	query := withTenant(db.NewUpdate().Model(row).
 		ModelTableExpr(tableStaffFinancialData+` AS "staff_financial_data"`).
 		ExcludeColumn("created_at", "updated_at").
-		Set("updated_at = NOW()").
 		WherePK().
 		Returning("*"), aliasStaffFinancialData, scope)
 	stats, err := execAffected(ctx, query, "update staff financial data")
@@ -424,7 +420,6 @@ func (s *Store) SoftDeleteStaffDocument(ctx context.Context, id, deletedBy int64
 		ModelTableExpr(tableStaffDocuments+` AS "staff_document"`).
 		Set("deleted_at = ?", at).
 		Set("deleted_by = ?", deletedBy).
-		Set("updated_at = NOW()").
 		Where(`"staff_document".id = ?`, id).
 		Where(`"staff_document".deleted_at IS NULL`), aliasStaffDocument, scope)
 	stats, err := execAffected(ctx, query, "soft delete staff document")
@@ -439,7 +434,6 @@ func (s *Store) MarkStaffDocumentFileDeleted(ctx context.Context, id int64, at t
 	query := withTenant(db.NewUpdate().Model((*staffDocumentRow)(nil)).
 		ModelTableExpr(tableStaffDocuments+` AS "staff_document"`).
 		Set("file_deleted_at = ?", at).
-		Set("updated_at = NOW()").
 		Where(`"staff_document".id = ?`, id).
 		Where(`"staff_document".file_deleted_at IS NULL`), aliasStaffDocument, scope)
 	return execAffected(ctx, query, "mark staff document file deleted")
@@ -511,7 +505,6 @@ func (s *Store) CompleteStaffDocumentFileCleanup(ctx context.Context, id int64, 
 	query := withTenant(db.NewUpdate().Model((*staffDocumentFileCleanupRow)(nil)).
 		ModelTableExpr(tableStaffDocumentFileCleanups+` AS "staff_document_file_cleanup"`).
 		Set("cleaned_at = ?", at).
-		Set("updated_at = NOW()").
 		Where(`"staff_document_file_cleanup".id = ?`, id).
 		Where(`"staff_document_file_cleanup".cleaned_at IS NULL`), aliasStaffDocumentFileCleanup, scope)
 	return execAffected(ctx, query, "complete staff document file cleanup")
@@ -525,7 +518,6 @@ func (s *Store) CompleteStaffDocumentFileCleanupByFilename(ctx context.Context, 
 	query := withTenant(db.NewUpdate().Model((*staffDocumentFileCleanupRow)(nil)).
 		ModelTableExpr(tableStaffDocumentFileCleanups+` AS "staff_document_file_cleanup"`).
 		Set("cleaned_at = ?", at).
-		Set("updated_at = NOW()").
 		Where(`"staff_document_file_cleanup".filename_stored = ?`, filename).
 		Where(`"staff_document_file_cleanup".cleaned_at IS NULL`), aliasStaffDocumentFileCleanup, scope)
 	return execAffected(ctx, query, "complete staff document file cleanup by filename")
@@ -539,7 +531,6 @@ func (s *Store) ActivateStaffDocumentFileCleanup(ctx context.Context, filename s
 	query := withTenant(db.NewUpdate().Model((*staffDocumentFileCleanupRow)(nil)).
 		ModelTableExpr(tableStaffDocumentFileCleanups+` AS "staff_document_file_cleanup"`).
 		Set("retry_after = ?", at).
-		Set("updated_at = NOW()").
 		Where(`"staff_document_file_cleanup".filename_stored = ?`, filename).
 		Where(`"staff_document_file_cleanup".cleaned_at IS NULL`), aliasStaffDocumentFileCleanup, scope)
 	return execAffected(ctx, query, "activate staff document file cleanup")

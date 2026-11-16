@@ -175,7 +175,7 @@ func (s *ProvenanceStore) BackfillStudentEnrollmentSource(ctx context.Context, s
 		return 0, stats, err
 	}
 	writeStats, err := execMeasuredWrite(ctx, db.NewUpdate().Table("activities.student_enrollments").
-		Set("enrollment_request_child_id = ?", requestChildID).Set("updated_at = NOW()").
+		Set("enrollment_request_child_id = ?", requestChildID).
 		Where("tenant_id = ?", tenantID).Where("id IN (?)", bun.List(ids)), "backfill student enrollment source")
 	stats.Add(writeStats)
 	return writeStats.Rows, stats, err
@@ -218,7 +218,7 @@ func (s *Store) SetStudentEnrollmentsKeptWithoutBooking(ctx context.Context, stu
 		return 0, total, err
 	}
 	scoped := func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set("updated_at = NOW()").Where("tenant_id = ?", tenantID).Where("student_id = ?", studentID).
+		return query.Where("tenant_id = ?", tenantID).Where("student_id = ?", studentID).
 			Where("id IN (?)", bun.List(ids)).Where("enrollment_request_child_id IS NULL")
 	}
 	keys := make([]string, 0, len(weekdays))

@@ -120,7 +120,6 @@ func (r *SchoolSetupRepository[S]) StoreSetup(ctx context.Context, stored *S) er
 		Set("skipped_steps = EXCLUDED.skipped_steps").
 		Set("completed_at = EXCLUDED.completed_at").
 		Set("updated_by = EXCLUDED.updated_by").
-		Set("updated_at = NOW()").
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("upsert school setup: %w", err)

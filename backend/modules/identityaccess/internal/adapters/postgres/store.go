@@ -166,7 +166,7 @@ func (s *Store) EnsureActiveTenantMapping(ctx context.Context, accountID, tenant
 		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at, invited_at, created_at, updated_at)
 			SELECT ?, ?, 'active', NOW(), NULL::timestamptz, NOW(), NOW() FROM caterer WHERE NOT caterer.refused
 			ON CONFLICT (account_id, tenant_id) DO UPDATE
-			SET status = EXCLUDED.status, activated_at = EXCLUDED.activated_at, deactivated_at = NULL, updated_at = NOW()
+			SET status = EXCLUDED.status, activated_at = EXCLUDED.activated_at, deactivated_at = NULL
 			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID)
 	})
 	stats.Add(mappingStats)

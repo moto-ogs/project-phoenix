@@ -323,7 +323,6 @@ func (s *Store) UpdateClosingDay(ctx context.Context, id int64, fields schoolcal
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`schedule.closing_days AS "closing_day"`).
 		Column("start_date", "end_date", "reason").
-		Set(`updated_at = NOW()`).
 		Where(`"closing_day".id = ?`, id), "closing_day", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -436,7 +435,6 @@ func (s *Store) UpdateDateframe(ctx context.Context, id int64, fields schoolcale
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`schedule.dateframes AS "dateframe"`).
 		Column("start_date", "end_date", "name", "description").
-		Set(`updated_at = NOW()`).
 		Where(`"dateframe".id = ?`, id), "dateframe", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()

@@ -78,7 +78,7 @@ func (s *Store) UpdateCareRule(ctx context.Context, organizationID, ruleID int64
 		}
 	}
 	row := newCareRuleRow(organizationID, input)
-	result, err := db.NewUpdate().Model(row).Column(careRuleColumns...).Set("updated_at = CURRENT_TIMESTAMP").
+	result, err := db.NewUpdate().Model(row).Column(careRuleColumns...).
 		Where("id = ?", ruleID).Where("organization_id = ?", organizationID).Where("service = ?", parentbilling.ServiceCare).
 		Exec(ctx)
 	if err != nil {

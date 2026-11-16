@@ -44,7 +44,6 @@ func (s *Store) ArchiveShiftType(ctx context.Context, id int64) (domain.ShiftTyp
 		Model(row).
 		ModelTableExpr(tableShiftTypes+` AS "shift_type"`).
 		Set("archived_at = COALESCE(archived_at, NOW())").
-		Set("updated_at = NOW()").
 		Where(`"shift_type".id = ?`, id).
 		Returning("*"), aliasShiftType, scope)
 	stats, err := execAffected(ctx, query, "archive shift type")

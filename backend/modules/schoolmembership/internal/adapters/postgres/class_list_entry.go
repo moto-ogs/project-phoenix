@@ -132,7 +132,6 @@ func (s *Store) UpdateClassListEntry(ctx context.Context, id int64, fields schoo
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`users.class_list_entries AS "class_list_entry"`).
 		Column("first_name", "last_name", "school_class").
-		Set(`updated_at = NOW()`).
 		Where(`"class_list_entry".id = ?`, id), "class_list_entry", scope)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
