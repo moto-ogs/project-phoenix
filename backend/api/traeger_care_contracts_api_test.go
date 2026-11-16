@@ -318,6 +318,29 @@ func TestCareContractDraftFromTheAcceptedApplicationIsSentWithItsFrozenPDF(t *te
 	for _, view := range []string{"care_contract_list", "care_contract_detail", "care_contract_document"} {
 		assert.Contains(t, contractReads, view)
 	}
+
+	// #4718: the export holds every contract of the filter and is logged
+	// with the contract in the access log of its school.
+	rec = traegerJSON(t, f.traeger, token, http.MethodGet, "/traeger/contracts/export?status=versendet", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
+	assert.Contains(t, rec.Header().Get("Content-Disposition"), "betreuungsvertraege.csv")
+	body := strings.TrimPrefix(rec.Body.String(), "\xEF\xBB\xBF")
+	lines := strings.Split(strings.TrimSpace(body), "\n")
+	require.Len(t, lines, 2, "the header and the one sent contract")
+	assert.Equal(t, "Nachname;Vorname;Betreuungsort;Module;Eltern;E-Mail;Beginn;Status;Seit", lines[0])
+	assert.Contains(t, lines[1], ";Versendet;")
+	rec = traegerJSON(t, f.traeger, token, http.MethodGet, "/traeger/contracts/export?status=entwurf", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Len(t, strings.Split(strings.TrimSpace(rec.Body.String()), "\n"), 1, "no draft: the header alone")
+	assertTraegerListFormats(t, f.traeger, token, fmt.Sprintf("/traeger/contracts/export?school_id=%d", f.school), "betreuungsvertraege")
+	rec = traegerJSON(t, f.traeger, token, http.MethodGet, "/traeger/contracts/export?status=unbekannt", nil)
+	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	var exportReads int
+	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM audit.data_access_log WHERE tenant_id = ?
+		AND resource_type = 'care_contracts' AND actor_role = 'traeger' AND metadata->>'view' = 'care_contract_export'
+		AND metadata->'contract_ids' @> to_jsonb(?::bigint)`, f.school, contract.ID).Scan(context.Background(), &exportReads))
+	assert.Equal(t, 3, exportReads, "the CSV, the PDF and the Excel export of the contract")
 }
 
 func TestCareContractDraftIsDiscardedAndOnlyADraft(t *testing.T) {

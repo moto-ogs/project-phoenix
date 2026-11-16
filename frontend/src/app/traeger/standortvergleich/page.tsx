@@ -4,7 +4,8 @@
 // Kennzahlen der Schulen über einen gewählten Zeitraum nebeneinander. Oben
 // vier Zahlen für alle gewählten Schulen zusammen, darunter die Rangfolge
 // einer Kennzahl mit dem Schnitt der Schulen und die Tabelle aller gewählten
-// Kennzahlen. Der Export enthält dieselben Schulen und Kennzahlen als CSV.
+// Kennzahlen. Der Export enthält dieselben Schulen und Kennzahlen als PDF,
+// Excel oder CSV (#4718).
 // Nur Zahlen, keine Kinder.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,11 +18,6 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
 import { EmptyState } from "~/components/ui/empty-state";
-import {
-  ExportMenu,
-  type ExportMenuOption,
-  exportFormatOptions,
-} from "~/components/ui/export-menu";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { PlanLegend } from "~/components/ui/planning/plan-legend";
@@ -51,13 +47,13 @@ import {
   utilizationPresets,
   windowLength,
 } from "~/components/traeger/utilization-model";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useApiLoadError } from "~/contexts/ToastContext";
 import { childrenConcept } from "~/lib/concepts/children";
 import { presentConcept } from "~/lib/concepts/present";
 import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
-import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import {
@@ -80,10 +76,6 @@ const ComparisonChart = dynamic(
     ),
   { ssr: false, loading: () => <Skeleton className="h-56" aria-hidden /> },
 );
-
-const EXPORT_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "csv",
-]);
 
 /** Ein Fenster ist höchstens 366 Tage lang, wie die Auslastung. */
 const MAX_WINDOW_DAYS = 366;
@@ -295,11 +287,9 @@ export default function TraegerComparisonPage() {
   );
   const [allSchools, setAllSchools] = useState<readonly TraegerSchool[]>([]);
   const [comparison, setComparison] = useState<TraegerComparison | null>(null);
-  const [exporting, setExporting] = useState(false);
   const request = useRef(0);
   const pageLoad = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = pageLoad;
-  const { show: showActionError } = useApiErrorDisplay();
 
   const changeWindow = useCallback((next: UtilizationWindow) => {
     let { from } = next;
@@ -385,28 +375,6 @@ export default function TraegerComparisonPage() {
   const averageForRank = comparison?.average[rankBy];
   const missingForRank = schools.length - ranked.length;
 
-  async function exportCsv() {
-    setExporting(true);
-    try {
-      const file = await downloadTraegerComparison(
-        { ...period, schoolIds },
-        metrics,
-      );
-      downloadBlob(
-        file.blob,
-        file.filename ??
-          `standortvergleich-${period.from}-bis-${period.to}.csv`,
-      );
-    } catch (err) {
-      logger.error("traeger_comparison_export_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showActionError(err, { object: "die Exportdatei" });
-    } finally {
-      setExporting(false);
-    }
-  }
-
   const range: DateRange = {
     from: parseISODate(period.from),
     to: parseISODate(period.to),
@@ -436,16 +404,25 @@ export default function TraegerComparisonPage() {
           Schulen stehen der Schnitt der Schulen und alle Schulen zusammen. Eine
           Schule ohne Zahl hat „–“, etwa ohne Platzgrenze oder ohne Check-in.
           Mit „Herunterladen“ bekommen Sie die Tabelle mit den gewählten Schulen
-          und Kennzahlen.
+          und Kennzahlen als PDF, Excel oder CSV.
         </>
       }
       actions={
-        <ExportMenu
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerComparison({ ...period, schoolIds }, metrics, format)
+          }
+          scope={
+            schoolIds.length > 0
+              ? schoolIds.length === 1
+                ? "Eine gewählte Schule"
+                : `${schoolIds.length} gewählte Schulen`
+              : "Alle Schulen"
+          }
           ariaLabel="Standortvergleich herunterladen"
-          options={EXPORT_FORMATS}
-          busyKey={exporting ? "csv" : null}
+          fallbackName={`standortvergleich-${period.from}-bis-${period.to}`}
+          errorObject="den Standortvergleich"
           unavailable={!comparison || schools.length === 0}
-          onSelect={() => void exportCsv()}
         />
       }
       stats={

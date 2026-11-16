@@ -2,9 +2,11 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -158,6 +160,26 @@ func TestTraegerKeyDateCountsShowTheNumbersOfTheOperatorReport(t *testing.T) {
 	}, got.Months[0], "the sum leaves out the school of the other Träger")
 	assert.Equal(t, 3, got.Months[1].ActiveStudents)
 	assert.Equal(t, 1, got.Months[1].ActiveTerminals)
+
+	// #4718: the export holds the same figures, the sum of each month first.
+	export := traegerOccupancyRequest(t, router, "/traeger/schools/key-date-counts/export", answer.AccessToken, nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Equal(t, "text/csv; charset=utf-8", export.Header().Get("Content-Type"))
+	assert.Contains(t, export.Header().Get("Content-Disposition"), "stichtagszahlen.csv")
+	csv := strings.TrimPrefix(export.Body.String(), "\xEF\xBB\xBF")
+	assert.True(t, strings.HasPrefix(csv, "Monat;Stichtag;Schule;Ort;Aktive Kinder;Aktive Geräte;Festgehalten am\n"), csv)
+	assert.Contains(t, csv, "Oktober 2026;15.10.2026;Alle Schulen (2);;4;2;\n")
+	assert.Contains(t, csv, "September 2026;15.09.2026;Alle Schulen (2);;3;1;\n")
+	assert.Contains(t, csv, "Oktober 2026;15.10.2026;OGS Am Bach;;3;2;", "the school at the brook in October")
+	assert.NotContains(t, csv, "OGS Fremd Stichtag")
+	single := traegerOccupancyRequest(t, router, fmt.Sprintf("/traeger/schools/key-date-counts/export?school=%d", linden), answer.AccessToken, nil)
+	require.Equal(t, http.StatusOK, single.Code, single.Body.String())
+	assert.Contains(t, single.Body.String(), "OGS Lindenweg")
+	assert.NotContains(t, single.Body.String(), "OGS Am Bach")
+	assert.NotContains(t, single.Body.String(), "Alle Schulen", "the export of one school has no sum over all schools")
+	assertTraegerListFormats(t, router, answer.AccessToken, "/traeger/schools/key-date-counts/export", "stichtagszahlen")
+	stranger := traegerOccupancyRequest(t, router, fmt.Sprintf("/traeger/schools/key-date-counts/export?school=%d", foreign), answer.AccessToken, nil)
+	assert.Equal(t, http.StatusNotFound, stranger.Code, stranger.Body.String())
 }
 
 func TestTraegerKeyDateCountsWithoutCaptureListTheSchools(t *testing.T) {

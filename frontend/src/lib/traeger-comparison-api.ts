@@ -6,8 +6,11 @@
  * school does not have is missing from its values, never 0.
  */
 
-import { apiErrorFromBody, transportFetch } from "./api-error";
-import { filenameFromDisposition } from "./file-download";
+import {
+  downloadTraegerList,
+  type TraegerListFile,
+  type TraegerListFormat,
+} from "./traeger-list-export";
 import type { TraegerSchool } from "./traeger-api";
 import { traegerRequest } from "./traeger-api";
 import type { UtilizationWindow } from "./traeger-utilization-api";
@@ -136,34 +139,16 @@ export async function fetchTraegerComparison(
   );
 }
 
-async function readJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
-}
-
 /** The CSV export of the chosen schools and figures. */
-export async function downloadTraegerComparison(
+export function downloadTraegerComparison(
   query: ComparisonQuery,
   metrics: readonly ComparisonMetric[],
-): Promise<{ readonly blob: Blob; readonly filename: string | null }> {
-  const response = await transportFetch(
-    `${COMPARISON_PATH}/export?${comparisonQuery(query, metrics)}`,
-    { credentials: "include", cache: "no-store" },
-  );
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await readJson(response),
-    );
-  }
-  return {
-    blob: await response.blob(),
-    filename: filenameFromDisposition(response),
-  };
+  format: TraegerListFormat,
+): Promise<TraegerListFile> {
+  return downloadTraegerList(`${COMPARISON_PATH}/export`, format, {
+    from: query.from,
+    to: query.to,
+    schools: query.schoolIds.join(","),
+    metrics: metrics.join(","),
+  });
 }

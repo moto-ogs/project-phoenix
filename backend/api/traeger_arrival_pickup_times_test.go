@@ -151,6 +151,16 @@ func TestTraegerArrivalPickupTimesCountFirstArrivalAndLastPickupPerChildDay(t *t
 		assert.Contains(t, csv, line+"\n")
 	}
 	assert.NotContains(t, csv, "Fremd")
+
+	// #4718: one school without the rows of all schools, and PDF and Excel.
+	single := traegerOccupancyRequest(t, router, fmt.Sprintf("/traeger/schools/arrival-pickup-times/export?%s&school=%d", arrivalPeriod, got.Schools[0].ID), answer.AccessToken, nil)
+	require.Equal(t, http.StatusOK, single.Code, single.Body.String())
+	assert.Contains(t, single.Body.String(), "07.09.2026;14.09.2026;OGS Am Bach;;Montag;15:00–15:30;0,0;0,5;2\n")
+	assert.NotContains(t, single.Body.String(), "Alle Schulen")
+	assert.NotContains(t, single.Body.String(), "OGS Lindenweg")
+	stranger := traegerOccupancyRequest(t, router, fmt.Sprintf("/traeger/schools/arrival-pickup-times/export?%s&school=%d", arrivalPeriod, foreignID), answer.AccessToken, nil)
+	assert.Equal(t, http.StatusNotFound, stranger.Code, stranger.Body.String())
+	assertTraegerListFormats(t, router, answer.AccessToken, "/traeger/schools/arrival-pickup-times/export?"+arrivalPeriod, "ankunft-und-abholung-2026-09-07-bis-2026-09-14")
 }
 
 func TestTraegerArrivalPickupTimesNeedTheReportsRightAndAPeriod(t *testing.T) {

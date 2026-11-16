@@ -228,11 +228,13 @@ describe("ParentSepaMandateView", () => {
     expect(document.activeElement).toBe(document.body);
 
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
-    expect(
-      await screen.findByRole("heading", {
-        name: "Schritt 2 von 2: Mandat bestätigen",
-      }),
-    ).toHaveFocus();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: "Schritt 2 von 2: Mandat bestätigen",
+        }),
+      ).toHaveFocus(),
+    );
 
     fireEvent.click(
       screen.getByRole("checkbox", {
@@ -240,9 +242,9 @@ describe("ParentSepaMandateView", () => {
       }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Mandat erteilen" }));
-    expect(
-      await screen.findByRole("heading", { name: "Ihr Mandat" }),
-    ).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Ihr Mandat" })).toHaveFocus(),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Mandat widerrufen" }));
     const dialog = await screen.findByRole("dialog");

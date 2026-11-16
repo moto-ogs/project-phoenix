@@ -1128,7 +1128,7 @@ async function downloadTraegerFile(path: string): Promise<DownloadedFile> {
 export async function downloadHolidayRegistrations(
   periodId: string,
   filter: HolidayRegistrationFilter,
-  format: "csv" | "xlsx",
+  format: "pdf" | "xlsx" | "csv",
 ): Promise<DownloadedFile> {
   return downloadTraegerFile(
     `${registrationsPath(periodId)}/export${holidayRegistrationQuery(filter, { format })}`,

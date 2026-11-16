@@ -22,7 +22,7 @@ export function traegerUtilizationTopic(): HelpTopic {
       "Wählen Sie einen Reiter: `Schulen`, `Betreuungsformen` oder `Räume`.",
       "Wählen Sie eine Zeile der Tabelle. Das Diagramm zeigt dann den Verlauf dieser Zeile.",
       "Wählen Sie über dem Diagramm `Tage`, `Wochen` oder `Monate`.",
-      "Wählen Sie `Herunterladen` und dann `CSV`, um alle Zahlen je Tag als Tabelle zu speichern.",
+      "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Zahlen je Tag. Mit einer gewählten Schule nur diese Schule.",
     ],
     result:
       "Sie sehen, wie voll die Plätze im Durchschnitt waren, an welchem Tag am meisten los war und welche Betreuungsformen voll waren.",

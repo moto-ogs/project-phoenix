@@ -219,6 +219,42 @@ describe("TraegerKeyDateCountsPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("filters every month by school and hides comparisons with missing captures", async () => {
+    mockFetchCounts.mockResolvedValue(COUNTS);
+    renderPage();
+    await screen.findByText("84 mehr als im September 2026.");
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Schule" }));
+    fireEvent.click(await screen.findByRole("option", { name: "OGS Am Bach" }));
+    expect(
+      await screen.findByText("4 mehr als im September 2026."),
+    ).toBeVisible();
+    const months = screen.getAllByRole("table")[1] as HTMLElement;
+    const october = within(months)
+      .getByText("Oktober 2026")
+      .closest("tr") as HTMLElement;
+    expect(within(october).getByText("124")).toBeVisible();
+    expect(within(october).getByText("3")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Schule" }));
+    fireEvent.click(
+      await screen.findByRole("option", { name: "OGS Lindenweg" }),
+    );
+    // Anker: Die gewählte Schule hat Zahlen im Oktober, aber keine im September.
+    expect(screen.getByText("1 von 1")).toBeVisible();
+    expect(within(october).getByText("80")).toBeVisible();
+    expect(screen.queryByText(/mehr als im September/)).not.toBeInTheDocument();
+    const september = within(months)
+      .getByText("September 2026")
+      .closest("tr") as HTMLElement;
+    expect(within(september).getAllByText("–")).toHaveLength(3);
+    fireEvent.click(september);
+    expect(await screen.findByText("0 von 1")).toBeVisible();
+    expect(
+      within(schoolTable()).getByText("Keine Zahlen zu diesem Stichtag"),
+    ).toBeVisible();
+  });
+
   it("keeps school and city search available alongside month navigation", async () => {
     mockFetchCounts.mockResolvedValue(COUNTS);
     renderPage();
