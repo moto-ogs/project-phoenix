@@ -545,6 +545,7 @@ type mockCleanupService struct {
 	attendanceCalls  int
 	attendanceResult *ports.StaleAttendanceCleanup
 	attendanceErr    error
+	supervisorResult *ports.StaleSupervisorCleanup
 }
 
 func (m *mockCleanupService) CleanupExpiredVisits(_ context.Context) (*ports.ExpiredVisitCleanup, error) {
@@ -562,6 +563,9 @@ func (m *mockCleanupService) CleanupStaleAttendance(_ context.Context) (*ports.S
 }
 
 func (m *mockCleanupService) CleanupStaleSupervisors(_ context.Context) (*ports.StaleSupervisorCleanup, error) {
+	if m.supervisorResult != nil {
+		return m.supervisorResult, nil
+	}
 	return &ports.StaleSupervisorCleanup{Success: true}, nil
 }
 
@@ -1337,6 +1341,66 @@ func TestExecuteCleanupForTenant_ReturnsFalseOnError(t *testing.T) {
 	result, err := cleanupComplete(context.Background(), s, testpkg.Tenant(t))
 	require.NoError(t, err)
 	assert.False(t, result)
+}
+
+// TestExecuteCleanupForTenant_VisitPartialFailureIsReportedWithCounts pins
+// #7211: a visit retention that failed for some children fails its step and
+// logs how many it processed, deleted and failed, never who.
+func TestExecuteCleanupForTenant_VisitPartialFailureIsReportedWithCounts(t *testing.T) {
+	t.Parallel()
+	logs := &cleanupLogs{}
+	tenantID := testpkg.Tenant(t)
+	s := unitScheduler(&unitSchedulerDependencies{
+		cleanupService: &mockCleanupService{cleanupResult: &ports.ExpiredVisitCleanup{
+			StudentsProcessed: 4, RecordsDeleted: 12, StudentsFailed: 2, Success: false,
+		}},
+		logger: logs.logger(),
+	})
+
+	complete, err := cleanupComplete(context.Background(), s, tenantID)
+	require.NoError(t, err)
+	assert.False(t, complete, "a partial visit retention leaves the run due")
+
+	records := logs.byMessage(t)
+	require.Len(t, records["visit cleanup partial failure"], 1)
+	warning := records["visit cleanup partial failure"][0]
+	assert.Equal(t, map[string]any{
+		"time": warning["time"], "level": "WARN", "msg": "visit cleanup partial failure",
+		"tenant_id": float64(tenantID), "students_processed": float64(4),
+		"records_deleted": float64(12), "students_failed": float64(2),
+	}, warning, "the warning carries counts only")
+	assert.Empty(t, records["cleanup completed for tenant"], "a partial failure is no success")
+	require.Len(t, records["cleanup step failed"], 1)
+	assert.Equal(t, "visits", records["cleanup step failed"][0]["step"])
+}
+
+// TestExecuteCleanupForTenant_SupervisorPartialFailureIsReportedWithCounts
+// holds the supervisor step to the same report (#7211).
+func TestExecuteCleanupForTenant_SupervisorPartialFailureIsReportedWithCounts(t *testing.T) {
+	t.Parallel()
+	logs := &cleanupLogs{}
+	tenantID := testpkg.Tenant(t)
+	s := unitScheduler(&unitSchedulerDependencies{
+		cleanupService: &mockCleanupService{
+			cleanupResult:    &ports.ExpiredVisitCleanup{Success: true},
+			supervisorResult: &ports.StaleSupervisorCleanup{RecordsClosed: 3, RecordsFailed: 1, Success: false},
+		},
+		logger: logs.logger(),
+	})
+
+	complete, err := cleanupComplete(context.Background(), s, tenantID)
+	require.NoError(t, err)
+	assert.False(t, complete, "a partial supervisor cleanup leaves the run due")
+
+	records := logs.byMessage(t)
+	require.Len(t, records["supervisor cleanup partial failure"], 1)
+	warning := records["supervisor cleanup partial failure"][0]
+	assert.Equal(t, map[string]any{
+		"time": warning["time"], "level": "WARN", "msg": "supervisor cleanup partial failure",
+		"tenant_id": float64(tenantID), "records_closed": float64(3), "records_failed": float64(1),
+	}, warning, "the warning carries counts only")
+	require.Len(t, records["cleanup step failed"], 1)
+	assert.Equal(t, "supervisors", records["cleanup step failed"][0]["step"])
 }
 
 type countingFeedbackCleaner struct{ calls int }

@@ -181,6 +181,13 @@ func (s *Scheduler) cleanupExpiredVisits(ctx context.Context, tenantID int64) er
 		return nil
 	}
 	if !result.Success {
+		// Counts only: the failed children stay out of the log (#7211).
+		s.getLogger().Warn("visit cleanup partial failure",
+			slog.Int64("tenant_id", tenantID),
+			slog.Int("students_processed", result.StudentsProcessed),
+			slog.Int64("records_deleted", result.RecordsDeleted),
+			slog.Int("students_failed", result.StudentsFailed),
+		)
 		return errCleanupStepPartial
 	}
 	s.getLogger().Info("cleanup completed for tenant",
@@ -355,6 +362,11 @@ func (s *Scheduler) cleanupStaleSupervisors(ctx context.Context, tenantID int64)
 		return nil
 	}
 	if !supervisorResult.Success {
+		s.getLogger().Warn("supervisor cleanup partial failure",
+			slog.Int64("tenant_id", tenantID),
+			slog.Int("records_closed", supervisorResult.RecordsClosed),
+			slog.Int("records_failed", supervisorResult.RecordsFailed),
+		)
 		return errCleanupStepPartial
 	}
 	if supervisorResult.RecordsClosed > 0 {

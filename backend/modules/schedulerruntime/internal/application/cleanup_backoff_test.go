@@ -54,6 +54,25 @@ func (l *cleanupLogs) take(t *testing.T, msg string) []map[string]any {
 	return matched
 }
 
+// byMessage returns every record grouped by message and empties the buffer.
+func (l *cleanupLogs) byMessage(t *testing.T) map[string][]map[string]any {
+	t.Helper()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	grouped := map[string][]map[string]any{}
+	for _, line := range bytes.Split(l.buf.Bytes(), []byte("\n")) {
+		if len(line) == 0 {
+			continue
+		}
+		var record map[string]any
+		require.NoError(t, json.Unmarshal(line, &record))
+		msg, _ := record["msg"].(string)
+		grouped[msg] = append(grouped[msg], record)
+	}
+	l.buf.Reset()
+	return grouped
+}
+
 const (
 	alertMessage     = "nightly cleanup failing repeatedly"
 	recoveredMessage = "nightly cleanup recovered"
