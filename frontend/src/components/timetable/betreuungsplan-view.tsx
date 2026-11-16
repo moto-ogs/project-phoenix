@@ -185,12 +185,14 @@ const LIFECYCLE_ERROR_OBJECT: Record<LifecycleAction, string> = {
   complete: "die Aktivität",
   reopen: "die Aktivität",
   cancel: "die Absage",
+  reinstate: "die Rücknahme der Absage",
 };
 
 const LIFECYCLE_SUCCESS: Record<Exclude<LifecycleAction, "cancel">, string> = {
   start: "Die Aktivität ist gestartet.",
   complete: "Die Aktivität ist beendet.",
   reopen: "Die Aktivität ist wieder geöffnet.",
+  reinstate: "Die Absage ist zurückgenommen. Die Aktivität findet statt.",
 };
 
 // Das verbindliche Drei-Parameter-Vokabular (06 §2.1). updateUrlParams baut die
@@ -1510,6 +1512,9 @@ function TimetablesContent() {
         } else if (action === "reopen") {
           await timetableService.reopen(instanceId);
           toast.success(LIFECYCLE_SUCCESS.reopen);
+        } else if (action === "reinstate") {
+          await timetableService.reinstate(instanceId);
+          toast.success(LIFECYCLE_SUCCESS.reinstate);
         } else {
           // Plain cancels keep the single-argument call; the notice rides
           // along only when the dialog produced one (#2601).

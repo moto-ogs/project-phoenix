@@ -88,9 +88,11 @@ type RetentionStore interface {
 // view (#7139).
 type FeedStore interface {
 	// PublishFeedEntries updates the recipients' unread entry of the same
-	// type and object last updated at or after bundleSince, and adds an entry
-	// for every other recipient.
-	PublishFeedEntries(ctx context.Context, tenantID int64, content domain.FeedEntryContent, accountIDs []int64, now, bundleSince time.Time) (domain.FeedWrite, error)
+	// object last updated at or after bundleSince whose type is one of
+	// bundleTypes, giving it the content's type, and adds an entry for every
+	// other recipient. bundleTypes holds the content's type and the types it
+	// takes back or that take it back (#7151).
+	PublishFeedEntries(ctx context.Context, tenantID int64, content domain.FeedEntryContent, bundleTypes []string, accountIDs []int64, now, bundleSince time.Time) (domain.FeedWrite, error)
 	// ListFeedEntries returns up to limit entries of the account after the
 	// cursor, newest update first; a nil cursor starts at the newest.
 	ListFeedEntries(ctx context.Context, tenantID, accountID int64, view domain.FeedView, after *domain.FeedCursor, limit int) ([]domain.FeedEntry, error)

@@ -81,6 +81,7 @@
   "planning_track_name_taken": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "planning_track_not_found": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "presence_would_overstaff": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "reinstate_ended": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "reopen_attendance_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "reopen_staff_busy": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "reopen_student_active": "{object} değiştirilemedi. Güncel durumu kontrol edin.",

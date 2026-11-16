@@ -207,6 +207,7 @@ func newTimetableResource(
 		MaterializationService:  materialization,
 		InstanceService:         lifecycle.Instances,
 		InstanceSeriesConverter: planning.SeriesConverter,
+		InstanceReinstatement:   lifecycle.Instances,
 		OperationsService:       lifecycle.Operations,
 		People:                  NewTimetablePeople(users),
 		TeacherHints:            newTimetableTeacherHints(hints),

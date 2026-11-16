@@ -48,6 +48,22 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	assert.Equal(t, cancelled.Permission, PermissionInPortal(cancelled, PortalStaff))
 }
 
+func TestFeedTypesKeepStaffReinstatementsOutOfSchool(t *testing.T) {
+	t.Parallel()
+
+	staffKeys := make([]string, 0)
+	for _, def := range FeedTypesForPortal(PortalStaff) {
+		staffKeys = append(staffKeys, def.Key)
+	}
+	schoolKeys := make([]string, 0)
+	for _, def := range FeedTypesForPortal(PortalSchool) {
+		schoolKeys = append(schoolKeys, def.Key)
+	}
+
+	assert.Contains(t, staffKeys, TypeInstanceReinstated)
+	assert.NotContains(t, schoolKeys, TypeInstanceReinstated)
+}
+
 // A school registration rebinds the browser endpoint: the school a Lehrkraft
 // left keeps neither its row nor its pushes, and both steps share one
 // transaction so a failure never leaves the device unregistered.

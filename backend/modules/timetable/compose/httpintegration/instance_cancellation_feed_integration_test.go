@@ -11,6 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	fixtures "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
@@ -32,6 +34,7 @@ var feedNow = time.Date(2030, 6, 10, 10, 0, 0, 0, calendar.Berlin)
 type feedFixture struct {
 	s         *lifecycleSetup
 	svc       fixtures.InstanceLifecycle
+	reinstate timetable.InstanceReinstatement
 	notices   timetablePorts.StaffCancellationNotices
 	router    chi.Router
 	consentDB func(accountID int64, enabled bool)
@@ -63,8 +66,10 @@ func newFeedFixture(t *testing.T) *feedFixture {
 	deps.StaffNotices = notices
 	deps.Now = func() time.Time { return feedNow }
 	consent := api.NewNotificationConsentTestStore(database)
+	lifecycle, err := compose.NewInstanceLifecycle(deps)
+	require.NoError(t, err)
 	return &feedFixture{
-		s: s, svc: newLifecycle(t, deps), notices: notices, router: module.NotificationPreferenceRouterForTests(),
+		s: s, svc: fixtures.FromInstanceLifecycle(lifecycle), reinstate: lifecycle, notices: notices, router: module.NotificationPreferenceRouterForTests(),
 		consentDB: func(accountID int64, enabled bool) {
 			require.NoError(t, testpkg.TenantCommand3(t, s.ctx, s.db, consent.RecordConsent, accountID, "instance_cancelled", enabled))
 		},
@@ -127,13 +132,19 @@ func (f *feedFixture) feed(t *testing.T, person feedPerson, query string) feedRe
 	return feed
 }
 
-// pushes counts the push intents of the type for the account.
+// pushes counts the cancellation push intents for the account.
 func (f *feedFixture) pushes(t *testing.T, person feedPerson) int {
+	t.Helper()
+	return f.pushesOf(t, person, "instance_cancelled")
+}
+
+// pushesOf counts the push intents of the type for the account.
+func (f *feedFixture) pushesOf(t *testing.T, person feedPerson, notificationType string) int {
 	t.Helper()
 	count, err := f.s.db.NewSelect().TableExpr("platform.push_outbox").
 		Where("tenant_id = ?", testpkg.Tenant(t)).
 		Where("(recipient->>'account_id')::bigint = ?", person.accountID).
-		Where("payload->>'type' = 'instance_cancelled'").
+		Where("payload->>'type' = ?", notificationType).
 		Count(context.Background())
 	require.NoError(t, err)
 	return int(count)

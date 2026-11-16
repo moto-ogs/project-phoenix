@@ -480,6 +480,7 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/timetable/instances/{id}/deviations"}:                                        notCaptured,
 	{http.MethodPost, "/api/timetable/instances/{id}/move-staff"}:                                        notCaptured,
 	{http.MethodPost, "/api/timetable/instances/{id}/reopen"}:                                            notCaptured,
+	{http.MethodPost, "/api/timetable/instances/{id}/reinstate"}:                                         notCaptured,
 	{http.MethodPost, "/api/timetable/instances/{id}/start"}:                                             notCaptured,
 	{http.MethodPatch, "/api/timetable/instances/{instance_id}/students/{student_id}"}:                   notCaptured,
 	{http.MethodPost, "/api/timetable/instances/{instance_id}/students/{student_id}/correction"}:         notCaptured,

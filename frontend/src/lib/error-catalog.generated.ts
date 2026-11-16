@@ -1652,6 +1652,8 @@ export const ERROR_CATALOG = {
         "Die Planungsspur gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "timetable.presence_would_overstaff":
         "Der Termin ist schon voll besetzt. Bitte entfernen Sie zuerst die nicht mehr nötige Vertretung.",
+      "timetable.reinstate_ended":
+        "Der Termin ist schon vorbei. Eine Absage lässt sich nur bis zum Ende des Termins zurücknehmen.",
       "timetable.reopen_attendance_changed":
         "Die Anwesenheit wurde nach dem Abschluss geändert. Der Termin lässt sich nicht wieder öffnen.",
       "timetable.reopen_staff_busy":

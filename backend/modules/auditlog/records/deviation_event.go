@@ -16,6 +16,8 @@ const (
 	DeviationEventSubstitution      = "substitution"
 	DeviationEventSubstituteRemoved = "substitute_removed"
 	DeviationEventCancellation      = "cancellation"
+	// A cancellation was taken back (#7151): the block is planned again.
+	DeviationEventReinstatement     = "reinstatement"
 	DeviationEventUnderstaffedAck   = "understaffed_ack"
 	DeviationEventUnderstaffedUnack = "understaffed_unack"
 	// A sick report (#1843) marked this staff row absent / cleared that mark

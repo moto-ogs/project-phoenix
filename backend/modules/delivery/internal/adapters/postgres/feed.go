@@ -32,27 +32,31 @@ type feedEntryRow struct {
 }
 
 // publishFeedEntriesSQL writes one publication in one statement: it updates
-// the recipients' unread entry of the same type and object last updated in
-// the bundle window and adds an entry for every other recipient. Its result
-// names each recipient once, with whether its entry is new.
+// the recipients' unread entry of the same object last updated in the bundle
+// window whose type bundles with the publication's, and adds an entry for
+// every other recipient. An updated entry takes the publication's type, so a
+// reinstatement turns an unread cancellation into "findet doch statt"
+// (#7151). Its result names each recipient once, with whether its entry is
+// new.
 //
 // ?0 tenant, ?1 recipients, ?2 type, ?3 title, ?4 body, ?5 deep link,
 // ?6 related type, ?7 related ID, ?8 now, ?9 start of the bundle window,
-// ?10 deep link in moto schule (NULL without one).
+// ?10 the types that bundle with ?2, ?11 deep link in moto schule (NULL
+// without one).
 const publishFeedEntriesSQL = `WITH recipient AS (
 		SELECT DISTINCT account_id FROM unnest(?1::bigint[]) AS input(account_id)
 	), refreshed AS (
 		UPDATE platform.notification_feed_entries AS entry
-		SET title = ?3, body = ?4, deep_link = ?5, school_deep_link = ?10, updated_at = ?8
+		SET type = ?2, title = ?3, body = ?4, deep_link = ?5, school_deep_link = ?11, updated_at = ?8
 		FROM recipient
 		WHERE entry.tenant_id = ?0 AND entry.account_id = recipient.account_id
-			AND entry.type = ?2 AND entry.related_type = ?6 AND entry.related_id = ?7
+			AND entry.type = ANY(?10::text[]) AND entry.related_type = ?6 AND entry.related_id = ?7
 			AND entry.read_at IS NULL AND entry.updated_at >= ?9
 		RETURNING entry.account_id
 	), created AS (
 		INSERT INTO platform.notification_feed_entries
 			(tenant_id, account_id, type, title, body, deep_link, school_deep_link, related_type, related_id, created_at, updated_at)
-		SELECT ?0, recipient.account_id, ?2, ?3, ?4, ?5, ?10, ?6, ?7, ?8, ?8
+		SELECT ?0, recipient.account_id, ?2, ?3, ?4, ?5, ?11, ?6, ?7, ?8, ?8
 		FROM recipient
 		WHERE NOT EXISTS (SELECT 1 FROM refreshed WHERE refreshed.account_id = recipient.account_id)
 		RETURNING account_id
@@ -80,7 +84,7 @@ type feedWriteRow struct {
 	Created   bool  `bun:"created"`
 }
 
-func (s *Store) PublishFeedEntries(ctx context.Context, tenantID int64, content domain.FeedEntryContent, accountIDs []int64, now, bundleSince time.Time) (domain.FeedWrite, error) {
+func (s *Store) PublishFeedEntries(ctx context.Context, tenantID int64, content domain.FeedEntryContent, bundleTypes []string, accountIDs []int64, now, bundleSince time.Time) (domain.FeedWrite, error) {
 	if len(accountIDs) == 0 {
 		return domain.FeedWrite{}, nil
 	}
@@ -91,7 +95,7 @@ func (s *Store) PublishFeedEntries(ctx context.Context, tenantID int64, content 
 	var rows []feedWriteRow
 	if err := db.NewRaw(publishFeedEntriesSQL,
 		tenantID, pgdialect.Array(accountIDs), content.Type, content.Title, content.Body, content.DeepLink,
-		content.RelatedType, content.RelatedID, now, bundleSince, optionalFeedLink(content.SchoolDeepLink),
+		content.RelatedType, content.RelatedID, now, bundleSince, pgdialect.Array(bundleTypes), optionalFeedLink(content.SchoolDeepLink),
 	).Scan(ctx, &rows); err != nil {
 		return domain.FeedWrite{}, fmt.Errorf("delivery postgres: publish feed entries: %w", err)
 	}

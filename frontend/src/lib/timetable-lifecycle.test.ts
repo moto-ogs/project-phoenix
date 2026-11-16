@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canReinstateInstance,
   canCompleteInstance,
   canStartPlannedInstance,
   completeAvailableClock,
@@ -72,5 +73,42 @@ describe("completeAvailableClock", () => {
     expect(completeAvailableClock("", "16:00")).toBe("16:00");
     expect(completeAvailableClock(undefined, "16:00")).toBe("16:00");
     expect(completeAvailableClock("kaputt", "16:00")).toBe("16:00");
+  });
+});
+
+describe("canReinstateInstance", () => {
+  const block = {
+    status: "cancelled",
+    date: "2026-09-09",
+    startTime: "14:00",
+    endTime: "15:00",
+  };
+
+  it("allows a cancelled block until its end", () => {
+    expect(canReinstateInstance(block, new Date("2026-09-09T12:59:00Z"))).toBe(
+      true,
+    );
+    expect(canReinstateInstance(block, new Date("2026-09-09T13:00:00Z"))).toBe(
+      false,
+    );
+  });
+
+  it("refuses blocks that are not cancelled", () => {
+    expect(
+      canReinstateInstance(
+        { ...block, status: "planned" },
+        new Date("2026-09-09T10:00:00Z"),
+      ),
+    ).toBe(false);
+  });
+
+  it("falls back to the end of the day without a later end", () => {
+    const open = { ...block, endTime: "00:00" };
+    expect(canReinstateInstance(open, new Date("2026-09-09T21:00:00Z"))).toBe(
+      true,
+    );
+    expect(canReinstateInstance(open, new Date("2026-09-09T22:00:00Z"))).toBe(
+      false,
+    );
   });
 });

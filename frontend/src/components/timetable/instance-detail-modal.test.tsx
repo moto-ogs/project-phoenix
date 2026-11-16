@@ -1498,6 +1498,51 @@ describe("InstanceDetailModal", () => {
     ).not.toBeInTheDocument();
     expect(onDeleteCancelled).not.toHaveBeenCalled();
   });
+
+  // #7151: eine Absage lässt sich bis zum Ende des Termins zurücknehmen.
+  it("takes back a cancellation after asking, until the block has ended", async () => {
+    const onLifecycleAction = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(
+      <InstanceDetailModal
+        instance={instance({
+          status: "cancelled",
+          date: "2026-09-09",
+          startTime: "14:00",
+          endTime: "15:00",
+        })}
+        onClose={vi.fn()}
+        onLifecycleAction={onLifecycleAction}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Absage zurücknehmen/ }),
+    );
+    const dialog = screen.getByRole("dialog", {
+      name: "Absage zurücknehmen?",
+    });
+    expect(
+      within(dialog).getByText(/Eltern bekommen keine Nachricht/),
+    ).toBeInTheDocument();
+    fireEvent.click(confirmDialogButton("Zurücknehmen"));
+    await waitFor(() =>
+      expect(onLifecycleAction).toHaveBeenCalledWith("reinstate"),
+    );
+
+    rerender(
+      <InstanceDetailModal
+        instance={instance({ id: "43", status: "cancelled" })}
+        onClose={vi.fn()}
+        onLifecycleAction={onLifecycleAction}
+      />,
+    );
+    expect(
+      screen.getByText("Diese Aktivität wurde abgesagt."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Absage zurücknehmen/ }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("Personalpool-Affordanz (#1884)", () => {

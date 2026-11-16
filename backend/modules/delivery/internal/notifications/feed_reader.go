@@ -66,15 +66,16 @@ func (f *feedReader) requireFeedCaller(tenantID, accountID int64, portal string)
 	return feedView(portal)
 }
 
-// feedView is what a portal shows of the feed (#7139): the types the
-// catalogue offers in it (OfferedInPortal), so moto schule shows the staff
-// types marked SchoolPortal and its own. An entry of another type stays in
-// the table and reaches only the portal that offers it.
+// feedView is what a portal shows of the feed (#7139): moto schule shows the
+// staff types marked SchoolPortal and its own. Staff also sees a staff-only
+// reversal, which is not offered as a preference but replaces a cancellation
+// in its feed (#7151). An entry of another type stays in the table and reaches
+// only the portal that renders it.
 func feedView(portal string) (domain.FeedView, error) {
 	if portal != PortalStaff && portal != PortalSchool {
 		return domain.FeedView{}, fmt.Errorf("notification feed: unknown portal %q", portal)
 	}
-	defs := TypesForPortal(portal)
+	defs := FeedTypesForPortal(portal)
 	view := domain.FeedView{School: portal == PortalSchool, Types: make([]string, 0, len(defs))}
 	for _, def := range defs {
 		view.Types = append(view.Types, def.Key)
