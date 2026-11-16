@@ -29,7 +29,7 @@ func setupRateLimitTest(t *testing.T) (*bun.DB, enrollmentCapability.Owner, int6
 	db := testpkg.SetupTestDB(t)
 	tenantID := testpkg.Tenant(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
-	return db, enrollmentCompose.NewClocked(nil), tenantID
+	return db, enrollmentCompose.NewClocked(time.Now), tenantID
 }
 
 // runUnscoped runs a closure with NO tenant in context. The rate limit
@@ -100,7 +100,7 @@ func TestSubmissionRateLimitIncrementRollbackAndRetry(t *testing.T) {
 
 func TestSubmissionRateLimitRequiresTransaction(t *testing.T) {
 	t.Parallel()
-	module := enrollmentCompose.NewClocked(nil)
+	module := enrollmentCompose.NewClocked(time.Now)
 	_, err := module.IncrementAttempts(context.Background(), testpkg.Tenant(t), enrollmentCapability.SubmissionRateLimitKeyTypeIP, "missing-transaction", time.Hour)
 	require.EqualError(t, err, "enrollment postgres: transaction is required")
 	_, _, err = module.DeleteExpiredSubmissionRateLimits(context.Background())

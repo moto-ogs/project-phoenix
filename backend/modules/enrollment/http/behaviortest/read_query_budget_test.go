@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
@@ -24,7 +25,7 @@ import (
 func TestEnrollmentSchemaReadQueryBudgets(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
-	owner := enrollmentCompose.NewClocked(nil)
+	owner := enrollmentCompose.NewClocked(time.Now)
 	account := testpkg.CreateTestAccount(t, db, "schema-budget")
 	service := enrollmentCompose.NewFormSchemas(owner, nil, nil)
 	resource := &enrollmentHTTP.Resource{FormSchemaService: service}

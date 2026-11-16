@@ -96,6 +96,7 @@ func TestCareUsageDoesNotEnrichSchedulePickupBeforeApproval(t *testing.T) {
 
 	studentID := int64(700)
 	svc := NewReports(ReportDependencies{
+		Now: enrollmentTestClock,
 		Requests: &fakeCareUsageRequestRepo{requests: []*enrollmentNative.Request{{
 			ID:          11,
 			SubmittedAt: time.Date(2026, 1, 2, 8, 0, 0, 0, time.UTC),
@@ -129,6 +130,7 @@ func TestCareUsageSkipsCompactEnrichment(t *testing.T) {
 
 	enrichmentErr := errors.New("enrichment unavailable")
 	svc := NewReports(ReportDependencies{
+		Now: enrollmentTestClock,
 		Requests: &fakeCareUsageRequestRepo{requests: []*enrollmentNative.Request{{
 			ID:          11,
 			SubmittedAt: time.Date(2026, 1, 2, 8, 0, 0, 0, time.UTC),

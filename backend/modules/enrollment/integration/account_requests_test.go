@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -16,7 +17,7 @@ import (
 func TestAccountRequestsOwnershipFallbackScopeAndFailure(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.NewClocked(nil)
+	module := enrollmentCompose.NewClocked(time.Now)
 	account := testpkg.CreateTestAccount(t, db, "account-requests")
 	other := testpkg.CreateTestAccount(t, db, "account-requests-other")
 	var schoolIDs []int64

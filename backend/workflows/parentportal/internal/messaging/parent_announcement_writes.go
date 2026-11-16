@@ -14,7 +14,7 @@ func (s *Service) answerableAnnouncement(adminCtx context.Context, announcementI
 	if err != nil {
 		return nil, fmt.Errorf("parent: load announcement: %w", err)
 	}
-	if a == nil || !announcementIsLive(a) {
+	if a == nil || !announcementIsLive(a, s.now()) {
 		return nil, ErrAnnouncementNotFound
 	}
 	// Authorize the CHILD, not just the account: AccountMayAnswerForStudent
@@ -47,7 +47,7 @@ func (s *Service) stampableAnnouncement(adminCtx context.Context, announcementID
 	if err != nil {
 		return nil, fmt.Errorf("parent: load announcement: %w", err)
 	}
-	if a == nil || !announcementIsLive(a) {
+	if a == nil || !announcementIsLive(a, s.now()) {
 		return nil, ErrAnnouncementNotFound
 	}
 	// Authorize audience membership BEFORE any other 4xx: an unmatched caller

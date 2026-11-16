@@ -35,6 +35,7 @@ func NewInbox(store interface {
 	Store
 	carecontract.DocumentPushValidity
 }, holidays carecontract.SchoolHolidays, clock Clock) *Inbox {
+	requireClock(clock, "inbox")
 	if store == nil {
 		panic("care contract: the store is required")
 	}

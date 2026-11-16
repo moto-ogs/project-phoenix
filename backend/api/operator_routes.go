@@ -19,6 +19,7 @@ import (
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // The operator router mounts the operator routes of Identity & Access,
@@ -111,6 +112,7 @@ func operatorRouter(
 	staffPersonMerge http.Handler,
 	sampleChildren http.HandlerFunc,
 	demoPresenceHistory http.HandlerFunc,
+	now func() time.Time,
 ) chi.Router {
 	// The root provides the session chains; without the signer the verifier
 	// mounts below would fail with a nil dereference instead of naming the
@@ -160,7 +162,7 @@ func operatorRouter(
 		identityRoutes.mountInvitationRoutes(r)
 		mountOperatorAnnouncementRoutes(r, announcementRoutes, provisioningRoutes)
 		mountOperatorBillingRoutes(r, billing)
-		mountOperatorBelegRetentionRoutes(r, provisioningRoutes)
+		mountOperatorBelegRetentionRoutes(r, provisioningRoutes, calendar.CalendarDateClock(now))
 		mountOperatorTraegerStaffReleaseRoutes(r, provisioningRoutes)
 	})
 
@@ -351,9 +353,9 @@ func mountOperatorTraegerSettingsRoutes(r chi.Router, provisioning *provisioning
 // Träger to the moto team (#4720, ADR 0184): the instructions, suspensions,
 // clarification list and deletion log under the operator read audit, and
 // the writes (Weisung, suspension and its lift, review of a clarification
-// entry) with their operator audit entry.
-func mountOperatorBelegRetentionRoutes(r chi.Router, provisioning *provisioningOperatorAPI.ProvisioningResource) {
-	retention := parentBillingHTTP.NewBelegRetentionResource(owners.NewBelegRetention(nil), provisioning.RecordBelegRetentionChange, operatorIDFromSession)
+// entry) with their operator audit entry; today is the root's day clock.
+func mountOperatorBelegRetentionRoutes(r chi.Router, provisioning *provisioningOperatorAPI.ProvisioningResource, today func() calendar.Date) {
+	retention := parentBillingHTTP.NewBelegRetentionResource(owners.NewBelegRetention(today), provisioning.RecordBelegRetentionChange, operatorIDFromSession)
 	r.Get("/organizations/{id}/beleg-retention", provisioning.AuditReadAccess(organizationtenancy.ReadBelegRetention, retention.Overview))
 	r.Post("/organizations/{id}/beleg-retention/instructions", retention.RecordInstruction)
 	r.Post("/organizations/{id}/beleg-retention/suspensions", retention.RecordSuspension)

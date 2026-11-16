@@ -111,6 +111,7 @@ func nextYearPhase() *enrollment.Phase {
 
 func responseDependencies(phase *enrollment.Phase, children *responseChildren) PhaseDependencies {
 	return PhaseDependencies{
+		Now:      enrollmentTestClock,
 		Records:  responsePhaseOwner{phase: phase, children: children},
 		Settings: responseSettings{gradeMax: 4},
 		Today:    func() calendar.Date { return responseToday },

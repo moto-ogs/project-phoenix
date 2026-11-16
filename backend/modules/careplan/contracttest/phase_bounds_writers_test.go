@@ -51,11 +51,12 @@ func gatedIntakeWith(t *testing.T, env *decisionTestEnv, parentChanges parentCha
 	schools := newFactorySchools(t, env.db)
 	offerings := enrollmentTest.NewCareOfferingRecords(env.repos.CarePlan())
 	return owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
+		Now:                    time.Now,
 		Bookings:               api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings()),
 		Requests:               env.reposEnrollment.Enrollment(),
 		Children:               env.reposEnrollment.Enrollment(),
 		CareOfferingRepo:       offerings,
-		Capacity:               owners.NewEnrollmentOfferingCapacity(offerings, env.reposEnrollment.Enrollment(), env.settings, nil),
+		Capacity:               owners.NewEnrollmentOfferingCapacity(offerings, env.reposEnrollment.Enrollment(), env.settings, calendar.TodayDate),
 		Catalog:                env.reposEnrollment.Enrollment(),
 		SchoolRepo:             schools,
 		Notifications:          testNotifications(env.reposEnrollment.Enrollment(), env.settings, schools),
@@ -113,13 +114,14 @@ func gatedChangeRequests(t *testing.T, env *decisionTestEnv) enrollmentTest.Chan
 	schools := newFactorySchools(t, env.db)
 	offerings := enrollmentTest.NewCareOfferingRecords(env.repos.CarePlan())
 	return owners.NewEnrollmentChangeRequests(owners.EnrollmentChangeRequestSources{
+		Now:                    time.Now,
 		Bookings:               api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings()),
 		Requests:               env.reposEnrollment.Enrollment(),
 		Children:               env.reposEnrollment.Enrollment(),
 		Guardians:              env.reposEnrollment.Enrollment(),
 		LateInviteRepo:         env.reposEnrollment.Enrollment(),
 		CareOfferingRepo:       offerings,
-		Capacity:               owners.NewEnrollmentOfferingCapacity(offerings, env.reposEnrollment.Enrollment(), env.settings, nil),
+		Capacity:               owners.NewEnrollmentOfferingCapacity(offerings, env.reposEnrollment.Enrollment(), env.settings, calendar.TodayDate),
 		Catalog:                env.reposEnrollment.Enrollment(),
 		Notifications:          testNotifications(env.reposEnrollment.Enrollment(), env.settings, schools),
 		GuardianProfileRepo:    env.reposPeople.GuardianProfile,

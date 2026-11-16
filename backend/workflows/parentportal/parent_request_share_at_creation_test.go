@@ -27,7 +27,7 @@ func buildSharingAtCreationServices(t *testing.T) (*parentService.Portal, parent
 	repos := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	reposCare := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db))
 	excused, err := api.NewTestExcusedAbsenceRequests(api.ExcusedRequestTestOptions{
-		CarePlan: reposCare.CarePlan(), Logger: slog.Default(),
+		CarePlan: reposCare.CarePlan(), Logger: slog.Default(), Today: careFixtureToday,
 	}, api.ExcusedRequestTestPeople{Students: repos.Student, Persons: repos.Person, Events: repos.ParentRequestEvent}, nil, nil)
 	require.NoError(t, err)
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
@@ -58,6 +58,7 @@ func buildSharingAtCreationServices(t *testing.T) (*parentService.Portal, parent
 			excusedRequiresApproval: true,
 		},
 		Logger: slog.Default(),
+		Now:    careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(reposCare.CarePlan()),
 
@@ -80,7 +81,7 @@ func TestShareTravelsWithTheCreation(t *testing.T) {
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 
 	res, err := svc.SubmitSickNote(ctx, family.AccountID, family.StudentID,
-		[]calendar.Date{calendar.TodayDate().AddDays(3)}, "Familienfeier",
+		[]calendar.Date{careFixtureToday().AddDays(3)}, "Familienfeier",
 		absencerecords.StudentStatusDayExcused, []int64{co.GuardianProfileID})
 	require.NoError(t, err)
 	require.NotNil(t, res.PendingRequest)
@@ -109,7 +110,7 @@ func TestForgedRecipientRollsTheRequestBack(t *testing.T) {
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 
 	_, err := svc.SubmitSickNote(ctx, family.AccountID, family.StudentID,
-		[]calendar.Date{calendar.TodayDate().AddDays(4)}, "Familienfeier",
+		[]calendar.Date{careFixtureToday().AddDays(4)}, "Familienfeier",
 		absencerecords.StudentStatusDayExcused, []int64{stranger.GuardianProfileID})
 	require.ErrorIs(t, err, parentService.ErrRequestSharingInvalid)
 
@@ -129,7 +130,7 @@ func TestEmptyRecipientsWriteNoShareEvent(t *testing.T) {
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 
 	res, err := svc.SubmitSickNote(ctx, family.AccountID, family.StudentID,
-		[]calendar.Date{calendar.TodayDate().AddDays(5)}, "Familienfeier",
+		[]calendar.Date{careFixtureToday().AddDays(5)}, "Familienfeier",
 		absencerecords.StudentStatusDayExcused, nil)
 	require.NoError(t, err)
 	require.NotNil(t, res.PendingRequest)

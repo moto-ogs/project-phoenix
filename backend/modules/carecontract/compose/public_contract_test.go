@@ -250,11 +250,11 @@ func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtThe
 	school.reads = &reads
 	ports := compose.ContractPorts{Holidays: holidaysDouble{}, Letterheads: letterheadDouble{}, Post: post, Runtime: runtimeDouble{}, Access: school,
 		Ledger: ledgerDouble{}, Links: carecontract.SigningLinks{Tokens: &tokenDouble{}, ParentsURL: "http://parents.localhost", Fingerprint: sha256Hex}}
-	contracts := compose.NewContracts(ports, nil)
+	contracts := compose.NewContracts(ports, time.Now)
 	id := created.Created[0].ID
 	// Missing identity cannot freeze an anonymous PDF or enqueue a mail.
 	ports.Letterheads = letterheadDouble{missing: true}
-	unnamed := compose.NewContracts(ports, nil)
+	unnamed := compose.NewContracts(ports, time.Now)
 	_, previewErr := unnamed.ContractDocument(ctx, reviewer, id)
 	var invalid *carecontract.ValidationError
 	assert.ErrorAs(t, previewErr, &invalid)

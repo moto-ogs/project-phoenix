@@ -61,6 +61,7 @@ func buildCareServiceWithAutoExcusal(t *testing.T) (careTestService, *bun.DB) {
 		},
 		StudentUpdates: owners.BindParentStudentUpdates(testpkg.NewRecordingBroadcaster()),
 		Logger:         slog.Default(),
+		Now:            careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
@@ -69,10 +70,10 @@ func buildCareServiceWithAutoExcusal(t *testing.T) (careTestService, *bun.DB) {
 	return careTestService{Portal: svc}, db
 }
 
-// nextMonday returns the first Monday at least seven days out, safely inside
-// the parent submit window (today .. +2 months).
+// nextMonday returns the first Monday at least seven days after the fixed
+// test day, safely inside the parent submit window (today .. +2 months).
 func nextMonday() calendar.Date {
-	date := calendar.TodayDate().AddDays(7)
+	date := careFixtureToday().AddDays(7)
 	for date.Weekday() != time.Monday {
 		date = date.AddDays(1)
 	}

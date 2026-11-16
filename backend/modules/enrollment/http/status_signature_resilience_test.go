@@ -85,7 +85,7 @@ func signatureResilienceTestContext(t *testing.T, adminTransactions *int, savepo
 func TestStatusSignatureFailureDoesNotHideJSONStatus(t *testing.T) {
 	t.Parallel()
 	service := &unavailableStatusSignatureService{}
-	rs := &Resource{RequestService: service}
+	rs := &Resource{Now: resourceTestClock, RequestService: service}
 	adminTransactions := 0
 	var savepointActions []tenant.SavepointAction
 
@@ -117,7 +117,7 @@ func TestStatusSignatureFailureDoesNotHideJSONStatus(t *testing.T) {
 func TestStatusSignatureProofFailureStillRejectsPDF(t *testing.T) {
 	t.Parallel()
 	service := &unavailableStatusSignatureService{}
-	rs := &Resource{RequestService: service}
+	rs := &Resource{Now: resourceTestClock, RequestService: service}
 	adminTransactions := 0
 	var savepointActions []tenant.SavepointAction
 
@@ -140,6 +140,7 @@ func TestAdminSignatureFailureDoesNotHideJSONDetail(t *testing.T) {
 	t.Parallel()
 	service := &unavailableStatusSignatureService{}
 	rs := &Resource{
+		Now:            resourceTestClock,
 		RequestService: service,
 		DecisionService: unavailableAdminSignatureDecisionService{summary: &RequestSummary{
 			Request: &capability.Request{ID: 42, GuardianFirstName: "Anna", GuardianLastName: "Beispiel"},
@@ -169,6 +170,7 @@ func TestAdminSignatureProofFailureStillRejectsPDF(t *testing.T) {
 	t.Parallel()
 	service := &unavailableStatusSignatureService{}
 	rs := &Resource{
+		Now:            resourceTestClock,
 		RequestService: service,
 		DecisionService: unavailableAdminSignatureDecisionService{summary: &RequestSummary{
 			Request: &capability.Request{ID: 42, GuardianFirstName: "Anna", GuardianLastName: "Beispiel"},

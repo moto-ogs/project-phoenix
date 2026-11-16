@@ -43,8 +43,8 @@ type HolidayContributions struct {
 
 var _ parentbilling.HolidayContributions = (*HolidayContributions)(nil)
 
-// NewHolidayContributions builds the holiday contribution; a nil today uses
-// the Berlin day.
+// NewHolidayContributions builds the holiday contribution on the root's day
+// clock today.
 func NewHolidayContributions(store HolidayStore, registrations parentbilling.HolidayRegistrations, settings parentbilling.HolidayBillingSettings,
 	today func() calendar.Date,
 ) (parentbilling.HolidayContributions, parentbilling.HolidayAllocationBilling) {
@@ -52,7 +52,7 @@ func NewHolidayContributions(store HolidayStore, registrations parentbilling.Hol
 		panic("parent billing: the store, the holiday registrations and the settings are required")
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("parent billing: the holiday contribution needs the day clock")
 	}
 	contributions := &HolidayContributions{store: store, registrations: registrations, settings: settings, today: today}
 	return contributions, contributions

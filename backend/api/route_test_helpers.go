@@ -47,7 +47,7 @@ func newCareScheduleTestRouter(db transactionruntime.Database, module StudentTes
 		SettingsService: liveSettings.Settings, Logger: slog.Default(), Now: now,
 	})
 	router := chi.NewRouter()
-	router.Mount("/parent", parentAPI.NewResource(parentAPI.ResourceConfig{Parent: parent}).Router(ParentSessionChain))
+	router.Mount("/parent", parentAPI.NewResource(parentAPI.ResourceConfig{Now: time.Now, Parent: parent}).Router(ParentSessionChain))
 	router.Mount("/api/students", students.Router(ProtectedTenantRoutes))
 	return router, nil
 }

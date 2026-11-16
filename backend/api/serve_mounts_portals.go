@@ -177,6 +177,7 @@ func newOperatorRouter(
 		mergeRoutes,
 		newSampleChildrenRoute(provisioning, students),
 		newDemoPresenceHistoryRoute(db, viper.GetString("app_env")),
+		now,
 	), nil
 }
 
@@ -190,6 +191,7 @@ func newParentResource(
 	healthData enrollmentOwner.HolidayHealthCipher, traegerSettings TraegerBrandingSettings, now func() time.Time,
 ) *parentAPI.Resource {
 	return parentAPI.NewResource(parentAPI.ResourceConfig{
+		Now:         now,
 		Auth:        parentPortalLogin(identity),
 		Resets:      portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeParent),
 		Parent:      parent,
@@ -202,7 +204,7 @@ func newParentResource(
 		),
 		GuardianProfileLoader: newParentGuardianProfiles(guardianProfiles),
 		Schools:               parentSchoolDirectory{schools: organizations},
-		HolidayLinks:          newParentHolidayRegistrationLinks(organizations, delivery, healthData, traegerSettings, logger),
+		HolidayLinks:          newParentHolidayRegistrationLinks(organizations, delivery, healthData, traegerSettings, logger, now),
 		Push:                  bindParentPushSubscriptions(devices.PushSubscriptions),
 		Preferences:           bindParentPreferences(notifications.Preferences),
 		Feed:                  bindParentNotificationFeed(notifications.GuardianFeed),

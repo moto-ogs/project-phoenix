@@ -308,7 +308,7 @@ func BuildParentDocumentNotices(
 		SchoolTraeger: NewParentSchoolTraeger(organizations), ParentAccounts: NewParentAccounts(identity),
 		GuardianProfileRepo: NewParentGuardianProfileReads(people.GuardianProfiles),
 		DocumentNotifier:    notifier, TraegerRuntime: ParentPortalRuntime{}, StudentRepo: NewParentStudentReads(people.Students),
-		Logger: env.Logger.With("service", "parent-document-notices"),
+		Logger: env.Logger.With("service", "parent-document-notices"), Now: env.Now,
 	}, parentportal.DocumentPushPorts{
 		// The pushes of a sent contract and of a release (#5941).
 		ContractInboxNotices: NewParentContractInboxNotices(), ReleaseNotices: NewParentReleaseNotices(),

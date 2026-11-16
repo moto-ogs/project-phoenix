@@ -16,7 +16,7 @@ import (
 // in the outbox payload. Without a lookup or parents URL, no app link is shown.
 func NewMailRenderers(accounts enrollment.HolidayAcceptanceAccounts, parentsURL string, today func() calendar.Date) enrollment.MailRenderers {
 	if today == nil {
-		today = calendar.TodayDate
+		panic("enrollment: the mail renderers need the day of dispatch")
 	}
 	return enrollment.MailRenderers{
 		Submitted:                decodingRenderer(renderSubmitted),

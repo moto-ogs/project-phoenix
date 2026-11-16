@@ -127,7 +127,7 @@ func NewRollovers(deps RolloverDependencies) *Rollovers {
 		deps.Logger = slog.Default()
 	}
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("enrollment rollovers: the clock is required")
 	}
 	return &Rollovers{deps: deps}
 }

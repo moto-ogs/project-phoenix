@@ -49,7 +49,7 @@ type BillingFamilies struct {
 var _ parentbilling.BillingFamilies = (*BillingFamilies)(nil)
 
 // NewBillingFamilies builds the view of the families over the format of the
-// Träger's debtor numbers (#6675); a nil today uses the Berlin day.
+// Träger's debtor numbers (#6675) on the root's day clock today.
 func NewBillingFamilies(store FamilyStore, contracts parentbilling.FamilyContracts, careContracts parentbilling.CareContracts,
 	formats parentbilling.DebtorNumberFormats, today func() calendar.Date,
 ) *BillingFamilies {
@@ -57,7 +57,7 @@ func NewBillingFamilies(store FamilyStore, contracts parentbilling.FamilyContrac
 		panic("parent billing: the store, the family contracts, the contracts and the debtor number format are required")
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("parent billing: the billing families need the day clock")
 	}
 	return &BillingFamilies{store: store, contracts: contracts, careContracts: careContracts, formats: formats, today: today}
 }

@@ -3,6 +3,8 @@
 package api
 
 import (
+	"time"
+
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
@@ -12,7 +14,7 @@ import (
 type ApprovedOfferingTestProjection = enrollmentCompose.ApprovedOfferingProjection
 
 func NewOwnerApprovedOfferingTestProjection(db transactionruntime.Database) (*ApprovedOfferingTestProjection, error) {
-	return NewApprovedOfferingTestProjection(db, owners.NewEnrollmentBookingProjection(owners.NewEnrollmentBookings(nil), owners.UngatedEnrollmentPhaseBounds()))
+	return NewApprovedOfferingTestProjection(db, owners.NewEnrollmentBookingProjection(owners.NewEnrollmentBookings(time.Now), owners.UngatedEnrollmentPhaseBounds()))
 }
 
 func NewApprovedOfferingTestProjection(db transactionruntime.Database, selections enrollmentCompose.ApprovedSelections) (*enrollmentCompose.ApprovedOfferingProjection, error) {

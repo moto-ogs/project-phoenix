@@ -68,10 +68,10 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	if limit := holidayRegistrationRateLimit(limiters.enabled(), demoLoopbackExempt()); limit != nil {
 		publicLink = root.With(limit)
 	}
-	publicLink.Mount(holidayRegistrationPath, NewHolidayRegistrationHTTP(organizations, delivery, keys, "", healthData, holidayCalendar, settings, accountLinks, viper.GetString("app_env"), logger, today).Router())
+	publicLink.Mount(holidayRegistrationPath, NewHolidayRegistrationHTTP(organizations, delivery, keys, "", healthData, holidayCalendar, settings, accountLinks, viper.GetString("app_env"), logger, now).Router())
 	mountTraegerClosingDayRoutes(root, calendarSchools, organizations, closureMail, holidayCalendar, closureHolidays, today)
 	mountHolidayClosureNotificationRoutes(root, tenant, organizations, closureMail, holidayCalendar, closureHolidays, logger, today)
-	mountParentBillingRoutes(root, publicLink, organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, healthData, bankData, holidayCalendar, today, logger)
+	mountParentBillingRoutes(root, publicLink, organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, healthData, bankData, holidayCalendar, today, now, logger)
 	mountCareContractRoutes(root, organizations, settings, schoolSettings, delivery, outcomes, audit.Log,
 		owners.NewCareContractNoticeAddressees(persons, identity), contractHolidays, parentsURL, today, now)
 	mountCareTimeOverrunRoutes(root, organizations, statistics, audit.Log, today)
@@ -79,7 +79,7 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	// the school (#5979).
 	mountCareContractChangeRoutes(root, organizations, changes, schoolSettings, audit.Log)
 	// The office rolls its phases and offerings out into its schools (#4704).
-	billing, intake := newTraegerCatalogBilling(organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, audit.Log, contractHolidays, parentsURL, today)
+	billing, intake := newTraegerCatalogBilling(organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, audit.Log, contractHolidays, parentsURL, today, now)
 	return mountTraegerCatalogRoutes(root, schoolPhases, schoolCatalog, lockRecurrence, organizations, billing, intake)
 }
 
@@ -106,8 +106,9 @@ type HolidayOrganizations interface {
 // asks for a parent account (ADR 0216); the offer mail issues its own when
 // it is sent. An empty
 // verifyURL uses Turnstile's endpoint; tests point it at a local provider.
-func NewHolidayRegistrationHTTP(organizations HolidayOrganizations, delivery deliveryRuntime.Capability, keys TurnstileKeys, verifyURL string, healthData enrollmentOwner.HolidayHealthCipher, schoolCalendar enrollmentOwner.HolidaySchoolCalendar, settings TraegerBrandingSettings, accountLinks enrollmentOwner.HolidayParentAccountLinks, appEnv string, logger *slog.Logger, today func() calendar.Date) *enrollmentAPI.HolidayRegistrationResource {
-	registrations := newHolidayRegistrations(organizations, delivery, healthData, schoolCalendar, settings, logger.With("service", "holiday-registrations"), today)
+// now is the root clock of the registration (ADR 0275).
+func NewHolidayRegistrationHTTP(organizations HolidayOrganizations, delivery deliveryRuntime.Capability, keys TurnstileKeys, verifyURL string, healthData enrollmentOwner.HolidayHealthCipher, schoolCalendar enrollmentOwner.HolidaySchoolCalendar, settings TraegerBrandingSettings, accountLinks enrollmentOwner.HolidayParentAccountLinks, appEnv string, logger *slog.Logger, now func() time.Time) *enrollmentAPI.HolidayRegistrationResource {
+	registrations := newHolidayRegistrations(organizations, delivery, healthData, schoolCalendar, settings, logger.With("service", "holiday-registrations"), now)
 	captcha := enrollmentCompose.NewCaptcha(holidayCaptchaSettings(keys), verifyURL, logger.With("service", "holiday-registration-captcha"))
 	// The local seeder alone receives a setup link for the offered parent
 	// account (ADR 0216), like the invitation tokens it redeems.
@@ -230,18 +231,19 @@ type parentHolidayRegistrationLinks struct {
 }
 
 // newParentHolidayRegistrationLinks binds the parents portal to Enrollment's
-// link resolution over the same Träger directory as the public link.
-func newParentHolidayRegistrationLinks(organizations HolidayOrganizations, delivery deliveryRuntime.Capability, healthData enrollmentOwner.HolidayHealthCipher, settings TraegerBrandingSettings, logger *slog.Logger) parentAPI.HolidayRegistrationLinks {
-	return parentHolidayRegistrationLinks{registrations: newHolidayRegistrations(organizations, delivery, healthData, nil, settings, logger.With("service", "parent-holiday-registrations"), nil)}
+// link resolution over the same Träger directory as the public link, on the
+// root clock now.
+func newParentHolidayRegistrationLinks(organizations HolidayOrganizations, delivery deliveryRuntime.Capability, healthData enrollmentOwner.HolidayHealthCipher, settings TraegerBrandingSettings, logger *slog.Logger, now func() time.Time) parentAPI.HolidayRegistrationLinks {
+	return parentHolidayRegistrationLinks{registrations: newHolidayRegistrations(organizations, delivery, healthData, nil, settings, logger.With("service", "parent-holiday-registrations"), now)}
 }
 
 // newHolidayRegistrations binds Enrollment's holiday registrations to the
 // Träger directory, the Träger's mail and Security Runtime's entropy and
 // fingerprint for the tokens of uploaded proofs (#5238), and the health
-// information to the root's cipher (#4722).
-func newHolidayRegistrations(organizations HolidayOrganizations, delivery deliveryRuntime.Capability, healthData enrollmentOwner.HolidayHealthCipher, schoolCalendar enrollmentOwner.HolidaySchoolCalendar, settings TraegerBrandingSettings, logger *slog.Logger, today func() calendar.Date) enrollmentOwner.HolidayRegistrations {
+// information to the root's cipher (#4722); now is the root clock.
+func newHolidayRegistrations(organizations HolidayOrganizations, delivery deliveryRuntime.Capability, healthData enrollmentOwner.HolidayHealthCipher, schoolCalendar enrollmentOwner.HolidaySchoolCalendar, settings TraegerBrandingSettings, logger *slog.Logger, now func() time.Time) enrollmentOwner.HolidayRegistrations {
 	return enrollmentCompose.NewHolidayRegistrations(holidayTraegerDirectory{organizations: organizations},
-		holidayTraegerMail{delivery: delivery}, healthData, schoolCalendar, holidayWishModes{settings: settings}, holidayRetentionSettings{settings: settings}, securityruntime.FillRandom, securityruntime.Fingerprint, logger, observability.RecordRateLimitRejection, today)
+		holidayTraegerMail{delivery: delivery}, healthData, schoolCalendar, holidayWishModes{settings: settings}, holidayRetentionSettings{settings: settings}, securityruntime.FillRandom, securityruntime.Fingerprint, logger, observability.RecordRateLimitRejection, now)
 }
 
 // holidayWishModes binds Enrollment's holiday wish mode (#4703) to the

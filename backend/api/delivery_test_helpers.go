@@ -80,6 +80,7 @@ func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
 	router.Mount("/api/notifications", notifications.Router())
 	router.Mount("/school/notifications", notifications.SchoolRouter())
 	parents := parentAPI.NewResource(parentAPI.ResourceConfig{
+		Now:         time.Now,
 		Preferences: bindParentPreferences(m.NotificationPreferences),
 		Feed:        bindParentNotificationFeed(m.GuardianFeed),
 	})

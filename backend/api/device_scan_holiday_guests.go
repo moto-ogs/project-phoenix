@@ -15,7 +15,7 @@ import (
 // comes from during its week, like the school portal does (PyrePortal#499).
 // It reads in the tenant transaction of the device's school, so no other
 // school sees the hint, inside a savepoint, so a failed read leaves that
-// transaction usable for the roster. A nil today uses the Berlin calendar day.
+// transaction usable for the roster. today is the root's day clock.
 func NewDeviceScanHolidayGuestSchools(today func() calendar.Date) devicescan.HolidayGuestSchools {
 	return deviceScanHolidayGuestSchools(enrollmentCompose.NewHolidayGuestBadgeList(today))
 }

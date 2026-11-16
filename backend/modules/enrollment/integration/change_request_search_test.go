@@ -3,6 +3,7 @@ package integration
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -14,7 +15,7 @@ import (
 func TestChangeRequestReviewSearchIgnoresAccents(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := enrollmentCompose.NewClocked(nil)
+	owner := enrollmentCompose.NewClocked(time.Now)
 	ctx := testpkg.Ctx(t)
 
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)
@@ -38,7 +39,7 @@ func TestChangeRequestReviewSearchIgnoresAccents(t *testing.T) {
 func TestChangeRequestReviewSearchTreatsFullwidthLikeCharactersLiterally(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := enrollmentCompose.NewClocked(nil)
+	owner := enrollmentCompose.NewClocked(time.Now)
 	ctx := testpkg.Ctx(t)
 
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)

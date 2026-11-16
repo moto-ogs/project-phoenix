@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,7 +68,7 @@ func buildAbsenceApprovalServices(t *testing.T, sickRequiresApproval, excusedReq
 	bc := testpkg.NewRecordingBroadcaster()
 	excused, err := api.NewTestExcusedAbsenceRequests(api.ExcusedRequestTestOptions{
 		CarePlan: repos.CarePlan(), Logger: slog.Default(),
-		Today: func() calendar.Date { return calendar.NewDate(2026, 8, 24) },
+		Today: careFixtureToday,
 	}, api.ExcusedRequestTestPeople{Students: reposPeople.Student, Persons: reposPeople.Person}, nil, bc)
 	require.NoError(t, err)
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
@@ -98,9 +97,7 @@ func buildAbsenceApprovalServices(t *testing.T, sickRequiresApproval, excusedReq
 		StudentUpdates:  owners.BindParentStudentUpdates(bc),
 		ExcusedRequests: owners.NewParentExcusedAbsenceRequests(excused),
 		Logger:          slog.Default(),
-		Now: func() time.Time {
-			return time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
-		},
+		Now:             careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
@@ -117,7 +114,7 @@ func TestSubmitSick_ApprovalOn_CreatesPendingRequest(t *testing.T) {
 	svc, _, _, db := buildAbsenceApprovalServices(t, true, true)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	day := calendar.TodayDate()
+	day := careFixtureToday()
 	res, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Fieber", absencerecords.StudentStatusDaySick, nil)
 	require.NoError(t, err)
@@ -140,7 +137,7 @@ func TestSubmitSick_ApprovalOff_WritesDirectly(t *testing.T) {
 	svc, _, _, db := buildAbsenceApprovalServices(t, false, true)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	day := calendar.TodayDate().AddDays(2)
+	day := careFixtureToday().AddDays(2)
 	res, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Fieber", absencerecords.StudentStatusDaySick, nil)
 	require.NoError(t, err)
@@ -199,7 +196,7 @@ func TestSubmitExcused_ApprovalOn_CreatesPendingRequest(t *testing.T) {
 	svc, _, _, db := buildExcusedServices(t, true)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	day := calendar.TodayDate().AddDays(3)
+	day := careFixtureToday().AddDays(3)
 	res, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
 	require.NoError(t, err)
@@ -210,7 +207,7 @@ func TestSubmitExcused_ApprovalOn_CreatesPendingRequest(t *testing.T) {
 	assert.Equal(t, "Familienfeier", res.PendingRequest.Note)
 
 	// The absence list (status days) stays empty — the child is still expected.
-	from := calendar.TodayDate()
+	from := careFixtureToday()
 	to := calendar.NewDate(from.Year(), from.Month()+1, from.Day())
 	absences, err := svc.ListSickDays(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, from, to)
 	require.NoError(t, err)
@@ -231,7 +228,7 @@ func TestSubmitExcused_ApprovalOff_WritesDirectly(t *testing.T) {
 	svc, _, _, db := buildExcusedServices(t, false)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	day := calendar.TodayDate().AddDays(3)
+	day := careFixtureToday().AddDays(3)
 	res, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
 	require.NoError(t, err)
@@ -249,7 +246,7 @@ func TestSubmitExcused_EmptyNoteRejected(t *testing.T) {
 		svc, _, _, db := buildExcusedServices(t, gate)
 		chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-		day := calendar.TodayDate().AddDays(3)
+		day := careFixtureToday().AddDays(3)
 		_, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 			[]calendar.Date{day}, "   ", absencerecords.StudentStatusDayExcused, nil)
 		assert.ErrorIs(t, err, parentService.ErrEmptyNote, "excused with blank note must be rejected (gate=%v)", gate)
@@ -305,7 +302,7 @@ func TestExcusedRequest_RejectWritesNoStatusDay(t *testing.T) {
 	svc, excused, _, db := buildExcusedServices(t, true)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	day := calendar.TodayDate().AddDays(3)
+	day := careFixtureToday().AddDays(3)
 	res, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
 	require.NoError(t, err)
@@ -321,7 +318,7 @@ func TestExcusedRequest_RejectWritesNoStatusDay(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	from := calendar.TodayDate()
+	from := careFixtureToday()
 	to := calendar.NewDate(from.Year(), from.Month()+1, from.Day())
 	absences, err := svc.ListSickDays(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, from, to)
 	require.NoError(t, err)
@@ -340,7 +337,7 @@ func TestListExcusedRequests_ShowsRecentlyRejectedLongPending(t *testing.T) {
 	svc, excused, _, db := buildExcusedServices(t, true)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	day := calendar.TodayDate().AddDays(3)
+	day := careFixtureToday().AddDays(3)
 	res, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
 	require.NoError(t, err)
@@ -348,7 +345,7 @@ func TestListExcusedRequests_ShowsRecentlyRejectedLongPending(t *testing.T) {
 
 	// Backdate creation (and updated_at) well past the recent window while the
 	// request is still pending, as if it had languished unreviewed for a month.
-	old := time.Now().AddDate(0, 0, -30)
+	old := careFixtureNow().AddDate(0, 0, -30)
 	_, err = db.NewUpdate().
 		Table("active.excused_absence_requests").
 		Set("created_at = ?", old).
@@ -389,7 +386,7 @@ func TestListExcusedRequests_ShowsApprovedForOutOfWindowDates(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	// A date well beyond the parent's ~2-month status-day window.
-	far := calendar.TodayDate().AddDays(120)
+	far := careFixtureToday().AddDays(120)
 	res, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 		[]calendar.Date{far}, "Urlaub", absencerecords.StudentStatusDayExcused, nil)
 	require.NoError(t, err)
@@ -405,7 +402,7 @@ func TestListExcusedRequests_ShowsApprovedForOutOfWindowDates(t *testing.T) {
 	require.NoError(t, err)
 
 	// The status-day view (today..+1 month here) does NOT include the far date.
-	from := calendar.TodayDate()
+	from := careFixtureToday()
 	to := calendar.NewDate(from.Year(), from.Month()+1, from.Day())
 	absences, err := svc.ListSickDays(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, from, to)
 	require.NoError(t, err)

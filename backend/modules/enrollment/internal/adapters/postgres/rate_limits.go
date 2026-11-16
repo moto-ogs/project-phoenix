@@ -17,7 +17,8 @@ type Store struct {
 	resolve  func(context.Context) (bun.IDB, error)
 	tenantID func(context.Context) (int64, error)
 	// now stamps the rows the store writes (updated_at, reviewed_at,
-	// late-invite creation); nil is the real clock.
+	// late-invite creation). Only WithClock sets it; a store without it
+	// serves reads.
 	now func() time.Time
 }
 
@@ -25,20 +26,24 @@ func NewStore(resolve func(context.Context) (bun.IDB, error), tenantID func(cont
 	return &Store{resolve: resolve, tenantID: tenantID}
 }
 
-// WithClock returns the store stamping its writes with now (ADR 0239).
+// WithClock returns the store stamping its writes with now (ADR 0239); a
+// nil clock is a wiring error.
 func (r *Store) WithClock(now func() time.Time) *Store {
+	if now == nil {
+		panic("enrollment store: the clock is required")
+	}
 	clocked := *r
 	clocked.now = now
 	return &clocked
 }
 
-// currentTime is the instant the store stamps a write with.
+// currentTime is the instant the store stamps a write with. A write through
+// a store built without WithClock is a wiring error (ADR 0275).
 func (r *Store) currentTime() time.Time {
-	now := r.now
-	if now == nil {
-		now = time.Now
+	if r.now == nil {
+		panic("enrollment store: a write needs the clock of WithClock")
 	}
-	return now()
+	return r.now()
 }
 
 // IncrementAttempts mirrors auth.PasswordResetRateLimitRepository.IncrementAttempts

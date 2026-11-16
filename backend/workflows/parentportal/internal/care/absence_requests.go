@@ -30,7 +30,7 @@ func (s *Service) ListExcusedRequests(ctx context.Context, accountID, studentID 
 	var recentSince time.Time
 	var out []*ExcusedAbsenceRequest
 	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(*Child) error {
-		recentSince = time.Now().AddDate(0, 0, -14)
+		recentSince = s.now().AddDate(0, 0, -14)
 		return nil
 	}, func(txCtx context.Context, _ *Child) error {
 		rows, err := s.ExcusedRequests.ListForStudent(txCtx, studentID, recentSince)

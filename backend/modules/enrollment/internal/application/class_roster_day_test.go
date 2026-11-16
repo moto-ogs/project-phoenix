@@ -14,7 +14,7 @@ import (
 func TestClassDayPhasesReturnsEveryActiveCoveringPhase(t *testing.T) {
 	t.Parallel()
 
-	svc := NewReports(ReportDependencies{Phases: &fakeClassDayPhaseRepo{phases: []*enrollment.Phase{
+	svc := NewReports(ReportDependencies{Now: enrollmentTestClock, Phases: &fakeClassDayPhaseRepo{phases: []*enrollment.Phase{
 		{ID: 1, Name: "Altjahr", ServiceStartDate: enrollment.Date(calendar.NewDate(2025, 8, 1)), ServiceEndDate: enrollment.Date(calendar.NewDate(2026, 7, 31))},
 		{ID: 2, Name: "Schuljahr", IsActive: true, ServiceStartDate: enrollment.Date(calendar.NewDate(2026, 8, 1)), ServiceEndDate: enrollment.Date(calendar.NewDate(2027, 7, 31))},
 		{ID: 3, Name: "Ferien", IsActive: true, ServiceStartDate: enrollment.Date(calendar.NewDate(2026, 8, 3)), ServiceEndDate: enrollment.Date(calendar.NewDate(2026, 8, 14))},
@@ -37,7 +37,7 @@ func TestClassDayPhasesReturnsEveryActiveCoveringPhase(t *testing.T) {
 func TestClassDayPhasesNoneCovering(t *testing.T) {
 	t.Parallel()
 
-	svc := NewReports(ReportDependencies{Phases: &fakeClassDayPhaseRepo{phases: []*enrollment.Phase{
+	svc := NewReports(ReportDependencies{Now: enrollmentTestClock, Phases: &fakeClassDayPhaseRepo{phases: []*enrollment.Phase{
 		{ID: 1, ServiceStartDate: enrollment.Date(calendar.NewDate(2025, 8, 1)), ServiceEndDate: enrollment.Date(calendar.NewDate(2026, 7, 31))},
 	}}})
 
