@@ -183,7 +183,7 @@ func NewStudentTestRetention(db transactionruntime.Database, audit *auditCompose
 	if err != nil {
 		return nil, err
 	}
-	owners, err := NewStudentDeletionOwners(db)
+	owners, err := NewStudentDeletionOwners(db, nil)
 	if err != nil {
 		return nil, err
 	}

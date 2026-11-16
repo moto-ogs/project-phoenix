@@ -23,15 +23,16 @@ func NewEnrollmentBookings(now func() time.Time) *enrollment.BookingProjection {
 }
 
 // NewEnrollmentPhaseBounds is Enrollment's phase bounds reader (#6657) over
-// the owner's phases and the Timetable recurrence gate the phase edit holds.
-func NewEnrollmentPhaseBounds(db transactionruntime.Database) (enrollment.PhaseBoundsReader, error) {
+// the owner's phases and the Timetable recurrence gate the phase edit holds;
+// now is the root clock of the owner (ADR 0265).
+func NewEnrollmentPhaseBounds(db transactionruntime.Database, now func() time.Time) (enrollment.PhaseBoundsReader, error) {
 	lock, err := timetableCompose.NewRecurrenceWriteLock(timetableCompose.RecurrenceLockDependencies{
 		DB: db.Pool(), GradeTransitionLockKey: schoolstructure.TransitionsLockKey,
 	})
 	if err != nil {
 		return enrollment.PhaseBoundsReader{}, fmt.Errorf("compose enrollment phase bounds: %w", err)
 	}
-	return enrollment.NewPhaseBoundsReader(enrollmentCompose.New(), lock.LockRecurrenceWrites), nil
+	return enrollment.NewPhaseBoundsReader(enrollmentCompose.NewClocked(now), lock.LockRecurrenceWrites), nil
 }
 
 func ComposeEnrollmentBookings(owner enrollment.Owner) *enrollment.BookingProjection {

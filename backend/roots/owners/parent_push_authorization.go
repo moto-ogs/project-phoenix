@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	contractcompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
@@ -118,7 +119,7 @@ func NewParentPushObjectAuthorization(db transactionruntime.Database) (func(cont
 		Runtime: ParentPortalRuntime{}, TraegerRuntime: ParentPortalRuntime{}, Schools: NewParentSchoolTraeger(organizations),
 
 		Accounts: parentPushAccounts(accounts), Relationships: parentPushRelationships(people), Students: parentPushStudents(people),
-		Billing: parentBillingPushObjects(billingcompose.NewParentDocuments()), Contracts: parentContractPushObjects(contractcompose.NewInbox(nil, nil)), Releases: parentReleasePushObjects(organizationcompose.NewSharedTraegerDocuments()),
+		Billing: parentBillingPushObjects(billingcompose.NewParentDocuments()), Contracts: parentContractPushObjects(contractcompose.NewInbox(nil, time.Now)), Releases: parentReleasePushObjects(organizationcompose.NewSharedTraegerDocuments()),
 	})
 	return BindParentPushObjectAuthorization(gate), nil
 }

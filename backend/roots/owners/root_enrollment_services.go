@@ -203,7 +203,7 @@ func BuildEnrollmentFlows(
 			Logger:                 env.Logger.With("service", "enrollment-change-request"),
 			LockTemplateRecurrence: owner.RecurrenceLock.LockRecurrenceWrites, Now: env.Now,
 		}),
-		Uploads: NewEnrollmentRequestUploads(records, audit.Persistence.DataAccessLog, settings, env.Logger.With("service", "enrollment-uploads")),
+		Uploads: NewEnrollmentRequestUploads(records, audit.Persistence.DataAccessLog, settings, env.Logger.With("service", "enrollment-uploads"), env.Now),
 		Rollovers: NewEnrollmentRollovers(EnrollmentRolloverSources{
 			Bookings: enrollment.CareBookings, Phases: records, Requests: records, Children: records,
 			Catalog: offerings.Catalog, Notifications: notices.Notifications, PhaseEligibility: phases,

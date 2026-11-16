@@ -56,8 +56,24 @@ mit 29 verschobenen Live-Daten.
    `created_at` von derselben Uhr, mit der Einlösung und Aufräumen seine
    Frist messen. Ein Nachweis der Ferienanmeldung wird dagegen von der
    Datenbank gestempelt und eingelöst; das stündliche Aufräumen misst sein
-   Alter jetzt ebenfalls dort statt mit `time.Now`.
-5. **Budget.** Das Compose-LOC-Budget von `modules/enrollment/compose` steigt
+   Alter jetzt ebenfalls dort statt mit `time.Now`. Die Wurzeln binden
+   deshalb auch die Elternportal-Lesezugriffe (`NewParentPortalReads` nimmt
+   die Uhr statt eines Owners), den Upload-Dienst mit Aufbewahrung und
+   Objektbereinigung des Workers, die Hochlade-Einheiten der Anmelde- und
+   Elternportalrouten und die Dateien und Exporte der Ferienanmeldungen und
+   Teilnehmerlisten an `RootEnvironment.Now`. Wo keine Wurzeluhr hinreicht, bindet die Wurzel
+   `time.Now` ausdrücklich.
+5. **Trigger-Spalten.** Wo `update_modified_column()` bei jedem UPDATE
+   `updated_at` auf `now()` der Datenbank setzt (`care_contract.contracts`,
+   `contract_templates`; `enrollment.holiday_periods`,
+   `holiday_period_weeks`, `holiday_week_time_models`,
+   `holiday_registrations`, `holiday_registration_children`,
+   `traeger_phases`, `traeger_care_offerings`), stempelt Go `updated_at` nicht
+   und keine Entscheidung vergleicht es mit der injizierten Uhr. Die Uhr des
+   Speichers stempelt nur Spalten ohne Trigger (`updated_at` und
+   `reviewed_at` von `request_children`, `request_guardians`, `created_at`
+   beim Einfügen).
+6. **Budget.** Das Compose-LOC-Budget von `modules/enrollment/compose` steigt
    um die Zeilen der Uhrfelder (+9, 639 auf 648: `NewClocked`, `Now` der
    Phasen und des Löschmoduls und ihre `time`-Importe). Die Verdrahtung folgt
    ADR 0239 und ist keine abzubauende Altlast. Die Compose-Zeilen des
@@ -71,6 +87,12 @@ mit 29 verschobenen Live-Daten.
   `modules/enrollment/` (29 Funde). Die Tests stehen auf festen Tagen und
   reichen ihre Uhr über dieselben Fabriken an die Dienste.
 - Das Inventar der Command-Effects ändert sich nicht.
+- Offen bleibt ein Vergleich über zwei Uhren im Betreuungsvertrag:
+  `acceptanceIssue` nennt `SkipAcceptanceChanged` statt
+  `SkipAcceptanceMissing`, wenn `contract_templates.updated_at`
+  (Datenbankuhr) nach dem Einwilligungszeitpunkt liegt, den der Intake mit
+  der injizierten Uhr stempelt. Er wählt nur den angezeigten Grund, nicht ob
+  ein Vertrag geschlossen wird; mit der echten Uhr verhält er sich wie zuvor.
 - Wo andere Owner im selben Test die echte Uhr oder `now()` der Datenbank
   lesen, bleibt der Test an deren Uhr gebunden; ihre Schnitte von #7104
   folgen in eigenen Pull Requests.
