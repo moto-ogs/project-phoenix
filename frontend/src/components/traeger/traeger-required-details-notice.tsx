@@ -103,7 +103,7 @@ export function TraegerRequiredDetailsNotice() {
       type="warning"
       announce="off"
       title="Es fehlen noch Pflichtangaben"
-      message="Ohne diese Angaben verschickt moto keine Verträge und erstellt keine Rechnungen oder Bescheide."
+      message="Ohne sie kann moto nicht alle Verträge, Rechnungen und Bescheide erstellen und verschicken."
       details={
         <ul className="mt-1 list-disc space-y-0.5 pl-5">
           {data.map((detail) => (

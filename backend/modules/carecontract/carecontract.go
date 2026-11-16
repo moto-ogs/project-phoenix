@@ -417,6 +417,10 @@ const (
 	SkipMailBlocked         = "mail_blocked"
 	SkipMailBlockUnreadable = "mail_block_unreadable"
 	SkipNotSendable         = "not_sendable"
+	// SkipLetterheadMissing holds back a conclusion at the acceptance while
+	// the Träger has no letterhead (#7177); the office's own send answers
+	// with ErrLetterheadMissing instead.
+	SkipLetterheadMissing = "letterhead_missing"
 )
 
 // Contracts serves the contracts of a Träger to its Träger-Büro. Every

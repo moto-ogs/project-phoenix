@@ -2,28 +2,30 @@ package parentbilling
 
 import "context"
 
-// The details a Träger has to enter before its letters, notices and
-// contracts go out (#7177). Each is required only while a school of the
-// Träger books a module that needs it.
+// RequiredDetail names a detail a Träger has to enter before its letters,
+// notices and contracts go out (#7177). Each is required only while a
+// school of the Träger books a module that needs it.
+type RequiredDetail string
+
 const (
 	// RequiredLetterhead names the Träger as the sender of every letter and
 	// gives the withdrawal notice of a contract its address.
-	RequiredLetterhead = "letterhead"
+	RequiredLetterhead RequiredDetail = "letterhead"
 	// RequiredBankAccount is the account the invoices ask to pay to.
-	RequiredBankAccount = "bank_account"
+	RequiredBankAccount RequiredDetail = "bank_account"
 	// RequiredSEPACreditor is the Gläubiger-ID of the direct debits.
-	RequiredSEPACreditor = "sepa_creditor"
+	RequiredSEPACreditor RequiredDetail = "sepa_creditor"
 	// RequiredNumberRangeHoliday numbers the invoices of the holiday care.
-	RequiredNumberRangeHoliday = "number_range_holiday"
+	RequiredNumberRangeHoliday RequiredDetail = "number_range_holiday"
 	// RequiredNumberRangeCare numbers the invoices and notices of the
 	// monthly care.
-	RequiredNumberRangeCare = "number_range_care"
+	RequiredNumberRangeCare RequiredDetail = "number_range_care"
 )
 
 // RequiredDetails are the details the Träger still has to enter, in the
 // order above. Missing is empty, never nil, when nothing is missing.
 type RequiredDetails struct {
-	Missing []string `json:"missing"`
+	Missing []RequiredDetail `json:"missing"`
 }
 
 // TraegerModules says which of the modules that need required details at

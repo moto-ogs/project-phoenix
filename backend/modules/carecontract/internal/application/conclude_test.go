@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -174,4 +175,13 @@ func TestManualDraftKeepsEarlyStartConsent(t *testing.T) {
 	require.Empty(t, reason)
 	assert.True(t, draft.EarlyStart, "manual drafts retain the parents' voluntary consent")
 	assert.Contains(t, withdrawalBlocks(ContractRecord{EarlyStart: draft.EarlyStart}, withdrawalContact{Partner: "Träger"})[1].Text, "ausdrücklich verlangt")
+}
+
+// TestConclusionHoldsBackAContractWithoutLetterhead pins #7177: a Träger
+// without a letterhead sends no contract, so the conclusion at the
+// acceptance holds the contract back for the next run instead of failing
+// the run of the whole Träger.
+func TestConclusionHoldsBackAContractWithoutLetterhead(t *testing.T) {
+	err := sendHoldBack(fmt.Errorf("care contract: %w", carecontract.ErrLetterheadMissing))
+	assert.Equal(t, carecontract.SkipLetterheadMissing, holdBackReason(err))
 }

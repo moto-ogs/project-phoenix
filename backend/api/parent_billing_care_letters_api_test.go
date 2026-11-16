@@ -187,6 +187,12 @@ func TestCareLettersSendEveryFamilyOnceAndShowTheirState(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF")))
 
+	// The mail names the Träger from the letterhead: without it no mail goes
+	// out with an empty name (#7177).
+	requireLettersNeedTheLetterhead(t, f.traeger, administration.token, func() *httptest.ResponseRecorder {
+		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters/mail"), nil)
+	})
+	assert.Empty(t, careLetterMails(t, f, run.ID), "no mail without the letterhead")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters/mail"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, careSeriesBody{Queued: 1, WithoutEmail: 1}, decodeSchoolPortalData[careSeriesBody](t, rec.Body.Bytes()))

@@ -373,6 +373,20 @@ func normalizeEmergencyContacts(contacts []parentbilling.BillingEmergencyContact
 	return normalized, nil
 }
 
+// mailSenderName is the first line of the letterhead, the name a mail of a
+// letter or notice is sent with. Without a letterhead no mail goes out with
+// an empty name (#7177).
+func mailSenderName(ctx context.Context, post parentbilling.BillingLetterPost, organizationID int64) (string, error) {
+	text, err := post.SenderText(ctx, organizationID)
+	if err != nil {
+		return "", fmt.Errorf("parent billing: read letterhead: %w", err)
+	}
+	if missingSender(parentbilling.Letterhead{SenderText: text}) {
+		return "", parentbilling.ErrLetterheadMissing
+	}
+	return firstLine(textLines(text)), nil
+}
+
 // missingSender tells whether the letterhead names no sender. A letter, a
 // notice and their mail name the Träger from it (#7177).
 func missingSender(head parentbilling.Letterhead) bool {

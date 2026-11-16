@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 )
@@ -50,7 +49,7 @@ func (r *RequiredDetails) RequiredDetails(ctx context.Context, organizationID in
 	if err != nil {
 		return result.done(), fmt.Errorf("parent billing: read letterhead: %w", err)
 	}
-	result.add(parentbilling.RequiredLetterhead, strings.TrimSpace(sender) == "")
+	result.add(parentbilling.RequiredLetterhead, missingSender(parentbilling.Letterhead{SenderText: sender}))
 	if !billing {
 		return result.done(), nil
 	}
@@ -98,23 +97,19 @@ func (r *RequiredDetails) modules(ctx context.Context, organizationID int64) (pa
 
 // requiredDetails collects the missing details in the order they are
 // checked.
-type requiredDetails []string
+type requiredDetails []parentbilling.RequiredDetail
 
-func (r *requiredDetails) add(detail string, missing bool) {
+func (r *requiredDetails) add(detail parentbilling.RequiredDetail, missing bool) {
 	if missing {
 		*r = append(*r, detail)
 	}
 }
 
 func (r requiredDetails) done() parentbilling.RequiredDetails {
-	return parentbilling.RequiredDetails{Missing: append([]string{}, r...)}
+	return parentbilling.RequiredDetails{Missing: append([]parentbilling.RequiredDetail{}, r...)}
 }
 
 func hasPattern(ranges []parentbilling.NumberRange, service string) bool {
-	for _, numberRange := range ranges {
-		if numberRange.Service == service && numberRange.Pattern != "" {
-			return true
-		}
-	}
-	return false
+	_, ok := patternOf(ranges, service)
+	return ok
 }

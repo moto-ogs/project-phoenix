@@ -574,11 +574,7 @@ func (l *CareNoticeLetters) readProviderBlocks(ctx context.Context, mailings []p
 }
 
 func (l *CareNoticeLetters) traegerName(ctx context.Context, organizationID int64) (string, error) {
-	text, err := l.post.SenderText(ctx, organizationID)
-	if err != nil {
-		return "", fmt.Errorf("parent billing: read letterhead: %w", err)
-	}
-	return firstLine(textLines(text)), nil
+	return mailSenderName(ctx, l.post, organizationID)
 }
 
 func (l *CareNoticeLetters) recordRead(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID int64, details map[string]any) error {

@@ -291,11 +291,7 @@ func (m *BillingLetterMail) send(ctx context.Context, reviewer parentbilling.Hol
 // traegerName is the first line of the letterhead, the name the letter
 // closes with and the mail is sent with.
 func (m *BillingLetterMail) traegerName(ctx context.Context, organizationID int64) (string, error) {
-	text, err := m.post.SenderText(ctx, organizationID)
-	if err != nil {
-		return "", fmt.Errorf("parent billing: read letterhead: %w", err)
-	}
-	return firstLine(textLines(text)), nil
+	return mailSenderName(ctx, m.post, organizationID)
 }
 
 // readProviderBlocks asks once per address, and only about letters whose last mail
