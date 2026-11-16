@@ -17,10 +17,10 @@ name: Frontend bundle base
 # and builds its base cold as before. bundle-workflow-permissions.node-test.mjs
 # keeps both jobs in step.
 #
-# Both jobs run on Blacksmith, whose transparent cache stores the entry
-# (about 4 KB, perf-results/bundle-base.json only) with GitHub's branch
-# scoping, outside the repository's 10 GB GitHub cache; unused entries expire
-# after seven days.
+# Both jobs run on free hosted runners and keep the entry (about 4 KB,
+# perf-results/bundle-base.json only) in the repository's GitHub cache. An
+# entry GitHub evicts at its 10 GB limit only makes a pull request build its
+# base cold, as on a miss.
 
 on:
   push:
@@ -50,8 +50,8 @@ jobs:
   measure:
     name: Measure development bundle base
     if: github.ref == 'refs/heads/development'
-    # Same image and size as "Frontend build".
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    # Same image as "Frontend build"; both read the same GitHub cache.
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
