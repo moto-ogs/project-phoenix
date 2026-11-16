@@ -24,7 +24,8 @@ import (
 // New code takes the clock from its composition: a `now func() time.Time`
 // dependency (calendar.CalendarDateClock turns it into a day clock), which
 // the root wires to time.Now and tests to a fixed instant. Referencing
-// time.Now as a value, as such a default does, is not counted.
+// time.Now as a value is not a call; moduleLiveClockValueBudget below caps it
+// outside the owner's compositions.
 //
 // Counted: calls of time.Now and of calendar.TodayDate, calendar.Today and
 // calendar.Now (package sharedkernel/calendar under any import name) in
@@ -94,6 +95,24 @@ var moduleLiveClockBudget = map[string]int{
 	"workflows/shiftplansync":              2,
 }
 
+// moduleLiveClockValueBudget caps, per owner directory, the references to the
+// real clock that are not calls and stand outside the owner's compositions:
+// `now: time.Now`, `clock := calendar.TodayDate`, `if now == nil { now =
+// time.Now }` in an application, adapter, HTTP or domain package (#7104).
+//
+// Why: such a binding passes the call ratchet above, because nothing calls
+// the clock there, and still decides on the real day. The owner slices of
+// #7104 left the budget of calls at zero for an owner while a constructor
+// kept its own `time.Now`, a root passed no clock, and a pinned test ran on
+// two clocks. The real clock is named in two places only: the roots (api,
+// roots, cmd) and an owner's compose or composition package, which may default
+// a clock the root left unset (ADR 0239). Everything else receives it.
+//
+// Same budget semantics as moduleLiveClockBudget; shrink-only.
+//
+// Seed: measured 2026-11-16 on development after the owner slices of #7104.
+var moduleLiveClockValueBudget = map[string]int{}
+
 const calendarImportPath = "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 var liveCalendarClockFunctions = map[string]bool{"TodayDate": true, "Today": true, "Now": true}
@@ -105,7 +124,7 @@ func TestModuleLiveClockRatchet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	measured, err := measureModuleLiveClockCalls(root)
+	measured, bound, err := measureModuleLiveClock(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,10 +132,18 @@ func TestModuleLiveClockRatchet(t *testing.T) {
 		t.Errorf("live clock ratchet (%d problem(s)):\n%s\n\nmeasured:\n%s",
 			len(problems), strings.Join(problems, "\n"), formatModuleLiveClockBudget(measured))
 	}
+	if problems := compareModuleLiveClockBudget(bound, moduleLiveClockValueBudget); len(problems) > 0 {
+		t.Errorf("live clock value ratchet, the real clock bound as a value outside a composition (%d problem(s)):\n%s\n\n"+
+			"Pass the clock in from the owner's compose package or the root instead of naming time.Now or calendar.TodayDate here.\n\nmeasured:\n%s",
+			len(problems), strings.Join(problems, "\n"), formatModuleLiveClockBudget(bound))
+	}
 }
 
-func measureModuleLiveClockCalls(root string) (map[string]int, error) {
-	counts := map[string]int{}
+// measureModuleLiveClock returns, per owner directory, the direct clock calls
+// and the references to the real clock as a value outside the owner's
+// compositions.
+func measureModuleLiveClock(root string) (map[string]int, map[string]int, error) {
+	counts, bound := map[string]int{}, map[string]int{}
 	for _, top := range []string{"modules", "workflows"} {
 		err := filepath.WalkDir(filepath.Join(root, top), func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
@@ -131,38 +158,58 @@ func measureModuleLiveClockCalls(root string) (map[string]int, error) {
 			if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return nil
 			}
-			calls, err := countLiveClockCalls(path)
-			if err != nil || calls == 0 {
+			calls, values, err := countLiveClockUses(path)
+			if err != nil || calls+values == 0 {
 				return err
 			}
 			rel, err := filepath.Rel(root, path)
 			if err != nil {
 				return err
 			}
-			parts := strings.SplitN(filepath.ToSlash(rel), "/", 3)
-			counts[parts[0]+"/"+parts[1]] += calls
+			rel = filepath.ToSlash(rel)
+			parts := strings.SplitN(rel, "/", 3)
+			owner := parts[0] + "/" + parts[1]
+			if calls > 0 {
+				counts[owner] += calls
+			}
+			if values > 0 && !inOwnerComposition(rel) {
+				bound[owner] += values
+			}
 			return nil
 		})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return counts, nil
+	return counts, bound, nil
 }
 
-// countLiveClockCalls counts direct clock calls in one file. Files built
-// only with the testhooks tag are test support, not production code.
-func countLiveClockCalls(path string) (int, error) {
+// inOwnerComposition reports whether a file belongs to a package that
+// composes its owner (a compose or composition directory, ADR 0068).
+func inOwnerComposition(rel string) bool {
+	for _, segment := range strings.Split(filepath.ToSlash(filepath.Dir(rel)), "/") {
+		if segment == "compose" || segment == "composition" {
+			return true
+		}
+	}
+	return false
+}
+
+// countLiveClockUses counts, in one file, the direct clock calls and the
+// references to a clock function that are not calls (`now: time.Now`,
+// `clock := calendar.TodayDate`). Files built only with the testhooks tag are
+// test support, not production code.
+func countLiveClockUses(path string) (int, int, error) {
 	source, err := readGoSource(path)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	file, err := parser.ParseFile(sharedGoFileSet, path, source, parser.ParseComments|parser.SkipObjectResolution)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	if fileHasBuildTag(file, "testhooks") {
-		return 0, nil
+		return 0, 0, nil
 	}
 	timeNames, calendarNames := map[string]bool{}, map[string]bool{}
 	for _, spec := range file.Imports {
@@ -178,28 +225,34 @@ func countLiveClockCalls(path string) (int, error) {
 			calendarNames[name] = true
 		}
 	}
-	stopwatches := stopwatchStarts(file, timeNames)
-	calls := 0
-	ast.Inspect(file, func(node ast.Node) bool {
-		call, ok := node.(*ast.CallExpr)
-		if !ok || stopwatches[call] {
-			return true
-		}
-		selector, ok := call.Fun.(*ast.SelectorExpr)
+	isLiveClock := func(expr ast.Expr) bool {
+		selector, ok := expr.(*ast.SelectorExpr)
 		if !ok {
-			return true
+			return false
 		}
 		pkg, ok := selector.X.(*ast.Ident)
-		if !ok {
-			return true
-		}
-		if timeNames[pkg.Name] && selector.Sel.Name == "Now" ||
-			calendarNames[pkg.Name] && liveCalendarClockFunctions[selector.Sel.Name] {
-			calls++
+		return ok && (timeNames[pkg.Name] && selector.Sel.Name == "Now" ||
+			calendarNames[pkg.Name] && liveCalendarClockFunctions[selector.Sel.Name])
+	}
+	stopwatches := stopwatchStarts(file, timeNames)
+	called := map[ast.Expr]bool{}
+	calls, values := 0, 0
+	ast.Inspect(file, func(node ast.Node) bool {
+		if call, ok := node.(*ast.CallExpr); ok && isLiveClock(call.Fun) {
+			called[call.Fun] = true
+			if !stopwatches[call] {
+				calls++
+			}
 		}
 		return true
 	})
-	return calls, nil
+	ast.Inspect(file, func(node ast.Node) bool {
+		if expr, ok := node.(ast.Expr); ok && !called[expr] && isLiveClock(expr) {
+			values++
+		}
+		return true
+	})
+	return calls, values, nil
 }
 
 // stopwatchStarts returns the time.Now calls that only start a duration
@@ -387,6 +440,28 @@ func hook() time.Time { return time.Now() }
 	writeCalendarFixtureSourceAt(t, root, "workflows/flow/flow.go", `package flow
 import "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 func run() { _ = calendar.Now() }
+var day = calendar.TodayDate
+`)
+	// The real clock as a value: counted in an application package, allowed
+	// in the owner's composition.
+	writeCalendarFixtureSourceAt(t, root, "modules/sample/compose/new.go", `package compose
+import "time"
+func clockOrReal(now func() time.Time) func() time.Time {
+	if now == nil {
+		return time.Now
+	}
+	return now
+}
+`)
+	writeCalendarFixtureSourceAt(t, root, "modules/sample/internal/application/service.go", `package application
+import "time"
+type service struct{ now func() time.Time }
+func newService(now func() time.Time) *service {
+	if now == nil {
+		now = time.Now
+	}
+	return &service{now: now}
+}
 `)
 	// Stopwatches: a start read only ever measured with time.Since is not a
 	// clock the code decides on. Any other use of the name in the function
@@ -429,13 +504,19 @@ func packageLevel() {
 }
 `)
 
-	measured, err := measureModuleLiveClockCalls(root)
+	measured, bound, err := measureModuleLiveClock(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := map[string]int{"modules/sample": 3, "workflows/flow": 1, "workflows/timed": 6}
 	if fmt.Sprint(measured) != fmt.Sprint(want) {
 		t.Fatalf("measured %v, want %v", measured, want)
+	}
+	// modules/sample: `now: stdtime.Now` in service.go and the nil default in
+	// internal/application; its compose package is not counted.
+	wantBound := map[string]int{"modules/sample": 2, "workflows/flow": 1}
+	if fmt.Sprint(bound) != fmt.Sprint(wantBound) {
+		t.Fatalf("bound as a value %v, want %v", bound, wantBound)
 	}
 	problems := compareModuleLiveClockBudget(measured, map[string]int{"modules/sample": 2, "workflows/flow": 2, "workflows/timed": 6, "modules/gone": 1})
 	joined := strings.Join(problems, "\n")
