@@ -38,6 +38,8 @@ type feedFixture struct {
 	notices   timetablePorts.StaffCancellationNotices
 	router    chi.Router
 	consentDB func(accountID int64, enabled bool)
+	// typedConsent stores an account's push choice for a notification type.
+	typedConsent func(accountID int64, notificationType string, enabled bool)
 }
 
 type feedPerson struct {
@@ -72,6 +74,9 @@ func newFeedFixture(t *testing.T) *feedFixture {
 		s: s, svc: fixtures.FromInstanceLifecycle(lifecycle), reinstate: lifecycle, notices: notices, router: module.NotificationPreferenceRouterForTests(),
 		consentDB: func(accountID int64, enabled bool) {
 			require.NoError(t, testpkg.TenantCommand3(t, s.ctx, s.db, consent.RecordConsent, accountID, "instance_cancelled", enabled))
+		},
+		typedConsent: func(accountID int64, notificationType string, enabled bool) {
+			require.NoError(t, testpkg.TenantCommand3(t, s.ctx, s.db, consent.RecordConsent, accountID, notificationType, enabled))
 		},
 	}
 }

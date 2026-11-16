@@ -461,7 +461,7 @@ func planSubstitutionTarget(
 	action = staging.stage(instance.ID, sub.SubstituteStaffID, action)
 	return &deviationSubOp{
 		write: substituteWriteOp{Instance: instance, OrigRow: orig, Action: action},
-		subID: sub.SubstituteStaffID,
+		subID: sub.SubstituteStaffID, wasAbsent: orig != nil && orig.IsAbsent,
 	}, nil
 }
 

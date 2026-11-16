@@ -33,6 +33,10 @@ type deviationSubOp struct {
 	write  substituteWriteOp
 	subID  int64
 	reason *string
+	// wasAbsent records that the covered person was already marked absent
+	// before this save; the write sets the row absent afterwards. The team
+	// heard about that absence already (#7138).
+	wasAbsent bool
 }
 
 type deviationSubstitutionRemovalOp struct {

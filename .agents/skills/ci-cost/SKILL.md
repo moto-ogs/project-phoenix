@@ -140,7 +140,21 @@ Proven here (#5700, #5762, #5770) or in pingdotgg/t3code (#14025, #19587,
   the full 8-vCPU suite.
 - `ci-runtime-watch.yml` reports every Monday the median of the week's
   green pull request runs (all, with backend tests, the backend job, the
-  jobs that end last) and opens one issue above 300 s.
+  jobs that end last, one row per day) and opens one issue when the last
+  three days are above 300 s. A week's median lags: #7195 reported 488 s
+  three days after the repair (561-642 s a day until 12.11., 264-281 s
+  from 14.11.). Read the day table before looking for a cause.
+- History for the backend tests comes without blobs
+  (`scripts/fetch-comparison-history.sh`): the tests read old files only at
+  the comparison commits, and one more request loads what differs from
+  HEAD there (228 blobs in a typical pull request). Locally 14 s against
+  56 s with every blob; the job had waited 7-16 s for the full fetch
+  (#7195).
+- A cache `actions/cache` saves in a pull request job has no writer on
+  development unless a development job saves it too: the migrated DB
+  snapshot missed in 19 of 30 pull request runs, 4-21 s of migrations
+  against 1-2 s of restore. `backend-build-cache.yml` now writes it
+  (`scripts/db-snapshot-cache.test.mjs`, #7195).
 - "Backend tests" writes a "CPU seconds" table into its job summary (build,
   vet, link, Postgres, test binaries). Compare shares of the busy seconds, not
   job durations: the same full suite took 1431 to 2183 busy CPU seconds and
