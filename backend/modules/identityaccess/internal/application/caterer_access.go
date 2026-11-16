@@ -147,12 +147,26 @@ func (c *CatererAccess) revokeOpen(ctx context.Context) error {
 	}
 	for _, invitation := range invitations {
 		if invitation.Open(c.now()) {
-			if _, _, err := c.store.RevokeCatererInvitation(ctx, invitation.ID, c.now()); err != nil {
+			if _, err := c.revoke(ctx, invitation.ID); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+// revoke takes back the school's open invitation and stops its mail if the
+// outbox has not sent it yet (#4496): a link that no longer works is not
+// mailed. Both commit in the school's transaction.
+func (c *CatererAccess) revoke(ctx context.Context, invitationID int64) (bool, error) {
+	revoked, _, err := c.store.RevokeCatererInvitation(ctx, invitationID, c.now())
+	if err != nil || !revoked {
+		return revoked, err
+	}
+	if err := c.delivery.CancelCatererInvitation(ctx, invitationID); err != nil {
+		return false, fmt.Errorf("stop caterer invitation mail: %w", err)
+	}
+	return true, nil
 }
 
 // ListCatererInvitations lists the school's invitations, newest first.
@@ -196,7 +210,7 @@ func (c *CatererAccess) RevokeCatererInvitation(ctx context.Context, invitationI
 	if !c.inSchool(ctx) {
 		return catererError(failed("revoke caterer invitation", errSchoolTransactionRequired))
 	}
-	revoked, _, err := c.store.RevokeCatererInvitation(ctx, invitationID, c.now())
+	revoked, err := c.revoke(ctx, invitationID)
 	if err == nil && !revoked {
 		err = domain.ErrInvitationNotFound
 	}
@@ -282,7 +296,10 @@ func (c *CatererAccess) preview(ctx context.Context, token string) (domain.Cater
 // the caller opened. A new address gets an account and a caterer of the
 // invited name; the account of an existing caterer confirms with its
 // password and adds the school. An address of another kind of account is
-// refused. The school's supply by the caterer starts with it, so the
+// refused. A wrong password answers ErrInvalidCredentials after it was
+// counted towards the account's lock in the caller's transaction, which has
+// written nothing else: the caller commits it before it answers, as the
+// login does. The school's supply by the caterer starts with it, so the
 // caterer never exists without its school.
 func (c *CatererAccess) AcceptCatererInvitation(ctx context.Context, token string, registration identityaccess.CatererRegistration) (identityaccess.CatererAcceptance, error) {
 	ctx = c.attach(ctx)
@@ -347,8 +364,17 @@ func (c *CatererAccess) catererAccount(ctx context.Context, invitation domain.Ca
 		case !isCaterer:
 			return 0, 0, domain.ErrCatererAddressTaken
 		}
-		if valid, verifyErr := c.verifier.VerifyPassword(registration.Password, account.PasswordHash); verifyErr != nil || !valid {
+		// Checked like a login (#4496); see AcceptCatererInvitation.
+		accepted, err := c.checkPassword(ctx, account, registration.Password)
+		if err != nil {
+			return 0, 0, err
+		}
+		if !accepted {
+			c.auth.logFailedLogin(ctx, account.ID, registration.IPAddress, registration.UserAgent, "Caterer invitation acceptance refused")
 			return 0, 0, identityaccess.ErrInvalidCredentials
+		}
+		if !account.Active {
+			return 0, 0, identityaccess.ErrAccountInactive
 		}
 		return account.ID, caterer.ID, nil
 	}

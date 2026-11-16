@@ -48,6 +48,10 @@ func BuildIdentityAccess(
 	if !ok {
 		return nil, nil, fmt.Errorf("identity access: transactional outbox is required")
 	}
+	catererOutbox, ok := outbox.(CatererMailOutbox)
+	if !ok {
+		return nil, nil, fmt.Errorf("identity access: the caterer invitation needs an outbox that stops unsent mails")
+	}
 	cfg, links := env.Config, env.Links
 	authLogger := env.Logger.With("service", "auth")
 	platformLogger := env.Logger.With("service", "platform")
@@ -98,7 +102,7 @@ func BuildIdentityAccess(
 	}
 	// The lifecycle flows (#3225) read the role management of the module
 	// they are composed into.
-	catererMail, err := CatererInvitationDelivery(organizations, outbox, deliveryRuntime.EmailOutcomes, links.CatererURL, env.Now)
+	catererMail, err := CatererInvitationDelivery(organizations, catererOutbox, deliveryRuntime.EmailOutcomes, links.CatererURL, env.Now)
 	if err != nil {
 		return nil, nil, err
 	}

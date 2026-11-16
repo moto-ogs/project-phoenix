@@ -3,6 +3,7 @@ package behavior_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -550,4 +551,88 @@ func loginCaterer(caterers *identityaccess.CatererAccess, email, password, ipAdd
 		Email: email, Password: password, IPAddress: ipAddress, UserAgent: userAgent,
 	})
 	return result.AccessToken, result.RefreshToken, err
+}
+
+// #4496: an existing caterer confirms a second school's invitation with its
+// password, checked like a login: wrong attempts count towards the
+// account's lock, are audited, and a locked account is refused even with
+// the right password, at the acceptance and at the sign-in.
+func TestCatererAcceptanceCountsWrongPasswords(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	caterers := setupAuthFactory(t, db).Caterers()
+	first := testpkg.Tenant(t)
+	second, _ := testpkg.CreateTestTenant(t, db)
+	staff := testpkg.CreateTestAccount(t, db, "caterer-accept-lock")
+	email := fmt.Sprintf("kueche-sperre-%d@example.com", time.Now().UnixNano())
+	acceptance, err := accept(t, db, caterers, first, invite(t, db, caterers, first, staff.ID, email), identityaccess.CatererRegistration{Password: catererPassword, ConfirmPassword: catererPassword})
+	require.NoError(t, err)
+	forgetCaterer(t, db, acceptance)
+	t.Cleanup(func() {
+		_, err := db.NewRaw(`DELETE FROM audit.auth_events WHERE account_id = ?`, acceptance.AccountID).Exec(context.Background())
+		require.NoError(t, err)
+	})
+	secondToken := invite(t, db, caterers, second, staff.ID, email)
+	// The caterer portal commits a refused password (catererportal).
+	acceptCommitting := func(password string) error {
+		var refused error
+		require.NoError(t, inSchool(t, db, second, func(ctx context.Context) error {
+			_, refused = caterers.AcceptCatererInvitation(ctx, secondToken, identityaccess.CatererRegistration{Password: password, IPAddress: "192.0.2.30", UserAgent: "test"})
+			if errors.Is(refused, identityaccess.ErrInvalidCredentials) {
+				return nil
+			}
+			return refused
+		}))
+		return refused
+	}
+	for range 5 {
+		require.ErrorIs(t, acceptCommitting(testpkg.NewTestPassword()), identityaccess.ErrInvalidCredentials)
+	}
+	var audited int
+	require.NoError(t, db.NewRaw(`SELECT count(*) FROM audit.auth_events WHERE account_id = ? AND tenant_id = ? AND success = false AND ip_address = '192.0.2.30'`, acceptance.AccountID, second).Scan(context.Background(), &audited))
+	assert.Equal(t, 5, audited, "each refused password is audited at the inviting school")
+	require.NoError(t, inSchool(t, db, second, func(ctx context.Context) error {
+		_, err := caterers.PreviewCatererInvitation(ctx, secondToken)
+		return err
+	}), "a committed refusal spends nothing: the invitation is still open")
+	require.ErrorIs(t, acceptCommitting(catererPassword), identityaccess.ErrInvalidCredentials, "wrong attempts lock the account like wrong logins")
+	_, _, err = loginCaterer(caterers, email, catererPassword, "", "")
+	require.ErrorIs(t, err, identityaccess.ErrInvalidCredentials, "the lock also holds the login")
+	_, schools, err := caterers.CatererSchools(context.Background(), acceptance.AccountID)
+	require.NoError(t, err)
+	assert.Equal(t, []int64{first}, schools, "the locked caterer did not get the second school")
+}
+
+// #4496: a revoked invitation's mail that is not sent yet is stopped, also
+// when a new invitation takes the open one back; the link no longer works.
+func TestRevokedCatererInvitationMailIsNotSent(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	caterers := setupAuthFactory(t, db).Caterers()
+	school := testpkg.Tenant(t)
+	staff := testpkg.CreateTestAccount(t, db, "caterer-revoke-mail")
+	mailStatus := func(email string) string {
+		t.Helper()
+		var status string
+		require.NoError(t, db.NewRaw(`SELECT status FROM platform.email_outbox
+			WHERE tenant_id = ? AND kind = 'caterer_invitation' AND payload->>'recipient_email' = ?`, school, email).Scan(context.Background(), &status))
+		return status
+	}
+	revoked := fmt.Sprintf("kueche-zurueck-%d@example.com", time.Now().UnixNano())
+	invite(t, db, caterers, school, staff.ID, revoked)
+	require.Equal(t, "pending", mailStatus(revoked))
+	require.NoError(t, inSchool(t, db, school, func(ctx context.Context) error {
+		invitations, err := caterers.ListCatererInvitations(ctx)
+		require.NoError(t, err)
+		require.Len(t, invitations, 1)
+		return caterers.RevokeCatererInvitation(ctx, invitations[0].ID)
+	}))
+	assert.Equal(t, "cancelled", mailStatus(revoked), "the revoked invitation's mail is not sent")
+
+	replaced := fmt.Sprintf("kueche-ersetzt-%d@example.com", time.Now().UnixNano())
+	invite(t, db, caterers, school, staff.ID, replaced)
+	renewed := fmt.Sprintf("kueche-neu-%d@example.com", time.Now().UnixNano())
+	invite(t, db, caterers, school, staff.ID, renewed)
+	assert.Equal(t, "cancelled", mailStatus(replaced), "a new invitation stops the mail of the one it takes back")
+	assert.Equal(t, "pending", mailStatus(renewed), "the new invitation's mail goes out")
 }
