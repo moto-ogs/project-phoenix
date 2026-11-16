@@ -51,11 +51,11 @@ func BuildGuardianService(db transactionruntime.Database, people PeopleRows, aud
 	if env.BankData == nil {
 		return nil, fmt.Errorf("guardian service: the bank data cipher is required")
 	}
-	invitations, err := identityaccessCompose.NewGuardianInvitationReads(db.Pool())
+	invitations, err := identityaccessCompose.NewGuardianInvitationReads(db.Pool(), env.Now)
 	if err != nil {
 		return nil, err
 	}
-	invalidate, err := identityaccessCompose.NewGuardianInvitationInvalidation(db.Pool())
+	invalidate, err := identityaccessCompose.NewGuardianInvitationInvalidation(db.Pool(), env.Now)
 	if err != nil {
 		return nil, err
 	}

@@ -173,7 +173,7 @@ func (rs *Resource) writeSignatureProof(w http.ResponseWriter, r *http.Request, 
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("enrollment signature proof not configured")))
 		return
 	}
-	doc, err := signatureProofDocument(proof, time.Now())
+	doc, err := signatureProofDocument(proof, rs.now())
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(fmt.Errorf("signature proof: %w", err)))
 		return

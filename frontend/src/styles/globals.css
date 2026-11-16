@@ -531,8 +531,12 @@
   border-color: var(--color-gray-200);
   background: var(--color-white);
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* Its own stacking context, as the former backdrop blur gave it: a raised
+     layer inside a card stays inside it. The blur itself sat under an opaque
+     white fill, so nothing showed it, yet the browser redrew it under every
+     card on every scrolled frame. No `backdrop-filter` (frontend-ui-kit.md,
+     Motion). */
+  isolation: isolate;
 }
 
 /* An open dropdown or popover lifts its surface above the next one. A card's
@@ -753,8 +757,6 @@
   }
   .moto-content-surface {
     box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
   .moto-dotted-background--guide .moto-content-surface {
     background: transparent;
@@ -770,7 +772,9 @@
 
 .moto-hover-elevated:not(:disabled):hover {
   border-color: #d1d5db;
-  background-color: rgb(249 250 251 / 0.4);
+  /* Opaque: gray-50 at 40 % over white, as it looked on a white card. A
+     translucent fill would show the dotted page behind a tile sharply. */
+  background-color: color-mix(in srgb, var(--color-gray-50) 40%, white);
   box-shadow:
     0 3px 10px rgb(15 23 42 / 0.045),
     0 0 0 1px rgb(15 23 42 / 0.045);
@@ -986,6 +990,21 @@ html[data-chat-page-lock] body {
   animation: fadeInUp 300ms ease-out forwards;
 }
 
+/* A short bar that fills once, before a redirect (invitation accepted). It
+   slides in from the left; a growing width would cost a layout per frame. */
+@keyframes progressFill {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-progressFill {
+  animation: progressFill 1.5s ease-in-out forwards;
+}
+
 /* Wer weniger Bewegung eingestellt hat, sieht die eigenen Animationen nicht
    (#7114): Ein- und Ausblenden springen sofort an ihr Ende, Pulsieren steht
    still. `forwards` hält den Endzustand, die Schließ-Timer der Modals
@@ -997,7 +1016,8 @@ html[data-chat-page-lock] body {
   .animate-bounceIn,
   .animate-slideInRight,
   .animate-fadeIn,
-  .animate-fadeInUp {
+  .animate-fadeInUp,
+  .animate-progressFill {
     animation-duration: 1ms;
     animation-delay: 0ms;
   }

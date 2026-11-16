@@ -105,6 +105,10 @@ type CreateSchool struct {
 	Zip            string
 	Phone          string
 	Email          string
+	// FederalState is the school's Bundesland as an ISO 3166-2 code
+	// ("DE-BW"). It has no default: holidays, school vacations and the
+	// Arbeitszeit-Soll follow it, so the operator names it on creation.
+	FederalState string
 }
 
 type UpdateSchool struct {
@@ -134,7 +138,14 @@ func NormalizeCreateSchool(input *CreateSchool) error {
 	if err := ValidateSchool(input.OrganizationID, input.Name, input.Slug, input.Subdomain, input.Email); err != nil {
 		return err
 	}
-	return ValidateSchoolContactEmail(input.Email)
+	if err := ValidateSchoolContactEmail(input.Email); err != nil {
+		return err
+	}
+	input.FederalState = strings.TrimSpace(input.FederalState)
+	if input.FederalState == "" {
+		return invalidSchool("federal state is required")
+	}
+	return nil
 }
 
 // ValidateSchoolContactEmail checks the contact address a school must have.

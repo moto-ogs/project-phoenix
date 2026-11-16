@@ -120,10 +120,12 @@ func TestOperatorMFAVerify_RememberDeviceIssuesCookie(t *testing.T) {
 	t.Parallel()
 
 	auth := &completeOperatorMFAAuthStub{access: "a", refresh: "r"}
+	// api/common.SetTrustedDevice derives the cookie's MaxAge with
+	// time.Until, so the device expires at a fixed instant far ahead.
 	mfa := &operatorTrustedDeviceStub{
 		verifyResult:   4242,
 		issueCookie:    "op.td.cookie",
-		issueExpiresAt: time.Now().Add(90 * 24 * time.Hour),
+		issueExpiresAt: time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC),
 	}
 	rs := identityoperator.NewMFAResource(auth, mfa)
 

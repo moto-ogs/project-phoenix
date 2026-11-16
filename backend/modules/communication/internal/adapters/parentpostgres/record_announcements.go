@@ -14,16 +14,19 @@ import (
 )
 
 // NewParentAnnouncementRepository returns the announcement store and audience
-// projection behind the existing repository contract. The optional clock
-// fixes the calendar day activity-group targets are evaluated on.
+// projection behind the existing repository contract. The stores stamp their
+// writes with now; nil is the real clock.
 //
 // SchoolName is not served here: the school's name belongs to Organisation
 // and Tenancy, and the composition root decorates it exactly as before.
-func NewParentAnnouncementRepository(db *bun.DB, audience recordports.AnnouncementAudienceReads) recordports.ParentAnnouncementRepository {
+func NewParentAnnouncementRepository(db *bun.DB, audience recordports.AnnouncementAudienceReads, now func() time.Time) recordports.ParentAnnouncementRepository {
 	if audience == nil {
 		panic("communication parent store: audience is required")
 	}
-	return &announcementRepository{store: NewAnnouncementStore(NewParentRecordDatabase(db)), AnnouncementAudienceReads: audience}
+	if now == nil {
+		now = time.Now
+	}
+	return &announcementRepository{store: NewAnnouncementStore(NewParentRecordDatabase(db), now), AnnouncementAudienceReads: audience}
 }
 
 type announcementRepository struct {
@@ -34,7 +37,7 @@ type announcementRepository struct {
 // SurveyRecords is the survey store (#4781) over the announcements'
 // database: a parent survey is carried by one of these announcements.
 func (r *announcementRepository) SurveyRecords() communication.SurveyRecords {
-	return NewSurveyStore(r.store.database)
+	return NewSurveyStore(r.store.database, r.store.now)
 }
 
 func (r *announcementRepository) Create(ctx context.Context, a *communication.PortalParentAnnouncement) error {

@@ -67,6 +67,22 @@ type apiSubdivision struct {
 	Code string `json:"code"`
 }
 
+// apiGroup is a school type a vacation applies to. Most states have one
+// calendar for every school; Mecklenburg-Vorpommern gives the vocational
+// schools other dates (2026: Sommerferien to 29.08. instead of 22.08.).
+type apiGroup struct {
+	Code string `json:"code"`
+}
+
+// generalEducationGroups are the groups of the general-education schools
+// (allgemeinbildende Schulen), where every OGS is. vocationalGroups are the
+// groups moto leaves out. A group in neither list fails the request: a new
+// split must be classified, not merged or silently dropped.
+var (
+	generalEducationGroups = map[string]bool{"DE-MV-ABS": true}
+	vocationalGroups       = map[string]bool{"DE-MV-BBS": true}
+)
+
 type apiHoliday struct {
 	StartDate    string           `json:"startDate"`
 	EndDate      string           `json:"endDate"`
@@ -74,6 +90,7 @@ type apiHoliday struct {
 	Name         []apiName        `json:"name"`
 	Nationwide   bool             `json:"nationwide"`
 	Subdivisions []apiSubdivision `json:"subdivisions"`
+	Groups       []apiGroup       `json:"groups"`
 }
 
 // SchoolVacations returns the school vacations of every German federal state
@@ -111,6 +128,13 @@ func vacations(holidays []apiHoliday, states []string) ([]Vacation, error) {
 		if holiday.Type != "" && holiday.Type != "School" {
 			continue
 		}
+		forGeneralEducation, err := appliesToGeneralEducation(holiday.Groups)
+		if err != nil {
+			return nil, fmt.Errorf("school vacations: vacation from %s: %w", holiday.StartDate, err)
+		}
+		if !forGeneralEducation {
+			continue
+		}
 		start, startErr := calendar.ParseDate(holiday.StartDate)
 		end, endErr := calendar.ParseDate(holiday.EndDate)
 		if startErr != nil || endErr != nil || end.Before(start) {
@@ -125,6 +149,25 @@ func vacations(holidays []apiHoliday, states []string) ([]Vacation, error) {
 		}
 	}
 	return result, nil
+}
+
+// appliesToGeneralEducation reports whether a vacation holds for the
+// general-education schools: one without groups holds for every school.
+func appliesToGeneralEducation(groups []apiGroup) (bool, error) {
+	if len(groups) == 0 {
+		return true, nil
+	}
+	general := false
+	for _, group := range groups {
+		switch {
+		case generalEducationGroups[group.Code]:
+			general = true
+		case vocationalGroups[group.Code]:
+		default:
+			return false, fmt.Errorf("unknown school group %q", group.Code)
+		}
+	}
+	return general, nil
 }
 
 func regions(holiday apiHoliday, states []string) []string {

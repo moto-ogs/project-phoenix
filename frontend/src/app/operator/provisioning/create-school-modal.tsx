@@ -7,7 +7,10 @@ import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import { generateSlug, isValidSlug } from "~/lib/operator/provisioning-helpers";
-import type { Organization } from "~/lib/operator/provisioning-helpers";
+import {
+  FEDERAL_STATES,
+  type Organization,
+} from "~/lib/operator/provisioning-helpers";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -39,6 +42,7 @@ export function CreateSchoolModal({
   const [schoolZip, setSchoolZip] = useState("");
   const [schoolPhone, setSchoolPhone] = useState("");
   const [schoolEmail, setSchoolEmail] = useState("");
+  const [schoolFederalState, setSchoolFederalState] = useState("");
   const [schoolHidden, setSchoolHidden] = useState(false);
   const [schoolSaving, setSchoolSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -59,6 +63,7 @@ export function CreateSchoolModal({
       setSchoolZip("");
       setSchoolPhone("");
       setSchoolEmail("");
+      setSchoolFederalState("");
       setSchoolHidden(false);
       clearError();
     }
@@ -84,10 +89,14 @@ export function CreateSchoolModal({
       // CustomSelect's `required` is ARIA-only — it does not join native form
       // constraint validation, so an Enter-submit with no organization lands
       // here and must produce a visible error instead of a silent return.
-      if (!schoolOrgId) {
-        const hint = "Bitte wählen Sie einen Träger aus.";
+      if (!schoolOrgId || !schoolFederalState) {
         invalid("Bitte prüfen Sie die markierten Felder.", {
-          organization_id: hint,
+          ...(!schoolOrgId && {
+            organization_id: "Bitte wählen Sie einen Träger aus.",
+          }),
+          ...(!schoolFederalState && {
+            federal_state: "Bitte wählen Sie das Bundesland aus.",
+          }),
         });
         return;
       }
@@ -123,6 +132,7 @@ export function CreateSchoolModal({
           ...(schoolZip && { zip: schoolZip.trim() }),
           ...(schoolPhone && { phone: schoolPhone.trim() }),
           email: schoolEmail.trim(),
+          federal_state: schoolFederalState,
           ...(schoolHidden && { hidden: true }),
         });
       } catch (error) {
@@ -147,6 +157,7 @@ export function CreateSchoolModal({
       schoolZip,
       schoolPhone,
       schoolEmail,
+      schoolFederalState,
       schoolHidden,
       onClose,
       onCreated,
@@ -178,6 +189,7 @@ export function CreateSchoolModal({
             disabled={
               schoolSaving ||
               !schoolOrgId ||
+              !schoolFederalState ||
               !schoolName.trim() ||
               !schoolSlug.trim() ||
               !schoolSubdomain.trim() ||
@@ -220,6 +232,28 @@ export function CreateSchoolModal({
             placeholder="Träger auswählen..."
             required
           />
+        </FormField>
+        <FormField
+          label="Bundesland"
+          htmlFor="school-federal-state"
+          required
+          error={formErrors.fieldError("federal_state")}
+        >
+          <CustomSelect
+            id="school-federal-state"
+            ariaLabel="Bundesland"
+            value={schoolFederalState}
+            options={[
+              { value: "", label: "Bundesland auswählen..." },
+              ...FEDERAL_STATES,
+            ]}
+            onChange={setSchoolFederalState}
+            placeholder="Bundesland auswählen..."
+            required
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Danach richten sich Feiertage und Schulferien.
+          </p>
         </FormField>
         <Input
           id="school-name"

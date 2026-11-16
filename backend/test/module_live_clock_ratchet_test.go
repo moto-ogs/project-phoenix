@@ -53,25 +53,53 @@ import (
 // Workforce (62 to 0, ADR 0264) reads the clock of its composition too.
 // Student Presence (86), Presence Projection (15) and Class Day (14) follow
 // with ADR 0262 (115 to 0).
+// Identity & Access (83 to 14, ADR 0261) keeps fourteen.
+// portalauth.PasswordResetRetryAfter is the RetryAfter func(error) of
+// api/common's PasswordResetRoutes, which five portal routers build without
+// a clock; sessiontoken's decode serves the package-level middleware
+// (ParseVerified, Authenticator, AuthenticateRefreshJWT, RateLimitKey), which
+// names no clock, behind the jwtauth verifier that checks exp on the jwx clock.
+// Five compare a passkey ceremony's expiry, which go-webauthn stamps and
+// validates on the real clock: verifyRegistration and consumeLoginSession of
+// AccountPasskeyFlows, verifyRegistration and verifyLogin of
+// OperatorPasskeyFlows, and SignInDataRetention's
+// inUnitDeleteExpiredPasskeySessions. Seven stamp or compare the iat and exp of
+// tokens the jwtauth verifier checks on the jwx clock: SessionCodec's
+// AccountOfAccessToken, IssueTokenPair, IssueAccessToken,
+// IssueMFAEnrollmentToken and ParseAccessToken, TokenAuth.ParseAccessJWT and
+// the access-token expiry in AccountAuthentication.ValidateSessionTokens.
 var moduleLiveClockBudget = map[string]int{
-	"modules/carecontract": 3,
 	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
 	// PickupBaselineReader method names no day.
-	"modules/careplan":      1,
-	"modules/communication": 15,
-	"modules/delivery":      44,
-	"modules/devicefleet":   12,
-	"modules/devicescan":    6,
+	"modules/careplan": 1,
+	// service.enqueueLetterRetry: the nanosecond only makes each retry's
+	// idempotency key unique; a pinned clock would give two retries one key
+	// and the outbox would swallow the second as a duplicate.
+	"modules/communication": 1,
+	// Resource.sendTestNotification: the nanosecond only makes the key of
+	// each test notification unique, as in Communication.
+	// Resource.startSchoolStream and schoolDeliver: the access re-check of
+	// an open school stream runs on the elapsed time since the last check; a
+	// pinned clock would never re-check. RealtimePublisher.recordDrop: the
+	// interval between two drop log lines. usageService.SnapshotUsage: the
+	// age of the cached usage snapshot (time.Since).
+	"modules/delivery":    5,
+	"modules/devicefleet": 12,
+	"modules/devicescan":  6,
 	// records.GeneratedAtLabel: the public formatting function prints the
 	// moment of rendering for a zero creation time, and the renderer is also
 	// built bare (&RendererService{}), so it holds no clock to pass.
-	"modules/documentrendering":            1,
-	"modules/enrollment":                   63,
-	"modules/facilities":                   2,
-	"modules/identityaccess":               83,
-	"modules/organizationtenancy":          7,
-	"modules/peopledirectory":              12,
-	"modules/schedulerruntime":             36,
+	"modules/documentrendering":   1,
+	"modules/facilities":          2,
+	"modules/identityaccess":      14,
+	"modules/organizationtenancy": 7,
+	"modules/peopledirectory":     12,
+	// leadership (acquire, renew, step, expire, current, stepDown and
+	// newLeadership): the lease term is a local monotonic deadline armed as
+	// timers, and the standby time is measured since the last term.
+	// Scheduler.waitUntilNextMinute: the timer that aligns the minute tick
+	// with the wall clock. A pinned clock would stop both.
+	"modules/schedulerruntime":             11,
 	"modules/schoolmembership":             2,
 	"modules/schoolstructure":              3,
 	"modules/settings":                     3,

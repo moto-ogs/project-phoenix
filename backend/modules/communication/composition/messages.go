@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/attachmentpostgres"
@@ -97,7 +98,8 @@ type StaffMessagingConfig struct {
 	Preferences deliveryPorts.NotificationOptIns
 	Observe     func(Observation)
 	// DB backs the photos and files of messages (#6685); nil refuses uploads.
-	DB *bun.DB
+	DB  *bun.DB
+	Now func() time.Time // dates the retention window; nil is the real clock
 }
 
 // NewStaffMessaging also returns the photos and files of the team chat (#6685).
@@ -106,7 +108,7 @@ func NewStaffMessaging(cfg StaffMessagingConfig, runtime staffMessages.Runtime, 
 		Attachments: messageAttachmentStore(cfg.DB),
 		ThreadRepo:  staffMessages.NewThreadRepository(cfg.ThreadRepo), Groups: cfg.ThreadRepo, MessageRepo: staffMessages.NewMessageRepository(cfg.MessageRepo), ReadRepo: staffMessages.NewReadRepository(cfg.ReadRepo),
 		Persons: cfg.Persons, Session: cfg.Session, Settings: cfg.Settings, Broadcaster: cfg.Broadcaster,
-		Logger: cfg.Logger, Notifier: deliveryPorts.NewNotificationSender(cfg.Notifier), Preferences: cfg.Preferences,
+		Logger: cfg.Logger, Notifier: deliveryPorts.NewNotificationSender(cfg.Notifier), Preferences: cfg.Preferences, Now: cfg.Now,
 	}, runtime, policy)
 	return deliveryPorts.NewStaffMessagingFacade(service, staffMessages.NativeFacadeRows(), staffMessages.NativeFacadeErrors(), communicationPostgres.NewMessageObservation(cfg.Observe)), service
 }

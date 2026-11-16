@@ -82,7 +82,7 @@ func TestDispatcherDeliverWaitsForTransportAcceptance(t *testing.T) {
 	t.Parallel()
 
 	mailer := &synchronousTestMailer{started: make(chan struct{}, 1), release: make(chan struct{})}
-	dispatcher := NewDispatcher(mailer, slog.Default())
+	dispatcher := NewDispatcher(mailer, slog.Default(), time.Now)
 	returned := make(chan error, 1)
 
 	go func() {
@@ -109,7 +109,7 @@ func TestDispatcherDeliverStopsAtAPermanentRejection(t *testing.T) {
 
 	refused := errors.Join(mailcontract.ErrPermanentRejection, errors.New("554 refused"))
 	mailer := &synchronousTestMailer{errors: []error{refused, refused, refused}}
-	dispatcher := NewDispatcher(mailer, slog.Default())
+	dispatcher := NewDispatcher(mailer, slog.Default(), time.Now)
 
 	err := dispatcher.Deliver(context.Background(), synchronousTestRequest())
 
@@ -122,14 +122,14 @@ func TestDispatcherDeliverRetriesAndReturnsTransportFailure(t *testing.T) {
 
 	transient := errors.New("smtp temporarily unavailable")
 	mailer := &synchronousTestMailer{errors: []error{transient, transient}}
-	dispatcher := NewDispatcher(mailer, slog.Default())
+	dispatcher := NewDispatcher(mailer, slog.Default(), time.Now)
 
 	require.NoError(t, dispatcher.Deliver(context.Background(), synchronousTestRequest()))
 	assert.Equal(t, 3, mailer.Attempts())
 
 	permanent := errors.New("smtp rejected message")
 	mailer = &synchronousTestMailer{errors: []error{permanent, permanent, permanent}}
-	dispatcher = NewDispatcher(mailer, slog.Default())
+	dispatcher = NewDispatcher(mailer, slog.Default(), time.Now)
 
 	err := dispatcher.Deliver(context.Background(), synchronousTestRequest())
 	require.ErrorIs(t, err, permanent)
@@ -143,7 +143,7 @@ func TestDispatcherDeliverHonorsCancellationDuringTransportAndBackoff(t *testing
 	t.Run("in flight", func(t *testing.T) {
 		t.Parallel()
 		mailer := &synchronousTestMailer{started: make(chan struct{}, 1), release: make(chan struct{})}
-		dispatcher := NewDispatcher(mailer, slog.Default())
+		dispatcher := NewDispatcher(mailer, slog.Default(), time.Now)
 		ctx, cancel := context.WithCancel(context.Background())
 		returned := make(chan error, 1)
 		go func() { returned <- dispatcher.Deliver(ctx, synchronousTestRequest()) }()
@@ -158,7 +158,7 @@ func TestDispatcherDeliverHonorsCancellationDuringTransportAndBackoff(t *testing
 		t.Parallel()
 		transient := errors.New("smtp unavailable")
 		mailer := &synchronousTestMailer{errors: []error{transient}}
-		dispatcher := NewDispatcher(mailer, slog.Default())
+		dispatcher := NewDispatcher(mailer, slog.Default(), time.Now)
 		req := synchronousTestRequest()
 		req.BackoffPolicy = []time.Duration{time.Hour}
 		ctx, cancel := context.WithCancel(context.Background())
@@ -176,7 +176,7 @@ func TestDispatcherDeliverReturnsDeadlineExceededForTransportTimeout(t *testing.
 	t.Parallel()
 
 	mailer := &synchronousTestMailer{release: make(chan struct{})}
-	dispatcher := NewDispatcher(mailer, slog.Default())
+	dispatcher := NewDispatcher(mailer, slog.Default(), time.Now)
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
 	defer cancel()
 
@@ -199,7 +199,7 @@ func TestDispatcherDeliverReportsStableObserverLabelsWithoutRecipient(t *testing
 	observer := func(transport, template, caller string, _ time.Duration, err error) {
 		observed <- observation{transport: transport, template: template, caller: caller, err: err}
 	}
-	dispatcher := NewDispatcher(&synchronousTestMailer{}, slog.Default(), observer)
+	dispatcher := NewDispatcher(&synchronousTestMailer{}, slog.Default(), time.Now, observer)
 
 	require.NoError(t, dispatcher.Deliver(context.Background(), synchronousTestRequest()))
 	got := <-observed
@@ -213,7 +213,7 @@ func TestDispatcherDeliverReportsStableObserverLabelsWithoutRecipient(t *testing
 func TestDispatcherDeliverFailsWhenTransportIsUnavailable(t *testing.T) {
 	t.Parallel()
 
-	err := NewDispatcher(nil, slog.Default()).Deliver(context.Background(), synchronousTestRequest())
+	err := NewDispatcher(nil, slog.Default(), time.Now).Deliver(context.Background(), synchronousTestRequest())
 	require.ErrorIs(t, err, mailcontract.ErrDeliveryUnavailable)
 }
 
@@ -227,7 +227,7 @@ func TestDispatcherDeliverDoesNotRetryAMissingTransport(t *testing.T) {
 	req.MaxAttempts = 3
 	req.BackoffPolicy = []time.Duration{time.Hour}
 
-	err := NewDispatcher(mailer, slog.Default()).Deliver(context.Background(), req)
+	err := NewDispatcher(mailer, slog.Default(), time.Now).Deliver(context.Background(), req)
 
 	require.ErrorIs(t, err, mailcontract.ErrDeliveryUnavailable)
 	assert.Equal(t, 1, mailer.Attempts())
@@ -236,7 +236,7 @@ func TestDispatcherDeliverDoesNotRetryAMissingTransport(t *testing.T) {
 func TestDispatcherDeliverConvertsTransportPanicToFailure(t *testing.T) {
 	t.Parallel()
 
-	err := NewDispatcher(panickingSynchronousMailer{}, slog.Default()).Deliver(
+	err := NewDispatcher(panickingSynchronousMailer{}, slog.Default(), time.Now).Deliver(
 		context.Background(), synchronousTestRequest(),
 	)
 

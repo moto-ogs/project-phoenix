@@ -77,3 +77,11 @@ type RootObservers struct {
 	// CarePlan records the excused-absence workflow as Care Plan operations.
 	CarePlan func(carePlanCompose.Observation)
 }
+
+// clockOrReal is now, or the real clock of the production roots, which fix none.
+func clockOrReal(now func() time.Time) func() time.Time {
+	if now == nil {
+		return time.Now
+	}
+	return now
+}

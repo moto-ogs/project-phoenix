@@ -32,6 +32,7 @@ export const SIDEBAR_WIDTH_COLLAPSED = "w-16";
  * prefers-reduced-motion: dort wechselt die Breite ohne Bewegung.
  */
 export const SIDEBAR_WIDTH_TRANSITION =
+  // oxlint-disable-next-line ui-kit/no-costly-motion -- #2825 asks for the slide; a rare toggle, and a transform would cover the page instead of making room
   "motion-safe:transition-[width] motion-safe:duration-200 motion-safe:ease-in-out";
 
 /** Innenabstand jeder Navigationsspalte (10px, siehe Rechnung oben). */
@@ -135,6 +136,7 @@ export function sidebarGroupIconClasses(highlighted: boolean): string {
  * derselben Bewegung auf null wie die Breite.
  */
 export function sidebarGroupBodyClasses(collapsed: boolean): string {
+  // oxlint-disable-next-line ui-kit/no-costly-motion -- moves with the width slide of #2825 above
   return `${SIDEBAR_NAV_GAP} pt-1 motion-safe:transition-[margin-left,border-color] motion-safe:duration-200 motion-safe:ease-in-out ${
     collapsed
       ? "ml-0 border-l border-transparent"

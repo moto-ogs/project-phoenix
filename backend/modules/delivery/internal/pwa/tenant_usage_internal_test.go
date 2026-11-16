@@ -28,34 +28,34 @@ func TestNewTenantUsageServiceBindsTheRuntimeAtConstruction(t *testing.T) {
 	require.NoError(t, err)
 	repo, summaries, schools, settings := &recordingUsageRepository{}, &summariesStub{}, accountTenantStub{}, &settingsDouble{}
 
-	_, err = NewTenantUsageService(tenant.UnitOfWork{}, db, repo, summaries, schools, settings, nil)
+	_, err = NewTenantUsageService(tenant.UnitOfWork{}, db, repo, summaries, schools, settings, nil, nil)
 	require.ErrorIs(t, err, tenant.ErrRuntimeRequired)
 	for name, construct := range map[string]func() error{
 		"database": func() error {
-			_, err := NewTenantUsageService(runtime, nil, repo, summaries, schools, settings, nil)
+			_, err := NewTenantUsageService(runtime, nil, repo, summaries, schools, settings, nil, nil)
 			return err
 		},
 		"repo": func() error {
-			_, err := NewTenantUsageService(runtime, db, nil, summaries, schools, settings, nil)
+			_, err := NewTenantUsageService(runtime, db, nil, summaries, schools, settings, nil, nil)
 			return err
 		},
 		"summaries": func() error {
-			_, err := NewTenantUsageService(runtime, db, repo, nil, schools, settings, nil)
+			_, err := NewTenantUsageService(runtime, db, repo, nil, schools, settings, nil, nil)
 			return err
 		},
 		"schools": func() error {
-			_, err := NewTenantUsageService(runtime, db, repo, summaries, nil, settings, nil)
+			_, err := NewTenantUsageService(runtime, db, repo, summaries, nil, settings, nil, nil)
 			return err
 		},
 		"settings": func() error {
-			_, err := NewTenantUsageService(runtime, db, repo, summaries, schools, nil, nil)
+			_, err := NewTenantUsageService(runtime, db, repo, summaries, schools, nil, nil, nil)
 			return err
 		},
 	} {
 		assert.Error(t, construct(), name)
 	}
 
-	service, err := NewTenantUsageService(runtime, db, repo, summaries, schools, settings, nil)
+	service, err := NewTenantUsageService(runtime, db, repo, summaries, schools, settings, nil, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, service.(*usageService).tenantRuntime)
 	assert.NotNil(t, service.(*usageService).logger, "a missing logger falls back to the default")

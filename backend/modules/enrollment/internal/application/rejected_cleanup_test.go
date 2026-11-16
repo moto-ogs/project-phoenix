@@ -82,7 +82,7 @@ func (s *cleanupChildrenStub) ChildrenForRequest(_ context.Context, requestID in
 }
 
 func eligibleCleanupChildren(requestIDs ...int64) *cleanupChildrenStub {
-	reviewedAt := time.Now().Add(-365 * 24 * time.Hour)
+	reviewedAt := cleanupTestNow.Add(-365 * 24 * time.Hour)
 	children := &cleanupChildrenStub{
 		byRequestID: make(map[int64][]*enrollmentNative.RequestChild, len(requestIDs)),
 		errFor:      map[int64]error{},
@@ -146,6 +146,10 @@ func (s *cleanupOutboxStub) CancelRelatedEmails(_ context.Context, relatedType s
 	return s.counts[id], nil
 }
 
+// cleanupTestNow is the fixed clock of the cleanup service and its fixtures,
+// a Wednesday 10:00 in Berlin (#7104).
+var cleanupTestNow = calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(10 * time.Hour)
+
 func cleanupServiceForTest(requests *cleanupRequestStub, children *cleanupChildrenStub, outbox *cleanupOutboxStub, settings cleanupSettingsStub, lateInviteStubs ...*cleanupLateInvitesStub) *RejectedCleanup {
 	lateInvites := &cleanupLateInvitesStub{counts: map[int64]int64{}, errFor: map[int64]error{}}
 	if len(lateInviteStubs) > 0 && lateInviteStubs[0] != nil {
@@ -158,6 +162,7 @@ func cleanupServiceForTest(requests *cleanupRequestStub, children *cleanupChildr
 		Delivery:    outbox,
 		Settings:    settings,
 		Logger:      slog.New(slog.DiscardHandler),
+		Now:         func() time.Time { return cleanupTestNow },
 		Runtime: Runtime{
 			InTransaction: func(context.Context) bool { return false },
 			WithinCurrentTenant: func(ctx context.Context, fn func(context.Context) error) error {
@@ -207,7 +212,7 @@ func TestRejectedEnrollmentCleanup_DeletesOnlyRepositorySelectedRequests(t *test
 	requests := &cleanupRequestStub{ids: []int64{11, 12}, deleteErr: map[int64]error{}}
 	children := eligibleCleanupChildren(11, 12)
 	outbox := &cleanupOutboxStub{counts: map[int64]int64{11: 2, 12: 1}, errFor: map[int64]error{}}
-	before := time.Now().Add(-30 * 24 * time.Hour)
+	before := cleanupTestNow.Add(-30 * 24 * time.Hour)
 
 	result, err := cleanupServiceForTest(requests, children, outbox, cleanupSettingsStub{days: 30}).CleanupRejectedEnrollments(context.Background())
 
@@ -256,7 +261,7 @@ func TestRejectedEnrollmentCleanup_RechecksLockedChildrenBeforeDeleting(t *testi
 
 	requests := &cleanupRequestStub{ids: []int64{11, 12}, deleteErr: map[int64]error{}}
 	children := eligibleCleanupChildren(11, 12)
-	reviewedAt := time.Now().Add(-365 * 24 * time.Hour)
+	reviewedAt := cleanupTestNow.Add(-365 * 24 * time.Hour)
 	children.byRequestID[11] = []*enrollmentNative.RequestChild{{
 		RequestID:  11,
 		Status:     enrollmentNative.ChildStatusUnderReview,

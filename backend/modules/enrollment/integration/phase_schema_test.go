@@ -16,7 +16,7 @@ import (
 func TestPhaseSchemaRepointIsolationRollbackAndRetry(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(nil)
 	var schoolIDs, sourceIDs, targetIDs []int64
 	for _, school := range []string{"first", "second"} {
 		t.Run(school, func(t *testing.T) {

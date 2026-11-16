@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 )
 
-func buildClassRosterExportFile(svc lists.DocumentRenderer, report *capability.ClassRosterReport, format lists.Format) (lists.File, error) {
+func buildClassRosterExportFile(svc lists.DocumentRenderer, report *capability.ClassRosterReport, format lists.Format, generatedAt time.Time) (lists.File, error) {
 	filename := "Klassenliste " + strings.TrimSpace(report.Filters.SchoolClass)
 	if report.Filters.AllClasses {
 		filename = "Klassenlisten"
@@ -18,7 +19,9 @@ func buildClassRosterExportFile(svc lists.DocumentRenderer, report *capability.C
 	if phaseName := strings.TrimSpace(report.Phase.Name); phaseName != "" {
 		filename += " " + phaseName
 	}
-	return svc.Render(buildClassRosterTableDocument(report), format, filename)
+	doc := buildClassRosterTableDocument(report)
+	doc.GeneratedAt = generatedAt
+	return svc.Render(doc, format, filename)
 }
 
 func buildClassRosterTableDocument(report *capability.ClassRosterReport) lists.Document {

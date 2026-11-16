@@ -77,7 +77,7 @@ func TestLogoutFailsWithItsAuditAndKeepsTheSession(t *testing.T) {
 	_, refreshToken, err := workingService.Login(ctx, email, testPassword)
 	require.NoError(t, err)
 
-	sessionTokens, err := api.NewConfiguredSessionTokens(authTestFactoryConfig(false).JWTSecret, 15*time.Minute, time.Hour)
+	sessionTokens, err := api.NewConfiguredSessionTokens(authTestFactoryConfig(false).JWTSecret, 15*time.Minute, time.Hour, nil)
 	require.NoError(t, err)
 	service, err := api.IdentityAccessForTests(api.IdentityAccessTestConfig{
 		SessionTokens: sessionTokens, FrontendURL: "http://localhost:3000",

@@ -73,12 +73,12 @@ func BuildCarePlanRows(
 	if err != nil {
 		return CarePlanRows{}, err
 	}
-	phaseBounds, err := NewEnrollmentPhaseBounds(db)
+	phaseBounds, err := NewEnrollmentPhaseBounds(db, now)
 	if err != nil {
 		return CarePlanRows{}, err
 	}
 	lifecycleOwners := NewCareLifecycleOwners(people.Students, people.Persons, membership, persons, timetableOwner, calendar,
-		NewUnloggedStudentPresence(db), NewPresenceProjectionReads(db), NewEnrollmentBookingProjection(NewEnrollmentBookings(), phaseBounds),
+		NewUnloggedStudentPresence(db), NewPresenceProjectionReads(db), NewEnrollmentBookingProjection(NewEnrollmentBookings(now), phaseBounds),
 		NewCareEndRecorder(studentAudit))
 	return CarePlanRows{
 		StatusDays:             NewStudentStatusDayRepository(carePlan),

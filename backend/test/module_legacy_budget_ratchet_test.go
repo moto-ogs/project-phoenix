@@ -322,7 +322,13 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0253: the Springer exits constructor of modules/workforce/compose (+6).
 // ADR 0263: the clock imports of modules/timetable/compose and the clock of
 // its repository composition (+6).
-const moduleComposeBudgetTotal = 13567
+// ADR 0265: the clock fields of modules/enrollment/compose (+7: the owner's
+// write clock NewClocked, Now of the phases and the deletion module, and
+// their time imports).
+// ADR 0267: the clock fields of modules/communication/composition (+7) and
+// modules/delivery/compose (+8).
+// ADR 0261: the clock of modules/identityaccess/compose (+16).
+const moduleComposeBudgetTotal = 13605
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -341,6 +347,7 @@ const moduleComposeBudgetTotal = 13567
 // added modules/schoolsearchview/compose for the school search.
 // ADR 0240 raised modules/careplan/compose for the clock fields (+8).
 // ADR 0264 raised modules/workforce/compose for the cleanup clock (+2).
+// ADR 0265 raised modules/enrollment/compose for the clock fields (+7).
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
@@ -364,11 +371,13 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0073: the parent announcement retention.
 	// ADR 0212: the message attachments (+25).
 	// ADR 0248: the parent-letter child reader constructor (+6).
-	"modules/communication/composition":  380,
+	// ADR 0267: +7, the clock fields.
+	"modules/communication/composition":  387,
 	"modules/dataimport/compose":         85,
 	"modules/dataimport/compose/imports": 29,
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.
-	"modules/delivery/compose":                      393,
+	// ADR 0267: +8, the clock fields.
+	"modules/delivery/compose":                      401,
 	"modules/devicefleet/compose":                   203,
 	"modules/devicefleet/compose/repositoryadapter": 10,
 	// ADR 0124: bind the optional heartbeat to the tenant runtime savepoint (+9).
@@ -394,7 +403,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0215: NewTraegerPhases (+4) and NewOfferingSelectionReferences (+4),
 	// less shortened comments and a merged file (-6).
 	// ADR 0231: the registration answers constructor (+5).
-	"modules/enrollment/compose": 639,
+	// ADR 0265: +7, the clock fields of the owner, its phases and deletions.
+	"modules/enrollment/compose": 646,
 	// ADR 0218: the Träger scope and the recipient rekey (+33).
 	"modules/exporttransfer/compose": 182,
 	// ADR 0241: the rooms of the utilization (+13).
@@ -406,7 +416,8 @@ var moduleComposeBudgets = map[string]int{
 	"modules/guardianlinkview/compose":             8,
 	// Raised by ADR 0106: the Träger-Büro account management (+24).
 	// Raised by ADR 0187: the operator directory of the Träger export CLI (+11).
-	"modules/identityaccess/compose": 1372, // raised by ADR 0077
+	// Raised by ADR 0261: the owner's clock, its nil default and imports (+16).
+	"modules/identityaccess/compose": 1388, // raised by ADR 0077
 	// ADR 0269: the clock of the participation history (+2).
 	"modules/mealplan/compose": 104, // raised by ADR 0078 and ADR 0168
 	// ADR 0097: the isolated tenant return constructor, no retained logic moved.

@@ -171,7 +171,7 @@ func (s *AccountAuthentication) mintAccountSession(ctx context.Context, req mint
 	session.MFAVerified = req.proof.verified()
 	session.MFAByDevice = session.MFAVerified && req.proof.byDevice()
 	if req.lifetime > 0 {
-		session.Expiry = time.Now().Add(req.lifetime)
+		session.Expiry = s.sessions.now().Add(req.lifetime)
 	}
 	stored, claims, err := s.persistNewSession(ctx, req, session)
 	if err != nil {
@@ -244,7 +244,7 @@ func (s *AccountAuthentication) persistSessionInTransaction(ctx context.Context,
 			return err
 		}
 		stored = domain.AccountSession(created)
-		if err := s.sessions.DeleteExpiredRotatedAccountSessions(txCtx, req.account.ID, time.Now()); err != nil {
+		if err := s.sessions.DeleteExpiredRotatedAccountSessions(txCtx, req.account.ID, s.sessions.now()); err != nil {
 			s.logger.Warn("failed to clean up refresh-token handoffs",
 				slog.Int64("account_id", req.account.ID),
 				slog.Any("error", err))
@@ -437,7 +437,7 @@ func (s *AccountAuthentication) recheckTrustedDevice(ctx context.Context, req mi
 // erasure of unused accounts anonymized after the caller's checks gets no
 // session (#5546); the login routes answer it like wrong credentials.
 func (s *AccountAuthentication) stampLiveAccount(ctx context.Context, accountID int64) (time.Time, error) {
-	loginTime := time.Now()
+	loginTime := s.sessions.now()
 	recorded, _, err := s.store.RecordAccountLogin(ctx, accountID, loginTime)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("update last login before token issuance: %w", err)
@@ -498,7 +498,7 @@ func (s *AccountAuthentication) recordTraegerSchoolSwitch(ctx context.Context, a
 
 func (s *AccountAuthentication) newRefreshSession(accountID int64, scope string) domain.AccountSession {
 	identifier := domain.RefreshTokenIdentifier
-	now := time.Now()
+	now := s.sessions.now()
 	familyID := uuid.Must(uuid.NewV4()).String()
 	return domain.AccountSession{
 		Token:      uuid.Must(uuid.NewV4()).String(),

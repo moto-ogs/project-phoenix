@@ -14,11 +14,11 @@ import (
 func TestNewGuardianInvitationReads(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewGuardianInvitationReads(nil)
+	_, err := NewGuardianInvitationReads(nil, nil)
 	require.ErrorContains(t, err, "need the database")
 
 	db := testpkg.SetupTestDB(t)
-	reads, err := NewGuardianInvitationReads(db)
+	reads, err := NewGuardianInvitationReads(db, nil)
 	require.NoError(t, err)
 	profile := testpkg.CreateTestGuardianProfile(t, db, "invitation-reads@test.local")
 	invitations, err := reads.ListGuardianInvitations(testpkg.Ctx(t), profile.ID)

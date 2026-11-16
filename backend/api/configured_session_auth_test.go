@@ -19,7 +19,7 @@ func TestConfiguredSessionAuthVerifiesTheConfiguredCodecsSessions(t *testing.T) 
 
 	sessionAuth, err := NewConfiguredSessionAuth(configuredSessionTestSecret, 15*time.Minute, 24*time.Hour)
 	require.NoError(t, err)
-	tokens, err := NewConfiguredSessionTokens(configuredSessionTestSecret, 15*time.Minute, 24*time.Hour)
+	tokens, err := NewConfiguredSessionTokens(configuredSessionTestSecret, 15*time.Minute, 24*time.Hour, nil)
 	require.NoError(t, err)
 
 	accessToken, err := tokens.IssueAccessToken(identityaccess.SessionClaims{

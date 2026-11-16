@@ -134,59 +134,18 @@ export function useSettingsSections(): SettingsSections | null {
     return null;
   }
 
-  const conceptFor = (key: string) => TAB_CONCEPTS[key] ?? settingsConcept;
-  const fallbackTabKeys = ["operations", "gdpr", "devices", "system"].filter(
-    (key) => nfcEnabled || !NFC_ONLY_TABS.has(key),
-  );
-  const schemaTabs: SettingsSection[] = schemaError
-    ? fallbackTabKeys.map((key) => ({
-        id: `settings-${key}`,
-        label: TAB_LABELS[key] ?? key,
-        icon: conceptFor(key),
-      }))
-    : schemaTabsForPage(schema, nfcEnabled).map((tab) => ({
-        id: `settings-${tab.key}`,
-        label: displayTabLabel(tab),
-        icon: conceptFor(tab.key),
-      }));
-
-  // "Startseite für alle" is what the school prescribes for everybody (#2875).
-  // The name carries the "für alle" on purpose: the start page also has a
-  // personal "Startseite anpassen" dialog, and two labels sharing a word stem
-  // are read as two names for the same thing unless the screen itself says
-  // otherwise. It is a hand-written tab rather than a registry entry: the
-  // choice is one of three states per start page block, and the block
-  // catalogue lives in the frontend.
-  //
-  // Unlike Personalisierung the tab only exists for whoever may actually write
-  // the prescription. A tab that opens onto "you are not allowed to change
-  // this" is a dead end; everybody else adjusts their own start page from the
-  // start page itself.
-  const homeBlocksTab: SettingsSection = {
-    id: "settings-startseite",
-    label: "Startseite für alle",
-    icon: dashboardConcept,
-  };
-
-  // Personalisierung is always available (permission-gated inside the component)
-  const personalizationTab: SettingsSection = {
-    id: "settings-personalisierung",
-    label: "Personalisierung",
-    icon: accountsConcept,
-  };
-
-  const tabs = [
-    ...schemaTabs,
-    ...(canManageHomeBlocks ? [homeBlocksTab] : []),
-    personalizationTab,
-  ];
+  const tabs = settingsSectionsFor(schema, {
+    schemaFailed: Boolean(schemaError),
+    nfcEnabled,
+    canManageHomeBlocks,
+  });
   const highlightKey = searchParams.get("highlight");
   const highlightSchemaTab = highlightKey
     ? schemaTabKeyOf(schema, highlightKey)
     : null;
   let highlightTabId: string | null = null;
   if (highlightSchemaTab === "startseite") {
-    highlightTabId = canManageHomeBlocks ? homeBlocksTab.id : null;
+    highlightTabId = canManageHomeBlocks ? HOME_BLOCKS_TAB.id : null;
   } else if (highlightSchemaTab) {
     const candidate = `settings-${highlightSchemaTab}`;
     highlightTabId = tabs.some((tab) => tab.id === candidate)
@@ -199,6 +158,72 @@ export function useSettingsSections(): SettingsSections | null {
     !nfcEnabled;
 
   return { tabs, highlightTabId, highlightNeedsNfc };
+}
+
+// "Startseite für alle" is what the school prescribes for everybody (#2875).
+// The name carries the "für alle" on purpose: the start page also has a
+// personal "Startseite anpassen" dialog, and two labels sharing a word stem
+// are read as two names for the same thing unless the screen itself says
+// otherwise. It is a hand-written tab rather than a registry entry: the
+// choice is one of three states per start page block, and the block
+// catalogue lives in the frontend.
+//
+// Unlike Personalisierung the tab only exists for whoever may actually write
+// the prescription. A tab that opens onto "you are not allowed to change
+// this" is a dead end; everybody else adjusts their own start page from the
+// start page itself.
+const HOME_BLOCKS_TAB: SettingsSection = {
+  id: "settings-startseite",
+  label: "Startseite für alle",
+  icon: dashboardConcept,
+};
+
+// Personalisierung is always available (permission-gated inside the component)
+const PERSONALIZATION_TAB: SettingsSection = {
+  id: "settings-personalisierung",
+  label: "Personalisierung",
+  icon: accountsConcept,
+};
+
+/** Das Symbol eines Bereichs aus dem Schema. */
+function settingsTabConcept(key: string): MotoConcept {
+  return TAB_CONCEPTS[key] ?? settingsConcept;
+}
+
+/**
+ * The sections of the settings page for a loaded schema. Seitenleiste und
+ * Suche (#6954) lesen dieselbe Liste. When the schema fetch failed,
+ * placeholder sections keep the page mounted so it can show its own retry
+ * instead of silently dropping them.
+ */
+export function settingsSectionsFor(
+  schema: SettingsSchema | null | undefined,
+  options: {
+    readonly schemaFailed: boolean;
+    readonly nfcEnabled: boolean;
+    readonly canManageHomeBlocks: boolean;
+  },
+): readonly SettingsSection[] {
+  const { schemaFailed, nfcEnabled, canManageHomeBlocks } = options;
+  const fallbackTabKeys = ["operations", "gdpr", "devices", "system"].filter(
+    (key) => nfcEnabled || !NFC_ONLY_TABS.has(key),
+  );
+  const schemaTabs: SettingsSection[] = schemaFailed
+    ? fallbackTabKeys.map((key) => ({
+        id: `settings-${key}`,
+        label: TAB_LABELS[key] ?? key,
+        icon: settingsTabConcept(key),
+      }))
+    : schemaTabsForPage(schema, nfcEnabled).map((tab) => ({
+        id: `settings-${tab.key}`,
+        label: displayTabLabel(tab),
+        icon: settingsTabConcept(tab.key),
+      }));
+  return [
+    ...schemaTabs,
+    ...(canManageHomeBlocks ? [HOME_BLOCKS_TAB] : []),
+    PERSONALIZATION_TAB,
+  ];
 }
 
 /**

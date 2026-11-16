@@ -77,9 +77,11 @@ export function ProgressBar(props: ProgressBarProps) {
       aria-valuenow={bounded}
       className={`w-full overflow-hidden rounded-full ${SIZE_CLASS[size]} ${className}`}
     >
+      {/* Full width, pushed left: a moved bar costs the browser no layout,
+          a growing width costs it one per frame. The track clips it. */}
       <div
-        className={`h-full rounded-full motion-safe:transition-[width] motion-safe:duration-300 ${fill}`}
-        style={{ width: `${percent}%`, ...fillStyle }}
+        className={`h-full w-full rounded-full motion-safe:transition-transform motion-safe:duration-300 ${fill}`}
+        style={{ transform: `translateX(${percent - 100}%)`, ...fillStyle }}
       />
     </div>
   );

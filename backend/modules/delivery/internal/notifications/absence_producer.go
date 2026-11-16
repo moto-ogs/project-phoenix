@@ -79,10 +79,18 @@ type absenceNotifier struct {
 	// school adds the moto schule notice (#4792); nil keeps the producer
 	// OGS-only.
 	school *contract.SchoolClassRecipients
+	// today is the school day a report must name to be news.
+	today func() calendar.Date
 }
 
 // AbsenceNotifierOption configures optional recipients of the producer.
 type AbsenceNotifierOption = func(*absenceNotifier)
+
+// WithAbsenceDay sets the day clock the notifier tells today's reports by;
+// without it the notifier reads the real Berlin day.
+func WithAbsenceDay(today func() calendar.Date) AbsenceNotifierOption {
+	return func(n *absenceNotifier) { n.today = today }
+}
 
 // NewAbsenceNotifier builds the sick/excused producer.
 func NewAbsenceNotifier(
@@ -97,6 +105,7 @@ func NewAbsenceNotifier(
 		recipients: recipients,
 		db:         db,
 		logger:     logger,
+		today:      calendar.CalendarDateClock(),
 	}
 	for _, opt := range opts {
 		opt(n)
@@ -159,7 +168,7 @@ func (n *absenceNotifier) notify(ctx context.Context, report AbsenceReport) erro
 		// A class trip is not news, and a cleared status even less so.
 		return nil
 	}
-	if !containsToday(report.Dates) {
+	if !containsToday(report.Dates, n.today()) {
 		return nil
 	}
 
@@ -323,8 +332,7 @@ func absenceDeepLink(report AbsenceReport) string {
 	return "/students"
 }
 
-func containsToday(dates []calendar.Date) bool {
-	today := calendar.TodayDate()
+func containsToday(dates []calendar.Date, today calendar.Date) bool {
 	for _, d := range dates {
 		if d == today {
 			return true

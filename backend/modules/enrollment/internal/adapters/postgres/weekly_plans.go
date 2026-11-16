@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
@@ -32,7 +31,7 @@ func (r *Store) SetChildWeeklyPlan(ctx context.Context, requestChildID int64, pl
 	}
 	res, err := db.NewUpdate().TableExpr("enrollment.request_children").
 		Set("weekly_plan_on = ?", on).Set("weekly_plan_replaces = ?", replaces).Set("weekly_plan_author = ?", author).
-		Set("updated_at = ?", time.Now()).
+		Set("updated_at = ?", r.currentTime()).
 		Where("tenant_id = ? AND id = ?", tenantID, requestChildID).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update request child weekly plan: %w", err)

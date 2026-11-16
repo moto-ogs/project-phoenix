@@ -68,11 +68,11 @@ func (s *Intake) CreateLateInvite(ctx context.Context, input enrollment.CreateLa
 	if err != nil {
 		return nil, fmt.Errorf("late invite: generate token: %w", err)
 	}
-	expiresAt := time.Now().Add(14 * 24 * time.Hour)
+	expiresAt := s.now().Add(14 * 24 * time.Hour)
 	if input.ExpiresAt != nil {
 		expiresAt = *input.ExpiresAt
 	}
-	if !expiresAt.After(time.Now()) {
+	if !expiresAt.After(s.now()) {
 		return nil, fmt.Errorf("%w: expires_at must be in the future", enrollment.ErrInvalidSubmission)
 	}
 	invite := &enrollment.LateInvite{

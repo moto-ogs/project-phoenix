@@ -150,7 +150,7 @@ func newOperatorPasskeyFlows(
 	for _, operator := range operators {
 		operatorStore.operators[operator.ID] = operator
 	}
-	service := New(operatorStore, operatorStore, operatorStore, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {})
+	service := New(operatorStore, operatorStore, operatorStore, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {}, time.Now)
 	flows, err := NewOperatorPasskeyFlows(service, OperatorPasskeyFlowDependencies{
 		Records: NewOperatorPasskey(service, store), MFA: gate, Sessions: sessions, Runtime: runtime,
 		RPID: "localhost", RPName: "moto", OperatorFrontendURL: "http://operator.localhost:3000",
@@ -659,7 +659,7 @@ func TestOperatorPasskeyRecordsObserveStableOperations(t *testing.T) {
 	var observed []ports.Observation
 	service := New(newFakeStore(), newFakeStore(), newFakeStore(), fakeTransaction{}, (&fakeRuntime{}).TenantID, NewObserver(func(observation ports.Observation) {
 		observed = append(observed, observation)
-	}))
+	}), time.Now)
 	ctx := context.Background()
 	credential := domain.OperatorPasskeyCredential{OperatorID: 7, UserHandle: []byte("handle"), CredentialID: []byte("credential"), CredentialJSON: json.RawMessage(`{}`), Name: "Laptop"}
 	session := domain.OperatorPasskeySession{ID: "session", Purpose: domain.PasskeySessionPurposeLogin, RPID: "localhost", ExpectedOrigin: "http://localhost", SessionJSON: json.RawMessage(`{}`), ExpiresAt: time.Now().Add(time.Minute)}
@@ -713,7 +713,7 @@ func TestOperatorPasskeyRecordsObserveStableOperations(t *testing.T) {
 func TestOperatorPasskeyRecordsValidateBeforeTheStore(t *testing.T) {
 	t.Parallel()
 
-	service := New(newFakeStore(), newFakeStore(), newFakeStore(), fakeTransaction{}, (&fakeRuntime{}).TenantID, func(ports.Observation) {})
+	service := New(newFakeStore(), newFakeStore(), newFakeStore(), fakeTransaction{}, (&fakeRuntime{}).TenantID, func(ports.Observation) {}, time.Now)
 	store := &fakeOperatorPasskeyStore{}
 	records := NewOperatorPasskey(service, store)
 	ctx := context.Background()

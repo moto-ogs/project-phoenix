@@ -374,7 +374,7 @@ func TestCareContractRemindersFollowTheTraegersDays(t *testing.T) {
 		reminders := careContractCompose.NewReminders(careContractCompose.ReminderPorts{
 			Organizations: reminderTraeger{id: f.office.organization}, Settings: reminderDays{days: days}, Sender: reminderSender{},
 			Post: mails, Runtime: owners.CareContractRuntime{}, Links: owners.CareContractLinks("http://parents.localhost:3000"),
-		})
+		}, nil)
 		require.NoError(t, reminders.RemindDue(ctx))
 	}
 
@@ -542,7 +542,7 @@ func TestCareContractRemindersRecheckMailingsAfterCandidateSelection(t *testing.
 			reminders := careContractCompose.NewReminders(careContractCompose.ReminderPorts{
 				Organizations: reminderTraeger{id: f.office.organization}, Settings: reminderDays{days: 7}, Sender: sender,
 				Post: mails, Runtime: owners.CareContractRuntime{}, Links: owners.CareContractLinks("http://parents.localhost:3000"),
-			})
+			}, nil)
 			require.NoError(t, reminders.RemindDue(ctx))
 			if fresh {
 				assert.Empty(t, mails.Purposes(), "a resend restarts the reminder interval")

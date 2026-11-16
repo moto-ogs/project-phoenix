@@ -14,7 +14,7 @@ import (
 func TestChangeRequestReviewSearchIgnoresAccents(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := enrollmentCompose.New()
+	owner := enrollmentCompose.NewClocked(nil)
 	ctx := testpkg.Ctx(t)
 
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)
@@ -38,7 +38,7 @@ func TestChangeRequestReviewSearchIgnoresAccents(t *testing.T) {
 func TestChangeRequestReviewSearchTreatsFullwidthLikeCharactersLiterally(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := enrollmentCompose.New()
+	owner := enrollmentCompose.NewClocked(nil)
 	ctx := testpkg.Ctx(t)
 
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)

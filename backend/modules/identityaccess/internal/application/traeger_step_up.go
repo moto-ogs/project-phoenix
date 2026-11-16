@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
@@ -105,7 +104,7 @@ func (s *AccountAuthentication) requireLiveTraegerFamily(ctx context.Context, ac
 	if err != nil {
 		return fmt.Errorf("read the presented Träger family: %w: %w", identityaccess.ErrMFAStatusUnavailable, err)
 	}
-	if !liveVerifiedHead(domain.AccountSession(source), accountID, domain.PortalOrg.Name, time.Now()) || source.OrganizationID != organizationID {
+	if !liveVerifiedHead(domain.AccountSession(source), accountID, domain.PortalOrg.Name, s.sessions.now()) || source.OrganizationID != organizationID {
 		return failed("Träger step-up", identityaccess.ErrInvalidToken)
 	}
 	return nil

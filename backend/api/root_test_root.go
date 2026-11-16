@@ -132,7 +132,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 	)
 	err = owners.RunRootSteps(
 		func() (err error) {
-			tokens, err = tokenAdapterFor(cfg.JWTSecret, cfg.JWTExpiry, cfg.JWTRefreshExpiry)
+			tokens, err = tokenAdapterFor(cfg.JWTSecret, cfg.JWTExpiry, cfg.JWTRefreshExpiry, env.Now)
 			return
 		},
 		func() (err error) {
@@ -148,7 +148,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		func() (err error) { groups, err = owners.BuildServeSchoolStructure(db); return },
 		func() (err error) { rooms, err = owners.BuildServeRooms(db); return },
 		func() (err error) { membership, err = owners.ComposeSchoolMembership(db); return },
-		func() error { bookings = owners.NewEnrollmentBookings(); return nil },
+		func() error { bookings = owners.NewEnrollmentBookings(env.Now); return nil },
 		func() (err error) {
 			settings, err = owners.BuildSettingsOwner(db, unit, env, organizations, hub, bookings)
 			return
@@ -159,7 +159,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
-			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime)
+			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, env.Now, groups, rooms, membership, workTime)
 			return nil
 		},
 		func() (err error) { guardian, err = owners.BuildGuardianService(db, people, audit, env); return },
@@ -220,7 +220,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() (err error) {
 			mailIdentity = owners.TenantMailIdentity(organizations, settings.Service, env)
-			portalReads = owners.NewParentPortalReads(db, persons, peopleIdentity, enrollmentCompose.New(), organizations)
+			portalReads = owners.NewParentPortalReads(db, persons, peopleIdentity, env.Now, organizations)
 			identity, caller, err = owners.BuildIdentityAccess(db, unit, env, tokens, organizations, persons, membership, settings.Service,
 				audit, operatorAuditLog, mailSender, mailDispatcher, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest,
 				structure.Groups, staffGroups, arrivalTimetable.NewCallerActivityGroups(timetableRepos.Timetable),
@@ -228,7 +228,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			messaging = owners.NewParentMessagingRepositories(messageDB, groups, membership, peopleIdentity, enrollmentCompose.New(), nil, organizations)
+			messaging = owners.NewParentMessagingRepositories(messageDB, groups, membership, peopleIdentity, enrollmentCompose.NewClocked(env.Now), nil, organizations)
 			consent, err = communicationCompose.NewNotificationConsent(communicationCompose.NotificationConsentConfig{
 				DB: messageDB.Pool(), Observe: env.Observe.Communication,
 			})

@@ -41,7 +41,7 @@ type emailOutcomeRow struct {
 	AddressMark   *string    `bun:"address_mark"`
 }
 
-func (row emailOutcomeRow) report() deliveryContract.EmailOutcomeReport {
+func (row emailOutcomeRow) report(now time.Time) deliveryContract.EmailOutcomeReport {
 	report := deliveryContract.EmailOutcomeReport{
 		MailID: row.ID, Kind: row.Kind, Address: row.Address, OutcomeAt: row.OutcomeAt, Attempts: row.Attempts, Stopped: row.Stopped,
 	}
@@ -54,7 +54,7 @@ func (row emailOutcomeRow) report() deliveryContract.EmailOutcomeReport {
 	if row.AddressMark != nil {
 		report.Mark = deliveryContract.EmailAddressMark(*row.AddressMark)
 	}
-	report.Outcome = deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(row.Status, row.DeliveryState, row.LastError, report.Mark), row.StateAt, time.Now())
+	report.Outcome = deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(row.Status, row.DeliveryState, row.LastError, report.Mark), row.StateAt, now)
 	return report
 }
 
@@ -82,7 +82,7 @@ func (s *Store) EmailOutcomes(ctx context.Context, tenantID int64, query deliver
 	}
 	reports := make([]deliveryContract.EmailOutcomeReport, 0, len(rows))
 	for _, row := range rows {
-		reports = append(reports, row.report())
+		reports = append(reports, row.report(s.now()))
 	}
 	return reports, nil
 }
@@ -108,7 +108,7 @@ func (s *Store) LatestEmailOutcomes(ctx context.Context, tenantID int64, kinds, 
 	}
 	reports := make(map[string]deliveryContract.EmailOutcomeReport, len(rows))
 	for _, row := range rows {
-		reports[row.Address] = row.report()
+		reports[row.Address] = row.report(s.now())
 	}
 	return reports, nil
 }

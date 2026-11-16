@@ -25,8 +25,8 @@ func (w *Worker) DispatchEmail(ctx context.Context, tenantID, id int64) error {
 		return errors.New("delivery: targeted email store is not configured")
 	}
 	for {
-		now := time.Now()
-		intent, acquired, err := store.ClaimEmail(ctx, tenantID, id, now, synchronousPushLease(ctx, w.leaseDuration))
+		now := w.now()
+		intent, acquired, err := store.ClaimEmail(ctx, tenantID, id, now, synchronousPushLease(ctx, w.now(), w.leaseDuration))
 		if err != nil {
 			return err
 		}
@@ -62,14 +62,14 @@ func (w *Worker) deliverEmail(ctx context.Context, store targetedEmailStore, int
 		return err
 	}
 	if hold != nil {
-		done, err := w.store.FinalizeCancelled(ctx, intent.Transport, intent.ID, leaseToken(intent), hold.Error(), time.Now())
+		done, err := w.store.FinalizeCancelled(ctx, intent.Transport, intent.ID, leaseToken(intent), hold.Error(), w.now())
 		if err == nil && !done {
 			err = errors.New("delivery: cancelled email lost its lease")
 		}
 		w.recordHeldSend(ctx, intent, hold)
 		return errors.Join(fmt.Errorf("%w: %w", domain.ErrCancelled, hold), err)
 	}
-	token, active, err := w.store.StartDelivery(ctx, intent.Transport, intent.ID, leaseToken(intent), synchronousPushLease(ctx, w.leaseDuration))
+	token, active, err := w.store.StartDelivery(ctx, intent.Transport, intent.ID, leaseToken(intent), synchronousPushLease(ctx, w.now(), w.leaseDuration))
 	if err != nil {
 		return err
 	}
@@ -80,14 +80,14 @@ func (w *Worker) deliverEmail(ctx context.Context, store targetedEmailStore, int
 	finalizeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), providerTimeout)
 	defer cancel()
 	if errors.Is(sendErr, domain.ErrCancelled) {
-		done, err := w.store.FinalizeCancelled(finalizeCtx, intent.Transport, intent.ID, token, sendErr.Error(), time.Now())
+		done, err := w.store.FinalizeCancelled(finalizeCtx, intent.Transport, intent.ID, token, sendErr.Error(), w.now())
 		if err == nil && !done {
 			err = errors.New("delivery: cancelled email lost its lease")
 		}
 		return errors.Join(sendErr, err)
 	}
 	if sendErr != nil {
-		state, err := w.store.FinalizeFailure(finalizeCtx, intent.Transport, intent.ID, token, attempts, sendErr.Error(), time.Now(), 1)
+		state, err := w.store.FinalizeFailure(finalizeCtx, intent.Transport, intent.ID, token, attempts, sendErr.Error(), w.now(), 1)
 		if err == nil && !state.Finalized {
 			err = errors.New("delivery: failed email lost its lease")
 		}
@@ -122,7 +122,7 @@ func (w *Worker) sendEmailAttempts(ctx context.Context, store targetedEmailStore
 			return result, attempts, errors.Join(sendErr, ctx.Err())
 		case <-timer.C:
 		}
-		updated, err := store.RecordEmailRetry(ctx, intent.ID, token, attempts, time.Now())
+		updated, err := store.RecordEmailRetry(ctx, intent.ID, token, attempts, w.now())
 		if err != nil {
 			return result, attempts, errors.Join(sendErr, err)
 		}

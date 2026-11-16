@@ -64,7 +64,7 @@ func (s *Scheduler) checkAndRunAnnouncementReminders(ctx context.Context, task *
 		task.mu.Unlock()
 	}()
 
-	now := time.Now()
+	now := s.clock()
 
 	ctx, cancel := s.taskContext(ctx, 5*time.Minute)
 	defer cancel()
