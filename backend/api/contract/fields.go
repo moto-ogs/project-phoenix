@@ -114,7 +114,7 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 	at := where + "." + sf.Name
 	schema, err := b.schema(sf.Type, at, request)
 	if errors.Is(err, errBareInt64) {
-		err = b.numericID(&schema, declaring.String()+"."+sf.Name, slices.Contains(options, "string"), at)
+		err = b.numericID(&schema, declaring, sf.Name, slices.Contains(options, "string"), at)
 	}
 	if err == nil {
 		err = setFormat(&schema, sf.Tag.Get("contract"), at)
@@ -183,9 +183,12 @@ func omission(field *Field, t reflect.Type, options []string) {
 }
 
 // numericID decides a bare int64. With ,string it is an identifier that
-// already travels as a string. Otherwise it must be on the shrink-only list
-// of numeric identifiers; a count is an int, a new identifier a common.ID.
-func (b *builder) numericID(schema *Schema, key string, asString bool, at string) error {
+// already travels as a string, and on a type whose own UnmarshalJSON is
+// registered it reads a number or a string. Otherwise it must be on the
+// shrink-only list of numeric identifiers; a count is an int, a new
+// identifier a common.ID.
+func (b *builder) numericID(schema *Schema, declaring reflect.Type, goField string, asString bool, at string) error {
+	key := declaring.String() + "." + goField
 	leaf := schema
 	for leaf.Kind == KindArray {
 		leaf = leaf.Elem
@@ -196,6 +199,8 @@ func (b *builder) numericID(schema *Schema, key string, asString bool, at string
 	switch {
 	case asString && leaf == schema:
 		leaf.Kind = KindID
+	case b.readers[declaring] == ReadsLaxIDs:
+		leaf.Kind = KindLaxID
 	case b.numericIDs[key]:
 		leaf.Kind = KindLegacyID
 		b.used["id:"+key] = true

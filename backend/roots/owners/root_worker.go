@@ -317,7 +317,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			calendar, err = BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings.Service)
+			calendar, err = BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings.Service, env.Now)
 			return
 		},
 		func() (err error) { workTime, err = BuildServeWorkforce(db, env, membership, calendar); return },
@@ -460,7 +460,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() (err error) {
 			lifecycle, err = BuildTimetableLifecycle(db, env, hub, timetableRows, days, people, careRows, presence, supervisions,
-				WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, NewTimetableSickReports(workTime), NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime))
+				WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, NewTimetableSickReports(workTime), NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime).WithGuardianContacts(persons))
 			return
 		},
 		func() (err error) {

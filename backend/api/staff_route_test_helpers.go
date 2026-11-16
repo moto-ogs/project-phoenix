@@ -71,16 +71,23 @@ func NewBirthdayTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return BirthdayTestModule{}, nil, owners.SettingsTestModule{}, err
 	}
+	now := OptionalClock(clocks)
+	if now == nil {
+		now = time.Now
+	}
 	birthdays := NewBirthdays(
 		BirthdayRepositories{Students: NewStudentLookupTestRepository(db), Staff: members.Staff, Persons: members.Person},
-		newBirthdayWritesForTests(db), settings.Settings, slog.Default(), OptionalClock(clocks))
+		newBirthdayWritesForTests(db), settings.Settings, slog.Default(), now)
 	return BirthdayTestModule{Birthdays: birthdays}, identity, settings, nil
 }
 
 // NewBirthdayCapabilityForTests composes the birthday capability over the
 // retained repositories the way the service graph does, with caller-supplied
-// settings and clock.
+// settings and clock; a nil clock is the real one.
 func NewBirthdayCapabilityForTests(db transactionruntime.Database, settings BirthdaySettingsSource, now func() time.Time) birthdaysAPI.Service {
+	if now == nil {
+		now = time.Now
+	}
 	members, err := owners.NewMembershipTestRepositories(db)
 	if err != nil {
 		panic(err)

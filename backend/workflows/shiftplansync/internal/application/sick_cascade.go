@@ -84,8 +84,8 @@ type SickCascadeDependencies struct {
 	InstanceStaff SickStamps
 	Broadcaster   realtime.Broadcaster
 	Logger        *slog.Logger
-	// Today is the calendar day the past-day guards compare against; nil
-	// means timezone.TodayDate.
+	// Today is the calendar day the past-day guards compare against; the
+	// composition requires it.
 	Today func() calendar.Date
 	// LockStaff takes the staff rows in one ordered query in the caller's
 	// unit of work; offboarded members are omitted.
@@ -133,10 +133,7 @@ func NewSickCascade(deps SickCascadeDependencies) SickCascade {
 }
 
 func (s *sickCascade) todayDate() calendar.Date {
-	if s.today != nil {
-		return s.today()
-	}
-	return calendar.TodayDate()
+	return s.today()
 }
 
 func (s *sickCascade) getLogger() *slog.Logger {

@@ -318,6 +318,14 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 
 	_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.beleg_retention_suspensions SET lifted_at = now() WHERE id = ?`, suspension)
 	require.NoError(t, err)
+	// The trail entries carry the database's write time (DEFAULT
+	// CURRENT_TIMESTAMP), the retention runs on the fixed days above. They
+	// are dated to the winter period the test stands for, so their age does
+	// not depend on the day the test runs: written in 2028 or later they
+	// would outlive the cutoff of 2031 (#7104).
+	_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.family_billing_events SET occurred_at = ? WHERE organization_id = ?`,
+		calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(12*time.Hour), f.office.organization)
+	require.NoError(t, err)
 	retain(calendar.NewDate(2031, time.January, 3))
 	assert.Equal(t, "-", f.familyNumber(t, "eva.muster@example.org"), "then the family without a document goes")
 	var logged []struct {

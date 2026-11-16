@@ -92,7 +92,7 @@ func (rs *Resource) getSchoolCaterer(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, schoolCatererResponse(caterer, time.Now()), "Caterer retrieved")
+	common.Respond(w, r, http.StatusOK, schoolCatererResponse(caterer, rs.runtime.Now()), "Caterer retrieved")
 }
 
 // inviteCaterer mails the school's invitation to its caterer.
@@ -110,7 +110,7 @@ func (rs *Resource) inviteCaterer(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusCreated, invitationResponse(invitation, time.Now()), "Caterer invited")
+	common.Respond(w, r, http.StatusCreated, invitationResponse(invitation, rs.runtime.Now()), "Caterer invited")
 }
 
 // revokeInvitation takes an open invitation back.

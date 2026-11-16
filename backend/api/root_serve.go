@@ -212,7 +212,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			calendar, err = owners.BuildSchoolCalendarRecords(db, owners.ObserveSchoolCalendar, settings.Service)
+			calendar, err = owners.BuildSchoolCalendarRecords(db, owners.ObserveSchoolCalendar, settings.Service, env.Now)
 			return
 		},
 		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, env, membership, calendar); return },
@@ -368,7 +368,7 @@ func composeServeRoot(
 		},
 		func() (err error) {
 			lifecycle, err = owners.BuildTimetableLifecycle(db, env, hub, timetableRows, days, people, careRows, presence, supervisions,
-				owners.WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, owners.NewTimetableSickReports(workTime), owners.NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime))
+				owners.WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, owners.NewTimetableSickReports(workTime), owners.NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime).WithGuardianContacts(persons))
 			return
 		},
 		func() (err error) {
@@ -492,7 +492,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			calendarAdmin, err = buildCalendarAdministration(db, owners.ObserveSchoolCalendar, calendar, timetableRows.RecurrenceLock, requests.CareOfferings)
+			calendarAdmin, err = buildCalendarAdministration(db, owners.ObserveSchoolCalendar, calendar, timetableRows.RecurrenceLock, requests.CareOfferings, notifications)
 			return
 		},
 		func() (err error) {
@@ -520,7 +520,7 @@ func composeServeRoot(
 		return nil, nil, err
 	}
 	logger, limiters, tenant, deviceAuth, studentPresence := newServeRouteRuntime(db, env.Logger, iot, organizations, settings.Service, env.Config.RateLimitEnabled, env.Now)
-	mountPublic(router, metricsToken, db, delivery.Runtime.EmailWebhooks, env.Config.RateLimitEnabled)
+	mountPublic(router, metricsToken, db, delivery.Runtime.EmailWebhooks, env.Config.RateLimitEnabled, env.Now)
 	careOfferings, studentAnswers := requests.CareOfferings, newStudentAnswers()
 	err = owners.RunRootSteps(
 		func() error {
@@ -528,13 +528,13 @@ func composeServeRoot(
 		},
 		func() error { return mountRequestFeed(router, tenant, db, logger, config.FrontendURL) },
 		func() error {
-			return mountModuleRoutes(tenant, settings.Service, caller, studentAnswers, persons.StudentNotes, activities, workforce.TimeTracking.Overview)
+			return mountModuleRoutes(tenant, settings.Service, caller, studentAnswers, persons.StudentNotes, activities, workforce.TimeTracking.Overview, env.Today)
 		},
 		func() error {
 			return mountStudentRoutes(tenant, db, logger, deviceAuth, studentPresence, persons, services, membership, caller, reviewPolicy,
 				settings.Service, hub, carePlan, carePlanRows.Companions, schedules, requests, planning, emitter, activities,
 				lifecycle, reports, structureViews, organizations, presence.StatusDays, notifications.AbsenceNotifier, studentDeletion,
-				groupLive, enrollmentCompose.PublicDecisions(decisions), active, owners.NewCareResumption(carePlanRows.LifecycleOwners.Students, carePlan, carePlanRows.LifecycleOwners.ChangeTrail, nil, logger.With("service", "care_lifecycle")).Resume, persons.StudentNoteTeam, newStudentNoteTeamReach(people.Staff, notifications), timetableRows.CohortRosters, studentAnswers, env.Now)
+				groupLive, enrollmentCompose.PublicDecisions(decisions), active, owners.NewCareResumption(carePlanRows.LifecycleOwners.Students, carePlan, carePlanRows.LifecycleOwners.ChangeTrail, env.Today, logger.With("service", "care_lifecycle")).Resume, persons.StudentNoteTeam, newStudentNoteTeamReach(people.Staff, notifications), timetableRows.CohortRosters, studentAnswers, env.Now)
 		},
 		func() error {
 			return mountPresenceRoutes(tenant, db, logger, config.SentryPyrePortalDSN, deviceAuth, studentPresence, active, facilities,
@@ -554,7 +554,7 @@ func composeServeRoot(
 		func() error {
 			enrollmentResource := newEnrollmentResource(logger, settings.Service, config.Turnstile, careOfferings, flows, phases,
 				enrollmentCompose.PublicDecisions(decisions), notices.Deletions, guardianProfiles, organizations, renderer, persons, carePlan, env.Now)
-			weekProtocolSeed := developmentWeekProtocolEvenings(env.Config.AppEnv, db, logger, settings.Service, persons, services, reports, schedules, carePlan, timetableRepos)
+			weekProtocolSeed := developmentWeekProtocolEvenings(env.Config.AppEnv, db, logger, settings.Service, persons, services, reports, schedules, carePlan, timetableRepos, env.Now)
 			mountSchoolRoutes(tenant, db, logger, facilities, facilitiesRooms, settings.Service, caller, active, services.Users,
 				structureViews.Education, renderer, activities, timetableOwner, iot, settingsWrites, organizations, people.Students, carePlan, audit.Persistence.DataAccessLog,
 				membership, classListEntries, databaseStats, dataImports, persons, gradeTransition, enrollmentResource, env.Config.AppEnv, weekProtocolSeed, env.HealthData, owners.NewHolidayHostCalendar(settings.Service, calendar), env.Now)
@@ -562,9 +562,8 @@ func composeServeRoot(
 				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog, env.Now)
 			mountCalendarRoutes(router, tenant, logger, calendarApp)
 			return errors.Join(mountMealBillingMonths(tenant, mealPlan, calendar, presence.Presence, settings.Service), mountCommunicationRoutes(tenant, logger, chat, announcements, reminders, deliveryDevices, communication),
-				mountDeliveryRoutes(router, tenant, logger, fileStore, parent, hub, caller, identity))
+				mountDeliveryRoutes(router, tenant, logger, fileStore, parent, hub, caller, identity), mountCatererPortal(router, tenant, limiters, identity, mealPlan, organizations, env.Now))
 		},
-		func() error { return mountCatererPortal(router, tenant, limiters, identity, mealPlan, organizations) },
 		func() error {
 			operator, err := newOperatorRouter(db, logger, sessionAuth, limiters, iot, organizations, settings.Service, hub,
 				active, settingsWrites, identity, provisioning, services.CaregiverCapability, schedules.Lifecycle, communication, dataImports.Student, settings.Traeger, env.Now)
@@ -601,12 +600,12 @@ func composeServeRoot(
 func developmentWeekProtocolEvenings(
 	appEnv string, db transactionruntime.Database, logger *slog.Logger, settings settingsCompose.BatchSettingsService,
 	persons *peopleCompose.Directory, services owners.PeopleServices, reports owners.PresenceReports, schedules owners.CarePlanSchedules,
-	carePlan carePlanModule.Owner, timetableRepos owners.TimetableRepositories,
+	carePlan carePlanModule.Owner, timetableRepos owners.TimetableRepositories, now func() time.Time,
 ) schedulerPorts.WeekProtocolEvenings {
 	if !strings.EqualFold(appEnv, "development") {
 		return nil
 	}
-	return owners.NewWeekProtocolEvenings(db, logger, settings, persons, services, reports, schedules, carePlan, timetableRepos, seedWeekProtocolDayLog)
+	return owners.NewWeekProtocolEvenings(db, logger, settings, persons, services, reports, schedules, carePlan, timetableRepos, seedWeekProtocolDayLog, now)
 }
 
 // newServeRouteRuntime constructs the server-root routing dependencies before

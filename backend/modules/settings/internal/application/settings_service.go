@@ -47,16 +47,18 @@ type settingsService struct {
 	gradeCapGuard func(ctx context.Context) (int, error)
 }
 
-// NewSettingsService creates a new config.SettingsService.
+// NewSettingsService creates a new config.SettingsService; now is the root's
+// clock the audit entries are stamped with and is required.
 func NewSettingsService(
 	valueRepo config.SettingValueRepository,
 	auditRepo config.SettingAuditRepository,
 	schoolStore config.SchoolSettingsStore,
 	runtime config.Runtime,
 	logger *slog.Logger,
+	now func() time.Time,
 	registries ...*config.Registry,
 ) config.SettingsService {
-	return newSettingsService(valueRepo, auditRepo, schoolStore, runtime, logger, nil, config.ServiceOptions{}, registries...)
+	return newSettingsService(valueRepo, auditRepo, schoolStore, runtime, logger, nil, config.ServiceOptions{Now: now}, registries...)
 }
 
 // SettingsServiceDependencies are every collaborator of the settings service,
@@ -125,7 +127,7 @@ func newSettingsService(
 	}
 	now := options.Now
 	if now == nil {
-		now = time.Now
+		panic("settings service: the clock is required")
 	}
 	return &settingsService{
 		OperatorWritePolicy:   registry,

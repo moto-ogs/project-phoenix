@@ -54,13 +54,15 @@ func Assemble(deps studentdeletioncompose.Dependencies, enrollments studentdelet
 	if logger == nil {
 		logger = slog.Default()
 	}
-	today := deps.Today
-	if today == nil {
-		today = func() string { return calendar.TodayDate().String() }
-	}
 	now := deps.Now
 	if now == nil {
 		now = time.Now
+	}
+	// One clock: a composition that pins Now and leaves Today unset reads
+	// the day of that clock, not the machine's.
+	today := deps.Today
+	if today == nil {
+		today = func() string { return calendar.DateFromTime(now()).String() }
 	}
 	return studentdeletion.Dependencies{
 		UnitOfWork: tenant.NewTransactionRunner().RunInTx,

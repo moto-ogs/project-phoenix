@@ -1207,7 +1207,7 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
           "Öffnen Sie `Schuljahr und Kalender`.",
           "Gehen Sie zum Abschnitt `Gesetzliche Feiertage`.",
           "Prüfen Sie das Bundesland im Text über der Liste.",
-          "Stimmt das Bundesland nicht? Wenden Sie sich an das moto-Team. Nur das moto-Team kann es ändern.",
+          "Stimmt das Bundesland nicht? Ändern Sie es in den `Einstellungen` unter `Betrieb`.",
         ],
       },
       {
@@ -4703,7 +4703,7 @@ export const manageStudentTopic = function manageStudentTopic(): HelpTopic {
           "`Betreuungszeiten`: der Wochenplan und einzelne Ausnahmen.",
           "`Betreuungsplan`: die geplante Betreuung Woche für Woche.",
           "`Nachrichten`: die Unterhaltungen mit den Bezugspersonen.",
-          "`Dokumente`: hochgeladene Dateien zu diesem Kind.",
+          "`Dokumente`: hochgeladene Dateien zu diesem Kind. Unter `Aus moto` stehen die Elternbriefe und Einverständnisse des Kindes.",
           "`Änderungsprotokoll`: wer wann was geändert hat.",
           "`Historie`: die vergangenen Betreuungstage.",
         ],
@@ -4724,6 +4724,7 @@ export const manageStudentTopic = function manageStudentTopic(): HelpTopic {
     differences: [
       "Sie sehen weniger Reiter? Dann haben Sie nur eingeschränkten Zugriff auf dieses Kind.",
       "Der Reiter `Anmeldungen` erscheint nur, wenn die Anmeldung über moto läuft.",
+      "`Aus moto` fehlt unter `Dokumente`? Den Bereich sehen nur Personen mit Zugriff auf `Mitteilungen`. Die Schule muss außerdem die Eltern-App nutzen.",
     ],
     troubleshootingDetails: [
       "Fehlt `Bearbeiten`? Dann fehlen Ihnen die Schreibrechte für dieses Kind.",
@@ -6180,6 +6181,7 @@ export const parentDeclarationTopic =
         "Mit `Passwort vor dem Antworten abfragen` geben Eltern vor jeder Antwort ihr Passwort ein.",
         "`Offene erinnern` schickt eine Erinnerung an alle, die noch nicht geantwortet haben.",
         "Unter `Herunterladen` lädt `Bericht als PDF` den Stand und alle Antworten als PDF herunter. `Verlauf als CSV` enthält dieselben Antworten als Tabelle.",
+        "Den Stand für ein einzelnes Kind sehen Sie beim Kind unter `Dokumente` im Bereich `Aus moto`. `Nachweis als PDF` lädt dort den Nachweis nur für dieses Kind herunter.",
         "Das ist eine einfache Erklärung per Knopfdruck. Verlangt ein Gesetz eine Erklärung auf Papier, reicht sie nicht aus.",
       ],
       differences: [
@@ -6997,6 +6999,7 @@ export const parentLetterTopic = function parentLetterTopic(): HelpTopic {
       "Unter `Empfänger` steht bei jeder Mail, was aus ihr geworden ist. Steht dort `Adresse prüfen`, korrigieren Sie die Adresse beim Kind unter `Erziehungsberechtigte`.",
       "Unter `Wer erhält die E-Mail?` wählen Sie `Nur mit Portalzugang` oder `Alle Bezugspersonen`.",
       "Die Eltern bestätigen den Brief. Eine Bestätigung pro Kind genügt.",
+      "Ob ein Kind den Brief bestätigt hat, sehen Sie auch beim Kind unter `Dokumente` im Bereich `Aus moto`.",
       "Der Kasten im Fenster zählt auf, was beim Veröffentlichen automatisch passiert.",
       "Brief nur an bestimmte Kinder, zum Beispiel ohne Fotoeinwilligung? Filtern Sie unter `Alle Kinder` die Liste. Wählen Sie oben rechts im Menü `Elternbrief schreiben`. Der Brief öffnet sich mit genau diesen Kindern als Empfänger.",
       "Die Kinder werden beim Öffnen übernommen. Ändern Sie danach den Filter, bleibt der Brief bei denselben Kindern.",
@@ -7384,7 +7387,8 @@ export const parentNewsTopic = function parentNewsTopic(): HelpTopic {
  *
  * Die `Hinweise` (#7140) stehen ohne Einstellung in moto: am Computer hinter
  * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Erster Hinweis ist
- * die Absage einer Betreuung des Kindes.
+ * die Absage einer Betreuung des Kindes, dann Raumänderungen und Schließtage
+ * des Kindes (#7141, #7144).
  */
 export const parentNotificationsTopic =
   function parentNotificationsTopic(): HelpTopic {
@@ -7411,6 +7415,9 @@ export const parentNotificationsTopic =
         "moto meldet sich ab jetzt bei den gewählten Themen. Auch wenn die App geschlossen ist.",
       notes: [
         "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
+        "Findet ein Termin Ihres Kindes in einem anderen Raum statt, steht das auch unter `Hinweise`. Für heute und morgen bekommen Sie dazu eine Benachrichtigung, solange Sie `Raumänderung heute oder morgen` nicht ausschalten.",
+        "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, steht das ebenfalls unter `Hinweise`. Das Thema `Schließtage` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
+        "Für spätere Tage schalten Sie `Raumänderung an späteren Tagen` selbst ein. Sie gilt bis 14 Tage im Voraus.",
         "Ändert sich der Unterrichtsschluss in der Klasse Ihres Kindes, steht in moto `Stundenplan geändert`. Eine Mitteilung aufs Handy kommt dazu, wenn Sie `Stundenplan der Klasse` einschalten und die Änderung in den nächsten 14 Tagen gilt.",
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder `Alle als gelesen markieren` wählen.",
         "Auf dem Sperrbildschirm steht nie der Name Ihres Kindes. Was genau los ist, lesen Sie nach der Anmeldung in moto.",
@@ -8507,7 +8514,8 @@ export const settingsTopic = function settingsTopic(): HelpTopic {
       "Unter `Datenschutz` sehen Sie die Löschfristen. Sie zeigen, wie lange moto Daten aufbewahrt.",
       "moto legt die Löschfristen mit Ihrer Schule fest. Sie können sie nur lesen.",
       "Eine Ausnahme ist `Erziehungsberechtigte ohne Kind aufbewahren (Tage)`. Diese Frist stellen Sie selbst ein, zwischen 30 und 365 Tagen. Sie beginnt erst, wenn das letzte Kind der Person gelöscht ist.",
-      "Unter `Betrieb` steht das `Bundesland` Ihrer Schule. Danach richten sich die gesetzlichen Feiertage. Ändern kann es nur das moto-Team.",
+      "Unter `Betrieb` tragen Sie das `Bundesland` Ihrer Schule ein. Danach richten sich die gesetzlichen Feiertage.",
+      "Ohne Bundesland fehlen die Feiertage. Dann zeigt moto einen Hinweis mit dem Knopf `Bundesland eintragen`.",
       "Wer Blöcke starten oder beenden darf, legen Sie unter `Betrieb` fest: bei `Wer darf Blöcke starten?` und `Wer darf Blöcke beenden?`.",
       "`Das ganze Team` geht dort nur, wenn das Team alle Gruppen und Blöcke sieht.",
       "Manche Werte legt Ihr Träger für alle Schulen fest. Dort steht `Vom Träger festgelegt`.",
@@ -8635,8 +8643,9 @@ export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
  * Die Glocke oben rechts im Staff-Portal (#7148): oben `Erinnerungen`, darunter
  * `Hinweise` (der Benachrichtigungs-Feed). Hinweise kommen zur Absage eines
  * Termins, zu Vertretungen, Änderungen im Dienstplan, neuen Hinweisen der
- * Leitung, zum Ausfall im Team, zum Stundenplan einer Klasse und zu weiteren
- * Mitteilungs-Arten außer Nachrichten (#7136, #7137, #7138, #7142, #7143).
+ * Leitung, zum Ausfall im Team, zu Raumänderungen, zum Stundenplan einer
+ * Klasse, zu Schließtagen und zu weiteren Mitteilungs-Arten außer Nachrichten
+ * (#7136, #7137, #7138, #7141, #7142, #7143, #7144).
  */
 export const staffNotificationsTopic =
   function staffNotificationsTopic(): HelpTopic {
@@ -8660,11 +8669,13 @@ export const staffNotificationsTopic =
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder alle als gelesen markieren. Das Öffnen der Glocke allein ändert nichts.",
       notes: [
         "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis. Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
+        "Findet ein Termin, bei dem Sie eingeplant sind, in einem anderen Raum statt, sehen Sie es hier. Im Hinweis stehen der neue und der alte Raum.",
         "Vertreten Sie jemanden, werden Sie vertreten oder sind Sie an einem Tag als nicht da eingetragen, sehen Sie es hier. Eine Vertretung über mehrere Tage ist ein einziger Hinweis. Der Hinweis öffnet `Mein Dienstplan` an dem Tag.",
         "Sind Sie einer Gruppe zugeordnet, sehen Sie auch, wer in Ihrer Gruppe fehlt oder vertritt. Der Hinweis öffnet den `Vertretungsplan` an dem Tag. Einen Grund nennt moto nie, auch keine Krankheit.",
         "Wurde Ihnen eine Gruppe übergeben, sehen Sie unter `Ausfall im Team`, wer in dieser Gruppe nicht da ist. Der Hinweis öffnet `Heute` an dem Tag.",
         "Wer die Änderung selbst einträgt, bekommt keinen Hinweis.",
         "Ändert sich der Unterrichtsschluss einer Klasse, steht hier `Stundenplan geändert`. Das sehen Sie, wenn Sie der Klasse zugeordnet sind oder Kinder der Klasse in Ihrer Gruppe sind. Der Hinweis öffnet `Heute` an dem Tag.",
+        "Trägt die Leitung einen Schließtag ein, ändert oder löscht ihn, bekommen alle im Team einen Hinweis. Ein Klick darauf öffnet den `Kalender`.",
         "Schreibt die Leitung unter `Hinweise der Leitung` etwas Neues für die Betreuung, steht es hier als `Neuer Hinweis der Leitung`. Ein Klick darauf öffnet die Seite `Hinweise der Leitung` mit diesem Text, auch wenn er erst später gilt.",
         "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
         "Die Leitung bekommt außerdem `Austritte aus dem Team` und `Ablaufende Nachweise im Team`. Für Ihre eigenen Nachweise gibt es `Eigene Nachweise`.",
@@ -8674,10 +8685,11 @@ export const staffNotificationsTopic =
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was Sie auf dem Handy gelesen haben, ist auch am Tablet gelesen.",
         "Weiter unten in der Liste lädt moto ältere Hinweise nach. Sie können auch `Weitere laden` wählen.",
-        "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Bei Absagen und Änderungen im Dienstplan passiert das nur von heute bis in 14 Tagen.",
+        "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Bei Absagen, Schließtagen und Änderungen im Dienstplan passiert das nur von heute bis in 14 Tagen.",
         "Die Mitteilung aufs Handy stellen Sie in Ihrem `Profil` unter `Benachrichtigungen` für jede Art ein. Schalten Sie sie aus, kommt der Hinweis in der Glocke trotzdem.",
         "Zu neuen Hinweisen der Leitung kommt keine Mitteilung aufs Handy. Sie können sie im `Profil` unter `Benachrichtigungen` bei `Hinweise der Leitung` einschalten. Dann kommt sie, wenn der Hinweis schon gilt oder in den nächsten 14 Tagen beginnt.",
         "Die Einstellung für `Absage eines Termins` gilt auch, wenn die Absage zurückgenommen wird.",
+        "Bei Raumänderungen gibt es zwei Einstellungen. `Raumänderung heute oder morgen` ist eingeschaltet. `Raumänderung an späteren Tagen` schalten Sie selbst ein. Sie gilt bis 14 Tage im Voraus.",
         "Zum Stundenplan einer Klasse kommt eine Mitteilung aufs Handy, wenn die Änderung heute oder morgen gilt. Für Änderungen in 2 bis 14 Tagen schalten Sie im `Profil` unter `Benachrichtigungen` den Punkt `Stundenplan Ihrer Klassen: spätere Tage` ein.",
       ],
       differences: [
@@ -8688,8 +8700,10 @@ export const staffNotificationsTopic =
       ],
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einer Absage? Ihre Schule kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder einen Hinweis noch eine Mitteilung aufs Handy. Fragen Sie Ihre Leitung.",
+        "Es kommt kein Hinweis zu einer Raumänderung? Ihre Schule kann `Hinweis bei Raumänderung` ausschalten. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu einer Vertretung? Ihre Schule kann `Hinweis bei Vertretung und Dienstplanänderung` ausschalten. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zum Stundenplan einer Klasse? Ihre Schule kann `Hinweis bei geändertem Stundenplan einer Klasse` ausschalten. Fragen Sie Ihre Leitung.",
+        "Es kommt kein Hinweis zu einem Schließtag? Ihre Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Ihre Schule kann `Benachrichtigung bei neuem Hinweis der Leitung` ausschalten. Fragen Sie Ihre Leitung.",
         "Die Seite `Hinweise der Leitung` zeigt `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder abgeschaltet.",
         "Es kommt kein Hinweis zu einer Krankmeldung? Ihre Schule kann `Hinweis bei Krankmeldung` ausschalten. Manche Schulen melden sie auch nur Personen, die gerade im Dienst sind. Fragen Sie Ihre Leitung.",
@@ -10379,7 +10393,7 @@ export const teacherNoticesTopic = function teacherNoticesTopic(): HelpTopic {
 /**
  * Die Glocke oben rechts in moto schule (#7139): die `Hinweise` der Lehrkraft,
  * zuerst die Absage eines Termins, für den sie eingeplant ist, dazu der
- * geänderte Stundenplan ihrer Klassen (#7142).
+ * geänderte Stundenplan ihrer Klassen und Schließtage (#7142, #7144).
  */
 export const teacherNotificationFeedTopic =
   function teacherNotificationFeedTopic(): HelpTopic {
@@ -10403,13 +10417,16 @@ export const teacherNotificationFeedTopic =
       notes: [
         "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis.",
         "Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
+        "Findet ein Termin, bei dem Sie eingeplant sind, in einem anderen Raum statt, sehen Sie es auch hier. Im Hinweis stehen der neue und der alte Raum.",
+        "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, sehen Sie es hier. Ein Klick darauf öffnet den `Kalender`.",
         "Ändert sich der Unterrichtsschluss einer Ihrer Klassen, steht hier `Stundenplan geändert`. Der Hinweis öffnet die Klasse an dem Tag. Werden viele Zeiten einer Klasse nacheinander eingetragen, bleibt es ein Hinweis.",
         "`Meine Aufsichten` zeigt den heutigen Tag. Liegt der Termin später, steht der Tag im Hinweis.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was Sie auf dem Handy gelesen haben, ist auch am Computer gelesen.",
-        "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen von heute bis in 14 Tagen.",
-        "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
+        "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen und Schließtagen von heute bis in 14 Tagen.",
+        "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` oder `Schließtagen` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
         "Die Einstellung gilt auch, wenn eine Absage zurückgenommen wird.",
+        "Bei Raumänderungen gibt es zwei Einstellungen. `Raumänderung heute oder morgen` ist eingeschaltet. `Raumänderung an späteren Tagen` schalten Sie selbst ein. Sie gilt bis 14 Tage im Voraus.",
         "Zum Stundenplan einer Klasse kommt eine Mitteilung aufs Handy, wenn die Änderung heute oder morgen gilt. Für 2 bis 14 Tage vorher schalten Sie unter `Einstellungen` den Punkt `Stundenplan Ihrer Klassen: spätere Tage` ein.",
       ],
       differences: [
@@ -10417,8 +10434,10 @@ export const teacherNotificationFeedTopic =
         "Sie arbeiten auch in der OGS mit moto? Dort sehen Sie dieselben Hinweise. Was Sie hier lesen, ist dort auch gelesen.",
       ],
       troubleshootingDetails: [
+        "Es kommt kein Hinweis zu einer Raumänderung? Die OGS-Leitung kann `Hinweis bei Raumänderung` ausschalten. Fragen Sie dort nach.",
         "Es kommt kein Hinweis zu einer Absage? Die OGS-Leitung kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder Hinweis noch Mitteilung aufs Handy. Fragen Sie dort nach.",
         "Es kommt kein Hinweis zum Stundenplan? Die OGS-Leitung kann `Hinweis bei geändertem Stundenplan einer Klasse` ausschalten. Fragen Sie dort nach.",
+        "Es kommt kein Hinweis zu einem Schließtag? Die OGS-Leitung kann `Benachrichtigung bei Schließtagen` ausschalten. Fragen Sie dort nach.",
       ],
       related: [HELP_TOPICS.teacherSettings, HELP_TOPICS.teacherSupervision],
     };

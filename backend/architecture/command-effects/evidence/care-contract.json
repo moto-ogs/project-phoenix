@@ -378,7 +378,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.careContractSchoolHolidays.SchoolHolidayDates",
-      "binding_digest": "1a511e07c718dfa9eab9edcee91053ae",
+      "binding_digest": "96266773911cb31d64ca27009f5478d8",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolHolidays.SchoolHolidayDates",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.HolidayDates",
@@ -386,7 +386,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.careContractSchoolHolidays.SchoolHolidayDates",
-      "binding_digest": "757c6c7c90067b9b14b75eca6d94e09b",
+      "binding_digest": "b74e9d50e26c074c110d990825093df5",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolHolidays.SchoolHolidayDates",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ValidHolidayRegion",
@@ -394,7 +394,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.careContractSchoolHolidays.SchoolHolidayDates",
-      "binding_digest": "a28d1248f140e7998d011287ca81cac5",
+      "binding_digest": "74de41a83069b6230849db0dcd5b1ed3",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolHolidays.SchoolHolidayDates",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidayQuery.HolidayDates",
@@ -402,7 +402,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.careContractSchoolHolidays.SchoolHolidayDates",
-      "binding_digest": "88f40225164f3c52423d237626dbe57a",
+      "binding_digest": "2f5ac024fe1acd1ea0b6fa3a01febfcc",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolHolidays.SchoolHolidayDates",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidayQuery.ValidHolidayRegion",

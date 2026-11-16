@@ -245,7 +245,7 @@ describe("SlideOver", () => {
     });
   });
 
-  it("dims the page with the shared overlay backdrop and its delayed blur", () => {
+  it("dims and blurs the page with the shared overlay backdrop", () => {
     const { container } = render(
       <SlideOver open>
         <SlideOverContent>Inhalt</SlideOverContent>

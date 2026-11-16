@@ -1,0 +1,7 @@
+{
+  "scenario": "communication18.student_records.n3",
+  "max": 9,
+  "exact": true,
+  "description": "Literal protected staff parent-announcement student_records route (#4814). N3/N8 children with a class letter and an agreed declaration; the first child's letters and declarations, all DTO fields asserted. Transaction and settings statements, one history read, one check that the child belongs to the school, one projection statement over announcements, targets, reads and guardian links, then the settings, current versions and signers of the declarations in one statement each, whatever the number of announcements; foreign-tenant and missing-auth checks.",
+  "route": "GET /api/parent-announcements/students/{studentId}"
+}

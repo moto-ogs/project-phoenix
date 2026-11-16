@@ -62,7 +62,7 @@ func TestOperationalOverviewScopeIsTenantScoped(t *testing.T) {
 	setOverviewScope(t, db, tenantA, configModel.OverviewScopeOwn)
 
 	settings := NewSettingsService(
-		configRepository.NewSettingValueRepository(testpkg.ConfigRuntime(db)), nil, nil, testpkg.SettingsRuntime(t, db), slog.Default(),
+		configRepository.NewSettingValueRepository(testpkg.ConfigRuntime(db)), nil, nil, testpkg.SettingsRuntime(t, db), slog.Default(), settingsTestClock,
 	)
 
 	assertScope := func(tb testing.TB, tenantID int64, wantScope string, wantOverview bool) {

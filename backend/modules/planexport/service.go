@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	listexport "github.com/moto-ogs/project-phoenix/modules/documentrendering/records"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -27,11 +26,11 @@ type service struct {
 	logger *slog.Logger
 }
 
-// NewService creates the plan export service over the bound ports. A nil
-// Now prints the real time as the sheet's creation time.
+// NewService creates the plan export service over the bound ports. Now,
+// the clock of the sheet's creation time, is required.
 func NewService(deps Dependencies, logger *slog.Logger) Service {
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("plan export: the clock is required")
 	}
 	return &service{deps: deps, logger: logger}
 }

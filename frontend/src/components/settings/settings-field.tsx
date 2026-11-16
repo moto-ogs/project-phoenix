@@ -194,14 +194,9 @@ function SwitchOffConsequence({
 }
 
 // operator_managed settings (ADR 0048) say who decides them: the moto team,
-// by contract. Module switches (#4892) name the booking, the federal state
-// (#4775) the holidays, every other one is a retention window.
+// by contract. Module switches (#4892) name the booking, every other one is
+// a retention window.
 function operatorManagedNote(key: string, audience: SettingsAudience): string {
-  if (key === "operations.federal_state") {
-    return audience === "operator"
-      ? "Bundesland der Schule. Die Schule sieht es, kann es aber nicht ändern."
-      : "Das Bundesland legt moto mit Ihrer Schule fest. Stimmt es nicht, wenden Sie sich an das moto-Team.";
-  }
   if (MODULE_SETTING_KEYS.includes(key)) {
     return audience === "operator"
       ? "Gebuchtes Modul aus dem Vertrag. Die Schule sieht es, kann es aber nicht ändern."
@@ -1649,6 +1644,15 @@ function offersReset(
   if (!setting.writable) return false;
   if (followsTraegerAfterReset(setting, audience)) return true;
   if (setting.is_default) return false;
+  // A select whose default is none of its options (the federal state,
+  // #7174): the backend refuses the reset; another option stays possible.
+  if (
+    setting.type === "select" &&
+    setting.options?.static &&
+    !setting.options.static.some((option) => option.value === setting.default)
+  ) {
+    return false;
+  }
   if (audience === "traeger") return true;
   return (
     (setting.type !== "boolean" || deletesRoomHistory) &&

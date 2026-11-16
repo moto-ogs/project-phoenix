@@ -41,6 +41,34 @@ function makeSetting(
 }
 
 describe("SettingsField", () => {
+  // #7174: the federal state has no default; a reset would lose the state.
+  it("offers no reset for a select whose default is none of its options", () => {
+    const { queryByRole, getByRole } = renderWithProviders(
+      <SettingsField
+        setting={makeSetting({
+          key: "operations.federal_state",
+          label: "Bundesland",
+          type: "select",
+          default: "",
+          value: "DE-NW",
+          options: {
+            static: [
+              { label: "Nordrhein-Westfalen", value: "DE-NW" },
+              { label: "Bayern", value: "DE-BY" },
+            ],
+          },
+        })}
+        onSave={vi.fn()}
+        onReset={vi.fn()}
+      />,
+    );
+
+    expect(getByRole("combobox", { name: "Bundesland" })).toBeEnabled();
+    expect(
+      queryByRole("button", { name: "Zurücksetzen" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("explains attendance history without prescribing a legal basis before saving", async () => {
     const onSave = vi.fn().mockResolvedValue(null);
     const { getByRole } = renderWithProviders(

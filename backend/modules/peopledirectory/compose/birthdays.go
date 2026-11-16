@@ -26,7 +26,7 @@ type BirthdayDependencies struct {
 	Store    internalports.BirthdayStore
 	Settings internalports.BirthdaySettings
 	Logger   *slog.Logger
-	// Now is injectable so tests can pin a weekday; nil means time.Now.
+	// Now is the root's clock, required; tests pin a weekday with it.
 	Now func() time.Time
 }
 

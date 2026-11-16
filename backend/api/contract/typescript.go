@@ -138,7 +138,7 @@ func (w *tsWriter) object(out *strings.Builder, object Object) {
 		if field.Deprecated {
 			out.WriteString("  /** @deprecated leaves the contract with the next release */\n")
 		}
-		fmt.Fprintf(out, "  %s%s: %s;\n", field.Name, optionalMark(field.Optional), tsType(field.Schema))
+		fmt.Fprintf(out, "  %s%s: %s;\n", field.Name, optionalMark(field.Optional), tsType(field.Schema, object.Request))
 	}
 	out.WriteString("}\n")
 	if object.Request {
@@ -185,6 +185,10 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	fmt.Fprintf(out, "  %q: {\n    method: %q,\n    pattern: %q,\n    portals: [%s],\n", route.Key(), route.Method, route.Pattern, quoted(route.Portals))
 	if route.Deprecated {
 		out.WriteString("    deprecated: true,\n")
+	}
+	if route.Request != nil {
+		w.helpers["requestBody"] = true
+		fmt.Fprintf(out, "    request: requestBody<%s>(),\n", tsType(*route.Request, true))
 	}
 	if route.Variants != nil {
 		fmt.Fprintf(out, "    variantParam: %q,\n    defaultVariant: %q,\n    response: {\n", route.Variants.QueryParam, route.Variants.Default)
@@ -246,10 +250,18 @@ func sortedKeys[V any](m map[string]V) []string {
 	return keys
 }
 
-func tsType(s Schema) string {
+// tsType is the type a decoder hands out or, for a request, the type the
+// client sends. An identifier is a string except where Go reads only a JSON
+// number.
+func tsType(s Schema, request bool) string {
 	var t string
 	switch s.Kind {
-	case KindString, KindDate, KindInstant, KindClock, KindID, KindLegacyID, KindLaxID:
+	case KindLegacyID:
+		t = "string"
+		if request {
+			t = "number"
+		}
+	case KindString, KindDate, KindInstant, KindClock, KindID, KindLaxID:
 		t = "string"
 	case KindBool:
 		t = "boolean"
@@ -258,13 +270,13 @@ func tsType(s Schema) string {
 	case KindEnum:
 		t = "OpenEnum<" + s.Ref + ">"
 	case KindArray:
-		elem := tsType(*s.Elem)
+		elem := tsType(*s.Elem, request)
 		if strings.Contains(elem, " ") {
 			elem = "(" + elem + ")"
 		}
 		t = elem + "[]"
 	case KindMap:
-		t = "Record<string, " + tsType(*s.Elem) + ">"
+		t = "Record<string, " + tsType(*s.Elem, request) + ">"
 	case KindRef:
 		t = s.Ref
 	}

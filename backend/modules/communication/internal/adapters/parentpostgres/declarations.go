@@ -504,3 +504,28 @@ func (s *AnnouncementStore) ReadOpenDeclarations(ctx context.Context, accountID 
 	}
 	return out, nil
 }
+
+// ListDeclarationSubmissionsForStudent returns one child's declaration
+// history in the ambient school across every declaration, newest first
+// (#4814). It needs a school: without one it refuses rather than read
+// across schools.
+func (s *AnnouncementStore) ListDeclarationSubmissionsForStudent(ctx context.Context, studentID int64) ([]*domain.DeclarationSubmission, int64, error) {
+	db, ambient, err := s.database(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	if ambient.TenantID <= 0 {
+		return nil, 0, errors.New("list declaration submissions for student: no school in the transaction")
+	}
+	var rows []declarationSubmissionRow
+	query := db.NewSelect().Model(&rows).ModelTableExpr(declarationSubmissionTableExpr).
+		ColumnExpr(declarationSubmissionColumns).
+		Join(declarationSubmissionVersionJoin).
+		Where(`"pds".student_id = ?`, studentID).
+		OrderExpr(`"pds".submitted_at DESC, "pds".id DESC`)
+	query = withTenant(query, declarationSubmissionAlias, TenantScope{TenantID: ambient.TenantID})
+	if err := query.Scan(ctx); err != nil {
+		return nil, 0, fmt.Errorf("list declaration submissions for student: %w", err)
+	}
+	return submissionValues(rows), ambient.TenantID, nil
+}

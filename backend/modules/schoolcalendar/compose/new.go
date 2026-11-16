@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
@@ -43,6 +44,8 @@ type RecordsDependencies struct {
 	Observe         func(Observation)
 	// FederalState resolves the tenant's federal-state ISO code (operations.federal_state).
 	FederalState func(context.Context) (string, error)
+	// Now is the root's clock of the school's day; nil is the real clock.
+	Now func() time.Time
 }
 
 // NewRecords composes the School Calendar without the period administration, for the owners a root builds before the ones the administration asks (#4080); NewAdministration adds it later.
@@ -50,9 +53,12 @@ func NewRecords(dependencies RecordsDependencies) (schoolcalendar.Days, error) {
 	if dependencies.DB == nil || dependencies.Observe == nil || dependencies.FederalState == nil || dependencies.ClosingDayReads == nil {
 		return nil, errors.New("school calendar compose: all dependencies are required")
 	}
-	// The records serve no period administration, so its gate and guard
-	// are never asked.
-	return application.New(postgres.New(postgres.NewCompositionDatabase(), dependencies.ClosingDayReads), ports.Observer(dependencies.Observe), application.Administration{Transaction: writeTransaction, Today: application.BerlinDay(time.Now), FederalState: dependencies.FederalState}, application.LocalCalendar{}), nil
+	// The records serve no period administration: gate and guard are never asked.
+	now := dependencies.Now
+	if now == nil {
+		now = time.Now
+	}
+	return application.New(postgres.New(postgres.NewCompositionDatabase(), dependencies.ClosingDayReads), ports.Observer(dependencies.Observe), application.Administration{Transaction: writeTransaction, Today: application.BerlinDay(now), FederalState: dependencies.FederalState}, application.LocalCalendar{}), nil
 }
 
 // AdministrationDependencies are the collaborators of the period administration.
@@ -60,8 +66,7 @@ type AdministrationDependencies struct {
 	DB      *bun.DB
 	Observe func(Observation)
 	// RecurrenceGate serializes period administration against every
-	// recurrence-derived write of the tenant: the shared tenant recurrence
-	// lock.
+	// recurrence-derived write of the tenant (shared recurrence lock).
 	RecurrenceGate func(context.Context) error
 	// CareOfferingGuard refuses a period change (replacement set) or
 	// removal (replacement nil) a linked care offering still needs, as
@@ -70,6 +75,8 @@ type AdministrationDependencies struct {
 	// Today names the current calendar day in YYYY-MM-DD. Nil means the
 	// Berlin calendar day, the school's day.
 	Today func() string
+	// ClosingDayNotices tells the school of a changed closing day (#7144).
+	ClosingDayNotices schoolcalendar.ClosingDayNotices
 }
 
 // NewAdministration adds the period administration to the Records: the whole School Calendar, which the period editor drives.
@@ -84,7 +91,7 @@ func NewAdministration(records schoolcalendar.Days, dependencies AdministrationD
 	}
 	service, err := application.WithAdministration(records, application.Administration{
 		Transaction: writeTransaction, RecurrenceGate: dependencies.RecurrenceGate,
-		CareOfferingGuard: dependencies.CareOfferingGuard, Today: today,
+		CareOfferingGuard: dependencies.CareOfferingGuard, Today: today, ClosingDayNotices: dependencies.ClosingDayNotices,
 	}, dependencies.Observe)
 	return service, err
 }
@@ -112,12 +119,12 @@ func NewTraegerClosingDays(schools traegercalendar.Schools, notices traegercalen
 	return application.NewTraegerClosingDays(postgres.NewTraegerClosingDayStore(), schools, notices)
 }
 
-// NewHolidayClosureEvents composes the notices of ADR 0196 over the caller's school or Träger transaction.
-func NewHolidayClosureEvents() *postgres.HolidayClosureEventStore {
-	return postgres.NewHolidayClosureEventStore(postgres.NewCompositionDatabase(), nil)
+// NewHolidayClosureEvents composes the notices of ADR 0196 over the caller's school or Träger transaction; today is the root's day clock.
+func NewHolidayClosureEvents(today func() calendar.Date) *postgres.HolidayClosureEventStore {
+	return postgres.NewHolidayClosureEventStore(postgres.NewCompositionDatabase(), today)
 }
 
-// NewHolidayClosureCalendar composes revision-guarded no-care days over the narrow read channel.
-func NewHolidayClosureCalendar(holidays ports.HolidayClosureHolidays) schoolcalendar.HolidayClosureCareCalendar {
-	return application.NewHolidayClosureCalendar(NewHolidayClosureEvents(), holidays)
+// NewHolidayClosureCalendar composes revision-guarded no-care days over the narrow read channel; today is the root's day clock.
+func NewHolidayClosureCalendar(holidays ports.HolidayClosureHolidays, today func() calendar.Date) schoolcalendar.HolidayClosureCareCalendar {
+	return application.NewHolidayClosureCalendar(NewHolidayClosureEvents(today), holidays)
 }

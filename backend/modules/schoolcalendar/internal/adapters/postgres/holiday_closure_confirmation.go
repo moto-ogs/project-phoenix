@@ -21,7 +21,7 @@ const confirmHolidayClosureBatchSQL = `WITH requested AS (
   revision, span_from, span_to, confirmed_channel, impact_token)
  SELECT proposal.tenant_id, proposal.organization_id, proposal.id, proposal.operation_id, proposal.source_kind, proposal.source_id,
   COALESCE((SELECT revision FROM calendar.holiday_closure_revisions WHERE tenant_id = ?0), 0),
-  CASE WHEN requested.preserve_span THEN proposal.span_from ELSE GREATEST(proposal.span_from, (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin')::date) END,
+  CASE WHEN requested.preserve_span THEN proposal.span_from ELSE GREATEST(proposal.span_from, ?6::date) END,
   proposal.span_to, ?4, requested.token
  FROM calendar.holiday_closure_proposals AS proposal JOIN requested ON requested.proposal_id = proposal.id
  WHERE proposal.tenant_id = ?0 AND proposal.state = 'open' ON CONFLICT (proposal_id) DO NOTHING RETURNING id, proposal_id, operation_id, revision
@@ -96,7 +96,7 @@ func (s *HolidayClosureEventStore) ConfirmHolidayClosureNotices(ctx context.Cont
 	if err != nil {
 		return nil, err
 	}
-	if _, err := db.NewRaw(confirmHolidayClosureBatchSQL, schoolID, pgdialect.Array(ids), pgdialect.Array(tokens), pgdialect.Array(preserve), actor.Channel, actor.AccountID).Exec(ctx); err != nil {
+	if _, err := db.NewRaw(confirmHolidayClosureBatchSQL, schoolID, pgdialect.Array(ids), pgdialect.Array(tokens), pgdialect.Array(preserve), actor.Channel, actor.AccountID, s.today()).Exec(ctx); err != nil {
 		return nil, err
 	}
 	if err := finishHolidayClosureRenewals(ctx, db, schoolID, replacements); err != nil {

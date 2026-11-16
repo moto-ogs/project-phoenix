@@ -43,8 +43,12 @@ type requestScopedResolver interface {
 	newRequestScoped() ports.RelationshipResolver
 }
 
-// NewStudentImportConfig creates a new student import configuration.
+// NewStudentImportConfig creates a new student import configuration; the
+// clock (deps.Now) is required.
 func NewStudentImportConfig(deps ports.StudentImportDeps) *StudentImportConfig {
+	if deps.Now == nil {
+		panic("data import: the student import requires the clock")
+	}
 	deps.Persons = ports.ObservePersonDirectory(deps.Persons)
 	deps.PersonBatches = ports.ObservePersonBatches(deps.PersonBatches)
 	deps.GuardianBatches = ports.ObserveNewGuardianBatches(deps.GuardianBatches)

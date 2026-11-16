@@ -59,6 +59,21 @@ type body struct {
 	ID   wireID `json:"id"`
 }
 
+// ownReader decodes itself; reflection alone cannot say what it takes.
+type ownReader struct {
+	Friend int64 `json:"friend_id"`
+}
+
+func (*ownReader) UnmarshalJSON([]byte) error { return nil }
+
+type legacyBody struct {
+	Group int64 `json:"group_id"`
+}
+
+func post(request any) Registration {
+	return Registration{Method: "POST", Pattern: "/api/rows/", Portals: []string{"tenant"}, Request: request, Response: inner{}}
+}
+
 type misformatted struct {
 	Count int `json:"count" contract:"clock"`
 }
@@ -173,6 +188,8 @@ func TestBuildRejects(t *testing.T) {
 		"a variant entry nothing uses":              {[]Registration{get("/api/rows/", inner{})}, Options{QueryVariants: []string{"GET /api/gone/"}, Identifiers: identifiers}, "query variant GET /api/gone/"},
 		"a format tag on a field that is no string": {[]Registration{get("/api/rows/", misformatted{})}, Options{Identifiers: identifiers}, `contract:"clock" needs a string field`},
 		"an unknown format tag":                     {[]Registration{get("/api/rows/", unknownFormat{})}, Options{Identifiers: identifiers}, `contract:"week" needs a string field`},
+		"a request type that reads itself":          {[]Registration{post(ownReader{})}, Options{Identifiers: identifiers}, "has its own UnmarshalJSON"},
+		"a reader entry nothing uses":               {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Readers: map[reflect.Type]string{reflect.TypeFor[ownReader](): ReadsFields}}, "reader contract.ownReader"},
 		"an enum field nothing uses":                {[]Registration{strayEnum}, Options{Identifiers: identifiers}, "enum field inner.gone"},
 	}
 	for name, tc := range cases {
@@ -205,6 +222,42 @@ func TestARequestBodyHasOnlyOptionalFields(t *testing.T) {
 	for name, field := range fieldsOf(t, doc, "body") {
 		assert.Truef(t, field.Optional, "%s", name)
 	}
+}
+
+func TestARequestTypeNamesWhatGoReads(t *testing.T) {
+	t.Parallel()
+	options := Options{
+		Identifiers: identifiers,
+		NumericIDs:  []string{"contract.legacyBody.Group"},
+		Readers:     map[reflect.Type]string{reflect.TypeFor[ownReader](): ReadsLaxIDs},
+	}
+	lax := post(ownReader{})
+	legacy := Registration{Method: "PUT", Pattern: "/api/rows/{id}", Portals: []string{"tenant"}, Request: legacyBody{}, Response: inner{}}
+	doc, err := Build([]Registration{lax, legacy}, options)
+	require.NoError(t, err)
+	assert.Equal(t, KindLaxID, fieldsOf(t, doc, "ownReader")["friend_id"].Schema.Kind, "its reader takes a number or a string")
+	assert.Equal(t, KindLegacyID, fieldsOf(t, doc, "legacyBody")["group_id"].Schema.Kind)
+
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	source := files["rows.generated.ts"]
+	for _, line := range []string{
+		"  friend_id?: string;",
+		"  group_id?: number;",
+		"    request: requestBody<ownReader>(),",
+		"    request: requestBody<legacyBody>(),",
+	} {
+		assert.Contains(t, source, line)
+	}
+	assert.NotContains(t, source, "legacyBodySchema", "a request has no decoder")
+
+	// The same entry on a response still leaves the decoder as a string.
+	response := get("/api/legacy/", legacyBody{})
+	doc, err = Build([]Registration{response}, Options{Identifiers: identifiers, NumericIDs: []string{"contract.legacyBody.Group"}})
+	require.NoError(t, err)
+	files, err = TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["legacy.generated.ts"], "  group_id: string;")
 }
 
 func TestTypeScriptWritesTypesBeforeTheirUse(t *testing.T) {
