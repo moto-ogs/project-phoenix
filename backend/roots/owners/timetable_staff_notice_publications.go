@@ -42,17 +42,17 @@ func NewTimetableStaffNoticePublications(staff StaffPermissionHolders, notificat
 	return timetableStaffNoticePublications{staff: staff, notifier: notifications.Notifier, preferences: notifications.Preferences, now: time.Now}
 }
 
-// ReaderAccountIDs lists the live staff of the request's school whose
-// active account reads the Tagesinformationen in the OGS portal: the route
-// reads them with users:read.
-func (n timetableStaffNoticePublications) ReaderAccountIDs(ctx context.Context) ([]int64, error) {
+// readers lists the live staff of the request's school whose active
+// account reads the Tagesinformationen in the OGS portal (users:read),
+// without the actor.
+func (n timetableStaffNoticePublications) readers(ctx context.Context, actorAccountID int64) ([]int64, error) {
 	rows, err := n.staff.ListStaffWithPermission(ctx, permissions.UsersRead)
 	if err != nil {
 		return nil, fmt.Errorf("staff notice publication: list readers: %w", err)
 	}
 	accounts := make([]int64, 0, len(rows))
 	for _, row := range rows {
-		if row != nil && row.AccountID > 0 {
+		if row != nil && row.AccountID > 0 && row.AccountID != actorAccountID {
 			accounts = append(accounts, row.AccountID)
 		}
 	}
@@ -60,18 +60,18 @@ func (n timetableStaffNoticePublications) ReaderAccountIDs(ctx context.Context) 
 }
 
 func (n timetableStaffNoticePublications) NotifyStaffNoticePublished(ctx context.Context, publication timetablePorts.StaffNoticePublication) error {
-	if len(publication.AccountIDs) == 0 {
-		return nil
+	accountIDs, err := n.readers(ctx, publication.ActorAccountID)
+	if err != nil || len(accountIDs) == 0 {
+		return err
 	}
 	var push []int64
 	if publication.Push {
-		var err error
-		if push, err = n.preferences.FilterOptedIn(ctx, deliveryContract.NotificationStaffNoticePublished, publication.AccountIDs); err != nil {
+		if push, err = n.preferences.FilterOptedIn(ctx, deliveryContract.NotificationStaffNoticePublished, accountIDs); err != nil {
 			return fmt.Errorf("staff notice publication: filter recipients: %w", err)
 		}
 	}
 	title, body, link := staffNoticePublicationCopy(publication)
-	err := n.notifier.Notify(ctx, deliveryCompose.NotificationEvent{
+	err = n.notifier.Notify(ctx, deliveryCompose.NotificationEvent{
 		Type: deliveryContract.NotificationStaffNoticePublished,
 		// A notice switched off and on again is published again; the moment
 		// keeps that a notice of its own.
@@ -79,7 +79,7 @@ func (n timetableStaffNoticePublications) NotifyStaffNoticePublished(ctx context
 		RelatedType:    "staff_notice", RelatedID: publication.NoticeID,
 		Title: title, Body: body, DeepLink: link,
 		Audience: deliveryCompose.NotificationAudience{
-			TenantID: tenant.FromContext(ctx), Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: publication.AccountIDs,
+			TenantID: tenant.FromContext(ctx), Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: accountIDs,
 		},
 		Feed: &deliveryContract.NotificationFeedDelivery{PushAccountIDs: push},
 	})

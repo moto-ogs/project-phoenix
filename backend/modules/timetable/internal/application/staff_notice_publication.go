@@ -21,10 +21,26 @@ func publishes(wasActive bool, notice *scheduleModels.StaffNotice) bool {
 	return notice.Active && !wasActive
 }
 
+// acknowledgeAuthorAndPublish stamps the author's own acknowledgement where
+// the notice asks for one and tells the audience when saving published it.
+// Both run in the caller's unit: the routes open the request's tenant
+// transaction, so the feed entry commits or rolls back with the Hinweis.
+func (s *staffNoticeService) acknowledgeAuthorAndPublish(ctx context.Context, notice *scheduleModels.StaffNotice, wasActive bool, actorAccountID int64) error {
+	if notice.RequiresAcknowledgement {
+		if err := s.repo.Acknowledge(ctx, notice.ID, notice.CreatedBy); err != nil {
+			return fmt.Errorf("staffnotice: acknowledge author: %w", err)
+		}
+	}
+	if !publishes(wasActive, notice) {
+		return nil
+	}
+	return s.noticeAudienceOfPublication(ctx, notice, actorAccountID)
+}
+
 // noticeAudienceOfPublication tells the audience of a published Hinweis der
 // Leitung (#7143) in the transaction that saved it. The audience are the
 // readers of the Tagesinformationen in the OGS portal, without the person who
-// published it. A notice only for the Lehrkräfte of moto schule reaches
+// published it, whom the port leaves out. A notice only for the Lehrkräfte of moto schule reaches
 // nobody here: the feed of moto schule follows with #7139. A notice that has
 // already ended tells nobody.
 func (s *staffNoticeService) noticeAudienceOfPublication(ctx context.Context, notice *scheduleModels.StaffNotice, actorAccountID int64) error {
@@ -35,22 +51,9 @@ func (s *staffNoticeService) noticeAudienceOfPublication(ctx context.Context, no
 	if notice.ValidUntil != nil && notice.ValidUntil.Before(today) {
 		return nil
 	}
-	readers, err := s.publications.ReaderAccountIDs(ctx)
-	if err != nil {
-		return fmt.Errorf("staffnotice: readers: %w", err)
-	}
-	accountIDs := make([]int64, 0, len(readers))
-	for _, accountID := range readers {
-		if accountID != actorAccountID {
-			accountIDs = append(accountIDs, accountID)
-		}
-	}
-	if len(accountIDs) == 0 {
-		return nil
-	}
 	publication := ports.StaffNoticePublication{
 		NoticeID: notice.ID, Title: notice.Title, ValidFrom: notice.ValidFrom,
-		AccountIDs: accountIDs, Push: today.DaysUntil(notice.ValidFrom) <= staffNoticePublishPushDays,
+		ActorAccountID: actorAccountID, Push: today.DaysUntil(notice.ValidFrom) <= staffNoticePublishPushDays,
 	}
 	if notice.ValidUntil != nil {
 		publication.ValidUntil = *notice.ValidUntil
@@ -59,15 +62,6 @@ func (s *staffNoticeService) noticeAudienceOfPublication(ctx context.Context, no
 		return fmt.Errorf("staffnotice: notify audience: %w", err)
 	}
 	return nil
-}
-
-// write runs a save of a notice and its notice to the audience as one unit
-// of work: the feed entry commits or rolls back with the Hinweis.
-func (s *staffNoticeService) write(ctx context.Context, fn func(context.Context) error) error {
-	if s.tx == nil {
-		return fn(ctx)
-	}
-	return s.tx.RunWrite(ctx, false, fn)
 }
 
 // StaffNoticeFor gives a reader the notice the feed entry links to (#7143).

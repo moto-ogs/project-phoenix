@@ -27330,6 +27330,26 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeService.StaffNoticeFor",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.StaffNotices.StaffNoticeFor",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.staffNoticeService.StaffNoticeFor (#7143). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeService.StaffNoticeFor",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.StaffNotices.StaffNoticeFor",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.staffNoticeService.StaffNoticeFor (#7143). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffNoticeService.StaffNoticesOn",
       "classification": "platform",
@@ -41902,6 +41922,56 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "reason": "Reviewed notice-reader read (#7143): the root lists the live staff whose active account holds users:read in the caller's tenant scope. The target only constructs the directory or SELECTs account/staff facts, with no row mutation or locking read. Target modules/staffdirectoryview.Directory.StaffWithPermission.",
+      "source_owner": "timetable-activities",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.StaffWithPermission",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "reason": "Platform protocol participation (durable): timetable-activities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished (#7143). The notification feed entries and the push outbox entries join the unit that saves the Hinweis; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterOptedIn (delivery-platform) through roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished (#7143). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "reason": "Reviewed notice-reader read (#7143): the root lists the live staff whose active account holds users:read in the caller's tenant scope. The target only constructs the directory or SELECTs account/staff facts, with no row mutation or locking read. Target modules/peopledirectory/ports.StaffRepository.ListStaffWithPermission.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.ListStaffWithPermission",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffNoticePublications.NotifyStaffNoticePublished",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffNoticePublications.NotifyStaffNoticePublished",
+      "reason": "Reviewed notice-reader read (#7143): the root lists the live staff whose active account holds users:read in the caller's tenant scope. The target only constructs the directory or SELECTs account/staff facts, with no row mutation or locking read. Target modules/staffdirectoryview.New.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
     },
     {
       "adr": "0098",

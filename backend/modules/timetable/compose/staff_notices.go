@@ -12,15 +12,12 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// StaffNoticeDependencies binds the staff notices (#2180) to the database
-// and to the readers the root provides; see application.StaffNoticeDependencies
-// for the optional ones.
+// StaffNoticeDependencies binds the staff notices (#2180) to the database, the root's readers
+// and the feed of a new Hinweis (#7143); application.StaffNoticeDependencies names the optional ones.
 type StaffNoticeDependencies struct {
-	DB      *bun.DB
-	Periods application.StaffNoticePeriodLookup
-	Names   func(ctx context.Context, accountIDs []int64) (map[int64]string, error)
-	// Publications tells the audience of a new Hinweis about it (#7143);
-	// without it nobody hears about it through the notification feed.
+	DB           *bun.DB
+	Periods      application.StaffNoticePeriodLookup
+	Names        func(ctx context.Context, accountIDs []int64) (map[int64]string, error)
 	Publications ports.StaffNoticePublications
 	Logger       *slog.Logger
 	CurrentDate  func() calendar.Date
@@ -29,8 +26,7 @@ type StaffNoticeDependencies struct {
 // NewStaffNotices builds the staff notices over the owner's repository.
 func NewStaffNotices(deps StaffNoticeDependencies) timetable.StaffNotices {
 	return application.NewStaffNotices(NewStaffNoticeRepository(deps.DB), application.StaffNoticeDependencies{
-		Periods: deps.Periods, Names: deps.Names, Publications: deps.Publications, Transaction: transaction{},
-		Logger: deps.Logger, CurrentDate: deps.CurrentDate,
+		Periods: deps.Periods, Names: deps.Names, Publications: deps.Publications, Logger: deps.Logger, CurrentDate: deps.CurrentDate,
 	})
 }
 

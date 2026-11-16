@@ -307,6 +307,7 @@ func init() {
 	registerParentStatusTypes()
 	registerSchoolTypes()
 	registerStaffAppointmentTypes()
+	registerStaffNoticeTypes()
 }
 
 // registerStaffAppointmentTypes registers the staff notices about the
@@ -323,6 +324,25 @@ func registerStaffAppointmentTypes() {
 		SortOrder:   1,
 		Permission:  permissionActivitiesRead,
 		DefaultOn:   true,
+	})
+}
+
+// registerStaffNoticeTypes registers the notice about a new Hinweis der
+// Leitung (#7143). It writes the notification feed; the person's switch
+// decides only the push.
+func registerStaffNoticeTypes() {
+	// A Hinweis der Leitung (#7143) reaches the readers of the
+	// Tagesinformationen, who hold users:read. The feed entry always comes;
+	// the push only for who switched it on.
+	RegisterType(TypeDefinition{
+		Key:         TypeStaffNoticePublished,
+		Label:       "Hinweise der Leitung",
+		Description: "Wenn die Leitung einen neuen Hinweis für das Team anlegt. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten.",
+		Group:       GroupMessages,
+		Portal:      PortalStaff,
+		TenantGate:  settingStaffNoticePublishedEnabled,
+		Permission:  permissionUsersRead,
+		SortOrder:   7,
 	})
 }
 
@@ -463,20 +483,6 @@ func registerStaffMessageTypes() {
 		Group:       GroupMessages,
 		Portal:      PortalStaff,
 		SortOrder:   3,
-	})
-
-	// A Hinweis der Leitung (#7143) reaches the readers of the
-	// Tagesinformationen, who hold users:read. The feed entry always comes;
-	// the push only for who switched it on.
-	RegisterType(TypeDefinition{
-		Key:         TypeStaffNoticePublished,
-		Label:       "Hinweise der Leitung",
-		Description: "Wenn die Leitung einen neuen Hinweis für das Team anlegt. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten.",
-		Group:       GroupMessages,
-		Portal:      PortalStaff,
-		TenantGate:  settingStaffNoticePublishedEnabled,
-		Permission:  permissionUsersRead,
-		SortOrder:   7,
 	})
 
 	// The Leitung's task (#4809): on until the person switches it off, and
