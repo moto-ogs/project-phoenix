@@ -1,0 +1,1574 @@
+{
+  "components": {
+    "schemas": {
+      "AttendanceActorResponse": {
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "type": "object",
+        "x-go-type": "presenceprojectionhttp.AttendanceActorResponse"
+      },
+      "ClassHandover": {
+        "properties": {
+          "absent": {
+            "type": "boolean"
+          },
+          "handed_over_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "handed_over_by": {
+            "type": "string"
+          },
+          "school_class": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "school_class",
+          "handed_over_at",
+          "absent"
+        ],
+        "type": "object",
+        "x-go-type": "presenceprojectionhttp.ClassHandover"
+      },
+      "DailyAttendanceStatus": {
+        "properties": {
+          "check_in_time": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "check_out_note": {
+            "type": "string"
+          },
+          "check_out_reason": {
+            "type": "string"
+          },
+          "check_out_time": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checked_in_by": {
+            "type": "string"
+          },
+          "checked_out_by": {
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "student_id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "yard_since": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "student_id",
+          "status",
+          "date",
+          "check_in_time",
+          "check_out_time",
+          "checked_in_by",
+          "checked_out_by"
+        ],
+        "type": "object",
+        "x-go-type": "studentpresence.DailyAttendanceStatus"
+      },
+      "DatedPickupScheduleResponse": {
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "offering_schedule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PickupScheduleResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PickupScheduleResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "date",
+          "schedule",
+          "offering_schedule"
+        ],
+        "type": "object",
+        "x-go-type": "careplanhttp.DatedPickupScheduleResponse"
+      },
+      "DepartureExceptionResponse": {
+        "properties": {
+          "created_by": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "departure_mode": {
+            "type": "string"
+          },
+          "exception_date": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "reason": {
+            "type": "string"
+          },
+          "student_id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "student_id",
+          "exception_date",
+          "departure_mode",
+          "updated_at"
+        ],
+        "type": "object",
+        "x-go-type": "careplanhttp.DepartureExceptionResponse"
+      },
+      "FolderRequest": {
+        "properties": {
+          "account_ids": {
+            "items": {
+              "anyOf": [
+                {
+                  "pattern": "^-?[0-9]+$",
+                  "type": "string"
+                },
+                {
+                  "format": "int64",
+                  "type": "integer"
+                }
+              ],
+              "x-moto-id": true
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "role_ids": {
+            "items": {
+              "anyOf": [
+                {
+                  "pattern": "^-?[0-9]+$",
+                  "type": "string"
+                },
+                {
+                  "format": "int64",
+                  "type": "integer"
+                }
+              ],
+              "x-moto-id": true
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "visibility": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "visibility",
+          "role_ids",
+          "account_ids"
+        ],
+        "type": "object",
+        "x-go-type": "files.FolderRequest"
+      },
+      "FolderResponse": {
+        "properties": {
+          "account_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "file_count": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "visibility": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "visibility",
+          "file_count",
+          "role_ids",
+          "account_ids",
+          "created_at"
+        ],
+        "type": "object",
+        "x-go-type": "files.FolderResponse"
+      },
+      "NameStudentResponse": {
+        "properties": {
+          "first_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "last_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "first_name",
+          "last_name"
+        ],
+        "type": "object",
+        "x-go-type": "presenceprojectionhttp.NameStudentResponse"
+      },
+      "Pagination": {
+        "properties": {
+          "current_page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "total_pages": {
+            "type": "integer"
+          },
+          "total_records": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "current_page",
+          "page_size",
+          "total_pages",
+          "total_records"
+        ],
+        "type": "object"
+      },
+      "PickupDataResponse": {
+        "properties": {
+          "departure_exceptions": {
+            "items": {
+              "$ref": "#/components/schemas/DepartureExceptionResponse"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "effective_schedules": {
+            "items": {
+              "$ref": "#/components/schemas/DatedPickupScheduleResponse"
+            },
+            "type": "array"
+          },
+          "exceptions": {
+            "items": {
+              "$ref": "#/components/schemas/PickupExceptionResponse"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/PickupNoteResponse"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "schedules": {
+            "items": {
+              "$ref": "#/components/schemas/PickupScheduleResponse"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "schedules",
+          "exceptions",
+          "notes",
+          "departure_exceptions"
+        ],
+        "type": "object",
+        "x-go-type": "careplanhttp.PickupDataResponse"
+      },
+      "PickupExceptionResponse": {
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "created_by": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "exception_date": {
+            "type": "string"
+          },
+          "excused_auto": {
+            "type": "boolean"
+          },
+          "excused_from": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "pickup_time": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "student_id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "student_id",
+          "exception_date",
+          "source",
+          "excused_auto",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object",
+        "x-go-type": "careplanhttp.PickupExceptionResponse"
+      },
+      "PickupNoteResponse": {
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "created_by": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "note_date": {
+            "type": "string"
+          },
+          "student_id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "weekday": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "student_id",
+          "content",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object",
+        "x-go-type": "careplanhttp.PickupNoteResponse"
+      },
+      "PickupScheduleResponse": {
+        "properties": {
+          "care_offering_id": {
+            "type": "string"
+          },
+          "care_offering_name": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "created_by": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "notes": {
+            "type": "string"
+          },
+          "pickup_time": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "student_id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "weekday": {
+            "type": "integer"
+          },
+          "weekday_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "student_id",
+          "weekday",
+          "weekday_name",
+          "pickup_time",
+          "source",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object",
+        "x-go-type": "careplanhttp.PickupScheduleResponse"
+      },
+      "SlimStudentResponse": {
+        "properties": {
+          "actual_arrival_time": {
+            "type": "string"
+          },
+          "actual_pickup_time": {
+            "type": "string"
+          },
+          "arrival_is_exception": {
+            "type": "boolean"
+          },
+          "arrival_notes": {
+            "type": "string"
+          },
+          "arrival_time": {
+            "type": "string"
+          },
+          "class_handover": {
+            "$ref": "#/components/schemas/ClassHandover"
+          },
+          "class_trip": {
+            "type": "boolean"
+          },
+          "class_trip_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "companion_student_ids": {
+            "items": {
+              "format": "int64",
+              "type": "integer",
+              "x-moto-id": true
+            },
+            "type": "array"
+          },
+          "current_location": {
+            "type": "string"
+          },
+          "current_room_color": {
+            "type": "string"
+          },
+          "day_planning_label": {
+            "type": "string"
+          },
+          "day_planning_reason": {
+            "type": "string"
+          },
+          "day_planning_status": {
+            "type": "string"
+          },
+          "departure_is_exception": {
+            "type": "boolean"
+          },
+          "departure_label": {
+            "type": "string"
+          },
+          "departure_modes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "excused": {
+            "type": "boolean"
+          },
+          "excused_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "group_id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "group_name": {
+            "type": "string"
+          },
+          "has_full_access": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "location_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "pending_excused_note": {
+            "type": "string"
+          },
+          "photo_consent_given": {
+            "type": "boolean"
+          },
+          "photo_url": {
+            "type": "string"
+          },
+          "pickup_is_exception": {
+            "type": "boolean"
+          },
+          "pickup_notes": {
+            "type": "string"
+          },
+          "pickup_time": {
+            "type": "string"
+          },
+          "school_class": {
+            "type": "string"
+          },
+          "sick": {
+            "type": "boolean"
+          },
+          "sick_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "teacher_hints": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherHint"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "first_name",
+          "last_name",
+          "school_class",
+          "current_location",
+          "sick",
+          "excused",
+          "class_trip",
+          "has_full_access"
+        ],
+        "type": "object",
+        "x-go-type": "presenceprojectionhttp.SlimStudentResponse"
+      },
+      "StringIDProbe": {
+        "properties": {
+          "first_name": {
+            "type": "string"
+          },
+          "friend_ids": {
+            "items": {
+              "format": "int64",
+              "type": "integer",
+              "x-moto-id": true
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "group_id": {
+            "pattern": "^-?[0-9]+$",
+            "type": "string",
+            "x-moto-id": true
+          },
+          "id": {
+            "pattern": "^-?[0-9]+$",
+            "type": "string",
+            "x-moto-id": true
+          },
+          "person_id": {
+            "pattern": "^-?[0-9]+$",
+            "type": [
+              "string",
+              "null"
+            ],
+            "x-moto-id": true
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "first_name",
+          "friend_ids"
+        ],
+        "type": "object",
+        "x-go-type": "contractspike.StringIDProbe"
+      },
+      "StudentConsentResponse": {
+        "properties": {
+          "changed_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "state"
+        ],
+        "type": "object",
+        "x-go-type": "presenceprojectionhttp.StudentConsentResponse"
+      },
+      "StudentDetailResponse": {
+        "properties": {
+          "actual_arrival_by": {
+            "$ref": "#/components/schemas/AttendanceActorResponse"
+          },
+          "actual_arrival_time": {
+            "type": "string"
+          },
+          "actual_pickup_by": {
+            "$ref": "#/components/schemas/AttendanceActorResponse"
+          },
+          "actual_pickup_note": {
+            "type": "string"
+          },
+          "actual_pickup_time": {
+            "type": "string"
+          },
+          "address_city": {
+            "type": "string"
+          },
+          "address_postal_code": {
+            "type": "string"
+          },
+          "address_street": {
+            "type": "string"
+          },
+          "agb_accepted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "allowed_departure_modes": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "type": "object"
+          },
+          "arrival_is_exception": {
+            "type": "boolean"
+          },
+          "arrival_notes": {
+            "type": "string"
+          },
+          "arrival_time": {
+            "type": "string"
+          },
+          "attendance_log_enabled": {
+            "type": "boolean"
+          },
+          "birthday": {
+            "type": "string"
+          },
+          "bus": {
+            "type": "boolean"
+          },
+          "bus_days": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object"
+          },
+          "care_ended": {
+            "type": "boolean"
+          },
+          "care_ends_on": {
+            "type": "string"
+          },
+          "care_exit_recorded": {
+            "type": "boolean"
+          },
+          "class_handover": {
+            "$ref": "#/components/schemas/ClassHandover"
+          },
+          "class_trip": {
+            "type": "boolean"
+          },
+          "class_trip_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "companion_student_ids": {
+            "items": {
+              "format": "int64",
+              "type": "integer",
+              "x-moto-id": true
+            },
+            "type": "array"
+          },
+          "companions_changed": {
+            "type": "boolean"
+          },
+          "consents": {
+            "items": {
+              "$ref": "#/components/schemas/StudentConsentResponse"
+            },
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "current_location": {
+            "type": "string"
+          },
+          "current_room_color": {
+            "type": "string"
+          },
+          "data_processing_accepted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "day_planning_label": {
+            "type": "string"
+          },
+          "day_planning_reason": {
+            "type": "string"
+          },
+          "day_planning_status": {
+            "type": "string"
+          },
+          "departure_companion_note": {
+            "type": "string"
+          },
+          "departure_days": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "email_contact_accepted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "excused": {
+            "type": "boolean"
+          },
+          "excused_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "extra_info": {
+            "type": "string"
+          },
+          "feedback_enabled": {
+            "type": "boolean"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "group_id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "group_name": {
+            "type": "string"
+          },
+          "group_supervisors": {
+            "items": {
+              "$ref": "#/components/schemas/SupervisorContact"
+            },
+            "type": "array"
+          },
+          "has_absence_write_access": {
+            "type": "boolean"
+          },
+          "has_full_access": {
+            "type": "boolean"
+          },
+          "has_sick_excused_write_access": {
+            "type": "boolean"
+          },
+          "has_write_access": {
+            "type": "boolean"
+          },
+          "health_info": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "location_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "pending_excused_note": {
+            "type": "string"
+          },
+          "person_id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "photo_consent_given": {
+            "type": "boolean"
+          },
+          "photo_consent_given_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "photo_consent_given_by": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "photo_url": {
+            "type": "string"
+          },
+          "pickup_days": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object"
+          },
+          "pickup_is_exception": {
+            "type": "boolean"
+          },
+          "pickup_notes": {
+            "type": "string"
+          },
+          "pickup_status": {
+            "type": "string"
+          },
+          "pickup_time": {
+            "type": "string"
+          },
+          "privacy_consent": {
+            "$ref": "#/components/schemas/StudentPrivacyConsentResponse"
+          },
+          "school_class": {
+            "type": "string"
+          },
+          "sick": {
+            "type": "boolean"
+          },
+          "sick_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "tag_id": {
+            "type": "string"
+          },
+          "teacher_hints": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherHint"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "first_name",
+          "last_name",
+          "school_class",
+          "current_location",
+          "bus",
+          "sick",
+          "excused",
+          "class_trip",
+          "created_at",
+          "updated_at",
+          "has_full_access",
+          "has_write_access",
+          "has_absence_write_access",
+          "has_sick_excused_write_access",
+          "attendance_log_enabled",
+          "feedback_enabled"
+        ],
+        "type": "object",
+        "x-go-type": "presenceprojectionhttp.StudentDetailResponse"
+      },
+      "StudentPrivacyConsentResponse": {
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "data_retention_days": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accepted",
+          "data_retention_days"
+        ],
+        "type": "object",
+        "x-go-type": "presenceprojectionhttp.StudentPrivacyConsentResponse"
+      },
+      "StudentResponse": {
+        "properties": {
+          "actual_arrival_time": {
+            "type": "string"
+          },
+          "actual_pickup_note": {
+            "type": "string"
+          },
+          "actual_pickup_time": {
+            "type": "string"
+          },
+          "address_city": {
+            "type": "string"
+          },
+          "address_postal_code": {
+            "type": "string"
+          },
+          "address_street": {
+            "type": "string"
+          },
+          "agb_accepted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "allowed_departure_modes": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "type": "object"
+          },
+          "arrival_is_exception": {
+            "type": "boolean"
+          },
+          "arrival_notes": {
+            "type": "string"
+          },
+          "arrival_time": {
+            "type": "string"
+          },
+          "birthday": {
+            "type": "string"
+          },
+          "bus": {
+            "type": "boolean"
+          },
+          "bus_days": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object"
+          },
+          "care_ended": {
+            "type": "boolean"
+          },
+          "care_ends_on": {
+            "type": "string"
+          },
+          "care_exit_recorded": {
+            "type": "boolean"
+          },
+          "class_handover": {
+            "$ref": "#/components/schemas/ClassHandover"
+          },
+          "class_trip": {
+            "type": "boolean"
+          },
+          "class_trip_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "companion_student_ids": {
+            "items": {
+              "format": "int64",
+              "type": "integer",
+              "x-moto-id": true
+            },
+            "type": "array"
+          },
+          "companions_changed": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "current_location": {
+            "type": "string"
+          },
+          "current_room_color": {
+            "type": "string"
+          },
+          "data_processing_accepted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "day_planning_label": {
+            "type": "string"
+          },
+          "day_planning_reason": {
+            "type": "string"
+          },
+          "day_planning_status": {
+            "type": "string"
+          },
+          "departure_companion_note": {
+            "type": "string"
+          },
+          "departure_days": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "email_contact_accepted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "excused": {
+            "type": "boolean"
+          },
+          "excused_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "extra_info": {
+            "type": "string"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "group_id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "group_name": {
+            "type": "string"
+          },
+          "has_full_access": {
+            "type": "boolean"
+          },
+          "health_info": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "location_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "pending_excused_note": {
+            "type": "string"
+          },
+          "person_id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "photo_consent_given": {
+            "type": "boolean"
+          },
+          "photo_consent_given_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "photo_consent_given_by": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "photo_url": {
+            "type": "string"
+          },
+          "pickup_days": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object"
+          },
+          "pickup_is_exception": {
+            "type": "boolean"
+          },
+          "pickup_notes": {
+            "type": "string"
+          },
+          "pickup_status": {
+            "type": "string"
+          },
+          "pickup_time": {
+            "type": "string"
+          },
+          "school_class": {
+            "type": "string"
+          },
+          "sick": {
+            "type": "boolean"
+          },
+          "sick_since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "tag_id": {
+            "type": "string"
+          },
+          "teacher_hints": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherHint"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "person_id",
+          "first_name",
+          "last_name",
+          "school_class",
+          "current_location",
+          "bus",
+          "sick",
+          "excused",
+          "class_trip",
+          "has_full_access",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object",
+        "x-go-type": "presenceprojectionhttp.StudentResponse"
+      },
+      "SupervisorContact": {
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer",
+            "x-moto-id": true
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "first_name",
+          "last_name",
+          "role"
+        ],
+        "type": "object",
+        "x-go-type": "presenceprojectionhttp.SupervisorContact"
+      },
+      "TeacherHint": {
+        "properties": {
+          "author_name": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "school_class": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "type": "object",
+        "x-go-type": "presenceprojectionhttp.TeacherHint"
+      }
+    },
+    "securitySchemes": {
+      "session": {
+        "flows": {
+          "password": {
+            "scopes": {
+              "tenant": "Tenant portal session"
+            },
+            "tokenUrl": "/auth/login"
+          }
+        },
+        "type": "oauth2"
+      }
+    }
+  },
+  "info": {
+    "title": "moto contract spike (#2342)",
+    "version": "0.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/students/": {
+      "get": {
+        "operationId": "getStudents",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "view",
+            "schema": {
+              "default": "full",
+              "enum": [
+                "full",
+                "names",
+                "slim"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "anyOf": [
+                        {
+                          "items": {
+                            "$ref": "#/components/schemas/StudentResponse"
+                          },
+                          "type": "array"
+                        },
+                        {
+                          "items": {
+                            "$ref": "#/components/schemas/NameStudentResponse"
+                          },
+                          "type": "array"
+                        },
+                        {
+                          "items": {
+                            "$ref": "#/components/schemas/SlimStudentResponse"
+                          },
+                          "type": "array"
+                        }
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    },
+                    "status": {
+                      "const": "success",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data",
+                    "pagination"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "success"
+          }
+        },
+        "security": [
+          {
+            "session": [
+              "tenant"
+            ]
+          }
+        ],
+        "x-moto-portals": [
+          "tenant"
+        ],
+        "x-moto-variants": {
+          "cases": {
+            "full": {
+              "items": {
+                "$ref": "#/components/schemas/StudentResponse"
+              },
+              "type": "array"
+            },
+            "names": {
+              "items": {
+                "$ref": "#/components/schemas/NameStudentResponse"
+              },
+              "type": "array"
+            },
+            "slim": {
+              "items": {
+                "$ref": "#/components/schemas/SlimStudentResponse"
+              },
+              "type": "array"
+            }
+          },
+          "default": "full",
+          "query_param": "view"
+        }
+      }
+    },
+    "/api/students/{id}": {
+      "get": {
+        "operationId": "getStudentsId",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/StudentDetailResponse"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "const": "success",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "success"
+          }
+        },
+        "security": [
+          {
+            "session": [
+              "tenant"
+            ]
+          }
+        ],
+        "x-moto-portals": [
+          "tenant"
+        ]
+      }
+    },
+    "/api/students/{id}/pickup-schedules": {
+      "get": {
+        "operationId": "getStudentsIdPickupSchedules",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PickupDataResponse"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "const": "success",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "success"
+          }
+        },
+        "security": [
+          {
+            "session": [
+              "tenant"
+            ]
+          }
+        ],
+        "x-moto-portals": [
+          "tenant"
+        ]
+      }
+    }
+  }
+}
