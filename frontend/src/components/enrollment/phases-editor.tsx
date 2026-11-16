@@ -294,11 +294,13 @@ export function PhasesEditor() {
     "die Liste der Anmeldephasen",
     () => Promise.all([mutatePhases(), mutateSchemas(), mutatePeriods()]),
   );
-  const loading =
-    !pageLoad.failure &&
-    (!phasesRead.data ||
+  // A failed load stays loading until its error text is there, so the empty
+  // state never shows in its place.
+  const loading = pageLoad.failure
+    ? pageLoad.error === null
+    : !phasesRead.data ||
       !schemasRead.data ||
-      (!periodsRead.data && !periodsRead.error));
+      (!periodsRead.data && !periodsRead.error);
   // Saving the slide-over form: alert in the panel, field errors at the field.
   const formErrors = useApiFormError();
   const clearFormErrors = formErrors.clear;

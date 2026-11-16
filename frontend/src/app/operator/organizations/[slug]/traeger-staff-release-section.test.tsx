@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
+import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { SWRConfig } from "~/lib/swr/testing";
 
 vi.unmock("swr");
@@ -103,5 +105,33 @@ describe("TraegerStaffReleaseSection", () => {
     expect(
       screen.getByText("Vereinbarung mit der Vertretung liegt vor"),
     ).toBeInTheDocument();
+  });
+
+  it("says the release is saved when the reload after it fails", async () => {
+    service.getState
+      .mockResolvedValueOnce({ release: null, records: 0 })
+      .mockRejectedValue(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      );
+    service.grant.mockResolvedValue(undefined);
+    renderSection();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Freischalten" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Personal beim Träger freischalten",
+    });
+    fireEvent.click(
+      within(dialog).getByRole("radio", { name: /Keine Vertretung/ }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Freischalten" }),
+    );
+
+    expect(
+      await screen.findByText(new RegExp(SAVED_BUT_STALE_SUFFIX)),
+    ).toBeInTheDocument();
+    expect(service.getState).toHaveBeenCalledTimes(2);
   });
 });

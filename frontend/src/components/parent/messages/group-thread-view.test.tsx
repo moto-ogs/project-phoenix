@@ -10,11 +10,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
 import {
+  getChildConversation,
   getChildFeatures,
   getGroupThread,
   listMyChildren,
   postChildMessage,
 } from "~/lib/parent-api";
+import {
+  PARENT_RESOURCE_OPTIONS,
+  useParentResourceEvents,
+} from "~/lib/hooks/use-parent-resources";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import { catalogText } from "~/test/error-catalog-text";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { ParentGroupThreadView } from "./group-thread-view";
@@ -28,6 +35,7 @@ vi.mock("~/lib/parent-url", () => ({
 vi.mock("~/lib/parent-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-api")>()),
   getGroupThread: vi.fn(),
+  getChildConversation: vi.fn(),
   getChildFeatures: vi.fn(),
   listMyChildren: vi.fn(),
   postChildMessage: vi.fn(),
@@ -251,4 +259,76 @@ it("confirms the retried private answer when the group closed after response los
   expect(
     await screen.findByText("Ihre Antwort ist bei der OGS."),
   ).toBeInTheDocument();
+});
+
+it("liest die Gruppennachricht beim Öffnen einmal, ohne sich selbst neu auszulösen", async () => {
+  // A second read stays pending, so a refetch loop shows as a count.
+  mockedThread
+    .mockResolvedValueOnce(sommerfest)
+    .mockReturnValue(new Promise(() => {}));
+  function Events() {
+    useParentResourceEvents();
+    return null;
+  }
+  render(
+    <ParentResourceTestProvider>
+      <NextIntlClientProvider locale="de" messages={deMessages}>
+        <Events />
+        <ParentGroupThreadView groupThreadId="9" />
+      </NextIntlClientProvider>
+    </ParentResourceTestProvider>,
+  );
+  expect(await screen.findByText("Sommerfest am Freitag")).toBeInTheDocument();
+  // The read nudges the unread refresh; that refresh must not read the
+  // thread again, which would nudge again and mark it read in a hidden tab.
+  await act(async () => {
+    window.dispatchEvent(new CustomEvent("parent-messages-unread-refresh"));
+  });
+  await waitFor(() => expect(mockedChildren).toHaveBeenCalled());
+  expect(mockedThread).toHaveBeenCalledTimes(1);
+});
+
+it("lässt den Chat des Kindes nach einer Antwort neu laden", async () => {
+  mockedThread.mockResolvedValue(sommerfest);
+  mockedPost.mockResolvedValue(
+    {} as Awaited<ReturnType<typeof postChildMessage>>,
+  );
+  const mockedConversation = vi.mocked(getChildConversation);
+  mockedConversation.mockResolvedValueOnce({
+    messages: [{ id: "1", body: "Alter Stand" }],
+  } as unknown as Awaited<ReturnType<typeof getChildConversation>>);
+  mockedConversation.mockResolvedValueOnce({
+    messages: [{ id: "2", body: "Wir bringen Muffins." }],
+  } as unknown as Awaited<ReturnType<typeof getChildConversation>>);
+  function CachedChat() {
+    const { data } = useSWRAuth(
+      parentKeys.conversation("42", "team"),
+      () => getChildConversation("42", "team"),
+      PARENT_RESOURCE_OPTIONS,
+    );
+    return <p>{data?.messages[0]?.body ?? "lädt"}</p>;
+  }
+  function Fixture({ chat }: Readonly<{ chat: boolean }>) {
+    return (
+      <ParentResourceTestProvider>
+        <NextIntlClientProvider locale="de" messages={deMessages}>
+          {chat ? <CachedChat /> : <ParentGroupThreadView groupThreadId="9" />}
+        </NextIntlClientProvider>
+      </ParentResourceTestProvider>
+    );
+  }
+  const view = render(<Fixture chat />);
+  expect(await screen.findByText("Alter Stand")).toBeInTheDocument();
+  view.rerender(<Fixture chat={false} />);
+  fireEvent.change(await screen.findByLabelText("Antwort"), {
+    target: { value: "Wir bringen Muffins." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Senden" }));
+  expect(
+    await screen.findByText("Ihre Antwort ist bei der OGS."),
+  ).toBeInTheDocument();
+  view.rerender(<Fixture chat />);
+  expect(screen.queryByText("Alter Stand")).not.toBeInTheDocument();
+  expect(await screen.findByText("Wir bringen Muffins.")).toBeInTheDocument();
+  expect(mockedConversation).toHaveBeenCalledTimes(2);
 });

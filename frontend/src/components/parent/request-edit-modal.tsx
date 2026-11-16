@@ -15,8 +15,7 @@ import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
 import { createLogger } from "~/lib/logger";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
-import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useFreshSWR, useInvalidateFamily } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   listParentRequestEvents,
@@ -66,10 +65,11 @@ export function useRequestVersion(
 ): { version: string; editedAt: string | null } {
   // Die Geschichte ist nur eine Zusatzangabe. Fehlt sie, bleibt das
   // Bearbeiten möglich; das Backend prüft dann ohne Fassungsvergleich.
-  const { data: events } = useSWRAuth(
+  // Jedes Öffnen liest sie neu: die OGS oder ein anderer Elternteil kann die
+  // Anfrage seitdem geändert haben, und eine alte Fassung lehnt das Backend ab.
+  const { data: events } = useFreshSWR(
     active ? parentKeys.requestEvents(studentId, requestType, requestId) : null,
     () => listParentRequestEvents(studentId, requestType, requestId),
-    PARENT_RESOURCE_OPTIONS,
   );
   return useMemo(() => {
     if (!events) return { version: "", editedAt: null };

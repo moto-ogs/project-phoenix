@@ -315,7 +315,7 @@ const ROW_ACTION_BASELINE = new Map(
       "aus Zielen entfernen@785",
     ],
     "src/app/[tenant]/(protected)/meal-plan/page.tsx": [
-      "Gericht entfernen@875",
+      "Gericht entfernen@880",
     ],
     "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
       "Antwort entfernen@1687",
@@ -1607,7 +1607,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Betreuungsangebot duplizieren new Neues Betreuungsangebot Betreuungsangebot bearbeiten@969",
     ],
     "src/components/enrollment/phases-editor.tsx": [
-      "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1037",
+      "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1039",
     ],
     "src/components/files/folder-modal.tsx": [
       "Ordner bearbeiten Neuer Ordner@156",

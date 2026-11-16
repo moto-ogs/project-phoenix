@@ -1,10 +1,12 @@
 import { type ListPreview, previewRow, previewText } from "./list-preview";
 
 /**
- * Shared Träger resources: schools, holidays, settings, documents, reports.
- * Billing, contracts and staff own their keys in `traeger-billing-keys`,
- * `traeger-contract-keys` and `traeger-staff-keys`. Every key lives only in
- * the tab's memory, scoped to the Träger and the account (#4986, #5182).
+ * Shared Träger resources: schools, holidays, settings, documents, report
+ * templates. Billing, billing runs, contracts, evaluations and staff own
+ * their keys in `traeger-billing-keys`, `traeger-billing-run-keys`,
+ * `traeger-contract-keys`, `traeger-report-keys` and `traeger-staff-keys`
+ * (README.md). Every key lives only in the tab's memory, scoped to the
+ * Träger and the account (#4986, #5182).
  */
 export const traegerKeys = {
   // Read by pages of several areas; each has one reader hook in

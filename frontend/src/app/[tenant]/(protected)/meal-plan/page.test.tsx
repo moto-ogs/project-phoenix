@@ -427,3 +427,85 @@ describe("reload after a write (#6652)", () => {
     expect(setDay).toHaveBeenCalledTimes(1);
   });
 });
+
+// Saving compares against the plan this visit read: a week reopened from
+// the cache stays locked until its own read answered, and a failed read
+// shows the error instead of the cached week.
+describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
+  const stored = {
+    date: "2026-10-05",
+    position: 0,
+    dish: "Fischstäbchen",
+    note: null,
+    allergens: [],
+  };
+
+  beforeEach(() => {
+    getMealPlanWeek.mockReset().mockResolvedValueOnce([stored]);
+    getMealOrders.mockReset().mockResolvedValue({
+      rhythm: "daily",
+      detail: "total",
+      days: [],
+    });
+    rights.admin = true;
+    rights.permissions = [];
+    features.mealPlanEnabled = true;
+  });
+
+  async function visitTwice() {
+    const cache = new Map();
+    function SharedCache({ children }: { children: React.ReactNode }) {
+      return (
+        <SWRConfig value={{ provider: () => cache, errorRetryCount: 0 }}>
+          {children}
+        </SWRConfig>
+      );
+    }
+    const page = (
+      <ToastProvider>
+        <MealPlanPage />
+      </ToastProvider>
+    );
+    const first = render(page, { wrapper: SharedCache });
+    expect(
+      await screen.findByDisplayValue("Fischstäbchen"),
+    ).not.toHaveAttribute("readonly");
+    first.unmount();
+    render(page, { wrapper: SharedCache });
+  }
+
+  it("keeps the week locked until this visit's read answered", async () => {
+    const pending = deferred<(typeof stored)[]>();
+    getMealPlanWeek.mockReturnValueOnce(pending.promise);
+
+    await visitTwice();
+
+    await waitFor(() => expect(getMealPlanWeek).toHaveBeenCalledTimes(2));
+    expect(
+      screen.getByRole("status", {
+        name: "Der Bereich „Speiseplan“ wird geladen…",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Fischstäbchen")).not.toBeInTheDocument();
+
+    pending.resolve([{ ...stored, dish: "Nudeln" }]);
+    expect(await screen.findByDisplayValue("Nudeln")).not.toHaveAttribute(
+      "readonly",
+    );
+  });
+
+  it("shows the load error instead of the cached week when the read fails", async () => {
+    getMealPlanWeek.mockRejectedValueOnce(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+
+    await visitTwice();
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Woche im Speiseplan"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Fischstäbchen")).not.toBeInTheDocument();
+  });
+});

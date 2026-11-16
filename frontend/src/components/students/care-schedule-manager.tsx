@@ -386,7 +386,9 @@ export function CareScheduleManager({
   // Not under the "arrival-data-"/"pickup-data-" prefixes the global SSE hook
   // revalidates: the editors seed their drafts from these props, so a remote
   // change arrives through CARE_SCHEDULE_STALE_EVENT below and waits while one
-  // is open. Focus and reconnect would replace the data the same way.
+  // is open. Focus and reconnect would replace the data the same way. Any
+  // other revalidation (the header's „Aktualisieren“) still reaches these
+  // readers; the shown week is held while an editor is open (`heldWeek`).
   const arrivalWeek = useSWRAuth(
     weekKnown ? tenantStudentKeys.arrivalWeek(studentId, fromISO, toISO) : null,
     () => fetchArrivalData(studentId, fromISO ?? "", toISO ?? ""),
@@ -447,14 +449,34 @@ export function CareScheduleManager({
     });
   }
   const previousWeek = shownWeek?.studentId === studentId ? shownWeek : null;
-  const arrivalData =
+  const loadedArrival =
     (pickupWeek.data ? arrivalWeek.data : undefined) ??
     previousWeek?.arrival ??
     EMPTY_ARRIVAL_DATA;
-  const pickupData =
+  const loadedPickup =
     (arrivalWeek.data ? pickupWeek.data : undefined) ??
     previousWeek?.pickup ??
     EMPTY_PICKUP_DATA;
+  // An open editor holds an unsaved draft that was seeded from arrivalData /
+  // pickupData: the exception slide-over re-reads its day whenever those props
+  // change identity, and the weekly edit state measures its removals against
+  // them, so writing them mid-edit silently changes what the user is editing.
+  const isEditorOpen = editorTarget !== null || isEditingWeekly;
+  // The week the open editor was seeded from. Only the user's own writes
+  // replace it (`refreshCareData`); every other answer waits until the editor
+  // closes, the same way deferred remote changes do.
+  const [heldWeek, setHeldWeek] = useState<{
+    arrival: ArrivalData;
+    pickup: PickupData;
+  } | null>(null);
+  if (isEditorOpen && heldWeek === null) {
+    setHeldWeek({ arrival: loadedArrival, pickup: loadedPickup });
+  } else if (!isEditorOpen && heldWeek !== null) {
+    setHeldWeek(null);
+  }
+  const arrivalData =
+    (isEditorOpen ? heldWeek?.arrival : null) ?? loadedArrival;
+  const pickupData = (isEditorOpen ? heldWeek?.pickup : null) ?? loadedPickup;
   const settings = arrivalSettings.data;
   const careDaysSource = settings?.careDaysSource ?? null;
   const schoolPeriods = settings?.schoolPeriods ?? EMPTY_SCHOOL_PERIODS;
@@ -468,9 +490,11 @@ export function CareScheduleManager({
         : undefined,
     [settings],
   );
-  const isLoading =
-    load.failure === undefined &&
-    (!arrivalWeek.data || !pickupWeek.data || !settings);
+  // A failed load stays loading until its error text is there, so no empty
+  // week shows in its place.
+  const isLoading = load.failure
+    ? load.error === null
+    : !arrivalWeek.data || !pickupWeek.data || !settings;
 
   // The edit state needs the care-days source and write access; without either
   // the section stays on its display, so the header never loses its controls.
@@ -601,7 +625,7 @@ export function CareScheduleManager({
   const refreshCareData = useCallback(async () => {
     if (fromISO !== null && toISO !== null) {
       try {
-        await Promise.all([
+        const [arrival, pickup] = await Promise.all([
           mutateArrivalWeek(fetchArrivalData(studentId, fromISO, toISO), {
             revalidate: false,
           }),
@@ -610,6 +634,10 @@ export function CareScheduleManager({
             { revalidate: false },
           ),
         ]);
+        // An editor still open sees its own write.
+        if (arrival && pickup) {
+          setHeldWeek((held) => (held ? { arrival, pickup } : held));
+        }
         clearRefreshError();
       } catch (err) {
         logger.error("care_schedule_refresh_failed", {
@@ -638,11 +666,6 @@ export function CareScheduleManager({
     onUpdate,
   ]);
 
-  // An open editor holds an unsaved draft that was seeded from arrivalData /
-  // pickupData: the exception slide-over re-reads its day whenever those props
-  // change identity, and the weekly edit state measures its removals against
-  // them, so writing them mid-edit silently changes what the user is editing.
-  const isEditorOpen = editorTarget !== null || isEditingWeekly;
   // Read through a ref inside the listener so opening/closing a modal does not
   // resubscribe it, and so the check uses the state at event time.
   const isEditorOpenRef = useRef(isEditorOpen);

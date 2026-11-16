@@ -23,7 +23,7 @@ import {
 import { CaregiverBlockerResolutionPanel } from "~/components/teachers/caregiver-blocker-resolution-panel";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR } from "~/lib/swr";
 import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import { createLogger } from "~/lib/logger";
 import { groupsConcept } from "~/lib/concepts/groups";
@@ -111,22 +111,22 @@ export function CaregiverCapabilityModal({
       );
     }
   }
+  // Jede Öffnung wartet auf ihren eigenen Stand: die Namensfelder starten
+  // daraus, nie aus dem einer früheren Öffnung.
   const {
-    data: state,
+    data: freshState,
     error: stateError,
     mutate: mutateState,
-  } = useSWRAuth(
-    capabilityKey,
-    () =>
-      operatorSchoolId
-        ? caregiverCapabilityService.getOperatorAccountCapability(
-            operatorSchoolId,
-            accountId,
-          )
-        : caregiverCapabilityService.getTenantAccountCapability(accountId),
-    // Ein anderes Konto zeigt nie den Stand des vorigen.
-    { keepPreviousData: false },
+  } = useFreshSWR(capabilityKey, () =>
+    operatorSchoolId
+      ? caregiverCapabilityService.getOperatorAccountCapability(
+          operatorSchoolId,
+          accountId,
+        )
+      : caregiverCapabilityService.getTenantAccountCapability(accountId),
   );
+  // Scheitert das Laden, zeigt der Dialog den Fehler, keinen älteren Stand.
+  const state = stateError ? undefined : freshState;
   const loading = capabilityKey !== null && !state && !stateError;
   // Ladefehler im Dialog, Speicherfehler oben im Dialog, beide mit
   // Wiederholen (#2517).

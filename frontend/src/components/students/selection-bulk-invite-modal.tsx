@@ -16,7 +16,7 @@ import {
 } from "~/lib/guardian-bulk-invite-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 const logger = createLogger({ component: "SelectionBulkInviteModal" });
@@ -80,16 +80,20 @@ export function SelectionBulkInviteModal({
   // „Wiederholen“ sendet mit der aktuellen Auswahl.
   const latestSendRef = useRef<() => Promise<void>>(async () => undefined);
 
-  // The dry run only counts; nothing is sent until the click below.
-  const previewRead = useSWRAuth(
+  // The dry run only counts; nothing is sent until the click below. The
+  // button names the counts of this opening's own dry run, never a cached one.
+  const previewRead = useFreshSWR(
     isOpen ? tenantStudentKeys.bulkInvitePreview(studentIds, resendOpen) : null,
     () => bulkInviteGuardians(studentIds, { dryRun: true, resendOpen }),
-    { keepPreviousData: false },
   );
   const { mutate: mutatePreview } = previewRead;
-  const preview = previewRead.data ?? null;
-  const load = useSwrResourceLoadError([previewRead], "die Vorschau", () =>
-    mutatePreview(),
+  // A failed dry run shows its error, not the counts of an earlier one.
+  const previewData = previewRead.error ? undefined : previewRead.data;
+  const preview = previewData ?? null;
+  const load = useSwrResourceLoadError(
+    [{ data: previewData, error: previewRead.error }],
+    "die Vorschau",
+    () => mutatePreview(),
   );
 
   const toMail = preview

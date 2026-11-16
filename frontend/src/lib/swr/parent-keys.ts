@@ -40,13 +40,33 @@ export const parentKeys = {
     key === "parent-shell-children" ||
     key.startsWith("parent-features-") ||
     key.startsWith("parent-today-"),
+  /**
+   * What a staff decision or a parent write on a child changes besides the
+   * shared child resources: its care state and offerings, its courses and
+   * the history of its requests. Without a child, that of every child.
+   */
+  isChildStatusResource: (key: string, studentId?: string | null) => {
+    if (!studentId)
+      return /^parent-child-.+?-(?:status-|courses$|request-events-)/.test(key);
+    const child = `parent-child-${encodeURIComponent(studentId)}-`;
+    return (
+      key.startsWith(`${child}status-`) ||
+      key === `${child}courses` ||
+      key.startsWith(`${child}request-events-`)
+    );
+  },
   /** Prefixes of `parentInboxKeys.groupThread` / `childThreads`. */
   groupThreadFamily: GROUP_THREAD_FAMILY,
   childThreadsFamily: CHILD_THREADS_FAMILY,
+  /**
+   * What the unread refresh reloads. A conversation or group thread stays
+   * out: reading it marks it read, so a refresh would mark a message read
+   * in a hidden tab, and its reader's badge nudge fires this refresh again.
+   * Those readers read anew on every opening instead.
+   */
   isMessagesResource: (key: string) =>
     key === "parent-messages" ||
     key === "parent-group-threads" ||
-    key.startsWith(GROUP_THREAD_FAMILY) ||
     key.startsWith(CHILD_THREADS_FAMILY),
   isNewsResource: (key: string) => key === "parent-announcements",
   isResource: (key: string) =>
@@ -120,6 +140,9 @@ export const parentKeys = {
   holidayRegistrationEntries: () => "parent-holiday-registration-entries",
   profile: () => "parent-profile",
   /** The conversation of one child with one audience (#5011, #5200). */
+  /** Prefix of every conversation (each audience) of one child. */
+  conversationFamily: (studentId: string) =>
+    `parent-conversation-${encodeURIComponent(studentId)}-`,
   conversation: (studentId: string, audience: string) =>
     `parent-conversation-${encodeURIComponent(studentId)}-${encodeURIComponent(audience)}`,
 } as const;

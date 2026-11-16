@@ -225,7 +225,12 @@ export function ChildOfferingAdjustment({
     "die Angebotsliste",
     () => catalogRead.mutate(),
   );
-  const loading = editing && !catalogLoaded && !catalogError.failure;
+  // A failed load stays loading until its error text is there, so no empty
+  // list shows in its place.
+  const loading =
+    editing &&
+    !catalogLoaded &&
+    (!catalogError.failure || catalogError.error === null);
   // Ohne Hinweis läse sich die fehlende Liste als "nie geändert".
   const historyError = useSwrResourceLoadError(
     [{ data: historyRead.data, error: historyRead.error }],

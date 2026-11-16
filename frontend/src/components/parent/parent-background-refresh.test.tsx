@@ -9,7 +9,12 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
-import { useParentChildren } from "~/lib/hooks/use-parent-resources";
+import {
+  PARENT_RESOURCE_OPTIONS,
+  useParentChildren,
+} from "~/lib/hooks/use-parent-resources";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ApiError } from "~/lib/api-error";
@@ -202,5 +207,70 @@ describe("shared SWR load error semantics", () => {
     await failChildrenRefresh();
     expect(screen.getByText("loaded")).toBe(content);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+describe("parent child status refresh", () => {
+  function ChildState({ studentId }: Readonly<{ studentId: string }>) {
+    const offerings = useSWRAuth(
+      parentKeys.careOfferings(studentId),
+      () => api.getChildCareOfferings(studentId),
+      PARENT_RESOURCE_OPTIONS,
+    );
+    const courses = useSWRAuth(
+      parentKeys.courses(studentId),
+      () => api.getChildCourses(studentId),
+      PARENT_RESOURCE_OPTIONS,
+    );
+    return offerings.data && courses.data ? <p>{studentId} geladen</p> : null;
+  }
+  function Fixture({ open }: Readonly<{ open: boolean }>) {
+    return (
+      <>
+        <ParentRealtimeBridge />
+        {open ? (
+          <>
+            <ChildState studentId="42" />
+            <ChildState studentId="43" />
+          </>
+        ) : null}
+      </>
+    );
+  }
+
+  it("reloads the decided child's state when its page opens again", async () => {
+    const view = render(<Fixture open />, {
+      wrapper: ParentResourceTestProvider,
+    });
+    expect(await screen.findByText("42 geladen")).toBeInTheDocument();
+    expect(await screen.findByText("43 geladen")).toBeInTheDocument();
+    view.rerender(<Fixture open={false} />);
+    // A staff decision on child 42 while its page is closed.
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent("parent-child-status-refresh", {
+          detail: { studentId: "42" },
+        }),
+      );
+    });
+    view.rerender(<Fixture open />);
+
+    await waitFor(() =>
+      expect(
+        vi
+          .mocked(api.getChildCareOfferings)
+          .mock.calls.filter(([id]) => id === "42"),
+      ).toHaveLength(2),
+    );
+    await waitFor(() =>
+      expect(
+        vi.mocked(api.getChildCourses).mock.calls.filter(([id]) => id === "42"),
+      ).toHaveLength(2),
+    );
+    expect(
+      vi
+        .mocked(api.getChildCareOfferings)
+        .mock.calls.filter(([id]) => id === "43"),
+    ).toHaveLength(1);
   });
 });

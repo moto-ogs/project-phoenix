@@ -133,6 +133,24 @@ describe("TraegerMonatsbeitraegePage start pending (#6593)", () => {
     );
   });
 
+  it("reads the schools' open runs again after a start", async () => {
+    const { answer } = await startRun();
+    expect(review.fetchCareRunSchools).toHaveBeenCalledOnce();
+
+    await act(async () => answer.resolve(RUN));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: TITLE })).toBeNull(),
+    );
+    review.fetchCareRunSchools.mockResolvedValue([
+      { id: "1", name: "Grundschule Birkenfeld", openRunId: "12" },
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: TITLE }));
+
+    await waitFor(() =>
+      expect(review.fetchCareRunSchools).toHaveBeenCalledTimes(2),
+    );
+  });
+
   it("keeps the dialog open with the error after a refused start", async () => {
     const { answer } = await startRun();
 

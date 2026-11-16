@@ -109,7 +109,10 @@ lists the remaining files and only shrinks. Read through `useSWRAuth` with a
 factory key instead. Träger pages and cards use `useTraegerResource`
 (`components/traeger/use-traeger-resource.ts`): Träger session gate, refusal
 rules and load error in one return shape. A read the access log records on a
-person's explicit click (`utilization-children.tsx`) stays a click handler. There is no
+person's explicit click (`utilization-children.tsx`) stays a click handler.
+A read that must be new each time its surface opens (the preview of a
+deletion, the version an edit saves against, a form's template) uses
+`useFreshSWR`: it shows nothing of an earlier opening. There is no
 runtime registry. Direct package imports outside this boundary and new free
 hook keys fail oxlint; both legacy baselines are shrink-only. A free key is
 anything at a `useSWRAuth` or `useImmutableSWR` call that is

@@ -179,6 +179,33 @@ describe("known-child comparison inputs", () => {
     },
   );
 
+  it("reads the schools again on every opening and shows no cached match", async () => {
+    // Each comparison stands in the schools' access logs: one read per
+    // opening, never an answer of an earlier one.
+    const first = new Map([["9", "31"]]);
+    const second = new Map([["9", "32"]]);
+    let finish!: (matches: ReadonlyMap<string, string>) => void;
+    mockFetchKnown.mockResolvedValueOnce(first).mockReturnValueOnce(
+      new Promise<ReadonlyMap<string, string>>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const children = knownChildrenKey(HOLIDAY_REGISTRATION.children);
+    const { result, rerender } = renderHook(
+      ({ children }) => useHolidayKnownChildren("5", "7", children),
+      { wrapper: TraegerResourceTestProvider, initialProps: { children } },
+    );
+    await waitFor(() => expect(result.current).toEqual(first));
+
+    rerender({ children: "" });
+    rerender({ children });
+    await waitFor(() => expect(mockFetchKnown).toHaveBeenCalledTimes(2));
+    expect(result.current.size).toBe(0);
+
+    await act(async () => finish(second));
+    expect(result.current).toEqual(second);
+  });
+
   it("ignores an earlier response after switching registrations", async () => {
     let finishEarlier!: (matches: ReadonlyMap<string, string>) => void;
     mockFetchKnown.mockReturnValueOnce(

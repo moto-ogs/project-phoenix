@@ -20,7 +20,7 @@ import {
 } from "~/lib/enrollment-admin-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 
 const logger = createLogger({ component: "AdminEnrollmentDeletionModal" });
@@ -67,11 +67,8 @@ export function AdminEnrollmentDeletionModal({
   // „Wiederholen“ löscht mit dem aktuellen Grund, nicht dem vom Fehler.
   const latestDeleteRef = useRef<() => Promise<void>>(async () => undefined);
 
-  const {
-    data: impact,
-    error: impactError,
-    mutate: mutateImpact,
-  } = useSWRAuth(
+  // Confirmed against this opening's own preview, never an earlier one.
+  const impactRead = useFreshSWR(
     isOpen
       ? childId
         ? enrollmentKeys.childDeleteImpact(requestId, childId)
@@ -81,12 +78,13 @@ export function AdminEnrollmentDeletionModal({
       childId
         ? getAdminChildDeleteImpact(requestId, childId)
         : getAdminRequestDeleteImpact(requestId),
-    { keepPreviousData: false },
   );
+  // A failed load of this opening shows the error, not an earlier preview.
+  const impact = impactRead.error ? undefined : impactRead.data;
   const previewError = useSwrResourceLoadError(
-    [{ data: impact, error: impactError }],
+    [{ data: impact, error: impactRead.error }],
     "die Vorschau der Löschung",
-    () => mutateImpact(),
+    () => impactRead.mutate(),
   );
   const loadingPreview = isOpen && !impact && !previewError.failure;
 

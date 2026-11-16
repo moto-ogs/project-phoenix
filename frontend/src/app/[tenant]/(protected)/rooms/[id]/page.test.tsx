@@ -92,16 +92,23 @@ const { removalImpact } = vi.hoisted(() => ({
 }));
 
 vi.mock("~/lib/swr", () => ({
-  // Der Löschdialog liest die Vorschau über den gemeinsamen Cache.
-  useSWRAuth: (key: string | null) => ({
-    data: key?.startsWith("room-removal-impact-") ? removalImpact : undefined,
+  useSWRAuth: () => ({
+    data: undefined,
     error: undefined,
     isLoading: false,
     isValidating: false,
     mutate: () => Promise.resolve(undefined),
   }),
+  // Der Löschdialog liest die Vorschau je Öffnen neu.
+  useFreshSWR: (key: string | null) => ({
+    data: key?.startsWith("room-removal-impact-") ? removalImpact : undefined,
+    error: undefined,
+    isLoading: false,
+    isValidating: false,
+    fresh: true,
+    mutate: () => Promise.resolve(undefined),
+  }),
   useSWRSeedFrom: () => () => undefined,
-  useInvalidateMatching: () => () => Promise.resolve([]),
   useTenantMutate: () => vi.fn(() => Promise.resolve()),
   useTenantMutateMatching: () => vi.fn(() => Promise.resolve()),
 }));

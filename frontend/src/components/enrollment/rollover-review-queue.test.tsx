@@ -342,6 +342,32 @@ describe("RolloverReviewQueue", () => {
     expect(await screen.findByText(/Lina Beispiel/)).toBeInTheDocument();
   });
 
+  it("never shows the empty list while a failed first load waits for its text", async () => {
+    mockListReview.mockRejectedValueOnce(
+      new ApiError("kaputt", 503, { code: "general.unavailable" }),
+    );
+    // Records every text the page shows on the way to the error.
+    let emptyShown = false;
+    const observer = new MutationObserver(() => {
+      if (document.body.textContent?.includes("Keine offenen Einträge"))
+        emptyShown = true;
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    render(<RolloverReviewQueue phaseID="77" />);
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Prüfliste"),
+      ),
+    ).toBeInTheDocument();
+    observer.disconnect();
+    expect(emptyShown).toBe(false);
+  });
+
   // #6652: a write holds once it is through; a failed reload keeps the list
   // and says the change is saved, and its retry only reloads.
   describe("reload after a write (#6652)", () => {

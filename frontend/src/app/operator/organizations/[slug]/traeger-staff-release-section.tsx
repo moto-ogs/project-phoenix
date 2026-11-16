@@ -89,7 +89,13 @@ export function TraegerStaffReleaseSection({
   const formErrors = useApiFormError(formRef);
   const { show: showError } = useApiErrorDisplay();
   const { success } = useToast();
-  const afterWrite = useRefreshAfterWrite("die Freigabe", () => mutate());
+  // The reload reads directly: a bare revalidation never rejects, and its
+  // failure must say that the change is saved but the display is old.
+  const afterWrite = useRefreshAfterWrite("die Freigabe", () =>
+    mutate(traegerStaffReleaseService.getState(organizationId), {
+      revalidate: false,
+    }),
+  );
 
   const grant = async () => {
     formErrors.clear();

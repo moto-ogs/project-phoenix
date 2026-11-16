@@ -7,6 +7,8 @@ import type {
   ContractImportResult,
   ContractImportRow,
 } from "~/lib/traeger-care-contract-import-api";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import TraegerContractImportPage from "./page";
 
 const api = vi.hoisted(() => ({
@@ -125,11 +127,12 @@ function preview(
   };
 }
 
-async function choose(result = preview()) {
+async function choose(result = preview(), beside: ReactNode = null) {
   api.previewContractImport.mockResolvedValueOnce(result);
   render(
     <TraegerResourceTestProvider>
       <TraegerContractImportPage />
+      {beside}
     </TraegerResourceTestProvider>,
   );
   fireEvent.change(screen.getByLabelText("Datei wählen"), {
@@ -140,6 +143,12 @@ async function choose(result = preview()) {
     },
   });
   await screen.findByRole("heading", { name: "Spalten zuordnen" });
+}
+
+/** The contracts page's read of the children still waiting for a contract. */
+function Candidates({ read }: { read: () => Promise<unknown> }) {
+  useTraegerResource(traegerContractKeys.candidates(), read, "die Kinder");
+  return null;
 }
 
 describe("Vertragsimport", () => {
@@ -189,6 +198,24 @@ describe("Vertragsimport", () => {
       screen.getByText(/1 schon vorhanden, 0 nicht übernommen/),
     ).toBeInTheDocument();
     expect(await screen.findAllByText("kinder.csv")).not.toHaveLength(0);
+  });
+
+  it("reads the children without a contract again after the import", async () => {
+    const readCandidates = vi.fn().mockResolvedValue([]);
+    await choose(preview(), <Candidates read={readCandidates} />);
+    await waitFor(() => expect(readCandidates).toHaveBeenCalledOnce());
+    api.applyContractImport.mockResolvedValueOnce(
+      preview({
+        applied: true,
+        counts: { ...preview().counts, ready: 0, imported: 1 },
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "1 Vertrag übernehmen" }),
+    );
+    await screen.findByText("1 Vertrag übernommen");
+
+    await waitFor(() => expect(readCandidates).toHaveBeenCalledTimes(2));
   });
 
   it("asks for the school and the module of a file without those columns", async () => {

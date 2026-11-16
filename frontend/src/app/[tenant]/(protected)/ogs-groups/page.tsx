@@ -191,7 +191,7 @@ function useGroupTransferData(
 ) {
   const reading = open && !!groupId;
   // Every opening reads the current availability again (no deduplication
-  // window), as the dialog did before it read through the cache.
+  // window): a transfer is planned against who is free now.
   const overview = useSWRAuth(
     reading ? tenantListKeys.substitutionOverview() : null,
     () => substitutionService.fetchOverview(),

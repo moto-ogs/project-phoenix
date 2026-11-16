@@ -12,7 +12,7 @@
 import { useCallback, useState } from "react";
 
 import type { ClosingDayDraft } from "~/components/planning/closing-day-modal";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   previewTraegerClosingDayHolidayBookings,
@@ -55,12 +55,14 @@ export function useClosingDayHolidayImpact(
     requested !== null && rested === requested
       ? traegerKeys.closingDayImpact(requested, saved, deleting)
       : null;
+  // Jedes Öffnen wartet auf seine eigene Vorschau: das Speichern bestätigt
+  // mit deren Zeichen, nie mit dem einer früheren.
   const {
     data: impact,
     loading,
     error,
     reload,
-  } = useTraegerResource(
+  } = useFreshTraegerResource(
     key,
     () =>
       requested

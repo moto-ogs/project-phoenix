@@ -215,10 +215,12 @@ export default function TraegerCareRunPage() {
     "die Liste der Schreiben",
   );
 
-  // The list of runs shows the new state of this one.
+  // The list of runs and the start dialog's open run per school show the
+  // new state of this one.
   const changed = async (next: CareRunDetail) => {
     await mutate(next, { revalidate: false });
     void invalidateFamily(traegerBillingRunKeys.careRuns());
+    void invalidateFamily(traegerBillingRunKeys.careRunSchoolsFamily);
   };
 
   const release = async () => {

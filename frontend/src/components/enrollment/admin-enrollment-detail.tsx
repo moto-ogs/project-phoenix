@@ -185,7 +185,11 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     "die Anmeldung",
     () => mutateDetail(),
   );
-  const loading = !data && !detailLoad.failure;
+  // A failed load stays loading until its error text is there, so no
+  // fallback shows in its place.
+  const loading =
+    (!data && !detailLoad.failure) ||
+    (detailLoad.failure !== undefined && detailLoad.error === null);
   // A reload after a write that fails stands above the shown request, which
   // stays on screen and may be old.
   const reloadError = useApiLoadError();

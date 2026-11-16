@@ -401,3 +401,40 @@ describe("OgsConversation keeps the composer while care reloads (#7113)", () => 
     expect(field).toHaveFocus();
   });
 });
+
+describe("OgsConversation on reopen", () => {
+  it("reads the conversation again when the chat opens anew within a minute", async () => {
+    const staffMessage = {
+      id: "m2",
+      kind: "message",
+      sender_kind: "staff",
+      sender_name: "Frau Berg",
+      body: "Felix wird heute früher abgeholt?",
+      created_at: "2026-09-09T11:00:00Z",
+    };
+    mockGetConversation
+      .mockResolvedValueOnce(thread)
+      .mockResolvedValueOnce({ ...thread, messages: [staffMessage] });
+    function Chat({ open }: Readonly<{ open: boolean }>) {
+      return (
+        <ParentResourceTestProvider>
+          {open ? <OgsConversation studentId="42" /> : null}
+        </ParentResourceTestProvider>
+      );
+    }
+    const view = baseRender(<Chat open />);
+    expect(
+      await screen.findByText("Noch keine Nachrichten", { exact: false }),
+    ).toBeInTheDocument();
+
+    view.rerender(<Chat open={false} />);
+    view.rerender(<Chat open />);
+
+    // The read on opening marks the thread read on the server and brings
+    // what the OGS wrote meanwhile.
+    expect(
+      await screen.findByText("Felix wird heute früher abgeholt?"),
+    ).toBeInTheDocument();
+    expect(mockGetConversation).toHaveBeenCalledTimes(2);
+  });
+});

@@ -29,6 +29,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   useSyncExternalStore,
 } from "react";
 import { useSession } from "next-auth/react";
@@ -532,6 +533,50 @@ export function useSWRAuth<T, E = Error>(
   // Fetches only while the session grants access (hasSessionAccess) and, in
   // the school portal, carries its school: swrScopePrefix is null otherwise.
   return useScopedSWR<T, E>(key, fetcher, options);
+}
+
+/**
+ * A read that has to be fresh each time its surface opens: the preview of a
+ * deletion, the version an edit is saved against, a form's template. `data`
+ * stays undefined until this opening's own request has answered, so nothing
+ * decides or types against the cached answer of an earlier opening; `fresh`
+ * says that it has. A `null` key closes the opening, the next key starts a
+ * new one. Focus and reconnect do not replace what the person is looking at.
+ */
+export function useFreshSWR<T, E = Error>(
+  key: string | null,
+  fetcher: () => Promise<T>,
+  options?: ReaderOptions<T, E>,
+): ScopedSWRResponse<T, E> & { fresh: boolean } {
+  const read = useScopedSWR<T, E>(key, fetcher, {
+    keepPreviousData: false,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    ...options,
+    revalidateOnMount: true,
+    dedupingInterval: 0,
+  });
+  const [answeredKey, setAnsweredKey] = useState<string | null>(null);
+  // Seen in flight first: before SWR starts the request, a cached answer
+  // looks settled.
+  const [flightKey, setFlightKey] = useState<string | null>(null);
+  if (key === null) {
+    if (answeredKey !== null) setAnsweredKey(null);
+    if (flightKey !== null) setFlightKey(null);
+  } else if (read.isValidating) {
+    if (flightKey !== key) setFlightKey(key);
+    if (answeredKey === key) setAnsweredKey(null);
+  } else if (flightKey === key && answeredKey !== key) {
+    setAnsweredKey(key);
+  }
+  const fresh = key !== null && answeredKey === key && !read.isValidating;
+  return {
+    ...read,
+    // SWR keeps the earlier answer next to a failure; this opening has none.
+    data: fresh && read.error === undefined ? read.data : undefined,
+    isLoading: key !== null && !fresh,
+    fresh,
+  };
 }
 
 /**

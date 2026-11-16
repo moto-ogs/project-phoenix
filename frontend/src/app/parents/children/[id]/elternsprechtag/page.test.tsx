@@ -167,4 +167,32 @@ describe("Elternsprechtag in der Eltern-App (#4801)", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Elternsprechtag")).toBeInTheDocument();
   });
+
+  it("keeps this child's page when only a sibling's features fail", async () => {
+    vi.mocked(listMyChildren).mockResolvedValue([
+      { student_id: "42", first_name: "Mia" } as Child,
+      { student_id: "43", first_name: "Ben" } as Child,
+    ]);
+    vi.mocked(getChildFeatures).mockImplementation((studentId) =>
+      studentId === "43"
+        ? Promise.reject(
+            new ApiError("offline", 503, { code: "general.unavailable" }),
+          )
+        : Promise.resolve({ conference_book_allowed: true } as ChildFeatures),
+    );
+    vi.mocked(fetchChildParentConferences).mockResolvedValue([offer]);
+    await renderPage();
+
+    expect(
+      await screen.findByRole("button", { name: "14:00" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        catalogText("general.unavailable", "den Elternsprechtag"),
+        {
+          exact: false,
+        },
+      ),
+    ).not.toBeInTheDocument();
+  });
 });

@@ -38,6 +38,7 @@ import { ApiError } from "~/lib/api-error";
 import { downloadBlob } from "~/lib/file-download";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
 import {
   REFRESH_WHILE_QUEUED_MS,
   traegerBillingRunKeys,
@@ -96,6 +97,7 @@ export default function TraegerCareRunLettersPage() {
   const actionErrors = useApiErrorDisplay();
   const { success } = useToast();
   const router = useRouter();
+  const invalidateFamily = useInvalidateFamily();
   const [sendingAll, setSendingAll] = useState(false);
   const [sendingKey, setSendingKey] = useState<string | null>(null);
   const [printing, setPrinting] = useState<"all" | "without_email" | null>(
@@ -234,6 +236,8 @@ export default function TraegerCareRunLettersPage() {
             schoolIds,
             invoiceDate: null,
           });
+          // The list of runs and the start dialog's open run per school.
+          void invalidateFamily(traegerBillingRunKeys.careRunsFamily);
         } catch (err) {
           if (
             !(err instanceof ApiError) ||

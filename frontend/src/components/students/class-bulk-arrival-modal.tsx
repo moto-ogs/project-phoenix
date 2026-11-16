@@ -14,7 +14,7 @@ import { ClassArrivalExceptionPanel } from "./class-arrival-exception-panel";
 import type { Student } from "~/lib/student-helpers";
 import { createLogger } from "~/lib/logger";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   type ArrivalScheduleInput,
@@ -142,15 +142,16 @@ export function FilteredBulkArrivalModal({
   const schoolClass =
     filter.type === "school_class" ? filter.schoolClass : null;
 
-  const classTimes = useSWRAuth(
+  const classTimes = useFreshSWR(
     isOpen && schoolClass
       ? tenantStudentKeys.classArrivalTimes(schoolClass)
       : null,
     () => fetchClassArrivalTimes(schoolClass ?? ""),
-    { keepPreviousData: false },
   );
+  // A failed load of this opening fills nothing from an earlier answer.
+  const classTimesData = classTimes.error ? undefined : classTimes.data;
   const classTimesLoad = useSwrResourceLoadError(
-    [classTimes],
+    [{ data: classTimesData, error: classTimes.error }],
     "die Klassenzeit",
     () => classTimes.mutate(),
   );
@@ -170,18 +171,14 @@ export function FilteredBulkArrivalModal({
     setView("weekly");
   }, [isOpen, schoolClass]);
 
-  // Fill the draft once per opening, from an answer read in this opening
-  // (not while it still revalidates), so later refreshes never replace
-  // what is being typed.
-  const classTimesData = classTimes.data;
-  const classTimesValidating = classTimes.isValidating;
+  // Fill the draft once per opening, from an answer read in this opening,
+  // so later refreshes never replace what is being typed.
   useEffect(() => {
     if (
       !isOpen ||
       !schoolClass ||
       seededClass === schoolClass ||
-      !classTimesData ||
-      classTimesValidating
+      !classTimesData
     )
       return;
     const next = initialDraft();
@@ -191,7 +188,7 @@ export function FilteredBulkArrivalModal({
     setDraft(next);
     setLastChanged(classTimesData.updated_at ?? null);
     setSeededClass(schoolClass);
-  }, [isOpen, schoolClass, seededClass, classTimesData, classTimesValidating]);
+  }, [isOpen, schoolClass, seededClass, classTimesData]);
 
   const targetTitle =
     filter.type === "school_class"

@@ -60,7 +60,7 @@ import {
 } from "~/lib/care-offering-booking-stats";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useFreshSWR, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { withLateInviteQuery } from "~/lib/enrollment-http";
 import { Loading } from "~/components/ui/loading";
@@ -228,12 +228,14 @@ export function ManualApprovedEnrollmentModal({
   phase: Phase;
   gradeLevelMax: number | null;
 }>) {
-  const bootstrapRead = useSWRAuth(
+  // The form reads its template once when it mounts: every opening waits for
+  // its own answer, so no deleted offering or outdated template is offered.
+  const bootstrapRead = useFreshSWR(
     isOpen ? enrollmentKeys.manualEnrollmentBootstrap(phase.id) : null,
     () => fetchManualEnrollmentBootstrap(phase.id),
-    { keepPreviousData: false },
   );
-  const bootstrap = bootstrapRead.data;
+  // A failed load of this opening shows the error, not an earlier template.
+  const bootstrap = bootstrapRead.error ? undefined : bootstrapRead.data;
   const prefetchedData = useMemo<EnrollmentFormPrefetchedData | null>(
     () => (bootstrap ? toManualPrefetchedData(bootstrap) : null),
     [bootstrap],

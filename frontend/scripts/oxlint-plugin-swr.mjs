@@ -362,8 +362,10 @@ const keyBaseline = JSON.parse(
 );
 const KEYED_HOOKS = new Set([
   "useSWRAuth",
+  "useFreshSWR",
   "useImmutableSWR",
   "useTraegerResource",
+  "useFreshTraegerResource",
 ]);
 // Portal readers that hand their caller's key on; the caller's key is checked.
 const KEY_FORWARDERS = new Set([
@@ -523,8 +525,10 @@ const noFreeKey = {
 // scope lock and repeats its own stale-answer and retry handling. Counted per
 // file as effects that reach asynchronous work and a state setter; the
 // baseline is shrink-only. Sessionless pages and DOM work (fonts, images,
-// clipboard) that match keep their baseline entry or an oxlint-disable line
-// with the reason.
+// clipboard) that match keep their baseline entry or an
+// `oxlint-disable-next-line swr/no-effect-load -- <reason>` line.
+// Not traced: loaders from another module (`const { load } = useLoader()`),
+// `useReducer` dispatch and setters passed in as props.
 const effectLoadBaseline = JSON.parse(
   readFileSync(
     new URL("./swr-effect-load-baseline.json", import.meta.url),
@@ -550,6 +554,13 @@ const FUNCTION_TYPES = new Set([
   "FunctionExpression",
   "FunctionDeclaration",
 ]);
+
+// Hooks whose first argument is the function they keep.
+const FUNCTION_KEEPERS = new Set(["useCallback", "useEffectEvent", "useRef"]);
+// Handlers of a promise without `.then`: they mark a load only when they
+// set state themselves, a logging `.catch` beside a synchronous setter
+// does not.
+const SETTLE_METHODS = new Set(["catch", "finally"]);
 
 function calleeName(node) {
   if (node?.type === "Identifier") return node.name;
@@ -604,14 +615,24 @@ const noEffectLoad = {
     const functions = new Map();
     const effects = [];
 
+    // The function a binding holds: itself, the one a hook keeps
+    // (`useCallback(fn)`, `useEffectEvent(fn)`, `useRef(fn)` for
+    // `ref.current()`), the one `useMemo(() => fn)` returns, or another
+    // binding's (an Identifier, resolved when the effect is checked).
+    function held(init) {
+      if (init?.type !== "CallExpression") return init;
+      const hook = calleeName(init.callee);
+      if (FUNCTION_KEEPERS.has(hook)) return held(init.arguments[0]);
+      const factory = init.arguments[0];
+      if (hook !== "useMemo" || !FUNCTION_TYPES.has(factory?.type)) return null;
+      if (factory.body.type !== "BlockStatement") return held(factory.body);
+      const last = factory.body.body.at(-1);
+      return last?.type === "ReturnStatement" ? held(last.argument) : null;
+    }
+
     function remember(name, init) {
-      let fn = init;
-      if (
-        fn?.type === "CallExpression" &&
-        calleeName(fn.callee) === "useCallback"
-      )
-        fn = fn.arguments[0];
-      if (!FUNCTION_TYPES.has(fn?.type)) return;
+      const fn = held(init);
+      if (!FUNCTION_TYPES.has(fn?.type) && fn?.type !== "Identifier") return;
       const known = functions.get(name) ?? [];
       known.push(fn);
       functions.set(name, known);
@@ -633,15 +654,32 @@ const noEffectLoad = {
         if (node.id) remember(node.id.name, node);
       },
       CallExpression(node) {
+        const run = node.arguments[0];
         if (
           EFFECT_HOOKS.has(calleeName(node.callee)) &&
-          FUNCTION_TYPES.has(node.arguments[0]?.type)
+          (FUNCTION_TYPES.has(run?.type) || run?.type === "Identifier")
         )
           effects.push(node);
       },
       "Program:exit"(program) {
         // Asynchronous work and a state setter anywhere the effect reaches:
         // its own body and the component's functions it calls or passes on.
+        // `.catch(setError)` or a handler whose own body calls a setter.
+        function setsStateDirectly(handler) {
+          if (handler.type === "Identifier") return setters.has(handler.name);
+          if (!FUNCTION_TYPES.has(handler.type)) return false;
+          let found = false;
+          walkExecuted(handler.body, (node) => {
+            if (
+              node.type === "CallExpression" &&
+              node.callee.type === "Identifier" &&
+              setters.has(node.callee.name)
+            )
+              found = true;
+          });
+          return found;
+        }
+
         function loads(effect) {
           const seen = new Set();
           const queue = [effect.arguments[0]];
@@ -649,22 +687,40 @@ const noEffectLoad = {
           let setsState = false;
           while (queue.length > 0) {
             const fn = queue.pop();
-            if (seen.has(fn)) continue;
+            if (!fn || seen.has(fn)) continue;
             seen.add(fn);
+            // `useEffect(load)`, or a binding that holds another one.
+            if (fn.type === "Identifier") {
+              queue.push(...(functions.get(fn.name) ?? []));
+              continue;
+            }
             const visit = (node) => {
               if (node.type === "AwaitExpression") asynchronous = true;
               if (node.type !== "CallExpression") return;
+              const method =
+                node.callee.type === "MemberExpression"
+                  ? calleeName(node.callee)
+                  : null;
+              if (method === "then") asynchronous = true;
               if (
-                node.callee.type === "MemberExpression" &&
-                calleeName(node.callee) === "then"
+                SETTLE_METHODS.has(method) &&
+                node.arguments.some(setsStateDirectly)
               )
                 asynchronous = true;
-              // Called or handed on (`.then(setRows)`, `run(load)`).
+              // Called or handed on (`.then(setRows)`, `run(load)`,
+              // `latest.current()`).
               for (const used of [node.callee, ...node.arguments]) {
-                if (used.type !== "Identifier") continue;
-                if (setters.has(used.name)) setsState = true;
-                for (const next of functions.get(used.name) ?? [])
-                  queue.push(next);
+                const name =
+                  used.type === "Identifier"
+                    ? used.name
+                    : used.type === "MemberExpression" &&
+                        calleeName(used) === "current" &&
+                        used.object.type === "Identifier"
+                      ? used.object.name
+                      : null;
+                if (name === null) continue;
+                if (setters.has(name)) setsState = true;
+                for (const next of functions.get(name) ?? []) queue.push(next);
               }
             };
             // `() => () => cleanup()`: the returned function does not run.

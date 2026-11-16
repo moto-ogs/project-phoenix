@@ -45,7 +45,7 @@ import { createLogger } from "~/lib/logger";
 import { useNavigationGuard } from "~/lib/hooks/use-navigation-guard";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR } from "~/lib/swr";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import {
   useMealPlanEnabled,
@@ -247,16 +247,19 @@ export default function MealPlanPage() {
     status === "authenticated" && canReadPlan && mealPlanEnabled
       ? tenantListKeys.mealPlanWeek(mondayISO)
       : null;
-  // Every visit of a week reads its stored plan again (no deduplication).
-  const week = useSWRAuth(weekKey, () => getMealPlanWeek(mondayISO), {
-    keepPreviousData: false,
-    dedupingInterval: 0,
-  });
+  // Saving compares against the plan this visit read: a cached answer of an
+  // earlier visit may miss a colleague's change and would be overwritten.
+  // So the week is shown and editable only once this visit's own read of it
+  // answered.
+  const week = useFreshSWR(weekKey, () => getMealPlanWeek(mondayISO));
+  // SWR keeps the cached answer next to a failed read; it is not this
+  // visit's plan.
+  const weekData = week.error ? undefined : week.data;
   // True when the displayed week failed to load. The grid is then NOT shown:
   // editing/saving against an unknown persisted state could overwrite real
   // meals based on a failed load, so we surface an error + retry instead.
   const { error: loadError } = useSwrResourceLoadError(
-    [week],
+    [{ data: weekData, error: week.error }],
     "die Woche im Speiseplan",
     () => week.mutate(),
   );
@@ -264,7 +267,7 @@ export default function MealPlanPage() {
   const loading =
     weekKey === null ||
     reloading ||
-    (week.data === undefined && (!week.error || week.isValidating));
+    (weekData === undefined && (!week.error || week.isValidating));
   const appliedWeek = useRef<{ key: string; data: MealPlanEntry[] } | null>(
     null,
   );
@@ -310,22 +313,24 @@ export default function MealPlanPage() {
   );
   const isDirty = changedDays.length > 0;
 
-  // Freeze all edit controls while a save, week-load, or "Vorwoche übernehmen"
-  // is in flight. handleSave() captures the pre-click draft snapshot and load()
-  // then replaces drafts/originals from the backend; an edit made after the
-  // request started would otherwise be silently overwritten when it resolves
-  // (same for an edit made while a new week is still loading). canEdit gates
+  // Freeze all edit controls while a save, a read of the week, or "Vorwoche
+  // übernehmen" is in flight. handleSave() captures the pre-click draft
+  // snapshot and the read after it replaces drafts/originals from the
+  // backend; an edit made after the request started would otherwise be
+  // silently overwritten when it resolves. Until this visit's read of the
+  // shown week answered, drafts and originals are not that week's stored
+  // plan, so a save would compare against the wrong state. canEdit gates
   // *who* may edit; editingLocked gates *when*.
   const editingLocked = saving || copyingPrev || loading;
   const canEditNow = canEdit && !editingLocked;
 
   useEffect(() => {
-    const entries = week.data;
+    const entries = weekData;
     if (!weekKey || !entries || appliedWeek.current?.data === entries) return;
     const sameWeek = appliedWeek.current?.key === weekKey;
     if (sameWeek && (isDirty || editingLocked)) return;
     applyWeek(weekKey, entries);
-  }, [weekKey, week.data, isDirty, editingLocked, applyWeek]);
+  }, [weekKey, weekData, isDirty, editingLocked, applyWeek]);
 
   // Warn before discarding unsaved changes — both on hard unloads (tab close /
   // reload) and on in-app navigation (clicking a sidebar/header link), which

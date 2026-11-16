@@ -6,7 +6,7 @@
 // Daten der Schule, nur ihren Namen. Jeder Abgleich steht im Protokoll, die
 // Seite fragt deshalb nur, was sie zeigt.
 
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
@@ -92,7 +92,9 @@ export function useHolidayKnownChildren(
   children?: string,
 ): ReadonlyMap<string, string> {
   // Silent on purpose: without the comparison the screen shows no hint.
-  const known = useTraegerResource(
+  // The comparison reads the schools' children and stands in their access
+  // logs: one read per opening, none on reconnect.
+  const known = useFreshTraegerResource(
     periodId && children !== ""
       ? traegerKeys.holidayKnownChildren(periodId, registrationId, children)
       : null,

@@ -11,6 +11,7 @@ export const traegerBillingRunKeys = {
   careLetters: (runId: string) =>
     `traeger-care-run-letters-${encodeURIComponent(runId)}`,
   // Schulen eines Monats und ihr offener Lauf (#5916), keine Personendaten.
+  careRunSchoolsFamily: "traeger-care-run-schools-",
   careRunSchools: (month: string) =>
     `traeger-care-run-schools-${encodeURIComponent(month)}`,
   // Abweichende Empfänger und Zahlwege der Familien (#4689).

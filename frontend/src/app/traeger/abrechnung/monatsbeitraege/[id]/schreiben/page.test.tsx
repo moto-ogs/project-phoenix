@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ApiError } from "~/lib/api-error";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   CareInvoice,
@@ -139,6 +141,16 @@ function renderPage() {
   );
 }
 
+/** The start dialog's read of the month's schools and their open run. */
+function StartDialogSchools({ read }: { read: () => Promise<unknown> }) {
+  useTraegerResource(
+    traegerBillingRunKeys.careRunSchools("2027-01-01"),
+    read,
+    "die Schulen",
+  );
+  return null;
+}
+
 describe("monthly invoice reissue", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -226,6 +238,28 @@ describe("monthly invoice reissue", () => {
       schoolIds: ["3"],
       invoiceDate: null,
     });
+  });
+
+  it("shows the new run as the schools' open run in the start dialog", async () => {
+    api.fetchCareLetters.mockResolvedValue(letters([CANCELLATION]));
+    api.startCareRun.mockResolvedValue({ id: "8" });
+    const readSchools = vi.fn().mockResolvedValue([]);
+    render(
+      <TraegerResourceTestProvider>
+        <TraegerCareRunLettersPage />
+        <StartDialogSchools read={readSchools} />
+      </TraegerResourceTestProvider>,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Neu ausstellen" }),
+    );
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith(
+        "/traeger/abrechnung/monatsbeitraege/8",
+      ),
+    );
+
+    await waitFor(() => expect(readSchools).toHaveBeenCalledTimes(2));
   });
 
   it("does not create an empty run when another tab already issued the replacement", async () => {

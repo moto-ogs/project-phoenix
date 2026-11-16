@@ -73,7 +73,11 @@ export function RolloverReviewQueue({ phaseID }: Props) {
     : (queue.data ?? []).filter(
         (item) => !completed.current.has(item.child_id),
       );
-  const loading = !queue.data && !listLoad.failure;
+  // A failed first load stays loading until its error text is there, so the
+  // empty list never shows in its place.
+  const loading =
+    (!queue.data && !listLoad.failure) ||
+    (listLoad.failure !== undefined && listLoad.error === null);
   // Rejects on failure: after a decision the hook shows it as a reload of a
   // saved change and keeps the shown list (#6652).
   const afterDecide = useRefreshAfterWrite(

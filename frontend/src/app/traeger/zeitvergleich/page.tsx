@@ -18,7 +18,7 @@ import {
 } from "react";
 import { useSession } from "next-auth/react";
 import { FreshPerTraeger } from "~/components/traeger/fresh-per-traeger";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { CalendarOff, CircleCheck, CircleDashed } from "lucide-react";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -444,11 +444,13 @@ function TraegerZeitvergleichContent() {
   const range = useMemo(() => monthWindow(month, today), [month, today]);
 
   const chosenSchool = schoolId === ALL_SCHOOLS ? undefined : schoolId;
+  // With names the read stands in the access log of every school it shows:
+  // one read per opening and filter, none on reconnect.
   const {
     data: evaluation,
     loading,
     error: loadError,
-  } = useTraegerResource(
+  } = useFreshTraegerResource(
     traegerReportKeys.careTimeOverruns(
       range.from,
       range.to,

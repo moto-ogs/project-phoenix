@@ -40,8 +40,9 @@ import {
   useParentFeatures,
 } from "~/lib/hooks/use-parent-resources";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   type GroupThreadChild,
   getGroupThread,
@@ -81,8 +82,15 @@ export function ParentGroupThreadView({
   const threadResource = useSWRAuth(
     parentInboxKeys.groupThread(groupThreadId),
     () => getGroupThread(groupThreadId),
-    // Opening the thread marks it read: the sidebar badge refetches.
-    { ...PARENT_RESOURCE_OPTIONS, onSuccess: nudgeUnreadBadge },
+    // Opening the thread marks it read: the sidebar badge refetches. Every
+    // opening reads anew, as the unread refresh leaves the thread out
+    // (parentKeys.isMessagesResource).
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      revalidateOnMount: true,
+      dedupingInterval: 0,
+      onSuccess: nudgeUnreadBadge,
+    },
   );
   const thread = threadResource.data ?? null;
   // Eine Gruppennachricht kommt von einer Schule: ihre Texte nennen die
@@ -136,6 +144,7 @@ export function ParentGroupThreadView({
     };
   }, []);
 
+  const invalidateFamily = useInvalidateFamily();
   const attachmentLabels = useParentAttachmentLabels();
   const attempt = useMessageSendAttempt(
     `parent-group-reply:${groupThreadId}:${selected ?? ""}`,
@@ -169,6 +178,11 @@ export function ParentGroupThreadView({
         );
         attempt.complete(clientMessageId);
         sentFiles.current = [];
+        // The answer lands in the child's chat: a cached copy without it
+        // goes, so the chat opens with the answer instead of seeming lost.
+        void invalidateFamily(parentKeys.conversationFamily(selected), {
+          clear: true,
+        });
         if (!mountedRef.current) return;
         setDraft("");
         setSentFor(selected);
@@ -191,6 +205,7 @@ export function ParentGroupThreadView({
       selected,
       groupThreadId,
       attempt,
+      invalidateFamily,
       clearSendError,
       showSendError,
       t,

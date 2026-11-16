@@ -77,7 +77,11 @@ export function AdminEnrollmentChangeRequestDetail({
     "die Änderungsanfrage",
     () => mutateData(),
   );
-  const loading = !data && !loadError.failure;
+  // A failed load stays loading until its error text is there, so no
+  // fallback shows in its place.
+  const loading =
+    (!data && !loadError.failure) ||
+    (loadError.failure !== undefined && loadError.error === null);
   const setData = (fresh: AdminEnrollmentChangeRequest) =>
     void mutateData(fresh, { revalidate: false });
 

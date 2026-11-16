@@ -25,10 +25,10 @@ import {
   useApiFormError,
   useToast,
 } from "~/contexts/ToastContext";
+import { useChildFeatures } from "~/components/parent/child-requests-context";
 import {
   PARENT_RESOURCE_OPTIONS,
   useParentChildren,
-  useParentFeatures,
 } from "~/lib/hooks/use-parent-resources";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
@@ -62,16 +62,21 @@ export default function ParentConferencePage({
   const cancelErrors = useApiFormError();
 
   // Whether this account may book for this child decides the backend at the
-  // guardian relationship; the page reads the shared child resources.
+  // guardian relationship; the page reads the shared child resources. Only
+  // this child's features count: a sibling's failed read is not this page's.
   const children = useParentChildren();
-  const features = useParentFeatures(children.data);
+  const childFeatures = useChildFeatures(studentId);
+  const features = {
+    data: childFeatures.features,
+    error: childFeatures.failure,
+  };
   const conferences = useSWRAuth(
     parentInboxKeys.conferences(studentId),
     () => fetchChildParentConferences(studentId),
     PARENT_RESOURCE_OPTIONS,
   );
   const { mutate: mutateConferences } = conferences;
-  const canBook = features.data?.[studentId]?.conference_book_allowed === true;
+  const canBook = features.data?.conference_book_allowed === true;
   const child =
     children.data?.find((entry) => entry.student_id === studentId) ?? null;
   const { error: loadError } = useSwrResourceLoadError(
@@ -79,7 +84,7 @@ export default function ParentConferencePage({
     t("errorObject"),
     () => {
       void children.mutate();
-      void features.mutate();
+      void childFeatures.reload();
       void mutateConferences();
     },
   );

@@ -14,6 +14,7 @@ import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setTestClock } from "~/test/clock";
 import { CareScheduleManager } from "./care-schedule-manager";
+import { useInvalidateMatching } from "~/lib/swr";
 import { ApiError } from "~/lib/api-error";
 import { toISODate } from "~/lib/date-helpers";
 import type { ArrivalScheduleFormEntry } from "~/lib/arrival-schedule-helpers";
@@ -575,6 +576,58 @@ describe("CareScheduleManager", () => {
       expect(mockFetchArrivalData).toHaveBeenCalledTimes(2);
       expect(mockFetchStudentPickupData).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it("holds the shown week while the weekly-plan editor is open and the whole page refreshes", async () => {
+    // The header's „Aktualisieren“ revalidates every read of the session.
+    function RefreshAll() {
+      const invalidate = useInvalidateMatching();
+      return (
+        <button type="button" onClick={() => void invalidate(() => true)}>
+          Alles aktualisieren
+        </button>
+      );
+    }
+    render(
+      <>
+        <CareScheduleManager studentId="42" statusDays={statusDays} />
+        <RefreshAll />
+      </>,
+    );
+    await screen.findByText("Betreuungszeiten");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Wochenplan bearbeiten" }),
+    );
+    const arrivalOnly = screen.getByRole("button", {
+      name: "Nur Ankunft im Test speichern",
+    });
+    expect(arrivalOnly).toBeEnabled();
+
+    // Meanwhile Monday was taken out of the plan elsewhere.
+    mockFetchArrivalData.mockResolvedValue({ ...arrivalData, schedules: [] });
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Alles aktualisieren" }),
+      );
+    });
+    await waitFor(() => expect(mockFetchArrivalData).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // The draft still measures against the week it was opened with.
+    expect(
+      screen.getByRole("button", { name: "Nur Ankunft im Test speichern" }),
+    ).toBeEnabled();
+
+    fireEvent.click(screen.getByText("Schließen"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Wochenplan bearbeiten" }),
+    );
+    // Closed and opened again, the editor starts from the refreshed week.
+    expect(
+      screen.getByRole("button", { name: "Nur Ankunft im Test speichern" }),
+    ).toBeDisabled();
   });
 
   it("ignores a superseded in-flight refresh so it cannot overwrite newer data", async () => {

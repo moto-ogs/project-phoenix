@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render as rtlRender,
   screen,
@@ -130,5 +131,48 @@ describe("RoomRemovalModal (#6845)", () => {
     expect(
       screen.getByRole("heading", { name: "Raum löschen?" }),
     ).toBeVisible();
+  });
+
+  it("decides a reopened dialog on its own preview, not the earlier one", async () => {
+    let answerSecond!: (value: RoomRemovalImpact) => void;
+    mocks.fetchRoomRemovalImpact
+      .mockResolvedValueOnce(unused)
+      .mockReturnValueOnce(
+        new Promise<RoomRemovalImpact>((resolve) => {
+          answerSecond = resolve;
+        }),
+      );
+    const modal = (isOpen: boolean) => (
+      <RoomRemovalModal
+        isOpen={isOpen}
+        roomId="7"
+        roomName="Igelraum"
+        onClose={vi.fn()}
+        onRemoved={vi.fn()}
+      />
+    );
+    const { rerender } = render(modal(true));
+    expect(
+      await screen.findByRole("heading", { name: "Raum löschen?" }),
+    ).toBeVisible();
+
+    rerender(modal(false));
+    rerender(modal(true));
+    expect(
+      await screen.findByRole("heading", { name: "Raum entfernen" }),
+    ).toBeVisible();
+    expect(screen.queryByText(/wird nirgends genutzt/)).not.toBeInTheDocument();
+
+    await act(async () => {
+      answerSecond({
+        ...unused,
+        outcome: "blocked",
+        references: { ...unused.references, devices: 1 },
+      });
+    });
+    expect(
+      await screen.findByRole("heading", { name: "Raum wird noch genutzt" }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /löschen/i })).toBeDisabled();
   });
 });

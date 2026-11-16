@@ -28,7 +28,7 @@ import {
   type RoomRemovalImpact,
   type RoomRemovalOutcome,
 } from "~/lib/room-removal-api";
-import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import { useFreshSWR } from "~/lib/swr";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 const logger = createLogger({ component: "RoomRemovalModal" });
@@ -184,16 +184,19 @@ export function RoomRemovalModal({
   const [removing, setRemoving] = useState(false);
   const errors = useApiFormError();
   const clearErrors = errors.clear;
+  // Bestätigt wird nur gegen die Vorschau dieser Öffnung; auch nach einem
+  // abgelehnten Entfernen erst wieder gegen die neue.
   const {
-    data,
+    data: freshData,
     error: impactError,
     mutate: reloadImpact,
-  } = useSWRAuth(
+  } = useFreshSWR(
     isOpen ? tenantDailyKeys.roomRemovalImpact(roomId) : null,
     () => fetchRoomRemovalImpact(roomId),
-    { keepPreviousData: false },
   );
-  const invalidate = useInvalidateMatching();
+  // Scheitert das Laden dieser Öffnung, zeigt der Dialog den Fehler, nicht
+  // eine frühere Vorschau.
+  const data = impactError ? undefined : freshData;
   const impact: RoomRemovalImpact | null = data ?? null;
   const loadingImpact = isOpen && data === undefined && !impactError;
   const impactLoad = useSwrResourceLoadError(
@@ -235,10 +238,6 @@ export function RoomRemovalModal({
       await onRemoved(result);
     } finally {
       setRemoving(false);
-      // The preview no longer describes the room; the closed dialog does
-      // not load it again.
-      const impactKey = tenantDailyKeys.roomRemovalImpact(roomId);
-      void invalidate((key) => key === impactKey, { clear: true });
     }
   };
 

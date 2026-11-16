@@ -248,6 +248,41 @@ describe("TraegerVertraegePage", () => {
     ).toBeInTheDocument();
   });
 
+  it("reads the other filters' lists again after creating drafts", async () => {
+    api.createCareContracts.mockResolvedValue({
+      created: [DRAFT],
+      skipped: [],
+    });
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+    fireEvent.click(screen.getByRole("button", { name: "Alle Status" }));
+    fireEvent.click(await screen.findByRole("option", { name: /^Entwurf/ }));
+    await waitFor(() =>
+      expect(api.fetchCareContracts).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: "entwurf" }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Verträge erstellen/ }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "1 Entwurf erstellen" }),
+    );
+    expect(
+      await screen.findByText(/1 Entwurf ist erstellt/),
+    ).toBeInTheDocument();
+    api.fetchCareContracts.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: /^Entwurf \(/ }));
+    fireEvent.click(await screen.findByRole("option", { name: "Alle Status" }));
+    await waitFor(() =>
+      expect(api.fetchCareContracts).toHaveBeenCalledWith({
+        status: undefined,
+        schoolId: "",
+        search: "",
+        offset: 0,
+      }),
+    );
+  });
+
   it("sends the selected drafts", async () => {
     api.sendCareContracts.mockResolvedValue({ sent: ["7"], skipped: [] });
     renderPage();

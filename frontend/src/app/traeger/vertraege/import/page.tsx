@@ -170,8 +170,10 @@ export default function TraegerContractImportPage() {
     } finally {
       setApplying(false);
     }
-    // The imported contracts are active at once.
+    // The imported contracts are active at once, and their children no
+    // longer wait for a contract.
     void invalidateFamily(traegerContractKeys.listFamily);
+    void invalidateFamily(traegerContractKeys.candidates());
     await mutateLog();
   };
 

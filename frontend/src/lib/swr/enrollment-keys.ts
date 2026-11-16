@@ -5,7 +5,7 @@
 export const enrollmentKeys = {
   /**
    * Every enrollment phase of the school (`listPhases`). The Betreuungsplan
-   * read it first under this name, so it keeps it.
+   * reads the same key, so both share one cached answer.
    */
   phases: () => "timetable-enrollment-phases",
   /** Prefix of every phase's care offering list. */
@@ -61,7 +61,7 @@ export const enrollmentKeys = {
     `enrollment-public-legal-texts-${encodeURIComponent(tenantSlug)}`,
   /**
    * Every timetable template of the school (`timetableService.getTemplates`).
-   * The Betreuungsplan read it first under this name, so it keeps it.
+   * The Betreuungsplan reads the same key, so both share one cached answer.
    */
   timetableTemplates: () => "timetable-connect-templates",
   /**

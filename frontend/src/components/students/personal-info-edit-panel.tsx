@@ -72,7 +72,7 @@ import {
 } from "~/lib/parent-visible-fields";
 import { createLogger } from "~/lib/logger";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 const logger = createLogger({ component: "PersonalInfoEditPanel" });
@@ -151,13 +151,15 @@ export function PersonalInfoEditPanel({
   // Tabelle, nicht am Kind: erst nach dem Laden darf das Formular sie
   // anzeigen, sonst würde ein Speichern die echte Einwilligung mit dem
   // leeren Vorgabewert überschreiben.
-  const consentRead = useSWRAuth(
+  // The draft starts from this panel's own answer, never a cached one.
+  const consentRead = useFreshSWR(
     student.id ? tenantStudentKeys.privacyConsent(student.id) : null,
     () => fetchStudentPrivacyConsent(student.id),
-    { keepPreviousData: false },
   );
+  // A failed load fills nothing from an earlier answer.
+  const consentData = consentRead.error ? undefined : consentRead.data;
   const consentLoad = useSwrResourceLoadError(
-    [consentRead],
+    [{ data: consentData, error: consentRead.error }],
     "die Einwilligung",
     () => consentRead.mutate(),
   );
@@ -210,14 +212,15 @@ export function PersonalInfoEditPanel({
   // The shared read (also behind the Stammdaten card) only fills the draft on
   // this panel's own loads: the first answer read after opening, a remote
   // refresh and a retry. A refresh the card starts never replaces the draft.
-  const companionsRead = useSWRAuth(
+  const companionsRead = useFreshSWR(
     student.id ? tenantStudentKeys.companions(student.id) : null,
     () => fetchStudentCompanions(student.id),
-    { keepPreviousData: false },
   );
   const { mutate: mutateCompanions } = companionsRead;
+  // A failed load fills nothing from an earlier answer.
+  const companionsData = companionsRead.error ? undefined : companionsRead.data;
   const firstCompanionsLoad = useSwrResourceLoadError(
-    [companionsRead],
+    [{ data: companionsData, error: companionsRead.error }],
     "die Laufgemeinschaft",
     () => void reloadCompanionsRef.current(),
   );
@@ -277,16 +280,8 @@ export function PersonalInfoEditPanel({
 
   // Einwilligung und Frist des Kindes in den Entwurf holen (siehe oben):
   // einmal je Kind, aus einer Antwort, die nach dem Öffnen gelesen wurde.
-  const consentData = consentRead.data;
-  const consentValidating = consentRead.isValidating;
   useEffect(() => {
-    if (
-      !student.id ||
-      consentSeededFor === student.id ||
-      !consentData ||
-      consentValidating
-    )
-      return;
+    if (!student.id || consentSeededFor === student.id || !consentData) return;
     setEditedStudent((prev) => ({
       ...prev,
       privacy_consent_accepted: consentData.accepted,
@@ -294,7 +289,7 @@ export function PersonalInfoEditPanel({
     }));
     setPrivacyConsentChanged(false);
     setConsentSeededFor(student.id);
-  }, [student.id, consentSeededFor, consentData, consentValidating]);
+  }, [student.id, consentSeededFor, consentData]);
 
   // The Laufgemeinschaft lives in its own table, so it is read when the panel
   // opens and submitted together with the departure plan it belongs to.
@@ -311,24 +306,15 @@ export function PersonalInfoEditPanel({
     },
     [],
   );
-  const companionsData = companionsRead.data;
-  const companionsValidating = companionsRead.isValidating;
   useEffect(() => {
     if (
       companionsSeed.status !== "first" ||
       companionsSeed.studentId !== student.id ||
-      !companionsData ||
-      companionsValidating
+      !companionsData
     )
       return;
     seedCompanions(student.id, companionsData);
-  }, [
-    companionsSeed,
-    student.id,
-    companionsData,
-    companionsValidating,
-    seedCompanions,
-  ]);
+  }, [companionsSeed, student.id, companionsData, seedCompanions]);
 
   // A remote refresh or a retry: read again and fill the draft with exactly
   // that answer.

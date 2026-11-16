@@ -163,6 +163,37 @@ describe("Länger als gebucht", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("reads the names again for every month chosen, also one shown before", async () => {
+    // Each read with names stands in the schools' access logs.
+    mockUseSession.mockReturnValue(
+      session(["traeger_reports:read", "traeger_contracts:manage"]),
+    );
+    api.fetchOverrunChildren.mockResolvedValue(EVALUATION);
+    renderPage();
+    expect(
+      await screen.findByRole("button", { name: "Monat davor" }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.fetchOverrunChildren).toHaveBeenCalledTimes(1),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Monat davor" }));
+    await waitFor(() =>
+      expect(api.fetchOverrunChildren).toHaveBeenCalledTimes(2),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Monat danach" }),
+    );
+    await waitFor(() =>
+      expect(api.fetchOverrunChildren).toHaveBeenCalledTimes(3),
+    );
+    expect(api.fetchOverrunChildren).toHaveBeenLastCalledWith({
+      from: "2026-09-01",
+      to: "2026-09-09",
+      schoolId: undefined,
+    });
+  });
+
   it("shows a zero day without red", async () => {
     mockUseSession.mockReturnValue(session(["traeger_reports:read"]));
     api.fetchOverrunSummary.mockResolvedValue(EVALUATION);

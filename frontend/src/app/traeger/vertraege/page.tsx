@@ -55,7 +55,8 @@ import { careContractsConcept } from "~/lib/concepts/careContracts";
 import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
-import { useInvalidateFamily } from "~/lib/swr";
+import { useLatest } from "~/lib/hooks/use-latest";
+import { useInvalidateFamily, useInvalidateMatching } from "~/lib/swr";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import {
   type CareContractList,
@@ -279,6 +280,7 @@ export default function TraegerVertraegePage() {
   );
   const schoolList = useTraegerSchools();
   const invalidateFamily = useInvalidateFamily();
+  const invalidateMatching = useInvalidateMatching();
   const [more, setMore] = useState<MorePages | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const moreLoad = useApiLoadError();
@@ -375,6 +377,16 @@ export default function TraegerVertraegePage() {
       }),
   );
 
+  // The lists of the other filters count the written contracts too; the
+  // list shown when the write ends reloads through afterWrite.
+  const shownList = useLatest(listKey);
+  const invalidateOtherLists = () =>
+    void invalidateMatching(
+      (key) =>
+        key.startsWith(traegerContractKeys.listFamily) &&
+        key !== shownList.current,
+    );
+
   const contracts = useMemo(() => [...(data?.list.contracts ?? [])], [data]);
   const schools = (data?.schools ?? []).map((school) => ({
     value: school.id,
@@ -404,6 +416,7 @@ export default function TraegerVertraegePage() {
       });
       void actionError.show(err, { object: "das Senden der Entwürfe" });
       setSelected(new Set());
+      invalidateOtherLists();
       await firstPage.mutate();
       setSending(false);
       return;
@@ -422,6 +435,7 @@ export default function TraegerVertraegePage() {
       );
     }
     setSelected(new Set());
+    invalidateOtherLists();
     await afterWrite.refresh();
     setSending(false);
   };
@@ -446,8 +460,10 @@ export default function TraegerVertraegePage() {
     modeRead.reload();
     // Die Entwürfe sind angelegt; ein Fehler beim Nachladen lässt die
     // bestätigte Liste stehen (#6652). Ein anderer Filter lädt neu.
-    if (status === "entwurf") await afterWrite.refresh();
-    else {
+    if (status === "entwurf") {
+      invalidateOtherLists();
+      await afterWrite.refresh();
+    } else {
       void invalidateFamily(traegerContractKeys.listFamily);
       setStatus("entwurf");
     }

@@ -176,6 +176,14 @@ export default function TraegerAccessLogPage() {
 
   const from = range?.from ? toISODate(range.from) : "";
   const to = range?.to ? toISODate(range.to) : from;
+  // Every read of the log stands in the log of each school it shows: one
+  // read per opening and filter, none on reconnect or from the dedupe window.
+  const oncePerOpening = {
+    revalidateOnMount: true,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 0,
+  };
 
   // The person filter offers the people who acted in the window; without
   // them (a failed read) only "Alle Personen". The list shows its own error.
@@ -183,6 +191,7 @@ export default function TraegerAccessLogPage() {
     from ? traegerKeys.accessLogPeople(from, to) : null,
     () => fetchTraegerAccessLogPeople(from, to),
     "die Personen des Zugriffsprotokolls",
+    oncePerOpening,
   );
   const people = peopleReader.data ?? [];
   // A person who does not act in the new window can no longer be chosen;
@@ -212,6 +221,7 @@ export default function TraegerAccessLogPage() {
     () =>
       filter ? fetchTraegerAccessLog(filter, 1) : Promise.reject(new Error()),
     "das Zugriffsprotokoll",
+    oncePerOpening,
   );
   // Later pages belong to the first page they continue; a new filter or a
   // reload starts a new list and drops them.

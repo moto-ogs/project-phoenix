@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SWRConfig } from "~/lib/swr/testing";
@@ -49,7 +49,11 @@ const impact = {
 } as unknown as AdminEnrollmentDeletionImpact;
 
 function renderModal() {
-  return render(
+  return render(<Modal isOpen />);
+}
+
+function Modal({ isOpen }: Readonly<{ isOpen: boolean }>) {
+  return (
     <SessionProvider
       session={{
         user: { id: "staff-7", scope: "tenant", tenantId: 42 },
@@ -59,14 +63,14 @@ function renderModal() {
     >
       <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
         <AdminEnrollmentDeletionModal
-          isOpen
+          isOpen={isOpen}
           requestId="7"
           studentHref={(id) => `/students/${id}`}
           onClose={vi.fn()}
           onDeleted={vi.fn()}
         />
       </SWRConfig>
-    </SessionProvider>,
+    </SessionProvider>
   );
 }
 
@@ -94,5 +98,35 @@ describe("AdminEnrollmentDeletionModal (#2515)", () => {
 
     expect(await screen.findByText("Betroffene Datensätze (1)")).toBeVisible();
     expect(mocks.getAdminRequestDeleteImpact).toHaveBeenCalledTimes(2);
+  });
+
+  it("decides a reopened dialog on its own preview, not the earlier one", async () => {
+    let answerSecond!: (value: AdminEnrollmentDeletionImpact) => void;
+    mocks.getAdminRequestDeleteImpact
+      .mockResolvedValueOnce(impact)
+      .mockReturnValueOnce(
+        new Promise<AdminEnrollmentDeletionImpact>((resolve) => {
+          answerSecond = resolve;
+        }),
+      );
+    const { rerender } = renderModal();
+    expect(await screen.findByLabelText(/Löschgrund/)).toBeVisible();
+
+    rerender(<Modal isOpen={false} />);
+    rerender(<Modal isOpen />);
+    expect(
+      await screen.findByText("Auswirkungen werden geladen…"),
+    ).toBeVisible();
+    expect(screen.queryByLabelText(/Löschgrund/)).not.toBeInTheDocument();
+
+    await act(async () => {
+      answerSecond({
+        ...impact,
+        can_delete: false,
+        blocking_student_ids: ["9"],
+      } as AdminEnrollmentDeletionImpact);
+    });
+    expect(await screen.findByText("Löschung blockiert")).toBeVisible();
+    expect(screen.queryByLabelText(/Löschgrund/)).not.toBeInTheDocument();
   });
 });

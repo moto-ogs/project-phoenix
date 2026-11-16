@@ -245,7 +245,8 @@ export default function TraegerMonatsbeitraegePage() {
             onClose={() => setStarting(false)}
             onStart={startCareRun}
             onStarted={(run: CareRun) => {
-              void invalidateFamily(traegerBillingRunKeys.careRuns());
+              // The list and the open run of each school in the start dialog.
+              void invalidateFamily(traegerBillingRunKeys.careRunsFamily);
               setStarting(false);
               openRun(run);
             }}

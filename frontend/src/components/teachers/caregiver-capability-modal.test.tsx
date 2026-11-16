@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render as renderRaw,
   screen,
@@ -606,6 +607,52 @@ describe("CaregiverCapabilityModal", () => {
         screen.getByLabelText("Pädagogische Rolle (optional)"),
       ).toHaveValue("");
     });
+  });
+
+  it("starts the name fields of a reopened dialog from this opening's answer", async () => {
+    const withoutPerson = (firstName: string) =>
+      createState({
+        firstName,
+        lastName: "Lovelace",
+        personId: null,
+        staffId: null,
+        teacherId: null,
+        hasPerson: false,
+        hasStaff: false,
+        hasTeacher: false,
+        hasCaregiverProfile: false,
+        isActiveCaregiver: false,
+      });
+    let answerSecond!: (value: unknown) => void;
+    mockGetTenantAccountCapability
+      .mockResolvedValueOnce(withoutPerson("Ada"))
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          answerSecond = resolve;
+        }),
+      );
+    const modal = (isOpen: boolean) => (
+      <CaregiverCapabilityModal
+        isOpen={isOpen}
+        onClose={vi.fn()}
+        scope="tenant"
+        accountId="42"
+        accountLabel="Ada Lovelace"
+      />
+    );
+    const { rerender } = render(modal(true));
+    expect(await screen.findByLabelText("Vorname")).toHaveValue("Ada");
+
+    rerender(modal(false));
+    rerender(modal(true));
+    // Renamed elsewhere in the meantime.
+    await act(async () => {
+      answerSecond(withoutPerson("Adele"));
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Vorname")).toHaveValue("Adele"),
+    );
   });
 
   it("shows a generic loading error when the capability state cannot be loaded", async () => {

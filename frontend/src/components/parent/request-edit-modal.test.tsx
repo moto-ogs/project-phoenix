@@ -128,6 +128,51 @@ describe("RequestEditModal", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("reads the version anew when the dialog opens again", async () => {
+    const request = {
+      type: "excused" as const,
+      id: "req-1",
+      dates: ["2026-09-01"],
+      note: "Zahnarzt",
+    };
+    function Dialog({ open }: Readonly<{ open: boolean }>) {
+      return (
+        <ParentResourceTestProvider>
+          {open ? (
+            <RequestEditModal
+              studentId="1"
+              request={request}
+              onClose={vi.fn()}
+              onSaved={vi.fn()}
+            />
+          ) : null}
+        </ParentResourceTestProvider>
+      );
+    }
+    const view = render(<Dialog open />);
+    await screen.findByText("Geändert am 24.08.2026");
+    view.rerender(<Dialog open={false} />);
+    // Another guardian edited the request meanwhile.
+    events.mockResolvedValue([
+      {
+        event_type: "guardian_edited",
+        version: "v3",
+        created_at: "2026-08-25T10:00:00Z",
+      },
+    ]);
+    view.rerender(<Dialog open />);
+
+    await screen.findByText("Geändert am 25.08.2026");
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    await waitFor(() =>
+      expect(updateExcused).toHaveBeenCalledWith("1", "req-1", {
+        dates: ["2026-09-01"],
+        note: "Zahnarzt",
+        expectedVersion: "v3",
+      }),
+    );
+  });
+
   it("changes a Stammdaten request through the same dialog", async () => {
     updateMasterData.mockResolvedValue({
       id: "md-1",

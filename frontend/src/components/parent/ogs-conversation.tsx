@@ -162,10 +162,18 @@ export function OgsConversation({
   // mark-read call is needed; the badge refetches after every read. Only
   // the conversation of the chosen audience is shown: its key carries it,
   // and an answer for another one never appears under this one's title.
+  // Every opening reads anew: that read marks the thread read, and the
+  // unread refresh leaves conversations out (parentKeys.isMessagesResource),
+  // so a cached answer would miss what the OGS wrote since.
   const conversation = useSWRAuth(
     conversationKey,
     () => getChildConversation(studentId, audience),
-    { ...PARENT_RESOURCE_OPTIONS, onSuccess: nudgeUnreadBadge },
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      revalidateOnMount: true,
+      dedupingInterval: 0,
+      onSuccess: nudgeUnreadBadge,
+    },
   );
   const { mutate: mutateConversation } = conversation;
   const { mutate: mutateSummaries } = summaryResource;
