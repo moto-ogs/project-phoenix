@@ -66,7 +66,15 @@ type lifecycleSetup struct {
 	student2  int64
 	tmplID    int64
 	period    *testpkg.CalendarPeriod
+	// clock is the day the owner and the lifecycle decide on; nil is the
+	// real clock.
+	clock func() time.Time
 }
+
+// lifecycleToday is the school Monday the pinned lifecycle suites decide on.
+var lifecycleToday = calendar.NewDate(2030, 8, 26)
+
+func lifecycleClock() time.Time { return lifecycleToday.BerlinMidnight().Add(12 * time.Hour) }
 
 // buildLifecycle prepares the minimum scaffold for instance-lifecycle tests:
 // one tenant, one room, one staff, two students, one template (is_template).
@@ -126,6 +134,7 @@ func buildLifecycle(t *testing.T, clocks ...func() time.Time) *lifecycleSetup {
 		student2:        student2.ID,
 		tmplID:          templateRow.ID,
 		period:          period,
+		clock:           api.OptionalClock(clocks),
 	}
 	// These state-machine fixtures use fixed wall-clock windows. Time-policy
 	// boundaries have dedicated clock-injected tests; keep this suite focused on
@@ -198,6 +207,7 @@ func lifecycleDependencies(s *lifecycleSetup, broadcaster realtime.Broadcaster, 
 		Database:            compose.NewTenantDatabase(s.db),
 		Logger:              slog.Default(),
 		RecoveryRepo:        fixtures.IntoActivityRecoveryRecords(recoveryRepo),
+		Now:                 s.clock,
 	}
 	if broadcaster != nil {
 		deps.Broadcaster = lifecycleRealtime{broadcaster: broadcaster}
@@ -213,7 +223,7 @@ func lifecycleStartConflicts(s *lifecycleSetup) timetable.StartConflictQuery {
 		Instances: s.timetable.ActivityInstance.Reads, InstanceStaff: s.timetable.InstanceStaff, InstanceStudents: s.timetable.InstanceStudent,
 		Exceptions: s.timetable.ActivityException, Schedules: s.timetable.ActivitySchedule, Staff: owners.NewTimetableStaff(s.reposPeople.Staff),
 		CalendarPeriods: fixtures.IntoConflictCalendarPeriods(fixtures.FromCalendarPeriodRecords(s.reposSchedules.CalendarPeriod)), ArrivalExceptions: fixtures.IntoConflictArrivalExceptions(fixtures.FromStudentArrivalExceptionRecords(s.reposSchedules.StudentArrivalException)),
-		Sessions: s.repos.ActiveGroup, Shifts: fixtures.IntoConflictShifts(unusedShiftRows{}), Presence: s.presence,
+		Sessions: s.repos.ActiveGroup, Shifts: fixtures.IntoConflictShifts(unusedShiftRows{}), Presence: s.presence, Now: s.clock,
 	}, nil)
 	if err != nil {
 		panic(err)

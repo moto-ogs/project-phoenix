@@ -97,10 +97,10 @@ func noticeInput(instanceID int64, actor int64, notice *timetable.GuardianNotice
 
 func TestCancelWithNotice_PublishesForBookedChildrenOnly(t *testing.T) {
 	t.Parallel()
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	publisher := &recordingNoticePublisher{}
 	svc := instanceServiceWithGuardianNotices(t, s, publisher)
-	instance, child1, child2 := seedNoticeInstance(t, s, calendar.TodayDate().AddDays(1))
+	instance, child1, child2 := seedNoticeInstance(t, s, lifecycleToday.AddDays(1))
 	actor := testpkg.CreateTestAccount(t, s.db, "cancel-actor")
 
 	result, err := svc.CancelWithNotice(s.ctx, noticeInput(instance.ID, actor.ID, &timetable.GuardianNoticeInput{
@@ -122,10 +122,10 @@ func TestCancelWithNotice_PublishesForBookedChildrenOnly(t *testing.T) {
 
 func TestCancelWithNotice_NilNoticeCancelsSilently(t *testing.T) {
 	t.Parallel()
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	publisher := &recordingNoticePublisher{}
 	svc := instanceServiceWithGuardianNotices(t, s, publisher)
-	instance, _, _ := seedNoticeInstance(t, s, calendar.TodayDate().AddDays(1))
+	instance, _, _ := seedNoticeInstance(t, s, lifecycleToday.AddDays(1))
 	actor := testpkg.CreateTestAccount(t, s.db, "cancel-actor")
 
 	result, err := svc.CancelWithNotice(s.ctx, noticeInput(instance.ID, actor.ID, nil))
@@ -137,13 +137,13 @@ func TestCancelWithNotice_NilNoticeCancelsSilently(t *testing.T) {
 
 func TestCancelWithNotice_RefusesBeforeCancellingWhenInvalid(t *testing.T) {
 	t.Parallel()
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	publisher := &recordingNoticePublisher{}
 	svc := instanceServiceWithGuardianNotices(t, s, publisher)
 	actor := testpkg.CreateTestAccount(t, s.db, "cancel-actor")
 
 	t.Run("empty text", func(t *testing.T) {
-		instance, _, _ := seedNoticeInstance(t, s, calendar.TodayDate().AddDays(1))
+		instance, _, _ := seedNoticeInstance(t, s, lifecycleToday.AddDays(1))
 		_, err := svc.CancelWithNotice(s.ctx, noticeInput(instance.ID, actor.ID, &timetable.GuardianNoticeInput{Title: "x"}))
 		require.ErrorIs(t, err, timetable.ErrGuardianNoticeInvalid)
 		reloaded, err := fixtures.FromActivityInstanceRecords(s.timetable.NativeInstances()).FindByID(s.ctx, instance.ID)
@@ -152,7 +152,7 @@ func TestCancelWithNotice_RefusesBeforeCancellingWhenInvalid(t *testing.T) {
 	})
 
 	t.Run("whitespace-only text", func(t *testing.T) {
-		instance, _, _ := seedNoticeInstance(t, s, calendar.TodayDate().AddDays(1))
+		instance, _, _ := seedNoticeInstance(t, s, lifecycleToday.AddDays(1))
 		_, err := svc.CancelWithNotice(s.ctx, noticeInput(instance.ID, actor.ID, &timetable.GuardianNoticeInput{Title: "  ", Message: "\t"}))
 		require.ErrorIs(t, err, timetable.ErrGuardianNoticeInvalid)
 		reloaded, err := fixtures.FromActivityInstanceRecords(s.timetable.NativeInstances()).FindByID(s.ctx, instance.ID)
@@ -161,7 +161,7 @@ func TestCancelWithNotice_RefusesBeforeCancellingWhenInvalid(t *testing.T) {
 	})
 
 	t.Run("overlong text", func(t *testing.T) {
-		instance, _, _ := seedNoticeInstance(t, s, calendar.TodayDate().AddDays(1))
+		instance, _, _ := seedNoticeInstance(t, s, lifecycleToday.AddDays(1))
 		_, err := svc.CancelWithNotice(s.ctx, noticeInput(instance.ID, actor.ID, &timetable.GuardianNoticeInput{Title: strings.Repeat("x", 201), Message: "Text"}))
 		require.ErrorIs(t, err, timetable.ErrGuardianNoticeInvalid)
 		reloaded, err := fixtures.FromActivityInstanceRecords(s.timetable.NativeInstances()).FindByID(s.ctx, instance.ID)
@@ -170,13 +170,13 @@ func TestCancelWithNotice_RefusesBeforeCancellingWhenInvalid(t *testing.T) {
 	})
 
 	t.Run("past block", func(t *testing.T) {
-		instance, _, _ := seedNoticeInstance(t, s, calendar.TodayDate().AddDays(-1))
+		instance, _, _ := seedNoticeInstance(t, s, lifecycleToday.AddDays(-1))
 		_, err := svc.CancelWithNotice(s.ctx, noticeInput(instance.ID, actor.ID, &timetable.GuardianNoticeInput{Title: "x", Message: "y"}))
 		require.ErrorIs(t, err, timetable.ErrGuardianNoticeInvalid)
 	})
 
 	t.Run("no actor", func(t *testing.T) {
-		instance, _, _ := seedNoticeInstance(t, s, calendar.TodayDate().AddDays(1))
+		instance, _, _ := seedNoticeInstance(t, s, lifecycleToday.AddDays(1))
 		_, err := svc.CancelWithNotice(s.ctx, timetable.CancelInstanceInput{
 			InstanceID:     instance.ID,
 			GuardianNotice: &timetable.GuardianNoticeInput{Title: "x", Message: "y"},
@@ -189,10 +189,10 @@ func TestCancelWithNotice_RefusesBeforeCancellingWhenInvalid(t *testing.T) {
 
 func TestGuardianNoticeReachFor_CountsBookedChildren(t *testing.T) {
 	t.Parallel()
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	publisher := &recordingNoticePublisher{}
 	svc := instanceServiceWithGuardianNotices(t, s, publisher)
-	instance, _, _ := seedNoticeInstance(t, s, calendar.TodayDate().AddDays(1))
+	instance, _, _ := seedNoticeInstance(t, s, lifecycleToday.AddDays(1))
 
 	reach, err := svc.GuardianNoticeReachFor(s.ctx, instance.ID)
 	require.NoError(t, err)
@@ -202,9 +202,9 @@ func TestGuardianNoticeReachFor_CountsBookedChildren(t *testing.T) {
 
 func TestGuardianNoticeReachFor_WithoutPublisherReportsNoReach(t *testing.T) {
 	t.Parallel()
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	svc := instanceServiceWithBroadcaster(t, s, nil)
-	instance, _, _ := seedNoticeInstance(t, s, calendar.TodayDate().AddDays(1))
+	instance, _, _ := seedNoticeInstance(t, s, lifecycleToday.AddDays(1))
 
 	reach, err := svc.GuardianNoticeReachFor(s.ctx, instance.ID)
 	require.NoError(t, err)
@@ -217,10 +217,10 @@ func TestGuardianNoticeReachFor_WithoutPublisherReportsNoReach(t *testing.T) {
 // user-facing refusal, and the block must stay planned.
 func TestCancelWithNotice_WithoutPublisherRefusesBeforeCancelling(t *testing.T) {
 	t.Parallel()
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	svc := instanceServiceWithBroadcaster(t, s, nil)
 	actor := testpkg.CreateTestAccount(t, s.db, "notice-unwired")
-	instance, _, _ := seedNoticeInstance(t, s, calendar.TodayDate().AddDays(1))
+	instance, _, _ := seedNoticeInstance(t, s, lifecycleToday.AddDays(1))
 
 	_, err := svc.CancelWithNotice(s.ctx, noticeInput(instance.ID, actor.ID, &timetable.GuardianNoticeInput{Title: "x", Message: "y"}))
 	require.Error(t, err)

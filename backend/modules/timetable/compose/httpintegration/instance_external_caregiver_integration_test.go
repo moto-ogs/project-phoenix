@@ -39,11 +39,11 @@ func createAccountBackedExternal(t *testing.T, db *bun.DB, ctx context.Context, 
 func TestInstance_CreatePlanned_AcceptsExternalCaregiver(t *testing.T) {
 	t.Parallel()
 
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	external := testpkg.CreateTestExternalCaregiverRecord(t, s.db, "Musik")
 
 	created, err := s.svc.CreateInstance(s.ctx, timetable.CreateInstanceInput{
-		Date:            calendar.TodayDate().AddDays(7),
+		Date:            lifecycleToday.AddDays(7),
 		StartTime:       time.Date(1, 1, 1, 9, 0, 0, 0, time.UTC),
 		EndTime:         time.Date(1, 1, 1, 10, 0, 0, 0, time.UTC),
 		Title:           "Geplante Musik-AG",
@@ -61,12 +61,12 @@ func TestInstance_CreatePlanned_AcceptsExternalCaregiver(t *testing.T) {
 func TestInstance_CreateSpontaneous_AllowsExternalCaregiver(t *testing.T) {
 	t.Parallel()
 
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	external := testpkg.CreateTestExternalCaregiverRecord(t, s.db, "Musik")
 	spontaneous := true
 
 	created, err := s.svc.CreateInstance(s.ctx, timetable.CreateInstanceInput{
-		Date:          calendar.TodayDate(),
+		Date:          lifecycleToday,
 		StartTime:     time.Date(1, 1, 1, 9, 0, 0, 0, time.UTC),
 		EndTime:       time.Date(1, 1, 1, 10, 0, 0, 0, time.UTC),
 		Title:         "Spontane Musik-AG",
@@ -84,7 +84,7 @@ func TestInstance_CreateSpontaneous_AllowsExternalCaregiver(t *testing.T) {
 func TestInstance_UpdateSpontaneous_PreservesExternalCaregiver(t *testing.T) {
 	t.Parallel()
 
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	instance := seedSpontaneousInstance(t, s, false)
 	external := testpkg.CreateTestExternalCaregiverRecord(t, s.db, "Musik")
 	staff := fixtures.NewInstanceStaff(func(fixtureRow *fixtures.InstanceStaff) {
@@ -115,7 +115,7 @@ func TestInstance_UpdateSpontaneous_PreservesExternalCaregiver(t *testing.T) {
 func TestInstance_UpdateSpontaneousToPlanned_KeepsExternalCaregiver(t *testing.T) {
 	t.Parallel()
 
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	instance := seedSpontaneousInstance(t, s, false)
 	external := testpkg.CreateTestExternalCaregiverRecord(t, s.db, "Musik")
 	staff := fixtures.NewInstanceStaff(func(fixtureRow *fixtures.InstanceStaff) {
@@ -147,11 +147,11 @@ func TestInstance_UpdateSpontaneousToPlanned_KeepsExternalCaregiver(t *testing.T
 func TestInstance_CreatePlanned_AllowsAccountBackedExternalAsOnlyStaff(t *testing.T) {
 	t.Parallel()
 
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	externalID := createAccountBackedExternal(t, s.db, s.ctx, testpkg.Tenant(t))
 
 	created, err := s.svc.CreateInstance(s.ctx, timetable.CreateInstanceInput{
-		Date:            calendar.TodayDate().AddDays(7),
+		Date:            lifecycleToday.AddDays(7),
 		StartTime:       time.Date(1, 1, 1, 9, 0, 0, 0, time.UTC),
 		EndTime:         time.Date(1, 1, 1, 10, 0, 0, 0, time.UTC),
 		Title:           "Geplante Musik-AG",

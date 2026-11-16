@@ -379,7 +379,7 @@ func TestApplyDeviations_PastBlock_Rejected(t *testing.T) {
 
 	s := buildDevModule(t)
 	router := devRouter(s.ctx, s.res, s.db)
-	past := calendar.TodayDate().AddDays(-1)
+	_, past := futureSubDate(-1) // the day before the module's clock
 
 	inst := testpkg.CreateTestActivityInstance(t, s.db, past, s.roomID, testpkg.ActivityInstanceOpts{Title: "Past"})
 
@@ -709,7 +709,7 @@ func TestAcknowledgeUnderstaffed_PastBlock_Rejected(t *testing.T) {
 
 	s := buildDevModule(t)
 	router := ackRouter(s.ctx, s.res)
-	past := calendar.TodayDate().AddDays(-1)
+	_, past := futureSubDate(-1) // the day before the module's clock
 
 	inst := testpkg.CreateTestActivityInstance(t, s.db, past, s.roomID, testpkg.ActivityInstanceOpts{Title: "PastAck"})
 
