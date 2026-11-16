@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"fmt"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"slices"
 	"strconv"
 	"strings"
@@ -248,20 +249,6 @@ func writeDayXLSX(rows []dayExportBlockRow, render TimeTrackingWorkbookRenderer)
 
 // --- shared serializers ----------------------------------------------------
 
-// sanitizeCSVFormula prevents spreadsheet software from evaluating untrusted
-// text as a formula. The apostrophe is Excel's explicit text marker.
-func sanitizeCSVFormula(value string) string {
-	if value == "" {
-		return value
-	}
-	switch value[0] {
-	case '=', '+', '-', '@', '\t', '\r':
-		return "'" + value
-	default:
-		return value
-	}
-}
-
 func writeExportCSV(headers []string, rows [][]string, untrustedColumns []int) ([]byte, error) {
 	var buf bytes.Buffer
 	// UTF-8 BOM for Excel compatibility, like the single-staff export.
@@ -275,7 +262,7 @@ func writeExportCSV(headers []string, rows [][]string, untrustedColumns []int) (
 		safeRow := append([]string(nil), row...)
 		for _, column := range untrustedColumns {
 			if column >= 0 && column < len(safeRow) {
-				safeRow[column] = sanitizeCSVFormula(safeRow[column])
+				safeRow[column] = domain.SpreadsheetSafe(safeRow[column])
 			}
 		}
 		if err := w.Write(safeRow); err != nil {

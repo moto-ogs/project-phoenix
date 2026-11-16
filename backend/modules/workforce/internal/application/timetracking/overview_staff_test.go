@@ -16,6 +16,10 @@ func (f overviewStaffQueryFunc) ListOverviewStaff(ctx context.Context) ([]Overvi
 	return f(ctx)
 }
 
+func (f overviewStaffQueryFunc) FindOverviewStaff(ctx context.Context, _ []int64) ([]OverviewStaff, error) {
+	return f(ctx)
+}
+
 func TestOverviewStaffFailureStopsReports(t *testing.T) {
 	t.Parallel()
 	failure := errors.New("staff directory unavailable")

@@ -114,7 +114,7 @@ func TestValidateContractChecksSitesSollAndWeeks(t *testing.T) {
 		}}
 	}
 	cases := map[string]func(*TraegerStaffContract){
-		"unknown kind":           func(c *TraegerStaffContract) { c.Kind = "ehrenamt" },
+		"unknown kind":           func(c *TraegerStaffContract) { c.Kind = "honorar" },
 		"end before start":       func(c *TraegerStaffContract) { c.EndsOn = day("2026-07-31") },
 		"no Soll":                func(c *TraegerStaffContract) { c.Targets = nil },
 		"foreign Einsatzort":     func(c *TraegerStaffContract) { c.Targets[0].ContractSite = ContractSite{SchoolID: 9, StaffID: 90} },
