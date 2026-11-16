@@ -36,6 +36,10 @@ func column(id, label string) common.ListColumn {
 	return common.ListColumn{ID: id, Label: label}
 }
 
+func euroColumn(id, label string) common.ListColumn {
+	return common.ListColumn{ID: id, Label: label + " (Euro)", Numeric: true}
+}
+
 // Status labels as the pages name them.
 var (
 	runStatusLabels = map[string]string{
@@ -62,12 +66,12 @@ func euroText(cents int64) string {
 	return fmt.Sprintf("%s%s,%02d €", sign, euros, cents%100)
 }
 
-// optionalEuro is an amount or „–“ without one.
-func optionalEuro(cents *int64) string {
+// optionalDecimalEuro leaves unknown amounts empty instead of exporting zero.
+func optionalDecimalEuro(cents *int64) string {
 	if cents == nil {
-		return "–"
+		return ""
 	}
-	return euroText(*cents)
+	return decimalEuro(*cents)
 }
 
 // dateText is a day as „07.09.2026“.

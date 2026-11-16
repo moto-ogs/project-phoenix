@@ -51,7 +51,7 @@ func (rs *BillingRunResource) exportList(w http.ResponseWriter, r *http.Request)
 func billingRunTable(runs []capability.BillingRun, periodID int64) common.ListTable {
 	table := newListTable("Abrechnungsläufe Ferienbetreuung", "abrechnungslaeufe", false,
 		column("period", "Ferienzeitraum"), column("days", "Betreuung"), column("status", "Status"),
-		column("invoices", "Rechnungen"), column("total", "Summe"), column("issued", "Ausgestellt am"))
+		column("invoices", "Rechnungen"), euroColumn("total", "Summe"), column("issued", "Ausgestellt am"))
 	periodName := ""
 	for _, run := range runs {
 		if periodID > 0 && run.HolidayPeriodID != periodID {
@@ -60,7 +60,7 @@ func billingRunTable(runs []capability.BillingRun, periodID int64) common.ListTa
 		periodName = run.PeriodName
 		table.Rows = append(table.Rows, []string{
 			run.PeriodName, periodText(run.ServiceFrom, run.ServiceUntil), runStatusLabels[run.Status],
-			countText(run.DocumentCount, "Rechnung", "Rechnungen"), optionalEuro(run.TotalCents), optionalDate(run.IssuedOn),
+			countText(run.DocumentCount, "Rechnung", "Rechnungen"), optionalDecimalEuro(run.TotalCents), optionalDate(run.IssuedOn),
 		})
 	}
 	if periodID > 0 {
@@ -99,7 +99,7 @@ func (rs *CareBillingResource) exportList(w http.ResponseWriter, r *http.Request
 func careRunTable(runs []capability.CareRun, schools []capability.CareRunSchool) common.ListTable {
 	table := newListTable("Monatsbeiträge", "monatsbeitraege", false,
 		column("month", "Monat"), column("status", "Status"), column("schools", "Schulen"),
-		column("invoices", "Rechnungen"), column("total", "Summe"), column("issued", "Ausgestellt am"),
+		column("invoices", "Rechnungen"), euroColumn("total", "Summe"), column("issued", "Ausgestellt am"),
 		column("rule", "Bei Vertragsänderung im Monat"))
 	names := make(map[int64]string, len(schools))
 	for _, school := range schools {
@@ -112,7 +112,7 @@ func careRunTable(runs []capability.CareRun, schools []capability.CareRunSchool)
 		}
 		table.Rows = append(table.Rows, []string{
 			run.BillingMonth.Format("01/2006"), runStatusLabels[run.Status], runSchoolNames(run.SchoolIDs, names),
-			countText(run.DocumentCount, "Rechnung", "Rechnungen"), optionalEuro(run.TotalCents), optionalDate(run.IssuedOn), rule,
+			countText(run.DocumentCount, "Rechnung", "Rechnungen"), optionalDecimalEuro(run.TotalCents), optionalDate(run.IssuedOn), rule,
 		})
 	}
 	return table
@@ -155,7 +155,7 @@ func (rs *CareNoticeResource) exportList(w http.ResponseWriter, r *http.Request)
 	}
 	table := newListTable("Jahresbescheide", "jahresbescheide", false,
 		column("period", "Zeitraum"), column("status", "Status"), column("schools", "Schulen"),
-		column("notices", "Bescheide"), column("total", "Summe"), column("issued", "Abgeschlossen am"))
+		column("notices", "Bescheide"), euroColumn("total", "Summe"), column("issued", "Abgeschlossen am"))
 	for _, run := range list.Runs {
 		status := noticeRunStatusLabels[run.Status]
 		if run.Status == capability.RunReleased && run.NoticeCount != nil && *run.NoticeCount == 0 {
@@ -167,7 +167,7 @@ func (rs *CareNoticeResource) exportList(w http.ResponseWriter, r *http.Request)
 		}
 		table.Rows = append(table.Rows, []string{
 			periodText(run.PeriodFrom, run.PeriodUntil), status, schoolCountText(run.SchoolIDs),
-			notices, optionalEuro(run.TotalCents), optionalDate(run.IssuedOn),
+			notices, optionalDecimalEuro(run.TotalCents), optionalDate(run.IssuedOn),
 		})
 	}
 	common.WriteList(w, r, rs.lists, format, table)

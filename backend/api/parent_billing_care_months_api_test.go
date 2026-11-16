@@ -209,7 +209,7 @@ func TestCareMonthlyRunBillsTheContractByTheTariffsOfItsSchool(t *testing.T) {
 	// #4718: the list of the runs as a file, the schools by name.
 	lines := billingListCSV(t, f.traeger, f.office.token, careRunsPath+"/export")
 	require.Len(t, lines, 2, "the header and the run")
-	assert.Equal(t, "Monat;Status;Schulen;Rechnungen;Summe;Ausgestellt am;Bei Vertragsänderung im Monat", lines[0])
+	assert.Equal(t, "Monat;Status;Schulen;Rechnungen;Summe (Euro);Ausgestellt am;Bei Vertragsänderung im Monat", lines[0])
 	assert.Contains(t, lines[1], ";Vorschau;Alle 2 Schulen;noch nicht ausgestellt;")
 	assertTraegerListFormats(t, f.traeger, f.office.token, careRunsPath+"/export", "monatsbeitraege")
 	require.Len(t, preview.Invoices, 2)

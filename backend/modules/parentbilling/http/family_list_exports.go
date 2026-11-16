@@ -67,8 +67,8 @@ func (rs *BillingFamilyResource) exportList(w http.ResponseWriter, r *http.Reque
 	table := newListTable("Familien der Abrechnung", "familien", true,
 		column("last_name", "Nachname"), column("first_name", "Vorname"), column("email", "E-Mail"),
 		column("debtor", "Debitorennummer"), column("payment", "Zahlung"), column("method", "Zahlungsart"),
-		column("issued", "Ausgestellt"), column("cancelled", "Storniert"), column("credited", "Gutgeschrieben"),
-		column("open", "Offene Forderung"))
+		euroColumn("issued", "Ausgestellt"), euroColumn("cancelled", "Storniert"), euroColumn("credited", "Gutgeschrieben"),
+		euroColumn("open", "Offene Forderung"))
 	for _, family := range families {
 		number := family.FamilyDebtorNumber
 		if number == "" {
@@ -84,8 +84,8 @@ func (rs *BillingFamilyResource) exportList(w http.ResponseWriter, r *http.Reque
 		}
 		table.Rows = append(table.Rows, []string{
 			family.RecipientLastName, family.RecipientFirstName, family.RecipientEmail, number,
-			strings.Join(payments, ", "), strings.Join(methods, ", "), euroText(family.IssuedCents),
-			euroText(family.CancelledCents), euroText(family.CreditedCents), euroText(family.OpenCents),
+			strings.Join(payments, ", "), strings.Join(methods, ", "), decimalEuro(family.IssuedCents),
+			decimalEuro(family.CancelledCents), decimalEuro(family.CreditedCents), decimalEuro(family.OpenCents),
 		})
 	}
 	common.WriteList(w, r, rs.lists, format, table)
@@ -116,7 +116,7 @@ func (rs *BillingFamilyResource) exportDocuments(w http.ResponseWriter, r *http.
 	table := newListTable("Dokumente der Familie", "familie-dokumente", true,
 		column("issued", "Datum"), column("kind", "Dokument"), column("number", "Nummer"), column("status", "Stand"),
 		column("reference", "Bezug"), column("payment", "Zahlung"), column("period", "Zeitraum"),
-		column("days", "Betreuung"), column("children", "Kinder"), column("amount", "Betrag"), column("open", "Offene Forderung"))
+		column("days", "Betreuung"), column("children", "Kinder"), euroColumn("amount", "Betrag"), euroColumn("open", "Offene Forderung"))
 	table.Subtitle = personName(family.RecipientFirstName, family.RecipientLastName)
 	for _, document := range family.Documents {
 		table.Rows = append(table.Rows, familyDocumentRow(document))
@@ -125,7 +125,7 @@ func (rs *BillingFamilyResource) exportDocuments(w http.ResponseWriter, r *http.
 }
 
 func familyDocumentRow(document capability.BillingFamilyDocument) []string {
-	reference, open := "", "–"
+	reference, open := "", ""
 	if document.ReferenceNumber != "" {
 		reference = "Zu " + document.ReferenceNumber
 		if document.Reason != "" {
@@ -134,7 +134,7 @@ func familyDocumentRow(document capability.BillingFamilyDocument) []string {
 	}
 	var payment []string
 	if document.Kind == capability.DocumentInvoice {
-		open = euroText(document.OpenCents)
+		open = decimalEuro(document.OpenCents)
 		if label := paymentMethodLabels[document.PaymentMethod]; label != "" {
 			payment = append(payment, label)
 		}
@@ -148,7 +148,7 @@ func familyDocumentRow(document capability.BillingFamilyDocument) []string {
 	return []string{
 		dateText(document.IssuedOn), documentKindLabels[document.Kind], document.Number, invoiceStateLabels[document.Status],
 		reference, strings.Join(payment, " · "), document.PeriodName, periodText(document.ServiceFrom, document.ServiceUntil),
-		strings.Join(document.ChildNames, ", "), euroText(document.TotalCents), open,
+		strings.Join(document.ChildNames, ", "), decimalEuro(document.TotalCents), open,
 	}
 }
 

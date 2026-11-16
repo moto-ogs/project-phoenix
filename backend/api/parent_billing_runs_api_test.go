@@ -282,7 +282,7 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	// #4718: the list as a file, of the chosen period too.
 	lines := billingListCSV(t, f.traeger, billing, fmt.Sprintf("%s/export?holiday_period_id=%d", billingRunsPath, f.period.ID))
 	require.Len(t, lines, 3, "the header and both runs of the period")
-	assert.Equal(t, "Ferienzeitraum;Betreuung;Status;Rechnungen;Summe;Ausgestellt am", lines[0])
+	assert.Equal(t, "Ferienzeitraum;Betreuung;Status;Rechnungen;Summe (Euro);Ausgestellt am", lines[0])
 	assert.Contains(t, strings.Join(lines, "\n"), "Winterferien 2027;04.01.2027 bis ")
 	assert.Contains(t, strings.Join(lines, "\n"), ";Freigegeben;2 Rechnungen;")
 	assert.Len(t, billingListCSV(t, f.traeger, billing, billingRunsPath+"/export?holiday_period_id=999999999"), 1, "another period: the header alone")

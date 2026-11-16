@@ -139,10 +139,11 @@ func TestCareNoticeOriginalStaysByteIdenticalAfterEveryLaterChange(t *testing.T)
 	// #4718: the mail list as a file, read like the page.
 	lines := billingListCSV(t, f.traeger, f.office.token, careNoticeRunPath(run.ID, "/letters/export"))
 	require.Len(t, lines, 2, "the header and the notice")
-	assert.Equal(t, "Nachname;Vorname;Schule;Art;Bescheid-Nr.;Empfänger;E-Mail;Gesamtbetrag;Original;An die Familie;Gesendet am", lines[0])
+	assert.Equal(t, "Nachname;Vorname;Schule;Art;Bescheid-Nr.;Empfänger;E-Mail;Gesamtbetrag (Euro);Original;An die Familie;Gesendet am", lines[0])
 	assert.Contains(t, lines[1], ";Gespeichert;Nicht gesendet;–")
-	assertTraegerListFormats(t, f.traeger, f.office.token, careNoticeRunPath(run.ID, "/letters/export"),
+	spreadsheet := assertTraegerListFormats(t, f.traeger, f.office.token, careNoticeRunPath(run.ID, "/letters/export"),
 		"bescheid-versand-"+strconv.FormatInt(run.ID, 10))
+	assertTraegerListNumbers(t, spreadsheet, map[string]string{"H7": "310"})
 
 	// Letterhead, template, address, contract and bank account change afterwards.
 	rec = traegerJSON(t, f.traeger, administration.token, http.MethodPut, "/traeger/settings/values/"+configModels.KeyBrandingLetterheadText,

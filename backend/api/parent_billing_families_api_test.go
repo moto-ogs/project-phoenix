@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -187,16 +188,27 @@ func TestBillingFamiliesShowEveryDocumentWhoPaysAndWhatIsOpen(t *testing.T) {
 	// reads like the page and stands in the same trail.
 	lines := billingListCSV(t, f.traeger, billing, billingFamiliesPath+"/export")
 	require.Len(t, lines, 3, "the header and both families")
-	assert.Equal(t, "Nachname;Vorname;E-Mail;Debitorennummer;Zahlung;Zahlungsart;Ausgestellt;Storniert;Gutgeschrieben;Offene Forderung", lines[0])
+	assert.Equal(t, "Nachname;Vorname;E-Mail;Debitorennummer;Zahlung;Zahlungsart;Ausgestellt (Euro);Storniert (Euro);Gutgeschrieben (Euro);Offene Forderung (Euro)", lines[0])
 	assert.Contains(t, strings.Join(lines, "\n"), ";papa.muster@example.org;")
 	assert.Contains(t, strings.Join(lines, "\n"), ";Familie zahlt selbst;")
 	lines = billingListCSV(t, f.traeger, billing, fmt.Sprintf("%s/%d/export", billingFamiliesPath, eva.ID))
 	require.Len(t, lines, 4, "the header and the three documents of the family")
-	assert.Equal(t, "Datum;Dokument;Nummer;Stand;Bezug;Zahlung;Zeitraum;Betreuung;Kinder;Betrag;Offene Forderung", lines[0])
+	assert.Equal(t, "Datum;Dokument;Nummer;Stand;Bezug;Zahlung;Zeitraum;Betreuung;Kinder;Betrag (Euro);Offene Forderung (Euro)", lines[0])
 	assert.Contains(t, strings.Join(lines, "\n"), ";Storno;")
 	assert.Contains(t, strings.Join(lines, "\n"), "Zu "+first.Number+" · Anschrift falsch")
-	assertTraegerListFormats(t, f.traeger, billing, billingFamiliesPath+"/export", "familien")
-	assertTraegerListFormats(t, f.traeger, billing, fmt.Sprintf("%s/%d/export", billingFamiliesPath, eva.ID), "familie-dokumente")
+	spreadsheet := assertTraegerListFormats(t, f.traeger, billing, billingFamiliesPath+"/export", "familien")
+	assertTraegerListNumbers(t, spreadsheet, map[string]string{
+		"G7": strconv.FormatFloat(float64(eva.IssuedCents)/100, 'f', -1, 64),
+		"H7": strconv.FormatFloat(float64(eva.CancelledCents)/100, 'f', -1, 64), "I7": "0",
+		"J7": strconv.FormatFloat(float64(eva.OpenCents)/100, 'f', -1, 64),
+		"G8": strconv.FormatFloat(float64(papa.IssuedCents)/100, 'f', -1, 64), "H8": "0", "I8": "5",
+		"J8": strconv.FormatFloat(float64(papa.OpenCents)/100, 'f', -1, 64),
+	})
+	spreadsheet = assertTraegerListFormats(t, f.traeger, billing, fmt.Sprintf("%s/%d/export", billingFamiliesPath, eva.ID), "familie-dokumente")
+	assertTraegerListNumbers(t, spreadsheet, map[string]string{
+		"J7": strconv.FormatFloat(float64(evaDetail.Documents[0].TotalCents)/100, 'f', -1, 64),
+		"K7": strconv.FormatFloat(float64(evaDetail.Documents[0].OpenCents)/100, 'f', -1, 64),
+	})
 	views = nil
 	require.NoError(t, f.db.NewRaw(`SELECT details->>'view' FROM parent_billing.run_events
 		WHERE run_id = ? AND action = 'read' AND details->>'view' IS NOT NULL ORDER BY id`, secondRun).Scan(context.Background(), &views))

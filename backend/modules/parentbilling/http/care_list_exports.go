@@ -57,20 +57,20 @@ func (rs *CareNoticeResource) exportNotices(w http.ResponseWriter, r *http.Reque
 	table := newListTable("Jahresbescheide "+year, "jahresbescheide-"+year, true,
 		column("last_name", "Nachname"), column("first_name", "Vorname"), column("school", "Schule"),
 		column("kind", "Art"), column("number", "Bescheid-Nr."), column("period", "Zeitraum"),
-		column("installments", "Raten"), column("total", "Gesamtbetrag"), column("delta", "Zu-/Abgang"))
+		column("installments", "Raten"), euroColumn("total", "Gesamtbetrag"), euroColumn("delta", "Zu-/Abgang"))
 	table.Subtitle = periodText(detail.PeriodFrom, detail.PeriodUntil)
 	for _, notice := range detail.Notices {
-		number, delta := notice.Number, "–"
+		number, delta := notice.Number, ""
 		if number == "" {
 			number = "–"
 		}
 		if notice.Kind == capability.NoticeKindChange {
-			delta = euroText(notice.DeltaCents)
+			delta = decimalEuro(notice.DeltaCents)
 		}
 		table.Rows = append(table.Rows, []string{
 			notice.ChildLastName, notice.ChildFirstName, notice.SchoolName, noticeKindLabels[notice.Kind], number,
 			periodText(notice.PeriodFrom, notice.PeriodUntil), strconv.Itoa(len(notice.Installments)),
-			euroText(notice.TotalCents), delta,
+			decimalEuro(notice.TotalCents), delta,
 		})
 	}
 	common.WriteList(w, r, rs.lists, format, table)
@@ -96,7 +96,7 @@ func (rs *CareNoticeResource) exportNoticeLetters(w http.ResponseWriter, r *http
 	table := newListTable("Versand der Jahresbescheide", "bescheid-versand-"+strconv.FormatInt(runID, 10), true,
 		column("last_name", "Nachname"), column("first_name", "Vorname"), column("school", "Schule"),
 		column("kind", "Art"), column("number", "Bescheid-Nr."), column("recipient", "Empfänger"), column("email", "E-Mail"),
-		column("total", "Gesamtbetrag"), column("letter", "Original"), column("status", "An die Familie"), column("sent", "Gesendet am"))
+		euroColumn("total", "Gesamtbetrag"), column("letter", "Original"), column("status", "An die Familie"), column("sent", "Gesendet am"))
 	for _, notice := range letters.Notices {
 		letter, status := "Noch nicht gespeichert", mailStates[notice.Status]
 		if notice.HasLetter {
@@ -108,7 +108,7 @@ func (rs *CareNoticeResource) exportNoticeLetters(w http.ResponseWriter, r *http
 		table.Rows = append(table.Rows, []string{
 			notice.ChildLastName, notice.ChildFirstName, notice.SchoolName, noticeKindLabels[notice.Kind], notice.Number,
 			personName(notice.RecipientFirstName, notice.RecipientLastName), notice.RecipientEmail,
-			euroText(notice.TotalCents), letter, status, instantText(notice.SentAt),
+			decimalEuro(notice.TotalCents), letter, status, instantText(notice.SentAt),
 		})
 	}
 	common.WriteList(w, r, rs.lists, format, table)

@@ -96,6 +96,12 @@ export default function TraegerAccountsPage() {
     setPending(null);
   }, []);
 
+  const onExportError = (error: unknown) => {
+    if (!isRefusal(error)) return;
+    dropOnRefusal(error);
+    void showLoadError(error, { object: "die Liste der Personen" });
+  };
+
   const fetchBuero = useCallback(async () => {
     const request = ++latestRead.current;
     try {
@@ -376,7 +382,7 @@ export default function TraegerAccountsPage() {
               fallbackName="mitglieder"
               errorObject="die Liste der Personen"
               unavailable={!loaded}
-              onError={dropOnRefusal}
+              onError={onExportError}
             />
             <Button
               type="button"
@@ -496,7 +502,7 @@ export default function TraegerAccountsPage() {
       {accessRefused || bueroLoad.error ? null : (
         <TraegerAccountHistory
           version={historyVersion}
-          onExportError={dropOnRefusal}
+          onExportError={onExportError}
         />
       )}
     </TenantPage>

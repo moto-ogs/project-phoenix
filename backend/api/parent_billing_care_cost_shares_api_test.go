@@ -139,10 +139,11 @@ func TestCareCostSharesSplitTheContributionAndStayOnTheIssuedInvoice(t *testing.
 	invoices := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, "/invoices/export"), nil)
 	require.Equal(t, http.StatusOK, invoices.Code, invoices.Body.String())
 	assert.True(t, strings.HasPrefix(strings.TrimPrefix(invoices.Body.String(), "\xEF\xBB\xBF"),
-		"Rechnung Nr.;Ausgestellt am;Schule;Nachname;Vorname;Leistung;Empfänger;Debitorennummer;Summe\n"), invoices.Body.String())
+		"Rechnung Nr.;Ausgestellt am;Schule;Nachname;Vorname;Leistung;Empfänger;Debitorennummer;Summe (Euro)\n"), invoices.Body.String())
 	assert.Contains(t, invoices.Body.String(), miaNumber+";")
 	assert.Equal(t, 3, strings.Count(strings.TrimSpace(invoices.Body.String()), "\n")+1, "the header and both invoices")
-	assertTraegerListFormats(t, f.traeger, f.office.token, careRunPath(run.ID, "/invoices/export"), "rechnungen-monatsbeitrag-"+released.BillingMonth[:7])
+	spreadsheet := assertTraegerListFormats(t, f.traeger, f.office.token, careRunPath(run.ID, "/invoices/export"), "rechnungen-monatsbeitrag-"+released.BillingMonth[:7])
+	assertTraegerListNumbers(t, spreadsheet, map[string]string{"I7": "52.5", "I8": "0"})
 
 	// A later change of the share and of the cost bearer's name never
 	// reaches the issued invoice.

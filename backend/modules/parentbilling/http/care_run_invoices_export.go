@@ -37,13 +37,13 @@ func (rs *CareBillingResource) exportInvoices(w http.ResponseWriter, r *http.Req
 	table := newListTable("Rechnungen des Monatslaufs", "rechnungen-monatsbeitrag-"+month, true,
 		column("number", "Rechnung Nr."), column("issued", "Ausgestellt am"), column("school", "Schule"),
 		column("last_name", "Nachname"), column("first_name", "Vorname"), column("service", "Leistung"),
-		column("recipient", "Empfänger"), column("debtor", "Debitorennummer"), column("total", "Summe"))
+		column("recipient", "Empfänger"), column("debtor", "Debitorennummer"), euroColumn("total", "Summe"))
 	table.Subtitle = "Monat " + detail.BillingMonth.Format("01.2006")
 	for _, invoice := range detail.Invoices {
 		table.Rows = append(table.Rows, []string{
 			invoice.Number, optionalDate(invoice.IssuedOn), invoice.SchoolName, invoice.ChildLastName, invoice.ChildFirstName,
 			careServiceLabels[invoice.Service], invoice.Recipient.FirstName + " " + invoice.Recipient.LastName,
-			invoice.DebtorNumber, euroText(invoice.TotalCents),
+			invoice.DebtorNumber, decimalEuro(invoice.TotalCents),
 		})
 	}
 	common.WriteList(w, r, rs.lists, format, table)
