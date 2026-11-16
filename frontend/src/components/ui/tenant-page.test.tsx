@@ -687,6 +687,60 @@ describe("TenantPage", () => {
     expect(within(band).getAllByRole("tab")).toHaveLength(2);
   });
 
+  // Folgt unter den Reitern nichts, schließen sie die Kopfkarte ab: eine
+  // eigene Grundlinie 20 px über der Kartenkante las sich als doppelter Rand
+  // (#7303). Mit Suchzeile trennt die Grundlinie Reiter und Suche.
+  it.each([
+    { name: "ohne Suchzeile", search: undefined, closes: true },
+    {
+      name: "mit Suchzeile",
+      search: { value: "", onChange: vi.fn(), placeholder: "Suchen" },
+      closes: false,
+    },
+  ])(
+    "schließt die Kopfkarte mit den Reitern $name ab: $closes",
+    ({ search, closes }) => {
+      const { container } = render(
+        <TenantPage
+          title="Einstellungen"
+          search={search}
+          tabs={{
+            value: "operations",
+            onChange: vi.fn(),
+            items: [
+              { value: "operations", label: "Betrieb" },
+              { value: "gdpr", label: "Datenschutz" },
+            ],
+            label: "Einstellungsbereiche",
+          }}
+        >
+          <p>Inhalt</p>
+        </TenantPage>,
+      );
+
+      const header = container.querySelector("header")!;
+      const band = screen.getByRole("tablist", {
+        name: "Einstellungsbereiche",
+      });
+      const bandWrapper = [...header.children].find((child) =>
+        child.contains(band),
+      )!;
+      const baseline = band.parentElement!.parentElement!;
+      // Die Linie liegt immer am Band; ab sm entfällt sie nur als letzte Zeile.
+      expect(baseline).toHaveClass("border-b", "sm:group-last/tabs:border-b-0");
+      expect(bandWrapper).toHaveClass("group/tabs");
+      expect(header.lastElementChild === bandWrapper).toBe(closes);
+      // Mobil bleiben Pillen und der Innenrand der Karte.
+      expect(header).toHaveClass("max-sm:p-4");
+      if (closes) {
+        expect(header).toHaveClass("sm:pb-0", "compact:pb-0");
+      } else {
+        expect(header).toHaveClass("p-5");
+        expect(header.className).not.toContain("pb-0");
+      }
+    },
+  );
+
   it("legt die Erklärung hinter einen Info-Knopf neben dem Titel", () => {
     render(
       <TenantPage

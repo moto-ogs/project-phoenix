@@ -195,6 +195,68 @@ it("offers older files of the protocol", async () => {
   expect(api.fetchExportProtocol).toHaveBeenLastCalledWith(1);
 });
 
+// A DataTable draws its own frame. In a flush card the table frame and the
+// card frame met at the bottom edge (#7303): the card body keeps its inset.
+it("keeps the card inset around the run table and the protocol table", async () => {
+  api.fetchExportRuns.mockResolvedValue({
+    items: [RUN],
+    total: 2,
+    notExported: 2,
+    nextOffset: 1,
+  });
+  api.fetchExportProtocol.mockResolvedValue({
+    items: [
+      {
+        id: "9",
+        fileNumber: 9,
+        format: "sollstellung" as const,
+        runKind: "care" as const,
+        runId: "7",
+        runLabel: "Monatsbeiträge Oktober 2026",
+        fileName: "sollstellung-9.csv",
+        invoiceCount: 2,
+        totalCents: 0,
+        reference: "",
+        repeatOf: null,
+        datevAll: false,
+        resolvedPositions: 0,
+        costCenterFallbacks: [],
+        exportedByYou: true,
+        exportedByAccount: true,
+        exportedByName: "",
+        exportedAt: "2026-11-09T10:00:00Z",
+        submittedAt: null,
+      },
+    ],
+    total: 2,
+    nextOffset: 1,
+  });
+  render(
+    <ToastProvider>
+      <TraegerFinanceExportsPage />
+    </ToastProvider>,
+  );
+  expect(
+    await screen.findByText("Sie sehen 1 von 2 Dateien."),
+  ).toBeInTheDocument();
+
+  for (const title of ["Dateien je Lauf", "Exportprotokoll"]) {
+    const card = screen
+      .getByRole("heading", { name: title })
+      .closest("section")!;
+    const body = [...card.children].find((child) =>
+      child.querySelector("table"),
+    );
+    expect(body?.className).toMatch(/(?:^|\s)px-5(?:\s|$)/);
+    // „Ältere anzeigen“ stays in the footer of the card.
+    expect(card).toContainElement(
+      screen.getAllByRole("button", { name: "Ältere anzeigen" })[
+        title === "Dateien je Lauf" ? 0 : 1
+      ]!,
+    );
+  }
+});
+
 function renderPage() {
   render(
     <ToastProvider>
