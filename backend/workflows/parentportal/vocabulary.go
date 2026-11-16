@@ -233,6 +233,8 @@ var (
 	ErrLeadershipMessagesUnavailable    = messaging.ErrLeadershipUnavailable
 	ErrPastCareDate                     = care.ErrPastCareDate
 	ErrPhotoConsentNotWithdrawn         = care.ErrPhotoConsentNotWithdrawn
+	ErrPhotosDisabled                   = care.ErrPhotosDisabled
+	ErrPhotoConsentBusy                 = care.ErrPhotoConsentBusy
 	ErrPickupChangeCareDayEnded         = care.ErrPickupChangeCareDayEnded
 	ErrPickupChangeCutoffPassed         = care.ErrPickupChangeCutoffPassed
 	ErrPickupChangeDisabled             = care.ErrPickupChangeDisabled
