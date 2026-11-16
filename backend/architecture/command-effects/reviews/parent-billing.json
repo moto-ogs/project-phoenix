@@ -978,13 +978,13 @@
       "target_owner": "settings-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerBankAccountPresence.HasBankAccount",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.HasBankAccount",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.TraegerBankAccounts.HasBankAccount",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerBankAccountPresence.HasBankAccount: tells whether the Träger of the session has a bank account, read in its Träger transaction without the account data and without a log, for the details the Träger still has to enter (#7177).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerMasterData.HasBankAccount: tells whether the Träger of the session has a bank account, read in its Träger transaction without the account data and without a log, for the details the Träger still has to enter (#7177).",
       "source_owner": "parent-billing",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerBankAccountPresence.HasBankAccount",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.HasBankAccount",
       "target_owner": "organization-tenancy"
     },
     {

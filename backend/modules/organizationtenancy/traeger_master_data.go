@@ -137,6 +137,9 @@ type TraegerMasterData interface {
 	DocumentContact(ctx context.Context, organizationID int64) (TraegerDocumentContact, error)
 	// TraegerNames reads the Träger's own name for its mails (#6437).
 	TraegerNames
+	// TraegerBankAccountPresence tells whether the Träger has a bank
+	// account, without a log (#7177).
+	TraegerBankAccountPresence
 	// ReplaceLogo checks the image and stores it in place of the old one.
 	ReplaceLogo(ctx context.Context, organizationID, accountID int64, data []byte) (TraegerLogo, error)
 	// RemoveLogo deletes the logo.

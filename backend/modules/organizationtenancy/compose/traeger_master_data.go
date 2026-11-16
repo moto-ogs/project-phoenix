@@ -11,11 +11,6 @@ func NewTraegerMasterData() organizationtenancy.TraegerMasterData {
 	return application.NewTraegerMasterData(postgres.NewTraegerMasterDataStore())
 }
 
-// NewTraegerBankAccountPresence builds the check for a bank account of a Träger (#7177) in the Träger transaction.
-func NewTraegerBankAccountPresence() organizationtenancy.TraegerBankAccountPresence {
-	return postgres.NewTraegerMasterDataStore()
-}
-
 // NewTraegerDocumentTemplates builds the document templates of a Träger (#4677, ADR 0152) in the Träger transaction.
 func NewTraegerDocumentTemplates() organizationtenancy.TraegerDocumentTemplates {
 	return application.NewTraegerDocumentTemplates(postgres.NewTraegerMasterDataStore())

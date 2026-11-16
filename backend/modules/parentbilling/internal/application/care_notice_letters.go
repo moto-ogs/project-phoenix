@@ -160,13 +160,8 @@ func (l *CareNoticeLetters) CreateCareNoticeLetters(ctx context.Context, reviewe
 	if err != nil {
 		return parentbilling.CareNoticeLetters{}, fmt.Errorf("parent billing: read letterhead: %w", err)
 	}
-	// A notice paid by transfer names the account to pay to. The original
-	// never changes, so without an account it is not stored at all.
-	if head.BankAccount == nil && anyByTransfer(missing) {
-		return parentbilling.CareNoticeLetters{}, parentbilling.ErrBankAccountMissing
-	}
-	if missingSender(head) {
-		return parentbilling.CareNoticeLetters{}, parentbilling.ErrLetterheadMissing
+	if err := noticeLetterheadComplete(head, missing); err != nil {
+		return parentbilling.CareNoticeLetters{}, err
 	}
 	created := make([]int64, 0, len(missing))
 	for _, notice := range missing {
@@ -580,6 +575,20 @@ func (l *CareNoticeLetters) traegerName(ctx context.Context, organizationID int6
 func (l *CareNoticeLetters) recordRead(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID int64, details map[string]any) error {
 	if err := l.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, runID, reviewer.AccountID, runEventRead, details); err != nil {
 		return fmt.Errorf("parent billing: record notice letter read: %w", err)
+	}
+	return nil
+}
+
+// noticeLetterheadComplete refuses originals the letterhead cannot carry. A
+// notice paid by transfer names the account to pay to; every notice names
+// the Träger as its sender (#7177). The original never changes, so without
+// them it is not stored at all.
+func noticeLetterheadComplete(head parentbilling.Letterhead, notices []parentbilling.CareNotice) error {
+	if head.BankAccount == nil && anyByTransfer(notices) {
+		return parentbilling.ErrBankAccountMissing
+	}
+	if missingSender(head) {
+		return parentbilling.ErrLetterheadMissing
 	}
 	return nil
 }

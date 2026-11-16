@@ -66,9 +66,9 @@ func NewCareLetters(letterheads parentbilling.BillingLetterheads, contracts pare
 	return application.NewCareLetters(postgres.NewStore(), ports, rendering.NewRenderer(), rendering.NewRenderer(), today)
 }
 
-// NewBillingTerms builds the payment terms, the bundling, the family deviations with the debtor number in the format of the Träger (#6675) and the due dates of the runs (#4689) over the contracts the root binds, and the DATEV booking batch of both payment methods (#4694) over the DATEV settings of the Träger.
-func NewBillingTerms(contracts parentbilling.CareContracts, datev parentbilling.DatevBillingSettings, formats parentbilling.DebtorNumberFormats, today func() calendar.Date) (parentbilling.BillingTerms, parentbilling.DatevExport) {
-	return application.NewBillingTerms(postgres.NewStore(), contracts, formats), application.NewDatevExport(datev, today, calendar.Now)
+// NewBillingTerms builds the payment terms, the bundling, the family deviations with the debtor number in the format of the Träger (#6675) and the due dates of the runs (#4689) over the contracts the root binds, and the DATEV booking batch of both payment methods (#4694) over the DATEV settings of the Träger, and the check of the details the Träger still has to enter (#7177) over the sources the root binds.
+func NewBillingTerms(contracts parentbilling.CareContracts, datev parentbilling.DatevBillingSettings, formats parentbilling.DebtorNumberFormats, details parentbilling.RequiredDetailSources, today func() calendar.Date) (parentbilling.BillingTerms, parentbilling.DatevExport, parentbilling.RequiredDetailsCheck) {
+	return application.NewBillingTerms(postgres.NewStore(), contracts, formats), application.NewDatevExport(datev, today, calendar.Now), application.NewRequiredDetails(postgres.NewStore(), details)
 }
 
 // NewCareFeeNotices builds the Jahresbescheide of the monthly care (#6219, ADR 0182) over the monthly computation and the letterhead of the Träger, which carries the template of the fee notice; the root binds the ports.
@@ -111,11 +111,6 @@ func NewSEPAReturn(creditors parentbilling.SEPACreditorAccounts, cipher parentbi
 // NewSEPADebitDownloadRetention builds the hourly expiry of the unsubmitted PAIN.008 downloads (ADR 0187).
 func NewSEPADebitDownloadRetention() parentbilling.SEPADebitDownloadRetention {
 	return postgres.NewStore()
-}
-
-// NewRequiredDetails builds the check of the details a Träger still has to enter (#7177) over the sources the root binds.
-func NewRequiredDetails(sources parentbilling.RequiredDetailSources) parentbilling.RequiredDetailsCheck {
-	return application.NewRequiredDetails(postgres.NewStore(), sources)
 }
 
 // NewSEPADebits builds the SEPA direct debit file of the issued runs (#4697, ADR 0181) over the letterhead with the bank account of the Träger and the field cipher the root binds.

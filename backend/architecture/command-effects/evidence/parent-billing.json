@@ -769,11 +769,11 @@
       "target_owner": "settings-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerBankAccountPresence.HasBankAccount",
-      "binding_digest": "1fed5f95c86e6378092072729bc584e2",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.HasBankAccount",
+      "binding_digest": "804a503ca1c1007bcc2cd5af5168b426",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.TraegerBankAccounts.HasBankAccount",
       "source_owner": "parent-billing",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerBankAccountPresence.HasBankAccount",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.HasBankAccount",
       "target_owner": "organization-tenancy"
     },
     {

@@ -182,6 +182,7 @@ func TestManualDraftKeepsEarlyStartConsent(t *testing.T) {
 // acceptance holds the contract back for the next run instead of failing
 // the run of the whole Träger.
 func TestConclusionHoldsBackAContractWithoutLetterhead(t *testing.T) {
+	t.Parallel()
 	err := sendHoldBack(fmt.Errorf("care contract: %w", carecontract.ErrLetterheadMissing))
 	assert.Equal(t, carecontract.SkipLetterheadMissing, holdBackReason(err))
 }

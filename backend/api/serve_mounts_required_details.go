@@ -4,28 +4,23 @@ import (
 	"context"
 	"errors"
 
-	"github.com/go-chi/chi/v5"
-
 	organizationTenancyCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
-	parentBillingCompose "github.com/moto-ogs/project-phoenix/modules/parentbilling/compose"
-	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// mountRequiredDetailRoutes serves the details the Träger still has to
-// enter before its letters, notices and contracts go out (#7177) at
-// /traeger/required-details: the schools of the Träger from Organisation &
-// Tenancy, their module switches and the letterhead text from the settings,
-// and whether the Träger has a bank account from Organisation & Tenancy.
-func mountRequiredDetailRoutes(root chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings) {
-	check := parentBillingCompose.NewRequiredDetails(parentbilling.RequiredDetailSources{
+// requiredDetailSources binds the sources of the details the Träger still
+// has to enter before its letters, notices and contracts go out (#7177): the
+// schools of the Träger from Organisation & Tenancy, their module switches
+// and the letterhead text from the settings, and whether the Träger has a
+// bank account from Organisation & Tenancy.
+func requiredDetailSources(organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings) parentbilling.RequiredDetailSources {
+	return parentbilling.RequiredDetailSources{
 		Schools: parentBillingCareSchools{organizations: organizations}, Modules: schoolModuleSwitches{settings: schoolSettings},
-		Sender: parentBillingLetterPost{settings: settings}, Accounts: organizationTenancyCompose.NewTraegerBankAccountPresence(),
-	})
-	root.Mount("/traeger/required-details", parentBillingHTTP.NewRequiredDetailsResource(check).Router(ProtectedTraegerRoutes))
+		Sender: parentBillingLetterPost{settings: settings}, Accounts: organizationTenancyCompose.NewTraegerMasterData(),
+	}
 }
 
 // schoolModuleSwitches reads the module switches of several schools in one
