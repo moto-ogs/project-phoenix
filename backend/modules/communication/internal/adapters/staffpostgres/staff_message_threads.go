@@ -31,8 +31,8 @@ func NewThreadStore(database Database) *ThreadStore {
 type staffThreadRow struct {
 	bun.BaseModel       `bun:"table:users.staff_message_threads,alias:staff_message_thread"`
 	ID                  int64      `bun:"id,pk,autoincrement"`
-	CreatedAt           time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt           time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt           time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt           time.Time  `bun:"updated_at,nullzero,notnull"`
 	TenantID            int64      `bun:"tenant_id,notnull"`
 	ParticipantKey      string     `bun:"participant_key,notnull"`
 	Kind                string     `bun:"kind,notnull"`
@@ -63,7 +63,7 @@ type staffParticipantRow struct {
 	TenantID      int64     `bun:"tenant_id,notnull"`
 	ThreadID      int64     `bun:"thread_id,pk"`
 	AccountID     int64     `bun:"account_id,pk"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
 	// HistoryFrom is when a group member joined (#4776); nil for direct chats.
 	HistoryFrom *time.Time `bun:"history_from"`
 }

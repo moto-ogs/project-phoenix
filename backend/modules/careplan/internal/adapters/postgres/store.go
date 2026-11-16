@@ -74,8 +74,8 @@ type careOfferingRow struct {
 	bun.BaseModel       `bun:"table:care_offerings,alias:care_offering"`
 	ID                  int64             `bun:"id,pk,autoincrement" json:"id"`
 	TenantID            int64             `bun:"tenant_id,notnull" json:"tenant_id"`
-	CreatedAt           time.Time         `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt           time.Time         `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+	CreatedAt           time.Time         `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt           time.Time         `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 	PhaseID             int64             `bun:"phase_id,notnull" json:"phase_id"`
 	ActivityGroupID     *int64            `bun:"activity_group_id" json:"activity_group_id"`
 	Name                string            `bun:"name,notnull" json:"name"`
@@ -119,8 +119,8 @@ type offeringChangeRow struct {
 	bun.BaseModel               `bun:"table:enrollment.offering_change_requests,alias:offering_change_request"`
 	ID                          int64           `bun:"id,pk,autoincrement"`
 	TenantID                    int64           `bun:"tenant_id,notnull"`
-	CreatedAt                   time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt                   time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt                   time.Time       `bun:"created_at,nullzero,notnull"`
+	UpdatedAt                   time.Time       `bun:"updated_at,nullzero,notnull"`
 	StudentID                   int64           `bun:"student_id,notnull"`
 	RequestChildID              int64           `bun:"request_child_id,notnull"`
 	SubmittedBy                 int64           `bun:"submitted_by,notnull"`

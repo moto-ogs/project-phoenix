@@ -37,7 +37,7 @@ type runRow struct {
 	ServiceFrom     calendar.Date  `bun:"service_from,type:date"`
 	ServiceUntil    calendar.Date  `bun:"service_until,type:date"`
 	Status          string         `bun:"status"`
-	CreatedAt       time.Time      `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt       time.Time      `bun:"created_at,nullzero"`
 	ReleasedAt      *time.Time     `bun:"released_at"`
 	IssuedOn        *calendar.Date `bun:"issued_on,type:date"`
 	DocumentCount   *int           `bun:"document_count"`
@@ -69,7 +69,7 @@ type correctionRow struct {
 	Reason                     string    `bun:"reason"`
 	CarriedFromNumber          string    `bun:"carried_from_number"`
 	CreatedByAccountID         *int64    `bun:"created_by_account_id"`
-	CreatedAt                  time.Time `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt                  time.Time `bun:"created_at,nullzero"`
 }
 
 type runEventRow struct {
@@ -90,7 +90,7 @@ type numberRangeRow struct {
 	OrganizationID int64     `bun:"organization_id"`
 	Service        string    `bun:"service"`
 	Pattern        string    `bun:"pattern"`
-	UpdatedAt      time.Time `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt      time.Time `bun:"updated_at,nullzero"`
 }
 
 func (r numberRangeRow) numberRange() parentbilling.NumberRange {

@@ -67,7 +67,7 @@ type ruleRow struct {
 	CapCents             *int64         `bun:"cap_cents"`
 	CountsFamilyChildren bool           `bun:"counts_family_children"`
 	TariffSiblingPrice   bool           `bun:"tariff_sibling_price"`
-	UpdatedAt            time.Time      `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt            time.Time      `bun:"updated_at,nullzero"`
 }
 
 func (r ruleRow) rule() parentbilling.ContributionRule {

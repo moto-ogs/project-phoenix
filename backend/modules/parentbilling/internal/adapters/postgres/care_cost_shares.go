@@ -48,7 +48,7 @@ type careCostShareRow struct {
 	Reference           string        `bun:"reference"`
 	CheckedOn           calendar.Date `bun:"checked_on,type:date"`
 	RecordedByAccountID *int64        `bun:"recorded_by_account_id"`
-	UpdatedAt           time.Time     `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt           time.Time     `bun:"updated_at,nullzero"`
 	CostBearerName      string        `bun:"cost_bearer_name,scanonly"`
 }
 

@@ -31,8 +31,8 @@ type studentNoteRow struct {
 	SharedWithSchool   bool           `bun:"shared_with_school,notnull"`
 	DeletedAt          *time.Time     `bun:"deleted_at"`
 	DeletedByAccountID *int64         `bun:"deleted_by_account_id"`
-	CreatedAt          time.Time      `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt          time.Time      `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt          time.Time      `bun:"created_at,nullzero,notnull"`
+	UpdatedAt          time.Time      `bun:"updated_at,nullzero,notnull"`
 }
 
 const studentNotesTable = "users.student_notes"

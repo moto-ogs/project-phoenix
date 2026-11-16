@@ -52,8 +52,8 @@ func New(database Database, today func() calendar.Date) *Store {
 type staffRow struct {
 	bun.BaseModel `bun:"table:staff_school_memberships,alias:staff"`
 	ID            int64      `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull"`
 	TenantID      int64      `bun:"tenant_id,notnull"`
 	PersonID      int64      `bun:"person_id,notnull"`
 	DeletedAt     *time.Time `bun:"deleted_at"`
@@ -75,8 +75,8 @@ type staffRow struct {
 type teacherRow struct {
 	bun.BaseModel  `bun:"table:teachers,alias:teacher"`
 	ID             int64      `bun:"id,pk,autoincrement"`
-	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull"`
 	TenantID       int64      `bun:"tenant_id,notnull"`
 	StaffID        int64      `bun:"staff_id,notnull"`
 	Specialization string     `bun:"specialization,nullzero"`
@@ -88,8 +88,8 @@ type teacherRow struct {
 type externalCaregiverRecordRow struct {
 	bun.BaseModel     `bun:"table:external_caregivers,alias:external_caregiver"`
 	ID                int64          `bun:"id,pk,autoincrement"`
-	CreatedAt         time.Time      `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time      `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time      `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time      `bun:"updated_at,nullzero,notnull"`
 	TenantID          int64          `bun:"tenant_id,notnull"`
 	StaffID           int64          `bun:"staff_id,notnull"`
 	Organization      string         `bun:"organization"`

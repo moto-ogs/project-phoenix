@@ -47,7 +47,7 @@ type attachmentRow struct {
 	ContentType          string     `bun:"content_type,notnull"`
 	Width                *int       `bun:"width"`
 	Height               *int       `bun:"height"`
-	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull"`
 	ClaimedAt            *time.Time `bun:"claimed_at"`
 }
 

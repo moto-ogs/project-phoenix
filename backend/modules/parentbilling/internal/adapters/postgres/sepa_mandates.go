@@ -34,7 +34,7 @@ type sepaCreditorRow struct {
 	PrenotificationDays int       `bun:"prenotification_days" json:"prenotification_days"`
 	MissingMandate      string    `bun:"missing_mandate" json:"missing_mandate"`
 	UpdatedByAccountID  *int64    `bun:"updated_by_account_id" json:"-"`
-	UpdatedAt           time.Time `bun:"updated_at,nullzero,default:current_timestamp" json:"updated_at"`
+	UpdatedAt           time.Time `bun:"updated_at,nullzero" json:"updated_at"`
 }
 
 func (r sepaCreditorRow) creditor() parentbilling.SEPACreditor {
@@ -66,9 +66,9 @@ type sepaMandateRow struct {
 	RevokedByAccountID *int64         `bun:"revoked_by_account_id" json:"-"`
 	RevokedAt          *time.Time     `bun:"revoked_at" json:"revoked_at"`
 	CreatedByAccountID *int64         `bun:"created_by_account_id" json:"-"`
-	CreatedAt          time.Time      `bun:"created_at,nullzero,default:current_timestamp" json:"created_at"`
+	CreatedAt          time.Time      `bun:"created_at,nullzero" json:"created_at"`
 	UpdatedByAccountID *int64         `bun:"updated_by_account_id" json:"-"`
-	UpdatedAt          time.Time      `bun:"updated_at,nullzero,default:current_timestamp" json:"updated_at"`
+	UpdatedAt          time.Time      `bun:"updated_at,nullzero" json:"updated_at"`
 	IBANSealed         []byte         `bun:"iban_sealed" json:"-"`
 	// CreditorCurrent tells whether the mandate is given to the Träger's
 	// creditor identifier now; read with the row.
@@ -110,7 +110,7 @@ type sepaMandateEventRow struct {
 	Source         string    `bun:"source"`
 	Fields         []string  `bun:"fields,array"`
 	ActorAccountID *int64    `bun:"actor_account_id"`
-	OccurredAt     time.Time `bun:"occurred_at,nullzero,default:current_timestamp"`
+	OccurredAt     time.Time `bun:"occurred_at,nullzero"`
 	ImportFile     string    `bun:"import_file,nullzero"`
 	ImportLine     int       `bun:"import_line,nullzero"`
 }

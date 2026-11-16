@@ -131,7 +131,7 @@ type declarationSubmissionRow struct {
 	RecordHash        string    `bun:"record_hash,notnull"`
 	SubmittedAt       time.Time `bun:"submitted_at,notnull"`
 	SignatureID       *int64    `bun:"signature_id"`
-	CreatedAt         time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time `bun:"created_at,nullzero,notnull"`
 }
 
 func (r *declarationSubmissionRow) value() *domain.DeclarationSubmission {

@@ -18,8 +18,8 @@ const monthSnapshotOrdinal = `("staff_month_balance_snapshot".year * 12 + "staff
 type monthSnapshotRow struct {
 	bun.BaseModel         `bun:"table:active.staff_month_balance_snapshots,alias:staff_month_balance_snapshot"`
 	ID                    int64      `bun:"id,pk,autoincrement"`
-	CreatedAt             time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt             time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt             time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt             time.Time  `bun:"updated_at,nullzero,notnull"`
 	TenantID              int64      `bun:"tenant_id,notnull"`
 	StaffID               int64      `bun:"staff_id,notnull"`
 	Year                  int        `bun:"year,notnull"`

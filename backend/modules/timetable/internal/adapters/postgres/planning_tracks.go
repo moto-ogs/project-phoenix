@@ -17,8 +17,8 @@ type planningTrackRow struct {
 	bun.BaseModel `bun:"table:planning_tracks,alias:planning_track"`
 	ID            int64      `bun:"id,pk,autoincrement"`
 	TenantID      int64      `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull"`
 	Name          string     `bun:"name,notnull"`
 	Color         string     `bun:"color,notnull"`
 	SortOrder     int        `bun:"sort_order,notnull"`

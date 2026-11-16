@@ -121,8 +121,8 @@ type workTimeModelRow struct {
 	Name               string       `bun:"name,notnull"`
 	RotationLength     int          `bun:"rotation_length,notnull"`
 	RotationAnchorDate calendarDate `bun:"rotation_anchor_date,notnull,type:date"`
-	CreatedAt          time.Time    `bun:"created_at,nullzero,notnull,default:now()"`
-	UpdatedAt          time.Time    `bun:"updated_at,nullzero,notnull,default:now()"`
+	CreatedAt          time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt          time.Time    `bun:"updated_at,nullzero,notnull"`
 	ArchivedAt         *time.Time   `bun:"archived_at"`
 }
 
@@ -134,8 +134,8 @@ type workTimeModelEntryRow struct {
 	DayOfWeek     int        `bun:"day_of_week,notnull"`
 	TargetMinutes int        `bun:"target_minutes,notnull"`
 	StartTime     *time.Time `bun:"start_time"`
-	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull,default:now()"`
-	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull,default:now()"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffWorkScheduleRow struct {

@@ -39,7 +39,7 @@ type careNoticeRunRow struct {
 	SchoolIDs          []int64        `bun:"school_ids,array,notnull"`
 	NoticeDate         *calendar.Date `bun:"notice_date,type:date"`
 	CreatedByAccountID *int64         `bun:"created_by_account_id"`
-	CreatedAt          time.Time      `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt          time.Time      `bun:"created_at,nullzero,notnull"`
 	ReleasedAt         *time.Time     `bun:"released_at"`
 	IssuedOn           *calendar.Date `bun:"issued_on,type:date"`
 	NoticeCount        *int           `bun:"notice_count"`

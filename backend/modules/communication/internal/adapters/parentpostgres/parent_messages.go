@@ -33,8 +33,8 @@ type parentMessageRow struct {
 	bun.BaseModel    `bun:"table:users.parent_messages,alias:parent_message"`
 	ID               int64           `bun:"id,pk,autoincrement"`
 	TenantID         int64           `bun:"tenant_id,notnull"`
-	CreatedAt        time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt        time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt        time.Time       `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time       `bun:"updated_at,nullzero,notnull"`
 	ThreadID         int64           `bun:"thread_id,notnull"`
 	StudentID        int64           `bun:"student_id,notnull"`
 	SenderAccountID  int64           `bun:"sender_account_id,notnull"`

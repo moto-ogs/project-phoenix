@@ -25,7 +25,7 @@ type pickupChangeTeamNoticeRow struct {
 	RequestID          int64        `bun:"request_id,pk"`
 	RecipientAccountID int64        `bun:"recipient_account_id,pk"`
 	PickupDate         calendarDate `bun:"pickup_date,notnull,type:date"`
-	InformedAt         time.Time    `bun:"informed_at,nullzero,notnull,default:current_timestamp"`
+	InformedAt         time.Time    `bun:"informed_at,nullzero,notnull"`
 	ReadAt             *time.Time   `bun:"read_at"`
 }
 

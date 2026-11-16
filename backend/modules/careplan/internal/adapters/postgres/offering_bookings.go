@@ -22,8 +22,8 @@ type careOfferingBookingRow struct {
 	AutomaticSelectedDays []string      `bun:"automatic_selected_days,type:jsonb,nullzero"`
 	ValidFrom             *calendarDate `bun:"valid_from,type:date"`
 	ValidUntil            *calendarDate `bun:"valid_until,type:date"`
-	CreatedAt             time.Time     `bun:"created_at,nullzero,default:current_timestamp"`
-	UpdatedAt             time.Time     `bun:"updated_at,nullzero,default:current_timestamp"`
+	CreatedAt             time.Time     `bun:"created_at,nullzero"`
+	UpdatedAt             time.Time     `bun:"updated_at,nullzero"`
 }
 
 func bookingDateToStorage(date *careplan.Date) *calendarDate {

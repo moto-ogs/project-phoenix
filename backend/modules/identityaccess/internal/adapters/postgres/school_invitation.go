@@ -39,8 +39,8 @@ type schoolInvitationRow struct {
 	EmailSentAt         *time.Time              `bun:"email_sent_at"`
 	EmailError          *string                 `bun:"email_error"`
 	EmailRetryCount     int                     `bun:"email_retry_count,notnull"`
-	CreatedAt           time.Time               `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt           time.Time               `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt           time.Time               `bun:"created_at,nullzero,notnull"`
+	UpdatedAt           time.Time               `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r schoolInvitationRow) toDomain() domain.SchoolInvitation {

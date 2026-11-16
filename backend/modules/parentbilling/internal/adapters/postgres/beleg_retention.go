@@ -101,7 +101,7 @@ type instructionRow struct {
 	ConfirmedByOperator  *int64        `bun:"confirmed_by_operator_id"`
 	ConfirmedAt          *time.Time    `bun:"confirmed_at"`
 	RecordedByOperatorID *int64        `bun:"recorded_by_operator_id"`
-	RecordedAt           time.Time     `bun:"recorded_at,nullzero,default:current_timestamp"`
+	RecordedAt           time.Time     `bun:"recorded_at,nullzero"`
 }
 
 func (r instructionRow) instruction() parentbilling.RetentionInstruction {
@@ -129,7 +129,7 @@ type suspensionRow struct {
 	Responsible         string        `bun:"responsible"`
 	ReviewOn            calendar.Date `bun:"review_on,type:date"`
 	CreatedByOperatorID *int64        `bun:"created_by_operator_id"`
-	CreatedAt           time.Time     `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt           time.Time     `bun:"created_at,nullzero"`
 }
 
 func (r suspensionRow) suspension() parentbilling.RetentionSuspension {

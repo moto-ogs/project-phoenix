@@ -22,8 +22,8 @@ const classListEntryNameIndex = "uniq_class_list_entries_name_class"
 type classListEntryRow struct {
 	bun.BaseModel `bun:"table:class_list_entries,alias:class_list_entry"`
 	ID            int64     `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
 	FirstName     string    `bun:"first_name,notnull"`
 	LastName      string    `bun:"last_name,notnull"`

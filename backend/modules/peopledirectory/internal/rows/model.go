@@ -7,8 +7,8 @@ import "time"
 // models/users no longer imports models/base for its row basis (#3991).
 type Model struct {
 	ID        int64     `bun:"id,pk,autoincrement" json:"id"`
-	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 }
 
 // TenantModel is embedded by the tenant-scoped user models.

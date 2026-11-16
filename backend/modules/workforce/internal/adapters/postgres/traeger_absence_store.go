@@ -28,8 +28,8 @@ type traegerAbsenceTypeRow struct {
 	CarryoverUntil   *string   `bun:"carryover_until"`
 	Requestable      bool      `bun:"requestable"`
 	IsActive         bool      `bun:"is_active"`
-	CreatedAt        time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt        time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r traegerAbsenceTypeRow) toDomain() domain.TraegerAbsenceType {

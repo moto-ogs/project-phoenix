@@ -134,7 +134,7 @@ type careEvidenceRow struct {
 	Evidence            string         `bun:"evidence"`
 	CheckedOn           calendar.Date  `bun:"checked_on,type:date"`
 	RecordedByAccountID *int64         `bun:"recorded_by_account_id"`
-	UpdatedAt           time.Time      `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt           time.Time      `bun:"updated_at,nullzero"`
 }
 
 func (r careEvidenceRow) evidence() parentbilling.CareEvidence {
