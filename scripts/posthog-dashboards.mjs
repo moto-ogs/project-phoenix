@@ -987,7 +987,7 @@ order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undef
         },
         {
           name: 'Caterer-Portal: Tage mit bestätigter Bestellung pro Woche',
-          description: 'Alle Schulen zusammen: Tage je Schule einer Woche, an denen ihr Caterer mindestens eine Bestellung bestätigt hat. Zwei Schulen mit je fünf Tagen ergeben 10. Die Aufteilung je Schule zeigt die Tabelle darüber.',
+          description: 'Alle Schulen zusammen: Tage je Schule einer Woche, an denen ihr Caterer mindestens eine Bestellung bestätigt hat. Zwei Schulen mit je fünf Tagen ergeben 10. Die Aufteilung je Schule zeigt die Tabelle darüber, für die letzten 30 Tage.',
           ...trends('production', {
             series: [series('meal_order_confirmed', 'Tage je Schule mit Bestätigung', { math: 'hogql', math_hogql: SCHOOL_DAYS })],
             dateFrom: '-180d',
@@ -997,7 +997,7 @@ order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undef
         },
         {
           name: 'Caterer-Anbindung: Einladungen, Annahmen und Enden pro Woche',
-          description: 'Schulen laden ihren Caterer in der OGS-App ein und beenden die Belieferung dort; der Caterer nimmt die Einladung im Caterer-Portal an. Gezählt werden Tage je Schule: mehrere gleiche Vorgänge einer Schule am selben Tag zählen einmal.',
+          description: 'Schulen laden ihren Caterer in der OGS-App ein und beenden die Belieferung dort; der Caterer nimmt die Einladung im Caterer-Portal an. Gezählt werden Tage je Schule, auch Wochenenden und Feiertage: mehrere gleiche Vorgänge einer Schule am selben Tag zählen einmal. Die OGS-Dashboards zählen Einladen und Beenden nur an Werktagen.',
           ...trends('production', {
             series: CATERER_LINK_EVENTS.map(([event, name]) => series(event, name, { math: 'hogql', math_hogql: SCHOOL_DAYS })),
             dateFrom: '-180d',
