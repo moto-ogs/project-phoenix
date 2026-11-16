@@ -128,8 +128,8 @@ func (rs *Resource) revokeInvitation(w http.ResponseWriter, r *http.Request) {
 }
 
 // endSupply ends the school's supply; the caterer loses the school at once.
-// Ending is idempotent: created tells whether this request ended a running
-// supply, so a repeated end is not counted as another one (createdEvent).
+// Ending is idempotent: ended tells whether this request ended a running
+// supply, so a repeated end is not counted as another one (endedEvent).
 func (rs *Resource) endSupply(w http.ResponseWriter, r *http.Request) {
 	ended, err := rs.portal.EndSupply(r.Context(), rs.currentAccountID(r.Context()))
 	if err != nil {
@@ -140,5 +140,5 @@ func (rs *Resource) endSupply(w http.ResponseWriter, r *http.Request) {
 	if !ended {
 		message = "No running supply"
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"created": ended}, message)
+	common.Respond(w, r, http.StatusOK, map[string]bool{"ended": ended}, message)
 }

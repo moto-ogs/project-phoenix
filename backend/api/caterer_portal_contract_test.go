@@ -236,14 +236,14 @@ func checkCatererPortal(t *testing.T, graph *goldenRuntime) {
 	status, body = request(http.MethodDelete, "/api/meal-caterer/supply", "", adminToken)
 	require.Equal(t, http.StatusOK, status, string(body))
 	var ended struct {
-		Created bool `json:"created"`
+		Ended bool `json:"ended"`
 	}
 	decodeCatererResponse(t, body, &ended)
-	assert.True(t, ended.Created, "the first end ends the running supply")
+	assert.True(t, ended.Ended, "the first end ends the running supply")
 	status, body = request(http.MethodDelete, "/api/meal-caterer/supply", "", adminToken)
 	require.Equal(t, http.StatusOK, status, "ending again stays idempotent: %s", body)
 	decodeCatererResponse(t, body, &ended)
-	assert.False(t, ended.Created, "a repeated end ends nothing and is no new core action")
+	assert.False(t, ended.Ended, "a repeated end ends nothing and is no new core action")
 	status, body = request(http.MethodGet, "/caterer/schools/"+schoolID+"/orders?from=2026-09-07&to=2026-09-11", "", catererToken)
 	assert.Equal(t, http.StatusForbidden, status)
 	assert.Equal(t, "meals.not_supplied", decodeCatererResponse(t, body, nil), "the end takes the school at once")

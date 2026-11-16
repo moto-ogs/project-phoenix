@@ -21,6 +21,10 @@ type CoreAction struct {
 	// carries data.created=true. Idempotent writes return created=false and
 	// must not be counted as another completed core action.
 	CreatedOnly bool
+	// EndedOnly captures an event only when the response envelope carries
+	// data.ended=true. An idempotent end that ended nothing answers
+	// ended=false and is no core action.
+	EndedOnly bool
 	// Session: the response mints a session (login, demo entry); the actor
 	// comes from its access token, and a 2xx without one sends nothing.
 	Session bool
@@ -42,6 +46,9 @@ var notCaptured = CoreAction{}
 func event(name string) CoreAction { return CoreAction{Event: name} }
 func createdEvent(name string) CoreAction {
 	return CoreAction{Event: name, CreatedOnly: true}
+}
+func endedEvent(name string) CoreAction {
+	return CoreAction{Event: name, EndedOnly: true}
 }
 func session(name string) CoreAction { return CoreAction{Event: name, Session: true} }
 func sessionOr(name, surface string) CoreAction {
@@ -232,7 +239,7 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/me/profile/avatar"}:                                                            notCaptured,
 	{http.MethodPost, "/api/meal-caterer/invitations"}:                                                     event("caterer_invited"),
 	{http.MethodDelete, "/api/meal-caterer/invitations/{invitationId}"}:                                    notCaptured,
-	{http.MethodDelete, "/api/meal-caterer/supply"}:                                                        createdEvent("caterer_supply_ended"),
+	{http.MethodDelete, "/api/meal-caterer/supply"}:                                                        endedEvent("caterer_supply_ended"),
 	{http.MethodPost, "/api/meal-billing-months/{month}/release"}:                                          event("meal_month_released"),
 	{http.MethodDelete, "/api/meal-plan/{date}"}:                                                           notCaptured,
 	{http.MethodPut, "/api/meal-plan/{date}"}:                                                              notCaptured,

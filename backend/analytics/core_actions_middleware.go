@@ -100,7 +100,10 @@ func CoreActionMiddleware(cfg CoreActionConfig) func(http.Handler) http.Handler 
 			if !ok || action.Event == "" {
 				return
 			}
-			if action.CreatedOnly && !responseCreated(body.Bytes()) {
+			if action.CreatedOnly && !responseFlag(body.Bytes(), "created") {
+				return
+			}
+			if action.EndedOnly && !responseFlag(body.Bytes(), "ended") {
 				return
 			}
 			captureCoreAction(cfg, r, action, body)
@@ -130,23 +133,25 @@ func lookupCoreAction(r *http.Request) (CoreAction, bool) {
 	return coreActionFor(r.Method, routeCtx.RoutePattern())
 }
 
-// responseCreated accepts the standard response envelope used by idempotent
-// write handlers. A missing, malformed or false field is deliberately not a
-// new write and therefore must not produce a core-action event.
-func responseCreated(body []byte) bool {
+// responseFlag reads a boolean result of the standard response envelope
+// used by idempotent write handlers (data.<field>, or <field> at the top
+// level). A missing, malformed or false field is deliberately not a new
+// write and therefore must not produce a core-action event.
+func responseFlag(body []byte, field string) bool {
 	var response struct {
-		Created *bool `json:"created"`
-		Data    struct {
-			Created *bool `json:"created"`
-		} `json:"data"`
+		Data map[string]json.RawMessage `json:"data"`
 	}
-	if err := json.Unmarshal(bytes.TrimSpace(body), &response); err != nil {
+	var top map[string]json.RawMessage
+	trimmed := bytes.TrimSpace(body)
+	if json.Unmarshal(trimmed, &response) != nil || json.Unmarshal(trimmed, &top) != nil {
 		return false
 	}
-	if response.Data.Created != nil {
-		return *response.Data.Created
+	raw, ok := response.Data[field]
+	if !ok {
+		raw, ok = top[field]
 	}
-	return response.Created != nil && *response.Created
+	var value bool
+	return ok && json.Unmarshal(raw, &value) == nil && value
 }
 
 // resolveActor names who acted. A session-minting route takes the minted
