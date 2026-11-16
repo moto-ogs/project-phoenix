@@ -60,7 +60,7 @@ func TestCommunicationFiles18PositiveGrowthQueryBudget(t *testing.T) {
 	}
 	// Shared system roles are part of every tenant audience. Resolve their fixture
 	// IDs by their exact seeded names, not by hardcoded identifiers.
-	for _, name := range []string{"admin", "ag-leitung", "guest", "lehrkraft", "schulverwaltung", "user"} {
+	for _, name := range []string{"admin", "ag-leitung", "guest", "lehrkraft", "schulverwaltung", "springer", "user"} {
 		var id int64
 		require.NoError(t, c.db.NewRaw(`SELECT id FROM auth.roles WHERE name = ? AND is_system = true`, name).Scan(testpkg.Ctx(t), &id))
 		roles = append(roles, filesHTTP.AudienceRoleResponse{ID: idStr(id), Name: name})

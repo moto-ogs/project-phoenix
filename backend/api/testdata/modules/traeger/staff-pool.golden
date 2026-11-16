@@ -1,0 +1,3 @@
+DELETE /traeger/staff-pool/blocks/{id} -> basis
+GET /traeger/staff-pool/ -> basis
+GET /traeger/staff-pool/export -> basis

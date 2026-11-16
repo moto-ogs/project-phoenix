@@ -1878,6 +1878,20 @@
     },
     {
       "build": "production",
+      "evidence": "func (e traegerSpringerEmployments) EmploySpringer(ctx context.Context, request workforce.SpringerEmploymentRequest) (int64, error) {\n\temployment, err := e.access.GrantSpringerWindow(ctx, identityaccess.SpringerWindow{AccountID: request.AccountID, FirstName: request.FirstName, LastName: request.LastName, BlockID: request.BlockID, StartsAt: request.StartsAt, EndsAt: request.EndsAt})\n\treturn employment.StaffID, err\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerSpringerEmployments.EmploySpringer",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (e traegerSpringerEmployments) EndSpringerAccess(ctx context.Context, blockID int64) error {\n\treturn e.access.EndSpringerWindow(ctx, blockID)\n}",
+      "form": "forward-debt",
+      "id": "api/traegerSpringerEmployments.EndSpringerAccess",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (a weekProtocolAttendance) GroupDayAttendance(ctx context.Context, day calendar.Date, groupIDs []int64) ([]timetableModule.WeekProtocolGroupDay, error) {\n\tlogs, err := a.dayLog.GroupDayLogs(ctx, day, groupIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]timetableModule.WeekProtocolGroupDay, 0, len(logs))\n\tfor _, log := range logs {\n\t\tresult = append(result, weekProtocolGroupDayOf(log))\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/weekProtocolAttendance.GroupDayAttendance",

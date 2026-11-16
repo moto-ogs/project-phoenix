@@ -202,7 +202,7 @@ func (s *AccountAuthentication) traegerSchoolFamily(ctx context.Context, account
 
 // traegerSwitchTarget resolves the target of a tenant switch that a Träger
 // school session presents: ok is true when the school of the slug belongs to
-// the session's Träger and the account holds no mapping there. A school
+// the session's Träger and no mapping admits the account there. A school
 // where the person works themselves keeps their own role.
 func (s *AccountAuthentication) traegerSwitchTarget(ctx context.Context, accountID int64, tenantSlug, presentedFamilyID string) (domain.School, bool, error) {
 	organizationID, err := s.traegerSchoolFamily(ctx, accountID, presentedFamilyID)
@@ -217,7 +217,9 @@ func (s *AccountAuthentication) traegerSwitchTarget(ctx context.Context, account
 		if lookupErr != nil || !found {
 			return lookupErr
 		}
-		mapped, _, lookupErr = s.store.HasActiveAccountTenant(txCtx, accountID, school.ID)
+		// A Springer outside their windows works there through the Träger
+		// (ADR 0251).
+		mapped, _, lookupErr = s.store.AdmittedTenantMapping(txCtx, accountID, school.ID, false)
 		return lookupErr
 	})
 	if err != nil {

@@ -129,6 +129,20 @@ Proven here (#5700, #5762, #5770) or in pingdotgg/t3code (#14025, #19587,
   request compiled cold, because pull requests saved 2 GB caches no other
   pull request could read and the repository sat above its 10 GB limit.
   Check a slow job's "Restore backend build cache" line first.
+- "Backend tests" runs on 16 vCPU with twelve package workers (#7205): the
+  full suite took 140, 155 and 166 s against 215, 222 and 257 s on 8 vCPU
+  (test step 104-123 s against 179-212 s), 3 billed minutes at 16 vCPU
+  against 4-5 at 8, $0.096 against $0.064-0.080 per run. Busy CPU stayed at
+  about 1400 s, idle rose from 8 to 13 %. Small selections stay on 4 vCPU.
+- Four isolated clone slots per package instead of two, rejected (#7205):
+  `organizationtenancy/compose`, 119 tests on a clone at 0.3 s each, fell
+  from 55 to 36-42 s, the job did not (167 and 172 s).
+- Postgres work in the suite is flat (pg_stat_statements on a private
+  server, 16.11.): 1.65 million statements, 256 s of execution in total,
+  none above 4 s but lock waits. About 1900 clones cost 85 ms of Postgres
+  CPU each to create and drop, about 160 CPU s; `STRATEGY WAL_LOG` cost the
+  same as `FILE_COPY` (46 MB template, 3107 relations). Fewer clones or
+  fewer relations lower it, a different statement does not.
 - Package wall times under that load are 2–3 times a local run: `importtest`
   136 s locally, 245–389 s in the full suite. Starting the long packages first
   gained nothing (305 s against 311 s) and slowed them, because they then ran

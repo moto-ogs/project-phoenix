@@ -48,6 +48,9 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
   if (onPage(page, "/personal/einsatzplanung")) {
     return HELP_TOPICS.traegerStaffPlanning;
   }
+  if (onPage(page, "/personal/vertretungspool")) {
+    return HELP_TOPICS.traegerStaffPool;
+  }
   if (onPage(page, "/personal/lohnexport")) {
     return HELP_TOPICS.traegerPayrollExport;
   }

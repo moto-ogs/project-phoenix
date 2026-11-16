@@ -35,6 +35,8 @@ export function dutyRosterTopic(): HelpTopic {
       "Die Vorlage `Stundenübersicht` druckt diese Stunden als Liste.",
       "Eine Serie lässt Ferien, Schließtage und Feiertage aus. Arbeitet die Person auch in den Ferien, setzen Sie bei der Serie das Häkchen `Auch in den Ferien und an Schließtagen planen`.",
       "An Feiertagen plant eine Serie nie eine Schicht.",
+      // #4709: der Vertretungspool des Trägers.
+      "Fehlt jemand, finden Sie im Drei-Punkte-Menü `Springer des Trägers`. Dort blocken Sie eine Fachkraft Ihres Trägers für einen Tag.",
     ],
     differences: [
       "Eine neue Schicht auf einem Schließtag löst eine Rückfrage aus.",
@@ -53,6 +55,7 @@ export function dutyRosterTopic(): HelpTopic {
       HELP_TOPICS.leadWorkTimeReview,
       HELP_TOPICS.leadCarePlan,
       HELP_TOPICS.leadInviteStaff,
+      HELP_TOPICS.leadStaffPool,
     ],
   };
 }

@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.staff_pool_export",
+  "max": 11,
+  "exact": true,
+  "description": "modules/workforce — GET /traeger/staff-pool/export (#4709, #4718) reads\nthe week like GET /traeger/staff-pool/: the Träger's schools, the binding\nof the Träger transaction, its release, the Springer of the week, the\nrecords with their links, the schools that ever blocked them, the blocks\nof the week and the status of the Nachweise in one statement each; then\nper school with an access entry the binding of its tenant transaction.\nFlat in the number of Springer and blocks.",
+  "route": "GET /traeger/staff-pool/export"
+}

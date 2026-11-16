@@ -33,6 +33,7 @@ const LIST_EXPORTS: Readonly<Record<string, string>> = {
   "/einstellungen/zugriffsprotokoll": "page",
   "/ferien/[id]/anmeldungen": "page",
   "/nachweise": "page",
+  "/personal/vertretungspool": "page",
   "/standortvergleich": "page",
   "/stichtagszahlen": "page",
   "/tagesmeldung": "page",

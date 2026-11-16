@@ -1,0 +1,7 @@
+{
+  "scenario": "api.staff_pool.week",
+  "max": 5,
+  "exact": true,
+  "description": "modules/workforce — GET /api/staff-pool/ (#4709) at a school of a released\nTräger: the binding of the tenant transaction, whether the Träger keeps its\nstaff in moto, the Springer of the week, their blocks and the status of\ntheir Nachweise through the functions of ADR 0252, one statement each. Flat\nin the number of Springer, blocks and Nachweise.",
+  "route": "GET /api/staff-pool/"
+}

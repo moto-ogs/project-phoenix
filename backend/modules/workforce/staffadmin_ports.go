@@ -53,7 +53,10 @@ type StaffDataAccess struct {
 	StaffID        int64
 	DocumentID     int64
 	Category       string
-	At             time.Time
+	// RecordIDs are the Personalakten of the Träger a pool read shows
+	// (#4709).
+	RecordIDs []int64
+	At        time.Time
 }
 
 // StaffAdminSubjects is the consumer-owned port over the staff and person rows
