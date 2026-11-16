@@ -358,6 +358,7 @@ func registerStaffingTypes() {
 		SortOrder:   1,
 		Permission:  permissionActivitiesRead,
 		DefaultOn:   true,
+		Feed:        true,
 	})
 	RegisterType(TypeDefinition{
 		Key:         TypeGroupStaffingChanged,
@@ -369,6 +370,7 @@ func registerStaffingTypes() {
 		SortOrder:   2,
 		Permission:  permissionActivitiesRead,
 		DefaultOn:   true,
+		Feed:        true,
 	})
 }
 

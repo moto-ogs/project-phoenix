@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -98,6 +99,26 @@ func TestParsePostgresDSNRejectsInvalidInput(t *testing.T) {
 			assert.Error(t, err)
 		})
 	}
+}
+
+func TestNewEphemeralLocalConfigUsesRandomLoopbackEndpoint(t *testing.T) {
+	first, err := NewEphemeralLocalConfig()
+	require.NoError(t, err)
+	second, err := NewEphemeralLocalConfig()
+	require.NoError(t, err)
+
+	assert.NotEqual(t, first.TemplateDSN(), second.TemplateDSN())
+	parsed, err := url.Parse(first.TemplateDSN())
+	require.NoError(t, err)
+	assert.Equal(t, "postgres", parsed.Scheme)
+	assert.Equal(t, "127.0.0.1", parsed.Hostname())
+	assert.NotEmpty(t, parsed.Port())
+	assert.Equal(t, "postgres", parsed.User.Username())
+	password, ok := parsed.User.Password()
+	assert.True(t, ok)
+	assert.NotEmpty(t, password)
+	assert.Equal(t, "/phoenix_test", parsed.Path)
+	assert.Equal(t, "disable", parsed.Query().Get("sslmode"))
 }
 
 func TestConfigDerivesDSNs(t *testing.T) {
