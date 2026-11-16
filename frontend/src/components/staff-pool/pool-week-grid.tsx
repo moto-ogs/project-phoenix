@@ -305,6 +305,8 @@ export function PoolWeekGrid({
           </span>
         }
         title={`${timeRange}, geblockt von ${block.schoolName}`}
+        // Another school's block is shown, not opened: no button (#7112).
+        interactive={false}
       />
     );
   };

@@ -71,9 +71,23 @@ const SURFACES: ReadonlyArray<
   ],
 ];
 
+/**
+ * The counter carries no aria-label (#7112): its number is visible text and
+ * the rest of its sentence hidden text, read as part of the row's name.
+ */
+function getCounter(text: string): HTMLElement {
+  const matches = Array.from(document.querySelectorAll("span")).filter(
+    (element) =>
+      element.textContent === text &&
+      element.querySelector(":scope > .sr-only") !== null,
+  );
+  expect(matches).toHaveLength(1);
+  return matches[0]!;
+}
+
 function visibleBadgeClass(element: ReactElement): string {
   const { unmount } = render(element);
-  const badge = screen.getByLabelText(LABEL);
+  const badge = getCounter(LABEL);
   const result = `${badge.className} | ${badge.parentElement?.className ?? ""}`;
   unmount();
   return result;
@@ -142,8 +156,11 @@ describe("Sidebar-Zähler (#6566)", () => {
       </SidebarGroup>,
     );
 
+    expect(getCounter("2 offene Tagesinformationen")).toBeInTheDocument();
     expect(
-      screen.getByLabelText("2 offene Tagesinformationen"),
+      screen.getByRole("button", {
+        name: "Team 2 offene Tagesinformationen",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -168,7 +185,7 @@ describe("Sidebar-Zähler (#6566)", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Eltern, 2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
+        name: "Eltern 2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
       }),
     ).toBeInTheDocument();
   });
@@ -189,7 +206,7 @@ describe("Sidebar-Zähler (#6566)", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Anmeldungen, 3 ungelesene Anmeldungen",
+        name: "Anmeldungen 3 ungelesene Anmeldungen",
       }),
     ).toBeInTheDocument();
   });

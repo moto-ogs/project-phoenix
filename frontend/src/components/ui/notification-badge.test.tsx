@@ -3,9 +3,19 @@ import { describe, expect, it } from "vitest";
 
 import { NotificationBadge } from "./notification-badge";
 
+/**
+ * The badge has no own name (#7112): its count is visible text, the rest of
+ * the sentence follows as hidden text, so the control around it reads both.
+ */
+function badge(container: HTMLElement): HTMLElement {
+  const element = container.firstElementChild;
+  if (!(element instanceof HTMLElement)) throw new Error("no badge rendered");
+  return element;
+}
+
 describe("NotificationBadge", () => {
   it("uses the orange tone and provided accessible label", () => {
-    render(
+    const { container } = render(
       <NotificationBadge
         count={2}
         tone="orange"
@@ -15,14 +25,15 @@ describe("NotificationBadge", () => {
 
     // -strong, not the raw brand orange: white on #F78C10 is 2.41:1, under
     // even the 3:1 non-text floor.
-    expect(screen.getByLabelText("2 offene Abwesenheitsanträge")).toHaveClass(
-      "bg-moto-orange-strong",
-      "text-white",
+    expect(badge(container)).toHaveClass("bg-moto-orange-strong", "text-white");
+    expect(badge(container)).toHaveTextContent(
+      /^2 offene Abwesenheitsanträge$/,
     );
+    expect(badge(container)).not.toHaveAttribute("aria-label");
   });
 
   it("uses the blue tone and caps the visible count", () => {
-    render(
+    const { container } = render(
       <NotificationBadge
         count={120}
         tone="blue"
@@ -30,11 +41,12 @@ describe("NotificationBadge", () => {
       />,
     );
 
-    expect(screen.getByLabelText("120 ungelesene Nachrichten")).toHaveClass(
-      "bg-moto-blue-strong",
-      "text-white",
+    expect(badge(container)).toHaveClass("bg-moto-blue-strong", "text-white");
+    // The capped number is only shown; the full count is read.
+    expect(screen.getByText("99+")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("120 ungelesene Nachrichten")).toHaveClass(
+      "sr-only",
     );
-    expect(screen.getByText("99+")).toBeInTheDocument();
   });
 
   it("caps at a lower maximum when the caller sets one", () => {
@@ -50,7 +62,7 @@ describe("NotificationBadge", () => {
   });
 
   it("uses the coral tone", () => {
-    render(
+    const { container } = render(
       <NotificationBadge
         count={3}
         tone="coral"
@@ -58,10 +70,8 @@ describe("NotificationBadge", () => {
       />,
     );
 
-    expect(screen.getByLabelText("3 neue Feedbackeinträge")).toHaveClass(
-      "bg-moto-coral-strong",
-      "text-white",
-    );
+    expect(badge(container)).toHaveClass("bg-moto-coral-strong", "text-white");
+    expect(badge(container)).toHaveTextContent(/^3 neue Feedbackeinträge$/);
   });
 
   it("renders nothing for an empty count", () => {
@@ -76,8 +86,11 @@ describe("NotificationBadge", () => {
     ["red", "bg-moto-red"],
     ["blue", "bg-moto-blue-strong"],
   ] as const)("shows the %s tone with white text", (tone, fill) => {
-    render(<NotificationBadge count={3} tone={tone} ariaLabel="3 offen" />);
+    const { container } = render(
+      <NotificationBadge count={3} tone={tone} ariaLabel="3 offen" />,
+    );
 
-    expect(screen.getByLabelText("3 offen")).toHaveClass(fill, "text-white");
+    expect(badge(container)).toHaveClass(fill, "text-white");
+    expect(badge(container)).toHaveTextContent(/^3 offen$/);
   });
 });

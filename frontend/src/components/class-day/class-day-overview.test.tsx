@@ -226,7 +226,7 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
     expect(fetchSchoolDay).toHaveBeenCalledWith("2026-09-09");
     expect(fetchClassDay).not.toHaveBeenCalled();
     expect(
-      screen.getByRole("link", { name: "Krank: 1, Liste öffnen" }),
+      screen.getByRole("link", { name: /^Krank 1 ?, Liste öffnen$/ }),
     ).toHaveAttribute("href", "/school?tag=2026-09-09&liste=krank");
     // Die Klassenzeilen kommen aus derselben Antwort.
     expect(screen.getByText("Alle Klassen")).toBeVisible();
@@ -385,7 +385,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     expect(screen.getByText(/Es gibt keine Krankmeldung/)).toBeVisible();
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Meldung für Dana Dorn eintragen",
+        name: /^Meldung eintragen ?, Meldung für Dana Dorn eintragen$/,
       }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: "Krank" }));
@@ -434,7 +434,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     expect(await screen.findByText("Fehlen ohne Meldung: 1")).toBeVisible();
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Meldung für Dana Dorn eintragen",
+        name: /^Meldung eintragen ?, Meldung für Dana Dorn eintragen$/,
       }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: "Krank" }));
@@ -466,7 +466,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     );
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Meldung für Dana Dorn eintragen",
+        name: /^Meldung eintragen ?, Meldung für Dana Dorn eintragen$/,
       }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: "Krank" }));
@@ -568,7 +568,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     expect(await screen.findByText("Dorn, Dana")).toBeVisible();
     expect(
       screen.queryByRole("button", {
-        name: "Meldung für Dana Dorn eintragen",
+        name: /^Meldung eintragen ?, Meldung für Dana Dorn eintragen$/,
       }),
     ).not.toBeInTheDocument();
   });

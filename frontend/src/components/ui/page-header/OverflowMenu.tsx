@@ -446,8 +446,9 @@ export function OverflowMenu({
   // given name that does not already contain a plain-text label follows it
   // as hidden text instead of replacing it.
   const textContent = plainText(triggerContent);
+  // No text to show (an icon): the given name is the whole name.
   const labelKeepsText =
-    textContent !== "" &&
+    textContent === "" ||
     ariaLabel
       .toLocaleLowerCase("de-DE")
       .includes(textContent.toLocaleLowerCase("de-DE"));

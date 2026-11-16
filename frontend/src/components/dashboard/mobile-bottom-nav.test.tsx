@@ -1,11 +1,40 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { releaseFakeTimers } from "~/test/clock";
-import { render, screen, fireEvent, act, within } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { STAFF_NAV_GROUPS } from "~/lib/staff-navigation";
 import {
   expectIdleRenderBudget,
   RENDER_BUDGET_MAX_COMMITS,
 } from "~/test/render-budget";
+
+/**
+ * Counter badges whose screen-reader text reads `name` (#7112): the badge
+ * shows its number and says the rest as hidden text, without aria-label.
+ */
+function getAllBadges(name: string, container: HTMLElement = document.body) {
+  const readable = (el: Element): string =>
+    Array.from(el.childNodes)
+      .map((node) =>
+        node instanceof Element
+          ? node.getAttribute("aria-hidden") === "true"
+            ? ""
+            : readable(node)
+          : (node.textContent ?? ""),
+      )
+      .join("");
+  const found = Array.from(container.querySelectorAll("span")).filter(
+    (el) =>
+      el.querySelector(":scope > .sr-only") !== null &&
+      readable(el).replace(/\s+/g, " ").trim() === name,
+  );
+  if (found.length === 0) throw new Error(`Kein Zähler „${name}“ gefunden.`);
+  return found;
+}
+function getBadge(name: string, container?: HTMLElement) {
+  const found = getAllBadges(name, container);
+  if (found.length > 1) throw new Error(`Mehrere Zähler „${name}“.`);
+  return found[0]!;
+}
 
 // Mock dependencies before importing component
 vi.mock("next/navigation", () => ({
@@ -426,19 +455,16 @@ describe("MobileBottomNav", () => {
         const eltern = screen.getByRole("button", { name: "Eltern" });
         const header = eltern.closest("h3");
         expect(
-          within(header!.parentElement!).getByLabelText(
-            "4 ungelesene Anmeldungen",
-          ),
+          getBadge("4 ungelesene Anmeldungen", header!.parentElement!),
         ).toBeInTheDocument();
 
         // Offen trägt die Zeile den Zähler, die Überschrift nicht mehr.
         fireEvent.click(eltern);
+        expect(getAllBadges("4 ungelesene Anmeldungen")).toHaveLength(1);
         expect(
-          screen.getAllByLabelText("4 ungelesene Anmeldungen"),
-        ).toHaveLength(1);
-        expect(
-          within(screen.getByText("Anmeldungen").closest("a")!).getByLabelText(
+          getBadge(
             "4 ungelesene Anmeldungen",
+            screen.getByText("Anmeldungen").closest("a")!,
           ),
         ).toBeInTheDocument();
       } finally {
@@ -525,16 +551,17 @@ describe("MobileBottomNav", () => {
       try {
         render(<MobileBottomNav />);
         // Ohne „Neu für Sie“ zählt „Mehr“ nur die Hinweise, ab 10 als „9+“.
-        expect(screen.getByLabelText("12 neu für Sie")).toHaveTextContent("9+");
+        expect(getBadge("12 neu für Sie")).toHaveTextContent("9+");
+        const more = screen.getByRole("button", {
+          name: "Mehr 12 neu für Sie",
+        });
         expect(
           screen.getByTestId("notifications-sheet-host"),
         ).toBeInTheDocument();
-        fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+        fireEvent.click(more);
 
         const row = screen.getByRole("button", { name: /Benachrichtigungen/ });
-        expect(
-          within(row).getByLabelText("12 neue Hinweise"),
-        ).toHaveTextContent("9+");
+        expect(getBadge("12 neue Hinweise", row)).toHaveTextContent("9+");
         fireEvent.click(row);
         expect(mockOpenNotificationsSheet).toHaveBeenCalledTimes(1);
         expect(screen.getByTestId("drawer")).toHaveAttribute(
@@ -556,9 +583,7 @@ describe("MobileBottomNav", () => {
         fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
 
         const row = screen.getByText("Anmeldungen").closest("a");
-        expect(
-          within(row!).getByLabelText("4 ungelesene Anmeldungen"),
-        ).toBeInTheDocument();
+        expect(getBadge("4 ungelesene Anmeldungen", row!)).toBeInTheDocument();
       } finally {
         enrollmentsUnread.count = 0;
       }
@@ -594,8 +619,10 @@ describe("MobileBottomNav", () => {
         feedUnread.count = 3;
         render(<MobileBottomNav />);
         // Zwei Einträge „Neu für Sie“ plus drei ungelesene Hinweise (#7148).
-        expect(screen.getByLabelText("5 neu für Sie")).toBeInTheDocument();
-        fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+        const more = screen.getByRole("button", {
+          name: "Mehr 5 neu für Sie",
+        });
+        fireEvent.click(more);
         expect(screen.getByText("Neu für Sie")).toBeInTheDocument();
         expect(
           screen.getByRole("link", { name: /Mia Muster/ }),
@@ -912,8 +939,12 @@ describe("MobileBottomNav", () => {
 
       render(<MobileBottomNav />);
 
-      // Home must NOT be active (its label only renders when active)…
-      expect(screen.queryByText("Start")).not.toBeInTheDocument();
+      // Home must NOT be active (its visible label renders only when
+      // active; inactive it is hidden text, #7112)…
+      expect(screen.getByRole("link", { name: "Start" })).not.toHaveAttribute(
+        "aria-current",
+      );
+      expect(screen.getByText("Start")).toHaveClass("sr-only");
       // …and the Eltern group ("Mehr") is active via its /messages activePath.
       expect(screen.getByRole("button", { name: "Mehr" })).toHaveClass(
         "bg-gray-100",

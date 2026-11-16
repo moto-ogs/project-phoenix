@@ -318,7 +318,7 @@ describe("RemindersBell — Erinnerungen", () => {
       ],
     });
     renderBell();
-    await openBell("Benachrichtigungen (2)");
+    await openBell("Benachrichtigungen 2 neu");
 
     expect(screen.getByText("5 Min überfällig").className).toContain(
       "text-moto-red",
@@ -336,7 +336,7 @@ describe("RemindersBell — Erinnerungen", () => {
     );
     setReminders({ enabled: true, count: 7, reminders: many });
     renderBell();
-    await openBell("Benachrichtigungen (7)");
+    await openBell("Benachrichtigungen 7 neu");
 
     expect(screen.getByText("Kind 0")).toBeInTheDocument();
     expect(screen.getByText("Kind 4")).toBeInTheDocument();
@@ -349,7 +349,7 @@ describe("RemindersBell — Erinnerungen", () => {
     renderBell();
 
     const button = await screen.findByRole("button", {
-      name: "Benachrichtigungen (1)",
+      name: "Benachrichtigungen 1 neu",
     });
     expect(button).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(button);
@@ -365,7 +365,7 @@ describe("RemindersBell — Erinnerungen", () => {
   it("closes on Escape and on an outside click, not on an inside click", async () => {
     setReminders({ enabled: true, count: 1, reminders: [reminder()] });
     renderBell();
-    const button = await openBell("Benachrichtigungen (1)");
+    const button = await openBell("Benachrichtigungen 1 neu");
 
     fireEvent.mouseDown(screen.getByText("Alle ansehen"));
     expect(button).toHaveAttribute("aria-expanded", "true");
@@ -395,11 +395,10 @@ describe("RemindersBell — Zähler", () => {
     renderBell();
 
     expect(
-      await screen.findByRole("button", { name: "Benachrichtigungen (5)" }),
+      await screen.findByRole("button", { name: "Benachrichtigungen 5 neu" }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("5 Benachrichtigungen")).toHaveTextContent(
-      "5",
-    );
+    // The counter shows the number; „neu“ follows as hidden text (#7112).
+    expect(screen.getByText("5")).toHaveTextContent(/^5 neu$/);
   });
 
   it("does not count reminders while the school has them switched off", async () => {
@@ -408,7 +407,7 @@ describe("RemindersBell — Zähler", () => {
     renderBell();
 
     expect(
-      await screen.findByRole("button", { name: "Benachrichtigungen (2)" }),
+      await screen.findByRole("button", { name: "Benachrichtigungen 2 neu" }),
     ).toBeInTheDocument();
   });
 
@@ -430,7 +429,7 @@ describe("RemindersBell — Zähler", () => {
     setUnread(1);
     setFeed([entry({ title: "Erster Hinweis" })]);
     renderBell();
-    await openBell("Benachrichtigungen (1)");
+    await openBell("Benachrichtigungen 1 neu");
     expect(await screen.findByText("Erster Hinweis")).toBeInTheDocument();
 
     setUnread(2);
@@ -444,7 +443,7 @@ describe("RemindersBell — Zähler", () => {
 
     expect(await screen.findByText("Neuer Hinweis")).toBeInTheDocument();
     expect(
-      await screen.findByRole("button", { name: "Benachrichtigungen (2)" }),
+      await screen.findByRole("button", { name: "Benachrichtigungen 2 neu" }),
     ).toBeInTheDocument();
   });
 });
@@ -455,7 +454,7 @@ describe("RemindersBell — Hinweise", () => {
     setUnread(1);
     setFeed([entry({ title: "Termin abgesagt" })]);
     renderBell();
-    await openBell("Benachrichtigungen (1)");
+    await openBell("Benachrichtigungen 1 neu");
 
     expect(await screen.findByText("Termin abgesagt")).toBeInTheDocument();
     expect(screen.getByText("Neu")).toBeInTheDocument();
@@ -468,7 +467,7 @@ describe("RemindersBell — Hinweise", () => {
     setUnread(1);
     setFeed([entry({ id: "41", title: "Termin abgesagt" })]);
     renderBell();
-    const bell = await openBell("Benachrichtigungen (1)");
+    const bell = await openBell("Benachrichtigungen 1 neu");
 
     fireEvent.click(
       await screen.findByRole("button", { name: /Termin abgesagt/ }),
@@ -497,7 +496,7 @@ describe("RemindersBell — Hinweise", () => {
       entry({ id: "42", title: "Fremder Link", deepLink: "//evil.example/x" }),
     ]);
     renderBell();
-    const bell = await openBell("Benachrichtigungen (1)");
+    const bell = await openBell("Benachrichtigungen 1 neu");
 
     fireEvent.click(
       await screen.findByRole("button", { name: /Fremder Link/ }),
@@ -531,7 +530,7 @@ describe("RemindersBell — Hinweise", () => {
     setUnread(2);
     setFeed([entry({ title: "Eins" }), entry({ title: "Zwei" })]);
     renderBell();
-    await openBell("Benachrichtigungen (2)");
+    await openBell("Benachrichtigungen 2 neu");
     expect(await screen.findByText("Eins")).toBeInTheDocument();
     expect(screen.getAllByText("Neu")).toHaveLength(2);
 
@@ -558,7 +557,7 @@ describe("RemindersBell — Hinweise", () => {
     setFeed([entry({ title: "Eins" })]);
     api.markAllNotificationFeedRead.mockRejectedValue(new Error("offline"));
     renderBell();
-    await openBell("Benachrichtigungen (1)");
+    await openBell("Benachrichtigungen 1 neu");
     expect(await screen.findByText("Eins")).toBeInTheDocument();
 
     fireEvent.click(
@@ -643,7 +642,7 @@ describe("RemindersBell — Telefon", () => {
     setUnread(1);
     renderBell();
 
-    await openBell("Benachrichtigungen (2)");
+    await openBell("Benachrichtigungen 2 neu");
 
     const sheet = await screen.findByTestId("notification-sheet");
     expect(sheet).toHaveClass("h-dvh");
@@ -660,7 +659,7 @@ describe("RemindersBell — Telefon", () => {
     // The sheet animates out; until then Radix hides the page behind it.
     expect(
       screen.getByRole("button", {
-        name: "Benachrichtigungen (2)",
+        name: "Benachrichtigungen 2 neu",
         hidden: true,
       }),
     ).toHaveAttribute("aria-expanded", "false");
@@ -700,7 +699,7 @@ describe("NotificationFeedBell — moto schule", () => {
 
     expect(await screen.findByText("9+")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Benachrichtigungen (12)" }),
+      screen.getByRole("button", { name: "Benachrichtigungen 12 neu" }),
     ).toBeInTheDocument();
     expect(api.fetchNotificationFeedUnreadCount).toHaveBeenCalledWith(
       SCHOOL_FEED,
@@ -712,7 +711,7 @@ describe("NotificationFeedBell — moto schule", () => {
     setUnread(1);
     setFeed([entry({ title: "Termin abgesagt" })]);
     renderSchoolBell();
-    await openBell("Benachrichtigungen (1)");
+    await openBell("Benachrichtigungen 1 neu");
 
     const feed = await screen.findByRole("region", { name: "Hinweise" });
     expect(within(feed).getByText("Termin abgesagt")).toBeInTheDocument();
@@ -735,7 +734,7 @@ describe("NotificationFeedBell — moto schule", () => {
       }),
     ]);
     renderSchoolBell();
-    const bell = await openBell("Benachrichtigungen (1)");
+    const bell = await openBell("Benachrichtigungen 1 neu");
 
     fireEvent.click(
       await screen.findByRole("button", { name: /Termin abgesagt/ }),
@@ -758,7 +757,7 @@ describe("NotificationFeedBell — moto schule", () => {
     setUnread(2);
     setFeed([entry({ title: "Erster" }), entry({ title: "Zweiter" })]);
     renderSchoolBell();
-    await openBell("Benachrichtigungen (2)");
+    await openBell("Benachrichtigungen 2 neu");
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Alle als gelesen markieren" }),
@@ -776,7 +775,7 @@ describe("NotificationFeedBell — moto schule", () => {
     setUnread(1);
     setFeed([entry({ title: "Erster Hinweis" })]);
     renderSchoolBell();
-    await openBell("Benachrichtigungen (1)");
+    await openBell("Benachrichtigungen 1 neu");
     expect(await screen.findByText("Erster Hinweis")).toBeInTheDocument();
 
     setUnread(2);
@@ -790,7 +789,7 @@ describe("NotificationFeedBell — moto schule", () => {
 
     expect(await screen.findByText("Neuer Hinweis")).toBeInTheDocument();
     expect(
-      await screen.findByRole("button", { name: "Benachrichtigungen (2)" }),
+      await screen.findByRole("button", { name: "Benachrichtigungen 2 neu" }),
     ).toBeInTheDocument();
   });
 
@@ -799,7 +798,7 @@ describe("NotificationFeedBell — moto schule", () => {
     setUnread(1);
     setFeed([entry({ title: "Termin abgesagt" })]);
     renderSchoolBell();
-    await openBell("Benachrichtigungen (1)");
+    await openBell("Benachrichtigungen 1 neu");
 
     const sheet = await screen.findByTestId("notification-sheet");
     expect(

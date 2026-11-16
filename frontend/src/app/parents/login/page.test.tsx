@@ -161,7 +161,10 @@ describe("ParentLoginPage i18n", () => {
   it("renders a pre-login language switcher and localized parent auth chrome", () => {
     render(<ParentLoginPage />);
 
-    expect(screen.getByRole("button", { name: "Language" })).toBeVisible();
+    // Named by what it shows: field word, then the language (#7112).
+    expect(
+      screen.getByRole("button", { name: "Language English" }),
+    ).toBeVisible();
     expect(screen.getByText("Language")).toBeInTheDocument();
     expect(screen.getByText("English")).toBeInTheDocument();
 
@@ -200,7 +203,10 @@ describe("ParentLoginPage i18n", () => {
 
     render(<ParentLoginPage />);
 
-    expect(screen.getByRole("button", { name: "Language" })).toBeVisible();
+    // Named by what it shows: field word, then the language (#7112).
+    expect(
+      screen.getByRole("button", { name: "Language English" }),
+    ).toBeVisible();
     expect(screen.getByText("Welcome to the parent portal")).toBeVisible();
     expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
 

@@ -280,7 +280,7 @@ describe("ClosingDaysEditor", () => {
     expect(
       within(screen.getByRole("group", { name: "Zeitraum" })).getByRole(
         "button",
-        { name: "12.–25. Okt. 2026" },
+        { name: "12.–25. Okt. 2026 , Zeitraum" },
       ),
     ).toBeInTheDocument();
     expect(mockBulkCancel).toHaveBeenCalledWith(

@@ -14,8 +14,10 @@ describe("RequestReviewCard", () => {
       />,
     );
 
+    // The row is named by its cells (#7112); open or closed is aria-expanded.
     const row = screen.getByRole("button", {
-      name: /Anfrage für Lina Beispiel.*Anmeldung.*Offen.*Details anzeigen/,
+      name: "Lina Beispiel Anmeldung Offen Eingereicht vor 20 Tagen",
+      expanded: false,
     });
     expect(row).toHaveClass(
       "sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_auto_1rem]",
@@ -58,8 +60,10 @@ describe("RequestReviewCard", () => {
 
     expect(screen.queryByText("Lina Beispiel")).not.toBeInTheDocument();
     expect(
+      // The child follows the visible cells as hidden text (#7112).
       screen.getByRole("button", {
-        name: /Anfrage für Lina Beispiel.*Krankmeldung.*Details anzeigen/,
+        name: /^Krankmeldung 29\.08\.2026 ?, Lina Beispiel$/,
+        expanded: false,
       }),
     ).toBeVisible();
   });
