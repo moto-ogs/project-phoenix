@@ -42,8 +42,8 @@ func NewStaffDeviations(deps ports.StaffDeviationDependencies) (timetable.StaffD
 		deps.Lifecycle == nil || deps.Protocol == nil || deps.ActivityUpdates == nil || deps.Locks == nil {
 		return nil, errors.New("timetable staff deviations: required dependency is nil")
 	}
-	if notices := deps.StaffingNotices; notices.Notices != nil && (notices.Groups == nil || notices.Teachers == nil) {
-		return nil, errors.New("timetable staff deviations: staffing notices need the block groups and the group teachers")
+	if notices := deps.StaffingNotices; notices.Notices != nil && (notices.Groups == nil || notices.Teachers == nil || notices.Handovers == nil) {
+		return nil, errors.New("timetable staff deviations: staffing notices need the block groups, the group teachers and the group handovers")
 	}
 	return &staffDeviations{
 		substituteConflicts: substituteConflicts{instances: deps.Instances.Reads, staff: deps.InstanceStaff},

@@ -162,15 +162,6 @@ const (
 	// taken back (#7151). It takes back TypeInstanceCancelled.
 	TypeInstanceReinstated = contract.NotificationInstanceReinstated
 
-	// TypeStaffingChanged tells the people a substitution or another staffing
-	// change is about (#7136): who substitutes and who is absent. It writes
-	// the notification feed and pushes while the change takes effect within
-	// 14 days.
-	TypeStaffingChanged = contract.NotificationStaffingChanged
-	// TypeGroupStaffingChanged tells the teachers of the OGS group of an
-	// affected block about the same change (#7136).
-	TypeGroupStaffingChanged = contract.NotificationGroupStaffingChanged
-
 	// TypeEnrollmentSubmitted is the e-mail "Neue Anmeldung" (#3780) to the
 	// enrollment managers who switched it on in the Anmeldungen overview.
 	TypeEnrollmentSubmitted = "enrollment_submitted"
@@ -388,38 +379,6 @@ func init() {
 	registerStaffAppointmentTypes()
 	registerStaffingTypes()
 	registerStaffNoticeTypes()
-}
-
-// registerStaffingTypes registers the staff notices about substitutions and
-// other changes to who staffs a block (#7136), under their own heading. They
-// also write the notification feed; the person's switch decides only the
-// push. Both follow the right every staff role holds, so the switch reaches
-// everyone who can be planned for a block or lead a group.
-func registerStaffingTypes() {
-	RegisterType(TypeDefinition{
-		Key:         TypeStaffingChanged,
-		Label:       "Eigene Vertretung",
-		Description: "Wenn Sie jemanden vertreten, vertreten werden oder an einem Tag als nicht da eingetragen sind. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Änderungen in den nächsten 14 Tagen.",
-		Group:       GroupStaffing,
-		Portal:      PortalStaff,
-		TenantGate:  settingStaffingChangedEnabled,
-		SortOrder:   1,
-		Permission:  permissionActivitiesRead,
-		DefaultOn:   true,
-		Feed:        true,
-	})
-	RegisterType(TypeDefinition{
-		Key:         TypeGroupStaffingChanged,
-		Label:       "Vertretung in Ihren Gruppen",
-		Description: "Wenn in einer Gruppe, der Sie zugeordnet sind, jemand nicht da ist oder vertreten wird. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Änderungen in den nächsten 14 Tagen.",
-		Group:       GroupStaffing,
-		Portal:      PortalStaff,
-		TenantGate:  settingStaffingChangedEnabled,
-		SortOrder:   2,
-		Permission:  permissionActivitiesRead,
-		DefaultOn:   true,
-		Feed:        true,
-	})
 }
 
 // registerStaffAppointmentTypes registers the staff notices about the
