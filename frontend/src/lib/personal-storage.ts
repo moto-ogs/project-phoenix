@@ -113,8 +113,9 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   // Sperrzeiten für „Passwort vergessen“ je Adresse (#7213); entstehen vor
   // der Anmeldung. Je Eintrag ein Zeitpunkt unter einem 32-Bit-Hash der
   // Adresse, kein Konto und keine Adresse im Klartext. Wer eine Adresse
-  // vermutet, kann am Gerät prüfen, ob sie hier angefragt wurde; der Eintrag
-  // verfällt nach höchstens einer Stunde.
+  // vermutet, kann am Gerät prüfen, ob sie hier angefragt wurde. Die Sperre
+  // läuft höchstens eine Stunde; das nächste Öffnen des Fensters räumt
+  // abgelaufene Einträge weg.
   "passwordResetWaits",
   // Die frühere Sperrzeit ohne Adresse; das Fenster räumt sie beim Lesen weg.
   "passwordResetRateLimitUntil",
