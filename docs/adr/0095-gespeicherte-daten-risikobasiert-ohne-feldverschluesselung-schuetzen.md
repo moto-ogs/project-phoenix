@@ -8,8 +8,9 @@ status: accepted
 > Kinderakte und der Ferienanmeldung sowie IBAN, Kontoinhaber, Steuer-ID und
 > SV-Nummer von Eltern, Personal und SEPA-Zahlern liegen feldverschlüsselt in der Datenbank (AES-256-GCM mit
 > Security Runtimes Feld-Cipher, jeder Wert an Schule oder Träger gebunden).
-> Dazu kommen bestätigte Mandatstexte, PAIN.008-Dateien, die Änderungshistorie
-> des Personalstamms, ein Zugangsgeheimnis und das Rückgabearchiv. Für diese Daten
+> Dazu kommen bestätigte Mandatstexte, PAIN.008-Dateien, die Bank- und
+> Steuerwerte in der Änderungshistorie des Personalstamms, das SFTP-Passwort
+> des Trägers und das Rückgabearchiv. Für diese Daten
 > gilt der Satz „keine Feld-/Dateiverschlüsselung in der Anwendung“ nicht mehr:
 >
 > - Gesundheitsangaben der Ferienanmeldung und des Feriengasts (#4722,
@@ -39,15 +40,18 @@ status: accepted
 >   hält diesen Schlüssel nur in Abruf-Tokens eingewickelt:
 >   [ADR 0203](0203-mandantenrueckgabe-wird-per-https-mit-kurzlebigem-token-abgerufen.md).
 >
-> ADR 0171, 0183, 0188 und 0203 tragen noch `status: proposed`; ihr Code liegt auf
+> ADR 0171, 0183, 0187, 0188 und 0203 tragen noch `status: proposed`; ihr Code liegt auf
 > `development`. Weiter gilt diese Entscheidung für Datei-Uploads, auch
 > solche in Datenbankzeilen, für Gesundheitsantworten in Anmeldeanträgen
 > (`enrollment.request_children.custom_data` und die Snapshots in
-> `enrollment.change_requests`), für Konten der Träger, für die
-> übrigen Personal-, Eltern- und Kinderdaten sowie für Datenträger-,
+> `enrollment.change_requests`), für Konten der Träger, für Zugangsgeheimnisse
+> in den Schuleinstellungen (SFTP-Passwort und Geräte-PIN in
+> `config.setting_values`), für die übrigen Personal-, Eltern- und
+> Kinderdaten sowie für Datenträger-,
 > Sicherungs-, Diagnose- und Protokollmaßnahmen. Die
 > Abwägung unten bleibt gültig: Der Anwendungsprozess erhält die
-> Schlüsselringe als Umgebungsvariablen und kann jeden Wert öffnen.
+> Schlüsselringe als Umgebungsvariablen und kann jeden feldverschlüsselten
+> Wert öffnen.
 > Aktueller Stand je Bestand:
 > [Schutz gespeicherter Daten](../reference/schutz-gespeicherter-daten.md).
 
