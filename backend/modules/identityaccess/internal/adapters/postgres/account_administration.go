@@ -180,7 +180,6 @@ func (s *Store) UpdateManageableAccountIdentity(ctx context.Context, update doma
 		Model((*administeredAccountRow)(nil)).
 		ModelTableExpr(`auth.accounts AS "account"`).
 		Set(`email = ?`, update.Email).
-		Set(`updated_at = NOW()`).
 		Where(`"account".id = ?`, update.AccountID).
 		Where(liveAccountSQL)
 	if update.Username != nil {
@@ -198,7 +197,6 @@ func (s *Store) SetManageableAccountActive(ctx context.Context, id int64, active
 		Model((*administeredAccountRow)(nil)).
 		ModelTableExpr(`auth.accounts AS "account"`).
 		Set(`active = ?`, active).
-		Set(`updated_at = NOW()`).
 		Where(`"account".id = ?`, id).
 		Where(liveAccountSQL)
 	return execManageableAccountWrite(ctx, scopeAccounts(query, visibility), "set manageable account active")

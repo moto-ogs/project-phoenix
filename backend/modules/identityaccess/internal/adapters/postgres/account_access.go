@@ -55,7 +55,6 @@ func (s *Store) SetAccountActive(ctx context.Context, id int64, active bool) (do
 	result, err := db.NewUpdate().
 		TableExpr(`auth.accounts AS "account"`).
 		Set("active = ?", active).
-		Set("updated_at = NOW()").
 		Where(`"account".id = ?`, id).
 		Where(`"account".personal_data_erased_at IS NULL`).
 		Exec(ctx)
@@ -114,7 +113,6 @@ func (s *Store) DeactivateTenantMapping(ctx context.Context, accountID, tenantID
 		Set("status = ?", "inactive").
 		Set("deactivated_at = NOW()").
 		Set("staff_calendar_feed_token = NULL").
-		Set("updated_at = NOW()").
 		Where(`"account_tenant".account_id = ?`, accountID).
 		Where(`"account_tenant".tenant_id = ?`, tenantID).
 		Exec(ctx)

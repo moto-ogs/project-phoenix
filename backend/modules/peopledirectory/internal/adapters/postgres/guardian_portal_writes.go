@@ -342,7 +342,6 @@ func (s *GuardianStore) SetPortalLocale(ctx context.Context, accountID int64, lo
 	return exec(ctx, "set guardian portal locale", db.NewUpdate().
 		TableExpr("users.guardian_profiles").
 		Set("portal_locale = ?", locale).
-		Set("updated_at = NOW()").
 		Where("account_id = ?", accountID).
 		Where("tenant_id = ?", scope.TenantID).Exec)
 }

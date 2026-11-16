@@ -150,7 +150,6 @@ func (r *StaffOnboardingRepository[S]) StoreStaffOnboarding(ctx context.Context,
 		Set("done_steps = EXCLUDED.done_steps").
 		Set("skipped_steps = EXCLUDED.skipped_steps").
 		Set("dismissed_at = EXCLUDED.dismissed_at").
-		Set("updated_at = NOW()").
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("upsert staff onboarding: %w", err)

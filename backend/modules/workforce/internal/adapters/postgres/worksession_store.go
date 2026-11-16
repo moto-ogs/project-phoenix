@@ -448,7 +448,6 @@ func (s *Store) UpdateStaffBalanceAdjustment(ctx context.Context, value workforc
 	query := withTenant(db.NewUpdate().Model(row).
 		ModelTableExpr(tableStaffBalanceAdjustments+` AS "staff_balance_adjustment"`).
 		ExcludeColumn("created_at", "updated_at").
-		Set("updated_at = NOW()").
 		WherePK().
 		Returning("*"), aliasStaffBalanceAdjustment, scope)
 	stats, err := execAffected(ctx, query, "update staff balance adjustment")

@@ -274,7 +274,6 @@ func (s *Store) UpdateGuardianInvitation(ctx context.Context, invitation domain.
 	rows, _, err := s.exec(ctx, "update guardian invitation", func(db bun.IDB) executor {
 		return guardianTenantFilter(scope, db.NewUpdate().Model(&row).
 			Column(columns...).
-			Set("updated_at = NOW()").
 			Where(`"guardian_invitation".id = ?`, invitation.ID).
 			Where(`"guardian_invitation".accepted_at IS NULL`).
 			Where(`"guardian_invitation".expires_at = ?`, expectedExpiresAt).
@@ -298,7 +297,6 @@ func (s *Store) AcceptGuardianInvitation(ctx context.Context, id int64, token st
 	rows, _, err := s.exec(ctx, "accept guardian invitation", func(db bun.IDB) executor {
 		return guardianTenantFilter(scope, db.NewUpdate().Model((*guardianInvitationRow)(nil)).
 			Set("accepted_at = ?", acceptedAt).
-			Set("updated_at = NOW()").
 			Where(`"guardian_invitation".id = ?`, id).
 			Where(`"guardian_invitation".token = ?`, domain.HashToken(token)).
 			Where(`"guardian_invitation".accepted_at IS NULL`).
@@ -324,7 +322,6 @@ func (s *Store) InvalidateGuardianInvitations(ctx context.Context, profileID int
 		Set("expires_at = LEAST(expires_at, ?)", now).
 		Set("email = NULL").
 		Set("approval_status = CASE WHEN approval_status = ? THEN ? ELSE approval_status END", domain.GuardianInvitationApprovalPending, domain.GuardianInvitationApprovalRejected).
-		Set("updated_at = NOW()").
 		Where("(? OR approval_status <> ?)", includePendingApprovals, domain.GuardianInvitationApprovalPending).
 		Where("guardian_profile_id = ?", profileID).Where("accepted_at IS NULL").Where("expires_at > ?", now)).Exec(ctx)
 	return err

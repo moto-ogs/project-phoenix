@@ -141,7 +141,6 @@ func (r *TraegerSettingRepository) Upsert(ctx context.Context, value *config.Tra
 		On("CONFLICT (organization_id, setting_key) DO UPDATE").
 		Set("value = EXCLUDED.value").
 		Set("updated_by = EXCLUDED.updated_by").
-		Set("updated_at = NOW()").
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("upsert Träger setting value: %w", err)

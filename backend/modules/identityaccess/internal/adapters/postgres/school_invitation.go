@@ -282,7 +282,7 @@ func (s *Store) EnsureAccountTenant(ctx context.Context, accountID, tenantID int
 		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at, deactivated_at, created_at, updated_at)
 			SELECT ?, ?, 'active', NOW(), NULL::timestamptz, NOW(), NOW() FROM caterer WHERE NOT caterer.refused
 			ON CONFLICT (account_id, tenant_id) DO UPDATE
-			SET status = 'active', activated_at = NOW(), deactivated_at = NULL, updated_at = NOW()
+			SET status = 'active', activated_at = NOW(), deactivated_at = NULL
 			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID)
 	})
 }

@@ -232,7 +232,6 @@ func (s *Store) UpdateStaff(ctx context.Context, id, personID int64) (schoolmemb
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`users.staff_school_memberships AS "staff"`).
 		Column("person_id").
-		Set(`updated_at = NOW()`).
 		Where(`"staff".id = ?`, id).
 		Where(`"staff".deleted_at IS NULL`), "staff", scope)
 	stats := domain.OperationStats{Queries: 1}
@@ -260,7 +259,6 @@ func (s *Store) SoftDeleteStaff(ctx context.Context, id int64) (domain.Operation
 	query := withTenant(clearPlannedExit(db.NewUpdate().Model((*staffRow)(nil)).
 		ModelTableExpr(`users.staff_school_memberships AS "staff"`)).
 		Set(`deleted_at = NOW()`).
-		Set(`updated_at = NOW()`).
 		Where(`"staff".id = ?`, id).
 		Where(`"staff".deleted_at IS NULL`), "staff", scope)
 	return execOne(ctx, query, "soft delete staff", schoolmembership.ErrStaffNotFound)
@@ -278,7 +276,6 @@ func (s *Store) ReinstateStaff(ctx context.Context, id int64) (schoolmembership.
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`users.staff_school_memberships AS "staff"`).
 		Set(`deleted_at = NULL`).
-		Set(`updated_at = NOW()`).
 		Where(`"staff".id = ?`, id).
 		Where(`"staff".deleted_at IS NOT NULL`).
 		Where(`"staff".personal_data_erased_at IS NULL`), "staff", scope)
@@ -395,7 +392,6 @@ func (s *Store) UpdateTeacher(ctx context.Context, id int64, fields schoolmember
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`users.teachers AS "teacher"`).
 		Column("staff_id", "specialization", "role", "qualifications").
-		Set(`updated_at = NOW()`).
 		Where(`"teacher".id = ?`, id).
 		Where(`"teacher".deleted_at IS NULL`), "teacher", scope)
 	stats := domain.OperationStats{Queries: 1}
@@ -420,7 +416,6 @@ func (s *Store) SoftDeleteTeacher(ctx context.Context, id int64) (domain.Operati
 	query := withTenant(db.NewUpdate().Model((*teacherRow)(nil)).
 		ModelTableExpr(`users.teachers AS "teacher"`).
 		Set(`deleted_at = NOW()`).
-		Set(`updated_at = NOW()`).
 		Where(`"teacher".id = ?`, id).
 		Where(`"teacher".deleted_at IS NULL`), "teacher", scope)
 	return execOne(ctx, query, "soft delete teacher", schoolmembership.ErrTeacherNotFound)
@@ -437,7 +432,6 @@ func (s *Store) ReinstateTeacher(ctx context.Context, id int64) (schoolmembershi
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`users.teachers AS "teacher"`).
 		Set(`deleted_at = NULL`).
-		Set(`updated_at = NOW()`).
 		Where(`"teacher".id = ?`, id).
 		Where(`"teacher".deleted_at IS NOT NULL`), "teacher", scope)
 	stats := domain.OperationStats{Queries: 1}
@@ -551,7 +545,6 @@ func (s *Store) UpdateExternalCaregiverRecord(ctx context.Context, id int64, fie
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`users.external_caregivers AS "external_caregiver"`).
 		Column("staff_id", "organization", "contact_email", "contact_phone", "activity_expertise", "start_date", "end_date", "notes").
-		Set(`updated_at = NOW()`).
 		Where(`"external_caregiver".id = ?`, id), "external_caregiver", scope)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()

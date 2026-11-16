@@ -94,7 +94,7 @@ func (s *Store) UpdatePlanningTrack(ctx context.Context, id int64, fields timeta
 	row := planningTrackRow{}
 	query := db.NewUpdate().Model(&row).ModelTableExpr(`schedule.planning_tracks`).
 		Set("name = ?", fields.Name).Set("color = ?", fields.Color).Set("sort_order = ?", fields.SortOrder).
-		Set("archived_at = ?", fields.ArchivedAt).Set("updated_at = NOW()").
+		Set("archived_at = ?", fields.ArchivedAt).
 		Where("id = ?", id).Where("tenant_id = ?", tenantID)
 	if activeOnly {
 		query = query.Where("archived_at IS NULL")
@@ -173,7 +173,7 @@ func (s *Store) applyPlanningTrackOrder(ctx context.Context, db bun.IDB, tenantI
 	}
 	writeStats, err := execMeasuredWrite(ctx, db.NewRaw(`
 		UPDATE schedule.planning_tracks AS "planning_track"
-		SET sort_order = ("ordered".position - 1)::integer, updated_at = NOW()
+		SET sort_order = ("ordered".position - 1)::integer
 		FROM unnest(?::bigint[]) WITH ORDINALITY AS "ordered"(id, position)
 		WHERE "planning_track".tenant_id = ?
 			AND "planning_track".id = "ordered".id
@@ -194,8 +194,7 @@ func (s *Store) RestorePlanningTrackAtEnd(ctx context.Context, id int64) (timeta
 		UPDATE schedule.planning_tracks AS "planning_track"
 		SET archived_at = NULL,
 			sort_order = COALESCE((SELECT MAX("active".sort_order) + 1 FROM schedule.planning_tracks AS "active"
-				WHERE "active".tenant_id = ? AND "active".archived_at IS NULL), 0),
-			updated_at = NOW()
+				WHERE "active".tenant_id = ? AND "active".archived_at IS NULL), 0)
 		WHERE "planning_track".tenant_id = ? AND "planning_track".id = ? AND "planning_track".archived_at IS NOT NULL
 		RETURNING "planning_track".*`, tenantID, tenantID, id).Scan(ctx, &row)
 	stats.StatementDuration = time.Since(started)

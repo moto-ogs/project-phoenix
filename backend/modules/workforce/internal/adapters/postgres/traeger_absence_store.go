@@ -206,7 +206,6 @@ func (s *TraegerStaffStore) CarryTraegerAbsenceType(ctx context.Context, schoolT
 	} else {
 		_, err = db.NewUpdate().Model(row).ModelTableExpr(tableStaffAbsenceTypes+` AS "staff_absence_type"`).
 			Column("name", "is_active", "allowance_enabled", "carryover_until", "requestable", "traeger_absence_type_id").
-			Set("updated_at = NOW()").
 			Where(`"staff_absence_type".tenant_id = ? AND "staff_absence_type".id = ?`, schoolID, schoolTypeID).Exec(ctx)
 	}
 	if isUniqueViolationOn(err, staffAbsenceTypeNameUniqueIndex) {

@@ -167,7 +167,6 @@ func (s *Store) UpdateGroupSubstitution(ctx context.Context, value domain.GroupS
 		Model(row).
 		ModelTableExpr(tableGroupSubstitution+` AS "group_substitution"`).
 		ExcludeColumn("created_at", "updated_at").
-		Set("updated_at = NOW()").
 		WherePK().
 		Returning("*")
 	query = scopeQuery(scope, query, `"group_substitution".tenant_id = ?`)

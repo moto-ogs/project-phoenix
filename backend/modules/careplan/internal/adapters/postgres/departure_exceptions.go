@@ -74,8 +74,7 @@ func (s *Store) SaveDepartureException(ctx context.Context, v careplan.Departure
 		On(`CONFLICT (tenant_id, student_id, exception_date) DO UPDATE`).
 		Set(`departure_mode = EXCLUDED.departure_mode`).
 		Set(`reason = EXCLUDED.reason`).
-		Set(`created_by = EXCLUDED.created_by`).
-		Set(`updated_at = NOW()`)
+		Set(`created_by = EXCLUDED.created_by`)
 	stats, err := createStudentScheduleRow(ctx, query, "save departure exception")
 	return departureExceptionToPublic(row), stats, err
 }
