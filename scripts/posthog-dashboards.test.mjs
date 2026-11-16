@@ -195,12 +195,19 @@ test('the caterer portal counts its core actions per school, since its browser s
   const tiles = definitions.find((d) => d.name === 'Nutzungsanalyse: Caterer-Portal').insights;
   const actions = tiles.find((insight) => insight.name === 'Caterer-Portal: Was tun Caterer?');
   assert.match(actions.query.source.query, /properties\.surface = 'caterer'/);
-  assert.match(actions.query.source.query, /uniq\(toString\(properties\.school_id\)\) as Schulen/);
+  assert.match(actions.query.source.query, /uniq\(concat\(toString\(properties\.school_id\), toString\(toDate\(timestamp\)\)\)\) as Schultage/);
   const queries = JSON.stringify(tiles.map((insight) => insight.query));
   assert.ok(tiles.every((insight) => !/Seite|klicken/.test(insight.name)), 'the caterer portal has no page views');
   for (const event of ['caterer_invited', 'caterer_invite_accepted', 'caterer_supply_ended', 'meal_order_confirmed']) {
     assert.match(queries, new RegExp(`\\b${event}\\b`), event);
-    assert.equal(FEATURES.filter((f) => f.events?.includes(event)).length, 1, event);
+  }
+  // The school's own link actions are a feature area; the caterer's own saves are no use by the school.
+  assert.deepEqual(FEATURES.find((f) => f.name === 'Caterer-Anbindung').events, ['caterer_invited', 'caterer_supply_ended']);
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of ['caterer_invite_accepted', 'meal_order_confirmed']) {
+    assert.ok(FEATURES.every((f) => !f.events?.includes(event)), event);
+    assert.match(noFeature, new RegExp(`'${event}'`), `${event} is no feature use`);
   }
 });
 
@@ -210,8 +217,9 @@ test('the caterer never makes its school look active, and its idempotent writes 
   let checked = 0;
   for (const insight of school.flatMap((d) => d.insights)) {
     const query = JSON.stringify(insight.query);
-    // ACTIVE_USE, or a scan of the schools' events (schoolDays, schoolFeatureEvents).
-    if (!/event != 'login_failed'|as Schule\b/.test(query)) continue;
+    // ACTIVE_USE, a scan of the schools' events (schoolDays, schoolFeatureEvents),
+    // or a feature area of a school (featureExpression with school_id).
+    if (!/event != 'login_failed'|as Schule\b|school_id[^"]*'Sonstiges'/.test(query)) continue;
     checked++;
     assert.ok(query.includes(notCaterer), `${insight.name}: a caterer action is no use by the school`);
   }

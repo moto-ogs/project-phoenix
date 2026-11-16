@@ -326,10 +326,9 @@ export const FEATURES = Object.freeze([
     },
     events: ['enrollment_submitted'],
   },
-  {
-    name: 'Essen vom Caterer',
-    events: ['caterer_invited', 'caterer_invite_accepted', 'caterer_supply_ended', 'meal_order_confirmed'],
-  },
+  // The school's own link actions; its caterer page is part of /meal-plan. What
+  // the caterer itself saves is no use by the school (NO_FEATURE_EVENTS).
+  { name: 'Caterer-Anbindung', events: ['caterer_invited', 'caterer_supply_ended'] },
   { name: 'Stammdaten und Export', pages: { ogs: ['/database/**', '/eltern/bankverbindungen'] }, events: ['data_exported'] },
   { name: 'Einstellungen', pages: { ogs: ['/settings', '/profile'], parents: ['/settings'], school: ['/einstellungen'] }, events: ['settings_changed'] },
   { name: 'Weitere Werkzeuge', pages: { ogs: ['/lists', '/reminders', '/emergency', '/info-displays', '/dateien', '/statistics'], parents: ['/documents', '/documents/**', '/vertrag-unterschreiben/**'] } },
@@ -342,8 +341,15 @@ export const NO_FEATURE_PAGES = Object.freeze({
   school: ['/login', '/invite', '/reset-password'],
 });
 
-/** Events that are no feature use: sessions, devices, and the demo funnel. */
-const NO_FEATURE_EVENTS = ['login_success', 'login_failed', 'tenant_switched', 'guardian_invite_accepted', 'pwa_installed', 'pwa_install_prompt_shown', 'page_viewed'];
+/**
+ * Events that are no feature use: sessions, devices, the demo funnel, and
+ * what the school's caterer saves (an outside party; the caterer dashboard
+ * counts it).
+ */
+const NO_FEATURE_EVENTS = [
+  'login_success', 'login_failed', 'tenant_switched', 'guardian_invite_accepted', 'pwa_installed', 'pwa_install_prompt_shown', 'page_viewed',
+  'caterer_invite_accepted', 'meal_order_confirmed',
+];
 
 /** Area unmatched pages and events fall into; growing means FEATURES lacks an entry. */
 const OTHER_FEATURE = 'Sonstiges';
@@ -938,12 +944,23 @@ order by Woche desc`),
       insights: [
         {
           name: 'Caterer-Portal: Was tun Caterer?',
-          description: 'Letzte 30 Tage. Erfolgreiche Speichervorgänge im Caterer-Portal: Einladung angenommen, Bestellung bestätigt.',
-          ...actionsByRole('production', CATERER, coreAction),
+          description: 'Letzte 30 Tage. Erfolgreiche Speichervorgänge im Caterer-Portal, etwa Bestellung bestätigt, gezählt als Schultage: mehrere Speichervorgänge für eine Schule am selben Tag zählen einmal. Samstage, Sonntage und Feiertage fehlen.',
+          ...hogql('production', (where) => `
+select
+  event as Aktion,
+  ${SCHOOL_DAYS} as Schultage,
+  uniq(toString(properties.school_id)) as Schulen
+from events
+where ${where}
+  and properties.surface = ${sqlString(CATERER)}
+  and ${coreAction}
+  and timestamp > now() - interval 30 day
+group by Aktion
+order by Schultage desc`),
         },
         {
           name: 'Caterer-Portal: Tage mit bestätigter Bestellung je Schule (30 Tage)',
-          description: 'Je Schule: an wie vielen Werktagen ihr Caterer mindestens eine Bestellung bestätigt hat, und wann zuletzt. Ein wiederholtes Bestätigen derselben Bestellung zählt nicht doppelt. Eine Schule ohne Bestätigung fehlt.',
+          description: 'Je Schule: an wie vielen Werktagen ihr Caterer mindestens eine Bestellung bestätigt hat, und wann zuletzt. Mehrere Bestätigungen am selben Tag zählen einmal. Bestätigungen an Samstagen, Sonntagen und Feiertagen fehlen; eine Schule ohne Bestätigung an einem Werktag fehlt ganz.',
           ...hogql('production', (where) => `
 select
   ${SCHOOL_BREAKDOWN} as Standort,
@@ -960,7 +977,7 @@ order by ${quoted('Tage mit Bestätigung')} desc, Standort`),
         },
         {
           name: 'Caterer-Portal: Tage mit bestätigter Bestellung pro Woche',
-          description: 'Je Schule die Werktage einer Woche, an denen ihr Caterer mindestens eine Bestellung bestätigt hat.',
+          description: 'Je Schule die Werktage einer Woche, an denen ihr Caterer mindestens eine Bestellung bestätigt hat. Samstage, Sonntage und Feiertage fehlen.',
           ...trends('production', {
             series: [series('meal_order_confirmed', 'Tage mit Bestätigung', { math: 'hogql', math_hogql: SCHOOL_DAYS })],
             dateFrom: '-180d',
@@ -971,7 +988,7 @@ order by ${quoted('Tage mit Bestätigung')} desc, Standort`),
         },
         {
           name: 'Caterer-Anbindung: Einladungen und Enden pro Woche',
-          description: 'Schulen laden ihren Caterer in der OGS-App ein und beenden die Belieferung dort; der Caterer nimmt die Einladung im Caterer-Portal an. Gezählt wird je Schule und Tag, ein wiederholter Klick zählt nicht doppelt.',
+          description: 'Schulen laden ihren Caterer in der OGS-App ein und beenden die Belieferung dort; der Caterer nimmt die Einladung im Caterer-Portal an. Gezählt werden Tage je Schule: mehrere gleiche Vorgänge einer Schule am selben Tag zählen einmal. Samstage, Sonntage und Feiertage fehlen.',
           ...trends('production', {
             series: CATERER_LINK_EVENTS.map(([event, name]) => series(event, name, { math: 'hogql', math_hogql: SCHOOL_DAYS })),
             dateFrom: '-180d',
@@ -1024,7 +1041,7 @@ order by ${quoted('Tage mit Bestätigung')} desc, Standort`),
           description: 'Seitenaufrufe und Aktionen je Ablauf. Zeigt, welche Abläufe die Schule neu aufnimmt oder liegen lässt.',
           ...trends('production', {
             series: KEY_FLOWS.map((flow) => series(null, flow, {
-              properties: [{ key: `isNotNull(properties.school_id) and ${featureExpression()} = ${sqlString(flow)}`, type: 'hogql' }],
+              properties: [{ key: `${SCHOOL_EVENT} and ${featureExpression()} = ${sqlString(flow)}`, type: 'hogql' }],
             })),
             display: 'ActionsBar',
           }),

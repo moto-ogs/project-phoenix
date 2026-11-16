@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -231,8 +232,9 @@ func TestCatererWritesCountForTheirRouteSchool(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			target := &recordingTracker{}
+			var asked []int64
 			policy := CollectionPolicy{SchoolEnabled: func(_ context.Context, school int64) (bool, error) {
-				require.Equal(t, int64(44), school)
+				asked = append(asked, school)
 				return tc.enabled, nil
 			}}
 			router := chi.NewRouter()
@@ -247,6 +249,7 @@ func TestCatererWritesCountForTheirRouteSchool(t *testing.T) {
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, request)
 			require.Equal(t, http.StatusNoContent, response.Code)
+			assert.Equal(t, []int64{44}, asked, "the route school's switch decides, also when it is off")
 			events := target.captured()
 			require.Len(t, events, tc.want)
 			if tc.want == 0 {
@@ -272,4 +275,18 @@ func TestRouteSchoolNeverReplacesASessionSchool(t *testing.T) {
 	assert.Equal(t, own, routeSchoolActor(request, action, own))
 	assert.Equal(t, Actor{Surface: SurfaceCaterer, SchoolID: 44, Role: RoleCaterer}, routeSchoolActor(request, action, Actor{Surface: SurfaceCaterer}))
 	assert.Equal(t, Actor{Surface: SurfaceCaterer}, routeSchoolActor(request, event("meal_order_confirmed"), Actor{Surface: SurfaceCaterer}), "only a SchoolFromRoute route")
+}
+
+func TestRouteSchoolRoutesNameTheirSchool(t *testing.T) {
+	t.Parallel()
+	count := 0
+	for key, action := range CoreActions() {
+		if !action.SchoolFromRoute {
+			continue
+		}
+		count++
+		assert.Contains(t, key.Pattern, "{schoolId}", "%v takes its school from the route", key)
+		assert.True(t, strings.HasPrefix(key.Pattern, "/caterer/"), "%v: only the caterer portal names no school", key)
+	}
+	assert.Equal(t, 2, count)
 }
