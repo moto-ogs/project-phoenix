@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
-import { apiGet, apiPost } from "~/lib/api-helpers.server";
-import { isApiResponseError } from "~/lib/api-response-error.server";
+import { apiPost } from "~/lib/api-helpers.server";
+import { contractGet, decodeContract } from "~/lib/contract/client.server";
+import { routes } from "~/lib/contract/students.generated";
 import {
   createGetHandler,
   createPostHandler,
@@ -10,8 +11,7 @@ import type { Student, StudentPage } from "~/lib/student-helpers";
 import {
   mapStudentListRow,
   mapStudentResponse,
-  type BackendNameStudent,
-  type BackendStudent,
+  studentWriteResponse,
   type StudentView,
 } from "~/lib/student-wire";
 import {
@@ -25,6 +25,7 @@ import {
 } from "~/lib/student-privacy-consent.server";
 
 const logger = createLogger({ component: "StudentsRoute" });
+const LIST = routes["GET /api/students/"];
 
 // Callers that don't paginate (Kindersuche, database list views) get every row
 // in one trip; an explicit page_size is honored up to the cap, so an
@@ -49,21 +50,16 @@ export const GET = createGetHandler(
     query.set("page_size", String(pageSize(query.get("page_size"))));
     const view = studentView(query.get("view"));
 
-    try {
-      const response = await apiGet<{
-        data: BackendNameStudent[];
-        pagination: StudentPage["pagination"];
-      }>(`/api/students?${query.toString()}`, token);
-      return {
-        data: response.data.map((row) => mapStudentListRow(row, view)),
-        pagination: response.pagination,
-      };
-    } catch (error) {
-      const context = {
-        error: error instanceof Error ? error.message : String(error),
-      };
+    const result = await contractGet(
+      `${LIST.method} ${LIST.pattern}`,
+      LIST.response[view],
+      `/api/students?${query.toString()}`,
+      token,
+    );
+    if (!result.ok) {
+      const context = { error: result.error.cause.message };
       // A rate-limited list is expected under load and stays a warning.
-      if (isApiResponseError(error, 429)) {
+      if (result.error.status === 429) {
         logger.warn("students fetch failed", {
           ...context,
           rate_limited: true,
@@ -71,8 +67,12 @@ export const GET = createGetHandler(
       } else {
         logger.error("students fetch failed", context);
       }
-      throw error;
+      throw result.error.cause;
     }
+    return {
+      data: result.value.data.map((row) => mapStudentListRow(row, view)),
+      pagination: result.value.pagination,
+    };
   },
 );
 
@@ -89,12 +89,13 @@ export const POST = createPostHandler<Student, StudentCreateBody>(
   async (_request, body, token) => {
     const backendRequest = buildStudentCreateRequest(body);
     const consent = sentConsentPair(body);
-    const response = await apiPost<{ data: BackendStudent }>(
-      "/api/students",
-      token,
-      backendRequest,
+    const created = decodeContract(
+      "POST /api/students/",
+      studentWriteResponse,
+      await apiPost<unknown>("/api/students", token, backendRequest),
     );
-    const student = response.data;
+    if (!created.ok) throw created.error.cause;
+    const student = created.value.data;
 
     let written = consent;
     if (consent) {
