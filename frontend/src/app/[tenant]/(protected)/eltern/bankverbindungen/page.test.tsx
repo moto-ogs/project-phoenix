@@ -102,6 +102,20 @@ describe("BankverbindungenPage", () => {
   afterEach(() => setViewportWidth(DESKTOP_WIDTH));
   const table = () => within(screen.getByTestId("data-table-table"));
   const stacked = () => within(screen.getByTestId("data-table-stacked"));
+  // Die Suchzeile rendert die Auswahl einmal je Anordnung; CSS zeigt auf
+  // jeder Breite genau eine. Unter der Desktop-Breite steht sie in ihrer
+  // eigenen Zeile unter der Suche (#7132).
+  const missingIbanChoice = (layout: "phone" | "desktop") => {
+    const choice = screen
+      .getAllByRole("button", { name: "Ohne IBAN (1)" })
+      .find(
+        (button) =>
+          (button.closest("[data-search-row-primary-action]") !== null) ===
+          (layout === "phone"),
+      );
+    if (!choice) throw new Error(`Keine Auswahl „Ohne IBAN“ (${layout})`);
+    return choice;
+  };
 
   it("shows children without bank details as a gap, not as a blank cell", async () => {
     mockFetchOverview.mockResolvedValue([
@@ -123,7 +137,8 @@ describe("BankverbindungenPage", () => {
     );
     expect(table().getByText("Nicht zugeordnet")).toBeInTheDocument();
     expect(table().getByText("Fehlt")).toBeInTheDocument();
-    expect(screen.getByText("Ohne IBAN (1)")).toBeInTheDocument();
+    expect(missingIbanChoice("desktop")).toBeInTheDocument();
+    expect(missingIbanChoice("phone")).toBeInTheDocument();
   });
 
   it("narrows the list to the children still missing an IBAN", async () => {
@@ -137,7 +152,7 @@ describe("BankverbindungenPage", () => {
       expect(table().getByText("Mia Schneider")).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Ohne IBAN (1)" }));
+    fireEvent.click(missingIbanChoice("desktop"));
 
     expect(table().queryByText("Mia Schneider")).not.toBeInTheDocument();
     expect(table().getByText("Lea Wolf")).toBeInTheDocument();
@@ -156,7 +171,9 @@ describe("BankverbindungenPage", () => {
       expect(stacked().getByText("Mia Schneider")).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Ohne IBAN (1)" }));
+    // Die Auswahl in der Telefon-Fassung der Suchzeile: Vorher gab es sie
+    // nur auf dem Desktop (#7132).
+    fireEvent.click(missingIbanChoice("phone"));
 
     expect(stacked().queryByText("Mia Schneider")).not.toBeInTheDocument();
     expect(stacked().getByText("Lea Wolf")).toBeInTheDocument();

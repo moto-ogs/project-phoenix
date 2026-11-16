@@ -51,12 +51,21 @@ export interface TenantPageSearchRowProps {
    */
   readonly filterPanel?: PageHeaderFilterPanel;
   /**
-   * Hauptaktion IN der Such- und Filterzeile statt in der Titelzeile. Nur fuer
-   * Aktionen, die zur Liste darunter gehoeren (An- und Abmelden). Auf dem
-   * Desktop teilt sie die Zeile: oben Suche und Hauptaktion, darunter Filter
-   * und Kebab.
+   * Hauptaktion IN der Such- und Filterzeile statt in der Titelzeile. Nur für
+   * Aktionen und Wertauswahlen, die zur Liste darunter gehören (An- und
+   * Abmelden, „Alle Kinder / Ohne IBAN“). Sie steht auf jeder Breite (#7132):
+   * Auf dem Desktop teilt sie die Zeile, oben Suche und Hauptaktion, darunter
+   * Filter und Kebab. Darunter bekommt sie eine eigene Zeile unter der Suche,
+   * auf dem Telefon über die volle Breite.
    */
   readonly primaryAction?: React.ReactNode;
+  /**
+   * Die Hauptaktion nur in der Desktop-Anordnung zeigen. Für eine Seite, die
+   * unter der Desktop-Breite einen eigenen Auslöser für dieselbe Aktion hat
+   * (Kinderseite: schwebender Knopf und Moduszeile beim An- und Abmelden);
+   * sonst stünde die Aktion dort doppelt.
+   */
+  readonly primaryActionDesktopOnly?: boolean;
 }
 
 const EMPTY_FILTERS: readonly FilterConfig[] = [];
@@ -72,6 +81,7 @@ export function TenantPageSearchRow({
   badge,
   filterPanel,
   primaryAction,
+  primaryActionDesktopOnly = false,
 }: Readonly<TenantPageSearchRowProps>) {
   // Die Filterfläche ist eine Option für sich: Schaltfläche mit Zahl statt
   // Chips, Desktop-Anordnung erst ab `xl`.
@@ -161,6 +171,7 @@ export function TenantPageSearchRow({
           filterSections={filterSections}
           hideClass={usesFilterPanel ? "xl:hidden" : "lg:hidden"}
           overflowMenu={overflowMenu}
+          primaryAction={primaryActionDesktopOnly ? undefined : primaryAction}
         />
 
         {/* Desktop: Filter in der Zeile ab `lg` (1024 px), die Filterfläche
@@ -269,6 +280,8 @@ interface MobileSearchSectionProps {
    * die das Kebab trägt. Ohne es gäbe es das Menü erst ab der Desktop-Breite.
    */
   readonly overflowMenu?: readonly OverflowMenuItem[];
+  /** Eigene Zeile unter der Suche; neben ihr wäre auf dem Telefon kein Platz. */
+  readonly primaryAction?: React.ReactNode;
 }
 
 function MobileSearchSection({
@@ -286,6 +299,7 @@ function MobileSearchSection({
   filterSections,
   hideClass,
   overflowMenu,
+  primaryAction,
 }: MobileSearchSectionProps) {
   const {
     anchorRef: filterButtonRef,
@@ -337,6 +351,20 @@ function MobileSearchSection({
           )}
 
           {badge && <RowBadge badge={badge} variant="mobile" />}
+        </div>
+      )}
+
+      {/* Die Hauptaktion gehört zur Liste, also direkt unter die Suche. Unter
+          sm füllt sie die Zeile (jede Zeile ist dort voll, Daumenreichweite);
+          eine Wertauswahl teilt die Breite dann gleich auf ihre Segmente auf.
+          Ab sm behält sie ihr Maß und steht linksbündig unter dem Suchfeld,
+          wie auf dem Desktop die Filter unter der Suche. */}
+      {primaryAction != null && (
+        <div
+          data-search-row-primary-action=""
+          className="mb-3 flex max-sm:*:w-full"
+        >
+          {primaryAction}
         </div>
       )}
 

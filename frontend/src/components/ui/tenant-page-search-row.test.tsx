@@ -405,10 +405,10 @@ describe("TenantPageSearchRow", () => {
       );
 
       // Without a title row the mobile search row carries a kebab as well;
-      // the desktop one is the last.
+      // the desktop one is the last, like the desktop primary action.
       const kebab = screen.getAllByTestId("overflow-menu").at(-1);
       expect(kebab?.parentElement).toBe(
-        screen.getByTestId("primary-action").parentElement,
+        screen.getAllByTestId("primary-action").at(-1)?.parentElement,
       );
     });
 
@@ -425,7 +425,50 @@ describe("TenantPageSearchRow", () => {
       expect(screen.getByTestId("desktop-filters")).toBeInTheDocument();
       expect(
         screen.getAllByTestId("overflow-menu").at(-1)?.parentElement,
-      ).not.toBe(screen.getByTestId("primary-action").parentElement);
+      ).not.toBe(screen.getAllByTestId("primary-action").at(-1)?.parentElement);
+    });
+  });
+
+  // #7132: Auf dem Telefon fehlte die Hauptaktion ganz (Bankverbindungen
+  // ohne „Ohne IBAN“-Auswahl).
+  describe("primaryAction below the desktop width", () => {
+    const primaryAction = <button data-testid="primary-action">Aktion</button>;
+
+    it("gives it its own full row under the search", () => {
+      setViewportWidth(390);
+      render(
+        <TenantPageSearchRow {...baseProps} primaryAction={primaryAction} />,
+      );
+
+      const [mobileAction, desktopAction] =
+        screen.getAllByTestId("primary-action");
+      const mobileSection =
+        screen.getAllByTestId("search-bar")[0]?.parentElement?.parentElement;
+      expect(mobileSection).toHaveClass("lg:hidden");
+      expect(mobileSection).toContainElement(mobileAction ?? null);
+      // Eine eigene Zeile, nicht neben das Suchfeld gequetscht.
+      expect(mobileAction?.parentElement).toHaveAttribute(
+        "data-search-row-primary-action",
+      );
+      expect(mobileAction?.parentElement).not.toContainElement(
+        screen.getAllByTestId("search-bar")[0] ?? null,
+      );
+      expect(mobileSection).not.toContainElement(desktopAction ?? null);
+    });
+
+    it("leaves it to the desktop with primaryActionDesktopOnly", () => {
+      setViewportWidth(390);
+      render(
+        <TenantPageSearchRow
+          {...baseProps}
+          primaryAction={primaryAction}
+          primaryActionDesktopOnly
+        />,
+      );
+
+      const [onlyAction, ...rest] = screen.getAllByTestId("primary-action");
+      expect(rest).toHaveLength(0);
+      expect(onlyAction?.closest(".lg\\:block")).not.toBeNull();
     });
   });
 
