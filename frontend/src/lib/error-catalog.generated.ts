@@ -34,6 +34,8 @@ export const ERROR_CATALOG = {
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "billing.invalid_key_day":
         "Der Stichtag muss zwischen dem 1. und dem 28. des Monats liegen. Bitte wählen Sie einen dieser Tage.",
+      "calendar.federal_state_missing":
+        "Für die Schule ist noch kein Bundesland hinterlegt. Deshalb fehlen die Feiertage. Bitte melden Sie das dem moto-Support.",
       "calendar.occurrence_unavailable":
         "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte laden Sie den Kalender neu.",
       "care_contract.application_not_found":
@@ -2136,6 +2138,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Please check this field.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "No federal state is set for the school yet, so the public holidays are missing. Please contact moto support.",
       "calendar.occurrence_unavailable":
         "This date no longer exists. It may have been cancelled. Please reload the calendar.",
       "care_contract.application_not_found":
@@ -2888,6 +2892,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Проверьте это поле.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Для школы ещё не указана федеральная земля. Поэтому нет праздничных дней. Пожалуйста, сообщите об этом в поддержку moto.",
       "calendar.occurrence_unavailable":
         "Этой даты больше нет. Возможно, её отменили. Пожалуйста, обновите календарь.",
       "care_contract.application_not_found":
@@ -3504,6 +3510,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Kontrolloni këtë fushë.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Për shkollën nuk është vendosur ende landi federal. Prandaj mungojnë ditët e festave. Ju lutemi njoftoni mbështetjen e moto.",
       "calendar.occurrence_unavailable":
         "Kjo datë nuk ekziston më. Mund të jetë anuluar. Ju lutemi rifreskoni kalendarin.",
       "care_contract.application_not_found":
@@ -4136,6 +4144,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Sprawdź to pole.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Dla szkoły nie ustawiono jeszcze kraju związkowego. Dlatego brakuje dni świątecznych. Proszę zgłosić to do pomocy technicznej moto.",
       "calendar.occurrence_unavailable":
         "Tego terminu już nie ma. Mógł zostać odwołany. Proszę odświeżyć kalendarz.",
       "care_contract.application_not_found":
@@ -4753,6 +4763,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Bu alanı kontrol edin.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Okul için henüz eyalet belirlenmedi. Bu yüzden resmi tatiller eksik. Lütfen bunu moto desteğine bildirin.",
       "calendar.occurrence_unavailable":
         "Bu tarih artık yok. İptal edilmiş olabilir. Lütfen takvimi yeniden yükleyin.",
       "care_contract.application_not_found":
@@ -5378,6 +5390,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Перевірте це поле.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Для школи ще не вказано федеральну землю. Тому бракує святкових днів. Будь ласка, повідомте про це підтримку moto.",
       "calendar.occurrence_unavailable":
         "Цієї дати більше немає. Можливо, її скасували. Будь ласка, оновіть календар.",
       "care_contract.application_not_found":

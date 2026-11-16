@@ -1,3 +1,4 @@
 {
-  "occurrence_unavailable": "Tego terminu już nie ma. Mógł zostać odwołany. Proszę odświeżyć kalendarz."
+  "occurrence_unavailable": "Tego terminu już nie ma. Mógł zostać odwołany. Proszę odświeżyć kalendarz.",
+  "federal_state_missing": "Dla szkoły nie ustawiono jeszcze kraju związkowego. Dlatego brakuje dni świątecznych. Proszę zgłosić to do pomocy technicznej moto."
 }

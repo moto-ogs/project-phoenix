@@ -1,3 +1,4 @@
 {
-  "occurrence_unavailable": "Bu tarih artık yok. İptal edilmiş olabilir. Lütfen takvimi yeniden yükleyin."
+  "occurrence_unavailable": "Bu tarih artık yok. İptal edilmiş olabilir. Lütfen takvimi yeniden yükleyin.",
+  "federal_state_missing": "Okul için henüz eyalet belirlenmedi. Bu yüzden resmi tatiller eksik. Lütfen bunu moto desteğine bildirin."
 }

@@ -6,6 +6,7 @@ package behaviortest
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	timetracking "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -113,6 +115,23 @@ func TestDashboardSummaryAPI(t *testing.T) {
 
 	rec = ctx.get("/staff/dashboard-summary", "feedback:read")
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+}
+
+// A school without a federal state (#7174 removed the default) cannot know
+// its holidays. The dashboard answers the registered rejection, so the card
+// tells the reader what is missing, instead of a server error.
+func TestDashboardSummaryAPI_WithoutFederalState(t *testing.T) {
+	t.Parallel()
+
+	ctx := setupOverviewAPI(t)
+	_, err := ctx.tc.db.NewDelete().TableExpr("config.setting_values").
+		Where("tenant_id = ? AND setting_key = 'operations.federal_state'", testpkg.Tenant(t)).
+		Exec(context.Background())
+	require.NoError(t, err)
+
+	rec := ctx.get("/staff/dashboard-summary", "users:read")
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"code":"`+schoolcalendar.CodeFederalStateMissing+`"`)
 }
 
 // TestTimeTrackingOverviewAPI_PermissionSplit is the DSGVO-relevant assertion:
