@@ -1079,3 +1079,55 @@ html[data-chat-page-lock] body {
     animation: moto-nav-progress-static 0s linear 150ms forwards;
   }
 }
+
+/* Unbestimmter Fortschritt (ProgressBar indeterminate): ein Abschnitt
+   gleitet hin und her durch die Spur. Nur transform, damit der Kompositor ihn zeichnet;
+   bei reduzierter Bewegung steht der Balken ruhig und voll. */
+.moto-progress-indeterminate {
+  animation: moto-progress-indeterminate 1.2s cubic-bezier(0.65, 0, 0.35, 1)
+    infinite alternate;
+  will-change: transform;
+}
+
+@keyframes moto-progress-indeterminate {
+  /* Der Abschnitt (40 % der Spur) ragt an beiden Enden noch hinein: die
+     Spur wirkt nie leer, auch nicht im langsamen Teil der Kurve. */
+  0% {
+    transform: translateX(-60%);
+  }
+  100% {
+    transform: translateX(210%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moto-progress-indeterminate {
+    width: 100%;
+    animation: none;
+    transform: none;
+  }
+}
+
+/* Ganzseitige Ladeanzeige (Loading fullPage): erst nach 400 ms sichtbar.
+   Kürzere Wartezeiten, etwa ein Neuladen, zeigen sonst einen weißen Schirm
+   mit Spinner, der sofort wieder verschwindet. Solange nichts Sichtbares
+   gezeichnet ist, hält der Browser beim Neuladen die alte Seite stehen
+   (Paint Holding). Bei reduzierter Bewegung erscheint sie ohne Überblendung. */
+.moto-loading-delayed {
+  animation: moto-loading-appear 200ms ease-out 400ms both;
+}
+
+@keyframes moto-loading-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moto-loading-delayed {
+    animation-duration: 1ms;
+  }
+}

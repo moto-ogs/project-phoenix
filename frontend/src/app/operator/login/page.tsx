@@ -77,7 +77,7 @@ export default function OperatorLoginPage() {
   ) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4">
-        <Loading fullPage />
+        <Loading fullPage message="Einen Moment bitte …" />
       </div>
     );
   }
