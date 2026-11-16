@@ -125,8 +125,8 @@ func HolidayClosureNotificationsJob(unit tenant.UnitOfWork, holidayCalendar enro
 	organizations HolidayOfficeOrganizations, mail HolidayClosureMail, logger *slog.Logger, today func() calendar.Date,
 ) schedulerPorts.HolidayClosureNotifications {
 	notices := NewHolidayClosureNotifications(NewHolidayClosures(holidayCalendar, holidays, NewHolidayOfficeTraeger(organizations), mail, today), organizations, mail,
-		logger.With("workflow", "holiday-closure-notification"))
-	watchdog := schoolCalendarCompose.NewHolidayClosureEvents()
+		logger.With("workflow", "holiday-closure-notification"), today)
+	watchdog := schoolCalendarCompose.NewHolidayClosureEvents(today)
 	return schedulerPorts.HolidayClosureNotifications{
 		ProcessDue: func(ctx context.Context) error { return notices.ProcessDue(tenant.WithUnitOfWork(ctx, unit)) },
 		Overdue: func(ctx context.Context, overdueFor time.Duration) (count int, err error) {

@@ -24,12 +24,13 @@ type HolidayClosureHolidays interface {
 // NewHolidayClosureNotifications binds the holiday closure notification
 // (ADR 0196) to School Calendar's proposals and commands, Enrollment's
 // closures and the units of work. The root builds it where it mounts a
-// route or the Worker's job.
-func NewHolidayClosureNotifications(closures enrollment.HolidayClosures, schools notificationPorts.Schools, mails notificationPorts.Mails, logger *slog.Logger) notification.Notifications {
+// route or the Worker's job. today is the root's day clock, the one its
+// closures read: the notices list and retire on the same day.
+func NewHolidayClosureNotifications(closures enrollment.HolidayClosures, schools notificationPorts.Schools, mails notificationPorts.Mails, logger *slog.Logger, today ...func() calendar.Date) notification.Notifications {
 	if closures == nil || schools == nil || mails == nil {
 		panic("holiday closure notification: Enrollment's closures and the Träger's schools are required")
 	}
-	events := schoolCalendarCompose.NewHolidayClosureEvents()
+	events := schoolCalendarCompose.NewHolidayClosureEvents(today...)
 	return notification.New(notification.Dependencies{
 		Proposals: events, Queue: events, Closures: closures, Mails: mails,
 		Schools: schools, Units: holidayClosureUnits{}, Logger: logger,

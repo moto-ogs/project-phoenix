@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -93,7 +94,9 @@ func TestAbsenceTypesRouteManagesCustomTypeAllowance(t *testing.T) {
 func TestAbsenceTypesRouteCarryoverAndPreview(t *testing.T) {
 	t.Parallel()
 
-	db, router := setupAbsenceTypesRoute(t)
+	// The preview of January 2031 is asked for before the carried-over days
+	// of 2030 expire on 31.03.2031.
+	db, router := setupAbsenceTypesRoute(t, func() time.Time { return time.Date(2030, time.November, 18, 12, 0, 0, 0, calendar.Berlin) })
 	_, account := testpkg.CreateTestStaffWithAccount(t, db, "Swantje", "Leitung")
 	staff := testpkg.CreateTestStaff(t, db, "Rena", "Übertrag")
 	claims := testutil.DefaultTestClaims()
