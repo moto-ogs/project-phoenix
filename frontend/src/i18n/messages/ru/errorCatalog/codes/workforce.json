@@ -118,5 +118,6 @@
   "traeger_planning_shift_not_found": "Не удалось сохранить: {object}. Проверьте введённые данные.",
   "traeger_month_closed_by_school": "Не удалось изменить: {object}. Проверьте текущее состояние.",
   "traeger_month_later_closed": "Не удалось изменить: {object}. Проверьте текущее состояние.",
-  "traeger_month_not_kept": "Не удалось изменить: {object}. Проверьте текущее состояние."
+  "traeger_month_not_kept": "Не удалось изменить: {object}. Проверьте текущее состояние.",
+  "traeger_payroll_not_ready": "Не удалось изменить: {object}. Проверьте текущее состояние."
 }

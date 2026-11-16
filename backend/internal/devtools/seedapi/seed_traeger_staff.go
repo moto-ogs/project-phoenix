@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 )
 
 // seedTraegerStaffStep seeds the Personalstamm of the demo Träger (#4705)
@@ -74,7 +75,12 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, %d planned shifts, month closed: %t\n", linked, contracts, imported, planned, closed)
+	last := time.Now().AddDate(0, -1, 0)
+	paid, err := seedTraegerPayroll(rt.Client, auth, last.Year(), int(last.Month()))
+	if err != nil {
+		return err
+	}
+	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, %d planned shifts, month closed: %t, %d contracts in the payroll file\n", linked, contracts, imported, planned, closed, paid)
 	return seedTraegerAbsences(ctx, rt, auth)
 }
 

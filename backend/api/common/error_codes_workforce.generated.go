@@ -94,6 +94,7 @@ const CodeWorkforceTraegerHolidayWeekSchoolOverride = "workforce.traeger_holiday
 const CodeWorkforceTraegerMonthClosedBySchool = "workforce.traeger_month_closed_by_school"
 const CodeWorkforceTraegerMonthLaterClosed = "workforce.traeger_month_later_closed"
 const CodeWorkforceTraegerMonthNotKept = "workforce.traeger_month_not_kept"
+const CodeWorkforceTraegerPayrollNotReady = "workforce.traeger_payroll_not_ready"
 const CodeWorkforceTraegerPlanningShiftNotFound = "workforce.traeger_planning_shift_not_found"
 const CodeWorkforceTraegerPlanningSiteInvalid = "workforce.traeger_planning_site_invalid"
 const CodeWorkforceTraegerProofInvalid = "workforce.traeger_proof_invalid"
@@ -216,6 +217,7 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceTraegerMonthClosedBySchool, "business_rejection"},
 	{CodeWorkforceTraegerMonthLaterClosed, "business_rejection"},
 	{CodeWorkforceTraegerMonthNotKept, "business_rejection"},
+	{CodeWorkforceTraegerPayrollNotReady, "business_rejection"},
 	{CodeWorkforceTraegerPlanningShiftNotFound, "input"},
 	{CodeWorkforceTraegerPlanningSiteInvalid, "input"},
 	{CodeWorkforceTraegerProofInvalid, "input"},

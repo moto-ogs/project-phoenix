@@ -94,6 +94,54 @@ func (s *TraegerStaffStore) ListStaffContracts(ctx context.Context, organization
 	return contracts, nil
 }
 
+// ListMonthContracts returns the contracts of the Träger that run on a day
+// of first..last with every Einsatzort whose Soll starts by last, in two
+// statements. The conditions are those of TraegerKeptStaffByMonth, so the
+// Träger's payroll file holds exactly the employments the school's file
+// leaves out (#4711 E6, #4712).
+func (s *TraegerStaffStore) ListMonthContracts(ctx context.Context, organizationID int64, first, last calendar.Date) ([]domain.TraegerStaffContract, error) {
+	db, err := traegerStaffDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	var rows []staffContractRow
+	if err := db.NewRaw(`SELECT id, organization_id, staff_record_id, kind, starts_on, ends_on, created_at FROM workforce.staff_contracts
+		WHERE organization_id = ? AND starts_on <= ? AND (ends_on IS NULL OR ends_on >= ?) ORDER BY staff_record_id, starts_on, id`,
+		organizationID, last, first).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("workforce postgres: list month contracts: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	contracts := make([]domain.TraegerStaffContract, len(rows))
+	index := make(map[int64]int, len(rows))
+	ids := make([]int64, len(rows))
+	for i, row := range rows {
+		contracts[i] = domain.TraegerStaffContract{
+			ID: row.ID, OrganizationID: row.OrganizationID, RecordID: row.StaffRecordID, Kind: row.Kind,
+			StartsOn: row.StartsOn, CreatedAt: row.CreatedAt,
+		}
+		if row.EndsOn != nil {
+			contracts[i].EndsOn = *row.EndsOn
+		}
+		index[row.ID], ids[i] = i, row.ID
+	}
+	var targets []staffContractWeekdayRow
+	if err := db.NewRaw(`SELECT DISTINCT ON (contract_id, school_id, membership_id) contract_id, school_id, membership_id, valid_from AS day, weekday_minutes
+		FROM workforce.staff_contract_targets
+		WHERE organization_id = ? AND contract_id = ANY(?) AND valid_from <= ?
+		ORDER BY contract_id, school_id, membership_id, valid_from DESC`, organizationID, pgdialect.Array(ids), last).Scan(ctx, &targets); err != nil {
+		return nil, fmt.Errorf("workforce postgres: list month contract sites: %w", err)
+	}
+	for _, row := range targets {
+		i := index[row.ContractID]
+		contracts[i].Targets = append(contracts[i].Targets, domain.ContractTarget{
+			ContractSite: domain.ContractSite{SchoolID: row.SchoolID, StaffID: row.StaffID}, ValidFrom: row.Day, WeekdayMinutes: row.WeekdayMinutes,
+		})
+	}
+	return contracts, nil
+}
+
 // InsertStaffContract writes a new contract with its first Soll per
 // Einsatzort.
 func (s *TraegerStaffStore) InsertStaffContract(ctx context.Context, contract domain.TraegerStaffContract, accountID int64) (int64, error) {

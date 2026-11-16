@@ -268,6 +268,7 @@ export const HELP_TOPICS = {
   traegerStaffPlanning: "einsatzplanung-des-traegers",
   traegerStaffContracts: "arbeitsvertrag-und-soll",
   traegerStaffTimeAccount: "stundenkonto-und-monatsabschluss-des-traegers",
+  traegerPayrollExport: "lohnexport-und-zeitexport-des-traegers",
   schoolTraegerDocuments: "dokumente-vom-traeger-in-der-ogs",
   traegerSchoolSwitch: "in-eine-schule-wechseln",
   traegerSchoolView: "zahlen-und-stammdaten-einer-schule-ansehen",

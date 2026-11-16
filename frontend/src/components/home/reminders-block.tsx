@@ -1,11 +1,14 @@
 "use client";
 
 import { REMINDERS_LINK_TOOLTIP } from "~/components/home/home-link-tooltips";
-import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ListRow } from "~/components/ui/list-row";
 import { SkeletonRows } from "~/components/ui/skeleton";
-import { HomeCard, HomeCardIcon } from "~/components/home/home-card";
+import {
+  HomeCard,
+  HomeCardEmpty,
+  HomeCardIcon,
+} from "~/components/home/home-card";
 import { useReminders } from "~/lib/hooks/use-reminders";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
@@ -65,8 +68,7 @@ export function RemindersBlock() {
         }
         if (shown.length === 0) {
           return (
-            <EmptyState
-              className="py-4"
+            <HomeCardEmpty
               title="Nichts steht an"
               description="Anstehende Abholungen und Aktivitäten erscheinen hier."
             />

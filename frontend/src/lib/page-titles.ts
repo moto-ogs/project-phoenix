@@ -234,6 +234,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/personal/abwesenheitsarten": "Abwesenheitsarten",
     "/personal/einsatzplanung": "Einsatzplanung",
     "/personal/import": "Personal importieren",
+    "/personal/lohnexport": "Lohnexport",
     "/reset-password": "Passwort zurücksetzen",
     "/schliesstage": "Schließtage und Feiertage",
     "/schulen/:id": "Schule",

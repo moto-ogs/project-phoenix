@@ -14,12 +14,22 @@ import (
 // into the time tracking of each Einsatzort, from the first day the school
 // has not closed on; the school sees it as „führt der Träger“.
 
-// The kinds of a contract, the kinds a school knows for an employment.
+// The kinds of a contract: the kinds a school knows for an employment, and
+// Übungsleiter and Ehrenamt, which only the Träger knows (#4712).
 const (
-	TraegerContractKindFullTime = "full_time"
-	TraegerContractKindPartTime = "part_time"
-	TraegerContractKindMinijob  = "minijob"
+	TraegerContractKindFullTime      = "full_time"
+	TraegerContractKindPartTime      = "part_time"
+	TraegerContractKindMinijob       = "minijob"
+	TraegerContractKindUebungsleiter = "uebungsleiter"
+	TraegerContractKindEhrenamt      = "ehrenamt"
 )
+
+// TraegerContractKinds lists every kind of a contract in display order; the
+// Träger's payroll file books each with its own Lohnarten.
+var TraegerContractKinds = []string{
+	TraegerContractKindPartTime, TraegerContractKindFullTime, TraegerContractKindMinijob,
+	TraegerContractKindUebungsleiter, TraegerContractKindEhrenamt,
+}
 
 var (
 	// ErrTraegerContractInvalid refuses a contract, a Soll or a holiday

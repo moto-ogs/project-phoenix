@@ -118,5 +118,6 @@
   "traeger_planning_shift_not_found": "{object} could not be saved. Please check your entries.",
   "traeger_month_closed_by_school": "{object} could not be changed. Please check its current status.",
   "traeger_month_later_closed": "{object} could not be changed. Please check its current status.",
-  "traeger_month_not_kept": "{object} could not be changed. Please check its current status."
+  "traeger_month_not_kept": "{object} could not be changed. Please check its current status.",
+  "traeger_payroll_not_ready": "{object} could not be changed. Please check its current status."
 }
