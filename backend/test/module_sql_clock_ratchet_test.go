@@ -32,14 +32,14 @@ import (
 // CURRENT_TIME, LOCALTIMESTAMP, LOCALTIME, clock_timestamp(),
 // statement_timestamp() and transaction_timestamp(), in any case, inside the
 // string literals of non-test .go files below modules/ and workflows/, per
-// owner directory. Migrations are out of scope: column defaults and triggers
+// owner directory. A literal that is one lower-case word is a key, no query. Migrations are out of scope: column defaults and triggers
 // are the schema's. Files built only with the testhooks tag are test support.
 //
 // Same budget semantics as moduleLiveClockBudget; shrink-only. A raise needs
 // an ADR the entry cites.
 //
 // Seed: measured 2026-11-16 on development 436cec0402, after the owner
-// slices of #7104 (805 reads in 27 owners); a mismatch prints the measured
+// slices of #7104 (802 reads in 26 owners); a mismatch prints the measured
 // values.
 var moduleSQLClockBudget = map[string]int{
 	"modules/appointments": 15,
@@ -51,7 +51,6 @@ var moduleSQLClockBudget = map[string]int{
 	"modules/communication":  42,
 	"modules/delivery":       6,
 	"modules/devicefleet":    6,
-	"modules/devicescan":     1,
 	"modules/enrollment":     75,
 	"modules/exporttransfer": 10,
 	"modules/facilities":     3,
@@ -70,12 +69,17 @@ var moduleSQLClockBudget = map[string]int{
 	"modules/schoolstructure":            13,
 	"modules/settings":                   26,
 	"modules/staffannouncementaudience":  2,
-	"modules/studentpresence":            32,
+	"modules/studentpresence":            31,
 	"modules/timetable":                  51,
-	"modules/workforce":                  104,
+	"modules/workforce":                  103,
 }
 
 var sqlClockRead = regexp.MustCompile(`(?i)\b(?:now|clock_timestamp|statement_timestamp|transaction_timestamp)\s*\(\s*\)|\b(?:current_timestamp|current_date|current_time|localtimestamp|localtime)\b`)
+
+// lowerCaseKey is a literal that is one lower-case word: a map key or log
+// attribute such as "current_time", no SQL. SQL keywords written alone are
+// upper case here ("CURRENT_TIMESTAMP" as a bun value).
+var lowerCaseKey = regexp.MustCompile(`^[a-z_]+$`)
 
 func TestModuleSQLClockRatchet(t *testing.T) {
 	t.Parallel()
@@ -132,7 +136,8 @@ func measureModuleSQLClock(root string) (map[string]int, error) {
 }
 
 // countSQLClockReads counts the database clock reads in the string literals
-// of one file. Comments are no literals and do not count.
+// of one file. Comments are no literals and do not count, and neither does a
+// literal that is a lower-case key.
 func countSQLClockReads(path string) (int, error) {
 	source, err := readGoSource(path)
 	if err != nil {
@@ -155,6 +160,9 @@ func countSQLClockReads(path string) (int, error) {
 		if err != nil {
 			return true
 		}
+		if lowerCaseKey.MatchString(text) {
+			return true
+		}
 		reads += len(sqlClockRead.FindAllString(text, -1))
 		return true
 	})
@@ -169,7 +177,9 @@ func TestModuleSQLClockRatchetCountsLiteralsOnly(t *testing.T) {
 		"// NOW() in a comment is no query.\n"+
 		"const expire = `UPDATE t SET ended_at = NOW(), day = current_date WHERE due < clock_timestamp ( )`\n"+
 		"const pinned = `UPDATE t SET ended_at = ? WHERE due < ?`\n"+
-		"var known = \"snow() is no clock, current_dates neither\"\n")
+		"var known = \"snow() is no clock, current_dates neither\"\n"+
+		"var detail = map[string]string{\"current_time\": \"12:00\"}\n"+
+		"var value = \"CURRENT_TIMESTAMP\"\n")
 	writeCalendarFixtureSourceAt(t, root, "modules/sample/internal/adapters/postgres/store_test.go", "package postgres\n"+
 		"const fixture = `SELECT NOW()`\n")
 	writeCalendarFixtureSourceAt(t, root, "workflows/flow/hooks.go", "//go:build testhooks\n\npackage flow\n"+
@@ -181,7 +191,7 @@ func TestModuleSQLClockRatchetCountsLiteralsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(measured) != 2 || measured["modules/sample"] != 3 || measured["workflows/flow"] != 1 {
-		t.Fatalf("measured %v, want modules/sample 3 and workflows/flow 1", measured)
+	if len(measured) != 2 || measured["modules/sample"] != 4 || measured["workflows/flow"] != 1 {
+		t.Fatalf("measured %v, want modules/sample 4 and workflows/flow 1", measured)
 	}
 }

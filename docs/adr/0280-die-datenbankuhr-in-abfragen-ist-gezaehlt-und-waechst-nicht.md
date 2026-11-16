@@ -43,7 +43,7 @@ auf verschiedenen Tagen.
    Trigger wie `update_modified_column()` gehören zum Schema. Eine Tabelle
    mit diesem Trigger erhält `updated_at` nicht aus Go; eine Entscheidung
    liest eine solche Spalte nur gegen die Datenbankuhr.
-5. **Startwert:** 805 Vorkommen in 27 Ownern, gemessen auf `development`
+5. **Startwert:** 802 Vorkommen in 26 Ownern, gemessen auf `development`
    `436cec0402`.
 
 ## Folgen
