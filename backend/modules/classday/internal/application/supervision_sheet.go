@@ -6,7 +6,6 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -28,7 +27,7 @@ func (s *dayReports) SupervisionStudentSheet(ctx context.Context, in classday.Su
 	}
 	date := in.Date
 	if date.IsZero() {
-		date = calendar.TodayDate()
+		date = calendar.DateFromTime(s.now())
 	}
 	student, err := s.students.FindSheetStudent(ctx, in.StudentID)
 	if err != nil {
@@ -247,7 +246,7 @@ func (s *dayReports) recordSupervisionSheetAudit(ctx context.Context, sheet *cla
 		return nil
 	}
 	const errPrefix = "supervision sheet audit"
-	entry, err := newAccessRecord(errPrefix, actorAccountID, actorRole, sheet.Date.BerlinMidnight(), sheet.Date.EndOfDay(), time.Now())
+	entry, err := newAccessRecord(errPrefix, actorAccountID, actorRole, sheet.Date.BerlinMidnight(), sheet.Date.EndOfDay(), s.now())
 	if err != nil {
 		return err
 	}

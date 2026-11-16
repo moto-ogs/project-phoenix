@@ -15,7 +15,7 @@ import (
 func TestGuardianAccountBackfillTenantScopeRollbackAndRetry(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(nil)
 	account := testpkg.CreateTestAccount(t, db, "enrollment-backfill")
 	email := account.Email
 	tenantIDs := make([]int64, 0, 2)

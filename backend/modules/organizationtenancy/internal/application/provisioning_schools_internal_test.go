@@ -13,7 +13,7 @@ import (
 func validCreateSchool(organizationID int64) *organizationtenancy.CreateSchool {
 	return &organizationtenancy.CreateSchool{
 		OrganizationID: organizationID, Name: " Grundschule Burbach ", Slug: "Burbach",
-		Subdomain: " Burbach-GS ", Active: true, City: "Burbach", Email: "info@burbach.test",
+		Subdomain: " Burbach-GS ", Active: true, City: "Burbach", Email: "info@burbach.test", FederalState: " DE-NW ",
 	}
 }
 
@@ -55,7 +55,58 @@ func TestProvisioningCreateSchool(t *testing.T) {
 		entry := h.onlyAudit(t, domain.AuditActionCreate, domain.AuditResourceSchool, created.ID)
 		assert.Equal(t, map[string]any{
 			"name": "Grundschule Burbach", "slug": "burbach", "subdomain": "burbach-gs", "organizationID": float64(1),
+			"federalState": "DE-NW",
 		}, auditChanges(t, entry))
+		assert.Equal(t, map[int64]string{created.ID: "DE-NW"}, h.settings.federalStates, "the federal state becomes the school's setting (#7174)")
+	})
+
+	t.Run("rejects a school without a federal state before writing", func(t *testing.T) {
+		t.Parallel()
+		for _, region := range []string{"", "  "} {
+			h := newHarness(t)
+			h.addOrg(1, "Talent", "talent", false)
+			input := validCreateSchool(1)
+			input.FederalState = region
+
+			_, err := h.svc.CreateSchool(context.Background(), input, testOperatorID, operatorIP)
+
+			var invalid *organizationtenancy.InvalidProvisioningDataError
+			require.ErrorAs(t, err, &invalid, "region %q", region)
+			assert.Empty(t, h.engine.schools, "region %q creates no school", region)
+		}
+	})
+
+	t.Run("answers a region Settings refuses as invalid input", func(t *testing.T) {
+		t.Parallel()
+		for _, region := range []string{"NRW", "DE-XYZ"} {
+			h := newHarness(t)
+			h.addOrg(1, "Talent", "talent", false)
+			input := validCreateSchool(1)
+			input.FederalState = region
+
+			created, err := h.svc.CreateSchool(context.Background(), input, testOperatorID, operatorIP)
+
+			var invalid *organizationtenancy.InvalidProvisioningDataError
+			require.ErrorAs(t, err, &invalid, "region %q", region)
+			assert.Nil(t, created)
+			assert.Empty(t, h.settings.federalStates)
+		}
+	})
+
+	t.Run("creates no school when its federal state cannot be recorded", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		h.addOrg(1, "Talent", "talent", false)
+		h.settings.stateErr = assert.AnError
+
+		created, err := h.svc.CreateSchool(context.Background(), validCreateSchool(1), testOperatorID, operatorIP)
+
+		// The error leaves the administrative unit, which rolls the school
+		// back with it; the fake unit records no rollback, the real one in
+		// the API integration tests does.
+		require.ErrorIs(t, err, assert.AnError)
+		assert.Nil(t, created)
+		assert.Empty(t, h.settings.federalStates)
 	})
 
 	t.Run("the same slug is allowed in another organisation", func(t *testing.T) {

@@ -52,7 +52,7 @@ func (s *Scheduler) checkAndRunWeekProtocols(ctx context.Context, task *Schedule
 	ctx, cancel := s.taskContext(ctx, weekProtocolsTimeout)
 	defer cancel()
 
-	now := time.Now()
+	now := s.clock()
 	if err := s.forEachTenant(ctx, "week-protocols", func(tenantCtx context.Context) error {
 		return s.weekProtocols(tenantCtx, now)
 	}); err != nil {

@@ -130,6 +130,7 @@ func (rs *Resource) buildStudentDetail(r *http.Request, student *peopleModule.St
 		HasFullAccess:  hasFullAccess,
 		HasPhotoAccess: rs.checkStudentPhotoReadAccess(r, student),
 		PhotosEnabled:  photosEnabled,
+		Today:          rs.todayDate(),
 	}, StudentResponseServices{
 		ActiveService: rs.ActiveService,
 	})

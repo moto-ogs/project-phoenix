@@ -6,7 +6,6 @@ import (
 	http "net/http"
 	slices "slices"
 	strings "strings"
-	time "time"
 
 	render "github.com/go-chi/render"
 	common "github.com/moto-ogs/project-phoenix/api/common"
@@ -115,7 +114,7 @@ func (rs *Resource) recordHealthAccess(r *http.Request, resourceType string, stu
 		StudentID:      studentID,
 		RangeStart:     today.BerlinMidnight(),
 		RangeEnd:       today.EndOfDay(),
-		AccessedAt:     time.Now(),
+		AccessedAt:     rs.Now(),
 	}
 	if err := rs.StudentHistoryService.RecordDataAccess(r.Context(), entry); err != nil {
 		rs.getLogger().Error("audit log write failed, refusing to show a student's health information",
@@ -140,14 +139,14 @@ func (rs *Resource) writeHealthListAudit(r *http.Request, req studentExportReque
 	if actorRole == "" {
 		actorRole = "unknown"
 	}
-	today := calendar.TodayDate()
+	today := rs.todayDate()
 	entry := &studentpresence.DataAccessEvent{
 		ActorAccountID: int64(claims.ID),
 		ActorRole:      actorRole,
 		ResourceType:   dataAccessStudentHealthListExport,
 		RangeStart:     today.BerlinMidnight(),
 		RangeEnd:       today.EndOfDay(),
-		AccessedAt:     time.Now(),
+		AccessedAt:     rs.Now(),
 		Scope: &studentpresence.DataAccessScope{
 			GroupIDs: parseGroupIDList([]string{req.Filters.GroupID}),
 			Date:     today.String(),

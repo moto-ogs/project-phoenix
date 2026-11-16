@@ -10447,6 +10447,28 @@
       "target_owner": "document-rendering"
     },
     {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerHireEmployments.CreateSchoolEmployment",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerHireEmployments.CreateSchoolEmployment",
+      "reason": "Guarded leaf command (mutation): workforce reaches schoolmembership.Command.CreateStaff (school-membership) through api.traegerHireEmployments.CreateSchoolEmployment. Participates in the tenant unit of one Einsatzort of a hire of the Träger (#7206, ADR 0254); the hire is the only caller, each owner keeps its validation and mutation, and no lock order or combined check spans the owners.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Command.CreateStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerHirePersons.CreateSchoolPerson",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerHirePersons.CreateSchoolPerson",
+      "reason": "Guarded leaf command (mutation): workforce reaches peopledirectory.Command.CreatePerson (people-directory) through api.traegerHirePersons.CreateSchoolPerson. Participates in the tenant unit of one Einsatzort of a hire of the Träger (#7206, ADR 0254); the hire is the only caller, each owner keeps its validation and mutation, and no lock order or combined check spans the owners.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Command.CreatePerson",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerPayrollSettings.TraegerPayrollSettings",
       "classification": "query",
       "effect": "query",

@@ -25,14 +25,14 @@ func setupRequestRepoTest(t *testing.T) (*bun.DB, capability.Owner, int64, int64
 	tenantID := testpkg.UniqueTestTenantID(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
 
-	phaseRepo := ownerCompose.New()
+	phaseRepo := ownerCompose.NewClocked(nil)
 	phaseName := uniquePhaseName("request-test")
 	phase := makeOwnerEligibilityPhase(phaseName)
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		return phaseRepo.InsertPhase(ctx, phase)
 	}))
 
-	return db, ownerCompose.New(), tenantID, phase.ID
+	return db, ownerCompose.NewClocked(nil), tenantID, phase.ID
 }
 
 func uniqueToken(prefix string) string {
@@ -92,7 +92,7 @@ func TestRequestRepository_FindByID_HappyPath(t *testing.T) {
 	var got *capability.Request
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var fbErr error
-		got, fbErr = ownerCompose.New().RequestByID(ctx, req.ID, false)
+		got, fbErr = ownerCompose.NewClocked(nil).RequestByID(ctx, req.ID, false)
 		return fbErr
 	})
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestRequestRepository_FindByID_NotFound(t *testing.T) {
 	var got *capability.Request
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var fbErr error
-		got, fbErr = ownerCompose.New().RequestByID(ctx, 9_999_999, false)
+		got, fbErr = ownerCompose.NewClocked(nil).RequestByID(ctx, 9_999_999, false)
 		return fbErr
 	})
 	require.Error(t, err)
@@ -130,12 +130,12 @@ func TestRequestRepository_PinDecisionNotificationMode_FirstPinWins(t *testing.T
 	var first, second string
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var err error
-		first, err = ownerCompose.New().PinDecisionNotificationMode(ctx, req.ID, notifyPerDecisionDigest)
+		first, err = ownerCompose.NewClocked(nil).PinDecisionNotificationMode(ctx, req.ID, notifyPerDecisionDigest)
 		return err
 	}))
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var err error
-		second, err = ownerCompose.New().PinDecisionNotificationMode(ctx, req.ID, notifyPerDecisionImmediate)
+		second, err = ownerCompose.NewClocked(nil).PinDecisionNotificationMode(ctx, req.ID, notifyPerDecisionImmediate)
 		return err
 	}))
 
@@ -144,7 +144,7 @@ func TestRequestRepository_PinDecisionNotificationMode_FirstPinWins(t *testing.T
 	var stored *capability.Request
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var err error
-		stored, err = ownerCompose.New().RequestByID(ctx, req.ID, false)
+		stored, err = ownerCompose.NewClocked(nil).RequestByID(ctx, req.ID, false)
 		return err
 	}))
 	require.NotNil(t, stored.DecisionNotificationMode)
@@ -163,7 +163,7 @@ func TestRequestRepository_PinDecisionNotificationMode_RejectsInvalidMode(t *tes
 	}))
 
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		_, pinErr := ownerCompose.New().PinDecisionNotificationMode(ctx, req.ID, "batch")
+		_, pinErr := ownerCompose.NewClocked(nil).PinDecisionNotificationMode(ctx, req.ID, "batch")
 		return pinErr
 	})
 	require.Error(t, err)
@@ -186,7 +186,7 @@ func TestRequestRepository_FindByStatusToken_HappyPath(t *testing.T) {
 	var got *capability.Request
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var fbErr error
-		got, fbErr = ownerCompose.New().RequestByToken(ctx, token, false)
+		got, fbErr = ownerCompose.NewClocked(nil).RequestByToken(ctx, token, false)
 		return fbErr
 	})
 	require.NoError(t, err)
@@ -202,7 +202,7 @@ func TestRequestRepository_FindByStatusToken_UnknownTokenErrors(t *testing.T) {
 	var got *capability.Request
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var fbErr error
-		got, fbErr = ownerCompose.New().RequestByToken(ctx, "no-such-token-"+t.Name(), false)
+		got, fbErr = ownerCompose.NewClocked(nil).RequestByToken(ctx, "no-such-token-"+t.Name(), false)
 		return fbErr
 	})
 	require.Error(t, err)
@@ -231,7 +231,7 @@ func TestRequestRepository_ListAdmin_NoFiltersReturnsAll(t *testing.T) {
 	var list []*capability.Request
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.New().AdminRequests(ctx, capability.RequestListFilters{})
+		list, lErr = ownerCompose.NewClocked(nil).AdminRequests(ctx, capability.RequestListFilters{})
 		return lErr
 	})
 	require.NoError(t, err)
@@ -255,7 +255,7 @@ func TestRequestRepository_ListAdmin_PhaseFilter(t *testing.T) {
 	token := uniqueToken("listPhase")
 
 	// A second phase so we can verify the filter actually narrows.
-	phaseRepo := ownerCompose.New()
+	phaseRepo := ownerCompose.NewClocked(nil)
 	otherPhase := makeOwnerEligibilityPhase(uniquePhaseName("other"))
 	otherPhase.ServiceStartDate = "2027-09-01"
 	otherPhase.ServiceEndDate = "2028-07-31"
@@ -274,7 +274,7 @@ func TestRequestRepository_ListAdmin_PhaseFilter(t *testing.T) {
 	var list []*capability.Request
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.New().AdminRequests(ctx, capability.RequestListFilters{PhaseID: phaseID})
+		list, lErr = ownerCompose.NewClocked(nil).AdminRequests(ctx, capability.RequestListFilters{PhaseID: phaseID})
 		return lErr
 	}))
 
@@ -311,7 +311,7 @@ func TestRequestRepository_ListAdmin_ChildStatusFilter(t *testing.T) {
 	var list []*capability.Request
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.New().AdminRequests(ctx, capability.RequestListFilters{
+		list, lErr = ownerCompose.NewClocked(nil).AdminRequests(ctx, capability.RequestListFilters{
 			ChildStatus: capability.ChildStatusWaitlisted,
 		})
 		return lErr
@@ -348,7 +348,7 @@ func TestRequestRepository_FindActiveDuplicate_BlocksRepeatSubmission(t *testing
 	var dupes []capability.DuplicateChildKey
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var dErr error
-		dupes, dErr = ownerCompose.New().ActiveDuplicateChildren(ctx, phaseID, "  anna@example.TEST  ",
+		dupes, dErr = ownerCompose.NewClocked(nil).ActiveDuplicateChildren(ctx, phaseID, "  anna@example.TEST  ",
 			[]capability.DuplicateChildKey{{FirstName: "LARA", LastName: " beispiel "}}, 0)
 		return dErr
 	})
@@ -378,7 +378,7 @@ func TestRequestRepository_FindActiveDuplicate_IgnoresWithdrawnAndRejected(t *te
 	var dupes []capability.DuplicateChildKey
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var dErr error
-		dupes, dErr = ownerCompose.New().ActiveDuplicateChildren(ctx, phaseID, "anna@example.test",
+		dupes, dErr = ownerCompose.NewClocked(nil).ActiveDuplicateChildren(ctx, phaseID, "anna@example.test",
 			[]capability.DuplicateChildKey{{FirstName: "Lara", LastName: "Beispiel"}}, 0)
 		return dErr
 	}))
@@ -403,7 +403,7 @@ func TestRequestRepository_FindActiveDuplicate_DifferentParentSameChildOK(t *tes
 	var dupes []capability.DuplicateChildKey
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var dErr error
-		dupes, dErr = ownerCompose.New().ActiveDuplicateChildren(ctx, phaseID, "bert@example.test",
+		dupes, dErr = ownerCompose.NewClocked(nil).ActiveDuplicateChildren(ctx, phaseID, "bert@example.test",
 			[]capability.DuplicateChildKey{{FirstName: "Lara", LastName: "Beispiel"}}, 0)
 		return dErr
 	}))
@@ -428,7 +428,7 @@ func TestRequestRepository_FindActiveDuplicate_DifferentPhaseSameChildOK(t *test
 	var dupes []capability.DuplicateChildKey
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var dErr error
-		dupes, dErr = ownerCompose.New().ActiveDuplicateChildren(ctx, otherPhaseID, "anna@example.test",
+		dupes, dErr = ownerCompose.NewClocked(nil).ActiveDuplicateChildren(ctx, otherPhaseID, "anna@example.test",
 			[]capability.DuplicateChildKey{{FirstName: "Lara", LastName: "Beispiel"}}, 0)
 		return dErr
 	}))
@@ -440,7 +440,7 @@ func TestRequestRepository_FindActiveDuplicate_RejectsZeroPhase(t *testing.T) {
 
 	db, _, tenantID, _ := setupRequestRepoTest(t)
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		_, dErr := ownerCompose.New().ActiveDuplicateChildren(ctx, 0, "x@y.z", nil, 0)
+		_, dErr := ownerCompose.NewClocked(nil).ActiveDuplicateChildren(ctx, 0, "x@y.z", nil, 0)
 		return dErr
 	})
 	require.Error(t, err)
@@ -453,7 +453,7 @@ func TestRequestRepository_FindActiveDuplicate_EmptyEmailIsNotADuplicate(t *test
 	var dupes []capability.DuplicateChildKey
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var dErr error
-		dupes, dErr = ownerCompose.New().ActiveDuplicateChildren(ctx, phaseID, "  ",
+		dupes, dErr = ownerCompose.NewClocked(nil).ActiveDuplicateChildren(ctx, phaseID, "  ",
 			[]capability.DuplicateChildKey{{FirstName: "Lara", LastName: "Beispiel"}}, 0)
 		return dErr
 	})
@@ -468,7 +468,7 @@ func TestRequestRepository_FindActiveDuplicate_EmptyChildListIsNotADuplicate(t *
 	var dupes []capability.DuplicateChildKey
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var dErr error
-		dupes, dErr = ownerCompose.New().ActiveDuplicateChildren(ctx, phaseID, "a@b.c", nil, 0)
+		dupes, dErr = ownerCompose.NewClocked(nil).ActiveDuplicateChildren(ctx, phaseID, "a@b.c", nil, 0)
 		return dErr
 	})
 	require.NoError(t, err)
@@ -491,7 +491,7 @@ func TestRequestRepository_ExistsByPhaseID_TrueWhenReferenced(t *testing.T) {
 	var count int
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var eErr error
-		count, eErr = ownerCompose.New().CountPhaseRequests(ctx, phaseID)
+		count, eErr = ownerCompose.NewClocked(nil).CountPhaseRequests(ctx, phaseID)
 		return eErr
 	})
 	require.NoError(t, err)
@@ -505,7 +505,7 @@ func TestRequestRepository_ExistsByPhaseID_FalseWhenUnreferenced(t *testing.T) {
 	var count int
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var eErr error
-		count, eErr = ownerCompose.New().CountPhaseRequests(ctx, 9_999_999)
+		count, eErr = ownerCompose.NewClocked(nil).CountPhaseRequests(ctx, 9_999_999)
 		return eErr
 	})
 	require.NoError(t, err)
@@ -520,7 +520,7 @@ func TestRequestRepository_ExistsBySchemaID_TrueWhenReferenced(t *testing.T) {
 
 	// Need a real schema row first.
 	account := testpkg.CreateTestAccount(t, db, "req-exists-schema")
-	schemaRepo := ownerCompose.New()
+	schemaRepo := ownerCompose.NewClocked(nil)
 	schema := &capability.FormSchema{
 		Name: uniqueSchemaName("req-exists-schema"), Version: 1,
 		Fields: validFields(), IsActive: true, CreatedBy: account.ID,
@@ -538,7 +538,7 @@ func TestRequestRepository_ExistsBySchemaID_TrueWhenReferenced(t *testing.T) {
 	var exists bool
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var eErr error
-		exists, eErr = ownerCompose.New().HasSchemaRequests(ctx, schema.ID)
+		exists, eErr = ownerCompose.NewClocked(nil).HasSchemaRequests(ctx, schema.ID)
 		return eErr
 	})
 	require.NoError(t, err)
@@ -552,7 +552,7 @@ func TestRequestRepository_ExistsBySchemaID_FalseWhenUnreferenced(t *testing.T) 
 	var exists bool
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var eErr error
-		exists, eErr = ownerCompose.New().HasSchemaRequests(ctx, 9_999_999)
+		exists, eErr = ownerCompose.NewClocked(nil).HasSchemaRequests(ctx, 9_999_999)
 		return eErr
 	})
 	require.NoError(t, err)
@@ -599,7 +599,7 @@ func TestRequestRepository_HasActiveRequestForMatchedStudent_TrueForActivePin(t 
 	var has bool
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var hErr error
-		has, hErr = ownerCompose.New().HasActiveRequestForMatchedStudent(ctx, phaseID, studentID, 0)
+		has, hErr = ownerCompose.NewClocked(nil).HasActiveRequestForMatchedStudent(ctx, phaseID, studentID, 0)
 		return hErr
 	}))
 	assert.True(t, has, "an active request pinned to the student must be detected")
@@ -607,7 +607,7 @@ func TestRequestRepository_HasActiveRequestForMatchedStudent_TrueForActivePin(t 
 	// A different student id in the same phase is not a collision.
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var hErr error
-		has, hErr = ownerCompose.New().HasActiveRequestForMatchedStudent(ctx, phaseID, studentID+1, 0)
+		has, hErr = ownerCompose.NewClocked(nil).HasActiveRequestForMatchedStudent(ctx, phaseID, studentID+1, 0)
 		return hErr
 	}))
 	assert.False(t, has, "an unrelated student id must not be flagged")
@@ -633,7 +633,7 @@ func TestRequestRepository_HasActiveRequestForMatchedStudent_IgnoresTerminalAndO
 	var has bool
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var hErr error
-		has, hErr = ownerCompose.New().HasActiveRequestForMatchedStudent(ctx, phaseID, studentID, 0)
+		has, hErr = ownerCompose.NewClocked(nil).HasActiveRequestForMatchedStudent(ctx, phaseID, studentID, 0)
 		return hErr
 	}))
 	assert.False(t, has, "withdrawn + rejected pins must not block re-enrollment")
@@ -641,7 +641,7 @@ func TestRequestRepository_HasActiveRequestForMatchedStudent_IgnoresTerminalAndO
 	// A different phase never collides with this phase's pins.
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var hErr error
-		has, hErr = ownerCompose.New().HasActiveRequestForMatchedStudent(ctx, phaseID+99_999_999, studentID, 0)
+		has, hErr = ownerCompose.NewClocked(nil).HasActiveRequestForMatchedStudent(ctx, phaseID+99_999_999, studentID, 0)
 		return hErr
 	}))
 	assert.False(t, has, "a different phase must not be flagged")
@@ -672,7 +672,7 @@ func TestRequestRepository_HasActiveRequestForMatchedStudent_ExcludesGivenChild(
 	var has bool
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var hErr error
-		has, hErr = ownerCompose.New().HasActiveRequestForMatchedStudent(ctx, phaseID, studentID, ownChildID)
+		has, hErr = ownerCompose.NewClocked(nil).HasActiveRequestForMatchedStudent(ctx, phaseID, studentID, ownChildID)
 		return hErr
 	}))
 	assert.False(t, has, "a row must not collide with its own pin")
@@ -687,7 +687,7 @@ func TestRequestRepository_HasActiveRequestForMatchedStudent_ExcludesGivenChild(
 
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var hErr error
-		has, hErr = ownerCompose.New().HasActiveRequestForMatchedStudent(ctx, phaseID, studentID, ownChildID)
+		has, hErr = ownerCompose.NewClocked(nil).HasActiveRequestForMatchedStudent(ctx, phaseID, studentID, ownChildID)
 		return hErr
 	}))
 	assert.True(t, has, "another guardian's active pin must still collide")
@@ -698,7 +698,7 @@ func TestRequestRepository_AcquireExistingStudentMatchLock_RejectsBadPhase(t *te
 
 	db, _, tenantID, _ := setupRequestRepoTest(t)
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.New().AcquireExistingStudentMatchLock(ctx, 0)
+		return ownerCompose.NewClocked(nil).AcquireExistingStudentMatchLock(ctx, 0)
 	})
 	require.Error(t, err, "a non-positive phase id is out of advisory-lock range")
 }
@@ -708,7 +708,7 @@ func TestRequestRepository_AcquireExistingStudentMatchLock_SucceedsInTx(t *testi
 
 	db, _, tenantID, phaseID := setupRequestRepoTest(t)
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.New().AcquireExistingStudentMatchLock(ctx, phaseID)
+		return ownerCompose.NewClocked(nil).AcquireExistingStudentMatchLock(ctx, phaseID)
 	})
 	require.NoError(t, err)
 }

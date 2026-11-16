@@ -420,7 +420,7 @@ func (d *Decisions) RecordPhaseExportAudit(ctx context.Context, actorAccountID i
 		statusFilterLabel = "all"
 	}
 	entry, err := newExportAccess(errPrefix, actorAccountID, actorRole,
-		calendar.Date(phase.ServiceStartDate).BerlinMidnight(), calendar.Date(phase.ServiceEndDate).EndOfDay(), time.Now())
+		calendar.Date(phase.ServiceStartDate).BerlinMidnight(), calendar.Date(phase.ServiceEndDate).EndOfDay(), d.deps.Now())
 	if err != nil {
 		return err
 	}
@@ -443,7 +443,7 @@ func (d *Decisions) recordStudentExportAudit(ctx context.Context, actorAccountID
 	if data == nil || data.StudentID <= 0 {
 		return fmt.Errorf("%s: student required", errPrefix)
 	}
-	now := time.Now()
+	now := d.deps.Now()
 	rangeStart, rangeEnd := studentExportRange(data.Phases, now)
 	entry, err := newExportAccess(errPrefix, actorAccountID, actorRole, rangeStart, rangeEnd, now)
 	if err != nil {

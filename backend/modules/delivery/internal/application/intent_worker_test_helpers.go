@@ -24,7 +24,7 @@ type exactEmailClaim interface {
 // intent, so parallel test mailers cannot steal another test's messages.
 func DrainEmailForTest(ctx context.Context, base ports.Store, provider ports.Provider, observe ports.Observer, tenantID, id int64) error {
 	store := &fixtureIntentStore{Store: base, exact: base.(exactEmailClaim), tenantID: tenantID, id: id}
-	worker := NewWorker(store, provider, observe)
+	worker := NewWorker(store, provider, observe, time.Now)
 	for !store.finished {
 		if _, err := worker.RunOnce(ctx, 1, 3); err != nil {
 			return err

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
@@ -84,7 +83,7 @@ func (s *Service) CloseWeekProtocol(ctx context.Context, reach timetable.WeekPro
 		if _, findErr := s.visibleWeekProtocolDraft(txCtx, reach, id); findErr != nil {
 			return findErr
 		}
-		if closeErr := s.store.CloseWeekProtocol(txCtx, id, actor, time.Now()); closeErr != nil {
+		if closeErr := s.store.CloseWeekProtocol(txCtx, id, actor, s.now()); closeErr != nil {
 			return closeErr
 		}
 		result, err = s.visibleWeekProtocol(txCtx, reach, id, false)
@@ -123,7 +122,7 @@ func (s *Service) OpenWeekProtocolPDF(ctx context.Context, reach timetable.WeekP
 
 // storeWeekProtocolPDF renders the closed protocol and stores the file.
 func (s *Service) storeWeekProtocolPDF(ctx context.Context, protocol timetable.WeekProtocol, renderer timetable.WeekProtocolRenderer) error {
-	file, err := renderer.RenderReport(timetable.WeekProtocolDocument(protocol), timetable.WeekProtocolFilename(protocol))
+	file, err := renderer.RenderReport(timetable.WeekProtocolDocument(protocol, s.now()), timetable.WeekProtocolFilename(protocol))
 	if err != nil {
 		return fmt.Errorf("render week protocol %d: %w", protocol.ID, err)
 	}

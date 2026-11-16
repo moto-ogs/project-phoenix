@@ -18,6 +18,7 @@ import (
 	"errors"
 	"log/slog"
 	"strings"
+	"time"
 
 	deliveryPorts "github.com/moto-ogs/project-phoenix/modules/communication/internal/application"
 	"github.com/moto-ogs/project-phoenix/realtime"
@@ -122,6 +123,9 @@ type Config struct {
 	// Attachments stores the photos and files of messages (#6685). Without
 	// it uploads are refused; messages without files are unaffected.
 	Attachments deliveryPorts.MessageAttachmentStore
+
+	// Now dates the retention window; nil is the real clock.
+	Now func() time.Time
 }
 
 // NewService wires an internal messaging service.
@@ -131,6 +135,9 @@ func NewService(cfg Config, runtime Runtime, policy deliveryPorts.NotificationEr
 	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
+	}
+	if cfg.Now == nil {
+		cfg.Now = time.Now
 	}
 	return &Service{Config: cfg, runtime: runtime, deliveryPolicy: policy}
 }

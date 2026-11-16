@@ -200,7 +200,7 @@ var RootCompositions struct {
 	// RecurrenceLock is the owner's tenant recurrence gate over db.
 	RecurrenceLock func(db *bun.DB) (timetableModule.RecurrenceWriteLock, error)
 	// SessionRecords are Student Presence's live sessions over db.
-	SessionRecords func(db *bun.DB) SessionRecords
+	SessionRecords func(db *bun.DB, clocks ...func() time.Time) SessionRecords
 	// OfferingSources serve the offering-source support of the routes over db.
 	OfferingSources func(t *testing.T, db *bun.DB) (timetableModule.OfferingSourceSupport, error)
 	// StaffAccountPeople is the operations' person port for an acting account

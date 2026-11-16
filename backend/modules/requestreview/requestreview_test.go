@@ -151,6 +151,7 @@ func (f *fixture) query() Query {
 			DirectCorrections: f.corrections,
 		},
 		Access: f.access,
+		Today:  func() Date { return "2026-08-24" },
 	}
 	if f.students != nil {
 		deps.Students = f.students
@@ -265,6 +266,12 @@ func TestNewRequiresQueuesAndAccess(t *testing.T) {
 		Access: f.access,
 	}).ListRequests(context.Background(), ListQuery{})
 	require.ErrorIs(t, err, ErrNotConfigured, "the correction log is part of the wiring")
+
+	_, err = New(Dependencies{
+		Queues: Queues{MasterData: f.master, CareSchedule: f.care, Offering: f.offering, Excused: f.excused, DirectCorrections: f.corrections},
+		Access: f.access,
+	}).ListRequests(context.Background(), ListQuery{})
+	require.ErrorIs(t, err, ErrNotConfigured, "the calendar day is part of the wiring")
 }
 
 func TestParseListQueryValidatesTheWire(t *testing.T) {

@@ -33,7 +33,7 @@ type enrollmentFixture struct {
 func (s retentionSuite) enrollments(t *testing.T, tenantID int64) enrollmentFixture {
 	t.Helper()
 	ctx := testpkg.WithTenantRuntime(t, testpkg.TenantContext(tenantID), s.admin)
-	owner := enrollmentCompose.New()
+	owner := enrollmentCompose.NewClocked(nil)
 	phase := &enrollment.Phase{
 		Name:                      fmt.Sprintf("Löschfrist-%d", tenantID),
 		Kind:                      enrollment.PhaseKindSchoolYear,

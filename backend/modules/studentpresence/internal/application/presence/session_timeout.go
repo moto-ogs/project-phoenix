@@ -209,7 +209,7 @@ func (s *service) GetSessionTimeoutInfo(ctx context.Context, deviceID int64) (*S
 		}
 	}
 
-	now := time.Now()
+	now := s.now()
 	info := &SessionTimeoutInfo{
 		SessionID:          session.ID,
 		ActivityID:         session.GroupID,

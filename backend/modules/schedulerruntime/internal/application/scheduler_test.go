@@ -1549,15 +1549,16 @@ func TestExecuteCleanupForTenant_AttendanceNilResult(t *testing.T) {
 func TestTimeMatchesNow(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := time.Date(2026, time.November, 16, 14, 5, 0, 0, time.Local)
+	s := &Scheduler{now: func() time.Time { return now }}
 	nowStr := now.Format("15:04")
-	assert.True(t, timeMatchesNow(nowStr))
-	assert.False(t, timeMatchesNow("99:99"))
-	assert.False(t, timeMatchesNow("invalid"))
-	assert.False(t, timeMatchesNow("25:00"))
-	assert.False(t, timeMatchesNow("12:60"))
+	assert.True(t, s.timeMatchesNow(nowStr))
+	assert.False(t, s.timeMatchesNow("99:99"))
+	assert.False(t, s.timeMatchesNow("invalid"))
+	assert.False(t, s.timeMatchesNow("25:00"))
+	assert.False(t, s.timeMatchesNow("12:60"))
 	for _, invalid := range []string{"aa:00", "02:bb", "-1:00", "02:-5", "18:99", "xx:00", "18:yy"} {
-		assert.False(t, timeMatchesNow(invalid), invalid)
+		assert.False(t, s.timeMatchesNow(invalid), invalid)
 	}
 }
 
@@ -1565,7 +1566,7 @@ func TestWasRunToday_NotRun(t *testing.T) {
 	t.Parallel()
 
 	var m sync.Map
-	assert.False(t, wasRunToday(&m, 1))
+	assert.False(t, (&Scheduler{}).wasRunToday(&m, 1))
 }
 
 func TestWasRunToday_RanToday(t *testing.T) {
@@ -1574,7 +1575,7 @@ func TestWasRunToday_RanToday(t *testing.T) {
 	var m sync.Map
 	tenantID := testpkg.UniqueTestTenantID(t)
 	m.Store(tenantID, time.Now())
-	assert.True(t, wasRunToday(&m, tenantID))
+	assert.True(t, (&Scheduler{}).wasRunToday(&m, tenantID))
 }
 
 func TestWasRunToday_RanYesterday(t *testing.T) {
@@ -1583,7 +1584,7 @@ func TestWasRunToday_RanYesterday(t *testing.T) {
 	var m sync.Map
 	tenantID := testpkg.UniqueTestTenantID(t)
 	m.Store(tenantID, time.Now().Add(-25*time.Hour))
-	assert.False(t, wasRunToday(&m, tenantID))
+	assert.False(t, (&Scheduler{}).wasRunToday(&m, tenantID))
 }
 
 func TestWasRunToday_InvalidType(t *testing.T) {
@@ -1592,7 +1593,7 @@ func TestWasRunToday_InvalidType(t *testing.T) {
 	var m sync.Map
 	tenantID := testpkg.UniqueTestTenantID(t)
 	m.Store(tenantID, "not a time")
-	assert.False(t, wasRunToday(&m, tenantID))
+	assert.False(t, (&Scheduler{}).wasRunToday(&m, tenantID))
 }
 
 func TestWasRunToday_DifferentTenant(t *testing.T) {
@@ -1602,7 +1603,7 @@ func TestWasRunToday_DifferentTenant(t *testing.T) {
 	tenantID := testpkg.UniqueTestTenantID(t)
 	otherTenantID := testpkg.UniqueTestTenantID(t)
 	m.Store(tenantID, time.Now())
-	assert.False(t, wasRunToday(&m, otherTenantID))
+	assert.False(t, (&Scheduler{}).wasRunToday(&m, otherTenantID))
 }
 
 func TestResolveStringSetting_NoSettings(t *testing.T) {

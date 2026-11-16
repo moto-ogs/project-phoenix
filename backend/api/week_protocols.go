@@ -25,8 +25,9 @@ import (
 // mountWeekProtocolRoutes serves the weekly protocols of the groups (#4769)
 // under /api/week-protocols: Timetable's protocols over its own tables, the
 // caller's groups from Identity & Access, the Audit Platform's data access log
-// and the People Directory names of the closing person.
-func mountWeekProtocolRoutes(tenant chi.Router, protocols timetableModule.WeekProtocols, logger *slog.Logger, caller *owners.CallerRows, accessLog owners.DataAccessAppender, persons peopledirectory.Query, appEnv string, seed schedulerPorts.WeekProtocolEvenings) {
+// and the People Directory names of the closing person. now dates the access
+// log entries.
+func mountWeekProtocolRoutes(tenant chi.Router, protocols timetableModule.WeekProtocols, logger *slog.Logger, caller *owners.CallerRows, accessLog owners.DataAccessAppender, persons peopledirectory.Query, appEnv string, seed schedulerPorts.WeekProtocolEvenings, now func() time.Time) {
 	var seedLifecycle func(context.Context) error
 	var isLocalSeed func(*http.Request) bool
 	if seed != nil {
@@ -42,6 +43,7 @@ func mountWeekProtocolRoutes(tenant chi.Router, protocols timetableModule.WeekPr
 		Logger:      logger.With("handler", "week_protocols"),
 		Seed:        seedLifecycle,
 		IsLocalSeed: isLocalSeed,
+		Now:         now,
 	})
 	tenant.Mount("/week-protocols", resource.Router(ProtectedTenantRoutes))
 }

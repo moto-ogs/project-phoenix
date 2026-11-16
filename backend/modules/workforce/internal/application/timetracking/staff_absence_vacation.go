@@ -74,7 +74,7 @@ func (s *staffAbsenceService) RequestVacation(ctx context.Context, staffID int64
 		return nil, workforce.ErrAbsenceNoWorkingDays
 	}
 
-	now := time.Now()
+	now := s.now()
 	// HalfDay legacy flag stays in sync: true iff either boundary is half.
 	halfDay := req.StartHalfDay || req.EndHalfDay
 	absence := &StaffAbsence{
@@ -143,7 +143,7 @@ func (s *staffAbsenceService) ApproveAbsence(ctx context.Context, absenceID int6
 		return nil, err
 	}
 	fromStatus := absence.Status
-	now := time.Now()
+	now := s.now()
 	absence.Status = AbsenceStatusApproved
 	absence.ApprovedBy = &decidedByStaffID
 	absence.ApprovedAt = &now
@@ -225,7 +225,7 @@ func (s *staffAbsenceService) DenyAbsence(ctx context.Context, absenceID int64, 
 		return nil, workforce.ErrAbsenceNotDeclinable
 	}
 	fromStatus := absence.Status
-	now := time.Now()
+	now := s.now()
 	absence.Status = AbsenceStatusDeclined
 	absence.ApprovedBy = &decidedByStaffID
 	absence.ApprovedAt = &now
@@ -278,7 +278,7 @@ func (s *staffAbsenceService) QuestionAbsence(ctx context.Context, absenceID int
 	// The Leitung's question lives in decision_note; ApprovedBy/At stay nil
 	// because no decision has been made yet. History is in the audit rows.
 	absence.DecisionNote = note
-	absence.UpdatedAt = time.Now()
+	absence.UpdatedAt = s.now()
 
 	updatedAbsence, err := s.absenceRepo.UpdateStaffAbsence(ctx, StaffAbsenceToCapability(absence))
 	err = absenceUpdateError(err)
@@ -319,7 +319,7 @@ func (s *staffAbsenceService) ResubmitAbsence(ctx context.Context, staffID int64
 		return nil, workforce.ErrAbsenceNotQuestioned
 	}
 	fromStatus := absence.Status
-	now := time.Now()
+	now := s.now()
 	absence.Status = AbsenceStatusRequested
 	absence.Note = note
 	// Re-stamp so the request re-enters the inbox at its resubmit time.
@@ -372,7 +372,7 @@ func (s *staffAbsenceService) CancelAbsence(ctx context.Context, staffID int64, 
 	}
 	fromStatus := absence.Status
 	absence.Status = AbsenceStatusCanceled
-	absence.UpdatedAt = time.Now()
+	absence.UpdatedAt = s.now()
 	updatedAbsence, err := s.absenceRepo.UpdateStaffAbsence(ctx, StaffAbsenceToCapability(absence))
 	err = absenceUpdateError(err)
 	if err == nil {

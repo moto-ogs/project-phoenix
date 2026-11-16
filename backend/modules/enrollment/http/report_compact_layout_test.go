@@ -4,6 +4,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -259,7 +260,7 @@ func TestBuildCareUsageExportLayoutDispatch(t *testing.T) {
 
 	t.Run("compact pdf and docx render the table document", func(t *testing.T) {
 		for _, format := range []lists.Format{lists.FormatPDF, lists.FormatDOCX} {
-			file, err := buildCareUsageExport(svc, careUsageExportPayload{report: report, layout: careUsageLayoutCompact}, format)
+			file, err := buildCareUsageExport(svc, careUsageExportPayload{report: report, layout: careUsageLayoutCompact}, format, time.Time{})
 			require.NoError(t, err, format)
 			assert.Contains(t, file.Filename, "kompakt", format)
 			assert.NotEmpty(t, file.Data, format)
@@ -267,14 +268,14 @@ func TestBuildCareUsageExportLayoutDispatch(t *testing.T) {
 	})
 
 	t.Run("compact xlsx stays tabular", func(t *testing.T) {
-		file, err := buildCareUsageExport(svc, careUsageExportPayload{report: report, layout: careUsageLayoutCompact}, lists.FormatXLSX)
+		file, err := buildCareUsageExport(svc, careUsageExportPayload{report: report, layout: careUsageLayoutCompact}, lists.FormatXLSX, time.Time{})
 		require.NoError(t, err)
 		assert.NotContains(t, file.Filename, "kompakt")
 		assert.True(t, strings.HasSuffix(file.Filename, ".xlsx"), "filename = %q", file.Filename)
 	})
 
 	t.Run("detailed keeps the record layout", func(t *testing.T) {
-		file, err := buildCareUsageExport(svc, careUsageExportPayload{report: report, layout: careUsageLayoutDetailed}, lists.FormatPDF)
+		file, err := buildCareUsageExport(svc, careUsageExportPayload{report: report, layout: careUsageLayoutDetailed}, lists.FormatPDF, time.Time{})
 		require.NoError(t, err)
 		assert.NotContains(t, file.Filename, "kompakt")
 		assert.NotEmpty(t, file.Data)

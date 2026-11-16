@@ -37,14 +37,16 @@ type DemoAccessDependencies struct {
 	Tokens   ports.DemoAccessTokens
 	Mail     ports.DemoAccessMail
 	AdminTx  ports.DemoAdminTx
+	// Now is the composition's clock (ADR 0239).
+	Now func() time.Time
 }
 
 func NewDemoAccess(deps DemoAccessDependencies) (*DemoAccess, error) {
-	if deps.Sessions == nil || deps.Store == nil || deps.Schools == nil || deps.Tokens == nil || deps.Mail == nil || deps.AdminTx == nil {
+	if deps.Sessions == nil || deps.Store == nil || deps.Schools == nil || deps.Tokens == nil || deps.Mail == nil || deps.AdminTx == nil || deps.Now == nil {
 		return nil, fmt.Errorf("identity access demo access: every dependency is required")
 	}
 	return &DemoAccess{
-		sessions: deps.Sessions, store: deps.Store, schools: deps.Schools, tokens: deps.Tokens, mail: deps.Mail, adminTx: deps.AdminTx, now: time.Now,
+		sessions: deps.Sessions, store: deps.Store, schools: deps.Schools, tokens: deps.Tokens, mail: deps.Mail, adminTx: deps.AdminTx, now: deps.Now,
 		perIP: newDemoRequestWindow(domain.DemoRequestsPerIPAddress), perAddress: newDemoRequestWindow(domain.DemoRequestsPerAddress),
 	}, nil
 }

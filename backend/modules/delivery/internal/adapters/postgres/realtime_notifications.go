@@ -25,6 +25,9 @@ type realtimeNotificationRow struct {
 	StaffPortal   bool            `bun:"staff_portal,notnull"`
 	SchoolPortal  bool            `bun:"school_portal,notnull"`
 	Content       json.RawMessage `bun:"content,type:jsonb,notnull"`
+	// CreatedAt comes from the store's clock, the clock the loads and the
+	// retention compare the notification's lifetime with.
+	CreatedAt time.Time `bun:"created_at,notnull"`
 }
 
 const deleteExpiredRealtimeNotificationsSQL = `DELETE FROM platform.realtime_notifications
@@ -42,7 +45,7 @@ func (s *Store) SaveRealtimeNotification(ctx context.Context, notification domai
 	row := realtimeNotificationRow{
 		TenantID: notification.TenantID, Scope: notification.Scope, ActiveGroupID: notification.ActiveGroupID,
 		AccountIDs: accountIDs, StaffPortal: notification.StaffPortal, SchoolPortal: notification.SchoolPortal,
-		Content: notification.Content,
+		Content: notification.Content, CreatedAt: s.now(),
 	}
 	if _, err := db.NewInsert().Model(&row).ExcludeColumn("id").Returning("id").Exec(ctx); err != nil {
 		return 0, fmt.Errorf("delivery postgres: store realtime notification: %w", err)

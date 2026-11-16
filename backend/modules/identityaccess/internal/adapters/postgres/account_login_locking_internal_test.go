@@ -23,7 +23,7 @@ func lockingStore(db *bun.DB, tenantID int64) *Store {
 			return tx, nil
 		}
 		return db, nil
-	}, func(context.Context) TenantScope { return TenantScope{TenantID: tenantID} })
+	}, func(context.Context) TenantScope { return TenantScope{TenantID: tenantID} }, time.Now)
 }
 
 // TestLockAccountPermissionSources pins the locking contract the school-portal

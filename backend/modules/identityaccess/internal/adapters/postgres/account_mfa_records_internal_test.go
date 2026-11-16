@@ -189,7 +189,7 @@ func TestNativeMFAChallengeAndDeviceScope(t *testing.T) {
 // administrative transaction of its own.
 func mfaTestRecords(t *testing.T, db *bun.DB) ports.AccountMFARecords {
 	t.Helper()
-	return application.NewAccountMFACommands(NewAccountMFARecords(NewStore(db)), adminTxRuntime{t: t, db: db})
+	return application.NewAccountMFACommands(NewAccountMFARecords(NewStore(db, time.Now)), adminTxRuntime{t: t, db: db})
 }
 
 // adminTxRuntime is the part of the runtime the record commands consult.

@@ -28,16 +28,18 @@ type appendOnceStore interface {
 }
 
 // Command is the single application entry point for append-only Audit writes.
+// now is the Audit clock the retention windows count back from (ADR 0239).
 type Command struct {
 	store   appendStore
 	observe func(AppendObservation)
+	now     func() time.Time
 }
 
-func NewCommand(store appendStore, observe func(AppendObservation)) (*Command, error) {
-	if store == nil || observe == nil {
-		return nil, fmt.Errorf("audit command: store and observer are required")
+func NewCommand(store appendStore, observe func(AppendObservation), now func() time.Time) (*Command, error) {
+	if store == nil || observe == nil || now == nil {
+		return nil, fmt.Errorf("audit command: store, observer and clock are required")
 	}
-	return &Command{store: store, observe: observe}, nil
+	return &Command{store: store, observe: observe, now: now}, nil
 }
 
 func (c *Command) Append(ctx context.Context, event any) error {

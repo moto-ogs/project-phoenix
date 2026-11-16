@@ -88,7 +88,7 @@ func (s *Store) RecordEmailDeliveryEvent(ctx context.Context, event domain.Email
 			return err
 		}
 		result.Recorded = true
-		return applyEmailEvent(txCtx, db, mail, event, &result)
+		return applyEmailEvent(txCtx, db, mail, event, &result, s.now())
 	})
 	if err != nil {
 		return domain.EmailDeliveryEventResult{}, fmt.Errorf("delivery postgres: record email delivery event: %w", err)
@@ -103,7 +103,7 @@ func emailEventCurrentState(mail emailEventMailRow) domain.EmailDeliveryState {
 	return domain.EmailDeliveryState(*mail.DeliveryState)
 }
 
-func applyEmailEvent(ctx context.Context, db bun.IDB, mail emailEventMailRow, event domain.EmailDeliveryEvent, result *domain.EmailDeliveryEventResult) error {
+func applyEmailEvent(ctx context.Context, db bun.IDB, mail emailEventMailRow, event domain.EmailDeliveryEvent, result *domain.EmailDeliveryEventResult, now time.Time) error {
 	if mail.Fallback != nil && event.Provider != "moto" {
 		// The mail left over the fallback: the event stays in the history, and
 		// the original provider no longer speaks for it. Local SMTP rejections
@@ -118,7 +118,7 @@ func applyEmailEvent(ctx context.Context, db bun.IDB, mail emailEventMailRow, ev
 	// its reason can still turn out as a blocklist. fallback_requested_at makes
 	// this happen once per mail.
 	if event.Reroute && mail.Fallback == nil && mail.Security && result.State != domain.EmailDeliveryDelivered && result.State != domain.EmailDeliveryComplained {
-		if _, err := db.ExecContext(ctx, emailEventRerouteSQL, time.Now(), mail.ID); err != nil {
+		if _, err := db.ExecContext(ctx, emailEventRerouteSQL, now, mail.ID); err != nil {
 			return err
 		}
 		result.State, result.Rerouted = "", true
@@ -126,7 +126,7 @@ func applyEmailEvent(ctx context.Context, db bun.IDB, mail emailEventMailRow, ev
 	}
 	next := domain.NextEmailDeliveryState(result.State, event.State)
 	if next != result.State {
-		if _, err := db.ExecContext(ctx, emailEventStateSQL, string(next), event.OccurredAt, time.Now(), mail.ID); err != nil {
+		if _, err := db.ExecContext(ctx, emailEventStateSQL, string(next), event.OccurredAt, now, mail.ID); err != nil {
 			return err
 		}
 		result.State = next

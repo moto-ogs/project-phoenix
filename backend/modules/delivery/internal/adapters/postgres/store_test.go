@@ -26,7 +26,7 @@ func testStore(t *testing.T, db *bun.DB) (*workerCommandsForTest, context.Contex
 			return nil, fmt.Errorf("transaction is required")
 		}
 		return raw.(bun.Tx), nil
-	}, postgresadapter.RequireAdminDatabase)
+	}, postgresadapter.RequireAdminDatabase, time.Now)
 	store := newWorkerCommandsForTest(raw, func(ctx context.Context, callback func(context.Context) error) error {
 		return tenant.WithAdminTx(ctx, db, func(txCtx context.Context, _ bun.Tx) error { return callback(txCtx) })
 	}, func(ctx context.Context, tenantID int64, callback func(context.Context) error) error {

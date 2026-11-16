@@ -50,14 +50,14 @@ func (s *Scheduler) checkAndRunOverdue(ctx context.Context, task *ScheduledTask)
 		task.mu.Unlock()
 	}()
 
-	s.rotateOverdueCacheIfNewDay(schedulerTime(s.now))
+	s.rotateOverdueCacheIfNewDay(s.clock())
 
 	ctx, cancel := s.taskContext(ctx, 5*time.Minute)
 	defer cancel()
 
 	s.forEachTenantSettings(ctx, "instance-overdue", func(tenantCtx context.Context, tenantID int64) error {
 		threshold := s.resolveIntSetting(tenantCtx, settingTimetableOverdueThresholdMinutes, 5)
-		s.runOverdueForTenant(tenantCtx, tenantID, threshold, time.Now())
+		s.runOverdueForTenant(tenantCtx, tenantID, threshold, s.clock())
 		return nil
 	})
 }

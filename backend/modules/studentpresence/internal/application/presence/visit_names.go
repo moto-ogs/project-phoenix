@@ -4,11 +4,10 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 func (s *service) todayVisitNames(ctx context.Context, studentIDs []int64) ([]visitGroupNames, error) {
-	since := calendar.TodayDate().BerlinMidnight()
+	since := s.todayDate().BerlinMidnight()
 	locations, err := s.SchoolPresence.ListVisitLocations(ctx, studentpresence.VisitLocationFilter{VisitFilter: studentpresence.VisitFilter{
 		StudentIDs: studentIDs, EnteredFrom: &since,
 	}})

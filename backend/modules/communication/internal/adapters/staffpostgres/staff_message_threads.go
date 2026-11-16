@@ -220,7 +220,6 @@ func (s *ThreadStore) AdvanceStaffThreadPreview(ctx context.Context, threadID in
 		Set("last_message_id = ?", messageID).
 		Set("last_sender_account_id = ?", senderAccountID).
 		Set("last_message_body = ?", body).
-		Set("updated_at = ?", at).
 		Where(`"staff_message_thread".id = ?`, threadID).
 		Where(`("staff_message_thread".last_message_at IS NULL
 			OR "staff_message_thread".last_message_at < ?

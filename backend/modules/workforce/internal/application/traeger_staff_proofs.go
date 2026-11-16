@@ -20,11 +20,7 @@ import (
 var _ workforce.TraegerStaffProofs = (*TraegerStaff)(nil)
 
 func (t *TraegerStaff) today() calendar.Date {
-	today, err := calendar.ParseDate(t.clock.Today())
-	if err != nil {
-		return calendar.TodayDate()
-	}
-	return today
+	return calendar.DateFromTime(t.clock.Now())
 }
 
 // proofKinds adds the standard kinds the Träger does not have yet and lists

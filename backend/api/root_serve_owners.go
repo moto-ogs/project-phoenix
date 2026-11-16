@@ -57,6 +57,7 @@ func buildCommunicationModule(db transactionruntime.Database, env owners.RootEnv
 		Viewers:       communicationViewerNames{query: persons},
 		Audit:         NewCommunicationAnnouncementAudit(operatorAuditLog.Create),
 		Observe:       env.Observe.Communication,
+		Now:           env.Now,
 	})
 }
 

@@ -203,7 +203,7 @@ func (s *staffOverviewService) expectedClockedIn(
 	if err != nil {
 		return 0, fmt.Errorf("failed to load today's shifts: %w", err)
 	}
-	nowWall := calendar.NormalizeWallClock(calendar.Now())
+	nowWall := calendar.NormalizeWallClock(s.now().In(calendar.Berlin))
 	expected := make(map[int64]bool)
 	for _, shift := range shifts {
 		if shift.Cancelled || !activeIDs[shift.StaffID] {

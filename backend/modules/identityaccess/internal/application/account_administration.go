@@ -85,7 +85,7 @@ func NewAccountAdministration(auth *AccountAuthentication, deps AccountAdministr
 	return &AccountAdministration{
 		auth: auth, store: deps.Store, verifier: deps.Verifier,
 		passwords: deps.Passwords, runtime: deps.Runtime, logger: logger,
-		ownership: NewAccountOwnership(auth.store, auth.traeger), notice: deps.Notice, now: time.Now,
+		ownership: NewAccountOwnership(auth.store, auth.traeger), notice: deps.Notice, now: auth.sessions.now,
 	}, nil
 }
 

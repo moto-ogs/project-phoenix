@@ -162,7 +162,7 @@ type refreshRotation struct {
 // lock, the portal's eligibility, then the presented session, the floor and
 // the live-account stamp.
 func (r *refreshRotation) run(ctx context.Context) error {
-	now := time.Now()
+	now := r.service.sessions.now()
 	if err := r.lockAccount(ctx); err != nil {
 		return err
 	}

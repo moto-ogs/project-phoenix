@@ -10,6 +10,7 @@ import (
 type AccountFixture struct {
 	PasswordAttempts    int        `bun:"password_attempts,scanonly" json:"-"`
 	PasswordLockedUntil *time.Time `bun:"password_locked_until,scanonly" json:"-"`
+	PasswordFailedAt    *time.Time `bun:"password_failed_at,scanonly" json:"-"`
 	MFAResetGeneration  int64      `bun:"mfa_reset_generation,scanonly" json:"-"`
 	bun.BaseModel       `bun:"table:auth.accounts,alias:account"`
 	ID                  int64      `bun:"id,pk,autoincrement" json:"id"`

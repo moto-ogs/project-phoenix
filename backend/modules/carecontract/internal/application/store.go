@@ -36,13 +36,16 @@ type LetterRenderer interface {
 	RenderContract(letter Letter, filenameBase string) (carecontract.File, error)
 }
 
+// Clock is the instant clock the composition binds (ADR 0239); a nil Now
+// is the real clock.
 type Clock struct {
 	Now func() time.Time
 }
 
 func (c Clock) now() time.Time {
-	if c.Now == nil {
-		return time.Now()
+	now := c.Now
+	if now == nil {
+		now = time.Now
 	}
-	return c.Now()
+	return now()
 }

@@ -34,6 +34,7 @@ import (
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // The compositions the retained People Directory repository suites
@@ -94,7 +95,7 @@ func newPeopleRepositorySuiteFactory(
 		FamilyProtection:           peopleCompose.NewFamilyProtectionEventRepository(db.Pool()),
 		ParentRequestShare:         peopleCompose.NewParentRequestShareEventRepository(db.Pool()),
 		ParentRequestEvent:         peopleCompose.NewParentRequestEventRepository(db.Pool()),
-		GroupSubstitution:          owners.NewGroupSubstitutionRepository(owners.NewSchoolStructureRepositories(db, persons, identity, membership, rooms, workTime).Group, membership, workTime),
+		GroupSubstitution:          owners.NewGroupSubstitutionRepository(owners.NewSchoolStructureRepositories(db, persons, identity, membership, rooms, workTime).Group, membership, workTime, timezone.TodayDate),
 		CaregiverBindingLock:       owners.NewCaregiverBindingLocker(membership, workTime, NewStudentPresenceForTests(db), capability),
 		CareWithdrawal:             owners.NewCareWithdrawalCompletionRepository(carePlan),
 		StudentDataChangeRequest:   NewStudentDataChangeRequestRepository(carePlan),
@@ -142,7 +143,7 @@ func NewCarePlanSuiteRepositories(db transactionruntime.Database) *CarePlanSuite
 	students := owners.MustNewPeopleDirectory(db)
 	carePlan := mustNewSuiteCarePlan(db, owners.MustNewUnobservedTimetable(db), students)
 	return &CarePlanSuiteRepositories{
-		ParentPortalRepositories: owners.ComposeParentPortalReads(db, students, owners.NewPeopleIdentityAccess(db, nil), enrollmentCompose.New()),
+		ParentPortalRepositories: owners.ComposeParentPortalReads(db, students, owners.NewPeopleIdentityAccess(db, nil), enrollmentCompose.NewClocked(nil)),
 		StudentStatusDay:         owners.NewStudentStatusDayRepository(carePlan),
 		ExcusedAbsenceRequest:    owners.NewExcusedAbsenceRequestRepository(carePlan),
 		carePlan:                 carePlan,
@@ -170,7 +171,7 @@ func (r *ParentMessagingSuiteRepositories) WithSchoolProjections(schools organiz
 // Communication stores over the unobserved owners of db.
 func NewParentMessagingSuiteRepositories(db transactionruntime.Database, clocks ...func() time.Time) *ParentMessagingSuiteRepositories {
 	return &ParentMessagingSuiteRepositories{MessagingRepositories: owners.ComposeParentMessagingRepositories(
-		db, MustNewSchoolStructure(db), owners.MustNewSchoolMembership(db), owners.NewPeopleIdentityAccess(db, nil), enrollmentCompose.New(), OptionalClock(clocks),
+		db, MustNewSchoolStructure(db), owners.MustNewSchoolMembership(db), owners.NewPeopleIdentityAccess(db, nil), enrollmentCompose.NewClocked(nil), OptionalClock(clocks),
 	)}
 }
 
@@ -220,7 +221,7 @@ func NewCareScheduleSuiteRepositories(db transactionruntime.Database) *CareSched
 	}
 	return &CareScheduleSuiteRepositories{
 		CareScheduleRepositories:   owners.NewCareScheduleRepositories(mustNewSuiteCarePlan(db, capability, owners.MustNewPeopleDirectory(db))),
-		SchoolCalendarRepositories: timetableCompose.NewSchoolCalendarRepositories(calendar, timetableCompose.NewPlanningCalendarPeriodUsage(enrollmentCompose.New(), capability)),
+		SchoolCalendarRepositories: timetableCompose.NewSchoolCalendarRepositories(calendar, timetableCompose.NewPlanningCalendarPeriodUsage(enrollmentCompose.NewClocked(nil), capability)),
 	}
 }
 
@@ -264,7 +265,7 @@ func (f *EnrollmentSuiteRepositories) Enrollment() owners.EnrollmentBookingProje
 
 // NewEnrollmentSuiteRepositories composes the projection's owner.
 func NewEnrollmentSuiteRepositories(transactionruntime.Database) *EnrollmentSuiteRepositories {
-	return &EnrollmentSuiteRepositories{enrollment: enrollmentCompose.New()}
+	return &EnrollmentSuiteRepositories{enrollment: enrollmentCompose.NewClocked(nil)}
 }
 
 // SchoolCalendarSuiteRepositories serve the School Calendar owner the
@@ -306,7 +307,7 @@ func NewPeopleRepositorySuiteParentMessaging(db transactionruntime.Database) (Pa
 // NewPeopleRepositorySuiteAnnouncements is the parent announcement store over
 // its Enrollment audience, constructed here rather than by shared fixtures.
 func NewPeopleRepositorySuiteAnnouncements(db transactionruntime.Database, clocks ...func() time.Time) recordports.ParentAnnouncementRepository {
-	return parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentCompose.New()), clocks...))
+	return parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentCompose.NewClocked(nil)), clocks...), OptionalClock(clocks))
 }
 
 // NewPeopleRepositorySuiteCaregiverBindingLocker is the caregiver binding

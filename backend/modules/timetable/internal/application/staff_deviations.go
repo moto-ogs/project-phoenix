@@ -52,10 +52,11 @@ func NewStaffDeviations(deps ports.StaffDeviationDependencies) (timetable.StaffD
 }
 
 func (s *staffDeviations) now() time.Time {
-	if s.deps.Now != nil {
-		return s.deps.Now()
+	now := s.deps.Now
+	if now == nil {
+		now = time.Now
 	}
-	return time.Now()
+	return now()
 }
 
 func (s *staffDeviations) getLogger() *slog.Logger {

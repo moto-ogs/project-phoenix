@@ -289,7 +289,7 @@ func (s *service) checkOutStudent(ctx context.Context, studentID, staffID int64,
 	if err != nil {
 		return nil, err
 	}
-	now := time.Now()
+	now := s.now()
 	result, err := s.performCheckOut(ctx, studentID, authorizedStaffID, 0, now, calendar.DateFromTime(now), checkoutTypeWeb, details)
 	if err != nil {
 		return nil, err
@@ -310,7 +310,7 @@ func (s *service) CheckOutStudentFromDevice(ctx context.Context, studentID, devi
 	}
 	var result *AttendanceResult
 	err = s.runInSessionTx(ctx, func(txCtx context.Context) error {
-		now := time.Now()
+		now := s.now()
 		var err error
 		result, err = s.performCheckOut(txCtx, studentID, staffID, deviceID, now, calendar.DateFromTime(now), checkoutTypeDaily, checkoutDetails{})
 		return err
@@ -328,7 +328,7 @@ func (s *service) checkOutDeviceStudentToClass(ctx context.Context, studentID, d
 	if err != nil {
 		return err
 	}
-	now := time.Now()
+	now := s.now()
 	_, err = s.performCheckOut(ctx, studentID, staffID, deviceID, now, calendar.DateFromTime(now), checkoutTypeDaily, checkoutDetails{reason: studentpresence.CheckoutReasonClass})
 	return err
 }

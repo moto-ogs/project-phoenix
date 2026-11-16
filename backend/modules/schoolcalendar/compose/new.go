@@ -4,6 +4,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/adapters/openholidays"
@@ -49,8 +50,9 @@ func NewRecords(dependencies RecordsDependencies) (schoolcalendar.Days, error) {
 	if dependencies.DB == nil || dependencies.Observe == nil || dependencies.FederalState == nil || dependencies.ClosingDayReads == nil {
 		return nil, errors.New("school calendar compose: all dependencies are required")
 	}
-	// The records serve no period administration: gate and guard are never asked.
-	return application.New(postgres.New(postgres.NewCompositionDatabase(), dependencies.ClosingDayReads), ports.Observer(dependencies.Observe), application.Administration{Transaction: writeTransaction, Today: application.BerlinToday, FederalState: dependencies.FederalState}, application.LocalCalendar{}), nil
+	// The records serve no period administration, so its gate and guard
+	// are never asked.
+	return application.New(postgres.New(postgres.NewCompositionDatabase(), dependencies.ClosingDayReads), ports.Observer(dependencies.Observe), application.Administration{Transaction: writeTransaction, Today: application.BerlinDay(time.Now), FederalState: dependencies.FederalState}, application.LocalCalendar{}), nil
 }
 
 // AdministrationDependencies are the collaborators of the period administration.
@@ -79,7 +81,7 @@ func NewAdministration(records schoolcalendar.Days, dependencies AdministrationD
 	}
 	today := dependencies.Today
 	if today == nil {
-		today = application.BerlinToday
+		today = application.BerlinDay(time.Now)
 	}
 	service, err := application.WithAdministration(records, application.Administration{
 		Transaction: writeTransaction, RecurrenceGate: dependencies.RecurrenceGate,
@@ -97,6 +99,9 @@ func writeTransaction(ctx context.Context, fn func(context.Context) error) error
 // NewSchoolVacations composes the school vacations (#5345) over the ambient transaction and the OpenHolidays API at
 // sourceURL ("" is the public API). Without federalState it serves only the sync; nil today is the Berlin day.
 func NewSchoolVacations(federalState func(context.Context) (string, error), sourceURL string, today func() string) (schoolcalendar.SchoolVacationOwner, error) {
+	if today == nil {
+		today = application.BerlinDay(time.Now)
+	}
 	return application.NewSchoolVacations(application.SchoolVacationDependencies{
 		Store: postgres.NewSchoolVacationStore(), Source: openholidays.New(nil, sourceURL, application.SchoolVacationRegions()).SchoolVacations,
 		FederalState: federalState, Today: today, AdminTransaction: tenant.WithinAdmin,
@@ -114,6 +119,6 @@ func NewHolidayClosureEvents() *postgres.HolidayClosureEventStore {
 }
 
 // NewHolidayClosureCalendar composes revision-guarded no-care days over the narrow read channel.
-func NewHolidayClosureCalendar(holidays ports.HolidayClosureHolidays, defaultRegion string) schoolcalendar.HolidayClosureCareCalendar {
-	return application.NewHolidayClosureCalendar(NewHolidayClosureEvents(), holidays, defaultRegion)
+func NewHolidayClosureCalendar(holidays ports.HolidayClosureHolidays) schoolcalendar.HolidayClosureCareCalendar {
+	return application.NewHolidayClosureCalendar(NewHolidayClosureEvents(), holidays)
 }

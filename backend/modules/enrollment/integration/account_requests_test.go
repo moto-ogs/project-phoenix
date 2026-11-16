@@ -16,7 +16,7 @@ import (
 func TestAccountRequestsOwnershipFallbackScopeAndFailure(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(nil)
 	account := testpkg.CreateTestAccount(t, db, "account-requests")
 	other := testpkg.CreateTestAccount(t, db, "account-requests-other")
 	var schoolIDs []int64

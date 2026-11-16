@@ -157,7 +157,7 @@ func (t *TraegerStaff) mirrorSchool(ctx context.Context, plan domain.SollPlan) e
 		return err
 	}
 	clipped := plan.From(from)
-	if err := t.store.MirrorStaffSchedule(ctx, staffID, from, clipped.ScheduleRows()); err != nil {
+	if err := t.store.MirrorStaffSchedule(ctx, staffID, from, clipped.ScheduleRows(), t.clock.Now()); err != nil {
 		return err
 	}
 	return t.store.MirrorStaffHolidayWeeks(ctx, staffID, from, clipped.HolidayOverrides())

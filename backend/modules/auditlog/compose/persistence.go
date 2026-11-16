@@ -2,6 +2,7 @@ package compose
 
 import (
 	"errors"
+	"time"
 
 	audit "github.com/moto-ogs/project-phoenix/modules/auditlog/internal/adapters/auditpostgres"
 	"github.com/uptrace/bun"
@@ -50,6 +51,7 @@ type PersistenceDependencies struct {
 	// Students and CarePlan are bound into the booking consistency audit.
 	Students StudentDirectory
 	CarePlan CareOfferingDirectory
+	Now      func() time.Time // stamps events appended without a time; nil is the real clock
 }
 
 // NewPersistence builds the Audit runtime, every retained repository, the
@@ -66,7 +68,11 @@ func NewPersistence(dependencies PersistenceDependencies) (*Persistence, error) 
 	if appends == nil {
 		appends = reads
 	}
-	repositories := audit.NewRepositories(reads, appends)
+	now := dependencies.Now
+	if now == nil {
+		now = time.Now
+	}
+	repositories := audit.NewRepositories(reads, appends, now)
 	if dependencies.Enrollment != nil {
 		repositories.BookingConsistency = audit.NewBookingConsistencyRepository(reads, dependencies.Enrollment, dependencies.Students, dependencies.CarePlan)
 	}
