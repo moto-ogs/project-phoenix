@@ -333,7 +333,7 @@ var moduleLegacyFileBudgets = map[string]int{
 // modules/peopledirectory/compose (+6), modules/schoolmembership/compose (+5),
 // modules/schoolstructure/compose (+8) and modules/settings/compose (+3)
 // add exactly 38 LOC.
-// ADR 0272: the nil default of the clock of workflows/parentportal/compose
+// ADR 0279: the nil default of the clock of workflows/parentportal/compose
 // (+3).
 const moduleComposeBudgetTotal = 13646
 
@@ -553,7 +553,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0212: the port of the message attachments (+1).
 	// ADR 0216: the ports of the account's holiday registrations and of its
 	// proof (+2).
-	// ADR 0272: the nil default of the portal's clock (+3).
+	// ADR 0279: the nil default of the portal's clock (+3).
 	"workflows/parentportal/compose":     339,
 	"workflows/reminderdelivery/compose": 30,
 	"workflows/sessionend/compose":       59,

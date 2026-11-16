@@ -59,7 +59,7 @@ type Resource struct {
 	// messages (#6685); nil answers 500 on their routes.
 	MessageAttachmentFiles common.MessageAttachmentFileStorage
 	// Now is the root's clock: the issue time of the proofs and the day of
-	// the enrollment form (ADR 0272).
+	// the enrollment form (ADR 0279).
 	Now func() time.Time
 }
 
