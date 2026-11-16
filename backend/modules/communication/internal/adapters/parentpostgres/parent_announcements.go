@@ -318,7 +318,6 @@ func (s *AnnouncementStore) UpdateDraft(ctx context.Context, announcement *domai
 	if err != nil {
 		return err
 	}
-	now := s.now()
 	query := db.NewUpdate().
 		Model((*parentAnnouncementRow)(nil)).
 		ModelTableExpr(parentAnnouncementTableExpr).
@@ -335,22 +334,20 @@ func (s *AnnouncementStore) UpdateDraft(ctx context.Context, announcement *domai
 		Set("email_audience = ?", announcement.EmailAudience).
 		Set("reminder_at = ?", announcement.ReminderAt).
 		Set("reminder_text = ?", announcement.ReminderText).
-		Set("updated_at = ?", now).
 		Where(`"parent_announcement".id = ?`, announcement.ID).
-		Where(`"parent_announcement".published_at IS NULL`)
+		Where(`"parent_announcement".published_at IS NULL`).
+		Returning(`"parent_announcement".updated_at`)
 	query = withTenant(setDeclarationColumns(query, announcement.Declaration), parentAnnouncementAlias, scope)
-	result, err := query.Exec(ctx)
-	if err != nil {
+	// The table's trigger stamps updated_at with the database clock; the
+	// returned value is the stored one (ADR 0267).
+	var updatedAt time.Time
+	if err := query.Scan(ctx, &updatedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.ErrParentAnnouncementPublished
+		}
 		return fmt.Errorf("update parent announcement draft: %w", err)
 	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("update parent announcement draft rows affected: %w", err)
-	}
-	if affected == 0 {
-		return domain.ErrParentAnnouncementPublished
-	}
-	announcement.UpdatedAt = now
+	announcement.UpdatedAt = updatedAt
 	return s.ClearEngagement(ctx, announcement.ID)
 }
 
@@ -485,7 +482,6 @@ func (s *AnnouncementStore) SetReminder(ctx context.Context, id int64, reminderA
 		ModelTableExpr(parentAnnouncementTableExpr).
 		Set("reminder_at = ?", reminderAt).
 		Set("reminder_text = ?", reminderText).
-		Set("updated_at = ?", s.now()).
 		Where(`"parent_announcement".id = ?`, id).
 		Where(`"parent_announcement".reminder_sent_at IS NULL`)
 	query = withTenant(query, parentAnnouncementAlias, scope)

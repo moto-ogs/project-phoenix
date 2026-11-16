@@ -319,7 +319,6 @@ func (s *SurveyStore) CloseSurvey(ctx context.Context, id int64, at time.Time, a
 	}
 	result, err = db.NewUpdate().TableExpr("users.parent_announcements").
 		Set("expires_at = ?", at).
-		Set("updated_at = ?", s.now()).
 		Where("id = ? AND tenant_id = ? AND system_kind = ?", *announcementID, tenantID, "survey").
 		Exec(ctx)
 	if err != nil {

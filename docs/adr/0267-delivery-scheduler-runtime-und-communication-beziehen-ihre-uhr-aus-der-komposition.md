@@ -66,7 +66,14 @@ in einer Entscheidung.
    des Rückstands. Der Hub lädt weitergeleitete Benachrichtigungen und die
    nächtliche Aufbewahrung löscht sie mit der Uhr, die sie gestempelt hat;
    der Mail-Dispatcher stempelt `SentAt` mit der Uhr der Wurzel.
-6. **Budgets.** Das Compose-LOC-Budget steigt nur um die Uhrfelder, ihren
+6. **`updated_at` mit Trigger bleibt auf der Datenbankuhr.** Tabellen, deren
+   Trigger `update_modified_column()` `updated_at` bei jedem UPDATE setzt,
+   bekommen beim UPDATE kein `updated_at` aus Go; eine Methode, die die Zeile
+   nach dem UPDATE zurückgibt, liefert den gespeicherten Wert (`RETURNING`).
+   Offen bleiben zwei Aufbewahrungsentscheidungen, die `updated_at` eines
+   Entwurfs mit einem Stichtag der injizierten Uhr vergleichen
+   (`announcementEndedBefore`, `SurveyStore.ExpiredSurveys`).
+7. **Budgets.** Das Compose-LOC-Budget steigt nur um die Uhrfelder, ihren
    nil-Standard und die `time`-Importe: `modules/communication/composition`
    von 380 auf 387 (+7), `modules/delivery/compose` von 393 auf 401 (+8), die
    Summe von 13.540 auf 13.555. Die Uhrparameter von Hub, Aufbewahrung und
