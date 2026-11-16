@@ -1,9 +1,8 @@
 import type { SchemaTab } from "./settings-api";
 
 export const ENROLLMENT_ENABLED_KEY = "enrollment.enabled";
-export const ENROLLMENT_PRIVACY_NOTICE_SWITCH_KEY =
-  "enrollment.legal_dsgvo_enabled";
-export const ENROLLMENT_PRIVACY_NOTICE_TEXT_KEY = "enrollment.legal_dsgvo_text";
+const ENROLLMENT_PRIVACY_NOTICE_SWITCH_KEY = "enrollment.legal_dsgvo_enabled";
+const ENROLLMENT_PRIVACY_NOTICE_TEXT_KEY = "enrollment.legal_dsgvo_text";
 export const ENROLLMENT_NOTIFICATION_EMAILS_KEY =
   "enrollment.notification_emails";
 
