@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/uptrace/bun"
 
@@ -35,6 +36,7 @@ type guardianProfileRepository struct {
 	links                  GuardianLinkRows
 	portalMemberships      PortalMembershipQuery
 	portalLoginMemberships PortalLoginMembershipQuery
+	now                    func() time.Time // stamps childless_since, see WithClock
 }
 
 // GuardianProfileOption configures a GuardianProfileRepository at construction.
@@ -57,6 +59,7 @@ func newRawGuardianProfileRepository(runtime Runtime, students StudentDirectoryR
 		runtime:  requireRuntime(runtime),
 		students: requireStudentRows(students),
 		links:    requireGuardianLinkRows(links),
+		now:      time.Now,
 	}
 	for _, option := range options {
 		option(repository)
@@ -64,7 +67,7 @@ func newRawGuardianProfileRepository(runtime Runtime, students StudentDirectoryR
 	return repository
 }
 
-// Create inserts a new guardian profile into the database
+// Create inserts a new guardian profile, childless since the repository's clock.
 func (r *guardianProfileRepository) Create(ctx context.Context, profile *users.GuardianProfile) error {
 	if err := profile.Validate(); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
@@ -82,8 +85,8 @@ func (r *guardianProfileRepository) Create(ctx context.Context, profile *users.G
 	_, err := db.NewInsert().
 		Model(profile).
 		ModelTableExpr(`users.guardian_profiles AS "guardian_profile"`).
+		Value("childless_since", "?", r.now()).
 		Exec(ctx)
-
 	if err != nil {
 		return guardianWriteError("failed to create guardian profile", err)
 	}

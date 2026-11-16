@@ -114,7 +114,7 @@ func New(dependencies Dependencies, memberships GuardianMembershipQuery) (*Direc
 		now = time.Now
 	}
 	students := application.NewStudents(postgres.NewStudentStore(database, dependencies.StudentDirectory, owners.LockClassWrites, dependencies.StudentClassWriteGateQuery), noteStore, companions, owners, transaction{}, observe, now)
-	guardians := application.NewGuardians(postgres.NewGuardianStore(database, postgres.PortalMembershipQuery(memberships), dependencies.GuardianLinkRows), dependencies.GuardianLinkOwners, transaction{}, observe)
+	guardians := application.NewGuardians(postgres.NewGuardianStore(database, postgres.PortalMembershipQuery(memberships), dependencies.GuardianLinkRows, now), dependencies.GuardianLinkOwners, transaction{}, observe)
 	var auditLog internalports.StudentFieldAuditLog
 	if dependencies.StudentFieldAudit != nil {
 		auditLog = application.NewStudentFieldAuditLog(dependencies.StudentFieldAudit)

@@ -78,7 +78,7 @@ func BuildPeopleRows(
 	return PeopleRows{Repositories: peopleCompose.Repositories{
 		Persons: personRepository, Students: NewStudentRepository(db, membership, groups, now),
 		StudentGuardians: newStudentGuardianRepository(db, identity, observeIdentity),
-		GuardianProfiles: NewGuardianProfileRepository(db), Staff: staff, Teachers: teachers,
+		GuardianProfiles: NewGuardianProfileRepository(db, now), Staff: staff, Teachers: teachers,
 	}}, identity
 }
 

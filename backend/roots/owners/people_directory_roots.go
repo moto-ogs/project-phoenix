@@ -137,11 +137,12 @@ func newGuardianLinkOwners(db transactionruntime.Database) guardianLinkOwners {
 
 // NewGuardianProfileRepository is the guardian profile repository with the
 // Identity & Access active-membership and login-ready-membership queries its
-// portal reachability check joins (#2720, #2721).
-func NewGuardianProfileRepository(db transactionruntime.Database) peoplePorts.GuardianProfileRepository {
+// portal reachability check joins (#2720, #2721). A new profile counts as
+// childless from the optional clock, the real one when none is given.
+func NewGuardianProfileRepository(db transactionruntime.Database, clocks ...func() time.Time) peoplePorts.GuardianProfileRepository {
 	identity := NewPeopleIdentityAccess(db, nil)
 	profiles := peopleCompose.NewGuardianProfileRepository(db.Pool(), StudentDirectoryReader(), guardianLinkView.NewReader(),
-		identity.FindActiveGuardianMemberships, identity.FindLoginReadyGuardianMemberships)
+		identity.FindActiveGuardianMemberships, identity.FindLoginReadyGuardianMemberships, firstClock(clocks))
 	return profiles
 }
 

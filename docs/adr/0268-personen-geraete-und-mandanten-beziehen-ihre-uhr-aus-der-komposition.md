@@ -61,7 +61,10 @@ musste den Fall selbst abfangen.
    und Spalten ohne Trigger stempeln mit der Uhr der Komposition. In diesem
    Schnitt betrifft das `iot.devices`. Eine Markierung, die eine Frist
    startet, und die Frist selbst kommen aus demselben Zeitpunkt
-   (`childless_since` der Guardian-Retention).
+   (`childless_since` der Guardian-Retention). Deshalb schreibt jeder
+   Insert von People Directory in `users.guardian_profiles` `childless_since`
+   ausdrücklich mit der Uhr seines Stores, statt den Spaltendefault `NOW()`
+   zu nutzen.
 6. Die 59 Effekt-Bindungen, deren Körper oder Aufrufspur sich nur durch ihre
    Uhr geändert haben, sind mit dieser ADR neu bestätigt, die 14 Ausnahmen
    darunter per `approval_adr`. Effekt und Einstufung bleiben gleich.

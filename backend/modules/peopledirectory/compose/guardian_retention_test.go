@@ -75,25 +75,37 @@ func TestDeleteExpiredChildlessGuardiansKeepsLinkedRecentAndInvitedContacts(t *t
 
 // The run marks a contact without a child at the instant its cut-off counts
 // from, never at the database's time: under a clock years ahead of the real
-// day, a contact marked in this run must not already be past the window.
+// day, a contact marked in this run must not already be past the window. A
+// contact the owner creates counts as childless from the same clock, not from
+// the column's NOW() default.
 func TestDeleteExpiredChildlessGuardiansMarksAtTheRunsInstant(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	runAt := time.Date(2031, time.March, 11, 1, 30, 0, 0, time.UTC)
-	module, err := New(Dependencies{
-		StudentDirectory: testpkg.StudentDirectory{}, DB: db, Observe: func(Observation) {},
-		GuardianLinkOwners: testGuardianLinkOwners{Db: db}, GuardianLinkRows: testpkg.GuardianLinks{},
-		GuardianRolePresets: lifecyclePresets(), Now: func() time.Time { return runAt },
-	}, testPortalMemberships(db))
-	require.NoError(t, err)
+	moduleAt := func(at time.Time) *Directory {
+		t.Helper()
+		module, err := New(Dependencies{
+			StudentDirectory: testpkg.StudentDirectory{}, DB: db, Observe: func(Observation) {},
+			GuardianLinkOwners: testGuardianLinkOwners{Db: db}, GuardianLinkRows: testpkg.GuardianLinks{},
+			GuardianRolePresets: lifecyclePresets(), Now: func() time.Time { return at },
+		}, testPortalMemberships(db))
+		require.NoError(t, err)
+		return module
+	}
+	module := moduleAt(runAt)
 	ctx := testpkg.Ctx(t)
 	school := testpkg.Tenant(t)
 	unmarked := testpkg.CreateTestGuardianProfileForTenant(t, db, school, "Gerade", "Ohne", "retention-run-instant")
-	_, err = db.ExecContext(context.Background(), `UPDATE users.guardian_profiles SET childless_since = NULL WHERE id = ?`, unmarked.ID)
+	_, err := db.ExecContext(context.Background(), `UPDATE users.guardian_profiles SET childless_since = NULL WHERE id = ?`, unmarked.ID)
 	require.NoError(t, err)
 	expired := testpkg.CreateTestGuardianProfileForTenant(t, db, school, "Lange", "Ohne", "retention-run-expired")
 	_, err = db.ExecContext(context.Background(), `UPDATE users.guardian_profiles SET childless_since = ? WHERE id = ?`, runAt.AddDate(0, 0, -120), expired.ID)
 	require.NoError(t, err)
+	created, err := module.CreateGuardianContact(ctx, peopledirectory.GuardianContactRecord{FirstName: "Neu", LastName: "Angelegt"})
+	require.NoError(t, err)
+	profiles := NewGuardianProfileRepository(db, testpkg.StudentDirectory{}, testpkg.GuardianLinks{}, nil, nil, func() time.Time { return runAt })
+	legacy := &peopledirectory.GuardianProfileSnapshot{FirstName: "Alt", LastName: "Angelegt", PreferredContactMethod: "phone", LanguagePreference: "de"}
+	require.NoError(t, tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error { return profiles.Create(txCtx, legacy) }))
 	noInvitations := func(context.Context, []int64) (map[int64]bool, error) { return nil, nil }
 
 	require.NoError(t, tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
@@ -101,10 +113,19 @@ func TestDeleteExpiredChildlessGuardiansMarksAtTheRunsInstant(t *testing.T) {
 		assert.Equal(t, 1, deleted, "only the contact childless for 120 days is past the window")
 		return err
 	}))
-	assert.Equal(t, []int64{unmarked.ID}, existingGuardians(t, db, unmarked.ID, expired.ID))
-	since := childlessSince(t, db, unmarked.ID)
-	require.NotNil(t, since)
-	assert.True(t, since.Equal(runAt), "marked at the run's instant, got %v", since)
+	assert.ElementsMatch(t, []int64{unmarked.ID, created, legacy.ID}, existingGuardians(t, db, unmarked.ID, expired.ID, created, legacy.ID))
+	for _, id := range []int64{unmarked.ID, created, legacy.ID} {
+		since := childlessSince(t, db, id)
+		require.NotNil(t, since)
+		assert.True(t, since.Equal(runAt), "guardian %d childless since the clock's instant, got %v", id, since)
+	}
+
+	require.NoError(t, tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
+		deleted, err := moduleAt(runAt.AddDate(0, 0, 100)).DeleteExpiredChildlessGuardians(txCtx, 90, noInvitations)
+		assert.Equal(t, 3, deleted, "100 days later every contact without a child is past the window")
+		return err
+	}))
+	assert.Empty(t, existingGuardians(t, db, unmarked.ID, created, legacy.ID))
 }
 
 func childlessSince(t *testing.T, db *bun.DB, guardianID int64) *time.Time {
