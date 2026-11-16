@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	enrollment "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	compose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -29,7 +30,7 @@ func TestEnrollmentPublicCaseChildErrorPrecedesMessages(t *testing.T) {
 	require.NoError(t, err)
 	_, err = env.db.NewRaw("REVOKE SELECT ON enrollment.change_request_messages FROM phoenix_tenant").Exec(ctx)
 	require.NoError(t, err)
-	f.resource.ChangeRequestService = newTestChangeRequestService(owners.EnrollmentChangeRequestSources{Requests: env.repos.Enrollment(), Children: env.repos.Enrollment(), Guardians: env.repos.Enrollment(), Catalog: env.repos.Enrollment(), CareOfferingRepo: compose.NewCareOfferingRecords(env.reposCare.CarePlan), Settings: f.settings.Settings, OutboxEnqueuer: env.outbox, ParentsURL: "http://parents.localhost:3000", FrontendURL: "http://localhost:3000"})
+	f.resource.ChangeRequestService = newTestChangeRequestService(owners.EnrollmentChangeRequestSources{Now: time.Now, Requests: env.repos.Enrollment(), Children: env.repos.Enrollment(), Guardians: env.repos.Enrollment(), Catalog: env.repos.Enrollment(), CareOfferingRepo: compose.NewCareOfferingRecords(env.reposCare.CarePlan), Settings: f.settings.Settings, OutboxEnqueuer: env.outbox, ParentsURL: "http://parents.localhost:3000", FrontendURL: "http://localhost:3000"})
 	rec := httptest.NewRecorder()
 	f.router(t).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/requests/"+submitted.Request.StatusToken+"/change-requests", nil))
 	// The shared error envelope uses the (empty here) correlation ID as instance.

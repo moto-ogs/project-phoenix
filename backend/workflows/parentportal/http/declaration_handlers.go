@@ -380,11 +380,11 @@ func (rs *Resource) declarationProof(w http.ResponseWriter, r *http.Request) {
 		rs.writeDeclarationProofPDF(w, r, proof)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, toDeclarationProofResponse(proof, time.Now()), "Declaration proof retrieved")
+	common.Respond(w, r, http.StatusOK, toDeclarationProofResponse(proof, rs.Now()), "Declaration proof retrieved")
 }
 
 func (rs *Resource) writeDeclarationProofPDF(w http.ResponseWriter, r *http.Request, proof *parentService.DeclarationProof) {
-	file, err := rs.renderDeclarationProof(proof, time.Now())
+	file, err := rs.renderDeclarationProof(proof, rs.Now())
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("render declaration proof", err))
 		return

@@ -33,11 +33,11 @@ type arrivalScheduleService struct {
 
 func NewArrivalSchedules(schedules ports.ArrivalScheduleRepository, exceptions ports.EffectiveExceptionRepository[*careplan.ArrivalException],
 	notes ports.EffectiveNoteRepository[*careplan.ArrivalNote], baselines careplan.ArrivalBaselineReader, rules ports.ArrivalScheduleRules, tx ports.EffectiveTimeTransaction, students ports.ArrivalBulkStudents, classes ports.ArrivalClassPlans, classExceptions careplan.ClassArrivalExceptions, notices careplan.ClassTimetableNotices, logger *slog.Logger, today func() calendar.Date) careplan.ArrivalScheduleService {
+	if today == nil {
+		panic("care plan arrival schedules: the composition's day clock is required")
+	}
 	if classExceptions == nil {
 		classExceptions = NewClassArrivalExceptions(nil, nil, today)
-	}
-	if today == nil {
-		today = calendar.TodayDate
 	}
 	if logger == nil {
 		logger = slog.Default()

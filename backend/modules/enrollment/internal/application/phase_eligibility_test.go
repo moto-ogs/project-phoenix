@@ -56,7 +56,7 @@ func (s collectionSettingsStub) read() {
 }
 
 func phasesWithSettings(settings CollectionSettings) *Phases {
-	return newPhases(PhaseDependencies{Settings: settings})
+	return newPhases(PhaseDependencies{Now: enrollmentTestClock, Settings: settings})
 }
 
 // A class-based eligibility restriction is uncheckable when the school does

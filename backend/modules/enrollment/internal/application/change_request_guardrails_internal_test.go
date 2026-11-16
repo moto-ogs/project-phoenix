@@ -46,6 +46,7 @@ func (s stubGuardrailPhones) GuardianPhones(context.Context, int64) ([]*Guardian
 func guardrailService(phones stubGuardrailPhones) *ChangeRequests {
 	email := "co@example.test"
 	return NewChangeRequests(ChangeRequestDependencies{
+		Now:        enrollmentTestClock,
 		Settings:   intakeSettingsFake{},
 		Guardians:  stubGuardrailGuardians{},
 		ParentsURL: "https://parents.example.test",

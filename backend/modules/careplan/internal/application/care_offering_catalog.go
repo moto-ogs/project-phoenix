@@ -60,7 +60,7 @@ func newCareOfferingCatalog(deps CareOfferingCatalogDependencies) (*CareOffering
 		deps.Logger = slog.Default()
 	}
 	if deps.Today == nil {
-		deps.Today = calendar.TodayDate
+		return nil, errors.New("care offering catalog: the composition's day clock is required")
 	}
 	copyWrites, _ := deps.Records.(ports.CatalogCopyWrites)
 	return &CareOfferingCatalog{deps: deps, copyWrites: copyWrites}, nil

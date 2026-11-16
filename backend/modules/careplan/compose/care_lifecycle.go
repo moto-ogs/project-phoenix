@@ -58,10 +58,9 @@ type CareLifecycleDependencies struct {
 	// BookingsAuthoritative resolves the school's booking-led care setting.
 	BookingsAuthoritative func(context.Context) (bool, error)
 	// Fingerprint returns the lowercase hexadecimal SHA-256 of the content.
-	Fingerprint func([]byte) string
-	Logger      *slog.Logger
-	// Now and Today default to the real clock and its Berlin day.
-	Now              func() time.Time
+	Fingerprint      func([]byte) string
+	Logger           *slog.Logger
+	Now              func() time.Time // required; Today defaults to its Berlin day
 	Today            func() calendar.Date
 	StudentDirectory StudentDirectory
 }
@@ -100,6 +99,7 @@ type StudentDocumentDependencies struct {
 	Permissions StudentDocumentPermissions
 	Audit       StudentDocumentAudit
 	Signatures  ports.StudentAccidentSignatures
+	Now         func() time.Time
 }
 
 // NewStudentDocuments composes the child document capability with the
@@ -111,7 +111,7 @@ func NewStudentDocuments(deps StudentDocumentDependencies) (application.StudentD
 	}
 	documents, err := application.NewStudentDocuments(application.StudentDocumentDependencies{
 		Records: deps.Records, Access: deps.Access, Permissions: deps.Permissions, Audit: deps.Audit,
-		Signatures: deps.Signatures, Transaction: ownTenantTransaction(deps.DB),
+		Signatures: deps.Signatures, Transaction: ownTenantTransaction(deps.DB), Now: deps.Now,
 	})
 	if err != nil {
 		return application.StudentDocumentsBinding{}, err

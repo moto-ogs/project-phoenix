@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,12 +72,13 @@ func setupUnreadTest(t *testing.T) *unreadEnv {
 
 	offerings := enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan)
 	requests := newFixtureRequestRoot(owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
+		Now:              time.Now,
 		Requests:         repos.Enrollment(),
 		ParentChanges:    repos.Enrollment(),
 		Children:         repos.Enrollment(),
 		Guardians:        repos.Enrollment(),
 		CareOfferingRepo: offerings,
-		Capacity:         owners.NewEnrollmentOfferingCapacity(offerings, repos.Enrollment(), settings, nil),
+		Capacity:         owners.NewEnrollmentOfferingCapacity(offerings, repos.Enrollment(), settings, calendar.TodayDate),
 		Catalog:          repos.Enrollment(),
 		SchoolRepo:       capabilitySchools{schools: reposSchools.School},
 		Notifications:    NewTestNotifications(repos.Enrollment(), notifyModeSettings{settings: settings}, discardingOutbox{}, capabilitySchools{schools: reposSchools.School}),
@@ -88,6 +90,7 @@ func setupUnreadTest(t *testing.T) *unreadEnv {
 		Logger:           slog.Default(),
 	}))
 	decisions := enrollmentAPI.NewDecisionService(enrollmentCompose.PublicDecisions(owners.NewEnrollmentDecisions(enrollmentCompose.DecisionDependencies{
+		Now:         time.Now,
 		Requests:    repos.Enrollment(),
 		Children:    repos.Enrollment(),
 		Guardians:   repos.Enrollment(),
@@ -102,7 +105,7 @@ func setupUnreadTest(t *testing.T) *unreadEnv {
 	resource := enrollmentAPI.NewResource(
 		nil, nil, requests, nil, nil, decisions, nil, nil, nil,
 		nil, nil, nil,
-		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation})
+		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, time.Now)
 	return &unreadEnv{
 		db: db, router: testpkg.TenantRuntimeMiddleware(t, db)(resource.Router(api.TenantSessionChain)),
 		tenantID: tenantID, phaseID: phase.ID, repos: repos, requests: requests,

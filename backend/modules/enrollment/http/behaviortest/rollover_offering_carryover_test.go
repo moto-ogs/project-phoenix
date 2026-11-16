@@ -400,6 +400,7 @@ func TestRolloverService_CreatePhaseFromSource_FailsWhenBookingHasNoClone(t *tes
 	// A mis-wired service (nil cloner) must fail the rollover instead of
 	// silently persisting a source-phase offering reference.
 	svcNoCloner := newTestRolloverService(owners.EnrollmentRolloverSources{
+		Now:        time.Now,
 		Bookings:   requestTestBookingCommands(),
 		Phases:     env.repos.Enrollment(),
 		Requests:   env.repos.Enrollment(),

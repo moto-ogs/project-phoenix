@@ -47,6 +47,7 @@ func TestCourseWritesRequireCatalogPermissionBeforeMutation(t *testing.T) {
 		ChildRepo:       careOfferingsChildRepoStub{child: child},
 		StudentRepo:     careOfferingsStudentReads(StudentReads.FindByIDForUpdate),
 		OfferingChanges: changes,
+		Now:             fixedCareNow,
 	}}
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 

@@ -80,6 +80,7 @@ func setupRolloverTest(t *testing.T) *rolloverTestEnv {
 
 	outbox := &recordingOutbox{}
 	requestSvc := newTestRequestService(owners.EnrollmentIntakeSources{
+		Now:              time.Now,
 		Bookings:         requestTestBookingCommands(),
 		Requests:         repoFactory.Enrollment(),
 		Children:         repoFactory.Enrollment(),
@@ -98,6 +99,7 @@ func setupRolloverTest(t *testing.T) *rolloverTestEnv {
 	var offeringCloner TestRolloverCatalogCloner = offeringCatalog
 
 	rolloverSvc := newTestRolloverService(owners.EnrollmentRolloverSources{
+		Now:        time.Now,
 		Bookings:   requestTestBookingCommands(),
 		Phases:     repoFactory.Enrollment(),
 		Requests:   repoFactory.Enrollment(),
@@ -217,6 +219,7 @@ func rolloverServiceWithSettings(
 	settings owners.EnrollmentIntakeSettings,
 ) enrollmentAPI.RolloverService {
 	return newTestRolloverService(owners.EnrollmentRolloverSources{
+		Now:        time.Now,
 		Bookings:   requestTestBookingCommands(),
 		Phases:     env.repos.Enrollment(),
 		Requests:   env.repos.Enrollment(),
@@ -807,6 +810,7 @@ func TestRolloverService_RunDeadlineWorker_AutoApprovePromotesToApproved(t *test
 	// Student repos and the full chain).
 	stubDecision := &fakeApproveDecisionService{repo: env.repos.Enrollment()}
 	autoApproveSvc := newTestRolloverService(owners.EnrollmentRolloverSources{
+		Now:        time.Now,
 		Bookings:   requestTestBookingCommands(),
 		Phases:     env.repos.Enrollment(),
 		Requests:   env.repos.Enrollment(),

@@ -40,7 +40,7 @@ func (excusalBaseline) Project(_ context.Context, ids []int64, from, _ calendar.
 func TestNativePartialAbsenceCompositionRollsBackBlockFailures(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 	student := testpkg.CreateTestStudent(t, db, "Partial", "Transaction", "1a")
 	staff := testpkg.CreateTestStaff(t, db, "Partial", "Staff")
@@ -76,12 +76,12 @@ func TestNativePartialAbsenceCompositionRollsBackBlockFailures(t *testing.T) {
 func TestNativeExcusalCompositionRestoresAutomaticDerivationAfterManualOverride(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 	student := testpkg.CreateTestStudent(t, db, "Auto", "Restore", "1a")
 	staff := testpkg.CreateTestStaff(t, db, "Auto", "Staff")
 	blocks := &excusalBlocks{}
-	auto, err := compose.NewPickupAutoExcusal(compose.PickupExcusalDependencies{DB: db, Records: owner, Baselines: excusalBaseline{}, Blocks: blocks})
+	auto, err := compose.NewPickupAutoExcusal(compose.PickupExcusalDependencies{DB: db, Records: owner, Baselines: excusalBaseline{}, Blocks: blocks, Today: decisionTestDay})
 	require.NoError(t, err)
 	manual, err := compose.NewPartialAbsences(db, owner, blocks, auto)
 	require.NoError(t, err)

@@ -151,7 +151,7 @@ func setupOfferingGuardRouterTest(
 	resource := enrollmentAPI.NewResource(
 		nil, nil, nil, nil, nil, decision, nil, nil, nil,
 		nil, nil, nil,
-		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation})
+		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, func() time.Time { return offeringGuardDay.BerlinMidnight().Add(10 * time.Hour) })
 	token := mintOfferingGuardReviewerToken(t, reviewer.ID, reviewer.Email)
 	return offeringGuardHarness{testpkg.TenantRuntimeMiddleware(t, db)(resource.Router(api.TenantSessionChain)), request.ID, child.ID, token, repos, ctx}
 }
@@ -290,6 +290,7 @@ func newOfferingGuardDecisionService(repos api.EnrollmentTestRepositories, repos
 // drive, the way the root binds it.
 func newOfferingGuardDecisions(repos api.EnrollmentTestRepositories, reposCare owners.TimetableCarePlanRows, reposTimetable owners.TimetableTestRepositories, offeringsEnabled bool, children TestDecisionChildren, guardianAccess TestDecisionGuardianAccess, studentEnrollment owners.EnrollmentDecisionPeople, bookings TestDecisionBookings, today func() calendar.Date) *TestDecisions {
 	return owners.NewEnrollmentDecisions(enrollmentCompose.DecisionDependencies{
+		Now:            time.Now,
 		Requests:       repos.Enrollment(),
 		Children:       children,
 		Guardians:      repos.Enrollment(),

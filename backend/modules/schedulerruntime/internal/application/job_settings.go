@@ -110,14 +110,6 @@ func (s *Scheduler) markRunAtAfterCommit(ctx context.Context, lastRunMap *sync.M
 	})
 }
 
-// schedulerTime supplies the optional injected clock with the production default.
-func schedulerTime(now func() time.Time) time.Time {
-	if now == nil {
-		now = time.Now
-	}
-	return now()
-}
-
 // clock reads the Worker clock the composition passes as
-// WorkerDependencies.Now; a Scheduler built bare in a test reads the real one.
-func (s *Scheduler) clock() time.Time { return schedulerTime(s.now) }
+// WorkerDependencies.Now (required); a Scheduler a test builds bare sets now.
+func (s *Scheduler) clock() time.Time { return s.now() }

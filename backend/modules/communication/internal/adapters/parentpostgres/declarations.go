@@ -483,6 +483,9 @@ func (s *AnnouncementStore) ReadOpenDeclarations(ctx context.Context, accountID 
 	if err != nil {
 		return nil, err
 	}
+	// One instant of the store's clock for all three bounds: publication is
+	// stamped from that clock, so the database's NOW() may not judge it.
+	now := s.now()
 	var rows []readDeclarationRow
 	if err := db.NewSelect().
 		TableExpr(parentAnnouncementTableExpr).
@@ -493,9 +496,9 @@ func (s *AnnouncementStore) ReadOpenDeclarations(ctx context.Context, accountID 
 		Where(`"parent_announcement".tenant_id IN (?)`, bun.List(tenantIDs)).
 		Where(`"parent_announcement".delivery_mode = 'declaration'`).
 		Where(`"parent_announcement".active`).
-		Where(`"parent_announcement".published_at IS NOT NULL AND "parent_announcement".published_at <= NOW()`).
-		Where(`("parent_announcement".expires_at IS NULL OR "parent_announcement".expires_at > NOW())`).
-		Where(`("parent_announcement".response_deadline IS NULL OR "parent_announcement".response_deadline > NOW())`).
+		Where(`"parent_announcement".published_at IS NOT NULL AND "parent_announcement".published_at <= ?`, now).
+		Where(`("parent_announcement".expires_at IS NULL OR "parent_announcement".expires_at > ?)`, now).
+		Where(`("parent_announcement".response_deadline IS NULL OR "parent_announcement".response_deadline > ?)`, now).
 		Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("list read open declarations: %w", err)
 	}

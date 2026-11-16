@@ -19,8 +19,8 @@ type PickupBulkStudents = ports.PickupBulkStudents
 type PickupBulkStudent = ports.PickupBulkStudent
 
 func NewPickupSchedules(db *bun.DB, records carePlanBindingPorts.PickupScheduleRecords, baselines careplan.PickupBaselineReader, auto careplan.PickupAutoExcusal, students PickupBulkStudents, logger *slog.Logger, today func() calendar.Date) (careplan.PickupScheduleService, error) {
-	if db == nil || records == nil || baselines == nil {
-		return nil, errors.New("pickup schedules: database, records, and baselines are required")
+	if db == nil || records == nil || baselines == nil || today == nil {
+		return nil, errors.New("pickup schedules: database, records, baselines, and clock are required")
 	}
 	return application.NewPickupSchedules(application.PickupScheduleRecords(records), application.PickupExceptionRecords(records),
 		application.PickupNoteRecords(records), pickupScheduleTransaction{excusalTransaction: excusalTransaction{db: db}}, baselines, auto, students, records, logger, today), nil

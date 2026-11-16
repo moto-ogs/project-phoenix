@@ -345,7 +345,7 @@ func TestStudents20DocumentsGrowthQueryBudget(t *testing.T) {
 	people := api.NewPeopleRepositorySuiteFactory(store)
 	audit := owners.NewTestAuditPersistence(store, nil)
 	caller := api.NewActiveTestCaller(store, testpkg.TenantRuntime(t, tc.db))
-	documents, err := api.NewStudentDocumentsTestModule(store, newStudentTestRepositories(store).CarePlan, people.Student, caller, audit.StudentFieldEdit, audit.DataAccessLog)
+	documents, err := api.NewStudentDocumentsTestModule(store, newStudentTestRepositories(store).CarePlan, people.Student, caller, audit.StudentFieldEdit, audit.DataAccessLog, fixedCalendarClock)
 	require.NoError(t, err)
 	tc.resource.StudentDocumentService = documents
 	child := testpkg.CreateTestStudent(t, tc.db, "Documents", "Subject", "S20")

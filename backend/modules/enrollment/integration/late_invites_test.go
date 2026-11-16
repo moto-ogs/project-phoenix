@@ -18,7 +18,7 @@ func TestLateInviteOwnerConsumptionRollsBackAndRejectsReuse(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	owner := enrollmentCompose.NewClocked(nil)
+	owner := enrollmentCompose.NewClocked(time.Now)
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)
 	creator := testpkg.CreateTestAccount(t, db, "invite-owner@example.test")
 	request := &enrollment.Request{PhaseID: phase.ID, GuardianFirstName: "Fixture", GuardianLastName: "Guardian", GuardianEmail: "invite@example.test", StatusToken: "late-invite-owner"}

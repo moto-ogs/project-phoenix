@@ -80,6 +80,7 @@ func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
 	router.Mount("/api/notifications", notifications.Router())
 	router.Mount("/school/notifications", notifications.SchoolRouter())
 	parents := parentAPI.NewResource(parentAPI.ResourceConfig{
+		Now:         time.Now,
 		Preferences: bindParentPreferences(m.NotificationPreferences),
 		Feed:        bindParentNotificationFeed(m.GuardianFeed),
 	})
@@ -129,7 +130,7 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	}
 	_, err = deliveryCompose.NewWorker(delivery, &deliveryCompose.MailPushProvider{Registry: deliveryCompose.NewEmailTemplateRegistry(nil), Mailer: fallbackMailer, MailIdentity: identity,
 		Push:   deliveryCompose.NewWebPushSender(deliveryContract.WebPushConfig{Subscriber: vapid.Subscriber, PublicKey: vapid.PublicKey, PrivateKey: vapid.PrivateKey}, deliveryCompose.NewExpiredPushSubscriptionCleaner(deliveryCompose.NewTenantTransactions(db.Pool()), pushRepo)),
-		Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(db.Pool()), PushAuthorized: deliveryCompose.NewPushAuthorizationChecker(deliveryCompose.NewTenantTransactions(db.Pool()), pushRepo)})
+		Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(db.Pool()), PushAuthorized: deliveryCompose.NewPushAuthorizationChecker(deliveryCompose.NewTenantTransactions(db.Pool()), pushRepo), Now: delivery.Now})
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}
@@ -191,7 +192,7 @@ func NewDeliveryTestPushNotifier(db transactionruntime.Database, unit tenant.Uni
 	if err != nil {
 		return nil, err
 	}
-	return deliveryCompose.NewNotifier(settings, slog.Default(), func(string, string, string, time.Duration, error) {}, nil, nil, webPush), nil
+	return deliveryCompose.NewNotifier(settings, slog.Default(), func(string, string, string, time.Duration, error) {}, nil, time.Now, webPush), nil
 }
 
 // NewDeliveryTestFeedNotifier is the production notification router with the

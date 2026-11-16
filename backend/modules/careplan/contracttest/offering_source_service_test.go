@@ -1376,6 +1376,7 @@ func TestPhaseDelete_WithRequestsLeavesSourcedRosterRows(t *testing.T) {
 	sourcedResyncer, ok := env.bookings.(enrollmentTest.SourcedTemplateResyncer)
 	require.True(t, ok, "decision service must implement the delete-side detach")
 	phaseSvc := enrollmentTest.NewPhases(enrollmentTest.PhaseDependencies{
+		Now:                    time.Now,
 		Records:                repoFactoryEnrollment.Enrollment(),
 		Offerings:              phaseOfferings{carePlan: repoFactory.CarePlan()},
 		LockTemplateRecurrence: func(context.Context) error { return nil },

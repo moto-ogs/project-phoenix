@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications"
@@ -64,7 +65,7 @@ func TestNotifyDisabledByDefault(t *testing.T) {
 	t.Parallel()
 
 	broadcaster := testpkg.NewRecordingBroadcaster()
-	svc := notifications.NewService(enabledSettings(false), nil, notifications.NewSSEChannel(broadcaster))
+	svc := notifications.NewService(enabledSettings(false), nil, time.Now, notifications.NewSSEChannel(broadcaster))
 
 	err := svc.Notify(context.Background(), tenantEvent(41))
 	require.ErrorIs(t, err, notifications.ErrDisabled)
@@ -75,7 +76,7 @@ func TestNotifyDeliversTenantScopedSSE(t *testing.T) {
 	t.Parallel()
 
 	broadcaster := testpkg.NewRecordingBroadcaster()
-	svc := notifications.NewService(enabledSettings(true), nil, notifications.NewSSEChannel(broadcaster))
+	svc := notifications.NewService(enabledSettings(true), nil, time.Now, notifications.NewSSEChannel(broadcaster))
 
 	event := tenantEvent(41)
 	event.Data = map[string]string{"reminder_id": "123"}
@@ -100,7 +101,7 @@ func TestNotifyDefersDeliveryUntilCommit(t *testing.T) {
 	t.Parallel()
 
 	channel := &recordingChannel{name: "recording"}
-	svc := notifications.NewService(enabledSettings(true), nil, channel)
+	svc := notifications.NewService(enabledSettings(true), nil, time.Now, channel)
 	ctx, commit := tenanttest.WithAfterCommitHooks(context.Background())
 
 	event := tenantEvent(41)
@@ -139,7 +140,7 @@ func TestNotifyDropsQueuedDeliveryOnRollback(t *testing.T) {
 	mock.ExpectRollback()
 
 	channel := &recordingChannel{name: "recording"}
-	svc := notifications.NewService(enabledSettings(true), nil, channel)
+	svc := notifications.NewService(enabledSettings(true), nil, time.Now, channel)
 	rollbackErr := errors.New("force rollback")
 	err = testpkg.WithTenantTx(t, testpkg.WithTenantRuntime(t, context.Background(), db), db, 41, func(ctx context.Context, _ bun.Tx) error {
 		require.NoError(t, svc.Notify(ctx, tenantEvent(41)))
@@ -156,7 +157,7 @@ func TestNotifyAdminGuardianAndGroupRouting(t *testing.T) {
 	t.Parallel()
 
 	broadcaster := testpkg.NewRecordingBroadcaster()
-	svc := notifications.NewService(enabledSettings(true), nil, notifications.NewSSEChannel(broadcaster))
+	svc := notifications.NewService(enabledSettings(true), nil, time.Now, notifications.NewSSEChannel(broadcaster))
 
 	admin := tenantEvent(41)
 	admin.Audience.Scope = notifications.ScopeAdmin
@@ -195,7 +196,7 @@ func TestNotifyAdminGuardianAndGroupRouting(t *testing.T) {
 func TestNotifyValidation(t *testing.T) {
 	t.Parallel()
 
-	svc := notifications.NewService(enabledSettings(true), nil)
+	svc := notifications.NewService(enabledSettings(true), nil, time.Now)
 	ctx := context.Background()
 
 	missingType := tenantEvent(41)
@@ -262,7 +263,7 @@ func TestNotifyChannelErrorDoesNotPropagate(t *testing.T) {
 
 	broadcaster := testpkg.NewRecordingBroadcaster()
 	broadcaster.Err = assert.AnError
-	svc := notifications.NewService(enabledSettings(true), nil, notifications.NewSSEChannel(broadcaster))
+	svc := notifications.NewService(enabledSettings(true), nil, time.Now, notifications.NewSSEChannel(broadcaster))
 
 	assert.NoError(t, svc.Notify(context.Background(), tenantEvent(41)),
 		"channel failures are fire-and-forget and must not reach the caller")
@@ -273,7 +274,7 @@ func TestNotifyConfigurationErrors(t *testing.T) {
 
 	ctx := context.Background()
 
-	withoutSettings := notifications.NewService(nil, nil)
+	withoutSettings := notifications.NewService(nil, nil, time.Now)
 	assert.EqualError(t, withoutSettings.Notify(ctx, tenantEvent(41)),
 		"notifications service has no settings service configured")
 
@@ -283,7 +284,7 @@ func TestNotifyConfigurationErrors(t *testing.T) {
 			return false, settingsErr
 		},
 	}
-	svc := notifications.NewService(failingSettings, nil)
+	svc := notifications.NewService(failingSettings, nil, time.Now)
 	err := svc.Notify(ctx, tenantEvent(41))
 	require.ErrorContains(t, err, "resolving notification feature flag")
 	require.ErrorIs(t, err, settingsErr)
@@ -296,7 +297,7 @@ func TestNotifyContinuesAfterChannelFailureAndLogs(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&logs, nil))
 	failing := &recordingChannel{name: "failing", err: assert.AnError}
 	succeeding := &recordingChannel{name: "succeeding"}
-	svc := notifications.NewService(enabledSettings(true), logger, failing, succeeding)
+	svc := notifications.NewService(enabledSettings(true), logger, time.Now, failing, succeeding)
 
 	event := tenantEvent(41)
 	event.Priority = notifications.PriorityHigh

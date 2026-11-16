@@ -70,9 +70,6 @@ import (
 // IssueMFAEnrollmentToken and ParseAccessToken, TokenAuth.ParseAccessJWT and
 // the access-token expiry in AccountAuthentication.ValidateSessionTokens.
 var moduleLiveClockBudget = map[string]int{
-	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
-	// PickupBaselineReader method names no day.
-	"modules/careplan": 1,
 	// service.enqueueLetterRetry: the nanosecond only makes each retry's
 	// idempotency key unique; a pinned clock would give two retries one key
 	// and the outbox would swallow the second as a duplicate.
@@ -96,7 +93,6 @@ var moduleLiveClockBudget = map[string]int{
 	// Scheduler.waitUntilNextMinute: the timer that aligns the minute tick
 	// with the wall clock. A pinned clock would stop both.
 	"modules/schedulerruntime": 11,
-	"workflows/parentportal":   19,
 }
 
 // moduleLiveClockValueBudget caps, per owner directory, the references to the
@@ -117,17 +113,12 @@ var moduleLiveClockBudget = map[string]int{
 // Seed: measured 2026-11-16 on development 77542c3af3, after the nine owner
 // slices of #7104 (111 references in 28 owners, ADR 0272); a mismatch prints
 // the measured values.
-var moduleLiveClockValueBudget = map[string]int{
-	"modules/carecontract":     1,
-	"modules/careplan":         16,
-	"modules/communication":    6,
-	"modules/delivery":         5,
-	"modules/enrollment":       24,
-	"modules/identityaccess":   1,
-	"modules/parentbilling":    5,
-	"modules/schedulerruntime": 1,
-	"workflows/parentportal":   3,
-}
+//
+// Care Plan (16), Communication (6), Delivery (5) and Scheduler Runtime (1)
+// receive their clocks from the roots since ADR 0277 (28 to 0); Care Plan's
+// pickup baselines read the day of their composition, so its last direct
+// call goes too.
+var moduleLiveClockValueBudget = map[string]int{}
 
 const calendarImportPath = "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 

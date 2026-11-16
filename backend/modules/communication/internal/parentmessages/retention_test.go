@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,27 +19,27 @@ func (w retentionWindow) ParentMessageRetentionDays(context.Context) (int, error
 }
 
 type recordingRetentionStore struct {
-	cutoff time.Time
-	calls  int
+	retentionDays int
+	calls         int
 }
 
-func (s *recordingRetentionStore) DeleteMessagesBefore(_ context.Context, cutoff time.Time) (int64, int64, error) {
+func (s *recordingRetentionStore) DeleteMessagesBefore(_ context.Context, retentionDays int) (int64, int64, error) {
 	s.calls++
-	s.cutoff = cutoff
+	s.retentionDays = retentionDays
 	return 4, 1, nil
 }
 
 func TestParentMessageRetentionDeletesBeforeTheRecordedWindow(t *testing.T) {
 	t.Parallel()
 	store := &recordingRetentionStore{}
-	now := time.Date(2026, time.October, 14, 2, 0, 0, 0, time.UTC)
 
-	result, err := Retention{Store: store, Settings: retentionWindow{days: 365}, Now: func() time.Time { return now }}.
+	result, err := Retention{Store: store, Settings: retentionWindow{days: 365}}.
 		CleanupExpiredMessages(context.Background())
 
 	require.NoError(t, err)
 	assert.Equal(t, RetentionResult{MessagesDeleted: 4, ThreadsDeleted: 1, RetentionDays: 365}, result)
-	assert.Equal(t, time.Date(2025, time.October, 14, 2, 0, 0, 0, time.UTC), store.cutoff)
+	// The store counts the recorded window on the database clock (ADR 0277).
+	assert.Equal(t, 365, store.retentionDays)
 }
 
 func TestParentMessageRetentionNeverDeletesOnAnUnknownWindow(t *testing.T) {

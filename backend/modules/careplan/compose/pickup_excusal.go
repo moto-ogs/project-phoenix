@@ -33,8 +33,8 @@ type PickupExcusalDependencies struct {
 }
 
 func NewPickupAutoExcusal(deps PickupExcusalDependencies) (careplan.PickupAutoExcusal, error) {
-	if deps.DB == nil || deps.Records == nil || deps.Baselines == nil || deps.Blocks == nil {
-		return nil, errors.New("pickup excusal: database, records, baselines, and block commands are required")
+	if deps.DB == nil || deps.Records == nil || deps.Baselines == nil || deps.Blocks == nil || deps.Today == nil {
+		return nil, errors.New("pickup excusal: database, records, baselines, block commands, and clock are required")
 	}
 	return application.NewPickupAutoExcusal(application.NewPickupExcusalRows(deps.Records), deps.Baselines,
 		deps.Blocks, deps.Preview, deps.Extensions, excusalTransaction{db: deps.DB}, deps.Today), nil

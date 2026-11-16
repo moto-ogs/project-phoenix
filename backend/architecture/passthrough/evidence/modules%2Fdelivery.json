@@ -226,7 +226,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *usageService) ReportStaff(ctx context.Context, accountID int64) error {\n\tif err := validateUsage(accountID, deliveryModels.PushPortalStaff); err != nil {\n\t\treturn err\n\t}\n\treturn s.repo.RecordSeen(ctx, tenant.FromContext(ctx), accountID, deliveryModels.PushPortalStaff)\n}",
+      "evidence": "func (s *usageService) ReportStaff(ctx context.Context, accountID int64) error {\n\tif err := validateUsage(accountID, deliveryModels.PushPortalStaff); err != nil {\n\t\treturn err\n\t}\n\treturn s.repo.RecordSeen(ctx, tenant.FromContext(ctx), accountID, deliveryModels.PushPortalStaff, s.now())\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/internal/pwa/usageService.ReportStaff",
       "owner": "modules/delivery"

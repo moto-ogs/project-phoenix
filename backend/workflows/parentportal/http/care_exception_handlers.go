@@ -292,7 +292,7 @@ func (rs *Resource) listCareExceptions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	from, to, err := parseSickDayRange(r)
+	from, to, err := parseSickDayRange(r, timezone.DateFromTime(rs.Now()))
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

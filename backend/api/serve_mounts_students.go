@@ -223,12 +223,12 @@ func mountStudentRoutes(
 			CareLifecycleService:   schedules.Lifecycle, CareResumption: resumption, CareExitRestoration: owners.NewCarePlanRestoration(schedules.Lifecycle, requests.CareOfferings, calendar.CalendarDateClock(now)),
 			CareRequestReviews: careReviews,
 			CareRequestService: requests.CareRequests, FollowCohortChanges: studentCohortChanges(cohorts),
-			CompanionService:             companions,
-			DocumentStorage:              NewStudentDocumentStorage(),
-			ExcusedRequestService:        requests.Excused,
-			LockTemplateRecurrence:       planning.Planning.RecurrenceLock.LockRecurrenceWrites,
-			Logger:                       logger.With("handler", "students"),
-			MasterDataReviewService:      requests.MasterData,
+			CompanionService:        companions,
+			DocumentStorage:         NewStudentDocumentStorage(),
+			ExcusedRequestService:   requests.Excused,
+			LockTemplateRecurrence:  planning.Planning.RecurrenceLock.LockRecurrenceWrites,
+			Logger:                  logger.With("handler", "students"),
+			MasterDataReviewService: requests.MasterData, Now: now,
 			OfferingChangeService:        requests.CareOfferings,
 			OfferingPickupTimes:          requests.CareOfferings,
 			OfferingSourceResyncer:       studentClassResyncer,
@@ -334,9 +334,10 @@ func newEnrollmentResource(
 		nativeUploads.UploadFiles{},
 		enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation,
 			SavepointRollback: func(err error) bool { return errors.Is(err, tenant.ErrSavepointRollback) }},
+		now,
 		owners.NewEnrollmentBookings(now),
 	)
-	resource.ListExportService, resource.Now = renderer, now
+	resource.ListExportService = renderer
 	resource.Uploads = enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(now), reads: flows.Uploads}
 	resource.UploadList = flows.Uploads
 	resource.FamilyChildren = flows.Intake

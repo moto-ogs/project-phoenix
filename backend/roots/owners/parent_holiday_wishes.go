@@ -1,6 +1,8 @@
 package owners
 
 import (
+	"time"
+
 	"context"
 	"slices"
 
@@ -58,9 +60,9 @@ func (a parentHolidayAnnouncements) AnnouncedHolidayRegistrations(ctx context.Co
 
 // NewParentHolidayAccountProofs binds the prefill's proof of the signed-in
 // account (ADR 0216 point 2) to Enrollment, which seals it with the field
-// cipher of the holiday registration.
-func NewParentHolidayAccountProofs(health enrollmentOwner.HolidayHealthCipher) parentportal.HolidayAccountProofs {
-	return enrollmentCompose.NewHolidayParentAccountProofs(health)
+// cipher of the holiday registration; now dates the proof.
+func NewParentHolidayAccountProofs(health enrollmentOwner.HolidayHealthCipher, now func() time.Time) parentportal.HolidayAccountProofs {
+	return enrollmentCompose.NewHolidayParentAccountProofs(health, now)
 }
 
 // HolidayRegistrationOrganizations names Träger for the holiday

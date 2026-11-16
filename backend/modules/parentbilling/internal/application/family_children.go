@@ -58,12 +58,14 @@ func NewFamilyChildren(store FamilyChildrenStore, contracts parentbilling.CareCo
 }
 
 // NewParentFamilyChildren builds the parents' statement alone; it reads no
-// contract, because the parents portal checked the reader's contract.
+// contract, because the parents portal checked the reader's contract, and
+// no clock: only the office's list reads the day, and it refuses to run
+// without the contracts.
 func NewParentFamilyChildren(store FamilyChildrenStore) *FamilyNumbers {
 	if store == nil {
 		panic("parent billing: the store is required")
 	}
-	return &FamilyNumbers{store: store, today: calendar.TodayDate}
+	return &FamilyNumbers{store: store}
 }
 
 // errOfficeNotConfigured reports the parents' build asked for the office.

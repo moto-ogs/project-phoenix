@@ -65,9 +65,10 @@ func TestListPublicPhasesHandler_DoesNotLeakOtherTenantPhases(t *testing.T) {
 
 	resource := enrollmentAPI.NewResource(
 		nil, nil, nil, nil,
-		NewTestPhases(TestPhaseDependencies{Records: NewTestModule(), Offerings: phaseOfferings{}, LockTemplateRecurrence: func(context.Context) error { return nil }, Resyncer: &recordingSourcedTemplateResyncer{}}),
+		NewTestPhases(TestPhaseDependencies{
+			Now: time.Now, Records: NewTestModule(), Offerings: phaseOfferings{}, LockTemplateRecurrence: func(context.Context) error { return nil }, Resyncer: &recordingSourcedTemplateResyncer{}}),
 		nil, nil, nil, nil, nil, nil, dbPublicSchools{db: db},
-		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation})
+		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, time.Now)
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/phases/public/%s", targetSchool.Slug), nil)
 	req = req.WithContext(testpkg.WithPackageTenantRuntime(req.Context()))
 	w := httptest.NewRecorder()

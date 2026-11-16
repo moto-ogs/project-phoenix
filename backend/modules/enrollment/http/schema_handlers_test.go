@@ -163,6 +163,7 @@ func (m *mockFormSchemaService) PublishFormVersion(_ context.Context, in capabil
 // db is nil so runInTenantTx short-circuits to the closure body.
 func buildSchemaRouter(svc capability.FormSchemaAdministration) chi.Router {
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, FormSchemaService: svc}
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))

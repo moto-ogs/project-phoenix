@@ -63,6 +63,7 @@ var (
 )
 
 func NewSignatures(store ContractStore, ports SignaturePorts, clock Clock, contracts *Contracts) *Signatures {
+	requireClock(clock, "signatures")
 	if store == nil || ports.Ledger == nil || ports.Links.Tokens == nil || ports.Links.Fingerprint == nil || ports.Sender == nil || ports.Post == nil || ports.Runtime == nil ||
 		ports.Holidays == nil || ports.Families == nil {
 		panic("care contract: the store, the ledger, the tokens, the sender, the post, the runtime, the school holidays and the family numbers are required")

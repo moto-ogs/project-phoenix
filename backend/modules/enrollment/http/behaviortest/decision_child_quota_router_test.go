@@ -227,6 +227,7 @@ func setupManualEnrollmentRouter(t *testing.T) manualEnrollmentRouter {
 	decisions := newOfferingGuardDecisions(repos, reposCare, reposTimetable, false, repos.Enrollment(), guardianAccess, studentEnrollment, bookings, today)
 	decision := enrollmentAPI.NewDecisionService(enrollmentCompose.PublicDecisions(decisions))
 	requests := newFixtureRequestRoot(owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
+		Now:      func() time.Time { return requestTestToday.BerlinMidnight().Add(10 * time.Hour) },
 		Requests: repos.Enrollment(), Children: repos.Enrollment(), Guardians: repos.Enrollment(),
 		CareOfferingRepo: enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan), Catalog: repos.Enrollment(),
 		SchoolRepo: capabilitySchools{schools: reposSchools.School}, RateLimitRepo: repos.Enrollment(),
@@ -237,7 +238,7 @@ func setupManualEnrollmentRouter(t *testing.T) manualEnrollmentRouter {
 	resource := enrollmentAPI.NewResource(
 		nil, nil, requests, nil, nil, decision, nil, nil, nil,
 		nil, nil, nil,
-		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation})
+		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, func() time.Time { return requestTestToday.BerlinMidnight().Add(10 * time.Hour) })
 	router := testpkg.TenantRuntimeMiddleware(t, db)(resource.Router(api.TenantSessionChain))
 
 	return manualEnrollmentRouter{db: db, ctx: ctx, router: router, phase: phase, reviewer: reviewer}

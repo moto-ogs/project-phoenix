@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	offeringContract "github.com/moto-ogs/project-phoenix/modules/enrollment/offeringcontract"
 
@@ -40,6 +41,7 @@ func newChangeRequestServiceForTestWithAuthorizer(
 	repoFactoryCare := env.reposCare
 	repoFactorySchools := env.reposSchools
 	return newTestChangeRequestService(owners.EnrollmentChangeRequestSources{
+		Now:                 time.Now,
 		Bookings:            requestTestBookingCommands(),
 		Requests:            repoFactory.Enrollment(),
 		Children:            repoFactory.Enrollment(),
@@ -119,6 +121,7 @@ func newChangeRequestServiceWithDecisionAndIntakeForTest(
 ) enrollmentAPI.ChangeRequestService {
 	t.Helper()
 	cfg := owners.EnrollmentChangeRequestSources{
+		Now:                 time.Now,
 		Bookings:            requestTestBookingCommands(),
 		Requests:            requests,
 		Children:            env.repos.Enrollment(),
@@ -205,6 +208,7 @@ func TestNewChangeRequestService_ParentsURLRequired(t *testing.T) {
 
 	assert.PanicsWithValue(t, "PARENTS_URL is required", func() {
 		newTestChangeRequestService(owners.EnrollmentChangeRequestSources{
+			Now:         time.Now,
 			Bookings:    requestTestBookingCommands(),
 			FrontendURL: "http://localhost:3000",
 		})
@@ -215,6 +219,7 @@ func TestChangeRequestService_CorrectApprovedChildData_RequiresReason(t *testing
 	t.Parallel()
 
 	svc := newTestChangeRequestService(owners.EnrollmentChangeRequestSources{
+		Now:        time.Now,
 		Bookings:   requestTestBookingCommands(),
 		ParentsURL: "http://parents.localhost:3000",
 	})
@@ -1776,6 +1781,7 @@ func TestChangeRequestService_PreservesReadFailures(t *testing.T) {
 	} {
 		t.Run(tc.operation+"/"+tc.fail, func(t *testing.T) {
 			svc := newTestChangeRequestService(owners.EnrollmentChangeRequestSources{
+				Now:      time.Now,
 				Bookings: requestTestBookingCommands(),
 				Requests: failingChangeRequestReader{ChangeRequestRecords: env.config.Requests.(enrollmentCompose.ChangeRequestRecords), fail: tc.fail},
 				Children: env.config.Children, Settings: env.settings,

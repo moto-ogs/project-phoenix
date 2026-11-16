@@ -30,6 +30,7 @@ func gatedFutureRenewal(t *testing.T) (*futureRenewal, enrollmentNative.PhaseAdm
 	decision := newDecisionServiceForTestWithBookings(t, r.env.rolloverTestEnv, bookings, nil, lock, nil, nil)
 	r.env = &decisionTestEnv{rolloverTestEnv: r.env.rolloverTestEnv, decision: decision, bookings: bookings}
 	phases := NewTestPhases(TestPhaseDependencies{
+		Now:                    time.Now,
 		Records:                r.env.repos.Enrollment(),
 		Offerings:              phaseOfferings{rows: newCareOfferingFixtures(r.env.reposCare.CarePlan)},
 		LockTemplateRecurrence: lock,

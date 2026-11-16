@@ -116,6 +116,9 @@ func traegerPortalRoutes(t *testing.T, db *bun.DB, identity TraegerPortalIdentit
 // today, the day clock the serving root binds to its real clock.
 func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date) http.Handler {
 	t.Helper()
+	// The instant clock stays the real one: the contract and billing routes
+	// compare their stamps with PostgreSQL's now(), as before #7104.
+	now := time.Now
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
@@ -135,7 +138,7 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	require.NoError(t, err)
 	portal, err := NewTraegerPortalHTTP(identity, organizations, owners.MustNewPeopleDirectory(database), membership,
 		TraegerAudit{Trail: audit.AccessTrail, Log: audit.DataAccessLog}, settings, testHealthCipher(), days,
-		holidayTraegerMail{delivery: delivery.Module}, holidayMailStates{mails: delivery.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics.Statistics, today, nil,
+		holidayTraegerMail{delivery: delivery.Module}, holidayMailStates{mails: delivery.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics.Statistics, today, now,
 		owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings))
 	require.NoError(t, err)
 	router := chi.NewRouter()
@@ -149,13 +152,13 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	require.NoError(t, err)
 	bankCipher, err := BankDataCipher(testpkg.TestBankDataKeys, "")
 	require.NoError(t, err)
-	mountParentBillingRoutes(router, router, organizations, settings, schoolSettings.Settings, presence, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, testHealthCipher(), bankCipher, days, today, slog.Default())
+	mountParentBillingRoutes(router, router, organizations, settings, schoolSettings.Settings, presence, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, testHealthCipher(), bankCipher, days, today, now, slog.Default())
 	mountTraegerClosingDayRoutes(router, owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings), organizations,
 		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, today)
 	mountHolidayClosureNotificationRoutes(router, router, organizations,
 		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, slog.Default(), today)
 	mountCareContractRoutes(router, organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog,
-		owners.NewCareContractNoticeAddressees(owners.MustNewPeopleDirectory(database), identity), owners.CareContractTestHolidays{}, "http://parents.localhost:3000", today, nil)
+		owners.NewCareContractNoticeAddressees(owners.MustNewPeopleDirectory(database), identity), owners.CareContractTestHolidays{}, "http://parents.localhost:3000", today, now)
 	return router
 }
 

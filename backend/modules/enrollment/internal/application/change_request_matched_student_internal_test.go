@@ -67,7 +67,7 @@ func TestApprovalAuthorityBatchesRolloverOriginsAndReusesIdentities(t *testing.T
 				}
 			}
 			hold := &stubReEnrollAuthorizer{granted: true}
-			svc := NewChangeRequests(ChangeRequestDependencies{Settings: intakeSettingsFake{}, Requests: store, Children: store, LateInvites: store, LateInviteIdentities: store, GuardianHold: hold, Decisions: &Decisions{}, ParentsURL: "http://localhost"})
+			svc := NewChangeRequests(ChangeRequestDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Requests: store, Children: store, LateInvites: store, LateInviteIdentities: store, GuardianHold: hold, Decisions: &Decisions{}, ParentsURL: "http://localhost"})
 			require.NoError(t, svc.holdApprovalAuthority(context.Background(), run))
 			require.Len(t, store.batches, 2)
 			require.Len(t, store.batches[0], count)
@@ -206,7 +206,8 @@ func newMatchedStudentFixture(audience string, resolved *int64, collision bool) 
 	children := &stubMatchedStudentChildRepo{}
 	requests := &stubMatchLockRequestRepo{has: collision}
 	auth := &stubReEnrollAuthorizer{granted: true}
-	svc := NewChangeRequests(ChangeRequestDependencies{Settings: intakeSettingsFake{},
+	svc := NewChangeRequests(ChangeRequestDependencies{
+		Now: enrollmentTestClock, Settings: intakeSettingsFake{},
 		Requests:     requests,
 		Children:     children,
 		Students:     &stubMatchStudentRepo{matchID: resolved, exists: resolved != nil},

@@ -313,7 +313,7 @@ func newTenantBatchTestSchedulerWithTenantRunner(
 	retryable func(error) bool,
 ) *Scheduler {
 	t.Helper()
-	return newScheduler(ports.WorkerDependencies{
+	return newScheduler(ports.WorkerDependencies{Now: time.Now,
 		Logger:        slog.New(slog.DiscardHandler),
 		TenantRuntime: scriptedTenantRuntime(withinTenant, retryable),
 		Tracer: ports.WorkerTracer{

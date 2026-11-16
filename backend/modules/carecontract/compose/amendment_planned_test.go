@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -83,7 +84,7 @@ func TestPublicChangeBeforeAPlannedVersionHoldsUntilItAndEveryDayHasOneVersion(t
 	conclusion := compose.NewConclusion(
 		compose.ContractPorts{Holidays: holidaysDouble{}, Letterheads: letterheadDouble{}, Post: &postDouble{}, Runtime: runtimeDouble{}, Access: school,
 			Ledger: ledgerDouble{}, Links: testSigningLinks()},
-		compose.IntakePorts{Schools: school, Applications: school, Bookings: school, Access: school, Runtime: runtimeDouble{}, Modes: modesDouble{}, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}}, nil)
+		compose.IntakePorts{Schools: school, Applications: school, Bookings: school, Access: school, Runtime: runtimeDouble{}, Modes: modesDouble{}, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}}, time.Now)
 
 	run, err := conclusion.AmendFromBookings(ctx, organization)
 	require.NoError(t, err)

@@ -339,10 +339,16 @@ var moduleLegacyFileBudgets = map[string]int{
 // guardian profile clock of its retained test suites),
 // modules/schoolcalendar/compose (+7: the notices' day clock and the
 // root's clock of the Records) and modules/schoolsearchview/compose (+1).
+// ADR 0279: the nil default of the clock of workflows/parentportal/compose
+// (+3).
+
+// ADR 0275: the root clock of modules/parentbilling/compose (+2: the time
+// import of the overview's and the exports' clock).
+
 // ADR 0276: the time import of the sick note retention clock in
 // modules/workforce/compose (+1) and the clock field of the staff offboarding
 // with its time import in workflows/staffoffboarding/compose (+2).
-const moduleComposeBudgetTotal = 13654
+const moduleComposeBudgetTotal = 13656
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -366,6 +372,7 @@ const moduleComposeBudgetTotal = 13654
 // ADR 0278 raised modules/peopledirectory/compose,
 // modules/schoolcalendar/compose and modules/schoolsearchview/compose for the
 // import of their clocks (+1 each).
+// ADR 0275 raised modules/parentbilling/compose for the root clock (+2).
 // ADR 0276 raised modules/workforce/compose for the sick note retention clock (+1)
 // and workflows/staffoffboarding/compose for the offboarding clock (+2).
 var moduleComposeBudgets = map[string]int{
@@ -391,8 +398,8 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0073: the parent announcement retention.
 	// ADR 0212: the message attachments (+25).
 	// ADR 0248: the parent-letter child reader constructor (+6).
-	// ADR 0267: +7, the clock fields.
-	"modules/communication/composition":  387,
+	// ADR 0267: +7, the clock fields; ADR 0277: -3, message retention reads the database clock.
+	"modules/communication/composition":  384,
 	"modules/dataimport/compose":         85,
 	"modules/dataimport/compose/imports": 29,
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.
@@ -485,7 +492,8 @@ var moduleComposeBudgets = map[string]int{
 	// Jahresbescheide (+5).
 	// ADR 0218: the handovers of the finance exports (+5).
 	// ADR 0232: the debtor numbers of an import of care contracts (+5).
-	"modules/parentbilling/compose":               134,
+	// ADR 0275: the time import of the root clock (+2).
+	"modules/parentbilling/compose":               136,
 	"modules/parentrequestfeedprojection/compose": 11,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0188: the guardian bank backfill/rekey constructor (+6).
@@ -569,7 +577,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0212: the port of the message attachments (+1).
 	// ADR 0216: the ports of the account's holiday registrations and of its
 	// proof (+2).
-	"workflows/parentportal/compose":     336,
+	// ADR 0279: the nil default of the portal's clock (+3).
+	"workflows/parentportal/compose":     339,
 	"workflows/reminderdelivery/compose": 30,
 	"workflows/sessionend/compose":       59,
 	// ADR 0273: the day clock of the Terminvertretung (+1).

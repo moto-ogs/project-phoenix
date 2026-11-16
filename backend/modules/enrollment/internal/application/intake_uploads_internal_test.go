@@ -29,6 +29,7 @@ func TestUploadField_RequiresPublicGateLateInviteOrEnrolleeAccess(t *testing.T) 
 
 	schemaID := int64(9)
 	svc := NewIntake(IntakeDependencies{
+		Now:      enrollmentTestClock,
 		Settings: intakeSettingsFake{enrollmentEnabled: true},
 		Catalog: uploadGateCatalog{
 			phase: &enrollmentNative.Phase{

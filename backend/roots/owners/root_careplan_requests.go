@@ -112,7 +112,7 @@ func newPickupChangeTeam(reach careplan.PickupChangeTeamReach, env RootEnvironme
 	if reach == nil {
 		return nil
 	}
-	return carePlanCompose.NewPickupChangeTeam(reach, StudentDirectoryReader(), env.Observe.CarePlan, nil)
+	return carePlanCompose.NewPickupChangeTeam(reach, StudentDirectoryReader(), env.Observe.CarePlan, env.Today)
 }
 
 // buildOfferingChanges binds the offering-change review over Enrollment's
@@ -159,7 +159,7 @@ func buildCarePlanDecisions(
 	if err != nil {
 		return CarePlanRequests{}, fmt.Errorf("compose care plan documents: %w", err)
 	}
-	deps.DB = db.Pool()
+	deps.DB, deps.Now = db.Pool(), env.Now
 	documents, err := carePlanCompose.NewStudentDocuments(deps)
 	if err != nil {
 		return CarePlanRequests{}, fmt.Errorf("compose care plan documents: %w", err)

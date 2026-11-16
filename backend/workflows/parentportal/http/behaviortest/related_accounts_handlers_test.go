@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -101,7 +102,7 @@ func newRelAcctRouter(t *testing.T, db *bun.DB, inviteMode string, canRemove boo
 
 		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
 	})
-	rs := parent.NewResource(parent.ResourceConfig{Parent: svc})
+	rs := parent.NewResource(parent.ResourceConfig{Now: time.Now, Parent: svc})
 	return testpkg.TenantRuntimeMiddleware(t, db)(rs.Router(api.ParentSessionChain))
 }
 
@@ -257,7 +258,7 @@ func newRelAcctRouterWithInvites(t *testing.T, db *bun.DB, invites parentService
 
 		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
 	})
-	rs := parent.NewResource(parent.ResourceConfig{Parent: svc})
+	rs := parent.NewResource(parent.ResourceConfig{Now: time.Now, Parent: svc})
 	return testpkg.TenantRuntimeMiddleware(t, db)(rs.Router(api.ParentSessionChain))
 }
 

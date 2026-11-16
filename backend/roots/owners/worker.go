@@ -101,7 +101,7 @@ func NewWorker(
 		return nil, err
 	}
 	return schedulerRuntimeCompose.NewWorker(schedulerPorts.WorkerDependencies{
-		Logger: logger.With("service", "scheduler"), Now: now,
+		Logger: logger.With("service", "scheduler"), Now: clockOrReal(now),
 		Getenv:                       os.Getenv,
 		SchoolRepo:                   schedulerTenantDirectory{schools: organizations, billing: billing, schoolNames: schoolNames},
 		TenantRuntime:                runtime,
@@ -155,7 +155,7 @@ func NewWorker(
 		OverdueBroadcaster:     newSchedulerOverdueBroadcaster(hub),
 		StudentLifecycleRepo:   schedulerStudentLifecycle(NewStudentRootReads(people.Students)), WeekProtocols: NewWeekProtocolEvenings(db, logger, settings, persons, services, reports, schedules, carePlan, timetableRepos, dayLog, now),
 		PayrollDispatch:       workforce.PayrollDispatch.RunDue,
-		ReminderNotifications: reminderNotifications, HolidayGuests: schedulerHolidayGuests(persons, people.Students, organizations, carePlan, accessLog, healthData, calendar.CalendarDateClock(now)), PlannedStaffExits: plannedExits(identity, notifications, people.Staff), CareContractConclusion: careContracts, CareContractReminders: careContractReminders, HolidayClosureNotifications: holidayClosures, StaffQualificationReminders: qualificationRemindersJob(workforce.QualificationReminders), TraegerStaffProofReminders: traegerProofRemindersJob(workforce.TraegerProofReminders, db.UnitOfWork()), SchoolVacations: schoolVacationSync(), TraegerDocumentReadRetention: organizationCompose.NewSharedTraegerDocuments(), BelegRetention: NewBelegRetention(nil), SEPADebitDownloadRetention: parentBillingCompose.NewSEPADebitDownloadRetention(),
+		ReminderNotifications: reminderNotifications, HolidayGuests: schedulerHolidayGuests(persons, people.Students, organizations, carePlan, accessLog, healthData, calendar.CalendarDateClock(now)), PlannedStaffExits: plannedExits(identity, notifications, people.Staff), CareContractConclusion: careContracts, CareContractReminders: careContractReminders, HolidayClosureNotifications: holidayClosures, StaffQualificationReminders: qualificationRemindersJob(workforce.QualificationReminders), TraegerStaffProofReminders: traegerProofRemindersJob(workforce.TraegerProofReminders, db.UnitOfWork()), SchoolVacations: schoolVacationSync(), TraegerDocumentReadRetention: organizationCompose.NewSharedTraegerDocuments(), BelegRetention: NewBelegRetention(calendar.CalendarDateClock(now)), SEPADebitDownloadRetention: parentBillingCompose.NewSEPADebitDownloadRetention(),
 	})
 }
 

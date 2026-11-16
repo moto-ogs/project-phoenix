@@ -130,7 +130,7 @@ type ChildResponse struct {
 	CareEnded bool `json:"care_ended"`
 }
 
-func toChildResponse(c *parentService.ChildSummary) ChildResponse {
+func toChildResponse(c *parentService.ChildSummary, today timezone.Date) ChildResponse {
 	return ChildResponse{
 		StudentID:     strconv.FormatInt(c.StudentID, 10),
 		TenantID:      strconv.FormatInt(c.TenantID, 10),
@@ -142,7 +142,7 @@ func toChildResponse(c *parentService.ChildSummary) ChildResponse {
 		EnrolledUntil: parentResponseDatePointer(c.EnrolledUntil),
 		SchoolName:    c.SchoolName,
 		SchoolSlug:    c.SchoolSlug,
-		CareEnded:     c.CareEnded(timezone.TodayDate()),
+		CareEnded:     c.CareEnded(today),
 	}
 }
 
@@ -176,9 +176,10 @@ func (rs *Resource) listMyChildren(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	today := timezone.DateFromTime(rs.Now())
 	out := make([]ChildResponse, 0, len(children))
 	for _, c := range children {
-		out = append(out, toChildResponse(c))
+		out = append(out, toChildResponse(c, today))
 	}
 
 	common.Respond(w, r, http.StatusOK, out, "Children retrieved")

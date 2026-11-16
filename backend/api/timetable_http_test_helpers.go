@@ -194,7 +194,7 @@ func newTimetableHTTPTestReads(db transactionruntime.Database, r TimetableHTTPTe
 	if err != nil {
 		return nil, nil, err
 	}
-	pickups, err := careplanCompose.NewPickupBaselines(carePlan, approvedOfferings, legacyBookings)
+	pickups, err := careplanCompose.NewPickupBaselines(carePlan, approvedOfferings, legacyBookings, calendar.TodayDate)
 	if err != nil {
 		return nil, nil, err
 	}

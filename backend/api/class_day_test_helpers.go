@@ -160,6 +160,7 @@ func classDayTestReports(
 ) enrollmentOwner.Reports {
 	rMembership := NewSchoolMembershipSuiteRepositories(db)
 	return owners.NewEnrollmentReports(owners.EnrollmentReportSources{
+		Now:   time.Now,
 		Owner: r.Enrollment(), Offerings: enrollmentCompose.NewCareOfferingRecords(rCare.CarePlan), AccessLog: rAudit.DataAccessLog,
 		Students: r.Student, Persons: r.Person, Groups: schoolStructureCompose.NewGroupNames(owners.NewSchoolStructureSuiteRepositories(db).Group), StudentGuardians: r.StudentGuardian,
 		Companions: owners.NewStudentCompanionRepository(rCare.CarePlan), ClassListEntries: owners.NewClassListEntryRosterReader(rMembership.Membership),

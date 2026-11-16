@@ -28,6 +28,7 @@ func followingPhases(t *testing.T, env *decisionTestEnv, today calendar.Date) en
 	pendingWindows, err := owners.ComposePendingWindows(testpkg.NewDatabase(t, env.db))
 	require.NoError(t, err)
 	return NewTestPhases(TestPhaseDependencies{
+		Now:                    time.Now,
 		Records:                env.repos.Enrollment(),
 		Offerings:              phaseOfferings{rows: newCareOfferingFixtures(env.reposCare.CarePlan)},
 		LockTemplateRecurrence: owners.MustNewTimetableRecurrenceLock(testpkg.NewDatabase(t, env.db)).LockRecurrenceWrites,

@@ -47,7 +47,7 @@ func (rs *HolidayPeriodResource) requireHealthWhenAsked(next http.Handler) http.
 
 func (rs *HolidayPeriodResource) recordNamesOf(r *http.Request) holidayRecordNames {
 	schools, _ := r.Context().Value(holidaySchoolNamesKey{}).(map[int64]string)
-	return holidayRecordNames{schools: schools, generatedAt: readClock(rs.Now)}
+	return holidayRecordNames{schools: schools, generatedAt: rs.Now()}
 }
 
 // holidayRecordFile renders the file of one registration. Its name carries

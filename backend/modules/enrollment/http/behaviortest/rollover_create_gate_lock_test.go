@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,6 +32,7 @@ func TestRolloverService_CreatePhaseFromSource_WaitsForPhaseDelete(t *testing.T)
 	env, decision := setupAutoApproveIntegrationEnvWithDecision(t, nil, lock)
 	gatedCatalog := testCareOfferingCatalog(t, env.db, api.WithCareOfferingSettings(env.settings), api.WithCareOfferingRecurrenceLock(lock))
 	env.rolloverSvc = newTestRolloverService(owners.EnrollmentRolloverSources{
+		Now:        time.Now,
 		Bookings:   requestTestBookingCommands(),
 		Phases:     env.repos.Enrollment(),
 		Requests:   env.repos.Enrollment(),
@@ -43,6 +45,7 @@ func TestRolloverService_CreatePhaseFromSource_WaitsForPhaseDelete(t *testing.T)
 		Logger:     slog.Default(),
 	})
 	phases := NewTestPhases(TestPhaseDependencies{
+		Now:                    time.Now,
 		Records:                env.repos.Enrollment(),
 		Offerings:              phaseOfferings{rows: newCareOfferingFixtures(env.reposCare.CarePlan)},
 		LockTemplateRecurrence: lock,
@@ -98,6 +101,7 @@ func TestRolloverService_CreatePhaseFromSource_TakesCollectionLockBeforeGates(t 
 	env.settings.boolValues[settingKeyCollectSchoolClass] = true
 	settings := lockingCollectionSettings{collectionSettings: collectionSettings{settings: env.settings}, db: env.db}
 	phases := NewTestPhases(TestPhaseDependencies{
+		Now:                    time.Now,
 		Records:                env.repos.Enrollment(),
 		Offerings:              phaseOfferings{rows: newCareOfferingFixtures(env.reposCare.CarePlan)},
 		LockTemplateRecurrence: lock,
@@ -107,6 +111,7 @@ func TestRolloverService_CreatePhaseFromSource_TakesCollectionLockBeforeGates(t 
 	})
 	gatedCatalog := testCareOfferingCatalog(t, env.db, api.WithCareOfferingSettings(env.settings), api.WithCareOfferingRecurrenceLock(lock))
 	env.rolloverSvc = newTestRolloverService(owners.EnrollmentRolloverSources{
+		Now:              time.Now,
 		Bookings:         requestTestBookingCommands(),
 		Phases:           env.repos.Enrollment(),
 		Requests:         env.repos.Enrollment(),

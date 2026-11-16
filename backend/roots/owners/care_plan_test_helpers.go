@@ -5,6 +5,7 @@ package owners
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 
@@ -31,8 +32,9 @@ func NewCarePlan(db transactionruntime.Database, students peopledirectory.Capabi
 	}
 	studentLock, studentNotFound := peopleCompose.CareStudentLock(students)
 	capability, err := carePlanCompose.New(carePlanCompose.Dependencies{
-		StudentDirectory: StudentDirectoryReader(),
-		DB:               db.Pool(), Observe: func(carePlanCompose.Observation) {}, AmbientDB: carePlanCompose.TenantAmbientDatabase(db.Pool()),
+		// The suites built over this graph stamp on the real clock, as before.
+		StudentDirectory: StudentDirectoryReader(), Now: time.Now,
+		DB: db.Pool(), Observe: func(carePlanCompose.Observation) {}, AmbientDB: carePlanCompose.TenantAmbientDatabase(db.Pool()),
 		StatusStudents: statusStudents,
 		StatusSlots:    CarePlanStatusSlots(slots),
 		People: carePlanStudentNames(func(ctx context.Context, ids []int64) ([]carePlanPorts.StudentName, error) {

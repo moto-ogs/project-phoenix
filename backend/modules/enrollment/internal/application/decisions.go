@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -46,7 +45,7 @@ func NewDecisions(deps DecisionDependencies) *Decisions {
 		deps.Logger = slog.Default()
 	}
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("enrollment decisions: the clock is required")
 	}
 	if deps.Today == nil {
 		deps.Today = calendar.CalendarDateClock(deps.Now)

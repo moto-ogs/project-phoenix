@@ -92,7 +92,7 @@ func NewHolidayParentAccountProofs(cipher enrollment.HolidayHealthCipher, now fu
 		panic(errHolidayHealthCipherRequired)
 	}
 	if now == nil {
-		now = time.Now
+		panic("enrollment: the parent account proofs need the clock")
 	}
 	return &HolidayParentAccountProofs{cipher: cipher, now: now}
 }

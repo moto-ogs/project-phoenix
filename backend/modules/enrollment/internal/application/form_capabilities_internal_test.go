@@ -16,7 +16,7 @@ import (
 func TestFormCapabilities_GradeDisableMakesSchoolClassIneffective(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{
 		collectGradeLevel:    false,
 		collectSchoolClass:   true,
 		careOfferingsEnabled: true,
@@ -33,7 +33,7 @@ func TestFormCapabilities_GradeDisableMakesSchoolClassIneffective(t *testing.T) 
 func TestFormCapabilities_ResolutionFailureIsReturned(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{
 		errFor: map[string]error{settingCareOfferingsEnabled: errors.New("repository unavailable")},
 	}})
 

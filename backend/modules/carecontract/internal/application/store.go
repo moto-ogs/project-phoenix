@@ -36,16 +36,18 @@ type LetterRenderer interface {
 	RenderContract(letter Letter, filenameBase string) (carecontract.File, error)
 }
 
-// Clock is the instant clock the composition binds (ADR 0239); a nil Now
-// is the real clock.
+// Clock is the instant clock the composition binds from the root (ADR 0239);
+// every constructor that takes one refuses a Clock without Now (ADR 0275).
 type Clock struct {
 	Now func() time.Time
 }
 
-func (c Clock) now() time.Time {
-	now := c.Now
-	if now == nil {
-		now = time.Now
+func (c Clock) now() time.Time { return c.Now() }
+
+// requireClock panics on a Clock without Now: a missing root clock is a
+// wiring error, not the real clock.
+func requireClock(clock Clock, service string) {
+	if clock.Now == nil {
+		panic("care contract " + service + ": the clock is required")
 	}
-	return now()
 }

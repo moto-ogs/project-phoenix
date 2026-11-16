@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -58,7 +59,7 @@ func TestEnrollmentPublicCasesKeepOpenMessagesAndSubjectLive(t *testing.T) {
 		_, updateErr := env.db.NewRaw("UPDATE enrollment.request_children SET first_name = ? WHERE tenant_id = ? AND id = ?", "Committed child name", testpkg.Tenant(t), submitted.Children[0].ID).Exec(ctx)
 		require.NoError(t, updateErr)
 	}}
-	service := newTestChangeRequestService(owners.EnrollmentChangeRequestSources{Requests: env.repos.Enrollment(), Children: children, Guardians: env.repos.Enrollment(), Catalog: env.repos.Enrollment(), CareOfferingRepo: compose.NewCareOfferingRecords(env.reposCare.CarePlan), Settings: f.settings.Settings, OutboxEnqueuer: env.outbox, ParentsURL: "http://parents.localhost:3000", FrontendURL: "http://localhost:3000"})
+	service := newTestChangeRequestService(owners.EnrollmentChangeRequestSources{Now: time.Now, Requests: env.repos.Enrollment(), Children: children, Guardians: env.repos.Enrollment(), Catalog: env.repos.Enrollment(), CareOfferingRepo: compose.NewCareOfferingRecords(env.reposCare.CarePlan), Settings: f.settings.Settings, OutboxEnqueuer: env.outbox, ParentsURL: "http://parents.localhost:3000", FrontendURL: "http://localhost:3000"})
 	rows, err := service.ListPublic(ctx, submitted.Request.StatusToken)
 	require.NoError(t, err)
 	require.Len(t, rows, 3)

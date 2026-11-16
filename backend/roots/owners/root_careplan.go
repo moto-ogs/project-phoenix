@@ -154,7 +154,7 @@ func BuildCarePlanSchedules(
 	if err != nil {
 		return CarePlanSchedules{}, fmt.Errorf("compose care lifecycle: %w", err)
 	}
-	pickupBaselines, err := carePlanCompose.NewPickupBaselines(carePlan, approved, authoritative)
+	pickupBaselines, err := carePlanCompose.NewPickupBaselines(carePlan, approved, authoritative, timezone.CalendarDateClock(rows.Now))
 	if err != nil {
 		return CarePlanSchedules{}, err
 	}

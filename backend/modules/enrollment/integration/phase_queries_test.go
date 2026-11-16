@@ -15,7 +15,7 @@ import (
 func TestPhaseCalendarReferencesTenantIsolationAndFailure(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.NewClocked(nil)
+	module := enrollmentCompose.NewClocked(time.Now)
 	var schoolIDs, periodIDs []int64
 	for _, name := range []string{"first school", "second school"} {
 		t.Run(name, func(t *testing.T) {
