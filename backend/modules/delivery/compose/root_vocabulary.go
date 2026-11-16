@@ -96,11 +96,8 @@ var (
 	ErrNoWebPushSubscribers      = notifications.ErrNoWebPushSubscribers
 	ErrNotificationsDisabled     = notifications.ErrDisabled
 	ErrOutsideNotificationWindow = notifications.ErrOutsideActiveWindow
-	// ParentAppointmentCopy is the localized title and body of a parent
-	// appointment notice.
+	// ParentAppointmentCopy and ParentRoomChangedCopy (#7141): localized parent notice copy.
 	ParentAppointmentCopy = notifications.ParentAppointmentCopy
-	// ParentRoomChangedCopy is the localized lock-screen copy of a room
-	// change for the families (#7141).
 	ParentRoomChangedCopy = notifications.ParentRoomChangedCopy
 	// MotoLogoURL and SchoolLogoURL brand the tenant mail.
 	MotoLogoURL   = emailbranding.MotoLogoURL

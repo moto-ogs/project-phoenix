@@ -23,13 +23,7 @@ func (seedRoomChangeNoticeStep) Run(_ context.Context, rt *Runtime) error {
 	if rt.FixedSeeder == nil || len(DemoActivities) == 0 {
 		return fmt.Errorf("fixed seeder not available")
 	}
-	var studentIDs []int64
-	for _, parent := range rt.Parents {
-		if len(parent.StudentIDs) > 0 {
-			studentIDs = parent.StudentIDs
-			break
-		}
-	}
+	studentIDs := firstParentChildren(rt)
 	if len(studentIDs) == 0 {
 		return fmt.Errorf("no parent account with children for the room change")
 	}
@@ -43,10 +37,7 @@ func (seedRoomChangeNoticeStep) Run(_ context.Context, rt *Runtime) error {
 	if len(staffIDs) > 3 {
 		staffIDs = staffIDs[:3]
 	}
-	date := todaySeedDate().AddDays(1)
-	for date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
-		date = date.AddDays(1)
-	}
+	date := nextSeedSchoolDay(todaySeedDate().AddDays(1))
 	body := map[string]any{
 		"date": date.String(), "start_time": "15:00", "end_time": "16:00",
 		"title": name, "room_id": from, "student_ids": studentIDs, "staff_ids": staffIDs,
@@ -88,4 +79,23 @@ func otherSeedRoom(rooms map[string]int64, not int64) int64 {
 		}
 	}
 	return 0
+}
+
+// firstParentChildren are the children of the first parent account that has
+// any.
+func firstParentChildren(rt *Runtime) []int64 {
+	for _, parent := range rt.Parents {
+		if len(parent.StudentIDs) > 0 {
+			return parent.StudentIDs
+		}
+	}
+	return nil
+}
+
+// nextSeedSchoolDay is date, or the Monday after it on a weekend.
+func nextSeedSchoolDay(date seedDate) seedDate {
+	for date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
+		date = date.AddDays(1)
+	}
+	return date
 }
