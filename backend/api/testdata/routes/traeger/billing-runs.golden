@@ -1,5 +1,6 @@
 DELETE /traeger/billing-runs/{id}/carried-corrections/{positionID}
 GET /traeger/billing-runs/
+GET /traeger/billing-runs/export
 GET /traeger/billing-runs/periods
 GET /traeger/billing-runs/{id}
 GET /traeger/billing-runs/{id}/cost-takeovers/{costBearerId}/export

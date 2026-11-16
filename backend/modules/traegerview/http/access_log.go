@@ -21,12 +21,12 @@ import (
 // Every route needs the right „Zugriffsprotokoll lesen“.
 type AccessLogResource struct {
 	overview traegerview.Overview
-	lists    ListRenderer
+	lists    common.ListRenderer
 }
 
 // NewAccessLogResource builds the resource. lists renders the export
 // (#4718).
-func NewAccessLogResource(overview traegerview.Overview, lists ListRenderer) *AccessLogResource {
+func NewAccessLogResource(overview traegerview.Overview, lists common.ListRenderer) *AccessLogResource {
 	if overview == nil || lists == nil {
 		panic("traeger view http: the overview and the list renderer are required")
 	}
@@ -102,7 +102,7 @@ func (rs *AccessLogResource) export(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	format, err := listFormat(r)
+	format, err := common.ParseListFormat(r)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -117,7 +117,7 @@ func (rs *AccessLogResource) export(w http.ResponseWriter, r *http.Request) {
 		renderAccessLogError(w, r, err)
 		return
 	}
-	writeList(w, r, rs.lists, format, accessLogTable(filter, entries))
+	common.WriteList(w, r, rs.lists, format, accessLogTable(filter, entries))
 }
 
 func traegerViewer(w http.ResponseWriter, r *http.Request) (traegerview.Viewer, bool) {
@@ -209,7 +209,7 @@ var accessKindLabels = map[string]string{
 // accessLogTable is the export: one row per read or change, newest first.
 // The head names the filter; the school and the person come from the
 // entries, which carry the names the list shows.
-func accessLogTable(filter traegerview.AccessLogFilter, entries []traegerview.AccessLogEntry) ListTable {
+func accessLogTable(filter traegerview.AccessLogFilter, entries []traegerview.AccessLogEntry) common.ListTable {
 	rows := make([][]string, 0, len(entries))
 	for _, entry := range entries {
 		at := entry.OccurredAt.In(berlin)
@@ -219,20 +219,20 @@ func accessLogTable(filter traegerview.AccessLogFilter, entries []traegerview.Ac
 		})
 	}
 	from, to := filter.From.Format("02.01.2006"), filter.To.Format("02.01.2006")
-	filters := []string{schoolFilterLabel(accessLogSchoolName(filter, entries)), periodLabel(from, to)}
+	filters := []string{common.ListSchoolLabel(accessLogSchoolName(filter, entries)), common.ListPeriodLabel(from, to)}
 	if filter.AccountID > 0 && len(entries) > 0 {
 		filters = append(filters, "Person: "+entries[0].Person)
 	}
 	if label, ok := accessKindLabels[filter.Kind]; ok {
 		filters = append(filters, "Art: "+label)
 	}
-	return ListTable{
+	return common.ListTable{
 		Title: "Zugriffsprotokoll", Subtitle: from + " bis " + to, Filters: filters,
-		Columns: []ListColumn{
+		Columns: []common.ListColumn{
 			{ID: "day", Label: "Datum"}, {ID: "time", Label: "Uhrzeit"}, {ID: "school", Label: "Schule"},
 			{ID: "person", Label: "Person"}, {ID: "kind", Label: "Art"}, {ID: "data", Label: "Daten"},
 		},
-		Rows: rows, Footer: personalDataFooter,
+		Rows: rows, Footer: common.ListPersonalDataFooter,
 		Filename: fmt.Sprintf("zugriffsprotokoll-%s-bis-%s", filter.From, filter.To),
 	}
 }
@@ -250,6 +250,3 @@ func accessLogSchoolName(filter traegerview.AccessLogFilter, entries []traegervi
 	}
 	return "ausgewählte Schule"
 }
-
-// personalDataFooter stands on every page of an export with personal data.
-const personalDataFooter = "Vertraulich. Enthält personenbezogene Daten."

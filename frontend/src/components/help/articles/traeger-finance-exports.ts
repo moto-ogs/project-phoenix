@@ -49,6 +49,13 @@ export function traegerFinanceExportsTopic(): HelpTopic {
           "Geben Sie die Datei an Ihre Kämmerei. Oder lassen Sie moto sie übergeben, siehe „Exporte an Empfänger übergeben“.",
         ],
       },
+      {
+        title: "Läufe und Exportprotokoll herunterladen",
+        steps: [
+          "Wählen Sie `Familien und Zahlung` und dann den Reiter `Exporte`.",
+          "Wählen Sie bei `Dateien je Lauf` oder `Exportprotokoll` den Knopf `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+        ],
+      },
     ],
     result:
       "Die Datei steht im `Exportprotokoll` mit Nummer, Datum und wer sie geholt hat. Beim Lauf steht die letzte Sollstellung. In jeder Monatsrechnung zeigt `Verlauf`, in welchen Dateien sie war.",

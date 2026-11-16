@@ -8,6 +8,11 @@
  * und Steuerdaten. Personendaten werden nie zwischengespeichert; jede Anfrage
  * steht im Zugriffsprotokoll der Schulen. Backend-IDs werden hier zu Strings.
  */
+import {
+  downloadTraegerList,
+  type TraegerListFile,
+  type TraegerListFormat,
+} from "./traeger-list-export";
 import { traegerRequest } from "~/lib/traeger-api";
 import {
   mapStaffProof,
@@ -445,6 +450,13 @@ const recordPath = (id: string, suffix = "") =>
 
 export async function fetchStaffOverview(): Promise<StaffOverview> {
   return mapStaffOverview(await traegerRequest<BackendOverview>(`${BASE}`));
+}
+
+/** Die Liste der Akten als Datei; der Download steht im Zugriffsprotokoll. */
+export function downloadStaffRecordList(
+  format: TraegerListFormat,
+): Promise<TraegerListFile> {
+  return downloadTraegerList(`${BASE}/export`, format);
 }
 
 export async function fetchStaffRecord(id: string): Promise<StaffRecordDetail> {

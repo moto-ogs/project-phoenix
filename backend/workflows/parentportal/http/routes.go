@@ -31,6 +31,16 @@ func (rs *Resource) mountAccountRoutes(r chi.Router, authRateLimiter func(http.H
 		r.Put("/{type}", rs.setNotificationPreference)
 	})
 
+	// The bell (#7140): the notification feed of this account across every
+	// school of the family. Account from the claims; each read keeps only
+	// the entries about children it still holds parent_portal.access for.
+	r.Route("/me/notifications/feed", func(r chi.Router) {
+		r.Get("/", rs.listNotificationFeed)
+		r.Get("/unread-count", rs.notificationFeedUnreadCount)
+		r.Post("/read-all", rs.markAllNotificationFeedRead)
+		r.Post("/{id}/read", rs.markNotificationFeedEntryRead)
+	})
+
 	r.Get("/me/profile", rs.getMyProfile)
 	r.Put("/me/profile", rs.updateMyProfile)
 	r.Get("/me/children", rs.listMyChildren)

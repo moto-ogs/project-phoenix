@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Fast local gate for the complete PR diff: secrets, guidance, lint, types and
-# unused code (knip).
+# Fast local gate for the complete PR diff: secrets, guidance, generated error
+# codes, lint, types and unused code (knip).
 # Expensive whole-repo analysis (build, ratchets, deadcode, architecture,
 # react-doctor) and tests run in CI; license and vulnerability scans nightly.
 # PHX_PREPUSH=skip skips the gate; CI still checks the push.
@@ -60,6 +60,7 @@ frontend=false
 context=false
 env_sync=false
 hooks=false
+error_codes=false
 # Keep the diff and child-tool scratch files off a quota-limited system /tmp.
 # Git metadata also works in linked worktrees without dirtying the checkout.
 workspace_parent=$(git rev-parse --path-format=absolute --git-path pre-push-cache)
@@ -86,12 +87,16 @@ while IFS= read -r -d '' file; do
     scripts/pre-push*|scripts/check-secrets*|.gitleaks*|scripts/run-go-toolchain.sh|scripts/dev-native*|scripts/go-package-workers.sh|scripts/total-memory-gb.sh|lefthook.yml|.github/*|scripts/test-*) hooks=true ;;
     .agents/*|.claude/*|.codex/*|scripts/check-agent-context*) context=true ;;
   esac
+  # Same paths as the error-codes filter in main.yml; the check takes < 1 s.
+  case "$file" in
+    error-registry/*|scripts/error-registry.mjs|scripts/generate-error-codes*|backend/api/common/error_codes*.generated.go|frontend/src/lib/error-codes.generated.ts|frontend/src/lib/error-codes/*.generated.ts|.github/workflows/lint.yml) error_codes=true ;;
+  esac
 done < "$changed"
 if [[ "$worktree" == false && -n "$(git status --porcelain --untracked-files=normal)" ]]; then
   echo 'Pre-push requires a clean working tree. Commit or stash changes, then push again.' >&2
   exit 1
 fi
-printf 'Pre-push %s..%s: backend=%s frontend=%s context=%s hooks=%s\n' "$merge_base" "$head" "$backend" "$frontend" "$context" "$hooks"
+printf 'Pre-push %s..%s: backend=%s frontend=%s context=%s hooks=%s error-codes=%s\n' "$merge_base" "$head" "$backend" "$frontend" "$context" "$hooks" "$error_codes"
 export PATH="$root/.devbox/nix/profile/default/bin:$PATH"
 export GOTOOLCHAIN=local
 export CGO_ENABLED=${CGO_ENABLED:-0}
@@ -126,6 +131,10 @@ if [[ "$context" == true || "$hooks" == true ]]; then
 fi
 if [[ "$hooks" == true ]]; then
   cached hook-tests node --test scripts/pre-push.test.mjs scripts/check-secrets.test.mjs
+fi
+if [[ "$error_codes" == true ]]; then
+  quality_step error-code-tests node --test scripts/generate-error-codes.test.mjs
+  quality_step error-codes node scripts/generate-error-codes.mjs --check
 fi
 if [[ "$env_sync" == true ]]; then
   quality_step env-sync bash scripts/env-check.sh

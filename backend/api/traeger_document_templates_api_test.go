@@ -124,6 +124,13 @@ func TestTraegerDocumentTemplatesStartWithTheStandardAndKeepEveryVersion(t *test
 	require.Len(t, detail.Versions, 2)
 	assert.Equal(t, hardtInvoice, detail.Versions[1].documentTemplateBody, "the first version is kept as it was")
 
+	// The list as a file (#4718).
+	export := traegerJSON(t, router, office.token, http.MethodGet, documentTemplatesPath+"/export", nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Contains(t, export.Body.String(), "Bestätigung und Rechnung;Standardvorlage;\n")
+	assert.Contains(t, export.Body.String(), "\nRechnung;Eigene, Version 2;")
+	assertTraegerListFormats(t, router, office.token, documentTemplatesPath+"/export", "vorlagen")
+
 	// A version never changes, not even for the administrative role.
 	_, err := db.ExecContext(context.Background(), `UPDATE platform.traeger_document_templates SET body = 'x'
 		WHERE organization_id = ? AND kind = 'rechnung' AND version = 1`, office.organization)

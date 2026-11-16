@@ -54,8 +54,9 @@ func (t *TraegerStaff) planningScene(ctx context.Context, actor workforce.Traege
 // PlanningWeek shows the week of weekStart (moved to its Monday; empty is
 // this week) for every
 // Personalakte with a live Einsatzort. A school that cannot be read is
-// listed as unreached; the others still show.
-func (t *TraegerStaff) PlanningWeek(ctx context.Context, actor workforce.TraegerStaffActor, weekStart calendar.Date) (workforce.TraegerPlanningWeek, error) {
+// listed as unreached; the others still show. view names the access entry
+// of every school, the page or its export.
+func (t *TraegerStaff) PlanningWeek(ctx context.Context, actor workforce.TraegerStaffActor, weekStart calendar.Date, view string) (workforce.TraegerPlanningWeek, error) {
 	if t.sites == nil {
 		return workforce.TraegerPlanningWeek{}, errors.New("workforce traeger planning: the Dienstplan of the schools is not bound")
 	}
@@ -77,7 +78,7 @@ func (t *TraegerStaff) PlanningWeek(ctx context.Context, actor workforce.Traeger
 			continue
 		}
 		err := t.ports.Runtime.WithinSchool(ctx, school.ID, func(ctx context.Context) error {
-			return t.readPlanningSchool(ctx, actor, school, links, people, monday, &week.Rules)
+			return t.readPlanningSchool(ctx, actor, view, school, links, people, monday, &week.Rules)
 		})
 		if err != nil {
 			t.warn("traeger planning week: school unreached", "school_id", school.ID, "error", err)
@@ -105,10 +106,11 @@ func linksBySchool(records []domain.TraegerStaffRecord, people map[int64]*planni
 	return result
 }
 
-// readPlanningSchool reads one school of the week in its tenant transaction.
+// readPlanningSchool reads one school of the week in its tenant transaction
+// and logs the read as accessView.
 // Each school adds its own share of the Soll, without its own holidays and
 // closing days (ADR 0242 point 2).
-func (t *TraegerStaff) readPlanningSchool(ctx context.Context, actor workforce.TraegerStaffActor, school workforce.TraegerStaffSchool,
+func (t *TraegerStaff) readPlanningSchool(ctx context.Context, actor workforce.TraegerStaffActor, accessView string, school workforce.TraegerStaffSchool,
 	links []planningLink, people map[int64]*planningPerson, monday calendar.Date, rules *workforce.TraegerPlanningRules,
 ) error {
 	live, err := t.liveStaff(ctx, links)
@@ -117,7 +119,7 @@ func (t *TraegerStaff) readPlanningSchool(ctx context.Context, actor workforce.T
 	}
 	staffIDs := slices.Sorted(maps.Keys(live))
 	if err := t.ports.Access.RecordTraegerStaffAccess(ctx, workforce.TraegerStaffAccess{
-		OrganizationID: actor.OrganizationID, AccountID: actor.AccountID, View: workforce.TraegerStaffViewPlanning,
+		OrganizationID: actor.OrganizationID, AccountID: actor.AccountID, View: accessView,
 		Rows: len(live), StaffIDs: staffIDs,
 	}); err != nil {
 		return err

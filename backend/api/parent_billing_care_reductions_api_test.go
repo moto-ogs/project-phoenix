@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -343,9 +344,13 @@ func TestCareReductionsNeedTheRightStayWithTheTraegerAndAreRecorded(t *testing.T
 		rec := traegerJSON(t, f.traeger, answer.AccessToken, request.method, request.path, request.body)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "%s %s without the right: %s", request.method, request.path, rec.Body.String())
 	}
+	rec = traegerJSON(t, f.traeger, answer.AccessToken, http.MethodGet, careEvidencesPath+"/export", nil)
+	assert.Equal(t, http.StatusForbidden, rec.Code, "the file of the evidences without the right: %s", rec.Body.String())
 
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Ermäßigungen Grenze Fremd", identityaccess.TraegerRoleBilling)
 	testpkg.OwnTraegerCareContracts(t, f.db, foreign.organization)
+	assert.NotContains(t, strings.Join(billingListCSV(t, f.traeger, foreign.token, careEvidencesPath+"/export"), "\n"), "Stufe 3",
+		"the file of another Träger holds no evidence of this one")
 	for _, request := range requests[4:] {
 		rec := traegerJSON(t, f.traeger, foreign.token, request.method, request.path, request.body)
 		assert.Contains(t, []int{http.StatusNotFound, http.StatusBadRequest}, rec.Code,
@@ -373,6 +378,18 @@ func TestCareReductionsNeedTheRightStayWithTheTraegerAndAreRecorded(t *testing.T
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_evidence_events
 		WHERE care_contract_id = ? AND actor_account_id IS NULL`, contract).Scan(context.Background(), &anonymous))
 	assert.Zero(t, anonymous, "every entry of the trail names the account")
+
+	// #4718: the evidences as a file. Each download reads like the page and
+	// stands in the trail of the contract.
+	lines := billingListCSV(t, f.traeger, f.office.token, careEvidencesPath+"/export")
+	assert.Equal(t, "Nachname;Vorname;Schule;Nachweis;Einkommensstufe;Gültig;Beleg;Geprüft am", lines[0])
+	assert.Contains(t, strings.Join(lines, "\n"), ";Einkommensstufe;Stufe 3;")
+	assertTraegerListFormats(t, f.traeger, f.office.token, careEvidencesPath+"/export", "nachweise-ermaessigung")
+	var reads int
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_evidence_events
+		WHERE organization_id = ? AND care_contract_id = ? AND action = 'read'`, f.office.organization, contract).
+		Scan(context.Background(), &reads))
+	assert.Equal(t, 5, reads, "two reads of the page and three downloads")
 }
 
 // The rule list and the evidence page read the same statements for any

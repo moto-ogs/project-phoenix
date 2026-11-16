@@ -67,7 +67,8 @@ Datensatz. Die anwaltliche Bestätigung, dass Register und Abrufweg Art. 26 und
 Art. 30 Abs. 2 Data Act genügen (Abschnitt 7), und die menschlichen Nachweise
 unten.
 
-**Produktiv nachzuweisen:** benannte Zuständigkeit, Migration und wirksame
+**Produktiv nachzuweisen:** Benennung der Zuständigkeit im einzelnen Auftrag
+(Standardbesetzung siehe Abschnitt 1), Migration und wirksame
 Berechtigungen, vollständiger DB-/Upload-Bestand, Schreibpause, Probelauf,
 verschlüsselte Übergabe, Empfang und Entfernung der lokalen Kopien. Lokale
 Tests sind kein produktiver Nachweis. Loki, Sentry, PostHog, journald und
@@ -80,9 +81,13 @@ Sicherungen sind nicht Bestandteil dieses PostgreSQL-/Upload-Exports.
    autorisieren; die Rückgabe eines Trägers besteht aus dem Trägerpaket und je
    Schule einem Schulpaket (Abschnitt 3). Keine Auswahl allein anhand einer E-Mail-Adresse oder
    eines Plattform-Tokens. Die HTTP-Middleware wird nicht verwendet.
-2. Vor Beginn eine verantwortliche Person und Vertretung im geschützten
-   Auftrag benennen. Diese organisatorische Zuordnung ist noch offen und
-   darf nicht durch einen CLI-Erfolg ersetzt werden.
+2. Vor Beginn verantwortliche Person, Vertretung und zweite prüfende Person
+   im geschützten Auftrag benennen. Standardbesetzung (3838-g, entschieden am
+   16.11.2026, [#3846](https://github.com/moto-ogs/project-phoenix/issues/3846#issuecomment-6912409509)):
+   zuständig Yannick, Vertretung Conrad, zweite prüfende Person Flo. Weicht
+   die Besetzung ab, die tatsächliche im Auftrag festhalten. Die Benennung im
+   einzelnen Auftrag bleibt Pflicht und darf nicht durch einen CLI-Erfolg
+   ersetzt werden.
 3. Eingang binnen **2 Arbeitstagen** bestätigen, Zusammenstellung binnen
    **10 Arbeitstagen** der Schule bereitstellen. Diese internen Zielwerte
    sind **vorläufig; die organisatorische Bestätigung ist offen (3838-d)**.
@@ -377,7 +382,7 @@ Gesamterfolg erhalten.
    Erziehungsberechtigter oder aller Geschwister. Auftrag und Antwortempfänger
    getrennt prüfen; keine Ausweiskopien in technische Protokolle übernehmen.
 2. Zuständige Person, Vertretung und zweite prüfende Person im geschützten
-   Auftrag benennen. Eingang/Prüfung binnen 2, Bereitstellung an die Schule
+   Auftrag benennen; Standardbesetzung nach Abschnitt 1 Punkt 2. Eingang/Prüfung binnen 2, Bereitstellung an die Schule
    binnen 10 Arbeitstagen gemäß Abschnitt 1 planen. Unklare Berechtigung oder
    drohende Fristüberschreitung sofort an die Schule eskalieren; keine
    eigenmächtige Verlängerung. Der Monat läuft nicht erst ab CLI-Ausführung.
@@ -425,10 +430,20 @@ Nur Schlüssel/Beziehungen bleiben im Arbeitsspeicher, Inhalte werden gestreamt.
    Eigene Äußerungen (Verfasser, Absender, Unterzeichner) bleiben Treffer,
    ebenso selbst angelegte Elternbriefe, Gesprächsverläufe, Aushänge und
    Umfragen. Die Ausnahmen stehen in `personActorColumn`.
+   Bei Beschäftigten endet die Suche an Zeilen, die andere an einen solchen
+   eigenen Datensatz hängen und die eine andere Person nennen: Briefkopien
+   und Antworten zu einem Elternbrief, Einladungen zu einem Termin und
+   Buchungen eines Elternsprechtags gehören den Familien, nicht der Fachkraft
+   (#7207). Zeilen ohne Personenbezug (Optionen, Pausen, Ausnahmen) bleiben.
 2. Benötigte Elternzeilen liefern Kontext, begründen aber **keinen** weiteren
    Personenexport. Gemeinsame Erziehungsberechtigte führen deshalb nicht zu
    Geschwisterakten. Ein Beschäftigtenkonto an zwei Schulen führt nicht zum
    Bestand der anderen Schule. Andere Identitätsketten werden nicht verfolgt.
+   Bei Beschäftigten kommen fremde Identitätszeilen gar nicht als Kontext
+   hinzu: Eine eigene Notiz zu einem Kind nennt dessen ID, bringt aber nicht
+   Profil, Adresse oder Foto des Kindes mit. Gesprächsverläufe, an denen die
+   Fachkraft teilnimmt, und die Notiz zu einem an sie gerichteten Hinweis
+   bleiben als `context-not-subject` im Paket und werden redigiert.
 3. Gesprächsinhalte, Versionen/Optionen und Anhänge einer relevanten
    Elternmitteilung sowie Änderungsnachrichten eines relevanten Anmeldeantrags
    sind Kontext. Die begrenzten Regeln stehen in `personContentChild`.

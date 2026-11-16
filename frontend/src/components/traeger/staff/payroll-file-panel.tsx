@@ -1,6 +1,6 @@
 "use client";
 
-// Die DATEV-Lohndatei des Trägers über alle Schulen (#4712, ADR 0249). Die
+// Die DATEV-Lohndatei des Trägers über alle Schulen (#4712, ADR 0250). Die
 // Prüfung zeigt dieselbe Rechnung wie die Datei: Verträge je Art, Zeilen,
 // Werte ohne Lohnart und Schulen mit offenem Monat. Was die Datei noch
 // verhindert, steht als Liste mit dem nächsten Schritt darunter.

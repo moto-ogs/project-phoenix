@@ -1,4 +1,5 @@
 GET /traeger/sepa-mandates/ -> basis
+GET /traeger/sepa-mandates/export -> basis
 GET /traeger/sepa-mandates/imports -> basis
 GET /traeger/sepa-mandates/{id}/collections -> basis
 GET /traeger/sepa-mandates/{id}/history -> basis

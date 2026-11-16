@@ -1,4 +1,5 @@
 DELETE /traeger/care-evidences/{id}
 GET /traeger/care-evidences/
+GET /traeger/care-evidences/export
 POST /traeger/care-evidences/
 PUT /traeger/care-evidences/{id}

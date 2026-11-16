@@ -21,17 +21,19 @@ import (
 // named school's staff.
 type TraegerClosingDayResource struct {
 	days          traegercalendar.ClosingDays
+	lists         common.ListRenderer
 	requireRead   common.Middleware
 	requireManage common.Middleware
 }
 
 // NewTraegerClosingDayResource builds the resource; the root binds the right
-// checks to the rights Identity & Access bundles into the Träger roles.
-func NewTraegerClosingDayResource(days traegercalendar.ClosingDays, requireRead, requireManage common.Middleware) *TraegerClosingDayResource {
-	if days == nil || requireRead == nil || requireManage == nil {
-		panic("school calendar http: the Träger closing days and the right checks are required")
+// checks to the rights Identity & Access bundles into the Träger roles;
+// lists renders the closing days as PDF, Excel or CSV (#4718).
+func NewTraegerClosingDayResource(days traegercalendar.ClosingDays, lists common.ListRenderer, requireRead, requireManage common.Middleware) *TraegerClosingDayResource {
+	if days == nil || lists == nil || requireRead == nil || requireManage == nil {
+		panic("school calendar http: the Träger closing days, the list renderer and the right checks are required")
 	}
-	return &TraegerClosingDayResource{days: days, requireRead: requireRead, requireManage: requireManage}
+	return &TraegerClosingDayResource{days: days, lists: lists, requireRead: requireRead, requireManage: requireManage}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/closing-days.
@@ -40,6 +42,7 @@ func (rs *TraegerClosingDayResource) TraegerRouter(protectedTraegerRoutes func(c
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	protectedTraegerRoutes(r, func(r chi.Router, withTx common.Middleware) {
 		r.With(rs.requireRead, withTx).Get("/", rs.calendar)
+		r.With(rs.requireRead, withTx).Get("/export", rs.export)
 		manage := r.With(rs.requireManage, withTx)
 		manage.Post("/", rs.create)
 		manage.Put("/{id}", rs.update)
@@ -82,18 +85,28 @@ func (rs *TraegerClosingDayResource) calendar(w http.ResponseWriter, r *http.Req
 	if !ok {
 		return
 	}
+	result, _, _, ok := rs.readCalendar(w, r, organizationID)
+	if !ok {
+		return
+	}
+	common.Respond(w, r, http.StatusOK, result, "Träger calendar retrieved successfully")
+}
+
+// readCalendar reads the calendar of the window from= to= of the request;
+// ok is false once the refusal is rendered.
+func (rs *TraegerClosingDayResource) readCalendar(w http.ResponseWriter, r *http.Request, organizationID int64) (traegercalendar.Calendar, calendar.Date, calendar.Date, bool) {
 	from, fromErr := calendar.ParseDate(r.URL.Query().Get("from"))
 	to, toErr := calendar.ParseDate(r.URL.Query().Get("to"))
 	if fromErr != nil || toErr != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(errors.Join(fromErr, toErr), common.CodeTraegerClosingDayInvalid))
-		return
+		return traegercalendar.Calendar{}, from, to, false
 	}
 	result, err := rs.days.Calendar(r.Context(), organizationID, from, to)
 	if err != nil {
 		renderTraegerClosingDayError(w, r, err)
-		return
+		return traegercalendar.Calendar{}, from, to, false
 	}
-	common.Respond(w, r, http.StatusOK, result, "Träger calendar retrieved successfully")
+	return result, from, to, true
 }
 
 func (rs *TraegerClosingDayResource) create(w http.ResponseWriter, r *http.Request) {

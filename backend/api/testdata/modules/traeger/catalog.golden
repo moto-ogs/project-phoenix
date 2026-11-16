@@ -1,4 +1,5 @@
 GET /traeger/catalog/phases -> basis
+GET /traeger/catalog/phases/export -> basis
 GET /traeger/catalog/phases/{id} -> basis
 POST /traeger/catalog/offerings/{id}/withdraw -> basis
 POST /traeger/catalog/phases -> basis

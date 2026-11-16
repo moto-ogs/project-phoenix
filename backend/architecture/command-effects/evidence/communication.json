@@ -105,22 +105,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.CareCancellationPublisher.PublishCareCancellation",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.CareCancellationPublisher.PublishCareCancellation",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CommunicationSignatures.DeclarationSignatures",
       "binding_digest": "8ba05fd773e5470ffcb0db26fe145582",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.DeclarationSignatureReader.DeclarationSignatures",
@@ -169,40 +153,8 @@
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentAnnouncements.PublishCareCancellation",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentAnnouncements.PublishCareCancellation",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.announcementsWithSurveys.PublishCareCancellation",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.announcementsWithSurveys.PublishCareCancellation",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishCareCancellation",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentAnnouncements.PublishParentAnnouncement",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
+      "binding_digest": "75e6440975465cb675dc4f9d6526838e",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishParentAnnouncement",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
@@ -210,7 +162,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentAnnouncements.PublishParentAnnouncement",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
+      "binding_digest": "1a8f86b5b73ea1cf86c756c94f1ed4dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishParentAnnouncement",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
@@ -242,7 +194,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.announcementsWithSurveys.PublishParentAnnouncement",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
+      "binding_digest": "75e6440975465cb675dc4f9d6526838e",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishParentAnnouncement",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
@@ -250,7 +202,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.announcementsWithSurveys.PublishParentAnnouncement",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
+      "binding_digest": "1a8f86b5b73ea1cf86c756c94f1ed4dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.PublishParentAnnouncement",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
@@ -282,7 +234,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentAnnouncements.RemindParentAnnouncement",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
+      "binding_digest": "75e6440975465cb675dc4f9d6526838e",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.RemindParentAnnouncement",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
@@ -290,7 +242,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentAnnouncements.RemindParentAnnouncement",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
+      "binding_digest": "1a8f86b5b73ea1cf86c756c94f1ed4dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.RemindParentAnnouncement",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
@@ -298,7 +250,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.announcementsWithSurveys.RemindParentAnnouncement",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
+      "binding_digest": "75e6440975465cb675dc4f9d6526838e",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.RemindParentAnnouncement",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
@@ -306,7 +258,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.announcementsWithSurveys.RemindParentAnnouncement",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
+      "binding_digest": "1a8f86b5b73ea1cf86c756c94f1ed4dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.RemindParentAnnouncement",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
@@ -346,7 +298,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentAnnouncements.SendDueParentAnnouncementReminders",
-      "binding_digest": "2b16831f9f393e63abf1169cfd06e204",
+      "binding_digest": "60f75b113be1b769f1390c1d823d8350",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.SendDueParentAnnouncementReminders",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably",
@@ -354,7 +306,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentAnnouncements.SendDueParentAnnouncementReminders",
-      "binding_digest": "3387f4528dba48aaa83f2433e971b601",
+      "binding_digest": "71b4f91acc0f32aa9f2f5ec33244b0d5",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.SendDueParentAnnouncementReminders",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEventsDurably",
@@ -362,7 +314,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.announcementsWithSurveys.SendDueParentAnnouncementReminders",
-      "binding_digest": "2b16831f9f393e63abf1169cfd06e204",
+      "binding_digest": "60f75b113be1b769f1390c1d823d8350",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.SendDueParentAnnouncementReminders",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably",
@@ -370,7 +322,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.announcementsWithSurveys.SendDueParentAnnouncementReminders",
-      "binding_digest": "3387f4528dba48aaa83f2433e971b601",
+      "binding_digest": "71b4f91acc0f32aa9f2f5ec33244b0d5",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.SendDueParentAnnouncementReminders",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEventsDurably",
@@ -394,7 +346,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.RemindParentAnnouncement",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
+      "binding_digest": "75e6440975465cb675dc4f9d6526838e",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementReminders.RemindParentAnnouncement",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
@@ -402,7 +354,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.RemindParentAnnouncement",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
+      "binding_digest": "1a8f86b5b73ea1cf86c756c94f1ed4dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementReminders.RemindParentAnnouncement",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
@@ -426,7 +378,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.SendDueParentAnnouncementReminders",
-      "binding_digest": "2b16831f9f393e63abf1169cfd06e204",
+      "binding_digest": "60f75b113be1b769f1390c1d823d8350",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementReminders.SendDueParentAnnouncementReminders",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably",
@@ -434,7 +386,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementCapability.SendDueParentAnnouncementReminders",
-      "binding_digest": "3387f4528dba48aaa83f2433e971b601",
+      "binding_digest": "71b4f91acc0f32aa9f2f5ec33244b0d5",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentAnnouncementReminders.SendDueParentAnnouncementReminders",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEventsDurably",
@@ -962,7 +914,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.surveyService.PublishSurvey",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
+      "binding_digest": "75e6440975465cb675dc4f9d6526838e",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.SurveyCapability.PublishSurvey",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
@@ -970,7 +922,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.surveyService.PublishSurvey",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
+      "binding_digest": "1a8f86b5b73ea1cf86c756c94f1ed4dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.SurveyCapability.PublishSurvey",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
@@ -978,7 +930,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.surveyService.RemindSurvey",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
+      "binding_digest": "75e6440975465cb675dc4f9d6526838e",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.SurveyCapability.RemindSurvey",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
@@ -986,7 +938,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.surveyService.RemindSurvey",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
+      "binding_digest": "1a8f86b5b73ea1cf86c756c94f1ed4dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.SurveyCapability.RemindSurvey",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
@@ -1658,7 +1610,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.Publish",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
+      "binding_digest": "75e6440975465cb675dc4f9d6526838e",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.Publish",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
@@ -1666,7 +1618,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.Publish",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
+      "binding_digest": "1a8f86b5b73ea1cf86c756c94f1ed4dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.Publish",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
@@ -1697,24 +1649,8 @@
       "target_owner": "school-structure"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.PublishCareCancellation",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.PublishCareCancellation",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.PublishCareCancellation",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.PublishCareCancellation",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.RemindOutstanding",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
+      "binding_digest": "75e6440975465cb675dc4f9d6526838e",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.RemindOutstanding",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
@@ -1722,7 +1658,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.RemindOutstanding",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
+      "binding_digest": "1a8f86b5b73ea1cf86c756c94f1ed4dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.RemindOutstanding",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
@@ -1730,7 +1666,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.RemindUnanswered",
-      "binding_digest": "4dc410a5238a21ac8a76072640b4cac2",
+      "binding_digest": "75e6440975465cb675dc4f9d6526838e",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.RemindUnanswered",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEvents",
@@ -1738,7 +1674,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.RemindUnanswered",
-      "binding_digest": "14fadf113f0912dbe2bac2e8dfd57d09",
+      "binding_digest": "1a8f86b5b73ea1cf86c756c94f1ed4dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.RemindUnanswered",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEvents",
@@ -1762,7 +1698,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.SendDueReminders",
-      "binding_digest": "2b16831f9f393e63abf1169cfd06e204",
+      "binding_digest": "60f75b113be1b769f1390c1d823d8350",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.SendDueReminders",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.NotificationSeriesCommands.NotifyEventsDurably",
@@ -1770,7 +1706,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.service.SendDueReminders",
-      "binding_digest": "3387f4528dba48aaa83f2433e971b601",
+      "binding_digest": "71b4f91acc0f32aa9f2f5ec33244b0d5",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.StaffService.SendDueReminders",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.NotifyEventsDurably",

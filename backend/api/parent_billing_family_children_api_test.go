@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -152,6 +153,7 @@ func TestFamilyChildrenAreCheckedNeedTheRightAndAreRecorded(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, familyChildrenPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.NotContains(t, rec.Body.String(), "example.org", "no family of another Träger")
+	assert.Len(t, billingListCSV(t, f.traeger, foreign.token, familyChildrenPath+"/export"), 1, "the file of another Träger holds no family")
 
 	password := testpkg.NewTestPassword()
 	account := traegerAccount(t, f.db, password)
@@ -160,6 +162,7 @@ func TestFamilyChildrenAreCheckedNeedTheRightAndAreRecorded(t *testing.T) {
 	require.Equal(t, http.StatusOK, code)
 	for _, request := range []struct{ method, path string }{
 		{http.MethodGet, familyChildrenPath},
+		{http.MethodGet, familyChildrenPath + "/export"},
 		{http.MethodPut, familyChildrenPath},
 		{http.MethodDelete, familyChildrenPath + "/" + strconv.FormatInt(mia, 10)},
 	} {
@@ -185,6 +188,17 @@ func TestFamilyChildrenAreCheckedNeedTheRightAndAreRecorded(t *testing.T) {
 	for _, entry := range trail {
 		assert.NotNil(t, entry.Account, "every entry names the account")
 	}
+
+	// #4718: the families as a file. Each download reads like the page and
+	// stands in the trail of the number.
+	lines := billingListCSV(t, f.traeger, f.office.token, familyChildrenPath+"/export")
+	assert.Equal(t, "Nachname;Vorname;E-Mail;Kinder mit Vertrag;Angabe der Eltern;Bestätigte Kinderzahl;Gültig;Stand", lines[0])
+	assert.Contains(t, strings.Join(lines, "\n"), ";–;2;ab 01.09.2026;Bestätigt")
+	assertTraegerListFormats(t, f.traeger, f.office.token, familyChildrenPath+"/export", "kinderzahl")
+	var reads int
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.family_child_count_events
+		WHERE organization_id = ? AND care_contract_id = ? AND action = 'read'`, f.office.organization, mia).Scan(context.Background(), &reads))
+	assert.Equal(t, 5, reads, "two reads of the page and three downloads")
 }
 
 // The page reads the same statements for any number of families.

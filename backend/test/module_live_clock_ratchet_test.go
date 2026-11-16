@@ -62,24 +62,24 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/carecontract": 3,
 	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
 	// PickupBaselineReader method names no day.
-	"modules/careplan":                     1,
-	"modules/classday":                     14,
-	"modules/communication":                15,
-	"modules/dataimport":                   55,
-	"modules/delivery":                     44,
-	"modules/devicefleet":                  12,
-	"modules/devicescan":                   6,
+	"modules/careplan":      1,
+	"modules/classday":      14,
+	"modules/communication": 15,
+	"modules/delivery":      44,
+	"modules/devicefleet":   12,
+	"modules/devicescan":    6,
+	// records.GeneratedAtLabel: the public formatting function prints the
+	// moment of rendering for a zero creation time, and the renderer is also
+	// built bare (&RendererService{}), so it holds no clock to pass.
 	"modules/documentrendering":            1,
 	"modules/enrollment":                   63,
 	"modules/facilities":                   2,
 	"modules/feedback":                     1,
-	"modules/filestorage":                  32,
 	"modules/identityaccess":               2,
 	"modules/mealplan":                     1,
 	"modules/operatordashboard":            2,
 	"modules/organizationtenancy":          7,
 	"modules/peopledirectory":              12,
-	"modules/planexport":                   2,
 	"modules/presenceprojection":           15,
 	"modules/requestreview":                1,
 	"modules/schedulerruntime":             36,

@@ -36,6 +36,9 @@ type personSelection struct {
 	dependents        map[personKey][]*personNode
 	handled           map[personKey][]*personNode
 	unassignedObjects int64
+	// staff is set when the subject is a staff member: other people's rows
+	// reach their package only as rows the staff member wrote or handled.
+	staff bool
 }
 
 func parseExportPerson(value string) (string, string, error) {
@@ -179,9 +182,12 @@ func (p *personSelection) choose(root *personNode) {
 	}
 	// Reverse edges find data ABOUT these seeds and their dependent records.
 	// Identity tables cannot be selected because somebody authored a record.
+	// Rows after the seeds hang off another record, not off the subject.
+	seeds := len(queue)
+	p.staff = root.table == "users.staff_school_memberships"
 	for i := 0; i < len(queue); i++ {
 		for _, node := range p.children(queue[i]) {
-			if !node.selected && !personIdentity(node.table) {
+			if p.subjectRecord(node, i >= seeds) {
 				node.selected, node.related = true, true
 				queue = append(queue, node)
 			}
@@ -189,6 +195,38 @@ func (p *personSelection) choose(root *personNode) {
 	}
 	p.addHandled(queue)
 	p.addContext(queue)
+}
+
+// subjectRecord reports a dependent row the reverse walk takes as data about
+// the subject. What others attach to a staff member's own appointment or
+// letter (bookings, letter copies, answers) is about them instead (#7207).
+func (p *personSelection) subjectRecord(node *personNode, indirect bool) bool {
+	if node.selected || personIdentity(node.table) {
+		return false
+	}
+	return !p.staff || !indirect || !p.namesOtherPerson(node)
+}
+
+// namesOtherPerson reports a row that refers to a person other than the
+// subject. Only the subject's identity rows are related before the reverse
+// walk, and identity rows never become related during it. The subject's own
+// identity always resolves, so a reference without a row is somebody else.
+func (p *personSelection) namesOtherPerson(node *personNode) bool {
+	for _, key := range node.links {
+		if !personIdentity(key.table) {
+			continue
+		}
+		targets := p.byKey[key]
+		if len(targets) == 0 {
+			return true
+		}
+		for _, target := range targets {
+			if !target.related {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // addHandled selects the rows the subject only handled, each as a single row:
@@ -215,7 +253,7 @@ func (p *personSelection) addContext(queue []*personNode) {
 		}
 		// The people who handled a selected row stay its context, as before.
 		for _, parent := range append(p.targets(node.links), p.targets(node.handled)...) {
-			if !parent.selected {
+			if p.contextParent(parent) {
 				parent.selected = true
 				queue = append(queue, parent)
 			}
@@ -227,6 +265,13 @@ func (p *personSelection) addContext(queue []*personNode) {
 			}
 		}
 	}
+}
+
+// contextParent reports a row a selected row refers to that joins as context.
+// A staff member's note names the child, but the child's profile, address and
+// photo are not the staff member's data (#7207).
+func (p *personSelection) contextParent(parent *personNode) bool {
+	return !parent.selected && (!p.staff || !personIdentity(parent.table))
 }
 
 func (p *personSelection) contentChild(parent, child *personNode) bool {

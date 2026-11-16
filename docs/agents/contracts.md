@@ -511,8 +511,13 @@ with its family, and a switch mints nothing out of a family that is gone.
 passes cannot confirm that the family is empty; deleting rows on the last
 pass alone is not confirmation. Every portal shell revokes through its BFF logout route
 (`/api/{,parent/,school/,caterer/,traeger/,operator/}auth/logout`) before
-Auth.js clears the cookie; a failed revocation keeps the session and shows
-the error with a retry, as does the tenant relogin action. All six routes
+Auth.js clears the cookie. When the route answers with an error (the
+backend's `identity.logout_not_revoked`, or a BFF 503), the browser still
+clears the cookie and the login page says the session ends at its expiry
+(#7209); only a logout without any answer (offline, timeout) keeps the
+session and shows the error with a retry. The tenant relogin action keeps
+the session on every failure and offers a retry: it moves to another
+school's host, where no notice could follow. All six routes
 come from one factory (`frontend/src/lib/logout-route.server.ts`); the
 token kind and backend path come from the portal table. A refused token may
 still belong to a live family (another tab rotated it), so each route renews

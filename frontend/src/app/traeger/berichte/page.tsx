@@ -50,11 +50,7 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { EmptyState } from "~/components/ui/empty-state";
-import {
-  ExportMenu,
-  type ExportMenuOption,
-  exportFormatOptions,
-} from "~/components/ui/export-menu";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
@@ -63,7 +59,6 @@ import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
-  useApiErrorDisplay,
   useApiFormError,
   useApiLoadError,
   useToast,
@@ -74,7 +69,6 @@ import { childrenConcept } from "~/lib/concepts/children";
 import { staffConcept } from "~/lib/concepts/staff";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 import { formatDate, parseISODate } from "~/lib/date-helpers";
-import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import {
@@ -83,19 +77,12 @@ import {
   fetchKeyDateReport,
   REPORT_TEMPLATES_MANAGE_RIGHT,
   type KeyDateReport,
-  type ReportExportFormat,
   type ReportSection,
   type ReportTemplate,
 } from "~/lib/traeger-reports-api";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerReportsPage" });
-
-const EXPORT_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "pdf",
-  "xlsx",
-  "csv",
-]);
 
 /** Ohne Vorlage: alle Abschnitte, keine Sozialräume. */
 const STANDARD = "standard";
@@ -472,13 +459,11 @@ function TraegerReportsContent() {
   });
   const [grouping, setGrouping] = useState<ReportGrouping>("schools");
   const [report, setReport] = useState<KeyDateReport | null>(null);
-  const [exporting, setExporting] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<ReportTemplate | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const request = useRef(0);
   const pageLoad = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = pageLoad;
-  const { show: showActionError } = useApiErrorDisplay();
   const deleteErrors = useApiFormError();
   const { success } = useToast();
 
@@ -556,30 +541,6 @@ function TraegerReportsContent() {
     if (report && report.districts.length === 0) setGrouping("schools");
   }, [report]);
 
-  async function exportReport(option: ExportMenuOption) {
-    const format = option.format as ReportExportFormat | undefined;
-    if (!format) return;
-    setExporting(option.key);
-    try {
-      const file = await downloadKeyDateReport(
-        shownKeyDate,
-        effectiveTemplate === STANDARD ? null : effectiveTemplate,
-        format,
-      );
-      downloadBlob(
-        file.blob,
-        file.filename ?? `bericht-stichtag-${shownKeyDate}.${format}`,
-      );
-    } catch (err) {
-      logger.error("traeger_report_export_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showActionError(err, { object: "die Exportdatei" });
-    } finally {
-      setExporting(null);
-    }
-  }
-
   async function confirmDelete() {
     if (!deleting) return;
     setDeleteBusy(true);
@@ -637,12 +598,19 @@ function TraegerReportsContent() {
       }
       actions={
         onReportTab ? (
-          <ExportMenu
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadKeyDateReport(
+                shownKeyDate,
+                effectiveTemplate === STANDARD ? null : effectiveTemplate,
+                format,
+              )
+            }
+            scope="Alle Schulen"
             ariaLabel="Bericht herunterladen"
-            options={EXPORT_FORMATS}
-            busyKey={exporting}
+            fallbackName={`bericht-stichtag-${shownKeyDate}`}
+            errorObject="den Bericht"
             unavailable={!report || schoolCount === 0}
-            onSelect={(option) => void exportReport(option)}
           />
         ) : canManage ? (
           <ButtonLink

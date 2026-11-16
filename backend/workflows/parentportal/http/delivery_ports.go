@@ -3,6 +3,7 @@ package parent
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 // PushSubscriptions manages only the authenticated parent's devices.
@@ -43,6 +44,40 @@ type PreferenceState struct {
 	Group       string `json:"group"`
 	Enabled     bool   `json:"enabled"`
 	Available   bool   `json:"available"`
+}
+
+// NotificationFeed is the notification feed of the guardian account across
+// the schools of the family (#7140). It keeps only the entries about children
+// the account still holds parent_portal.access for, on every call.
+type NotificationFeed interface {
+	Page(ctx context.Context, accountID int64, cursor string, limit int) (FeedPage, error)
+	UnreadCount(ctx context.Context, accountID int64) (int, error)
+	MarkRead(ctx context.Context, accountID, entryID int64) (int, error)
+	MarkAllRead(ctx context.Context, accountID int64) (int, error)
+	// IsNotFound answers an entry the account may not read; IsInvalidCursor
+	// a cursor the feed did not issue.
+	IsNotFound(error) bool
+	IsInvalidCursor(error) bool
+}
+
+// FeedPage is one page of the feed with the unread count; NextCursor is
+// empty on the last page.
+type FeedPage struct {
+	Entries     []FeedEntry
+	NextCursor  string
+	UnreadCount int
+}
+
+// FeedEntry is one entry of the feed: finished text and an app-relative link.
+type FeedEntry struct {
+	ID        int64
+	Type      string
+	Title     string
+	Body      string
+	DeepLink  string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	ReadAt    *time.Time
 }
 
 // PWAUsage records standalone usage across the parent's active schools.

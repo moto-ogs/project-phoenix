@@ -24,6 +24,7 @@ import {
 import { BILLING_DOCUMENT_KIND_LABELS } from "~/components/traeger/billing-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -41,6 +42,7 @@ import {
   type BillingFamilyDocument,
   fetchBillingFamily,
 } from "~/lib/traeger-billing-families-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
@@ -306,6 +308,22 @@ export default function TraegerBillingFamilyPage() {
             leading={<ConceptIconTile concept={documentsConcept} />}
             title="Dokumente"
             description="Neueste Dokumente zuerst. Jede Zeile öffnet den Abrechnungslauf."
+            action={
+              <TraegerListExportMenu
+                download={(format) =>
+                  downloadTraegerList(
+                    `/api/traeger/billing-families/${encodeURIComponent(familyId)}/export`,
+                    format,
+                  )
+                }
+                scope="Alle Dokumente der Familie"
+                ariaLabel="Dokumente der Familie herunterladen"
+                tooltip="Zeigt die Formate für alle Dokumente der Familie. Jeder Download wird protokolliert."
+                fallbackName="familie-dokumente"
+                errorObject="die Dokumente der Familie"
+                unavailable={family.documents.length === 0}
+              />
+            }
           >
             <DataTable
               columns={COLUMNS}

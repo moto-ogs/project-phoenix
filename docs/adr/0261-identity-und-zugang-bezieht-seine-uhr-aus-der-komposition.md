@@ -71,7 +71,7 @@ Gültigkeit mit `time.Until`.
    einem festen Zeitpunkt im Jahr 2100 ab.
 5. **Budgets und Bindungen.** Das Compose-LOC-Budget von
    `modules/identityaccess/compose` steigt um die Zeilen der Uhr: Feld,
-   nil-Default und Importe (+17, 1.372 auf 1.389). Die 225 Effekt-Bindungen,
+   nil-Default und Importe (+16, 1.372 auf 1.388). Die 225 Effekt-Bindungen,
    deren Körper oder Spur sich nur durch die Uhr geändert hat, sind mit
    dieser ADR neu bestätigt. Das sind 161 in Identity & Access, 36 in Care
    Plan, 18 in People Directory und 10 in Communication. Die 14
@@ -80,8 +80,8 @@ Gültigkeit mit `time.Until`.
 
 ## Folgen
 
-- Das Uhr-Budget fällt von 665 auf 584 Aufrufe, Identity & Access von 83
-  auf 2.
+- Das Uhr-Budget fällt um 81 Aufrufe (auf der Basis dieses Schnitts von 576
+  auf 495), Identity & Access von 83 auf 2.
 - `calendarFixtureShiftedLiveDateDebt` verliert 9 Dateien mit 33 Funden.
   Alle Einträge unter `modules/identityaccess/` und
   `api/operator_mfa_verify_success_internal_test.go` entfallen.

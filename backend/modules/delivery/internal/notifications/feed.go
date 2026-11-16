@@ -11,7 +11,9 @@ import (
 )
 
 // The feed (#7148) is Delivery's third channel next to Web Push and e-mail.
-// A feed event's entry reaches every staff account of the audience; the
+// A feed event's entry reaches every staff account of the audience, or every
+// guardian account of a guardian audience together with the children it is
+// about (#7140); the
 // producer has already left out the person who triggered the change. A push
 // follows only for an entry that is new: a change that updates an unread
 // entry of the same object within the bundle window moves it to the top
@@ -26,6 +28,8 @@ import (
 type feedSignalChannel interface {
 	Channel
 	signalFeed(tenantID int64, accountIDs []int64) error
+	// signalGuardianFeed tells the open sessions of the parents portal.
+	signalGuardianFeed(tenantID int64, accountIDs []int64) error
 }
 
 // windowAndFeed applies the delivery window and writes the feed entries of a
@@ -73,22 +77,50 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 		}
 	}
 	now := r.now()
-	write, err := r.store.PublishFeedEntries(ctx, event.Audience.TenantID, domain.FeedEntryContent{
-		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: feedDeepLink(*event),
-		SchoolDeepLink: feedSchoolDeepLink(*event),
-		RelatedType:    event.RelatedType, RelatedID: event.RelatedID,
-	}, feedBundleTypes(def), event.Audience.StaffAccountIDs, now, now.Add(-domain.FeedBundleWindow))
+	content, recipients := feedEntryOf(*event)
+	write, err := r.store.PublishFeedEntries(ctx, event.Audience.TenantID, content, feedBundleTypes(def), recipients, now, now.Add(-domain.FeedBundleWindow))
 	if err != nil {
 		return false, fmt.Errorf("write notification feed: %w", err)
 	}
 	event.feedChanged = append(slices.Clone(write.Created), write.Updated...)
+	narrowToPush(event, write, pushAllowed)
+	return len(event.feedChanged) > 0, nil
+}
+
+// feedEntryOf is the entry an event writes and the accounts it reaches: the
+// staff accounts, or the guardian accounts with the children (#7140).
+func feedEntryOf(event Event) (domain.FeedEntryContent, []int64) {
+	content := domain.FeedEntryContent{
+		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: feedDeepLink(event),
+		SchoolDeepLink: feedSchoolDeepLink(event),
+		RelatedType:    event.RelatedType, RelatedID: event.RelatedID,
+	}
+	if event.Feed.Title != "" {
+		// A producer's own text, such as what the person cancelling wrote to
+		// the families, may be longer than an entry holds.
+		content.Title = clipFeedText(event.Feed.Title, feedTitleMaxRunes)
+		content.Body = clipFeedText(event.Feed.Body, feedBodyMaxRunes)
+	}
+	if event.Audience.Scope != ScopeGuardian {
+		return content, event.Audience.StaffAccountIDs
+	}
+	content.StudentIDs = slices.Clone(event.Audience.StudentIDs)
+	return content, guardianAccountIDs(event.Audience)
+}
+
+// narrowToPush leaves in the audience only the accounts with a new entry the
+// producer lets a push reach, and marks the event feed-only without them.
+func narrowToPush(event *Event, write domain.FeedWrite, pushAllowed bool) {
 	var push []int64
 	if pushAllowed {
 		push = feedPushRecipients(write.Created, event.Feed.PushAccountIDs)
 	}
-	event.Audience.StaffAccountIDs = push
+	if event.Audience.Scope == ScopeGuardian {
+		event.Audience.GuardianAccountID, event.Audience.GuardianAccountIDs = 0, push
+	} else {
+		event.Audience.StaffAccountIDs = push
+	}
 	event.feedOnly = len(push) == 0
-	return len(event.feedChanged) > 0, nil
 }
 
 // feedSchoolDeepLink is the link an entry keeps for moto schule (#7139): the
@@ -121,15 +153,13 @@ func feedBundleTypes(def TypeDefinition) []string {
 	return slices.Compact(types)
 }
 
-// feedType checks the shape a feed event needs: a staff audience, a known
-// feed type, an app-relative deep link and the object it is about.
+// feedType checks the shape a feed event needs: a staff audience with a
+// staff type, or a guardian audience with a parent type about named children
+// (#7140), an app-relative deep link and the object it is about.
 func feedType(event Event) (TypeDefinition, error) {
-	if event.Audience.Scope != ScopeStaff {
-		return TypeDefinition{}, fmt.Errorf("notification feed requires the staff scope, got %q", event.Audience.Scope)
-	}
 	def, known := GetType(event.Type)
-	if !known || !def.Feed {
-		return TypeDefinition{}, fmt.Errorf("%w: %s", ErrUnknownNotificationType, event.Type)
+	if err := validateFeedAudience(event, def, known); err != nil {
+		return TypeDefinition{}, err
 	}
 	if event.DeepLink == "" && event.Feed.DeepLink == "" {
 		return TypeDefinition{}, errors.New("notification feed requires a deep link")
@@ -140,7 +170,47 @@ func feedType(event Event) (TypeDefinition, error) {
 	if event.RelatedType == "" || event.RelatedID <= 0 {
 		return TypeDefinition{}, errors.New("notification feed requires the object it is about")
 	}
+	if event.Feed.Title == "" && event.Feed.Body != "" {
+		return TypeDefinition{}, errors.New("notification feed text needs a title")
+	}
 	return def, nil
+}
+
+func validateFeedAudience(event Event, def TypeDefinition, known bool) error {
+	switch event.Audience.Scope {
+	case ScopeStaff:
+		if !known || !def.Feed || def.Portal != PortalStaff {
+			return fmt.Errorf("%w: %s", ErrUnknownNotificationType, event.Type)
+		}
+	case ScopeGuardian:
+		if !known || !def.Feed || def.Portal != PortalParent {
+			return fmt.Errorf("%w: %s", ErrUnknownNotificationType, event.Type)
+		}
+		// A guardian reads an entry only through the children it is about;
+		// without them nobody could ever read it.
+		if len(event.Audience.StudentIDs) == 0 {
+			return errors.New("guardian notification feed requires the children the entry is about")
+		}
+	default:
+		return fmt.Errorf("notification feed requires the staff or guardian scope, got %q", event.Audience.Scope)
+	}
+	return nil
+}
+
+// The lengths platform.notification_feed_entries allows.
+const (
+	feedTitleMaxRunes = 200
+	feedBodyMaxRunes  = 1000
+)
+
+// clipFeedText shortens text to at most limit runes, ending in "…".
+func clipFeedText(text string, limit int) string {
+	text = strings.TrimSpace(text)
+	runes := []rune(text)
+	if len(runes) <= limit {
+		return text
+	}
+	return strings.TrimSpace(string(runes[:limit-1])) + "…"
 }
 
 // requireFeedDelivery holds a type and its delivery path together (#7137):
