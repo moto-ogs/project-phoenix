@@ -174,11 +174,13 @@ func resolveActor(cfg CoreActionConfig, r *http.Request, action CoreAction, body
 }
 
 // routeSchoolActor gives a caterer actor the school of the route
-// (CoreAction.SchoolFromRoute). Any other actor keeps its own school.
+// (CoreAction.SchoolFromRoute), and the caterer role where no session named
+// it (the invitation is accepted before login). Any other actor stays as it is.
 func routeSchoolActor(r *http.Request, action CoreAction, actor Actor) Actor {
 	if !action.SchoolFromRoute || actor.Surface != SurfaceCaterer || actor.SchoolID > 0 {
 		return actor
 	}
+	actor.Role = RoleCaterer
 	if id, err := strconv.ParseInt(chi.URLParam(r, "schoolId"), 10, 64); err == nil && id > 0 {
 		actor.SchoolID = id
 	}

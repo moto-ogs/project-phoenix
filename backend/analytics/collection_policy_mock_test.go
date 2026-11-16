@@ -255,11 +255,7 @@ func TestCatererWritesCountForTheirRouteSchool(t *testing.T) {
 			assert.Equal(t, tc.event, events[0].event)
 			assert.Equal(t, "school:44", events[0].distinctID)
 			assert.Empty(t, events[0].sessionID, "a caterer account has no consent and names no browser session")
-			want := map[string]any{"surface": SurfaceCaterer, "school_id": "44"}
-			if tc.actor {
-				want["role"] = RoleCaterer
-			}
-			assert.Equal(t, want, events[0].props)
+			assert.Equal(t, map[string]any{"surface": SurfaceCaterer, "role": RoleCaterer, "school_id": "44"}, events[0].props)
 		})
 	}
 }
@@ -274,5 +270,6 @@ func TestRouteSchoolNeverReplacesASessionSchool(t *testing.T) {
 	assert.Equal(t, staffActor, routeSchoolActor(request, action, staffActor), "only a caterer takes the route school")
 	own := Actor{Surface: SurfaceCaterer, SchoolID: 43}
 	assert.Equal(t, own, routeSchoolActor(request, action, own))
+	assert.Equal(t, Actor{Surface: SurfaceCaterer, SchoolID: 44, Role: RoleCaterer}, routeSchoolActor(request, action, Actor{Surface: SurfaceCaterer}))
 	assert.Equal(t, Actor{Surface: SurfaceCaterer}, routeSchoolActor(request, event("meal_order_confirmed"), Actor{Surface: SurfaceCaterer}), "only a SchoolFromRoute route")
 }
