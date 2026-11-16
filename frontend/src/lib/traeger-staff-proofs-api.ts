@@ -10,9 +10,12 @@
  * mit Personen steht im Zugriffsprotokoll der Schulen. Backend-IDs werden
  * hier zu Strings.
  */
-import { apiErrorFromBody, transportFetch } from "./api-error";
-import { filenameFromDisposition } from "./file-download";
-import { readJson, traegerRequest } from "~/lib/traeger-api";
+import {
+  downloadTraegerList,
+  type TraegerListFile,
+  type TraegerListFormat,
+} from "./traeger-list-export";
+import { traegerRequest } from "~/lib/traeger-api";
 
 const BASE = "/api/traeger/staff-proofs";
 
@@ -308,25 +311,10 @@ export async function deleteStaffProof(
 }
 
 /** Die Ablaufliste als CSV, mit dem Dateinamen des Backends. */
-export async function downloadStaffProofList(): Promise<{
-  readonly blob: Blob;
-  readonly filename: string | null;
-}> {
-  const response = await transportFetch(`${BASE}/export`, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await readJson(response),
-    );
-  }
-  return {
-    blob: await response.blob(),
-    filename: filenameFromDisposition(response),
-  };
+export function downloadStaffProofList(
+  format: TraegerListFormat,
+): Promise<TraegerListFile> {
+  return downloadTraegerList(`${BASE}/export`, format);
 }
 
 /** Name, Farbe und Satz je Stand, wie auf der Liste der Schule. */

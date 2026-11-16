@@ -6,7 +6,11 @@
  */
 
 import { apiErrorFromBody, transportFetch } from "./api-error";
-import { filenameFromDisposition } from "./file-download";
+import {
+  downloadTraegerList,
+  type TraegerListFile,
+  type TraegerListFormat,
+} from "./traeger-list-export";
 import type { TraegerSchool } from "./traeger-api";
 
 interface ArrivalPickupCell {
@@ -143,22 +147,14 @@ export async function fetchTraegerArrivalPickupTimes(
 }
 
 /** The CSV export of the period, with the file name the backend chose. */
-export async function downloadTraegerArrivalPickupTimes(
+export function downloadTraegerArrivalPickupTimes(
   period: ArrivalPickupPeriod,
-): Promise<{ readonly blob: Blob; readonly filename: string | null }> {
-  const response = await transportFetch(
-    `/api/traeger/schools/arrival-pickup-times/export?${query(period)}`,
-    { credentials: "include", cache: "no-store" },
+  format: TraegerListFormat,
+  schoolId?: string,
+): Promise<TraegerListFile> {
+  return downloadTraegerList(
+    "/api/traeger/schools/arrival-pickup-times/export",
+    format,
+    { from: period.from, to: period.to, school: schoolId },
   );
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await readJson(response),
-    );
-  }
-  return {
-    blob: await response.blob(),
-    filename: filenameFromDisposition(response),
-  };
 }

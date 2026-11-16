@@ -114,8 +114,11 @@ const (
 )
 
 type Column struct {
-	ID    ColumnID `json:"id"`
-	Label string   `json:"label"`
+	// Numeric writes nonempty decimal values as numbers in Excel. Text formats
+	// retain the supplied display value, including a German decimal comma.
+	Numeric bool     `json:"numeric,omitempty"`
+	ID      ColumnID `json:"id"`
+	Label   string   `json:"label"`
 }
 
 // LineStyle is the emphasis of one line inside a cell. A matrix cell stacks

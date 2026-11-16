@@ -4,6 +4,8 @@
 // Schule im Monat berechnet, mit derselben Zählweise und aus denselben Zeilen
 // wie der Bericht des Betreibers. Oben der gewählte Monat für alle Schulen,
 // darunter jede Schule, unten alle erfassten Monate. Nur Zahlen, keine Namen.
+// Der Download enthält alle erfassten Monate als PDF, Excel oder CSV, für
+// alle Schulen oder die gewählte (#4718).
 
 import { type MouseEvent, useMemo, useState } from "react";
 import { CalendarCheck, School } from "lucide-react";
@@ -23,11 +25,18 @@ import {
   formatKeyDateMonth,
   keyDateChange,
   keyDateMonthRows,
+  keyDateSchoolFigures,
   type KeyDateMonthRow,
+  type KeyDateMonthFigures,
   type KeyDateSchoolRow,
   selectKeyDateMonth,
 } from "~/components/traeger/key-date-counts-model";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerKeyDateCounts } from "~/components/traeger/use-traeger-key-date-counts";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { childrenConcept } from "~/lib/concepts/children";
 import { devicesConcept } from "~/lib/concepts/devices";
 import { schoolsConcept } from "~/lib/concepts/schools";
@@ -36,7 +45,6 @@ import {
   formatBerlinTime,
   formatDate,
 } from "~/lib/date-helpers";
-import type { TraegerKeyDateMonth } from "~/lib/traeger-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { foldForSearch } from "~/lib/search-fold";
 
@@ -57,7 +65,7 @@ function matchesSearch(row: KeyDateSchoolRow, search: string): boolean {
 /** „12 mehr als im September 2026", ohne Vormonat kein Vergleich. */
 function changeHint(
   change: number | null,
-  previous: TraegerKeyDateMonth | null,
+  previous: KeyDateMonthFigures | null,
 ): string | undefined {
   if (change === null || !previous) return undefined;
   const month = formatKeyDateMonth(previous.period);
@@ -104,7 +112,7 @@ function MissingFigure() {
  * mitten im Monat verschoben); sonst nennt ihn die Überschrift.
  */
 function schoolColumns(
-  previous: TraegerKeyDateMonth | null,
+  previous: KeyDateMonthFigures | null,
   showKeyDate: boolean,
 ): DataTableColumn<KeyDateSchoolRow>[] {
   const previousMonth = previous ? formatKeyDateMonth(previous.period) : null;
@@ -228,7 +236,9 @@ const MONTH_COLUMNS: DataTableColumn<KeyDateMonthRow>[] = [
     header: "Stichtage",
     render: (month) => (
       <span className="text-sm text-gray-700 tabular-nums">
-        {month.keyDates.map((date) => formatDate(date)).join(", ")}
+        {month.keyDates.length > 0
+          ? month.keyDates.map((date) => formatDate(date)).join(", ")
+          : EMPTY_VALUE}
       </span>
     ),
     sortValue: (month) => month.keyDates[0] ?? null,
@@ -240,7 +250,7 @@ const MONTH_COLUMNS: DataTableColumn<KeyDateMonthRow>[] = [
     align: "right",
     render: (month) => (
       <span className="text-sm font-semibold text-gray-900 tabular-nums">
-        {month.activeStudents}
+        {month.activeStudents ?? EMPTY_VALUE}
       </span>
     ),
     sortValue: (month) => month.activeStudents,
@@ -251,7 +261,7 @@ const MONTH_COLUMNS: DataTableColumn<KeyDateMonthRow>[] = [
     align: "right",
     render: (month) => (
       <span className="text-sm font-semibold text-gray-900 tabular-nums">
-        {month.activeTerminals}
+        {month.activeTerminals ?? EMPTY_VALUE}
       </span>
     ),
     sortValue: (month) => month.activeTerminals,
@@ -274,8 +284,8 @@ function MonthFigures({
   previous,
   schoolCount,
 }: Readonly<{
-  month: TraegerKeyDateMonth;
-  previous: TraegerKeyDateMonth | null;
+  month: KeyDateMonthFigures;
+  previous: KeyDateMonthFigures | null;
   schoolCount: number;
 }>) {
   const missing = schoolCount - month.schools;
@@ -283,7 +293,7 @@ function MonthFigures({
     <div className="grid grid-cols-2 gap-4 max-sm:gap-3 lg:grid-cols-3">
       <StatCard
         label="Aktive Kinder"
-        value={month.activeStudents}
+        value={month.activeStudents ?? EMPTY_VALUE}
         hint={
           changeHint(
             keyDateChange(month.activeStudents, previous?.activeStudents),
@@ -295,7 +305,7 @@ function MonthFigures({
       />
       <StatCard
         label="Aktive Geräte"
-        value={month.activeTerminals}
+        value={month.activeTerminals ?? EMPTY_VALUE}
         hint={
           changeHint(
             keyDateChange(month.activeTerminals, previous?.activeTerminals),
@@ -326,11 +336,14 @@ export default function TraegerKeyDateCountsPage() {
   const { counts, error } = useTraegerKeyDateCounts();
   const [period, setPeriod] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [schoolId, setSchoolId] = useState("");
   const loading = counts === null && !error;
   const schools = counts?.schools ?? [];
+  const chosenSchool = schools.find((school) => school.id === schoolId);
   const months = useMemo(
-    () => (counts ? keyDateMonthRows(counts.schools, counts.months) : []),
-    [counts],
+    () =>
+      counts ? keyDateMonthRows(counts.schools, counts.months, schoolId) : [],
+    [counts, schoolId],
   );
   const selection = useMemo(
     () =>
@@ -338,9 +351,22 @@ export default function TraegerKeyDateCountsPage() {
     [counts, period],
   );
   const rows = useMemo(
-    () => (selection?.rows ?? []).filter((row) => matchesSearch(row, search)),
-    [selection, search],
+    () =>
+      (selection?.rows ?? []).filter(
+        (row) =>
+          (!schoolId || row.school.id === schoolId) &&
+          matchesSearch(row, search),
+      ),
+    [selection, schoolId, search],
   );
+  // One school chosen: the figures above show that school too.
+  const chosenRow = chosenSchool
+    ? selection?.rows.find((row) => row.school.id === chosenSchool.id)
+    : undefined;
+  const figures =
+    chosenRow && selection
+      ? keyDateSchoolFigures(chosenRow, selection.month, selection.previous)
+      : null;
   const selectedKeyDates =
     months.find((month) => month.period === selection?.month.period)
       ?.keyDates ?? [];
@@ -366,8 +392,26 @@ export default function TraegerKeyDateCountsPage() {
           Nach diesen Zahlen berechnet moto jede Schule im Monat. moto hält sie
           am Stichtag einmal fest. Danach ändern sie sich nicht mehr. Das
           moto-Team sieht in seinem Bericht genau dieselben Zahlen. Ein Klick
-          auf einen Monat unten zeigt seine Zahlen.
+          auf einen Monat unten zeigt seine Zahlen. Mit „Herunterladen“ bekommen
+          Sie alle Monate als PDF, Excel oder CSV, für alle Schulen oder die
+          gewählte Schule.
         </>
+      }
+      actions={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList(
+              "/api/traeger/schools/key-date-counts/export",
+              format,
+              { school: schoolId },
+            )
+          }
+          scope={traegerExportScope(chosenSchool?.name)}
+          ariaLabel="Stichtagszahlen herunterladen"
+          fallbackName="stichtagszahlen"
+          errorObject="die Stichtagszahlen"
+          unavailable={!counts || months.length === 0}
+        />
       }
       stats={
         counts ? (
@@ -422,13 +466,28 @@ export default function TraegerKeyDateCountsPage() {
             todayLabel="Neuester Monat"
             actions={
               schools.length > 1 ? (
-                <SearchBar
-                  value={search}
-                  onChange={setSearch}
-                  placeholder="Schule oder Ort suchen…"
-                  inputProps={{ "aria-label": "Schule oder Ort suchen" }}
-                  className="min-w-0 md:w-72"
-                />
+                <>
+                  <CustomSelect
+                    ariaLabel="Schule"
+                    value={schoolId}
+                    onChange={setSchoolId}
+                    options={[
+                      { value: "", label: "Alle Schulen" },
+                      ...schools.map((school) => ({
+                        value: school.id,
+                        label: school.name,
+                      })),
+                    ]}
+                    className="min-w-0 md:w-64"
+                  />
+                  <SearchBar
+                    value={search}
+                    onChange={setSearch}
+                    placeholder="Schule oder Ort suchen…"
+                    inputProps={{ "aria-label": "Schule oder Ort suchen" }}
+                    className="min-w-0 md:w-72"
+                  />
+                </>
               ) : undefined
             }
           />
@@ -438,9 +497,9 @@ export default function TraegerKeyDateCountsPage() {
       {selection ? (
         <>
           <MonthFigures
-            month={selection.month}
-            previous={selection.previous}
-            schoolCount={schools.length}
+            month={figures?.month ?? selection.month}
+            previous={figures ? figures.previous : selection.previous}
+            schoolCount={chosenSchool ? 1 : schools.length}
           />
           <DataTable
             heading={{

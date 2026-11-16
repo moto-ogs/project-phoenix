@@ -18,11 +18,6 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import {
-  ExportMenu,
-  exportFormatOptions,
-  type ExportMenuOption,
-} from "~/components/ui/export-menu";
 import type {
   ActiveFilter,
   FilterConfig,
@@ -35,15 +30,14 @@ import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import {
-  useApiErrorDisplay,
   useApiFormError,
   useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { formatDate } from "~/lib/date-helpers";
-import { downloadBlob } from "~/lib/file-download";
 import { formatCount } from "~/lib/format-utils";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { createLogger } from "~/lib/logger";
 import { foldForSearch } from "~/lib/search-fold";
 import { staffName } from "~/lib/traeger-staff-api";
@@ -74,10 +68,6 @@ const STATUS_ORDER: readonly StaffProofStatus[] = [
   "expiring_soon",
   "valid",
 ];
-
-const EXPORT_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "csv",
-]);
 
 const NO_MAPPING = "";
 
@@ -115,11 +105,7 @@ const NO_LIST: StaffProofList = {
 };
 
 /** Search, filters, export and table of the Ablaufliste in the page head. */
-function useProofListView(
-  loaded: StaffProofList | null,
-  onExport: () => void,
-  exporting: boolean,
-) {
+function useProofListView(loaded: StaffProofList | null) {
   const list = loaded ?? NO_LIST;
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("open");
@@ -289,13 +275,14 @@ function useProofListView(
       setKind("all");
     },
     actions: (
-      <ExportMenu
+      <TraegerListExportMenu
+        download={downloadStaffProofList}
+        scope="Alle Nachweise"
         ariaLabel="Ablaufliste herunterladen"
-        tooltip="Speichert alle Nachweise als Tabelle. Das steht im Zugriffsprotokoll der Schulen."
-        options={EXPORT_FORMATS}
-        busyKey={exporting ? "csv" : null}
+        tooltip="Zeigt die Formate für alle Nachweise. Jeder Download steht im Zugriffsprotokoll der Schulen."
+        fallbackName={`nachweise-${list.today || "heute"}`}
+        errorObject="die Ablaufliste"
         unavailable={list.entries.length === 0}
-        onSelect={onExport}
       />
     ),
     body: (
@@ -548,10 +535,8 @@ export default function TraegerStaffProofsPage() {
   const [list, setList] = useState<StaffProofList | null>(null);
   const [schools, setSchools] = useState<SchoolProofKinds[] | null>(null);
   const [editing, setEditing] = useState<StaffProofTypeTarget>(null);
-  const [exporting, setExporting] = useState(false);
   const pageLoad = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = pageLoad;
-  const { show: showActionError } = useApiErrorDisplay();
 
   const load = useCallback(async () => {
     try {
@@ -577,25 +562,7 @@ export default function TraegerStaffProofsPage() {
     void load();
   }, [load]);
 
-  const exportCsv = async () => {
-    setExporting(true);
-    try {
-      const file = await downloadStaffProofList();
-      downloadBlob(
-        file.blob,
-        file.filename ?? `nachweise-${list?.today ?? "heute"}.csv`,
-      );
-    } catch (err) {
-      logger.error("traeger_staff_proofs_export_failed", {
-        error: errorMessage(err),
-      });
-      await showActionError(err, { object: "die Exportdatei" });
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const listView = useProofListView(list, () => void exportCsv(), exporting);
+  const listView = useProofListView(list);
   const loading = !list && !pageLoad.error;
   const open = list
     ? list.counts.expired + list.counts.missing + list.counts.expiringSoon

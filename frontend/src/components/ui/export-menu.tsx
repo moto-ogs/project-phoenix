@@ -22,6 +22,8 @@ export interface ExportMenuOption {
   readonly format?: ExportFileFormat;
   /** Visible label; defaults to the format name („PDF“, „Word“, …). */
   readonly label?: string;
+  /** One line under the label: what the file is good for. */
+  readonly description?: string;
 }
 
 /** One entry per format, in this order. */
@@ -72,8 +74,12 @@ export function exportMenuItems({
             ? EXPORT_FORMAT_LABELS[option.format]
             : EXPORT_ACTION_LABELS.print)),
     icon: optionIcon(option),
-    noDescription:
-      "Format oder Drucken unter „Herunterladen“ sagt schon, was passiert",
+    ...(option.description
+      ? { description: option.description }
+      : {
+          noDescription:
+            "Format oder Drucken unter „Herunterladen“ sagt schon, was passiert",
+        }),
     disabled: unavailable || busyKey !== null,
     onClick: () => onSelect(option),
   }));

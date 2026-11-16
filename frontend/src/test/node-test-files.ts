@@ -27,6 +27,7 @@ export const nodeLogicTestFiles = [
   "src/app/[tenant]/(protected)/students/search/child-scope-tabs.test.ts",
   "src/app/[tenant]/(protected)/students/search/tracking-filter.test.ts",
   "src/app/manifest.test.ts",
+  "src/app/traeger/list-exports.test.ts",
   "src/components/active-supervisions/use-supervision-dashboard.test.ts",
   "src/components/active-supervisions/view-model.test.ts",
   "src/components/activities/activity-form-sections.test.ts",

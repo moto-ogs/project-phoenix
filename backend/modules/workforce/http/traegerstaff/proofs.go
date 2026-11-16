@@ -1,10 +1,7 @@
 package traegerstaff
 
 import (
-	"bytes"
-	"encoding/csv"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -14,7 +11,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // ProofsResource serves the Nachweise of the Personalstamm (#4707, ADR 0089
@@ -24,15 +20,16 @@ import (
 type ProofsResource struct {
 	proofs       workforce.TraegerStaffProofs
 	requireStaff common.Middleware
+	lists        ListRenderer
 }
 
 // NewProofsResource builds the resource; the root binds requireStaff to the
-// Träger right traeger_staff:manage.
-func NewProofsResource(proofs workforce.TraegerStaffProofs, requireStaff common.Middleware) *ProofsResource {
-	if proofs == nil || requireStaff == nil {
-		panic("workforce traeger staff proofs: the proofs and the right check are required")
+// Träger right traeger_staff:manage and lists to Document Rendering (#4718).
+func NewProofsResource(proofs workforce.TraegerStaffProofs, requireStaff common.Middleware, lists ListRenderer) *ProofsResource {
+	if proofs == nil || requireStaff == nil || lists == nil {
+		panic("workforce traeger staff proofs: the proofs, the right check and the list renderer are required")
 	}
-	return &ProofsResource{proofs: proofs, requireStaff: requireStaff}
+	return &ProofsResource{proofs: proofs, requireStaff: requireStaff, lists: lists}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/staff-proofs.
@@ -67,12 +64,17 @@ func (rs *ProofsResource) list(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, list, "Staff proofs retrieved successfully")
 }
 
-// export answers the list as CSV for a spreadsheet: one row per kind and
-// person, the most urgent first. Its access entry is written before the
-// file; a failed entry leaves no file.
+// export answers the list as PDF, Excel or CSV (format=, CSV without one):
+// one row per kind and person, the most urgent first. Its access entry is
+// written before the file; a failed entry leaves no file.
 func (rs *ProofsResource) export(w http.ResponseWriter, r *http.Request) {
 	session, ok := actor(w, r)
 	if !ok {
+		return
+	}
+	format, err := listFormat(r)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
 	list, err := rs.proofs.ProofList(r.Context(), session, workforce.TraegerStaffViewProofExport)
@@ -80,16 +82,7 @@ func (rs *ProofsResource) export(w http.ResponseWriter, r *http.Request) {
 		renderProofError(w, r, err)
 		return
 	}
-	data, err := proofListCSV(list)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", textnorm.ContentDisposition("attachment", fmt.Sprintf("nachweise-%s.csv", list.Today)))
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
+	writeList(w, r, rs.lists, format, proofListTable(list))
 }
 
 // proofStatusLabels are the German statuses of the export.
@@ -108,34 +101,29 @@ func germanDay(day string) string {
 	return parsed.Format("02.01.2006")
 }
 
-func proofListCSV(list workforce.TraegerStaffProofList) ([]byte, error) {
-	var buf bytes.Buffer
-	buf.WriteString("\xEF\xBB\xBF")
-	writer := csv.NewWriter(&buf)
-	writer.Comma = ';'
-	rows := [][]string{{"Nachname", "Vorname", "Personalnummer", "Einsatzorte", "Nachweis", "Stand", "Gültig bis", "Vorgelegt am"}}
+func proofListTable(list workforce.TraegerStaffProofList) ListTable {
+	rows := make([][]string, 0, len(list.Entries))
 	for _, entry := range list.Entries {
 		number := ""
 		if entry.PersonnelNumber != nil {
 			number = *entry.PersonnelNumber
 		}
 		rows = append(rows, []string{
-			csvSafe(entry.LastName), csvSafe(entry.FirstName), number, csvSafe(strings.Join(entry.Schools, ", ")), csvSafe(entry.TypeName),
+			entry.LastName, entry.FirstName, number, strings.Join(entry.Schools, ", "), entry.TypeName,
 			proofStatusLabels[entry.Status], germanDay(entry.ExpiresOn), germanDay(entry.PresentedOn),
 		})
 	}
-	if err := writer.WriteAll(rows); err != nil {
-		return nil, err
+	return ListTable{
+		Title: "Nachweise", Subtitle: "Stand " + germanDay(list.Today),
+		Filters: []string{"Alle Personen und Einsatzorte"},
+		Columns: []ListColumn{
+			{ID: "last_name", Label: "Nachname"}, {ID: "first_name", Label: "Vorname"}, {ID: "personnel_number", Label: "Personalnummer"},
+			{ID: "schools", Label: "Einsatzorte"}, {ID: "type", Label: "Nachweis"}, {ID: "status", Label: "Stand"},
+			{ID: "expires_on", Label: "Gültig bis"}, {ID: "presented_on", Label: "Vorgelegt am"},
+		},
+		Rows: rows, Footer: "Vertraulich. Enthält personenbezogene Daten.",
+		Filename: "nachweise-" + list.Today,
 	}
-	return buf.Bytes(), nil
-}
-
-// csvSafe keeps a spreadsheet from reading a name as a formula.
-func csvSafe(value string) string {
-	if value != "" && strings.ContainsRune("=+-@\t\r", rune(value[0])) {
-		return "'" + value
-	}
-	return value
 }
 
 func (rs *ProofsResource) types(w http.ResponseWriter, r *http.Request) {

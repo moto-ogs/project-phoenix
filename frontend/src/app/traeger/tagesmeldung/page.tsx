@@ -13,11 +13,6 @@ import { Alert } from "~/components/ui/alert";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
 import { EmptyState } from "~/components/ui/empty-state";
-import {
-  ExportMenu,
-  type ExportMenuOption,
-  exportFormatOptions,
-} from "~/components/ui/export-menu";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import type {
   ActiveFilter,
@@ -38,7 +33,7 @@ import {
   limitPeriod,
 } from "~/components/traeger/daily-attendance-model";
 import { useTraegerDailyAttendance } from "~/components/traeger/use-traeger-daily-attendance";
-import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { childrenConcept } from "~/lib/concepts/children";
 import { pickupConcept } from "~/lib/concepts/pickup";
 import { presentConcept } from "~/lib/concepts/present";
@@ -49,9 +44,7 @@ import {
   parseISODate,
   toISODate,
 } from "~/lib/date-helpers";
-import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { createLogger } from "~/lib/logger";
 import {
   DAILY_ATTENDANCE_MAX_DAYS,
   type DailyAttendanceDay,
@@ -60,12 +53,6 @@ import {
   type TraegerSchoolDailyAttendance,
   downloadTraegerDailyAttendance,
 } from "~/lib/traeger-daily-attendance-api";
-
-const logger = createLogger({ component: "TraegerDailyAttendancePage" });
-
-const EXPORT_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "csv",
-]);
 
 /** So weit reicht die Auswahl zurück: ein Jahr; ein Zeitraum hat 31 Tage. */
 const PICKER_DAYS = 366;
@@ -342,10 +329,8 @@ export default function TraegerDailyAttendancePage() {
   });
   const [clamped, setClamped] = useState(false);
   const [schoolId, setSchoolId] = useState("");
-  const [exporting, setExporting] = useState(false);
   const { report, error, reportError, loading } =
     useTraegerDailyAttendance(period);
-  const { show: showActionError } = useApiErrorDisplay();
 
   const schools = report?.schools ?? [];
   const selected = schools.find((school) => school.id === schoolId) ?? null;
@@ -365,25 +350,6 @@ export default function TraegerDailyAttendancePage() {
       if (limited.clamped) {
         setRange({ from: parseISODate(limited.period.from), to: next.to });
       }
-    }
-  }
-
-  async function exportCsv() {
-    setExporting(true);
-    try {
-      const file = await downloadTraegerDailyAttendance(period);
-      downloadBlob(
-        file.blob,
-        file.filename ?? `tagesmeldung-mv-${period.from}-bis-${period.to}.csv`,
-      );
-    } catch (err) {
-      reportError(err);
-      logger.error("traeger_daily_attendance_export_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showActionError(err, { object: "die Datei der Tagesmeldung" });
-    } finally {
-      setExporting(false);
     }
   }
 
@@ -462,13 +428,17 @@ export default function TraegerDailyAttendancePage() {
             className="w-full sm:w-auto"
             triggerClassName="w-full sm:w-auto"
           />
-          <ExportMenu
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerDailyAttendance(period, format)
+            }
+            scope="Alle Schulen in Mecklenburg-Vorpommern"
             ariaLabel="Tagesmeldung herunterladen"
-            tooltip="Speichert die Datei für das Land. Sie enthält keine Namen."
-            options={EXPORT_FORMATS}
-            busyKey={exporting ? "csv" : null}
+            tooltip="Zeigt die Formate der Datei für das Land. Sie enthält keine Namen."
+            fallbackName={`tagesmeldung-mv-${period.from}-bis-${period.to}`}
+            errorObject="die Datei der Tagesmeldung"
             unavailable={!report || schools.length === 0}
-            onSelect={() => void exportCsv()}
+            onError={reportError}
           />
         </>
       }

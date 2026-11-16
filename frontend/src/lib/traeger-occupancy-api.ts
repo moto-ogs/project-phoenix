@@ -5,7 +5,11 @@
  */
 
 import { apiErrorFromBody, transportFetch } from "./api-error";
-import { filenameFromDisposition } from "./file-download";
+import {
+  downloadTraegerList,
+  type TraegerListFile,
+  type TraegerListFormat,
+} from "./traeger-list-export";
 import type { TraegerSchool } from "./traeger-api";
 
 interface TraegerOccupancyGroup {
@@ -116,24 +120,15 @@ export async function fetchTraegerOccupancy(): Promise<TraegerOccupancy> {
   };
 }
 
-/** The CSV export of the occupancy, with the file name the backend chose. */
-export async function downloadTraegerOccupancy(): Promise<{
-  readonly blob: Blob;
-  readonly filename: string | null;
-}> {
-  const response = await transportFetch(
-    "/api/traeger/schools/occupancy/export",
-    { credentials: "include", cache: "no-store" },
-  );
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await readJson(response),
-    );
-  }
-  return {
-    blob: await response.blob(),
-    filename: filenameFromDisposition(response),
-  };
+/**
+ * The export of the occupancy as PDF, Excel or CSV (#4718), for every school
+ * or one, with the file name the backend chose.
+ */
+export function downloadTraegerOccupancy(
+  format: TraegerListFormat,
+  schoolId?: string,
+): Promise<TraegerListFile> {
+  return downloadTraegerList("/api/traeger/schools/occupancy/export", format, {
+    school: schoolId,
+  });
 }

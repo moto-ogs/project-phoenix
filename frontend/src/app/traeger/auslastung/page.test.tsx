@@ -286,6 +286,7 @@ describe("TraegerUtilizationPage", () => {
     expect(mockDownload).toHaveBeenCalledWith(
       { from: "2026-06-10", to: "2026-09-09" },
       undefined,
+      "csv",
     );
   });
 

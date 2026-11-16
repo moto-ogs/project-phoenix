@@ -117,10 +117,12 @@ describe("ContractSigningView focus", () => {
 
     submit();
 
-    expect(
-      await screen.findByRole("heading", {
-        name: "Vielen Dank. Der Vertrag ist unterschrieben.",
-      }),
-    ).toHaveFocus();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: "Vielen Dank. Der Vertrag ist unterschrieben.",
+        }),
+      ).toHaveFocus(),
+    );
   });
 });

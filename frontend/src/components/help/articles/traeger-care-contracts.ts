@@ -101,6 +101,16 @@ export function traegerCareContractsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Verträge herunterladen",
+        description: "Zum Ablegen, für eine Tabelle oder ein anderes Programm.",
+        steps: [
+          "Wählen Sie in der Navigation `Verträge`.",
+          "Wählen Sie bei Bedarf einen Status, einen Betreuungsort oder suchen Sie.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Die Datei enthält alle Verträge zu Ihrer Auswahl. Jeder Download steht im Zugriffsprotokoll der Schulen.",
+        ],
+      },
+      {
         title: "Kinder und bestehende Verträge importieren",
         description:
           "Haben Sie Kinder und Verträge schon in einem anderen Programm, zum Beispiel OGS Connect? Dann übernehmen Sie alle auf einmal aus einer CSV-Datei. Jeder Vertrag gilt sofort als abgeschlossen. Die Eltern bekommen keine Mail. moto bewahrt die Datei nicht auf.",
