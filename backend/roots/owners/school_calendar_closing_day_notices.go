@@ -32,9 +32,17 @@ const (
 type schoolCalendarClosingDayNotices struct {
 	audience    deliveryContract.SchoolAudience
 	notifier    staffPushRouter
-	preferences staffPushPreferences
+	preferences closingDayPreferences
 	actor       func(context.Context) int64
 	now         func() time.Time
+}
+
+// closingDayPreferences applies Delivery's recipient rules for a school-wide
+// notice. OGS accounts need the type's permission; moto-schule accounts do
+// not, because the type explicitly waives it in that portal.
+type closingDayPreferences interface {
+	FilterNotOptedOut(ctx context.Context, notificationType string, accountIDs []int64) ([]int64, error)
+	FilterPermitted(ctx context.Context, notificationType string, accountIDs []int64) ([]int64, error)
 }
 
 // NewSchoolCalendarClosingDayNotices binds the notices over the root's
@@ -58,6 +66,13 @@ func (n schoolCalendarClosingDayNotices) NotifyClosingDayChanged(ctx context.Con
 	}
 	actor := n.actor(ctx)
 	staff := withoutAccount(audience.StaffAccountIDs, actor)
+	staff, err = n.preferences.FilterPermitted(ctx, deliveryContract.NotificationSchoolClosingDayChanged, staff)
+	if err != nil {
+		return fmt.Errorf("closing day notice: filter staff recipients: %w", err)
+	}
+	staff = append(staff, withoutAccount(audience.SchoolAccountIDs, actor)...)
+	slices.Sort(staff)
+	staff = slices.Compact(staff)
 	guardians := withoutAccount(audience.GuardianAccountIDs, actor)
 	title, body := closingDayNoticeCopy(notice)
 	key := fmt.Sprintf("school_closing_day:%d:%d", notice.ClosingDayID, n.now().UnixNano())

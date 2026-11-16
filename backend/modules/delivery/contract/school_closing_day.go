@@ -29,9 +29,13 @@ type SchoolAudience interface {
 }
 
 // SchoolAudienceMembers are the accounts of one school's audience.
-// StudentIDs are the children the guardians reach the notice through.
+// StaffAccountIDs have an OGS staff role and therefore still need the
+// notification type's permission. SchoolAccountIDs have a moto-schule role;
+// types can explicitly waive that permission for this portal. StudentIDs are
+// the children the guardians reach the notice through.
 type SchoolAudienceMembers struct {
 	StaffAccountIDs    []int64
+	SchoolAccountIDs   []int64
 	GuardianAccountIDs []int64
 	StudentIDs         []int64
 }

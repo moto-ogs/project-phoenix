@@ -31,6 +31,9 @@ func (r *router) SchoolAudience(ctx context.Context, tenantID int64) (contract.S
 		if member.Staff {
 			audience.StaffAccountIDs = append(audience.StaffAccountIDs, member.AccountID)
 		}
+		if member.School {
+			audience.SchoolAccountIDs = append(audience.SchoolAccountIDs, member.AccountID)
+		}
 		if len(member.StudentIDs) > 0 {
 			audience.GuardianAccountIDs = append(audience.GuardianAccountIDs, member.AccountID)
 			audience.StudentIDs = append(audience.StudentIDs, member.StudentIDs...)

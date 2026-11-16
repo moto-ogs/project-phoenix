@@ -61,10 +61,11 @@ type FeedView struct {
 }
 
 // SchoolAudienceMember is one account of a school-wide notice (#7144): an
-// account with a role of the OGS portal or of moto schule (Staff), or a
+// account with a role of the OGS portal (Staff), moto schule (School), or a
 // guardian with the children it holds parent_portal.access for.
 type SchoolAudienceMember struct {
 	AccountID  int64
 	Staff      bool
+	School     bool
 	StudentIDs []int64
 }

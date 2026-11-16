@@ -325,7 +325,8 @@ func (s *Store) MarkAllGuardianFeedEntriesRead(ctx context.Context, accountID in
 // Web Push and SSE check on delivery, so it names nobody who could not read
 // the entry. An account that is staff and guardian at once is both.
 const schoolAudienceSQL = `SELECT reader.account_id,
-		(reader.has_staff_role OR reader.has_school_role) AS staff,
+		reader.has_staff_role AS staff,
+		reader.has_school_role AS school,
 		CASE WHEN reader.has_guardian_role THEN reader.guardian_student_ids ELSE '{}'::bigint[] END AS student_ids
 	FROM platform.delivery_realtime_recipients AS reader
 	WHERE reader.tenant_id = ? AND reader.active
@@ -336,6 +337,7 @@ const schoolAudienceSQL = `SELECT reader.account_id,
 type schoolAudienceRow struct {
 	AccountID  int64   `bun:"account_id"`
 	Staff      bool    `bun:"staff"`
+	School     bool    `bun:"school"`
 	StudentIDs []int64 `bun:"student_ids,array"`
 }
 
@@ -350,7 +352,7 @@ func (s *Store) SchoolAudience(ctx context.Context, tenantID int64) ([]domain.Sc
 	}
 	members := make([]domain.SchoolAudienceMember, 0, len(rows))
 	for _, row := range rows {
-		members = append(members, domain.SchoolAudienceMember{AccountID: row.AccountID, Staff: row.Staff, StudentIDs: row.StudentIDs})
+		members = append(members, domain.SchoolAudienceMember{AccountID: row.AccountID, Staff: row.Staff, School: row.School, StudentIDs: row.StudentIDs})
 	}
 	return members, nil
 }

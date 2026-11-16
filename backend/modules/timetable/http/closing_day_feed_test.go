@@ -88,6 +88,15 @@ func (f *closingFeedFixture) staff(t *testing.T, name string) closingFeedPerson 
 	return closingFeedPerson{accountID: account.ID, email: account.Email}
 }
 
+// staffWithoutActivities is a member of the OGS portal but does not hold the
+// permission the closing-day notification type requires there.
+func (f *closingFeedFixture) staffWithoutActivities(t *testing.T, name string) closingFeedPerson {
+	t.Helper()
+	_, account := testpkg.CreateTestStaffWithAccountForTenant(t, f.db, f.tenantID, name, "Schließtag")
+	f.device(t, account.ID, "staff")
+	return closingFeedPerson{accountID: account.ID, email: account.Email}
+}
+
 // teacher is a Lehrkraft of moto schule with a device there.
 func (f *closingFeedFixture) teacher(t *testing.T) closingFeedPerson {
 	t.Helper()
@@ -202,6 +211,7 @@ func TestClosingDayFeedReachesEveryAccountOfTheSchoolOnly(t *testing.T) {
 	t.Parallel()
 	f := newClosingFeedFixture(t)
 	leitung, staff, quiet, departed := f.staff(t, "Leitung"), f.staff(t, "Betreuung"), f.staff(t, "Ruhig"), f.staff(t, "Ausgeschieden")
+	withoutActivities := f.staffWithoutActivities(t, "Ohne Recht")
 	teacher := f.teacher(t)
 	family, withoutAccess := f.family(t), f.family(t)
 	f.consent(quiet.accountID, deliveryContract.NotificationSchoolClosingDayChanged, false)
@@ -234,6 +244,7 @@ func TestClosingDayFeedReachesEveryAccountOfTheSchoolOnly(t *testing.T) {
 
 	assert.Empty(t, f.entries(t, leitung.accountID, f.tenantID, "staff"), "who entered it gets nothing")
 	assert.Empty(t, f.entries(t, departed.accountID, f.tenantID, "staff"), "who left the school gets nothing")
+	assert.Empty(t, f.entries(t, withoutActivities.accountID, f.tenantID, "staff"), "an OGS account without activities:read gets nothing")
 	assert.Empty(t, f.entries(t, withoutAccess.AccountID, 0, "parent"), "a guardian without portal access gets nothing")
 
 	// The push is on until a person switches it off.
@@ -243,6 +254,7 @@ func TestClosingDayFeedReachesEveryAccountOfTheSchoolOnly(t *testing.T) {
 	assert.Zero(t, f.pushes(t, quiet.accountID), "who switched it off gets the entry without a push")
 	assert.Zero(t, f.pushes(t, leitung.accountID))
 	assert.Zero(t, f.pushes(t, departed.accountID))
+	assert.Zero(t, f.pushes(t, withoutActivities.accountID))
 
 	// The family's access is checked on every read: once the school takes
 	// parent_portal.access back, the entry is gone without being deleted.
