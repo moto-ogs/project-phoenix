@@ -17,7 +17,7 @@ const CodeFederalStateMissing = "calendar.federal_state_missing"
 // ErrFederalStateMissing is returned when a school has no federal state set,
 // or one that names no supported holiday region (#7174 removed the default).
 // It is a business rejection: the request is valid, but the school's
-// holidays cannot be known until the operator sets the state, so every
+// holidays cannot be known until the school sets the state, so every
 // endpoint answers 409 with its code instead of a server error. It matches
 // ErrFederalStateUnavailable, so callers that tolerate an unknown state
 // keep doing so. A failure to read the setting stays

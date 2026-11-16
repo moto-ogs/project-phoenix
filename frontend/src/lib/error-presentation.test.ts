@@ -91,7 +91,7 @@ describe("presentError", () => {
     });
     const result = presentError(error, "Die Karte „Personal heute“");
     expect(result.message).toBe(
-      "Für die Schule ist noch kein Bundesland hinterlegt. Deshalb fehlen die Feiertage. Bitte melden Sie das dem moto-Support.",
+      "Für die Schule ist noch kein Bundesland eingetragen. Deshalb fehlen die Feiertage. Die Leitung trägt es in den Einstellungen ein.",
     );
     expect(result.retryable).toBe(false);
     expect(result.requestId).toBeUndefined();
