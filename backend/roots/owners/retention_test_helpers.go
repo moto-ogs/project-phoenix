@@ -96,7 +96,7 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 // so the object store is never reached.
 func newRetentionTestAnnouncements(db transactionruntime.Database, settings settingsCompose.BatchSettingsService) (communication.ParentAnnouncementRetention, error) {
 	purger, err := filestorageCompose.NewAttachmentPurger(filestorageCompose.AttachmentPurgerDependencies{
-		DB: db.Pool(), Objects: unreachableObjects{}, Observe: func(filestorageCompose.Observation) {},
+		DB: db.Pool(), Objects: unreachableObjects{}, Observe: func(filestorageCompose.Observation) {}, Now: time.Now,
 	})
 	if err != nil {
 		return nil, err
