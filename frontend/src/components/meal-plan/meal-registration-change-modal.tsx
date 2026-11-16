@@ -18,7 +18,7 @@ import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR } from "~/lib/swr";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { createLogger } from "~/lib/logger";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
@@ -110,7 +110,7 @@ export function MealRegistrationChangeModal({
     isOpen && studentId
       ? tenantContactKeys.childMealSchedule(studentId, effectiveFrom)
       : null;
-  const schedule = useSWRAuth(
+  const schedule = useFreshSWR(
     scheduleKey,
     () => getChildMealSchedule(studentId, effectiveFrom),
     { keepPreviousData: false },
@@ -137,7 +137,7 @@ export function MealRegistrationChangeModal({
       ? draft.weekdays
       : (schedule.data?.weekdays ?? NO_WEEKDAYS);
   const toggleWeekday = (weekday: number) => {
-    if (scheduleKey === null) return;
+    if (scheduleKey === null || scheduleState !== "loaded") return;
     setDraft({
       key: scheduleKey,
       weekdays: weekdays.includes(weekday)

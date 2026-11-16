@@ -32,7 +32,7 @@ import {
 } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
-import { useTraegerResource } from "./use-traeger-resource";
+import { useFreshTraegerResource } from "./use-traeger-resource";
 
 const logger = createLogger({ component: "CareContractChangeModal" });
 
@@ -74,8 +74,8 @@ export function DecideChangeModal({
   const form = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(form);
   const { success } = useToast();
-  const read = useTraegerResource(
-    approve && effectiveFrom
+  const read = useFreshTraegerResource(
+    isOpen && approve && effectiveFrom
       ? traegerContractKeys.changePreview(
           contractId,
           request.id,

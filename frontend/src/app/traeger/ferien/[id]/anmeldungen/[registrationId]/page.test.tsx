@@ -1,6 +1,7 @@
 import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 import {
+  act,
   fireEvent,
   render as rtlRender,
   screen,
@@ -16,6 +17,7 @@ import {
   onTestFinished,
   vi,
 } from "vitest";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
@@ -1221,6 +1223,30 @@ describe("TraegerHolidayRegistrationPage", () => {
     ).toBeGreaterThan(0);
     expect(mockHealth).not.toHaveBeenCalled();
     expect(screen.queryByText("Erdnüsse")).not.toBeInTheDocument();
+  });
+
+  it("performs a new audited health read on immediate revisits before showing health data", async () => {
+    sessionPermissions.current = [
+      "traeger_enrollment:manage",
+      "traeger_health:read",
+    ];
+    const view = rtlRender(<TraegerHolidayRegistrationPage />, {
+      wrapper: ({ children }) => (
+        <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+          <ToastProvider>{children}</ToastProvider>
+        </SWRConfig>
+      ),
+    });
+    expect(await screen.findByText("Erdnüsse")).toBeVisible();
+    expect(mockHealth).toHaveBeenCalledTimes(1);
+    view.rerender(<div>away</div>);
+    const fresh = deferred<typeof HOLIDAY_REGISTRATION_HEALTH>();
+    mockHealth.mockReturnValue(fresh.promise);
+    view.rerender(<TraegerHolidayRegistrationPage />);
+    expect(screen.queryByText("Erdnüsse")).not.toBeInTheDocument();
+    await waitFor(() => expect(mockHealth).toHaveBeenCalledTimes(2));
+    await act(async () => fresh.resolve(HOLIDAY_REGISTRATION_HEALTH));
+    expect(await screen.findByText("Erdnüsse")).toBeVisible();
   });
 
   it("shows the health information to the right (#4722)", async () => {

@@ -49,7 +49,10 @@ import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-resource";
 import { useSWRRequestGuard } from "~/lib/swr/hooks";
 import { ApiError } from "~/lib/api-error";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import {
+  useFreshTraegerResource,
+  useTraegerResource,
+} from "~/components/traeger/use-traeger-resource";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
@@ -204,7 +207,7 @@ export default function TraegerHolidayRegistrationPage() {
     () => fetchHolidayContribution(periodId, registrationId),
     "die Anmeldung",
   );
-  const healthReader = useTraegerResource(
+  const healthReader = useFreshTraegerResource(
     ids && canSeeHealth
       ? traegerKeys.holidayRegistrationHealth(periodId, registrationId)
       : null,

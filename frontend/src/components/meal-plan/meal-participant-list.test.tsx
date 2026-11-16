@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render as rtlRender,
   screen,
@@ -61,6 +62,8 @@ import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
+import { deferred } from "~/test/helpers/form-modal-pending";
+import { MealRegistrationChangeModal } from "./meal-registration-change-modal";
 import { MealParticipantList } from "./meal-participant-list";
 
 function render(ui: ReactElement) {
@@ -162,6 +165,63 @@ describe("MealParticipantList", () => {
     mocks.setChildMealDay.mockResolvedValue(undefined);
     mocks.clearChildMealDay.mockResolvedValue(undefined);
     mocks.replaceChildMealSchedule.mockResolvedValue(undefined);
+  });
+
+  it("waits for this opening's meal schedule before edits can freeze a draft", async () => {
+    const props = {
+      date: "2026-09-07",
+      participants: [
+        {
+          studentId: "42",
+          firstName: "Mia",
+          lastName: "Muster",
+          schoolClass: "2a",
+        },
+      ],
+      others: [],
+      initialStudentId: "42",
+      onClose: vi.fn(),
+      onSaved: vi.fn(),
+    };
+    const view = render(<MealRegistrationChangeModal {...props} isOpen />);
+    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Montag" })).toBeChecked(),
+    );
+    view.rerender(<MealRegistrationChangeModal {...props} isOpen={false} />);
+    const fresh = deferred<{ weekdays: number[]; effectiveFrom: null }>();
+    mocks.getChildMealSchedule.mockReturnValue(fresh.promise);
+    view.rerender(<MealRegistrationChangeModal {...props} isOpen />);
+    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(mocks.replaceChildMealSchedule).not.toHaveBeenCalled();
+    await act(async () => fresh.reject(new ApiError("offline", 503)));
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die festen Tage"),
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Montag" })).toBeDisabled();
+    mocks.getChildMealSchedule.mockResolvedValue({
+      weekdays: [2, 4],
+      effectiveFrom: null,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Dienstag" })).toBeChecked(),
+    );
+    expect(screen.getByRole("checkbox", { name: "Donnerstag" })).toBeChecked();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Freitag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.replaceChildMealSchedule).toHaveBeenCalledWith(
+        "42",
+        [2, 4, 5],
+        "2026-09-07",
+      ),
+    );
   });
 
   // #3873: seeing the list opens no change of a registration.

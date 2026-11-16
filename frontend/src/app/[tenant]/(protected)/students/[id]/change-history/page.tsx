@@ -15,7 +15,7 @@ import {
   fetchStudentChangeHistory,
   type StudentFieldChange,
 } from "~/lib/student-api";
-import { useSWRAuth } from "~/lib/swr";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { useStudentData } from "~/lib/hooks/use-student-data";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -140,22 +140,28 @@ function StudentChangeHistoryPageContent() {
   const { student, loading: studentLoading } = useStudentData(studentId);
   const {
     data: entries,
-    error: historyError,
+    failure: historyError,
     mutate,
-  } = useSWRAuth(
-    studentKeys.changeHistory(studentId),
-    () => fetchStudentChangeHistory(studentId),
-    { keepPreviousData: false },
+  } = useConfirmedSWR(studentKeys.changeHistory(studentId), () =>
+    fetchStudentChangeHistory(studentId),
   );
   // A 404 is its own state, not an error to retry.
   const notFound =
     historyError instanceof ApiError && historyError.status === 404;
   const historyLoad = useSwrResourceLoadError(
-    [{ data: entries, error: notFound ? undefined : historyError }],
+    [
+      {
+        data: entries ?? undefined,
+        error: notFound ? undefined : historyError,
+      },
+    ],
     "die Liste der Änderungen",
     () => mutate(),
   );
-  const loading = (!entries && !historyError) || studentLoading;
+  const loading =
+    (!entries && !historyError) ||
+    studentLoading ||
+    (historyLoad.failure !== undefined && historyLoad.error === null);
 
   useStudentHistoryBreadcrumb({ studentName: student?.name, referrer });
   useScrollToTop(studentId);
@@ -176,7 +182,7 @@ function StudentChangeHistoryPageContent() {
         .filter(Boolean)
         .join(" · ")
     : "";
-  const failed = notFound || historyLoad.error !== null;
+  const failed = notFound || historyLoad.failure !== undefined;
   const back = studentHistoryBack(studentId, referrer, failed);
 
   return (
