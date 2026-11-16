@@ -129,6 +129,12 @@ describe("makeCatalogProxy", () => {
     expect(api.mock.calls[0]?.[1]).toBe("/parent/rows/mine");
   });
 
+  it("keeps a decoded slash or question mark inside its one segment", async () => {
+    api.mockResolvedValueOnce({ status: "success", data: { name: "Ada" } });
+    await call("GET", ["rows", "../mine?x=1"]);
+    expect(api.mock.calls[0]?.[1]).toBe("/parent/rows/..%2Fmine%3Fx%3D1");
+  });
+
   it.each([
     ["a path nothing registers", "GET", ["secrets"]],
     ["a registered path under another method", "PUT", ["rows", "1"]],
