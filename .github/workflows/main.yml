@@ -501,8 +501,11 @@ jobs:
     permissions:
       contents: read
     # Blacksmith: in a private repository GitHub-hosted runners bill at a
-    # higher price per vCPU (.claude/rules/ci-test-performance.md).
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    # higher price per vCPU (.claude/rules/ci-test-performance.md). unit keeps
+    # its cores busy: 168 + 52 s on 2 vCPU against 70 + 20 s on the hosted
+    # 4 vCPU, same price at half the wall time (#7286). The restore suites
+    # wait on I/O and took as long on 2 vCPU (283 s) as hosted.
+    runs-on: ${{ (matrix.suite == 'restore' || matrix.suite == 'release-restore') && 'blacksmith-2vcpu-ubuntu-2404' || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
