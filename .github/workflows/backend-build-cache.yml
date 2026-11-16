@@ -123,6 +123,58 @@ jobs:
           path: ~/.cache/go-build
           key: ${{ steps.build-cache-key.outputs.key }}
 
+      # The migrated database "Backend tests" restores instead of running
+      # every migration. That job saves it too, but a pull request's entry
+      # serves that pull request alone, and development has no test run: 19
+      # of 30 pull request runs migrated for 4-21 s (median 11 s) where the
+      # restore takes 1-2 s (14.-16.11.2026, #7195). This job is the writer
+      # every pull request reads. Key, path and Postgres image must match
+      # test.yml (scripts/db-snapshot-cache.test.mjs); the dump holds no
+      # roles, so the server settings and passwords of this container do
+      # not reach it.
+      - name: Look up migrated DB snapshot
+        id: db-snapshot
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: backend/.db-snapshot
+          key: db-snapshot-pg17-alpine-${{ hashFiles('backend/database/migrations/*.go', 'backend/cmd/migrate.go') }}
+          lookup-only: true
+
+      - name: Migrate a fresh database and dump it
+        if: steps.db-snapshot.outputs.cache-hit != 'true'
+        working-directory: backend
+        env:
+          POSTGRES_IMAGE: postgres:17.12-alpine3.24@sha256:34261f594522cf41dfcb76aefd42b9d201098b0e6b23c9c68733f169e4218b6f
+          DB_DSN: postgres://postgres:postgres@localhost:5432/phoenix_test?sslmode=disable
+          DB_MAX_OPEN_CONNS: "40"
+          DB_MAX_IDLE_CONNS: "40"
+          DB_CONN_MAX_LIFETIME: 30m
+          DB_CONN_MAX_IDLE_TIME: 10m
+          PHOENIX_AUTH_PASSWORD: phoenix_auth_test
+          PHOENIX_DEMO_PASSWORD: phoenix_demo_test
+        run: |
+          docker run -d --name snapshot-postgres -p 5432:5432 \
+            -e POSTGRES_DB=phoenix_test -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
+            -e TZ=Europe/Berlin --tmpfs /var/lib/postgresql/data:rw,size=4g "$POSTGRES_IMAGE"
+          # The entrypoint restarts the server once after initdb; only the
+          # TCP port answers on the final one.
+          for _ in $(seq 60); do
+            docker exec snapshot-postgres pg_isready -q -h localhost -U postgres && break
+            sleep 1
+          done
+          docker exec snapshot-postgres pg_isready -h localhost -U postgres
+          go run main.go migrate
+          mkdir -p .db-snapshot
+          docker exec snapshot-postgres pg_dump -U postgres phoenix_test > .db-snapshot/dump.sql
+          test -s .db-snapshot/dump.sql
+
+      - name: Save migrated DB snapshot
+        if: steps.db-snapshot.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: backend/.db-snapshot
+          key: db-snapshot-pg17-alpine-${{ hashFiles('backend/database/migrations/*.go', 'backend/cmd/migrate.go') }}
+
   # The build cache "Backend architecture ratchet" (main.yml) restores. Pull
   # requests only restore it; before, each run saved 1.2 to 2.0 GB that only
   # its own pull request could read, and the base tree compiled cold every
