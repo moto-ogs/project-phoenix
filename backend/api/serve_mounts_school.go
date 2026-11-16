@@ -101,7 +101,7 @@ func mountStaffRoutes(
 
 func schoolVacationHints(
 	db transactionruntime.Database, groups timetableModule.ActivityGroupQuery, days schoolcalendar.Calendar,
-	vacations schoolcalendar.SchoolVacationOwner,
+	vacations schoolcalendar.SchoolVacationOwner, now func() time.Time,
 ) (timetableModule.SchoolVacationHintQuery, error) {
 	rows := struct {
 		timetableCompose.PresenceReads
@@ -110,7 +110,8 @@ func schoolVacationHints(
 		PresenceReads:      owners.MustPresenceReads(db),
 		ActivityGroupQuery: groups,
 	}
-	return timetableCompose.NewSchoolVacationHints(rows, days, vacations, nil)
+	today := timezone.CalendarDateClock(now)
+	return timetableCompose.NewSchoolVacationHints(rows, days, vacations, func() string { return today().String() })
 }
 
 // mountSchoolPortalRoutes serves the school portal ("moto schule", #2207) at
@@ -146,7 +147,7 @@ func mountSchoolPortalRoutes(
 	if err != nil {
 		return err
 	}
-	vacationHints, err := schoolVacationHints(db, timetableOwner, calendar, vacations)
+	vacationHints, err := schoolVacationHints(db, timetableOwner, calendar, vacations, now)
 	if err != nil {
 		return err
 	}
@@ -261,8 +262,9 @@ func mountSchoolRoutes(
 	membership schoolMembershipModule.Capability, classListEntries schoolMembershipModule.ClassListEntries, databaseStats DatabaseStatsReader,
 	dataImports imports, persons peopledirectory.Capability, gradeTransition *gradetransition.Workflow, enrollment *enrollmentAPI.Resource,
 	appEnv string, weekProtocolSeed schedulerPorts.WeekProtocolEvenings, healthData enrollmentOwner.HolidayHealthCipher, holidayNoCare enrollmentOwner.HolidayHostCalendar,
+	now func() time.Time,
 ) {
-	mountWeekProtocolRoutes(tenant, timetableOwner, logger, caller, holidayAccessLog, persons, appEnv, weekProtocolSeed)
+	mountWeekProtocolRoutes(tenant, timetableOwner, logger, caller, holidayAccessLog, persons, appEnv, weekProtocolSeed, now)
 	tenant.Mount("/rooms", roomsHTTPAdapter.NewResource(facilities, roomsHTTPAdapter.Dependencies{
 		Facilities:          rooms.RoomService,
 		RoomHistorySettings: NewRoomHistorySettings(settings, logger.With("handler", "rooms"), settingsFacts.PrefetchSettings),

@@ -315,8 +315,9 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0248: Communication's parent-letter child reader constructor (+6).
 // ADR 0246: the report templates of modules/organizationtenancy/compose (+5)
 // and the export adapter of modules/traegerview/compose (+1).
-// ADR 0263: the clock imports of modules/timetable/compose (+4).
-const moduleComposeBudgetTotal = 13544
+// ADR 0263: the clock imports of modules/timetable/compose and the clock of
+// its repository composition (+6).
+const moduleComposeBudgetTotal = 13546
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -485,8 +486,9 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0128: the student template days constructor (+5), by
 	// ADR 0144: the vacation hint constructor (+6) and by ADR 0224: the cohort
 	// rosters constructor (+5).
-	// ADR 0263: the clock imports of the Timetable compositions (+4).
-	"modules/timetable/compose":                     1154,
+	// ADR 0263: the clock imports of the Timetable compositions and the clock
+	// of the repository composition (+6).
+	"modules/timetable/compose":                     1156,
 	"modules/timetableblockdisplay/compose":         9,
 	"modules/timetableenrollmentprovenance/compose": 10,
 	"modules/timetableprojection/compose":           7,

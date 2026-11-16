@@ -35,19 +35,24 @@ nannten.
    Schreibstempel `updated_at`, `archived_at` und `acknowledged_at`. Die
    Wurzel reicht `RootEnvironment.Now`/`Today` an den Owner
    (`BuildServeTimetable`), die Aktivitäten (`BuildActivities`), die
-   Raumreferenzen (`BuildFacilitiesModule`), die Planungsspuren, die
-   Konfliktprüfung, die Tagesinformationen und die HTTP-Ressource; Tests
-   reichen ihre feste Uhr über dieselben Testfabriken.
+   Raumreferenzen (`BuildFacilitiesModule`), die Repository-Komposition
+   (`NewTimetableRepositories`), die Planungsspuren, die Konfliktprüfung, die
+   Tagesinformationen, die Ferienhinweise, die Wochenprotokolle und die
+   HTTP-Ressource; Tests reichen ihre feste Uhr über dieselben Testfabriken.
+   Wo eine Wurzel keine Umgebung hat (Aufräum-Kommando, Aufbewahrung), bindet
+   sie die echte Uhr ausdrücklich.
 2. **Vorhandene Teiluhren bleiben, ihr Standard sitzt an einer Stelle.**
    Lebenszyklus, Vertretungen und Betriebstag behalten ihr `now()`; es liest
    `deps.Now` und fällt nur dort auf die echte Uhr zurück. Ein Block, der
    laufend ohne Zeitpunkt angelegt wird, bekommt seinen Start aus der Uhr
-   des Aufrufers (`InstanceRows.Now`, im Lebenszyklus dessen Uhr).
+   des Aufrufers (`InstanceRows.Now`, im Lebenszyklus dessen Uhr). Der
+   Abgleich der Teilnehmerlisten liest ohne eigene Uhr dieselbe.
 3. **Stoppuhr statt Startzeitpunkt.** Die Materialisierung reicht eine
    gemessene Dauer weiter statt ihres Startzeitpunkts (ADR 0240, Punkt 1).
 4. **Budgets.** Das Compose-LOC-Budget von `modules/timetable/compose` steigt
-   um die vier Importe der Uhrfelder (+4, 1.150 auf 1.154; Summe 13.540 auf
-   13.544). `ComposeWorker` wächst um drei Zeilen (347 auf 350), weil gofmt die
+   um die vier Importe der Uhrfelder und das Uhrfeld der
+   Repository-Komposition mit seinem Import (+6, 1.150 auf 1.156; Summe
+   13.540 auf 13.546). `ComposeWorker` wächst um drei Zeilen (347 auf 350), weil gofmt die
    Closure mit dem zusätzlichen Uhrargument umbricht.
 5. Die 83 Effekt-Bindungen, deren Körper sich nur durch ihre Uhr geändert
    haben (Stammdaten-Entscheidung der Betreuung, Raumentfernung und

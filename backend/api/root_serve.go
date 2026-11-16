@@ -237,7 +237,7 @@ func composeServeRoot(
 			return
 		},
 		func() error {
-			timetableRepos = owners.NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime)
+			timetableRepos = owners.NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime, env.Now)
 			return nil
 		},
 		func() (err error) {
@@ -556,7 +556,7 @@ func composeServeRoot(
 			weekProtocolSeed := developmentWeekProtocolEvenings(env.Config.AppEnv, db, logger, settings.Service, persons, services, reports, schedules, carePlan, timetableRepos)
 			mountSchoolRoutes(tenant, db, logger, facilities, facilitiesRooms, settings.Service, caller, active, services.Users,
 				structureViews.Education, renderer, activities, timetableOwner, iot, settingsWrites, organizations, people.Students, carePlan, audit.Persistence.DataAccessLog,
-				membership, classListEntries, databaseStats, dataImports, persons, gradeTransition, enrollmentResource, env.Config.AppEnv, weekProtocolSeed, env.HealthData, owners.NewHolidayHostCalendar(settings.Service, calendar))
+				membership, classListEntries, databaseStats, dataImports, persons, gradeTransition, enrollmentResource, env.Config.AppEnv, weekProtocolSeed, env.HealthData, owners.NewHolidayHostCalendar(settings.Service, calendar), env.Now)
 			mountPeopleRoutes(tenant, db, logger, reports, renderer, persons, services.Guardian, identity, caller, feedback, mealPlan,
 				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog)
 			mountCalendarRoutes(router, tenant, logger, calendarApp)

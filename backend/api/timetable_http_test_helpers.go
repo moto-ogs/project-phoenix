@@ -215,7 +215,7 @@ func newTimetableHTTPTestReads(db transactionruntime.Database, r TimetableHTTPTe
 		ArrivalBaselines:  owners.ArrivalBaselineProjector{Reader: arrivals},
 		Presence:          presence,
 		Sessions:          sessions.ActiveGroup,
-		ContentHash:       securityruntime.Fingerprint,
+		ContentHash:       securityruntime.Fingerprint, Now: r.ActivityInstance.Now,
 	})
 	if err != nil {
 		return nil, nil, err

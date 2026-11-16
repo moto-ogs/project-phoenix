@@ -37,7 +37,7 @@ func NewCleanupTimetable(db transactionruntime.Database) (timetableModule.Capabi
 	if err != nil {
 		return nil, err
 	}
-	return NewUnobservedTimetable(db, students, rooms)
+	return NewUnobservedTimetable(db, students, rooms, time.Now)
 }
 
 // newTimetable composes the Timetable owner over now; nil is the real clock

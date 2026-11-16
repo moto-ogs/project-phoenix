@@ -28,12 +28,13 @@ type TimetableRepositories = timetableCompose.Repositories
 // names of People Directory, School Structure, Facilities, School Membership
 // and Workforce reach the adapters through the directories bound here; the
 // instance and participant adapters compose an unobserved Student Presence
-// owner.
+// owner. now is the owner's clock (nil: the real one).
 func NewTimetableRepositories(
 	db transactionruntime.Database, capability timetable.Capability, students peopledirectory.Capability, groups schoolstructure.Query,
 	rooms facilities.Query, calendar schoolcalendar.Capability, membership schoolmembership.Capability, workTime workforce.Capability,
+	now func() time.Time,
 ) TimetableRepositories {
-	return NewTimetableRepositoriesWithPresence(db, capability, students, groups, rooms, calendar, membership, workTime, NewUnloggedStudentPresence(db))
+	return NewTimetableRepositoriesWithPresence(db, capability, students, groups, rooms, calendar, membership, workTime, NewUnloggedStudentPresence(db), now)
 }
 
 // NewTimetableRepositoriesWithPresence is NewTimetableRepositories with the
@@ -41,11 +42,11 @@ func NewTimetableRepositories(
 func NewTimetableRepositoriesWithPresence(
 	db transactionruntime.Database, capability timetable.Capability, students peopledirectory.Capability, groups schoolstructure.Query,
 	rooms facilities.Query, calendar schoolcalendar.Capability, membership schoolmembership.Capability, workTime workforce.Capability,
-	presence studentpresence.Owner,
+	presence studentpresence.Owner, now func() time.Time,
 ) timetableCompose.Repositories {
 	return timetableCompose.NewRepositories(timetableCompose.RepositoryDependencies{
 		DB: db.Pool(), Timetable: capability, Presence: presence, PartialAbsences: NewPartialAbsencePreview(db),
-		Directories: timetableDirectories(students, groups, rooms, calendar, membership, workTime),
+		Directories: timetableDirectories(students, groups, rooms, calendar, membership, workTime), Now: now,
 	}, MustPresenceReads(db))
 }
 
@@ -58,11 +59,16 @@ func NewUnobservedTimetable(db transactionruntime.Database, students peopledirec
 	if err != nil {
 		return nil, err
 	}
-	var now func() time.Time
-	if len(clocks) > 0 {
-		now = clocks[0]
+	return newTimetable(db, students, rooms, membership, func(timetableCompose.Observation) {}, firstTimetableClock(clocks))
+}
+
+// firstTimetableClock is the first given clock, nil (the real one) when none
+// is given.
+func firstTimetableClock(clocks []func() time.Time) func() time.Time {
+	if len(clocks) == 0 {
+		return nil
 	}
-	return newTimetable(db, students, rooms, membership, func(timetableCompose.Observation) {}, now)
+	return clocks[0]
 }
 
 // timetableDirectories binds the Timetable adapters' directory ports to the

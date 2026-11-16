@@ -177,7 +177,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() error {
-			timetableRepos = owners.NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime)
+			timetableRepos = owners.NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime, env.Now)
 			return nil
 		},
 		func() (err error) {
