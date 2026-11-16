@@ -214,7 +214,7 @@ type testDate string
 func (d testDate) String() string { return string(d) }
 
 func testDay(offset int) testDate {
-	return testDate(time.Now().AddDate(0, 0, offset).Format(time.DateOnly))
+	return testDate(parentRouteNow().AddDate(0, 0, offset).Format(time.DateOnly))
 }
 
 func testDayPlus(day testDate, offset int) testDate {

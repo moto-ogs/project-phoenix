@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -73,7 +74,7 @@ func postGuardianContact(t *testing.T, body []byte) (*httptest.ResponseRecorder,
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	service := &guardianContactCapture{}
 	router := testpkg.TenantRuntimeMiddleware(t, db)(
-		parent.NewResource(parent.ResourceConfig{Parent: service}).Router(api.ParentSessionChain))
+		parent.NewResource(parent.ResourceConfig{Now: time.Now, Parent: service}).Router(api.ParentSessionChain))
 
 	req := httptest.NewRequest(http.MethodPost, "/me/children/"+strconv.FormatInt(chain.StudentID, 10)+"/guardians", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")

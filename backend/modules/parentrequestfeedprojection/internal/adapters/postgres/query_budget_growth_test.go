@@ -12,6 +12,10 @@ import (
 	"github.com/uptrace/bun"
 )
 
+// growthFeedSince lies before every row this test inserts: PostgreSQL stamps
+// created_at at the insert, so the feed lists them on every day.
+var growthFeedSince = time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+
 func TestListNewParentRequestsQueryBudgetGrowth(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
@@ -51,7 +55,7 @@ func TestListNewParentRequestsQueryBudgetGrowth(t *testing.T) {
 		var queries []string
 		require.NoError(t, testpkg.WithTenantTx(t, testpkg.Ctx(t), db, testpkg.Tenant(t), func(ctx context.Context, tx bun.Tx) error {
 			counter.Reset()
-			entries, err := feedCompose.NewReader(func(context.Context) (bun.IDB, error) { return tx, nil }).ListNewParentRequests(ctx, testpkg.Tenant(t), time.Now().Add(-24*time.Hour), true, true)
+			entries, err := feedCompose.NewReader(func(context.Context) (bun.IDB, error) { return tx, nil }).ListNewParentRequests(ctx, testpkg.Tenant(t), growthFeedSince, true, true)
 			require.NoError(t, err)
 			queries = counter.Queries()
 			byKind := map[string]int{}

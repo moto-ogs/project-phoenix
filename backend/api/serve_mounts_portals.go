@@ -189,6 +189,7 @@ func newParentResource(
 	healthData enrollmentOwner.HolidayHealthCipher, traegerSettings TraegerBrandingSettings, now func() time.Time,
 ) *parentAPI.Resource {
 	return parentAPI.NewResource(parentAPI.ResourceConfig{
+		Now:         now,
 		Auth:        parentPortalLogin(identity),
 		Resets:      portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeParent),
 		Parent:      parent,

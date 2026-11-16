@@ -44,21 +44,32 @@ func buildAnnouncementServiceOn(t *testing.T, db *bun.DB, newsEnabled bool) (*pa
 	return buildAnnouncementServiceOnWithSurveys(t, db, newsEnabled, nil)
 }
 
+// The announcements of these suites are published on the real clock and
+// Communication filters them with PostgreSQL's now(), so the portal reads the
+// real clock too.
 func buildAnnouncementServiceOnWithSurveys(t *testing.T, db *bun.DB, newsEnabled bool, surveys parentportal.Surveys) (*parentportal.Portal, *bun.DB, *api.ParentMessagingSuiteRepositories) {
 	t.Helper()
-	return buildAnnouncementServiceWithAccess(t, db, newsEnabled, surveys, nil)
+	return buildAnnouncementServiceWithAccess(t, db, newsEnabled, surveys, nil, time.Now)
+}
+
+// buildAnnouncementServiceAt wires the service and Communication's audience
+// on the given clock; the caller publishes its announcements before it.
+func buildAnnouncementServiceAt(t *testing.T, db *bun.DB, newsEnabled bool, clock func() time.Time) (*parentportal.Portal, *bun.DB, *api.ParentMessagingSuiteRepositories) {
+	t.Helper()
+	return buildAnnouncementServiceWithAccess(t, db, newsEnabled, nil, nil, clock)
 }
 
 // buildAnnouncementServiceWithAccess lets a test wrap Communication's
-// announcement access, e.g. to park a declaration around its lock.
+// announcement access, e.g. to park a declaration around its lock. The
+// portal and Communication's audience read clock.
 func buildAnnouncementServiceWithAccess(
 	t *testing.T, db *bun.DB, newsEnabled bool, surveys parentportal.Surveys,
-	wrap func(parentportal.AnnouncementAccess) parentportal.AnnouncementAccess,
+	wrap func(parentportal.AnnouncementAccess) parentportal.AnnouncementAccess, clock func() time.Time,
 ) (*parentportal.Portal, *bun.DB, *api.ParentMessagingSuiteRepositories) {
 	t.Helper()
 	repos := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db))
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
-	reposMessages := api.NewParentMessagingSuiteRepositories(testpkg.NewDatabase(t, db))
+	reposMessages := api.NewParentMessagingSuiteRepositories(testpkg.NewDatabase(t, db), clock)
 	access := owners.BindParentAnnouncementAccess(reposMessages.ParentAnnouncement)
 	if wrap != nil {
 		access = wrap(access)
@@ -80,6 +91,7 @@ func buildAnnouncementServiceWithAccess(
 		},
 		Logger:  slog.Default(),
 		Surveys: surveys,
+		Now:     clock,
 	})
 	return svc, db, reposMessages
 }

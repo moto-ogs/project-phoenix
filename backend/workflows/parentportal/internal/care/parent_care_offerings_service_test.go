@@ -269,14 +269,18 @@ func careOfferingsService(
 		ChildRepo:      careOfferingsChildRepoStub{child: child},
 		StudentRepo:    careOfferingsStudentReads(StudentReads.FindByIDForUpdate),
 		Logger:         slog.Default(),
-		Now: func() time.Time {
-			return time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
-		},
+		Now:            fixedCareNow,
 	}}
 	if changes != nil {
 		svc.OfferingChanges = changes
 	}
 	return svc
+}
+
+// fixedCareNow is the fixed test instant of this package: Monday,
+// 24 August 2026, 14:00 in Berlin.
+func fixedCareNow() time.Time {
+	return time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
 }
 
 // careOfferingsAccountID is the guardian account the offering tests act as.
@@ -292,7 +296,7 @@ func TestGetChildCareOfferingsReturnsCompleteSortedView(t *testing.T) {
 	sourceChildID := int64(301)
 	futureStart := today.AddDays(15)
 	note := "Ab Februar bitte dienstags"
-	createdAt := time.Now().Add(-time.Hour)
+	createdAt := fixedCareNow().Add(-time.Hour)
 
 	firstOffering := &CareOffering{
 		ID:            41,
@@ -406,7 +410,7 @@ func TestPendingOfferingChange_HidesAnotherGuardiansRequest(t *testing.T) {
 func TestLoadChildCareOfferingsReadsOfferingHistory(t *testing.T) {
 	t.Parallel()
 
-	today := calendar.TodayDate()
+	today := calendar.DateFromTime(fixedCareNow())
 	period := &CarePeriod{
 		RequestChildID:   101,
 		ServiceStartDate: today.AddDays(-20),
@@ -417,7 +421,7 @@ func TestLoadChildCareOfferingsReadsOfferingHistory(t *testing.T) {
 		CareOfferingID: 1,
 		ValidUntil:     &periodEndExclusive,
 	}}}
-	svc := &Service{Config: Config{CarePlanPolicy: carePlanFixturePolicy{}, Runtime: testpkg.TenantTransactionRuntime{},
+	svc := &Service{Config: Config{CarePlanPolicy: carePlanFixturePolicy{}, Runtime: testpkg.TenantTransactionRuntime{}, Now: fixedCareNow,
 		CarePeriods:     carePeriodRepoStub{periods: []*CarePeriod{period}},
 		OfferingHistory: links,
 		CareOfferingRepo: careOfferingRepoStub{offerings: []*CareOffering{{
@@ -500,7 +504,7 @@ func TestGetChildCareOfferingsPropagatesDependencyFailures(t *testing.T) {
 }
 
 func currentCarePeriodStub() carePeriodRepoStub {
-	today := calendar.TodayDate()
+	today := calendar.DateFromTime(fixedCareNow())
 	return carePeriodRepoStub{periods: []*CarePeriod{{
 		RequestChildID:   1,
 		ServiceStartDate: today.AddDays(-1),
@@ -560,7 +564,7 @@ func TestCurrentCarePeriodSelection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := &Service{Config: Config{CarePlanPolicy: carePlanFixturePolicy{}, Runtime: testpkg.TenantTransactionRuntime{}, CarePeriods: tt.repo}}
+			svc := &Service{Config: Config{CarePlanPolicy: carePlanFixturePolicy{}, Runtime: testpkg.TenantTransactionRuntime{}, CarePeriods: tt.repo, Now: fixedCareNow}}
 			got, err := svc.currentCarePeriod(testpkg.WithPackageTenantRuntime(context.Background()), 22, today)
 			if tt.wantErr {
 				require.Error(t, err)
@@ -575,7 +579,7 @@ func TestCurrentCarePeriodSelection(t *testing.T) {
 func TestOfferingChangeAvailabilityReasonsAndSettingFailures(t *testing.T) {
 	t.Parallel()
 
-	today := calendar.TodayDate()
+	today := calendar.DateFromTime(fixedCareNow())
 	activePeriod := &CarePeriod{ServiceEndDate: today.AddDays(1)}
 	endedPeriod := &CarePeriod{ServiceEndDate: today.AddDays(-1)}
 	permitted := &Child{
@@ -633,7 +637,7 @@ func TestOfferingChangeAvailabilityReasonsAndSettingFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := &Service{Config: Config{CarePlanPolicy: carePlanFixturePolicy{}, Runtime: testpkg.TenantTransactionRuntime{}, Settings: tt.settings, Logger: slog.Default()}}
+			svc := &Service{Config: Config{CarePlanPolicy: carePlanFixturePolicy{}, Runtime: testpkg.TenantTransactionRuntime{}, Settings: tt.settings, Logger: slog.Default(), Now: fixedCareNow}}
 			got, reason := svc.resolveOfferingChangeAvailabilityForStudent(
 				testpkg.WithPackageTenantRuntime(context.Background()),
 				tt.child,
@@ -651,7 +655,7 @@ func TestOfferingChangeCommandsAuthorizeDelegateAndRefresh(t *testing.T) {
 	t.Parallel()
 
 	db := careOfferingsTestDB(t)
-	today := calendar.TodayDate()
+	today := calendar.DateFromTime(fixedCareNow())
 	child := permittedCareOfferingsChild(t)
 	changes := &offeringChangesStub{
 		catalog:  &OfferingChangeCatalog{PhaseID: 99},
@@ -699,7 +703,7 @@ func TestOfferingChangeCommandsRejectMissingDependencyPermissionAndDelegateError
 			name:  "create no service",
 			child: permittedCareOfferingsChild(t),
 			call: func(svc *Service) error {
-				_, err := svc.CreateOfferingChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), 11, 22, nil, calendar.TodayDate(), "", false, nil)
+				_, err := svc.CreateOfferingChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), 11, 22, nil, calendar.DateFromTime(fixedCareNow()), "", false, nil)
 				return err
 			},
 			want: careplan.ErrOfferingChangeDisabled,
@@ -732,7 +736,7 @@ func TestOfferingChangeCommandsRejectMissingDependencyPermissionAndDelegateError
 				// #2267: reason policy defaults to "both" — an empty note is
 				// now refused before the delegate is reached, so this case
 				// carries one to keep testing the delegate's error.
-				_, err := svc.CreateOfferingChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), 11, 22, nil, calendar.TodayDate(), "Bitte", false, nil)
+				_, err := svc.CreateOfferingChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), 11, 22, nil, calendar.DateFromTime(fixedCareNow()), "Bitte", false, nil)
 				return err
 			},
 			want: delegateErr,

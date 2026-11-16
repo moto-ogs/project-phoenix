@@ -339,11 +339,13 @@ var moduleLegacyFileBudgets = map[string]int{
 // guardian profile clock of its retained test suites),
 // modules/schoolcalendar/compose (+7: the notices' day clock and the
 // root's clock of the Records) and modules/schoolsearchview/compose (+1).
+// ADR 0279: the nil default of the clock of workflows/parentportal/compose
+// (+3).
 
 // ADR 0275: the root clock of modules/parentbilling/compose (+2: the time
 // import of the overview's and the exports' clock).
 
-const moduleComposeBudgetTotal = 13653
+const moduleComposeBudgetTotal = 13656
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -570,7 +572,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0212: the port of the message attachments (+1).
 	// ADR 0216: the ports of the account's holiday registrations and of its
 	// proof (+2).
-	"workflows/parentportal/compose":     336,
+	// ADR 0279: the nil default of the portal's clock (+3).
+	"workflows/parentportal/compose":     339,
 	"workflows/reminderdelivery/compose": 30,
 	"workflows/sessionend/compose":       59,
 	// ADR 0273: the day clock of the Terminvertretung (+1).
