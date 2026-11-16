@@ -58,6 +58,19 @@ type AnnouncementResponse struct {
 
 	// Survey is set on the entry that carries a survey (#4781).
 	Survey *AnnouncementSurveyResponse `json:"survey,omitempty"`
+
+	// Letters are the letters of the guardian's own children of an
+	// Elternbrief that names each child (#4813); absent otherwise. Body is
+	// then the first child's letter.
+	Letters []AnnouncementLetterResponse `json:"letters,omitempty"`
+}
+
+// AnnouncementLetterResponse is the letter one of the guardian's children got.
+type AnnouncementLetterResponse struct {
+	StudentID string `json:"student_id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Body      string `json:"body"`
 }
 
 // AnnouncementSurveyResponse is the survey state on a feed entry.
@@ -128,7 +141,21 @@ func toAnnouncementResponse(item *parentService.AnnouncementFeedItem) Announceme
 		ReminderText:            item.ReminderText,
 		Declaration:             toDeclarationResponse(item.Declaration),
 		Survey:                  toAnnouncementSurveyResponse(item.Survey),
+		Letters:                 toAnnouncementLetters(item.Letters),
 	}
+}
+
+func toAnnouncementLetters(letters []parentService.AnnouncementLetter) []AnnouncementLetterResponse {
+	if len(letters) == 0 {
+		return nil
+	}
+	out := make([]AnnouncementLetterResponse, 0, len(letters))
+	for _, letter := range letters {
+		out = append(out, AnnouncementLetterResponse{
+			StudentID: strconv.FormatInt(letter.StudentID, 10), FirstName: letter.FirstName, LastName: letter.LastName, Body: letter.Body,
+		})
+	}
+	return out
 }
 
 func toAnnouncementSurveyResponse(s *parentService.SurveySummary) *AnnouncementSurveyResponse {

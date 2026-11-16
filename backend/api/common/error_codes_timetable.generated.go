@@ -83,6 +83,7 @@ const CodeTimetablePlanningTrackInvalid = "timetable.planning_track_invalid"
 const CodeTimetablePlanningTrackNameTaken = "timetable.planning_track_name_taken"
 const CodeTimetablePlanningTrackNotFound = "timetable.planning_track_not_found"
 const CodeTimetablePresenceWouldOverstaff = "timetable.presence_would_overstaff"
+const CodeTimetableReinstateEnded = "timetable.reinstate_ended"
 const CodeTimetableReopenAttendanceChanged = "timetable.reopen_attendance_changed"
 const CodeTimetableReopenStaffBusy = "timetable.reopen_staff_busy"
 const CodeTimetableReopenStudentActive = "timetable.reopen_student_active"
@@ -232,6 +233,7 @@ var errorCodeClassesTimetable = []errorCodeClass{
 	{CodeTimetablePlanningTrackNameTaken, "business_rejection"},
 	{CodeTimetablePlanningTrackNotFound, "business_rejection"},
 	{CodeTimetablePresenceWouldOverstaff, "business_rejection"},
+	{CodeTimetableReinstateEnded, "business_rejection"},
 	{CodeTimetableReopenAttendanceChanged, "business_rejection"},
 	{CodeTimetableReopenStaffBusy, "business_rejection"},
 	{CodeTimetableReopenStudentActive, "business_rejection"},

@@ -15825,7 +15825,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students.StudentNoteTeamReach.NotifyStudentNoteShared",
-      "reason": "Platform protocol participation (durable): people-directory reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through api.studentNoteTeamReach.NotifyStudentNoteShared (#6854). The push outbox entry joins the caller's unit with the team markers; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (durable): people-directory reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through api.studentNoteTeamReach.NotifyStudentNoteShared (#6854). The push outbox entry joins the caller's unit with the team markers; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Rechecked for #7137: the event now also writes the staff notification feed entries of its whole audience in the same unit, beside the push outbox entries of the push recipients.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
       "target_owner": "delivery-platform"
@@ -15835,7 +15835,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students.StudentNoteTeamReach.NotifyStudentNoteShared",
-      "reason": "Read-only target: people-directory reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through api.studentNoteTeamReach.NotifyStudentNoteShared (#6854). No persistent, lock or scope effect.",
+      "reason": "Read-only target: people-directory reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through api.studentNoteTeamReach.NotifyStudentNoteShared (#6854). No persistent, lock or scope effect. Rechecked for #7137: the filter now narrows only the push recipients; the feed reaches the whole audience. Still read-only.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"

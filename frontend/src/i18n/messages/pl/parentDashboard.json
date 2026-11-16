@@ -58,5 +58,7 @@
   "newsPollSaveTooltip": "Od razu wysyła odpowiedź do szkoły.",
   "newsPollSaveDisabledReason": "Najpierw proszę wybrać odpowiedź lub zmienić wybór.",
   "newsReadAndConfirmTooltip": "Od razu potwierdza szkole, że list został przeczytany.",
-  "newsCloseUnsavedTooltip": "Zamyka ankietę, nowy wybór zostanie utracony."
+  "newsCloseUnsavedTooltip": "Zamyka ankietę, nowy wybór zostanie utracony.",
+  "newsLetterChildChoice": "List dla którego dziecka?",
+  "newsLetterPerChild": "Każde z Państwa dzieci ma własny list."
 }

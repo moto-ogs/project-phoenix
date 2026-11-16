@@ -37,7 +37,7 @@ export const SCHOOL_PARENT_LETTER_KINDS: readonly SchoolParentLetterKindOption[]
       value: "letter",
       deliveryMode: "letter",
       label: "Mit Lesebestätigung",
-      hint: "Die Eltern bestätigen, dass sie den Brief gelesen haben.",
+      hint: "Die Eltern bestätigen, dass sie den Brief gelesen haben. Sie können Name, Gruppe und Abholzeit jedes Kindes einsetzen.",
     },
     {
       value: "consent",

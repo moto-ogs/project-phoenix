@@ -308,6 +308,13 @@ export const parentAnnouncementKeys = {
   detail: (id: string) => `parent-announcement-${id}`,
   pollEvaluation: (id: string) =>
     `parent-announcement-poll-evaluation-${encodeURIComponent(id)}`,
+  // Serienbriefe (#4813): the placeholders per portal and the children a
+  // letter preview can show.
+  letterPlaceholders: (base = "ogs") => `parent-letter-placeholders-${base}`,
+  letterPreview: (base = "ogs", studentId: string, body: string) =>
+    `parent-letter-preview-${base}-${studentId}-${body}`,
+  letterPreviewChildren: (scope: string) =>
+    `parent-letter-preview-children-${encodeURIComponent(scope)}`,
   preview(data: unknown, id: string) {
     const row = previewRow(data, id);
     const name = previewText(row?.title);

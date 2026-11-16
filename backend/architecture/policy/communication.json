@@ -219,6 +219,10 @@
       "write_owner": "communication"
     },
     {
+      "name": "users.parent_announcement_letter_copies",
+      "write_owner": "communication"
+    },
+    {
       "name": "users.parent_announcement_options",
       "write_owner": "communication"
     },

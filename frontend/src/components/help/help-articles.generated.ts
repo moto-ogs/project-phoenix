@@ -198,6 +198,8 @@ import type { parentHolidayRegistrationTopic as authored_parentHolidayRegistrati
 
 import type { parentInstallAppTopic as authored_parentInstallAppTopic } from "./articles/parent-install-app";
 
+import type { parentLetterPerChildTopic as authored_parentLetterPerChildTopic } from "./articles/parent-letter-per-child";
+
 import type { parentLetterTopic as authored_parentLetterTopic } from "./articles/parent-letter";
 
 import type { parentLoginTopic as authored_parentLoginTopic } from "./articles/parent-login";
@@ -3766,7 +3768,7 @@ export const invitationTopic = function invitationTopic(): HelpTopic {
       "Ergänzen Sie `Vorname` und `Nachname`, falls die Felder leer sind.",
       "Geben Sie unter `Passwort` ein persönliches Passwort ein.",
       "Geben Sie dasselbe Passwort unter `Passwort bestätigen` erneut ein.",
-      "Prüfen Sie, ob alle Passwortanforderungen grün markiert sind.",
+      "Prüfen Sie, ob alle Passwortanforderungen einen Haken haben.",
       "Wählen Sie `Einladung akzeptieren`.",
     ],
     result:
@@ -4051,6 +4053,7 @@ export const leadBirthdaysTopic = function leadBirthdaysTopic(): HelpTopic {
  * Einen einzelnen Termin im Betreuungsplan absagen (#2601, #3731). Ob die
  * Eltern Bescheid bekommen, entscheidet die absagende Person im Dialog; es
  * gibt dafür keine Schuleinstellungen mehr. Beschriftungen live geprüft.
+ * Bis zum Ende des Termins lässt sich die Absage zurücknehmen (#7151).
  */
 export const leadCancelBlockTopic = function leadCancelBlockTopic(): HelpTopic {
   return {
@@ -4076,6 +4079,7 @@ export const leadCancelBlockTopic = function leadCancelBlockTopic(): HelpTopic {
     notes: [
       "Der interne Grund der Absage geht nicht an die Eltern. Sie sehen nur Ihren Text.",
       "Ohne Haken bekommen die Eltern keine Nachricht.",
+      "Bis zum Ende des Termins können Sie die Absage zurücknehmen: Termin wählen, dann `Absage zurücknehmen`. Das eingeplante Personal bekommt einen Hinweis „Termin findet doch statt“. Die Eltern bekommen keine Nachricht. Informieren Sie sie bei Bedarf selbst.",
     ],
     differences: [
       "Fehlt der Haken? Dann sind für diesen Termin keine Kinder eingetragen, oder der Termin liegt in der Vergangenheit.",
@@ -6829,6 +6833,70 @@ export const parentInstallAppTopic =
   } satisfies typeof authored_parentInstallAppTopic;
 
 /**
+ * Serienbriefe (#4813): ein Elternbrief, der jedes Kind mit seinen eigenen
+ * Angaben nennt, und alle Briefe eines Versands als PDF zum Drucken.
+ */
+export const parentLetterPerChildTopic =
+  function parentLetterPerChildTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.leadParentLetterPerChild,
+      title: "Einen Elternbrief mit den Angaben jedes Kindes schreiben",
+      question: "Wie nenne ich in einem Elternbrief jedes Kind mit Namen?",
+      summary:
+        "moto setzt für jedes Kind Name, Klasse, Gruppe, Betreuungstage und Abholzeit in den Brief. Alle Briefe gibt es auch als PDF zum Drucken.",
+      group: "elternarbeit",
+      audience: "lead",
+      icon: "NotePencil",
+      steps: [],
+      instructionGroups: [
+        {
+          title: "Den Brief schreiben",
+          steps: [
+            "Klappen Sie in der Seitenleiste `Eltern` auf.",
+            "Öffnen Sie `Mitteilungen`.",
+            "Wählen Sie oben `Elternbriefe`.",
+            "Wählen Sie oben rechts `+ Elternbrief`.",
+            "Schreiben Sie bei `Text` den Brief.",
+            "Setzen Sie die Schreibmarke an die Stelle für eine Angabe. Wählen Sie unter `Für jedes Kind einsetzen` zum Beispiel `Vorname`.",
+            "Prüfen Sie den Brief unter `So liest die Familie den Brief`. Wählen Sie dort ein anderes Kind, wenn Sie möchten.",
+            "Wählen Sie unten `Weiter`, dann die Empfänger, dann `Veröffentlichen`.",
+          ],
+        },
+        {
+          title: "Alle Briefe drucken",
+          description: "Für Familien, die den Brief auf Papier brauchen.",
+          steps: [
+            "Öffnen Sie den veröffentlichten Elternbrief.",
+            "Wählen Sie oben im Kasten `Elternbrief` den Knopf `Briefe drucken`.",
+            "Drucken Sie das PDF. Jedes Kind hat einen eigenen Brief mit Name und Logo der Schule.",
+          ],
+        },
+      ],
+      result:
+        "Jede Familie bekommt einen Brief je Kind, mit den Angaben ihres eigenen Kindes. Geschwister bekommen je Kind einen Brief.",
+      notes: [
+        "moto schreibt den Brief beim Veröffentlichen fest. Ändern sich danach Gruppe oder Abholzeit, bleibt der Brief, wie er war.",
+        "Fehlt bei einem Kind eine Angabe, bleibt die Stelle leer. Steht in einer Zeile nur diese Angabe, zum Beispiel `Abholzeit:`, lässt moto die ganze Zeile weg.",
+        "Gesundheitsangaben gibt es als Platzhalter nicht.",
+        "Briefe ohne Platzhalter druckt moto genauso, einen je Kind.",
+      ],
+      troubleshootingDetails: [
+        "Fehlt die Auswahl der Kinder für die Vorschau? Klicken Sie bei der Fehlermeldung auf `Wiederholen`.",
+        "Die Knöpfe unter `Für jedes Kind einsetzen` fehlen? Klicken Sie bei der Fehlermeldung auf `Wiederholen`.",
+        "moto meldet `Diese Platzhalter kennt moto nicht`? Nehmen Sie den Platzhalter heraus. Setzen Sie ihn mit den Knöpfen unter `Für jedes Kind einsetzen` neu ein.",
+        "Im Betreff geht kein Platzhalter. Schreiben Sie ihn in den Text.",
+      ],
+      image: "/help/screens/elternbrief-angaben-jedes-kindes.webp",
+      imageAlt:
+        "Neuer Elternbrief: unter dem Text die Knöpfe zum Einsetzen von Vorname, Gruppe und Abholzeit, darunter der Brief, wie ihn die Familie von Felix liest.",
+      related: [
+        HELP_TOPICS.leadParentLetter,
+        HELP_TOPICS.leadParentAnnouncement,
+      ],
+    };
+  } satisfies typeof authored_parentLetterPerChildTopic;
+
+/**
  * Elternbrief: Mitteilung, die zusaetzlich per E-Mail geht und von den Eltern
  * bestaetigt wird (page.tsx:171).
  */
@@ -6864,6 +6932,7 @@ export const parentLetterTopic = function parentLetterTopic(): HelpTopic {
       "Reicht eine Nachricht ohne E-Mail und ohne Bestätigung? Nehmen Sie stattdessen eine Mitteilung. Dort sind beides Schalter.",
     ],
     related: [
+      HELP_TOPICS.leadParentLetterPerChild,
       HELP_TOPICS.leadParentAnnouncement,
       HELP_TOPICS.leadParentSurvey,
       HELP_TOPICS.leadInviteGuardians,
@@ -7199,6 +7268,7 @@ export const parentNewsTopic = function parentNewsTopic(): HelpTopic {
     ],
     result: "Erledigte Einträge wandern von `Offen` zu `Erledigt`.",
     notes: [
+      "Haben Sie mehrere Kinder an der Schule? Manche Elternbriefe gibt es für jedes Kind einzeln. Oben im Brief wählen Sie dann den Namen des Kindes.",
       "Die Bestätigung heißt `Lesebestätigung`. Damit bestätigen Sie nur, dass Sie den Brief gelesen haben.",
       "Bei mehreren Kindern zeigt moto, wie viele Antworten noch fehlen.",
       "Angehängte Dateien öffnen Sie, indem Sie auf den Namen tippen.",
@@ -8462,8 +8532,9 @@ export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
 
 /**
  * Die Glocke oben rechts im Staff-Portal (#7148): oben `Erinnerungen`, darunter
- * `Hinweise` (der Benachrichtigungs-Feed). Hinweise gibt es zur Absage eines
- * Termins (#7148) und zu Vertretungen und Änderungen im Dienstplan (#7136).
+ * `Hinweise` (der Benachrichtigungs-Feed). Hinweise kommen zur Absage eines
+ * Termins, zu Vertretungen und Änderungen im Dienstplan sowie zu weiteren
+ * Mitteilungs-Arten außer Nachrichten (#7136, #7137).
  */
 export const staffNotificationsTopic =
   function staffNotificationsTopic(): HelpTopic {
@@ -8472,7 +8543,7 @@ export const staffNotificationsTopic =
       title: "Hinweise und Erinnerungen in der Glocke",
       question: "Wo sehe ich, was sich für mich geändert hat?",
       summary:
-        "Die Glocke oben rechts zeigt Ihre Erinnerungen und Ihre Hinweise, zum Beispiel wenn ein Termin von Ihnen ausfällt oder Sie jemanden vertreten.",
+        "Die Glocke oben rechts zeigt Ihre Erinnerungen und Ihre Hinweise, zum Beispiel wenn ein Termin von Ihnen ausfällt, Sie jemanden vertreten oder sich eine Abholzeit ändert.",
       group: "einstieg",
       audience: ["caregiver", "lead"],
       icon: "Bell",
@@ -8486,16 +8557,20 @@ export const staffNotificationsTopic =
       result:
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder alle als gelesen markieren. Das Öffnen der Glocke allein ändert nichts.",
       notes: [
-        "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis.",
+        "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis. Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
         "Vertreten Sie jemanden, werden Sie vertreten oder sind Sie an einem Tag als nicht da eingetragen, sehen Sie es hier. Eine Vertretung über mehrere Tage ist ein einziger Hinweis. Der Hinweis öffnet `Mein Dienstplan` an dem Tag.",
         "Sind Sie einer Gruppe zugeordnet, sehen Sie auch, wer in Ihrer Gruppe fehlt oder vertritt. Der Hinweis öffnet den `Vertretungsplan` an dem Tag. Einen Grund nennt moto nie, auch keine Krankheit.",
         "Wer die Änderung selbst einträgt, bekommt keinen Hinweis.",
+        "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
+        "Die Leitung bekommt außerdem `Austritte aus dem Team` und `Ablaufende Nachweise im Team`. Für Ihre eigenen Nachweise gibt es `Eigene Nachweise`.",
+        "Nachrichten stehen nicht in der Glocke. Neue Nachrichten zählt moto bei `Nachrichten` und `Team-Chat`.",
         "Ändert sich derselbe Termin kurz danach noch einmal, rückt der Hinweis nach oben. Sie bekommen dann keine zweite Mitteilung aufs Handy.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was Sie auf dem Handy gelesen haben, ist auch am Tablet gelesen.",
         "Weiter unten in der Liste lädt moto ältere Hinweise nach. Sie können auch `Weitere laden` wählen.",
-        "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Änderungen von heute bis in 14 Tagen.",
-        "Die Mitteilung aufs Handy schalten Sie in Ihrem `Profil` unter `Benachrichtigungen` aus: bei `Absage eines Termins`, unter `Dienstplan und Vertretung` bei `Eigene Vertretung` und `Vertretung in Ihren Gruppen`. Der Hinweis in der Glocke kommt dann trotzdem.",
+        "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Bei Absagen und Änderungen im Dienstplan passiert das nur von heute bis in 14 Tagen.",
+        "Die Mitteilung aufs Handy stellen Sie in Ihrem `Profil` unter `Benachrichtigungen` für jede Art ein. Schalten Sie sie aus, kommt der Hinweis in der Glocke trotzdem.",
+        "Die Einstellung für `Absage eines Termins` gilt auch, wenn die Absage zurückgenommen wird.",
       ],
       differences: [
         "Auf dem Handy und auf kleinen Tablets fehlt oben die Glocke. Tippen Sie unten auf `Mehr` und dann auf `Benachrichtigungen`. Die Zahl an `Mehr` zählt neue Hinweise mit.",
@@ -8506,6 +8581,7 @@ export const staffNotificationsTopic =
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einer Absage? Ihre Schule kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder einen Hinweis noch eine Mitteilung aufs Handy. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu einer Vertretung? Ihre Schule kann `Hinweis bei Vertretung und Dienstplanänderung` ausschalten. Fragen Sie Ihre Leitung.",
+        "Es kommt kein Hinweis zu einer Krankmeldung? Ihre Schule kann `Hinweis bei Krankmeldung` ausschalten. Manche Schulen melden sie auch nur Personen, die gerade im Dienst sind. Fragen Sie Ihre Leitung.",
         "Ein Hinweis öffnet eine Seite mit `Sie haben keinen Zugriff auf einen eigenen Dienstplan.`? Dann führt Ihre Schule für Sie keinen eigenen Dienstplan in moto. Fragen Sie Ihre Leitung.",
       ],
       image: "/help/screens/benachrichtigungen-glocke.webp",
@@ -10253,14 +10329,17 @@ export const teacherParentLettersTopic =
         "Öffnen Sie `Elternbriefe`.",
         "Wählen Sie `Neuer Elternbrief`.",
         "Wählen Sie die Klasse.",
-        "Geben Sie `Betreff` und `Text` ein.",
+        "Geben Sie den `Betreff` ein.",
         "Wählen Sie unter `Was sollen die Eltern tun?`: `Nur zur Information`, `Mit Lesebestätigung` oder `Einverständnis mit Unterschrift`.",
+        "Schreiben Sie den `Text`.",
         "Wählen Sie `Senden`.",
       ],
       result:
         "Die Eltern der Klasse sehen den Brief sofort. Als Absender sehen sie Ihren Namen, die Klasse und die Schule.",
       notes: [
         "Wählen Sie den Brief in der Liste. Dort sehen Sie, wer gelesen, bestätigt oder zugestimmt hat.",
+        "Bei `Mit Lesebestätigung` setzen Sie unter `Für jedes Kind einsetzen` Angaben wie den Vornamen in den Text. Jede Familie liest dann den Brief mit den Angaben ihres Kindes. Unter `So liest die Familie den Brief` sehen Sie ihn vorher.",
+        "Für Familien ohne moto wählen Sie im gesendeten Brief `Briefe drucken`. Das PDF hat einen Brief je Kind.",
         "Ein gesendeter Brief lässt sich nicht mehr ändern. Sie können ihn über `Zurückziehen` zurücknehmen.",
         "Die OGS sieht Ihre Briefe in ihrer Übersicht. Ändern kann sie nur Sie.",
         "Unter `Empfänger` steht bei jeder Mail, was aus ihr geworden ist. Steht dort `Adresse prüfen`, sagen Sie der OGS Bescheid. Sie korrigiert die Adresse.",

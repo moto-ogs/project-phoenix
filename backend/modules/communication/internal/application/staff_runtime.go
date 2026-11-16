@@ -37,6 +37,7 @@ func NewService(cfg ServiceConfig, runtime Runtime, policy ParentDeliveryPolicy)
 		signatures:     cfg.Signatures,
 		attachments:    cfg.Attachments,
 		parentsURL:     cfg.ParentsURL,
+		letters:        cfg.Letters,
 		logger:         logger,
 	}
 }

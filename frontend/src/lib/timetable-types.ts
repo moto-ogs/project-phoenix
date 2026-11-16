@@ -388,6 +388,7 @@ type DeviationEventType =
   | "substitution"
   | "substitute_removed"
   | "cancellation"
+  | "reinstatement"
   | "understaffed_ack"
   | "understaffed_unack"
   | "deviation_dropped_by_replan"

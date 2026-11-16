@@ -14,7 +14,7 @@
   "legalGermanNotice": "Te teksty prawne obowiązują w wersji niemieckiej.",
   "previewError": "To jest podgląd. Z tego widoku nie można wysłać zapisu.",
   "missingPhase": "Dla tego zapisu brakuje okresu zapisów.",
-  "fixMarked": "Proszę poprawić pola oznaczone na czerwono.",
+  "fixMarked": "Przy niektórych polach jest wskazówka. Proszę poprawić te pola.",
   "consentSummary": "Proszę potwierdzić wszystkie wymagane zgody.",
   "sections": {
     "guardianKicker": "Krok 1",
@@ -137,6 +137,11 @@
     "photoTitle": "Zgoda na zdjęcia"
   },
   "captchaMisconfigured": "Zapis online nie jest teraz możliwy. Problem nie leży po Państwa stronie. Proszę skontaktować się z {careTerm}.",
+  "captchaHelp": {
+    "hint": "Kontrola bezpieczeństwa się nie ładuje lub zawiesiła?",
+    "restart": "Uruchom kontrolę ponownie",
+    "restartTooltip": "Ponownie wczytuje kontrolę, Twoje dane zostaną zachowane."
+  },
   "structured": {
     "yes": "Tak",
     "no": "Nie",

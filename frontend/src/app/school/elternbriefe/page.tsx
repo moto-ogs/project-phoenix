@@ -35,8 +35,11 @@ import {
 } from "~/components/ui/slide-over";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Textarea } from "~/components/ui/textarea";
+import {
+  LetterBodyField,
+  type LetterPreviewChildren,
+} from "~/components/announcements/letter-body-field";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { formatDate } from "~/lib/date-helpers";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import {
@@ -46,7 +49,11 @@ import {
   SCHOOL_PARENT_LETTERS_BASE,
   type Announcement,
 } from "~/lib/parent-announcements-api";
-import { fetchClassDayClassesSchool } from "~/lib/school-class-day-api";
+import {
+  fetchClassDayClassesSchool,
+  fetchClassDaySchool,
+} from "~/lib/school-class-day-api";
+import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { NO_OWN_CLASS_REASON } from "~/components/school/no-own-class";
 import {
@@ -151,6 +158,20 @@ export default function SchoolParentLettersPage() {
   const formErrors = useApiFormError(formRef);
   const latestSubmitRef = useRef<() => void>(() => undefined);
 
+  // The preview of a letter (#4813) shows a child of the chosen class.
+  const previewClass = draft.kind === "letter" ? draft.schoolClass : "";
+  const previewChildren: LetterPreviewChildren | null = previewClass
+    ? {
+        scope: `class-${previewClass}`,
+        load: async () =>
+          (await fetchClassDaySchool(previewClass, berlinTodayISO())).rows
+            .filter((row) => row.student_id > 0)
+            .map((row) => ({
+              value: String(row.student_id),
+              label: `${row.first_name} ${row.last_name}`.trim(),
+            })),
+      }
+    : null;
   const update = (patch: Partial<SchoolParentLetterDraft>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
@@ -299,18 +320,6 @@ export default function SchoolParentLettersPage() {
                       required
                     />
 
-                    <Textarea
-                      label="Text"
-                      name="body"
-                      rows={8}
-                      value={draft.body}
-                      onChange={(event) => update({ body: event.target.value })}
-                      error={formErrors.fieldError("body")}
-                      disabled={fieldsDisabled}
-                      maxLength={4000}
-                      required
-                    />
-
                     <fieldset className="space-y-2">
                       <legend className="mb-2 block text-sm font-medium text-gray-700">
                         Was sollen die Eltern tun?
@@ -341,6 +350,33 @@ export default function SchoolParentLettersPage() {
                         ))}
                       </div>
                     </fieldset>
+
+                    {draft.kind === "letter" ? (
+                      <LetterBodyField
+                        value={draft.body}
+                        onChange={(body) => update({ body })}
+                        error={formErrors.fieldError("body")}
+                        disabled={fieldsDisabled}
+                        apiBase={SCHOOL_PARENT_LETTERS_BASE}
+                        required
+                        previewChildren={previewChildren}
+                        rows={8}
+                      />
+                    ) : (
+                      <Textarea
+                        label="Text"
+                        name="body"
+                        rows={8}
+                        value={draft.body}
+                        onChange={(event) =>
+                          update({ body: event.target.value })
+                        }
+                        error={formErrors.fieldError("body")}
+                        disabled={fieldsDisabled}
+                        maxLength={4000}
+                        required
+                      />
+                    )}
 
                     <p className="text-sm text-gray-600">
                       Die Eltern der Klasse bekommen den Brief in moto und eine

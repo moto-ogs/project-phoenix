@@ -18,6 +18,8 @@
   "showPassword": "Показать пароль",
   "hidePassword": "Скрыть пароль",
   "requirementsTitle": "Требования к паролю",
+  "requirementMet": "выполнено",
+  "requirementUnmet": "ещё не выполнено",
   "submitting": "Принимается...",
   "submit": "Принять приглашение",
   "passwordRules": {
