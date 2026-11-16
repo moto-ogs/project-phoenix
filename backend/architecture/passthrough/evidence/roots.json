@@ -5266,7 +5266,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r communicationAnnouncementAudience) StudentAnnouncements(ctx context.Context, schoolID, studentID int64, history []*communication.PortalDeclarationSubmission) ([]*communication.PortalStudentAnnouncement, error) {\n\trows, err := r.source.StudentAnnouncements(ctx, schoolID, studentID, projectionDeclarationHistory(history))\n\treturn mapProjectionRows(rows, func(row *parentaudience.StudentAnnouncement) *communication.PortalStudentAnnouncement {\n\t\treturn (*communication.PortalStudentAnnouncement)(row)\n\t}), err\n}",
+      "evidence": "func (r communicationAnnouncementAudience) StudentAnnouncements(ctx context.Context, schoolID, studentID int64, history []*communication.PortalDeclarationSubmission) ([]*communication.PortalStudentAnnouncement, error) {\n\trows, err := r.source.StudentAnnouncements(ctx, schoolID, studentID, projectionDeclarationHistory(history))\n\tif errors.Is(err, parentaudience.ErrStudentNotInSchool) {\n\t\treturn nil, communication.ErrStudentNotInSchool\n\t}\n\treturn mapProjectionRows(rows, func(row *parentaudience.StudentAnnouncement) *communication.PortalStudentAnnouncement {\n\t\treturn (*communication.PortalStudentAnnouncement)(row)\n\t}), err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/communicationAnnouncementAudience.StudentAnnouncements",
       "owner": "roots"

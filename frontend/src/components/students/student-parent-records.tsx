@@ -266,12 +266,7 @@ function DeclarationGroup({
             key={declaration.announcement_id}
             concept={confirmationsConcept}
             title={declaration.title}
-            state={
-              DECLARATION_STATE_META[declaration.state] ?? {
-                label: declaration.state,
-                tone: "gray",
-              }
-            }
+            state={DECLARATION_STATE_META[declaration.state]}
             detail={declarationDetail(declaration)}
           >
             <ButtonLink

@@ -389,10 +389,6 @@ func TestCommunication18AnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 				case "list":
 					require.Equal(t, 200, denied.Code)
 					communication18Equal(t, []any{communication18Announcement(foreignAnnouncement)}, communication18JSON(t, denied.Body.Bytes()))
-				case "student_records":
-					// Another school reads the child's ID and finds nothing of it.
-					require.Equal(t, 200, denied.Code)
-					communication18Equal(t, map[string]any{"letters": []any{}, "declarations": []any{}}, communication18JSON(t, denied.Body.Bytes()))
 				default:
 					require.Equal(t, 404, denied.Code, "%s: %s", tc.name, denied.Body.String())
 				}

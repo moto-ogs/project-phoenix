@@ -30,6 +30,10 @@ func (s *service) studentParentRecords(ctx context.Context, actorAccountID, stud
 		return nil, errStudentRecordsNotWired
 	}
 	rows, err := s.studentRecords.AnnouncementStudentParentRecords(ctx, studentID)
+	if errors.Is(err, communication.ErrStudentNotInSchool) {
+		// Not this school's child: nothing to read, nothing to log.
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, fmt.Errorf("announcement: read student records: %w", err)
 	}

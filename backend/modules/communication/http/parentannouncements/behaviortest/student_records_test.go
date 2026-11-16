@@ -166,12 +166,12 @@ func TestStudentParentRecordsListLettersAndDeclarationsOfOneChild(t *testing.T) 
 	require.Empty(t, emilRecords.Data.Letters)
 	require.Len(t, emilRecords.Data.Declarations, 1)
 
-	// A role that reads children but not the school's letters gets 403;
-	// another school reads the child's ID and finds nothing.
+	// A role that reads children but not the school's letters gets 403.
+	// Another school does not reach the child, and an unknown child is not
+	// found: neither read is logged against a child of no school.
 	require.Equal(t, http.StatusForbidden, send(http.MethodGet, fmt.Sprintf("/api/parent-announcements/students/%d", lina.StudentID), reader, nil).Code)
-	foreignRecords := records(lina.StudentID, foreignAdmin)
-	require.Empty(t, foreignRecords.Data.Letters)
-	require.Empty(t, foreignRecords.Data.Declarations)
+	require.Equal(t, http.StatusNotFound, send(http.MethodGet, fmt.Sprintf("/api/parent-announcements/students/%d", lina.StudentID), foreignAdmin, nil).Code)
+	require.Equal(t, http.StatusNotFound, send(http.MethodGet, "/api/parent-announcements/students/999999999", admin, nil).Code)
 
 	// The proof narrows to the child it names; a child the consent never
 	// reached has no proof, and another school reaches no proof at all.
@@ -189,13 +189,10 @@ func TestStudentParentRecordsListLettersAndDeclarationsOfOneChild(t *testing.T) 
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	// Every read of a child's record and every proof is in the access log,
-	// with the reading account and the child it named. The foreign school's
-	// read is logged under its own account.
-	var ours []communication.ParentLetterAccess
-	for _, entry := range access.entries {
-		if entry.ActorAccountID == staff.ID {
-			ours = append(ours, entry)
-		}
+	// with the reading account and the child it named.
+	ours := access.entries
+	for _, entry := range ours {
+		require.Equal(t, staff.ID, entry.ActorAccountID)
 	}
 	require.Len(t, ours, 4)
 	require.Equal(t, communication.ParentLetterAccessStudentRecords, ours[0].Kind)

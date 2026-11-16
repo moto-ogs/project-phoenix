@@ -2202,7 +2202,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.communicationAnnouncementAudience.StudentAnnouncements",
-      "binding_digest": "9d2501ff2a159088c0ed402e3f48b58c",
+      "binding_digest": "7ab6c4a6ebf0229eaedfc284768b608d",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.AnnouncementAudienceReads.StudentAnnouncements",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/parentannouncementaudience/internal/adapters/postgres.Projection.StudentAnnouncements",

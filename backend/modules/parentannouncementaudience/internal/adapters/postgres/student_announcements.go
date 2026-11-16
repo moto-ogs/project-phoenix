@@ -25,7 +25,7 @@ const studentAnnouncementsSQL = `WITH history AS (
 			WHERE h.tenant_id = ? AND h.student_id = ?
 		)
 			SELECT ra.id AS announcement_id, ra.title, ra.delivery_mode, ra.published_at,
-				ra.response_deadline, ra.expires_at, ra.active,
+				ra.response_deadline,
 				EXISTS (
 					SELECT 1 FROM (?) sg
 					JOIN users.guardian_profiles gp ON gp.id = sg.guardian_profile_id AND gp.tenant_id = ra.tenant_id
@@ -75,21 +75,35 @@ type studentAnnouncementRow struct {
 	DeliveryMode     string     `bun:"delivery_mode"`
 	PublishedAt      time.Time  `bun:"published_at"`
 	ResponseDeadline *time.Time `bun:"response_deadline"`
-	ExpiresAt        *time.Time `bun:"expires_at"`
-	Active           bool       `bun:"active"`
 	CanConfirm       bool       `bun:"can_confirm"`
 	AcknowledgedAt   *time.Time `bun:"acknowledged_at"`
 	AckFirstName     string     `bun:"ack_first_name"`
 	AckLastName      string     `bun:"ack_last_name"`
 }
 
+// studentOfSchoolSQL reports whether the child belongs to the school.
+//
+// Bind order: student, school.
+const studentOfSchoolSQL = `SELECT EXISTS (
+			SELECT 1 FROM users.student_profiles s WHERE s.id = ? AND s.tenant_id = ?
+		)`
+
 // StudentAnnouncements returns the published letters and declarations of
 // the school that reached the child or that a guardian answered for it,
-// newest first, in one statement.
+// newest first. A child of another school, or none at all, is
+// contract.ErrStudentNotInSchool: its record must not be read or logged
+// in this school.
 func (p *Projection) StudentAnnouncements(ctx context.Context, schoolID, studentID int64, history []contract.DeclarationHistoryLink) ([]*contract.StudentAnnouncement, error) {
 	db, _, err := p.database(ctx)
 	if err != nil {
 		return nil, err
+	}
+	var known bool
+	if err := db.NewRaw(studentOfSchoolSQL, studentID, schoolID).Scan(ctx, &known); err != nil {
+		return nil, fmt.Errorf("student of the school: %w", err)
+	}
+	if !known {
+		return nil, contract.ErrStudentNotInSchool
 	}
 	historyJSON, err := declarationHistoryJSON(history)
 	if err != nil {

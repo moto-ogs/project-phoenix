@@ -241,8 +241,6 @@ type StudentAnnouncement struct {
 	DeliveryMode     string
 	PublishedAt      time.Time
 	ResponseDeadline *time.Time
-	ExpiresAt        *time.Time
-	Active           bool
 	CanConfirm       bool
 	AcknowledgedAt   *time.Time
 	AckFirstName     string

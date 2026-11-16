@@ -79,9 +79,11 @@ func TestStudentAnnouncementsListWhatReachedTheChild(t *testing.T) {
 	require.Nil(t, byID[legacy].AcknowledgedAt)
 	require.Equal(t, "declaration", byID[answered].DeliveryMode)
 
-	// Another school reads nothing of the child.
+	// Another school does not reach the child, and an unknown child is no
+	// child of any school.
 	foreign, _ := testpkg.CreateTestTenant(t, db)
-	rows, err = projection.StudentAnnouncements(ctx, foreign, family.StudentID, nil)
-	require.NoError(t, err)
-	require.Empty(t, rows)
+	_, err = projection.StudentAnnouncements(ctx, foreign, family.StudentID, nil)
+	require.ErrorIs(t, err, contract.ErrStudentNotInSchool)
+	_, err = projection.StudentAnnouncements(ctx, tenantID, 999999999, nil)
+	require.ErrorIs(t, err, contract.ErrStudentNotInSchool)
 }

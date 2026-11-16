@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"errors"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	parentaudience "github.com/moto-ogs/project-phoenix/modules/parentannouncementaudience/contract"
@@ -106,6 +107,9 @@ func (r communicationAnnouncementAudience) DeclarationChildren(ctx context.Conte
 }
 func (r communicationAnnouncementAudience) StudentAnnouncements(ctx context.Context, schoolID, studentID int64, history []*communication.PortalDeclarationSubmission) ([]*communication.PortalStudentAnnouncement, error) {
 	rows, err := r.source.StudentAnnouncements(ctx, schoolID, studentID, projectionDeclarationHistory(history))
+	if errors.Is(err, parentaudience.ErrStudentNotInSchool) {
+		return nil, communication.ErrStudentNotInSchool
+	}
 	return mapProjectionRows(rows, func(row *parentaudience.StudentAnnouncement) *communication.PortalStudentAnnouncement {
 		return (*communication.PortalStudentAnnouncement)(row)
 	}), err

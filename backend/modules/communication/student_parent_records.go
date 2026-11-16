@@ -2,6 +2,7 @@ package communication
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -19,8 +20,6 @@ type PortalStudentAnnouncement struct {
 	DeliveryMode     string
 	PublishedAt      time.Time
 	ResponseDeadline *time.Time
-	ExpiresAt        *time.Time
-	Active           bool
 	CanConfirm       bool
 	AcknowledgedAt   *time.Time
 	AckFirstName     string
@@ -38,6 +37,10 @@ type PortalStudentParentRecords struct {
 	Signers       []*PortalDeclarationSigner
 	Submissions   []*PortalDeclarationSubmission
 }
+
+// ErrStudentNotInSchool reports a child that does not belong to the ambient
+// school, or does not exist. Its record is neither read nor logged there.
+var ErrStudentNotInSchool = errors.New("student parent records: student is not in the school")
 
 // StudentParentRecordRecords reads a child's record rows of the ambient
 // school in a constant number of statements.
