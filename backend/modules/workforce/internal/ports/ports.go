@@ -442,6 +442,10 @@ type TraegerStaffStore interface {
 	SchoolFinancialRows(ctx context.Context, staffIDs []int64) ([]domain.StaffFinancialData, error)
 	DeleteSchoolFinancialRow(ctx context.Context, staffID int64) error
 	InsertSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error
+	// InsertSchoolHireData writes the master data row of an employment a
+	// hire just created at the school (#7206): entry day, last day, address
+	// and phone. The employment has no row yet.
+	InsertSchoolHireData(ctx context.Context, data domain.StaffMasterData) error
 
 	ReleaseOfTraeger(ctx context.Context, organizationID int64) (*domain.TraegerStaffRelease, error)
 	CountStaffRecords(ctx context.Context, organizationID int64) (int, error)

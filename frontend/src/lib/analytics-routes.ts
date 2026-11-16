@@ -285,6 +285,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/personal/:id",
   "/personal/abwesenheitsarten",
   "/personal/einsatzplanung",
+  "/personal/einstellen",
   "/personal/import",
   "/personal/vertretungspool",
   "/personal/lohnexport",
