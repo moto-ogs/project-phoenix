@@ -46,7 +46,7 @@ func openDataReturnRelease(context.Context) (organizationtenancy.DataReturnRelea
 	if err != nil {
 		return nil, nil, errors.New("data return: database connection unavailable")
 	}
-	release, err := organizationCompose.NewDataReturnRelease(db.Pool(), owners.NewDataReturnCrypto(), organizationtenancy.DataReturnStoreDir)
+	release, err := organizationCompose.NewDataReturnRelease(db.Pool(), owners.NewDataReturnCrypto(), organizationtenancy.DataReturnStoreDir, time.Now)
 	if err != nil {
 		_ = db.Close()
 		return nil, nil, err

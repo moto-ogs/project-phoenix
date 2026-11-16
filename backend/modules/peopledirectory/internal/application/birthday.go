@@ -32,8 +32,8 @@ type BirthdayService struct {
 	now      func() time.Time
 }
 
-// NewBirthdayService creates the birthday service. now is injectable so tests
-// can pin a weekday; nil means time.Now.
+// NewBirthdayService creates the birthday service. now is the composition's
+// clock and required; tests pin a weekday with it.
 func NewBirthdayService(store ports.BirthdayStore, settings ports.BirthdaySettings, logger *slog.Logger, now func() time.Time) *BirthdayService {
 	if store == nil || settings == nil {
 		panic("people directory birthdays: store and settings are required")
@@ -42,7 +42,7 @@ func NewBirthdayService(store ports.BirthdayStore, settings ports.BirthdaySettin
 		logger = slog.Default()
 	}
 	if now == nil {
-		now = time.Now
+		panic("people directory birthdays: clock is required")
 	}
 	return &BirthdayService{store: store, settings: settings, logger: logger, now: now}
 }

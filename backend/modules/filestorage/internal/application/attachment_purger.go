@@ -23,7 +23,6 @@ type AttachmentPurgerDependencies struct {
 // portal, so a root builds the purger before both (#4080). The composition
 // hands out only these three methods; every seam they use is required.
 func NewAttachmentPurger(deps AttachmentPurgerDependencies) *Service {
-	deps.Now = Clock(deps.Now)
 	if deps.Attachments == nil || deps.AttachmentCleanups == nil || deps.AttachmentObjects == nil ||
 		deps.Tx == nil || deps.Observe == nil || deps.Now == nil {
 		panic("file storage application: all dependencies are required")

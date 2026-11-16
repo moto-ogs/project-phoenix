@@ -78,7 +78,7 @@ type StaffImportDeps struct {
 	// it exclusively while it locks the school's staff rows. Nil takes none.
 	LockStaffPersonMerge func(context.Context) error
 	Records              StaffRecords
-	// Now is the instant a birthday must not lie after; nil is the real clock.
+	// Now is the instant a birthday must not lie after; required.
 	Now func() time.Time
 }
 
@@ -122,8 +122,8 @@ type ImportRuntime struct {
 	// tenant.IsSavepointControlFailure): the transaction can no longer be
 	// trusted, so the upload ends without retry and without replay.
 	SavepointLost func(error) bool
-	// Now stamps the run, its batches and its row messages; nil is the real
-	// clock. Durations are measured on the monotonic clock regardless.
+	// Now stamps the run, its batches and its row messages; required.
+	// Durations are measured on the monotonic clock regardless.
 	Now func() time.Time
 }
 
@@ -222,7 +222,7 @@ type StudentImportDeps struct {
 	// (#5552 step 7); without it each child is created in place.
 	EnrollmentBatches EnrollmentBatches
 	// Now stamps consents and their history and is the instant a birthday
-	// or a consent date must not lie after; nil is the real clock.
+	// or a consent date must not lie after; required.
 	Now func() time.Time
 	// Today is the calendar day a new child's status is taken against;
 	// nil is the Berlin day of Now. Tests set a clock that crosses midnight.

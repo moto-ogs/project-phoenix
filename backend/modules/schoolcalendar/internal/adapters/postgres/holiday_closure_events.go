@@ -157,13 +157,14 @@ var (
 )
 
 // NewHolidayClosureEventStore builds the store; school resolves the
-// caller's school transaction, today names the Berlin day (nil: today).
+// caller's school transaction, today is the root's day clock. Both are
+// required.
 func NewHolidayClosureEventStore(school Database, today func() calendar.Date) *HolidayClosureEventStore {
 	if school == nil {
 		panic("school calendar postgres: the school database is required")
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("school calendar postgres: the day clock is required")
 	}
 	return &HolidayClosureEventStore{school: school, today: today}
 }

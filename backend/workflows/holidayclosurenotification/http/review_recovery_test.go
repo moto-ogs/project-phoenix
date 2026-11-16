@@ -93,7 +93,7 @@ func TestPreparationHoldsSchoolMembershipUntilCommit(t *testing.T) {
 	t.Parallel()
 	w := newClosureWorld(t, "Träger gesicherte Zugehörigkeit")
 	other := newClosureWorld(t, "Träger paralleler Wechsel")
-	events := schoolCalendarCompose.NewHolidayClosureEvents()
+	events := schoolCalendarCompose.NewHolidayClosureEvents(calendar.TodayDate)
 	require.NoError(t, testpkg.WithinTraeger(w.ctx, w.organization, func(ctx context.Context) error {
 		schools, err := events.HolidayClosureCalendars(ctx, w.organization, []int64{w.school}, calendar.NewDate(2030, 7, 8), calendar.NewDate(2030, 7, 12))
 		require.NoError(t, err)
@@ -181,7 +181,7 @@ func TestBulkConfirmationGuardsAndBudget(t *testing.T) {
 	for _, notice := range w.schoolNotices(t) {
 		confirmations = append(confirmations, schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID, Revision: notice.Revision, ImpactToken: notice.Token})
 	}
-	events := schoolCalendarCompose.NewHolidayClosureEvents()
+	events := schoolCalendarCompose.NewHolidayClosureEvents(calendar.TodayDate)
 	actor := schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelTraeger, OrganizationID: w.organization}
 	stale := append([]schoolcalendar.HolidayClosureConfirmation(nil), confirmations...)
 	stale[1].Revision--
@@ -236,7 +236,7 @@ func TestUnprocessedMoveKeepsTheLastToldRange(t *testing.T) {
 		}
 	}
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := schoolCalendarCompose.NewHolidayClosureEvents().ConfirmHolidayClosureNotice(ctx, pending.ProposalID, pending.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: pending.ImpactToken})
+		_, err := schoolCalendarCompose.NewHolidayClosureEvents(calendar.TodayDate).ConfirmHolidayClosureNotice(ctx, pending.ProposalID, pending.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: pending.ImpactToken})
 		return err
 	}))
 	move("2030-07-11")
@@ -266,7 +266,7 @@ func TestDeletingUnpreparedNewClosureWithdrawsItsCommands(t *testing.T) {
 			testpkg.OwnTenant(t)
 			w := newClosureWorldIn(t, "Träger vor Verarbeitung aufgehoben "+state, db)
 			day := w.createClosingDay(t, "2030-07-08", "2030-07-08")
-			events := schoolCalendarCompose.NewHolidayClosureEvents()
+			events := schoolCalendarCompose.NewHolidayClosureEvents(calendar.TodayDate)
 			confirm := func() {
 				for _, notice := range w.schoolNotices(t) {
 					if notice.Status != "suggested" {
@@ -382,7 +382,7 @@ func TestEditedNoticeReplacesAnOutstandingRenewal(t *testing.T) {
 			w := newClosureWorldIn(t, "Träger erneute Bestätigung nach Änderung", testpkg.SetupIsolatedTestDB(t))
 			day := w.createClosingDay(t, "2030-07-08", "2030-07-08")
 			first := w.schoolNotices(t)[0]
-			events := schoolCalendarCompose.NewHolidayClosureEvents()
+			events := schoolCalendarCompose.NewHolidayClosureEvents(calendar.TodayDate)
 			require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
 				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID, first.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: first.Token})
 				return err
@@ -482,7 +482,7 @@ func TestPreparationFailureKeepsTheLastToldSourceRange(t *testing.T) {
 		require.NoError(t, err)
 	}
 	move("2030-07-12")
-	events := schoolCalendarCompose.NewHolidayClosureEvents()
+	events := schoolCalendarCompose.NewHolidayClosureEvents(calendar.TodayDate)
 	for _, notice := range w.schoolNotices(t) {
 		if notice.Status != "suggested" {
 			continue
@@ -529,7 +529,7 @@ func TestErasedRegistrationsResolveWaitingCommands(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, w.notices.ProcessDue(w.ctx))
 			assert.Equal(t, []string{"no_mail"}, w.events(t), "erased recipients require no further transport work")
-			events := schoolCalendarCompose.NewHolidayClosureEvents()
+			events := schoolCalendarCompose.NewHolidayClosureEvents(calendar.TodayDate)
 			require.NoError(t, tenant.WithAdminTx(w.ctx, w.db, func(ctx context.Context, _ bun.Tx) error {
 				due, err := events.DueHolidayClosureTraeger(ctx)
 				require.NoError(t, err)
@@ -557,7 +557,7 @@ func TestAuthorizationHistoryCommitsWithTheCommandAndAnonymizesActors(t *testing
 	retry := testpkg.CreateTestAccount(t, w.db, "closure.retry@example.org")
 	w.createClosingDay(t, "2030-07-08", "2030-07-08")
 	n := w.schoolNotices(t)[0]
-	events := schoolCalendarCompose.NewHolidayClosureEvents()
+	events := schoolCalendarCompose.NewHolidayClosureEvents(calendar.TodayDate)
 	err := tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
 		_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID, n.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, AccountID: first.ID, ImpactToken: n.Token})
 		if err != nil {

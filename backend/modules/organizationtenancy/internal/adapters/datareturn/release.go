@@ -26,9 +26,10 @@ type Release struct {
 }
 
 // NewRelease binds the operator side to a database whose login may assume
-// phoenix_data_return, and to the store directory.
-func NewRelease(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root string) *Release {
-	return &Release{store: releaseStore{db: db}, crypto: crypto, root: root, now: time.Now}
+// phoenix_data_return, to the store directory and to the clock that stamps
+// releases and sweeps.
+func NewRelease(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root string, now func() time.Time) *Release {
+	return &Release{store: releaseStore{db: db}, crypto: crypto, root: root, now: now}
 }
 
 // The longest retrieval period a release may name: the 7-month alternative

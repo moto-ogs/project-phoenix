@@ -3,6 +3,8 @@
 package api
 
 import (
+	"time"
+
 	care "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	people "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students"
 	projection "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
@@ -12,14 +14,14 @@ import (
 )
 
 func NewCareHTTPUnitResource(cfg care.ResourceConfig) *care.Resource {
-	_, subject, _, _, _, _ := NewStudentHTTPResources(people.ResourceConfig{}, cfg, projection.ResourceConfig{}, presence.ResourceConfig{}, delete.ResourceConfig{}, review.ResourceConfig{})
+	_, subject, _, _, _, _ := NewStudentHTTPResources(people.ResourceConfig{Now: time.Now}, cfg, projection.ResourceConfig{}, presence.ResourceConfig{}, delete.ResourceConfig{}, review.ResourceConfig{})
 	return subject
 }
 func NewProjectionHTTPUnitResource(cfg projection.ResourceConfig) *projection.Resource {
-	_, _, subject, _, _, _ := NewStudentHTTPResources(people.ResourceConfig{}, care.ResourceConfig{}, cfg, presence.ResourceConfig{}, delete.ResourceConfig{}, review.ResourceConfig{})
+	_, _, subject, _, _, _ := NewStudentHTTPResources(people.ResourceConfig{Now: time.Now}, care.ResourceConfig{}, cfg, presence.ResourceConfig{}, delete.ResourceConfig{}, review.ResourceConfig{})
 	return subject
 }
 func NewReviewHTTPUnitResource(cfg review.ResourceConfig) *review.Resource {
-	_, _, _, _, _, subject := NewStudentHTTPResources(people.ResourceConfig{}, care.ResourceConfig{}, projection.ResourceConfig{}, presence.ResourceConfig{}, delete.ResourceConfig{}, cfg)
+	_, _, _, _, _, subject := NewStudentHTTPResources(people.ResourceConfig{Now: time.Now}, care.ResourceConfig{}, projection.ResourceConfig{}, presence.ResourceConfig{}, delete.ResourceConfig{}, cfg)
 	return subject
 }

@@ -459,7 +459,7 @@ func TestErasureCLIRefusesWhileAReturnPackageIsReleased(t *testing.T) {
 	seedCLIErasure(t, db, school)
 	operator := testpkg.CreateTestOperator(t, db)
 	store := t.TempDir()
-	release, err := tenancyCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store)
+	release, err := tenancyCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store, time.Now)
 	require.NoError(t, err)
 	issued, err := release.Release(t.Context(), organizationtenancy.DataReturnReleaseRequest{Package: returnPackage(t, school), SchoolID: school,
 		OperatorID: operator.ID, KeepUntil: time.Now().AddDate(0, 0, 40), DataReturnRecipient: organizationtenancy.DataReturnRecipient{
@@ -506,7 +506,7 @@ func TestErasureCLIErasesASchoolWhileItsTraegerPackageIsReleased(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT organization_id FROM platform.schools WHERE id = ?`, school).Scan(t.Context(), &organization))
 	seedCLIErasure(t, db, school)
 	operator := testpkg.CreateTestOperator(t, db)
-	release, err := tenancyCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), t.TempDir())
+	release, err := tenancyCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), t.TempDir(), time.Now)
 	require.NoError(t, err)
 	issued, err := release.Release(t.Context(), organizationtenancy.DataReturnReleaseRequest{Package: organizationReturnPackage(t, organization),
 		OrganizationID: organization, OperatorID: operator.ID, KeepUntil: time.Now().AddDate(0, 0, 40), DataReturnRecipient: organizationtenancy.DataReturnRecipient{
