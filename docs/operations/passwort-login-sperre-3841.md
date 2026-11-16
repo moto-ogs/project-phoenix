@@ -18,7 +18,13 @@ andere Akzeptanzkriterien bleiben bei ihren jeweiligen Slices.
 
 Nach **fünf falschen Passwörtern** pausiert die Passwortanmeldung für
 **15 Minuten**. Ein korrektes Passwort setzt den Passwortzähler zurück, sofern
-die Sperre nicht mehr gilt. Der anschließende MFA-Schritt bleibt unabhängig:
+die Sperre nicht mehr gilt. Fehlversuche verfallen: Liegt der letzte falsche
+Versuch länger als die Sperrdauer zurück, zählt der nächste wieder als erster
+(`password_failed_at`, #7214). Vertipper über Wochen summieren sich so nicht
+zu einer Sperre. Die Rate bleibt begrenzt: höchstens vier Versuche je
+15 Minuten ohne Sperre. Ein so langsames Raten löst allerdings keine Sperre
+mehr aus; es fällt nur noch in den fehlgeschlagenen Auth-Ereignissen auf.
+Der anschließende MFA-Schritt bleibt unabhängig:
 Ein korrektes Passwort setzt niemals MFA-Code-Versuche zurück.
 
 Ein Versuch während der Sperre verlängert sie nicht, auch nicht mit dem
@@ -31,7 +37,9 @@ Die Werte stammen zentral aus den Registry-Defaults
 `security.account_lockout_duration_minutes`. Änderungen dieser Defaults
 erfordern einen geprüften Code-Rollout. Es gibt keinen Env-Fallback und kein
 zusätzliches Plattform-Einstellungsmodell. Schul-Overrides dieser bestehenden
-Einstellungen gelten weiterhin **nur für MFA-Codes**. Ein Schulwechsel oder
+Einstellungen gelten weiterhin **nur für MFA-Codes**; die Einstellungen heißen
+deshalb „Fehlversuche bis zur Code-Sperre“ und „Dauer der Code-Sperre“.
+Ein Schulwechsel oder
 anderes Portal darf eine plattformweite Identitätssperre nicht abschwächen.
 
 Die Wahl begrenzt verteiltes Raten, ohne eine dauerhafte Support-Sperre zu
@@ -105,16 +113,23 @@ Keine Passwörter, Codes, vollständigen Adressen oder Kontolisten kopieren.
 ## Rollout und lokale Nachweise
 
 Migration **1.15.499** ergänzt Zähler, Fristen und Reset-Generationen an
-bestehenden Identity-&-Access-Tabellen. Kein neuer Datentopf, keine zusätzliche
+bestehenden Identity-&-Access-Tabellen. Migration **20261116150100** ergänzt
+den Zeitpunkt des letzten falschen Passworts; vorhandene Zähler zählen ab der
+Migration und verfallen nach einer Sperrdauer.
+Kein neuer Datentopf, keine zusätzliche
 Aufbewahrungsfrist. Die neuen Sicherheitsfelder sind im Laufzeitkatalog
 aus Kundenexporten ausgeschlossen; die bestehende globale Kontolöschung
 bleibt zuständig. Backend und Migration zusammen ausrollen; alte Prozesse
 zählen Passwortversuche nicht. Ein gemischter Rollout ist kein Wirksamkeitsnachweis.
 Ein Rollback entfernt den Schutz und benötigt eine gesonderte Entscheidung.
+Migration 20261116150100 nur zusammen mit dem Backend davor zurückrollen: Ein
+neues Backend ohne die Spalte `password_failed_at` lehnt jede
+Passwortanmeldung mit einem Fehler ab.
 
 Die Regressionstests in `backend/api/password_login_protection_test.go` und
 `backend/api/mfa_reset_exchange_test.go` prüfen Sperre, Ablauf, Zurücksetzen,
-Parallelität, Portalgrenzen und den zwischen Prüfung und Mint committeten Reset.
+Verfall alter Fehlversuche, Parallelität, Portalgrenzen und den zwischen
+Prüfung und Mint committeten Reset.
 `backend/api/mfa_challenge_rate_race_test.go` prüft parallele Code-Anforderungen.
 Die Tests erzeugen Zugangsdaten zur Laufzeit und verwenden nur lokale Testdaten.
 

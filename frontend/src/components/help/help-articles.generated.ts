@@ -8434,7 +8434,8 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
         ordered: false,
         steps: [
           "`Zwei-Faktor-Anmeldung (Code per E-Mail)`: Beim Anmelden kommt zusätzlich ein Code per E-Mail.",
-          "`Fehlversuche bis zur Kontosperre`: Nach so vielen falschen Bestätigungscodes pausiert die Code-Prüfung.",
+          "`Fehlversuche bis zur Code-Sperre`: Nach so vielen falschen Bestätigungscodes pausiert die Code-Prüfung.",
+          "`Dauer der Code-Sperre (Minuten)`: So lange pausiert danach die Code-Prüfung.",
         ],
       },
       {
