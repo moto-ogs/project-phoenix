@@ -192,7 +192,7 @@ func composeServeRoot(
 		staffGroups      schoolstructure.StaffGroupQuery
 	)
 	err := owners.RunRootSteps(
-		func() (err error) { tokens, err = newLegacyTokenAdapter(); return },
+		func() (err error) { tokens, err = newLegacyTokenAdapter(env.Now); return },
 		func() (err error) {
 			objects, err = nativeUploads.PrivateUploadsBackend()
 			return owners.StepError("resolve uploads backend", err)
@@ -217,7 +217,7 @@ func composeServeRoot(
 		},
 		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
-			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime, env.Now)
+			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, env.Now, groups, rooms, membership, workTime)
 			return nil
 		},
 		func() (err error) { guardian, err = owners.BuildGuardianService(db, people, audit, env); return },
@@ -524,7 +524,7 @@ func composeServeRoot(
 	careOfferings, studentAnswers := requests.CareOfferings, newStudentAnswers()
 	err = owners.RunRootSteps(
 		func() error {
-			return mountDemoAccess(router, authAPI.ComposedDemoAccess(identity.DemoAccess()), viper.GetString("app_env"), config.FrontendURL, viper.GetString("tenant_domain"))
+			return mountDemoAccess(router, authAPI.ComposedDemoAccess(identity.DemoAccess()), viper.GetString("app_env"), config.FrontendURL, viper.GetString("tenant_domain"), env.Now)
 		},
 		func() error { return mountRequestFeed(router, tenant, db, logger, config.FrontendURL) },
 		func() error {

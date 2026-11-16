@@ -16,13 +16,15 @@ import (
 type GuardianInvitationReads struct {
 	invitations ports.GuardianInvitationStore
 	run         func(context.Context, func(context.Context) error) error
+	now         func() time.Time
 }
 
 var _ identityaccess.GuardianInvitationReads = GuardianInvitationReads{}
 
-// NewGuardianInvitationReads reads the invitations through the store.
-func NewGuardianInvitationReads(invitations ports.GuardianInvitationStore, run func(context.Context, func(context.Context) error) error) GuardianInvitationReads {
-	return GuardianInvitationReads{invitations: invitations, run: run}
+// NewGuardianInvitationReads reads the invitations through the store; now
+// decides which of them are still open.
+func NewGuardianInvitationReads(invitations ports.GuardianInvitationStore, run func(context.Context, func(context.Context) error) error, now func() time.Time) GuardianInvitationReads {
+	return GuardianInvitationReads{invitations: invitations, run: run, now: now}
 }
 
 // ListGuardianInvitations returns every invitation ever issued for the
@@ -44,7 +46,7 @@ func (r GuardianInvitationReads) ListOpenGuardianInvitations(ctx context.Context
 	var invitations []domain.GuardianInvitation
 	err := r.run(ctx, func(txCtx context.Context) error {
 		var err error
-		invitations, err = r.invitations.ListOpenGuardianInvitations(txCtx, guardianProfileIDs, time.Now())
+		invitations, err = r.invitations.ListOpenGuardianInvitations(txCtx, guardianProfileIDs, r.now())
 		return err
 	})
 	return guardianInvitationList(invitations, err)
@@ -56,7 +58,7 @@ func (r GuardianInvitationReads) ListRedeemableGuardianInvitations(ctx context.C
 	var invitations []domain.GuardianInvitation
 	err := r.run(ctx, func(txCtx context.Context) error {
 		var err error
-		invitations, err = r.invitations.ListRedeemableGuardianInvitations(txCtx, time.Now())
+		invitations, err = r.invitations.ListRedeemableGuardianInvitations(txCtx, r.now())
 		return err
 	})
 	return guardianInvitationList(invitations, err)
@@ -73,32 +75,33 @@ func (l *AccountLifecycle) ListGuardianInvitations(ctx context.Context, guardian
 	if l == nil {
 		return nil, errAccountLifecycleUnavailable
 	}
-	return NewGuardianInvitationReads(l.invitations, l.sessions.tx.RunRead).ListGuardianInvitations(bindRuntime(l.auth.attach, ctx), guardianProfileID)
+	return NewGuardianInvitationReads(l.invitations, l.sessions.tx.RunRead, l.sessions.now).ListGuardianInvitations(bindRuntime(l.auth.attach, ctx), guardianProfileID)
 }
 
 func (l *AccountLifecycle) ListOpenGuardianInvitations(ctx context.Context, guardianProfileIDs []int64) ([]identityaccess.GuardianInvitation, error) {
 	if l == nil {
 		return nil, errAccountLifecycleUnavailable
 	}
-	return NewGuardianInvitationReads(l.invitations, l.sessions.tx.RunRead).ListOpenGuardianInvitations(bindRuntime(l.auth.attach, ctx), guardianProfileIDs)
+	return NewGuardianInvitationReads(l.invitations, l.sessions.tx.RunRead, l.sessions.now).ListOpenGuardianInvitations(bindRuntime(l.auth.attach, ctx), guardianProfileIDs)
 }
 
 func (l *AccountLifecycle) ListRedeemableGuardianInvitations(ctx context.Context) ([]identityaccess.GuardianInvitation, error) {
 	if l == nil {
 		return nil, errAccountLifecycleUnavailable
 	}
-	return NewGuardianInvitationReads(l.invitations, l.sessions.tx.RunRead).ListRedeemableGuardianInvitations(bindRuntime(l.auth.attach, ctx))
+	return NewGuardianInvitationReads(l.invitations, l.sessions.tx.RunRead, l.sessions.now).ListRedeemableGuardianInvitations(bindRuntime(l.auth.attach, ctx))
 }
 
 // NewGuardianInvitationInvalidation binds the guarded command independently of
 // the full lifecycle, so contact edits need neither late binding nor a cycle.
-func NewGuardianInvitationInvalidation(invitations ports.GuardianInvitationStore) identityaccess.GuardianInvitationInvalidation {
+// now stamps the invalidation.
+func NewGuardianInvitationInvalidation(invitations ports.GuardianInvitationStore, now func() time.Time) identityaccess.GuardianInvitationInvalidation {
 	return func(ctx context.Context, profileID int64) error {
 		if profileID <= 0 {
 			return failed("invalidate guardian invitations", identityaccess.ErrGuardianInvitationNotFound)
 		}
 		// The store refuses a missing school or transaction. This leaf command
 		// never starts an independent unit or switches the caller's scope.
-		return invitationError(invitations.InvalidateGuardianInvitations(ctx, profileID, time.Now(), true))
+		return invitationError(invitations.InvalidateGuardianInvitations(ctx, profileID, now(), true))
 	}
 }

@@ -93,9 +93,14 @@ func firstClock(clocks []func() time.Time) func() time.Time {
 // NewPeopleIdentityAccess composes the Identity & Access module the People
 // Directory repositories read accounts and memberships through. A nil
 // observer composes it unobserved, which is what test graphs and CLI roots
-// use.
+// use, on the real clock.
 func NewPeopleIdentityAccess(db transactionruntime.Database, observe IdentityAccessObserver) identityaccess.Owner {
-	module, err := identityCompose.New(identityCompose.Dependencies{DB: db.Pool(), Observe: identityAccessObservation(observe)})
+	return newPeopleIdentityAccess(db, observe, nil)
+}
+
+// newPeopleIdentityAccess composes it on the root's clock (nil: the real one).
+func newPeopleIdentityAccess(db transactionruntime.Database, observe IdentityAccessObserver, now func() time.Time) identityaccess.Owner {
+	module, err := identityCompose.New(identityCompose.Dependencies{DB: db.Pool(), Observe: identityAccessObservation(observe), Now: now})
 	if err != nil {
 		panic(fmt.Sprintf("compose identity access: %v", err))
 	}

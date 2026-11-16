@@ -31,7 +31,7 @@ func NewOperatorTokens(service *Service, store ports.OperatorTokenStore) *Operat
 	if service == nil || store == nil {
 		panic("identity access application: operator tokens require the service and their store")
 	}
-	return &OperatorTokens{service: service, store: store, now: time.Now}
+	return &OperatorTokens{service: service, store: store, now: service.now}
 }
 
 func (t *OperatorTokens) run(ctx context.Context, operation string, fn func(context.Context, *domain.OperationStats) error) error {

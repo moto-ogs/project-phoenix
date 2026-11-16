@@ -132,7 +132,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 	)
 	err = owners.RunRootSteps(
 		func() (err error) {
-			tokens, err = tokenAdapterFor(cfg.JWTSecret, cfg.JWTExpiry, cfg.JWTRefreshExpiry)
+			tokens, err = tokenAdapterFor(cfg.JWTSecret, cfg.JWTExpiry, cfg.JWTRefreshExpiry, env.Now)
 			return
 		},
 		func() (err error) {
@@ -159,7 +159,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
-			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime, env.Now)
+			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, env.Now, groups, rooms, membership, workTime)
 			return nil
 		},
 		func() (err error) { guardian, err = owners.BuildGuardianService(db, people, audit, env); return },

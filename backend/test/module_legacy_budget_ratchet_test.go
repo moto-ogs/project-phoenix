@@ -327,12 +327,13 @@ var moduleLegacyFileBudgets = map[string]int{
 // their time imports).
 // ADR 0267: the clock fields of modules/communication/composition (+7) and
 // modules/delivery/compose (+8).
+// ADR 0261: the clock of modules/identityaccess/compose (+16).
 // ADR 0268: the clock fields, their imports and nil defaults of
 // modules/devicefleet/compose (+6), modules/organizationtenancy/compose (+10),
 // modules/peopledirectory/compose (+6), modules/schoolmembership/compose (+5),
 // modules/schoolstructure/compose (+8) and modules/settings/compose (+3)
 // add exactly 38 LOC.
-const moduleComposeBudgetTotal = 13627
+const moduleComposeBudgetTotal = 13643
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -422,7 +423,8 @@ var moduleComposeBudgets = map[string]int{
 	"modules/guardianlinkview/compose":             8,
 	// Raised by ADR 0106: the Träger-Büro account management (+24).
 	// Raised by ADR 0187: the operator directory of the Träger export CLI (+11).
-	"modules/identityaccess/compose": 1372, // raised by ADR 0077
+	// Raised by ADR 0261: the owner's clock, its nil default and imports (+16).
+	"modules/identityaccess/compose": 1388, // raised by ADR 0077
 	// ADR 0269: the clock of the participation history (+2).
 	"modules/mealplan/compose": 104, // raised by ADR 0078 and ADR 0168
 	// ADR 0097: the isolated tenant return constructor, no retained logic moved.

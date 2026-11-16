@@ -322,7 +322,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() (err error) { workTime, err = BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
-			people, peopleIdentity = BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime, env.Now)
+			people, peopleIdentity = BuildPeopleRows(db, env.Observe.IdentityAccess, env.Now, groups, rooms, membership, workTime)
 			return nil
 		},
 		func() (err error) { guardian, err = BuildGuardianService(db, people, audit, env); return },
