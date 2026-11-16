@@ -1,6 +1,8 @@
 package owners
 
 import (
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"context"
 	"errors"
 	"fmt"
@@ -80,8 +82,8 @@ func BuildServeRooms(db transactionruntime.Database) (facilitiesModule.Catalog, 
 // care-offering catalog for the rooms its offerings need (#4010), and
 // Timetable, School Structure, Device Fleet and Student Presence what else
 // still uses the room (#6845).
-func BuildFacilitiesModule(db transactionruntime.Database, observe func(facilitiesCompose.Observation), lock timetable.RecurrenceWriteLock, sessions studentpresence.Owner, offerings careplan.CareOfferingGuards, groups schoolstructure.GroupListing, devices devicefleet.Capability) (facilitiesModule.Capability, error) {
-	references, err := NewRoomReferences(db, sessions, groups, devices)
+func BuildFacilitiesModule(db transactionruntime.Database, observe func(facilitiesCompose.Observation), lock timetable.RecurrenceWriteLock, sessions studentpresence.Owner, offerings careplan.CareOfferingGuards, groups schoolstructure.GroupListing, devices devicefleet.Capability, today func() timezone.Date) (facilitiesModule.Capability, error) {
+	references, err := NewRoomReferences(db, sessions, groups, devices, today)
 	if err != nil {
 		return nil, err
 	}
@@ -261,15 +263,16 @@ func BuildServeFeedback(db transactionruntime.Database, settings *feedbackCompos
 }
 
 // BuildServeTimetable composes the observed Timetable owner over the People
-// Directory, the room catalog and School Membership.
-func BuildServeTimetable(db transactionruntime.Database, persons peopledirectory.StudentQuery, rooms facilitiesModule.Query, membership schoolmembership.Capability) (timetable.Owner, error) {
+// Directory, the room catalog and School Membership; now is its clock, nil
+// the real one.
+func BuildServeTimetable(db transactionruntime.Database, persons peopledirectory.StudentQuery, rooms facilitiesModule.Query, membership schoolmembership.Capability, now func() time.Time) (timetable.Owner, error) {
 	return newTimetable(db, persons, rooms, membership, func(observation timetableCompose.Observation) {
 		observability.ObserveTimetableActivitiesOperation(
 			observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows,
 			observation.Stats.DuplicatePreventionConflicts, observation.Stats.StatementDuration,
 			timetable.ErrorCode(observation.Err), observation.Err,
 		)
-	}, nil)
+	}, now)
 }
 
 // observeTimetableActivities records one Timetable activities operation of

@@ -173,7 +173,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			timetableOwner, err = owners.BuildServeTimetable(db, persons, rooms, membership)
+			timetableOwner, err = owners.BuildServeTimetable(db, persons, rooms, membership, env.Now)
 			return
 		},
 		func() error {
@@ -277,7 +277,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			activities, err = owners.BuildActivities(timetableRows, timetableOwner, presence.SessionRecords, people)
+			activities, err = owners.BuildActivities(timetableRows, timetableOwner, presence.SessionRecords, people, env.Today)
 			yard = buildFacilitiesYard(env, facilitiesRooms, activities)
 			return
 		},

@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"slices"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
@@ -363,7 +362,7 @@ func (s *Service) PropagateActivityInstanceListKind(ctx context.Context, groupID
 		if factsErr != nil {
 			return factsErr
 		}
-		rows, updateStats, updateErr := s.store.SetActivityInstanceListKind(txCtx, withoutIDs(ids, started), newKind, time.Now())
+		rows, updateStats, updateErr := s.store.SetActivityInstanceListKind(txCtx, withoutIDs(ids, started), newKind, s.now())
 		stats.Add(updateStats)
 		result = rows
 		return updateErr

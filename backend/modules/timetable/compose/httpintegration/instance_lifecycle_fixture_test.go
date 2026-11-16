@@ -70,7 +70,9 @@ type lifecycleSetup struct {
 
 // buildLifecycle prepares the minimum scaffold for instance-lifecycle tests:
 // one tenant, one room, one staff, two students, one template (is_template).
-func buildLifecycle(t *testing.T) *lifecycleSetup {
+// buildLifecycle composes the lifecycle suite; a given clock pins the owner
+// and the lifecycle to one day.
+func buildLifecycle(t *testing.T, clocks ...func() time.Time) *lifecycleSetup {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 
@@ -78,7 +80,7 @@ func buildLifecycle(t *testing.T) *lifecycleSetup {
 	repoFactoryPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	repoFactorySchedules := api.NewCareScheduleSuiteRepositories(testpkg.NewDatabase(t, db))
 	repoFactoryPresence := api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db))
-	ttLifecycle, ttPlanning, ttMaterialization, ttActive, ttSchedules, ttCareOfferings, ttStatusDays, err := api.NewTestTimetable(testpkg.NewDatabase(t, db), slog.Default())
+	ttLifecycle, ttPlanning, ttMaterialization, ttActive, ttSchedules, ttCareOfferings, ttStatusDays, err := api.NewTestTimetable(testpkg.NewDatabase(t, db), slog.Default(), clocks...)
 	require.NoError(t, err)
 
 	// Own tenant per caller, subtests included: every subtest builds its own
@@ -115,7 +117,7 @@ func buildLifecycle(t *testing.T) *lifecycleSetup {
 		reposPeople:     repoFactoryPeople,
 		reposSchedules:  repoFactorySchedules,
 		reposCare:       repoFactory,
-		timetable:       api.NewUnobservedTimetableRepositories(testpkg.MustDatabase(db)),
+		timetable:       api.NewUnobservedTimetableRepositories(testpkg.MustDatabase(db), clocks...),
 		db:              db,
 		ctx:             ctx,
 		roomID:          room.ID,

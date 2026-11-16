@@ -658,7 +658,7 @@ func newSchoolContentRetentionSteps(db transactionruntime.Database, settings ret
 		return nil, fmt.Errorf("compose worker grade transition retention: %w", err)
 	}
 	steps := schoolContentRetentionSteps(
-		settings, announcements, timetable.NewStaffNoticeRetention(timetableCompose.NewStaffNoticeRepository(db.Pool()), calendar.TodayDate),
+		settings, announcements, timetable.NewStaffNoticeRetention(timetableCompose.NewStaffNoticeRepository(db.Pool(), nil), calendar.TodayDate),
 		appointments, transitions, fileStorageCompose.NewCleanupRetention(), homework,
 		homework,
 	)

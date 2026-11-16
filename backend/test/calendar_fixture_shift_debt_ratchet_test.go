@@ -108,7 +108,6 @@ var calendarFixtureShiftedLiveDateDebt = map[string]int{
 	"modules/timetable/http/templates_series_end_test.go":                                                    2,
 	"modules/timetable/http/templates_split_test.go":                                                         24,
 	"modules/timetable/http/templates_write_staff_lock_test.go":                                              3,
-	"modules/timetable/internal/application/bulk_substitution_unit_test.go":                                  3,
 	"modules/timetable/internal/application/template_end_service_unit_test.go":                               3,
 	"modules/timetableblockdisplay/internal/adapters/postgres/projection_test.go":                            1,
 	"modules/workforce/compose/absence_map_contract_test.go":                                                 2,

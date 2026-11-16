@@ -1,6 +1,10 @@
 package api
 
 import (
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
+	"time"
+
 	"context"
 	"log/slog"
 	"net/http"
@@ -124,6 +128,7 @@ func mountSchoolPortalRoutes(
 	planExport planexport.Service, chat owners.CommunicationMessaging, persons peopledirectory.Capability, notifications owners.DeliveryNotifications,
 	devices owners.DeliveryDevices, classDay ClassDayViews, identity identityaccess.Owner, calendarApp calendarCompose.Application,
 	announcements communicationModule.ParentAnnouncementCapability, shiftSeries workforceModule.ShiftPlanReferenceQuery, staff owners.StaffPermissionHolders,
+	now func() time.Time,
 ) error {
 	pickupExtensions, err := careexit.NewPickupExtensions(timetableOwner, presence)
 	if err != nil {
@@ -146,7 +151,7 @@ func mountSchoolPortalRoutes(
 		return err
 	}
 	timetableResource := newTimetableResource(calendar, vacations, vacationHints, timetableOwner, materialization, lifecycle, planning, planningTracks, users, schedules,
-		caller, settings, careOfferings, classDay, planExport, pickupExtensions, persons, classArrivals, shiftSeries, logger)
+		caller, settings, careOfferings, classDay, planExport, pickupExtensions, persons, classArrivals, shiftSeries, logger, now)
 	// OGS-internal colleague chat (#2598) — staff-to-staff, deliberately a
 	// separate surface from /messages (which is parent-facing).
 	staffMessaging := staffMessagingAPI.NewResource(chat.StaffMessaging)
@@ -157,9 +162,9 @@ func mountSchoolPortalRoutes(
 	// pattern and the People Directory names of the acknowledgement list
 	// (#3418). All staff read them, admins write them; a new one reaches the feed (#7143).
 	staffNotices := timetableAPI.NewStaffNoticeResource(timetableCompose.NewStaffNotices(timetableCompose.StaffNoticeDependencies{
-		DB: db.Pool(), Periods: timetableCompose.NewCalendarPeriodRepository(calendar, newCalendarPeriodUsage(timetableOwner)), Names: staffNoticeNames(persons),
+		DB: db.Pool(), Periods: timetableCompose.NewCalendarPeriodRepository(calendar, newCalendarPeriodUsage(timetableOwner)), Names: staffNoticeNames(persons), Now: now,
 		Publications: owners.NewTimetableStaffNoticePublications(staff, notifications), Logger: logger.With("service", "staffnotice"),
-	}), func(ctx context.Context) int64 { return timeTrackingIdentity(ctx).AccountID })
+	}), func(ctx context.Context) int64 { return timeTrackingIdentity(ctx).AccountID }, timezone.CalendarDateClock(now))
 	// Notification abstraction (#1624).
 	notificationRoutes := NewNotificationHTTP(notifications.Notifier, devices.PushSubscriptions, notifications.Preferences, notifications.Feed)
 	// The class-day surface reads the class-day projection (#2701): the day
@@ -196,6 +201,7 @@ func newTimetableResource(
 	careOfferings carePlanModule.CareOfferingCapability, classDay ClassDayViews, planExport planexport.Service,
 	pickupExtensions timetableAPI.PickupExtensionDecisions, hints peopledirectory.SchoolDayHintQuery,
 	classArrivals timetableModule.ClassArrivalQuery, shiftSeries workforceModule.ShiftPlanReferenceQuery, logger *slog.Logger,
+	now func() time.Time,
 ) *timetableAPI.Resource {
 	return timetableAPI.NewResource(timetableAPI.Dependencies{
 		CalendarPeriods:         calendar,
@@ -235,6 +241,7 @@ func newTimetableResource(
 		PickupExtensions:        pickupExtensions,
 		Staffing:                timetableStaffingAnnouncer(lifecycle.Instances),
 		Logger:                  logger.With("handler", "timetable"),
+		Now:                     now,
 	})
 }
 

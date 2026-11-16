@@ -5,6 +5,7 @@ import (
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/application"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // NewService binds the activity application to the owner capabilities.
@@ -14,7 +15,7 @@ func NewService(
 	directories ports.RepositoryDirectories,
 	occupancy application.ActivityOccupancy,
 	staff ports.LifecycleStaff,
-	students RosterStudents,
+	students RosterStudents, today func() calendar.Date,
 ) (activityContract.ActivityService, error) {
-	return application.NewActivityService(capability, schedules, directories, occupancy, staff, students)
+	return application.NewActivityService(capability, schedules, directories, occupancy, staff, students, today)
 }

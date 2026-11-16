@@ -16,7 +16,6 @@ import (
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // TimetableRepositories are the Timetable owner's retained activities and
@@ -59,7 +58,11 @@ func NewUnobservedTimetable(db transactionruntime.Database, students peopledirec
 	if err != nil {
 		return nil, err
 	}
-	return newTimetable(db, students, rooms, membership, func(timetableCompose.Observation) {}, calendar.CalendarDateClock(clocks...))
+	var now func() time.Time
+	if len(clocks) > 0 {
+		now = clocks[0]
+	}
+	return newTimetable(db, students, rooms, membership, func(timetableCompose.Observation) {}, now)
 }
 
 // timetableDirectories binds the Timetable adapters' directory ports to the

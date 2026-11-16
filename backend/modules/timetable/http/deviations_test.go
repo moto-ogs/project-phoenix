@@ -43,6 +43,7 @@ type devSetup struct {
 	staffX int64 // current substitute
 	staffY int64 // replacement
 	staffB int64 // second planned person
+	clock  func() time.Time
 }
 
 func buildDevModule(t *testing.T) *devSetup {
@@ -76,7 +77,7 @@ func buildDevModule(t *testing.T) *devSetup {
 
 	return &devSetup{
 		res: res, mock: mock, db: db, ctx: ctx, roomID: room.ID,
-		staffA: a.ID, staffX: x.ID, staffY: y.ID, staffB: b.ID,
+		staffA: a.ID, staffX: x.ID, staffY: y.ID, staffB: b.ID, clock: clock,
 	}
 }
 

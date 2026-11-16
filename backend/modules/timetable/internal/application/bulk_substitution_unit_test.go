@@ -19,7 +19,7 @@ func TestNormalizeBulkDates_DedupesAndSortsAscending(t *testing.T) {
 	later := today.AddDays(3)
 	sooner := today.AddDays(1)
 
-	out, err := normalizeBulkDates([]calendar.Date{later, sooner, later, sooner})
+	out, err := normalizeBulkDates([]calendar.Date{later, sooner, later, sooner}, today)
 
 	require.NoError(t, err)
 	// Ascending order is the day-lock ordering requirement, not cosmetics.
@@ -29,7 +29,7 @@ func TestNormalizeBulkDates_DedupesAndSortsAscending(t *testing.T) {
 func TestNormalizeBulkDates_RejectsEmptyInput(t *testing.T) {
 	t.Parallel()
 
-	_, err := normalizeBulkDates(nil)
+	_, err := normalizeBulkDates(nil, calendar.NewDate(2030, 8, 26))
 
 	var de *timetable.DeviationError
 	require.ErrorAs(t, err, &de)
@@ -40,7 +40,8 @@ func TestNormalizeBulkDates_RejectsEmptyInput(t *testing.T) {
 func TestNormalizeBulkDates_RejectsPastDates(t *testing.T) {
 	t.Parallel()
 
-	_, err := normalizeBulkDates([]calendar.Date{calendar.TodayDate().AddDays(-1)})
+	today := calendar.NewDate(2030, 8, 26)
+	_, err := normalizeBulkDates([]calendar.Date{today.AddDays(-1)}, today)
 
 	var de *timetable.DeviationError
 	require.ErrorAs(t, err, &de)
@@ -51,13 +52,13 @@ func TestNormalizeBulkDates_RejectsPastDates(t *testing.T) {
 func TestNormalizeBulkDates_CapsAtMaxDatesAfterDedupe(t *testing.T) {
 	t.Parallel()
 
-	today := calendar.TodayDate()
+	today := calendar.NewDate(2030, 8, 26)
 	dates := make([]calendar.Date, 0, timetable.MaxBulkSubstitutionDates+1)
 	for i := 0; i <= timetable.MaxBulkSubstitutionDates; i++ {
 		dates = append(dates, today.AddDays(i))
 	}
 
-	_, err := normalizeBulkDates(dates)
+	_, err := normalizeBulkDates(dates, today)
 
 	var de *timetable.DeviationError
 	require.ErrorAs(t, err, &de)
@@ -67,7 +68,7 @@ func TestNormalizeBulkDates_CapsAtMaxDatesAfterDedupe(t *testing.T) {
 	// Duplicates do not count against the cap: 32 raw entries collapsing to
 	// 31 distinct dates pass.
 	withDup := append(dates[:timetable.MaxBulkSubstitutionDates], dates[0])
-	out, err := normalizeBulkDates(withDup)
+	out, err := normalizeBulkDates(withDup, today)
 	require.NoError(t, err)
 	assert.Len(t, out, timetable.MaxBulkSubstitutionDates)
 }

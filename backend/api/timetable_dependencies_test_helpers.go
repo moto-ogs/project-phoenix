@@ -3,6 +3,8 @@
 package api
 
 import (
+	"time"
+
 	"fmt"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
@@ -37,7 +39,7 @@ func MustNewSchoolCalendar(db transactionruntime.Database) schoolcalendar.Calend
 
 // NewUnobservedTimetableRepositories builds the retained Timetable
 // repositories over the unobserved owners of db.
-func NewUnobservedTimetableRepositories(db transactionruntime.Database) owners.TimetableRepositories {
-	return owners.NewTimetableRepositories(db, owners.MustNewUnobservedTimetable(db), owners.MustNewPeopleDirectory(db), MustNewSchoolStructure(db),
+func NewUnobservedTimetableRepositories(db transactionruntime.Database, clocks ...func() time.Time) owners.TimetableRepositories {
+	return owners.NewTimetableRepositories(db, owners.MustNewUnobservedTimetable(db, clocks...), owners.MustNewPeopleDirectory(db), MustNewSchoolStructure(db),
 		owners.MustNewUnobservedRooms(db), MustNewSchoolCalendar(db), owners.MustNewSchoolMembership(db), owners.MustNewWorkforce(db))
 }
