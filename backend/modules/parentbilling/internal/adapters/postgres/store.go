@@ -24,10 +24,16 @@ import (
 const ruleOverlapConstraint = "excl_contribution_rules_overlap"
 
 // Store persists the Elternabrechnung of a Träger in its Träger transaction.
-type Store struct{}
+// Its clock stamps the time columns it owns (ADR 0281).
+type Store struct{ now func() time.Time }
 
-// NewStore builds the store.
-func NewStore() *Store { return &Store{} }
+// NewStore builds the store on the owner's clock, which is required.
+func NewStore(now func() time.Time) *Store {
+	if now == nil {
+		panic("parent billing postgres: the clock is required")
+	}
+	return &Store{now: now}
+}
 
 // traegerDB returns the Träger transaction of organizationID. A school,
 // administrative or foreign Träger transaction is refused.

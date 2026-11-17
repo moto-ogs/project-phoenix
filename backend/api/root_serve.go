@@ -428,7 +428,7 @@ func composeServeRoot(
 		},
 		func() (err error) {
 			parent, err = owners.BuildParentPortal(db, env, hub, settings.Service, people, portalReads, messaging, presence, carePlanRows,
-				carePlan, persons, mealPlan, schedules, requests, services, emitter, notifications, identity, enrollment, notices, announcements, audit, organizations, owners.NewParentContractNotices(settings.Traeger, owners.DeliveryModuleOf(delivery), owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Now), careContractCompose.NewInboxSigning(careContractSignaturePorts(organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), env.Now), owners.NewCareContractSchoolHolidays(settings.Service, calendar), owners.NewParentSEPAMandates(settings.Traeger, env.BankData, env.Today))
+				carePlan, persons, mealPlan, schedules, requests, services, emitter, notifications, identity, enrollment, notices, announcements, audit, organizations, owners.NewParentContractNotices(settings.Traeger, owners.DeliveryModuleOf(delivery), owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Now), careContractCompose.NewInboxSigning(careContractSignaturePorts(organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), env.Now), owners.NewCareContractSchoolHolidays(settings.Service, calendar), owners.NewParentSEPAMandates(settings.Traeger, env.BankData, env.Today, env.Now))
 			return
 		},
 		func() (err error) {

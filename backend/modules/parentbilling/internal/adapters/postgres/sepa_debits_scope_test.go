@@ -71,7 +71,7 @@ func TestSEPADebitFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 	otherScope := newMandateScope(t, db, "Träger Datei B")
 	ownSchool := testpkg.CreateTestSchoolInOrganization(t, db, ownScope.organization, "OGS Datei A")
 	otherSchool := testpkg.CreateTestSchoolInOrganization(t, db, otherScope.organization, "OGS Datei B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the debits back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
@@ -140,7 +140,7 @@ func TestSEPADebitKeepsWhatTheReleaseWrote(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	scope := newMandateScope(t, db, "Träger Datei Historie")
 	school := testpkg.CreateTestSchoolInOrganization(t, db, scope.organization, "OGS Datei Historie")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the debit back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
@@ -185,7 +185,7 @@ func TestSEPADebitHistoryKeepsSubmittedTerms(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	scope := newMandateScope(t, db, "Träger tatsächlicher Einzug")
 	school := testpkg.CreateTestSchoolInOrganization(t, db, scope.organization, "OGS tatsächlicher Einzug")
-	store := NewStore()
+	store := NewStore(time.Now)
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	rollback := errors.New("roll the submitted terms back")
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {

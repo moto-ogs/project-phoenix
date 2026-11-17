@@ -104,7 +104,7 @@ func TestBelegRetentionDeletesOnlyInstructedBelegeAfterTheirPeriod(t *testing.T)
 	instructed := newBelegFixture(t, db, "Träger mit Weisung")
 	open := newBelegFixture(t, db, "Träger ohne Weisung")
 	today := calendar.NewDate(2026, time.November, 9)
-	retention := NewBelegRetention(func() calendar.Date { return today })
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
 	admin := func(fn func(context.Context) error) {
 		t.Helper()
 		require.NoError(t, tenant.WithinAdmin(tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db)), fn))
@@ -197,7 +197,7 @@ func TestBelegRetentionSuspensionHoldsTheDeletion(t *testing.T) {
 	ctx := context.Background()
 	f := newBelegFixture(t, db, "Träger mit Aussetzung")
 	today := calendar.NewDate(2026, time.November, 9)
-	retention := NewBelegRetention(func() calendar.Date { return today })
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
 	admin := func(fn func(context.Context) error) {
 		t.Helper()
 		require.NoError(t, tenant.WithinAdmin(tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db)), fn))
@@ -253,7 +253,7 @@ func TestBelegRetentionRefusesTheTraegerTransaction(t *testing.T) {
 	}
 	unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db))
 	err := tenant.WithinTraeger(unit, organization, func(traegerCtx context.Context) error {
-		_, err := NewBelegRetention(calendar.TodayDate).Overview(traegerCtx, organization)
+		_, err := NewBelegRetention(time.Now).Overview(traegerCtx, organization)
 		return err
 	})
 	assert.ErrorContains(t, err, "administrative transaction")
@@ -284,7 +284,7 @@ func TestPendingDebitGoesWithItsInvoice(t *testing.T) {
 		FROM parent_billing.sepa_debits WHERE id = ? RETURNING id`, pendingInvoice, f.debit).Scan(ctx, &pendingDebit))
 
 	today := calendar.NewDate(2026, time.November, 9)
-	retention := NewBelegRetention(func() calendar.Date { return today })
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
 	admin := func(fn func(context.Context) error) {
 		t.Helper()
 		require.NoError(t, tenant.WithinAdmin(tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db)), fn))

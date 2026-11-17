@@ -66,9 +66,17 @@ var moduleSQLClockBudget = map[string]int{
 	// Includes the data return of ADR 0274: the database clock is the security
 	// boundary of the release functions.
 	"modules/organizationtenancy": 20,
-	// Includes the age of the debtor number trails (ADR 0281): the database
-	// stamps their entries by column default.
-	"modules/parentbilling":             41,
+	// Named exceptions on the database clock (ADR 0281): the family children
+	// statement and confirmation (5), ordered against the statement time
+	// enrollment stamps with clock_timestamp(); the download of a PAIN.008
+	// file (1), which delete_expired_sepa_debit_downloads expires on its
+	// clock; the release of holiday and monthly runs and the submission of
+	// debits (4), which the invoice history and the export run list order
+	// against stamps of column defaults; the start and settlement of an export
+	// handover (2), judged against the transport's fences that lease on the
+	// database clock; and the age of the Beleg deletion log (1), whose entries
+	// parent_billing.log_removed_belege stamps by column default.
+	"modules/parentbilling":             13,
 	"modules/peopledirectory":           18,
 	"modules/schedulerruntime":          11,
 	"modules/schoolcalendar":            22,

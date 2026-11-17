@@ -91,12 +91,13 @@ func (r familyBillingRow) family() parentbilling.FamilyBilling {
 type familyBillingEventRow struct {
 	bun.BaseModel `bun:"table:parent_billing.family_billing_events"`
 
-	ID              int64  `bun:"id,pk,autoincrement"`
-	OrganizationID  int64  `bun:"organization_id"`
-	FamilyBillingID int64  `bun:"family_billing_id"`
-	CareContractID  *int64 `bun:"care_contract_id"`
-	Action          string `bun:"action"`
-	ActorAccountID  *int64 `bun:"actor_account_id"`
+	ID              int64     `bun:"id,pk,autoincrement"`
+	OrganizationID  int64     `bun:"organization_id"`
+	FamilyBillingID int64     `bun:"family_billing_id"`
+	CareContractID  *int64    `bun:"care_contract_id"`
+	Action          string    `bun:"action"`
+	ActorAccountID  *int64    `bun:"actor_account_id"`
+	OccurredAt      time.Time `bun:"occurred_at"`
 }
 
 type runDueDateRow struct {
@@ -135,7 +136,7 @@ func (s *Store) SaveServiceTerms(ctx context.Context, organizationID, accountID 
 		return err
 	}
 	row := &serviceTermsRow{OrganizationID: organizationID, Service: terms.Service, PaymentMethod: terms.PaymentMethod,
-		DueDays: terms.DueDays, UpdatedByAccountID: accountRef(accountID)}
+		DueDays: terms.DueDays, UpdatedByAccountID: accountRef(accountID), UpdatedAt: s.now()}
 	if terms.BundleWith != "" {
 		row.BundleWith = &terms.BundleWith
 	}
@@ -143,7 +144,7 @@ func (s *Store) SaveServiceTerms(ctx context.Context, organizationID, accountID 
 		On("CONFLICT (organization_id, service) DO UPDATE").
 		Set("payment_method = EXCLUDED.payment_method").Set("due_days = EXCLUDED.due_days").
 		Set("bundle_with = EXCLUDED.bundle_with").Set("updated_by_account_id = EXCLUDED.updated_by_account_id").
-		Set("updated_at = CURRENT_TIMESTAMP").Exec(ctx); err != nil {
+		Set("updated_at = EXCLUDED.updated_at").Exec(ctx); err != nil {
 		return fmt.Errorf("save service terms: %w", err)
 	}
 	return nil
@@ -176,7 +177,7 @@ func (s *Store) SaveFamilyBilling(ctx context.Context, organizationID, accountID
 		OrganizationID: organizationID, FamilyEmail: family.FamilyEmail, CareContractID: idRef(family.ContractID),
 		RecipientKind: family.RecipientKind, SecondFirstName: family.SecondFirstName, SecondLastName: family.SecondLastName,
 		PayerFirstName: family.PayerFirstName, PayerLastName: family.PayerLastName, PayerEmail: family.PayerEmail,
-		DueDay: family.DueDay, DebtorNumber: textRef(family.DebtorNumber), UpdatedByAccountID: accountRef(accountID),
+		DueDay: family.DueDay, DebtorNumber: textRef(family.DebtorNumber), UpdatedByAccountID: accountRef(accountID), UpdatedAt: s.now(),
 	}
 	if family.PaymentMethod != "" {
 		row.PaymentMethod = &family.PaymentMethod
@@ -194,7 +195,7 @@ func (s *Store) SaveFamilyBilling(ctx context.Context, organizationID, accountID
 		Set("payment_method = EXCLUDED.payment_method").Set("due_day = EXCLUDED.due_day").
 		Set("debtor_number_registration_id = CASE WHEN COALESCE(family_billing_row.debtor_number, '') = COALESCE(EXCLUDED.debtor_number, '') THEN family_billing_row.debtor_number_registration_id ELSE NULL END").
 		Set("debtor_number = EXCLUDED.debtor_number").
-		Set("updated_by_account_id = EXCLUDED.updated_by_account_id").Set("updated_at = CURRENT_TIMESTAMP").
+		Set("updated_by_account_id = EXCLUDED.updated_by_account_id").Set("updated_at = EXCLUDED.updated_at").
 		Returning("*").Scan(ctx); err != nil {
 		return parentbilling.FamilyBilling{}, fmt.Errorf("save family billing: %w", err)
 	}
@@ -235,10 +236,10 @@ func (s *Store) InsertFamilyBillingEvents(ctx context.Context, organizationID, a
 	if err != nil {
 		return err
 	}
-	rows := make([]familyBillingEventRow, len(families))
+	rows, now := make([]familyBillingEventRow, len(families)), s.now()
 	for i, family := range families {
 		rows[i] = familyBillingEventRow{OrganizationID: organizationID, FamilyBillingID: family.ID, CareContractID: idRef(family.ContractID),
-			Action: action, ActorAccountID: accountRef(accountID)}
+			Action: action, ActorAccountID: accountRef(accountID), OccurredAt: now}
 	}
 	if _, err := db.NewInsert().Model(&rows).Exec(ctx); err != nil {
 		return fmt.Errorf("record family billing: %w", err)
@@ -455,17 +456,17 @@ func (s *Store) SetFamilyDebtorNumbers(ctx context.Context, organizationID, acco
 	if err != nil {
 		return err
 	}
-	rows := make([]familyBillingRow, len(numbers))
+	rows, now := make([]familyBillingRow, len(numbers)), s.now()
 	for i, number := range numbers {
 		rows[i] = familyBillingRow{OrganizationID: organizationID, FamilyEmail: number.FamilyEmail, CareContractID: idRef(number.ContractID),
 			RecipientKind: parentbilling.RecipientApplicant, DebtorNumber: textRef(number.DebtorNumber),
-			UpdatedByAccountID: accountRef(accountID)}
+			UpdatedByAccountID: accountRef(accountID), UpdatedAt: now}
 	}
 	var saved []familyBillingRow
 	if err := db.NewInsert().Model(&rows).
 		On("CONFLICT (organization_id, family_email) DO UPDATE").
 		Set("debtor_number = EXCLUDED.debtor_number").Set("updated_by_account_id = EXCLUDED.updated_by_account_id").
-		Set("updated_at = CURRENT_TIMESTAMP").
+		Set("updated_at = EXCLUDED.updated_at").
 		Where("family_billing_row.debtor_number IS NULL").
 		Returning("id, care_contract_id").Scan(ctx, &saved); err != nil {
 		return fmt.Errorf("set the debtor numbers of the families: %w", err)

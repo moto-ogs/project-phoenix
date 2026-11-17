@@ -40,7 +40,7 @@ func mountCareContractRoutes(root chi.Router, organizations HolidayOrganizations
 	root.Mount("/traeger/contracts", resource.ContractRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/contract-templates", resource.TemplateRouter(ProtectedTraegerRoutes))
 	mountCareContractNoticeRoutes(root, organizations, settings, schoolSettings, delivery, outcomes, accessLog, addressees, holidays, parentsURL, now)
-	mountCareContractImportRoutes(root, organizations, settings, accessLog, today)
+	mountCareContractImportRoutes(root, organizations, settings, accessLog, today, now)
 	// The one-time link of a contract mail (#4679), without an account.
 	signing := careContractCompose.NewSigning(careContractSignaturePorts(organizations, settings, delivery, outcomes, holidays, parentsURL), now)
 	root.Mount("/public/care-contract-signing", careContractHTTP.NewSigningResource(signing).PublicRouter())

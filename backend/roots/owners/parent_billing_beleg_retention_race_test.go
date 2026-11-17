@@ -62,14 +62,14 @@ func TestBelegRetentionJobWaitsForASuspensionBeingRecorded(t *testing.T) {
 	ctx := context.Background()
 	f := newBelegFixture(t, db, "Träger mit gleichzeitiger Aussetzung")
 	today := calendar.NewDate(2026, time.November, 9)
-	retention := NewBelegRetention(func() calendar.Date { return today })
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
 	unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db))
 	require.NoError(t, tenant.WithinAdmin(unit, func(adminCtx context.Context) error {
 		instruct(t, retention, adminCtx, f.organization)
 		return nil
 	}))
 	today = calendar.NewDate(2035, time.January, 2)
-	job := NewBelegRetention(func() calendar.Date { return calendar.NewDate(2035, time.January, 2) })
+	job := NewBelegRetention(func() time.Time { return calendar.NewDate(2035, time.January, 2).BerlinMidnight() })
 
 	recorded, release := make(chan struct{}), make(chan struct{})
 	operatorDone := make(chan error, 1)
@@ -119,7 +119,7 @@ func TestBelegDeletionRechecksWhatHoldsAtDeleteTime(t *testing.T) {
 	withdrawn := newBelegFixture(t, db, "Träger ohne aktuelle Weisung")
 	cancelled := newBelegFixture(t, db, "Träger mit spätem Storno")
 	today := calendar.NewDate(2026, time.November, 9)
-	retention := NewBelegRetention(func() calendar.Date { return today })
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
 	unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db))
 	admin := func(fn func(context.Context) error) {
 		t.Helper()
@@ -174,7 +174,7 @@ func TestBelegDeletionWaitsForACreditNoteBeingIssued(t *testing.T) {
 	ctx := context.Background()
 	f := newBelegFixture(t, db, "Träger mit Gutschrift im Lauf")
 	today := calendar.NewDate(2026, time.November, 9)
-	retention := NewBelegRetention(func() calendar.Date { return today })
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
 	unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db))
 	require.NoError(t, tenant.WithinAdmin(unit, func(adminCtx context.Context) error {
 		instruct(t, retention, adminCtx, f.organization)
@@ -225,7 +225,7 @@ func TestMandateKeepsTheSubmissionOfItsLastDebitAfterTheDebitWent(t *testing.T) 
 	_, err := db.ExecContext(ctx, `UPDATE parent_billing.sepa_mandates SET last_collected_on = '2026-11-13', sequence = 'recurring' WHERE id = ?`, f.mandate)
 	require.NoError(t, err)
 	today := calendar.NewDate(2026, time.November, 9)
-	retention := NewBelegRetention(func() calendar.Date { return today })
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
 	unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db))
 	admin := func(fn func(context.Context) error) {
 		t.Helper()
@@ -264,7 +264,7 @@ func TestContractDeletionWaitsForAMandateBeingSigned(t *testing.T) {
 	ctx := context.Background()
 	f := newBelegFixture(t, db, "Träger mit neuem Mandat im Lauf")
 	today := calendar.NewDate(2026, time.November, 9)
-	retention := NewBelegRetention(func() calendar.Date { return today })
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
 	unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db))
 	require.NoError(t, tenant.WithinAdmin(unit, func(adminCtx context.Context) error {
 		instruct(t, retention, adminCtx, f.organization)
@@ -429,7 +429,7 @@ func TestBelegRetentionSkipsAnInvoiceWhoseRunACancellationHolds(t *testing.T) {
 	ctx := context.Background()
 	f := newBelegFixture(t, db, "Träger mit Storno im Löschlauf")
 	today := calendar.NewDate(2026, time.November, 9)
-	retention := NewBelegRetention(func() calendar.Date { return today })
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
 	unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db))
 	require.NoError(t, tenant.WithinAdmin(unit, func(adminCtx context.Context) error {
 		instruct(t, retention, adminCtx, f.organization)
@@ -462,7 +462,7 @@ func TestBelegRetentionSkipsADebitWhoseMandateAConfirmationHolds(t *testing.T) {
 	ctx := context.Background()
 	f := newBelegFixture(t, db, "Träger mit Bestätigung im Löschlauf")
 	today := calendar.NewDate(2026, time.November, 9)
-	retention := NewBelegRetention(func() calendar.Date { return today })
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
 	unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db))
 	require.NoError(t, tenant.WithinAdmin(unit, func(adminCtx context.Context) error {
 		instruct(t, retention, adminCtx, f.organization)

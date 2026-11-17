@@ -69,7 +69,7 @@ func newHolidayRegistrationFixtureIn(t *testing.T, days owners.HolidayTestSchool
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	unit := testpkg.TenantRuntime(t, db)
-	traeger := traegerPortalWithDaysOn(t, db, unit, days, holidayFixtureToday)
+	traeger := traegerPortalWithDaysOn(t, db, unit, days, holidayFixtureToday, time.Now)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
 	delivery, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{

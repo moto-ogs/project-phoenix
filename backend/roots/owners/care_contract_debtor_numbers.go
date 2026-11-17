@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
@@ -20,9 +21,9 @@ type CareContractDebtorNumbers struct {
 }
 
 // NewCareContractDebtorNumbers binds the port to the Elternabrechnung over
-// the format of the Träger's numbers and the root's day clock.
-func NewCareContractDebtorNumbers(formats parentbilling.DebtorNumberFormats, today func() calendar.Date) CareContractDebtorNumbers {
-	return CareContractDebtorNumbers{Numbers: parentBillingCompose.NewContractImportNumbers(formats, today)}
+// the format of the Träger's numbers and the root's clocks.
+func NewCareContractDebtorNumbers(formats parentbilling.DebtorNumberFormats, today func() calendar.Date, now func() time.Time) CareContractDebtorNumbers {
+	return CareContractDebtorNumbers{Numbers: parentBillingCompose.NewContractImportNumbers(formats, today, now)}
 }
 
 var _ carecontract.ContractDebtorNumbers = CareContractDebtorNumbers{}

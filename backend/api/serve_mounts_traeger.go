@@ -134,7 +134,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		return nil, err
 	}
 	review, places, allocation, records := enrollmentCompose.NewHolidayRegistrationReview(healthData, holidayMail, holidayTraeger, holidayCalendar, holidayMails, today)
-	_, allocationBilling := parentBillingCompose.NewHolidayContributions(parentBillingHolidayRegistrations{review: review}, parentBillingSettings{settings: settings}, today)
+	_, allocationBilling := parentBillingCompose.NewHolidayContributions(parentBillingHolidayRegistrations{review: review}, parentBillingSettings{settings: settings}, today, now)
 	decide := newHolidayAllocation(allocationBilling, review, places, allocation)
 	_, wishes := enrollmentCompose.NewHolidayWishes(healthData, now)
 	traegerLists := traegerListRenderer(NewSimpleListRenderer())
