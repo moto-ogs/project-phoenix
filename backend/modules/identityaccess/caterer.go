@@ -55,6 +55,9 @@ type CatererInvitation struct {
 	AcceptedAt      *time.Time
 	RevokedAt       *time.Time
 	CreatedAt       time.Time
+	// Expired says the invitation's expiry had passed on the database
+	// clock when it was read (ADR 0285); the HTTP status reads it.
+	Expired bool
 }
 
 // CatererInvitationPreview is what the public acceptance page shows.

@@ -106,8 +106,14 @@ var moduleSQLClockBudget = map[string]int{
 	// clock, so the prune of ended windows reads that clock too. And the
 	// deletion of deactivated operators (1): a trigger stamps
 	// platform.operators.deactivated_at with now(), so its cutoff compares on
-	// the database clock (ADR 0281).
-	"modules/identityaccess": 4,
+	// the database clock (ADR 0281). And databaseClock (1, ADR 0285), the
+	// package's one read for the caterer invitations:
+	// auth.create_invited_caterer accepts only while expires_at >
+	// statement_timestamp(), so expiry, the open checks, preview,
+	// acceptance, accepted_at, revoked_at and their retention read that clock
+	// once per operation, the locked link after its lock wait, and the
+	// acceptance's writes check the expiry again at their own time.
+	"modules/identityaccess": 5,
 	// Named exceptions on the database clock (ADR 0281): deleted_at of
 	// platform.schools (4), which the demo retirement functions stamp with
 	// now() and the demo database erasure ages with clock_timestamp(), so the
