@@ -302,6 +302,9 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	if route.Paginated {
 		wrap = "paginated"
 	}
+	if route.NoData {
+		wrap = "noData"
+	}
 	w.helpers[wrap] = true
 	fmt.Fprintf(out, "  %q: {\n    method: %q,\n    pattern: %q,\n    portals: [%s],\n", route.Key(), route.Method, route.Pattern, quoted(route.Portals))
 	if route.Deprecated {
@@ -324,6 +327,8 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 			fmt.Fprintf(out, "      %s: %s(%s),\n", value, wrap, w.zod(route.Variants.Cases[value]))
 		}
 		out.WriteString("    },\n")
+	} else if route.NoData {
+		out.WriteString("    response: noData,\n")
 	} else {
 		fmt.Fprintf(out, "    response: %s(%s),\n", wrap, w.zod(*route.Response))
 	}

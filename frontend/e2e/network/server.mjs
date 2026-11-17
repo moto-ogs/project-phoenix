@@ -136,6 +136,33 @@ const api = createServer(async (req, res) => {
     });
   } else if (sharedTenantCookie && portalReads.has(path)) {
     data = envelope([]);
+  } else if (sharedTenantCookie && path === "/school/notifications/feed") {
+    // Through the catalog proxy: the cursor names the query that arrived.
+    data = envelope({
+      entries: [
+        {
+          id: 7,
+          type: "test",
+          title: "Hinweis",
+          body: "Text",
+          deep_link: "/school",
+          created_at: "2026-11-01T08:00:00Z",
+          updated_at: "2026-11-01T08:00:00Z",
+          read_at: null,
+        },
+      ],
+      next_cursor: url.search,
+      unread_count: 1,
+    });
+  } else if (
+    sharedTenantCookie &&
+    req.method === "PUT" &&
+    path === "/school/notifications/preferences/absence"
+  ) {
+    // Like the backend: a recorded decision answers 204.
+    res.writeHead(204);
+    res.end();
+    return;
   } else if (sharedTenantCookie && catalogReads.has(path)) {
     data = envelope(catalogReads.get(path));
   } else if (sharedTenantCookie && path === "/parent/me/enrollable-schools") {

@@ -406,3 +406,51 @@ for (const portal of portals.slice(1)) {
     await context.close();
   });
 }
+
+// The proxy of moto schule beyond a plain read: only the registered query
+// travels, a legacy numeric id leaves as a string, and a write the backend
+// answers with 204 succeeds without data.
+test("Schule: the catalog proxy forwards a query and a write without data", async ({
+  browser,
+}) => {
+  const portal = portals[1];
+  const context = await browser.newContext();
+  await isolate(context);
+  const page = await context.newPage();
+  await page.goto(`${portal.origin}${portal.basePath}/providers`);
+  await signIn(page, portal);
+
+  const feed = await page.evaluate(async () => {
+    const response = await fetch(
+      "/api/school/notifications/feed?limit=5&debug=1",
+    );
+    return (await response.json()) as {
+      data?: { entries: { id: unknown }[]; next_cursor: string };
+    };
+  });
+  expect(feed.data?.next_cursor).toBe("?limit=5");
+  expect(feed.data?.entries[0]?.id).toBe("7");
+
+  const write = (path: string) =>
+    page.evaluate(async (target) => {
+      const response = await fetch(target, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: true }),
+      });
+      return {
+        status: response.status,
+        body: (await response.json().catch(() => null)) as {
+          data?: unknown;
+        } | null,
+      };
+    }, path);
+  const saved = await write("/api/school/notifications/preferences/absence");
+  expect(saved.status).toBe(200);
+  expect(saved.body?.data).toBeNull();
+  // The same path under a method the contract does not register.
+  expect((await write("/api/school/notifications/feed/read-all")).status).toBe(
+    404,
+  );
+  await context.close();
+});
