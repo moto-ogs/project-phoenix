@@ -27,6 +27,12 @@ import {
 } from "~/test/helpers/form-modal-pending";
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
+// The offering suggestion and the weekday preview read through the
+// session-scoped SWR hooks; without a session they read nothing, as in
+// timetable-event-modal.test.tsx.
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ data: null, status: "unauthenticated" }),
+}));
 
 vi.mock("~/components/ui/date-picker", async () =>
   (await import("~/test/mocks/date-picker")).datePickerModuleMock(),

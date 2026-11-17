@@ -10,6 +10,9 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { formErrorMessage } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
+import { useDebounce } from "~/lib/use-debounce";
 import {
   searchGuardians,
   GUARDIAN_PICKER_RESULT_LIMIT,
@@ -89,12 +92,6 @@ export default function GuardianPickerPanel({
   embedded = false,
 }: GuardianPickerPanelProps) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Guardian[]>([]);
-  const [loading, setLoading] = useState(false);
-  // Eine gescheiterte Suche ist ein Ladefehler der Trefferliste (#2517):
-  // Katalogtext an der Stelle der Treffer, „Wiederholen“ sucht erneut.
-  const [searchFailed, setSearchFailed] = useState(false);
-  const [searchAttempt, setSearchAttempt] = useState(0);
   const searchError = useApiLoadError();
   const showSearchError = searchError.show;
   const clearSearchError = searchError.clear;
@@ -102,54 +99,39 @@ export default function GuardianPickerPanel({
   const [relationship, setRelationship] =
     useState<RelationshipFormData>(DEFAULT_RELATIONSHIP);
 
-  // Debounced search. Skips firing while a guardian is already selected (the
-  // relationship step) or while the query is too short.
-  useEffect(() => {
-    if (selected) return;
+  // Debounced search through the shared cache. Skips firing while a guardian
+  // is already selected (the relationship step) or while the query is too
+  // short.
+  const trimmed = query.trim();
+  const searchable = !selected && trimmed.length >= MIN_QUERY_LENGTH;
+  const debounced = useDebounce(trimmed, SEARCH_DEBOUNCE_MS);
+  const settled = searchable && debounced === trimmed;
+  const search = useSWRAuth(
+    settled ? tenantContactKeys.guardianSearch(debounced) : null,
+    () => searchGuardians(debounced),
+    { keepPreviousData: true },
+  );
+  const searchFailed = searchable && search.error !== undefined;
+  const loading = searchable && !searchFailed && (!settled || search.isLoading);
+  const results = searchable && !searchFailed ? (search.data ?? []) : [];
+  const failure = searchable ? search.error : undefined;
+  const retrySearch = search.mutate;
 
-    const trimmed = query.trim();
-    if (trimmed.length < MIN_QUERY_LENGTH) {
-      setResults([]);
-      setLoading(false);
-      setSearchFailed(false);
+  // Eine gescheiterte Suche ist ein Ladefehler der Trefferliste (#2517):
+  // Katalogtext an der Stelle der Treffer, „Wiederholen“ sucht erneut.
+  useEffect(() => {
+    if (failure === undefined) {
       clearSearchError();
       return;
     }
-
-    setLoading(true);
-    let cancelled = false;
-    const handle = setTimeout(() => {
-      searchGuardians(trimmed)
-        .then((found) => {
-          if (!cancelled) {
-            setResults(found);
-            setSearchFailed(false);
-            clearSearchError();
-          }
-        })
-        .catch((err: unknown) => {
-          if (!cancelled) {
-            logger.error("guardian_search_failed", {
-              error: err instanceof Error ? err.message : String(err),
-            });
-            setResults([]);
-            setSearchFailed(true);
-            void showSearchError(err, {
-              object: "die Suche nach Erziehungsberechtigten",
-              retry: () => setSearchAttempt((attempt) => attempt + 1),
-            });
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-    }, SEARCH_DEBOUNCE_MS);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
-    };
-  }, [query, selected, searchAttempt, showSearchError, clearSearchError]);
+    logger.error("guardian_search_failed", {
+      error: failure instanceof Error ? failure.message : String(failure),
+    });
+    void showSearchError(failure, {
+      object: "die Suche nach Erziehungsberechtigten",
+      retry: () => void retrySearch(),
+    });
+  }, [failure, retrySearch, showSearchError, clearSearchError]);
 
   const updateRelationship = (field: RelationshipFlag, value: boolean) => {
     setRelationship((prev) => ({ ...prev, [field]: value }));

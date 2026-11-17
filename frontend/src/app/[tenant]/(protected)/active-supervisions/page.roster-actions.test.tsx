@@ -287,6 +287,45 @@ vi.mock("~/components/students/student-card", () => ({
   ),
 }));
 
+// The page mocks ~/lib/swr with fixed answers per key. The child list of the
+// add dialog reads the school's children through it; here it loads them from
+// the mocked fetchStudents instead, with the real paging and sorting, one
+// load per block as the real hook (its own test: add-unplanned-student-modal).
+vi.mock("~/components/students/student-choice-list", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/components/students/student-choice-list")
+    >();
+  const { useEffect, useState } = await import("react");
+  type Choices = Awaited<ReturnType<typeof actual.fetchStudentChoices>>;
+  return {
+    ...actual,
+    useStudentChoices: (enabled: boolean, scope = "") => {
+      const [result, setResult] = useState<{
+        scope: string;
+        choices: Choices;
+      } | null>(null);
+      useEffect(() => {
+        if (!enabled) return;
+        let live = true;
+        void actual.fetchStudentChoices().then((choices) => {
+          if (live) setResult({ scope, choices });
+        });
+        return () => {
+          live = false;
+        };
+      }, [enabled, scope]);
+      return {
+        load:
+          enabled && result?.scope === scope
+            ? { kind: "loaded" as const, choices: result.choices }
+            : { kind: "loading" as const },
+        error: null,
+      };
+    },
+  };
+});
+
 // Mock SWR hook
 vi.mock("~/lib/swr", () => ({
   // No SSE stream in these tests: readers keep their fallback interval.

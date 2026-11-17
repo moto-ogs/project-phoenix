@@ -51,6 +51,7 @@ export function DeferredNotificationSetup({
   );
   const [Dialog, setDialog] = useState<NotificationSetupDialog | null>(null);
 
+  // oxlint-disable-next-line swr/no-effect-load -- loads the dialog's code chunk (dynamic import), no data read
   useEffect(() => {
     if (
       !canRequireNotificationSetup() ||

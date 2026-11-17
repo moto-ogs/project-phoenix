@@ -255,6 +255,9 @@ export const timetableKeys = {
   // Elternhinweise zu eigenen Schließtagen in Ferienwochen (ADR 0196):
   // Grund, Tage, Stand und eine Zahl, keine Namen.
   holidayClosureNotices: () => "timetable-holiday-closure-notices",
+  /** The offering matching the children a Regeltermin plans (#5104). */
+  offeringSuggestion: (query: object) =>
+    resourceKey("timetable-offering-suggestion-", query),
 } as const;
 
 // School portal (Lehrkräfte).
@@ -280,6 +283,9 @@ export const schoolPortalKeys = {
   noticesToday: () => "school-staff-notices-today",
   supervisions: (today: string) => `school-supervisions-${today}`,
   supervisionRoster: (id: string) => `school-supervision-roster-${id}`,
+  /** The info sheet of one child in a supervision the teacher holds. */
+  supervisionStudentSheet: (instanceId: string, studentId: string) =>
+    `school-supervision-student-sheet-${encodeURIComponent(instanceId)}-${encodeURIComponent(studentId)}`,
 } as const;
 
 export const weekProtocolKeys = {
@@ -300,6 +306,12 @@ export const databaseKeys = {
   counts: () => "/api/database/counts",
   // The SSE hook revalidates every key containing this name.
   calendarPeriods: () => "database-calendar-periods-list",
+  /** The id/name options of one API list for a select, per query. */
+  /** The choice of one loaded select field of a database form, by resource. */
+  formFieldOptions: (resource: string) =>
+    `database-form-options-${encodeURIComponent(resource)}`,
+  entityOptions: (entityType: string, query: string) =>
+    `database-entity-options-${entityType}-${encodeURIComponent(query)}`,
 } as const;
 
 export const homeLayoutKeys = {

@@ -67,6 +67,7 @@ export function DisplayDashboardView({ token }: DisplayDashboardViewProps) {
   );
 
   // Polling loop + daily self-reload.
+  // oxlint-disable-next-line swr/no-effect-load -- sessionless info display authenticated by its URL token; the shared cache has no scope without a session, and the loop also reloads the page daily
   useEffect(() => {
     const controller = new AbortController();
     void poll(controller.signal);

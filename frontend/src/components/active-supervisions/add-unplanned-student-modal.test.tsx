@@ -1,4 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as renderPlain,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,6 +12,30 @@ import {
   type AddUnplannedStudentModalProps,
 } from "./add-unplanned-student-modal";
 import type { Student } from "~/lib/student-helpers";
+
+import { SessionProvider } from "next-auth/react";
+import type { ReactElement, ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// The component reads through the shared cache; each render gets its own.
+vi.unmock("swr");
+
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderPlain(ui, { wrapper: Providers });
+}
 
 const mocks = vi.hoisted(() => ({ fetchStudents: vi.fn() }));
 
@@ -181,6 +210,25 @@ describe("AddUnplannedStudentModal", () => {
       "aria-disabled",
       "true",
     );
+  });
+
+  it("loads the list anew for another block and hides the old one meanwhile", async () => {
+    mocks.fetchStudents.mockResolvedValue({
+      students: [student("1", "Marie Beier")],
+    });
+    const { rerender } = render(<Harness />);
+    expect(
+      await screen.findByRole("radio", { name: /Marie Beier/ }),
+    ).toBeInTheDocument();
+    expect(mocks.fetchStudents).toHaveBeenCalledTimes(1);
+
+    rerender(<Harness instanceId="instance-2" />);
+
+    expect(screen.queryByRole("radio", { name: /Marie Beier/ })).toBeNull();
+    expect(
+      await screen.findByRole("radio", { name: /Marie Beier/ }),
+    ).toBeInTheDocument();
+    expect(mocks.fetchStudents).toHaveBeenCalledTimes(2);
   });
 
   it("shows a load failure in the dialog", async () => {

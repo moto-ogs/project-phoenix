@@ -1,8 +1,30 @@
-import { act, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  render as renderPlain,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ReactElement, ReactNode } from "react";
 import type { SchoolSearchResult } from "~/lib/school-search";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// The search reads through the shared cache; each render gets its own.
+vi.unmock("swr");
+
+function Providers({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderPlain(ui, { wrapper: Providers });
+}
 
 const {
   mockUseSession,
@@ -123,7 +145,7 @@ function child(id: string, firstName: string, lastName: string) {
 
 function signIn(permissions: string[]) {
   mockUseSession.mockReturnValue({
-    data: { user: { token: "t", roles: [], permissions } },
+    data: { user: { id: "1", token: "t", roles: [], permissions } },
     status: "authenticated",
   });
 }
@@ -190,10 +212,7 @@ describe("SchoolSearchDialog", () => {
     await screen.findByRole("option", {
       name: "Sabine Sonnenberg, +49 170 1234567, Elternteil von Mia Sonnenberg (Klasse 3a)",
     });
-    expect(mockSearchSchool).toHaveBeenLastCalledWith(
-      "0170 1234567",
-      expect.any(AbortSignal),
-    );
+    expect(mockSearchSchool).toHaveBeenLastCalledWith("0170 1234567");
     // The typed text never lands in a URL (ADR 0231).
     expect(document.querySelector('a[href*="0170"]')).toBeNull();
 
@@ -301,10 +320,7 @@ describe("SchoolSearchDialog", () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 260));
     });
-    expect(mockSearchSchool).toHaveBeenLastCalledWith(
-      "Müller",
-      expect.any(AbortSignal),
-    );
+    expect(mockSearchSchool).toHaveBeenLastCalledWith("Müller");
     expect(mockPush).not.toHaveBeenCalled();
     await act(async () => {
       answer({ ...EMPTY, children: [child("12", "Ole", "Müller")] });

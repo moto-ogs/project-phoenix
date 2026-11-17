@@ -261,31 +261,83 @@ describe.concurrent("swr/no-direct-import", () => {
     },
   );
 
-  it("accepts the existing exception but rejects an additional import", async () => {
-    const file = "src/components/dashboard/sidebar.test.tsx";
+  // The exceptions live in a baseline of their own: the checked-in one only
+  // shrinks, and its last entries are gone once their files are migrated.
+  function lintWithImportBaseline(
+    baseline: Record<string, number>,
+    file: string,
+    code: string,
+  ) {
+    const directory = mkdtempSync(join(tmpdir(), "swr-baseline-"));
+    try {
+      const scripts = join(directory, "scripts");
+      mkdirSync(scripts);
+      copyFileSync(
+        resolve("scripts/oxlint-plugin-swr.mjs"),
+        join(scripts, "plugin.mjs"),
+      );
+      writeFileSync(
+        join(scripts, "swr-import-baseline.json"),
+        JSON.stringify(baseline),
+      );
+      writeFileSync(join(scripts, "swr-key-baseline.json"), "{}");
+      writeFileSync(join(scripts, "swr-effect-load-baseline.json"), "{}");
+      const config = join(directory, "config.json");
+      writeFileSync(
+        config,
+        JSON.stringify({
+          jsPlugins: [join(scripts, "plugin.mjs")],
+          rules: { "swr/no-direct-import": "error" },
+        }),
+      );
+      const source = join(directory, file);
+      mkdirSync(join(source, ".."), { recursive: true });
+      writeFileSync(source, code);
+      const result = spawnSync(
+        resolve("node_modules/.bin/oxlint"),
+        ["-c", config, source],
+        { encoding: "utf8" },
+      );
+      return {
+        status: result.status,
+        output: `${result.stdout}${result.stderr}`,
+      };
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }
+
+  it("accepts the existing exception but rejects an additional import", () => {
+    const file = "src/components/probe.test.tsx";
     const existing = 'import useSWR from "swr"; void useSWR;';
-    expect((await lintSource(existing, file)).status).toBe(0);
-    const result = await lintSource(
-      `${existing}\nexport { mutate } from "swr";`,
+    const accepted = lintWithImportBaseline({ [file]: 1 }, file, existing);
+    expect(accepted.status, accepted.output).toBe(0);
+    const result = lintWithImportBaseline(
+      { [file]: 1 },
       file,
+      `${existing}\nexport { mutate } from "swr";`,
     );
     expect(result.status).toBe(1);
     expect(result.output).toContain(RULE);
   });
 
-  it("requires removing an exception once its import is removed", async () => {
-    const result = await lintSource(
+  it("requires removing an exception once its import is removed", () => {
+    const file = "src/components/probe.test.tsx";
+    const result = lintWithImportBaseline(
+      { [file]: 1 },
+      file,
       "export const migrated = true;",
-      "src/components/dashboard/sidebar.test.tsx",
     );
     expect(result.status).toBe(1);
     expect(result.output).toContain("Shrink");
   });
 
-  it("also requires shrinking a partially migrated file", async () => {
-    const result = await lintSource(
+  it("also requires shrinking a partially migrated file", () => {
+    const file = "src/components/probe.test.tsx";
+    const result = lintWithImportBaseline(
+      { [file]: 2 },
+      file,
       'export { mutate } from "swr";',
-      "src/app/[tenant]/(protected)/students/[id]/page.test.tsx",
     );
     expect(result.status).toBe(1);
     expect(result.output).toContain("Shrink");

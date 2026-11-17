@@ -54,6 +54,7 @@ export const groupsConfig = defineEntityConfig<Group>({
             label: "Gruppenraum",
             type: "select",
             required: false,
+            optionsResource: "group-room-choice",
             options: async () => {
               const result = (await fetchOptionsJson("/api/rooms")) as {
                 data?: Array<{ id: number; name: string }>;
@@ -74,6 +75,7 @@ export const groupsConfig = defineEntityConfig<Group>({
             type: "multiselect",
             required: false,
             colSpan: 2,
+            optionsResource: "group-caregiver-choice",
             options: async () => {
               // Fetch active caregivers from the canonical caregiver pool.
               const result = (await fetchOptionsJson(
