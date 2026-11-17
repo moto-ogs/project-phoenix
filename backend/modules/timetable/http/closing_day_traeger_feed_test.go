@@ -19,6 +19,7 @@ import (
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
+	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
 
 type traegerFeedEntry struct {
@@ -83,6 +84,9 @@ func TestClosingDayReachesTheBellOfTheSchoolsTraegerOnly(t *testing.T) {
 	}).ID
 	school := testpkg.CreateTestSchoolInOrganization(t, db, own, "Grundschule Am Bach")
 	f := newClosingFeedFixtureIn(t, db, school)
+	// A second school of the same Träger: its entries reach the same bell,
+	// each with its school's name.
+	sister := testpkg.CreateTestSchoolInOrganization(t, db, own, "Grundschule Am Hang")
 	foreign := traegerFeedOrganization(t, f, "Anderer Träger")
 	foreignSchool := testpkg.CreateTestSchoolInOrganization(t, db, foreign, "Fremde Schule")
 
@@ -94,9 +98,14 @@ func TestClosingDayReachesTheBellOfTheSchoolsTraegerOnly(t *testing.T) {
 	testpkg.CreateTestTraegerMember(t, db, own, departing.ID, identityaccess.TraegerRoleReadOnly)
 	testpkg.CreateTestTraegerMember(t, db, own, leitung.accountID, identityaccess.TraegerRoleAdministration)
 	testpkg.CreateTestTraegerMember(t, db, foreign, stranger.ID, identityaccess.TraegerRoleReadOnly)
+	_, err := db.ExecContext(context.Background(), `INSERT INTO platform.notification_feed_entries
+		(tenant_id, account_id, type, title, body, deep_link, related_type, related_id, created_at, updated_at)
+		VALUES (?, ?, ?, 'Schließtag geändert', '', '/traeger/schulen/1', 'closing_day', 1, NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 hour')`,
+		sister, office.ID, deliveryContract.NotificationTraegerSchoolClosingDayChanged)
+	require.NoError(t, err)
 	// An entry of another Träger's school for the same account never reaches
 	// this Träger's bell, even though the account owns it.
-	_, err := db.ExecContext(context.Background(), `INSERT INTO platform.notification_feed_entries
+	_, err = db.ExecContext(context.Background(), `INSERT INTO platform.notification_feed_entries
 		(tenant_id, account_id, type, title, body, deep_link, related_type, related_id)
 		VALUES (?, ?, ?, 'Fremder Schließtag', '', '/traeger/schulen/1', 'closing_day', 1)`,
 		foreignSchool, office.ID, deliveryContract.NotificationTraegerSchoolClosingDayChanged)
@@ -105,8 +114,10 @@ func TestClosingDayReachesTheBellOfTheSchoolsTraegerOnly(t *testing.T) {
 	first := f.save(t, leitung, http.MethodPost, 0, closingDayBody("2030-06-12", "2030-06-12", "Pädagogischer Tag"))
 
 	entries, unread := f.traegerFeed(t, office.ID, own)
-	require.Len(t, entries, 1)
-	assert.Equal(t, 1, unread)
+	require.Len(t, entries, 2, "the bell holds the entries of every school of the Träger")
+	assert.Equal(t, 2, unread)
+	assert.Equal(t, "Grundschule Am Hang", entries[1].SchoolName)
+	assert.Equal(t, fmt.Sprint(sister), entries[1].SchoolID)
 	assert.Equal(t, deliveryContract.NotificationTraegerSchoolClosingDayChanged, entries[0].Type)
 	assert.Equal(t, "Neuer Schließtag", entries[0].Title)
 	assert.Equal(t, "Am 12.06.2030 ist ein Schließtag: Pädagogischer Tag.", entries[0].Body)
@@ -126,17 +137,17 @@ func TestClosingDayReachesTheBellOfTheSchoolsTraegerOnly(t *testing.T) {
 	// The read state works as in the staff portal.
 	second := f.save(t, leitung, http.MethodPost, 0, closingDayBody("2030-06-20", "2030-06-20", "Betriebsausflug"))
 	entries, unread = f.traegerFeed(t, office.ID, own)
-	require.Len(t, entries, 2)
-	assert.Equal(t, 2, unread)
+	require.Len(t, entries, 3)
+	assert.Equal(t, 3, unread)
 	var count struct {
 		UnreadCount int `json:"unread_count"`
 	}
 	f.traegerFeedCall(t, office.ID, own, http.MethodPost, fmt.Sprintf("/%d/read", entries[1].ID), &count)
-	assert.Equal(t, 1, count.UnreadCount)
+	assert.Equal(t, 2, count.UnreadCount)
 	f.traegerFeedCall(t, office.ID, own, http.MethodPost, "/read-all", &count)
 	assert.Zero(t, count.UnreadCount)
 	entries, unread = f.traegerFeed(t, office.ID, own)
-	require.Len(t, entries, 2)
+	require.Len(t, entries, 3)
 	assert.Zero(t, unread)
 	assert.NotNil(t, entries[0].ReadAt)
 
@@ -149,7 +160,7 @@ func TestClosingDayReachesTheBellOfTheSchoolsTraegerOnly(t *testing.T) {
 	testpkg.SetTestTenantSetting(t, f.db, school, "notifications.school_closing_day_enabled", "false")
 	f.save(t, leitung, http.MethodDelete, second, "")
 	entries, _ = f.traegerFeed(t, office.ID, own)
-	assert.Len(t, entries, 2)
+	assert.Len(t, entries, 3)
 	testpkg.SetTestTenantSetting(t, f.db, school, "notifications.school_closing_day_enabled", "true")
 
 	// An ended membership hides the entries on the next read; nothing is
@@ -163,4 +174,64 @@ func TestClosingDayReachesTheBellOfTheSchoolsTraegerOnly(t *testing.T) {
 	var stored int
 	require.NoError(t, db.NewRaw(`SELECT count(*) FROM platform.notification_feed_entries WHERE account_id = ?`, departing.ID).Scan(context.Background(), &stored))
 	assert.Equal(t, 2, stored, "the entries before the end stay until their retention")
+}
+
+// N is the number of entries of a Träger member across the schools of its
+// Träger (#7146). The page and the unread count, each with the check of the
+// membership and the schools of the Träger, are a fixed number of statements
+// whatever the bell holds; another member's entries stay out.
+func TestTraegerNotificationFeedHTTPQueryBudget(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupIsolatedTestDB(t)
+	own := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{
+		Name: "Träger Budget", Slug: fmt.Sprintf("traeger-budget-%d", testpkg.UniqueTestTenantID(t)), Active: true,
+	}).ID
+	schools := []int64{
+		testpkg.CreateTestSchoolInOrganization(t, db, own, "Schule Eins"),
+		testpkg.CreateTestSchoolInOrganization(t, db, own, "Schule Zwei"),
+	}
+	f := newClosingFeedFixtureIn(t, db, schools[0])
+	office := testpkg.CreateTestAccount(t, db, "traeger-budget")
+	other := testpkg.CreateTestAccount(t, db, "traeger-budget-other")
+	testpkg.CreateTestTraegerMember(t, db, own, office.ID, identityaccess.TraegerRoleReadOnly)
+	testpkg.CreateTestTraegerMember(t, db, own, other.ID, identityaccess.TraegerRoleReadOnly)
+	insert := func(accountID, schoolID int64, objectID int) {
+		t.Helper()
+		_, err := db.ExecContext(context.Background(), `INSERT INTO platform.notification_feed_entries
+			(tenant_id, account_id, type, title, body, deep_link, related_type, related_id)
+			VALUES (?, ?, ?, 'Neuer Schließtag', 'Am 12.06.2030 ist ein Schließtag.', '/traeger/schulen/1', 'closing_day', ?)`,
+			schoolID, accountID, deliveryContract.NotificationTraegerSchoolClosingDayChanged, objectID)
+		require.NoError(t, err)
+	}
+	insert(other.ID, schools[0], 1)
+	token := testpkg.MintTestJWT(t, traegerReaderClaims(office.ID, own))
+	counter := testpkg.CaptureQueries(t, db)
+	previous, statements := 0, 0
+	for _, n := range []int{0, 3, 8} {
+		for i := previous; i < n; i++ {
+			insert(office.ID, schools[i%2], 100+i)
+		}
+		counter.Reset()
+		req := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/traeger/notifications/feed/", nil, testutil.WithJWTBearer(token))
+		rec := testutil.ExecuteRequestForTest(t, f.feed, req)
+		counter.Stop()
+		querybudgets.AssertQueryBudget(t, "traeger.notifications.feed", counter.Measurement(counter.Queries()))
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var page struct {
+			Data struct {
+				Entries     []json.RawMessage `json:"entries"`
+				UnreadCount int               `json:"unread_count"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
+		require.Len(t, page.Data.Entries, n)
+		require.Equal(t, n, page.Data.UnreadCount)
+		if statements > 0 {
+			require.Len(t, counter.Queries(), statements, "bell entries must not add round trips")
+		}
+		statements = len(counter.Queries())
+		previous = n
+		counter.Start()
+	}
+	counter.Stop()
 }

@@ -163,17 +163,21 @@ func (s *Store) ListFeedEntries(ctx context.Context, tenantID, accountID int64, 
 func feedEntries(rows []feedEntryRow) []domain.FeedEntry {
 	entries := make([]domain.FeedEntry, 0, len(rows))
 	for _, row := range rows {
-		entries = append(entries, domain.FeedEntry{
-			ID: row.ID, TenantID: row.TenantID, AccountID: row.AccountID,
-			FeedEntryContent: domain.FeedEntryContent{
-				Type: row.Type, Title: row.Title, Body: row.Body, DeepLink: row.DeepLink,
-				SchoolDeepLink: derefFeedLink(row.SchoolDeepLink),
-				RelatedType:    row.RelatedType, RelatedID: row.RelatedID, StudentIDs: row.StudentIDs,
-			},
-			CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, ReadAt: row.ReadAt,
-		})
+		entries = append(entries, row.entry())
 	}
 	return entries
+}
+
+func (row feedEntryRow) entry() domain.FeedEntry {
+	return domain.FeedEntry{
+		ID: row.ID, TenantID: row.TenantID, AccountID: row.AccountID,
+		FeedEntryContent: domain.FeedEntryContent{
+			Type: row.Type, Title: row.Title, Body: row.Body, DeepLink: row.DeepLink,
+			SchoolDeepLink: derefFeedLink(row.SchoolDeepLink),
+			RelatedType:    row.RelatedType, RelatedID: row.RelatedID, StudentIDs: row.StudentIDs,
+		},
+		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, ReadAt: row.ReadAt,
+	}
 }
 
 // feedChildren is never nil: the column is NOT NULL.

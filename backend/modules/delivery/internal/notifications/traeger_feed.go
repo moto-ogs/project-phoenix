@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
@@ -147,15 +148,7 @@ func typesOfPortal(portal string) []TypeDefinition {
 			defs = append(defs, def)
 		}
 	}
-	slices.SortFunc(defs, func(a, b TypeDefinition) int {
-		if a.Key < b.Key {
-			return -1
-		}
-		if a.Key > b.Key {
-			return 1
-		}
-		return 0
-	})
+	slices.SortFunc(defs, func(a, b TypeDefinition) int { return strings.Compare(a.Key, b.Key) })
 	return defs
 }
 

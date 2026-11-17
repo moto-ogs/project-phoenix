@@ -22,11 +22,15 @@ const traegerFeedReaderJoin = `INNER JOIN platform.delivery_traeger_feed_readers
 		ON reader.organization_id = ?0 AND reader.tenant_id = entry.tenant_id AND reader.account_id = entry.account_id
 	WHERE entry.account_id = ?1 AND entry.type = ANY(?2::text[])`
 
-// listTraegerFeedEntriesSQL pages the bell newest update first; ?3 and ?4
-// are the cursor, ?5 the page size.
-const listTraegerFeedEntriesSQL = `SELECT entry.*, reader.school_name FROM platform.notification_feed_entries AS entry ` + traegerFeedReaderJoin + `
-		AND (entry.updated_at, entry.id) < (?3, ?4)
-	ORDER BY entry.updated_at DESC, entry.id DESC LIMIT ?5`
+// The pages of the bell, newest update first: ?3 is the page size, ?4 and
+// ?5 the cursor of a next page.
+const (
+	listTraegerFeedFirstPageSQL = `SELECT entry.*, reader.school_name FROM platform.notification_feed_entries AS entry ` + traegerFeedReaderJoin + `
+	ORDER BY entry.updated_at DESC, entry.id DESC LIMIT ?3`
+	listTraegerFeedNextPageSQL = `SELECT entry.*, reader.school_name FROM platform.notification_feed_entries AS entry ` + traegerFeedReaderJoin + `
+		AND (entry.updated_at, entry.id) < (?4, ?5)
+	ORDER BY entry.updated_at DESC, entry.id DESC LIMIT ?3`
+)
 
 type traegerFeedEntryRow struct {
 	feedEntryRow
@@ -41,18 +45,17 @@ func (s *Store) ListTraegerFeedEntries(ctx context.Context, organizationID, acco
 	if err != nil {
 		return nil, err
 	}
-	// A first page starts after the newest instant and the largest ID.
-	afterAt, afterID := time.Unix(1<<40, 0), int64(1<<62)
+	query, args := listTraegerFeedFirstPageSQL, []any{organizationID, accountID, pgdialect.Array(types), limit}
 	if after != nil {
-		afterAt, afterID = after.UpdatedAt, after.ID
+		query, args = listTraegerFeedNextPageSQL, append(args, after.UpdatedAt, after.ID)
 	}
 	var rows []traegerFeedEntryRow
-	if err := db.NewRaw(listTraegerFeedEntriesSQL, organizationID, accountID, pgdialect.Array(types), afterAt, afterID, limit).Scan(ctx, &rows); err != nil {
+	if err := db.NewRaw(query, args...).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("delivery postgres: list Träger feed entries: %w", err)
 	}
 	entries := make([]domain.TraegerFeedEntry, 0, len(rows))
 	for _, row := range rows {
-		entries = append(entries, domain.TraegerFeedEntry{FeedEntry: feedEntries([]feedEntryRow{row.feedEntryRow})[0], SchoolName: row.SchoolName})
+		entries = append(entries, domain.TraegerFeedEntry{FeedEntry: row.feedEntryRow.entry(), SchoolName: row.SchoolName})
 	}
 	return entries, nil
 }
