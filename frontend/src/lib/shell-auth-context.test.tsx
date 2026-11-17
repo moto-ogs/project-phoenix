@@ -308,6 +308,26 @@ describe("TeacherShellProvider", () => {
     expect(result.current.user?.name).toBe("Benutzer");
   });
 
+  // Ein Konto ohne Personendaten trägt im Sitzungsnamen seine Adresse; die
+  // Kopfzeile zeigt sie nur im Profil-Menü, nie als Namen (#7305).
+  it("never shows the sign-in address as the name", () => {
+    mockUseSession.mockReturnValue({
+      data: {
+        user: {
+          name: "petra@traeger.de",
+          email: "petra@traeger.de",
+          roles: ["admin"],
+        },
+      },
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useShellAuth(), { wrapper });
+
+    expect(result.current.user?.name).toBe("Benutzer");
+    expect(result.current.user?.email).toBe("petra@traeger.de");
+  });
+
   it("detects expired session", () => {
     mockUseSession.mockReturnValue({
       data: {
@@ -1305,5 +1325,44 @@ describe("endTraegerSession (#6955)", () => {
     expect(localStorage.getItem("supervision-last-session")).toBe(
       "Gruppe Sonne",
     );
+  });
+});
+
+describe("SchoolShellProvider names", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <SchoolShellProvider>{children}</SchoolShellProvider>
+  );
+
+  it("shows the person's name", () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { name: "Eva Ziel", email: "eva@schule.de" } },
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useShellAuth(), { wrapper });
+
+    expect(result.current.user?.name).toBe("Eva Ziel");
+    expect(result.current.profile).toEqual({
+      firstName: "Eva",
+      lastName: "Ziel",
+    });
+  });
+
+  // Wie im Eltern-Portal: Die Adresse ist kein Name (#7305).
+  it("never shows the sign-in address as the name", () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { name: "eva@schule.de", email: "eva@schule.de" } },
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useShellAuth(), { wrapper });
+
+    expect(result.current.user?.name).toBe("Lehrkraft");
+    expect(result.current.user?.email).toBe("eva@schule.de");
+    expect(result.current.profile).toBeNull();
   });
 });

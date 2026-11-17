@@ -8,7 +8,8 @@ import {
   hasEffectiveAdminScope,
   canReadSupervisionData,
   isCaregiver,
-  getUserDisplayName,
+  getGreetingName,
+  getSessionPersonName,
 } from "./auth-utils";
 
 describe("auth-utils", () => {
@@ -349,86 +350,77 @@ describe("auth-utils", () => {
     });
   });
 
-  describe("getUserDisplayName", () => {
-    it("should return firstName when available", () => {
-      const session: Session = {
-        user: {
-          id: "1",
-          email: "test@example.com",
-          firstName: "John",
-          name: "John Doe",
-          isAdmin: false,
-        },
-        expires: "2024-12-31",
-      };
-
-      expect(getUserDisplayName(session)).toBe("John");
+  // Nie mit einer E-Mail-Adresse grüßen (#7305): Ein Konto ohne Personendaten
+  // trägt im Sitzungsnamen den Benutzernamen, und der ist meist die Adresse.
+  describe("getGreetingName", () => {
+    const sessionWith = (user: Partial<Session["user"]>): Session => ({
+      user: { id: "1", email: "petra@traeger.de", isAdmin: false, ...user },
+      expires: "2099-12-31",
     });
 
-    it("should return name when firstName is not available", () => {
-      const session: Session = {
-        user: {
-          id: "1",
-          email: "test@example.com",
-          name: "John Doe",
-          isAdmin: false,
-        },
-        expires: "2024-12-31",
-      };
-
-      expect(getUserDisplayName(session)).toBe("John Doe");
+    it("grüßt mit dem Vornamen", () => {
+      expect(
+        getGreetingName(
+          sessionWith({ firstName: "Anna", name: "Anna Müller" }),
+        ),
+      ).toBe("Anna");
     });
 
-    it("should return email when firstName and name are not available", () => {
-      const session: Session = {
-        user: {
-          id: "1",
-          email: "test@example.com",
-          isAdmin: false,
-        },
-        expires: "2024-12-31",
-      };
-
-      expect(getUserDisplayName(session)).toBe("test@example.com");
+    it("nimmt das erste Wort eines Namens mit Leerzeichen", () => {
+      expect(
+        getGreetingName(
+          sessionWith({ firstName: "Petra Träger", name: "Petra Träger" }),
+        ),
+      ).toBe("Petra");
+      expect(getGreetingName(sessionWith({ name: "  Eva   Ziel " }))).toBe(
+        "Eva",
+      );
     });
 
-    it('should return "User" when session is null', () => {
-      expect(getUserDisplayName(null)).toBe("User");
+    it("grüßt nie mit einer E-Mail-Adresse", () => {
+      expect(
+        getGreetingName(sessionWith({ name: "petra@traeger.de" })),
+      ).toBeUndefined();
+      expect(
+        getGreetingName(sessionWith({ name: "x@traeger.de", email: "" })),
+      ).toBeUndefined();
+      expect(
+        getGreetingName(
+          sessionWith({ name: "PETRA@traeger.de", email: "petra@traeger.de" }),
+        ),
+      ).toBeUndefined();
     });
 
-    it('should return "User" when user is undefined', () => {
-      const session = { expires: "2024-12-31" } as Session;
-      expect(getUserDisplayName(session)).toBe("User");
+    it("gibt ohne Namen nichts zurück", () => {
+      expect(getGreetingName(sessionWith({ name: "  " }))).toBeUndefined();
+      expect(getGreetingName(sessionWith({}))).toBeUndefined();
+      expect(getGreetingName(null)).toBeUndefined();
+    });
+  });
+
+  describe("getSessionPersonName", () => {
+    it("gibt den ganzen Namen der Sitzung zurück", () => {
+      expect(
+        getSessionPersonName({
+          user: {
+            id: "1",
+            email: "a@b.de",
+            name: " Petra Träger ",
+            isAdmin: false,
+          },
+          expires: "2099-12-31",
+        }),
+      ).toBe("Petra Träger");
     });
 
-    it('should return "User" when all name fields are null', () => {
-      const session: Session = {
-        user: {
-          id: "1",
-          email: undefined,
-          name: undefined,
-          firstName: undefined,
-          isAdmin: false,
-        },
-        expires: "2024-12-31",
-      };
-
-      expect(getUserDisplayName(session)).toBe("User");
-    });
-
-    it("should prefer firstName over name and email", () => {
-      const session: Session = {
-        user: {
-          id: "1",
-          email: "test@example.com",
-          firstName: "John",
-          name: "John Doe",
-          isAdmin: false,
-        },
-        expires: "2024-12-31",
-      };
-
-      expect(getUserDisplayName(session)).toBe("John");
+    it("gibt keine E-Mail-Adresse als Namen zurück", () => {
+      expect(
+        getSessionPersonName({
+          user: { id: "1", email: "a@b.de", name: "a@b.de", isAdmin: false },
+          expires: "2099-12-31",
+        }),
+      ).toBe("");
+      expect(getSessionPersonName(null)).toBe("");
     });
   });
 });

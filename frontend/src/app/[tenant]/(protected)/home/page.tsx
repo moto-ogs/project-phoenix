@@ -30,7 +30,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { leadsSchool } from "~/lib/auth-utils";
+import { getGreetingName, leadsSchool } from "~/lib/auth-utils";
 import { fetchBirthdayOverviewClient } from "~/lib/birthdays-api";
 import type { BirthdayOverview } from "~/lib/birthdays-api";
 import { fetchDashboardAnalyticsClient } from "~/lib/dashboard-api";
@@ -419,7 +419,7 @@ function HomeContent() {
   }
 
   const editing = draft !== null;
-  const firstName = session?.user?.name?.trim().split(/\s+/)[0];
+  const firstName = getGreetingName(session);
   const greeting = useTimeBasedGreeting();
   // Die Route der Hinweise verlangt config:manage; die Leitung der Schule
   // hält es, ob Admin oder eigene Leitungsrolle (#3469).
