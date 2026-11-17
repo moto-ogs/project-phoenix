@@ -38,9 +38,7 @@ func TestBackfilledLegacyChainStaysSignedInAndRevocable(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := testpkg.Ctx(t)
-	// Migration 1.15.707 decides expiry on the database clock; the sessions
-	// it backfills are issued on that clock too.
-	identity, err := NewTestIdentityAccess(testpkg.NewDatabase(t, db), slog.Default(), testpkg.DatabaseClock(t, db))
+	identity, err := NewTestIdentityAccess(testpkg.NewDatabase(t, db), slog.Default())
 	require.NoError(t, err)
 	account := testpkg.CreateTestAccount(t, db, "backfill-legacy-chain")
 	testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))
@@ -54,7 +52,7 @@ func TestBackfilledLegacyChainStaysSignedInAndRevocable(t *testing.T) {
 	_, err = db.ExecContext(ctx, `UPDATE auth.tokens SET family_id = NULL WHERE account_id = ?`, account.ID)
 	require.NoError(t, err)
 
-	require.NoError(t, migrations.BackfillSessionFamilies(context.Background(), db))
+	require.NoError(t, migrations.BackfillSessionFamilies(context.Background(), db, time.Now()))
 
 	var families []string
 	require.NoError(t, db.NewRaw(`SELECT DISTINCT family_id FROM auth.tokens WHERE account_id = ?`, account.ID).Scan(ctx, &families))
@@ -102,9 +100,7 @@ func TestBackfillAndConcurrentRotationWithPredecessorKeepsOneFamily(t *testing.T
 func backfillDuringRotation(t *testing.T, withPredecessor bool) {
 	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := testpkg.Ctx(t)
-	// Migration 1.15.707 decides expiry on the database clock; the sessions
-	// it backfills are issued on that clock too.
-	identity, err := NewTestIdentityAccess(testpkg.NewDatabase(t, db), slog.Default(), testpkg.DatabaseClock(t, db))
+	identity, err := NewTestIdentityAccess(testpkg.NewDatabase(t, db), slog.Default())
 	require.NoError(t, err)
 	account := testpkg.CreateTestAccount(t, db, "backfill-concurrent-rotation")
 	testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))
@@ -146,7 +142,7 @@ func backfillDuringRotation(t *testing.T, withPredecessor bool) {
 	}()
 	require.Eventually(t, waiting(1), 5*time.Second, 10*time.Millisecond, "the rotation waits for the head")
 	migration := make(chan error, 1)
-	go func() { migration <- migrations.BackfillSessionFamilies(context.Background(), db) }()
+	go func() { migration <- migrations.BackfillSessionFamilies(context.Background(), db, time.Now()) }()
 	require.Eventually(t, waiting(2), 5*time.Second, 10*time.Millisecond, "the migration waits too")
 	require.NoError(t, holder.Commit())
 

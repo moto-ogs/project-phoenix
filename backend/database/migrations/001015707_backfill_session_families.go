@@ -3,6 +3,7 @@ package migrations
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/uptrace/bun"
 )
@@ -45,7 +46,11 @@ func init() {
 // tokens are refused, its refresh is refused, and a logout presenting it
 // revokes the whole chain it links into (domain.SessionChain), as the
 // runtime does for every row without family. Expired rows stay as they are;
-// the cleanup removes them.
+// the cleanup removes them. A row is live when its expiry is after the
+// instant the caller passes: Identity & Access stamps expiry on the host
+// clock of the backend (newRefreshSession, createAndPersistSuccessor) and
+// judges it there, so the migration, which runs in that process, passes the
+// same clock instead of reading the database's (ADR 0281).
 //
 // The backfill and a rotation are serialized per account. Refresh locks the
 // account row before it locks or changes a session, as logout does, and the
@@ -70,7 +75,7 @@ WITH RECURSIVE heads AS MATERIALIZED (
 	FROM auth.tokens
 	WHERE account_id = ?
 		AND rotated_at IS NULL
-		AND expiry > NOW()
+		AND expiry > ?
 ), chain AS (
 	SELECT id, token, account_id, generation, family_id FROM heads
 	UNION
@@ -79,7 +84,7 @@ WITH RECURSIVE heads AS MATERIALIZED (
 	JOIN chain ON predecessor.replacement_token = chain.token
 	WHERE (predecessor.family_id IS NULL OR predecessor.family_id IN ('', chain.family_id))
 		AND predecessor.rotated_at IS NOT NULL
-		AND predecessor.expiry > NOW()
+		AND predecessor.expiry > ?
 		AND predecessor.account_id = chain.account_id
 		AND predecessor.generation = chain.generation - 1
 		AND (SELECT count(*) FROM auth.tokens AS same WHERE same.token = predecessor.replacement_token) = 1
@@ -91,16 +96,17 @@ WHERE auth.tokens.id = chain.id
 	AND (auth.tokens.family_id IS NULL OR auth.tokens.family_id = '')`
 
 func backfillSessionFamiliesUp(ctx context.Context, db *bun.DB) error {
-	return BackfillSessionFamilies(ctx, db)
+	return BackfillSessionFamilies(ctx, db, time.Now())
 }
 
-// BackfillSessionFamilies runs the backfill; the root's tests call it to
+// BackfillSessionFamilies runs the backfill for the chains live at now, an
+// instant of the clock that stamps their expiry; the root's tests call it to
 // prove that a chain it reaches stays signed in and can be revoked.
-func BackfillSessionFamilies(ctx context.Context, db bun.IDB) error {
+func BackfillSessionFamilies(ctx context.Context, db bun.IDB, now time.Time) error {
 	var accountIDs []int64
 	if err := db.NewRaw(`SELECT DISTINCT account_id FROM auth.tokens
-		WHERE (family_id IS NULL OR family_id = '') AND expiry > NOW()
-		ORDER BY account_id`).Scan(ctx, &accountIDs); err != nil {
+		WHERE (family_id IS NULL OR family_id = '') AND expiry > ?
+		ORDER BY account_id`, now).Scan(ctx, &accountIDs); err != nil {
 		return fmt.Errorf("list accounts with sessions without family: %w", err)
 	}
 	for _, accountID := range accountIDs {
@@ -110,7 +116,8 @@ func BackfillSessionFamilies(ctx context.Context, db bun.IDB) error {
 			if _, err := tx.ExecContext(ctx, `SELECT id FROM auth.accounts WHERE id = ? FOR UPDATE`, accountID); err != nil {
 				return err
 			}
-			_, err := tx.ExecContext(ctx, backfillSessionFamiliesSQL, accountID)
+			// Bind order: account, expiry of the heads, expiry of the predecessors.
+			_, err := tx.ExecContext(ctx, backfillSessionFamiliesSQL, accountID, now, now)
 			return err
 		}); err != nil {
 			return fmt.Errorf("backfill session families of account %d: %w", accountID, err)
