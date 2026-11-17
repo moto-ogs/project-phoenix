@@ -374,6 +374,18 @@ type PendingAccountWideWipe struct {
 	Cutoff    time.Time
 }
 
+// PushSubscriptionLink names a push subscription of the Delivery platform
+// and the session facts it was registered under. TokenFamilyID is empty for a
+// subscription bound to no refresh-token family; Portal is "staff", "school"
+// or "parent".
+type PushSubscriptionLink struct {
+	SubscriptionID int64
+	AccountID      int64
+	TenantID       int64
+	Portal         string
+	TokenFamilyID  string
+}
+
 // AccountAuthentication is the capability tenant, parent and school login,
 // MFA exchange, refresh, switching, logout and session validation consume.
 type AccountAuthentication interface {

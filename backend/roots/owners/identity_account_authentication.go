@@ -10,6 +10,7 @@ import (
 
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
+	deliveryModels "github.com/moto-ogs/project-phoenix/modules/delivery/subscriptions"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	identityBindingPorts "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports"
@@ -473,9 +474,25 @@ func (p PushSubscriptionCleanup) DeleteUnboundByAccount(ctx context.Context, acc
 	return p.Subscriptions.DeleteUnboundByAccountForPortal(ctx, accountID, tenantID, portal)
 }
 
-func (p PushSubscriptionCleanup) DeleteOrphaned(ctx context.Context) error {
+func (p PushSubscriptionCleanup) ListLinks(ctx context.Context) ([]identityaccess.PushSubscriptionLink, error) {
+	if p.Subscriptions == nil {
+		return nil, nil
+	}
+	links, err := p.Subscriptions.ListSessionLinks(ctx)
+	result := make([]identityaccess.PushSubscriptionLink, len(links))
+	for i, link := range links {
+		result[i] = identityaccess.PushSubscriptionLink(link)
+	}
+	return result, err
+}
+
+func (p PushSubscriptionCleanup) DeleteLinks(ctx context.Context, links []identityaccess.PushSubscriptionLink) error {
 	if p.Subscriptions == nil {
 		return nil
 	}
-	return p.Subscriptions.DeleteOrphanedSubscriptions(ctx)
+	rows := make([]deliveryModels.SessionLink, len(links))
+	for i, link := range links {
+		rows[i] = deliveryModels.SessionLink(link)
+	}
+	return p.Subscriptions.DeleteSessionLinks(ctx, rows)
 }

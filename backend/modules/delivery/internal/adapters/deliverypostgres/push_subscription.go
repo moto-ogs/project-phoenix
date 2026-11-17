@@ -20,6 +20,8 @@ const (
 	pushPortalFilter       = "portal = ?"
 )
 
+var errAdminTxRequired = errors.New("push subscription repository: admin transaction required")
+
 // PushSubscriptionRepository implements deliveryPorts.PushSubscriptionRepository.
 type PushSubscriptionRepository struct {
 	DB *bun.DB
@@ -276,18 +278,68 @@ func (r *PushSubscriptionRepository) DeleteUnboundByAccountForPortal(ctx context
 	}
 }
 
-func (r *PushSubscriptionRepository) DeleteOrphanedSubscriptions(ctx context.Context) error {
-	ambientDB8, databaseErr8 := r.database(ctx)
-	if databaseErr8 != nil {
-		return databaseErr8
+// ListSessionLinks names every subscription with the session facts it was
+// registered under, across schools. Whether a session still backs it is
+// Identity & Access's decision on its own session clock, not this query's.
+func (r *PushSubscriptionRepository) ListSessionLinks(ctx context.Context) ([]deliveryModels.SessionLink, error) {
+	if !tenant.IsAdminTx(ctx) {
+		return nil, errAdminTxRequired
 	}
-	_, err := ambientDB8.NewDelete().
-		TableExpr(tablePushSubscriptions + ` AS "push_subscription"`).
-		Where(`"push_subscription".id IN (
-			SELECT "delivery_subscription".id
-			FROM platform.delivery_push_subscriptions AS "delivery_subscription"
-			WHERE NOT "delivery_subscription".has_live_token
-		)`).
+	db, err := r.database(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var links []deliveryModels.SessionLink
+	err = db.NewSelect().
+		TableExpr(tablePushSubscriptions+` AS "push_subscription"`).
+		ColumnExpr(`"push_subscription".id AS subscription_id`).
+		ColumnExpr(`"push_subscription".account_id`).
+		ColumnExpr(`"push_subscription".tenant_id`).
+		ColumnExpr(`"push_subscription".portal`).
+		ColumnExpr(`"push_subscription".token_family_id`).
+		OrderExpr(`"push_subscription".id`).
+		Scan(ctx, &links)
+	if err != nil {
+		return nil, &databaseError{Op: "list push subscription session links", Err: translateNotFound(err)}
+	}
+	return links, nil
+}
+
+// DeleteSessionLinks removes the named subscriptions in one statement. A row
+// counts only while its account, school, portal and token family still equal
+// the link: a re-subscribe that rebound it after the liveness decision keeps
+// it.
+func (r *PushSubscriptionRepository) DeleteSessionLinks(ctx context.Context, links []deliveryModels.SessionLink) error {
+	if len(links) == 0 {
+		return nil
+	}
+	if !tenant.IsAdminTx(ctx) {
+		return errAdminTxRequired
+	}
+	db, err := r.database(ctx)
+	if err != nil {
+		return err
+	}
+	ids := make([]int64, len(links))
+	accounts := make([]int64, len(links))
+	tenants := make([]int64, len(links))
+	portals := make([]string, len(links))
+	families := make([]string, len(links))
+	for i, link := range links {
+		ids[i], accounts[i], tenants[i] = link.SubscriptionID, link.AccountID, link.TenantID
+		portals[i], families[i] = link.Portal, link.TokenFamilyID
+	}
+	_, err = db.NewRaw(`
+		DELETE FROM iot.push_subscriptions AS "push_subscription"
+		USING unnest(?::BIGINT[], ?::BIGINT[], ?::BIGINT[], ?::TEXT[], ?::TEXT[])
+			AS "link"(subscription_id, account_id, tenant_id, portal, token_family_id)
+		WHERE "push_subscription".id = "link".subscription_id
+			AND "push_subscription".account_id = "link".account_id
+			AND "push_subscription".tenant_id = "link".tenant_id
+			AND "push_subscription".portal = "link".portal
+			AND "push_subscription".token_family_id = "link".token_family_id`,
+		pgdialect.Array(ids), pgdialect.Array(accounts), pgdialect.Array(tenants),
+		pgdialect.Array(portals), pgdialect.Array(families)).
 		Exec(ctx)
 	if err != nil {
 		return &databaseError{Op: "delete orphaned push subscriptions", Err: translateNotFound(err)}
