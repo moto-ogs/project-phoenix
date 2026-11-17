@@ -52,7 +52,7 @@ func gatedIntakeWith(t *testing.T, env *decisionTestEnv, parentChanges parentCha
 	offerings := enrollmentTest.NewCareOfferingRecords(env.repos.CarePlan())
 	return owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
 		Now:                    time.Now,
-		Bookings:               api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings()),
+		Bookings:               api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings(time.Now)),
 		Requests:               env.reposEnrollment.Enrollment(),
 		Children:               env.reposEnrollment.Enrollment(),
 		CareOfferingRepo:       offerings,
@@ -115,7 +115,7 @@ func gatedChangeRequests(t *testing.T, env *decisionTestEnv) enrollmentTest.Chan
 	offerings := enrollmentTest.NewCareOfferingRecords(env.repos.CarePlan())
 	return owners.NewEnrollmentChangeRequests(owners.EnrollmentChangeRequestSources{
 		Now:                    time.Now,
-		Bookings:               api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings()),
+		Bookings:               api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings(time.Now)),
 		Requests:               env.reposEnrollment.Enrollment(),
 		Children:               env.reposEnrollment.Enrollment(),
 		Guardians:              env.reposEnrollment.Enrollment(),

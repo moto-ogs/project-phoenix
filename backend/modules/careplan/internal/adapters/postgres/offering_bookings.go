@@ -129,8 +129,9 @@ func (s *Store) RecordCareOfferingBookings(ctx context.Context, childID int64, b
 	if err := lockCareOfferingBookings(ctx, db, tenantID, childID); err != nil {
 		return err
 	}
+	now := s.currentTime()
 	for _, booking := range bookings {
-		if err := recordCareOfferingBooking(ctx, db, tenantID, childID, booking); err != nil {
+		if err := recordCareOfferingBooking(ctx, db, tenantID, childID, booking, now); err != nil {
 			return err
 		}
 	}
@@ -147,13 +148,14 @@ func lockCareOfferingBookings(ctx context.Context, db bun.IDB, tenantID, childID
 
 // recordCareOfferingBooking inserts one booking unless an identical row for
 // the same offering and validity window exists; a differing row conflicts.
-func recordCareOfferingBooking(ctx context.Context, db bun.IDB, tenantID, childID int64, booking careplan.CareOfferingBooking) error {
+// A new row is stamped with now.
+func recordCareOfferingBooking(ctx context.Context, db bun.IDB, tenantID, childID int64, booking careplan.CareOfferingBooking, now time.Time) error {
 	if booking.TenantID != 0 && booking.TenantID != tenantID {
 		return fmt.Errorf("care offering booking tenant mismatch")
 	}
 	row := &careOfferingBookingRow{TenantID: tenantID, RequestChildID: childID, CareOfferingID: booking.CareOfferingID,
 		ManualSelectedDays: booking.ManualSelectedDays, AutomaticSelectedDays: booking.AutomaticSelectedDays,
-		ValidFrom: bookingDateToStorage(booking.ValidFrom), ValidUntil: bookingDateToStorage(booking.ValidUntil)}
+		ValidFrom: bookingDateToStorage(booking.ValidFrom), ValidUntil: bookingDateToStorage(booking.ValidUntil), CreatedAt: now, UpdatedAt: now}
 	var existing careOfferingBookingRow
 	err := db.NewSelect().Model(&existing).
 		Where("tenant_id = ? AND request_child_id = ? AND care_offering_id = ?", tenantID, childID, row.CareOfferingID).
@@ -211,7 +213,7 @@ func (s *Store) replaceCareOfferingBookings(ctx context.Context, childID int64, 
 		return fmt.Errorf("delete superseded care bookings: %w", err)
 	}
 	if effectiveFrom != nil {
-		if err := closeCurrentCareOfferingBookings(ctx, db, tenantID, childID, *effectiveFrom); err != nil {
+		if err := closeCurrentCareOfferingBookings(ctx, db, tenantID, childID, *effectiveFrom, s.currentTime()); err != nil {
 			return err
 		}
 	}
@@ -238,10 +240,10 @@ func sameCareOfferingBooking(row careOfferingBookingRow, booking careplan.CareOf
 }
 
 // closeCurrentCareOfferingBookings ends every booking still valid on
-// effectiveFrom that started before it.
-func closeCurrentCareOfferingBookings(ctx context.Context, db bun.IDB, tenantID, childID int64, effectiveFrom careplan.Date) error {
+// effectiveFrom that started before it, stamped with now.
+func closeCurrentCareOfferingBookings(ctx context.Context, db bun.IDB, tenantID, childID int64, effectiveFrom careplan.Date, now time.Time) error {
 	if _, err := db.NewUpdate().Model((*careOfferingBookingRow)(nil)).
-		Set("valid_until = ?", calendarDate(effectiveFrom)).Set("updated_at = CURRENT_TIMESTAMP").
+		Set("valid_until = ?", calendarDate(effectiveFrom)).Set("updated_at = ?", now).
 		Where("tenant_id = ? AND request_child_id = ?", tenantID, childID).
 		Where("valid_from IS NULL OR valid_from < ?", calendarDate(effectiveFrom)).
 		Where("valid_until IS NULL OR valid_until > ?", calendarDate(effectiveFrom)).Exec(ctx); err != nil {

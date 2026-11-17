@@ -225,7 +225,7 @@ func setupEnrollmentTestEnv(t *testing.T, decisionSettings owners.EnrollmentDeci
 	offerings := enrollmentTest.NewCareOfferingRecords(repoFactory.CarePlan())
 	intake := owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
 		Now:              time.Now,
-		Bookings:         api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings()),
+		Bookings:         api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings(time.Now)),
 		Requests:         repoFactoryEnrollment.Enrollment(),
 		Children:         repoFactoryEnrollment.Enrollment(),
 		CareOfferingRepo: offerings,
@@ -447,7 +447,7 @@ func newChangeRequestServiceWithDecisionForTest(t *testing.T, env *decisionTestE
 	offerings := enrollmentTest.NewCareOfferingRecords(env.repos.CarePlan())
 	return owners.NewEnrollmentChangeRequests(owners.EnrollmentChangeRequestSources{
 		Now:                 time.Now,
-		Bookings:            api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings()),
+		Bookings:            api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings(time.Now)),
 		Requests:            env.reposEnrollment.Enrollment(),
 		Children:            env.reposEnrollment.Enrollment(),
 		Guardians:           env.reposEnrollment.Enrollment(),

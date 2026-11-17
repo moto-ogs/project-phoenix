@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	carePlanTest "github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -71,6 +73,42 @@ func TestCareExitArchive_RecordedAtUsesTheBerlinDay(t *testing.T) {
 			require.NotNil(t, rows[0].RecordedAt)
 			assert.Equal(t, wantBerlinDay, rows[0].RecordedAt.String(),
 				"the archive must show the Berlin day, not the session-timezone day")
+			return nil
+		})
+	require.NoError(t, err)
+}
+
+// The archive day of a care exit is the day of the owner's clock: Care Plan
+// stamps created_at itself (#7295, ADR 0281). The pinned clock and the
+// database clock are months apart, so a stamp from the column default would
+// show the database's day.
+func TestCareExitArchive_RecordedAtIsTheOwnersDay(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
+	ctx := testpkg.Ctx(t)
+
+	class := fmt.Sprintf("ce-%s", uuid.Must(uuid.NewV4()).String()[:8])
+	student := testpkg.CreateTestStudent(t, db, "CareExitOwnerDay", "Kid", class)
+	yesterday := decisionTestToday.AddDays(-1)
+	testpkg.SetStudentLifecycle(t, db, student.ID, testpkg.StudentStatusActive, nil, &yesterday)
+
+	pinned := func() time.Time { return decisionTestToday.BerlinMidnight().Add(10 * time.Hour) }
+	records := carePlanTest.NewCarePlan(t, db, testpkg.StudentDirectory{}, pinned)
+	require.NoError(t, records.UpsertCareExit(ctx, careplan.CareExit{StudentID: student.ID, Reason: careplan.CareExitReasonMovedAway}))
+
+	err := testpkg.WithTenantTx(t, context.Background(), db, testpkg.Tenant(t),
+		func(txCtx context.Context, tx bun.Tx) error {
+			rows, total, err := svc.ListEnded(txCtx, careplan.EndedCareFilter{Search: class})
+			if err != nil {
+				return err
+			}
+			require.Equal(t, 1, total)
+			require.Len(t, rows, 1)
+			require.NotNil(t, rows[0].RecordedAt)
+			assert.Equal(t, decisionTestToday.String(), rows[0].RecordedAt.String(),
+				"the archive shows the day of the owner's clock, not of the database's")
 			return nil
 		})
 	require.NoError(t, err)
