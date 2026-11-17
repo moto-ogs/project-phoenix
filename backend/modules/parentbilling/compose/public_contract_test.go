@@ -125,9 +125,9 @@ func TestPublicParentBillingContractFreezesTheHolidayContribution(t *testing.T) 
 			{WeekID: 1, WeekStartsOn: week, WeekEndsOn: week.AddDays(4), TimeModelID: 2, TimeModelName: "bis 16 Uhr", PriceCents: 6750},
 		}}},
 	}}
-	rules := compose.NewContributionRules()
-	contributions, _ := compose.NewHolidayContributions(enrollment, settingsDouble{}, func() calendar.Date { return week.AddDays(-28) },
-		func() time.Time { return week.AddDays(-28).BerlinMidnight() })
+	now := func() time.Time { return week.AddDays(-28).BerlinMidnight() }
+	rules := compose.NewContributionRules(now)
+	contributions, _ := compose.NewHolidayContributions(enrollment, settingsDouble{}, func() calendar.Date { return week.AddDays(-28) }, now)
 	reviewer := parentbilling.HolidayReviewer{OrganizationID: organization, AccountID: account.ID}
 
 	var exemption parentbilling.ContributionRule

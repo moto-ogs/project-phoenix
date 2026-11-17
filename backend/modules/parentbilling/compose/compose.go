@@ -11,9 +11,9 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// NewContributionRules builds the rules and cost bearers (#5627) of a Träger in its Träger transaction (ADR 0105).
-func NewContributionRules() parentbilling.ContributionRules {
-	return application.NewRules(postgres.NewStore(time.Now))
+// NewContributionRules builds the rules and cost bearers (#5627) of a Träger in its Träger transaction (ADR 0105) on the root's clock.
+func NewContributionRules(now func() time.Time) parentbilling.ContributionRules {
+	return application.NewRules(postgres.NewStore(now))
 }
 
 // NewHolidayContributions builds the holiday contribution and allocation billing over the root-bound registrations (ADR 0115).
@@ -26,9 +26,9 @@ func NewBillingRuns(registrations parentbilling.HolidayBillingRegistrations, set
 	return application.NewBillingRuns(postgres.NewStore(now), registrations, settings, rendering.NewRenderer(now), templates, today), application.NewDocumentKinds(postgres.NewStore(now), templates)
 }
 
-// NewBillingLetterMail builds the mail and print of the letters (#4670, ADR 0123) over the post the root binds.
-func NewBillingLetterMail(post parentbilling.BillingLetterPost) parentbilling.BillingLetterMailService {
-	return application.NewBillingLetterMail(postgres.NewStore(time.Now), post, rendering.NewLetterRenderer())
+// NewBillingLetterMail builds the mail and print of the letters (#4670, ADR 0123) over the post and the clock the root binds.
+func NewBillingLetterMail(post parentbilling.BillingLetterPost, now func() time.Time) parentbilling.BillingLetterMailService {
+	return application.NewBillingLetterMail(postgres.NewStore(now), post, rendering.NewLetterRenderer())
 }
 
 // NewLetterMailRenderer renders the mail of a letter for the Delivery worker.
@@ -39,7 +39,7 @@ func NewBillingLetters(letterheads parentbilling.BillingLetterheads, today func(
 	return application.NewBillingLetters(postgres.NewStore(now), letterheads, rendering.NewLetterRenderer(), today)
 }
 
-// NewParentDocuments builds the inbox of the parents portal (#4671, ADR 0126) in the Träger transaction it opens.
+// NewParentDocuments builds the inbox of the parents portal (#4671, ADR 0126) in the Träger transaction it opens; no write it reaches stamps from the store clock (ADR 0281).
 func NewParentDocuments() *application.ParentDocuments {
 	return application.NewParentDocuments(postgres.NewStore(time.Now))
 }
@@ -79,9 +79,9 @@ func NewCareFeeNotices(contracts parentbilling.CareContracts, schools parentbill
 	return application.NewCareFeeNotices(billing, postgres.NewStore(now), letterheads)
 }
 
-// NewCareNoticeLetters builds the stored originals of the Jahresbescheide and their mail and print (#6347) over the ports the root binds.
-func NewCareNoticeLetters(letterheads parentbilling.BillingLetterheads, contracts parentbilling.CareContracts, post parentbilling.BillingLetterPost, noticePost parentbilling.CareNoticeLetterPost) parentbilling.CareNoticeLetterService {
-	return application.NewCareNoticeLetters(postgres.NewStore(time.Now), application.CareNoticeLetterPorts{Letterheads: letterheads, Recipients: contracts, Post: post, NoticePost: noticePost}, rendering.NewLetterRenderer(), rendering.NewLetterRenderer())
+// NewCareNoticeLetters builds the stored originals of the Jahresbescheide and their mail and print (#6347) over the ports the root binds; now stamps the recipient trail (ADR 0281).
+func NewCareNoticeLetters(letterheads parentbilling.BillingLetterheads, contracts parentbilling.CareContracts, post parentbilling.BillingLetterPost, noticePost parentbilling.CareNoticeLetterPost, now func() time.Time) parentbilling.CareNoticeLetterService {
+	return application.NewCareNoticeLetters(postgres.NewStore(now), application.CareNoticeLetterPorts{Letterheads: letterheads, Recipients: contracts, Post: post, NoticePost: noticePost}, rendering.NewLetterRenderer(), rendering.NewLetterRenderer())
 }
 
 // NewSEPAMandates builds the SEPA mandates and the creditor of the Träger (#4695, ADR 0171) over the contracts, the field cipher and the day clock the root binds; the import judges a mandate's lapse on that day.
@@ -105,14 +105,14 @@ func NewBankDataRekey(cipher parentbilling.BankDataRewrapper) parentbilling.Bank
 }
 
 // NewSEPAReturn builds the bank data of the Rückgabe of a Träger (#6314) over its creditor account and
-// the field cipher the root binds. Internal procedure only; never bind it to HTTP.
+// the field cipher the root binds. Internal procedure only; never bind it to HTTP. It only reads: no store clock stamps (ADR 0281).
 func NewSEPAReturn(creditors parentbilling.SEPACreditorAccounts, cipher parentbilling.BankDataCipher, fingerprint func([]byte) string) parentbilling.SEPAReturn {
 	return application.NewSEPAReturn(postgres.NewStore(time.Now), creditors, cipher, fingerprint)
 }
 
-// NewSEPADebitDownloadRetention builds the hourly expiry of the unsubmitted PAIN.008 downloads (ADR 0187).
-func NewSEPADebitDownloadRetention() parentbilling.SEPADebitDownloadRetention {
-	return postgres.NewStore(time.Now)
+// NewSEPADebitDownloadRetention builds the hourly expiry of the unsubmitted PAIN.008 downloads (ADR 0187) on the root's clock.
+func NewSEPADebitDownloadRetention(now func() time.Time) parentbilling.SEPADebitDownloadRetention {
+	return postgres.NewStore(now)
 }
 
 // NewSEPADebits builds the SEPA direct debit file of the issued runs (#4697, ADR 0181) over the letterhead with the bank account of the Träger and the field cipher the root binds, on the root's clocks.
@@ -130,7 +130,7 @@ func NewParentSEPAMandates(contracts parentbilling.ContractParties, cipher paren
 	return application.NewParentMandates(postgres.NewStore(now), contracts, cipher, terms, sums, today)
 }
 
-// NewExportHandovers builds the handover of finance exports to the recipient of the Träger (ADR 0218) over the producers of the downloads and the transport the root binds.
+// NewExportHandovers builds the handover of finance exports to the recipient of the Träger (ADR 0218) over the producers of the downloads and the transport the root binds; no write it reaches stamps from the store clock (ADR 0281).
 func NewExportHandovers(exports parentbilling.FinanceExports, debits parentbilling.SEPADebits, transfer parentbilling.FinanceExportTransfer) parentbilling.FinanceExportHandovers {
 	return application.NewExportHandovers(exports, debits, postgres.NewStore(time.Now), transfer)
 }

@@ -166,7 +166,7 @@ func NewCareNoticeHTTP(organizations HolidayOrganizations, settings TraegerBrand
 	notices := parentBillingCompose.NewCareFeeNotices(contracts, parentBillingCareSchools{organizations: organizations},
 		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings), today, now)
 	post := parentBillingLetterPost{settings: settings, delivery: delivery, outcomes: outcomes}
-	letters := parentBillingCompose.NewCareNoticeLetters(newParentBillingLetterheads(settings), contracts, post, post)
+	letters := parentBillingCompose.NewCareNoticeLetters(newParentBillingLetterheads(settings), contracts, post, post, now)
 	return parentBillingHTTP.NewCareNoticeResource(notices, letters, common.RequiresPermission(identityaccess.TraegerRightBillingManage),
 		traegerListRenderer(NewSimpleListRenderer()))
 }
@@ -266,7 +266,7 @@ func NewBillingRunHTTP(settings TraegerBrandingSettings, delivery deliveryRuntim
 	runs, kinds := parentBillingCompose.NewBillingRuns(registrations, parentBillingSettings{settings: settings}, newParentBillingLetterheads(settings), today, now)
 	return parentBillingHTTP.NewBillingRunResource(runs, runs,
 			parentBillingCompose.NewBillingLetters(newParentBillingLetterheads(settings), today, now),
-			parentBillingCompose.NewBillingLetterMail(parentBillingLetterPost{settings: settings, delivery: delivery, outcomes: outcomes}),
+			parentBillingCompose.NewBillingLetterMail(parentBillingLetterPost{settings: settings, delivery: delivery, outcomes: outcomes}, now),
 			requireBilling, traegerListRenderer(NewSimpleListRenderer())),
 		parentBillingHTTP.NewDocumentKindResource(kinds, requireBilling)
 }
@@ -474,7 +474,7 @@ func NewParentBillingHTTP(organizations HolidayOrganizations, settings TraegerBr
 		links:  newHolidayRegistrations(organizations, delivery, healthData, holidayCalendar, settings, logger.With("service", "parent-billing-holiday-registrations"), now),
 		review: review,
 	}
-	rules := parentBillingHTTP.NewRuleResource(parentBillingCompose.NewContributionRules(),
+	rules := parentBillingHTTP.NewRuleResource(parentBillingCompose.NewContributionRules(now),
 		common.RequiresPermission(identityaccess.TraegerRightBillingManage))
 	contributions, allocationBilling := parentBillingCompose.NewHolidayContributions(registrations, parentBillingSettings{settings: settings}, today, now)
 	placeChanges := parentBillingPlaceChanges{workflow: newHolidayAllocation(allocationBilling, review, places, allocation)}

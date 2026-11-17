@@ -60,7 +60,7 @@ func newTraegerPortalOn(t *testing.T, today func() calendar.Date) (*bun.DB, *tra
 	mail := testpkg.NewCapturingMailer()
 	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
 	require.NoError(t, err)
-	routes := traegerPortalRoutesOn(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, today)
+	routes := traegerPortalRoutesOn(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, today, time.Now)
 	return db, &traegerPortalHandler{Handler: testpkg.SessionVerifier(routes), mail: mail}, auth.Auth, unit
 }
 
@@ -78,17 +78,17 @@ func traegerPortalOn(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, options .
 // on days (#6447).
 func traegerPortalWithDays(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar) *traegerPortalHandler {
 	t.Helper()
-	return traegerPortalWithDaysOn(t, db, unit, days, calendar.TodayDate)
+	return traegerPortalWithDaysOn(t, db, unit, days, calendar.TodayDate, time.Now)
 }
 
 // traegerPortalWithDaysOn is traegerPortalWithDays whose day-bound services
-// read today.
-func traegerPortalWithDaysOn(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date) *traegerPortalHandler {
+// read today and whose instant-bound services read now.
+func traegerPortalWithDaysOn(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date, now func() time.Time) *traegerPortalHandler {
 	t.Helper()
 	mail := testpkg.NewCapturingMailer()
 	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
 	require.NoError(t, err)
-	return &traegerPortalHandler{Handler: testpkg.SessionVerifier(traegerPortalRoutesOn(t, db, auth.Auth, unit, days, today)), mail: mail}
+	return &traegerPortalHandler{Handler: testpkg.SessionVerifier(traegerPortalRoutesOn(t, db, auth.Auth, unit, days, today, now)), mail: mail}
 }
 
 // traegerPortalRouter builds the /traeger router over identity, with the
@@ -109,16 +109,16 @@ func traegerPortalRouterWithDays(t *testing.T, db *bun.DB, identity TraegerPorta
 // a test can mount the serving root's family check between the two.
 func traegerPortalRoutes(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar) http.Handler {
 	t.Helper()
-	return traegerPortalRoutesOn(t, db, identity, unit, days, calendar.TodayDate)
+	return traegerPortalRoutesOn(t, db, identity, unit, days, calendar.TodayDate, time.Now)
 }
 
 // traegerPortalRoutesOn is traegerPortalRoutes whose day-bound services read
-// today, the day clock the serving root binds to its real clock.
-func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date) http.Handler {
+// today, the day clock the serving root binds to its real clock, and whose
+// instant-bound services read now. Most callers keep the real instant clock:
+// the contract and billing routes compare their stamps with PostgreSQL's
+// now(), as before #7104.
+func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date, now func() time.Time) http.Handler {
 	t.Helper()
-	// The instant clock stays the real one: the contract and billing routes
-	// compare their stamps with PostgreSQL's now(), as before #7104.
-	now := time.Now
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)

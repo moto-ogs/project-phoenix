@@ -247,6 +247,9 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 	t.Parallel()
 	testpkg.SetupIsolatedTestDB(t)
 	f := newReviewFixture(t, "Familie Frist")
+	// The writing routes run on the fixture's instant clock, so the trail
+	// entries carry its instant and not the real or the database's (#7295).
+	f.traeger = traegerPortalWithDaysOn(t, f.db, testpkg.TenantRuntime(t, f.db), owners.HolidayTestSchoolCalendar{}, holidayFixtureToday, holidayFixtureNow)
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.siblings, map[string]any{"debtor_number": "10 4711"}).Code)
 
 	summer := januaryHolidays(f.office)
@@ -284,6 +287,13 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 		var count int
 		require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM enrollment.holiday_registrations WHERE id = ?`, f.siblings).Scan(ctx, &count))
 		return count
+	}
+	for _, table := range []string{"family_billing_events", "child_debtor_number_events"} {
+		var stamps []time.Time
+		require.NoError(t, f.db.NewRaw(`SELECT DISTINCT occurred_at FROM parent_billing.`+table+` WHERE organization_id = ?`,
+			f.office.organization).Scan(ctx, &stamps))
+		require.Len(t, stamps, 1, "one write stamps the trail of %s", table)
+		assert.True(t, stamps[0].Equal(holidayFixtureNow()), "the owner's clock stamps %s, not %v", table, stamps[0])
 	}
 
 	// The winter period ends on 15.01.2027; its registrations go the day
