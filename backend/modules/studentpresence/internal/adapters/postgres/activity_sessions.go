@@ -231,7 +231,7 @@ func (s *Store) ReopenActivitySession(ctx context.Context, instanceID, activeGro
 	started := time.Now()
 	err = db.NewUpdate().Model(&row).ModelTableExpr(`active.activity_sessions`).
 		Set("status = 'active'").Set("active_group_id = ?", activeGroupID).Set("completed_at = NULL").Set("completed_by = NULL").
-		Set("reopen_until = NULL").Set("completion_snapshot = NULL").Set("updated_at = now()").
+		Set("reopen_until = NULL").Set("completion_snapshot = NULL").Set("updated_at = "+statementClock).
 		Where("tenant_id = ?", tenantID).Where("schedule_instance_id = ?", instanceID).Where("status = 'completed'").
 		Returning(activitySessionColumns).Scan(ctx)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}

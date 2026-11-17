@@ -42,12 +42,12 @@ type SessionAttendanceStore interface {
 	CloseOpenParticipants(context.Context, []int64, time.Time) (Stats, error)
 	ReconcileParticipantInterval(context.Context, int64, time.Time, *time.Time, time.Time, *time.Time) (Stats, error)
 	PatchSessionAttendance(context.Context, int64, studentpresence.SessionAttendancePatch, time.Time) (Stats, error)
-	// The writers stamp updated_at with the transaction time: Timetable's
-	// Reopen orders it against completed_at, the database's transaction
-	// timestamp of the completion (ADR 0281). An UPDATE sets now(), an INSERT
-	// takes the column default now() (EXCLUDED.updated_at on conflict). A
-	// time argument is the owner's instant of the change (check-in,
-	// checkout, manual decision).
+	// The writers stamp updated_at with the database's statement time
+	// (clock_timestamp()), in UPDATEs, INSERTs and their conflict branches:
+	// Timetable's Reopen orders it against completed_at, which the
+	// completion reads the same way after its own writes (ADR 0281). A time
+	// argument is the owner's instant of the change (check-in, checkout,
+	// manual decision).
 	TransitionParticipants(context.Context, []int64, string, string) (Stats, error)
 	MarkParticipantsNotScheduled(context.Context, []int64) (Stats, error)
 	RestoreSessionAttendance(context.Context, studentpresence.SessionAttendanceRestore) (Stats, error)

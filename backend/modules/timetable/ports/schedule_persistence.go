@@ -9,9 +9,10 @@ import (
 )
 
 type ActivityRecoveryRecords interface {
-	// CompletionTimestamp returns PostgreSQL's stable time for the current
-	// transaction. It is the baseline for distinguishing completion writes from
-	// later attendance and supervisor edits during reopen.
+	// CompletionTimestamp returns the database's statement time
+	// (clock_timestamp()), read after the completion's own writes. It is the
+	// baseline for distinguishing completion writes from later attendance,
+	// plan and supervisor edits during reopen.
 	CompletionTimestamp(ctx context.Context) (time.Time, error)
 	// LockOpenVisits takes FOR UPDATE locks on every still-open visit of the
 	// group so completion can snapshot the same rows EndActivitySession closes.
