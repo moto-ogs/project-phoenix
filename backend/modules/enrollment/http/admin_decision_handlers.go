@@ -750,6 +750,9 @@ func (rs *Resource) decideErrorRules(r *http.Request) []common.ErrorRule {
 		{Target: capability.ErrExistingStudentAlreadyRequested, Render: func(err error) render.Renderer {
 			return common.ErrorConflictWithCode(err, common.CodeEnrollmentChildAlreadyRequested)
 		}},
+		{Target: capability.ErrWithoutCarePlaceNeedsSchoolYear, Render: func(err error) render.Renderer {
+			return common.ErrorConflictWithCode(err, common.CodeEnrollmentWithoutCarePlaceSchoolYearOnly)
+		}},
 		{Match: rs.Failures.Transient, Render: common.ErrorServiceUnavailable},
 	}
 }

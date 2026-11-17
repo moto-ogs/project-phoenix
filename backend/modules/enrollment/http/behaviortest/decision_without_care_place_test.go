@@ -153,3 +153,35 @@ func TestDecisionService_FullChildQuotaHoldsOnlyThePlace(t *testing.T) {
 	assert.False(t, mark)
 	assert.Equal(t, class, after, "the class stays")
 }
+
+// TestDecisionService_HolidayApprovalRefusesAChildWithoutCarePlace keeps a
+// child without an OGS place in its class (#4803 review): a holiday phase
+// would give it the place and end its care with the holidays, so the
+// approval is refused and the child keeps its mark.
+func TestDecisionService_HolidayApprovalRefusesAChildWithoutCarePlace(t *testing.T) {
+	t.Parallel()
+
+	env := setupDecisionTest(t)
+	ctx := testpkg.Ctx(t)
+
+	env.sourcePhase.Kind = capability.PhaseKindHoliday
+	env.sourcePhase.ServiceStartDate = capability.Date(calendar.NewDate(2030, 10, 14))
+	env.sourcePhase.ServiceEndDate = capability.Date(calendar.NewDate(2030, 10, 25))
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, OwnerPhaseForTest(env.sourcePhase)))
+
+	child := testpkg.CreateTestStudent(t, env.db, "Nele", "Ferien", "2b")
+	testpkg.MarkTestStudentWithoutCarePlace(t, env.db, child.ID)
+
+	requestID, childID := submitReEnrollment(t, env, "Eltern", "Ferien", "holiday-without-place@example.com", nil,
+		"Nele", "Ferien", map[string]any{"agb": true, "data_processing": true, "email_contact": true, "photo": true})
+	matchChildToExistingStudent(t, env, childID, child.ID)
+	_, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), env.decision.Decide, enrollmentAPI.DecideInput{
+		RequestID: requestID, ChildID: childID, Status: capability.DecisionApproved, ReviewedBy: env.creatorID,
+	})
+	require.ErrorIs(t, err, capability.ErrWithoutCarePlaceNeedsSchoolYear)
+
+	var mark bool
+	require.NoError(t, env.db.NewRaw(`SELECT without_care_place FROM users.student_school_memberships
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID).Scan(ctx, &mark))
+	assert.True(t, mark, "the child keeps its mark")
+}

@@ -115,6 +115,9 @@ func (d *Decisions) renewExistingStudent(ctx context.Context, child *enrollmentN
 	if existing == nil {
 		return nil, fmt.Errorf("decision: existing student %d not found", studentID)
 	}
+	if existing.WithoutCarePlace && phase.Kind != enrollmentNative.PhaseKindSchoolYear {
+		return nil, fmt.Errorf("decision: student %d: %w", studentID, enrollmentNative.ErrWithoutCarePlaceNeedsSchoolYear)
+	}
 	beforeStatus := existing.Status
 	plan := d.approvalActivationPlan(ctx, phase)
 	previousSchoolClass := existing.SchoolClass
