@@ -427,3 +427,9 @@ func (req *StudentRequest) hasDeparturePlan() bool {
 	return req.DepartureDays != nil || req.AllowedDepartureModes != nil || req.DepartureCompanionNote != nil ||
 		req.PickupDays != nil || req.BusDays != nil
 }
+
+// dropDeparturePlan leaves the stored way home untouched.
+func (req *UpdateStudentRequest) dropDeparturePlan() {
+	req.DepartureDays, req.AllowedDepartureModes, req.DepartureCompanionNote = nil, nil, nil
+	req.PickupStatus, req.PickupDays, req.Bus, req.BusDays = nil, nil, nil, nil
+}
