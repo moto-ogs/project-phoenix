@@ -355,9 +355,8 @@ function childNote(
     return [statusLabel(child.status), bySchool].filter(Boolean).join(", ");
   }
   if (child.unreported) return "ohne Meldung";
-  if (list === "kinder" && (child.list_entry || child.without_care_place)) {
+  if (list === "kinder" && (child.list_entry || child.without_care_place))
     return "keine Betreuung";
-  }
   return null;
 }
 

@@ -51,9 +51,10 @@ Deshalb erreichen sie Familien ohne OGS-Platz nicht. Ein zweiter Weg für Eltern
   (`AdministrativelyVisibleOn`) behält das Kind. Die Schule pflegt es dort und
   lädt die Eltern ein. Die Klassenliste der Tagesansicht zeigt es unter seiner
   Kind-ID als „Keine Betreuung“, wie bisher einen Eintrag. Krankmeldung,
-  Klassenfahrt, die Anwesenheit am Vormittag und „Fehlt ohne Meldung“ gelten
-  für das Kind wie für jedes andere. Abholung, Übergabe an die OGS,
-  Tageshinweise und Rückmeldungen zu Hausaufgaben gibt es für das Kind nicht.
+  die Anwesenheit am Vormittag und „Fehlt ohne Meldung“ gelten für das Kind
+  wie für jedes andere. Abholung, Übergabe an die OGS, Tageshinweise,
+  Rückmeldungen zu Hausaufgaben und die Meldung von Ausflug oder Klassenfahrt
+  an die OGS gibt es für das Kind nicht.
   Die Fehlzeitenliste zählt das Kind an jedem Tag des Zeitraums.
   Elternsprechtag, Kalender und Elternbriefe lesen den Schul-Roster und
   erreichen die Familie ohne Änderung.

@@ -349,10 +349,8 @@ export function ClassDayClass({
       ),
     [rows],
   );
-  // Klassenlisteneinträge (#2382) und Kinder ohne OGS-Platz (#4803): "Keine
-  // Betreuung" ist eine neutrale Verbands-Aussage, kein "geht nach Hause" —
-  // eigene Sektion statt der Übergabe-Kategorien. Ein krankes Kind ohne
-  // OGS-Platz steht bei den Abwesenden.
+  // Kinder ohne Betreuung stehen neutral in einer eigenen Sektion.
+  // Bei Kindern mit Datensatz hat ein Tagesstatus Vorrang.
   const noCare = useMemo(
     () =>
       rows.filter(
@@ -374,7 +372,7 @@ export function ClassDayClass({
       : null;
   const isToday = dateISO === today;
   // Beobachtungen der OGS (#4797): nur die Lehrkraft der Klasse bekommt den
-  // Link, und nur bei Kindern mit OGS-Datensatz.
+  // Link, und nur bei Kindern mit Betreuungsplatz.
   const sharedNotesHref =
     report?.can_read_shared_notes === true
       ? (row: ClassDayRow) => {
@@ -388,8 +386,7 @@ export function ClassDayClass({
   const classHints = report && !weekend ? (report.class_day_hints ?? []) : [];
   const canWriteDayHints =
     report?.can_write_day_hints === true && isAssignedClass && !weekend;
-  // Nur Kinder mit OGS-Datensatz: ein Klassenlisteneintrag hat keine
-  // Kindakte, an der ein Hinweis stehen könnte.
+  // Hinweise an die OGS sind nur für Kinder mit Betreuungsplatz.
   const hintChildren = rows.filter(
     (row) => !row.list_entry && !row.without_care_place && row.student_id > 0,
   );
@@ -494,12 +491,14 @@ export function ClassDayClass({
     }
   };
 
-  // Nur Kinder mit eigenem Datensatz lassen sich melden, auch Kinder ohne
-  // OGS-Platz (#4803); Klassenlisteneinträge ("Keine Betreuung") nicht.
+  // Ausflüge an die OGS melden: nur Kinder mit Betreuungsplatz.
   const tripStudents = useMemo(
     () =>
       rows
-        .filter((row) => !row.list_entry && row.student_id > 0)
+        .filter(
+          (row) =>
+            !row.list_entry && !row.without_care_place && row.student_id > 0,
+        )
         .map((row) => ({
           id: String(row.student_id),
           first_name: row.first_name,

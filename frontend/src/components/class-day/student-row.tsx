@@ -175,9 +175,8 @@ export function StudentRow({
             color={LOCATION_COLORS.WARNING}
           />
         ) : null}
-        {/* Klassenlisteneintrag (#2382): Kind ohne OGS-Datensatz — eindeutig
-            als "Keine Betreuung" gekennzeichnet, unabhängig von Anmeldephasen. */}
-        {row.list_entry || (row.without_care_place && !row.status) ? (
+        {/* Kinder ohne Betreuung, unabhängig von Anmeldephasen. */}
+        {row.list_entry || row.without_care_place ? (
           <StatusColorBadge
             label="Keine Betreuung"
             color={LOCATION_COLORS.HOME}
