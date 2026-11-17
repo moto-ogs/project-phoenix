@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
@@ -13,7 +14,7 @@ func (s *Store) CreatePickupException(ctx context.Context, v careplan.PickupExce
 		return careplan.PickupException{}, domain.OperationStats{}, err
 	}
 	row := pickupExceptionFromPublic(v)
-	row.TenantID = tid
+	row.TenantID, row.UpdatedAt = tid, time.Time{}
 	stats, err := createStudentScheduleRow(ctx, db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_pickup_exceptions`), "create pickup exception")
 	return pickupExceptionToPublic(row), stats, err
 }
@@ -24,8 +25,10 @@ func (s *Store) UpdatePickupException(ctx context.Context, v careplan.PickupExce
 	}
 	row := pickupExceptionFromPublic(v)
 	row.TenantID = tid
-	row.UpdatedAt = s.currentTime()
-	return execGuarded(ctx, db.NewUpdate().Model(&row).ModelTableExpr(`schedule.student_pickup_exceptions AS "student_pickup_exception"`).Where(`"student_pickup_exception".id = ?`, row.ID).Where(`"student_pickup_exception".tenant_id = ?`, tid), "update pickup exception", careplan.ErrStudentScheduleNotFound)
+	// The column default stamps updated_at, as it does on insert: a
+	// correction orders it against the trigger-stamped updated_at of the
+	// care request whose decision wrote the row (ADR 0281, point 4).
+	return execGuarded(ctx, db.NewUpdate().Model(&row).ModelTableExpr(`schedule.student_pickup_exceptions AS "student_pickup_exception"`).ExcludeColumn("updated_at").Set("updated_at = DEFAULT").Where(`"student_pickup_exception".id = ?`, row.ID).Where(`"student_pickup_exception".tenant_id = ?`, tid), "update pickup exception", careplan.ErrStudentScheduleNotFound)
 }
 func (s *Store) DeletePickupException(ctx context.Context, id int64) (domain.OperationStats, error) {
 	db, tid, err := s.databaseForWrite(ctx, "delete pickup exception")

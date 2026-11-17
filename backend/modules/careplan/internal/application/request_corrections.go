@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -133,7 +134,7 @@ func (s *RequestCorrections) revertPickupException(ctx context.Context, request 
 	if row == nil {
 		return nil
 	}
-	if request.ReviewedAt != nil && row.UpdatedAt.After(*request.ReviewedAt) {
+	if editedAfterDecision(request, row.UpdatedAt) {
 		return fmt.Errorf("%w: die Abholzeit am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, row.ExceptionDate.Format("02.01.2006"))
 	}
 	if row.ExcusedAuto {
@@ -152,10 +153,21 @@ func (s *RequestCorrections) revertDepartureException(ctx context.Context, reque
 	if row == nil {
 		return nil
 	}
-	if request.ReviewedAt != nil && row.UpdatedAt.After(*request.ReviewedAt) {
+	if editedAfterDecision(request, row.UpdatedAt) {
 		return fmt.Errorf("%w: die Abholart am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, row.ExceptionDate.Format("02.01.2006"))
 	}
 	return s.Records.DeleteDepartureException(ctx, row.ID)
+}
+
+// editedAfterDecision reports whether a row the decision wrote changed in a
+// later transaction. Both stamps are database transaction time: the trigger
+// stamps the departure exception and the request, the column default the
+// pickup exception. The decision writes its rows and the request in one
+// transaction, so an untouched row carries the request's stamp; reviewed_at
+// is the owner's clock and cannot be ordered against them (ADR 0281,
+// point 4).
+func editedAfterDecision(request *carerequests.Request, rowUpdatedAt time.Time) bool {
+	return request.ReviewedAt != nil && rowUpdatedAt.After(request.UpdatedAt)
 }
 
 // latestPickupRows reads the generation written by the latest decision or
