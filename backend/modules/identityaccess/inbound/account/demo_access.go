@@ -54,14 +54,14 @@ type DemoOrigins struct {
 	School  func(schoolSlug string) string
 }
 
-// NewDemoResource builds the demo routes; now is the root's clock, nil the
-// real one, as RootEnvironment.Now is.
+// NewDemoResource builds the demo routes; now is the root's clock
+// (RootEnvironment.Now) and required.
 func NewDemoResource(accesses DemoAccesses, origins DemoOrigins, now func() time.Time) (*DemoResource, error) {
 	if accesses == nil || origins.Waiting == "" || origins.School == nil {
 		return nil, errors.New("demo routes require the capability and the entry origins")
 	}
 	if now == nil {
-		now = time.Now
+		return nil, errors.New("demo routes require the root's clock")
 	}
 	origins.Waiting = strings.TrimRight(origins.Waiting, "/")
 	return &DemoResource{accesses: accesses, origins: origins, now: now}, nil
@@ -164,6 +164,9 @@ type demoSessionFacts struct {
 	// FixedRole: the standing school's session keeps all functions; the
 	// banner shows its role without a switch.
 	FixedRole bool `json:"fixed_role"`
+	// Traeger: the school has a Träger of its own, so the banner offers the
+	// demo role Träger-Büro (ADR 0271).
+	Traeger bool `json:"traeger"`
 }
 
 // createSession redeems the token. With a demo role it first switches the
@@ -185,7 +188,7 @@ func (rs *DemoResource) createSession(w http.ResponseWriter, r *http.Request) {
 	}
 	render.JSON(w, r, demoSessionResponse{
 		TokenResponse: portalauth.TokenResponse{AccessToken: entry.AccessToken, RefreshToken: entry.RefreshToken},
-		Demo:          demoSessionFacts{AccessID: strconv.FormatInt(entry.AccessID, 10), Role: entry.Role, Source: entry.Source, FixedRole: entry.FixedRole},
+		Demo:          demoSessionFacts{AccessID: strconv.FormatInt(entry.AccessID, 10), Role: entry.Role, Source: entry.Source, FixedRole: entry.FixedRole, Traeger: entry.Traeger},
 	})
 }
 

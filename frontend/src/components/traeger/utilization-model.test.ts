@@ -119,6 +119,24 @@ describe("utilization presets", () => {
     expect(utilizationPresets("2026-03-02")[2]?.window.from).toBe("2025-08-01");
   });
 
+  it("keeps a month window whole when the earlier month is shorter", () => {
+    // 31.12. minus drei Monate gibt es nicht als 31.09.: Das Fenster beginnt
+    // am Tag nach dem 30.09., nicht einen Tag später.
+    const yearEnd = utilizationPresets("2026-12-31");
+    expect(yearEnd[1]?.window).toEqual({
+      from: "2026-10-01",
+      to: "2026-12-31",
+    });
+    expect(yearEnd[3]?.window).toEqual({
+      from: "2026-01-01",
+      to: "2026-12-31",
+    });
+    // 31.05. minus drei Monate: der Februar endet am 28.
+    expect(utilizationPresets("2026-05-31")[1]?.window.from).toBe("2026-03-01");
+    // Vom Schalttag zwölf Monate zurück: der 28.02. des Vorjahres.
+    expect(utilizationPresets("2028-02-29")[3]?.window.from).toBe("2027-03-01");
+  });
+
   it("picks days for a month, weeks for a season and months beyond", () => {
     expect(defaultGranularity(23)).toBe("day");
     expect(defaultGranularity(66)).toBe("week");

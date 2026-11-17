@@ -4,6 +4,7 @@ package api
 
 import (
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -29,6 +30,12 @@ func (m StaffTestModule) NewStaffMembershipRuntime(db transactionruntime.Databas
 // NewStaffTestModule composes the staff routes' People Directory side and
 // returns it with the Workforce owner the routes administer staff through.
 func NewStaffTestModule(db transactionruntime.Database, unit tenant.UnitOfWork) (StaffTestModule, WorkforceTestModule, error) {
+	return NewStaffTestModuleWithClock(db, unit, time.Now)
+}
+
+// NewStaffTestModuleWithClock is NewStaffTestModule with the staff
+// offboarding and its planned exits on the clock now.
+func NewStaffTestModuleWithClock(db transactionruntime.Database, unit tenant.UnitOfWork, now func() time.Time) (StaffTestModule, WorkforceTestModule, error) {
 	work, users, err := NewWorkforceTestModule(db, unit)
 	if err != nil {
 		return StaffTestModule{}, WorkforceTestModule{}, err
@@ -46,7 +53,7 @@ func NewStaffTestModule(db transactionruntime.Database, unit tenant.UnitOfWork) 
 		return StaffTestModule{}, WorkforceTestModule{}, err
 	}
 	membershipRuntime := func(db transactionruntime.Database, logger *slog.Logger, hooks StaffMembershipHooks) StaffMembershipRuntime {
-		return NewStaffMembershipRuntime(users, groups.Education, work.TimeTracking.StaffDay, nil, db, auth.Auth, logger, hooks)
+		return NewStaffMembershipRuntime(users, groups.Education, work.TimeTracking.StaffDay, nil, db, auth.Auth, logger, hooks, now)
 	}
 	return StaffTestModule{Users: users, PeopleDirectory: people, membershipRuntime: membershipRuntime}, work, nil
 }

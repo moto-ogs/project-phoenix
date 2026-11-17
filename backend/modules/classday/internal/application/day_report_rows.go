@@ -51,10 +51,11 @@ func buildClassDayReportFor(schoolClass string, date calendar.Date, weekday, pha
 		report.Rows = append(report.Rows, dayRow)
 		report.Totals.Students++
 		switch {
-		case row.ListEntry:
-			// A class-list-only entry neither stays nor leaves — "Keine
-			// Betreuung" is its own neutral roster bucket, never a
-			// "geht nach Hause" claim.
+		case row.ListEntry, row.WithoutCarePlace && dayRow.Status == "":
+			// A class-list-only entry, and a child without an OGS place
+			// (#4803) whom no day status keeps away, neither stays nor
+			// leaves — "Keine Betreuung" is its own neutral roster bucket,
+			// never a "geht nach Hause" claim.
 			report.Totals.ListEntries++
 		case dayRow.Status != "":
 			report.Totals.Absent++
@@ -101,7 +102,7 @@ func classDayRow(row DayRosterRow, weekday string, facts classDayFacts) classday
 	status := facts.statuses[row.StudentID]
 	// A class-list-only entry has no care plan at all (#2382): it can
 	// neither deviate from one nor carry a report time.
-	if row.ListEntry {
+	if row.NoCare() {
 		pickupChanged, pickupRegular = false, ""
 	}
 	return classday.DayRow{
@@ -110,8 +111,11 @@ func classDayRow(row DayRosterRow, weekday string, facts classDayFacts) classday
 		LastName:    row.LastName,
 		ListEntry:   row.ListEntry,
 		ListEntryID: row.ListEntryID,
-		GroupName:   row.GroupName,
-		Registered:  row.Registered,
+		// A child without an OGS place (#4803) is "Keine Betreuung" like a
+		// list entry, yet a student: its status day still shows.
+		WithoutCarePlace: row.WithoutCarePlace,
+		GroupName:        row.GroupName,
+		Registered:       row.Registered,
 		// The materialized care plan is the current truth: a weekday the
 		// parents struck from the plan beats the approved offering — the
 		// same source the effective times above already come from.
@@ -140,7 +144,7 @@ func classDayRow(row DayRosterRow, weekday string, facts classDayFacts) classday
 // statement, and "Keine Angabe" would suggest a plan gap the office should
 // fill.
 func classDayRowDeparture(row DayRosterRow, weekday string, facts classDayFacts) string {
-	if weekday == "" || row.ListEntry {
+	if weekday == "" || row.NoCare() {
 		return ""
 	}
 	if departure := facts.departures[row.StudentID]; departure != "" {

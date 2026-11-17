@@ -5,7 +5,6 @@
 // Entfernen gibt seine Dateien an den Download zurück.
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import {
   destinationText,
   EXPORT_RECIPIENT_PATH,
@@ -20,22 +19,20 @@ import {
   ExportHandoverHistoryCard,
   ExportRecipientFormCard,
 } from "~/components/traeger/export-recipient-cards";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { JumpButton } from "~/components/ui/jump-button";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import {
   deleteExportRecipient,
   type ExportRecipient,
-  type ExportRecipientPage,
   fetchExportRecipient,
   saveExportRecipient,
 } from "~/lib/traeger-export-handovers-api";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerExportRecipientPage" });
 
 /** Where a failed handover is sent again. */
 const EXPORTS_PATH = "/traeger/abrechnung/exporte";
@@ -139,28 +136,17 @@ function RecipientStateNotice({
 export default function TraegerExportRecipientPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [page, setPage] = useState<ExportRecipientPage | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      setPage(await fetchExportRecipient(id));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_export_recipient_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "der Empfänger",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, id, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const {
+    data: page,
+    loading,
+    error,
+    mutate,
+  } = useTraegerResource(
+    id ? traegerBillingKeys.exportRecipient(id) : null,
+    () => fetchExportRecipient(id),
+    "der Empfänger",
+  );
+  const invalidate = useInvalidateFamily();
 
   const recipient = page?.recipient;
   const last = recipient?.lastHandover;
@@ -189,9 +175,9 @@ export default function TraegerExportRecipientPage() {
           />
         ) : null
       }
-      statsLoading={!page && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!page && !pageLoad.error}
+      statsLoading={loading}
+      error={error}
+      loading={loading}
     >
       {page && recipient ? (
         <>
@@ -200,12 +186,16 @@ export default function TraegerExportRecipientPage() {
             recipient={recipient}
             onSave={async (draft) => {
               const saved = await saveExportRecipient(recipient.id, draft);
-              setPage((current) =>
-                current ? { ...current, recipient: saved } : current,
+              await mutate(
+                { ...page, recipient: saved },
+                { revalidate: false },
               );
+              // The list shows whether the recipient is ready.
+              void invalidate(traegerBillingKeys.exportRecipients());
             }}
             onDelete={async () => {
               await deleteExportRecipient(recipient.id);
+              void invalidate(traegerBillingKeys.exportRecipients());
               router.push(traegerPath(EXPORT_RECIPIENT_PATH));
             }}
           />

@@ -25,12 +25,12 @@ func TestFormerModelGetterExceptionsHaveHonestShapes(t *testing.T) {
 	t.Parallel()
 
 	tests := []formerGetterShape{
-		{name: "auth event", model: (*AuthEvent)(nil), timestampField: "CreatedAt", timestampBun: "created_at,notnull,default:now()"},
-		{name: "data access log", model: (*DataAccessLog)(nil), timestampField: "AccessedAt", timestampBun: "accessed_at,notnull,default:now()"},
-		{name: "data deletion", model: (*DataDeletion)(nil), timestampField: "DeletedAt", timestampBun: "deleted_at,notnull,default:now()"},
-		{name: "deviation event", model: (*DeviationEvent)(nil), timestampField: "OccurredAt", timestampBun: "occurred_at,notnull,default:now()"},
-		{name: "enrollment offering adjustment", model: (*EnrollmentOfferingAdjustment)(nil), timestampField: "ChangedAt", timestampBun: "changed_at,notnull,default:now()"},
-		{name: "guardian change", model: (*GuardianChange)(nil), timestampField: "ChangedAt", timestampBun: "changed_at,notnull,default:now()"},
+		{name: "auth event", model: (*AuthEvent)(nil), timestampField: "CreatedAt", timestampBun: "created_at,nullzero,notnull"},
+		{name: "data access log", model: (*DataAccessLog)(nil), timestampField: "AccessedAt", timestampBun: "accessed_at,nullzero,notnull"},
+		{name: "data deletion", model: (*DataDeletion)(nil), timestampField: "DeletedAt", timestampBun: "deleted_at,nullzero,notnull"},
+		{name: "deviation event", model: (*DeviationEvent)(nil), timestampField: "OccurredAt", timestampBun: "occurred_at,nullzero,notnull"},
+		{name: "enrollment offering adjustment", model: (*EnrollmentOfferingAdjustment)(nil), timestampField: "ChangedAt", timestampBun: "changed_at,nullzero,notnull"},
+		{name: "guardian change", model: (*GuardianChange)(nil), timestampField: "ChangedAt", timestampBun: "changed_at,nullzero,notnull"},
 	}
 
 	for _, tt := range tests {

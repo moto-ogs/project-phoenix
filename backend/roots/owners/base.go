@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	mealInputs "github.com/moto-ogs/project-phoenix/modules/mealplan"
 
 	carePlanModule "github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -40,8 +42,8 @@ func NewCleanupTimetable(db transactionruntime.Database) (timetableModule.Capabi
 	return NewUnobservedTimetable(db, students, rooms, time.Now)
 }
 
-// newTimetable composes the Timetable owner over now; nil is the real clock
-// and decides on the Berlin calendar day.
+// newTimetable composes the Timetable owner over now, the root's clock; it
+// decides on the Berlin calendar day.
 func newTimetable(db transactionruntime.Database, students peopleModule.StudentQuery, rooms facilitiesModule.Query, membership schoolMembershipModule.Capability, observe func(timetableCompose.Observation), now func() time.Time) (timetableModule.Owner, error) {
 	return timetableCompose.New(timetableCompose.Dependencies{
 		LockStaffAssignments: func(ctx context.Context, staffIDs []int64) error {
@@ -54,12 +56,14 @@ func newTimetable(db transactionruntime.Database, students peopleModule.StudentQ
 
 // ComposeSchoolMembership composes the observed School Membership owner. A
 // staff member is School Membership's membership row plus Workforce's
-// employment profile (#2753); the membership owner composes the two.
-func ComposeSchoolMembership(db transactionruntime.Database) (schoolMembershipModule.Owner, error) {
+// employment profile (#2753); the membership owner composes the two. Its
+// writes and reads decide on the Berlin day of now, the root's clock.
+func ComposeSchoolMembership(db transactionruntime.Database, now func() time.Time) (schoolMembershipModule.Owner, error) {
 	dependencies, err := SchoolMembershipDependencies(db)
 	if err != nil {
 		return nil, err
 	}
+	dependencies.Today, dependencies.Now = calendar.CalendarDateClock(now), now
 	return schoolMembershipCompose.New(dependencies)
 }
 
@@ -75,12 +79,13 @@ func ComposePendingWindows(db transactionruntime.Database) (schoolMembershipModu
 
 // ComposeStaffReinstatement composes School Membership's observed staff
 // lifecycle for its Wiederaufnahme (ADR 0021), which the identity chain uses
-// when a former staff member is invited again.
-func ComposeStaffReinstatement(db transactionruntime.Database) (*schoolMembershipModule.Offboarding, error) {
+// when a former staff member is invited again, on the root clock now.
+func ComposeStaffReinstatement(db transactionruntime.Database, now func() time.Time) (*schoolMembershipModule.Offboarding, error) {
 	dependencies, err := SchoolMembershipDependencies(db)
 	if err != nil {
 		return nil, err
 	}
+	dependencies.Now = now
 	return schoolMembershipCompose.NewOffboarding(dependencies)
 }
 

@@ -13,7 +13,8 @@ import (
 // of #2791: only a live membership in status active whose enrollment has not
 // ended before the capture date counts, including an immediately activated
 // child whose formal start is still ahead. Pending, inactive (care ended),
-// alumnus and soft-deleted memberships do not.
+// alumnus and soft-deleted memberships do not, nor a child without an OGS
+// place (#4803).
 func TestActiveStudentCountsCountOnlyLiveActiveMemberships(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -36,6 +37,8 @@ func TestActiveStudentCountsCountOnlyLiveActiveMemberships(t *testing.T) {
 	ended := testpkg.CreateTestStudent(t, db, "Beendet", "Aktiv", "1a")
 	_, err = db.ExecContext(ctx, "UPDATE users.student_school_memberships SET enrolled_until = '2099-06-14' WHERE tenant_id = ? AND student_profile_id = ?", tenantID, ended.ID)
 	require.NoError(t, err)
+	withoutPlace := testpkg.CreateTestStudent(t, db, "Ohne", "Platz", "1a")
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, withoutPlace.ID)
 	boundary := testpkg.CreateTestStudent(t, db, "Am", "Stichtag", "1a")
 	_, err = db.ExecContext(ctx, "UPDATE users.student_school_memberships SET enrolled_from = '2099-06-15', enrolled_until = '2099-06-15' WHERE tenant_id = ? AND student_profile_id = ?", tenantID, boundary.ID)
 	require.NoError(t, err)

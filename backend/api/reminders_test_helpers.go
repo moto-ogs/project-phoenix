@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	careplanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
@@ -62,12 +64,12 @@ func NewRemindersTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 	}
 	baseline, err := careplanCompose.NewPickupBaselines(carePlan, approvedOfferings, func(ctx context.Context) (bool, error) {
 		return settings.Settings.ResolveBool(ctx, configModels.KeyEnrollmentBookingsAuthoritative)
-	})
+	}, calendar.CalendarDateClock(clocks...))
 	if err != nil {
 		return RemindersTestModule{}, owners.SettingsTestModule{}, err
 	}
 	autoExcusal, err := careplanCompose.NewPickupAutoExcusal(careplanCompose.PickupExcusalDependencies{
-		DB: db.Pool(), Records: carePlan, Baselines: baseline, Blocks: owners.NewLoggedStudentPresence(db, slog.Default()), Preview: owners.NewPickupExcusalTimetable(r.Timetable, owners.NewPartialAbsencePreview(db)),
+		DB: db.Pool(), Records: carePlan, Baselines: baseline, Blocks: owners.NewLoggedStudentPresence(db, slog.Default()), Preview: owners.NewPickupExcusalTimetable(r.Timetable, owners.NewPartialAbsencePreview(db)), Today: calendar.CalendarDateClock(clocks...),
 	})
 	if err != nil {
 		return RemindersTestModule{}, owners.SettingsTestModule{}, err
@@ -76,7 +78,7 @@ func NewRemindersTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 	if err != nil {
 		return RemindersTestModule{}, owners.SettingsTestModule{}, err
 	}
-	pickup, err := careplanCompose.NewPickupSchedules(db.Pool(), carePlan, baseline, autoExcusal, pickupStudents, slog.Default(), nil)
+	pickup, err := careplanCompose.NewPickupSchedules(db.Pool(), carePlan, baseline, autoExcusal, pickupStudents, slog.Default(), calendar.CalendarDateClock(clocks...))
 	if err != nil {
 		return RemindersTestModule{}, owners.SettingsTestModule{}, err
 	}

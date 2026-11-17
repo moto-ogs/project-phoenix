@@ -407,7 +407,8 @@ func newerRegistration(candidate, incumbent *deliveryModels.PushSubscription) bo
 // staff-side portals an event reaches. For a catalogue type the catalogue
 // decides: every staff type reaches the OGS portal, the school portal is
 // added for the types it offers, and a school-only type (#4792) reaches the
-// school portal alone.
+// school portal alone. A PortalSchool event narrows a catalogue type to moto
+// schule without making a type available in a portal it does not offer.
 //
 // TypeTest is the exception. It carries no catalogue entry and exists to prove
 // one thing: that the portal the person is looking at receives notifications.
@@ -420,6 +421,9 @@ func deliversToStaffPortal(event Event) bool {
 	if event.Type == TypeTest {
 		return event.Portal != PortalSchool
 	}
+	if event.Portal == PortalSchool {
+		return false
+	}
 	def, ok := GetType(event.Type)
 	return !ok || def.Portal != PortalSchool
 }
@@ -429,7 +433,7 @@ func deliversToSchoolPortal(event Event) bool {
 		return event.Portal == PortalSchool
 	}
 	def, ok := GetType(event.Type)
-	return ok && typeDeliversToSchoolPortal(def)
+	return event.Portal != PortalStaff && ok && typeDeliversToSchoolPortal(def)
 }
 
 func (c *webPushChannel) sendAllSynchronously(ctx context.Context, event Event, payload []byte, subs []*deliveryModels.PushSubscription) error {

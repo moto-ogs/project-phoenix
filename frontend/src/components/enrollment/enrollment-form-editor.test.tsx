@@ -1,18 +1,35 @@
 import {
   act,
   fireEvent,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { StrictMode } from "react";
+import { StrictMode, type ReactElement, type ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Reads run through real SWR, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 
 // useTenantMutate scopes its keys to the signed-in account (#5006).
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "1" }, expires: "2099-01-01" },
+    data: {
+      user: { id: "1", scope: "tenant", tenantId: 42 },
+      expires: "2099-01-01",
+    },
     status: "authenticated",
   }),
 }));
@@ -63,11 +80,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
     show: mocks.showActionError,
     showMessage: mocks.showActionMessage,
   }),
-}));
-
-vi.mock("~/lib/swr", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useSWRAuth: () => ({ data: [], error: undefined, isLoading: false }),
 }));
 
 vi.mock("./rollover-form", async () =>

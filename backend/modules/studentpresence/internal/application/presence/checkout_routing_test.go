@@ -37,7 +37,7 @@ func (q checkoutGroupsQuery) StudentGroupIDs(ctx context.Context, ids []int64) (
 func TestCheckoutRoutingFailureKeepsOpenVisitsWithoutPartialGroups(t *testing.T) {
 	t.Parallel()
 	exited := time.Date(2026, time.July, 1, 12, 0, 0, 0, time.UTC)
-	svc := &service{ServiceDependencies: ServiceDependencies{
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow,
 		SchoolPresence: checkoutVisitsQuery{visits: []studentpresence.Visit{
 			{ID: 1, StudentID: 42}, {ID: 2, StudentID: 42}, {ID: 3, StudentID: 43, ExitTime: &exited},
 		}},
@@ -70,7 +70,7 @@ func TestSingleStudentRoutingPreservesUnknownAndPresentGroups(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			svc := &service{ServiceDependencies: ServiceDependencies{
+			svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow,
 				EducationGroupRepo: checkoutGroupsQuery{readOne: func(_ context.Context, id int64) (*int64, error) {
 					assert.Equal(t, int64(42), id)
 					return tc.group, tc.err

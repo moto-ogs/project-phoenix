@@ -260,13 +260,23 @@ func TestCareNoticeChangeAmendsTheIssuedNotice(t *testing.T) {
 	_, err := f.db.ExecContext(ctx, `UPDATE care_contract.contract_versions SET status = 'abgeloest'
 		WHERE contract_id = ? AND version_number = 1`, contract)
 	require.NoError(t, err)
-	require.NoError(t, f.db.NewRaw(`INSERT INTO care_contract.contract_versions (organization_id, contract_id, version_number,
+	// The change was recorded in October 2030, before it took effect.
+	// care_contract.guard_version_timeline refuses a version that takes
+	// effect before the database's day, so the fixture writes it without
+	// that trigger: from 2030-11-01 on, the database's day lies after the
+	// recording day the scenario stands for (#7104).
+	require.NoError(t, f.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if _, err := tx.ExecContext(ctx, `SET LOCAL session_replication_role = replica`); err != nil {
+			return err
+		}
+		return tx.NewRaw(`INSERT INTO care_contract.contract_versions (organization_id, contract_id, version_number,
 			status, effective_from, child_first_name, child_last_name, school_name, term_kind, notice_months, notice_to,
 			special_termination, special_termination_note, statute_required, statute_title, statute_url, contract_partner)
 		SELECT organization_id, contract_id, 2, 'wirksam', '2030-11-01'::date, child_first_name, child_last_name, school_name,
 			term_kind, notice_months, notice_to, special_termination, special_termination_note, statute_required,
 			statute_title, statute_url, contract_partner
-		FROM care_contract.contract_versions WHERE contract_id = ? AND version_number = 1 RETURNING id`, contract).Scan(ctx, &versionID))
+		FROM care_contract.contract_versions WHERE contract_id = ? AND version_number = 1 RETURNING id`, contract).Scan(ctx, &versionID)
+	}))
 	_, err = f.db.ExecContext(ctx, `INSERT INTO care_contract.contract_version_services (organization_id, contract_version_id,
 		weekday, care_offering_id, module_name, ends_at) VALUES (?, ?, 'mon', ?, 'Betreuung bis 14:00 Uhr', '14:00'::time)`,
 		f.office.organization, versionID, careModuleUntil1400)

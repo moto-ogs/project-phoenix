@@ -54,7 +54,7 @@ func TestBuildTemplateLegalBlocks_FiltersDisabledAndKeepsCustomKeys(t *testing.T
 func TestResolveRequiredConsents_UsesTemplateLegalBlocks(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}})
 	schema := &enrollmentNative.FormSchema{
 		LegalBlocks: []enrollmentNative.FormLegalBlock{
 			{
@@ -200,7 +200,7 @@ func TestResolveRequiredConsents_AllDisabledTemplateFallsBackToSettings(t *testi
 	// A template whose blocks are ALL disabled must behave like a template
 	// without blocks: the tenant-wide settings contract stays in force, so
 	// the DSGVO acknowledgment cannot be erased by an empty snapshot.
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{legal: LegalSettings{
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{legal: LegalSettings{
 		DSGVO:        "DSGVO Text",
 		DSGVOEnabled: true,
 	}}})

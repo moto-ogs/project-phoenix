@@ -14,17 +14,21 @@ vi.mock("@sentry/nextjs", () => ({
   setTags: mocks.setTags,
 }));
 
+// A pseudonym as the session callback derives it (#3843).
+const PSEUDONYM = "0123456789abcdef0123456789abcdef";
+
 describe("SentrySessionContext", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("attaches the signed-in account, its role and school", () => {
+  it("attaches the signed-in account's pseudonym, its role and school", () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
       data: {
         user: {
           id: "42",
+          sentryUserId: PSEUDONYM,
           name: "Mia Muster",
           email: "mia@example.com",
           scope: "",
@@ -35,7 +39,7 @@ describe("SentrySessionContext", () => {
 
     render(<SentrySessionContext portal="tenant" />);
 
-    expect(mocks.setUser).toHaveBeenCalledWith({ id: "42" });
+    expect(mocks.setUser).toHaveBeenCalledWith({ id: PSEUDONYM });
     expect(mocks.setTags).toHaveBeenCalledWith({
       role: "staff",
       school_id: "12",
@@ -45,12 +49,12 @@ describe("SentrySessionContext", () => {
   it("attaches a parent without a school", () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "7", scope: "parent" } },
+      data: { user: { id: "7", sentryUserId: PSEUDONYM, scope: "parent" } },
     });
 
     render(<SentrySessionContext portal="parent" />);
 
-    expect(mocks.setUser).toHaveBeenCalledWith({ id: "7" });
+    expect(mocks.setUser).toHaveBeenCalledWith({ id: PSEUDONYM });
     expect(mocks.setTags).toHaveBeenCalledWith({
       role: "guardian",
       school_id: undefined,
@@ -60,7 +64,7 @@ describe("SentrySessionContext", () => {
   it("clears the account at logout", () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "42", tenantId: 12 } },
+      data: { user: { id: "42", sentryUserId: PSEUDONYM, tenantId: 12 } },
     });
     const { rerender } = render(<SentrySessionContext portal="tenant" />);
 

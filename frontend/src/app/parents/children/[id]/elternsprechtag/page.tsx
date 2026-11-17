@@ -5,14 +5,7 @@
 // verschieben oder sagen sie bis 24 Stunden vorher ab. Ob sie das für dieses
 // Kind dürfen, entscheidet das Backend an der Eltern-Kind-Beziehung.
 
-import {
-  use,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { use, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import {
@@ -30,9 +23,16 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
+import { useChildFeatures } from "~/components/parent/child-requests-context";
+import {
+  PARENT_RESOURCE_OPTIONS,
+  useParentChildren,
+} from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { parseISODate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { parentPath } from "~/lib/parent-url";
@@ -40,9 +40,6 @@ import {
   bookChildParentConference,
   cancelChildParentConference,
   fetchChildParentConferences,
-  listMyChildren,
-  getChildFeatures,
-  type Child,
 } from "~/lib/parent-api";
 import type {
   ParentConferenceOffer,
@@ -62,52 +59,50 @@ export default function ParentConferencePage({
   const locale = useLocale();
   const toast = useToast();
   const { show: showActionError } = useApiErrorDisplay();
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
   const cancelErrors = useApiFormError();
 
-  const [canBook, setCanBook] = useState(false);
-  const [child, setChild] = useState<Child | null>(null);
-  const [offers, setOffers] = useState<ParentConferenceOffer[] | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
+  // Whether this account may book for this child decides the backend at the
+  // guardian relationship; the page reads the shared child resources. Only
+  // this child's features count: a sibling's failed read is not this page's.
+  const children = useParentChildren();
+  const childFeatures = useChildFeatures(studentId);
+  const features = {
+    data: childFeatures.features,
+    error: childFeatures.failure,
+  };
+  const conferences = useSWRAuth(
+    parentInboxKeys.conferences(studentId),
+    () => fetchChildParentConferences(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const { mutate: mutateConferences } = conferences;
+  const canBook = features.data?.conference_book_allowed === true;
+  const child =
+    children.data?.find((entry) => entry.student_id === studentId) ?? null;
+  const { error: loadError } = useSwrResourceLoadError(
+    [children, features, conferences],
+    t("errorObject"),
+    () => {
+      void children.mutate();
+      void childFeatures.reload();
+      void mutateConferences();
+    },
+  );
+  const settled = (resource: {
+    data?: unknown;
+    error?: unknown;
+    hasConfirmedData?: boolean;
+  }) =>
+    (resource.hasConfirmedData ?? resource.data !== undefined) ||
+    !!resource.error;
+  const offers =
+    settled(children) && settled(features) && conferences.data
+      ? conferences.data
+      : null;
   const [busy, setBusy] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] =
     useState<ParentConferenceOffer | null>(null);
   const latestCancelRef = useRef<() => void>(() => undefined);
-
-  useEffect(() => {
-    let active = true;
-    Promise.all([
-      listMyChildren(),
-      fetchChildParentConferences(studentId),
-      getChildFeatures(studentId),
-    ])
-      .then(([children, loaded, features]) => {
-        if (!active) return;
-        setCanBook(features.conference_book_allowed === true);
-        setChild(
-          children.find((entry) => entry.student_id === studentId) ?? null,
-        );
-        setOffers(loaded);
-        clearLoadError();
-      })
-      .catch((err: unknown) => {
-        if (!active) return;
-        logger.warn("parent_conference_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: t("errorObject"),
-          retry: () => setReloadKey((key) => key + 1),
-        });
-      });
-    return () => {
-      active = false;
-    };
-  }, [studentId, reloadKey, clearLoadError, showLoadError, t]);
 
   const dateLabel = useCallback(
     (date: string) =>
@@ -122,8 +117,10 @@ export default function ParentConferencePage({
     t("timeRange", { from: window.start_time, to: window.end_time });
 
   const replaceOffer = (next: ParentConferenceOffer) =>
-    setOffers((current) =>
-      (current ?? []).map((offer) => (offer.id === next.id ? next : offer)),
+    void mutateConferences(
+      (current) =>
+        (current ?? []).map((offer) => (offer.id === next.id ? next : offer)),
+      { revalidate: false },
     );
 
   const book = async (
@@ -145,7 +142,7 @@ export default function ParentConferencePage({
         error: err instanceof Error ? err.message : String(err),
       });
       await showActionError(err, { object: t("errorObjectBooking") });
-      setReloadKey((key) => key + 1);
+      void mutateConferences();
     } finally {
       setBusy(null);
     }
@@ -159,7 +156,7 @@ export default function ParentConferencePage({
       await cancelChildParentConference(studentId, cancelTarget.id);
       toast.success(t("cancelled"));
       setCancelTarget(null);
-      setReloadKey((key) => key + 1);
+      void mutateConferences();
     } catch (err) {
       logger.warn("parent_conference_cancel_failed", {
         error: err instanceof Error ? err.message : String(err),

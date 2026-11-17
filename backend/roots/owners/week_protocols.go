@@ -45,18 +45,18 @@ func NewWeekProtocolEvenings(
 	db transactionruntime.Database, logger *slog.Logger, settings settingsCompose.BatchSettingsService,
 	persons peopledirectory.Capability, services PeopleServices, reports PresenceReports,
 	schedules CarePlanSchedules, carePlan carePlanModule.Owner, timetableRepos timetableCompose.Repositories,
-	dayLog WeekProtocolDayLogBuilder,
+	dayLog WeekProtocolDayLogBuilder, now func() time.Time,
 ) schedulerPorts.WeekProtocolEvenings {
 	// Like the planned staff exits, a composition failure is a startup
 	// failure of the Worker: the job panics while the Worker is wired.
 	if dayLog == nil {
 		panic("compose week protocols: the day log builder is required")
 	}
-	calendar, err := BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings)
+	calendar, err := BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings, now)
 	if err != nil {
 		panic(fmt.Errorf("compose week protocol calendar: %w", err))
 	}
-	groups, err := BuildServeSchoolStructure(db)
+	groups, err := BuildServeSchoolStructure(db, time.Now)
 	if err != nil {
 		panic(fmt.Errorf("compose week protocol groups: %w", err))
 	}

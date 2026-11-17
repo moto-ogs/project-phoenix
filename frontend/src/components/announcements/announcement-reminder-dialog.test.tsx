@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { setTestClock } from "~/test/clock";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { ApiError } from "~/lib/api-error";
@@ -12,7 +13,11 @@ import {
 } from "./announcement-reminder-dialog";
 import { endOfBerlinDayISO } from "~/lib/date-helpers";
 
-// The test clock is 2026-09-09 12:00 Berlin (setup-common).
+// Die Erinnerungen liegen fest im September 2026 und an den Tagen der
+// Zeitumstellung; "in der Zukunft" gilt nur ab dem 2026-09-09 12:00 Berlin.
+beforeEach(() => {
+  setTestClock("2026-09-09T12:00:00+02:00");
+});
 
 const { updateMock } = vi.hoisted(() => ({
   updateMock: vi.fn(),

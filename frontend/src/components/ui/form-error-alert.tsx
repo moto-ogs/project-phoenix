@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import { Alert } from "./alert";
 import { Button } from "./button";
+import { useErrorFixLink } from "./error-fix-slot";
 import { useNotBookedSlots } from "./not-booked-slot";
 import {
   formErrorAttempt,
@@ -50,6 +51,7 @@ export function FormErrorAlert({
   const attempt = formErrorAttempt(message);
   const detail = formErrorDetail(message);
   const NotBookedAlert = useNotBookedSlots()?.Alert;
+  const fixLink = useErrorFixLink(detail?.code);
 
   useEffect(() => {
     if (!text) return;
@@ -83,16 +85,7 @@ export function FormErrorAlert({
     );
   }
 
-  const errorActions = errorAlertActions(detail);
-  const action =
-    placeAction && errorActions ? (
-      <span className="flex flex-wrap items-center gap-2">
-        {placeAction}
-        {errorActions}
-      </span>
-    ) : (
-      (placeAction ?? errorActions)
-    );
+  const action = joinActions(placeAction ?? fixLink, errorAlertActions(detail));
 
   return (
     <div ref={ref} tabIndex={-1} className={className}>
@@ -104,6 +97,24 @@ export function FormErrorAlert({
       />
     </div>
   );
+}
+
+/**
+ * The place that fixes the error (#7054, #7092) before retry and request ID.
+ */
+function joinActions(
+  place: ReactNode | undefined,
+  errorActions: ReactNode | undefined,
+): ReactNode | undefined {
+  if (place && errorActions) {
+    return (
+      <span className="flex flex-wrap items-center gap-2">
+        {place}
+        {errorActions}
+      </span>
+    );
+  }
+  return place ?? errorActions;
 }
 
 /** Nothing holds the focus, or a control that was disabled while it had it. */
@@ -176,6 +187,7 @@ export function LoadErrorAlert({
   const text = formErrorMessage(error);
   const detail = formErrorDetail(error);
   const NotBookedAlert = useNotBookedSlots()?.Alert;
+  const fixLink = useErrorFixLink(detail?.code);
   if (!text) return null;
   // A module the school did not book is a state, not a failure (#4894): the
   // role-specific explanation names the next step, and there is nothing to retry.
@@ -185,7 +197,7 @@ export function LoadErrorAlert({
     );
   }
   const layout = detail?.requestId ? "stacked" : actionLayout;
-  const actions = errorAlertActions(detail);
+  const actions = joinActions(fixLink, errorAlertActions(detail));
   return (
     <Alert
       type="error"

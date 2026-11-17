@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	birthdaysAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/birthdays"
@@ -28,7 +30,7 @@ type BirthdayRepositories struct {
 // The retained People Directory reads of the birthday display.
 type (
 	birthdayStudents interface {
-		FindBirthdaysOn(ctx context.Context, days []peopleCompose.BirthdayMonthDay) ([]peopleCompose.BirthdayEntry, error)
+		FindBirthdaysOn(ctx context.Context, days []peopleCompose.BirthdayMonthDay, today calendar.Date) ([]peopleCompose.BirthdayEntry, error)
 	}
 	birthdayStaff interface {
 		FindBirthdaysOn(ctx context.Context, days []peopleCompose.BirthdayMonthDay) ([]peopleCompose.BirthdayEntry, error)
@@ -54,8 +56,8 @@ func NewBirthdays(repos BirthdayRepositories, writes staffoffboarding.StaffBirth
 
 type birthdayStore struct{ repos BirthdayRepositories }
 
-func (s birthdayStore) StudentBirthdaysOn(ctx context.Context, days []peopleCompose.BirthdayMonthDay) ([]peopleCompose.BirthdayEntry, error) {
-	rows, err := s.repos.Students.FindBirthdaysOn(ctx, days)
+func (s birthdayStore) StudentBirthdaysOn(ctx context.Context, days []peopleCompose.BirthdayMonthDay, today calendar.Date) ([]peopleCompose.BirthdayEntry, error) {
+	rows, err := s.repos.Students.FindBirthdaysOn(ctx, days, today)
 	return rows, err
 }
 

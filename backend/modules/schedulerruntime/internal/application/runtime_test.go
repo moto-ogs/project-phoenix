@@ -86,7 +86,7 @@ func newUnitScheduler(
 	operatorInvitationCleaner ports.OperatorInvitationCleaner,
 	logger *slog.Logger,
 ) *Scheduler {
-	scheduler := newScheduler(ports.WorkerDependencies{
+	scheduler := newScheduler(ports.WorkerDependencies{Now: time.Now,
 		Logger:                    logger,
 		TenantRuntime:             unitTenantRuntime(),
 		Active:                    activeService,
@@ -204,6 +204,11 @@ func unitScheduler(input *unitSchedulerDependencies) *Scheduler {
 	if feedbackCleaner == nil {
 		feedbackCleaner = configured.feedbackCleaner
 	}
+	now := input.now
+	if now == nil {
+		// A unit test that pins no clock runs on the real one, as before.
+		now = time.Now
+	}
 	retentionLog := input.retentionLog
 	if retentionLog == nil {
 		retentionLog = func(context.Context, string, ports.RetentionOutcome) error { return nil }
@@ -248,7 +253,7 @@ func unitScheduler(input *unitSchedulerDependencies) *Scheduler {
 		minuteSnapshotLoader:          snapshotLoader,
 		cleanupMinuteSnapshotLoader:   snapshotLoader,
 		minuteSnapshotNow:             input.minuteSnapshotNow,
-		now:                           input.now,
+		now:                           now,
 		outboxWorker:                  input.outboxWorker,
 		overdueBroadcaster:            input.overdueBroadcaster,
 		registry:                      registry,

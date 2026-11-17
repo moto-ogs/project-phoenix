@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -93,7 +94,7 @@ func TestTenantSwitchCannotRestoreInvalidatedMFAProof(t *testing.T) {
 			case "logout":
 				require.NoError(t, tc.resource.Sessions.LogoutWithAudit(context.Background(), refresh, "", ""))
 			case "expired":
-				_, err := tc.db.ExecContext(context.Background(), `UPDATE auth.tokens SET expiry = NOW() - INTERVAL '1 second' WHERE account_id = ?`, account.ID)
+				_, err := tc.db.ExecContext(context.Background(), `UPDATE auth.tokens SET expiry = ? WHERE account_id = ?`, time.Now().Add(-time.Second), account.ID)
 				require.NoError(t, err)
 			case "retired-after-switch":
 				req := testutil.NewJSONRequest(t, http.MethodPost, "/auth/switch-tenant", map[string]string{"tenant_slug": slug})
@@ -101,7 +102,7 @@ func TestTenantSwitchCannotRestoreInvalidatedMFAProof(t *testing.T) {
 				require.Equal(t, http.StatusOK, testutil.ExecuteRequest(router, req).Code)
 				// The seed previously cached this access JWT past the switch's
 				// retirement grace. Expire only retired families, without sleeping.
-				_, err := tc.db.ExecContext(context.Background(), `UPDATE auth.tokens SET expiry = NOW() - INTERVAL '1 second', family_expiry_cap = NOW() - INTERVAL '1 second' WHERE account_id = ? AND family_expiry_cap IS NOT NULL`, account.ID)
+				_, err := tc.db.ExecContext(context.Background(), `UPDATE auth.tokens SET expiry = ?0, family_expiry_cap = ?0 WHERE account_id = ?1 AND family_expiry_cap IS NOT NULL`, time.Now().Add(-time.Second), account.ID)
 				require.NoError(t, err)
 			}
 			// The access JWT is still signed and unexpired, but no live proof remains.

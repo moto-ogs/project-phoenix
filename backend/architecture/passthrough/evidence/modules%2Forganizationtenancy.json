@@ -58,6 +58,20 @@
     },
     {
       "build": "production",
+      "evidence": "func (d *DemoSchools) RecordDemoSchool(ctx context.Context, name string, schoolID int64) error {\n\tif name == \"\" || schoolID \u003c= 0 {\n\t\treturn fmt.Errorf(\"demo school name and school ID are required\")\n\t}\n\treturn d.engine.RecordDemoSchool(ctx, name, schoolID)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/organizationtenancy/DemoSchools.RecordDemoSchool",
+      "owner": "modules/organizationtenancy"
+    },
+    {
+      "build": "production",
+      "evidence": "func (d *DemoSchools) RecordDemoTraeger(ctx context.Context, name string, traegerID int64) error {\n\tif name == \"\" || traegerID \u003c= 0 {\n\t\treturn fmt.Errorf(\"demo school name and Träger ID are required\")\n\t}\n\treturn d.engine.RecordDemoTraeger(ctx, name, traegerID)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/organizationtenancy/DemoSchools.RecordDemoTraeger",
+      "owner": "modules/organizationtenancy"
+    },
+    {
+      "build": "production",
       "evidence": "func (d *DemoSchools) RememberDemoSchool(ctx context.Context, name string, state DemoSchoolState) error {\n\tif name == \"\" || state.SchoolID \u003c= 0 || len(state.SeedJSON) == 0 {\n\t\treturn fmt.Errorf(\"demo school name, school ID and seed state are required\")\n\t}\n\treturn d.engine.RememberDemoSchool(ctx, name, state)\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/DemoSchools.RememberDemoSchool",
@@ -107,7 +121,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *BillingResource) SeedKeyDateCounts(w http.ResponseWriter, r *http.Request) {\n\tif rs.isLocalSeedRequest == nil || !rs.isLocalSeedRequest(r) {\n\t\tcommon.RenderError(w, r, common.OperatorForbidden(\"Die Demo-Erfassung ist nur lokal verfügbar.\"))\n\t\treturn\n\t}\n\twritten, err := rs.service.SeedBillingKeyDateCounts(r.Context(), time.Now())\n\tif err != nil {\n\t\tcommon.RenderError(w, r, rs.billingError(r, err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusCreated, map[string]int{\"written\": written}, \"Demo-Stichtagszahlen erfasst\")\n}",
+      "evidence": "func (rs *BillingResource) SeedKeyDateCounts(w http.ResponseWriter, r *http.Request) {\n\tif rs.isLocalSeedRequest == nil || !rs.isLocalSeedRequest(r) {\n\t\tcommon.RenderError(w, r, common.OperatorForbidden(\"Die Demo-Erfassung ist nur lokal verfügbar.\"))\n\t\treturn\n\t}\n\twritten, err := rs.service.SeedBillingKeyDateCounts(r.Context(), rs.now())\n\tif err != nil {\n\t\tcommon.RenderError(w, r, rs.billingError(r, err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusCreated, map[string]int{\"written\": written}, \"Demo-Stichtagszahlen erfasst\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/inbound/operator/BillingResource.SeedKeyDateCounts",
       "owner": "modules/organizationtenancy"
@@ -240,7 +254,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (e DemoOrderEngine) DemoSchoolProgress(ctx context.Context, slug string) (*organizationtenancy.DemoSchoolProgress, error) {\n\tprogress, err := e.Store.Progress(ctx, slug)\n\tif err != nil || progress == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026organizationtenancy.DemoSchoolProgress{Status: progress.Status, SchoolID: progress.TenantID, VisitorAccountID: progress.VisitorAccountID, VisitorParentAccountID: progress.VisitorParentAccountID}, nil\n}",
+      "evidence": "func (e DemoOrderEngine) DemoSchoolProgress(ctx context.Context, slug string) (*organizationtenancy.DemoSchoolProgress, error) {\n\tprogress, err := e.Store.Progress(ctx, slug)\n\tif err != nil || progress == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026organizationtenancy.DemoSchoolProgress{Status: progress.Status, SchoolID: progress.TenantID, VisitorAccountID: progress.VisitorAccountID, VisitorParentAccountID: progress.VisitorParentAccountID, TraegerID: progress.TraegerID}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/internal/adapters/postgres/DemoOrderEngine.DemoSchoolProgress",
       "owner": "modules/organizationtenancy"
@@ -338,9 +352,23 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *DemoSchoolDatabaseStore) EraseDemoSchoolDatabase(ctx context.Context, schoolID int64) (string, string, error) {\n\tvar data string\n\tif err := s.db.NewRaw(`SELECT platform.erase_retired_demo_school(?)::text`, schoolID).Scan(ctx, \u0026data); err != nil {\n\t\treturn \"\", \"\", fmt.Errorf(\"erase retired demo school: %w\", err)\n\t}\n\tvar result struct {\n\t\tStatus    string `json:\"status\"`\n\t\tErrorCode string `json:\"error_code\"`\n\t}\n\tif err := json.Unmarshal([]byte(data), \u0026result); err != nil {\n\t\treturn \"\", \"\", fmt.Errorf(\"decode demo school erasure result: %w\", err)\n\t}\n\treturn result.Status, result.ErrorCode, nil\n}",
+      "evidence": "func (s *DemoSchoolDatabaseStore) DueDemoTraegers(ctx context.Context, limit int) ([]int64, error) {\n\tids := []int64{}\n\tif err := s.db.NewRaw(`SELECT id FROM platform.retired_demo_traegers_due_for_erasure(?) AS id`, limit).Scan(ctx, \u0026ids); err != nil {\n\t\treturn nil, fmt.Errorf(\"list retired demo Träger due for erasure: %w\", err)\n\t}\n\treturn ids, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoSchoolDatabaseStore.DueDemoTraegers",
+      "owner": "modules/organizationtenancy"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s *DemoSchoolDatabaseStore) EraseDemoSchoolDatabase(ctx context.Context, schoolID int64) (string, string, error) {\n\tvar data string\n\tif err := s.db.NewRaw(`SELECT platform.erase_retired_demo_school(?)::text`, schoolID).Scan(ctx, \u0026data); err != nil {\n\t\treturn \"\", \"\", fmt.Errorf(\"erase retired demo school: %w\", err)\n\t}\n\treturn decodeDemoErasureResult(data)\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/internal/adapters/postgres/DemoSchoolDatabaseStore.EraseDemoSchoolDatabase",
+      "owner": "modules/organizationtenancy"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s *DemoSchoolDatabaseStore) EraseDemoTraeger(ctx context.Context, organizationID int64) (string, string, error) {\n\tvar data string\n\tif err := s.db.NewRaw(`SELECT platform.erase_retired_demo_traeger(?)::text`, organizationID).Scan(ctx, \u0026data); err != nil {\n\t\treturn \"\", \"\", fmt.Errorf(\"erase retired demo Träger: %w\", err)\n\t}\n\treturn decodeDemoErasureResult(data)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoSchoolDatabaseStore.EraseDemoTraeger",
       "owner": "modules/organizationtenancy"
     },
     {
@@ -362,6 +390,20 @@
       "evidence": "func (e DemoStateEngine) LoadDemoSchool(ctx context.Context, name string) (*organizationtenancy.DemoSchoolState, error) {\n\tstate, err := e.Store.Load(ctx, name)\n\tif err != nil || state == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026organizationtenancy.DemoSchoolState{SchoolID: state.TenantID, SeedJSON: []byte(state.SeedJSON), VisitorAccountID: state.VisitorAccountID, VisitorParentAccountID: state.VisitorParentAccountID}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateEngine.LoadDemoSchool",
+      "owner": "modules/organizationtenancy"
+    },
+    {
+      "build": "production",
+      "evidence": "func (e DemoStateEngine) RecordDemoSchool(ctx context.Context, name string, schoolID int64) error {\n\treturn e.Store.RecordSchool(ctx, name, schoolID)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateEngine.RecordDemoSchool",
+      "owner": "modules/organizationtenancy"
+    },
+    {
+      "build": "production",
+      "evidence": "func (e DemoStateEngine) RecordDemoTraeger(ctx context.Context, name string, traegerID int64) error {\n\treturn e.Store.RecordTraeger(ctx, name, traegerID)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateEngine.RecordDemoTraeger",
       "owner": "modules/organizationtenancy"
     },
     {
@@ -418,6 +460,20 @@
       "evidence": "func (s *DemoStateStore) ReadyNames(ctx context.Context) ([]string, error) {\n\tvar names []string\n\terr := s.db.NewRaw(`SELECT state.name FROM platform.demo_school_states AS state\n\t\tJOIN platform.schools AS school ON school.id = state.tenant_id\n\t\tWHERE state.status = 'ready' AND school.deleted_at IS NULL ORDER BY state.created_at, state.name`).Scan(ctx, \u0026names)\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"list demo schools: %w\", err)\n\t}\n\treturn names, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateStore.ReadyNames",
+      "owner": "modules/organizationtenancy"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s *DemoStateStore) RecordSchool(ctx context.Context, name string, schoolID int64) error {\n\tresult, err := s.db.NewRaw(`UPDATE platform.demo_school_states\n\t\tSET visitor_school_ids = array_remove(visitor_school_ids || ARRAY[?::BIGINT], NULL)\n\t\tWHERE name = ? AND NOT (? = ANY(visitor_school_ids))`, schoolID, name, schoolID).Exec(ctx)\n\tif err != nil {\n\t\treturn errors.New(\"could not record a school of the demo order\")\n\t}\n\tif rows, err := result.RowsAffected(); err != nil || rows \u003e 1 {\n\t\treturn errors.New(\"demo school state does not exist\")\n\t}\n\treturn nil\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateStore.RecordSchool",
+      "owner": "modules/organizationtenancy"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s *DemoStateStore) RecordTraeger(ctx context.Context, name string, traegerID int64) error {\n\tresult, err := s.db.NewRaw(`UPDATE platform.demo_school_states SET traeger_id = ?\n\t\tWHERE name = ? AND (traeger_id IS NULL OR traeger_id = ?)`, traegerID, name, traegerID).Exec(ctx)\n\tif err != nil {\n\t\treturn errors.New(\"could not record the Träger of the demo school\")\n\t}\n\tif rows, err := result.RowsAffected(); err != nil || rows != 1 {\n\t\treturn errors.New(\"demo school state names another Träger or does not exist\")\n\t}\n\treturn nil\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateStore.RecordTraeger",
       "owner": "modules/organizationtenancy"
     },
     {

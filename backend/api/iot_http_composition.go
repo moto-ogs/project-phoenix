@@ -19,8 +19,9 @@ import (
 	staffclockAPI "github.com/moto-ogs/project-phoenix/modules/devicescan/http/staffclock"
 )
 
-// NewIoTHTTPRuntime binds the native HTTP leaf constructors without a Root service graph.
-func NewIoTHTTPRuntime() iotCompose.RouterRuntime {
+// NewIoTHTTPRuntime binds the native HTTP leaf constructors without a Root
+// service graph; now is the root's clock the kiosk answers are stamped with.
+func NewIoTHTTPRuntime(now func() time.Time) iotCompose.RouterRuntime {
 	return iotCompose.RouterRuntime{
 		Protected: func(r chi.Router, register func(chi.Router, iotCompose.Middleware)) {
 			ProtectedTenantRoutes(r, func(r chi.Router, withTx common.Middleware) { register(r, withTx) })
@@ -31,30 +32,32 @@ func NewIoTHTTPRuntime() iotCompose.RouterRuntime {
 			return iotCore.NewResource(cfg, school, iotInfoRuntime())
 		},
 		Data: func(directory devicescan.Directory, tags devicescan.TagAssignments, rooms devicescan.RoomAvailability) iotCompose.DataResource {
-			return dataAPI.NewResource(directory, tags, rooms, iotDataRuntime())
+			return dataAPI.NewResource(directory, tags, rooms, iotDataRuntime(now))
 		},
 		Feedback: func(students devicescan.FeedbackStudents, service iotCompose.Feedback, observe func(int, string), logger *slog.Logger) iotCompose.RouteResource {
-			return dataAPI.NewFeedbackResource(students, service, observe, iotDataRuntime(), logger)
+			return dataAPI.NewFeedbackResource(students, service, observe, iotDataRuntime(now), logger)
 		},
 		Checkin: func(scan devicescan.DeviceScan, logger *slog.Logger) iotCompose.RouteResource {
-			return checkinAPI.NewResource(scan, iotCheckinRuntime(), logger)
+			return checkinAPI.NewResource(scan, iotCheckinRuntime(now), logger)
 		},
 		OpenRooms: func(booking devicescan.OpenRoomBooking, logger *slog.Logger) iotCompose.RouteResource {
-			return checkinAPI.NewOpenRoomResource(booking, iotCheckinRuntime(), logger)
+			return checkinAPI.NewOpenRoomResource(booking, iotCheckinRuntime(now), logger)
 		},
 		StaffClock: func(clock devicescan.StaffClock) iotCompose.RouteResource {
 			return staffclockAPI.NewResource(clock, iotStaffClockRuntime())
 		},
 		Attendance: func(scan devicescan.DeviceScan, logger *slog.Logger) iotCompose.RouteResource {
-			return checkinAPI.NewAttendanceResource(scan, iotCheckinRuntime(), logger)
+			return checkinAPI.NewAttendanceResource(scan, iotCheckinRuntime(now), logger)
 		},
-		Session: newIoTSessionResource,
+		Session: func(lifecycle devicescan.SessionLifecycle, end iotCompose.EndSession) iotCompose.RouteResource {
+			return newIoTSessionResource(lifecycle, end, now)
+		},
 		RFID: func(tags devicescan.TagAssignments) iotCompose.RouteResource {
-			return dataAPI.NewRFIDResource(tags, iotDataRuntime())
+			return dataAPI.NewRFIDResource(tags, iotDataRuntime(now))
 		},
 	}
 }
-func newIoTSessionResource(lifecycle devicescan.SessionLifecycle, end iotCompose.EndSession) iotCompose.RouteResource {
+func newIoTSessionResource(lifecycle devicescan.SessionLifecycle, end iotCompose.EndSession, now func() time.Time) iotCompose.RouteResource {
 	var native sessionsAPI.EndSession
 	if end != nil {
 		native = func(ctx context.Context, id int64) (time.Time, sessionsAPI.EndFailure, error) {
@@ -62,7 +65,7 @@ func newIoTSessionResource(lifecycle devicescan.SessionLifecycle, end iotCompose
 			return when, sessionsAPI.EndFailure(kind), err
 		}
 	}
-	return sessionsAPI.NewResource(lifecycle, native, iotSessionRuntime())
+	return sessionsAPI.NewResource(lifecycle, native, iotSessionRuntime(now))
 }
 func bindIoTHostSessionEnd(end sessionsAPI.EndSession) iotCompose.EndSession {
 	if end == nil {
@@ -74,10 +77,11 @@ func bindIoTHostSessionEnd(end sessionsAPI.EndSession) iotCompose.EndSession {
 	}
 }
 
-// NewIoTAdministration mounts the same native Device Fleet resource in its JWT/tenant group.
-func NewIoTAdministration(administration devicefleet.Administration) iotCompose.Administration {
+// NewIoTAdministration mounts the same native Device Fleet resource in its
+// JWT/tenant group; now is the root's clock.
+func NewIoTAdministration(administration devicefleet.Administration, now func() time.Time) iotCompose.Administration {
 	return func(r chi.Router, withTx iotCompose.Middleware) {
-		devicesResource := devicesAPI.NewResource(administration, iotDevicesRuntime())
+		devicesResource := devicesAPI.NewResource(administration, iotDevicesRuntime(now))
 		r.With(withTx).Mount("/", devicesResource.Router())
 	}
 }

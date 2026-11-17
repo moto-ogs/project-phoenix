@@ -6,7 +6,7 @@
 // Schule eine Person schon geblockt hat, nur mit dem Namen dieser Schule.
 
 import { LockKeyIcon, UsersThreeIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   BlockSpringerModal,
@@ -27,16 +27,12 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError, useToast } from "~/contexts/ToastContext";
+import { useToast } from "~/contexts/ToastContext";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { createLogger } from "~/lib/logger";
-import {
-  fetchSchoolPoolWeek,
-  liftSchoolBlock,
-  type PoolWeek,
-} from "~/lib/staff-pool-api";
-
-const logger = createLogger({ component: "StaffPoolPage" });
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { fetchSchoolPoolWeek, liftSchoolBlock } from "~/lib/staff-pool-api";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 const INFO = (
   <div className="space-y-2">
@@ -54,41 +50,23 @@ const INFO = (
 function StaffPoolContent() {
   const today = useBerlinToday();
   const [weekStart, setWeekStart] = useState(() => mondayOf(today));
-  const [week, setWeek] = useState<PoolWeek | null>(null);
   const [blocking, setBlocking] = useState<BlockSpringerTarget | null>(null);
   const [lifting, setLifting] = useState<LiftBlockTarget | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const { success } = useToast();
-
-  // Die Woche, die zuletzt angefragt wurde: eine späte Antwort einer
-  // vorigen Woche überschreibt sie nicht.
-  const requested = useRef(weekStart);
-  const load = useCallback(
-    async (monday: string) => {
-      requested.current = monday;
-      try {
-        const loaded = await fetchSchoolPoolWeek(monday);
-        if (requested.current !== monday) return;
-        setWeek(loaded);
-        clearLoadError();
-      } catch (err) {
-        if (requested.current !== monday) return;
-        logger.error("staff_pool_week_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        await showLoadError(err, {
-          object: "die Springer",
-          retry: () => void load(monday),
-        });
-      }
-    },
-    [clearLoadError, showLoadError],
+  const {
+    data: week,
+    error: weekError,
+    mutate,
+  } = useSWRAuth(
+    tenantDailyKeys.springerWeek(weekStart),
+    () => fetchSchoolPoolWeek(weekStart),
+    { keepPreviousData: false },
   );
-
-  useEffect(() => {
-    void load(weekStart);
-  }, [load, weekStart]);
+  const pageLoad = useSwrResourceLoadError(
+    [{ data: week, error: weekError }],
+    "die Springer",
+    () => mutate(),
+  );
 
   const shown = week?.weekStart === weekStart ? week : null;
   const days = useMemo(() => poolDays(weekStart), [weekStart]);
@@ -162,7 +140,7 @@ function StaffPoolContent() {
             onBlocked={(message) => {
               setBlocking(null);
               success(message);
-              void load(weekStart);
+              void mutate();
             }}
           />
           <LiftBlockModal
@@ -173,7 +151,7 @@ function StaffPoolContent() {
             onLifted={(message) => {
               setLifting(null);
               success(message);
-              void load(weekStart);
+              void mutate();
             }}
           />
         </>

@@ -46,19 +46,19 @@ func TestResolveSessionTimeout(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("per-session TimeoutMinutes wins", func(t *testing.T) {
-		s := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}}
+		s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}}
 		group := &ports.ActiveGroup{TimeoutMinutes: 45}
 		assert.Equal(t, 45*time.Minute, s.ResolveSessionTimeout(ctx, group))
 	})
 
 	t.Run("nil settings falls back to default", func(t *testing.T) {
-		s := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}}
+		s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}}
 		group := &ports.ActiveGroup{TimeoutMinutes: 0}
 		assert.Equal(t, DefaultSessionInactivityTimeout, s.ResolveSessionTimeout(ctx, group))
 	})
 
 	t.Run("tenant override resolved from settings", func(t *testing.T) {
-		s := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}, settings: &stubSettingsResolver{
+		s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}, settings: &stubSettingsResolver{
 			intValues: map[string]int{sessionInactivityTimeoutQuestion: 20},
 		},
 		}
@@ -67,7 +67,7 @@ func TestResolveSessionTimeout(t *testing.T) {
 	})
 
 	t.Run("zero from settings degrades to default", func(t *testing.T) {
-		s := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}, settings: &stubSettingsResolver{
+		s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}, settings: &stubSettingsResolver{
 			intValues: map[string]int{sessionInactivityTimeoutQuestion: 0},
 		},
 		}
@@ -81,7 +81,7 @@ func TestIsSessionTimedOut(t *testing.T) {
 
 	ctx := context.Background()
 	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
-	s := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, // nil settings → 30 min default
+	s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, // nil settings → 30 min default
 		Logger: slog.Default()}}
 
 	t.Run("active session within window is not timed out", func(t *testing.T) {
@@ -122,7 +122,7 @@ func TestSessionTimeUntilTimeout(t *testing.T) {
 
 	ctx := context.Background()
 	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
-	s := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, // nil settings → 30 min default
+	s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, // nil settings → 30 min default
 		Logger: slog.Default()}}
 
 	t.Run("positive when within window", func(t *testing.T) {

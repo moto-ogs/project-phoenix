@@ -16,7 +16,7 @@ func (r *Store) SetChangeRequestStatus(ctx context.Context, id int64, status str
 		return err
 	}
 	res, err := db.NewUpdate().TableExpr("enrollment.change_requests").
-		Set("status = ?", status).Set("updated_at = NOW()").
+		Set("status = ?", status).Set("updated_at = ?", r.currentTime()).
 		Where("id = ?", id).Where("tenant_id = ?", tenantID).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update enrollment change request status: %w", err)
@@ -39,7 +39,7 @@ func (r *Store) MarkChangeRequestReviewed(ctx context.Context, id int64, status 
 	}
 	q := db.NewUpdate().TableExpr("enrollment.change_requests").
 		Set("status = ?", status).Set("admin_decision_note = ?", note).
-		Set("reviewed_at = ?", at).Set("updated_at = NOW()").
+		Set("reviewed_at = ?", at).Set("updated_at = ?", r.currentTime()).
 		Where("id = ?", id).Where("tenant_id = ?", tenantID)
 	if reviewerID > 0 {
 		q = q.Set("reviewed_by_account_id = ?", reviewerID)

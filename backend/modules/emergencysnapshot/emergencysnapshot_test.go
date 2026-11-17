@@ -146,6 +146,7 @@ func fullDeps() Dependencies {
 		Renderer:  &fakeRenderer{},
 		AccessLog: &fakeAccessLog{},
 		Collate:   collateASCIIFold,
+		Now:       func() time.Time { return generatedAt },
 	}
 }
 
@@ -196,6 +197,11 @@ func TestNewRejectsMissingPorts(t *testing.T) {
 	deps.AccessLog = nil
 	_, err = New(deps)
 	require.ErrorIs(t, err, ErrIncompleteDependencies, "the access log of the health information is required")
+
+	deps = fullDeps()
+	deps.Now = nil
+	_, err = New(deps)
+	require.ErrorIs(t, err, ErrIncompleteDependencies, "the clock is required")
 
 	_, err = New(fullDeps())
 	require.NoError(t, err)

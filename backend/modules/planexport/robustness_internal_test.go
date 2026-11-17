@@ -24,12 +24,12 @@ func TestExportsFailOnTheirOwnDataSource(t *testing.T) {
 
 	renderer := &captureRenderer{}
 
-	dienstplan := NewService(Dependencies{Overview: failingOverview{}, Renderer: renderer}, nil)
+	dienstplan := NewService(Dependencies{Now: planExportTestClock, Overview: failingOverview{}, Renderer: renderer}, nil)
 	if _, err := dienstplan.ExportDienstplan(context.Background(), defaultParams()); err == nil {
 		t.Fatal("a failing overview must fail the export")
 	}
 
-	betreuungsplan := NewService(Dependencies{
+	betreuungsplan := NewService(Dependencies{Now: planExportTestClock,
 		Instances:     failingInstances{},
 		InstanceStaff: stubInstanceStaff{},
 		Renderer:      renderer,
@@ -38,7 +38,7 @@ func TestExportsFailOnTheirOwnDataSource(t *testing.T) {
 		t.Fatal("a failing instance read must fail the export")
 	}
 
-	betreuungsplan = NewService(Dependencies{
+	betreuungsplan = NewService(Dependencies{Now: planExportTestClock,
 		Instances:     stubInstances{instances: []*Instance{instance(11, monday, clock(12, 0), clock(13, 0), "Mensa", 3)}},
 		InstanceStaff: failingInstanceStaff{},
 		Renderer:      renderer,
@@ -53,7 +53,7 @@ func TestExportsFailOnTheirOwnDataSource(t *testing.T) {
 func TestExportsRefuseAnUnwiredService(t *testing.T) {
 	t.Parallel()
 
-	unwired := NewService(Dependencies{}, nil)
+	unwired := NewService(Dependencies{Now: planExportTestClock}, nil)
 	if _, err := unwired.ExportDienstplan(context.Background(), defaultParams()); err == nil {
 		t.Fatal("expected the Dienstplan to refuse an unwired service")
 	}
@@ -68,7 +68,7 @@ func TestDienstplanSurvivesFailingOptionalLookups(t *testing.T) {
 	t.Parallel()
 
 	renderer := &captureRenderer{}
-	service := NewService(Dependencies{
+	service := NewService(Dependencies{Now: planExportTestClock,
 		Overview: stubOverview{overview: &StaffScheduleOverview{
 			Staff:  []*StaffMember{staffMember(7, "Franziska", "Kessener")},
 			Shifts: []*Shift{withType(shift(1, 7, monday, clock(7, 30), clock(14, 0)), 4)},
@@ -93,7 +93,7 @@ func TestBetreuungsplanSurvivesFailingOptionalLookups(t *testing.T) {
 	t.Parallel()
 
 	renderer := &captureRenderer{}
-	service := NewService(Dependencies{
+	service := NewService(Dependencies{Now: planExportTestClock,
 		Instances:     stubInstances{instances: []*Instance{instance(11, monday, clock(12, 0), clock(13, 0), "Mensa", 3)}},
 		InstanceStaff: stubInstanceStaff{rows: []*InstanceStaff{instanceStaff(11, 7)}},
 		Rooms:         failingRooms{},
@@ -129,7 +129,7 @@ func TestBetreuungsplanBlockColour(t *testing.T) {
 			block = withGroup(block, 5)
 		}
 		renderer := &captureRenderer{}
-		service := NewService(Dependencies{
+		service := NewService(Dependencies{Now: planExportTestClock,
 			Instances:      stubInstances{instances: []*Instance{block}},
 			InstanceStaff:  stubInstanceStaff{},
 			ActivityGroups: groups,
@@ -180,7 +180,7 @@ func TestNonWorkingDaysPrefersClosingDayOverHoliday(t *testing.T) {
 	t.Parallel()
 
 	renderer := &captureRenderer{}
-	service := NewService(Dependencies{
+	service := NewService(Dependencies{Now: planExportTestClock,
 		Instances:     stubInstances{instances: []*Instance{instance(11, monday, clock(12, 0), clock(13, 0), "Mensa", 3)}},
 		InstanceStaff: stubInstanceStaff{},
 		Holidays: stubHolidays{days: []Holiday{
@@ -676,7 +676,7 @@ func TestBetreuungsplanColoursOnlyTheBlocksItCan(t *testing.T) {
 	t.Parallel()
 
 	renderer := &captureRenderer{}
-	service := NewService(Dependencies{
+	service := NewService(Dependencies{Now: planExportTestClock,
 		Instances: stubInstances{instances: []*Instance{
 			withGroup(instance(11, monday, clock(12, 0), clock(13, 0), "Mensa", 3), 5),
 			instance(12, monday, clock(14, 0), clock(15, 0), "Lernzeit", 4),
@@ -781,7 +781,7 @@ func TestExportLogsThroughTheInjectedLogger(t *testing.T) {
 	var sink bytes.Buffer
 	logger := slog.New(slog.NewTextHandler(&sink, nil))
 	renderer := &captureRenderer{}
-	service := NewService(Dependencies{
+	service := NewService(Dependencies{Now: planExportTestClock,
 		Overview: stubOverview{overview: &StaffScheduleOverview{
 			Staff:  []*StaffMember{staffMember(7, "Franziska", "Kessener")},
 			Shifts: []*Shift{shift(1, 7, monday, clock(7, 30), clock(14, 0))},

@@ -119,32 +119,31 @@ func TestSettingsSchoolSetsItsGuardianRetention(t *testing.T) {
 	assert.Equal(t, float64(90), schemaItems(t, ctx)["gdpr.guardian_retention_days"]["value"])
 }
 
-// The school sees its federal state read-only (#4775): the moto team sets
-// it, because it decides the statutory holidays of the Arbeitszeitkonto,
-// the Dienstplan and the Regeltermine.
-func TestSettingsSchoolSeesTheFederalStateButCannotWriteIt(t *testing.T) {
+// The school's management sets its own federal state (#7174): the message
+// for a missing state links to this setting. It replaces the read-only
+// rule of #4775; config:manage still guards the write.
+func TestSettingsSchoolSetsItsFederalState(t *testing.T) {
 	t.Parallel()
 	ctx := setupSettingsModule(t)
 	items := schemaItems(t, ctx)
 	item, ok := items["operations.federal_state"]
 	require.True(t, ok, "the school sees its federal state")
-	assert.Equal(t, false, item["writable"])
-	assert.Equal(t, "operator_managed", item["access_policy"])
+	assert.Equal(t, true, item["writable"])
+	assert.Equal(t, "shared", item["access_policy"])
 	assert.Equal(t, testpkg.TestSchoolFederalState, item["value"], "the state the school got on creation (#7174)")
 
 	router := ctx.resource.SettingsRouter()
 	put := testutil.NewAuthenticatedRequest(t, "PUT", "/values/operations.federal_state", map[string]any{"value": "DE-BY"}, testutil.WithTestTenant(t))
-	testutil.AssertErrorResponse(t, testutil.ExecuteRequest(router, put), 403)
-	reset := testutil.NewAuthenticatedRequest(t, "DELETE", "/values/operations.federal_state", nil, testutil.WithTestTenant(t))
-	testutil.AssertErrorResponse(t, testutil.ExecuteRequest(router, reset), 403)
+	testutil.AssertSuccessResponse(t, testutil.ExecuteRequest(router, put), 200)
+	assert.Equal(t, "DE-BY", schemaItems(t, ctx)["operations.federal_state"]["value"])
 
-	var stored []string
-	err := ctx.db.NewSelect().
-		Table("config.setting_values").
-		ColumnExpr("value #>> '{}'").
-		Where("tenant_id = ?", testpkg.Tenant(t)).
-		Where("setting_key = 'operations.federal_state'").
-		Scan(context.Background(), &stored)
-	require.NoError(t, err)
-	assert.Equal(t, []string{testpkg.TestSchoolFederalState}, stored, "refused writes neither change nor remove the school's state")
+	invalid := testutil.NewAuthenticatedRequest(t, "PUT", "/values/operations.federal_state", map[string]any{"value": "DE-XX"}, testutil.WithTestTenant(t))
+	assert.Equal(t, 400, testutil.ExecuteRequest(router, invalid).Code, "only the 16 states with a holiday calendar")
+	assert.Equal(t, "DE-BY", schemaItems(t, ctx)["operations.federal_state"]["value"], "a refused value keeps the state")
+
+	// The empty default is no state: a reset would bring the missing-state
+	// error back, so the school chooses another state instead.
+	reset := testutil.NewAuthenticatedRequest(t, "DELETE", "/values/operations.federal_state", nil, testutil.WithTestTenant(t))
+	assert.Equal(t, 400, testutil.ExecuteRequest(router, reset).Code)
+	assert.Equal(t, "DE-BY", schemaItems(t, ctx)["operations.federal_state"]["value"], "a refused reset keeps the state")
 }

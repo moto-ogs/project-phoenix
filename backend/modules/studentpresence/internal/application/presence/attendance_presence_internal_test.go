@@ -24,7 +24,7 @@ func TestEnsureStaffPresenceKeepsCheckInFailureBestEffort(t *testing.T) {
 			return false, errors.New("check-in failed")
 		},
 	}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		WorkSessionService: workSessions,
 		Logger:             slog.New(slog.DiscardHandler),
 	}}
@@ -44,7 +44,7 @@ func TestEnsureStaffPresenceAcceptsClosedSessionSkip(t *testing.T) {
 			return false, nil
 		},
 	}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		WorkSessionService: workSessions,
 		Logger:             slog.New(slog.DiscardHandler),
 	}}
@@ -64,7 +64,7 @@ func TestEnsureStaffPresenceForAttendanceResultSkipsIdempotentCheckout(t *testin
 			return false, nil
 		},
 	}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		WorkSessionService: workSessions,
 		Logger:             slog.New(slog.DiscardHandler),
 	}}
@@ -86,7 +86,7 @@ func TestEnsureStaffPresenceForAttendanceResultStampsMutatingCheckout(t *testing
 			return false, nil
 		},
 	}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		WorkSessionService: workSessions,
 		Logger:             slog.New(slog.DiscardHandler),
 	}}
@@ -122,7 +122,7 @@ func TestEnsureStaffPresenceRollsBackFailedCheckInToSavepoint(t *testing.T) {
 			return false, errors.New("check-in failed")
 		},
 	}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		WorkSessionService: workSessions,
 		Logger:             slog.New(slog.DiscardHandler),
 	}}

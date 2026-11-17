@@ -3,9 +3,12 @@ name: PR body
 # The user TL;DR from PULL_REQUEST_TEMPLATE.md. `gh pr create --body` skips the
 # template, so this check catches bodies written without it. Bots (Dependabot,
 # release-please) and drafts are skipped. `edited` reruns it after a body fix.
+# A push does not change the body: without `synchronize` the check ran 267 times
+# a day for nothing (14.11.2026). It is no required check, so its result on an
+# older commit is enough.
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened, ready_for_review]
+    types: [opened, edited, reopened, ready_for_review]
 permissions: {}
 
 concurrency:

@@ -5,12 +5,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -68,6 +71,15 @@ func bookHolidayWeek(t *testing.T, organization, school int64, email string) int
 	return week
 }
 
+// newHolidayClosurePortal is the Träger portal on a day before the booked
+// holiday weeks of July 2030: only weeks still ahead are told.
+func newHolidayClosurePortal(t *testing.T) (*bun.DB, *traegerPortalHandler) {
+	t.Helper()
+	db := testpkg.SetupTestDB(t)
+	today := func() calendar.Date { return calendar.NewDate(2030, time.June, 3) }
+	return db, traegerPortalWithDaysOn(t, db, testpkg.TenantRuntime(t, db), owners.HolidayTestSchoolCalendar{}, today, time.Now)
+}
+
 // proposeSchoolClosingDay saves a closing day of the school in the booked
 // holiday week and the notice it proposes, as School Calendar records it.
 func proposeSchoolClosingDay(t *testing.T, db *bun.DB, school int64, day string) {
@@ -98,7 +110,7 @@ func closureMails(t *testing.T, db *bun.DB, organization int64) int {
 // booking at its own school is neither shown nor told.
 func TestTraegerClosingDayTellsTheParentsOfBookedHolidayWeeksOnce(t *testing.T) {
 	t.Parallel()
-	db, router := newMasterDataPortal(t)
+	db, router := newHolidayClosurePortal(t)
 	office := newTraegerOffice(t, db, router, "Träger Ferienschluss", identityaccess.TraegerRoleAdministration)
 	foreign := newTraegerOffice(t, db, router, "Träger Ferienschluss Fremd", identityaccess.TraegerRoleAdministration)
 	north := bookHolidayWeek(t, office.organization, office.schools[0], "nord@example.org")
@@ -160,7 +172,7 @@ func TestTraegerClosingDayTellsTheParentsOfBookedHolidayWeeksOnce(t *testing.T) 
 // weeks (#6434).
 func TestTraegerHolidayClosurePendingQueryBudget(t *testing.T) {
 	t.Parallel()
-	db, router := newMasterDataPortal(t)
+	db, router := newHolidayClosurePortal(t)
 	office := newTraegerOffice(t, db, router, "Träger Budget Ferienschluss", identityaccess.TraegerRoleAdministration)
 	bookHolidayWeek(t, office.organization, office.schools[0], "eins@example.org")
 	read := func() testpkg.QueryMeasurement {

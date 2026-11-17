@@ -73,7 +73,7 @@ func TestResendGuardianInvitation_LosesToConcurrentInvalidation(t *testing.T) {
 			mailCount := len(outbox.Requests())
 			err = raceHeldTransition(t, db, func(context.Context) error {
 				return service.ResendGuardianInvitation(testpkg.Ctx(t), invitation.ID, creator.ID)
-			}, `UPDATE auth.guardian_invitations SET expires_at = NOW() - INTERVAL '1 minute', email = NULL WHERE id = ?`, invitation.ID)
+			}, `UPDATE auth.guardian_invitations SET expires_at = ?, email = NULL WHERE id = ?`, time.Now().Add(-time.Minute), invitation.ID)
 			require.Error(t, err, "a resend cannot restore the expiry from its stale snapshot")
 			after := testpkg.GuardianInvitationByID(t, db, invitation.ID)
 			assert.Equal(t, before.Token, after.Token, "no new token replaces the invalidated link")

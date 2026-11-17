@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
@@ -23,7 +24,7 @@ import (
 // proves the Dienstplan side (#2706).
 func planExportBetreuungsplanSources(t *testing.T, db *bun.DB, tx bun.IDB, staff planexport.StaffNameReader, renderer planexport.Renderer) planExportSources {
 	t.Helper()
-	return planExportSources{
+	return planExportSources{Now: func() time.Time { return time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC) },
 		Overview:       &planExportFakeOverview{},
 		ShiftTypes:     planExportFakeShiftTypes{},
 		Instances:      newPlanExportOwnerInstances(t, db),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -18,7 +19,7 @@ func TestErasureSchoolLockIsReleasedBeforeReturn(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	id := testpkg.Tenant(t)
-	store, err := NewErasureStore(db)
+	store, err := NewErasureStore(db, time.Now)
 	require.NoError(t, err)
 	// Keep the next caller connected so a new connection handshake cannot hide
 	// a lock that PostgreSQL has not released yet after session disposal.
@@ -60,7 +61,7 @@ func TestErasureSchoolLockRejectsOverlappingRunsOnlyForSameSchool(t *testing.T) 
 	db := testpkg.SetupIsolatedTestDB(t)
 	id := testpkg.Tenant(t)
 	other, _ := testpkg.CreateTestTenant(t, db)
-	store, err := NewErasureStore(db)
+	store, err := NewErasureStore(db, time.Now)
 	require.NoError(t, err)
 	ctx := t.Context()
 	require.NoError(t, store.WithSchoolLock(ctx, id, func(context.Context) error {

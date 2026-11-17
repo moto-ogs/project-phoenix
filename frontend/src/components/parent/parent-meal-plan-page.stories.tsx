@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { storyNow } from "~storybook/clock";
 import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
 import { ParentMealPlanPage } from "./parent-meal-plan-page";
 import type {
@@ -60,7 +61,7 @@ function toISODate(date: Date): string {
 }
 
 function mondayISOFromOffset(weekOffset: number): string {
-  const date = new Date();
+  const date = storyNow();
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + weekOffset * 7);
   const offset = (date.getDay() + 6) % 7;
@@ -118,7 +119,7 @@ function mealPlanForWeek(mondayISO: string): MealPlanEntry[] {
 
 function participationForFourWeeks(): MealParticipation {
   const monday = mondayISOFromOffset(0);
-  const today = toISODate(new Date());
+  const today = toISODate(storyNow());
   const days = Array.from({ length: 26 }, (_, offset) => ({
     date: dateFromMonday(monday, offset),
     offset,

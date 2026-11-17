@@ -6,6 +6,11 @@ import type { SigningView } from "~/lib/care-contract-signing-api";
 import { ContractSigningView } from "./care-contract-signing-view";
 
 const mocks = vi.hoisted(() => ({ fetch: vi.fn(), sign: vi.fn() }));
+// The mail link has no session; the inbox refresh then does nothing.
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ data: null, status: "unauthenticated" }),
+}));
+
 vi.mock("~/lib/care-contract-signing-api", () => ({
   fetchSigningView: mocks.fetch,
   signContract: mocks.sign,

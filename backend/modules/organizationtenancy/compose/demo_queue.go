@@ -3,19 +3,30 @@ package compose
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/adapters/postgres"
 	"github.com/uptrace/bun"
 )
 
+// NewDemoSchools composes the demo process's records of its demo schools on
+// its privileged connection; they claim no order and stamp nothing.
+func NewDemoSchools(db *bun.DB) (*organizationtenancy.DemoSchools, error) {
+	if db == nil {
+		return nil, fmt.Errorf("demo schools require a database")
+	}
+	return organizationtenancy.NewDemoSchools(postgres.DemoStateEngine{Store: postgres.NewDemoStateStore(db, nil)}), nil
+}
+
 // NewDemoSchoolQueue composes the demo process's side of the queue on its
-// privileged connection, like NewDemoSchools.
+// privileged connection, like NewDemoSchools; the real clock stamps a claim
+// (ADR 0272), which nothing compares.
 func NewDemoSchoolQueue(db *bun.DB) (*organizationtenancy.DemoSchoolQueue, error) {
 	if db == nil {
 		return nil, fmt.Errorf("demo school queue requires a database")
 	}
-	return organizationtenancy.NewDemoSchoolQueue(postgres.DemoQueueEngine{Store: postgres.NewDemoStateStore(db)}), nil
+	return organizationtenancy.NewDemoSchoolQueue(postgres.DemoQueueEngine{Store: postgres.NewDemoStateStore(db, time.Now)}), nil
 }
 
 // NewDemoSchoolOrders composes the serving backend's side. Every call needs

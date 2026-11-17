@@ -29,7 +29,11 @@ type CareStudent struct {
 	// care days, in every status. Both nil when no gap is known.
 	CarePausedAfter *calendar.Date
 	CareResumedFrom *calendar.Date
-	UpdatedAt       time.Time
+	// WithoutCarePlace is School Membership's mark of a child of the class
+	// without an OGS place (#4803). Such a child never takes part in OGS
+	// care, whatever its dates say.
+	WithoutCarePlace bool
+	UpdatedAt        time.Time
 }
 
 // CareEndedOn reports whether the care has already ended on day. The

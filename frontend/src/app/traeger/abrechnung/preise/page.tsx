@@ -8,7 +8,7 @@
 
 import { Tags } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   billingAreaTitle,
   billingTabs,
@@ -24,22 +24,16 @@ import {
 } from "~/components/traeger/care-billing-format";
 import { CarePriceListCard } from "~/components/traeger/care-price-list-card";
 import { CarePriceListModal } from "~/components/traeger/care-price-list-modal";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { EmptyState } from "~/components/ui/empty-state";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
-import {
-  type CareRule,
-  fetchCareRules,
-} from "~/lib/traeger-care-reductions-api";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { fetchCareRules } from "~/lib/traeger-care-reductions-api";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import {
-  type CareTariffs,
   deleteCarePriceList,
   fetchCareTariffs,
 } from "~/lib/traeger-care-billing-api";
@@ -68,54 +62,37 @@ function PriceListPage() {
   const searchParams = useSearchParams();
   const focusSchool = searchParams?.get(SCHOOL_PARAM) ?? "";
   const currentMonth = monthOf(useBerlinToday());
-  const [data, setData] = useState<CareTariffs | null>(null);
+  const {
+    data,
+    loading,
+    error: loadError,
+    mutate,
+  } = useTraegerResource(
+    traegerBillingKeys.careTariffs(),
+    fetchCareTariffs,
+    "die Preisliste",
+  );
   const [shown, setShown] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<SchoolRef | null>(null);
   const [deleting, setDeleting] = useState<
     (SchoolRef & { validFrom: string }) | null
   >(null);
   const [busy, setBusy] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const deleteErrors = useApiFormError();
   const { success } = useToast();
 
   // The sibling rules decide whether the list's sibling prices are charged;
-  // without them (not loaded, no right) the cells keep showing them.
-  const [siblingRules, setSiblingRules] = useState<readonly CareRule[] | null>(
-    null,
+  // without them (not loaded, no right) the cells keep showing them. Their
+  // failure stays silent: the page shows the sibling prices as before.
+  const { data: ruleSet } = useTraegerResource(
+    traegerBillingKeys.careRules(),
+    fetchCareRules,
+    "die Regeln der Ermäßigungen",
   );
-  useEffect(() => {
-    fetchCareRules()
-      .then((set) =>
-        setSiblingRules(set.rules.filter((rule) => rule.kind === "sibling")),
-      )
-      .catch((err: unknown) => {
-        // Silent on purpose: the page shows the sibling prices as before.
-        logger.warn("traeger_care_rules_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-  }, []);
-
-  const load = useCallback(async () => {
-    try {
-      setData(await fetchCareTariffs());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_tariffs_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Preisliste",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const siblingRules = useMemo(
+    () => ruleSet?.rules.filter((rule) => rule.kind === "sibling") ?? null,
+    [ruleSet],
+  );
 
   // Open a school asked for in the address once its data is there.
   useEffect(() => {
@@ -137,7 +114,9 @@ function PriceListPage() {
     setBusy(true);
     deleteErrors.clear();
     try {
-      setData(await deleteCarePriceList(deleting.id, deleting.validFrom));
+      await mutate(await deleteCarePriceList(deleting.id, deleting.validFrom), {
+        revalidate: false,
+      });
       setShown(({ [deleting.id]: _removed, ...rest }) => rest);
       success(
         `Die Preise ab ${formatMonth(deleting.validFrom)} sind gelöscht.`,
@@ -194,10 +173,10 @@ function PriceListPage() {
           />
         ) : null
       }
-      statsLoading={!data && !pageLoad.error}
+      statsLoading={loading}
       tabs={billingTabs("preise")}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !data}
+      error={loadError}
+      loading={loading}
       overlays={
         data ? (
           <>
@@ -208,7 +187,7 @@ function PriceListPage() {
               initialMonth={editing ? shown[editing.id] : undefined}
               onClose={() => setEditing(null)}
               onSaved={(next) => {
-                setData(next);
+                void mutate(next, { revalidate: false });
                 setEditing(null);
               }}
             />

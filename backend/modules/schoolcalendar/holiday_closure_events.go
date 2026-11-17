@@ -178,8 +178,9 @@ type HolidayClosureCalendar struct {
 type HolidayClosureOutcome struct {
 	State     string
 	ErrorCode string
-	// RetryAt makes a pending outcome due again then.
-	RetryAt time.Time
+	// RetryAfter makes a pending outcome due again that long after the
+	// database's clock, which also leases the commands and watches them.
+	RetryAfter time.Duration
 }
 
 // HolidayClosureSettlement moves a waiting command to its delivery state.

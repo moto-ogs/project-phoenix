@@ -14,8 +14,8 @@ type SettingValue struct {
 	SettingKey string          `bun:"setting_key,notnull" json:"setting_key"`
 	Value      json.RawMessage `bun:"value,type:jsonb,notnull" json:"value"`
 	UpdatedBy  *int64          `bun:"updated_by" json:"updated_by,omitempty"`
-	CreatedAt  time.Time       `bun:"created_at,notnull,default:now()" json:"created_at"`
-	UpdatedAt  time.Time       `bun:"updated_at,notnull,default:now()" json:"updated_at"`
+	CreatedAt  time.Time       `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt  time.Time       `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 }
 
 func (sv *SettingValue) GetTenantID() int64   { return sv.TenantID }

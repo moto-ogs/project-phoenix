@@ -318,7 +318,7 @@ func TestWithWeekendPlanReadsTheSchoolSetting(t *testing.T) {
 
 	saturday := calendar.NewDate(2026, 9, 12)
 	for _, follows := range []bool{true, false} {
-		s := &Scheduler{settings: &stubSettingsResolver{boolVal: follows}}
+		s := &Scheduler{now: time.Now, settings: &stubSettingsResolver{boolVal: follows}}
 		weekday, err := calendar.PlanWeekday(s.withWeekendPlan(context.Background()), saturday)
 		require.NoError(t, err)
 		if follows {
@@ -327,7 +327,7 @@ func TestWithWeekendPlanReadsTheSchoolSetting(t *testing.T) {
 			assert.Equal(t, 6, weekday)
 		}
 	}
-	weekday, err := calendar.PlanWeekday((&Scheduler{}).withWeekendPlan(context.Background()), saturday)
+	weekday, err := calendar.PlanWeekday((&Scheduler{now: time.Now}).withWeekendPlan(context.Background()), saturday)
 	require.NoError(t, err)
 	assert.Equal(t, 6, weekday, "without settings the weekend stays what it was")
 }

@@ -44,8 +44,8 @@ func TestPlannedExit_BlockedClosesThisSchoolThenCompletes(t *testing.T) {
 	// A day long past: the exit is due on every run, whatever the clock. The
 	// suite may not name School Membership, so the plan goes in by SQL.
 	_, err := sc.db.NewRaw(`UPDATE users.staff_school_memberships SET planned_exit_day = ?, planned_exit_by_account_id = ?,
-		planned_exit_by_staff_id = ?, planned_exit_by_name = 'Leitung', planned_exit_at = NOW() WHERE tenant_id = ? AND id = ?`,
-		calendar.NewDate(2000, 1, 3), plannerAccount.ID, planner.ID, testpkg.Tenant(t), staff.ID).Exec(context.Background())
+		planned_exit_by_staff_id = ?, planned_exit_by_name = 'Leitung', planned_exit_at = ? WHERE tenant_id = ? AND id = ?`,
+		calendar.NewDate(2000, 1, 3), plannerAccount.ID, planner.ID, time.Now(), testpkg.Tenant(t), staff.ID).Exec(context.Background())
 	require.NoError(t, err)
 
 	var notices []staffoffboarding.ExitNotice
@@ -107,8 +107,9 @@ func TestPlannedExit_BlockedClosesThisSchoolThenCompletes(t *testing.T) {
 	runDue()
 	assert.Nil(t, membershipDeletedAt(t, sc, staff.ID), "the retry waits for the hour")
 
-	_, err = sc.db.NewRaw(`UPDATE users.staff_school_memberships SET exit_next_attempt_at = NOW() - INTERVAL '1 minute' WHERE tenant_id = ? AND id = ?`,
-		testpkg.Tenant(t), staff.ID).Exec(context.Background())
+	// The run schedules and compares the retry on its clock, time.Now here.
+	_, err = sc.db.NewRaw(`UPDATE users.staff_school_memberships SET exit_next_attempt_at = ? WHERE tenant_id = ? AND id = ?`,
+		time.Now().Add(-time.Minute), testpkg.Tenant(t), staff.ID).Exec(context.Background())
 	require.NoError(t, err)
 	runDue()
 	assert.NotNil(t, membershipDeletedAt(t, sc, staff.ID), "the hourly retry completes the offboarding")

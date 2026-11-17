@@ -106,6 +106,7 @@ type SignatureStore interface {
 	PaperDocument(ctx context.Context, organizationID, contractID int64) (carecontract.File, error)
 	Reminders(ctx context.Context, organizationID, contractID int64) ([]carecontract.Reminder, error)
 	DueReminders(ctx context.Context, organizationID, contractID int64, lastContactBefore time.Time, maxReminders int) ([]ReminderCandidate, error)
-	InsertReminder(ctx context.Context, organizationID, contractID int64, number int, outboxID int64, recipient string) error
+	// InsertReminder records a reminder at the owner clock's instant at.
+	InsertReminder(ctx context.Context, organizationID, contractID int64, number int, outboxID int64, recipient string, at time.Time) error
 	InboxContractAddressed(ctx context.Context, organizationID, contractID int64, reader carecontract.InboxReader) (bool, error)
 }

@@ -62,7 +62,7 @@ func TestParseNoteSubject(t *testing.T) {
 		date := "2026-09-09"
 		subject, err := parseNoteSubject(studentNoteRequestBody{
 			SubjectDate: &date, ActivityGroupID: &activity,
-		})
+		}, noteSubjectToday)
 		require.NoError(t, err)
 		require.NotNil(t, subject.Date)
 		assert.Equal(t, "2026-09-09", subject.Date.String())
@@ -75,21 +75,21 @@ func TestParseNoteSubject(t *testing.T) {
 		t.Parallel()
 		_, err := parseNoteSubject(studentNoteRequestBody{
 			ActivityGroupID: &activity, EducationGroupID: &group,
-		})
+		}, noteSubjectToday)
 		require.ErrorContains(t, err, "not to both")
 	})
 
 	t.Run("a day that is not a calendar date is refused", func(t *testing.T) {
 		t.Parallel()
 		broken := "09.09.2026"
-		_, err := parseNoteSubject(studentNoteRequestBody{SubjectDate: &broken})
+		_, err := parseNoteSubject(studentNoteRequestBody{SubjectDate: &broken}, noteSubjectToday)
 		require.ErrorContains(t, err, "YYYY-MM-DD")
 	})
 
 	t.Run("a future day is refused", func(t *testing.T) {
 		t.Parallel()
-		future := calendar.TodayDate().AddDays(1).String()
-		_, err := parseNoteSubject(studentNoteRequestBody{SubjectDate: &future})
+		future := noteSubjectToday.AddDays(1).String()
+		_, err := parseNoteSubject(studentNoteRequestBody{SubjectDate: &future}, noteSubjectToday)
 		require.ErrorContains(t, err, "must not be in the future")
 	})
 
@@ -98,7 +98,7 @@ func TestParseNoteSubject(t *testing.T) {
 		empty := ""
 		subject, err := parseNoteSubject(studentNoteRequestBody{
 			SubjectDate: &empty, ActivityGroupID: &empty, EducationGroupID: &empty,
-		})
+		}, noteSubjectToday)
 		require.NoError(t, err)
 		assert.Nil(t, subject.Date)
 		assert.Nil(t, subject.ActivityGroupID)
@@ -108,7 +108,7 @@ func TestParseNoteSubject(t *testing.T) {
 	t.Run("a non-numeric reference is refused", func(t *testing.T) {
 		t.Parallel()
 		broken := "abc"
-		_, err := parseNoteSubject(studentNoteRequestBody{ActivityGroupID: &broken})
+		_, err := parseNoteSubject(studentNoteRequestBody{ActivityGroupID: &broken}, noteSubjectToday)
 		require.ErrorContains(t, err, "activity_group_id")
 	})
 }
@@ -207,3 +207,6 @@ func TestBuildNoteSubjectsResponse(t *testing.T) {
 	require.NotNil(t, empty.Activities)
 	assert.Empty(t, empty.Activities)
 }
+
+// noteSubjectToday is the fixed day the note references are judged on.
+var noteSubjectToday = calendar.NewDate(2026, 11, 2)

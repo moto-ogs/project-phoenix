@@ -121,7 +121,7 @@ async function warmTourPages(
   const cold = paths.filter((path) => !warmedPages.has(path));
   if (cold.length === 0) return;
   const pending = new Set<Request>();
-  let lastActivity = Date.now();
+  let lastActivity = performance.now();
   // Es zählen die Routen der App, die eine Seite lädt (`/api/…`): Die baut
   // der Entwicklungsserver beim ersten Aufruf. Der Live-Kanal (SSE) bleibt
   // offen und zählt nicht, ebenso Anfragen an andere Hosts und der Versand
@@ -156,12 +156,12 @@ async function warmTourPages(
   const onRequest = (request: Request) => {
     if (!counts(request)) return;
     pending.add(request);
-    lastActivity = Date.now();
+    lastActivity = performance.now();
   };
   const onDone = (request: Request) => {
     if (!counts(request)) return;
     pending.delete(request);
-    lastActivity = Date.now();
+    lastActivity = performance.now();
   };
   page.on("framenavigated", onNavigated);
   page.on("request", onRequest);
@@ -191,7 +191,7 @@ async function warmTourPages(
             open: [...pending].map(
               (request) => new URL(request.url()).pathname,
             ),
-            quiet: Date.now() - lastActivity >= 500,
+            quiet: performance.now() - lastActivity >= 500,
           }),
           {
             message: `${path}: Die Seite lädt nicht zu Ende (offene Anfragen).`,

@@ -44,6 +44,7 @@ export const sourceRatchets = [
   entry('module_complexity_ratchet', 'TestModuleComplexityRatchet', production),
   entry('module_legacy_budget_ratchet', 'TestModuleLegacyBudgetRatchet', production),
   entry('module_live_clock_ratchet', 'TestModuleLiveClockRatchet', moduleRoots),
+  entry('module_sql_clock_ratchet', 'TestModuleSQLClockRatchet', moduleRoots),
   entry('module_compose_alias_ratchet', 'TestModuleComposeAliasRatchet', production),
   entry('module_facade_width_ratchet', 'TestModuleFacadeWidthRatchet', moduleRoots),
   // Embedded interfaces can import types from anywhere in the backend.

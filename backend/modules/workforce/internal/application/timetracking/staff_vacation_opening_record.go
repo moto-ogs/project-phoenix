@@ -39,7 +39,7 @@ type StaffVacationOpening struct {
 	EnteredRemainingDays float64       `bun:"entered_remaining_days,notnull" json:"entered_remaining_days"`
 	Note                 string        `bun:"note,notnull,default:''" json:"note"`
 	DecidedBy            int64         `bun:"decided_by,notnull" json:"decided_by"`
-	DecidedAt            time.Time     `bun:"decided_at,notnull,default:current_timestamp" json:"decided_at"`
+	DecidedAt            time.Time     `bun:"decided_at,nullzero,notnull" json:"decided_at"`
 }
 
 func (o *StaffVacationOpening) Validate() error {

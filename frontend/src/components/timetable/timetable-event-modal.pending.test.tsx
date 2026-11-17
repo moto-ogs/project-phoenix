@@ -19,6 +19,7 @@ import type {
   EnrichedInstance,
   TimetableTemplate,
 } from "~/lib/timetable-types";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import {
   deferred,
@@ -215,7 +216,7 @@ async function deleteSeries() {
   );
   expect(onDeleteSeries).toHaveBeenCalledWith(
     expect.objectContaining({ id: "7" }),
-    "2026-09-09",
+    TEST_CLOCK_TODAY,
   );
   return { ...view, answer, dialog };
 }

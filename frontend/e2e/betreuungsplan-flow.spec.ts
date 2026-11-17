@@ -1,6 +1,7 @@
 import { type Page } from "@playwright/test";
 
 import { expect, test } from "./a11y/scan";
+import { runToday, uniqueTitle } from "./clock";
 import {
   loginToTenant,
   MISSING_SEED_ACCESS,
@@ -8,7 +9,6 @@ import {
   seedAccess as access,
   tenantBase as base,
 } from "./tenant-session";
-import { berlinTodayISO } from "../src/lib/date-helpers";
 import { nextWorkdayISO } from "../src/lib/timetable-helpers";
 
 // Eigenständiger /betreuungsplan-Bereich. Diese Spec testet die UI-Verdrahtung
@@ -132,7 +132,7 @@ test.describe("Betreuungsplan UI-Flow (Inkrement 4)", () => {
     // Alt-Parameter bewusst mitgeben: der Erstaufruf lässt sie stehen (die
     // Seite liest nur d/view/block), aber der erste Navigationsschritt muss sie
     // ersatzlos abräumen (Kriterium 2).
-    const today = berlinTodayISO();
+    const today = runToday();
     await page.goto(`${base}/betreuungsplan?d=${today}&week=2&instance=99`, {
       waitUntil: "domcontentloaded",
     });
@@ -217,8 +217,8 @@ test.describe("Betreuungsplan UI-Flow (Inkrement 4)", () => {
     test.setTimeout(90000);
 
     // nextWorkdayISO: die Woche zeigt Mo–Fr, ein Wochenendtag würde snappen.
-    const day = nextWorkdayISO(berlinTodayISO());
-    const title = `Playwright Betreuungsplan ${Date.now()}`;
+    const day = nextWorkdayISO(runToday());
+    const title = uniqueTitle("Playwright Betreuungsplan");
     const { id, startTime, endTime } = await createGapInstance(
       page,
       day,
@@ -287,8 +287,8 @@ test.describe("Betreuungsplan UI-Flow (Inkrement 4)", () => {
     if (!access) return;
     test.setTimeout(90000);
 
-    const day = nextWorkdayISO(berlinTodayISO());
-    const title = `Playwright Neu ${Date.now()}`;
+    const day = nextWorkdayISO(runToday());
+    const title = uniqueTitle("Playwright Neu");
 
     await page.goto(`${base}/betreuungsplan?d=${day}`, {
       waitUntil: "domcontentloaded",
@@ -357,8 +357,8 @@ test.describe("Betreuungsplan UI-Flow (Inkrement 4)", () => {
     // Ein per API angelegter Einzeltermin (status "planned", keine
     // activityGroupId) ist genau der Fall, für den der Slide-Over die Aktion
     // "Wiederholen" anbietet: die Konvertierung Einzeltermin -> Serie.
-    const day = nextWorkdayISO(berlinTodayISO());
-    const title = `Playwright Wiederholen ${Date.now()}`;
+    const day = nextWorkdayISO(runToday());
+    const title = uniqueTitle("Playwright Wiederholen");
     const { startTime, endTime } = await createGapInstance(page, day, title);
 
     await page.goto(`${base}/betreuungsplan?d=${day}`, {

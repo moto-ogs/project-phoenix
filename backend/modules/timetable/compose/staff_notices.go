@@ -21,7 +21,7 @@ type StaffNoticeDependencies struct {
 	Names        func(ctx context.Context, accountIDs []int64) (map[int64]string, error)
 	Publications ports.StaffNoticePublications
 	Logger       *slog.Logger
-	Now          func() time.Time // stamps and dates the notices; nil is the real clock
+	Now          func() time.Time // stamps and dates the notices; required
 }
 
 // NewStaffNotices builds the staff notices over the owner's repository.
@@ -31,7 +31,7 @@ func NewStaffNotices(deps StaffNoticeDependencies) timetable.StaffNotices {
 	})
 }
 
-// NewStaffNoticeRepository builds the retained staff notice repository; nil now is the real clock.
+// NewStaffNoticeRepository builds the retained staff notice repository; now is required.
 func NewStaffNoticeRepository(db *bun.DB, now func() time.Time) ports.StaffNoticeRecords {
 	return application.NewStaffNoticeRecords(postgres.NewStaffNoticeRepository(postgres.New(postgres.DatabaseRuntime(db)).WithClock(now)), transaction{})
 }

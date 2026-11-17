@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,7 +54,7 @@ func TestTraegerPhaseStatementsKeepTheirTraegerBeneathRLS(t *testing.T) {
 	_, err := db.ExecContext(bg, `INSERT INTO enrollment.traeger_phase_schools (organization_id, traeger_phase_id, school_id) VALUES (?, ?, ?)`,
 		foreign.organization, foreignPhase, foreign.school)
 	require.NoError(t, err)
-	store := postgres.NewTraegerPhaseStore()
+	store := postgres.NewTraegerPhaseStore(time.Now)
 	version := 1
 
 	ctx := testpkg.ContextWithTenantRuntime(bg, testpkg.TenantRuntime(t, db))
@@ -100,7 +101,7 @@ func TestTraegerPhaseStoreRefusesASchoolTransaction(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newCatalogTraeger(t, db, "Trägerphase Wächter")
 	other := newCatalogTraeger(t, db, "Trägerphase Anderer")
-	store := postgres.NewTraegerPhaseStore()
+	store := postgres.NewTraegerPhaseStore(time.Now)
 	_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), db, func(ctx context.Context, organization int64) ([]enrollment.TraegerPhase, error) {
 		return store.ListTraegerPhases(ctx, organization)
 	}, own.organization)
@@ -122,7 +123,7 @@ func TestTraegerPhaseLifecycle(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newCatalogTraeger(t, db, "Trägerphase Ablauf")
 	foreign := newCatalogTraeger(t, db, "Trägerphase Ablauf Fremd")
-	phases := enrollmentCompose.NewTraegerPhases()
+	phases := enrollmentCompose.NewTraegerPhases(time.Now)
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	require.NoError(t, testpkg.WithinTraeger(ctx, own.organization, func(ctx context.Context) error {
 		_, err := phases.CreateTraegerPhase(ctx, own.organization, enrollment.TraegerPhaseInput{

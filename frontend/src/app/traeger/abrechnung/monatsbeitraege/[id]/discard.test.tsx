@@ -1,7 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { CareRunDetail } from "~/lib/traeger-care-billing-api";
+
+vi.unmock("swr");
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -62,10 +66,20 @@ function run(overrides: Partial<CareRunDetail> = {}): CareRunDetail {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerCareRunPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
+}
+
+/** The start dialog's read of the month's schools and their open run. */
+function StartDialogSchools({ read }: { read: () => Promise<unknown> }) {
+  useTraegerResource(
+    traegerBillingRunKeys.careRunSchools("2027-01-01"),
+    read,
+    "die Schulen",
+  );
+  return null;
 }
 
 describe("discarding an empty monthly run", () => {
@@ -102,6 +116,29 @@ describe("discarding an empty monthly run", () => {
     expect(
       screen.queryByRole("button", { name: "Leeren Lauf verwerfen" }),
     ).toBeNull();
+  });
+
+  it("frees the schools in the start dialog once the run is discarded", async () => {
+    api.fetchCareRun.mockResolvedValue(run());
+    api.discardCareRun.mockResolvedValue(
+      run({ status: "discarded", discardedAt: "2027-01-05T09:00:00Z" }),
+    );
+    const readSchools = vi.fn().mockResolvedValue([]);
+    render(
+      <TraegerResourceTestProvider>
+        <TraegerCareRunPage />
+        <StartDialogSchools read={readSchools} />
+      </TraegerResourceTestProvider>,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Leeren Lauf verwerfen" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Verwerfen" }));
+    expect(
+      await screen.findByText("Dieser Lauf ist verworfen"),
+    ).toBeInTheDocument();
+
+    await waitFor(() => expect(readSchools).toHaveBeenCalledTimes(2));
   });
 
   it("keeps the release for a run that waits for a price", async () => {

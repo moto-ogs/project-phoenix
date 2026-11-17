@@ -283,7 +283,7 @@ func requestTestCapacity(cfg owners.EnrollmentIntakeSources) enrollmentNative.Of
 
 func setupRequestTest(t *testing.T) *requestTestEnv {
 	t.Helper()
-	return setupRequestTestOn(t, nil)
+	return setupRequestTestOn(t, time.Now)
 }
 
 // requestTestNow is the fixed instant of the window tests, a Wednesday 10:00
@@ -291,7 +291,7 @@ func setupRequestTest(t *testing.T) *requestTestEnv {
 var requestTestNow = requestTestToday.BerlinMidnight().Add(10 * time.Hour)
 
 // setupRequestTestOn builds the request environment over the intake clock
-// now; nil is the real clock.
+// now; setupRequestTest binds the real one.
 func setupRequestTestOn(t *testing.T, now func() time.Time) *requestTestEnv {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)

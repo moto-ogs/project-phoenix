@@ -1,9 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { LetterMailing } from "~/lib/traeger-billing-api";
 import { catalogText } from "~/test/error-catalog-text";
+import { useSWRAuth } from "~/lib/swr";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
+
+vi.unmock("swr");
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -60,9 +64,9 @@ const FAMILIES: LetterMailing[] = [
 
 function renderCard() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <BillingMailCard runId="9" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -285,6 +289,36 @@ describe("BillingMailCard", () => {
     await waitFor(() =>
       expect(api.fetchLetterMailings).toHaveBeenCalledTimes(2),
     );
+  });
+
+  it("reloads the history of an invoice after mailing", async () => {
+    api.mailBillingLetters.mockResolvedValue({
+      queued: 1,
+      already: 0,
+      withoutEmail: 0,
+    });
+    const readHistory = vi.fn(() => Promise.resolve({ steps: [] }));
+    function InvoiceHistory() {
+      useSWRAuth(
+        traegerBillingRunKeys.invoiceHistory("care", "51"),
+        readHistory,
+      );
+      return null;
+    }
+    render(
+      <TraegerResourceTestProvider>
+        <BillingMailCard runId="9" />
+        <InvoiceHistory />
+      </TraegerResourceTestProvider>,
+    );
+    const sendAll = await screen.findByRole("button", {
+      name: "An alle Familien senden",
+    });
+    await waitFor(() => expect(sendAll).toBeEnabled());
+    expect(readHistory).toHaveBeenCalledTimes(1);
+    fireEvent.click(sendAll);
+
+    await waitFor(() => expect(readHistory).toHaveBeenCalledTimes(2));
   });
 
   it("sends a failed mail again", async () => {

@@ -41,6 +41,10 @@
       "label": "Opieka odwołana",
       "description": "Gdy {careTerm} odwoła termin opieki Państwa dziecka."
     },
+    "parent_school_closing_day_changed": {
+      "label": "Dni zamknięcia",
+      "description": "Gdy {careTerm} doda, zmieni lub usunie dzień zamknięcia. Informacja w moto pojawia się zawsze, powiadomienie na telefon tylko dla dni zamknięcia w ciągu najbliższych 14 dni."
+    },
     "parent_billing_document": {
       "label": "Nowy dokument od organizatora",
       "description": "Gdy organizator wyśle lub udostępni Państwu dokument, na przykład umowę."

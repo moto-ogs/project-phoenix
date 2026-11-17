@@ -13,8 +13,8 @@ type ClassArrivalExceptionStore = ports.ClassArrivalExceptionStore
 type ClassArrivalStudents = ports.ClassArrivalStudents
 
 func NewClassArrivalExceptions(store ClassArrivalExceptionStore, students ClassArrivalStudents, today func() calendar.Date) (careplan.ClassArrivalExceptions, error) {
-	if store != nil && students == nil {
-		return nil, errors.New("class arrival exceptions: student directory is required")
+	if store != nil && students == nil || today == nil {
+		return nil, errors.New("class arrival exceptions: student directory and clock are required")
 	}
 	return application.NewClassArrivalExceptions(store, students, today), nil
 }

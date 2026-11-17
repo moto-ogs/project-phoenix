@@ -44,7 +44,7 @@ func holidayEntriesPortal(t *testing.T, db *bun.DB) (*parentService.Portal, http
 		ChildRepo: api.NewRepositoryTestFactory(database).ParentChildReads(), ParentAccounts: owners.NewParentAccounts(identity),
 		HolidayRegistrations: owners.NewParentHolidayRegistrations(organizations),
 	})
-	router := testpkg.TenantRuntimeMiddleware(t, db)(parentHTTP.NewResource(parentHTTP.ResourceConfig{Parent: portal}).Router(api.ParentSessionChain))
+	router := testpkg.TenantRuntimeMiddleware(t, db)(parentHTTP.NewResource(parentHTTP.ResourceConfig{Now: time.Now, Parent: portal}).Router(api.ParentSessionChain))
 	return portal, router
 }
 

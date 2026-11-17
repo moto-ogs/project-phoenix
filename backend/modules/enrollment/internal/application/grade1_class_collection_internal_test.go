@@ -114,7 +114,7 @@ func TestValidateAndNormalizeSchoolClasses_Grade1KeepsPrefixlessEligibleClass(t 
 		EligibleGradeLevels:    []int{1},
 		RequireSchoolClass:     true,
 	}
-	svc := NewIntake(IntakeDependencies{Settings: schoolClassSettings(true)})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: schoolClassSettings(true)})
 	children := []SubmitChild{{
 		FirstName:         "Kim",
 		LastName:          "Test",
@@ -139,7 +139,7 @@ func TestValidateAndNormalizeSchoolClasses_Grade1RequiresPrefixlessEligibleClass
 		EligibleSchoolClasses:  []string{"Bienen"},
 		RequireSchoolClass:     true,
 	}
-	svc := NewIntake(IntakeDependencies{Settings: schoolClassSettings(true)})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: schoolClassSettings(true)})
 	children := []SubmitChild{{FirstName: "Kim", LastName: "Test", TargetGradeLevel: grade(1)}}
 
 	err := svc.validateAndNormalizeSchoolClasses(context.Background(), phase, children)
@@ -158,7 +158,7 @@ func TestValidateAndNormalizeSchoolClasses_Grade1StaysClasslessForGrade2Restrict
 		EligibleSchoolClasses:  []string{"2a"},
 		RequireSchoolClass:     true,
 	}
-	svc := NewIntake(IntakeDependencies{Settings: schoolClassSettings(true)})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: schoolClassSettings(true)})
 	children := []SubmitChild{{FirstName: "Kim", LastName: "Test", TargetGradeLevel: grade(1), TargetSchoolClass: classPtr("2a")}}
 
 	require.NoError(t, svc.validateAndNormalizeSchoolClasses(context.Background(), phase, children))

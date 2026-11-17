@@ -1,16 +1,15 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use } from "react";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { RolloverForm } from "~/components/enrollment/rollover-form";
-import { getPhase, type Phase } from "~/lib/enrollment-phase-api";
+import { getPhase } from "~/lib/enrollment-phase-api";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
-import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { useRefreshPhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
-
-const logger = createLogger({ component: "MobileRolloverPage" });
 
 interface PageProps {
   readonly params: Promise<{ id: string }>;
@@ -21,37 +20,22 @@ export default function MobileRolloverPage({ params }: PageProps) {
   const { isReady } = useRequirePermission("config:manage");
   const router = useTenantRouter();
   const refreshPhaseExpiryWarnings = useRefreshPhaseExpiryWarnings();
-  const [phase, setPhase] = useState<Phase | null>(null);
-  const phaseLoad = useApiLoadError();
-  const showLoadError = phaseLoad.show;
-  const clearLoadError = phaseLoad.clear;
-  // Bumped by „Wiederholen“ to load the phase again.
-  const [attempt, setAttempt] = useState(0);
+  const {
+    data: phase,
+    error: phaseError,
+    mutate,
+  } = useSWRAuth(
+    isReady ? tenantAdminKeys.enrollmentPhase(id) : null,
+    () => getPhase(id),
+    { keepPreviousData: false },
+  );
+  const phaseLoad = useSwrResourceLoadError(
+    [{ data: phase, error: phaseError }],
+    "die Anmeldephase",
+    () => mutate(),
+  );
 
-  useEffect(() => {
-    if (!isReady) return;
-    let cancelled = false;
-    clearLoadError();
-    getPhase(id)
-      .then((loaded) => {
-        if (!cancelled) setPhase(loaded);
-      })
-      .catch(async (err: unknown) => {
-        if (cancelled) return;
-        logger.error("rollover_phase_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        await showLoadError(err, {
-          object: "die Anmeldephase",
-          retry: () => setAttempt((current) => current + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isReady, id, attempt, showLoadError, clearLoadError]);
-
-  if (!isReady || (phase === null && !phaseLoad.error)) {
+  if (!isReady || (!phase && !phaseLoad.failure)) {
     return (
       <TenantPage
         title="Anschlussphase erstellen"

@@ -176,7 +176,7 @@ func execStudents(ctx context.Context, query *bun.UpdateQuery, operation string)
 
 func studentUpdate(db bun.IDB) *bun.UpdateQuery {
 	return db.NewUpdate().TableExpr(`users.student_school_memberships AS "student"`).
-		Set("updated_at = NOW()").Where("student.deleted_at IS NULL")
+		Where("student.deleted_at IS NULL")
 }
 
 func (s *Store) EndStudentCare(ctx context.Context, ids []int64, until string) (int64, domain.OperationStats, error) {

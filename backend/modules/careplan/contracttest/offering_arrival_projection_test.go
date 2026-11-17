@@ -58,7 +58,7 @@ func bookingModeCareDays(t *testing.T, env *decisionTestEnv, authoritative bool)
 
 func bookingModePickupBaseline(env *decisionTestEnv, authoritative bool) careplan.PickupBaselineReader {
 	baselines, err := careplanCompose.NewPickupBaselines(env.repos.CarePlan(), approvedOfferingTestProjection(env.reposEnrollment, env.reposPeople),
-		func(context.Context) (bool, error) { return authoritative, nil })
+		func(context.Context) (bool, error) { return authoritative, nil }, decisionTestDay)
 	if err != nil {
 		panic(err)
 	}

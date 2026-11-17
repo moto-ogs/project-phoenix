@@ -154,7 +154,7 @@ func newRaceFixture(t *testing.T, name string) raceFixture {
 	}).ID
 	testpkg.OwnTraegerCareContracts(t, db, org)
 	account := testpkg.CreateTestAccountWithPassword(t, db, fmt.Sprintf("rennen-%d@test.local", testpkg.UniqueTestTenantID(t)), testpkg.NewTestPassword())
-	store := postgres.NewStore()
+	store := postgres.NewStore(calendar.TodayDate)
 	clock := Clock{Now: time.Now}
 	contracts := NewContracts(store, raceRenderer{}, ContractPorts{
 		Letterheads: raceLetterhead{}, Post: &racePost{next: testpkg.UniqueTestTenantID(t) * 1_000}, Runtime: raceRuntime{}, Access: raceAccess{},

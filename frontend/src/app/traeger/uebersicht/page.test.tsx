@@ -52,6 +52,17 @@ import TraegerDashboardPage from "./page";
 
 const AS_OF = TEST_CLOCK_INSTANT.toISOString();
 
+// Berliner Uhrzeit HH:MM eines Zeitpunkts, für den erwarteten „Stand“.
+function berlinClock(instant: Date): string {
+  return new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(instant);
+}
+const NOW_CLOCK = berlinClock(TEST_CLOCK_INSTANT);
+
 function figures(
   childrenTotal: number,
   childrenPresent: number,
@@ -304,7 +315,7 @@ describe("TraegerDashboardPage", () => {
     await act(async () => {
       renderPage();
     });
-    expect(screen.getByText("Stand 12:00 Uhr")).toBeInTheDocument();
+    expect(screen.getByText(`Stand ${NOW_CLOCK} Uhr`)).toBeInTheDocument();
 
     mockFetchAlerts.mockRejectedValue(
       new ApiError("boom", 500, { code: "general.internal" }),
@@ -317,7 +328,7 @@ describe("TraegerDashboardPage", () => {
     // Ein Abruf je Minute: das Dashboard fragt nur noch eine Quelle.
     expect(mockFetchAlerts).toHaveBeenCalledTimes(2);
     const hint = await screen.findByText(
-      "Stand 12:00 Uhr, Aktualisierung fehlgeschlagen. Die Zahlen sind vielleicht nicht mehr aktuell.",
+      `Stand ${NOW_CLOCK} Uhr, Aktualisierung fehlgeschlagen. Die Zahlen sind vielleicht nicht mehr aktuell.`,
     );
     expect(hint).toBeVisible();
     // Die bestätigten Zahlen bleiben stehen, keine Fehlerkarte statt Inhalt.
@@ -415,7 +426,11 @@ describe("TraegerDashboardPage", () => {
     expect(screen.getByText("9")).toBeInTheDocument();
     expect(screen.getByText("3 von 9")).toBeInTheDocument();
     expect(screen.getByText("1 : 16,7")).toBeInTheDocument();
-    expect(screen.getByText("Stand 11:59 Uhr")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `Stand ${berlinClock(new Date(TEST_CLOCK_INSTANT.getTime() - 60_000))} Uhr`,
+      ),
+    ).toBeInTheDocument();
 
     const [field] = screen.getAllByPlaceholderText("Schule oder Ort suchen…");
     fireEvent.change(field!, { target: { value: "melle" } });
@@ -606,7 +621,7 @@ describe("school alerts", () => {
   it("stays away while the Träger has no school", async () => {
     await renderAlerts(alertsOf([]));
     expect(screen.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-    expect(screen.getByText("Stand 12:00 Uhr")).toBeInTheDocument();
+    expect(screen.getByText(`Stand ${NOW_CLOCK} Uhr`)).toBeInTheDocument();
     expect(screen.getByText("0 von 0")).toBeInTheDocument();
     expect(
       screen.getByText(

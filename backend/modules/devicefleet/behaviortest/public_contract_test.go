@@ -2,6 +2,7 @@ package devicefleet_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	api "github.com/moto-ogs/project-phoenix/roots/owners"
@@ -12,7 +13,7 @@ import (
 func TestPublicDeviceContractPersistsRoomAndMapsMissingDevice(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db))
+	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
 	room := testpkg.CreateTestRoom(t, db, "Device contract room")
 	device, err := fleet.CreateDevice(testpkg.Ctx(t), devicefleet.CreateDevice{DeviceID: "contract-reader", DeviceType: "terminal", Status: devicefleet.DeviceStatusActive, RoomID: &room.ID})
@@ -34,7 +35,7 @@ func TestPublicDeviceContractPersistsRoomAndMapsMissingDevice(t *testing.T) {
 func TestDeviceCredentialIsOnlyReturnedAtCreation(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db))
+	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
 	ctx := testpkg.Ctx(t)
 	created, err := fleet.CreateDevice(ctx, devicefleet.CreateDevice{DeviceID: "credential-reader", DeviceType: "terminal"})
@@ -57,7 +58,7 @@ func TestDeviceCredentialIsOnlyReturnedAtCreation(t *testing.T) {
 func TestDeviceCredentialRotationRevokesOldKeyAndPreservesExactBytes(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db))
+	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
 	ctx := testpkg.Ctx(t)
 	oldKey := " " + testpkg.NewTestSigningSecret() + " "

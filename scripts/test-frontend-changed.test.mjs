@@ -28,6 +28,10 @@ function fixture(t) {
   write("bin/pnpm", `#!/bin/sh
 if [ "$3" = list ]; then
   printf '[]'
+elif [ -n "$TEST_CLOCK_INSTANT" ]; then
+  # The second run of changed tests on the moved clock (#7337).
+  { printf '%s\\n' "$TEST_CLOCK_INSTANT"; printf '%s\\n' "$@"; } > '${root}/moved-args'
+  exit "\${MOVED_EXIT:-0}"
 else
   printf '%s\\n' "$@" > '${root}/args'
 fi
@@ -523,4 +527,71 @@ test("quality path does not exempt unknown transitive IO through a helper cycle"
   const checked = f.run("--check-guards");
   assert.equal(checked.status, 1, checked.stderr);
   assert.match(checked.stderr, /quality-io-probe\.test\.ts/);
+});
+
+// #7337: a changed or new Vitest test runs a second time on a moved clock, so
+// a literal default day fails in the pull request, not in the weekly run.
+function movedClockFixture(t) {
+  const f = fixture(t);
+  const moved = () => existsSync(join(f.root, "moved-args"))
+    ? readFileSync(join(f.root, "moved-args"), "utf8").trim().split("\n") : undefined;
+  return { ...f, moved };
+}
+
+test("changed and new Vitest tests run again on the moved clock", (t) => {
+  const f = movedClockFixture(t);
+  f.write("frontend/src/lib/product.test.ts", "export {};\n");
+  f.write("frontend/src/lib/untouched.test.ts", "export {};\n");
+  f.git("add", ".");
+  f.git("commit", "-qm", "tests");
+  f.write("frontend/src/lib/product.test.ts", "export const changed = true;\n");
+  f.write("frontend/src/components/new.test.tsx", "export {};\n");
+  f.write("frontend/e2e/flow.spec.ts", "export {};\n");
+  f.write("frontend/scripts/tool.node-test.mjs", "export {};\n");
+  const result = f.run("HEAD", "--project", "logic-node");
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(f.moved(), [
+    "2027-01-01T23:30:00.000Z", "exec", "vitest", "run", "--passWithNoTests",
+    "--project", "logic-node",
+    "src/components/new.test.tsx", "src/lib/product.test.ts",
+  ]);
+  assert.ok(existsSync(join(f.root, "args")), "the run on the default clock stays");
+});
+
+test("no changed Vitest test starts no second run", (t) => {
+  const f = movedClockFixture(t);
+  f.write("frontend/src/lib/gone.test.ts", "export {};\n");
+  f.git("add", ".");
+  f.git("commit", "-qm", "tests");
+  rmSync(join(f.root, "frontend/src/lib/gone.test.ts"));
+  const result = f.run("HEAD");
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(f.moved(), undefined);
+});
+
+test("a red moved-clock run fails and names the instructions", (t) => {
+  const f = movedClockFixture(t);
+  f.write("frontend/src/lib/new.test.ts", "export {};\n");
+  const result = spawnSync(process.execPath, [join(f.root, "scripts/test-frontend-changed.mjs"), "HEAD"],
+    { encoding: "utf8", env: { ...f.env, MOVED_EXIT: "1" } });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /TEST_CLOCK_INSTANT=2027-01-01T23:30:00\.000Z pnpm vitest run src\/lib\/new\.test\.ts/);
+  assert.match(result.stderr, /docs\/agents\/frontend-testing\.md/);
+});
+
+test("--moved-clock runs only the moved-clock pass, for full CI suites", (t) => {
+  const f = movedClockFixture(t);
+  f.write("frontend/src/lib/new.test.ts", "export {};\n");
+  f.write("frontend/package.json", "{}\n");
+  const result = f.run("--moved-clock", "HEAD", "--shard", "1/2");
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(f.moved()?.slice(1), [
+    "exec", "vitest", "run", "--passWithNoTests", "--shard", "1/2", "src/lib/new.test.ts",
+  ]);
+  assert.ok(!existsSync(join(f.root, "args")), "the default-clock run belongs to the caller");
+});
+
+test("the frontend job runs the moved-clock pass after a full suite", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/test.yml", import.meta.url), "utf8");
+  assert.match(workflow, /pnpm vitest run --disableConsoleIntercept "\$\{test_args\[@\]\}"\n\s+if \[ -n "\$BASE_REF" \]; then\n\s+node \.\.\/scripts\/test-frontend-changed\.mjs --moved-clock "origin\/\$BASE_REF" --disableConsoleIntercept "\$\{test_args\[@\]\}"/);
 });

@@ -29,3 +29,12 @@ export const Sizes: Story = {
     </div>
   ),
 };
+
+export const Indeterminate: Story = {
+  render: () => (
+    <div className="flex w-28 flex-col gap-3">
+      <ProgressBar indeterminate label="Weiterleitung" size="xs" />
+      <ProgressBar indeterminate label="Dunkel" tone="dark" size="xs" />
+    </div>
+  ),
+};

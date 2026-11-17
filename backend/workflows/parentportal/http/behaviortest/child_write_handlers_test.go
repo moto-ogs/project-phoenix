@@ -77,7 +77,7 @@ func newWriteRouter(t *testing.T, db *bun.DB) http.Handler {
 func newWriteRouterWithSettings(t *testing.T, db *bun.DB, settings parentService.SettingsService) http.Handler {
 	t.Helper()
 	members := owners.MustNewMembershipTestRepositories(testpkg.NewDatabase(t, db))
-	repos, repoErr := api.NewParentRouteTestRepositories(testpkg.NewDatabase(t, db), members)
+	repos, repoErr := api.NewParentRouteTestRepositories(testpkg.NewDatabase(t, db), members, parentRouteNow)
 	require.NoError(t, repoErr)
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
@@ -100,12 +100,13 @@ func newWriteRouterWithSettings(t *testing.T, db *bun.DB, settings parentService
 		Settings:            settings,
 		ExcusedRequests:     owners.NewParentExcusedAbsenceRequests(repos.ExcusedRequests),
 		Logger:              slog.Default(),
+		Now:                 parentRouteNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CareExceptions),
 
 		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
 	})
-	rs := parent.NewResource(parent.ResourceConfig{Parent: svc})
+	rs := parent.NewResource(parent.ResourceConfig{Now: parentRouteNow, Parent: svc})
 	return testpkg.TenantRuntimeMiddleware(t, db)(rs.Router(api.ParentSessionChain))
 }
 
@@ -238,7 +239,7 @@ func (disabledSettings) ResolveBoolForTenant(_ context.Context, _ int64, _ strin
 func newDisabledWriteRouter(t *testing.T, db *bun.DB) http.Handler {
 	t.Helper()
 	members := owners.MustNewMembershipTestRepositories(testpkg.NewDatabase(t, db))
-	repos, repoErr := api.NewParentRouteTestRepositories(testpkg.NewDatabase(t, db), members)
+	repos, repoErr := api.NewParentRouteTestRepositories(testpkg.NewDatabase(t, db), members, parentRouteNow)
 	require.NoError(t, repoErr)
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
@@ -258,12 +259,13 @@ func newDisabledWriteRouter(t *testing.T, db *bun.DB) http.Handler {
 		StudentRepo:         owners.NewParentStudentReads(members.Student),
 		Settings:            disabledSettings{},
 		Logger:              slog.Default(),
+		Now:                 parentRouteNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CareExceptions),
 
 		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
 	})
-	return testpkg.TenantRuntimeMiddleware(t, db)(parent.NewResource(parent.ResourceConfig{Parent: svc}).Router(api.ParentSessionChain))
+	return testpkg.TenantRuntimeMiddleware(t, db)(parent.NewResource(parent.ResourceConfig{Now: parentRouteNow, Parent: svc}).Router(api.ParentSessionChain))
 }
 
 func TestWriteEndpoints_FeatureDisabledForbidden(t *testing.T) {
@@ -498,10 +500,16 @@ func TestSickNoteEndpoint_RejectsInvalidStatus(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
 }
 
+// parentRouteNow is the fixed clock of the write routes: Monday,
+// 24 August 2026, 14:00 in Berlin.
+func parentRouteNow() time.Time {
+	return time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
+}
+
 func nowISO() string         { return isoDay(0) }
 func futureISO(d int) string { return isoDay(d) }
 func isoDay(addDays int) string {
-	return time.Now().AddDate(0, 0, addDays).Format("2006-01-02")
+	return parentRouteNow().AddDate(0, 0, addDays).Format("2006-01-02")
 }
 
 // careProfiles builds Care Plan's care-profile commands the portal writes the

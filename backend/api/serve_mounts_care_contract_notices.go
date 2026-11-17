@@ -19,7 +19,7 @@ import (
 func mountCareContractNoticeRoutes(root chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings,
 	schoolSettings CareContractSchoolSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
 	addressees carecontract.NoticeAddressees, holidays carecontract.SchoolHolidays, parentsURL string, now func() time.Time) {
-	contractPorts, _ := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL)
+	contractPorts, _ := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL, now)
 	notices := careContractCompose.NewNotices(contractPorts, owners.NewCareContractNoticePorts(settings, delivery, addressees, holidays), now)
 	resource := careContractHTTP.NewNoticeResource(notices, common.RequiresPermission(identityaccess.TraegerRightContractsManage))
 	root.Mount("/traeger/contract-notices", resource.Router(ProtectedTraegerRoutes))

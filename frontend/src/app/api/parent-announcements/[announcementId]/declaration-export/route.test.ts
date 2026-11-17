@@ -57,4 +57,35 @@ describe("GET /api/parent-announcements/[announcementId]/declaration-export", ()
       "X-POSTHOG-SESSION-ID": "4f79f286-6f14-49cb-bb84-16fd4f906eba",
     });
   });
+
+  it("narrows the proof to one child and refuses a malformed child", async () => {
+    mockAuth.mockResolvedValue(session("tok"));
+    global.fetch = vi.fn(
+      async () =>
+        new Response("%PDF", {
+          headers: { "content-type": "application/pdf" },
+        }),
+    ) as unknown as typeof fetch;
+    const params = { params: Promise.resolve({ announcementId: "42" }) };
+
+    const response = await GET(
+      new NextRequest(
+        "http://localhost:3000/api/parent-announcements/42/declaration-export?format=pdf&student_id=7",
+      ),
+      params,
+    );
+    expect(response.status).toBe(200);
+    expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBe(
+      "http://backend:8080/api/parent-announcements/42/declaration-export?format=pdf&student_id=7",
+    );
+
+    const refused = await GET(
+      new NextRequest(
+        "http://localhost:3000/api/parent-announcements/42/declaration-export?format=pdf&student_id=7%26format%3Dcsv",
+      ),
+      { params: Promise.resolve({ announcementId: "42" }) },
+    );
+    expect(refused.status).toBe(400);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
 });

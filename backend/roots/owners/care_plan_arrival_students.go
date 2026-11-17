@@ -12,10 +12,13 @@ import (
 
 type arrivalPlanStudents struct{ people peopledirectory.Capability }
 
+// arrivalPlanStudent maps a child onto the arrival plan. A child without an
+// OGS place (#4803) has no OGS arrival, so the plan treats it like a child
+// whose care has ended.
 func arrivalPlanStudent(row peopledirectory.StudentRecord, date timezone.Date) careplanCompose.ArrivalBulkStudent {
 	return careplanCompose.ArrivalBulkStudent{ScheduleStudent: careplan.ScheduleStudent{ID: row.ID, TenantID: row.TenantID},
 		PersonID: row.PersonID, SchoolClass: row.SchoolClass, GroupID: row.GroupID, Alumnus: row.IsAlumnus(),
-		CareEnded: row.CareEndedOn(date)}
+		CareEnded: row.CareEndedOn(date) || row.WithoutCarePlace}
 }
 
 func arrivalPlanRows(rows []peopledirectory.StudentRecord, date timezone.Date) []careplanCompose.ArrivalBulkStudent {

@@ -32,7 +32,6 @@ type rawPersonRepository interface {
 	LinkToRFIDCard(ctx context.Context, personID int64, tagID string) error
 	UnlinkFromRFIDCard(ctx context.Context, personID int64) error
 	FindWithAccount(ctx context.Context, id int64) (*models.Person, error)
-	AnonymizeAndSoftDelete(ctx context.Context, personID int64) error
 }
 type rawStudentRepository interface {
 	directory.StudentSnapshotReads
@@ -45,7 +44,7 @@ type rawStudentRepository interface {
 	ExistsEnrolledByNameAndBirthday(ctx context.Context, tenantID int64, firstName, lastName string, birthday calendar.Date) (bool, error)
 	FindEnrolledStudentIDByNameAndBirthday(ctx context.Context, tenantID int64, firstName, lastName string, birthday calendar.Date) (*int64, error)
 	ListSchoolClasses(ctx context.Context) ([]string, error)
-	FindBirthdaysOn(ctx context.Context, days []peopleBirthday.MonthDay) ([]peopleBirthday.BirthdayEntry, error)
+	FindBirthdaysOn(ctx context.Context, days []peopleBirthday.MonthDay, today calendar.Date) ([]peopleBirthday.BirthdayEntry, error)
 	FindBornOn(ctx context.Context, dates []calendar.Date) ([]directory.StudentBorn, error)
 	FindEnrolledMatchCandidates(ctx context.Context, firstName, lastName string, birthday calendar.Date) ([]directory.StudentMatchCandidate, error)
 	ListByGroupIDsIncludingAlumni(ctx context.Context, groupIDs []int64) ([]*models.Student, error)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	postgresNative "github.com/moto-ogs/project-phoenix/modules/careplan/internal/adapters/postgres"
@@ -57,13 +58,17 @@ func (l *observationLog) record(observation Observation) {
 	l.seen = append(l.seen, observation)
 }
 
+// composeTestNow is the fixed instant the composed owner stamps its writes
+// and dates its retention with.
+func composeTestNow() time.Time { return time.Date(2026, time.August, 24, 10, 0, 0, 0, time.UTC) }
+
 func buildModule(t *testing.T, db *bun.DB, observe ...func(Observation)) careplan.Owner {
 	t.Helper()
 	observer := func(Observation) {}
 	if len(observe) > 0 {
 		observer = observe[0]
 	}
-	module, err := New(Dependencies{
+	module, err := New(Dependencies{Now: composeTestNow,
 		StudentDirectory: testpkg.StudentDirectory{},
 		DB:               db, Observe: observer, AmbientDB: postgresNative.TenantAmbientDatabase(db),
 		People: emptyPeopleDirectory{}, StatusStudents: emptyPeopleDirectory{}, StatusSlots: emptyStatusSlots{},

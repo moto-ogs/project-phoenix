@@ -53,7 +53,7 @@ func TestTransferredSupervisorConflictPrecedesLaterEnrichmentFailure(t *testing.
 		return nil, nil
 	}}, Now: func() time.Time { return calendar.NewDate(2026, 11, 5).BerlinMidnight() }})
 	repo := sessionSupervisors(records)
-	svc := active.NewService(active.ServiceDependencies{SupervisorRepo: repo})
+	svc := active.NewService(active.ServiceDependencies{Now: time.Now, SupervisorRepo: repo})
 	err := testpkg.TenantCommand0(t, ctx, db, func(txCtx context.Context) error {
 		return active.ValidateTransferredSupervisorLocksForTest(svc, txCtx, []int64{first.ID, later.ID}, nil)
 	})
@@ -96,7 +96,7 @@ func TestTransferredSupervisorValidationKeepsGroupOrder(t *testing.T) {
 			}
 			return nil, nil
 		}}, Now: func() time.Time { return calendar.NewDate(2026, 11, 5).BerlinMidnight() }})
-		svc := active.NewService(active.ServiceDependencies{SupervisorRepo: sessionSupervisors(records)})
+		svc := active.NewService(active.ServiceDependencies{Now: time.Now, SupervisorRepo: sessionSupervisors(records)})
 		counter.Reset()
 		err := testpkg.TenantCommand0(t, ctx, db, func(txCtx context.Context) error {
 			return active.ValidateTransferredSupervisorLocksForTest(svc, txCtx, groupIDs, locked)

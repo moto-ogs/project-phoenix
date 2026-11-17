@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"time"
 
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -49,11 +50,11 @@ type StructureServices struct {
 // buildGroupManagement binds School Structure's group management over the
 // People Directory, School Membership and Facilities directories; its group
 // events wake the open views.
-func buildGroupManagement(db transactionruntime.Database, hub *realtime.Hub, structure owners.StructureRows, people owners.PeopleRows, substitutions owners.GroupSubstitutions, audit owners.AuditOwner) schoolstructure.GroupManagement {
+func buildGroupManagement(db transactionruntime.Database, hub *realtime.Hub, structure owners.StructureRows, people owners.PeopleRows, substitutions owners.GroupSubstitutions, audit owners.AuditOwner, now func() time.Time) schoolstructure.GroupManagement {
 	return education.NewGroupManagement(
 		structure.Groups, structure.GroupTeachers, structure.ClassTeachers, structure.GroupRooms, structure.GroupTeacherDirectory,
 		structure.StaffChecks, people.Students, substitutions, education.NewLegacyRepositoryRuntime(db.Pool()),
-		education.GroupServiceOptions{Broadcaster: NewGroupEvents(hub, nil), Audit: NewEducationClassAssignmentAudit(audit.Persistence.StaffMasterDataChange)},
+		education.GroupServiceOptions{Broadcaster: NewGroupEvents(hub, nil), Audit: NewEducationClassAssignmentAudit(audit.Persistence.StaffMasterDataChange), Now: now},
 	)
 }
 
@@ -74,6 +75,7 @@ func buildSubstitutions(
 		Logger:            env.Logger.With("service", "schedule-substitution"),
 		ActivityInstances: arrivalTimetable.NewTimetableInstanceReads(repos.ActivityInstance.Reads),
 		InstanceStaff:     arrivalTimetable.NewTimetableInstanceStaffReads(repos.InstanceStaff),
+		Today:             env.Today,
 	})
 	if err != nil {
 		return nil, err
@@ -186,7 +188,7 @@ func buildClassDayViews(
 		presenceStudentsHTTP.NewSchoolAbsenceReports(presenceStudentsHTTP.ResourceConfig{
 			AbsenceNotifier: studentAbsenceNotifier{notifier: notifications.AbsenceNotifier},
 			Broadcaster:     hub, Logger: env.Logger.With("service", "class-day-absence-reports"), ParentEventEmitter: emitter,
-			PeopleDirectory: persons, StudentStatusDayService: presence.StatusDays,
+			PeopleDirectory: persons, StudentStatusDayService: presence.StatusDays, Now: env.Now,
 		}, presence.Presence), audit.Persistence.StudentFieldEdit, notifications.UnreportedAbsences)
 	// The absence list (#4793) counts the morning marks of a period.
 	morning = withClassDayAbsenceList(morning, presence.Presence, carePlanRows.StatusDays, schoolDays, audit.Persistence.DataAccessLog, renderer, settings, schedules.Lifecycle, persons)
@@ -195,7 +197,7 @@ func buildClassDayViews(
 		Companions: owners.NewStudentCompanionRepository(carePlan), ClassArrivalExceptions: schedules.Arrivals,
 		TripStatusDays: NewClassDayTripStatusDays(presenceStudentsHTTP.NewSchoolClassTrips(presenceStudentsHTTP.ResourceConfig{
 			Broadcaster: hub, Logger: env.Logger.With("service", "class-day-class-trips"), ParentEventEmitter: emitter,
-			PeopleDirectory: persons, StudentStatusDayService: presence.StatusDays,
+			PeopleDirectory: persons, StudentStatusDayService: presence.StatusDays, Now: env.Now,
 		})),
 		BlockStarts: operations,
 		// The day hints (#4795) and the notes the OGS released for the

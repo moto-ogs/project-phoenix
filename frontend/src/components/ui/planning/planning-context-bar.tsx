@@ -129,7 +129,15 @@ export function PlanningContextBar({
             `md:order-*`-Klassen stellen die Zeile als Navigation, Datum,
             Aktionen zusammen. */}
         {!navigationInGroup && (
-          <div className="flex min-w-0 flex-1 flex-col md:contents">
+          // Ein breiter Slot (Wochenstreifen) scrollt in seinem Platz, statt
+          // unter die Zeitnavigation zu laufen; sichtbar, wie die Kontextzeile.
+          <div
+            className={`flex min-w-0 flex-1 flex-col md:contents ${
+              navigationSlot
+                ? "planning-context-scrollbar scrollbar-thin overflow-x-auto"
+                : ""
+            }`}
+          >
             {navigationSlot ??
               (dateLabel && (
                 // Unter md darf das Datum umbrechen: abgeschnitten („KW 36 ·

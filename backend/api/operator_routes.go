@@ -111,6 +111,7 @@ func operatorRouter(
 	staffPersonMerge http.Handler,
 	sampleChildren http.HandlerFunc,
 	demoPresenceHistory http.HandlerFunc,
+	now func() time.Time,
 ) chi.Router {
 	// The root provides the session chains; without the signer the verifier
 	// mounts below would fail with a nil dereference instead of naming the
@@ -160,7 +161,7 @@ func operatorRouter(
 		identityRoutes.mountInvitationRoutes(r)
 		mountOperatorAnnouncementRoutes(r, announcementRoutes, provisioningRoutes)
 		mountOperatorBillingRoutes(r, billing)
-		mountOperatorBelegRetentionRoutes(r, provisioningRoutes)
+		mountOperatorBelegRetentionRoutes(r, provisioningRoutes, now)
 		mountOperatorTraegerStaffReleaseRoutes(r, provisioningRoutes)
 	})
 
@@ -351,9 +352,9 @@ func mountOperatorTraegerSettingsRoutes(r chi.Router, provisioning *provisioning
 // Träger to the moto team (#4720, ADR 0184): the instructions, suspensions,
 // clarification list and deletion log under the operator read audit, and
 // the writes (Weisung, suspension and its lift, review of a clarification
-// entry) with their operator audit entry.
-func mountOperatorBelegRetentionRoutes(r chi.Router, provisioning *provisioningOperatorAPI.ProvisioningResource) {
-	retention := parentBillingHTTP.NewBelegRetentionResource(owners.NewBelegRetention(nil), provisioning.RecordBelegRetentionChange, operatorIDFromSession)
+// entry) with their operator audit entry; now is the root's clock.
+func mountOperatorBelegRetentionRoutes(r chi.Router, provisioning *provisioningOperatorAPI.ProvisioningResource, now func() time.Time) {
+	retention := parentBillingHTTP.NewBelegRetentionResource(owners.NewBelegRetention(now), provisioning.RecordBelegRetentionChange, operatorIDFromSession)
 	r.Get("/organizations/{id}/beleg-retention", provisioning.AuditReadAccess(organizationtenancy.ReadBelegRetention, retention.Overview))
 	r.Post("/organizations/{id}/beleg-retention/instructions", retention.RecordInstruction)
 	r.Post("/organizations/{id}/beleg-retention/suspensions", retention.RecordSuspension)

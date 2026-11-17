@@ -17,7 +17,7 @@ type TraegerDocumentDownload struct {
 	ActorAccountID int64     `bun:"actor_account_id,notnull" json:"actor_account_id"`
 	ClientIP       string    `bun:"client_ip,nullzero" json:"client_ip,omitempty"`
 	UserAgent      string    `bun:"user_agent,nullzero" json:"user_agent,omitempty"`
-	DownloadedAt   time.Time `bun:"downloaded_at,notnull,default:current_timestamp" json:"downloaded_at"`
+	DownloadedAt   time.Time `bun:"downloaded_at,nullzero,notnull" json:"downloaded_at"`
 }
 
 // PlatformScoped marks the entry as tenantless: the Audit adapter appends it

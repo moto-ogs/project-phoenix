@@ -12,8 +12,8 @@ type excusedAbsenceRequestRow struct {
 	bun.BaseModel  `bun:"table:excused_absence_requests,alias:excused_absence_request"`
 	ID             int64          `bun:"id,pk,autoincrement"`
 	TenantID       int64          `bun:"tenant_id,notnull"`
-	CreatedAt      time.Time      `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time      `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time      `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time      `bun:"updated_at,nullzero,notnull"`
 	StudentID      int64          `bun:"student_id,notnull"`
 	SubmittedBy    int64          `bun:"submitted_by,notnull"`
 	Dates          []calendarDate `bun:"dates,type:jsonb,notnull"`
@@ -30,8 +30,8 @@ type careScheduleRequestRow struct {
 	bun.BaseModel    `bun:"table:care_schedule_change_requests,alias:care_schedule_change_request"`
 	ID               int64           `bun:"id,pk,autoincrement"`
 	TenantID         int64           `bun:"tenant_id,notnull"`
-	CreatedAt        time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt        time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt        time.Time       `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time       `bun:"updated_at,nullzero,notnull"`
 	StudentID        int64           `bun:"student_id,notnull"`
 	SubmittedBy      int64           `bun:"submitted_by,notnull"`
 	RequestKind      string          `bun:"request_kind,notnull"`
@@ -48,8 +48,8 @@ type studentDataRequestRow struct {
 	bun.BaseModel `bun:"table:student_data_change_requests,alias:student_data_change_request"`
 	ID            int64           `bun:"id,pk,autoincrement"`
 	TenantID      int64           `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time       `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time       `bun:"updated_at,nullzero,notnull"`
 	StudentID     int64           `bun:"student_id,notnull"`
 	SubmittedBy   int64           `bun:"submitted_by,notnull"`
 	Target        string          `bun:"target,notnull"`

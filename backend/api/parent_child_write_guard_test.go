@@ -301,7 +301,7 @@ func (r *guardRig) declaration(t *testing.T, f childReadFamily) guardDeclaration
 		[]*ParentAnnouncementTargetFixture{{TargetType: "student", TargetRefID: &f.StudentID}}))
 	version := NewParentDeclarationVersionFixture(a)
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, r.db, fixtures.InsertDeclarationVersion, version))
-	published := time.Now().Add(-time.Minute)
+	published := r.now().Add(-time.Minute)
 	require.NoError(t, testpkg.TenantCommand2(t, ctx, r.db, fixtures.SetPublished, a.ID, &published))
 	return guardDeclaration{announcementID: a.ID, versionID: version.ID}
 }
@@ -328,7 +328,7 @@ func (r *guardRig) poll(t *testing.T, f childReadFamily) guardPoll {
 		[]*ParentAnnouncementTargetFixture{{TargetType: "student", TargetRefID: &f.StudentID}}))
 	require.NoError(t, testpkg.TenantCommand3(t, ctx, r.db, fixtures.ReplaceOptions, f.TenantID, a.ID,
 		[]*ParentAnnouncementOptionFixture{{Label: "Ja", Position: 0}, {Label: "Nein", Position: 1}}))
-	published := time.Now().Add(-time.Minute)
+	published := r.now().Add(-time.Minute)
 	require.NoError(t, testpkg.TenantCommand2(t, ctx, r.db, fixtures.SetPublished, a.ID, &published))
 	stored, err := testpkg.TenantQuery1(t, ctx, r.db, fixtures.FindByID, a.ID)
 	require.NoError(t, err)
@@ -819,6 +819,8 @@ func guardedWrites() []guardedWrite {
 			name:        "Fotoeinwilligung erteilen",
 			permissions: []string{permConsent},
 			prepare: func(t *testing.T, r *guardRig, f childReadFamily) childWrite {
+				// A photo consent needs the school's child photos on (#7208).
+				r.set(t, map[string]any{"operations.student_photos_enabled": true})
 				r.givePhoto(t, f)
 				r.do(t, photoConsent(http.MethodDelete, f.StudentID), f.token)
 				return photoConsent(http.MethodPut, f.StudentID)

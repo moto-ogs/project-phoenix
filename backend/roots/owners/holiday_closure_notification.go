@@ -24,12 +24,12 @@ type HolidayClosureHolidays interface {
 // NewHolidayClosureNotifications binds the holiday closure notification
 // (ADR 0196) to School Calendar's proposals and commands, Enrollment's
 // closures and the units of work. The root builds it where it mounts a
-// route or the Worker's job.
-func NewHolidayClosureNotifications(closures enrollment.HolidayClosures, schools notificationPorts.Schools, mails notificationPorts.Mails, logger *slog.Logger) notification.Notifications {
+// route or the Worker's job; today is its day clock.
+func NewHolidayClosureNotifications(closures enrollment.HolidayClosures, schools notificationPorts.Schools, mails notificationPorts.Mails, logger *slog.Logger, today func() calendar.Date) notification.Notifications {
 	if closures == nil || schools == nil || mails == nil {
 		panic("holiday closure notification: Enrollment's closures and the Träger's schools are required")
 	}
-	events := schoolCalendarCompose.NewHolidayClosureEvents()
+	events := schoolCalendarCompose.NewHolidayClosureEvents(today)
 	return notification.New(notification.Dependencies{
 		Proposals: events, Queue: events, Closures: closures, Mails: mails,
 		Schools: schools, Units: holidayClosureUnits{}, Logger: logger,
@@ -38,11 +38,11 @@ func NewHolidayClosureNotifications(closures enrollment.HolidayClosures, schools
 
 // NewHolidayClosureCalendar binds School Calendar's guarded no-care capability
 // to Enrollment's consumer contract.
-func NewHolidayClosureCalendar(holidays HolidayClosureHolidays) enrollment.HolidayClosureCalendar {
+func NewHolidayClosureCalendar(holidays HolidayClosureHolidays, today func() calendar.Date) enrollment.HolidayClosureCalendar {
 	if holidays == nil {
 		panic("holiday closure calendar: School Calendar's holidays are required")
 	}
-	return holidayClosureCalendar{calendar: schoolCalendarCompose.NewHolidayClosureCalendar(holidays)}
+	return holidayClosureCalendar{calendar: schoolCalendarCompose.NewHolidayClosureCalendar(holidays, today)}
 }
 
 type holidayClosureCalendar struct {

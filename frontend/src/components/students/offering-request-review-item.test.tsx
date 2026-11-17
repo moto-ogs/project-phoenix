@@ -12,6 +12,7 @@ import type { ReactElement } from "react";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
 // Fehler laufen als Toast über den gemeinsamen Fehlerweg; die Karte selbst
@@ -268,14 +269,20 @@ describe("OfferingRequestReviewItem", () => {
   // Schule am Berg, November 2026: Montag 14:30 Uhr von Hand verdeckte die
   // neue Buchung bis 16:00 Uhr, ohne dass die OGS davon erfuhr.
   it("keeps the card open while an entered pickup time hides the booking", async () => {
+    // Ein Montag nach dem Testtag: die Buchung gilt erst später.
+    const [year = 0, month = 1, day = 1] =
+      TEST_CLOCK_TODAY.split("-").map(Number);
+    const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+    const monday = testClockDay(7 + ((8 - weekday) % 7));
+    const mondayLabel = monday.split("-").reverse().join("\\.");
     mockDecide.mockResolvedValue({
-      effective_from: "2027-02-01",
+      effective_from: monday,
       adjusted: [],
       not_adjusted: [],
       pickup_overrides: [
         {
           weekday: 1,
-          date: "2027-02-01",
+          date: monday,
           stored_time: "14:30",
           booked_time: "16:00",
           reset_now: true,
@@ -292,7 +299,9 @@ describe("OfferingRequestReviewItem", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /eingetragen 14:30 Uhr, ab 01.02.2027 gebucht 16:00 Uhr/,
+        new RegExp(
+          `eingetragen 14:30 Uhr, ab ${mondayLabel} gebucht 16:00 Uhr`,
+        ),
       ),
     ).toBeInTheDocument();
     expect(onDecided).not.toHaveBeenCalled();

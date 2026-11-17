@@ -1,23 +1,14 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
-import {
-  DataField,
-  DataGrid,
-  DetailIcons,
-  InfoSection,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoSection } from "~/components/ui/info-section";
+import { DetailIcons } from "~/components/ui/detail-modal-components";
 import {
   useApiFormError,
   useApiLoadError,
@@ -31,6 +22,9 @@ import {
 } from "~/lib/caregiver-capability-api";
 import { CaregiverBlockerResolutionPanel } from "~/components/teachers/caregiver-blocker-resolution-panel";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useFreshSWR } from "~/lib/swr";
+import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import { createLogger } from "~/lib/logger";
 import { groupsConcept } from "~/lib/concepts/groups";
 import { rolesConcept } from "~/lib/concepts/roles";
@@ -84,20 +78,11 @@ export function CaregiverCapabilityModal({
   onUpdated,
 }: CaregiverCapabilityModalProps) {
   const { success: toastSuccess } = useToast();
-  const [state, setState] = useState<CaregiverCapabilityState | null>(null);
-  const [loading, setLoading] = useState(false);
   const save = useFormModalPending(isOpen);
   const saving = save.pending;
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [position, setPosition] = useState("");
-  // Ladefehler im Dialog, Speicherfehler oben im Dialog, beide mit
-  // Wiederholen (#2517).
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearFormErrors } = formErrors;
@@ -108,82 +93,95 @@ export function CaregiverCapabilityModal({
   const [step, setStep] = useState<"overview" | "resolve">("overview");
   const [blockerConfirmationOpen, setBlockerConfirmationOpen] = useState(false);
 
-  useEffect(() => {
-    if (!isOpen) setBlockerConfirmationOpen(false);
-  }, [isOpen]);
-
   const needsSchoolId = scope === "operator";
   const operatorSchoolId = scope === "operator" ? schoolId : undefined;
+  const missingSchool =
+    isOpen && Boolean(accountId) && needsSchoolId && !operatorSchoolId;
 
-  const loadState = useCallback(async () => {
-    if (!accountId) return;
-    if (needsSchoolId && !operatorSchoolId) {
-      // Ohne Schule gibt es im Operator-Portal keinen Stand zu laden; der
-      // Dialog sagt es, statt leer zu bleiben.
-      void showLoadError(new Error("Operator scope requires a school"), {
-        object: "die Betreuung dieses Kontos",
-      });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      clearLoadError();
-      clearFormErrors();
-      setPosition("");
-
-      let nextState: CaregiverCapabilityState;
-      if (scope === "operator") {
-        const resolvedSchoolId = operatorSchoolId;
-        if (!resolvedSchoolId) {
-          return;
-        }
-        nextState =
-          await caregiverCapabilityService.getOperatorAccountCapability(
-            resolvedSchoolId,
-            accountId,
-          );
-      } else {
-        nextState =
-          await caregiverCapabilityService.getTenantAccountCapability(
-            accountId,
-          );
-      }
-
-      setState(nextState);
-      setFirstName(nextState.firstName);
-      setLastName(nextState.lastName);
-    } catch (error) {
-      logger.error("failed to load caregiver capability state", {
-        error: error instanceof Error ? error.message : String(error),
+  // Der Stand lädt nur bei offenem Dialog. Das Operator-Portal liest ihn je
+  // Schule über einen eigenen Endpunkt; ohne Schule gibt es keinen Schlüssel.
+  let capabilityKey: string | null = null;
+  if (isOpen && accountId) {
+    if (scope === "tenant") {
+      capabilityKey = staffAccessKeys.caregiverCapability(accountId);
+    } else if (operatorSchoolId) {
+      capabilityKey = staffAccessKeys.operatorCaregiverCapability(
+        operatorSchoolId,
         accountId,
-        schoolId: operatorSchoolId,
-        scope,
-      });
-      void showLoadError(error, {
-        object: "die Betreuung dieses Kontos",
-        retry: () => void loadState(),
-      });
-    } finally {
-      setLoading(false);
+      );
     }
-  }, [
-    accountId,
-    needsSchoolId,
-    operatorSchoolId,
-    scope,
-    clearLoadError,
-    clearFormErrors,
-    showLoadError,
-  ]);
+  }
+  // Jede Öffnung wartet auf ihren eigenen Stand: die Namensfelder starten
+  // daraus, nie aus dem einer früheren Öffnung.
+  const {
+    data: freshState,
+    error: stateError,
+    mutate: mutateState,
+  } = useFreshSWR(capabilityKey, () =>
+    operatorSchoolId
+      ? caregiverCapabilityService.getOperatorAccountCapability(
+          operatorSchoolId,
+          accountId,
+        )
+      : caregiverCapabilityService.getTenantAccountCapability(accountId),
+  );
+  // Scheitert das Laden, zeigt der Dialog den Fehler, keinen älteren Stand.
+  const state = stateError ? undefined : freshState;
+  // Für welches Konto die Namensfelder schon aus dem geladenen Stand
+  // gefüllt sind. Bis dahin bleibt der Dialog im Ladezustand: Ein Klick
+  // dazwischen sendete leere Namen.
+  const [seededFor, setSeededFor] = useState<string | null>(null);
+  const loading =
+    capabilityKey !== null &&
+    !stateError &&
+    (!state || seededFor !== capabilityKey);
+  // Ladefehler im Dialog, Speicherfehler oben im Dialog, beide mit
+  // Wiederholen (#2517).
+  const { error: stateLoadError } = useSwrResourceLoadError(
+    [{ data: state, error: stateError }],
+    "die Betreuung dieses Kontos",
+    () => mutateState(),
+  );
+  // Ohne Schule gibt es im Operator-Portal keinen Stand zu laden; der
+  // Dialog sagt es, statt leer zu bleiben. Der Hinweis bietet kein
+  // Wiederholen an: ein neuer Versuch fände ebenfalls keine Schule.
+  const {
+    error: missingSchoolError,
+    show: showMissingSchool,
+    clear: clearMissingSchool,
+  } = useApiLoadError();
+  useEffect(() => {
+    if (missingSchool) {
+      void showMissingSchool(new Error("Operator scope requires a school"), {
+        object: "die Betreuung dieses Kontos",
+      });
+    } else {
+      clearMissingSchool();
+    }
+  }, [missingSchool, showMissingSchool, clearMissingSchool]);
+  const loadError = missingSchool ? missingSchoolError : stateLoadError;
 
   useEffect(() => {
     if (!isOpen) {
+      setBlockerConfirmationOpen(false);
+      setSeededFor(null);
       return;
     }
     setStep("overview");
-    void loadState();
-  }, [isOpen, loadState]);
+  }, [isOpen]);
+
+  // Die Namensfelder starten einmal je geöffnetem Konto beim geladenen Stand.
+  // Ein erneutes Laden desselben Kontos, etwa nach dem Auflösen der
+  // Zuordnungen, überschreibt die Eingaben nicht; ein anderes Konto beginnt
+  // mit leerer pädagogischer Rolle.
+  useEffect(() => {
+    if (!capabilityKey || !state || seededFor === capabilityKey) return;
+    setSeededFor(capabilityKey);
+    clearFormErrors();
+    setPosition("");
+    setFirstName(state.firstName);
+    setLastName(state.lastName);
+  }, [capabilityKey, state, seededFor, clearFormErrors]);
 
   const canDisable = Boolean(state?.isActiveCaregiver);
   const needsNames = state != null && !state.hasPerson;
@@ -256,7 +254,7 @@ export function CaregiverCapabilityModal({
         });
         return;
       }
-      if (op.isCurrent()) setState(nextState);
+      if (op.isCurrent()) void mutateState(nextState, { revalidate: false });
       toastSuccess(`Die Betreuung für ${accountLabel} ist eingeschaltet.`);
       // Never rejects; the dialog does not wait for the page's reload.
       void onUpdated?.();
@@ -306,19 +304,22 @@ export function CaregiverCapabilityModal({
           error instanceof CaregiverCapabilityApiError &&
           error.blockers.length > 0
         ) {
-          setState((current) =>
-            current
-              ? {
-                  ...current,
-                  disableBlocked: true,
-                  disableBlockers: error.blockers,
-                }
-              : current,
+          const blockers = error.blockers;
+          void mutateState(
+            (current) =>
+              current
+                ? {
+                    ...current,
+                    disableBlocked: true,
+                    disableBlockers: blockers,
+                  }
+                : current,
+            { revalidate: false },
           );
         }
         return;
       }
-      if (op.isCurrent()) setState(nextState);
+      if (op.isCurrent()) void mutateState(nextState, { revalidate: false });
       toastSuccess(`Die Betreuung für ${accountLabel} ist ausgeschaltet.`);
       // Never rejects; the dialog does not wait for the page's reload.
       void onUpdated?.();
@@ -352,7 +353,7 @@ export function CaregiverCapabilityModal({
             type="button"
             onClick={() => {
               setStep("overview");
-              void loadState();
+              void mutateState();
             }}
             variant="outline"
             size="md"

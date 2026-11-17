@@ -25,7 +25,7 @@ func (m *wtmMockSessionReader) ListOverlappingByStaffID(_ context.Context, _ int
 	m.lastFrom = DateFromTime(from)
 	var result []*WorkSession
 	for _, s := range m.sessions {
-		end := time.Now()
+		end := testNow()
 		if m.nowFunc != nil {
 			end = m.nowFunc()
 		}
@@ -182,9 +182,14 @@ type wtmFixture struct {
 
 // newWTMFixture builds the service with a Monday-only 480-minute schedule
 // valid since 2020, no data, account start 2026-06-01, today = 2026-07-15.
+// wtmNow is the month fixture's one clock: 2026-07-15 at noon in Berlin. Its
+// day is the service's today, so an open session ends on the same instant the
+// day decisions read.
+func wtmNow() time.Time { return time.Date(2026, time.July, 15, 12, 0, 0, 0, Berlin) }
+
 func newWTMFixture() *wtmFixture {
 	f := &wtmFixture{
-		sessions: &wtmMockSessionReader{},
+		sessions: &wtmMockSessionReader{nowFunc: wtmNow},
 		breaks:   &wtmMockBreakReader{breaks: map[int64][]*WorkSessionBreak{}},
 		absences: &wtmMockAbsenceReader{},
 		shifts:   &wtmMockShiftReader{},
@@ -196,8 +201,7 @@ func newWTMFixture() *wtmFixture {
 	}
 	svc := NewWorkTimeMonthService(f.sessions, f.breaks, f.absences,
 		&wtmMockStaffReader{staff: &StaffScheduleAssignment{}},
-		f.schedules, f.models, f.shifts, f.settings, nil).(*workTimeMonthService)
-	svc.todayFunc = func() Date { return NewDate(2026, time.July, 15) }
+		f.schedules, f.models, f.shifts, f.settings, nil, WithMonthTestClock(wtmNow)).(*workTimeMonthService)
 	f.svc = svc
 	return f
 }
@@ -615,8 +619,7 @@ func TestWTMMonthSummary_HistoricalRowAnchorWinsOverStaffAnchor(t *testing.T) {
 	versionAnchor := NewDate(2026, time.June, 1)
 	svc := NewWorkTimeMonthService(f.sessions, f.breaks, f.absences,
 		&wtmMockStaffReader{staff: &StaffScheduleAssignment{RotationAnchorDate: &staffAnchor}},
-		f.schedules, f.models, f.shifts, f.settings, nil).(*workTimeMonthService)
-	svc.todayFunc = func() Date { return NewDate(2026, time.July, 15) }
+		f.schedules, f.models, f.shifts, f.settings, nil, WithMonthTestClock(wtmNow)).(*workTimeMonthService)
 
 	// 2-week rotation: week A Mondays = 480, week B Mondays = 0.
 	f.schedules.entries = []*WorkScheduleRow{
@@ -824,6 +827,7 @@ func TestPrefetchedMonthService_FiltersSessionsToRequestedRange(t *testing.T) {
 			},
 		},
 		settings: newMemoSettingsResolver(&wtmMockSettings{accountStart: accountStart.String()}),
+		now:      wtmNow,
 	}
 	svc := newPrefetchedMonthService(prefetch, nil)
 

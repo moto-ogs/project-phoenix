@@ -34,6 +34,8 @@ export const ERROR_CATALOG = {
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "billing.invalid_key_day":
         "Der Stichtag muss zwischen dem 1. und dem 28. des Monats liegen. Bitte wählen Sie einen dieser Tage.",
+      "calendar.federal_state_missing":
+        "Für die Schule ist noch kein Bundesland eingetragen. Deshalb fehlen die Feiertage. Die Leitung trägt es in den Einstellungen ein.",
       "calendar.occurrence_unavailable":
         "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte laden Sie den Kalender neu.",
       "care_contract.application_not_found":
@@ -177,6 +179,10 @@ export const ERROR_CATALOG = {
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.offering_changes_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
+      "care.photo_consent_busy":
+        "Die Foto-Einwilligung konnte gerade nicht gespeichert werden. Bitte versuchen Sie es noch einmal.",
+      "care.photos_disabled":
+        "Die Schule hat Kinderfotos ausgeschaltet. Sie können die Einwilligung später wieder geben.",
       "care.pickup_change_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.pickup_permission_request_required":
@@ -2132,6 +2138,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Please check this field.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "No federal state is set for the school yet, so the public holidays are missing. The school management can set it in the settings.",
       "calendar.occurrence_unavailable":
         "This date no longer exists. It may have been cancelled. Please reload the calendar.",
       "care_contract.application_not_found":
@@ -2267,6 +2275,10 @@ export const ERROR_CATALOG = {
         "{object} contains invalid details. Please check your entries.",
       "care.offering_changes_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
+      "care.photo_consent_busy":
+        "The photo consent could not be saved right now. Please try again.",
+      "care.photos_disabled":
+        "The school has switched child photos off. You can give your consent again later.",
       "care.pickup_change_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
       "care.pickup_permission_request_required":
@@ -2880,6 +2892,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Проверьте это поле.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Для школы ещё не указана федеральная земля. Поэтому нет праздничных дней. Руководство может указать её в настройках.",
       "calendar.occurrence_unavailable":
         "Этой даты больше нет. Возможно, её отменили. Пожалуйста, обновите календарь.",
       "care_contract.application_not_found":
@@ -3015,6 +3029,10 @@ export const ERROR_CATALOG = {
         "Указаны неверные данные: {object}. Проверьте введённые данные.",
       "care.offering_changes_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
+      "care.photo_consent_busy":
+        "Сейчас не удалось сохранить согласие на фотографии. Пожалуйста, попробуйте ещё раз.",
+      "care.photos_disabled":
+        "Школа отключила фотографии детей. Вы сможете снова дать согласие позже.",
       "care.pickup_change_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "care.pickup_permission_request_required":
@@ -3492,6 +3510,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Kontrolloni këtë fushë.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Për shkollën nuk është vendosur ende landi federal. Prandaj mungojnë ditët e festave. Drejtuesit mund ta vendosin te cilësimet.",
       "calendar.occurrence_unavailable":
         "Kjo datë nuk ekziston më. Mund të jetë anuluar. Ju lutemi rifreskoni kalendarin.",
       "care_contract.application_not_found":
@@ -3628,6 +3648,10 @@ export const ERROR_CATALOG = {
         "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
       "care.offering_changes_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
+      "care.photo_consent_busy":
+        "Pëlqimi për fotot nuk mund të ruhej tani. Ju lutemi provoni përsëri.",
+      "care.photos_disabled":
+        "Shkolla i ka çaktivizuar fotot e fëmijëve. Pëlqimin mund ta jepni përsëri më vonë.",
       "care.pickup_change_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.pickup_permission_request_required":
@@ -4120,6 +4144,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Sprawdź to pole.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Dla szkoły nie ustawiono jeszcze kraju związkowego. Dlatego brakuje dni świątecznych. Kierownictwo może go ustawić w ustawieniach.",
       "calendar.occurrence_unavailable":
         "Tego terminu już nie ma. Mógł zostać odwołany. Proszę odświeżyć kalendarz.",
       "care_contract.application_not_found":
@@ -4256,6 +4282,10 @@ export const ERROR_CATALOG = {
         "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
       "care.offering_changes_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
+      "care.photo_consent_busy":
+        "Nie udało się teraz zapisać zgody na zdjęcia. Proszę spróbować ponownie.",
+      "care.photos_disabled":
+        "Szkoła wyłączyła zdjęcia dzieci. Zgodę możesz ponownie wyrazić później.",
       "care.pickup_change_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "care.pickup_permission_request_required":
@@ -4733,6 +4763,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Bu alanı kontrol edin.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Okul için henüz eyalet belirlenmedi. Bu yüzden resmi tatiller eksik. Yönetim bunu ayarlardan girebilir.",
       "calendar.occurrence_unavailable":
         "Bu tarih artık yok. İptal edilmiş olabilir. Lütfen takvimi yeniden yükleyin.",
       "care_contract.application_not_found":
@@ -4869,6 +4901,10 @@ export const ERROR_CATALOG = {
         "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
       "care.offering_changes_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
+      "care.photo_consent_busy":
+        "Fotoğraf izni şu anda kaydedilemedi. Lütfen tekrar deneyin.",
+      "care.photos_disabled":
+        "Okul çocuk fotoğraflarını kapattı. Onayınızı daha sonra yeniden verebilirsiniz.",
       "care.pickup_change_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "care.pickup_permission_request_required":
@@ -5354,6 +5390,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Перевірте це поле.",
     },
     codes: {
+      "calendar.federal_state_missing":
+        "Для школи ще не вказано федеральну землю. Тому бракує святкових днів. Керівництво може вказати її в налаштуваннях.",
       "calendar.occurrence_unavailable":
         "Цієї дати більше немає. Можливо, її скасували. Будь ласка, оновіть календар.",
       "care_contract.application_not_found":
@@ -5488,6 +5526,10 @@ export const ERROR_CATALOG = {
         "Указано неправильні дані: {object}. Перевірте введені дані.",
       "care.offering_changes_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
+      "care.photo_consent_busy":
+        "Зараз не вдалося зберегти згоду на фотографії. Будь ласка, спробуйте ще раз.",
+      "care.photos_disabled":
+        "Школа вимкнула фото дітей. Ви зможете знову надати згоду пізніше.",
       "care.pickup_change_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "care.pickup_permission_request_required":

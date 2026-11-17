@@ -26,8 +26,8 @@ type groupSubstitutionRow struct {
 	StartDate         calendarDate `bun:"start_date,notnull,type:date"`
 	EndDate           calendarDate `bun:"end_date,notnull,type:date"`
 	Reason            string       `bun:"reason"`
-	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull"`
 }
 
 func (s *Store) FindGroupSubstitution(ctx context.Context, id int64, lock bool) (domain.GroupSubstitution, bool, domain.OperationStats, error) {
@@ -167,7 +167,6 @@ func (s *Store) UpdateGroupSubstitution(ctx context.Context, value domain.GroupS
 		Model(row).
 		ModelTableExpr(tableGroupSubstitution+` AS "group_substitution"`).
 		ExcludeColumn("created_at", "updated_at").
-		Set("updated_at = NOW()").
 		WherePK().
 		Returning("*")
 	query = scopeQuery(scope, query, `"group_substitution".tenant_id = ?`)

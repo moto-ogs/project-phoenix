@@ -78,7 +78,7 @@ func BuildCarePlanRows(
 		return CarePlanRows{}, err
 	}
 	lifecycleOwners := NewCareLifecycleOwners(people.Students, people.Persons, membership, persons, timetableOwner, calendar,
-		NewUnloggedStudentPresence(db), NewPresenceProjectionReads(db), NewEnrollmentBookingProjection(NewEnrollmentBookings(now), phaseBounds),
+		NewUnloggedStudentPresence(db, now), NewPresenceProjectionReads(db), NewEnrollmentBookingProjection(NewEnrollmentBookings(now), phaseBounds, now),
 		NewCareEndRecorder(studentAudit))
 	return CarePlanRows{
 		StatusDays:             NewStudentStatusDayRepository(carePlan),
@@ -140,7 +140,7 @@ func BuildCarePlanSchedules(
 	db transactionruntime.Database, logger *slog.Logger, carePlan careplan.Capability, persons peopledirectory.Capability,
 	rows CarePlanRows, classArrivals timetable.ClassArrivals, approved careplan.ApprovedBookingReader,
 	settings settingsCompose.SettingsService, lockRecurrence func(context.Context) error, presence studentpresence.Owner,
-	studentDays timetable.StudentTemplateDays,
+	studentDays timetable.StudentTemplateDays, classNotices careplan.ClassTimetableNotices,
 ) (CarePlanSchedules, error) {
 	authoritative := bookingsAuthoritative(settings)
 	lifecycleOwners := rows.LifecycleOwners
@@ -154,7 +154,7 @@ func BuildCarePlanSchedules(
 	if err != nil {
 		return CarePlanSchedules{}, fmt.Errorf("compose care lifecycle: %w", err)
 	}
-	pickupBaselines, err := carePlanCompose.NewPickupBaselines(carePlan, approved, authoritative)
+	pickupBaselines, err := carePlanCompose.NewPickupBaselines(carePlan, approved, authoritative, timezone.CalendarDateClock(rows.Now))
 	if err != nil {
 		return CarePlanSchedules{}, err
 	}
@@ -180,6 +180,8 @@ func BuildCarePlanSchedules(
 		Lifecycle: lifecycle, PickupBaselines: pickupBaselines, ArrivalBaselines: arrivalBaselines, CareDay: careDay,
 		OfferingDays: offeringDays,
 	}
+	// A change to the Stundenplan of a class tells its people (#7142).
+	rows.ArrivalDependencies.Notices = classNotices
 	return buildCarePlanPlans(db, logger, carePlan, rows, presence, schedules)
 }
 

@@ -63,7 +63,7 @@ func formatMonthDay(day peopleBirthday.MonthDay) string {
 // check), which is what makes the display degrade gracefully when a school has
 // not maintained every date — the card simply shows fewer names instead of
 // failing (#1542).
-func (r *studentRepository) FindBirthdaysOn(ctx context.Context, days []peopleBirthday.MonthDay) ([]peopleBirthday.BirthdayEntry, error) {
+func (r *studentRepository) FindBirthdaysOn(ctx context.Context, days []peopleBirthday.MonthDay, today calendar.Date) ([]peopleBirthday.BirthdayEntry, error) {
 	if len(days) == 0 {
 		return nil, nil
 	}
@@ -87,11 +87,13 @@ func (r *studentRepository) FindBirthdaysOn(ctx context.Context, days []peopleBi
 		// as newStudentWithGroupQuery). users.students itself carries no
 		// deleted_at column — status IS the marker.
 		Where(`"student".status <> ?`, string(users.StudentStatusAlumnus)).
+		// A child without an OGS place (#4803) is not cared for here.
+		Where(`NOT "student".without_care_place`).
 		// Same for a child whose care has ended (#2487): the birthday card is
 		// a staff-facing list of the children the school currently cares for.
 		Where(
 			`("student".enrolled_until IS NULL OR "student".enrolled_until >= ?)`,
-			calendar.TodayDate(),
+			today,
 		)
 
 	query = query.Where(birthdayDayCondition, bun.List(birthdayDayValues(days)))

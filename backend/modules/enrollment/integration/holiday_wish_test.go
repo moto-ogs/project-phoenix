@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -96,7 +97,7 @@ func TestHolidayWishOrdersOnlyTheWaitingList(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	w := newWishWeek(t, db, "Träger Ferienwunsch Vorrang", "no", "")
 	declined, unknown := w.waiting[0], w.waiting[1]
-	store := postgres.NewHolidayRegistrationStore()
+	store := postgres.NewHolidayRegistrationStore().WithClock(time.Now)
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 
 	waitlist := func() (order []int64, deferred []bool) {
@@ -194,7 +195,7 @@ func TestHolidayWishStatementsKeepTheirTenantBeneathRLS(t *testing.T) {
 
 	own := newWishWeek(t, db, "Träger Wunsch A", "")
 	foreign := newWishWeek(t, db, "Träger Wunsch B", "")
-	holidays := postgres.NewHolidayRegistrationStore()
+	holidays := postgres.NewHolidayRegistrationStore().WithClock(time.Now)
 	runtime := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	var foreignRegistration int64
 	require.NoError(t, db.NewRaw(`SELECT holiday_registration_id FROM enrollment.holiday_registration_children WHERE id = ?`, foreign.waiting[0]).

@@ -2,6 +2,8 @@
 
 import { Suspense } from "react";
 import { Header } from "~/components/dashboard/header";
+import { DemoBanner, useDemoBannerShown } from "~/components/demo/demo-banner";
+import { Z_LAYER } from "~/components/ui/overlay-styles";
 import { PortalShell } from "~/components/ui/portal-shell";
 import { TraegerBottomNav } from "./shell/traeger-bottom-nav";
 import { TraegerReturnPathMemory } from "./shell/traeger-return-path";
@@ -35,21 +37,32 @@ export function TraegerShell({
   /** Die Bundesländer der Schulen; die Tagesmeldung gibt es nur für M-V (#4717). */
   readonly federalStates?: readonly string[];
 }) {
+  // Öffentliche Demo (#6193): derselbe feste Streifen wie in der OGS-App
+  // (h-12). Kopfzeile und Seitenleiste rücken um seine Höhe nach unten.
+  const demoBannerShown = useDemoBannerShown();
   return (
-    <PortalShell
-      header={<Header />}
-      topLayer={testSystem ? <TraegerTestSystemNotice /> : null}
-      sidebar={<TraegerSidebar federalStates={federalStates} />}
-      bottomNav={<TraegerBottomNav federalStates={federalStates} />}
-      // Eine Flex-Spalte bis zur Inhaltshülle, wie im Personal- und
-      // Schul-Portal: die letzte Fläche einer Seite reicht dann bis zur
-      // Unterkante (TENANT-PAGE-SPEC, Regel 6).
-      contentClassName="flex flex-1 flex-col"
-    >
-      <Suspense fallback={null}>
-        <TraegerReturnPathMemory />
-      </Suspense>
-      {children}
-    </PortalShell>
+    <div className={demoBannerShown ? "pt-12" : undefined}>
+      <PortalShell
+        header={<Header />}
+        headerClassName={`sticky ${demoBannerShown ? "top-12" : "top-0"} ${Z_LAYER.header}`}
+        topLayer={
+          <>
+            {demoBannerShown ? <DemoBanner /> : null}
+            {testSystem ? <TraegerTestSystemNotice /> : null}
+          </>
+        }
+        sidebar={<TraegerSidebar federalStates={federalStates} />}
+        bottomNav={<TraegerBottomNav federalStates={federalStates} />}
+        // Eine Flex-Spalte bis zur Inhaltshülle, wie im Personal- und
+        // Schul-Portal: die letzte Fläche einer Seite reicht dann bis zur
+        // Unterkante (TENANT-PAGE-SPEC, Regel 6).
+        contentClassName="flex flex-1 flex-col"
+      >
+        <Suspense fallback={null}>
+          <TraegerReturnPathMemory />
+        </Suspense>
+        {children}
+      </PortalShell>
+    </div>
   );
 }

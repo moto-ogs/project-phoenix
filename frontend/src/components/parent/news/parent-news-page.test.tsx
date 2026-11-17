@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { listAnnouncements, type ParentAnnouncement } from "~/lib/parent-api";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { ParentNewsPage } from "./parent-news-page";
+
+vi.unmock("swr");
 
 let searchParams = new URLSearchParams();
 const replace = vi.fn();
@@ -26,6 +29,14 @@ vi.mock("~/lib/parent-api", () => ({
 }));
 
 const mocked = vi.mocked(listAnnouncements);
+
+function renderPage() {
+  return render(
+    <ParentResourceTestProvider>
+      <ParentNewsPage />
+    </ParentResourceTestProvider>,
+  );
+}
 
 function announcement(
   overrides: Partial<ParentAnnouncement> = {},
@@ -55,7 +66,7 @@ describe("ParentNewsPage", () => {
   it("bildet Gruppenueberschrift und Karten waehrend des Ladens ab", () => {
     mocked.mockReturnValue(new Promise(() => {}));
 
-    render(<ParentNewsPage />);
+    renderPage();
 
     expect(
       screen.getByRole("heading", { name: "Elternbriefe" }),
@@ -68,7 +79,7 @@ describe("ParentNewsPage", () => {
   });
 
   it("zeigt Elternbriefe im gemeinsamen Seitenkopf", async () => {
-    render(<ParentNewsPage />);
+    renderPage();
     expect(
       await screen.findByRole("heading", { name: "Elternbriefe" }),
     ).toBeInTheDocument();
@@ -82,7 +93,7 @@ describe("ParentNewsPage", () => {
 
   it("hebt eine ungelesene Meldung im Titelgewicht hervor", async () => {
     mocked.mockResolvedValue([announcement({ read: false })]);
-    render(<ParentNewsPage />);
+    renderPage();
     const card = await screen.findByRole("button", { name: /Sommerfest/ });
     expect(screen.getByText("Sommerfest").className).toContain("font-semibold");
     expect(
@@ -105,7 +116,7 @@ describe("ParentNewsPage", () => {
         ],
       }),
     ]);
-    render(<ParentNewsPage />);
+    renderPage();
     const card = await screen.findByRole("button", { name: /Sommerfest/ });
     expect(
       card.querySelector('[data-moto-duotone-tone="blue"]'),
@@ -119,7 +130,7 @@ describe("ParentNewsPage", () => {
     mocked.mockResolvedValue([
       announcement({ requires_acknowledgement: true, acknowledged: false }),
     ]);
-    render(<ParentNewsPage />);
+    renderPage();
     expect(
       await screen.findByText("Bestätigung erforderlich"),
     ).toBeInTheDocument();
@@ -130,7 +141,7 @@ describe("ParentNewsPage", () => {
     searchParams = new URLSearchParams("brief=a1");
     mocked.mockResolvedValue([announcement()]);
 
-    render(<ParentNewsPage />);
+    renderPage();
 
     expect(await screen.findByRole("dialog")).toHaveTextContent("Sommerfest");
   });
@@ -148,7 +159,7 @@ describe("ParentNewsPage", () => {
       announcement({ id: "new", title: "Noch ungelesen", read: false }),
     ]);
 
-    render(<ParentNewsPage />);
+    renderPage();
 
     expect(
       await screen.findByRole("heading", { name: "Offen, 2" }),
@@ -161,7 +172,7 @@ describe("ParentNewsPage", () => {
   });
 
   it("sagt in Alltagssprache, wenn nichts anliegt", async () => {
-    render(<ParentNewsPage />);
+    renderPage();
     expect(
       await screen.findByText("Derzeit gibt es keine neuen Elternbriefe."),
     ).toBeInTheDocument();
@@ -174,7 +185,7 @@ describe("ParentNewsPage", () => {
         new ApiError("feed kaputt", 503, { code: "general.unavailable" }),
       )
       .mockResolvedValueOnce([announcement()]);
-    render(<ParentNewsPage />);
+    renderPage();
 
     expect(
       await screen.findByText(

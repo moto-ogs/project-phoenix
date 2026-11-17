@@ -104,6 +104,7 @@ func emergencyFullSources() emergencySnapshotSources {
 		Rooms:        &emergencyFakeRooms{},
 		Renderer:     lists.NewRendererService(),
 		AccessLog:    emergencyFakeAccessLog{},
+		Now:          time.Now,
 	}
 }
 
@@ -446,6 +447,7 @@ func TestEmergencySnapshotInputsEnforceRLS(t *testing.T) {
 		Rooms:        facilitiesModule,
 		Renderer:     lists.NewRendererService(),
 		AccessLog:    emergencyFakeAccessLog{},
+		Now:          time.Now,
 	})
 	require.NoError(t, err)
 	for _, fixture := range fixtures {

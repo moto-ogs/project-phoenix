@@ -93,6 +93,8 @@ type ReminderPushOutbox interface {
 }
 
 type DeliveryDependencies struct {
+	// Now is the clock a reminder is checked against before it goes out;
+	// required.
 	Now          func() time.Time
 	Outbox       ReminderPushOutbox
 	Appointments appointments.Capability

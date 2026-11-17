@@ -21,7 +21,7 @@ func BuildMealPlanAtForTests(db transactionruntime.Database, settings settingsCo
 	if err != nil {
 		return nil, err
 	}
-	calendarRecords, err := BuildSchoolCalendarRecords(db, func(schoolCalendarCompose.Observation) {}, settings)
+	calendarRecords, err := BuildSchoolCalendarRecords(db, func(schoolCalendarCompose.Observation) {}, settings, now)
 	if err != nil {
 		return nil, err
 	}

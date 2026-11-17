@@ -79,7 +79,6 @@ func (s *Store) classArrivalExceptionUpsertQuery(ctx context.Context, row *sched
 		Set("school_class = EXCLUDED.school_class").
 		Set("created_by = EXCLUDED.created_by").
 		Set("origin = EXCLUDED.origin").
-		Set("updated_at = NOW()").
 		Returning("*"), nil
 }
 
@@ -116,8 +115,8 @@ func (s *Store) classArrivalExceptionDeleteQuery(ctx context.Context, class stri
 type StaffNotice struct {
 	bun.BaseModel           `bun:"table:staff_notices,alias:staff_notice"`
 	ID                      int64          `bun:"id,pk,autoincrement"`
-	CreatedAt               time.Time      `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt               time.Time      `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt               time.Time      `bun:"created_at,nullzero,notnull"`
+	UpdatedAt               time.Time      `bun:"updated_at,nullzero,notnull"`
 	TenantID                int64          `bun:"tenant_id,notnull"`
 	Title                   string         `bun:"title,notnull"`
 	Body                    string         `bun:"body,notnull"`
@@ -138,7 +137,7 @@ type StaffNoticeAck struct {
 	TenantID       int64     `bun:"tenant_id,notnull"`
 	NoticeID       int64     `bun:"notice_id,pk"`
 	AccountID      int64     `bun:"account_id,pk"`
-	AcknowledgedAt time.Time `bun:"acknowledged_at,nullzero,notnull,default:current_timestamp"`
+	AcknowledgedAt time.Time `bun:"acknowledged_at,nullzero,notnull"`
 }
 
 // StaffNoticeCount is the acknowledgement count of one notice.
@@ -217,9 +216,12 @@ func (s *Store) DeleteStaffNotice(ctx context.Context, id int64) error {
 }
 
 // DeleteStaffNoticesEndedBefore removes the notices whose last valid day
-// lies before cutoff or that were switched off before its Berlin midnight;
-// acknowledgements cascade (#4045).
-func (s *Store) DeleteStaffNoticesEndedBefore(ctx context.Context, cutoff calendar.Date) (int, error) {
+// lies before cutoff or that were switched off before the window of
+// retentionDays; acknowledgements cascade (#4045). The trigger stamps
+// updated_at, so the switched-off branch counts the window back from the
+// database's Berlin day (ADR 0281 point 3); valid_until is the school's
+// calendar day and keeps the owner's cutoff.
+func (s *Store) DeleteStaffNoticesEndedBefore(ctx context.Context, cutoff calendar.Date, retentionDays int) (int, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
 		return 0, err
@@ -230,7 +232,7 @@ func (s *Store) DeleteStaffNoticesEndedBefore(ctx context.Context, cutoff calend
 		Where(`"staff_notice".tenant_id = ?`, tenantID).
 		WhereGroup(" AND ", func(q *bun.DeleteQuery) *bun.DeleteQuery {
 			return q.Where(`"staff_notice".valid_until < ?`, cutoff).
-				WhereOr(`NOT "staff_notice".active AND "staff_notice".updated_at < ?`, cutoff.BerlinMidnight())
+				WhereOr(`NOT "staff_notice".active AND "staff_notice".updated_at < `+databaseDayCutoff, retentionDays)
 		}).
 		Exec(ctx)
 	if err != nil {

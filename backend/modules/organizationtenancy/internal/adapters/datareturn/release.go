@@ -22,13 +22,17 @@ type Release struct {
 	store  releaseStore
 	crypto organizationtenancy.DataReturnCrypto
 	root   string
-	now    func() time.Time
+	// now is the host clock, which dates the files of the store; the sweep
+	// compares their modification times with it. Release and grant decide
+	// on the database clock instead (databaseNow).
+	now func() time.Time
 }
 
 // NewRelease binds the operator side to a database whose login may assume
-// phoenix_data_return, and to the store directory.
-func NewRelease(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root string) *Release {
-	return &Release{store: releaseStore{db: db}, crypto: crypto, root: root, now: time.Now}
+// phoenix_data_return, to the store directory and to the host clock that
+// ages the store's files for the sweep.
+func NewRelease(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root string, now func() time.Time) *Release {
+	return &Release{store: releaseStore{db: db}, crypto: crypto, root: root, now: now}
 }
 
 // The longest retrieval period a release may name: the 7-month alternative
@@ -63,7 +67,8 @@ func validRecipient(recipient organizationtenancy.DataReturnRecipient) error {
 }
 
 // expiry is the end of a token issued at now: its lifetime, but never past
-// the retrieval period. One now serves validation and the stored row.
+// the retrieval period. One now serves validation and the stored row; it is
+// the database time platform.data_return_issue validates against (ADR 0274).
 func expiry(now time.Time, validFor time.Duration, keepUntil time.Time) time.Time {
 	expires := now.Add(validFor)
 	if expires.After(keepUntil) {
@@ -76,9 +81,12 @@ func expiry(now time.Time, validFor time.Duration, keepUntil time.Time) time.Tim
 // first token. The archive key is answered once, for further grants.
 func (r *Release) Release(ctx context.Context, request organizationtenancy.DataReturnReleaseRequest) (organizationtenancy.DataReturnIssued, error) {
 	var issued organizationtenancy.DataReturnIssued
-	now := r.now().UTC()
 	if err := validRecipient(request.DataReturnRecipient); err != nil {
 		return issued, err
+	}
+	now, err := databaseNow(ctx, r.store.db)
+	if err != nil {
+		return issued, errors.New("data return: database clock unavailable")
 	}
 	keepUntil := request.KeepUntil.UTC()
 	if keepUntil.Before(now.Add(request.ValidFor)) || keepUntil.After(now.Add(maxKeepUntil)) {
@@ -130,7 +138,6 @@ func (r *Release) discardUnreleased(ctx context.Context, operatorID int64, name 
 // release answered.
 func (r *Release) Grant(ctx context.Context, request organizationtenancy.DataReturnGrantRequest) (organizationtenancy.DataReturnIssued, error) {
 	var issued organizationtenancy.DataReturnIssued
-	now := r.now().UTC()
 	if err := validRecipient(request.DataReturnRecipient); err != nil {
 		return issued, err
 	}
@@ -140,6 +147,10 @@ func (r *Release) Grant(ctx context.Context, request organizationtenancy.DataRet
 	head, live, err := r.store.archive(ctx, request.OperatorID, request.ArchiveName)
 	if err != nil {
 		return issued, err
+	}
+	now, err := databaseNow(ctx, r.store.db)
+	if err != nil {
+		return issued, errors.New("data return: database clock unavailable")
 	}
 	if !live || !head.KeepUntil.After(now) {
 		return issued, errors.New("data return: no live archive with this name; release the package again")

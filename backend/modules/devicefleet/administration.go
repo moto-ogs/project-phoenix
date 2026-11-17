@@ -18,14 +18,21 @@ func isProtectedSystemDevice(device *Device) bool {
 // service implements the Service interface on top of the owner capability.
 type administration struct {
 	devices Capability
+	// now is the composition's clock: a new device and a ping are last
+	// seen at it.
+	now func() time.Time
 }
 
-// NewAdministration creates a new IoT service over the Device Fleet capability.
-func NewAdministration(devices Capability) Administration {
+// NewAdministration creates a new IoT service over the Device Fleet
+// capability and the composition's clock.
+func NewAdministration(devices Capability, now func() time.Time) Administration {
 	if devices == nil {
 		panic("iot service: device fleet capability is required")
 	}
-	return &administration{devices: devices}
+	if now == nil {
+		panic("iot service: the clock is required")
+	}
+	return &administration{devices: devices, now: now}
 }
 
 // Fleet exposes the owner this service delegates to.
@@ -33,7 +40,7 @@ func (s *administration) Fleet() Capability { return s.devices }
 
 // IsDeviceOnline reports whether the device is currently online.
 func (s *administration) IsDeviceOnline(ctx context.Context, device *Device) bool {
-	return s.IsDeviceOnlineAt(ctx, device, time.Now())
+	return s.IsDeviceOnlineAt(ctx, device, s.now())
 }
 
 // IsLastSeenOnline reports whether a device last seen at lastSeen counts as
@@ -78,7 +85,7 @@ func (s *administration) CreateDevice(ctx context.Context, device *Device) error
 		device.Status = DeviceStatusActive
 	}
 	if device.LastSeen == nil {
-		now := time.Now()
+		now := s.now()
 		device.LastSeen = &now
 	}
 
@@ -296,7 +303,7 @@ func (s *administration) PingDevice(ctx context.Context, deviceID string) error 
 	}
 	// Address the row by its globally unique primary key, so the ping stays
 	// cross-tenant safe.
-	if err := s.devices.UpdateDeviceLastSeen(ctx, existing.ID, time.Now()); err != nil {
+	if err := s.devices.UpdateDeviceLastSeen(ctx, existing.ID, s.now()); err != nil {
 		return &AdministrationError{Op: "PingDevice", Err: err}
 	}
 	return nil

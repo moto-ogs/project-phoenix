@@ -32,8 +32,8 @@ type staffShiftRow struct {
 	CreatedBy        int64     `bun:"created_by,nullzero"`
 	UpdatedBy        *int64    `bun:"updated_by"`
 	PlannedByTraeger bool      `bun:"planned_by_traeger,notnull,default:false"`
-	CreatedAt        time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt        time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffShiftSeriesRow struct {
@@ -56,8 +56,8 @@ type staffShiftSeriesRow struct {
 	IncludeSchoolBreaks       bool          `bun:"include_school_breaks,notnull,default:false"`
 	CreatedBy                 int64         `bun:"created_by,notnull"`
 	UpdatedBy                 *int64        `bun:"updated_by"`
-	CreatedAt                 time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt                 time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt                 time.Time     `bun:"created_at,nullzero,notnull"`
+	UpdatedAt                 time.Time     `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffShiftSeriesExceptionRow struct {
@@ -67,8 +67,8 @@ type staffShiftSeriesExceptionRow struct {
 	SeriesID      int64        `bun:"series_id,notnull"`
 	Date          calendarDate `bun:"date,notnull,type:date"`
 	CreatedBy     int64        `bun:"created_by,notnull"`
-	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull"`
 }
 
 type shiftTypeRow struct {
@@ -82,8 +82,8 @@ type shiftTypeRow struct {
 	// a false value and the column default is TRUE.
 	IsActive   bool       `bun:"is_active,notnull"`
 	ArchivedAt *time.Time `bun:"archived_at"`
-	CreatedAt  time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt  time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt  time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt  time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 // requiredClock binds a wall clock to a TIME column. The clock is anchored at

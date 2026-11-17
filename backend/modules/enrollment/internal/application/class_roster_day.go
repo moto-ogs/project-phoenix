@@ -51,14 +51,11 @@ func (s *Reports) rosterDay(ctx context.Context, filters enrollment.ClassRosterF
 	// care ended belongs on the sheets of the days they were still there and
 	// on none after that (#2487).
 	filters.OfferingDate = &date
-	students, err := s.classRosterStudents(ctx, filters)
+	students, withoutPlace, err := s.classRosterStudents(ctx, filters)
 	if err != nil {
 		return nil, err
 	}
-	if len(students) > maxReportRows {
-		return nil, fmt.Errorf("class day report: %d students: %w", len(students), enrollment.ErrReportExportTooLarge)
-	}
-	rows, err := s.classDayRosterRows(ctx, filters, date, phases, students)
+	rows, err := s.classDayRosterRows(ctx, filters, date, phases, students, withoutPlace)
 	if err != nil {
 		return nil, err
 	}
@@ -80,13 +77,14 @@ func (s *Reports) rosterDay(ctx context.Context, filters enrollment.ClassRosterF
 
 // classDayRosterRows merges the rosters of every covering phase (or builds
 // the enrollment-less roster when none covers the day) and completes the
-// Klassenverband with the class-list-only entries (#2382).
-func (s *Reports) classDayRosterRows(ctx context.Context, filters enrollment.ClassRosterFilters, date calendar.Date, phases []classDayCoveringPhase, students []*RosterStudent) ([]enrollment.ClassRosterRow, error) {
+// Klassenverband with the class-list-only entries (#2382) and the children
+// without an OGS place (#4803).
+func (s *Reports) classDayRosterRows(ctx context.Context, filters enrollment.ClassRosterFilters, date calendar.Date, phases []classDayCoveringPhase, students, withoutPlace []*RosterStudent) ([]enrollment.ClassRosterRow, error) {
 	rows, err := s.classDayPhaseRows(ctx, filters, date, phases, students)
 	if err != nil {
 		return nil, err
 	}
-	entryRows, err := s.classListEntryRows(ctx, filters.SchoolClass, filters.AllClasses)
+	entryRows, err := s.noCareRows(ctx, filters, withoutPlace)
 	if err != nil {
 		return nil, err
 	}

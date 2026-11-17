@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { storyNow } from "~storybook/clock";
 import { PasswordResetModal } from "./password-reset-modal";
 import { rememberResetWait } from "./password-reset-wait";
 
@@ -34,7 +35,7 @@ export const WithTypedAddress: Story = {
 export const AddressWaits: Story = {
   args: { initialEmail: "test@example.com" },
   beforeEach: () => {
-    const now = Date.now();
+    const now = storyNow().getTime();
     rememberResetWait({}, "test@example.com", now + 42 * 60_000, now);
     return () => globalThis.localStorage.removeItem("passwordResetWaits");
   },

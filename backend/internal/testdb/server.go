@@ -233,13 +233,9 @@ func StartEphemeralLocalServer(ctx context.Context) (_ *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
-	out, err := cmd.CombinedOutput()
+	containerID, err := startEphemeralContainer(cmd)
 	if err != nil {
-		return nil, fmt.Errorf("docker run ephemeral postgres-test: %w\n%s", err, out)
-	}
-	containerID := strings.TrimSpace(string(out))
-	if containerID == "" {
-		return nil, fmt.Errorf("docker run ephemeral postgres-test returned no container id")
+		return nil, err
 	}
 	defer func() {
 		if err != nil {
@@ -261,6 +257,22 @@ func StartEphemeralLocalServer(ctx context.Context) (_ *Config, err error) {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+// startEphemeralContainer reads only stdout as the container ID: compatible
+// runtimes may emit notices on stderr even when the container starts.
+func startEphemeralContainer(cmd *exec.Cmd) (string, error) {
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("docker run ephemeral postgres-test: %w\n%s%s", err, out, stderr.String())
+	}
+	containerID := strings.TrimSpace(string(out))
+	if containerID == "" {
+		return "", fmt.Errorf("docker run ephemeral postgres-test returned no container id")
+	}
+	return containerID, nil
 }
 
 func ephemeralTestContainerCommand(ctx context.Context, password string, environment []string) (*exec.Cmd, error) {

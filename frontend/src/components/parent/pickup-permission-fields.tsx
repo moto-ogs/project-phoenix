@@ -9,15 +9,18 @@
  */
 
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   SignaturePad,
   type SignaturePadLabels,
@@ -63,39 +66,25 @@ export function usePickupSignatureStatement(
   error: unknown | null;
   retry: () => void;
 } {
-  const [statement, setStatement] = useState<string | null>(null);
-  const [error, setError] = useState<unknown | null>(null);
-  const [attempt, setAttempt] = useState(0);
-  const key = input === null ? "" : JSON.stringify(input);
-  const retry = useCallback(() => setAttempt((current) => current + 1), []);
-
-  useEffect(() => {
-    if (!studentId || key === "") {
-      setStatement(null);
-      setError(null);
-      return;
-    }
-    const request = JSON.parse(key) as PickupSignatureStatementInput;
-    let active = true;
-    setStatement(null);
-    setError(null);
-    void (async () => {
-      try {
-        const next = await getPickupSignatureStatement(studentId, request);
-        if (active) setStatement(next);
-      } catch (requestError) {
-        if (active) {
-          setStatement(null);
-          setError(requestError);
-        }
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [studentId, key, attempt]);
-
-  return { statement, error, retry };
+  const request = input === null ? "" : JSON.stringify(input);
+  const { data, error, mutate } = useSWRAuth(
+    studentId && request !== ""
+      ? parentKeys.pickupSignatureStatement(studentId, request)
+      : null,
+    () =>
+      getPickupSignatureStatement(
+        studentId ?? "",
+        JSON.parse(request) as PickupSignatureStatementInput,
+      ),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const retry = useCallback(() => void mutate(), [mutate]);
+  // A failed refresh keeps a loaded statement and the signature drawn on it.
+  return {
+    statement: data ?? null,
+    error: data === undefined ? (error ?? null) : null,
+    retry,
+  };
 }
 
 /** Shows a failed declaration load where the signature field would appear. */
@@ -107,16 +96,7 @@ export function PickupSignatureStatementLoadError({
   retry: () => void;
 }>) {
   const t = useCareTermTranslations("parentPickupPermission");
-  const { error: loadError, show, clear } = useApiLoadError();
-
-  useEffect(() => {
-    if (error) {
-      void show(error, { object: t("signature.title"), retry });
-    } else {
-      clear();
-    }
-  }, [clear, error, retry, show, t]);
-
+  const loadError = useSwrLoadError(error, t("signature.title"), retry);
   return <LoadErrorAlert error={loadError} />;
 }
 

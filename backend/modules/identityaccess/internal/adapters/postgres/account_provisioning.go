@@ -42,10 +42,10 @@ func (s *Store) InsertSchoolAccount(ctx context.Context, account domain.NewSchoo
 	}
 	var rows []registeredAccountRow
 	started := time.Now()
-	err = db.NewRaw(`INSERT INTO auth.accounts (email, username, active, last_login, created_at, updated_at)
-		VALUES (?, ?, TRUE, NOW(), NOW(), NOW())
+	err = db.NewRaw(`INSERT INTO auth.accounts (email, username, active, last_login)
+		VALUES (?, ?, TRUE, ?)
 		RETURNING id, email, username, active, created_at, updated_at, last_login`,
-		account.Email, account.Username).Scan(ctx, &rows)
+		account.Email, account.Username, s.now()).Scan(ctx, &rows)
 	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started), Rows: int64(len(rows))}
 	if err != nil {
 		return domain.RegisteredAccount{}, stats, fmt.Errorf("identity access postgres: insert school account: %w", err)
@@ -96,9 +96,9 @@ func (s *Store) FindLoginAccountByUsername(ctx context.Context, username string)
 // link must not resurrect a membership an offboarding deactivated.
 func (s *Store) InsertTenantMappingIfAbsent(ctx context.Context, accountID, tenantID int64) (domain.OperationStats, error) {
 	return s.bindAccountToSchool(ctx, "insert tenant mapping", func(db bun.IDB) *bun.RawQuery {
-		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at, created_at, updated_at)
-			SELECT ?, ?, 'active', NOW(), NOW(), NOW() FROM caterer WHERE NOT caterer.refused
+		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at)
+			SELECT ?, ?, 'active', ?::timestamptz FROM caterer WHERE NOT caterer.refused
 			ON CONFLICT (account_id, tenant_id) DO NOTHING
-			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID)
+			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID, s.now())
 	})
 }

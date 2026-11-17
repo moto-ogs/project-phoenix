@@ -23,7 +23,7 @@ type revenueAccountRow struct {
 	ScopeID            int64     `bun:"scope_id"`
 	Account            string    `bun:"account"`
 	UpdatedByAccountID *int64    `bun:"updated_by_account_id"`
-	UpdatedAt          time.Time `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt          time.Time `bun:"updated_at,nullzero"`
 }
 
 type costCenterRow struct {
@@ -36,7 +36,7 @@ type costCenterRow struct {
 	ValidFrom          calendar.Date `bun:"valid_from,type:date"`
 	Code               string        `bun:"code"`
 	CreatedByAccountID *int64        `bun:"created_by_account_id"`
-	CreatedAt          time.Time     `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt          time.Time     `bun:"created_at,nullzero"`
 }
 
 // costCenterScopeConstraint is the unique key of a scope and its day.
@@ -108,10 +108,11 @@ func (s *Store) SetRevenueAccount(ctx context.Context, organizationID, accountID
 	if err != nil {
 		return err
 	}
-	row := &revenueAccountRow{OrganizationID: organizationID, Scope: scope, ScopeID: scopeID, Account: account, UpdatedByAccountID: accountRef(accountID)}
+	row := &revenueAccountRow{OrganizationID: organizationID, Scope: scope, ScopeID: scopeID, Account: account, UpdatedByAccountID: accountRef(accountID),
+		UpdatedAt: s.now()}
 	if _, err := db.NewInsert().Model(row).
 		On("CONFLICT (organization_id, scope, scope_id) DO UPDATE").
-		Set("account = EXCLUDED.account, updated_by_account_id = EXCLUDED.updated_by_account_id, updated_at = CURRENT_TIMESTAMP").
+		Set("account = EXCLUDED.account, updated_by_account_id = EXCLUDED.updated_by_account_id, updated_at = EXCLUDED.updated_at").
 		Exec(ctx); err != nil {
 		return fmt.Errorf("set revenue account: %w", err)
 	}

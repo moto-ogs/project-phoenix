@@ -363,11 +363,11 @@ func (s *staffAbsenceService) getLogger() *slog.Logger {
 }
 
 func (s *staffAbsenceService) today() calendar.Date {
-	return dayOrWall(s.todayFunc, s.nowFunc)()
+	return dayOf(s.todayFunc, s.nowFunc)()
 }
 
 func (s *staffAbsenceService) now() time.Time {
-	return clockOrWall(s.nowFunc)()
+	return requireClock(s.nowFunc)()
 }
 
 // resolveAbsenceTypeSelection validates a requested Abwesenheitsart and returns

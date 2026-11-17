@@ -87,7 +87,7 @@ func newPhases(deps PhaseDependencies) *Phases {
 		logger = slog.Default()
 	}
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("enrollment phases: the clock is required")
 	}
 	if deps.Today == nil {
 		deps.Today = calendar.CalendarDateClock(deps.Now)

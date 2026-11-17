@@ -424,7 +424,7 @@ func teacherToSupervisorContact(teacher GroupTeacher) *SupervisorContact {
 		FirstName: teacher.FirstName,
 		LastName:  teacher.LastName,
 		Email:     teacher.Email,
-		Role:      "teacher",
+		Role:      SupervisorRoleTeacher,
 	}
 }
 

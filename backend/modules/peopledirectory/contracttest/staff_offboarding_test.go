@@ -66,9 +66,29 @@ type offboardingScenario struct {
 	svc         *offboardingTestRunner
 	deps        offboardingcompose.Dependencies
 	ctx         context.Context
+	now         func() time.Time
 }
 
+// offboardingDay is the Wednesday the offboarding tests of this file run on:
+// the workflow, Workforce, Timetable and Student Presence of their scenario
+// read offboardingNow, so "tomorrow" and "yesterday" are fixed days.
+var offboardingDay = calendar.NewDate(2026, time.March, 11)
+
+func offboardingNow() time.Time { return offboardingDay.BerlinMidnight().Add(10 * time.Hour) }
+
+// newOffboardingScenario composes the offboarding owners on the wall clock
+// for the scenarios of other files; newPinnedOffboardingScenario pins them.
 func newOffboardingScenario(t *testing.T, databases ...*bun.DB) *offboardingScenario {
+	t.Helper()
+	return newOffboardingScenarioAt(t, time.Now, databases...)
+}
+
+func newPinnedOffboardingScenario(t *testing.T, databases ...*bun.DB) *offboardingScenario {
+	t.Helper()
+	return newOffboardingScenarioAt(t, offboardingNow, databases...)
+}
+
+func newOffboardingScenarioAt(t *testing.T, now func() time.Time, databases ...*bun.DB) *offboardingScenario {
 	t.Helper()
 
 	var db *bun.DB
@@ -92,7 +112,7 @@ func newOffboardingScenario(t *testing.T, databases ...*bun.DB) *offboardingScen
 
 	actorAccount := testpkg.CreateTestAccount(t, db, "offboarding-audit-actor@example.org")
 	deps, err := api.NewStaffOffboardingOwners(testpkg.NewDatabase(t, db), peopleCompose.MustNewReads(db, testpkg.StudentDirectory{}),
-		owners.MembershipStaffEmployment(api.MustNewStaffEmployment(testpkg.NewDatabase(t, db))), nil)
+		owners.MembershipStaffEmployment(api.MustNewStaffEmployment(testpkg.NewDatabase(t, db))), nil, now)
 	require.NoError(t, err)
 	deps.Access = api.StaffOffboardingAccess(authService)
 	deps.Authorize = func(ctx context.Context) (staffoffboarding.Actor, error) {
@@ -103,13 +123,15 @@ func newOffboardingScenario(t *testing.T, databases ...*bun.DB) *offboardingScen
 	}
 	deps.Cleanup = func(context.Context, int64) error { return nil }
 	svc := &offboardingTestRunner{deps: deps}
+	workTime, err := owners.NewWorkforceWithClock(testpkg.NewDatabase(t, db), owners.MustNewSchoolMembership(testpkg.NewDatabase(t, db)), now)
+	require.NoError(t, err)
 
 	return &offboardingScenario{
 		db:          db,
 		repos:       repos,
 		reposPeople: reposPeople,
-		timetable:   api.NewUnobservedTimetableRepositories(testpkg.MustDatabase(db)),
-		workTime:    owners.MustNewWorkforce(testpkg.NewDatabase(t, db)),
+		timetable:   api.NewUnobservedTimetableRepositories(testpkg.MustDatabase(db), now),
+		workTime:    workTime,
 		rows:        rows,
 		authSvc: newOffboardingIdentity(authService, func(ctx context.Context, email, password string) (string, error) {
 			result, err := authService.LoginWithMFAGate(ctx, email, password, "", "", "", "")
@@ -121,6 +143,7 @@ func newOffboardingScenario(t *testing.T, databases ...*bun.DB) *offboardingScen
 		svc:  svc,
 		deps: deps,
 		ctx:  testpkg.Ctx(t),
+		now:  now,
 	}
 }
 
@@ -162,14 +185,14 @@ func TestOffboardStaff_ConcurrentSupervisionCannotAttachAfterRetirement(t *testi
 
 func assertConcurrentSupervisionRejected(t *testing.T, operation string) {
 	t.Helper()
-	sc := newOffboardingScenario(t, testpkg.SetupIsolatedTestDB(t))
-	_, err := api.NewActiveTestModule(testpkg.NewDatabase(t, sc.db), testpkg.TenantRuntime(t, sc.db))
+	sc := newPinnedOffboardingScenario(t, testpkg.SetupIsolatedTestDB(t))
+	_, err := api.NewActiveTestModule(testpkg.NewDatabase(t, sc.db), testpkg.TenantRuntime(t, sc.db), sc.now)
 	require.NoError(t, err)
-	activePresence := api.NewActiveTestPresence(testpkg.NewDatabase(t, sc.db), testpkg.TenantRuntime(t, sc.db))
+	activePresence := api.NewActiveTestPresence(testpkg.NewDatabase(t, sc.db), testpkg.TenantRuntime(t, sc.db), sc.now)
 	staff := testpkg.CreateTestStaff(t, sc.db, "Concurrent", "Supervisor")
 	activity := testpkg.CreateTestActivityGroup(t, sc.db, "Concurrent supervision")
 	room := testpkg.CreateTestRoom(t, sc.db, "Concurrent supervision")
-	group := testpkg.CreateTestActiveGroup(t, sc.db, activity.ID, room.ID)
+	group := testpkg.CreateTestActiveGroupAt(t, sc.db, activity.ID, room.ID, offboardingNow())
 	workflow, err := api.NewStaffOffboardingWorkflow(sc.deps)
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(sc.ctx, 15*time.Second)
@@ -188,7 +211,7 @@ func assertConcurrentSupervisionRejected(t *testing.T, operation string) {
 					return err
 				}
 				return activePresence.Active.CreateGroupSupervisor(writerCtx, &studentpresence.GroupSupervision{
-					StaffID: staff.ID, GroupID: group.ID, Role: "supervisor", StartDate: calendar.TodayDate().String(),
+					StaffID: staff.ID, GroupID: group.ID, Role: "supervisor", StartDate: offboardingDay.String(),
 				})
 			})
 		}()
@@ -214,12 +237,12 @@ func assertConcurrentSupervisionRejected(t *testing.T, operation string) {
 
 func TestOffboardStaff_CleanupIntentFailureRestoresAccessAndAllOwnerWrites(t *testing.T) {
 	t.Parallel()
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 	staff, account := testpkg.CreateTestCalendarStaff(t, sc.db, "Atomic", "Offboarding")
 	token := testpkg.CreateTestToken(t, sc.db, account.ID, "refresh")
-	shift := testpkg.CreateTestStaffShift(t, sc.db, staff.ID, testpkg.TodayDate().AddDays(1), testpkg.StaffShiftOpts{})
+	shift := testpkg.CreateTestStaffShift(t, sc.db, staff.ID, offboardingDay.AddDays(1), testpkg.StaffShiftOpts{})
 	room := testpkg.CreateTestRoom(t, sc.db, "Atomic offboarding")
-	instance := testpkg.CreateTestActivityInstance(t, sc.db, testpkg.TodayDate().AddDays(1), room.ID, testpkg.ActivityInstanceOpts{})
+	instance := testpkg.CreateTestActivityInstance(t, sc.db, offboardingDay.AddDays(1), room.ID, testpkg.ActivityInstanceOpts{})
 	assignment := testpkg.CreateTestInstanceStaff(t, sc.db, instance.ID, staff.ID, testpkg.InstanceStaffOpts{})
 	failure := errors.New("cleanup intent unavailable")
 	sc.svc.deps.Cleanup = func(context.Context, int64) error { return failure }
@@ -270,13 +293,13 @@ func TestOffboardStaff_ConcurrentPlanningCannotAttachAfterRetirement(t *testing.
 
 func assertConcurrentPlanningRejected(t *testing.T, operation string) {
 	t.Helper()
-	sc := newOffboardingScenario(t, testpkg.SetupIsolatedTestDB(t))
-	planner := owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, sc.db))
+	sc := newPinnedOffboardingScenario(t, testpkg.SetupIsolatedTestDB(t))
+	planner := owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, sc.db), sc.now)
 	staff := testpkg.CreateTestStaff(t, sc.db, "Concurrent", "Timetable")
 	room := testpkg.CreateTestRoom(t, sc.db, "Concurrent timetable")
-	date := testpkg.TodayDate().AddDays(1)
+	date := offboardingDay.AddDays(1)
 	if operation == "move_history" {
-		date = testpkg.TodayDate().AddDays(-1)
+		date = offboardingDay.AddDays(-1)
 	}
 	instance := testpkg.CreateTestActivityInstance(t, sc.db, date, room.ID, testpkg.ActivityInstanceOpts{})
 	if operation == "move_history" {
@@ -296,11 +319,11 @@ func assertConcurrentPlanningRejected(t *testing.T, operation string) {
 		go func() {
 			writerDone <- tenant.WithinCurrentTenant(ctx, func(writerCtx context.Context) error {
 				if operation == "shift" {
-					_, err := sc.workTime.CreateStaffShift(writerCtx, &workforce.StaffShift{StaffID: staff.ID, Date: testpkg.TodayDate().AddDays(1).String(), StartTime: "08:00:00", EndTime: "12:00:00", CreatedBy: staff.ID})
+					_, err := sc.workTime.CreateStaffShift(writerCtx, &workforce.StaffShift{StaffID: staff.ID, Date: offboardingDay.AddDays(1).String(), StartTime: "08:00:00", EndTime: "12:00:00", CreatedBy: staff.ID})
 					return err
 				}
 				if operation == "move_history" {
-					return api.MoveActivityInstanceForTest(writerCtx, sc.timetable, instance.ID, testpkg.TodayDate().AddDays(1))
+					return api.MoveActivityInstanceForTest(writerCtx, sc.timetable, instance.ID, offboardingDay.AddDays(1))
 				}
 				return api.AssignInstanceStaffForTest(writerCtx, planner, instance.ID, staff.ID)
 			})
@@ -341,7 +364,7 @@ func assertConcurrentPlanningRejected(t *testing.T, operation string) {
 func TestOffboardingRuntimeEvidence(t *testing.T) {
 	t.Parallel()
 	testpkg.RequireRuntimeEvidence(t)
-	sc := newOffboardingScenario(t, testpkg.SetupIsolatedTestDB(t))
+	sc := newPinnedOffboardingScenario(t, testpkg.SetupIsolatedTestDB(t))
 	actor := testpkg.CreateTestStaff(t, sc.db, "Runtime", "Actor")
 	queue, err := api.NewStaffDocumentCleanup(testpkg.NewDatabase(t, sc.db), nil)
 	require.NoError(t, err)
@@ -384,8 +407,8 @@ func TestOffboardingRuntimeEvidence(t *testing.T) {
 	for iteration := range 35 {
 		staff, account := testpkg.CreateTestCalendarStaff(t, sc.db, "Runtime", "Subject")
 		testpkg.CreateTestToken(t, sc.db, account.ID, "refresh")
-		testpkg.CreateTestStaffShift(t, sc.db, staff.ID, testpkg.TodayDate().AddDays(1), testpkg.StaffShiftOpts{})
-		instance := testpkg.CreateTestActivityInstance(t, sc.db, testpkg.TodayDate().AddDays(1), room.ID, testpkg.ActivityInstanceOpts{})
+		testpkg.CreateTestStaffShift(t, sc.db, staff.ID, offboardingDay.AddDays(1), testpkg.StaffShiftOpts{})
+		instance := testpkg.CreateTestActivityInstance(t, sc.db, offboardingDay.AddDays(1), room.ID, testpkg.ActivityInstanceOpts{})
 		testpkg.CreateTestInstanceStaff(t, sc.db, instance.ID, staff.ID, testpkg.InstanceStaffOpts{})
 		var preview staffoffboarding.Preview
 		measure("preview", iteration, func() error { var err error; preview, err = workflow.Preview(ctx, staff.ID); return err })
@@ -411,13 +434,13 @@ func assignTenantRole(t *testing.T, db *bun.DB, accountID int64, roleID int64) {
 func TestOffboardStaff_WithAttendanceHistory(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	staff, account := testpkg.CreateTestStaffWithAccount(t, sc.db, "Attendance", "History")
 	testpkg.MapAccountToTenant(t, sc.db, account.ID, testpkg.Tenant(t))
 	student := testpkg.CreateTestStudent(t, sc.db, "Offboard", "Student", "1a")
 	device := testpkg.CreateTestDevice(t, sc.db, fmt.Sprintf("offb-dev-%d", time.Now().UnixNano()))
-	attendance := testpkg.CreateTestAttendance(t, sc.db, student.ID, staff.ID, device.ID, time.Now(), nil)
+	attendance := testpkg.CreateTestAttendance(t, sc.db, student.ID, staff.ID, device.ID, offboardingNow(), nil)
 
 	require.NoError(t, testpkg.TenantCommand3(t, sc.ctx, sc.db, sc.svc.OffboardStaff, staff.ID, staff.ID, "test-admin"))
 
@@ -456,7 +479,7 @@ func TestOffboardStaff_WithAttendanceHistory(t *testing.T) {
 func TestOffboardStaff_RevokesAccountAccess(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	credential := offboardingCredential("Offboard", "123")
 	emailAddr := fmt.Sprintf("offboard-login-%d@test.local", time.Now().UnixNano())
@@ -523,7 +546,7 @@ func TestOffboardStaff_RevokesAccountAccess(t *testing.T) {
 func TestOffboardStaff_MultiTenantAccountKeepsOtherSchool(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	credential := offboardingCredential("Offboard", "123")
 	emailAddr := fmt.Sprintf("offboard-multi-%d@test.local", time.Now().UnixNano())
@@ -581,7 +604,7 @@ func TestOffboardStaff_MultiTenantAccountKeepsOtherSchool(t *testing.T) {
 func TestOffboardStaff_ReinviteSameEmailSameSchool(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	identityModule, factoryErr := api.NewTestIdentityAccess(testpkg.NewDatabase(t, sc.db), slog.Default())
 	require.NoError(t, factoryErr)
@@ -698,7 +721,7 @@ func TestOffboardStaff_ReinviteSameEmailSameSchool(t *testing.T) {
 func TestOffboardStaff_ReinviteResumesFormerEmployment(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	emailAddr := fmt.Sprintf("offboard-resume-%d@test.local", time.Now().UnixNano())
 	account := testpkg.CreateTestAccountWithPassword(t, sc.db, emailAddr, offboardingCredential("Resume", "123"))
@@ -745,7 +768,7 @@ func TestOffboardStaff_ReinviteResumesFormerEmployment(t *testing.T) {
 func TestOffboardStaff_ReinviteDropsPersonnelNumberTakenMeanwhile(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	emailAddr := fmt.Sprintf("offboard-number-%d@test.local", time.Now().UnixNano())
 	account := testpkg.CreateTestAccountWithPassword(t, sc.db, emailAddr, offboardingCredential("Number", "123"))
@@ -817,13 +840,13 @@ func reinviteAndAccept(t *testing.T, sc *offboardingScenario, emailAddr string, 
 func TestOffboardStaff_ActiveSupervisionBlocks(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	staff := testpkg.CreateTestStaff(t, sc.db, "Supervising", "Staff")
 	activityGroup := testpkg.CreateTestActivityGroup(t, sc.db, "OffboardSupervision")
 	room := testpkg.CreateTestRoom(t, sc.db, fmt.Sprintf("OffbRoom-%d", time.Now().UnixNano()))
-	activeGroup := testpkg.CreateTestActiveGroup(t, sc.db, activityGroup.ID, room.ID)
-	testpkg.CreateTestGroupSupervisor(t, sc.db, staff.ID, activeGroup.ID, "supervisor")
+	activeGroup := testpkg.CreateTestActiveGroupAt(t, sc.db, activityGroup.ID, room.ID, offboardingNow())
+	testpkg.CreateTestGroupSupervisorOn(t, sc.db, staff.ID, activeGroup.ID, "supervisor", offboardingDay)
 
 	err := testpkg.TenantCommand3(t, sc.ctx, sc.db, sc.svc.OffboardStaff, staff.ID, staff.ID, "test-admin")
 	require.Error(t, err)
@@ -842,10 +865,10 @@ func TestOffboardStaff_ActiveSupervisionBlocks(t *testing.T) {
 func TestOffboardStaff_ActiveGroupHandoverBlocks(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 	staff := testpkg.CreateTestStaff(t, sc.db, "Handover", "Target")
 	group := testpkg.CreateTestEducationGroup(t, sc.db, "OffboardHandover")
-	today := calendar.TodayDate()
+	today := offboardingDay
 	handover := testpkg.CreateTestGroupSubstitution(
 		t, sc.db, group.ID, nil, staff.ID, today, today.AddDays(1),
 	)
@@ -864,7 +887,7 @@ func TestOffboardStaff_ActiveGroupHandoverBlocks(t *testing.T) {
 func TestOffboardStaff_CleansUpAssignments(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	teacher := testpkg.CreateTestTeacher(t, sc.db, "Assigned", "Teacher")
 	staffID := teacher.StaffID
@@ -872,7 +895,7 @@ func TestOffboardStaff_CleansUpAssignments(t *testing.T) {
 	groupTeacher := testpkg.CreateTestGroupTeacher(t, sc.db, educationGroup.ID, teacher.ID)
 
 	otherStaff := testpkg.CreateTestStaff(t, sc.db, "Other", "Substitute")
-	today := calendar.TodayDate()
+	today := offboardingDay
 	substitution := testpkg.CreateTestGroupSubstitution(t, sc.db, educationGroup.ID, &staffID, otherStaff.ID,
 		today.AddDays(1), today.AddDays(8))
 
@@ -916,14 +939,14 @@ func TestOffboardStaff_CleansUpAssignments(t *testing.T) {
 func TestOffboardStaff_BroadcastsGroupAccessChanged(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 	broadcaster := testpkg.NewRecordingBroadcaster()
 	sc.svc.deps.Broadcaster = broadcaster
 
 	teacher := testpkg.CreateTestTeacher(t, sc.db, "Broadcast", "Teacher")
 	group := testpkg.CreateTestEducationGroup(t, sc.db, "OffboardBroadcastGroup")
 	testpkg.CreateTestGroupTeacher(t, sc.db, group.ID, teacher.ID)
-	today := calendar.TodayDate()
+	today := offboardingDay
 	regularStaffID := teacher.StaffID
 	otherStaff := testpkg.CreateTestStaff(t, sc.db, "Broadcast", "Substitute")
 	testpkg.CreateTestGroupSubstitution(
@@ -947,7 +970,7 @@ func TestOffboardStaff_BroadcastsGroupAccessChanged(t *testing.T) {
 func TestOffboardStaff_RollbackBroadcastsNothing(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 	broadcaster := testpkg.NewRecordingBroadcaster()
 	sc.deps.Audit = failingOffboardingAudit{}
 	svc := &offboardingTestRunner{deps: sc.deps}
@@ -976,7 +999,7 @@ func TestOffboardStaff_RollbackBroadcastsNothing(t *testing.T) {
 // no-op so the HTTP handler keeps returning 200.
 func TestOffboardStaff_EmptyDisplayNameKeepsLegacyAuditAttribution(t *testing.T) {
 	t.Parallel()
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 	staff := testpkg.CreateTestStaff(t, sc.db, "UnnamedActor", "Offboarding")
 	require.NoError(t, testpkg.TenantCommand3(t, sc.ctx, sc.db, sc.svc.OffboardStaff, staff.ID, staff.ID, ""))
 	var deletedBy string
@@ -987,7 +1010,7 @@ func TestOffboardStaff_EmptyDisplayNameKeepsLegacyAuditAttribution(t *testing.T)
 func TestOffboardStaff_Idempotent(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 	require.NoError(t, testpkg.TenantCommand3(t, sc.ctx, sc.db, sc.svc.OffboardStaff, 999999, 999999, "test-admin"))
 }
 
@@ -996,7 +1019,7 @@ func TestOffboardStaff_Idempotent(t *testing.T) {
 func TestOffboardStaff_ExcludedFromListsAndPIN(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	staff, account := testpkg.CreateTestStaffWithAccount(t, sc.db, "Listed", "Staff")
 	testpkg.MapAccountToTenant(t, sc.db, account.ID, testpkg.Tenant(t))
@@ -1020,7 +1043,7 @@ func TestOffboardStaff_ExcludedFromListsAndPIN(t *testing.T) {
 func TestOffboardStaff_PreservesGuardianAccess(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	credential := offboardingCredential("Offboard", "123")
 	emailAddr := fmt.Sprintf("offboard-guardian-%d@test.local", time.Now().UnixNano())
@@ -1084,11 +1107,11 @@ func TestOffboardStaff_PreservesGuardianAccess(t *testing.T) {
 func TestOffboardStaff_RemovesSameDayPlannedInstanceAssignments(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	staff := testpkg.CreateTestStaff(t, sc.db, "SameDay", "Planned")
 	room := testpkg.CreateTestRoom(t, sc.db, fmt.Sprintf("OffbInstRoom-%d", time.Now().UnixNano()))
-	today := calendar.TodayDate()
+	today := offboardingDay
 
 	makeInstance := func(title string) *testpkg.ActivityInstance {
 		return testpkg.CreateTestActivityInstance(t, sc.db, today, room.ID, testpkg.ActivityInstanceOpts{
@@ -1128,11 +1151,11 @@ func TestOffboardStaff_RemovesSameDayPlannedInstanceAssignments(t *testing.T) {
 func TestOffboardStaff_RemovesPendingAndFutureAbsences(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	staff := testpkg.CreateTestStaff(t, sc.db, "Absent", "Staff")
 	actor := testpkg.CreateTestStaff(t, sc.db, "Offboarding", "Admin")
-	today := calendar.TodayDate()
+	today := offboardingDay
 
 	makeAbsence := func(absenceType, status string, start, end calendar.Date) workforce.StaffAbsence {
 		absence, err := sc.workTime.CreateStaffAbsence(sc.ctx, &workforce.StaffAbsence{
@@ -1200,10 +1223,10 @@ func TestOffboardStaff_RemovesPendingAndFutureAbsences(t *testing.T) {
 func TestOffboardStaff_AbsenceAuditFailureRollsBackOffboarding(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	staff := testpkg.CreateTestStaff(t, sc.db, "Audit", "Rollback")
-	today := calendar.TodayDate()
+	today := offboardingDay
 	absence, err := sc.workTime.CreateStaffAbsence(sc.ctx, &workforce.StaffAbsence{
 		StaffID:     staff.ID,
 		AbsenceType: workforce.AbsenceTypeVacation,
@@ -1239,10 +1262,10 @@ func TestOffboardStaff_AbsenceAuditFailureRollsBackOffboarding(t *testing.T) {
 func TestOffboardStaff_RemovesUpcomingStaffShifts(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	staff := testpkg.CreateTestStaff(t, sc.db, "Shifted", "Offboard")
-	today := calendar.TodayDate()
+	today := offboardingDay
 
 	makeShift := func(date calendar.Date, startHour int) *testpkg.StaffShift {
 		return testpkg.CreateTestStaffShift(t, sc.db, staff.ID, date, testpkg.StaffShiftOpts{
@@ -1284,7 +1307,7 @@ func TestOffboardStaff_RemovesUpcomingStaffShifts(t *testing.T) {
 func TestOffboardStaff_KeepsWorkTimeModelAssignment(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	staff := testpkg.CreateTestStaff(t, sc.db, "Modeled", "Staff")
 	model, err := sc.workTime.CreateWorkTimeModel(sc.ctx, workforce.CreateWorkTimeModel{WorkTimeModelFields: workforce.WorkTimeModelFields{
@@ -1323,7 +1346,7 @@ func TestOffboardStaff_KeepsWorkTimeModelAssignment(t *testing.T) {
 func TestOffboardStaff_ReleasesTransponderForTheNextPerson(t *testing.T) {
 	t.Parallel()
 
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	staff, account := testpkg.CreateTestStaffWithAccount(t, sc.db, "Card", "Holder")
 	testpkg.MapAccountToTenant(t, sc.db, account.ID, testpkg.Tenant(t))
@@ -1363,7 +1386,7 @@ func TestOffboardStaff_ReleasesTransponderForTheNextPerson(t *testing.T) {
 func TestOffboardStaff_LocksAccountBeforeRevokingRoles(t *testing.T) {
 	t.Parallel()
 	testpkg.SetupIsolatedTestDB(t)
-	sc := newOffboardingScenario(t)
+	sc := newPinnedOffboardingScenario(t)
 
 	credential := offboardingCredential("Offboard", "789")
 	emailAddr := fmt.Sprintf("offboard-lockorder-%d@test.local", time.Now().UnixNano())

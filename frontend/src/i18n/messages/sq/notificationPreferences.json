@@ -41,6 +41,10 @@
       "label": "Kujdesi anulohet",
       "description": "Kur {careTerm}-ja anulon një nga takimet e kujdesit të fëmijës suaj."
     },
+    "parent_school_closing_day_changed": {
+      "label": "Ditët e mbylljes",
+      "description": "Kur {careTerm}-ja shton, ndryshon ose fshin një ditë mbylljeje. Njoftimi në moto vjen gjithmonë, njoftimi në telefon vetëm për ditët e mbylljes në 14 ditët e ardhshme."
+    },
     "parent_billing_document": {
       "label": "Dokument i ri nga ofruesi",
       "description": "Kur ofruesi ju dërgon ose ju ndan një dokument, për shembull një kontratë."

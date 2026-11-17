@@ -60,7 +60,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					success(w, r, status, data, message)
 				}
 				router := testutil.NewTenantRouter(db)
-				router.Mount("/", devices.NewResource(devicefleet.NewAdministration(fleet), runtime).Router())
+				router.Mount("/", devices.NewResource(devicefleet.NewAdministration(fleet, time.Now), runtime).Router())
 				var lastID int64
 				for i := 0; i < n; i++ {
 					id := fmt.Sprintf("write-budget-%s-%d-%d", scenario, n, i)
@@ -115,7 +115,10 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					want.UpdatedAt, want.RoomName = row.UpdatedAt, roomName
 					if scenario == "create-no-room" {
 						require.Equal(t, "no-store", response.Header().Get("Cache-Control"))
-						require.True(t, row.CreatedAt.Equal(row.UpdatedAt))
+						// The owner stamps created_at on its clock: ListOffline
+						// compares it with an owner-clock cutoff (ADR 0281).
+						require.False(t, row.CreatedAt.Before(hostStart))
+						require.False(t, row.CreatedAt.After(hostEnd))
 						require.NotNil(t, row.LastSeen)
 						require.False(t, row.LastSeen.Before(hostStart))
 						require.False(t, row.LastSeen.After(hostEnd))

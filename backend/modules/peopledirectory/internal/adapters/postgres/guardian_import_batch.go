@@ -13,9 +13,9 @@ import (
 // The bundled writes of the data import's new guardians (#5552, ADR 0067
 // addendum of 2026-11-08, step 5c). Each writes the columns its single
 // counterpart writes and leaves the rest to the column defaults: a profile
-// starts with childless_since = now() and no account, as CreateGuardian
-// leaves it, until LinkNewGuardians clears the mark as LinkGuardianToStudent
-// does.
+// starts childless since the store's clock and without an account, as
+// CreateGuardian leaves it, until LinkNewGuardians clears the mark as
+// LinkGuardianToStudent does.
 
 // nullableTexts splits optional texts into values and a set flag per value,
 // so a NULL stays NULL and an empty text stays empty.
@@ -64,14 +64,14 @@ func (s *GuardianStore) InsertNewGuardians(ctx context.Context, profiles []domai
 		USING (SELECT k.* FROM unnest(?::text[], ?::text[], ?::text[], ?::boolean[], ?::text[], ?::boolean[], ?::text[], ?::boolean[], ?::text[], ?::text[], ?::text[], ?::boolean[])
 			WITH ORDINALITY AS k(first_name, last_name, street, street_set, city, city_set, postal, postal_set, method, language, note, note_set, ord) ORDER BY k.ord) AS s
 		ON false
-		WHEN NOT MATCHED THEN INSERT (tenant_id, first_name, last_name, address_street, address_city, address_postal_code, preferred_contact_method, language_preference, notes)
-			VALUES (?, s.first_name, s.last_name, CASE WHEN s.street_set THEN s.street END, CASE WHEN s.city_set THEN s.city END,
+		WHEN NOT MATCHED THEN INSERT (tenant_id, childless_since, first_name, last_name, address_street, address_city, address_postal_code, preferred_contact_method, language_preference, notes)
+			VALUES (?, ?, s.first_name, s.last_name, CASE WHEN s.street_set THEN s.street END, CASE WHEN s.city_set THEN s.city END,
 				CASE WHEN s.postal_set THEN s.postal END, s.method, s.language, CASE WHEN s.note_set THEN s.note END)
 		RETURNING s.ord, g.id`,
 		pgdialect.Array(firsts), pgdialect.Array(lasts), pgdialect.Array(street), pgdialect.Array(streetSet),
 		pgdialect.Array(city), pgdialect.Array(citySet), pgdialect.Array(postal), pgdialect.Array(postalSet),
 		pgdialect.Array(methods), pgdialect.Array(languages), pgdialect.Array(note), pgdialect.Array(noteSet),
-		scope.TenantID).Scan(ctx, &rows)
+		scope.TenantID, s.now()).Scan(ctx, &rows)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return nil, stats, wrapGuardianWriteError("create new guardians", err)

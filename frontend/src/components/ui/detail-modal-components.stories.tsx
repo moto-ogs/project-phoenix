@@ -1,12 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { UserIcon } from "@phosphor-icons/react";
 
-import {
-  DataField,
-  DataGrid,
-  DetailIcons,
-  InfoSection,
-  InfoText,
-} from "./detail-modal-components";
+import { DataField, DataGrid } from "./data-field";
+import { InfoSection } from "./info-section";
+import { DetailIcons, InfoText } from "./detail-modal-components";
+import { MotoDuotoneIcon } from "./moto-duotone-icon";
+
+const personIcon = (
+  <MotoDuotoneIcon icon={UserIcon} tone="greenVivid" size="100%" />
+);
 
 const meta = {
   title: "components/ui/DetailModalComponents",
@@ -68,7 +70,7 @@ export const InfoTextDefault: Story = {
 
 export const InfoSectionDefault: Story = {
   render: () => (
-    <InfoSection title="Persönliche Daten" icon={DetailIcons.person}>
+    <InfoSection title="Persönliche Daten" icon={personIcon}>
       <DataGrid>
         <DataField label="Vorname">Max</DataField>
         <DataField label="Nachname">Mustermann</DataField>
@@ -80,7 +82,7 @@ export const InfoSectionDefault: Story = {
 export const InfoSectionColors: Story = {
   render: () => (
     <div className="flex flex-col gap-3">
-      <InfoSection title="Blau" icon={DetailIcons.person}>
+      <InfoSection title="Blau" icon={personIcon}>
         <InfoText>Blauer Akzent</InfoText>
       </InfoSection>
       <InfoSection title="Orange" icon={DetailIcons.building}>
@@ -103,7 +105,7 @@ export const InfoSectionColors: Story = {
 export const Composition: Story = {
   render: () => (
     <div className="flex max-w-md flex-col gap-3">
-      <InfoSection title="Stammdaten" icon={DetailIcons.person}>
+      <InfoSection title="Stammdaten" icon={personIcon}>
         <DataGrid>
           <DataField label="Vorname">Max</DataField>
           <DataField label="Nachname">Mustermann</DataField>

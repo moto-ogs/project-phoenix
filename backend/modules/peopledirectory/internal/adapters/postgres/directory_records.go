@@ -33,6 +33,9 @@ type directoryRecordRow struct {
 	// of a returning child (#6073).
 	CarePausedAfter *calendar.Date `bun:"care_paused_after"`
 	CareResumedFrom *calendar.Date `bun:"care_resumed_from"`
+	// WithoutCarePlace is School Membership's mark of a child without an
+	// OGS place (#4803).
+	WithoutCarePlace bool `bun:"without_care_place"`
 
 	AddressStreet     *string `bun:"address_street"`
 	AddressCity       *string `bun:"address_city"`
@@ -83,6 +86,7 @@ func (r directoryRecordRow) toDomain(health HealthOpener) (directory.StudentReco
 		PhotoPath: r.PhotoPath, PhotoConsentGivenAt: r.PhotoConsentGivenAt, PhotoConsentGivenBy: r.PhotoConsentGivenBy,
 		AGBAcceptedAt: r.AGBAcceptedAt, DataProcessingAcceptedAt: r.DataProcessingAcceptedAt,
 		EmailContactAcceptedAt: r.EmailContactAcceptedAt,
+		WithoutCarePlace:       r.WithoutCarePlace,
 	}
 	if r.FirstCareFrom != nil {
 		record.FirstCareFrom = r.FirstCareFrom.String()
@@ -118,7 +122,7 @@ func directoryRecords(rows []directoryRecordRow, health HealthOpener) ([]directo
 const studentRecordColumns = `"student".id, "student".created_at, "student".updated_at, "student".tenant_id,
 	"student".person_id, "student".school_class, "student".group_id, "student".status,
 	"student".enrolled_from, "student".enrolled_until, "student".first_care_from,
-	"student".care_paused_after, "student".care_resumed_from,
+	"student".care_paused_after, "student".care_resumed_from, "student".without_care_place,
 	"student".address_street, "student".address_city, "student".address_postal_code,
 	"student".extra_info, "student".health_data, "student".membership_id, "student".pickup_status,
 	"student".departure_days, "student".allowed_departure_modes, "student".pickup_days, "student".bus_days,

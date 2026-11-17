@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports"
@@ -28,7 +30,7 @@ func (ownerTestTransaction) RunTenant(ctx context.Context, _ int64, fn func(cont
 	return fn(ctx)
 }
 func newFakeOwner(engine *fakeEngine) *Service {
-	return New(fakeOwnerStore{engine}, ownerTestTransaction{}, func(ports.Observation) {})
+	return New(fakeOwnerStore{engine}, ownerTestTransaction{}, func(ports.Observation) {}, ownerTestToday)
 }
 func (s fakeOwnerStore) Create(ctx context.Context, input organizationtenancy.CreateOrganization) (organizationtenancy.Organization, domain.OperationStats, error) {
 	value, err := s.engine.Create(ctx, input)
@@ -169,3 +171,7 @@ func (s fakeOwnerStore) FindSchoolBySubdomain(ctx context.Context, subdomain str
 	}
 	return value, err == nil, domain.OperationStats{}, err
 }
+
+// ownerTestToday is the fixed day the owner's erasure orders are judged
+// against in these tests (#7104).
+func ownerTestToday() calendar.Date { return calendar.NewDate(2026, 11, 2) }

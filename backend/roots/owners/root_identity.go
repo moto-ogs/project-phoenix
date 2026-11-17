@@ -38,7 +38,7 @@ func BuildIdentityAccess(
 	db transactionruntime.Database, unit rootUnitOfWork, env RootEnvironment, tokens TokenAdapter,
 	organizations organizationtenancy.Capability, persons peopledirectory.Capability, membership schoolmembership.Capability,
 	settings settingsCompose.BatchSettingsService, audit AuditOwner, operatorAuditLog OperatorAuditEntries,
-	mailSender email.Mailer, mailDispatcher email.Dispatcher, mailFrom email.Email, deliveryRuntime *deliveryCompose.Runtime, mailIdentity email.ReplyToResolver, outbox MailResultOutbox,
+	mailSender email.Mailer, mailDispatcher email.Dispatcher, mailFrom email.Email, deliveryRuntime *deliveryCompose.Runtime, mailIdentity email.ReplyToResolver, outbox IdentityMailOutbox,
 	people PeopleRows, guardianEnrollments guardianEnrollmentClaims,
 	groups EducationGroupRows, staffGroups schoolstructure.StaffGroupQuery, activityGroups timetablePorts.CallerActivityGroups,
 	sessions presenceCompose.SessionRecords, presence studentpresence.Owner,
@@ -55,7 +55,7 @@ func BuildIdentityAccess(
 	if err != nil {
 		return nil, nil, err
 	}
-	reinstatement, err := ComposeStaffReinstatement(db)
+	reinstatement, err := ComposeStaffReinstatement(db, env.Now)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -139,7 +139,7 @@ func BuildIdentityAccess(
 	// retained records.
 	usercontextLogger := env.Logger.With("service", "usercontext")
 	caller, err := NewCallerContext(tokens, module, CallerPersons{Rows: people.Persons, People: persons}, membership, staffGroups,
-		people.Students, activityGroups, presence, settings, usercontextLogger)
+		people.Students, activityGroups, presence, settings, usercontextLogger, env.Today)
 	if err != nil {
 		return nil, nil, err
 	}

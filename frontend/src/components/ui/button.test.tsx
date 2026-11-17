@@ -279,10 +279,19 @@ describe("Button", () => {
 
     const classes = screen.getByRole("button").className.split(" ");
     expect(classes).toEqual(
-      expect.arrayContaining(["h-full", "rounded-none", "px-3", "text-xs"]),
+      expect.arrayContaining([
+        "h-full",
+        "rounded-none",
+        "px-3",
+        "text-xs",
+        // The group clips with overflow-hidden; the focus ring stays inside.
+        "focus-visible:ring-inset",
+      ]),
     );
     expect(classes).not.toContain("h-8");
     expect(classes).not.toContain("rounded-md");
+    // The head's forced control height leaves a segment alone.
+    expect(screen.getByRole("button")).toHaveAttribute("data-control-part");
   });
 
   it("keeps an icon segment square: no side padding beside the divider", () => {

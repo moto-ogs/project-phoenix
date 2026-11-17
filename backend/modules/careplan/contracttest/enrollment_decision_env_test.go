@@ -108,6 +108,9 @@ const decisionTestToday calendar.Date = "2026-08-24"
 // owners of the env that take one.
 func decisionTestClock() time.Time { return decisionTestToday.BerlinMidnight() }
 
+// decisionTestDay is the day clock of the fixed decision day.
+func decisionTestDay() calendar.Date { return decisionTestToday }
+
 func (s stubActivationSettings) ResolveString(_ context.Context, key string) (string, error) {
 	if key == enrollmentKeys.DefaultActivationMode {
 		return s.mode, nil
@@ -221,11 +224,12 @@ func setupEnrollmentTestEnv(t *testing.T, decisionSettings owners.EnrollmentDeci
 	schools := newFactorySchools(t, db)
 	offerings := enrollmentTest.NewCareOfferingRecords(repoFactory.CarePlan())
 	intake := owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
-		Bookings:         api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings()),
+		Now:              time.Now,
+		Bookings:         api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings(time.Now)),
 		Requests:         repoFactoryEnrollment.Enrollment(),
 		Children:         repoFactoryEnrollment.Enrollment(),
 		CareOfferingRepo: offerings,
-		Capacity:         owners.NewEnrollmentOfferingCapacity(offerings, repoFactoryEnrollment.Enrollment(), settings, nil),
+		Capacity:         owners.NewEnrollmentOfferingCapacity(offerings, repoFactoryEnrollment.Enrollment(), settings, calendar.TodayDate),
 		Catalog:          repoFactoryEnrollment.Enrollment(),
 		SchoolRepo:       schools,
 		Notifications:    testNotifications(repoFactoryEnrollment.Enrollment(), settings, schools),
@@ -366,6 +370,7 @@ func composeDecisions(
 	require.NoError(tb, err)
 	audits := owners.NewTestAuditPersistence(testpkg.NewDatabase(tb, db), nil)
 	return owners.NewEnrollmentDecisions(api.EnrollmentDecisionDependencies{
+		Now:            time.Now,
 		Requests:       repoFactory.Enrollment(),
 		Children:       repoFactory.Enrollment(),
 		Guardians:      repoFactory.Enrollment(),
@@ -441,13 +446,14 @@ func newChangeRequestServiceWithDecisionForTest(t *testing.T, env *decisionTestE
 	schools := newFactorySchools(t, env.db)
 	offerings := enrollmentTest.NewCareOfferingRecords(env.repos.CarePlan())
 	return owners.NewEnrollmentChangeRequests(owners.EnrollmentChangeRequestSources{
-		Bookings:            api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings()),
+		Now:                 time.Now,
+		Bookings:            api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings(time.Now)),
 		Requests:            env.reposEnrollment.Enrollment(),
 		Children:            env.reposEnrollment.Enrollment(),
 		Guardians:           env.reposEnrollment.Enrollment(),
 		LateInviteRepo:      env.reposEnrollment.Enrollment(),
 		CareOfferingRepo:    offerings,
-		Capacity:            owners.NewEnrollmentOfferingCapacity(offerings, env.reposEnrollment.Enrollment(), env.settings, nil),
+		Capacity:            owners.NewEnrollmentOfferingCapacity(offerings, env.reposEnrollment.Enrollment(), env.settings, calendar.TodayDate),
 		Catalog:             env.reposEnrollment.Enrollment(),
 		Notifications:       testNotifications(env.reposEnrollment.Enrollment(), env.settings, schools),
 		GuardianProfileRepo: env.reposPeople.GuardianProfile,

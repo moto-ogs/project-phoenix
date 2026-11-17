@@ -58,7 +58,7 @@ func lifecycleCollaboratorsWired(deps ports.InstanceLifecycleDependencies) bool 
 	return deps.ActiveGroupRepo != nil && deps.SupervisorRepo != nil && deps.Presence != nil && deps.ActiveService != nil &&
 		deps.Rooms != nil && deps.CareDays != nil && deps.CareDayLocks != nil && deps.Protocol != nil &&
 		deps.Materialization != nil && deps.RecurrenceLock != nil && deps.StartConflicts != nil &&
-		deps.SubstituteConflicts != nil && deps.ContentHash != nil && deps.Database != nil
+		deps.SubstituteConflicts != nil && deps.ContentHash != nil && deps.Database != nil && deps.Now != nil
 }
 
 // SeriesDeviations exposes the re-plan's deviation snapshot and reapply
@@ -69,11 +69,7 @@ func (s *InstanceLifecycleService) SeriesDeviations() ports.SeriesDeviations {
 }
 
 func (s *InstanceLifecycleService) now() time.Time {
-	now := s.deps.Now
-	if now == nil {
-		now = time.Now
-	}
-	return now()
+	return s.deps.Now()
 }
 
 func (s *InstanceLifecycleService) getLogger() *slog.Logger {

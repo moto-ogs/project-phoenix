@@ -92,8 +92,8 @@ func (payrollTestTokens) Fingerprint(raw string) string { return "fp:" + raw }
 
 func newPayrollTestDispatch(t *testing.T, config workforce.PayrollDispatchConfig, clock ...func() time.Time) (workforce.PayrollDispatch, *payrollTestTransfer, *payrollTestMail) {
 	t.Helper()
-	var now func() time.Time
-	if len(clock) > 0 {
+	now := time.Now
+	if len(clock) > 0 && clock[0] != nil {
 		now = clock[0]
 	}
 	transfer, mail := &payrollTestTransfer{}, &payrollTestMail{}

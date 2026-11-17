@@ -45,4 +45,5 @@ func TestSchoolCreationSettingsRecordTheFederalStateInTheAdminUnit(t *testing.T)
 	require.Len(t, audit.entries, 1)
 	assert.Equal(t, "set", audit.entries[0].Action)
 	assert.Nil(t, audit.entries[0].ChangedBy)
+	assert.True(t, audit.entries[0].ChangedAt.IsZero(), "the column default stamps the entry on the database clock")
 }

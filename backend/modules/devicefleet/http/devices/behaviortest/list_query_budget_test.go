@@ -48,7 +48,8 @@ func TestDeviceListQueryBudgets(t *testing.T) {
 			testpkg.EnsureTestTenant(t, db, foreign)
 			testpkg.SetTestTenantSetting(t, db, tenant, settings.KeyDeviceOnlineWindowMinutes, "60")
 			// Distinguish the 60-minute override from the five-minute registry default.
-			recent, old := time.Now().Add(-20*time.Minute), time.Now().Add(-48*time.Hour)
+			// old is a fixed past instant, far outside every online window.
+			recent, old := time.Now().Add(-20*time.Minute), time.Date(2025, time.October, 31, 12, 0, 0, 0, time.UTC)
 			registrar := testpkg.CreateTestPerson(t, db, "List", "Target")
 			otherRegistrar := testpkg.CreateTestPerson(t, db, "List", "Other")
 			status := devicefleet.DeviceStatusActive
@@ -106,7 +107,7 @@ func TestDeviceListQueryBudgets(t *testing.T) {
 				success(w, r, code, data, message)
 			}
 			router := testutil.NewTenantRouter(db)
-			router.Mount("/", devices.NewResource(devicefleet.NewAdministration(fleet), runtime).Router())
+			router.Mount("/", devices.NewResource(devicefleet.NewAdministration(fleet, time.Now), runtime).Router())
 			message, path := "Devices retrieved successfully", "/"
 			switch route {
 			case "type":

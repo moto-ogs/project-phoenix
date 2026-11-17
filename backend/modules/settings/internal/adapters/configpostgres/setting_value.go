@@ -118,7 +118,6 @@ func (r *SettingValueRepository) Upsert(ctx context.Context, sv *config.SettingV
 		On("CONFLICT (tenant_id, setting_key) DO UPDATE").
 		Set("value = EXCLUDED.value").
 		Set("updated_by = EXCLUDED.updated_by").
-		Set("updated_at = NOW()").
 		Exec(ctx)
 
 	if err != nil {

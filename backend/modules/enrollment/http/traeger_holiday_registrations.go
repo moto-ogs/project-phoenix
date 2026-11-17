@@ -298,7 +298,7 @@ func (rs *HolidayPeriodResource) exportRegistrations(w http.ResponseWriter, r *h
 		return
 	}
 	names, _ := r.Context().Value(holidaySchoolNamesKey{}).(map[int64]string)
-	doc := holidayRegistrationDocument(export, filter, names, readClock(rs.Now))
+	doc := holidayRegistrationDocument(export, filter, names, rs.Now())
 	if format == lists.FormatPDF {
 		doc.Columns = holidayRegistrationPrintColumns(doc.Columns)
 	}

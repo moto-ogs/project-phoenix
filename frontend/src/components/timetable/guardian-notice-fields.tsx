@@ -1,22 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import { Checkbox } from "~/components/ui/checkbox";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type {
   GuardianNoticeInput,
   GuardianNoticeReach,
 } from "~/lib/timetable-types";
 import { InsetPanel } from "~/components/ui/inset-panel";
-
-const logger = createLogger({ component: "GuardianNoticeFields" });
 
 /** The block a notice would be about; the prefilled text is built from it. */
 export interface GuardianNoticeBlock {
@@ -132,65 +131,52 @@ export function GuardianNoticeFields({
   disabled = false,
   compact = false,
 }: GuardianNoticeFieldsProps) {
-  const [reach, setReach] = useState<GuardianNoticeReach | null>(null);
-  const [failed, setFailed] = useState(false);
-  // Ladefehler vor Ort (#2516): Katalogtext mit Wiederholen, das den Abruf
-  // über `attempt` neu startet.
-  const [attempt, setAttempt] = useState(0);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
   const past = block.date < today;
   const checkboxId = `guardian-notice-send-${block.id}`;
+  const { data, error, mutate } = useSWRAuth(
+    past ? null : tenantDailyKeys.guardianNoticeReach(block.id),
+    // Wrapped in a resolved promise so a synchronous throw (a test double
+    // without the method, a broken client) lands in the same failure as a
+    // rejected request.
+    () =>
+      Promise.resolve().then(() =>
+        timetableService.getGuardianNoticeReach(block.id),
+      ),
+    { keepPreviousData: false },
+  );
+  const reach = data ?? null;
+  const failed = !past && !data && !!error;
+  // Ladefehler vor Ort (#2516): Katalogtext mit Wiederholen.
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data, error }],
+    "die Information der Eltern",
+    () => mutate(),
+  );
 
+  // The parent surface owns reach and draft. The draft is seeded once per
+  // block and outcome, never on a background refresh, so typed text stays.
+  const seededRef = useRef<string | null>(null);
   useEffect(() => {
-    if (past) {
-      setReach(null);
+    if (past || (!data && !failed)) {
       onReachChange(null);
       return;
     }
-    let cancelled = false;
-    setFailed(false);
-    clearLoadError();
-    // Wrapped in a resolved promise so a synchronous throw (a test double
-    // without the method, a broken client) lands in the same catch as a
-    // rejected request.
-    Promise.resolve()
-      .then(() => timetableService.getGuardianNoticeReach(block.id))
-      .then((loaded) => {
-        if (cancelled) return;
-        setReach(loaded);
-        onReachChange(loaded);
-        if (noticeApplies(loaded)) {
-          onDraftChange({ send: true, ...suggestGuardianNotice(block) });
-        }
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setFailed(true);
-        setReach(null);
-        onReachChange(null);
-        // A failed preview must not permanently block a cancellation. Seed an
-        // explicit opt-out, distinct from the initial loading state above.
-        onDraftChange({ send: false, ...suggestGuardianNotice(block) });
-        logger.error("guardian_notice_reach_failed", {
-          instance_id: block.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: "die Information der Eltern",
-          retry: () => setAttempt((current) => current + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
+    onReachChange(reach);
+    const outcome = `${block.id}:${data ? "loaded" : "failed"}`;
+    if (seededRef.current === outcome) return;
+    seededRef.current = outcome;
+    if (data) {
+      if (noticeApplies(data))
+        onDraftChange({ send: true, ...suggestGuardianNotice(block) });
+    } else {
+      // A failed preview must not permanently block a cancellation. Seed an
+      // explicit opt-out, distinct from the initial loading state above.
+      onDraftChange({ send: false, ...suggestGuardianNotice(block) });
+    }
     // The block identity is what matters; the title/date inside it only change
-    // together with the id. The load-error helpers are stable.
+    // together with the id. The parent's callbacks are not dependencies.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [block.id, past, attempt]);
+  }, [block.id, past, data, failed]);
 
   if (past) return null;
   if (failed) {

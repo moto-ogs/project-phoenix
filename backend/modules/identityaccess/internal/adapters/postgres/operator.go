@@ -31,8 +31,8 @@ type operatorRow struct {
 	MFAAttempts          int        `bun:"mfa_attempts,default:0"`
 	MFALockedUntil       *time.Time `bun:"mfa_locked_until"`
 	DeactivatedAt        *time.Time `bun:"deactivated_at"`
-	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt            time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt            time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 // operatorColumns selects the scan-only credential generation with the row:
@@ -69,8 +69,8 @@ type operatorSessionRow struct {
 	RotatedAt            *time.Time `bun:"rotated_at"`
 	ReplacementTokenHash *string    `bun:"replacement_token"`
 	RecoveryProofHash    []byte     `bun:"recovery_proof_hash"`
-	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt            time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt            time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r operatorSessionRow) toDomain() domain.OperatorSession {

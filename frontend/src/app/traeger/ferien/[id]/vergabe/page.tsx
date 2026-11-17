@@ -35,6 +35,7 @@ import {
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -43,12 +44,9 @@ import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { focusStepHeading } from "~/components/ui/use-step-focus";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   decideHolidayAllocation,
   fetchHolidayAllocation,
@@ -74,7 +72,20 @@ export default function TraegerHolidayAllocationPage() {
   } = useTraegerHolidayPeriod(id);
   const { schools } = useTraegerSchools();
   const names = useMemo(() => schoolNames(schools), [schools]);
-  const [board, setBoard] = useState<HolidayAllocationBoard | null>(null);
+  const byCriteria = period?.allocationMode === "criteria";
+  // A period by arrival has no allocation list; the page says so instead.
+  const {
+    data: board,
+    error: boardError,
+    mutate,
+    reload,
+  } = useTraegerResource(
+    byCriteria && id ? traegerKeys.holidayAllocation(id) : null,
+    () => fetchHolidayAllocation(id),
+    "die Vergabe",
+  );
+  const setBoard = (next: HolidayAllocationBoard) =>
+    mutate(next, { revalidate: false });
   const [target, setTarget] = useState<AllocationDecisionTarget | null>(null);
   const [proposalScope, setProposalScope] = useState<ProposalScope | null>(
     null,
@@ -99,31 +110,8 @@ export default function TraegerHolidayAllocationPage() {
         ),
     );
   }, [board]);
-  const boardLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = boardLoad;
   const actionErrors = useApiErrorDisplay();
   const toast = useToast();
-  const byCriteria = period?.allocationMode === "criteria";
-
-  const load = useCallback(async () => {
-    try {
-      setBoard(await fetchHolidayAllocation(id));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_holiday_allocation_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Vergabe",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, id, showLoadError]);
-
-  useEffect(() => {
-    // A period by arrival has no allocation list; the page says so instead.
-    if (byCriteria) void load();
-  }, [byCriteria, load]);
 
   const weeks = useMemo(() => (board ? openWeeks(board) : []), [board]);
   const pendingTotal = weeks.reduce(
@@ -144,9 +132,9 @@ export default function TraegerHolidayAllocationPage() {
       setTarget(null);
       setProposalScope(null);
       void actionErrors.show(err, { object: "die Vergabe" });
-      void load();
+      reload();
     },
-    [actionErrors, load],
+    [actionErrors, reload],
   );
 
   const decideOne = async (reason: string) => {
@@ -160,7 +148,7 @@ export default function TraegerHolidayAllocationPage() {
       },
     ]);
     focusAfterDecision.current = target.week.weekId;
-    setBoard(next);
+    void setBoard(next);
     setTarget(null);
     toast.success(
       target.placement === "placed"
@@ -187,7 +175,7 @@ export default function TraegerHolidayAllocationPage() {
         );
         const next = await decideHolidayAllocation(id, choices);
         // Preserve completed batches even when a later batch needs review.
-        setBoard(next);
+        void setBoard(next);
       }
       focusAfterDecision.current =
         proposalScope === "all" || proposalScope === null
@@ -206,14 +194,14 @@ export default function TraegerHolidayAllocationPage() {
       } else {
         setProposalScope(null);
         void actionErrors.show(err, { object: "der Vorschlag" });
-        void load();
+        reload();
       }
     } finally {
       setTaking(false);
     }
   };
 
-  const loadError = boardLoad.error ?? periodError;
+  const loadError = boardError ?? periodError;
   const loading = !loadError && (!period || (byCriteria && !board));
   const busy = taking || target !== null;
 

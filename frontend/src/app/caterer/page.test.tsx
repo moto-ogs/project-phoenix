@@ -73,6 +73,8 @@ function week(dayTotals: number[], change = 0) {
 
 describe("CatererOverviewPage (#3873)", () => {
   beforeEach(() => {
+    // The week fixture and the expected periods are the week of Wednesday 2026-09-09.
+    setTestClock("2026-09-09T12:00:00+02:00");
     vi.resetAllMocks();
     sessionState.data = {
       user: { id: "caterer", scope: "caterer" },

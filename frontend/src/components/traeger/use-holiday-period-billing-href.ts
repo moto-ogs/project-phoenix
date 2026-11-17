@@ -9,7 +9,7 @@
 import { useSession } from "next-auth/react";
 import { hasPermission } from "~/lib/auth-utils";
 import { useSWRAuth } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 import { type BillingRun, fetchBillingRuns } from "~/lib/traeger-billing-api";
 import { traegerPath } from "~/lib/traeger-url";

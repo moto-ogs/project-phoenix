@@ -21,19 +21,35 @@ import (
 // which is the only provider over audit.unregistered_tag_scans.
 func newScanFleet(t *testing.T, db *bun.DB) devicefleet.Capability {
 	t.Helper()
-	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db))
+	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err, "Failed to compose the device fleet")
 	return fleet
 }
 
-func recordScan(t *testing.T, fleet devicefleet.Capability, ctx context.Context, tagUID string, deviceID *int64, scannedAt time.Time) devicefleet.UnregisteredTagScan {
+func recordScan(t *testing.T, fleet devicefleet.Capability, ctx context.Context, tagUID string, deviceID *int64) devicefleet.UnregisteredTagScan {
 	t.Helper()
-	scan, err := fleet.RecordUnregisteredTagScan(ctx, devicefleet.RecordUnregisteredTagScan{
-		TagUID: tagUID, DeviceID: deviceID, ScannedAt: scannedAt,
-	})
+	scan, err := fleet.RecordUnregisteredTagScan(ctx, devicefleet.RecordUnregisteredTagScan{TagUID: tagUID, DeviceID: deviceID})
 	require.NoError(t, err)
 	require.NotZero(t, scan.ID)
 	return scan
+}
+
+// ageScan dates the scan age before the database clock, which stamps
+// scanned_at (ADR 0281, Nachtrag).
+func ageScan(t *testing.T, db *bun.DB, id int64, age time.Duration) {
+	t.Helper()
+	_, err := db.NewRaw(`UPDATE audit.unregistered_tag_scans SET scanned_at = clock_timestamp() - make_interval(secs => ?) WHERE id = ?`,
+		age.Seconds(), id).Exec(context.Background())
+	require.NoError(t, err)
+}
+
+// scanRetentionCutoff is the end of the retention window on the database
+// clock that stamps the scans and guards their deletion.
+func scanRetentionCutoff(t *testing.T, db *bun.DB) time.Time {
+	t.Helper()
+	var now time.Time
+	require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(context.Background(), &now))
+	return now.Add(-devicefleet.UnregisteredTagScanRetentionDays * 24 * time.Hour)
 }
 
 func newScanOperator(t *testing.T, db *bun.DB) int64 {
@@ -50,11 +66,11 @@ func TestUnregisteredTagScan_RecordAttachesOwnDeviceIdentity(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	device := testpkg.CreateTestDevice(t, db, "scan-record")
 
-	recorded := recordScan(t, fleet, ctx, "  TAG-RECORD  ", &device.ID, time.Time{})
+	recorded := recordScan(t, fleet, ctx, "  TAG-RECORD  ", &device.ID)
 
 	require.Equal(t, "TAG-RECORD", recorded.TagUID, "the owner trims the tag UID")
 	require.Equal(t, testpkg.Tenant(t), recorded.TenantID)
-	require.False(t, recorded.ScannedAt.IsZero(), "a zero scan time is stamped by the owner clock")
+	require.False(t, recorded.ScannedAt.IsZero(), "the column default stamps the scan time")
 
 	found, err := fleet.FindUnregisteredTagScan(ctx, recorded.ID)
 	require.NoError(t, err)
@@ -106,10 +122,11 @@ func TestUnregisteredTagScan_ListFiltersAndOrders(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	tenantID := testpkg.Tenant(t)
 	operatorID := newScanOperator(t, db)
-	now := time.Now()
-	oldUnresolved := recordScan(t, fleet, ctx, "TAG-OLD", nil, now.Add(-2*time.Hour))
-	newUnresolved := recordScan(t, fleet, ctx, "TAG-NEW", nil, now.Add(-time.Hour))
-	resolved := recordScan(t, fleet, ctx, "TAG-RESOLVED", nil, now)
+	oldUnresolved := recordScan(t, fleet, ctx, "TAG-OLD", nil)
+	ageScan(t, db, oldUnresolved.ID, 2*time.Hour)
+	newUnresolved := recordScan(t, fleet, ctx, "TAG-NEW", nil)
+	ageScan(t, db, newUnresolved.ID, time.Hour)
+	resolved := recordScan(t, fleet, ctx, "TAG-RESOLVED", nil)
 	require.NoError(t, testpkg.WithinAdminContext(t, ctx, db, func(adminCtx context.Context) error {
 		_, err := fleet.ResolveUnregisteredTagScan(adminCtx, devicefleet.ResolveUnregisteredTagScan{ID: resolved.ID, OperatorID: operatorID})
 		return err
@@ -152,7 +169,7 @@ func TestUnregisteredTagScan_ResolveStampsOnce(t *testing.T) {
 	fleet := newScanFleet(t, db)
 	ctx := testpkg.Ctx(t)
 	operatorID := newScanOperator(t, db)
-	scan := recordScan(t, fleet, ctx, "TAG-RESOLVE", nil, time.Now())
+	scan := recordScan(t, fleet, ctx, "TAG-RESOLVE", nil)
 	note := "  Issued replacement card  "
 
 	var resolved devicefleet.UnregisteredTagScan
@@ -194,7 +211,7 @@ func TestUnregisteredTagScan_ResolveKeepsBlankNoteEmpty(t *testing.T) {
 	fleet := newScanFleet(t, db)
 	ctx := testpkg.Ctx(t)
 	operatorID := newScanOperator(t, db)
-	scan := recordScan(t, fleet, ctx, "TAG-BLANK-NOTE", nil, time.Now())
+	scan := recordScan(t, fleet, ctx, "TAG-BLANK-NOTE", nil)
 	blank := "   "
 
 	var resolved devicefleet.UnregisteredTagScan
@@ -214,11 +231,11 @@ func TestUnregisteredTagScan_DeleteExpiredKeepsRecentScans(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	fleet := newScanFleet(t, db)
 	ctx := testpkg.Ctx(t)
-	now := time.Now()
-	oldScan := recordScan(t, fleet, ctx, "TAG-EXPIRED", nil, now.Add(-120*24*time.Hour))
-	newScan := recordScan(t, fleet, ctx, "TAG-KEPT", nil, now)
+	oldScan := recordScan(t, fleet, ctx, "TAG-EXPIRED", nil)
+	ageScan(t, db, oldScan.ID, 120*24*time.Hour)
+	newScan := recordScan(t, fleet, ctx, "TAG-KEPT", nil)
 
-	deleted, err := fleet.DeleteExpiredUnregisteredTagScans(ctx, now.Add(-devicefleet.UnregisteredTagScanRetentionDays*24*time.Hour))
+	deleted, err := fleet.DeleteExpiredUnregisteredTagScans(ctx, scanRetentionCutoff(t, db))
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, deleted, "only the expired scan is deleted")
 
@@ -230,7 +247,7 @@ func TestUnregisteredTagScan_DeleteExpiredKeepsRecentScans(t *testing.T) {
 	_, err = fleet.DeleteExpiredUnregisteredTagScans(ctx, time.Time{})
 	require.ErrorIs(t, err, devicefleet.ErrInvalidUnregisteredTagScan)
 
-	_, err = fleet.DeleteExpiredUnregisteredTagScans(testpkg.WithTestTenantRuntime(t, context.Background()), now)
+	_, err = fleet.DeleteExpiredUnregisteredTagScans(testpkg.WithTestTenantRuntime(t, context.Background()), scanRetentionCutoff(t, db))
 	require.ErrorIs(t, err, devicefleet.ErrTenantRequired, "retention never runs without a tenant")
 }
 
@@ -244,9 +261,9 @@ func TestUnregisteredTagScan_DeleteExpiredRollsBackAndRetriesIdempotently(t *tes
 	db := testpkg.SetupTestDB(t)
 	fleet := newScanFleet(t, db)
 	ctx := testpkg.Ctx(t)
-	now := time.Now()
-	expired := recordScan(t, fleet, ctx, "TAG-RETENTION-ROLLBACK", nil, now.Add(-120*24*time.Hour))
-	cutoff := now.Add(-devicefleet.UnregisteredTagScanRetentionDays * 24 * time.Hour)
+	expired := recordScan(t, fleet, ctx, "TAG-RETENTION-ROLLBACK", nil)
+	ageScan(t, db, expired.ID, 120*24*time.Hour)
+	cutoff := scanRetentionCutoff(t, db)
 	wantErr := errors.New("abort after retention")
 
 	err := testpkg.WithinTenantContext(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
@@ -288,13 +305,13 @@ func TestUnregisteredTagScan_TwoTenantIsolation(t *testing.T) {
 
 	var scanA, scanB devicefleet.UnregisteredTagScan
 	require.NoError(t, testpkg.WithinTenantContext(t, base, db, tenantA, func(ctxA context.Context) error {
-		scanA = recordScan(t, fleet, ctxA, "TAG-A", &deviceA.ID, time.Now())
+		scanA = recordScan(t, fleet, ctxA, "TAG-A", &deviceA.ID)
 		return nil
 	}))
 	require.NoError(t, testpkg.WithinTenantContext(t, base, db, tenantB, func(ctxB context.Context) error {
 		// Tenant B's device column may point at another tenant's device row;
 		// the foreign key is not tenant-bound. The owner must not reveal it.
-		scanB = recordScan(t, fleet, ctxB, "TAG-B", &deviceA.ID, time.Now())
+		scanB = recordScan(t, fleet, ctxB, "TAG-B", &deviceA.ID)
 		return nil
 	}))
 	require.Equal(t, tenantA, scanA.TenantID)
@@ -350,7 +367,7 @@ func TestUnregisteredTagScan_TwoTenantIsolation(t *testing.T) {
 		for _, scan := range scans {
 			assert.Equal(t, tenantB, scan.TenantID, "cross-tenant leak: tenant A scan visible to tenant B")
 		}
-		deleted, err := fleet.DeleteExpiredUnregisteredTagScans(ctxB, time.Now().Add(-devicefleet.UnregisteredTagScanRetentionDays*24*time.Hour))
+		deleted, err := fleet.DeleteExpiredUnregisteredTagScans(ctxB, scanRetentionCutoff(t, db))
 		require.NoError(t, err)
 		assert.Zero(t, deleted, "retention is scoped to the caller tenant")
 		return nil
@@ -372,7 +389,7 @@ func TestUnregisteredTagScan_RecordRollsBackWithOuterUnitOfWork(t *testing.T) {
 
 	var aborted devicefleet.UnregisteredTagScan
 	err := testpkg.WithinTenantContext(t, ctx, db, tenantID, func(txCtx context.Context) error {
-		aborted = recordScan(t, fleet, txCtx, tagUID, nil, time.Now())
+		aborted = recordScan(t, fleet, txCtx, tagUID, nil)
 		return wantErr
 	})
 	require.ErrorIs(t, err, wantErr)
@@ -380,7 +397,7 @@ func TestUnregisteredTagScan_RecordRollsBackWithOuterUnitOfWork(t *testing.T) {
 	_, err = fleet.FindUnregisteredTagScan(ctx, aborted.ID)
 	require.ErrorIs(t, err, devicefleet.ErrUnregisteredTagScanNotFound, "the aborted append left no row")
 
-	retried := recordScan(t, fleet, ctx, tagUID, nil, time.Now())
+	retried := recordScan(t, fleet, ctx, tagUID, nil)
 	scans, err := fleet.ListUnregisteredTagScans(ctx, devicefleet.UnregisteredTagScanFilter{TenantIDs: []int64{tenantID}})
 	require.NoError(t, err)
 	matches := 0
@@ -403,7 +420,7 @@ func TestUnregisteredTagScan_ResolveRollsBackWithOuterUnitOfWork(t *testing.T) {
 	fleet := newScanFleet(t, db)
 	ctx := testpkg.Ctx(t)
 	operatorID := newScanOperator(t, db)
-	scan := recordScan(t, fleet, ctx, "TAG-RESOLVE-ROLLBACK", nil, time.Now())
+	scan := recordScan(t, fleet, ctx, "TAG-RESOLVE-ROLLBACK", nil)
 	wantErr := errors.New("abort after resolve")
 
 	err := testpkg.WithinAdminContext(t, ctx, db, func(adminCtx context.Context) error {

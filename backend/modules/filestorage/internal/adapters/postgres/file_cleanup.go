@@ -18,8 +18,8 @@ type fileCleanupRow struct {
 	FilenameStored string     `bun:"filename_stored,notnull"`
 	RetryAfter     time.Time  `bun:"retry_after,notnull"`
 	CleanedAt      *time.Time `bun:"cleaned_at"`
-	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r fileCleanupRow) intent() domain.CleanupIntent {

@@ -10,10 +10,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// publicContractClock is the fixed instant the owner stamps and dates on.
+func publicContractClock() time.Time { return time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC) }
+
 func TestPublicCarePlanContractUpsertsOneObservableStatusDay(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	module := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, publicContractClock)
 	student := testpkg.CreateTestStudent(t, db, "Care", "Contract", "1A")
 	day := careplan.Date("2026-08-24")
 	note := "Arzttermin"
@@ -41,7 +44,7 @@ func TestPublicCarePlanContractUpsertsOneObservableStatusDay(t *testing.T) {
 func TestStatusDayReportReplacesTheStandingStatusOfTheDay(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	module := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, publicContractClock)
 	student := testpkg.CreateTestStudent(t, db, "Kim", "Fahrt", "3b")
 	day := careplan.Date("2026-08-25")
 	reported := time.Date(2026, 8, 25, 7, 0, 0, 0, time.UTC)
@@ -75,7 +78,7 @@ func TestStatusDayReportReplacesTheStandingStatusOfTheDay(t *testing.T) {
 func TestRecordingAClearedStatusLeavesTheStandingStatusAlone(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	module := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, publicContractClock)
 	student := testpkg.CreateTestStudent(t, db, "Lio", "Fahrt", "3b")
 	day := careplan.Date("2026-08-26")
 	reported := time.Date(2026, 8, 26, 7, 0, 0, 0, time.UTC)

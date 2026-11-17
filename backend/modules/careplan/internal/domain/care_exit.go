@@ -48,6 +48,8 @@ func CareExitBlocker(student *CareStudent, lastCareDay, today calendar.Date) str
 		return careplan.CareBlockerUnknown
 	case student.IsAlumnus():
 		return careplan.CareBlockerAlumnus
+	case student.WithoutCarePlace:
+		return careplan.CareBlockerWithoutCarePlace
 	case student.CareEndedOn(today):
 		return careplan.CareBlockerAlreadyEnded
 	case student.EnrolledFrom != nil && lastCareDay.Before(*student.EnrolledFrom):
@@ -423,7 +425,8 @@ func ParticipationBoundaries(students map[int64]CareStudent, pending map[int64]c
 
 // ParticipatingOn applies the boundaries to one day. Actual presence always
 // wins; otherwise a graduate and a pending child still waiting for its
-// scheduled care start (#6041, AwaitsCareStartOn) do not take part.
+// scheduled care start (#6041, AwaitsCareStartOn) do not take part. A child
+// without an OGS place (#4803) never takes part.
 func ParticipatingOn(
 	studentIDs []int64, students map[int64]CareStudent, boundaries map[int64]calendar.Date,
 	on, today calendar.Date, actuallyPresent map[int64]bool,
@@ -442,6 +445,17 @@ func ParticipatingOn(
 			delete(participating, id)
 		}
 	}
+	return withoutPlacesRemoved(participating, students)
+}
+
+// withoutPlacesRemoved drops every child without an OGS place (#4803): it
+// is a child of the class, not of the OGS, on every day.
+func withoutPlacesRemoved(participating map[int64]bool, students map[int64]CareStudent) map[int64]bool {
+	for id, student := range students {
+		if student.WithoutCarePlace {
+			delete(participating, id)
+		}
+	}
 	return participating
 }
 
@@ -449,7 +463,8 @@ func ParticipatingOn(
 // list shows: retained children (a pending withdrawal task, actual presence)
 // stay, and a pending child waiting for its scheduled care start stays
 // findable for the school to prepare it (#6041), unless care has ended or
-// the child is an alumnus.
+// the child is an alumnus. A child without an OGS place (#4803) stays too:
+// the school keeps its record and invites its family from this list.
 func AdministrativelyVisibleOn(
 	studentIDs []int64, students map[int64]CareStudent, boundaries map[int64]calendar.Date,
 	on, today calendar.Date, retained map[int64]bool,
@@ -460,7 +475,7 @@ func AdministrativelyVisibleOn(
 			continue
 		}
 		student := students[id]
-		if !student.IsAlumnus() && student.AwaitsCareStartOn(on, today) {
+		if !student.IsAlumnus() && (student.WithoutCarePlace || student.AwaitsCareStartOn(on, today)) {
 			visible[id] = true
 		}
 	}
@@ -490,5 +505,5 @@ func HistoricalParticipationOn(
 			participating[id] = true
 		}
 	}
-	return participating
+	return withoutPlacesRemoved(participating, students)
 }

@@ -48,7 +48,8 @@ func (l enrollmentUploadAccessLog) RecordUploadAccess(ctx context.Context, entry
 		ResourceType:   auditModels.ResourceTypeEnrollmentUploadView,
 		RangeStart:     at,
 		RangeEnd:       at,
-		AccessedAt:     at,
+		// The column default stamps the read (ADR 0281, Nachtrag).
+		AccessedAt: entry.AccessedAt,
 		Metadata: map[string]any{
 			"request_id": entry.RequestID,
 			"upload_id":  entry.UploadID,

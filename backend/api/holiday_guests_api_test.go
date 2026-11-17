@@ -16,6 +16,7 @@ import (
 	"net/http/httptest"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -89,7 +90,7 @@ func newHolidayGuestFixture(t *testing.T, name string) holidayGuestFixture {
 	f := newHolidayHostFixture(t, name)
 	persons := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, f.db))
 	accessLog := owners.NewTestAuditPersistence(testpkg.NewDatabase(t, f.db), nil).DataAccessLog
-	clock := func() calendar.Date { return f.today.Load().(calendar.Date) }
+	clock := func() time.Time { return f.today.Load().(calendar.Date).BerlinMidnight().Add(10 * time.Hour) }
 	carePlan, err := owners.NewUnobservedCarePlan(testpkg.NewDatabase(t, f.db), owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, f.db)), persons)
 	require.NoError(t, err)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, f.db))

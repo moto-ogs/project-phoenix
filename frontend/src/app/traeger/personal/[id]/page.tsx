@@ -9,7 +9,7 @@
 import { EyeIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   STAFF_FIELD_LABELS,
   schoolCount,
@@ -17,10 +17,11 @@ import {
 } from "~/components/traeger/staff/staff-record-format";
 import { StaffProofsCard } from "~/components/traeger/staff/staff-proofs-card";
 import { StaffAbsenceAccountsCard } from "~/components/traeger/staff/staff-absence-accounts-card";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Button } from "~/components/ui/button";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FramedList } from "~/components/ui/framed-list";
@@ -32,7 +33,6 @@ import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
@@ -41,6 +41,8 @@ import { schoolsConcept } from "~/lib/concepts/schools";
 import { staffConcept } from "~/lib/concepts/staff";
 import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   dissolveStaffRecord,
   fetchStaffRecord,
@@ -351,37 +353,37 @@ export default function TraegerStaffRecordPage() {
   const recordId = params?.id ?? "";
   const router = useRouter();
   const { success } = useToast();
-  const [record, setRecord] = useState<StaffRecordDetail | null>(null);
+  const {
+    data: record,
+    loading,
+    error,
+    mutate,
+    reload,
+  } = useTraegerResource(
+    recordId ? traegerStaffKeys.record(recordId) : null,
+    () => fetchStaffRecord(recordId),
+    "die Personalakte",
+  );
   const [confirming, setConfirming] = useState(false);
   const [dissolving, setDissolving] = useState(false);
   const dissolveErrors = useApiFormError();
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
+  const invalidateFamily = useInvalidateFamily();
 
-  const load = useCallback(async () => {
-    try {
-      setRecord(await fetchStaffRecord(recordId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_staff_record_load_failed", {
-        error: errorMessage(err),
-      });
-      await showLoadError(err, {
-        object: "die Personalakte",
-        retry: () => void load(),
-      });
-    }
-  }, [recordId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Name, Personalnummer, Einsatzorte and Bank und Steuer of a record also
+  // stand in the list of records.
+  const refreshOverview = () =>
+    void invalidateFamily(traegerStaffKeys.overviewFamily);
+  const replace = (next: StaffRecordDetail) => {
+    void mutate(next, { revalidate: false });
+    refreshOverview();
+  };
 
   const dissolve = async () => {
     if (!record) return;
     setDissolving(true);
     try {
       await dissolveStaffRecord(record.id);
+      refreshOverview();
       success(`Die Akte von ${staffName(record)} ist aufgelöst.`);
       router.push(traegerPath("/traeger/personal"));
     } catch (err) {
@@ -420,9 +422,9 @@ export default function TraegerStaffRecordPage() {
           />
         ) : null
       }
-      statsLoading={!record && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!record && !pageLoad.error}
+      statsLoading={loading}
+      error={error}
+      loading={loading}
       actions={
         record ? (
           <OverflowMenu
@@ -503,7 +505,7 @@ export default function TraegerStaffRecordPage() {
           </SectionCard>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <PersonnelNumberCard record={record} onSaved={setRecord} />
+            <PersonnelNumberCard record={record} onSaved={replace} />
             <SectionCard
               concept={schoolsConcept}
               title="Einsatzorte"
@@ -549,16 +551,23 @@ export default function TraegerStaffRecordPage() {
             personName={staffName(record)}
             proofs={record.proofs}
             onChanged={(proofs) =>
-              setRecord((current) =>
-                current ? { ...current, proofs } : current,
+              void mutate(
+                (current) => (current ? { ...current, proofs } : current),
+                { revalidate: false },
               )
             }
           />
           <StaffAbsenceAccountsCard recordId={record.id} />
-          <StaffContractsCard record={record} onChanged={setRecord} />
+          <StaffContractsCard record={record} onChanged={replace} />
           <StaffTimeAccountCard recordId={record.id} />
 
-          <FinancialCard record={record} onSaved={() => void load()} />
+          <FinancialCard
+            record={record}
+            onSaved={() => {
+              reload();
+              refreshOverview();
+            }}
+          />
 
           <SectionCard
             concept={changeHistoryConcept}

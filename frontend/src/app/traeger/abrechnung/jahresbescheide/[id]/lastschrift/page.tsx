@@ -5,45 +5,26 @@
 // „Schreiben“ beim Monatslauf; der Jahreslauf verlinkt sie im Kopf.
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import { NoticeSepaDebits } from "~/components/traeger/notice-sepa-debits";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { EmptyState } from "~/components/ui/empty-state";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
-import {
-  type CareNoticeRunDetail,
-  fetchCareNoticeRun,
-} from "~/lib/traeger-care-notices-api";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
+import { fetchCareNoticeRun } from "~/lib/traeger-care-notices-api";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerNoticeDebitsPage" });
 
 export default function TraegerNoticeDebitsPage() {
   const { id: runId } = useParams<{ id: string }>();
-  const [run, setRun] = useState<CareNoticeRunDetail | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      setRun(await fetchCareNoticeRun(runId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_notice_debits_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "der Jahreslauf",
-        retry: () => void load(),
-      });
-    }
-  }, [runId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const {
+    data: run,
+    loading,
+    error,
+  } = useTraegerResource(
+    traegerBillingRunKeys.noticeRun(runId),
+    () => fetchCareNoticeRun(runId),
+    "der Jahreslauf",
+  );
 
   const issued = run?.status === "released" && run.previewCount > 0;
 
@@ -62,9 +43,9 @@ export default function TraegerNoticeDebitsPage() {
           </span>
         ) : null
       }
-      statsLoading={!run && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !run}
+      statsLoading={loading}
+      error={error}
+      loading={loading}
     >
       {run ? (
         issued ? (

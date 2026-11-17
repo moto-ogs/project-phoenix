@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -75,7 +76,7 @@ func newRequestLookupRouter(t *testing.T, db *bun.DB) (http.Handler, careplan.Ca
 
 		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
 	})
-	rs := parent.NewResource(parent.ResourceConfig{Parent: svc})
+	rs := parent.NewResource(parent.ResourceConfig{Now: time.Now, Parent: svc})
 	return testpkg.TenantRuntimeMiddleware(t, db)(rs.Router(api.ParentSessionChain)), carePlan
 }
 

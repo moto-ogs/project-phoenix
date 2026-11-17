@@ -95,6 +95,7 @@ type savepointCleanupDelivery struct {
 
 func runSavepointCleanup(ctx context.Context, requests *savepointCleanupRequests) error {
 	_, err := enrollmentCompose.NewRejectedCleanup(enrollmentCompose.RejectedCleanupDependencies{
+		Now:         time.Now,
 		Requests:    requests,
 		Children:    savepointCleanupChildren{},
 		LateInvites: savepointCleanupLateInvites{},

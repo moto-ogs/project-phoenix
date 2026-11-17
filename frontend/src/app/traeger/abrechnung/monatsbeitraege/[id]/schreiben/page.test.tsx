@@ -1,7 +1,17 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useInvalidateMatching } from "~/lib/swr";
+import { deferred } from "~/test/helpers/form-modal-pending";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ApiError } from "~/lib/api-error";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   CareInvoice,
   CareLetterMailing,
@@ -9,9 +19,12 @@ import type {
   CareRunDetail,
 } from "~/lib/traeger-care-billing-api";
 
+vi.unmock("swr");
+
 const { api, push } = vi.hoisted(() => ({
   api: {
     fetchCareRun: vi.fn(),
+    downloadCareLetter: vi.fn(),
     printCareLetters: vi.fn(),
     fetchCareLetters: vi.fn(),
     fetchCareRuns: vi.fn(),
@@ -131,10 +144,20 @@ const letters = (documents: CareLetterMailing[]): CareLetters => ({
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerCareRunLettersPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
+}
+
+/** The start dialog's read of the month's schools and their open run. */
+function StartDialogSchools({ read }: { read: () => Promise<unknown> }) {
+  useTraegerResource(
+    traegerBillingRunKeys.careRunSchools("2027-01-01"),
+    read,
+    "die Schulen",
+  );
+  return null;
 }
 
 describe("monthly invoice reissue", () => {
@@ -142,6 +165,58 @@ describe("monthly invoice reissue", () => {
     vi.clearAllMocks();
     api.fetchCareRun.mockResolvedValue(RUN);
     api.fetchCareRuns.mockResolvedValue({ runs: [] });
+  });
+
+  it("ignores a late refused read after the letters resource was invalidated and reloaded", async () => {
+    const initial = {
+      ...letters([{ ...CANCELLATION, hasLetter: true }]),
+      letters: {
+        paymentDueOn: "2026-09-23",
+        notes: "Bisheriger Hinweis",
+        createdAt: "2026-09-09T08:00:00Z",
+      },
+    };
+    api.fetchCareLetters.mockResolvedValue(initial);
+    let invalidate!: ReturnType<typeof useInvalidateMatching>;
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      invalidate = useInvalidateMatching();
+      const resource = useTraegerResource(
+        traegerBillingRunKeys.careLetters("7"),
+        () => api.fetchCareLetters("7"),
+        "die Liste der Schreiben",
+      );
+      reload = async () => {
+        const next = await api.fetchCareLetters("7");
+        resource.readCallbacks.onSuccess();
+        await resource.mutate(next, { revalidate: false });
+      };
+      return null;
+    }
+    render(
+      <TraegerResourceTestProvider>
+        <TraegerCareRunLettersPage />
+        <Probe />
+      </TraegerResourceTestProvider>,
+    );
+    expect(await screen.findByText("Bisheriger Hinweis")).toBeVisible();
+    const pending = deferred<CareLetters>();
+    api.fetchCareLetters.mockReturnValueOnce(pending.promise);
+    fireEvent.click(screen.getByRole("button", { name: "Neu ausstellen" }));
+    await waitFor(() => expect(api.fetchCareLetters).toHaveBeenCalledTimes(2));
+    api.fetchCareLetters.mockResolvedValue({
+      ...initial,
+      letters: { ...initial.letters, notes: "Frischer Hinweis" },
+    });
+    await act(async () => {
+      await invalidate((key) => key === traegerBillingRunKeys.careLetters("7"));
+      await reload();
+    });
+    expect(await screen.findByText("Frischer Hinweis")).toBeVisible();
+    await act(async () => {
+      pending.reject(new ApiError("gone", 404));
+    });
+    expect(screen.getByText("Frischer Hinweis")).toBeVisible();
   });
 
   it.each([403, 503])(
@@ -190,6 +265,50 @@ describe("monthly invoice reissue", () => {
     },
   );
 
+  it("withdraws letters and open panels when reissue's fresh read is refused", async () => {
+    api.fetchCareLetters.mockResolvedValue({
+      ...letters([{ ...CANCELLATION, hasLetter: true }]),
+      letters: {
+        paymentDueOn: "2026-09-23",
+        notes: "Privater Hinweis",
+        createdAt: "2026-09-09T08:00:00Z",
+      },
+    });
+    renderPage();
+    expect(await screen.findByText("Privater Hinweis")).toBeVisible();
+    let reject!: (error: unknown) => void;
+    api.fetchCareLetters.mockReturnValueOnce(
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+    );
+    api.downloadCareLetter.mockRejectedValue(new ApiError("down", 503));
+    fireEvent.click(screen.getByRole("button", { name: "Neu ausstellen" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Aktionen für den Storno von Mia Beispiel",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Schreiben ansehen" }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Storno MB-0002" }),
+    ).toBeVisible();
+    await act(async () => reject(new ApiError("forbidden", 403)));
+    // Anker: der verweigerte Abruf wird auf der geladenen Seite angezeigt.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Schreiben"),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Privater Hinweis")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Storno MB-0002" }),
+    ).not.toBeInTheDocument();
+    expect(api.startCareRun).not.toHaveBeenCalled();
+  });
+
   it("hides reissue when every cancellation has a released replacement", async () => {
     api.fetchCareLetters.mockResolvedValue(
       letters([{ ...CANCELLATION, replaced: true }]),
@@ -224,6 +343,28 @@ describe("monthly invoice reissue", () => {
       schoolIds: ["3"],
       invoiceDate: null,
     });
+  });
+
+  it("shows the new run as the schools' open run in the start dialog", async () => {
+    api.fetchCareLetters.mockResolvedValue(letters([CANCELLATION]));
+    api.startCareRun.mockResolvedValue({ id: "8" });
+    const readSchools = vi.fn().mockResolvedValue([]);
+    render(
+      <TraegerResourceTestProvider>
+        <TraegerCareRunLettersPage />
+        <StartDialogSchools read={readSchools} />
+      </TraegerResourceTestProvider>,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Neu ausstellen" }),
+    );
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith(
+        "/traeger/abrechnung/monatsbeitraege/8",
+      ),
+    );
+
+    await waitFor(() => expect(readSchools).toHaveBeenCalledTimes(2));
   });
 
   it("does not create an empty run when another tab already issued the replacement", async () => {

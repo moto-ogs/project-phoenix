@@ -10,6 +10,7 @@ package test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 
@@ -287,7 +288,7 @@ func TestTenantIsolation_DisplayVisibility(t *testing.T) {
 	db := SetupTestDB(t)
 	tenantA, tenantB := isolationTenants(t, db)
 
-	fleet, err := owners.NewDeviceFleet(NewDatabase(t, db))
+	fleet, err := owners.NewDeviceFleet(NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
 
 	ctxA := ctxForTenant(tenantA)
@@ -350,7 +351,7 @@ func TestTenantIsolation_ActiveGroupVisibility(t *testing.T) {
 	agA := CreateTestActiveGroupForTenant(t, db, tenantA)
 	agB := CreateTestActiveGroupForTenant(t, db, tenantB)
 
-	repo, _, _ := api.NewSessionCleanupRepositories(NewDatabase(t, db), owners.MustNewUnobservedTimetable(NewDatabase(t, db)))
+	repo, _, _ := api.NewSessionCleanupRepositories(NewDatabase(t, db), owners.MustNewUnobservedTimetable(NewDatabase(t, db)), time.Now)
 	presence := api.NewStudentPresenceForTests(NewDatabase(t, db))
 
 	// --- Tenant A ---

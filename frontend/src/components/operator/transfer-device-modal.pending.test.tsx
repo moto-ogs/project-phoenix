@@ -1,7 +1,38 @@
 // #6533: Schließen während des Verschiebens ist gesperrt, eine späte Antwort
 // schließt nicht den Dialog eines anderen Geräts. Echter FormModal.
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as renderPlain,
+  screen,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactElement, ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: {
+      user: { id: "account-1", scope: "platform" },
+      expires: "2099-01-01",
+    },
+    status: "authenticated",
+  }),
+}));
+
+function SWRWrapper({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderPlain(ui, { wrapper: SWRWrapper });
+}
 
 import { ApiError } from "~/lib/api-error";
 import type {

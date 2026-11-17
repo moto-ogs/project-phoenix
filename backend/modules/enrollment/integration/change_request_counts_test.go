@@ -18,7 +18,7 @@ import (
 func TestChangeRequestReviewCountIsTenantAndStatusScoped(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := enrollmentCompose.NewClocked(nil)
+	owner := enrollmentCompose.NewClocked(time.Now)
 	var tenants []int64
 	var pendingIDs []int64
 	var requestIDs []int64

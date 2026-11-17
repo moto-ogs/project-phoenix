@@ -62,11 +62,11 @@ func NewWorkTimeMonthService(
 }
 
 func (s *workTimeMonthService) today() calendar.Date {
-	return dayOrWall(s.todayFunc, s.nowFunc)()
+	return dayOf(s.todayFunc, s.nowFunc)()
 }
 
 func (s *workTimeMonthService) now() time.Time {
-	return clockOrWall(s.nowFunc)()
+	return requireClock(s.nowFunc)()
 }
 
 // maxDailyTargetRangeDays bounds GetDailyProjection: the table never shows more

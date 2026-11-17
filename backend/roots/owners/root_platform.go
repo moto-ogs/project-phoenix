@@ -193,7 +193,7 @@ func BuildTraegerSettings(db transactionruntime.Database, unit rootUnitOfWork, l
 	return settingsCompose.NewTraegerSettings(settingsCompose.TraegerSettingsDependencies{
 		Values:  settingsCompose.NewTraegerSettingRepository(settingsCompose.NewTenantSettingsRuntime(db.Pool(), nil)),
 		Runtime: settingsCompose.NewTenantSettingsRuntime(db.Pool(), &unit),
-		Schools: organizations.ListTraegerSchoolIDs, Notify: notify, Logger: logger, Now: time.Now,
+		Schools: organizations.ListTraegerSchoolIDs, Notify: notify, Logger: logger,
 		Rights: map[configModels.TraegerRight]string{
 			configModels.TraegerRightSettings: identityaccess.TraegerRightSettingsManage,
 			configModels.TraegerRightStaff:    identityaccess.TraegerRightStaffManage,

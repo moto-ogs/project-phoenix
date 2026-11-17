@@ -61,7 +61,7 @@ func (r *Store) ApprovedHolidayCareWish(ctx context.Context, studentID int64, on
 }
 
 const setHolidayChildWishQuery = `UPDATE enrollment.holiday_registration_children
-	SET holiday_wish = ?, holiday_wish_source = ?, updated_at = statement_timestamp()
+	SET holiday_wish = ?, holiday_wish_source = ?
 	WHERE organization_id = ? AND holiday_registration_id = ? AND id = ? AND home_school_id IS NOT NULL`
 
 // SetHolidayChildWish writes the wish of a child of a school of the Träger

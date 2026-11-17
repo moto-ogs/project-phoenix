@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	iotAPI "github.com/moto-ogs/project-phoenix/api/iot"
@@ -49,12 +50,12 @@ func renderIoTErrorReportFailure(w http.ResponseWriter, r *http.Request, status 
 	}
 }
 
-func iotDevicesRuntime() devicesAPI.Runtime {
-	return devicesAPI.Runtime{ParseID: common.ParseIDParam, Permission: common.RequiresPermission, Success: common.Respond, Failure: renderIoTDataFailure, ConflictOnField: renderIoTConflictOnField, ConstraintViolation: transactionFailures.IsConstraintViolation}
+func iotDevicesRuntime(now func() time.Time) devicesAPI.Runtime {
+	return devicesAPI.Runtime{ParseID: common.ParseIDParam, Now: now, Permission: common.RequiresPermission, Success: common.Respond, Failure: renderIoTDataFailure, ConflictOnField: renderIoTConflictOnField, ConstraintViolation: transactionFailures.IsConstraintViolation}
 }
 
-func iotSessionRuntime() sessionsAPI.Runtime {
-	return sessionsAPI.Runtime{ParseID: common.ParseIDParam,
+func iotSessionRuntime(now func() time.Time) sessionsAPI.Runtime {
+	return sessionsAPI.Runtime{ParseID: common.ParseIDParam, Now: now,
 		Authenticated: func(ctx context.Context) bool { _, _, _, _, ok := deviceauth.ContextDevice(ctx); return ok },
 		Success:       common.Respond,
 		Failure:       renderIoTDataFailure,
@@ -77,8 +78,8 @@ func renderIoTSessionConflict(w http.ResponseWriter, r *http.Request, message st
 	common.RenderError(w, r, common.ErrorConflictWithDetails(errors.New(message), common.CodeGeneralBusinessRejection, details))
 }
 
-func iotDataRuntime() dataAPI.Runtime {
-	return dataAPI.Runtime{ParseID: common.ParseIDParam,
+func iotDataRuntime(now func() time.Time) dataAPI.Runtime {
+	return dataAPI.Runtime{ParseID: common.ParseIDParam, Now: now,
 		Device: func(ctx context.Context) (int64, string, bool) {
 			id, deviceID, _, _, ok := deviceauth.ContextDevice(ctx)
 			return id, deviceID, ok
@@ -129,8 +130,8 @@ func iotStaffClockRuntime() staffclockAPI.Runtime {
 
 // iotCheckinRuntime binds the kiosk scan and attendance resources to the same
 // envelope (#2698).
-func iotCheckinRuntime() checkinAPI.Runtime {
-	return checkinAPI.Runtime{
+func iotCheckinRuntime(now func() time.Time) checkinAPI.Runtime {
+	return checkinAPI.Runtime{Now: now,
 		Success: common.Respond,
 		Failure: renderIoTKioskFailure,
 	}

@@ -2,7 +2,7 @@
 // Sorgerecht mit Zeitpunkt, der Name, mit dem die Eltern die Erklärungen
 // abgegeben haben, die Fassung und der Wortlaut dieser Fassung.
 
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import type { HolidayRegistrationDetail } from "~/lib/traeger-holiday-registrations-api";

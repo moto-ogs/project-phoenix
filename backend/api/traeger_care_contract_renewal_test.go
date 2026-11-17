@@ -61,9 +61,10 @@ func TestRenewalAcceptanceReachesTheContractIntake(t *testing.T) {
 				changed["notice_months"] = 3
 				traegerTemplateFor(t, f, child.offering, changed)
 			}
-			// The school accepts the renewed child afterwards.
+			// The school accepts the renewed child afterwards. Enrollment stamps
+			// reviewed_at on its owner clock, the intake's time.Now (ADR 0281).
 			_, err := f.db.ExecContext(context.Background(), `UPDATE enrollment.request_children
-  SET status = 'approved', reviewed_at = clock_timestamp() + interval '1 minute' WHERE id = ?`, child.id)
+  SET status = 'approved', reviewed_at = ? WHERE id = ?`, time.Now().Add(time.Minute), child.id)
 			require.NoError(t, err)
 
 			setTraegerConclusionMode(t, f, carecontract.ModeOnAcceptance)
@@ -129,11 +130,13 @@ func newRenewalContractFlow(t *testing.T, f careContractFixture) (renewalIntake,
 	}))
 
 	intake := owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
+		Now:      time.Now,
 		Requests: repos.Enrollment(), ParentChanges: repos.Enrollment(), Children: repos.Enrollment(), Guardians: repos.Enrollment(),
 		Catalog: repos.Enrollment(), Settings: settings.Settings, ParentsURL: "http://parents.localhost:3000", Logger: slog.Default(),
 	})
 	rollovers := owners.NewEnrollmentRollovers(owners.EnrollmentRolloverSources{
-		Bookings: NewEnrollmentCareBookingCommands(carePlanCompose.NewOfferingBookings()),
+		Now:      time.Now,
+		Bookings: NewEnrollmentCareBookingCommands(carePlanCompose.NewOfferingBookings(time.Now)),
 		Phases:   repos.Enrollment(), Requests: repos.Enrollment(), Children: repos.Enrollment(),
 		Catalog: catalog.Catalog, Settings: settings.Settings, ParentsURL: "http://parents.localhost:3000", Logger: slog.Default(),
 	})

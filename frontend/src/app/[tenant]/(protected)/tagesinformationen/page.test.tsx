@@ -46,6 +46,7 @@ vi.mock("~/lib/swr", () => ({
         : key.startsWith("staff-notice:")
           ? state.linked
           : state.all,
+  useInvalidateMatching: () => () => Promise.resolve([]),
 }));
 
 function slot(data: unknown, error?: unknown): SwrSlot {

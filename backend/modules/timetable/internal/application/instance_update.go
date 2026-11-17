@@ -52,6 +52,7 @@ func (s *InstanceLifecycleService) UpdatePlanned(ctx context.Context, instanceID
 	if err := s.lockEditedRoster(ctx, instance.ID, req); err != nil {
 		return nil, err
 	}
+	previousRoomID := instance.RoomID
 	if err := s.updateLifecycleColumns(ctx, instance, applyPlannedEdit(instance, req)...); err != nil {
 		return nil, &ports.ScheduleError{Op: "update instance", Err: duplicateTemplateInstance(err)}
 	}
@@ -66,6 +67,9 @@ func (s *InstanceLifecycleService) UpdatePlanned(ctx context.Context, instanceID
 	// block fully staffed; an unrelated edit must not reopen an
 	// acknowledged gap (#1840).
 	if err := s.clearStaleAckIfStaffed(ctx, instance, actorAccountID); err != nil {
+		return nil, err
+	}
+	if err := s.noticeRoomChange(ctx, instance, previousRoomID, origSlot.Date, actorAccountID); err != nil {
 		return nil, err
 	}
 	s.broadcastPlannedInstanceChanged(ctx, "instance_update")

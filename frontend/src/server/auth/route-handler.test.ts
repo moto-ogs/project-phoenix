@@ -204,6 +204,9 @@ describe("createResponseAwareAuth", () => {
   });
 
   describe("Sentry context of the request", () => {
+    // The session callback's pseudonym of the account (#3843).
+    const PSEUDONYM = "0123456789abcdef0123456789abcdef";
+
     function requestWithId(url: string): NextRequest {
       return new NextRequest(url, {
         headers: { "X-Request-ID": "0b6f3f4e-5c1d-4a52-9d57-2d3c1b5e8f10" },
@@ -226,11 +229,12 @@ describe("createResponseAwareAuth", () => {
       await route(requestWithId("https://moto.test/api/whatever"));
     }
 
-    it("tags a school-bound OGS request with account, role, school, portal and Vorgangskennung", async () => {
+    it("tags a school-bound OGS request with account pseudonym, role, school, portal and Vorgangskennung", async () => {
       await runRoute("tenant", {
         ...tenantSession,
         user: {
           ...tenantSession.user,
+          sentryUserId: PSEUDONYM,
           email: "leitung@example.com",
           tenantId: 12,
           scope: "",
@@ -238,7 +242,7 @@ describe("createResponseAwareAuth", () => {
         },
       } as Session);
 
-      expect(setUser).toHaveBeenLastCalledWith({ id: "42" });
+      expect(setUser).toHaveBeenLastCalledWith({ id: PSEUDONYM });
       expect(sentryTags()).toEqual({
         portal: "tenant",
         role: "admin",
@@ -249,11 +253,16 @@ describe("createResponseAwareAuth", () => {
 
     it("leaves school_id out for operator sessions", async () => {
       await runRoute("operator", {
-        user: { id: "7", token: "operator-access", scope: "platform" },
+        user: {
+          id: "7",
+          sentryUserId: PSEUDONYM,
+          token: "operator-access",
+          scope: "platform",
+        },
         expires: "2099-01-01T00:00:00.000Z",
       } as Session);
 
-      expect(setUser).toHaveBeenLastCalledWith({ id: "7" });
+      expect(setUser).toHaveBeenLastCalledWith({ id: PSEUDONYM });
       expect(sentryTags()).toMatchObject({
         portal: "operator",
         role: "operator",
@@ -265,6 +274,7 @@ describe("createResponseAwareAuth", () => {
       await runRoute("parent", {
         user: {
           id: "99",
+          sentryUserId: PSEUDONYM,
           token: "parent-access",
           scope: "parent",
           tenantId: 0,
@@ -272,7 +282,7 @@ describe("createResponseAwareAuth", () => {
         expires: "2099-01-01T00:00:00.000Z",
       } as Session);
 
-      expect(setUser).toHaveBeenLastCalledWith({ id: "99" });
+      expect(setUser).toHaveBeenLastCalledWith({ id: PSEUDONYM });
       expect(sentryTags()).toMatchObject({
         portal: "parent",
         role: "guardian",

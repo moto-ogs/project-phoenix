@@ -5,6 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ModalProvider } from "~/components/ui/modal-context";
 import { ParentNotificationOnboarding } from "./parent-notification-onboarding";
@@ -55,9 +56,15 @@ beforeAll(async () => {
 
 function renderOnboarding() {
   return render(
-    <ModalProvider>
-      <ParentNotificationOnboarding accountId="42" />
-    </ModalProvider>,
+    // The dialog refreshes the scoped cache, which needs the session.
+    <SessionProvider
+      session={{ user: { id: "42" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <ModalProvider>
+        <ParentNotificationOnboarding accountId="42" />
+      </ModalProvider>
+    </SessionProvider>,
   );
 }
 

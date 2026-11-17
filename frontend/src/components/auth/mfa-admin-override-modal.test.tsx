@@ -1,13 +1,31 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
-  render,
+  render as rtlRender,
   screen,
   fireEvent,
   waitFor,
   act,
 } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import { MFAAdminOverrideModal } from "./mfa-admin-override-modal";
+
+vi.unmock("swr");
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {ui}
+      </SWRConfig>
+    </SessionProvider>,
+  );
+}
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();

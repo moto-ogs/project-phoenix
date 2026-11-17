@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/spf13/viper"
 
@@ -117,6 +119,7 @@ func newOperatorRouter(
 	provisioning organizationtenancy.OperatorProvisioning, caregivers peoplePorts.CaregiverCapabilityService,
 	lifecycle carePlanModule.CareLifecycle, communication communicationModule.Capability,
 	students importModels.RowImporter[importModels.StudentImportRow], traegerSettings settingsOperatorAPI.TraegerOperations,
+	now func() time.Time,
 ) (chi.Router, error) {
 	tagScanReview := tagScanOperatorAPI.NewResource(tagScanOperatorAPI.Config{
 		Scans:     iot.Fleet(),
@@ -142,6 +145,7 @@ func newOperatorRouter(
 		// trigger side effects (e.g. auto-creating the Schulhof/WC rooms when
 		// the corresponding checkout toggle flips on).
 		OnValueSet: settingsWrites.SideEffects.Dispatch,
+		Now:        now,
 	})
 	provisioningConfig, err := newProvisioningConfig(provisioning, caregiverCapabilityViews(db, caregivers))
 	if err != nil {
@@ -150,21 +154,21 @@ func newOperatorRouter(
 	isLocalSeedRequest := func(r *http.Request) bool {
 		return apiCommon.IsLocalSeedRequest(r, viper.GetString("app_env"))
 	}
-	mergeRoutes, err := newStaffPersonMergeRoutes(db)
+	mergeRoutes, err := newStaffPersonMergeRoutes(db, now)
 	if err != nil {
 		return nil, err
 	}
 	return operatorRouter(
 		newOperatorIdentity(sessionAuth, identity),
 		provisioningConfig,
-		provisioningOperatorAPI.NewBillingResource(billing, nil, isLocalSeedRequest),
+		provisioningOperatorAPI.NewBillingResource(billing, nil, isLocalSeedRequest, now),
 		&operatorSchoolSettings{
 			values: settingsOperatorAPI.NewSettingsResource(settingsOperatorAPI.SettingsConfig{
 				Settings:   schoolSettings,
 				Schools:    operatorSettingsSchools{schools: organizations},
 				OperatorID: operatorIDFromSession,
 			}),
-			bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle),
+			bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.CalendarDateClock(now)),
 			traegerValues:          traegerSettings,
 		},
 		communication,
@@ -173,6 +177,7 @@ func newOperatorRouter(
 		mergeRoutes,
 		newSampleChildrenRoute(provisioning, students),
 		newDemoPresenceHistoryRoute(db, viper.GetString("app_env")),
+		now,
 	), nil
 }
 
@@ -186,6 +191,7 @@ func newParentResource(
 	healthData enrollmentOwner.HolidayHealthCipher, traegerSettings TraegerBrandingSettings, now func() time.Time,
 ) *parentAPI.Resource {
 	return parentAPI.NewResource(parentAPI.ResourceConfig{
+		Now:         now,
 		Auth:        parentPortalLogin(identity),
 		Resets:      portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeParent),
 		Parent:      parent,
@@ -198,7 +204,7 @@ func newParentResource(
 		),
 		GuardianProfileLoader: newParentGuardianProfiles(guardianProfiles),
 		Schools:               parentSchoolDirectory{schools: organizations},
-		HolidayLinks:          newParentHolidayRegistrationLinks(organizations, delivery, healthData, traegerSettings, logger),
+		HolidayLinks:          newParentHolidayRegistrationLinks(organizations, delivery, healthData, traegerSettings, logger, now),
 		Push:                  bindParentPushSubscriptions(devices.PushSubscriptions),
 		Preferences:           bindParentPreferences(notifications.Preferences),
 		Feed:                  bindParentNotificationFeed(notifications.GuardianFeed),
@@ -240,6 +246,12 @@ func newSessionTokenAuth() (*sessiontoken.TokenAuth, error) {
 		viper.GetDuration("auth_jwt_expiry"),
 		viper.GetDuration("auth_jwt_refresh_expiry"),
 	)
+}
+
+// newSentryUserPseudonym keys the Sentry pseudonym of an account with the
+// session secret the verifier above reads (#3843).
+func newSentryUserPseudonym() (SentryUserPseudonym, error) {
+	return NewSentryUserPseudonym(viper.GetString("auth_jwt_secret"))
 }
 
 // newProvisioningConfig binds the operator provisioning routes to the

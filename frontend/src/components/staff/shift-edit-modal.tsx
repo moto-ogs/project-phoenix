@@ -25,7 +25,7 @@ import {
   type FormModalOperation,
   useFormModalPending,
 } from "~/components/ui/use-form-modal-pending";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
 import {
   findPeriodForDate,
@@ -33,7 +33,11 @@ import {
   type CalendarPeriod,
 } from "~/lib/calendar-period-helpers";
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { databaseKeys } from "~/lib/swr/portal-keys";
+import { staffTimeKeys } from "~/lib/swr/staff-keys";
 import {
   copyStableObjectKey,
   getStableObjectKey,
@@ -208,10 +212,6 @@ export function ShiftEditModal({
   const workingTime = useWorkingTimeConfirmation();
   const { reset: resetWorkingTime } = workingTime;
   const deleteErrors = useApiFormError();
-  const periodsLoad = useApiLoadError();
-  const seriesRuleLoad = useApiLoadError();
-  const [periodsReload, setPeriodsReload] = useState(0);
-  const [seriesRuleReload, setSeriesRuleReload] = useState(0);
   // „Wiederholen“ sendet den aktuellen Stand, nicht den vom Fehlerzeitpunkt.
   const latestSaveRef = useRef<() => void>(() => undefined);
   const latestDeleteRef = useRef<() => void>(() => undefined);
@@ -228,8 +228,7 @@ export function ShiftEditModal({
 
   // Wiederholung (#1889): create-only series section.
   const [repeatEnabled, setRepeatEnabled] = useState(false);
-  const [periods, setPeriods] = useState<CalendarPeriod[] | null>(null);
-  const [periodId, setPeriodId] = useState("");
+  const [chosenPeriodId, setPeriodId] = useState("");
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [biweekly, setBiweekly] = useState(false);
   const [abPattern, setAbPattern] = useState<1 | 2>(1);
@@ -251,7 +250,6 @@ export function ShiftEditModal({
   // the "Alle Termine der Serie" editor. The rule is loaded whenever a series
   // row is opened so its rhythm is visible right away instead of only after
   // the user tries to save.
-  const [seriesRule, setSeriesRule] = useState<SeriesRule | null>(null);
   const [seriesEditOpen, setSeriesEditOpen] = useState(false);
   const [seriesWeekdays, setSeriesWeekdays] = useState<number[]>([]);
   const [seriesBiweekly, setSeriesBiweekly] = useState(false);
@@ -293,7 +291,6 @@ export function ShiftEditModal({
     setSeriesNotice(null);
     setIncludeSchoolBreaks(false);
     setScopeQuestion(null);
-    setSeriesRule(null);
     setSeriesEditOpen(false);
     setOccurrenceDraft(null);
     setChangeReason(shift?.changeReason ?? "");
@@ -321,87 +318,43 @@ export function ShiftEditModal({
     resetWorkingTime,
   ]);
 
-  const showPeriodsLoadError = periodsLoad.show;
-  const clearPeriodsLoadError = periodsLoad.clear;
-  const showSeriesRuleLoadError = seriesRuleLoad.show;
-  const clearSeriesRuleLoadError = seriesRuleLoad.clear;
-
   // Calendar periods load once the series section is opened; the period is
   // required (it bounds the series and anchors Woche A/B). A series row needs
   // them too: its own period decides whether Woche A/B is available at all
-  // (#2028).
-  useEffect(() => {
-    if ((!repeatEnabled && !isSeriesRow) || periods !== null) return;
-    let cancelled = false;
-    clearPeriodsLoadError();
-    calendarPeriodService
-      .list()
-      .then((loaded) => {
-        if (cancelled) return;
-        setPeriods(loaded);
-        const match = findPeriodForDate(loaded, date);
-        setPeriodId((current) => current || (match?.id ?? ""));
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("shift_series_periods_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        // Periods stay unloaded: an empty list would claim the school has
-        // no calendar period at all.
-        void showPeriodsLoadError(err, {
-          object: "die Liste der Kalenderzeiträume",
-          retry: () => setPeriodsReload((n) => n + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    repeatEnabled,
-    isSeriesRow,
-    periods,
-    date,
-    periodsReload,
-    showPeriodsLoadError,
-    clearPeriodsLoadError,
-  ]);
+  // (#2028). Same entry as the Dienstplan's period switcher.
+  const periodsResource = useSWRAuth(
+    repeatEnabled || isSeriesRow ? databaseKeys.calendarPeriods() : null,
+    () => calendarPeriodService.list(),
+  );
+  // Periods stay unloaded on a failure: an empty list would claim the school
+  // has no calendar period at all.
+  const periods: CalendarPeriod[] | null = periodsResource.data ?? null;
+  const { error: periodsLoadError } = useSwrResourceLoadError(
+    [periodsResource],
+    "die Liste der Kalenderzeiträume",
+    () => periodsResource.mutate(),
+  );
+  const periodId =
+    chosenPeriodId ||
+    (periods ? (findPeriodForDate(periods, date)?.id ?? "") : "");
 
   // The rule behind a series shift (#2028). Loaded on open so the modal can
   // state the rhythm up front — "Diese Schicht ist Teil einer Serie" alone
   // does not tell the planner what the series actually does.
   const seriesId = shift?.seriesId ?? null;
-  useEffect(() => {
-    if (!isOpen || mode !== "edit" || seriesId === null) return;
-    let cancelled = false;
-    clearSeriesRuleLoadError();
-    staffShiftSeriesService
-      .getSeries(seriesId)
-      .then((rule) => {
-        if (!cancelled) setSeriesRule(rule);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("shift_series_load_failed", {
-          series_id: seriesId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showSeriesRuleLoadError(err, {
-          object: "die Serie",
-          retry: () => setSeriesRuleReload((n) => n + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isOpen,
-    mode,
-    seriesId,
-    seriesRuleReload,
-    showSeriesRuleLoadError,
-    clearSeriesRuleLoadError,
-  ]);
+  const seriesRuleResource = useFreshSWR(
+    isOpen && mode === "edit" && seriesId !== null
+      ? staffTimeKeys.shiftSeries(seriesId)
+      : null,
+    () => staffShiftSeriesService.getSeries(seriesId ?? ""),
+    { keepPreviousData: false },
+  );
+  const seriesRule: SeriesRule | null = seriesRuleResource.data ?? null;
+  const { error: seriesRuleLoadError } = useSwrResourceLoadError(
+    [seriesRuleResource],
+    "die Serie",
+    () => seriesRuleResource.mutate(),
+  );
 
   const selectedPeriod = useMemo(
     () => periods?.find((p) => p.id === periodId) ?? null,
@@ -1183,8 +1136,8 @@ export function ShiftEditModal({
                         {describeSeriesRule(seriesRule)}
                       </p>
                     )}
-                    <LoadErrorAlert error={seriesRuleLoad.error} />
-                    <LoadErrorAlert error={periodsLoad.error} />
+                    <LoadErrorAlert error={seriesRuleLoadError} />
+                    <LoadErrorAlert error={periodsLoadError} />
                     {!seriesEditOpen && (
                       <Button
                         type="button"
@@ -1496,8 +1449,8 @@ export function ShiftEditModal({
                           />
                         </FieldGroup>
                         <Field label="Kalenderzeitraum">
-                          {periodsLoad.error ? (
-                            <LoadErrorAlert error={periodsLoad.error} />
+                          {periodsLoadError ? (
+                            <LoadErrorAlert error={periodsLoadError} />
                           ) : periods !== null && periodOptions.length === 0 ? (
                             <Alert
                               type="warning"

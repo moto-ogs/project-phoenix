@@ -214,9 +214,10 @@ func (p calendarGuardianPort) ListPortalContacts(ctx context.Context, guardianID
 	return result, nil
 }
 
-// guardianPortalAccessGranted reads a stored parent_portal.access value of a
-// GuardianPortalContact with the shared helper's interpretation of historical
-// JSON values.
+// guardianPortalAccessGranted reads a stored parent_portal.access value of
+// People Directory's portal contacts with the shared helper, which knows its
+// historical shapes. The calendar, room change (#7141) and meal plan (#7145)
+// notices use it.
 func guardianPortalAccessGranted(raw json.RawMessage) (bool, error) {
 	var value any
 	if len(raw) > 0 {

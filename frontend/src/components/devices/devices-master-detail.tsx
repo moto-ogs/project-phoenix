@@ -23,11 +23,8 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { DatabaseForm } from "~/components/database/database-form";
 import { useApiFormError } from "~/contexts/ToastContext";
-import {
-  DataField,
-  DataGrid,
-  InfoSection,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoSection } from "~/components/ui/info-section";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import {
   formatRelativeLastSeen,

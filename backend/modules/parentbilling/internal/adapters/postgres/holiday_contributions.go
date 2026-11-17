@@ -33,7 +33,7 @@ type holidayContributionRow struct {
 	Version                    int       `bun:"version"`
 	SiblingRank                string    `bun:"sibling_rank"`
 	CostTakeoverOrder          string    `bun:"cost_takeover_order"`
-	ConfirmedAt                time.Time `bun:"confirmed_at,nullzero,default:current_timestamp"`
+	ConfirmedAt                time.Time `bun:"confirmed_at,nullzero"`
 	ConfirmedByAccountID       *int64    `bun:"confirmed_by_account_id"`
 }
 

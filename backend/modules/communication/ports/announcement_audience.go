@@ -11,6 +11,15 @@ type AnnouncementAudienceReads interface {
 	DeliveryAudienceReads
 	FeedAudienceReads
 	PollAudienceReads
+	StudentAudienceReads
+}
+
+// StudentAudienceReads reads what reached one child (#4814): the published
+// letters and declarations of the school, with the child's letter
+// confirmation. The history adds the declarations a guardian answered for
+// the child.
+type StudentAudienceReads interface {
+	StudentAnnouncements(ctx context.Context, schoolID, studentID int64, history []*communication.PortalDeclarationSubmission) ([]*communication.PortalStudentAnnouncement, error)
 }
 
 type DeclarationAudienceReads interface {

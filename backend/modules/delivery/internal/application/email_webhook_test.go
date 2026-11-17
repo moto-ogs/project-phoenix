@@ -52,7 +52,7 @@ func webhookEvent(reroute bool) *domain.EmailDeliveryEvent {
 func noHeaders(string) string { return "" }
 
 func ingestFor(store *eventWorkerStore, provider *stubWebhookProvider, fallback bool) *EmailWebhooks {
-	return NewEmailWebhooks(store, []ports.EmailWebhookProvider{provider}, fallback, slog.New(slog.DiscardHandler), func(domain.Observation) {})
+	return NewEmailWebhooks(store, []ports.EmailWebhookProvider{provider}, fallback, slog.New(slog.DiscardHandler), func(domain.Observation) {}, func() time.Time { return reconcileNow })
 }
 
 func TestWebhookRefusalsWriteNothing(t *testing.T) {
@@ -128,7 +128,7 @@ func TestWebhookReportsAStoreFailureForARetry(t *testing.T) {
 	failure := errors.New("database down")
 	store := &failingEventStore{err: failure}
 	provider := &stubWebhookProvider{parsed: domain.ReportedEmailEvent{Name: "message.suppressed", Known: true, Event: webhookEvent(false)}}
-	webhooks := NewEmailWebhooks(store, []ports.EmailWebhookProvider{provider}, true, slog.New(slog.DiscardHandler), func(domain.Observation) {})
+	webhooks := NewEmailWebhooks(store, []ports.EmailWebhookProvider{provider}, true, slog.New(slog.DiscardHandler), func(domain.Observation) {}, func() time.Time { return reconcileNow })
 
 	err := webhooks.IngestEmailWebhook(context.Background(), "lettermint", noHeaders, []byte(`{}`))
 

@@ -29,6 +29,7 @@ func TestSubmissionMailSubscriberLookupFailureKeepsConfirmationAndConfiguredReci
 	outbox := &decisionOutboxStub{}
 	savepointCalled := false
 	intake := NewIntake(IntakeDependencies{
+		Now:           enrollmentTestClock,
 		Notifications: newNotificationsForTest(NotificationDependencies{}),
 		Outbox:        outbox, Settings: mailSettings{},
 		AdminSubscribers: failingAdminSubscribers{err: errors.New("lookup failed")},
@@ -54,7 +55,8 @@ func TestSubmissionMailSubscriberLookupFailureKeepsConfirmationAndConfiguredReci
 func TestSubmissionMailSavepointControlFailureAborts(t *testing.T) {
 	t.Parallel()
 	controlErr := errors.New("savepoint control failed")
-	intake := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{},
+	intake := NewIntake(IntakeDependencies{
+		Now: enrollmentTestClock, Settings: intakeSettingsFake{},
 		Notifications:    newNotificationsForTest(NotificationDependencies{}),
 		Outbox:           &decisionOutboxStub{},
 		AdminSubscribers: failingAdminSubscribers{err: errors.New("lookup failed")},
@@ -77,6 +79,7 @@ func TestNotifySubmissionHonoursSuppression(t *testing.T) {
 			t.Parallel()
 			outbox := &decisionOutboxStub{}
 			intake := NewIntake(IntakeDependencies{
+				Now:           enrollmentTestClock,
 				Notifications: newNotificationsForTest(NotificationDependencies{}),
 				Outbox:        outbox, Settings: mailSettings{},
 				Logger: slog.New(slog.DiscardHandler),

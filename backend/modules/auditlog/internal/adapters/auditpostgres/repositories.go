@@ -57,7 +57,7 @@ type Repositories struct {
 
 // RetentionSummaries lists the recent automated deletion runs.
 type RetentionSummaries interface {
-	ListRecentRetentionSummaries(ctx context.Context, since time.Time, limit int) ([]auditModel.RecentDeletionSummary, error)
+	ListRecentRetentionSummaries(ctx context.Context, days, limit int) ([]auditModel.RecentDeletionSummary, error)
 }
 
 // NewRepositories binds every retained Audit repository to reads and the
@@ -69,30 +69,30 @@ func NewRepositories(reads, appends Runtime, now func() time.Time) *Repositories
 	deletions := NewDataDeletionRepository(reads, now)
 	return &Repositories{
 		AppendStore:                  NewAppender(appends, now),
-		FileEvent:                    NewFileEventRepository(reads),
-		SubstitutionChange:           NewSubstitutionChangeRepository(reads),
+		FileEvent:                    NewFileEventRepository(reads, now),
+		SubstitutionChange:           NewSubstitutionChangeRepository(reads, now),
 		DataDeletion:                 deletions,
-		StudentDeletionAudit:         NewStudentDeletionRepository(reads),
-		EnrollmentDeletionAudit:      NewEnrollmentDeletionRepository(reads),
-		EnrollmentRestorationAudit:   NewEnrollmentRestorationRepository(reads),
-		DataAccessLog:                NewDataAccessLogRepository(reads),
+		StudentDeletionAudit:         NewStudentDeletionRepository(reads, now),
+		EnrollmentDeletionAudit:      NewEnrollmentDeletionRepository(reads, now),
+		EnrollmentRestorationAudit:   NewEnrollmentRestorationRepository(reads, now),
+		DataAccessLog:                NewDataAccessLogRepository(reads, now),
 		AccessTrail:                  NewAccessTrail(reads),
 		TraegerAccountChanges:        NewTraegerAccountChanges(reads),
 		EnrollmentOfferingAdjustment: NewEnrollmentOfferingAdjustmentRepository(reads),
-		GuardianChange:               NewGuardianChangeRepository(reads),
-		StudentConsentChange:         NewStudentConsentChangeRepository(reads),
+		GuardianChange:               NewGuardianChangeRepository(reads, now),
+		StudentConsentChange:         NewStudentConsentChangeRepository(reads, now),
 		DeviationEvent:               NewDeviationEventRepository(reads),
 		AuthEvent:                    NewAuthEventRepository(reads, now),
 		DataImport:                   NewDataImportRepository(reads),
 		WorkSessionEdit:              NewWorkSessionEditRepository(reads, now),
 		StudentFieldEdit:             NewStudentFieldEditRepository(reads, now),
-		TimeTrackingDeletion:         NewTimeTrackingDeletionRepository(reads),
-		PersonnelNumberChange:        NewPersonnelNumberChangeRepository(reads),
-		StaffMasterDataChange:        NewStaffMasterDataChangeRepository(reads),
-		GuardianFinancialChange:      NewGuardianFinancialChangeRepository(reads),
-		ClassListEntryChange:         NewClassListEntryChangeRepository(reads),
+		TimeTrackingDeletion:         NewTimeTrackingDeletionRepository(reads, now),
+		PersonnelNumberChange:        NewPersonnelNumberChangeRepository(reads, now),
+		StaffMasterDataChange:        NewStaffMasterDataChangeRepository(reads, now),
+		GuardianFinancialChange:      NewGuardianFinancialChangeRepository(reads, now),
+		ClassListEntryChange:         NewClassListEntryChangeRepository(reads, now),
 		TimeTrackingAuditLog:         NewTimeTrackingAuditLogRepository(reads),
-		AttendanceCorrection:         NewAttendanceCorrectionRepository(reads),
+		AttendanceCorrection:         NewAttendanceCorrectionRepository(reads, now),
 		OperatorAuditLog:             NewOperatorAuditLogRepository(reads),
 		RetentionSummaries:           deletions,
 	}

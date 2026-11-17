@@ -12,9 +12,15 @@ import (
 )
 
 type sickNoteStoreDouble struct {
-	calls  int
-	before time.Time
-	err    error
+	calls   int
+	before  time.Time
+	err     error
+	timeErr error
+}
+
+// DatabaseTime is the database clock of the run: 03:00 on 15 October 2026.
+func (s *sickNoteStoreDouble) DatabaseTime(context.Context) (time.Time, error) {
+	return calendar.NewDate(2026, time.October, 15).BerlinMidnight().Add(3 * time.Hour), s.timeErr
 }
 
 func (s *sickNoteStoreDouble) DeleteStaffSickNotesUploadedBefore(_ context.Context, before time.Time) (int, error) {
@@ -33,9 +39,7 @@ func (w sickNoteWindowDouble) StaffSickNoteRetentionDays(context.Context) (int, 
 }
 
 func newSickNoteRetentionForTest(store *sickNoteStoreDouble, window sickNoteWindowDouble) *SickNoteRetention {
-	retention := NewSickNoteRetention(store, window)
-	retention.today = func() calendar.Date { return calendar.NewDate(2026, time.October, 15) }
-	return retention
+	return NewSickNoteRetention(store, window)
 }
 
 func TestSickNoteRetentionDeletesBeforeTheFirstBerlinDayTheWindowKeeps(t *testing.T) {
@@ -81,4 +85,16 @@ func TestSickNoteRetentionReportsAFailedDeletion(t *testing.T) {
 	require.ErrorContains(t, err, "cutoff refused")
 	assert.Zero(t, deleted)
 	assert.Zero(t, applied)
+}
+
+func TestSickNoteRetentionDeletesNothingWithoutTheDatabaseTime(t *testing.T) {
+	t.Parallel()
+	store := &sickNoteStoreDouble{timeErr: errors.New("database clock unavailable")}
+
+	deleted, applied, err := newSickNoteRetentionForTest(store, sickNoteWindowDouble{days: 365}).DeleteExpiredStaffSickNotes(context.Background())
+
+	require.ErrorContains(t, err, "database clock unavailable")
+	assert.Zero(t, deleted)
+	assert.Zero(t, applied)
+	assert.Zero(t, store.calls)
 }

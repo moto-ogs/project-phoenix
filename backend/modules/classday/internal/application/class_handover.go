@@ -168,7 +168,7 @@ func checkHandoverChildren(roster *DayRoster, present, absent []int64) error {
 	onRoster := map[int64]bool{}
 	if roster != nil {
 		for _, row := range roster.Rows {
-			if !row.ListEntry && row.StudentID > 0 {
+			if !row.NoCare() && row.StudentID > 0 {
 				onRoster[row.StudentID] = true
 			}
 		}
@@ -252,7 +252,7 @@ func markHandoverAbsent(report *classday.DayReport, absent []int64) {
 	}
 	for i := range report.Rows {
 		row := &report.Rows[i]
-		if !row.ListEntry && marked[row.StudentID] {
+		if !row.NoCare() && marked[row.StudentID] {
 			row.HandoverAbsent = true
 		}
 	}

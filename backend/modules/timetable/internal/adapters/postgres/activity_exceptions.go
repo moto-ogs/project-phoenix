@@ -16,8 +16,8 @@ type activityExceptionRow struct {
 	bun.BaseModel   `bun:"table:activity_exceptions,alias:activity_exception"`
 	ID              int64     `bun:"id,pk,autoincrement"`
 	TenantID        int64     `bun:"tenant_id,notnull"`
-	CreatedAt       time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time `bun:"updated_at,nullzero,notnull"`
 	ActivityGroupID int64     `bun:"activity_group_id,notnull"`
 	ExceptionDate   string    `bun:"exception_date,notnull"`
 	ExceptionType   string    `bun:"exception_type,notnull"`
@@ -135,7 +135,8 @@ func (s *Store) CreateActivityException(ctx context.Context, fields timetable.Ac
 	if err != nil {
 		return timetable.ActivityException{}, domain.OperationStats{}, err
 	}
-	row := activityExceptionRow{TenantID: tenantID}
+	stamp := s.currentTime()
+	row := activityExceptionRow{TenantID: tenantID, CreatedAt: stamp, UpdatedAt: stamp}
 	applyActivityExceptionFields(&row, fields)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -161,7 +162,7 @@ func (s *Store) UpdateActivityException(ctx context.Context, id int64, fields ti
 		Set("activity_group_id = ?", fields.ActivityGroupID).Set("exception_date = ?::date", fields.ExceptionDate).
 		Set("exception_type = ?", fields.ExceptionType).Set("start_time = ?", fields.StartTime).
 		Set("end_time = ?", fields.EndTime).Set("room_id = ?", fields.RoomID).
-		Set("reason = ?", fields.Reason).Set("created_by = ?", fields.CreatedBy).Set("updated_at = NOW()").
+		Set("reason = ?", fields.Reason).Set("created_by = ?", fields.CreatedBy).Set("updated_at = ?", s.currentTime()).
 		Where("id = ?", id).Where("tenant_id = ?", tenantID).Returning(activityExceptionColumns).Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if errors.Is(err, sql.ErrNoRows) {

@@ -1,7 +1,14 @@
+import { ApiError } from "~/lib/api-error";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createElement, type ReactNode } from "react";
+
+import { SWRConfig } from "~/lib/swr/testing";
+
 import { useStudentEnrollmentExtraFields } from "./use-student-enrollment-extra-fields";
+
+vi.unmock("swr");
 
 const { fetchStudentEnrollmentExtraFieldsMock, loggerWarnMock } = vi.hoisted(
   () => ({
@@ -15,8 +22,28 @@ vi.mock("~/lib/student-api", () => ({
 }));
 
 vi.mock("~/lib/logger", () => ({
-  createLogger: () => ({ warn: loggerWarnMock }),
+  createLogger: () => ({
+    warn: loggerWarnMock,
+    error: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  }),
 }));
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1", token: "test-token" } },
+  }),
+}));
+
+function wrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return createElement(
+    SWRConfig,
+    { value: { provider: () => new Map(), errorRetryCount: 0 } },
+    children,
+  );
+}
 
 const groups = [
   {
@@ -53,8 +80,9 @@ describe("useStudentEnrollmentExtraFields", () => {
   it("loads enrollment extra field groups for full-access students", async () => {
     fetchStudentEnrollmentExtraFieldsMock.mockResolvedValueOnce(groups);
 
-    const { result } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", true),
+    const { result } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
     );
 
     expect(result.current.loading).toBe(true);
@@ -67,8 +95,9 @@ describe("useStudentEnrollmentExtraFields", () => {
   });
 
   it("clears state and skips loading without full access", async () => {
-    const { result } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", false),
+    const { result } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", false),
+      { wrapper },
     );
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -83,8 +112,9 @@ describe("useStudentEnrollmentExtraFields", () => {
       new Error("server unavailable"),
     );
 
-    const { result } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", true),
+    const { result } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
     );
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -104,8 +134,9 @@ describe("useStudentEnrollmentExtraFields", () => {
     const failure = new Error("server unavailable");
     fetchStudentEnrollmentExtraFieldsMock.mockRejectedValueOnce(failure);
 
-    const { result } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", true),
+    const { result } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
     );
 
     await waitFor(() => expect(result.current.error).toBe(failure));
@@ -118,6 +149,38 @@ describe("useStudentEnrollmentExtraFields", () => {
     expect(fetchStudentEnrollmentExtraFieldsMock).toHaveBeenCalledTimes(2);
   });
 
+  it("withdraws cached answers on refusal but preserves them on a transient failure", async () => {
+    fetchStudentEnrollmentExtraFieldsMock.mockResolvedValue(groups);
+    const { result } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.groups).toEqual(groups));
+    fetchStudentEnrollmentExtraFieldsMock.mockRejectedValueOnce(
+      new Error("offline"),
+    );
+    act(() => result.current.reload());
+    await waitFor(() => expect(loggerWarnMock).toHaveBeenCalled());
+    expect(result.current.groups).toEqual(groups);
+    const refusal = new ApiError("forbidden", 403);
+    fetchStudentEnrollmentExtraFieldsMock.mockRejectedValueOnce(refusal);
+    act(() => result.current.reload());
+    await waitFor(() => expect(result.current.error).toBe(refusal));
+    expect(result.current.groups).toEqual([]);
+    fetchStudentEnrollmentExtraFieldsMock.mockRejectedValueOnce(
+      new Error("offline again"),
+    );
+    act(() => result.current.reload());
+    await waitFor(() =>
+      expect(fetchStudentEnrollmentExtraFieldsMock).toHaveBeenCalledTimes(4),
+    );
+    expect(result.current.groups).toEqual([]);
+    fetchStudentEnrollmentExtraFieldsMock.mockResolvedValue(groups);
+    act(() => result.current.reload());
+    await waitFor(() => expect(result.current.groups).toEqual(groups));
+    expect(result.current.hasError).toBe(false);
+  });
+
   it("clears previous groups before loading another student", async () => {
     fetchStudentEnrollmentExtraFieldsMock.mockResolvedValueOnce(groups);
     fetchStudentEnrollmentExtraFieldsMock.mockImplementationOnce(
@@ -126,7 +189,7 @@ describe("useStudentEnrollmentExtraFields", () => {
 
     const { result, rerender } = renderHook(
       ({ studentId }) => useStudentEnrollmentExtraFields(studentId, true),
-      { initialProps: { studentId: "123" } },
+      { initialProps: { studentId: "123" }, wrapper },
     );
 
     await waitFor(() => expect(result.current.groups).toEqual(groups));
@@ -141,8 +204,9 @@ describe("useStudentEnrollmentExtraFields", () => {
     const request = deferred<typeof groups>();
     fetchStudentEnrollmentExtraFieldsMock.mockReturnValueOnce(request.promise);
 
-    const { unmount } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", true),
+    const { unmount } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
     );
 
     unmount();
@@ -156,8 +220,9 @@ describe("useStudentEnrollmentExtraFields", () => {
     const request = deferred<typeof groups>();
     fetchStudentEnrollmentExtraFieldsMock.mockReturnValueOnce(request.promise);
 
-    const { unmount } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", true),
+    const { unmount } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
     );
 
     unmount();

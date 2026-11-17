@@ -10,7 +10,7 @@ import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { useTraegerHolidayCriteria } from "~/components/traeger/use-traeger-resources";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useInvalidateFamily } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { traegerPath } from "~/lib/traeger-url";
 
 export default function NewTraegerHolidayPeriodPage() {

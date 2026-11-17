@@ -16,7 +16,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/communication/communicationtest"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	parentportalcompose "github.com/moto-ogs/project-phoenix/workflows/parentportal/compose"
 )
@@ -69,6 +68,7 @@ func TestSubmitCareException_EmitsSelfServiceMirrorPill(t *testing.T) {
 		Conversations:       api.NewParentConversationCore(reposMessages.ParentMessageThread, communicationtest.NewParentMessageRepository(db), reposMessages.ParentMessageRead, testpkg.NewRecordingBroadcaster(), slog.Default()),
 		Emitter:             owners.BindParentChildEvents(emitter),
 		Logger:              slog.Default(),
+		Now:                 careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
@@ -78,7 +78,7 @@ func TestSubmitCareException_EmitsSelfServiceMirrorPill(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	// A future in-window date; a fixed clock time is fine (wall-clock only).
-	today := calendar.TodayDate()
+	today := careFixtureToday()
 	date := today.AddDays(3)
 	pickup := time.Date(2000, 1, 1, 15, 30, 0, 0, time.UTC)
 
@@ -151,6 +151,7 @@ func TestSubmitCareException_WakesEveryGuardian(t *testing.T) {
 		Conversations:       api.NewParentConversationCore(reposMessages.ParentMessageThread, communicationtest.NewParentMessageRepository(db), reposMessages.ParentMessageRead, testpkg.NewRecordingBroadcaster(), slog.Default()),
 		Emitter:             owners.BindParentChildEvents(emitter),
 		Logger:              slog.Default(),
+		Now:                 careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
@@ -159,7 +160,7 @@ func TestSubmitCareException_WakesEveryGuardian(t *testing.T) {
 
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	date := calendar.TodayDate().AddDays(3)
+	date := careFixtureToday().AddDays(3)
 	pickup := time.Date(2000, 1, 1, 15, 30, 0, 0, time.UTC)
 
 	_, err := svc.SubmitCareExceptionWithReason(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, date, &pickup, "Arzttermin")

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api"
@@ -91,9 +92,9 @@ func newHolidayGrowthFixture(t *testing.T, db *bun.DB, n int) holidayGrowthFixtu
 	cipher, err := api.HealthDataCipher(testpkg.TestHealthDataKeys)
 	require.NoError(t, err)
 	audit := owners.NewTestAuditPersistence(database, nil).DataAccessLog
-	today := func() calendar.Date { return calendar.NewDate(2099, 7, 6) }
+	now := func() time.Time { return calendar.NewDate(2099, 7, 6).BerlinMidnight().Add(10 * time.Hour) }
 	students := owners.MustNewMembershipTestRepositories(database).Student
-	guests := owners.NewHolidayGuests(people, students, organizations, care, audit, cipher, today)
+	guests := owners.NewHolidayGuests(people, students, organizations, care, audit, cipher, now)
 	unit := testpkg.TenantRuntime(t, db)
 	schoolID, err := tenant.NewTenantID(school)
 	require.NoError(t, err)
@@ -138,7 +139,7 @@ func newHolidayGrowthFixture(t *testing.T, db *bun.DB, n int) holidayGrowthFixtu
 		})
 	})
 	router.Mount("/api/holiday-guests", api.NewHolidayGuestHTTP(guests).Router(api.ProtectedTenantRoutes))
-	router.Mount("/api/holiday-weeks", api.NewHolidayHostHTTP(organizations, people, audit, cipher, owners.HolidayTestSchoolCalendar(nil), today).Router(api.ProtectedTenantRoutes))
+	router.Mount("/api/holiday-weeks", api.NewHolidayHostHTTP(organizations, people, audit, cipher, owners.HolidayTestSchoolCalendar(nil), now).Router(api.ProtectedTenantRoutes))
 	f.router = testpkg.SessionVerifier(router)
 	f.token = f.mint(t, school, "config:read", "users:read")
 	return f

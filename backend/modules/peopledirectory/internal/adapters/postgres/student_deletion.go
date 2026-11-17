@@ -82,7 +82,7 @@ func (s *Store) AnonymizeIfUnchanged(ctx context.Context, personID int64, update
 		Set(`birthday = NULL`).
 		Set(`tag_id = NULL`).
 		Set(`account_id = NULL`).
-		Set(`deleted_at = NOW()`).
+		Set(`deleted_at = ?`, s.stamp()).
 		Where(`"person".id = ?`, personID).
 		Where(`"person".updated_at = ?`, updatedAt).
 		Where(`"person".deleted_at IS NULL`), scope).

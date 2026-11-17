@@ -47,7 +47,7 @@ type billingMonthRow struct {
 	OrganizationID      int64         `bun:"organization_id"`
 	SchoolID            int64         `bun:"school_id"`
 	BillingMonth        calendar.Date `bun:"billing_month,type:date"`
-	ReleasedAt          time.Time     `bun:"released_at,nullzero,default:current_timestamp"`
+	ReleasedAt          time.Time     `bun:"released_at,nullzero"`
 	ReleasedByAccountID *int64        `bun:"released_by_account_id"`
 	ChildCount          int           `bun:"child_count"`
 	MealCount           int           `bun:"meal_count"`

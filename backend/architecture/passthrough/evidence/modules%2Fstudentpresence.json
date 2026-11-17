@@ -1066,13 +1066,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (g *ActiveGroup) GetDuration() time.Duration {\n\tif g.EndTime == nil {\n\t\treturn time.Since(g.StartTime)\n\t}\n\treturn g.EndTime.Sub(g.StartTime)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/studentpresence/internal/ports/ActiveGroup.GetDuration",
-      "owner": "modules/studentpresence"
-    },
-    {
-      "build": "production",
       "evidence": "func (g *ActiveGroup) SetEndTime(endTime time.Time) error {\n\tif g.StartTime.After(endTime) {\n\t\treturn errors.New(\"end time cannot be before start time\")\n\t}\n\tg.EndTime = \u0026endTime\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/studentpresence/internal/ports/ActiveGroup.SetEndTime",

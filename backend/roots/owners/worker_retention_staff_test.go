@@ -3,8 +3,11 @@ package owners
 import (
 	"context"
 	"testing"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
+	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -352,5 +355,53 @@ func TestStaffRetentionFunctionRefusesStaffWhoAreNotDue(t *testing.T) {
 		"another school's staff member is refused")
 	for _, member := range []retiredStaff{recent, active, foreign} {
 		assert.Equal(t, stagedStaffRecords, suite.staffRecords(t, member.staffID))
+	}
+}
+
+// retireThroughOwner retires the staff member the way the offboarding does,
+// through School Membership composed on the root clock now.
+func (s retentionSuite) retireThroughOwner(t *testing.T, tenantID, staffID int64, now func() time.Time) {
+	t.Helper()
+	db, err := transactionruntime.NewDatabase(s.admin)
+	require.NoError(t, err)
+	membership, err := ComposeSchoolMembership(db, now)
+	require.NoError(t, err)
+	require.NoError(t, testpkg.WithinTenantContext(t, context.Background(), s.serve, tenantID, func(ctx context.Context) error {
+		return membership.DeleteStaff(ctx, staffID)
+	}))
+}
+
+// The automatic deletion of staff decides on the database clock (ADR 0281
+// point 3, #7295): the database stamps the retirement, and
+// users.erase_retired_staff_records guards the cutoff with its own clock. A
+// root clock years behind or ahead of the database neither erases a member
+// retired today nor keeps one retired before the window, and the guard
+// admits the cutoff for the tenant role. The root clock marks the erasure.
+func TestNightlyStaffRetentionDecidesOnTheDatabaseClock(t *testing.T) {
+	t.Parallel()
+	for name, pinned := range map[string]time.Time{
+		"root clock years behind": time.Date(2021, time.March, 1, 12, 0, 0, 0, calendar.Berlin),
+		"root clock years ahead":  time.Date(2099, time.March, 1, 12, 0, 0, 0, calendar.Berlin),
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			now := func() time.Time { return pinned }
+			suite := newRetentionSuiteAt(t, now)
+			school, _ := testpkg.CreateTestTenant(t, suite.admin)
+			today := suite.staffWithRecords(t, school, "Heute")
+			suite.retireThroughOwner(t, school, today.staffID, now)
+			expired := suite.staffWithRecords(t, school, "Abgelaufen")
+			suite.retire(t, expired.staffID, 731)
+
+			suite.run(t, school)
+
+			assert.Equal(t, stagedStaffRecords, suite.staffRecords(t, today.staffID), "a member retired today keeps every record")
+			assert.False(t, suite.tombstoneErased(t, today.staffID), "a member retired today is not erased")
+			assert.Zero(t, suite.staffRecords(t, expired.staffID), "a member gone for more than the window loses every record")
+			var erasedAt time.Time
+			require.NoError(t, suite.admin.NewRaw(`SELECT personal_data_erased_at FROM users.staff_school_memberships WHERE id = ?`,
+				expired.staffID).Scan(context.Background(), &erasedAt))
+			assert.True(t, erasedAt.Equal(pinned), "the root clock marks the erasure, got %s", erasedAt)
+		})
 	}
 }

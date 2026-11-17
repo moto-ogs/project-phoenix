@@ -58,11 +58,11 @@ func NewOfferingChanges(deps OfferingChangeDependencies) (*OfferingChanges, erro
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.Now == nil {
+		return nil, errors.New("offering changes: the composition's clock is required")
+	}
 	if deps.Today == nil {
 		deps.Today = calendar.CalendarDateClock(deps.Now)
-	}
-	if deps.Now == nil {
-		deps.Now = time.Now
 	}
 	return &OfferingChanges{deps: deps}, nil
 }

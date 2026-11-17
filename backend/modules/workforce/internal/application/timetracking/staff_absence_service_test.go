@@ -724,7 +724,7 @@ func absSetupService() (*staffAbsenceService, *absStaffAbsenceRepoMock, *absWork
 		shiftPlanSyncer: noopShiftPlanSyncer{},
 		// Requests and cancellations judge "in the past" by this day, so the
 		// fixed 2027 fixture dates stay in the future (#4027).
-		todayFunc: func() Date { return absTestToday },
+		todayFunc: func() Date { return absTestToday }, nowFunc: testNow,
 	}
 	return svc, absRepo, workRepo
 }
@@ -1879,7 +1879,7 @@ func TestAbsApproveAbsence_WritesAudit(t *testing.T) {
 		absenceRepo:     absRepo,
 		auditRepo:       auditRepo,
 		broadcaster:     broadcaster,
-		shiftPlanSyncer: syncer,
+		shiftPlanSyncer: syncer, nowFunc: testNow,
 	}
 	absenceID := int64(1000)
 	actorAccountID := int64(2000)
@@ -1942,7 +1942,7 @@ func TestAbsDenyAbsence_WritesAudit(t *testing.T) {
 	auditRepo := &absStaffAbsenceAuditRepoMock{}
 	svc := &staffAbsenceService{
 		absenceRepo: absRepo,
-		auditRepo:   auditRepo,
+		auditRepo:   auditRepo, nowFunc: testNow,
 	}
 	absenceID := int64(1001)
 	actorAccountID := int64(2001)
@@ -1990,7 +1990,7 @@ func TestAbsCancelAbsence_WritesAudit(t *testing.T) {
 		absenceRepo:     absRepo,
 		auditRepo:       auditRepo,
 		shiftPlanSyncer: syncer,
-		todayFunc:       func() Date { return absTestToday },
+		todayFunc:       func() Date { return absTestToday }, nowFunc: testNow,
 	}
 	staffID := int64(4002)
 	absenceID := int64(1002)
@@ -2050,7 +2050,7 @@ func TestAbsGetVacationQuotaSummary_SplitsCrossYearVacation(t *testing.T) {
 	quotaRepo := &absVacationQuotaRepoMock{}
 	svc := &staffAbsenceService{
 		absenceRepo: absRepo,
-		quotaRepo:   quotaRepo,
+		quotaRepo:   quotaRepo, nowFunc: testNow,
 	}
 	staffID := int64(100)
 	workingDays := 5.0
@@ -2093,7 +2093,7 @@ func TestAbsUpsertVacationQuota_RejectsInvalidPrecision(t *testing.T) {
 		upsertCalled = true
 		return nil
 	}
-	svc := &staffAbsenceService{quotaRepo: quotaRepo}
+	svc := &staffAbsenceService{quotaRepo: quotaRepo, nowFunc: testNow}
 
 	err := svc.UpsertVacationQuota(context.Background(), 42, 2026, 30.25, 0)
 
@@ -2956,7 +2956,7 @@ func TestAbsQuestionAbsence_WritesAuditAndDecisionNote(t *testing.T) {
 	auditRepo := &absStaffAbsenceAuditRepoMock{}
 	svc := &staffAbsenceService{
 		absenceRepo: absRepo,
-		auditRepo:   auditRepo,
+		auditRepo:   auditRepo, nowFunc: testNow,
 	}
 	absenceID := int64(1100)
 	actorAccountID := int64(2100)
@@ -2997,7 +2997,7 @@ func TestAbsQuestionAbsence_WritesAuditAndDecisionNote(t *testing.T) {
 func TestAbsQuestionAbsence_RequiresNote(t *testing.T) {
 	t.Parallel()
 
-	svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}}
+	svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}, nowFunc: testNow}
 
 	result, err := svc.QuestionAbsence(context.Background(), int64(1101), int64(2101), "")
 
@@ -3009,7 +3009,7 @@ func TestAbsQuestionAbsence_RequiresNote(t *testing.T) {
 func TestAbsQuestionAbsence_RejectsWhitespaceOnlyNote(t *testing.T) {
 	t.Parallel()
 
-	svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}}
+	svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}, nowFunc: testNow}
 
 	result, err := svc.QuestionAbsence(context.Background(), int64(1101), int64(2101), " \t\n ")
 
@@ -3023,7 +3023,7 @@ func TestAbsQuestionAbsence_TrimsStoredAndAuditedNote(t *testing.T) {
 
 	absRepo := &absStaffAbsenceRepoMock{}
 	auditRepo := &absStaffAbsenceAuditRepoMock{}
-	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: auditRepo}
+	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: auditRepo, nowFunc: testNow}
 	absence := &StaffAbsence{
 		Model:   Model{ID: int64(1110)},
 		StaffID: int64(4110),
@@ -3050,7 +3050,7 @@ func TestAbsQuestionAbsence_OnlyFromRequested(t *testing.T) {
 	t.Parallel()
 
 	absRepo := &absStaffAbsenceRepoMock{}
-	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: &absStaffAbsenceAuditRepoMock{}}
+	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: &absStaffAbsenceAuditRepoMock{}, nowFunc: testNow}
 	absRepo.findByIDFunc = func(_ context.Context, _ any) (*StaffAbsence, error) {
 		return &StaffAbsence{
 			Model:  Model{ID: int64(1102)},
@@ -3070,7 +3070,7 @@ func TestAbsApproveAbsence_FromQuestion(t *testing.T) {
 
 	absRepo := &absStaffAbsenceRepoMock{}
 	auditRepo := &absStaffAbsenceAuditRepoMock{}
-	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: auditRepo, shiftPlanSyncer: noopShiftPlanSyncer{}}
+	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: auditRepo, shiftPlanSyncer: noopShiftPlanSyncer{}, nowFunc: testNow}
 	decidedByStaffID := int64(3103)
 
 	absRepo.findByIDFunc = func(_ context.Context, _ any) (*StaffAbsence, error) {
@@ -3103,7 +3103,7 @@ func TestAbsDenyAbsence_FromQuestion(t *testing.T) {
 	t.Parallel()
 
 	absRepo := &absStaffAbsenceRepoMock{}
-	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: &absStaffAbsenceAuditRepoMock{}}
+	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: &absStaffAbsenceAuditRepoMock{}, nowFunc: testNow}
 
 	absRepo.findByIDFunc = func(_ context.Context, _ any) (*StaffAbsence, error) {
 		return &StaffAbsence{
@@ -3131,9 +3131,9 @@ func TestAbsResubmitAbsence_RestampsAndAudits(t *testing.T) {
 
 	absRepo := &absStaffAbsenceRepoMock{}
 	auditRepo := &absStaffAbsenceAuditRepoMock{}
-	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: auditRepo}
+	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: auditRepo, nowFunc: testNow}
 	staffID := int64(4105)
-	originalRequestedAt := time.Now().Add(-48 * time.Hour)
+	originalRequestedAt := testNow().Add(-48 * time.Hour)
 
 	absRepo.findByIDFunc = func(_ context.Context, _ any) (*StaffAbsence, error) {
 		return &StaffAbsence{
@@ -3172,7 +3172,7 @@ func TestAbsResubmitAbsence_RestampsAndAudits(t *testing.T) {
 func TestAbsResubmitAbsence_RejectsWhitespaceOnlyNote(t *testing.T) {
 	t.Parallel()
 
-	svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}}
+	svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}, nowFunc: testNow}
 
 	result, err := svc.ResubmitAbsence(context.Background(), int64(4105), int64(2105), int64(1105), " \t\n ")
 
@@ -3186,7 +3186,7 @@ func TestAbsResubmitAbsence_TrimsStoredAndAuditedNote(t *testing.T) {
 
 	absRepo := &absStaffAbsenceRepoMock{}
 	auditRepo := &absStaffAbsenceAuditRepoMock{}
-	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: auditRepo}
+	svc := &staffAbsenceService{absenceRepo: absRepo, auditRepo: auditRepo, nowFunc: testNow}
 	absence := &StaffAbsence{
 		Model:   Model{ID: int64(1111)},
 		StaffID: int64(4111),
@@ -3219,7 +3219,7 @@ func TestAbsResubmitAbsence_OwnershipGuard(t *testing.T) {
 	t.Parallel()
 
 	absRepo := &absStaffAbsenceRepoMock{}
-	svc := &staffAbsenceService{absenceRepo: absRepo}
+	svc := &staffAbsenceService{absenceRepo: absRepo, nowFunc: testNow}
 	absRepo.findByIDFunc = func(_ context.Context, _ any) (*StaffAbsence, error) {
 		return &StaffAbsence{
 			Model:   Model{ID: int64(1106)},
@@ -3239,7 +3239,7 @@ func TestAbsResubmitAbsence_OnlyFromQuestion(t *testing.T) {
 	t.Parallel()
 
 	absRepo := &absStaffAbsenceRepoMock{}
-	svc := &staffAbsenceService{absenceRepo: absRepo}
+	svc := &staffAbsenceService{absenceRepo: absRepo, nowFunc: testNow}
 	absRepo.findByIDFunc = func(_ context.Context, _ any) (*StaffAbsence, error) {
 		return &StaffAbsence{
 			Model:   Model{ID: int64(1107)},
@@ -3259,7 +3259,7 @@ func TestAbsListPendingRequests_IncludesQuestionRows(t *testing.T) {
 	t.Parallel()
 
 	absRepo := &absStaffAbsenceRepoMock{}
-	svc := &staffAbsenceService{absenceRepo: absRepo}
+	svc := &staffAbsenceService{absenceRepo: absRepo, nowFunc: testNow}
 	absRepo.listByStatusesFunc = func(_ context.Context, statuses []string) ([]*StaffAbsence, error) {
 		assert.ElementsMatch(t, []string{
 			AbsenceStatusRequested,
@@ -3294,7 +3294,7 @@ func newAbsEmailTestService(t *testing.T, absRepo *absStaffAbsenceRepoMock, enab
 	svc := &staffAbsenceService{
 		absenceRepo: absRepo,
 		auditRepo:   &absStaffAbsenceAuditRepoMock{},
-		todayFunc:   func() Date { return absTestToday },
+		todayFunc:   func() Date { return absTestToday }, nowFunc: testNow,
 	}
 	svc.emailDeps = &AbsenceEmailDeps{
 		Settings:    absSettingsMock{enabled: enabled},
@@ -3808,7 +3808,7 @@ func TestStaffAbsenceService_RefusesAnUnplannedSickCascade(t *testing.T) {
 		},
 	}
 	workRepo := &absWorkSessionRepoMock{getHistoryByStaffIDFunc: func(context.Context, int64, Date, Date) ([]*WorkSession, error) { return nil, nil }}
-	svc := NewStaffAbsenceService(absRepo, workRepo, &absVacationQuotaRepoMock{}, &absStaffAbsenceAuditRepoMock{}, nil, nil)
+	svc := NewStaffAbsenceService(absRepo, workRepo, &absVacationQuotaRepoMock{}, &absStaffAbsenceAuditRepoMock{}, nil, nil, WithAbsenceClock(testNow))
 
 	_, err := svc.CreateAbsenceFor(context.Background(), 100, 200, nil, CreateAbsenceRequest{
 		AbsenceType: AbsenceTypeSick, DateStart: "2026-02-10", DateEnd: "2026-02-12",

@@ -970,7 +970,7 @@ describe("ParentMealPlanPage", () => {
   it("distinguishes missing children from a disabled school meal plan", async () => {
     mocks.listMyChildren.mockResolvedValue([]);
 
-    const { rerender } = render(<ParentMealPlanPage />);
+    const first = render(<ParentMealPlanPage />);
 
     expect(
       await screen.findByText("Noch kein Kind verknüpft"),
@@ -992,7 +992,10 @@ describe("ParentMealPlanPage", () => {
       meal_plan_enabled: false,
       meal_registration_enabled: false,
     });
-    rerender(<ParentMealPlanPage key="disabled-school" />);
+    // A new page visit with its own cache: the shared children list is not
+    // read again on a remount within one session.
+    first.unmount();
+    render(<ParentMealPlanPage key="disabled-school" />);
 
     expect(
       await screen.findByText(
@@ -1109,7 +1112,7 @@ describe("ParentMealPlanPage", () => {
   it("carries no subtitle while no plan can be shown", async () => {
     mocks.listMyChildren.mockReturnValue(new Promise(() => {}));
 
-    const { rerender, unmount } = render(<ParentMealPlanPage />);
+    let view = render(<ParentMealPlanPage />);
 
     // Loading.
     expect(
@@ -1119,7 +1122,8 @@ describe("ParentMealPlanPage", () => {
 
     // No linked child.
     mocks.listMyChildren.mockResolvedValue([]);
-    rerender(<ParentMealPlanPage key="no-children" />);
+    view.unmount();
+    view = render(<ParentMealPlanPage key="no-children" />);
     expect(
       await screen.findByText("Noch kein Kind verknüpft"),
     ).toBeInTheDocument();
@@ -1142,7 +1146,8 @@ describe("ParentMealPlanPage", () => {
       meal_plan_enabled: false,
       meal_registration_enabled: false,
     });
-    rerender(<ParentMealPlanPage key="disabled-school" />);
+    view.unmount();
+    view = render(<ParentMealPlanPage key="disabled-school" />);
     expect(
       await screen.findByText(
         "Für Ihre Schule ist der Speiseplan derzeit nicht freigeschaltet.",
@@ -1150,7 +1155,7 @@ describe("ParentMealPlanPage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(SUBTITLE_MEALS_ONLY)).not.toBeInTheDocument();
 
-    unmount();
+    view.unmount();
 
     // Resolving the schools failed.
     mocks.listMyChildren.mockRejectedValue(unavailable());

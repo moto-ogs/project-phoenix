@@ -13,23 +13,33 @@ import (
 )
 
 // TransitionRetentionStore takes the transition gate and deletes the
-// transitions of a school that ended before cutoff, their mappings, history,
-// class-list ledger, class teachers and roster removals by cascade.
+// transitions of a school that ended before cutoff, the Berlin midnight of
+// the first day a window of retentionDays keeps, their mappings, history,
+// class-list ledger, class teachers and roster removals by cascade. A draft
+// ends at its trigger-stamped last change, which counts the window back from
+// the database's day (ADR 0281 point 3).
 type TransitionRetentionStore interface {
 	LockTransitions(ctx context.Context, tenantID int64) (domain.OperationStats, error)
-	DeleteTransitionsEndedBefore(ctx context.Context, tenantID int64, cutoff time.Time) (int64, domain.OperationStats, error)
+	DeleteTransitionsEndedBefore(ctx context.Context, tenantID int64, cutoff time.Time, retentionDays int) (int64, domain.OperationStats, error)
 }
 
 // TransitionRetention is the School Structure grade-transition retention.
-type TransitionRetention struct{ store TransitionRetentionStore }
+type TransitionRetention struct {
+	store TransitionRetentionStore
+	// today is the composition's day clock the retention window ends on.
+	today func() calendar.Date
+}
 
 // NewTransitionRetention composes the deletion of expired grade transitions
 // (#4045) over the store, counted in Berlin calendar days.
-func NewTransitionRetention(store TransitionRetentionStore) *TransitionRetention {
+func NewTransitionRetention(store TransitionRetentionStore, today func() calendar.Date) *TransitionRetention {
 	if store == nil {
 		panic("school structure application: transition retention requires its store")
 	}
-	return &TransitionRetention{store: store}
+	if today == nil {
+		panic("school structure application: transition retention requires its day clock")
+	}
+	return &TransitionRetention{store: store, today: today}
 }
 
 // DeleteExpiredGradeTransitions deletes the transitions that ended before the
@@ -50,6 +60,6 @@ func (r *TransitionRetention) DeleteExpiredGradeTransitions(ctx context.Context,
 	if _, err := lockTransitionGate(ctx, r.store, tenantID.Int64()); err != nil {
 		return 0, err
 	}
-	deleted, _, err := r.store.DeleteTransitionsEndedBefore(ctx, tenantID.Int64(), calendar.TodayDate().AddDays(-retentionDays).BerlinMidnight())
+	deleted, _, err := r.store.DeleteTransitionsEndedBefore(ctx, tenantID.Int64(), r.today().AddDays(-retentionDays).BerlinMidnight(), retentionDays)
 	return int(deleted), err
 }

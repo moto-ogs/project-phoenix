@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,7 @@ type demoSession struct {
 		Role      string `json:"role"`
 		Source    string `json:"src"`
 		FixedRole bool   `json:"fixed_role"`
+		Traeger   bool   `json:"traeger"`
 	} `json:"demo"`
 }
 
@@ -275,7 +277,61 @@ func TestDemoRoleParentKeepsEarlierParentSessions(t *testing.T) {
 
 	var live int
 	require.NoError(t, env.db.NewRaw(`SELECT COUNT(*) FROM auth.tokens
-		WHERE account_id = ? AND portal_scope = 'parent' AND rotated_at IS NULL AND expiry > NOW()`,
-		parent.AccountID).Scan(context.Background(), &live))
+		WHERE account_id = ? AND portal_scope = 'parent' AND rotated_at IS NULL AND expiry > ?`,
+		parent.AccountID, time.Now()).Scan(context.Background(), &live))
 	assert.Equal(t, entries, live, "no parent session of the demo is evicted by the cap")
+}
+
+// The demo role Träger-Büro (#6193, ADR 0271): the same token signs the
+// visitor's own account in to the Träger-Portal of the school's own
+// Demo-Träger. It changes no school role. A school without a Träger of its
+// own offers none, and an order cannot name a Träger its school left.
+func TestDemoRoleTraegerSignsTheVisitorInToTheSchoolsOwnTraeger(t *testing.T) {
+	t.Parallel()
+	env := newOwnSchoolDemoEnv(t)
+	env.createDemoSchoolRoles(t)
+	_, visitor := testpkg.CreateTestStaffWithAccount(t, env.db, "Kim", "Beispiel")
+	testpkg.EnsureAccountTenant(t, env.db, visitor.ID, testpkg.Tenant(t))
+	env.grantRole(t, visitor.ID, "user")
+	token, slug := env.requestOwnSchool(t, env.address())
+	seedDemoSchool(t, env.db, slug, testpkg.Tenant(t), visitor.ID)
+	var traegerID int64
+	require.NoError(t, env.db.NewRaw(`SELECT organization_id FROM platform.schools WHERE id = ?`, testpkg.Tenant(t)).Scan(context.Background(), &traegerID))
+
+	lead := env.enterAs(t, token, "lead")
+	assert.False(t, lead.Demo.Traeger, "under the shared Demo-Träger the banner offers no Träger-Büro")
+	rr := env.post(t, "/demo/access/sessions", map[string]string{"token": token, "role": "traeger"})
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), "identity.demo_access_invalid")
+
+	// An order naming a Träger its school does not belong to opens nothing.
+	other := testpkg.CreateTestOrganization(t, env.db, &testpkg.Organization{Name: "Fremder Träger", Slug: "fremd-" + slug})
+	_, err := env.db.NewRaw(`UPDATE platform.demo_school_states SET traeger_id = ? WHERE name = ?`, other.ID, slug).Exec(context.Background())
+	require.NoError(t, err)
+	rr = env.post(t, "/demo/access/sessions", map[string]string{"token": token, "role": "traeger"})
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code, rr.Body.String())
+
+	_, err = env.db.NewRaw(`UPDATE platform.demo_school_states SET traeger_id = ? WHERE name = ?`, traegerID, slug).Exec(context.Background())
+	require.NoError(t, err)
+	testpkg.CreateTestTraegerMember(t, env.db, traegerID, visitor.ID, "administration", "school_access")
+
+	traeger := env.enterAs(t, token, "traeger")
+	assert.Equal(t, "traeger", traeger.Demo.Role)
+	assert.True(t, traeger.Demo.Traeger)
+	segments := strings.Split(traeger.AccessToken, ".")
+	require.Len(t, segments, 3)
+	payload, err := base64.RawURLEncoding.DecodeString(segments[1])
+	require.NoError(t, err)
+	var claims struct {
+		ID       int64  `json:"id"`
+		Scope    string `json:"scope"`
+		OrgID    int64  `json:"org_id"`
+		TenantID int64  `json:"tenant_id"`
+	}
+	require.NoError(t, json.Unmarshal(payload, &claims))
+	assert.Equal(t, visitor.ID, claims.ID, "the Träger-Büro is the visitor's own account")
+	assert.Equal(t, "org", claims.Scope)
+	assert.Equal(t, traegerID, claims.OrgID)
+	assert.Zero(t, claims.TenantID)
+	assert.Equal(t, []string{"ogs-leitung"}, env.schoolRoles(t, visitor.ID), "the school role of the last switch stays")
 }

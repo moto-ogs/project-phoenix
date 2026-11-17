@@ -2,6 +2,11 @@ import type { NextRequest } from "next/server";
 import { tenantPortal } from "~/server/auth";
 import { sendBackend } from "./backend-client.server";
 import { forwardJsonRequest, type JsonProxyOptions } from "./json-proxy.server";
+import {
+  makeCatalogProxy,
+  type CatalogMethod,
+  type CatalogRoute,
+} from "./contract/catalog-proxy.server";
 import { makePortalHandlers } from "./portal-handlers.server";
 
 export { isStringParam } from "./route-wrapper-utils.server";
@@ -38,3 +43,12 @@ export function createOptionalTenantJsonProxy(options: JsonProxyOptions) {
     );
   });
 }
+
+/**
+ * The staff portal's proxy: forwards `/api/…` to the backend's `/api/…`
+ * for the routes the contract registers for this portal.
+ */
+export const catalogProxy = (
+  routes: readonly CatalogRoute[],
+  method: CatalogMethod,
+) => makeCatalogProxy(tenant, "/api", routes, method);

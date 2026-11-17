@@ -4,13 +4,17 @@ restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
 import {
   act,
   fireEvent,
-  render,
+  render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode as TenantSWRNode } from "react";
+import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setTestClock } from "~/test/clock";
 import { CareScheduleManager } from "./care-schedule-manager";
+import { useInvalidateMatching } from "~/lib/swr";
 import { ApiError } from "~/lib/api-error";
 import { toISODate } from "~/lib/date-helpers";
 import type { ArrivalScheduleFormEntry } from "~/lib/arrival-schedule-helpers";
@@ -20,6 +24,36 @@ import type {
 } from "~/lib/student-arrival-api";
 import type { PickupData } from "~/lib/pickup-schedule-helpers";
 import type { StudentStatusDay } from "~/lib/student-status-days-api";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in OGS session per render.
+function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <TenantSWRConfig
+        value={{ provider: () => new Map(), errorRetryCount: 0 }}
+      >
+        {children}
+      </TenantSWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  const Outer = options?.wrapper;
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: TenantSWRNode }>) => (
+      <TenantSWRWrapper>
+        {Outer ? <Outer>{children}</Outer> : children}
+      </TenantSWRWrapper>
+    ),
+  });
+}
 
 const mockFetchArrivalData = vi.fn();
 const mockFetchArrivalSettings = vi.fn();
@@ -542,6 +576,58 @@ describe("CareScheduleManager", () => {
       expect(mockFetchArrivalData).toHaveBeenCalledTimes(2);
       expect(mockFetchStudentPickupData).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it("holds the shown week while the weekly-plan editor is open and the whole page refreshes", async () => {
+    // The header's „Aktualisieren“ revalidates every read of the session.
+    function RefreshAll() {
+      const invalidate = useInvalidateMatching();
+      return (
+        <button type="button" onClick={() => void invalidate(() => true)}>
+          Alles aktualisieren
+        </button>
+      );
+    }
+    render(
+      <>
+        <CareScheduleManager studentId="42" statusDays={statusDays} />
+        <RefreshAll />
+      </>,
+    );
+    await screen.findByText("Betreuungszeiten");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Wochenplan bearbeiten" }),
+    );
+    const arrivalOnly = screen.getByRole("button", {
+      name: "Nur Ankunft im Test speichern",
+    });
+    expect(arrivalOnly).toBeEnabled();
+
+    // Meanwhile Monday was taken out of the plan elsewhere.
+    mockFetchArrivalData.mockResolvedValue({ ...arrivalData, schedules: [] });
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Alles aktualisieren" }),
+      );
+    });
+    await waitFor(() => expect(mockFetchArrivalData).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // The draft still measures against the week it was opened with.
+    expect(
+      screen.getByRole("button", { name: "Nur Ankunft im Test speichern" }),
+    ).toBeEnabled();
+
+    fireEvent.click(screen.getByText("Schließen"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Wochenplan bearbeiten" }),
+    );
+    // Closed and opened again, the editor starts from the refreshed week.
+    expect(
+      screen.getByRole("button", { name: "Nur Ankunft im Test speichern" }),
+    ).toBeDisabled();
   });
 
   it("ignores a superseded in-flight refresh so it cannot overwrite newer data", async () => {

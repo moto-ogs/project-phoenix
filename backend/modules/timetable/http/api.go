@@ -186,7 +186,7 @@ func NewResource(deps Dependencies) *Resource {
 		panic("timetable API: settings service is required")
 	}
 	if deps.Now == nil {
-		deps.Now = calendar.Now
+		panic("timetable API: the clock is required")
 	}
 	return &Resource{Dependencies: deps}
 }

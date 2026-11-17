@@ -15,36 +15,51 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application"
 )
 
-// Renderer lays out the confirmation letters and the overview of a run.
-type Renderer struct {
+// LetterRenderer lays out the confirmation letters and combines them.
+type LetterRenderer struct {
 	letters lists.LetterRenderer
-	tables  lists.Renderer
+}
+
+// Renderer lays out the letters and the overview of a run.
+type Renderer struct {
+	*LetterRenderer
+	tables lists.Renderer
 	// now stamps the creation time of an overview (#7104).
 	now func() time.Time
 }
 
 var (
-	_ application.LetterRenderer = (*Renderer)(nil)
-	_ application.LetterCombiner = (*Renderer)(nil)
+	_ application.LetterRenderer = (*LetterRenderer)(nil)
+	_ application.LetterCombiner = (*LetterRenderer)(nil)
 	_ application.TableRenderer  = (*Renderer)(nil)
 )
 
+// NewLetterRenderer returns the letter layout of Document Rendering; a letter
+// carries the dates the owner gives it and reads no clock.
+func NewLetterRenderer() *LetterRenderer {
+	return &LetterRenderer{letters: lists.NewLetterRenderer()}
+}
+
 // NewRenderer returns the renderer over Document Rendering; an overview
-// carries the time of the real clock.
-func NewRenderer() *Renderer {
-	return &Renderer{letters: lists.NewLetterRenderer(), tables: lists.NewRenderer(), now: time.Now}
+// carries the time of now, the root's clock (ADR 0275).
+func NewRenderer(now func() time.Time) *Renderer {
+	if now == nil {
+		panic("parent billing renderer: the clock is required")
+	}
+	return &Renderer{LetterRenderer: NewLetterRenderer(), tables: lists.NewRenderer(), now: now}
 }
 
 // RenderLetter renders one letter as a PDF.
-func (r *Renderer) RenderLetter(letter application.Letter, filenameBase string) (parentbilling.BillingLetterFile, error) {
+func (r *LetterRenderer) RenderLetter(letter application.Letter, filenameBase string) (parentbilling.BillingLetterFile, error) {
 	blocks := make([]lists.LetterBlock, len(letter.Blocks))
 	for i, block := range letter.Blocks {
-		blocks[i] = lists.LetterBlock{Heading: block.Heading, Text: block.Text, Bold: block.Bold, Facts: facts(block.Facts)}
+		blocks[i] = lists.LetterBlock{Heading: block.Heading, Text: block.Text, Bold: block.Bold, Facts: facts(block.Facts),
+			PaymentCode: paymentCode(block.PaymentCode)}
 	}
 	file, err := r.letters.RenderLetter(lists.Letter{
 		Title: letter.Title, AccentColor: letter.AccentColor, Logo: letter.Logo, Sender: letter.Sender,
 		Recipient: letter.Recipient, Facts: facts(letter.Facts), Subject: letter.Subject, Salutation: letter.Salutation,
-		Blocks: blocks, Closing: letter.Closing, Footer: letter.Footer,
+		Blocks: blocks, Closing: letter.Closing, Footer: letter.Footer, OnePage: letter.OnePage,
 	}, filenameBase)
 	if errors.Is(err, lists.ErrLetterheadTooLong) {
 		return parentbilling.BillingLetterFile{}, fmt.Errorf("%w: %w", parentbilling.ErrLetterheadTooLong, err)
@@ -57,7 +72,7 @@ func (r *Renderer) RenderLetter(letter application.Letter, filenameBase string) 
 
 // CombineLetters puts the stored letters of a run into one PDF to print
 // (#4670).
-func (r *Renderer) CombineLetters(letters [][]byte, title, filenameBase string) (parentbilling.BillingLetterFile, error) {
+func (r *LetterRenderer) CombineLetters(letters [][]byte, title, filenameBase string) (parentbilling.BillingLetterFile, error) {
 	file, err := r.letters.CombineLetters(letters, title, filenameBase)
 	if errors.Is(err, lists.ErrNoLetters) {
 		return parentbilling.BillingLetterFile{}, fmt.Errorf("%w: %w", parentbilling.ErrBillingLettersMissing, err)
@@ -74,4 +89,13 @@ func facts(values []application.LetterFact) []lists.LetterFact {
 		translated[i] = lists.LetterFact{Label: value.Label, Value: value.Value, Bold: value.Bold}
 	}
 	return translated
+}
+
+// paymentCode translates the transfer code of a letter (#4818); nil stays
+// nil.
+func paymentCode(code *application.PaymentCode) *lists.LetterPaymentCode {
+	if code == nil {
+		return nil
+	}
+	return &lists.LetterPaymentCode{Payload: code.Payload, Heading: code.Heading, Text: code.Text, Facts: facts(code.Facts)}
 }

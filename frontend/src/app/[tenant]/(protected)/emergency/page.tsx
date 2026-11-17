@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Download, Printer } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -18,20 +18,16 @@ export default function EmergencyPage() {
   const { status } = useSession({ required: true });
   const [isExporting, setIsExporting] = useState(false);
   const { show: showError } = useApiErrorDisplay();
-  // „Wiederholen“ erstellt die Liste noch einmal auf demselben Weg.
-  const retryRef = useRef<(mode: EmergencySnapshotExportMode) => void>(
-    () => undefined,
-  );
-
   const handleExport = useCallback(
     async (mode: EmergencySnapshotExportMode) => {
       setIsExporting(true);
       try {
         await exportEmergencySnapshot(mode);
       } catch (exportError) {
+        // „Wiederholen“ erstellt die Liste noch einmal auf demselben Weg.
         void showError(exportError, {
           object: "die Notfallliste",
-          retry: () => retryRef.current(mode),
+          retry: () => void handleExport(mode),
         });
       } finally {
         setIsExporting(false);
@@ -39,9 +35,6 @@ export default function EmergencyPage() {
     },
     [showError],
   );
-  useLayoutEffect(() => {
-    retryRef.current = (mode) => void handleExport(mode);
-  });
   const handlePrint = useCallback(() => {
     void handleExport("print");
   }, [handleExport]);

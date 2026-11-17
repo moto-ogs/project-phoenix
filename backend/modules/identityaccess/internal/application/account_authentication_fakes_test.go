@@ -175,6 +175,11 @@ type fakeStore struct {
 	nextSessionID  int64
 	operatorTokens map[int64]domain.OperatorSession
 
+	// pushLiveness answers LivePushSubscriptionLinks as is; pushLivenessErr
+	// fails it.
+	pushLiveness    map[int64]bool
+	pushLivenessErr error
+
 	// error injection
 	findAccountErr     error
 	findAccountByEmail error
@@ -576,6 +581,15 @@ func (s *fakeStore) HasLiveAccountSessionsCreatedAfter(_ context.Context, accoun
 		}
 	}
 	return false, stats(), nil
+}
+
+func (s *fakeStore) LivePushSubscriptionLinks(context.Context, []domain.PushSubscriptionLink, time.Time) (map[int64]bool, domain.OperationStats, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.pushLivenessErr != nil {
+		return nil, stats(), s.pushLivenessErr
+	}
+	return s.pushLiveness, stats(), nil
 }
 
 func (s *fakeStore) InsertAccountSession(_ context.Context, session domain.AccountSession) (domain.AccountSession, domain.OperationStats, error) {
@@ -1064,6 +1078,7 @@ func (a *fakeAudit) eventsOfType(eventType string) []domain.AuthEvent {
 type fakePush struct {
 	mu    sync.Mutex
 	calls []string
+	links []identityaccess.PushSubscriptionLink
 }
 
 func (p *fakePush) record(call string) {
@@ -1092,8 +1107,13 @@ func (p *fakePush) DeleteUnboundByAccount(_ context.Context, accountID, tenantID
 	p.record(fmt.Sprintf("unbound:%s:%d:%d", portal, accountID, tenantID))
 	return nil
 }
-func (p *fakePush) DeleteOrphaned(context.Context) error {
-	p.record("orphaned")
+func (p *fakePush) ListLinks(context.Context) ([]identityaccess.PushSubscriptionLink, error) {
+	return p.links, nil
+}
+func (p *fakePush) DeleteLinks(_ context.Context, links []identityaccess.PushSubscriptionLink) error {
+	for _, link := range links {
+		p.record(fmt.Sprintf("link:%d", link.SubscriptionID))
+	}
 	return nil
 }
 

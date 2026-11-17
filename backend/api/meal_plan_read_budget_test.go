@@ -103,7 +103,7 @@ func checkStaffMealPlanReadBudgets(t *testing.T, api *goldenRuntime) {
 	get := func(path string) (*httptest.ResponseRecorder, testpkg.QueryMeasurement) {
 		return captureMealRead(t, api, counter, token, path)
 	}
-	monday := calendar.NewDate(2030, 3, 4)
+	monday := calendar.NewDate(2080, 3, 4)
 	// Frozen order fixture gives the monthly export real, named billed rows.
 	// No app clock is replaced. All dates passed to DATE columns are calendar.Date.
 	var orderID int64
@@ -202,7 +202,7 @@ func checkStaffMealPlanReadBudgets(t *testing.T, api *goldenRuntime) {
 		for _, export := range []struct{ scenario, path string }{
 			{"api.mealplan.participants.export", "/api/meal-plan/participants/export?date=" + monday.String() + "&format=xlsx"},
 			{"api.mealplan.participants.week_export", "/api/meal-plan/participants/week/export?week_start=" + monday.String() + "&format=xlsx"},
-			{"api.mealplan.orders.month_export", "/api/meal-plan/orders/month/export?month=2030-03&format=xlsx"},
+			{"api.mealplan.orders.month_export", "/api/meal-plan/orders/month/export?month=2080-03&format=xlsx"},
 		} {
 			response, queries = get(export.path)
 			text := mealExportText(t, response)

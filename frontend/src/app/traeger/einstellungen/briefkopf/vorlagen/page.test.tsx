@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 
+vi.unmock("swr");
 const { templatesApi, push } = vi.hoisted(() => ({
   templatesApi: { fetchDocumentTemplates: vi.fn() },
   push: vi.fn(),
@@ -39,9 +40,9 @@ describe("TraegerVorlagenPage", () => {
 
   it("lists every kind with its template and opens one", async () => {
     render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <TraegerVorlagenPage />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     // The table renders a desktop and a stacked phone layout.
     const [confirmation] = await screen.findAllByText(

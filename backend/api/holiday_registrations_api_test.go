@@ -58,6 +58,10 @@ func newHolidayRegistrationFixtureWithDays(t *testing.T, days owners.HolidayTest
 // of openHolidays (#7104).
 func holidayFixtureToday() calendar.Date { return calendar.NewDate(2026, time.December, 1) }
 
+// holidayFixtureNow is the instant of holidayFixtureToday the registration
+// and the proofs it opens read.
+func holidayFixtureNow() time.Time { return holidayFixtureToday().BerlinMidnight().Add(10 * time.Hour) }
+
 // newHolidayRegistrationFixtureIn is newHolidayRegistrationFixtureWithDays in
 // the environment appEnv, which gates what the local seeder receives (ADR
 // 0216).
@@ -65,7 +69,7 @@ func newHolidayRegistrationFixtureIn(t *testing.T, days owners.HolidayTestSchool
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	unit := testpkg.TenantRuntime(t, db)
-	traeger := traegerPortalWithDaysOn(t, db, unit, days, holidayFixtureToday)
+	traeger := traegerPortalWithDaysOn(t, db, unit, days, holidayFixtureToday, holidayFixtureNow)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
 	delivery, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
@@ -80,7 +84,7 @@ func newHolidayRegistrationFixtureIn(t *testing.T, days owners.HolidayTestSchool
 	settings, err := owners.BuildTraegerSettings(testpkg.NewDatabase(t, db), unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)
 	resource := NewHolidayRegistrationHTTP(organizations, delivery.Module, TurnstileKeys{SiteKey: "site-key", SecretKey: "secret-key"},
-		turnstile.URL, testHealthCipher(), days, settings, owners.NewHolidayParentAccountLinks(holidayTestSetupLinks{}, "https://eltern.example.org/"), appEnv, slog.Default(), holidayFixtureToday)
+		turnstile.URL, testHealthCipher(), days, settings, owners.NewHolidayParentAccountLinks(holidayTestSetupLinks{}, "https://eltern.example.org/"), appEnv, slog.Default(), holidayFixtureNow)
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -561,7 +565,7 @@ func TestHolidayRegistrationsGoThreeMonthsAfterTheirPeriod(t *testing.T) {
 
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, tenant.WithinAdmin(ctx, func(adminCtx context.Context) error {
-		_, err := owners.NewHolidayRegistrationRetention(holidayFixtureToday).DeleteExpiredHolidayRegistrations(adminCtx)
+		_, err := owners.NewHolidayRegistrationRetention(holidayFixtureNow).DeleteExpiredHolidayRegistrations(adminCtx)
 		return err
 	}))
 	countRows := func(period int64) int {

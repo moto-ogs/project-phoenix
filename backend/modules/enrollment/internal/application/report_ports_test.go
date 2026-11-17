@@ -18,6 +18,7 @@ import (
 // test needs; tests swap single dependencies on the returned reports.
 func classRosterTestService(students []*RosterStudent, persons map[int64]*RosterPerson, requests *fakeClassRosterRequestRepo, children *fakeClassRosterChildRepo) *Reports {
 	return NewReports(ReportDependencies{
+		Now:               enrollmentTestClock,
 		Requests:          requests,
 		Children:          children,
 		Guardians:         &fakeClassRosterRequestGuardianRepo{},
@@ -356,4 +357,18 @@ func reportChildInput(r *enrollmentNative.RequestChild) *enrollmentNative.Reques
 		CreatedStudentID: r.CreatedStudentID, MatchedStudentID: r.MatchedStudentID,
 		CustomData: r.CustomData.Clone(),
 	}
+}
+
+// idRecordingClassCareParticipation keeps every candidate and records them.
+type idRecordingClassCareParticipation struct{ ids []int64 }
+
+func (f *idRecordingClassCareParticipation) ResolveListParticipation(
+	_ context.Context, studentIDs []int64, _, _ calendar.Date, _ bool,
+) (*careplan.CareParticipationResolution, error) {
+	f.ids = append(f.ids, studentIDs...)
+	participating := make(map[int64]bool, len(studentIDs))
+	for _, id := range studentIDs {
+		participating[id] = true
+	}
+	return &careplan.CareParticipationResolution{CandidateIDs: studentIDs, ParticipatingIDs: participating}, nil
 }

@@ -30,7 +30,7 @@ func buildLedgerServices(t *testing.T) (*parentService.Portal, careplan.ExcusedA
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	events := reposPeople.ParentRequestEvent
 	excused, err := api.NewTestExcusedAbsenceRequests(api.ExcusedRequestTestOptions{
-		CarePlan: repos.CarePlan(), Logger: slog.Default(),
+		CarePlan: repos.CarePlan(), Logger: slog.Default(), Today: careFixtureToday,
 	}, api.ExcusedRequestTestPeople{Students: reposPeople.Student, Persons: reposPeople.Person, Events: events}, nil, nil)
 	require.NoError(t, err)
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
@@ -59,6 +59,7 @@ func buildLedgerServices(t *testing.T) (*parentService.Portal, careplan.ExcusedA
 		ExcusedRequestRepo:  repos.ExcusedAbsenceRequest,
 		ParentRequestEvents: owners.NewParentRequestEvents(events),
 		Logger:              slog.Default(),
+		Now:                 careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
@@ -76,7 +77,7 @@ func TestParentRequestLedgerRecordsSubmitAndDecision(t *testing.T) {
 
 	svc, requests, events, db := buildLedgerServices(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
-	day := calendar.TodayDate().AddDays(3)
+	day := careFixtureToday().AddDays(3)
 
 	res, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
@@ -121,7 +122,7 @@ func TestParentRequestLedgerRollsBackWithItsWrite(t *testing.T) {
 
 	svc, requests, events, db := buildLedgerServices(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
-	day := calendar.TodayDate().AddDays(4)
+	day := careFixtureToday().AddDays(4)
 
 	res, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)

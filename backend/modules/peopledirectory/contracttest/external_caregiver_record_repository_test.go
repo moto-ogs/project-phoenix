@@ -63,7 +63,7 @@ func TestExternalCaregiverRecordRepository_Create(t *testing.T) {
 	t.Run("creates record with date range", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Extern", "Dates")
 
-		startDate := calendar.TodayDate()
+		startDate := calendar.NewDate(2026, 11, 2)
 		endDate := startDate.AddDays(90)
 
 		record := &peopleValues.ExternalCaregiverRecord{

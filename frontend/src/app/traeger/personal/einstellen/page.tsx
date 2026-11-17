@@ -6,49 +6,30 @@
 // an jedem Einsatzort die Person mit ihrer Beschäftigung.
 
 import { BuildingsIcon, LockKeyIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useState } from "react";
 import { StaffHireWizard } from "~/components/traeger/staff/staff-hire-wizard";
 import { EmptyState } from "~/components/ui/empty-state";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
-import {
-  fetchStaffOverview,
-  type StaffOverview,
-} from "~/lib/traeger-staff-api";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
+import { fetchStaffOverview } from "~/lib/traeger-staff-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-
-const logger = createLogger({ component: "TraegerStaffHirePage" });
 
 const INFO =
   "Hier stellen Sie eine Person ein, die noch an keiner Ihrer Schulen arbeitet. moto legt die Personalakte und den Arbeitsvertrag an. An jeder gewählten Schule entsteht die Person. Zugang, Transponder und Rolle richtet danach die Schule ein. Arbeitet die Person schon an einer Schule? Dann legen Sie ihre Akte bei den Personalakten unter „Ohne Akte“ an.";
 
 export default function TraegerStaffHirePage() {
   const today = useBerlinToday();
-  const [overview, setOverview] = useState<StaffOverview | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      setOverview(await fetchStaffOverview());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_staff_hire_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Schulen",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const {
+    data: overview,
+    loading,
+    error,
+  } = useTraegerResource(
+    traegerStaffKeys.overview(),
+    fetchStaffOverview,
+    "die Schulen",
+  );
 
   return (
     <TenantPage
@@ -57,8 +38,8 @@ export default function TraegerStaffHirePage() {
       back
       backHref={traegerPath("/traeger/personal")}
       backLabel="Zurück zu den Personalakten"
-      error={pageLoad.error}
-      loading={!overview && !pageLoad.error}
+      error={error}
+      loading={loading}
     >
       {overview && overview.release === null ? (
         <SectionCard>

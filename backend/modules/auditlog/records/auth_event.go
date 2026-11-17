@@ -16,7 +16,7 @@ type AuthEvent struct {
 	UserAgent    string                 `bun:"user_agent" json:"user_agent,omitempty"`
 	ErrorMessage string                 `bun:"error_message" json:"error_message,omitempty"`
 	Metadata     map[string]interface{} `bun:"metadata,type:jsonb" json:"metadata,omitempty"`
-	CreatedAt    time.Time              `bun:"created_at,notnull,default:now()" json:"created_at"`
+	CreatedAt    time.Time              `bun:"created_at,nullzero,notnull" json:"created_at"`
 }
 
 // EventType constants

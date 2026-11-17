@@ -4,6 +4,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/compose/presenceservice"
@@ -21,5 +22,5 @@ func NewStudentStatusDayReadHTTPForTests(writer *presence.Resource) http.Handler
 }
 
 func NewStudentHTTPTestStatusDays(repo presenceservice.StudentStatusDayRepository) studentpresence.StatusDays {
-	return presenceservice.NewStatusDays(repo, nil, nil, nil)
+	return presenceservice.NewStatusDays(repo, nil, nil, nil, time.Now)
 }

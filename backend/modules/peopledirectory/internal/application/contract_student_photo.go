@@ -11,6 +11,8 @@ func mapPhotoError(err error) error {
 	switch {
 	case err == nil:
 		return nil
+	case errors.Is(err, domain.ErrPhotoFeatureBusy):
+		return peopledirectory.ErrPhotoFeatureBusy
 	case errors.Is(err, domain.ErrPhotoFeatureDisabledMid):
 		return peopledirectory.ErrPhotoFeatureDisabledMid
 	case errors.Is(err, domain.ErrPhotoFeatureDisabled):

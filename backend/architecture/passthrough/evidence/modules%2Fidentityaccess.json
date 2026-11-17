@@ -632,13 +632,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (c *CatererAccess) RevokeCatererInvitation(ctx context.Context, invitationID int64) error {\n\tctx = c.attach(ctx)\n\tif !c.inSchool(ctx) {\n\t\treturn catererError(failed(\"revoke caterer invitation\", errSchoolTransactionRequired))\n\t}\n\trevoked, _, err := c.store.RevokeCatererInvitation(ctx, invitationID, c.now())\n\tif err == nil \u0026\u0026 !revoked {\n\t\terr = domain.ErrInvitationNotFound\n\t}\n\tif err != nil {\n\t\treturn catererError(failed(\"revoke caterer invitation\", err))\n\t}\n\treturn nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/CatererAccess.RevokeCatererInvitation",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
       "evidence": "func (c *CatererAccess) SchoolCaterer(ctx context.Context) (identityaccess.CatererSupply, bool, error) {\n\tctx = c.attach(ctx)\n\tif !c.inSchool(ctx) {\n\t\treturn identityaccess.CatererSupply{}, false, catererError(failed(\"find school caterer\", errSchoolTransactionRequired))\n\t}\n\tsupply, found, _, err := c.store.FindSchoolCaterer(ctx)\n\tif err != nil {\n\t\treturn identityaccess.CatererSupply{}, false, catererError(failed(\"find school caterer\", err))\n\t}\n\treturn identityaccess.CatererSupply{Caterer: identityaccess.Caterer(supply.Caterer), DeliveryAddress: supply.DeliveryAddress, StartedAt: supply.StartedAt}, found, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/CatererAccess.SchoolCaterer",
@@ -835,7 +828,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (e DemoAccessEngine) RedeemDemoAccess(ctx context.Context, token, role, ipAddress, userAgent string) (identityaccess.DemoEntry, error) {\n\tentry, err := e.Flows.Redeem(ctx, token, domain.DemoRole(role), ipAddress, userAgent)\n\tif err != nil {\n\t\treturn identityaccess.DemoEntry{}, demoAccessError(err)\n\t}\n\treturn identityaccess.DemoEntry{AccessToken: entry.AccessToken, RefreshToken: entry.RefreshToken, AccessID: entry.AccessID, Role: string(entry.Role), Source: entry.Source, FixedRole: entry.FixedRole}, nil\n}",
+      "evidence": "func (e DemoAccessEngine) RedeemDemoAccess(ctx context.Context, token, role, ipAddress, userAgent string) (identityaccess.DemoEntry, error) {\n\tentry, err := e.Flows.Redeem(ctx, token, domain.DemoRole(role), ipAddress, userAgent)\n\tif err != nil {\n\t\treturn identityaccess.DemoEntry{}, demoAccessError(err)\n\t}\n\treturn identityaccess.DemoEntry{AccessToken: entry.AccessToken, RefreshToken: entry.RefreshToken, AccessID: entry.AccessID, Role: string(entry.Role), Source: entry.Source, FixedRole: entry.FixedRole, Traeger: entry.Traeger}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/DemoAccessEngine.RedeemDemoAccess",
       "owner": "modules/identityaccess"
@@ -870,7 +863,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p DemoSchoolsPort) DemoSchoolEntry(ctx context.Context, slug string) (domain.DemoSchoolEntry, error) {\n\tentry, err := p.DemoSchools.DemoSchoolEntry(ctx, slug)\n\treturn domain.DemoSchoolEntry{Exists: entry.Exists, Status: entry.Status, TenantID: entry.SchoolID, AccountID: entry.AccountID, ParentAccountID: entry.ParentAccountID}, err\n}",
+      "evidence": "func (p DemoSchoolsPort) DemoSchoolEntry(ctx context.Context, slug string) (domain.DemoSchoolEntry, error) {\n\tentry, err := p.DemoSchools.DemoSchoolEntry(ctx, slug)\n\treturn domain.DemoSchoolEntry{Exists: entry.Exists, Status: entry.Status, TenantID: entry.SchoolID, AccountID: entry.AccountID, ParentAccountID: entry.ParentAccountID, TraegerID: entry.TraegerID}, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/DemoSchoolsPort.DemoSchoolEntry",
       "owner": "modules/identityaccess"

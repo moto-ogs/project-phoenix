@@ -54,6 +54,9 @@ type DeliveryNotifications struct {
 	// GuardianFeed serves a guardian account its feed across the schools of
 	// the family in the parents portal (#7140).
 	GuardianFeed deliveryContract.GuardianNotificationFeed
+	// SchoolAudience names the accounts and families a notice to the whole
+	// school reaches (#7144).
+	SchoolAudience deliveryContract.SchoolAudience
 }
 
 // BuildDeliveryNotifications binds the notification router over the realtime
@@ -106,13 +109,9 @@ func BuildDeliveryNotifications(
 	if err != nil {
 		return DeliveryNotifications{}, err
 	}
-	unreported, ok := absences.(deliveryContract.UnreportedAbsenceNotifier)
-	if !ok {
-		return DeliveryNotifications{}, fmt.Errorf("absence notifier does not send the notice about children missing without a report")
-	}
-	responsible, ok := recipients.(deliveryContract.ResponsibleStaff)
-	if !ok {
-		return DeliveryNotifications{}, fmt.Errorf("staff recipients do not name the staff responsible for a child")
+	unreported, responsible, schoolAudience, err := deliveryCapabilities(absences, recipients, notifier)
+	if err != nil {
+		return DeliveryNotifications{}, err
 	}
 	return DeliveryNotifications{
 		UnreportedAbsences: unreported,
@@ -124,6 +123,7 @@ func BuildDeliveryNotifications(
 		ResponsibleStaff: responsible,
 		Feed:             feed,
 		GuardianFeed:     guardianFeed,
+		SchoolAudience:   schoolAudience,
 	}, nil
 }
 
@@ -207,6 +207,25 @@ func buildDeliveryWorker(
 		return nil, fmt.Errorf("initialize delivery module: %w", err)
 	}
 	return worker, nil
+}
+
+// deliveryCapabilities are the further contracts of the composed Delivery:
+// the notice about children missing without a report, the staff responsible
+// for a child and the audience of the whole school (#7144).
+func deliveryCapabilities(absences, recipients any, notifier deliveryCompose.Notifier) (deliveryContract.UnreportedAbsenceNotifier, deliveryContract.ResponsibleStaff, deliveryContract.SchoolAudience, error) {
+	unreported, ok := absences.(deliveryContract.UnreportedAbsenceNotifier)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("absence notifier does not send the notice about children missing without a report")
+	}
+	responsible, ok := recipients.(deliveryContract.ResponsibleStaff)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("staff recipients do not name the staff responsible for a child")
+	}
+	audience, ok := notifier.(deliveryContract.SchoolAudience)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("notification router does not name the audience of the whole school")
+	}
+	return unreported, responsible, audience, nil
 }
 
 // deliveryFeeds are the two read sides of the router's notification feed:

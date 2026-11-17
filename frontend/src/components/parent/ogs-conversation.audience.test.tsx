@@ -1,5 +1,15 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as baseRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type React from "react";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+const render = ((ui: React.ReactElement) =>
+  baseRender(ui, { wrapper: ParentResourceTestProvider })) as typeof baseRender;
 
 const { mockGetConversation, mockPostMessage, mockListChildThreads } =
   vi.hoisted(() => ({
@@ -8,13 +18,8 @@ const { mockGetConversation, mockPostMessage, mockListChildThreads } =
     mockListChildThreads: vi.fn(),
   }));
 
-// The send overlay (#5011) is bound to the signed-in session's scope.
-vi.mock("next-auth/react", () => ({
-  useSession: () => ({
-    data: { user: { id: "1", scope: "parents" }, expires: "2099-01-01" },
-    status: "authenticated",
-  }),
-}));
+// The send overlay (#5011) and the readers are bound to the session's scope.
+vi.unmock("swr");
 
 vi.mock("~/lib/parent-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-api")>()),
@@ -22,6 +27,7 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
   postChildMessage: mockPostMessage,
   listChildThreads: mockListChildThreads,
   getChildToday: vi.fn(),
+  listMyChildren: vi.fn(() => Promise.resolve([])),
 }));
 
 vi.mock("~/lib/parent-url", () => ({

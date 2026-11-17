@@ -1,6 +1,7 @@
 DELETE /api/parent-announcements/{announcementId}
 GET /api/parent-announcements/
 GET /api/parent-announcements/letter-placeholders
+GET /api/parent-announcements/students/{studentId}
 GET /api/parent-announcements/{announcementId}
 GET /api/parent-announcements/{announcementId}/declaration-export
 GET /api/parent-announcements/{announcementId}/declaration-status

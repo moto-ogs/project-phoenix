@@ -41,5 +41,5 @@ func MustNewSchoolCalendar(db transactionruntime.Database) schoolcalendar.Calend
 // repositories over the unobserved owners of db.
 func NewUnobservedTimetableRepositories(db transactionruntime.Database, clocks ...func() time.Time) owners.TimetableRepositories {
 	return owners.NewTimetableRepositories(db, owners.MustNewUnobservedTimetable(db, clocks...), owners.MustNewPeopleDirectory(db), MustNewSchoolStructure(db),
-		owners.MustNewUnobservedRooms(db), MustNewSchoolCalendar(db), owners.MustNewSchoolMembership(db), owners.MustNewWorkforce(db), OptionalClock(clocks))
+		owners.MustNewUnobservedRooms(db), MustNewSchoolCalendar(db), owners.MustNewSchoolMembership(db), owners.MustNewWorkforce(db), clockOrNow(clocks))
 }

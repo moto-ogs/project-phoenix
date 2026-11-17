@@ -11,8 +11,8 @@ type visitRow struct {
 	bun.BaseModel `bun:"table:active.visits,alias:visit"`
 	ID            int64      `bun:"id,pk,autoincrement"`
 	TenantID      int64      `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull"`
 	StudentID     int64      `bun:"student_id,notnull"`
 	ActiveGroupID int64      `bun:"active_group_id,notnull"`
 	EntryTime     time.Time  `bun:"entry_time,notnull"`

@@ -36,8 +36,8 @@ type HolidayHostResource struct {
 	requireHealth common.Middleware
 	guests        capability.HolidayGuests
 	requireAssign common.Middleware
-	// Now stamps the participant export (ADR 0239). Set as a field after
-	// construction; nil is the real clock.
+	// Now stamps the participant export (ADR 0239, ADR 0275); the
+	// constructor requires it.
 	Now func() time.Time
 }
 
@@ -45,12 +45,12 @@ type HolidayHostResource struct {
 // permission that opens the list of hosted weeks: dates, care window and
 // counts, no child; the planning views show it. requireRead opens the
 // participant lists; requireHealth the health information of a child of the
-// school (#4722).
-func NewHolidayHostResource(participants capability.HolidayHostParticipants, schoolNames capability.HolidayHostSchoolNames, requireWeeks, requireRead, requireHealth common.Middleware) *HolidayHostResource {
-	if participants == nil || schoolNames == nil || requireWeeks == nil || requireRead == nil || requireHealth == nil {
-		panic("enrollment holiday host resource: participants, school names and the permissions are required")
+// school (#4722). now stamps the participant export.
+func NewHolidayHostResource(participants capability.HolidayHostParticipants, schoolNames capability.HolidayHostSchoolNames, requireWeeks, requireRead, requireHealth common.Middleware, now func() time.Time) *HolidayHostResource {
+	if participants == nil || schoolNames == nil || requireWeeks == nil || requireRead == nil || requireHealth == nil || now == nil {
+		panic("enrollment holiday host resource: participants, school names, the permissions and the clock are required")
 	}
-	return &HolidayHostResource{participants: participants, schoolNames: schoolNames, requireWeeks: requireWeeks, requireRead: requireRead, requireHealth: requireHealth}
+	return &HolidayHostResource{participants: participants, schoolNames: schoolNames, requireWeeks: requireWeeks, requireRead: requireRead, requireHealth: requireHealth, Now: now}
 }
 
 // Router mounts the routes behind the school session.
@@ -164,7 +164,7 @@ func (rs *HolidayHostResource) exportParticipants(w http.ResponseWriter, r *http
 		renderHolidayHostError(w, r, err)
 		return
 	}
-	file, err := lists.NewRenderer().Render(holidayParticipantDocument(list, hostSchoolNames(r.Context()), readClock(rs.Now)), format,
+	file, err := lists.NewRenderer().Render(holidayParticipantDocument(list, hostSchoolNames(r.Context()), rs.Now()), format,
 		"teilnehmerliste-"+list.Week.StartsOn.String())
 	if err != nil {
 		renderHolidayHostError(w, r, err)

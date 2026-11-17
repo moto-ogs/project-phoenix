@@ -7,12 +7,14 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { _resetTraegerHostCache } from "~/lib/traeger-url";
 
 // #6870: the header shows the name of the current Träger membership, not the
 // e-mail address of the session; the page „Konto“ updates it in place.
 
+vi.unmock("swr");
 const { mockUseSession, api } = vi.hoisted(() => ({
   mockUseSession: vi.fn(),
   api: {
@@ -51,6 +53,8 @@ function HeaderName() {
   return <p data-testid="header-name">{user?.name}</p>;
 }
 
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { TraegerAuthGuard } from "./auth-guard";
 import TraegerAccountPage from "./konto/page";
 
@@ -63,11 +67,32 @@ function sessionOf(id: string, orgId: number, email: string) {
   };
 }
 
+function ReloadProfile() {
+  const { reload } = useTraegerResource(
+    traegerKeys.profile(),
+    api.fetchTraegerProfile,
+    "Ihr Konto",
+  );
+  return (
+    <button type="button" onClick={reload}>
+      Reload profile
+    </button>
+  );
+}
+
 function renderPortal(page: React.ReactNode = <p>Seite</p>) {
+  const cache = new Map();
   return render(
     <ToastProvider>
       <TraegerAuthGuard>{page}</TraegerAuthGuard>
     </ToastProvider>,
+    {
+      wrapper: ({ children }) => (
+        <SWRConfig value={{ provider: () => cache, errorRetryCount: 0 }}>
+          {children}
+        </SWRConfig>
+      ),
+    },
   );
 }
 
@@ -143,42 +168,45 @@ describe("Träger header name (#6870)", () => {
     await waitFor(() => expect(headerName()).toHaveTextContent("Karl Kasse"));
   });
 
-  it("keeps the saved name when the initial header profile answers later", async () => {
+  it("keeps the saved name when a profile read from before the save answers later", async () => {
     const oldProfile = {
       accountId: "4",
       email: "kasse@traeger.example",
       name: "Karl Kasse",
     };
-    let answerHeader: (profile: typeof oldProfile) => void = () => {};
+    // Header and „Konto“ share one profile (#4986): the read still running
+    // at the save is a reload of that shared profile.
+    let answerLate: (profile: typeof oldProfile) => void = () => {};
+    api.fetchTraegerProfile.mockResolvedValueOnce(oldProfile);
     api.fetchTraegerProfile.mockReturnValueOnce(
       new Promise<typeof oldProfile>((resolve) => {
-        answerHeader = resolve;
+        answerLate = resolve;
       }),
     );
-    const view = renderPortal();
-    await waitFor(() => expect(api.fetchTraegerProfile).toHaveBeenCalledOnce());
-
-    api.fetchTraegerProfile.mockResolvedValue(oldProfile);
     api.changeTraegerProfileName.mockResolvedValue({
       ...oldProfile,
       name: "Karla Kasse",
     });
-    view.rerender(
-      <ToastProvider>
-        <TraegerAuthGuard>
-          <TraegerAccountPage />
-        </TraegerAuthGuard>
-      </ToastProvider>,
+    renderPortal(
+      <>
+        <ReloadProfile />
+        <TraegerAccountPage />
+      </>,
     );
 
     const field = await screen.findByRole("textbox", { name: /Ihr Name/ });
     await waitFor(() => expect(headerName()).toHaveTextContent("Karl Kasse"));
+    fireEvent.click(screen.getByRole("button", { name: "Reload profile" }));
+    await waitFor(() =>
+      expect(api.fetchTraegerProfile).toHaveBeenCalledTimes(2),
+    );
     fireEvent.change(field, { target: { value: "Karla Kasse" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(headerName()).toHaveTextContent("Karla Kasse"));
 
-    await act(async () => answerHeader(oldProfile));
+    await act(async () => answerLate(oldProfile));
     expect(headerName()).toHaveTextContent("Karla Kasse");
+    expect(field).toHaveValue("Karla Kasse");
   });
 
   it("drops the name of the former membership after a change of Träger", async () => {

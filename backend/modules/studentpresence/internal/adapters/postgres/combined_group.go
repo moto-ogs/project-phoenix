@@ -113,7 +113,7 @@ func (s *Store) ReviseCombination(ctx context.Context, id int64, start time.Time
 	}
 	var row studentpresence.CombinedGroup
 	started := time.Now()
-	err = db.NewRaw("UPDATE active.combined_groups SET start_time = ?,end_time = ?,updated_at = NOW() WHERE tenant_id = ? AND id = ? RETURNING id,tenant_id,created_at,updated_at,start_time,end_time", start, end, tenantID, id).Scan(ctx, &row)
+	err = db.NewRaw("UPDATE active.combined_groups SET start_time = ?,end_time = ? WHERE tenant_id = ? AND id = ? RETURNING id,tenant_id,created_at,updated_at,start_time,end_time", start, end, tenantID, id).Scan(ctx, &row)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
 		return studentpresence.CombinedGroup{}, stats, fmt.Errorf("revise combination: %w", err)

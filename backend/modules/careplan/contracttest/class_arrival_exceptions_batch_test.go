@@ -34,10 +34,11 @@ func newClassArrivalBatchFixture(t *testing.T) *classArrivalBatchFixture {
 
 func newClassArrivalBatchFixtureOn(t *testing.T, db *bun.DB) *classArrivalBatchFixture {
 	t.Helper()
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	people := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db))
 	_, deps, err := owners.ArrivalScheduleBinding(people, nil, nil, nil)
 	require.NoError(t, err)
+	deps.Today = decisionTestDay
 	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, deps)
 	require.NoError(t, err)
 	staff := testpkg.CreateTestStaff(t, db, "Batch", "Author")

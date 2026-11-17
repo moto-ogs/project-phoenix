@@ -432,7 +432,7 @@ func (rs *Resource) getDeviceStatistics(w http.ResponseWriter, r *http.Request) 
 		TotalDevices:    total,
 		ActiveDevices:   len(activeDevices),
 		OfflineDevices:  len(offlineDevices),
-		LastUpdated:     time.Now(),
+		LastUpdated:     rs.runtime.Now(),
 	}
 
 	rs.runtime.Success(w, r, http.StatusOK, response, "Device statistics retrieved successfully")
@@ -465,7 +465,7 @@ func (rs *Resource) scanNetwork(w http.ResponseWriter, r *http.Request) {
 	// Build response
 	response := NetworkScanResponse{
 		Devices:      scanResults,
-		ScanTime:     time.Now(),
+		ScanTime:     rs.runtime.Now(),
 		DevicesFound: len(scanResults),
 	}
 

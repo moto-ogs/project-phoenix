@@ -227,6 +227,32 @@ func TestTestContainerCommandUsesDSNConnectionSettings(t *testing.T) {
 	assert.NotContains(t, strings.Join(cmd.Args, " "), "pa'ss", "the password must not be exposed in process arguments")
 }
 
+func TestEphemeralContainerIDIgnoresStderr(t *testing.T) {
+	t.Parallel()
+
+	cmd, err := ephemeralTestContainerCommand(t.Context(), "unused", nil)
+	require.NoError(t, err)
+	cmd.Path = "/bin/sh"
+	cmd.Args = []string{"sh", "-c", "printf 'container-id\\n'; printf 'container runtime notice\\n' >&2"}
+	id, err := startEphemeralContainer(cmd)
+
+	require.NoError(t, err)
+	assert.Equal(t, "container-id", id)
+}
+
+func TestEphemeralContainerStartPreservesFailureDiagnostics(t *testing.T) {
+	t.Parallel()
+
+	cmd, err := ephemeralTestContainerCommand(t.Context(), "unused", nil)
+	require.NoError(t, err)
+	cmd.Path = "/bin/sh"
+	cmd.Args = []string{"sh", "-c", "printf 'image unavailable\\n' >&2; exit 1"}
+	_, err = startEphemeralContainer(cmd)
+
+	require.ErrorContains(t, err, "image unavailable")
+	require.EqualError(t, errors.Unwrap(err), "exit status 1")
+}
+
 func TestEphemeralTestContainerCommandPublishesOnlyLoopback(t *testing.T) {
 	t.Parallel()
 

@@ -38,11 +38,12 @@ func boundsPhases(t *testing.T, env *decisionTestEnv, lock func(context.Context)
 	pendingWindows, err := owners.ComposePendingWindows(testpkg.NewDatabase(t, env.db))
 	require.NoError(t, err)
 	return enrollmentTest.NewPhases(enrollmentTest.PhaseDependencies{
+		Now:                    time.Now,
 		Records:                api.NewEnrollmentSuiteRepositories(testpkg.NewDatabase(t, env.db)).Enrollment(),
 		Offerings:              phaseOfferings{carePlan: api.NewRepositoryTestFactory(testpkg.NewDatabase(t, env.db)).CarePlan()},
 		LockTemplateRecurrence: lock,
 		Resyncer:               resyncer,
-		Bookings:               owners.NewEnrollmentPhaseBookings(carePlanCompose.NewOfferingBookings()),
+		Bookings:               owners.NewEnrollmentPhaseBookings(carePlanCompose.NewOfferingBookings(time.Now)),
 		Students:               owners.NewEnrollmentPhaseStudents(pendingWindows),
 		CareStudents:           owners.NewEnrollmentPhaseCareStudents(owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, env.db))),
 		Today:                  func() calendar.Date { return offeringResyncToday },
@@ -62,7 +63,7 @@ type bookingWindow struct{ from, until calendar.Date }
 // childBookings reads the child's bookings ordered by id.
 func childBookings(t *testing.T, env *decisionTestEnv, childID int64) []bookingWindow {
 	t.Helper()
-	rows, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), env.db, carePlanCompose.NewOfferingBookings().CareOfferingBookingHistory, []int64{childID})
+	rows, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), env.db, carePlanCompose.NewOfferingBookings(time.Now).CareOfferingBookingHistory, []int64{childID})
 	require.NoError(t, err)
 	windows := make([]bookingWindow, 0, len(rows))
 	for _, row := range rows {
@@ -178,7 +179,7 @@ func TestPhaseUpdate_KeepsSwitchesAndCareEndsOfBookings(t *testing.T) {
 	switchDay, careEnd := start.AddDays(30), start.AddDays(60)
 	require.NoError(t, api.NewEnrollmentBookingFixtureWithin(testpkg.WithinCurrentTenant).ScheduleRequestChildOfferings(
 		ctx, switched.childID, enrollmentTest.Date(switchDay), []*enrollmentTest.RequestChildOffering{{CareOfferingID: switched.offering.ID}}))
-	_, err := testpkg.TenantQuery2(t, ctx, env.db, carePlanCompose.NewOfferingBookings().EndCareOfferingBookings, []int64{ended.childID}, careplan.Date(careEnd))
+	_, err := testpkg.TenantQuery2(t, ctx, env.db, carePlanCompose.NewOfferingBookings(time.Now).EndCareOfferingBookings, []int64{ended.childID}, careplan.Date(careEnd))
 	require.NoError(t, err)
 
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, phaseEdit(boundsPhases(t, env, nil)), movedSourcePhase(env, -7, 7)))
@@ -232,7 +233,7 @@ func TestFollowPhaseBookingBounds_StaysInItsTenant(t *testing.T) {
 	}
 
 	require.NoError(t, testpkg.WithinTenantContext(t, context.Background(), env.db, otherTenant, func(txCtx context.Context) error {
-		return carePlanCompose.NewOfferingBookings().FollowPhaseBookingBounds(txCtx, move)
+		return carePlanCompose.NewOfferingBookings(time.Now).FollowPhaseBookingBounds(txCtx, move)
 	}))
 	assert.Equal(t, []bookingWindow{{c.start, c.end.AddDays(1)}}, childBookings(t, env, c.childID))
 }
@@ -254,7 +255,7 @@ func TestPhaseUpdate_WaitsForConcurrentBookingChange(t *testing.T) {
 	done := make(chan error, 1)
 	holdErr := testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(holdCtx context.Context, tx bun.Tx) error {
 		days := []string{"mon"}
-		if err := carePlanCompose.NewOfferingBookings().ReplaceCareOfferingBookings(holdCtx, c.childID, []careplan.CareOfferingBooking{
+		if err := carePlanCompose.NewOfferingBookings(time.Now).ReplaceCareOfferingBookings(holdCtx, c.childID, []careplan.CareOfferingBooking{
 			{CareOfferingID: c.offering.ID, ManualSelectedDays: days, ValidFrom: new(careplan.Date(c.start)), ValidUntil: new(careplan.Date(switchDay))},
 			{CareOfferingID: c.offering.ID, ManualSelectedDays: days, ValidFrom: new(careplan.Date(switchDay)), ValidUntil: new(careplan.Date(c.end.AddDays(1)))},
 		}); err != nil {
@@ -339,7 +340,7 @@ func TestPhaseUpdate_LocksApplicationsThatAppearWhileItWaits(t *testing.T) {
 	defer cancel()
 	first := approveSourcedChild(t, env, "Zuerst")
 	late := approveSourcedChild(t, env, "Spaeter")
-	bookings := carePlanCompose.NewOfferingBookings()
+	bookings := carePlanCompose.NewOfferingBookings(time.Now)
 	require.NoError(t, testpkg.TenantCommand2(t, ctx, env.db, bookings.ReplaceCareOfferingBookings, late.childID, []careplan.CareOfferingBooking{}))
 	start, end, switchDay := first.start, first.end, first.start.AddDays(30)
 	days := []string{"mon"}

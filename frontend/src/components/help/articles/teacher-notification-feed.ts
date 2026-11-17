@@ -3,7 +3,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
 
 /**
  * Die Glocke oben rechts in moto schule (#7139): die `Hinweise` der Lehrkraft,
- * zuerst die Absage eines Termins, für den sie eingeplant ist.
+ * zuerst die Absage eines Termins, für den sie eingeplant ist, dazu der
+ * geänderte Stundenplan ihrer Klassen und Schließtage (#7142, #7144).
  */
 export function teacherNotificationFeedTopic(): HelpTopic {
   return {
@@ -26,19 +27,27 @@ export function teacherNotificationFeedTopic(): HelpTopic {
     notes: [
       "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis.",
       "Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
+      "Findet ein Termin, bei dem Sie eingeplant sind, in einem anderen Raum statt, sehen Sie es auch hier. Im Hinweis stehen der neue und der alte Raum.",
+      "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, sehen Sie es hier. Ein Klick darauf öffnet den `Kalender`.",
+      "Ändert sich der Unterrichtsschluss einer Ihrer Klassen, steht hier `Stundenplan geändert`. Der Hinweis öffnet die Klasse an dem Tag. Werden viele Zeiten einer Klasse nacheinander eingetragen, bleibt es ein Hinweis.",
       "`Meine Aufsichten` zeigt den heutigen Tag. Liegt der Termin später, steht der Tag im Hinweis.",
       "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
       "Was Sie auf dem Handy gelesen haben, ist auch am Computer gelesen.",
-      "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen von heute bis in 14 Tagen.",
-      "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
+      "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen und Schließtagen von heute bis in 14 Tagen.",
+      "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` oder `Schließtagen` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
       "Die Einstellung gilt auch, wenn eine Absage zurückgenommen wird.",
+      "Bei Raumänderungen gibt es zwei Einstellungen. `Raumänderung heute oder morgen` ist eingeschaltet. `Raumänderung an späteren Tagen` schalten Sie selbst ein. Sie gilt bis 14 Tage im Voraus.",
+      "Zum Stundenplan einer Klasse kommt eine Mitteilung aufs Handy, wenn die Änderung heute oder morgen gilt. Für 2 bis 14 Tage vorher schalten Sie unter `Einstellungen` den Punkt `Stundenplan Ihrer Klassen: spätere Tage` ein.",
     ],
     differences: [
       "Auf dem Handy öffnen sich die Hinweise über den ganzen Bildschirm. Mit dem X schließen Sie sie wieder.",
       "Sie arbeiten auch in der OGS mit moto? Dort sehen Sie dieselben Hinweise. Was Sie hier lesen, ist dort auch gelesen.",
     ],
     troubleshootingDetails: [
+      "Es kommt kein Hinweis zu einer Raumänderung? Die OGS-Leitung kann `Hinweis bei Raumänderung` ausschalten. Fragen Sie dort nach.",
       "Es kommt kein Hinweis zu einer Absage? Die OGS-Leitung kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder Hinweis noch Mitteilung aufs Handy. Fragen Sie dort nach.",
+      "Es kommt kein Hinweis zum Stundenplan? Die OGS-Leitung kann `Hinweis bei geändertem Stundenplan einer Klasse` ausschalten. Fragen Sie dort nach.",
+      "Es kommt kein Hinweis zu einem Schließtag? Die OGS-Leitung kann `Benachrichtigung bei Schließtagen` ausschalten. Fragen Sie dort nach.",
     ],
     related: [HELP_TOPICS.teacherSettings, HELP_TOPICS.teacherSupervision],
   };

@@ -32,7 +32,7 @@ func TestParentAnnouncement_TenantIsolation(t *testing.T) {
 	homeCtx := tenantCtx(t)
 
 	poll, options := api.ParentStorePollAnnouncement(parentStoreFixtureChecks(t), homeCtx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		userModels.ParentAnnouncementResponseSingleChoice)
 	live, err := testpkg.TenantQuery4(t, homeCtx, db, repo.MarkRead, chain.TenantID, poll.ID, chain.AccountID, *poll.PublishedAt)

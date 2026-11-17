@@ -10,8 +10,8 @@ import {
   type DemoRole,
   type DemoSetupProgress,
   demoEntryEvent,
-  isParentDemoRole,
-  parentsDemoEntryUrl,
+  demoAppOfRole,
+  otherAppDemoEntryUrl,
   redeemDemoAccess,
   startDemoSession,
   takeDemoLinkFromFragment,
@@ -28,14 +28,15 @@ type EntryPhase = DemoEntryPhase | "choosing";
  * Redeems the link in the role; the BFF installs the session cookie.
  * The banner reports the entry after the start page has loaded (#3467), or
  * the switch when the banner of the parents app sent the visitor (#3468).
- * The role parent is the parents app's: the link goes on to its entry page.
+ * The role parent is the parents app's, the role Träger-Büro the
+ * Träger-Portal's (#6193): the link goes on to their entry page.
  */
 async function enterAs(
   link: DemoLink,
   role: DemoRole,
 ): Promise<"entered" | "left" | "invalid" | "failed"> {
-  if (isParentDemoRole(role)) {
-    globalThis.location.assign(parentsDemoEntryUrl(link));
+  if (demoAppOfRole(role) !== "school") {
+    globalThis.location.assign(otherAppDemoEntryUrl(link, role));
     return "left";
   }
   const session = await redeemDemoAccess(link.token, role);

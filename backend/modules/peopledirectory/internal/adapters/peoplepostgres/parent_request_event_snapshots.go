@@ -53,7 +53,7 @@ func (r *ParentRequestEventRepository) AppendParentRequestEvent(ctx context.Cont
 		return err
 	}
 	// Invoke the exact original insert, including tenant binding, nil payload
-	// materialization, clock_timestamp and its database error wrapper.
+	// materialization, the owner's stamp and its database error wrapper.
 	err = r.Create(ctx, row)
 	if value != nil {
 		mapped, mapErr := nativeParentRequestEvent(row)

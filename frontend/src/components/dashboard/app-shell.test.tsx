@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { setTestClock } from "~/test/clock";
 import { AppShell } from "./app-shell";
 
 vi.mock("next/navigation", () => ({
@@ -98,6 +99,8 @@ describe("AppShell", () => {
   // preview strip: the shell moves down by its height, so the banner covers
   // neither the header nor the page, and the bottom bar stays free.
   it("moves the OGS app below the demo banner in the demo build only", () => {
+    // Noon on a school day: in the evening the notice row (pt-20) joins in.
+    setTestClock("2026-09-09T12:00:00+02:00");
     shellAuth.useShellAuthSafe.mockReturnValue({ mode: "teacher" });
     const { container, unmount } = render(
       <AppShell>

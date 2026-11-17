@@ -450,7 +450,7 @@ export default function CatererOverviewPage() {
       if (!response.ok) {
         throw await apiErrorFromResponse(response, "caterer print failed");
       }
-      openBlobForPrint(await response.blob(), target);
+      await openBlobForPrint(await response.blob(), target);
     } catch (cause) {
       target?.close();
       void showActionError(cause, { object: "die Druckansicht" });

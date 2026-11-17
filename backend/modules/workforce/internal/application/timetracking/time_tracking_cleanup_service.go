@@ -120,8 +120,8 @@ func NewTimeTrackingCleanupService(
 	logger *slog.Logger,
 	now func() time.Time,
 ) TimeTrackingCleanupService {
-	if settings == nil {
-		panic("time tracking cleanup: settings are required")
+	if settings == nil || now == nil {
+		panic("time tracking cleanup: settings and the clock are required")
 	}
 	if logger == nil {
 		logger = slog.Default()
@@ -132,7 +132,7 @@ func NewTimeTrackingCleanupService(
 		auditRepo:        auditRepo,
 		settings:         settings,
 		logger:           logger,
-		now:              clockOrWall(now),
+		now:              now,
 	}
 }
 

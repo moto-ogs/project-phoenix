@@ -35,7 +35,7 @@ type Resource struct{ ResourceConfig }
 
 func NewResource(cfg ResourceConfig) *Resource {
 	if cfg.Now == nil {
-		cfg.Now = time.Now
+		panic("studentpresence HTTP: the clock is required")
 	}
 	return &Resource{ResourceConfig: cfg}
 }
