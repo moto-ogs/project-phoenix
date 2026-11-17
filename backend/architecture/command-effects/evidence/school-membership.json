@@ -658,7 +658,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.RemoveClassListEntry",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
+      "binding_digest": "5a3645f1924e5a7000093b520e2958ff",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.RemoveClassListEntry",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.RemoveClassListEntry",
+      "binding_digest": "3b5dd0af7c77858263bcb95a50cf28d3",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.RemoveClassListEntry",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -682,7 +690,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ResolveClassListEntry",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
+      "binding_digest": "29aa5ebee7d60aee0f5f913e20094415",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ResolveClassListEntry",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ResolveClassListEntry",
+      "binding_digest": "878c716613d8ba84e90f65b566ac918d",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ResolveClassListEntry",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -706,7 +722,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ReviseClassListEntry",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
+      "binding_digest": "47831a5862c59a6a52d2bdf215d21b0b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ReviseClassListEntry",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ReviseClassListEntry",
+      "binding_digest": "953fce7e1f9e16f4bea7dc8b12d3e8a7",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ReviseClassListEntry",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",

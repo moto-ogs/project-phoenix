@@ -17,13 +17,13 @@ const (
 	settingChildrenWithoutCarePlace  = "operations.children_without_care_place"
 )
 
-// ErrWithoutCarePlaceCareData refuses an OGS group for a child without an
+// ErrWithoutCarePlaceGroupRefused refuses an OGS group for a child without an
 // OGS place.
-var ErrWithoutCarePlaceCareData = errors.New("a child without an OGS place has no group")
+var ErrWithoutCarePlaceGroupRefused = errors.New("a child without an OGS place has no group")
 
-// ErrWithoutCarePlaceCareTimes refuses OGS arrival or pickup times, their
+// ErrWithoutCarePlaceCareData refuses OGS arrival or pickup times, their
 // exceptions and notes, and an OGS way home for a child without an OGS place.
-var ErrWithoutCarePlaceCareTimes = errors.New("a child without an OGS place has no OGS times and no OGS way home")
+var ErrWithoutCarePlaceCareData = errors.New("a child without an OGS place has no OGS times and no OGS way home")
 
 // errWithoutCarePlaceOff refuses a child without an OGS place while the
 // school's switch is off or Unterricht am Vormittag is not booked.
@@ -31,10 +31,10 @@ var errWithoutCarePlaceOff = errors.New("this school does not keep children with
 
 // studentRequestError maps a refused create request onto its response.
 func studentRequestError(err error) render.Renderer {
-	if errors.Is(err, ErrWithoutCarePlaceCareTimes) {
+	if errors.Is(err, ErrWithoutCarePlaceCareData) {
 		return common.ErrorConflictWithCode(err, common.CodeStudentsWithoutCarePlaceCareData)
 	}
-	if errors.Is(err, ErrWithoutCarePlaceCareData) {
+	if errors.Is(err, ErrWithoutCarePlaceGroupRefused) {
 		return common.ErrorInvalidRequestWithCode(err, common.CodeStudentsWithoutCarePlaceGroup)
 	}
 	return common.ErrorInvalidRequest(err)

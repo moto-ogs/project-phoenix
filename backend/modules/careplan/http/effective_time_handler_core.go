@@ -159,7 +159,7 @@ func (rs *Resource) requireCareWriteAccess(
 	// Arrival and pickup times, their exceptions and notes are OGS care: a
 	// child without an OGS place (#4803, ADR 0283) has none.
 	if student.WithoutCarePlace {
-		renderError(w, r, studentRequestError(ErrWithoutCarePlaceCareTimes))
+		renderError(w, r, studentRequestError(ErrWithoutCarePlaceCareData))
 		return nil
 	}
 	return student

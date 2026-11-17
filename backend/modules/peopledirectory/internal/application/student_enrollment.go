@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 func (s *StudentService) ReadEnrollment(ctx context.Context, id int64, lock string) (result peopledirectory.EnrollmentRecord, err error) {
@@ -128,8 +129,10 @@ func (s *StudentService) RenewEnrollment(ctx context.Context, id int64, input do
 		// day turns into OGS participation. An administrative import keeps
 		// the status read under the student lock.
 		if !input.PreserveCarePlaceStatus {
-			if record.WithoutCarePlace && record.EnrolledFrom == "" {
-				record.EnrolledFrom = s.today().String()
+			// The place starts no earlier than today: a renewal dated into
+			// the running year must not turn past days into OGS care.
+			if today := s.today(); record.WithoutCarePlace && (record.EnrolledFrom == "" || calendar.Date(record.EnrolledFrom).Before(today)) {
+				record.EnrolledFrom = today.String()
 			}
 			record.WithoutCarePlace = false
 		}

@@ -116,6 +116,30 @@ func (c classListEntriesWhileChildrenKept) AddClassListEntry(ctx context.Context
 	return c.ClassListEntries.AddClassListEntry(ctx, in)
 }
 
+// ReviseClassListEntry, RemoveClassListEntry and ResolveClassListEntry hold
+// the same shared lock to commit, so a switch-on never converts an entry
+// under its old name or deletes one a concurrent write still changes.
+func (c classListEntriesWhileChildrenKept) ReviseClassListEntry(ctx context.Context, in schoolMembershipModule.ReviseClassListEntry) (schoolMembershipModule.ClassListEntry, error) {
+	if err := c.lock.LockClassListConversionShared(ctx); err != nil {
+		return schoolMembershipModule.ClassListEntry{}, err
+	}
+	return c.ClassListEntries.ReviseClassListEntry(ctx, in)
+}
+
+func (c classListEntriesWhileChildrenKept) RemoveClassListEntry(ctx context.Context, in schoolMembershipModule.RemoveClassListEntry) error {
+	if err := c.lock.LockClassListConversionShared(ctx); err != nil {
+		return err
+	}
+	return c.ClassListEntries.RemoveClassListEntry(ctx, in)
+}
+
+func (c classListEntriesWhileChildrenKept) ResolveClassListEntry(ctx context.Context, in schoolMembershipModule.ResolveClassListEntry) error {
+	if err := c.lock.LockClassListConversionShared(ctx); err != nil {
+		return err
+	}
+	return c.ClassListEntries.ResolveClassListEntry(ctx, in)
+}
+
 func classListEntryRefusalCode(err error) string {
 	for _, refusal := range classListEntryRefusals {
 		if errors.Is(err, refusal.err) {
