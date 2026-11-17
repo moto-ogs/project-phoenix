@@ -52,6 +52,7 @@ export interface SetupSWROptions {
   useSWRMock: { mockImplementation: (fn: (key: unknown) => unknown) => void };
   mutateOrgs?: MutateFn;
   mutateSchools?: MutateFn;
+  mutateRequiredDetails?: MutateFn;
   mutateSchoolPersons?: MutateFn;
   orgs?: unknown[] | undefined;
   schools?: unknown[] | undefined;
@@ -91,6 +92,7 @@ export function setupSWR(opts: SetupSWROptions): void {
     useSWRMock,
     mutateOrgs,
     mutateSchools,
+    mutateRequiredDetails,
     mutateSchoolPersons,
     orgs = [mockOrg],
     schools = [mockSchool],
@@ -136,7 +138,8 @@ export function setupSWR(opts: SetupSWROptions): void {
         data: requiredDetailsError ? undefined : requiredDetails,
         error: requiredDetailsError,
         isLoading: false,
-        mutate: () => Promise.resolve(requiredDetails),
+        mutate:
+          mutateRequiredDetails ?? (() => Promise.resolve(requiredDetails)),
       };
     }
     if (key === "operator-provisioning-stats") {

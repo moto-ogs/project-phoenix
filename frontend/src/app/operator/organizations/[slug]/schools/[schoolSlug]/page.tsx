@@ -220,7 +220,11 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
 
   // What the school still lacks (#7174); the edit dialog completes it. A
   // failed read leaves the dialog without the hint, never with a wrong one.
-  const { data: requiredDetails, mutate: mutateRequiredDetails } = useSWRAuth(
+  const {
+    data: requiredDetails,
+    error: requiredDetailsError,
+    mutate: mutateRequiredDetails,
+  } = useSWRAuth(
     isAuthenticated ? operatorProvisioningKeys.schoolRequiredDetails() : null,
     () => operatorProvisioningService.listSchoolRequiredDetails(),
     { revalidateOnFocus: false, dedupingInterval: 5000 },
@@ -344,6 +348,11 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
     organizationsError ?? schoolsError,
     "die Übersicht der Schule",
     () => void refreshSchoolDetail(),
+  );
+  const requiredDetailsLoadError = useSwrLoadError(
+    requiredDetailsError,
+    "die fehlenden Pflichtangaben",
+    () => void mutateRequiredDetails(),
   );
   const pwaUsageLoadError = useSwrLoadError(
     pwaUsageError,
@@ -945,6 +954,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       }
     >
       <LoadErrorAlert error={headLoadError} />
+      <LoadErrorAlert error={requiredDetailsLoadError} />
       <LoadErrorAlert error={schoolDelete.reloadError} />
       <LoadErrorAlert error={statusAfterWrite.error} />
       <LoadErrorAlert error={editAfterWrite.error} />

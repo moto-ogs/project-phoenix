@@ -123,6 +123,11 @@ export default function OperatorSchoolsPage() {
         : undefined,
     [requiredDetailsList],
   );
+  // A missing response cannot identify which schools match this filter.
+  // Reset a prior selection while the required details are unavailable.
+  useLayoutEffect(() => {
+    if (requiredDetails === undefined) setRequiredFilter("all");
+  }, [requiredDetails]);
   // The create form and the trash need the providers.
   const organizationsLoadError = useSwrLoadError(
     organizationsError,
@@ -224,7 +229,10 @@ export default function OperatorSchoolsPage() {
       await revalidateTenantCache([target.subdomain]);
     },
     onAfterRestore: async (target) => {
-      await revalidateTenantCache([target.subdomain]);
+      await Promise.all([
+        revalidateTenantCache([target.subdomain]),
+        mutateRequiredDetails(),
+      ]);
     },
   });
 
@@ -301,7 +309,11 @@ export default function OperatorSchoolsPage() {
         )
       }
       actions={schoolSummariesAccessRefused ? undefined : actionButton}
-      filters={schoolDelete.showTrash ? undefined : filterConfigs}
+      filters={
+        schoolDelete.showTrash || requiredDetails === undefined
+          ? undefined
+          : filterConfigs
+      }
       overlays={
         <>
           <CreateSchoolModal

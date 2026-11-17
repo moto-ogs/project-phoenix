@@ -25,6 +25,7 @@ const {
   mockUseSWR,
   mockMutateOrgs,
   mockMutateSchools,
+  mockMutateRequiredDetails,
   mockListOrganizations,
   mockListSchools,
   mockCreateSchool,
@@ -39,6 +40,7 @@ const {
   mockUseSWR: vi.fn(),
   mockMutateOrgs: vi.fn(),
   mockMutateSchools: vi.fn(),
+  mockMutateRequiredDetails: vi.fn(),
   mockListOrganizations: vi.fn(),
   mockListSchools: vi.fn(),
   mockCreateSchool: vi.fn(),
@@ -166,6 +168,7 @@ function withDefaultSWR(overrides: SWROverrides = {}) {
     useSWRMock: mockUseSWR,
     mutateOrgs: mockMutateOrgs,
     mutateSchools: mockMutateSchools,
+    mutateRequiredDetails: mockMutateRequiredDetails,
     ...overrides,
   });
 }
@@ -185,6 +188,7 @@ describe("OperatorSchoolsPage", () => {
     });
     mockMutateOrgs.mockResolvedValue(undefined);
     mockMutateSchools.mockResolvedValue([mockSchool]);
+    mockMutateRequiredDetails.mockResolvedValue(undefined);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ status: "ok" })),
     );
@@ -288,6 +292,7 @@ describe("OperatorSchoolsPage", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Test School")).toBeInTheDocument();
+    expect(screen.queryByTestId("filter-pflichtangaben")).toBeNull();
   });
 
   // --- Create ---
@@ -714,6 +719,7 @@ describe("OperatorSchoolsPage", () => {
     await waitFor(() => {
       expect(mockRestoreSchool).toHaveBeenCalledWith("20");
       expect(mockMutateSchools).toHaveBeenCalled();
+      expect(mockMutateRequiredDetails).toHaveBeenCalled();
     });
   });
 
