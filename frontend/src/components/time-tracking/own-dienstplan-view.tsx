@@ -76,16 +76,6 @@ export function OwnDienstplanView() {
   // Ohne Personalprofil gibt es keinen eigenen Dienstplan (#7306).
   const noOwnStaff = useNoOwnStaffProfileEmpty(STAFF_PLAN_ICON);
 
-  if (noOwnStaff) {
-    return (
-      <TenantPage
-        title="Mein Dienstplan"
-        testId="own-dienstplan-page"
-        empty={noOwnStaff}
-      />
-    );
-  }
-
   if (isDenied) {
     return (
       <TenantPage
@@ -107,6 +97,16 @@ export function OwnDienstplanView() {
             </ButtonLink>
           ),
         }}
+      />
+    );
+  }
+
+  if (noOwnStaff) {
+    return (
+      <TenantPage
+        title="Mein Dienstplan"
+        testId="own-dienstplan-page"
+        empty={noOwnStaff}
       />
     );
   }

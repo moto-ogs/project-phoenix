@@ -438,10 +438,11 @@ describe("OwnDienstplanView", () => {
     expect(screen.queryByText("geplant")).not.toBeInTheDocument();
   });
 
-  // Ein Hinweis der Glocke führt mit ?d= hierher (#7148). Ohne eigenen
-  // Dienstplan erklärt die Seite das, statt still umzuleiten.
-  it("explains a missing own duty roster instead of redirecting", () => {
+  // Ein Hinweis der Glocke führt mit ?d= hierher (#7148). Die fehlende
+  // Berechtigung erklärt die Seite auch dann, wenn kein Personalprofil da ist.
+  it("explains missing permission before a missing staff profile", () => {
     state.permissionDenied = true;
+    state.hasOwnStaff = false;
     state.day = "2026-11-20";
 
     render(<OwnDienstplanView />);
