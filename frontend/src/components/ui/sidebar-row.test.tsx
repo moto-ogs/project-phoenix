@@ -38,7 +38,10 @@ describe("SidebarRowLink (#5975)", () => {
       />,
     );
 
-    expect(screen.getAllByLabelText("3 offene Anfragen")).toHaveLength(1);
+    // The count is part of the row's name, read once (#7112).
+    expect(
+      screen.getByRole("link", { name: "Anfragen 3 offene Anfragen" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Anfragen")).toBeInTheDocument();
   });
 
@@ -57,13 +60,15 @@ describe("SidebarRowLink (#5975)", () => {
       />,
     );
 
+    // The rail name is hidden text in the row, the count follows it (#7112).
     const link = screen.getByRole("link", {
-      name: "Abrechnung, nicht gebucht",
+      name: "Abrechnung, nicht gebucht 3 offene Anfragen",
     });
     expect(link).toHaveAttribute("title", "Abrechnung");
     expect(screen.queryByText("Abrechnung")).not.toBeInTheDocument();
-    const railBadge = screen.getByLabelText("3 offene Anfragen");
-    expect(railBadge.parentElement).toHaveAttribute("aria-hidden", "false");
+    const railBadge = screen.getByText(/^offene Anfragen$/).parentElement;
+    expect(railBadge).toHaveTextContent("3 offene Anfragen");
+    expect(railBadge?.parentElement).toHaveAttribute("aria-hidden", "false");
   });
 
   it("opens targets outside the app in a new tab", () => {

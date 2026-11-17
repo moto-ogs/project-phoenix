@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { releaseFakeTimers } from "~/test/clock";
 
@@ -216,7 +216,7 @@ describe("PlannedNowSection", () => {
       "Kommt heute um 12:45 Uhr (Klasse 2a: Unterricht fällt aus)",
     );
     expect(line.className).not.toContain("text-moto-amber-strong");
-    expect(screen.queryByLabelText(/Planungs-Hinweis/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Planungs-Hinweis:/)).toBeNull();
   });
 
   it("renders roster planning warnings", () => {
@@ -249,15 +249,23 @@ describe("PlannedNowSection", () => {
       />,
     );
 
-    expect(screen.getByLabelText("1 Planungs-Hinweis")).toHaveAttribute(
-      "title",
+    // The hint icon keeps its tooltip and reads the hint itself as hidden
+    // text: a title reaches no screen reader (#7112).
+    const hint = screen.getByTitle(
       "Erwartete Ankunft liegt nach dem Start dieser Betreuung.",
     );
     expect(
-      screen.getByText(
-        "Erwartete Ankunft liegt nach dem Start dieser Betreuung.",
+      within(hint).getByText(
+        "Planungs-Hinweis: Erwartete Ankunft liegt nach dem Start dieser Betreuung.",
       ),
-    ).toBeInTheDocument();
+    ).toHaveClass("sr-only");
+    expect(
+      screen
+        .getAllByText(
+          "Erwartete Ankunft liegt nach dem Start dieser Betreuung.",
+        )
+        .filter((element) => !element.classList.contains("sr-only")),
+    ).toHaveLength(1);
   });
 
   it("does not crash when a roster preview row has no warnings array", () => {
@@ -280,7 +288,7 @@ describe("PlannedNowSection", () => {
     );
 
     expect(screen.getByText("Mia Bauer")).toBeInTheDocument();
-    expect(screen.queryByLabelText(/Planungs-Hinweis/)).toBeNull();
+    expect(screen.queryByText(/^Planungs-Hinweis:/)).toBeNull();
   });
 
   // #4350: dieselbe Markierung wie im Tagesplan. Ob ein Block der eigene ist,

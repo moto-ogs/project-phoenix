@@ -103,16 +103,19 @@ describe("SupervisionStudentGrid one-day change (#3946)", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Mia Schulz, Gehzeit heute geändert - Details öffnen",
+        // Named by what the card shows, name first (#7112).
+        name: /^Mia Schulz .*Gehzeit heute geändert , Details öffnen$/,
       }),
     ).toHaveAttribute("data-day-home-change", "time");
     expect(
       screen.getByRole("button", {
-        name: "Lea Brandt, Abholart heute geändert: Wird abgeholt - Details öffnen",
+        name: /^Lea Brandt .*Abholart heute geändert: Wird abgeholt , Details öffnen$/,
       }),
     ).toHaveAttribute("data-day-home-change", "mode");
     expect(
-      screen.getByRole("button", { name: "Ben Kurz - Details öffnen" }),
+      screen.getByRole("button", {
+        name: /^Ben Kurz .*Unbekannt , Details öffnen$/,
+      }),
     ).not.toHaveAttribute("data-day-home-change");
   });
 });

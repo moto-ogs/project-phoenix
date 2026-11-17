@@ -57,10 +57,15 @@ export function combineSidebarRowBadges(
   if (parts.length === 0) return null;
   const labels = parts.map((badge) => badge.ariaLabel);
   const last = labels.pop();
+  const count = parts.reduce((sum, badge) => sum + badge.count, 0);
   return {
-    count: parts.reduce((sum, badge) => sum + badge.count, 0),
+    count,
     tone,
-    ariaLabel: labels.length > 0 ? `${labels.join(", ")} und ${last}` : last!,
+    // The visible sum leads what is read, then each part (WCAG 2.5.3, #7112).
+    ariaLabel:
+      labels.length > 0
+        ? `${count} insgesamt: ${labels.join(", ")} und ${last}`
+        : last!,
   };
 }
 
@@ -84,10 +89,18 @@ export function SidebarRowContent({
   badge,
   chevronOpen,
   railBadgeClassName = SIDEBAR_RAIL_BADGE_CLASSES,
+  collapsedName,
   collapsed = false,
   labelsMounted = true,
   labelsVisible = true,
 }: SidebarRowCollapseState & {
+  /**
+   * Der Name im Streifen, wenn er mehr sagt als `label` („…, nicht
+   * gebucht“). Er steht als versteckter Text in der Zeile, nicht als
+   * aria-label: sonst verschluckte er den sichtbaren Zähler (WCAG 2.5.3,
+   * #7112).
+   */
+  readonly collapsedName?: string;
   /** Fehlt beim Unterpunkt; dann rückt die Bezeichnung nicht ein. */
   readonly icon?: ReactNode;
   readonly label: string;
@@ -102,9 +115,16 @@ export function SidebarRowContent({
   readonly railBadgeClassName?: string;
 }) {
   const showBadge = badge != null && badge.count > 0;
+  const nameRest =
+    collapsed && collapsedName?.startsWith(label)
+      ? collapsedName.slice(label.length)
+      : "";
   return (
     <>
       {icon}
+      {labelsMounted ? null : (
+        <span className="sr-only">{collapsedName ?? label}</span>
+      )}
       {labelsMounted && (
         <>
           <span
@@ -112,6 +132,7 @@ export function SidebarRowContent({
           >
             {label}
           </span>
+          {nameRest ? <span className="sr-only">{nameRest}</span> : null}
           {trailing ? (
             <span
               className={`ml-2 inline-flex shrink-0 ${sidebarFadeClasses(labelsVisible)}`}
@@ -202,9 +223,7 @@ export function SidebarRowLink({
       data-active={active ? "true" : "false"}
       aria-current={active ? "page" : undefined}
       className={sidebarRowClasses({ isActive: active })}
-      {...(collapsed
-        ? { title: label, "aria-label": collapsedLabel ?? label }
-        : {})}
+      {...(collapsed ? { title: label } : {})}
       {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
       <SidebarRowContent
@@ -212,6 +231,7 @@ export function SidebarRowLink({
         label={label}
         trailing={trailing}
         badge={badge}
+        collapsedName={collapsedLabel}
         collapsed={collapsed}
         labelsMounted={labelsMounted}
         labelsVisible={labelsVisible}
@@ -280,7 +300,7 @@ export function SidebarRowButton({
       {...buttonProps}
       type="button"
       className={`${sidebarRowClasses()} cursor-pointer`}
-      {...(collapsed ? { title: label, "aria-label": label } : {})}
+      {...(collapsed ? { title: label } : {})}
     >
       <SidebarRowContent
         icon={icon}

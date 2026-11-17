@@ -87,35 +87,6 @@ function TypePill({
   );
 }
 
-function rowAccessibleLabel({
-  childName,
-  type,
-  typeLabel,
-  summary,
-  status,
-  timing,
-  open,
-}: Readonly<{
-  childName: string;
-  type?: RequestRowType;
-  typeLabel?: string;
-  summary?: string;
-  status?: string;
-  timing?: string | null;
-  open: boolean;
-}>): string {
-  return [
-    `Anfrage für ${childName}`,
-    typeLabel ?? (type ? TYPE_LABEL[type] : undefined),
-    summary,
-    status,
-    timing,
-    open ? "Details ausblenden" : "Details anzeigen",
-  ]
-    .filter((part): part is string => Boolean(part))
-    .join(". ");
-}
-
 type RequestReviewCardHistoryBase = {
   readonly decidedAt: string;
   readonly decidedByName?: string;
@@ -297,15 +268,7 @@ export function RequestReviewCard({
                 ? GROUPED_OPEN_ROW_GRID
                 : OPEN_ROW_GRID
           }
-          ariaLabel={rowAccessibleLabel({
-            childName,
-            type,
-            typeLabel,
-            summary,
-            status: meta?.label,
-            timing: decided ? history.decidedAt : waitingDisplay,
-            open,
-          })}
+          hiddenName={grouped && !decided ? childName : undefined}
         >
           {history.decidedAt && (
             <span className="hidden text-xs text-gray-500 sm:block">
@@ -371,14 +334,7 @@ export function RequestReviewCard({
         open={open}
         onToggle={() => setOpen((o) => !o)}
         grid={grouped ? GROUPED_OPEN_ROW_GRID : OPEN_ROW_GRID}
-        ariaLabel={rowAccessibleLabel({
-          childName,
-          type,
-          typeLabel,
-          summary,
-          timing: waitingDisplay,
-          open,
-        })}
+        hiddenName={grouped ? childName : undefined}
       >
         {grouped ? null : (
           <span className="truncate text-sm font-semibold text-gray-900">
@@ -478,13 +434,18 @@ function RowButton({
   open,
   onToggle,
   grid,
-  ariaLabel,
+  hiddenName,
   children,
 }: Readonly<{
   open: boolean;
   onToggle: () => void;
   grid: string;
-  ariaLabel: string;
+  /**
+   * Das Kind, wenn die Zeile es nicht zeigt (gruppiert unter seinem Namen).
+   * Sonst nennt sich die Zeile nach ihren sichtbaren Zellen (WCAG 2.5.3,
+   * #7112); auf oder zu sagt aria-expanded.
+   */
+  hiddenName?: string;
   children: ReactNode;
 }>) {
   return (
@@ -493,10 +454,10 @@ function RowButton({
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      aria-label={ariaLabel}
       className={`flex w-full flex-wrap items-center justify-start gap-1.5 px-4 py-3 text-left text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50/60 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none sm:px-5 ${grid}`}
     >
       {children}
+      {hiddenName ? <span className="sr-only">{`, ${hiddenName}`}</span> : null}
       <ChevronDown
         className={`ml-auto h-4 w-4 shrink-0 text-gray-500 transition-transform sm:ml-0 ${open ? "rotate-180" : ""}`}
         aria-hidden="true"

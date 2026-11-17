@@ -6,7 +6,8 @@
     "phase": "Auswahl",
     "form": "Formular",
     "done": "Bestätigung",
-    "aria": "Fortschritt der Anmeldung"
+    "aria": "Fortschritt der Anmeldung",
+    "completed": "erledigt"
   },
   "loading": "Anmeldung wird geladen…",
   "phaseTitle": "Wofür möchten Sie Ihr Kind anmelden?",

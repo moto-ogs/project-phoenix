@@ -27,7 +27,13 @@ describe("OpenWithdrawalCard", () => {
       <OpenWithdrawalCard row={row({})} finish={vi.fn()} remove={vi.fn()} />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Details anzeigen/ }));
+    // The row is named by its cells; open or closed is aria-expanded (#7112).
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /^Emelie Beispiel Abmeldung/,
+        expanded: false,
+      }),
+    );
 
     expect(
       screen.getByText(
@@ -45,7 +51,13 @@ describe("OpenWithdrawalCard", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Details anzeigen/ }));
+    // The row is named by its cells; open or closed is aria-expanded (#7112).
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /^Emelie Beispiel Abmeldung/,
+        expanded: false,
+      }),
+    );
 
     expect(
       screen.getByText(

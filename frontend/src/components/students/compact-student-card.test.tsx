@@ -104,7 +104,8 @@ describe("CompactStudentCard", () => {
     );
 
     const button = screen.getByRole("button", {
-      name: "Anna Müller - Profil öffnen",
+      // Named by its content, the name first (#7112).
+      name: /^Anna Müller ?, Profil öffnen$/,
     });
     expect(button).toHaveAttribute("data-testid", "compact-student-card-42");
     expect(button).toHaveAttribute("type", "button");

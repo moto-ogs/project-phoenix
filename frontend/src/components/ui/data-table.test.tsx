@@ -6,6 +6,7 @@
  * placeholder rendering path, plus expandable, sub and summary rows.
  */
 import { render, screen, fireEvent, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 
 import {
@@ -69,7 +70,10 @@ describe("DataTable keyboard navigation", () => {
     setViewportWidth(DESKTOP_WIDTH);
   });
 
-  it("invokes onRowClick when Enter is pressed on a clickable row", () => {
+  // The keyboard reaches a row through a real button in its first cell,
+  // named by that cell; the row itself is no button (#7112).
+  it("invokes onRowClick when Enter is pressed on a clickable row", async () => {
+    const user = userEvent.setup();
     const onRowClick = vi.fn();
 
     render(
@@ -81,24 +85,17 @@ describe("DataTable keyboard navigation", () => {
       />,
     );
 
-    const rowButtons = screen.getAllByRole("button");
-    // The first button is the column header sort; pick the row buttons by tabIndex=0
-    const clickableRow = rowButtons.find(
-      (el) => el.tagName === "TR" && el.getAttribute("tabIndex") === "0",
-    );
-    expect(clickableRow).toBeDefined();
-    if (clickableRow) {
-      fireEvent.keyDown(clickableRow, {
-        key: "Enter",
-        target: clickableRow,
-        currentTarget: clickableRow,
-      });
-    }
+    const rowButton = screen.getByRole("button", { name: "Alpha" });
+    expect(rowButton.closest("tr")).not.toHaveAttribute("role");
+    rowButton.focus();
+    await user.keyboard("{Enter}");
 
+    expect(onRowClick).toHaveBeenCalledTimes(1);
     expect(onRowClick).toHaveBeenCalledWith(rows[0]);
   });
 
-  it("invokes onRowClick when Space is pressed on a clickable row", () => {
+  it("invokes onRowClick when Space is pressed on a clickable row", async () => {
+    const user = userEvent.setup();
     const onRowClick = vi.fn();
 
     render(
@@ -110,18 +107,15 @@ describe("DataTable keyboard navigation", () => {
       />,
     );
 
-    const tr = screen
-      .getAllByRole("button")
-      .find((el) => el.tagName === "TR" && el.getAttribute("tabIndex") === "0");
-    expect(tr).toBeDefined();
-    if (tr) {
-      fireEvent.keyDown(tr, { key: " ", target: tr, currentTarget: tr });
-    }
+    screen.getByRole("button", { name: "Beta" }).focus();
+    await user.keyboard(" ");
 
-    expect(onRowClick).toHaveBeenCalled();
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    expect(onRowClick).toHaveBeenCalledWith(rows[1]);
   });
 
-  it("does not invoke onRowClick for other keys", () => {
+  it("does not invoke onRowClick for other keys", async () => {
+    const user = userEvent.setup();
     const onRowClick = vi.fn();
 
     render(
@@ -133,12 +127,8 @@ describe("DataTable keyboard navigation", () => {
       />,
     );
 
-    const tr = screen
-      .getAllByRole("button")
-      .find((el) => el.tagName === "TR" && el.getAttribute("tabIndex") === "0");
-    if (tr) {
-      fireEvent.keyDown(tr, { key: "a", target: tr, currentTarget: tr });
-    }
+    screen.getByRole("button", { name: "Alpha" }).focus();
+    await user.keyboard("a");
 
     expect(onRowClick).not.toHaveBeenCalled();
   });
@@ -914,30 +904,42 @@ describe("DataTable expandable rows, sub rows and summary rows (#5600)", () => {
   const details = (row: HourRow, expanded: boolean) =>
     expanded ? [{ key: `${row.id}-detail`, content: "Details des Tages" }] : [];
 
+  // The row stays a table row; its chevron is the button that carries
+  // aria-expanded and the row label (#7112). A click anywhere on the row
+  // still toggles it.
   it("opens a row with a click and closes it with a second click", () => {
     renderHours({ renderSubRows: details });
 
-    const row = screen.getByRole("row", { name: "Montag: Details öffnen" });
-    expect(row).toHaveAttribute("aria-expanded", "false");
+    const toggle = screen.getByRole("button", {
+      name: "Montag: Details öffnen",
+    });
+    const row = toggle.closest("tr")!;
+    expect(row).not.toHaveAttribute("aria-expanded");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Details des Tages")).not.toBeInTheDocument();
 
     fireEvent.click(row);
-    expect(row).toHaveAttribute("aria-expanded", "true");
-    expect(row).toHaveAccessibleName("Montag: Details schließen");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveAccessibleName("Montag: Details schließen");
     expect(screen.getByText("Details des Tages")).toBeInTheDocument();
 
     fireEvent.click(row);
-    expect(row).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Details des Tages")).not.toBeInTheDocument();
   });
 
-  it.each(["Enter", " "])("toggles a row with the key %j", (key) => {
+  it.each(["{Enter}", " "])("toggles a row with the key %j", async (key) => {
+    const user = userEvent.setup();
     renderHours({ renderSubRows: details });
 
-    const row = screen.getByRole("row", { name: "Montag: Details öffnen" });
-    fireEvent.keyDown(row, { key });
+    const toggle = screen.getByRole("button", {
+      name: "Montag: Details öffnen",
+    });
+    toggle.focus();
+    await user.keyboard(key);
 
-    expect(row).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Details des Tages")).toBeInTheDocument();
   });
 
   it("ignores a key pressed on a control inside the row", () => {
@@ -957,7 +959,7 @@ describe("DataTable expandable rows, sub rows and summary rows (#5600)", () => {
     });
 
     expect(
-      screen.getByRole("row", { name: "Montag: Details öffnen" }),
+      screen.getByRole("button", { name: "Montag: Details öffnen" }),
     ).toHaveAttribute("aria-expanded", "false");
   });
 
@@ -978,12 +980,16 @@ describe("DataTable expandable rows, sub rows and summary rows (#5600)", () => {
       renderSubRows: details,
     });
 
-    fireEvent.click(screen.getByRole("row", { name: "Montag" }));
-    fireEvent.click(screen.getByRole("row", { name: "Dienstag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Montag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Dienstag" }));
 
-    expect(screen.getByRole("row", { name: "Montag" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Montag" })).toHaveAttribute(
       "aria-expanded",
       "false",
+    );
+    expect(screen.getByRole("button", { name: "Dienstag" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
     );
     expect(screen.getAllByText("Details des Tages")).toHaveLength(1);
   });

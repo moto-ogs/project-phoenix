@@ -131,28 +131,35 @@ export function CapacityStrip({
       : "border-t border-gray-200";
 
   if (as === "div") {
+    // A row needs its table around it (axe aria-required-parent, #7112); in
+    // div mode the strip stands alone, so it brings a one-row table.
     return (
       <div
-        role="row"
-        style={{ gridTemplateColumns } as CSSProperties}
-        className={`grid ${borderClass} bg-gray-50 ${className ?? ""}`.trim()}
+        role="table"
+        aria-label={typeof rowLabel === "string" ? rowLabel : undefined}
       >
         <div
-          role="cell"
-          className={`sticky left-0 ${Z_LAYER.raised} ${labelWidthClassName} bg-gray-50 px-2 py-1.5 text-left text-xs font-medium text-gray-500`}
+          role="row"
+          style={{ gridTemplateColumns } as CSSProperties}
+          className={`grid ${borderClass} bg-gray-50 ${className ?? ""}`.trim()}
         >
-          {rowLabel}
-        </div>
-        {cells.map((cell) => (
           <div
-            key={cell.key}
-            role="cell"
-            title={cellDisplay(cell).title}
-            className="border-l border-gray-100 px-2 py-1.5 text-center text-xs text-gray-600 tabular-nums"
+            role="rowheader"
+            className={`sticky left-0 ${Z_LAYER.raised} ${labelWidthClassName} bg-gray-50 px-2 py-1.5 text-left text-xs font-medium text-gray-500`}
           >
-            <CellValue cell={cell} />
+            {rowLabel}
           </div>
-        ))}
+          {cells.map((cell) => (
+            <div
+              key={cell.key}
+              role="cell"
+              title={cellDisplay(cell).title}
+              className="border-l border-gray-100 px-2 py-1.5 text-center text-xs text-gray-600 tabular-nums"
+            >
+              <CellValue cell={cell} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

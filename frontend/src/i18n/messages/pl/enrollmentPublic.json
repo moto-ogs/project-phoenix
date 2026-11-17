@@ -6,7 +6,8 @@
     "phase": "Wybór",
     "form": "Formularz",
     "done": "Potwierdzenie",
-    "aria": "Postęp zapisu"
+    "aria": "Postęp zapisu",
+    "completed": "ukończono"
   },
   "loading": "Wczytywanie zapisu…",
   "phaseTitle": "Na co chcą Państwo zapisać dziecko?",

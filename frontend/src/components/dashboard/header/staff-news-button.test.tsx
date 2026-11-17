@@ -77,7 +77,9 @@ describe("StaffNewsButton", () => {
     });
     render(<StaffNewsButton />);
 
-    const button = screen.getByRole("button", { name: "Neu für Sie (3)" });
+    const button = screen.getByRole("button", {
+      name: "Neu für Sie 3 ungelesen",
+    });
     expect(screen.getByText("3")).toBeInTheDocument();
     fireEvent.click(button);
 

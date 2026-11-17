@@ -286,6 +286,51 @@ function createMockSession(isAdminUser: boolean) {
   } as unknown as ReturnType<typeof useSession>;
 }
 
+/**
+ * Counters carry no aria-label (#7112): the number is visible text, the rest
+ * of the sentence hidden text, read as part of the row's name. A counter is
+ * the span that holds both.
+ */
+/**
+ * A target in the 64-px rail: its name is hidden text in it now (#7112),
+ * not an aria-label, so it is no visible label either.
+ */
+function railTarget(name: string): HTMLElement {
+  const target = screen.getByRole("link", { name });
+  expect(within(target).getByText(name)).toHaveClass("sr-only");
+  return target;
+}
+
+function counters(
+  text: string | RegExp,
+  container: ParentNode = document,
+): HTMLElement[] {
+  return Array.from(container.querySelectorAll("span")).filter((element) => {
+    if (element.querySelector(":scope > .sr-only") === null) return false;
+    const content = element.textContent ?? "";
+    return typeof text === "string" ? content === text : text.test(content);
+  });
+}
+
+/**
+ * Links and buttons whose accessible name contains `text`: what a screen
+ * reader hears at a sidebar entry, the behaviour the counter assertions
+ * check (#7112).
+ */
+function controlsNaming(
+  text: string | RegExp,
+  container: HTMLElement = document.body,
+): HTMLElement[] {
+  const name =
+    typeof text === "string"
+      ? new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      : text;
+  return [
+    ...within(container).queryAllByRole("link", { name }),
+    ...within(container).queryAllByRole("button", { name }),
+  ];
+}
+
 describe("Sidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -630,7 +675,7 @@ describe("Sidebar", () => {
         "href",
         "/test-tenant/anfragen",
       );
-      expect(screen.getByLabelText("9 offene Anfragen")).toBeInTheDocument();
+      expect(counters("9 offene Anfragen")).toHaveLength(1);
     });
 
     it("hides Anfragen without a current effective review scope", () => {
@@ -648,9 +693,7 @@ describe("Sidebar", () => {
       // Anker: die Staff-Navigation ist geladen, nicht nur das Skelett.
       expect(screen.getByText("Gruppen")).toBeInTheDocument();
       expect(screen.queryByText("Anfragen")).not.toBeInTheDocument();
-      expect(
-        screen.queryByLabelText("2 offene Anfragen"),
-      ).not.toBeInTheDocument();
+      expect(controlsNaming("2 offene Anfragen")).toHaveLength(0);
     });
 
     it("prefixes the Team-Chat link in path-routing mode", () => {
@@ -677,16 +720,22 @@ describe("Sidebar", () => {
       render(<Sidebar />);
 
       const row = screen.getByText("Team-Chat").closest("a")!;
-      expect(within(row).getByText("3")).toHaveAccessibleName(
-        "3 ungelesene Nachrichten im Team-Chat",
+      expect(
+        counters("3 ungelesene Nachrichten im Team-Chat", row),
+      ).toHaveLength(1);
+      expect(row).toHaveAccessibleName(
+        "Team-Chat 3 ungelesene Nachrichten im Team-Chat",
       );
       // Team steht beim ersten Besuch offen (#6670); zugeklappt trägt die
       // Gruppe den Zähler ihrer Zeile.
       const group = screen.getByRole("button", { name: /^Team/ });
       fireEvent.click(group);
       expect(group).toHaveAttribute("aria-expanded", "false");
-      expect(within(group).getByText("3")).toHaveAccessibleName(
-        "3 ungelesene Nachrichten im Team-Chat",
+      expect(
+        counters("3 ungelesene Nachrichten im Team-Chat", group),
+      ).toHaveLength(1);
+      expect(group).toHaveAccessibleName(
+        "Team 3 ungelesene Nachrichten im Team-Chat",
       );
     });
 
@@ -2866,14 +2915,10 @@ describe("Sidebar", () => {
       const messages = screen.getByRole("link", {
         name: "Nachrichten , nicht gebucht",
       });
-      expect(
-        within(messages).queryByLabelText("2 ungelesene Nachrichten"),
-      ).not.toBeInTheDocument();
+      expect(messages).not.toHaveAccessibleName(/2 ungelesene Nachrichten/);
 
       const parents = screen.getByRole("button", { name: /^Eltern/ });
-      expect(
-        within(parents).queryByLabelText("2 ungelesene Nachrichten"),
-      ).not.toBeInTheDocument();
+      expect(parents).not.toHaveAccessibleName(/2 ungelesene Nachrichten/);
     });
 
     it("zeigt der Leitung gesperrte Datenverwaltung ohne Routenrecht", () => {
@@ -3723,10 +3768,11 @@ describe("Sidebar", () => {
       const { container } = render(<Sidebar />);
 
       expect(container.querySelector("aside")).toHaveClass("w-16");
-      // Labels verschwinden; die Ziele bleiben als beschriftete Icons da.
-      expect(screen.queryByText("Aktivitäten")).not.toBeInTheDocument();
-      expect(screen.getByLabelText("Aktivitäten")).toBeInTheDocument();
-      expect(screen.getByLabelText("Räume")).toBeInTheDocument();
+      // Labels verschwinden; die Ziele bleiben als beschriftete Icons da,
+      // ihr Name steht nur noch als versteckter Text in der Zeile (#7112).
+      expect(screen.getByText("Aktivitäten")).toHaveClass("sr-only");
+      expect(railTarget("Aktivitäten")).toBeInTheDocument();
+      expect(railTarget("Räume")).toBeInTheDocument();
     });
 
     it("follows the header toggle via the shared store while mounted", () => {
@@ -3786,7 +3832,7 @@ describe("Sidebar", () => {
 
       expect(team).toHaveAttribute("aria-expanded", "true");
       expect(container.querySelector("aside")).toHaveClass("w-16");
-      expect(screen.getByLabelText("Zeiterfassung")).toBeInTheDocument();
+      expect(railTarget("Zeiterfassung")).toBeInTheDocument();
     });
 
     // Nackt auf `/help` fragte die Hilfe zuerst nach Rolle und
@@ -3829,8 +3875,8 @@ describe("Sidebar", () => {
       localStorage.setItem("sidebar-collapsed", "true");
       render(<Sidebar />);
 
-      expect(screen.getByLabelText("Notfall")).toBeInTheDocument();
-      expect(screen.getByLabelText("Hilfe")).toBeInTheDocument();
+      expect(railTarget("Notfall")).toBeInTheDocument();
+      expect(railTarget("Hilfe")).toBeInTheDocument();
     });
 
     it("keeps Heute reachable as an icon in the rail (#2383, #4348)", () => {
@@ -3843,7 +3889,7 @@ describe("Sidebar", () => {
 
       render(<Sidebar />);
 
-      expect(screen.getByLabelText("Heute")).toBeInTheDocument();
+      expect(railTarget("Heute")).toBeInTheDocument();
     });
   });
 
@@ -3937,11 +3983,12 @@ describe("Sidebar", () => {
       expect(label.className).toContain("opacity-0");
       expect(label.className).toContain("truncate");
 
-      // … und ist erst nach der Bewegung aus dem Baum verschwunden.
+      // … und ist erst nach der Bewegung aus dem Baum verschwunden; nur
+      // der versteckte Name bleibt (#7112).
       await waitFor(() =>
-        expect(screen.queryByText("Aktivitäten")).not.toBeInTheDocument(),
+        expect(screen.getByText("Aktivitäten")).toHaveClass("sr-only"),
       );
-      expect(screen.getByLabelText("Aktivitäten")).toBeInTheDocument();
+      expect(railTarget("Aktivitäten")).toBeInTheDocument();
     });
 
     it("entfernt die Bezeichnungen bei prefers-reduced-motion sofort", () => {
@@ -3970,7 +4017,8 @@ describe("Sidebar", () => {
           globalThis.dispatchEvent(new Event("sidebar-collapsed-change"));
         });
 
-        expect(screen.queryByText("Aktivitäten")).not.toBeInTheDocument();
+        // Sofort bleibt nur der versteckte Name (#7112).
+        expect(screen.getByText("Aktivitäten")).toHaveClass("sr-only");
       } finally {
         globalThis.matchMedia = original;
       }
@@ -4002,7 +4050,7 @@ describe("Sidebar", () => {
       // Beide Zähler stehen für die Dauer der Gegenblende im Baum — der
       // ausblendende ist unsichtbar und darf deshalb auch nicht vorgelesen
       // werden.
-      const badges = screen.getAllByLabelText("9 offene Anfragen");
+      const badges = counters("9 offene Anfragen");
       expect(badges).toHaveLength(2);
       expect(
         badges.filter(
@@ -4052,9 +4100,7 @@ describe("Sidebar", () => {
       // Für die Dauer der Gegenblende stehen beide Zähler im Baum; der
       // ausblendende ist unsichtbar und darf nicht mitgelesen werden.
       const header = screen.getByText("Eltern").closest("button");
-      const badges = within(header!).getAllByLabelText(
-        "4 ungelesene Nachrichten",
-      );
+      const badges = counters("4 ungelesene Nachrichten", header!);
       expect(badges).toHaveLength(2);
       expect(
         badges.filter(
@@ -4110,12 +4156,8 @@ describe("Sidebar", () => {
 
       render(<Sidebar />);
 
-      expect(
-        screen.getAllByLabelText("3 ungelesene Anmeldungen").length,
-      ).toBeGreaterThan(0);
-      expect(
-        screen.queryByLabelText(/offene Anfragen?$/),
-      ).not.toBeInTheDocument();
+      expect(counters("3 ungelesene Anmeldungen").length).toBeGreaterThan(0);
+      expect(controlsNaming(/offene Anfragen?$/)).toHaveLength(0);
     });
 
     it("nennt am Unterpunkt eine Anmeldung in der Einzahl", () => {
@@ -4129,9 +4171,8 @@ describe("Sidebar", () => {
       render(<Sidebar />);
 
       const overview = screen.getByRole("link", { name: /^Überblick/ });
-      expect(within(overview).getByText("1")).toHaveAccessibleName(
-        "1 ungelesene Anmeldung",
-      );
+      expect(counters("1 ungelesene Anmeldung", overview)).toHaveLength(1);
+      expect(overview).toHaveAccessibleName("Überblick 1 ungelesene Anmeldung");
     });
 
     it("nennt am zugeklappten Bereich eine Anmeldung in der Einzahl", () => {
@@ -4144,12 +4185,8 @@ describe("Sidebar", () => {
       render(<Sidebar />);
       fireEvent.click(screen.getByRole("button", { name: /^Eltern/ }));
 
-      expect(
-        screen.getAllByLabelText("1 ungelesene Anmeldung").length,
-      ).toBeGreaterThan(0);
-      expect(
-        screen.queryByLabelText("1 ungelesene Anmeldungen"),
-      ).not.toBeInTheDocument();
+      expect(counters("1 ungelesene Anmeldung").length).toBeGreaterThan(0);
+      expect(controlsNaming("1 ungelesene Anmeldungen")).toHaveLength(0);
     });
 
     it("zeigt den Zähler am zugeklappten Bereich", () => {
@@ -4158,9 +4195,7 @@ describe("Sidebar", () => {
       // Die Gruppe summiert den Zähler auf ihre Kopfzeile.
       fireEvent.click(screen.getByRole("button", { name: /^Eltern/ }));
 
-      expect(
-        screen.getAllByLabelText("3 ungelesene Anmeldungen").length,
-      ).toBeGreaterThan(0);
+      expect(counters("3 ungelesene Anmeldungen").length).toBeGreaterThan(0);
     });
 
     // Die Gruppe zählt Nachrichten und Anmeldungen zusammen; vorgelesen
@@ -4184,8 +4219,8 @@ describe("Sidebar", () => {
 
       const header = screen.getByRole("button", { name: /^Eltern/ });
       expect(header).toHaveAttribute("aria-expanded", "false");
-      expect(within(header).getByText("5")).toHaveAccessibleName(
-        "2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
+      expect(header).toHaveAccessibleName(
+        "Eltern 5 insgesamt: 2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
       );
     });
 
@@ -4211,8 +4246,8 @@ describe("Sidebar", () => {
       render(<Sidebar />);
 
       const header = screen.getByRole("button", { name: /^Eltern/ });
-      expect(within(header).getByText("2")).toHaveAccessibleName(
-        "1 ungelesene Nachricht und 1 ungelesene Anmeldung",
+      expect(header).toHaveAccessibleName(
+        "Eltern 2 insgesamt: 1 ungelesene Nachricht und 1 ungelesene Anmeldung",
       );
     });
 
@@ -4225,9 +4260,7 @@ describe("Sidebar", () => {
 
       // Anker: die Staff-Navigation ist geladen.
       expect(screen.getByText("Mitarbeiter")).toBeInTheDocument();
-      expect(
-        screen.queryByLabelText(/ungelesene Anmeldungen/),
-      ).not.toBeInTheDocument();
+      expect(controlsNaming(/ungelesene Anmeldungen/)).toHaveLength(0);
     });
   });
 

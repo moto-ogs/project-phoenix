@@ -56,8 +56,6 @@ export const NoConflicts: Story = {
 };
 
 export const SingleConflict: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     openConflicts: [studentConflict],
     hiddenConflicts: [],
@@ -65,8 +63,6 @@ export const SingleConflict: Story = {
 };
 
 export const MultipleConflicts: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     openConflicts: [studentConflict, staffConflict],
     hiddenConflicts: [],
@@ -74,8 +70,6 @@ export const MultipleConflicts: Story = {
 };
 
 export const WithHiddenConflicts: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     openConflicts: [studentConflict],
     hiddenConflicts: [staffConflict],

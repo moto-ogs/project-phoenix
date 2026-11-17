@@ -159,7 +159,9 @@ import { ToastProvider } from "~/contexts/ToastContext";
 
 import { BrandTenantSwitcher } from "./tenant-switcher";
 
-const TRIGGER_LABEL = "Einrichtung wechseln";
+// The trigger is named by the school it shows; the action follows as hidden
+// text (WCAG 2.5.3, #7112).
+const TRIGGER_LABEL = /, Einrichtung wechseln$/;
 
 // ============================================================================
 // Test Data

@@ -6,7 +6,8 @@
     "phase": "Seçim",
     "form": "Form",
     "done": "Onay",
-    "aria": "Kayıt ilerlemesi"
+    "aria": "Kayıt ilerlemesi",
+    "completed": "tamamlandı"
   },
   "loading": "Kayıt yükleniyor…",
   "phaseTitle": "Çocuğunuzu ne için kaydetmek istiyorsunuz?",
