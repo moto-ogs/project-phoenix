@@ -140,7 +140,9 @@
   "captchaHelp": {
     "hint": "Güvenlik kontrolü yüklenmiyor veya takılı mı kaldı?",
     "restart": "Kontrolü yeniden başlat",
-    "restartTooltip": "Kontrolü yeniden yükler, bilgileriniz korunur."
+    "restartTooltip": "Kontrolü yeniden yükler, bilgileriniz korunur.",
+    "failedTitle": "Güvenlik kontrolü yüklenmiyor.",
+    "failedText": "Kontrolü çoğu zaman bir reklam engelleyici engeller. Bu sayfa için engelleyiciyi kapatın ve kontrolü yeniden başlatın. Bu işe yaramazsa sayfayı başka bir tarayıcıda açın, örneğin Chrome."
   },
   "structured": {
     "yes": "Evet",

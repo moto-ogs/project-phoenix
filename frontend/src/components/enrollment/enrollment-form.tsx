@@ -1924,6 +1924,8 @@ export function EnrollmentForm({
                 hint: tr("captchaHelp.hint"),
                 restart: tr("captchaHelp.restart"),
                 restartTooltip: tr("captchaHelp.restartTooltip"),
+                failedTitle: tr("captchaHelp.failedTitle"),
+                failedText: tr("captchaHelp.failedText"),
               }}
             />
             <input type="hidden" name="captcha_token" value={captchaToken} />

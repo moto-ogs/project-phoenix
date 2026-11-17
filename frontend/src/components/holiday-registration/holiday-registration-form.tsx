@@ -310,6 +310,8 @@ export function HolidayRegistrationForm({
                   hint: t("captchaHelp.hint"),
                   restart: t("captchaHelp.restart"),
                   restartTooltip: t("captchaHelp.restartTooltip"),
+                  failedTitle: t("captchaHelp.failedTitle"),
+                  failedText: t("captchaHelp.failedText"),
                 }}
               />
             ) : (

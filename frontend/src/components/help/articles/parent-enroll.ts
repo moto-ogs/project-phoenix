@@ -43,6 +43,7 @@ export function parentEnrollTopic(): HelpTopic {
       "moto sagt, aktuell sei keine Anmeldephase geöffnet? Dann wenden Sie sich an die OGS.",
       "moto sagt, die Online-Anmeldung sei nicht freigeschaltet? Dann nimmt diese OGS keine Anmeldungen über moto an.",
       "moto sagt, eine hochgeladene Datei sei abgelaufen? Dann ist sie älter als einen Tag. Laden Sie sie noch einmal hoch und senden Sie die Anmeldung ab.",
+      "Steht vor dem Absenden `Die Sicherheitsprüfung lädt nicht.`? Oft blockiert ein Werbeblocker die Prüfung. Schalten Sie ihn für die Seite aus und wählen Sie `Prüfung neu starten`. Hilft das nicht, öffnen Sie die Seite in einem anderen Browser, zum Beispiel Chrome.",
       "Ein roter Hinweis nennt einen Tag und zwei Angebote? Diese Angebote gehen am selben Tag nicht zusammen. Nehmen Sie den Tag bei einem der beiden heraus.",
     ],
     related: [

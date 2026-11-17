@@ -6481,6 +6481,7 @@ export const parentEnrollTopic = function parentEnrollTopic(): HelpTopic {
       "moto sagt, aktuell sei keine Anmeldephase geöffnet? Dann wenden Sie sich an die OGS.",
       "moto sagt, die Online-Anmeldung sei nicht freigeschaltet? Dann nimmt diese OGS keine Anmeldungen über moto an.",
       "moto sagt, eine hochgeladene Datei sei abgelaufen? Dann ist sie älter als einen Tag. Laden Sie sie noch einmal hoch und senden Sie die Anmeldung ab.",
+      "Steht vor dem Absenden `Die Sicherheitsprüfung lädt nicht.`? Oft blockiert ein Werbeblocker die Prüfung. Schalten Sie ihn für die Seite aus und wählen Sie `Prüfung neu starten`. Hilft das nicht, öffnen Sie die Seite in einem anderen Browser, zum Beispiel Chrome.",
       "Ein roter Hinweis nennt einen Tag und zwei Angebote? Diese Angebote gehen am selben Tag nicht zusammen. Nehmen Sie den Tag bei einem der beiden heraus.",
     ],
     related: [
@@ -6850,6 +6851,7 @@ export const parentHolidayRegistrationTopic =
         "moto meldet zu viele Tage je Kind? Die Grenze gilt für alle Anmeldungen des Kindes zusammen. Bitte wählen Sie weniger Tage oder fragen Sie das Träger-Büro. Der Hinweis zeigt keine Tage aus anderen Anmeldungen.",
         "moto sagt, die Anmeldung sei nicht offen? Oben auf der Seite stehen die Tage, an denen Sie anmelden können.",
         "moto sagt, den Anmeldelink gebe es nicht? Fragen Sie den Träger nach dem richtigen Link.",
+        "Steht vor dem Absenden `Die Sicherheitsprüfung lädt nicht.`? Oft blockiert ein Werbeblocker die Prüfung. Schalten Sie ihn für die Seite aus und wählen Sie `Prüfung neu starten`. Hilft das nicht, öffnen Sie die Seite in einem anderen Browser, zum Beispiel Chrome.",
         "Steht nach `Stand ansehen` `Wir finden diese Anmeldung nicht`? Öffnen Sie den Link noch einmal aus der E-Mail. Nach den Ferien löscht der Träger die Anmeldung. Dann gilt auch der Link nicht mehr.",
         "Der Link zum Elternkonto gilt nicht mehr? Er gilt 30 Tage. Haben Sie schon ein Konto, melden Sie sich an. Sonst bitten Sie den Träger um einen neuen Link.",
         "Sie sehen eine Anmeldung nicht unter `Ferienanmeldungen`? Dort stehen Anmeldungen mit der E-Mail-Adresse Ihres Kontos. Haben Sie eine andere Adresse eingetragen, fragen Sie den Träger.",

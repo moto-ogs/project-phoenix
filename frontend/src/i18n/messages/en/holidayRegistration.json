@@ -91,7 +91,9 @@
   "captchaHelp": {
     "hint": "Is the security check not loading or stuck?",
     "restart": "Restart check",
-    "restartTooltip": "Reloads the check, your entries stay."
+    "restartTooltip": "Reloads the check, your entries stay.",
+    "failedTitle": "The security check is not loading.",
+    "failedText": "An ad blocker often blocks the check. Turn it off for this page and restart the check. If that does not help, open this page in another browser, for example Chrome."
   },
   "toSummary": "Continue to summary",
   "checkFields": "Please check the marked fields.",

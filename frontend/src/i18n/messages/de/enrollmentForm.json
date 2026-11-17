@@ -140,7 +140,9 @@
   "captchaHelp": {
     "hint": "Die Sicherheitsprüfung lädt nicht oder bleibt stehen?",
     "restart": "Prüfung neu starten",
-    "restartTooltip": "Lädt die Prüfung neu, Ihre Angaben bleiben erhalten."
+    "restartTooltip": "Lädt die Prüfung neu, Ihre Angaben bleiben erhalten.",
+    "failedTitle": "Die Sicherheitsprüfung lädt nicht.",
+    "failedText": "Oft blockiert ein Werbeblocker die Prüfung. Schalten Sie ihn für diese Seite aus und starten Sie die Prüfung neu. Hilft das nicht, öffnen Sie diese Seite in einem anderen Browser, zum Beispiel Chrome."
   },
   "structured": {
     "yes": "Ja",

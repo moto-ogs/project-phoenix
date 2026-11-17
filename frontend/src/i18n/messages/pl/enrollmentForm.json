@@ -140,7 +140,9 @@
   "captchaHelp": {
     "hint": "Kontrola bezpieczeństwa się nie ładuje lub zawiesiła?",
     "restart": "Uruchom kontrolę ponownie",
-    "restartTooltip": "Ponownie wczytuje kontrolę, Twoje dane zostaną zachowane."
+    "restartTooltip": "Ponownie wczytuje kontrolę, Twoje dane zostaną zachowane.",
+    "failedTitle": "Kontrola bezpieczeństwa się nie ładuje.",
+    "failedText": "Często blokuje ją bloker reklam. Wyłącz go dla tej strony i uruchom kontrolę ponownie. Jeśli to nie pomoże, otwórz tę stronę w innej przeglądarce, na przykład Chrome."
   },
   "structured": {
     "yes": "Tak",
