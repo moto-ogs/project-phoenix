@@ -12,21 +12,19 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import {
-  SCHOOL_NOTICES_TODAY_KEY,
-  schoolStaffNoticesApi,
-} from "~/lib/school-staff-notices-api";
+import { schoolStaffNoticesApi } from "~/lib/school-staff-notices-api";
 import { schoolPath } from "~/lib/school-url";
 import type { StaffNotice } from "~/lib/staff-notices-api";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
+import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 
 const SCHOOL_NOTICES_ROUTE = "/school/tagesinformationen";
 
 export function TodayNoticesCard() {
   const { data: session } = useSession();
   const { data, error, mutate } = useSWRAuth<StaffNotice[]>(
-    session ? SCHOOL_NOTICES_TODAY_KEY : null,
+    session ? schoolPortalKeys.noticesToday() : null,
     schoolStaffNoticesApi.fetchTodaysNotices,
     { revalidateOnFocus: false },
   );

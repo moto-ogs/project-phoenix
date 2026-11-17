@@ -328,9 +328,10 @@ describe("DienstplanPersonWeekGrid read-only", () => {
     renderReadOnly([shift({ id: "a", shiftTypeId: GT.id })]);
 
     expect(screen.queryAllByRole("button")).toHaveLength(0);
-    expect(
-      screen.getByRole("group", { name: "08:00–12:00 GT" }),
-    ).toBeInTheDocument();
+    // The read-only block shows time and shift type as its text (#7112).
+    expect(screen.getByText("08:00–12:00").parentElement).toHaveTextContent(
+      /^08:00–12:00\s*GT$/,
+    );
     expect(
       screen.queryByText(/Ziehen Sie über die Viertelstunden/),
     ).not.toBeInTheDocument();

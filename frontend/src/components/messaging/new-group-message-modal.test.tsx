@@ -17,7 +17,7 @@ import {
 } from "@testing-library/react";
 import type { GroupChild } from "~/lib/parent-group-threads-api";
 import type { ReactNode } from "react";
-import { SWRConfig } from "swr";
+import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 

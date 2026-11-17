@@ -90,7 +90,8 @@ describe("TraegerStaffPoolPage", () => {
     api.liftTraegerBlock.mockResolvedValue(undefined);
     renderPage();
     const block = await screen.findByRole("button", {
-      name: /08:00–12:00, geblockt von OGS Süd/,
+      // Named by what the block shows; the action follows hidden (#7112).
+      name: /^08:00–12:00 ?Geblockt ?OGS Süd ?, Blockung aufheben$/,
     });
     expect(
       screen.getAllByText("Im Pool bis 31.07.2027").length,

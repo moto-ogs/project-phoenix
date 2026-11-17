@@ -1,9 +1,18 @@
-import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  renderHook as rtlRenderHook,
+  waitFor,
+} from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActivityCategory } from "~/lib/activity-helpers";
 import type { PlanningTrack } from "~/lib/planning-track-api";
 import type {
+  CombinedOfferingCounts,
+  ConflictCheckResult,
+  ConflictWarningItem,
   EnrichedInstance,
   TimetableTemplate,
 } from "~/lib/timetable-types";
@@ -14,6 +23,43 @@ import { timetableService } from "~/lib/timetable-api";
 import * as formModel from "./form-model";
 import { reconcileCategoryId, useEventForm } from "./use-event-form";
 import type { UseEventFormParams } from "./use-event-form";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// The form reads its lists, probes and offering data through the shared,
+// session-scoped cache (~/lib/swr): a signed-in session and a fresh cache
+// per hook, without automatic retries.
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
+
+function SwrProviders({ children }: { readonly children: ReactNode }) {
+  return createElement(
+    SWRConfig,
+    { value: { provider: () => new Map(), errorRetryCount: 0 } },
+    children,
+  );
+}
+
+function deferredValue<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  return { promise, resolve, reject };
+}
+
+function renderHook<Result, Props>(
+  hook: (props: Props) => Result,
+  options?: { initialProps?: Props },
+) {
+  return rtlRenderHook(hook, { ...options, wrapper: SwrProviders });
+}
 
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
@@ -26,6 +72,13 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 
 beforeEach(() => {
   vi.spyOn(planningTrackService, "list").mockResolvedValue([]);
+  // The advisory double-booking probe of a form with a resource.
+  vi.spyOn(timetableService, "checkConflicts").mockResolvedValue({
+    date: "2026-08-03",
+    startTime: "12:00",
+    endTime: "13:00",
+    warnings: [],
+  });
   vi.spyOn(timetableService, "getOfferingSources").mockResolvedValue([]);
   vi.spyOn(timetableService, "getCombinedOfferingCounts").mockResolvedValue({
     totalCount: 0,
@@ -490,6 +543,82 @@ describe("useEventForm submit locking", () => {
 });
 
 describe("useEventForm offering source roster stash", () => {
+  it("drops the previous selection's exact counts and classes while loading new sources", async () => {
+    vi.spyOn(plannerReferenceApi, "fetchPlannerRooms").mockResolvedValue([]);
+    vi.spyOn(plannerReferenceApi, "fetchPlannerGroups").mockResolvedValue([]);
+    vi.spyOn(
+      plannerReferenceApi,
+      "fetchPlannerActivityCategories",
+    ).mockResolvedValue([]);
+    vi.spyOn(formModel, "fetchAllStudentOptions").mockResolvedValue([]);
+    vi.spyOn(staffService, "getAllStaff").mockResolvedValue([]);
+    vi.mocked(timetableService.getOfferingSources).mockResolvedValue(
+      ["5", "6"].map((id) => ({
+        id,
+        name: id,
+        phaseId: "1",
+        phaseName: "Phase",
+        totalCount: 3,
+        gradeCounts: { 2: 3 },
+        sourcedTemplates: [],
+      })),
+    );
+    const pending = deferredValue<CombinedOfferingCounts>();
+    vi.mocked(timetableService.getCombinedOfferingCounts)
+      .mockResolvedValueOnce({
+        totalCount: 1,
+        gradeCounts: { 1: 1 },
+        students: [{ studentId: "11", schoolClass: "1a" }],
+      })
+      .mockReturnValueOnce(pending.promise);
+    const { result } = renderHook(() =>
+      useEventForm({
+        isOpen: true,
+        onClose: vi.fn(),
+        onSaved: vi.fn(),
+        defaultDate: "2026-08-03",
+        calendarPeriods: [],
+        defaultCalendarPeriodId: null,
+        planningPeriods: null,
+        initialInstance: null,
+        initialSeries: null,
+        convertInstance: null,
+        defaultRepeat: "weekly",
+        variant: "full",
+        canCheckShiftCoverage: false,
+      }),
+    );
+    act(() => result.current.changeTargetGroupType("angebot"));
+    await waitFor(() => expect(result.current.offeringSources).toHaveLength(2));
+    act(() => result.current.changeSourceOfferings(["5"]));
+    await waitFor(() =>
+      expect(result.current.sourceClassOptions).toEqual(["1a"]),
+    );
+    expect(result.current.sourceFilteredCount).toBe(1);
+    act(() => result.current.changeSourceOfferings(["6"]));
+    await waitFor(() =>
+      expect(timetableService.getCombinedOfferingCounts).toHaveBeenCalledTimes(
+        2,
+      ),
+    );
+    expect(result.current.sourceCountsPending).toBe(true);
+    expect(result.current.sourceClassOptions).toEqual([]);
+    expect(result.current.sourceFilteredCount).toBe(3);
+    await act(async () =>
+      pending.resolve({
+        totalCount: 2,
+        gradeCounts: { 2: 2 },
+        students: [
+          { studentId: "12", schoolClass: "2a" },
+          { studentId: "13", schoolClass: "2a" },
+        ],
+      }),
+    );
+    await waitFor(() => expect(result.current.sourceCountsPending).toBe(false));
+    expect(result.current.sourceClassOptions).toEqual(["2a"]);
+    expect(result.current.sourceFilteredCount).toBe(2);
+  });
+
   it("restores the manual roster when the source is cleared again", async () => {
     vi.spyOn(plannerReferenceApi, "fetchPlannerRooms").mockResolvedValue([]);
     vi.spyOn(plannerReferenceApi, "fetchPlannerGroups").mockResolvedValue([]);
@@ -1150,6 +1279,138 @@ describe("useEventForm category loading", () => {
 
     expect(result.current.categories).toEqual(refreshedCategories);
     expect(result.current.form.categoryId).toBe("2");
+  });
+
+  it("seeds a reopened form from this opening's category list, not the cached one", async () => {
+    const timestamp = new Date("2026-08-03T10:00:00Z");
+    vi.spyOn(plannerReferenceApi, "fetchPlannerRooms").mockResolvedValue([]);
+    vi.spyOn(plannerReferenceApi, "fetchPlannerGroups").mockResolvedValue([]);
+    const secondOpening = deferredValue<ActivityCategory[]>();
+    vi.spyOn(plannerReferenceApi, "fetchPlannerActivityCategories")
+      .mockResolvedValueOnce([
+        { id: "1", name: "Alt", created_at: timestamp, updated_at: timestamp },
+      ])
+      .mockImplementationOnce(() => secondOpening.promise);
+    vi.spyOn(formModel, "fetchAllStudentOptions").mockResolvedValue([]);
+    vi.spyOn(staffService, "getAllStaff").mockResolvedValue([]);
+    const params = (isOpen: boolean): UseEventFormParams => ({
+      isOpen,
+      onClose: vi.fn(),
+      onSaved: vi.fn(),
+      defaultDate: "2026-08-03",
+      calendarPeriods: [],
+      defaultCalendarPeriodId: null,
+      planningPeriods: null,
+      initialInstance: null,
+      initialSeries: null,
+      convertInstance: null,
+      defaultRepeat: "none",
+      variant: "full",
+      canCheckShiftCoverage: false,
+    });
+
+    const { result, rerender } = renderHook(
+      (props: UseEventFormParams) => useEventForm(props),
+      { initialProps: params(true) },
+    );
+    await waitFor(() => expect(result.current.form.categoryId).toBe("1"));
+
+    rerender(params(false));
+    rerender(params(true));
+    // The new form waits for its own read: nothing of the earlier answer.
+    expect(result.current.form.categoryId).toBe("");
+    expect(result.current.categories).toEqual([]);
+    expect(result.current.loadingRefs).toBe(true);
+
+    await act(async () => {
+      secondOpening.resolve([
+        { id: "3", name: "Neu", created_at: timestamp, updated_at: timestamp },
+      ]);
+      await secondOpening.promise;
+    });
+    await waitFor(() => expect(result.current.form.categoryId).toBe("3"));
+    expect(
+      plannerReferenceApi.fetchPlannerActivityCategories,
+    ).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("useEventForm advisory probes", () => {
+  it("shows the double bookings of the settled form and keeps them while the next probe waits", async () => {
+    vi.spyOn(plannerReferenceApi, "fetchPlannerRooms").mockResolvedValue([]);
+    vi.spyOn(plannerReferenceApi, "fetchPlannerGroups").mockResolvedValue([]);
+    vi.spyOn(
+      plannerReferenceApi,
+      "fetchPlannerActivityCategories",
+    ).mockResolvedValue([]);
+    vi.spyOn(formModel, "fetchAllStudentOptions").mockResolvedValue([]);
+    vi.spyOn(staffService, "getAllStaff").mockResolvedValue([]);
+    const warning: ConflictWarningItem = {
+      kind: "staff",
+      resourceId: "11",
+      message: "Ada ist schon eingeplant",
+      conflictingInstanceId: "50",
+      conflictingTitle: "Basteln",
+    };
+    const nextProbe = deferredValue<ConflictCheckResult>();
+    const checkConflicts = vi
+      .spyOn(timetableService, "checkConflicts")
+      .mockResolvedValueOnce({
+        date: "2026-08-03",
+        startTime: "12:00",
+        endTime: "13:00",
+        warnings: [warning],
+      })
+      .mockImplementationOnce(() => nextProbe.promise);
+
+    const { result } = renderHook(() =>
+      useEventForm({
+        isOpen: true,
+        onClose: vi.fn(),
+        onSaved: vi.fn(),
+        defaultDate: "2026-08-03",
+        defaultStartTime: "12:00",
+        defaultEndTime: "13:00",
+        calendarPeriods: [],
+        defaultCalendarPeriodId: null,
+        planningPeriods: null,
+        initialInstance: null,
+        initialSeries: null,
+        convertInstance: null,
+        defaultRepeat: "none",
+        variant: "full",
+        canCheckShiftCoverage: false,
+      }),
+    );
+    act(() => {
+      result.current.update("staffIds", ["11"]);
+    });
+
+    await waitFor(
+      () => expect(result.current.conflictWarnings).toEqual([warning]),
+      { timeout: 2000 },
+    );
+    expect(checkConflicts).toHaveBeenCalledTimes(1);
+    expect(checkConflicts).toHaveBeenCalledWith(
+      expect.objectContaining({ date: "2026-08-03", staffIds: ["11"] }),
+    );
+
+    act(() => {
+      result.current.update("staffIds", ["12"]);
+    });
+    await waitFor(() => expect(checkConflicts).toHaveBeenCalledTimes(2), {
+      timeout: 2000,
+    });
+    // The earlier answer stays until the new probe answered.
+    expect(result.current.conflictWarnings).toEqual([warning]);
+    expect(result.current.conflictCheckFailed).toBe(false);
+
+    await act(async () => {
+      nextProbe.reject(new Error("probe failed"));
+      await nextProbe.promise.catch(() => undefined);
+    });
+    await waitFor(() => expect(result.current.conflictCheckFailed).toBe(true));
+    expect(result.current.conflictWarnings).toEqual([]);
   });
 });
 

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SchoolBottomNav } from "./school-bottom-nav";
@@ -20,16 +20,16 @@ vi.mock("~/lib/school-url", () => ({
 describe("SchoolBottomNav", () => {
   // Seit dem dritten Ziel (#2527) traegt nur das aktive Feld seine
   // Beschriftung: drei volle Namen passen auf 390 px nicht in die Pille und
-  // schoben "Hilfe" aus dem Bild. Erreichbar bleiben alle ueber ihr
-  // aria-label.
+  // schoben "Hilfe" aus dem Bild. Erreichbar bleiben alle ueber ihren
+  // versteckten Namen im Feld (#7112).
   it("beschriftet das aktive Ziel und benennt die uebrigen fuer Screenreader", () => {
     mockPathname.value = "/";
     render(<SchoolBottomNav teamChat={teamChat} />);
 
     expect(screen.getByText("Klassenansicht")).toBeInTheDocument();
-    expect(screen.queryByText("Meine Aufsichten")).not.toBeInTheDocument();
-    expect(screen.queryByText("Hinweise der Leitung")).not.toBeInTheDocument();
-    expect(screen.queryByText("Hilfe")).not.toBeInTheDocument();
+    expect(screen.getByText("Meine Aufsichten")).toHaveClass("sr-only");
+    expect(screen.getByText("Hinweise der Leitung")).toHaveClass("sr-only");
+    expect(screen.getByText("Hilfe")).toHaveClass("sr-only");
 
     expect(
       screen.getByRole("link", { name: "Meine Aufsichten" }),
@@ -44,8 +44,8 @@ describe("SchoolBottomNav", () => {
     mockPathname.value = "/aufsichten";
     render(<SchoolBottomNav teamChat={teamChat} />);
 
-    expect(screen.getByText("Meine Aufsichten")).toBeInTheDocument();
-    expect(screen.queryByText("Klassenansicht")).not.toBeInTheDocument();
+    expect(screen.getByText("Meine Aufsichten")).not.toHaveClass("sr-only");
+    expect(screen.getByText("Klassenansicht")).toHaveClass("sr-only");
   });
 
   // Auch ohne Team-Chat sind es seit den Fehlzeiten (#4793) sieben Ziele:
@@ -95,9 +95,13 @@ describe("SchoolBottomNav", () => {
       <SchoolBottomNav teamChat={teamChat} notices={{ pendingCount: 3 }} />,
     );
 
-    expect(
-      screen.getByLabelText("3 offene Hinweise der Leitung"),
-    ).toBeInTheDocument();
+    // The count is part of the field's name (#7112).
+    const notices = screen.getByRole("link", {
+      name: "Hinweise der Leitung 3 offene Hinweise der Leitung",
+    });
+    expect(within(notices).getByText("3")).toHaveTextContent(
+      /^3 offene Hinweise der Leitung$/,
+    );
   });
 
   it("zeigt in den Einstellungen Rückweg und beide Bereiche ohne Mehr", () => {

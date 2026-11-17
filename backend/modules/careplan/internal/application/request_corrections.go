@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -109,31 +110,50 @@ func (s *RequestCorrections) revertPickup(ctx context.Context, request *carerequ
 		return fmt.Errorf("%w: zu dieser Entscheidung ist kein Eintrag gespeichert, der zurückgenommen werden kann. Bitte ändern Sie die Abholung direkt", careplan.ErrParentRequestCorrectionUnsupported)
 	}
 	if applied.PickupExceptionID > 0 {
-		if err := s.revertPickupException(ctx, request, applied.PickupExceptionID); err != nil {
+		if err := s.revertPickupException(ctx, request, applied); err != nil {
 			return err
 		}
 	}
 	if applied.DepartureExceptionID > 0 {
-		if err := s.revertDepartureException(ctx, request, applied.DepartureExceptionID); err != nil {
+		if err := s.revertDepartureException(ctx, request, applied); err != nil {
 			return err
 		}
 	}
 	if applied.PickupNoteID > 0 {
-		// The day's collector note the approval wrote (#4780).
-		return s.Records.DeletePickupNote(ctx, applied.PickupNoteID)
+		return s.revertPickupNote(ctx, applied)
 	}
 	return nil
 }
 
-func (s *RequestCorrections) revertPickupException(ctx context.Context, request *carerequests.Request, id int64) error {
-	row, err := s.Records.FindException(ctx, id)
+// revertPickupNote deletes the day's collector note the approval wrote
+// (#4780). Ledger entries without a version keep the unconditional delete
+// they were written under.
+func (s *RequestCorrections) revertPickupNote(ctx context.Context, applied carerequests.PickupApplied) error {
+	if applied.PickupNoteVersion == "" {
+		return s.Records.DeletePickupNote(ctx, applied.PickupNoteID)
+	}
+	note, err := s.Records.FindPickupNote(ctx, applied.PickupNoteID)
+	if err != nil {
+		return err
+	}
+	if note == nil {
+		return nil
+	}
+	if pickupNoteVersion(*note) != applied.PickupNoteVersion {
+		return fmt.Errorf("%w: die Abholnotiz am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, note.NoteDate.Format("02.01.2006"))
+	}
+	return s.Records.DeletePickupNote(ctx, note.ID)
+}
+
+func (s *RequestCorrections) revertPickupException(ctx context.Context, request *carerequests.Request, applied carerequests.PickupApplied) error {
+	row, err := s.Records.FindException(ctx, applied.PickupExceptionID)
 	if err != nil {
 		return err
 	}
 	if row == nil {
 		return nil
 	}
-	if request.ReviewedAt != nil && row.UpdatedAt.After(*request.ReviewedAt) {
+	if changedAfterDecision(request, applied.PickupExceptionVersion, pickupExceptionVersion(*row), row.UpdatedAt) {
 		return fmt.Errorf("%w: die Abholzeit am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, row.ExceptionDate.Format("02.01.2006"))
 	}
 	if row.ExcusedAuto {
@@ -144,18 +164,34 @@ func (s *RequestCorrections) revertPickupException(ctx context.Context, request 
 	return s.Records.DeleteException(ctx, row.ID)
 }
 
-func (s *RequestCorrections) revertDepartureException(ctx context.Context, request *carerequests.Request, id int64) error {
-	row, err := s.Records.FindDepartureException(ctx, id)
+func (s *RequestCorrections) revertDepartureException(ctx context.Context, request *carerequests.Request, applied carerequests.PickupApplied) error {
+	row, err := s.Records.FindDepartureException(ctx, applied.DepartureExceptionID)
 	if err != nil {
 		return err
 	}
 	if row == nil {
 		return nil
 	}
-	if request.ReviewedAt != nil && row.UpdatedAt.After(*request.ReviewedAt) {
+	if changedAfterDecision(request, applied.DepartureExceptionVersion, departureExceptionVersion(*row), row.UpdatedAt) {
 		return fmt.Errorf("%w: die Abholart am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, row.ExceptionDate.Format("02.01.2006"))
 	}
 	return s.Records.DeleteDepartureException(ctx, row.ID)
+}
+
+// changedAfterDecision compares the row with the version the decision ledger
+// recorded for it. Equality is the only test: transaction start times do not
+// follow commit order, so a staff edit whose transaction began before the
+// approval carries an older stamp than the decision (ADR 0281, point 4).
+// Ledger entries written before versions existed keep the guard they were
+// written under: the row's updated_at after the request's reviewed_at. Those
+// approvals stamped the rows they updated on the owner clock, after their
+// transaction began, so only reviewed_at lies after an untouched row; the
+// guard keeps its known limits (overlapping edits, clocks apart).
+func changedAfterDecision(request *carerequests.Request, recorded, current string, rowUpdatedAt time.Time) bool {
+	if recorded != "" {
+		return current != recorded
+	}
+	return request.ReviewedAt != nil && rowUpdatedAt.After(*request.ReviewedAt)
 }
 
 // latestPickupRows reads the generation written by the latest decision or
@@ -171,10 +207,19 @@ func latestPickupRows(events []ports.RequestCorrectionEvent) (carerequests.Picku
 		pickupID, pickupOK := correctionExceptionID(event.Payload["pickup_exception_id"])
 		departureID, departureOK := correctionExceptionID(event.Payload["departure_exception_id"])
 		noteID, noteOK := correctionExceptionID(event.Payload["pickup_note_id"])
-		applied = carerequests.PickupApplied{PickupExceptionID: pickupID, DepartureExceptionID: departureID, PickupNoteID: noteID}
+		applied = carerequests.PickupApplied{
+			PickupExceptionID: pickupID, PickupExceptionVersion: correctionRowVersion(event.Payload["pickup_exception_version"]),
+			DepartureExceptionID: departureID, DepartureExceptionVersion: correctionRowVersion(event.Payload["departure_exception_version"]),
+			PickupNoteID: noteID, PickupNoteVersion: correctionRowVersion(event.Payload["pickup_note_version"]),
+		}
 		found = pickupOK || departureOK || noteOK
 	}
 	return applied, found
+}
+
+func correctionRowVersion(value any) string {
+	version, _ := value.(string)
+	return version
 }
 
 func correctionExceptionID(value any) (int64, bool) {

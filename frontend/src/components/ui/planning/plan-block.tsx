@@ -76,7 +76,13 @@ interface PlanBlockProps {
    * autoritativ und lassen sich hierüber nicht überschreiben.
    */
   readonly style?: CSSProperties;
-  readonly "aria-label"?: string;
+  /**
+   * Was der Block nicht zeigt (Status, Spur, die Aktion beim Klick), als
+   * versteckter Text nach dem sichtbaren Inhalt. Der Block nennt sich nach
+   * Zeitspanne und Titel, wie er sie zeigt (WCAG 2.5.3, #7112); ein
+   * aria-label ersetzte sie.
+   */
+  readonly details?: string;
 }
 
 /**
@@ -112,7 +118,7 @@ export function PlanBlock({
   className,
   style: positionStyle,
   title,
-  "aria-label": ariaLabel,
+  details,
 }: PlanBlockProps) {
   const isCancelled = status === "cancelled";
   const edgeColor = isCancelled
@@ -182,6 +188,10 @@ export function PlanBlock({
       </span>
     );
 
+  const hiddenDetails = details ? (
+    <span className="sr-only">{`, ${details}`}</span>
+  ) : null;
+
   const statusIconSlot = statusIcon ? (
     <span
       aria-hidden="true"
@@ -193,14 +203,9 @@ export function PlanBlock({
 
   if (!interactive) {
     return (
-      <div
-        role={ariaLabel ? "group" : undefined}
-        className={containerClassName}
-        style={style}
-        title={title}
-        aria-label={ariaLabel}
-      >
+      <div className={containerClassName} style={style} title={title}>
         {content}
+        {hiddenDetails}
         {statusIconSlot}
       </div>
     );
@@ -214,9 +219,9 @@ export function PlanBlock({
       onClick={onClick}
       title={title}
       aria-pressed={selected}
-      aria-label={ariaLabel}
     >
       {content}
+      {hiddenDetails}
       {statusIconSlot}
     </button>
   );

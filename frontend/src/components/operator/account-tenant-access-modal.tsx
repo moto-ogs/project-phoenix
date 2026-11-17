@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SectionCard } from "~/components/ui/section-card";
@@ -35,9 +35,58 @@ import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { Loading } from "~/components/ui/loading";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { operatorKeys } from "~/lib/swr/operator-keys";
+import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "AccountTenantAccessModal" });
+
+type AssignableRole = Awaited<
+  ReturnType<typeof accountTenantAccessService.listAssignableRoles>
+>[number];
+
+/**
+ * The assignable roles of each school. A school whose roles fail stays out
+ * of `roles` (its role select stays locked); the first failure is reported.
+ */
+async function assignableRolesBySchool(
+  accountId: string,
+  schoolIds: readonly string[],
+): Promise<{
+  roles: Record<string, AssignableRole[]>;
+  failure?: unknown;
+}> {
+  const results = await Promise.allSettled(
+    schoolIds.map(
+      async (schoolId) =>
+        [
+          schoolId,
+          await accountTenantAccessService.listAssignableRoles(
+            accountId,
+            schoolId,
+          ),
+        ] as const,
+    ),
+  );
+  const roles: Record<string, AssignableRole[]> = {};
+  let failure: unknown;
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      roles[result.value[0]] = result.value[1];
+      continue;
+    }
+    logger.warn("failed to load assignable school roles", {
+      error:
+        result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason),
+      accountId,
+    });
+    failure ??= result.reason;
+  }
+  return failure === undefined ? { roles } : { roles, failure };
+}
 
 function roleLabel(name: string): string {
   return systemRoleLabel(name) ?? name;
@@ -88,15 +137,6 @@ export function AccountTenantAccessModal({
 }: AccountTenantAccessModalProps) {
   const { success: toastSuccess } = useToast();
 
-  const [access, setAccess] = useState<AccountTenantAccess[]>([]);
-  const [schools, setSchools] = useState<{ id: string; label: string }[]>([]);
-  const [rolesBySchool, setRolesBySchool] = useState<
-    Record<
-      string,
-      { id: string; name: string; isSystem: boolean; schoolPortal: boolean }[]
-    >
-  >({});
-  const [loading, setLoading] = useState(false);
   const save = useFormModalPending(isOpen, accountId);
   const saving = save.pending;
   // #2519: load errors stay where the data is missing, the grant error in
@@ -105,7 +145,6 @@ export function AccountTenantAccessModal({
   const { show: showAccessLoadError, clear: clearAccessLoadError } = accessLoad;
   const rolesLoad = useApiLoadError();
   const { show: showRolesLoadError, clear: clearRolesLoadError } = rolesLoad;
-  const [rolesReload, setRolesReload] = useState(0);
   const grantFormRef = useRef<HTMLElement>(null);
   const grantErrors = useApiFormError(grantFormRef);
   const { show: showGrantError, clear: clearGrantError } = grantErrors;
@@ -120,152 +159,133 @@ export function AccountTenantAccessModal({
   const [revokeTarget, setRevokeTarget] = useState<AccountTenantAccess | null>(
     null,
   );
-  const loadRequestRef = useRef(0);
 
-  const load = useCallback(async () => {
-    if (!accountId) return;
+  const reading = isOpen && accountId !== "";
+  // The access list is what every grant, role change and revoke edits: each
+  // opening reads it anew and shows nothing of an earlier one.
+  const accessRead = useFreshSWR(
+    reading ? operatorKeys.accountTenantAccess(accountId) : null,
+    () => accountTenantAccessService.list(accountId),
+  );
+  const schoolsRead = useSWRAuth(
+    reading ? operatorProvisioningKeys.schoolSummaries() : null,
+    () => operatorProvisioningService.listSchoolSummaries(),
+    { keepPreviousData: false },
+  );
+  const access = useMemo(() => accessRead.data ?? [], [accessRead.data]);
+  const schools = useMemo(
+    () =>
+      (schoolsRead.data ?? [])
+        .filter((school) => school.active && !school.deletedAt)
+        .map((school) => ({
+          id: school.id,
+          label: `${school.name} (${school.organizationName})`,
+        })),
+    [schoolsRead.data],
+  );
+  const activeSchoolIds = useMemo(
+    () =>
+      access
+        .filter((entry) => entry.status === "active" && entry.schoolActive)
+        .map((entry) => entry.tenantId),
+    [access],
+  );
+  const accessError = accessRead.error ?? schoolsRead.error;
+  const accessListed =
+    accessRead.data !== undefined && schoolsRead.data !== undefined;
+  const loadAssignableRoles = (schoolIds: readonly string[]) =>
+    assignableRolesBySchool(accountId, schoolIds);
+  // Roles of every school the account is active at, and of the school picked
+  // for a new access.
+  const activeRolesRead = useSWRAuth(
+    accessListed && activeSchoolIds.length > 0
+      ? operatorKeys.accountAssignableRoles(accountId, activeSchoolIds)
+      : null,
+    () => loadAssignableRoles(activeSchoolIds),
+    { keepPreviousData: true },
+  );
+  const addRolesRead = useSWRAuth(
+    accessListed && addSchoolId
+      ? operatorKeys.accountAssignableRoles(accountId, [addSchoolId])
+      : null,
+    () => loadAssignableRoles([addSchoolId]),
+    { keepPreviousData: false },
+  );
+  const rolesBySchool: Record<string, AssignableRole[]> = {
+    ...(accessListed ? activeRolesRead.data?.roles : undefined),
+    ...(addSchoolId ? addRolesRead.data?.roles : undefined),
+  };
+  const loading =
+    reading &&
+    accessError === undefined &&
+    (!accessListed ||
+      (activeSchoolIds.length > 0 && activeRolesRead.data === undefined));
+  const rolesFailure = accessListed
+    ? (addRolesRead.error ??
+      addRolesRead.data?.failure ??
+      activeRolesRead.error ??
+      activeRolesRead.data?.failure)
+    : undefined;
+  const retryAccess = accessRead.mutate;
+  const retrySchools = schoolsRead.mutate;
+  const retryActiveRoles = activeRolesRead.mutate;
+  const retryAddRoles = addRolesRead.mutate;
 
-    const requestId = ++loadRequestRef.current;
-    const isCurrentRequest = () => requestId === loadRequestRef.current;
-    try {
-      setLoading(true);
+  // A new opening, or another account, starts with an empty form.
+  useEffect(() => {
+    setAddSchoolId("");
+    setAddRoleId("");
+    setFirstName("");
+    setLastName("");
+    setRevokeTarget(null);
+    clearGrantError();
+  }, [isOpen, accountId, clearGrantError]);
+
+  useEffect(() => {
+    if (accessError === undefined) {
       clearAccessLoadError();
-      clearRolesLoadError();
-      clearGrantError();
-      setAccess([]);
-      setSchools([]);
-      setRolesBySchool({});
-      setAddSchoolId("");
-      setAddRoleId("");
-      setFirstName("");
-      setLastName("");
-      setRevokeTarget(null);
-      const [entries, schoolList] = await Promise.all([
-        accountTenantAccessService.list(accountId),
-        operatorProvisioningService.listSchoolSummaries(),
-      ]);
-      if (!isCurrentRequest()) return;
-      setAccess(entries);
-      setSchools(
-        schoolList
-          .filter((school) => school.active && !school.deletedAt)
-          .map((school) => ({
-            id: school.id,
-            label: `${school.name} (${school.organizationName})`,
-          })),
-      );
-      const rolesForActiveSchools = await Promise.allSettled(
-        entries
-          .filter((entry) => entry.status === "active" && entry.schoolActive)
-          .map(
-            async (entry) =>
-              [
-                entry.tenantId,
-                await accountTenantAccessService.listAssignableRoles(
-                  accountId,
-                  entry.tenantId,
-                ),
-              ] as const,
-          ),
-      );
-      if (!isCurrentRequest()) return;
-      setRolesBySchool(
-        Object.fromEntries(
-          rolesForActiveSchools.flatMap((result) => {
-            if (result.status === "fulfilled") return [result.value];
-            logger.warn("failed to load assignable school roles", {
-              error:
-                result.reason instanceof Error
-                  ? result.reason.message
-                  : String(result.reason),
-              accountId,
-            });
-            return [];
-          }),
-        ),
-      );
-      // A school without roles keeps its role select locked; say why.
-      const failedRoles = rolesForActiveSchools.find(
-        (result) => result.status === "rejected",
-      );
-      if (failedRoles?.status === "rejected") {
-        void showRolesLoadError(failedRoles.reason, {
-          object: "die Liste der Rollen",
-          retry: () => void load(),
-        });
-      }
-    } catch (error) {
-      if (!isCurrentRequest()) return;
-      logger.error("failed to load school access", {
-        error: error instanceof Error ? error.message : String(error),
-        accountId,
-      });
-      void showAccessLoadError(error, {
-        object: "die Liste der Schulzugänge",
-        retry: () => void load(),
-      });
-    } finally {
-      if (isCurrentRequest()) setLoading(false);
+      return;
     }
+    logger.error("failed to load school access", {
+      error:
+        accessError instanceof Error
+          ? accessError.message
+          : String(accessError),
+      accountId,
+    });
+    void showAccessLoadError(accessError, {
+      object: "die Liste der Schulzugänge",
+      retry: () => {
+        void retryAccess();
+        void retrySchools();
+      },
+    });
   }, [
+    accessError,
     accountId,
+    retryAccess,
+    retrySchools,
     showAccessLoadError,
     clearAccessLoadError,
-    showRolesLoadError,
-    clearRolesLoadError,
-    clearGrantError,
   ]);
 
+  // A school without roles keeps its role select locked; say why.
   useEffect(() => {
-    if (isOpen) {
-      void load();
-    } else {
-      loadRequestRef.current += 1;
-      setAddSchoolId("");
-      setAddRoleId("");
-      setFirstName("");
-      setLastName("");
-      clearAccessLoadError();
+    if (rolesFailure === undefined) {
       clearRolesLoadError();
-      clearGrantError();
-      setRolesBySchool({});
+      return;
     }
+    void showRolesLoadError(rolesFailure, {
+      object: "die Liste der Rollen",
+      retry: () => {
+        void retryActiveRoles();
+        void retryAddRoles();
+      },
+    });
   }, [
-    isOpen,
-    load,
-    clearAccessLoadError,
-    clearRolesLoadError,
-    clearGrantError,
-  ]);
-
-  useEffect(() => {
-    if (!isOpen || !addSchoolId || rolesBySchool[addSchoolId]) return;
-    clearRolesLoadError();
-    void accountTenantAccessService
-      .listAssignableRoles(accountId, addSchoolId)
-      .then((schoolRoles) =>
-        setRolesBySchool((current) => ({
-          ...current,
-          [addSchoolId]: schoolRoles,
-        })),
-      )
-      .catch((error) => {
-        logger.error("failed to load assignable school roles", {
-          error: error instanceof Error ? error.message : String(error),
-          accountId,
-          schoolId: addSchoolId,
-        });
-        void showRolesLoadError(error, {
-          object: "die Liste der Rollen",
-          retry: () => setRolesReload((count) => count + 1),
-        });
-      });
-  }, [
-    accountId,
-    addSchoolId,
-    isOpen,
-    rolesBySchool,
-    rolesReload,
+    rolesFailure,
+    retryActiveRoles,
+    retryAddRoles,
     showRolesLoadError,
     clearRolesLoadError,
   ]);
@@ -329,7 +349,7 @@ export function AccountTenantAccessModal({
       // Eine späte Antwort ändert keinen inzwischen neu geöffneten Dialog
       // (#6533); Erfolgsmeldung und Nachladen beim Aufrufer laufen weiter.
       // Ein gescheitertes Nachladen zeigt die Seite als Ladefehler (#6652).
-      if (op.isCurrent()) setAccess(next);
+      if (op.isCurrent()) void accessRead.mutate(next, { revalidate: false });
       toastSuccess(successMessage);
       // Never rejects; the dialog does not wait for the page's reload.
       void onUpdated?.();

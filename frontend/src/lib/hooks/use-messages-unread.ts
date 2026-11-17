@@ -1,19 +1,14 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { personalStorageOwner } from "~/lib/personal-storage";
 import { hasPermission } from "~/lib/auth-utils";
 import { fetchUnreadCount } from "~/lib/parent-messages-api";
 import { useShellAuth } from "~/lib/shell-auth-context";
-import {
-  useModuleBooked,
-  useTenantSafe,
-  useTenantSlugSafe,
-} from "~/lib/tenant-context";
-import { useShellSeed } from "~/lib/shell-seed";
-import { useUnreadCount } from "./use-unread-count";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
+import { useModuleBooked, useTenantSafe } from "~/lib/tenant-context";
+import { useUnreadCount, type UseUnreadCountResult } from "./use-unread-count";
 
-export function useMessagesUnread() {
+export function useMessagesUnread(): UseUnreadCountResult {
   const { data: session, status } = useSession();
   // The staff inbox endpoint is tenant-scoped: TenantMiddleware rejects parent
   // and operator (scope != "") tokens with 401. Only fetch in the tenant-staff
@@ -23,44 +18,39 @@ export function useMessagesUnread() {
   // tenant context (TenantInfo.messagingEnabled) and re-resolved whenever the
   // tenant provider sees phoenix:tenant-settings-stale (operator toggles the
   // setting). Tying `enabled` to it means flipping messaging off re-runs the
-  // hook (enabled is a refresh dep) and clears the badge to 0 immediately,
-  // instead of leaving a cached non-zero count until an unrelated refresh; and
+  // hook and clears the badge to 0 immediately, instead of leaving a
+  // non-zero count until an unrelated refresh; and
   // re-enabling re-fetches the real count once the flag re-resolves.
   // Elternnachrichten gehören zum Modul Eltern-App (#4894).
   const elternAppBooked = useModuleBooked("eltern_app");
   const messagingEnabled = useTenantSafe()?.tenant?.messagingEnabled === true;
   const messagesAvailable = messagingEnabled && elternAppBooked;
-  // Per-tenant AND per-account cache key: the unread count is computed for the
-  // current account and its student-read scope, so two staff users sharing a
-  // browser on the same tenant must not see each other's cached badge. The
-  // tenant slug keeps a tenant switch from surfacing the previous school's
-  // count. Changing the key also re-runs the fetch (useUnreadCount's refresh
-  // depends on cacheKey), so the badge refreshes purely from tenant/account
-  // changes.
-  const tenantSlug = useTenantSlugSafe();
-  const accountId = session?.user?.id ?? "";
-  const shellSeed = useShellSeed();
-  return useUnreadCount({
-    // The inbox requires users:read; the role „AG-Leitung“ (#4573) lacks it.
-    enabled:
-      status === "authenticated" &&
-      mode === "teacher" &&
-      messagesAvailable &&
-      hasPermission(session, "users:read"),
-    fetcher: fetchUnreadCount,
-    cacheKey: `messages_unread_count:${tenantSlug ?? ""}:${accountId}`,
-    cacheOwner: personalStorageOwner(session?.user),
-    eventNames: ["messages-unread-refresh"],
-    // Collapse the tenant-wide message fan-out into one count refetch per burst.
-    eventDebounceMs: 500,
-    // Refetch on focus, matching the parent badge. SSE stops reconnecting after
-    // maxReconnectAttempts and stays "failed"; if that happens while the tab is
-    // backgrounded, no messages-unread-refresh event fires for a new message and
-    // the badge would stay stale until a full reload. A focus refetch heals it
-    // when the staffer returns to the tab.
-    refetchOnFocus: true,
-    initialCount: messagesAvailable
-      ? shellSeed?.counts.messagesUnread
-      : undefined,
-  });
+  // The count is computed for the current account and its student-read scope.
+  // The shared cache scopes the key by school and account: two staff users
+  // sharing a browser never see each other's badge, and a tenant switch never
+  // surfaces the previous school's count. The key is the one the tenant layout
+  // seeds from the server; while messaging is unavailable nothing reads it.
+  const accountId = session?.user?.id;
+  return useUnreadCount(
+    accountId ? shellResourceKeys.messagesUnread(accountId) : null,
+    {
+      // The inbox requires users:read; the role „AG-Leitung“ (#4573) lacks it.
+      enabled:
+        status === "authenticated" &&
+        mode === "teacher" &&
+        !!accountId &&
+        messagesAvailable &&
+        hasPermission(session, "users:read"),
+      fetcher: fetchUnreadCount,
+      eventNames: ["messages-unread-refresh"],
+      // Collapse the tenant-wide message fan-out into one count refetch per burst.
+      eventDebounceMs: 500,
+      // Refetch on focus, matching the parent badge. SSE stops reconnecting after
+      // maxReconnectAttempts and stays "failed"; if that happens while the tab is
+      // backgrounded, no messages-unread-refresh event fires for a new message and
+      // the badge would stay stale until a full reload. A focus refetch heals it
+      // when the staffer returns to the tab.
+      refetchOnFocus: true,
+    },
+  );
 }

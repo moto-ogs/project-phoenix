@@ -143,6 +143,11 @@ type raceFixture struct {
 	conclusion  carecontract.Concluded
 }
 
+// raceNow is the owner clock of the race fixture, pinned after the paper
+// signing day of paperOf: a live clock before that day refuses the paper as
+// signed in the future (#7295).
+var raceNow = time.Date(2026, 11, 6, 10, 0, 0, 0, time.UTC)
+
 // newRaceFixture is one draft of a Träger with its party and services, and
 // the conclusion and the contracts over the real store.
 func newRaceFixture(t *testing.T, name string) raceFixture {
@@ -155,7 +160,7 @@ func newRaceFixture(t *testing.T, name string) raceFixture {
 	testpkg.OwnTraegerCareContracts(t, db, org)
 	account := testpkg.CreateTestAccountWithPassword(t, db, fmt.Sprintf("rennen-%d@test.local", testpkg.UniqueTestTenantID(t)), testpkg.NewTestPassword())
 	store := postgres.NewStore(calendar.TodayDate)
-	clock := Clock{Now: time.Now}
+	clock := Clock{Now: func() time.Time { return raceNow }}
 	contracts := NewContracts(store, raceRenderer{}, ContractPorts{
 		Letterheads: raceLetterhead{}, Post: &racePost{next: testpkg.UniqueTestTenantID(t) * 1_000}, Runtime: raceRuntime{}, Access: raceAccess{},
 		Holidays: schoolHolidays{},

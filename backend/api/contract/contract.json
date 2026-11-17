@@ -24,6 +24,17 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/parent-announcements/{announcementId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "deletedResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/school/notifications/preferences/",
       "portals": [
         "school"
@@ -43,6 +54,17 @@
         }
       ],
       "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/school/parent-letters/{announcementId}",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "deletedResponse"
+      }
     },
     {
       "method": "GET",
@@ -107,6 +129,134 @@
       "response": {
         "kind": "ref",
         "ref": "pushPublicKeyResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/parent-announcements/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "include_inactive",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "announcementResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/parent-announcements/letter-placeholders",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "letterPlaceholderResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/parent-announcements/students/{studentId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "studentRecordsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/parent-announcements/{announcementId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "announcementResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/parent-announcements/{announcementId}/declaration-status",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "declarationStatusResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/parent-announcements/{announcementId}/letter-status",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "letterStatusResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/parent-announcements/{announcementId}/poll-children",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "pollChildResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/parent-announcements/{announcementId}/poll-results",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "pollResultsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/parent-announcements/{announcementId}/recipients",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "recipientResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/parent-announcements/{announcementId}/stats",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "statsResponse"
       }
     },
     {
@@ -425,6 +575,92 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/parent-letters/",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "announcementResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/parent-letters/letter-placeholders",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "letterPlaceholderResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/parent-letters/{announcementId}",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "announcementResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/parent-letters/{announcementId}/declaration-status",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "declarationStatusResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/parent-letters/{announcementId}/letter-status",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "letterStatusResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/parent-letters/{announcementId}/recipients",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "recipientResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/parent-letters/{announcementId}/stats",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "statsResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/school/staff-messages/",
       "portals": [
         "school"
@@ -566,6 +802,80 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/parent-announcements/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "announcementRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "announcementResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/parent-announcements/letter-preview",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "letterPreviewRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "letterPreviewResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/parent-announcements/{announcementId}/publish",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "announcementResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/parent-announcements/{announcementId}/remind",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "remindedResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/parent-announcements/{announcementId}/resend-failed",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "resentResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/parent-announcements/{announcementId}/unpublish",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "announcementResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/staff-messages/groups",
       "portals": [
         "tenant"
@@ -691,6 +1001,80 @@
     },
     {
       "method": "POST",
+      "pattern": "/school/parent-letters/",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "announcementRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "announcementResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/parent-letters/letter-preview",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "letterPreviewRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "letterPreviewResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/parent-letters/{announcementId}/publish",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "announcementResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/parent-letters/{announcementId}/remind",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "remindedResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/parent-letters/{announcementId}/resend-failed",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "resentResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/parent-letters/{announcementId}/unpublish",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "announcementResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/school/staff-messages/threads/open",
       "portals": [
         "school"
@@ -772,6 +1156,21 @@
         "ref": "preferenceRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/parent-announcements/{announcementId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "announcementRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "announcementResponse"
+      }
     },
     {
       "method": "PUT",
@@ -1586,6 +1985,114 @@
               "kind": "ref",
               "ref": "NewGuardianPhone"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentAnnouncementLetterSummary",
+      "go_type": "communication.ParentAnnouncementLetterSummary",
+      "fields": [
+        {
+          "name": "children_total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children_confirmable",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children_fulfilled",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children_open",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children_without_portal",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "recipients_total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "emails_sent",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "emails_delivered",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "emails_delayed",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "emails_address_check",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "emails_stopped",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "emails_provider_blocked",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "emails_resendable",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "emails_pending",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "emails_failed",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "without_email",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "without_portal",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -3592,6 +4099,371 @@
       ]
     },
     {
+      "name": "announcementRequest",
+      "go_type": "announcement.announcementRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "priority",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "link_url",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "requires_acknowledgement",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "send_email",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "expires_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "targets",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "targetRequest"
+            }
+          }
+        },
+        {
+          "name": "response_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "response_deadline",
+          "optional": true,
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "options",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "delivery_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email_audience",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reminder_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reminder_text",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "declaration_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "declaration_signers",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "declaration_requires_password",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "declaration_requires_signature",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "announcementResponse",
+      "go_type": "announcement.announcementResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "priority",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "link_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requires_acknowledgement",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "send_email",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "published_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "expires_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "targets",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "targetResponse"
+            }
+          }
+        },
+        {
+          "name": "response_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "response_deadline",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "options",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "optionResponse"
+            }
+          }
+        },
+        {
+          "name": "delivery_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email_audience",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "system_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sender_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sender_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reminder_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reminder_text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reminder_sent_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "declaration_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "declaration_signers",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "declaration_requires_password",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "declaration_requires_signature",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "declaration_locked_attachments",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "billingKeyDayResponse",
       "go_type": "operator.billingKeyDayResponse",
       "fields": [
@@ -3642,6 +4514,415 @@
           "schema": {
             "kind": "enum",
             "ref": "DebtorNumberScope"
+          }
+        }
+      ]
+    },
+    {
+      "name": "declarationAttachmentResponse",
+      "go_type": "announcement.declarationAttachmentResponse",
+      "fields": [
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "sha256",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "declarationChildResponse",
+      "go_type": "announcement.declarationChildResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "state",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "declarationSignerResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "declarationSignatureResponse",
+      "go_type": "announcement.declarationSignatureResponse",
+      "fields": [
+        {
+          "name": "method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "typed_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "signed_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "integrity_ok",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "declarationSignerResponse",
+      "go_type": "announcement.declarationSignerResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "submitted_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "declarationStatusResponse",
+      "go_type": "announcement.declarationStatusResponse",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signers",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requires_password",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "requires_signature",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "deadline",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "current_version",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "declarationVersionResponse"
+          }
+        },
+        {
+          "name": "versions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "declarationVersionResponse"
+            }
+          }
+        },
+        {
+          "name": "summary",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "declarationChildResponse"
+            }
+          }
+        },
+        {
+          "name": "submissions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "declarationSubmissionResponse"
+            }
+          }
+        },
+        {
+          "name": "integrity_ok",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "declarationSubmissionResponse",
+      "go_type": "announcement.declarationSubmissionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_role",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password_confirmed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "version_no",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_hash",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "record_hash",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "submitted_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "integrity_ok",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "signature",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "declarationSignatureResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "declarationVersionResponse",
+      "go_type": "announcement.declarationVersionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version_no",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content_hash",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "published_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "attachments",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "declarationAttachmentResponse"
+            }
+          }
+        },
+        {
+          "name": "integrity_ok",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "deletedResponse",
+      "go_type": "announcement.deletedResponse",
+      "fields": [
+        {
+          "name": "deleted",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -3781,6 +5062,291 @@
       ]
     },
     {
+      "name": "letterChildResponse",
+      "go_type": "announcement.letterChildResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "fulfilled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_confirm",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "acknowledged_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "acknowledged_by",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "letterPlaceholderResponse",
+      "go_type": "announcement.letterPlaceholderResponse",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "example",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "letterPreviewChild",
+      "go_type": "announcement.letterPreviewChild",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "letterPreviewRequest",
+      "go_type": "announcement.letterPreviewRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "letterPreviewResponse",
+      "go_type": "announcement.letterPreviewResponse",
+      "fields": [
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child",
+          "schema": {
+            "kind": "ref",
+            "ref": "letterPreviewChild"
+          }
+        }
+      ]
+    },
+    {
+      "name": "letterRecipientResponse",
+      "go_type": "announcement.letterRecipientResponse",
+      "fields": [
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email_status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mail_outcome",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_mark",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "stopped",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "stop_shared",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "departed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "mailed_to",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "provider_block",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reachability",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_error",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sent_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "letterStatusResponse",
+      "go_type": "announcement.letterStatusResponse",
+      "fields": [
+        {
+          "name": "recipients",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "letterRecipientResponse"
+            }
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "letterChildResponse"
+            }
+          }
+        },
+        {
+          "name": "summary",
+          "schema": {
+            "kind": "ref",
+            "ref": "ParentAnnouncementLetterSummary"
+          }
+        }
+      ]
+    },
+    {
       "name": "openThreadRequest",
       "go_type": "staffmessaging.openThreadRequest",
       "request": true,
@@ -3790,6 +5356,136 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "optionResponse",
+      "go_type": "announcement.optionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pollChildResponse",
+      "go_type": "announcement.pollChildResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "answer_labels",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "responded_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "can_answer",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pollOptionResultResponse",
+      "go_type": "announcement.pollOptionResultResponse",
+      "fields": [
+        {
+          "name": "option_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pollResultsResponse",
+      "go_type": "announcement.pollResultsResponse",
+      "fields": [
+        {
+          "name": "child_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_child_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "answered_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "options",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "pollOptionResultResponse"
+            }
           }
         }
       ]
@@ -3897,12 +5593,291 @@
       ]
     },
     {
+      "name": "recipientResponse",
+      "go_type": "announcement.recipientResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "read_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "acknowledged_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "remindedResponse",
+      "go_type": "announcement.remindedResponse",
+      "fields": [
+        {
+          "name": "reminded_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "renameGroupRequest",
       "go_type": "staffmessaging.renameGroupRequest",
       "request": true,
       "fields": [
         {
           "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "resentResponse",
+      "go_type": "announcement.resentResponse",
+      "fields": [
+        {
+          "name": "resent_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "statsResponse",
+      "go_type": "announcement.statsResponse",
+      "fields": [
+        {
+          "name": "target_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "read_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "acknowledged_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "recorded",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "studentDeclarationResponse",
+      "go_type": "announcement.studentDeclarationResponse",
+      "fields": [
+        {
+          "name": "announcement_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "published_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "deadline",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "version_no",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "state",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "declarationSignerResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "studentLetterResponse",
+      "go_type": "announcement.studentLetterResponse",
+      "fields": [
+        {
+          "name": "announcement_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "published_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "can_confirm",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "acknowledged_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "acknowledged_by",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "studentRecordsResponse",
+      "go_type": "announcement.studentRecordsResponse",
+      "fields": [
+        {
+          "name": "letters",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "studentLetterResponse"
+            }
+          }
+        },
+        {
+          "name": "declarations",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "studentDeclarationResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "targetRequest",
+      "go_type": "announcement.targetRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "target_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ref_id",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ref_text",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "targetResponse",
+      "go_type": "announcement.targetResponse",
+      "fields": [
+        {
+          "name": "target_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ref_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ref_text",
           "optional": true,
           "schema": {
             "kind": "string"

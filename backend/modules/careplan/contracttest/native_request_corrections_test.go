@@ -66,6 +66,11 @@ func TestNativeCorrectionReauthorizesAndRollsBackExactExceptionDeletion(t *testi
 		CreatedAt: createdAt, UpdatedAt: createdAt,
 	})
 	require.NoError(t, err)
+	// The history below has no row versions: a ledger written before them,
+	// whose approvals stamped the row on the owner clock (ADR 0281). Today the
+	// column default stamps it on the database clock, so restore that stamp.
+	_, err = db.NewUpdate().TableExpr("schedule.student_pickup_exceptions").Set("updated_at = ?", createdAt).Where("id = ?", exception.ID).Exec(ctx)
+	require.NoError(t, err)
 	request, err := owner.CreateCareScheduleRequest(ctx, carerequests.Request{StudentID: student.ID, SubmittedBy: parent.ID,
 		RequestKind: "pickup_change", Status: "pending", Payload: json.RawMessage(`{"date":"2031-02-03","pickup_time":"14:00"}`)})
 	require.NoError(t, err)

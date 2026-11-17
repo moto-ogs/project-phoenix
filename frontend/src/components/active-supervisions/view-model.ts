@@ -2,6 +2,7 @@ import type { StatusBadgeTone } from "~/components/ui/status-badge";
 import type { ClassHandover } from "~/lib/class-handover";
 import type { Student, TeacherHint } from "~/lib/student-helpers";
 import type { TimetableRoster } from "~/lib/timetable-operations-types";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 export const SCHULHOF_ROOM_NAME = "Schulhof";
 
@@ -390,16 +391,7 @@ export function activeSupervisionRosterKey(options: {
   readonly currentRoomId: string | null | undefined;
   readonly missingRosterActiveGroupIds: ReadonlySet<string>;
 }): string | null {
-  if (options.selectedTimetableInstanceId) {
-    return `timetable-roster-${options.selectedTimetableInstanceId}`;
-  }
-  if (
-    !options.currentRoomId ||
-    options.missingRosterActiveGroupIds.has(options.currentRoomId)
-  ) {
-    return null;
-  }
-  return `timetable-roster-active-group-${options.currentRoomId}`;
+  return tenantDailyKeys.activeSupervisionRoster(options);
 }
 
 /**

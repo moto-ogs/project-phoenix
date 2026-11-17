@@ -284,10 +284,6 @@
     {
       "name": "platform.notification_feed_entries",
       "write_owner": "delivery-platform"
-    },
-    {
-      "name": "platform.delivery_traeger_feed_readers",
-      "write_owner": "delivery-platform"
     }
   ],
   "rules": [

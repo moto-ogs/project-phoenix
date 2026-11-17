@@ -96,7 +96,11 @@ export function PublicEnrollmentSteps({
         const done = index < currentIndex || current === "done";
         const active = index === currentIndex && current !== "done";
         return (
-          <li key={step.id} className="flex items-center gap-2">
+          <li
+            key={step.id}
+            className="flex items-center gap-2"
+            aria-current={active ? "step" : undefined}
+          >
             <span
               className={`flex h-7 w-7 items-center justify-center rounded-full border sm:h-8 sm:w-8 ${
                 done
@@ -112,15 +116,20 @@ export function PublicEnrollmentSteps({
                 index + 1
               )}
             </span>
+            {/* On a phone the name is read, not shown; the check mark of a
+                finished step is said in words (#7112). */}
             <span
               className={
                 active || done
-                  ? "hidden text-gray-900 sm:inline"
-                  : "hidden sm:inline"
+                  ? "sr-only text-gray-900 sm:not-sr-only"
+                  : "sr-only sm:not-sr-only"
               }
             >
               {step.label}
             </span>
+            {done ? (
+              <span className="sr-only">{`, ${t("steps.completed")}`}</span>
+            ) : null}
             {index < steps.length - 1 && (
               <ChevronRight
                 className="h-3.5 w-3.5 text-gray-300 sm:h-4 sm:w-4"

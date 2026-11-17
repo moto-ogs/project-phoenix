@@ -1,0 +1,60 @@
+package announcement
+
+import "github.com/moto-ogs/project-phoenix/api/common"
+
+// RouteContracts registers the typed contract of the parent announcements a
+// portal mounts (ADR 0270), with patterns relative to the mount:
+// /api/parent-announcements in the staff portal, /school/parent-letters in
+// moto schule. A Lehrkraft writes class letters only; changing a draft, polls,
+// the scheduled reminder and the Kinderakte belong to the staff portal.
+//
+// The PDF and CSV downloads answer a file and keep their route files, and so
+// does PUT /{announcementId}/reminder: its body tells an omitted reminder_at
+// from an explicit null, which a typed request cannot say.
+func RouteContracts(portal common.PortalScope) []common.RouteContract {
+	portals := []common.PortalScope{portal}
+	tenant := portal == common.PortalTenant
+	var listQuery []common.QueryParam
+	if tenant {
+		listQuery = []common.QueryParam{{Name: "include_inactive", Kind: common.QueryBool}}
+	}
+	routes := []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Query: listQuery, Response: []announcementResponse{}},
+		{Method: "POST", Pattern: "/", Portals: portals, Request: announcementRequest{}, Response: announcementResponse{}},
+		{Method: "GET", Pattern: "/letter-placeholders", Portals: portals, Response: []letterPlaceholderResponse{}},
+		{Method: "POST", Pattern: "/letter-preview", Portals: portals, Request: letterPreviewRequest{}, Response: letterPreviewResponse{}},
+		{Method: "GET", Pattern: "/{announcementId}", Portals: portals, Response: announcementResponse{}},
+		{Method: "DELETE", Pattern: "/{announcementId}", Portals: portals, Response: deletedResponse{}},
+		{Method: "POST", Pattern: "/{announcementId}/publish", Portals: portals, Response: announcementResponse{}},
+		{Method: "POST", Pattern: "/{announcementId}/unpublish", Portals: portals, Response: announcementResponse{}},
+		{Method: "GET", Pattern: "/{announcementId}/stats", Portals: portals, Response: statsResponse{}},
+		{Method: "GET", Pattern: "/{announcementId}/recipients", Portals: portals, Response: []recipientResponse{}},
+		{Method: "GET", Pattern: "/{announcementId}/letter-status", Portals: portals, Response: letterStatusResponse{}},
+		{Method: "GET", Pattern: "/{announcementId}/declaration-status", Portals: portals, Response: declarationStatusResponse{}},
+		{Method: "POST", Pattern: "/{announcementId}/remind", Portals: portals, Response: remindedResponse{}},
+		{Method: "POST", Pattern: "/{announcementId}/resend-failed", Portals: portals, Response: resentResponse{}},
+	}
+	if !tenant {
+		return routes
+	}
+	return append(routes,
+		common.RouteContract{Method: "PUT", Pattern: "/{announcementId}", Portals: portals, Request: announcementRequest{}, Response: announcementResponse{}},
+		common.RouteContract{Method: "GET", Pattern: "/{announcementId}/poll-results", Portals: portals, Response: pollResultsResponse{}},
+		common.RouteContract{Method: "GET", Pattern: "/{announcementId}/poll-children", Portals: portals, Response: []pollChildResponse{}},
+		common.RouteContract{Method: "GET", Pattern: "/students/{studentId}", Portals: portals, Response: studentRecordsResponse{}},
+	)
+}
+
+// deletedResponse, remindedResponse and resentResponse are the small answers
+// of a write that returns no announcement.
+type deletedResponse struct {
+	Deleted bool `json:"deleted"`
+}
+
+type remindedResponse struct {
+	RemindedCount int `json:"reminded_count"`
+}
+
+type resentResponse struct {
+	ResentCount int `json:"resent_count"`
+}

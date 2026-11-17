@@ -1,11 +1,40 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, render, screen, fireEvent } from "@testing-library/react";
+import {
+  act,
+  render as renderPlain,
+  screen,
+  fireEvent,
+} from "@testing-library/react";
 
 import { CompanionPicker } from "./companion-picker";
 import { ApiError } from "~/lib/api-error";
 import { releaseFakeTimers } from "~/test/clock";
 import { fetchStudents } from "~/lib/student-api";
 import type { StudentCompanion } from "~/lib/student-companion-api";
+
+import { SessionProvider } from "next-auth/react";
+import type { ReactElement, ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// The component reads through the shared cache; each render gets its own.
+vi.unmock("swr");
+
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderPlain(ui, { wrapper: Providers });
+}
 
 vi.mock("~/lib/student-api", () => ({
   fetchStudents: vi.fn().mockResolvedValue({ students: [] }),

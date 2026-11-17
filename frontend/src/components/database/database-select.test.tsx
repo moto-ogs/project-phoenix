@@ -1,38 +1,36 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render as renderPlain,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactElement, ReactNode } from "react";
 import { DatabaseSelect, GroupSelect } from "./database-select";
 import { useApiLoadError } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { SWRConfig } from "~/lib/swr/testing";
 
-type SelectOptions = ReadonlyArray<{ value: string; label: string }>;
+// GroupSelect reads its options through the shared cache; each render gets
+// its own.
+vi.unmock("swr");
 
-/** An owner with the shared load path, as a real caller wires it (#2517). */
-function SelectOwner({
-  loadOptions,
-}: {
-  readonly loadOptions: () => Promise<SelectOptions>;
-}) {
-  const { error, show, clear } = useApiLoadError();
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <DatabaseSelect
-      name="room"
-      label="Raum"
-      value=""
-      onChange={() => undefined}
-      loadOptions={loadOptions}
-      loadError={error}
-      onLoadError={(loadError, retry) =>
-        void show(loadError, {
-          object: "die Liste der Räume",
-          retry: () => {
-            clear();
-            retry();
-          },
-        })
-      }
-    />
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
   );
+}
+
+function render(ui: ReactElement) {
+  return renderPlain(ui, { wrapper: Providers });
 }
 
 function GroupSelectOwner() {
@@ -277,120 +275,6 @@ describe("DatabaseSelect", () => {
     });
   });
 
-  describe("Async Options Loading", () => {
-    it("loads options from loadOptions function", async () => {
-      const loadOptions = vi.fn().mockResolvedValue([
-        { value: "1", label: "Loaded Option 1" },
-        { value: "2", label: "Loaded Option 2" },
-      ]);
-
-      render(
-        <DatabaseSelect
-          {...defaultProps}
-          loadOptions={loadOptions}
-          loadError={null}
-          onLoadError={vi.fn()}
-        />,
-      );
-
-      // Should show loading state initially
-      expect(screen.getByText("Lädt...")).toBeInTheDocument();
-
-      // The trigger is disabled while loading; open once loading finished
-      await waitFor(() => {
-        expect(screen.getByRole("combobox")).not.toBeDisabled();
-      });
-      openMenu();
-
-      await waitFor(() => {
-        expect(
-          screen.getByRole("option", { name: "Loaded Option 1" }),
-        ).toBeInTheDocument();
-        expect(
-          screen.getByRole("option", { name: "Loaded Option 2" }),
-        ).toBeInTheDocument();
-      });
-
-      expect(loadOptions).toHaveBeenCalledTimes(1);
-    });
-
-    it("shows a failed load with the owner's catalog text instead of an empty select and retries it", async () => {
-      const loadOptions = vi
-        .fn<() => Promise<SelectOptions>>()
-        .mockRejectedValueOnce(
-          new ApiError("down", 503, { code: "general.unavailable" }),
-        )
-        .mockResolvedValueOnce([{ value: "1", label: "Raum Blau" }]);
-
-      render(<SelectOwner loadOptions={loadOptions} />);
-
-      expect(
-        await screen.findByText(
-          catalogText("general.unavailable", "die Liste der Räume"),
-        ),
-      ).toBeInTheDocument();
-      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-
-      fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
-
-      await waitFor(() => {
-        expect(screen.getByRole("combobox")).not.toBeDisabled();
-      });
-      expect(loadOptions).toHaveBeenCalledTimes(2);
-      expect(
-        screen.queryByText(
-          catalogText("general.unavailable", "die Liste der Räume"),
-        ),
-      ).not.toBeInTheDocument();
-      openMenu();
-      expect(
-        screen.getByRole("option", { name: "Raum Blau" }),
-      ).toBeInTheDocument();
-    });
-
-    it("hands a failed load to the owner with the error and a retry", async () => {
-      const failure = new ApiError("down", 503, {
-        code: "general.unavailable",
-      });
-      const loadOptions = vi.fn().mockRejectedValue(failure);
-      const onLoadError = vi.fn();
-
-      render(
-        <DatabaseSelect
-          {...defaultProps}
-          loadOptions={loadOptions}
-          loadError={null}
-          onLoadError={onLoadError}
-        />,
-      );
-
-      await waitFor(() => {
-        expect(onLoadError).toHaveBeenCalledWith(failure, expect.any(Function));
-      });
-    });
-
-    it("does not call loadOptions if staticOptions are provided", () => {
-      const loadOptions = vi.fn();
-      const staticOptions = [{ value: "static", label: "Static Option" }];
-
-      render(
-        // @ts-expect-error The type takes one source; the runtime still
-        // prefers static options when a caller passes both.
-        <DatabaseSelect
-          {...defaultProps}
-          options={staticOptions}
-          loadOptions={loadOptions}
-        />,
-      );
-
-      openMenu();
-      expect(loadOptions).not.toHaveBeenCalled();
-      expect(
-        screen.getByRole("option", { name: "Static Option" }),
-      ).toBeInTheDocument();
-    });
-  });
-
   describe("Custom Styling", () => {
     it("applies custom className", () => {
       render(<DatabaseSelect {...defaultProps} className="custom-class" />);
@@ -485,6 +369,9 @@ describe("GroupSelect", () => {
 
     render(<GroupSelect {...defaultProps} />);
 
+    // Should show loading state initially
+    expect(screen.getByText("Lädt...")).toBeInTheDocument();
+
     await waitFor(() => {
       expect(screen.getByRole("combobox")).not.toBeDisabled();
     });
@@ -500,6 +387,57 @@ describe("GroupSelect", () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith("/api/groups");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a failed load with the owner's catalog text instead of an empty select and retries it", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ data: [{ id: "1", name: "Raum Blau" }] }),
+      });
+
+    render(<GroupSelectOwner />);
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Liste der Gruppen"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).not.toBeDisabled();
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(
+      screen.queryByText(
+        catalogText("general.unavailable", "die Liste der Gruppen"),
+      ),
+    ).not.toBeInTheDocument();
+    openMenu();
+    expect(
+      screen.getByRole("option", { name: "Raum Blau" }),
+    ).toBeInTheDocument();
+  });
+
+  it("hands a failed load to the owner with the error and a retry", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new TypeError("Failed to fetch"),
+    );
+    const onLoadError = vi.fn();
+
+    render(<GroupSelect {...defaultProps} onLoadError={onLoadError} />);
+
+    await waitFor(() => {
+      expect(onLoadError).toHaveBeenCalledWith(
+        expect.objectContaining({ code: "general.unavailable" }),
+        expect.any(Function),
+      );
+    });
   });
 
   it("shows a failed group load with the catalog text and retry", async () => {

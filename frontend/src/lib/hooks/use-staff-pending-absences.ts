@@ -5,11 +5,11 @@ import { useSession } from "next-auth/react";
 import { hasPermission, isAdmin } from "~/lib/auth-utils";
 import { staffAbsenceService, type StaffAbsenceRow } from "~/lib/staff-api";
 import { useSWRAuth } from "~/lib/swr";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 
-// SWR key for the tenant-wide open-request list. Deliberately shares the
+// The tenant-wide open-request list deliberately shares the
 // "staff-pending-absences-" prefix with the per-staff detail-tab badge so the
 // existing includes()-mutate in abwesenheiten-tab.tsx invalidates both.
-const STAFF_PENDING_ABSENCES_KEY = "staff-pending-absences-all";
 
 /**
  * Tenant-wide open absence requests. Feeds the per-card pending indicators on
@@ -23,7 +23,7 @@ export function useStaffPendingAbsences() {
   const canReview =
     isAdmin(session) || hasPermission(session, "vacation:approve");
   const { data } = useSWRAuth<StaffAbsenceRow[]>(
-    canReview ? STAFF_PENDING_ABSENCES_KEY : null,
+    canReview ? staffAbsenceKeys.pendingAll() : null,
     () => staffAbsenceService.listPending(),
     { revalidateOnFocus: true },
   );

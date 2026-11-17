@@ -1102,6 +1102,7 @@ function SidebarContent({
         )}
       >
         <nav
+          aria-label="Hauptnavigation"
           className={`${collapsed ? "scrollbar-hidden" : ""} flex-1 overflow-y-auto ${SIDEBAR_NAV_PADDING}`}
         >
           {resolvedOperatorSections.map((section, index) => (
@@ -1424,6 +1425,7 @@ function SidebarContent({
                 64px-Streifen wird er ausgeblendet, wo er ein Viertel der Breite
                 einnähme (Muster: VS-Code-Aktivitätsleiste). */}
           <nav
+            aria-label="Hauptnavigation"
             className={`${collapsed ? "scrollbar-hidden" : ""} flex-1 overflow-y-auto ${SIDEBAR_NAV_GAP} ${SIDEBAR_NAV_PADDING}`}
           >
             {/* Startseite der Rolle: Home für Admins, Tagesplan (#2383) für
@@ -1473,6 +1475,7 @@ function SidebarContent({
           {/* Bottom pinned items — gleiches Raster wie oben, damit der untere
                 Block in beiden Zuständen zur Hauptnavigation passt. */}
           <nav
+            aria-label="Notfall, Hilfe und Einstellungen"
             className={`border-t border-gray-200 ${SIDEBAR_NAV_GAP} ${SIDEBAR_NAV_PADDING}`}
           >
             {STAFF_NAV_BOTTOM.map(renderEntry)}
@@ -1513,7 +1516,7 @@ export function Sidebar({ className = "" }: SidebarProps) {
             {/* Platzhalter im selben Raster wie die fertigen Zeilen: 40px
                 hoch, Icon an derselben Stelle — der Wechsel vom Platzhalter
                 zur Navigation verschiebt nichts. */}
-            <nav className={SIDEBAR_NAV_GAP}>
+            <div className={SIDEBAR_NAV_GAP}>
               {["w-24", "w-28", "w-20", "w-24"].map((widthClass, index) => (
                 <div key={index} className="flex h-10 items-center px-3">
                   <Skeleton className="h-5 w-5 shrink-0" />
@@ -1522,7 +1525,7 @@ export function Sidebar({ className = "" }: SidebarProps) {
                   )}
                 </div>
               ))}
-            </nav>
+            </div>
           </div>
         </PortalSidebarFrame>
       }

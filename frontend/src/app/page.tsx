@@ -29,6 +29,7 @@ export default function RootPage() {
   const [selectedSlug, setSelectedSlug] = useState("");
   const [isNavigating, setIsNavigating] = useState(false);
 
+  // oxlint-disable-next-line swr/no-effect-load -- sessionless school picker on the root domain; useSWRAuth fetches only with a session and ~/lib/swr has no public reader
   useEffect(() => {
     void listAllTenants()
       .then((result) => {

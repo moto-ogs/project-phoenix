@@ -61,16 +61,12 @@ export default meta;
 type Story = StoryObj<typeof InstanceBlock>;
 
 export const Planned: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance(),
   },
 };
 
 export const Active: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance({
       status: "active",
@@ -81,8 +77,6 @@ export const Active: Story = {
 };
 
 export const Cancelled: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance({
       status: "cancelled",
@@ -91,8 +85,6 @@ export const Cancelled: Story = {
 };
 
 export const Spontaneous: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance({
       isSpontaneous: true,
@@ -102,8 +94,6 @@ export const Spontaneous: Story = {
 };
 
 export const WithConflict: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance({
       conflictWarnings: [
@@ -120,8 +110,6 @@ export const WithConflict: Story = {
 };
 
 export const Selected: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance(),
     isSelected: true,
@@ -129,8 +117,6 @@ export const Selected: Story = {
 };
 
 export const Compact: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance(),
     height: 40,
@@ -138,8 +124,6 @@ export const Compact: Story = {
 };
 
 export const Tiny: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance(),
     height: 24,
@@ -148,8 +132,6 @@ export const Tiny: Story = {
 
 /** #4570: Ein kurzer Dienst am Tagesende zeigt seine Besetzung im Block. */
 export const TinyWithNames: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance({
       title: "Busaufsicht",

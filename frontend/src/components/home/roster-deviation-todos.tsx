@@ -1,12 +1,13 @@
 "use client";
 
-import { rosterDeviationsKey } from "~/components/timetable/use-roster-deviations";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
 import { findPeriodForDate } from "~/lib/calendar-period-helpers";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { useSWRAuth } from "~/lib/swr";
+import { databaseKeys } from "~/lib/swr/portal-keys";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { timetableService } from "~/lib/timetable-api";
 
@@ -25,13 +26,13 @@ export function RosterDeviationTodos({
 }>) {
   const tenantPath = useTenantAwarePath();
   const { data: periods } = useSWRAuth(
-    enabled ? "database-calendar-periods-list" : null,
+    enabled ? databaseKeys.calendarPeriods() : null,
     () => calendarPeriodService.list(),
   );
   const period = periods ? findPeriodForDate(periods, berlinTodayISO()) : null;
   // Same cache entry as the Betreuungsplan, so both show the same count.
   const { data: deviations } = useSWRAuth(
-    enabled && period ? rosterDeviationsKey(period.id) : null,
+    enabled && period ? tenantDailyKeys.rosterDeviations(period.id) : null,
     () => timetableService.getRosterDeviations(period?.id ?? ""),
   );
 

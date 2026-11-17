@@ -84,7 +84,7 @@ Only three files may use raw `console.*`: `src/lib/logger.ts`, `src/lib/client-l
 Read through the shared cache: `useSWRAuth` with a key factory of `~/lib/swr`
 (Träger portal: `useTraegerResource`), never `useEffect` + `useState`. A load
 in an effect is gone at the next page switch. oxlint `swr/no-effect-load`
-fails a new one; `scripts/swr-effect-load-baseline.json` only shrinks.
+fails it; `scripts/swr-effect-load-baseline.json` stays empty.
 Contract and exceptions: `src/lib/swr/README.md`.
 
 ## Real-time updates

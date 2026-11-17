@@ -56,8 +56,9 @@ func createSigningLink(ctx context.Context, store SignatureStore, links carecont
 	if err != nil {
 		return signingLink{}, fmt.Errorf("care contract: signing token: %w", err)
 	}
-	expires := clock.now().Add(carecontract.SigningLinkLifetime)
-	if err := store.InsertSigningLink(ctx, organizationID, contractID, documentID, fingerprint, sent, expires); err != nil {
+	created := clock.now()
+	expires := created.Add(carecontract.SigningLinkLifetime)
+	if err := store.InsertSigningLink(ctx, organizationID, contractID, documentID, fingerprint, sent, created, expires); err != nil {
 		return signingLink{}, err
 	}
 	base := strings.TrimRight(links.ParentsURL, "/")

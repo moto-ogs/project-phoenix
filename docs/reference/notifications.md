@@ -314,7 +314,7 @@ only the reason changed. The default-on push uses `FilterNotOptedOut`; the
 shared `notifications.school_closing_day_enabled` switch stops feed and push.
 The active members of the school's Träger (`platform.organization_accounts`,
 active account) read the same notice in the bell of the Träger-Portal
-(`traeger_school_closing_day_changed`, #7146, ADR 0286): one entry per member
+(`traeger_school_closing_day_changed`, #7146, ADR 0287): one entry per member
 in the school it is about, linked to `/traeger/schulen/<id>`, without push
 and without live signal, under the same school switch. The request account is
 excluded here too. `GET /traeger/notifications/feed` lists the entries of all

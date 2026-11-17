@@ -14,6 +14,8 @@ type RequestCorrectionRecords interface {
 	DeleteException(context.Context, int64) error
 	FindDepartureException(context.Context, int64) (*careplan.DepartureException, error)
 	DeleteDepartureException(context.Context, int64) error
+	// FindPickupNote locks the note and returns nil when it is gone.
+	FindPickupNote(context.Context, int64) (*careplan.PickupNote, error)
 	DeletePickupNote(context.Context, int64) error
 }
 

@@ -63,9 +63,8 @@ describe("SchoolSidebar", () => {
 
     const item = document.querySelector('[data-school-nav-item="notices"]');
     expect(item).toHaveAttribute("href", "/tagesinformationen");
-    expect(
-      screen.getByLabelText("2 offene Hinweise der Leitung"),
-    ).toBeInTheDocument();
+    // The count is part of the entry's name (#7112).
+    expect(item).toHaveAccessibleName(/ 2 offene Hinweise der Leitung$/);
   });
 
   it("markiert die Aufsichten auf ihrer Seite des Schul-Hosts (#2527)", () => {

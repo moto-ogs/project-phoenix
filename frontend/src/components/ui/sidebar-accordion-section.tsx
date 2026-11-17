@@ -74,9 +74,6 @@ export function SidebarAccordionSection({
   // ist, übernehmen die Zähler der Unterpunkte.
   const shownBadge =
     badge != null && badge.count > 0 && !bodyExpanded ? badge : null;
-  const collapsedLabel = shownBadge
-    ? `${label}, ${shownBadge.ariaLabel}`
-    : label;
 
   return (
     <div>
@@ -95,7 +92,7 @@ export function SidebarAccordionSection({
         data-active={rowActive ? "true" : "false"}
         aria-controls={bodyId}
         aria-expanded={bodyExpanded}
-        {...(collapsed ? { title: label, "aria-label": collapsedLabel } : {})}
+        {...(collapsed ? { title: label } : {})}
       >
         <SidebarRowContent
           icon={

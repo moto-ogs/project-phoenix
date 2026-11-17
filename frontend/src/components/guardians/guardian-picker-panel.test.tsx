@@ -1,6 +1,6 @@
 import {
   act,
-  render,
+  render as rtlRender,
   screen,
   fireEvent,
   waitFor,
@@ -10,6 +10,29 @@ import GuardianPickerPanel from "./guardian-picker-panel";
 import type { Guardian } from "@/lib/guardian-helpers";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { SessionProvider } from "next-auth/react";
+import type { ReactElement, ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// The search reads through the shared cache; each render gets its own.
+vi.unmock("swr");
+
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: Providers });
+}
 
 const mockSearchGuardians = vi.fn();
 

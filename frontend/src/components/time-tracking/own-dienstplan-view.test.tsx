@@ -209,9 +209,17 @@ describe("OwnDienstplanView", () => {
     expect(
       screen.queryByRole("button", { name: /Schicht anlegen/ }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getAllByRole("group", { name: "08:00–12:00 Frühdienst" }),
-    ).toHaveLength(2);
+    // The read-only blocks show time and Dienstart as text, as no buttons
+    // (#7112: a block names itself by what it shows).
+    const earlyBlocks = screen
+      .getAllByText("08:00–12:00")
+      .filter(
+        (time) => time.closest("div")?.textContent === "08:00–12:00Frühdienst",
+      );
+    expect(earlyBlocks).toHaveLength(2);
+    for (const time of earlyBlocks) {
+      expect(time.closest("button")).toBeNull();
+    }
     // Raster (ab lg) und Tagesliste (Handy) tragen beide den Hinweis.
     expect(screen.getAllByText(/Nur zur Information/)).toHaveLength(2);
 
