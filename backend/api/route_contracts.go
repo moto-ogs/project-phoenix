@@ -35,6 +35,7 @@ func ContractDocument() (contract.Document, error) {
 		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
+		{"/traeger/notifications", traegerNotificationRouteContracts()},
 		{"/caterer", catererPortalHTTP.RouteContracts()},
 	}
 	catalog, err := RouteCatalog()
@@ -99,6 +100,20 @@ func notificationRouteContracts(portal common.PortalScope) []common.RouteContrac
 		common.RouteContract{Method: "GET", Pattern: "/email-subscriptions/{type}", Portals: portals, Response: types.EmailSubscription},
 		common.RouteContract{Method: "PUT", Pattern: "/email-subscriptions/{type}", Portals: portals, Request: types.PreferenceRequest, NoData: true},
 	)
+}
+
+// traegerNotificationRouteContracts registers the bell of the Träger-Portal
+// (#7146), with patterns relative to its /traeger/notifications mount.
+func traegerNotificationRouteContracts() []common.RouteContract {
+	types := notificationsHTTP.RouteContractTypes()
+	portals := []common.PortalScope{common.PortalTraeger}
+	page := []common.QueryParam{{Name: "limit", Kind: common.QueryInt}, {Name: "cursor", Kind: common.QueryString}}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/feed/", Portals: portals, Query: page, Response: types.TraegerFeedPage},
+		{Method: "GET", Pattern: "/feed/unread-count", Portals: portals, Response: types.FeedCount},
+		{Method: "POST", Pattern: "/feed/read-all", Portals: portals, Response: types.FeedCount},
+		{Method: "POST", Pattern: "/feed/{id}/read", Portals: portals, Response: types.FeedCount},
+	}
 }
 
 func contractRegistration(prefix string, route common.RouteContract) contract.Registration {

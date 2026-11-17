@@ -168,7 +168,7 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 	{
 		Key:             config.KeyNotificationsSchoolClosingDayEnabled,
 		Label:           "Benachrichtigung bei Schließtagen",
-		Description:     "Wird ein Schließtag eingetragen, geändert oder gelöscht, steht das bei den Benachrichtigungen aller Mitarbeitenden, Lehrkräfte und Eltern. Liegt der Tag in den nächsten 14 Tagen, kommt auch eine Mitteilung aufs Handy. Jede Person kann sie selbst ausschalten.",
+		Description:     "Wird ein Schließtag eingetragen, geändert oder gelöscht, steht das bei den Benachrichtigungen aller Mitarbeitenden, Lehrkräfte, Eltern und im Träger-Büro. Liegt der Tag in den nächsten 14 Tagen, kommt auch eine Mitteilung aufs Handy. Jede Person kann sie selbst ausschalten.",
 		Type:            config.FieldBoolean,
 		Default:         true,
 		ReadPermission:  "config:read",

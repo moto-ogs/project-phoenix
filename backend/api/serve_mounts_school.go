@@ -186,6 +186,9 @@ func mountSchoolPortalRoutes(
 	tenant.Mount("/staff-notices", staffNotices.Router(ProtectedTenantRoutes))
 	tenant.Mount("/timetable", timetableResource.Router(ProtectedTenantRoutesWith(classdayHTTP.NewSlotListResource(classDay.SlotLists).Register)))
 	tenant.Mount("/notifications", notificationRoutes.Router())
+	// The bell of the Träger-Portal (#7146): the closing days of every school
+	// of the Träger, read across its schools.
+	root.Mount("/traeger/notifications", NewTraegerNotificationHTTP(notifications.TraegerFeed).Router())
 	root.Mount("/school-staff-messages", schoolMessageAttachmentRouter(staffAttachments))
 	root.Mount("/school", school.RouterWithAuthRateLimiter(limiters.authMiddleware(), SchoolSessionChain, ProtectedSchoolRoutes))
 	return nil

@@ -68,6 +68,8 @@ type DeliveryTestModule struct {
 	Hub  *realtime.Hub
 	// GuardianFeed reads the feed of a guardian across its schools (#7140).
 	GuardianFeed deliveryContract.GuardianNotificationFeed
+	// TraegerFeed reads the bell of the Träger-Portal (#7146).
+	TraegerFeed deliveryContract.TraegerNotificationFeed
 }
 
 // NotificationPreferenceRouterForTests mounts the actual protected resources
@@ -85,6 +87,7 @@ func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
 		Feed:        bindParentNotificationFeed(m.GuardianFeed),
 	})
 	router.Mount("/parent", parents.Router(ParentSessionChain))
+	router.Mount("/traeger/notifications", NewTraegerNotificationHTTP(m.TraegerFeed).Router())
 	return router
 }
 
@@ -150,8 +153,11 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	guardianFeed := service.(interface {
 		GuardianFeed() deliveryContract.GuardianNotificationFeed
 	}).GuardianFeed()
+	traegerFeed := service.(interface {
+		TraegerFeed() deliveryContract.TraegerNotificationFeed
+	}).TraegerFeed()
 	return DeliveryTestModule{Runtime: delivery, EmailOutbox: deliveryCompose.NewEmailOutbox(deliveryCompose.NewDurableEmails(delivery.Module)),
-		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub, GuardianFeed: guardianFeed}, nil
+		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub, GuardianFeed: guardianFeed, TraegerFeed: traegerFeed}, nil
 }
 
 // newDeliveryTestRouter builds the notification router over the SSE, Web Push

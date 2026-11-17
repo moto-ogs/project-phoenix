@@ -57,6 +57,10 @@ type DeliveryNotifications struct {
 	// SchoolAudience names the accounts and families a notice to the whole
 	// school reaches (#7144).
 	SchoolAudience deliveryContract.SchoolAudience
+	// TraegerNotices writes a notice into the bell of the Träger-Portal, and
+	// TraegerFeed serves that bell across the schools of a Träger (#7146).
+	TraegerNotices deliveryContract.TraegerFeedNotifier
+	TraegerFeed    deliveryContract.TraegerNotificationFeed
 }
 
 // BuildDeliveryNotifications binds the notification router over the realtime
@@ -93,6 +97,10 @@ func BuildDeliveryNotifications(
 	if err != nil {
 		return DeliveryNotifications{}, err
 	}
+	traegerNotices, traegerFeed, err := deliveryTraegerFeed(notifier)
+	if err != nil {
+		return DeliveryNotifications{}, err
+	}
 	preferences, err := deliveryCompose.NewTenantPreferenceService(unit, consent, DeliveryPreferenceSettings(settings), db.Pool(), identity, securityruntime.HasPermission)
 	if err != nil {
 		return DeliveryNotifications{}, err
@@ -124,6 +132,8 @@ func BuildDeliveryNotifications(
 		Feed:             feed,
 		GuardianFeed:     guardianFeed,
 		SchoolAudience:   schoolAudience,
+		TraegerNotices:   traegerNotices,
+		TraegerFeed:      traegerFeed,
 	}, nil
 }
 
@@ -226,6 +236,19 @@ func deliveryCapabilities(absences, recipients any, notifier deliveryCompose.Not
 		return nil, nil, nil, fmt.Errorf("notification router does not name the audience of the whole school")
 	}
 	return unreported, responsible, audience, nil
+}
+
+// deliveryTraegerFeed is the write and the read side of the bell of the
+// Träger-Portal (#7146).
+func deliveryTraegerFeed(notifier deliveryCompose.Notifier) (deliveryContract.TraegerFeedNotifier, deliveryContract.TraegerNotificationFeed, error) {
+	notices, ok := notifier.(deliveryContract.TraegerFeedNotifier)
+	served, reads := notifier.(interface {
+		TraegerFeed() deliveryContract.TraegerNotificationFeed
+	})
+	if !ok || !reads || served.TraegerFeed() == nil {
+		return nil, nil, fmt.Errorf("notification router does not serve the Träger bell")
+	}
+	return notices, served.TraegerFeed(), nil
 }
 
 // deliveryFeeds are the two read sides of the router's notification feed:

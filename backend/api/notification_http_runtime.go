@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/devices"
@@ -20,6 +22,14 @@ func notificationHTTPRuntime() notificationsHTTP.Runtime {
 	runtime.ProtectedSchool = func(r chi.Router, register func(chi.Router, notificationsHTTP.Middleware)) {
 		ProtectedSchoolRoutes(r, func(r chi.Router, withTx common.Middleware) { register(r, withTx) })
 	}
+	runtime.ProtectedTraeger = func(r chi.Router, register func(chi.Router)) {
+		// The bell opens its own administrative unit across the Träger's
+		// schools (#7146), so the Träger transaction stays unused here.
+		ProtectedTraegerRoutes(r, func(r chi.Router, _ common.Middleware) {
+			register(r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)))
+		})
+	}
+	runtime.OrganizationID = tenant.OrgFromContext
 	runtime.TenantOperation = common.TenantOperationMiddleware
 	runtime.TenantID = tenant.FromContext
 	runtime.ActorID = sessiontoken.ActorAccountIDFromCtx

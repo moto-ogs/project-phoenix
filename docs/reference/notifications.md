@@ -312,6 +312,16 @@ The request account is excluded. Feed and push apply while a changed day lies
 within 14 days, feed only later, and neither applies if every day is past or
 only the reason changed. The default-on push uses `FilterNotOptedOut`; the
 shared `notifications.school_closing_day_enabled` switch stops feed and push.
+The active members of the school's Träger (`platform.organization_accounts`,
+active account) read the same notice in the bell of the Träger-Portal
+(`traeger_school_closing_day_changed`, #7146, ADR 0286): one entry per member
+in the school it is about, linked to `/traeger/schulen/<id>`, without push
+and without live signal, under the same school switch. The request account is
+excluded here too. `GET /traeger/notifications/feed` lists the entries of all
+schools of the session's Träger with `school_id` and `school_name`; it reads
+in one administrative unit whose statements keep only the Träger's schools
+while the account is an active member. The bell reloads its count on every
+page change and every minute.
 
 A block that moves to another room (#7141) comes from Timetable's edit of a
 planned block (`UpdatePlanned`, also its series conversion): only a change

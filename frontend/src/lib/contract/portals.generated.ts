@@ -8,6 +8,7 @@ import { routes as schoolStaffMessages } from "./school-staff-messages.generated
 import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as students } from "./students.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
+import { routes as traegerNotifications } from "./traeger-notifications.generated";
 
 /** The registered routes of each portal, by the scope of its session token. */
 export const portalRoutes = {
@@ -16,6 +17,10 @@ export const portalRoutes = {
   ],
   org: [
     traegerBillingFamilies["GET /traeger/billing-families/debtor-number-format"],
+    traegerNotifications["GET /traeger/notifications/feed/"],
+    traegerNotifications["GET /traeger/notifications/feed/unread-count"],
+    traegerNotifications["POST /traeger/notifications/feed/read-all"],
+    traegerNotifications["POST /traeger/notifications/feed/{id}/read"],
   ],
   parent: [
     parentMe["GET /parent/me/enrollable-schools"],

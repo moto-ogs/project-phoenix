@@ -402,6 +402,8 @@ import type { traegerKeyDateCountsTopic as authored_traegerKeyDateCountsTopic } 
 
 import type { traegerLoginTopic as authored_traegerLoginTopic } from "./articles/traeger-login";
 
+import type { traegerNotificationFeedTopic as authored_traegerNotificationFeedTopic } from "./articles/traeger-notification-feed";
+
 import type { traegerOccupancyTopic as authored_traegerOccupancyTopic } from "./articles/traeger-occupancy";
 
 import type { traegerPayrollExportTopic as authored_traegerPayrollExportTopic } from "./articles/traeger-payroll-export";
@@ -14108,6 +14110,47 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
     related: [HELP_TOPICS.errorMessages],
   };
 } satisfies typeof authored_traegerLoginTopic;
+
+/**
+ * Die Glocke oben rechts im Träger-Portal (#7146): die Hinweise aller Schulen
+ * des Trägers, jeweils mit dem Namen der Schule. Erster Typ ist der
+ * Schließtag einer Schule.
+ */
+export const traegerNotificationFeedTopic =
+  function traegerNotificationFeedTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerNotificationFeed,
+      title: "Hinweise in der Glocke",
+      question: "Wo sehe ich, was sich an meinen Schulen geändert hat?",
+      summary:
+        "Die Glocke oben rechts zeigt Hinweise aus allen Schulen Ihres Trägers, zum Beispiel einen neuen Schließtag.",
+      group: "einstieg",
+      audience: "traeger",
+      icon: "Bell",
+      steps: [
+        "Wählen Sie oben rechts die Glocke. Die Zahl daran zählt neue Hinweise. Ab 10 steht dort `9+`.",
+        "Neue Hinweise sind mit `Neu` markiert. Daneben steht die Schule.",
+        "Wählen Sie einen Hinweis. moto öffnet die Seite dieser Schule.",
+        "Mit `Alle als gelesen markieren` sind alle Hinweise auf einmal gelesen.",
+      ],
+      result:
+        "Erst Ihr Klick macht einen Hinweis zu „gelesen“. Das Öffnen der Glocke allein ändert nichts.",
+      notes: [
+        "Trägt eine Schule einen Schließtag ein, ändert oder löscht ihn, sehen Sie es hier.",
+        "Die Zahl an der Glocke prüft moto bei jedem Seitenwechsel und jede Minute neu.",
+        "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
+        "Im Träger-Portal gibt es keine Mitteilung aufs Handy. Die Hinweise stehen nur in der Glocke.",
+      ],
+      differences: [
+        "Auf dem Handy öffnen sich die Hinweise über den ganzen Bildschirm. Mit dem X schließen Sie sie wieder.",
+      ],
+      troubleshootingDetails: [
+        "Es kommt kein Hinweis zu einem Schließtag? Die Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Fragen Sie dort nach.",
+        "Wer den Schließtag selbst einträgt, bekommt keinen Hinweis dazu.",
+      ],
+      related: [HELP_TOPICS.traegerSchoolView, HELP_TOPICS.traegerClosingDays],
+    };
+  } satisfies typeof authored_traegerNotificationFeedTopic;
 
 /** `/traeger/belegung` (#4676): die Kinder von heute je Schule, Gruppe und Betreuungsform. */
 export const traegerOccupancyTopic =
