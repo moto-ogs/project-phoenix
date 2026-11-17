@@ -25,7 +25,10 @@ func TestOperatorDeactivationTimeFollowsTheActiveFlag(t *testing.T) {
 	require.NoError(t, err)
 	stamped := deactivatedAt()
 	require.NotNil(t, stamped, "a deactivation by hand starts the deletion window too")
-	assert.WithinDuration(t, time.Now(), *stamped, time.Minute)
+	// The trigger stamps on the database clock, so the window starts at its now().
+	var databaseNow time.Time
+	require.NoError(t, db.NewRaw(`SELECT now()`).Scan(ctx, &databaseNow))
+	assert.WithinDuration(t, databaseNow, *stamped, time.Minute)
 
 	past := time.Date(2024, time.March, 1, 10, 0, 0, 0, time.UTC)
 	_, err = db.ExecContext(ctx, `UPDATE platform.operators SET deactivated_at = ? WHERE id = ?`, past, operator.ID)

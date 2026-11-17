@@ -55,12 +55,18 @@ func newTraegerPortal(t *testing.T) (*bun.DB, *traegerPortalHandler, identityacc
 // newTraegerPortalOn is newTraegerPortal whose day-bound services read today.
 func newTraegerPortalOn(t *testing.T, today func() calendar.Date) (*bun.DB, *traegerPortalHandler, identityaccess.Owner, tenant.UnitOfWork) {
 	t.Helper()
+	return newTraegerPortalAt(t, today, time.Now)
+}
+
+// newTraegerPortalAt is newTraegerPortalOn whose instant-bound services read now.
+func newTraegerPortalAt(t *testing.T, today func() calendar.Date, now func() time.Time) (*bun.DB, *traegerPortalHandler, identityaccess.Owner, tenant.UnitOfWork) {
+	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	unit := testpkg.TenantRuntime(t, db)
 	mail := testpkg.NewCapturingMailer()
 	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
 	require.NoError(t, err)
-	routes := traegerPortalRoutesOn(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, today, time.Now)
+	routes := traegerPortalRoutesOn(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, today, now)
 	return db, &traegerPortalHandler{Handler: testpkg.SessionVerifier(routes), mail: mail}, auth.Auth, unit
 }
 

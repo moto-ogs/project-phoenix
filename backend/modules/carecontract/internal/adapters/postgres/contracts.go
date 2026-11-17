@@ -250,14 +250,16 @@ func (r documentRow) file(err error, notFound error) (carecontract.File, error) 
 	return carecontract.File{Filename: r.Filename, ContentType: "application/pdf", Data: r.PDF, WithdrawalNotice: r.WithdrawalNotice}, nil
 }
 
-func (Store) InsertMailing(ctx context.Context, organizationID, accountID, contractID, documentID, outboxID int64, recipient string) error {
+// InsertMailing stamps sent_at with the owner clock's instant at, not the
+// column default: the reminders compare it with that clock (ADR 0281).
+func (Store) InsertMailing(ctx context.Context, organizationID, accountID, contractID, documentID, outboxID int64, recipient string, at time.Time) error {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return err
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO care_contract.contract_mailings (organization_id, contract_id,
-			contract_document_id, outbox_id, recipient_email, sent_by_account_id) VALUES (?, ?, ?, ?, ?, ?)`,
-		organizationID, contractID, documentID, outboxID, recipient, accountRef(accountID)); err != nil {
+			contract_document_id, outbox_id, recipient_email, sent_by_account_id, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		organizationID, contractID, documentID, outboxID, recipient, accountRef(accountID), at); err != nil {
 		return fmt.Errorf("care contract postgres: insert mailing: %w", err)
 	}
 	return nil

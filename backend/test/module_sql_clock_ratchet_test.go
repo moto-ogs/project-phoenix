@@ -105,9 +105,13 @@ var moduleSQLClockBudget = map[string]int{
 	// records hint stay on that ledger's clock; logo_updated_at (1), set in
 	// the statement whose trigger stamps updated_at of the same profile; and
 	// the export manifest (1), which names the instant of its REPEATABLE READ
-	// snapshot. The data return of ADR 0274 reads no clock in Go: its release
-	// functions guard it on the database clock in the migrations.
-	"modules/organizationtenancy": 11,
+	// snapshot. And the data return (3, ADR 0274, raised by ADR 0284): its
+	// release functions bound keep_until and expires_at
+	// against now(), so release, grant and retrieval decide on that clock
+	// too: databaseNow reads it once per decision (1), countDownload spends a
+	// download only while expires_at > now() (1), and finishDownload stamps
+	// finished_at like the started_at default (1).
+	"modules/organizationtenancy": 14,
 	// Named exceptions on the database clock (ADR 0281): the family children
 	// statement and confirmation (5), ordered against the statement time
 	// enrollment stamps with clock_timestamp(); the download of a PAIN.008

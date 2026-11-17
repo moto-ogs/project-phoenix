@@ -34,11 +34,11 @@ func NewTraegerTenantExporter(db *bun.DB, dependencies organizationtenancy.Tenan
 }
 
 // NewDataReturn binds the HTTPS retrieval of released packages (ADR 0203).
-func NewDataReturn(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root string, now func() time.Time, logger *slog.Logger) (organizationtenancy.DataReturn, error) {
-	if db == nil || !crypto.Complete() || root == "" || now == nil {
-		return nil, errors.New("data return requires a database, its cryptography and the clock")
+func NewDataReturn(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root string, logger *slog.Logger) (organizationtenancy.DataReturn, error) {
+	if db == nil || !crypto.Complete() || root == "" {
+		return nil, errors.New("data return requires a database and its cryptography")
 	}
-	return datareturn.NewRetrieval(db, crypto, root, now, logger), nil
+	return datareturn.NewRetrieval(db, crypto, root, logger), nil
 }
 
 // NewDataReturnRelease binds the operator side; it runs as phoenix_data_return.
