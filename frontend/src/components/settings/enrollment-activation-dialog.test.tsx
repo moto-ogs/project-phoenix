@@ -4,8 +4,12 @@ import "@testing-library/jest-dom/vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { SWRConfig } from "~/lib/swr/testing";
 import { EnrollmentActivationDialog } from "./enrollment-activation-dialog";
 import { SettingsField } from "./settings-field";
+
+// The proposal is read through real SWR, a fresh cache per render.
+vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   permissions: ["config:update", "config:manage"] as string[],
@@ -38,16 +42,18 @@ function renderDialog(
   const onSave = vi.fn().mockResolvedValue(undefined);
   const onClose = vi.fn();
   render(
-    <ToastProvider>
-      <EnrollmentActivationDialog
-        isOpen
-        onClose={onClose}
-        noticePresent
-        currentRecipients=""
-        onSave={onSave}
-        {...props}
-      />
-    </ToastProvider>,
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>
+        <EnrollmentActivationDialog
+          isOpen
+          onClose={onClose}
+          noticePresent
+          currentRecipients=""
+          onSave={onSave}
+          {...props}
+        />
+      </ToastProvider>
+    </SWRConfig>,
   );
   return { onSave, onClose };
 }

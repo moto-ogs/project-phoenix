@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
@@ -13,11 +13,10 @@ import {
   ENROLLMENT_PRIVACY_NOTICE_SETTINGS_PATH,
   ENROLLMENT_PRIVACY_NOTICE_WHO_ACTS,
 } from "~/lib/enrollment-privacy-notice";
-import { createLogger } from "~/lib/logger";
 import { fetchSchoolContactEmail } from "~/lib/settings-api";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useTenantRouter } from "~/lib/tenant-router";
-
-const logger = createLogger({ component: "EnrollmentActivationDialog" });
 
 interface EnrollmentActivationDialogProps {
   readonly isOpen: boolean;
@@ -93,32 +92,26 @@ function RecipientsStep({
   currentRecipients: string;
   onSave: (key: string, value: unknown) => Promise<void>;
 }>) {
-  const [recipients, setRecipients] = useState(currentRecipients);
+  // Without stored recipients the school's contact address is the proposal.
+  // A failed read stays silent on purpose: it is only a proposal, the field
+  // stays empty and the person can type an address or leave it empty.
+  const contactRead = useSWRAuth(
+    currentRecipients.trim() === ""
+      ? tenantAdminKeys.schoolContactEmail()
+      : null,
+    () => fetchSchoolContactEmail(),
+  );
+  // null until the person types: until then the field shows the proposal.
+  const [edited, setEdited] = useState<string | null>(null);
+  const recipients =
+    edited ??
+    (currentRecipients.trim() === ""
+      ? (contactRead.data ?? "")
+      : currentRecipients);
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLDivElement | null>(null);
   const errors = useApiFormError(formRef);
   const { success: toastSuccess } = useToast();
-  const touchedRef = useRef(false);
-
-  // Without stored recipients the school's contact address is the proposal.
-  useEffect(() => {
-    if (currentRecipients.trim() !== "") return;
-    let cancelled = false;
-    fetchSchoolContactEmail()
-      .then((email) => {
-        if (!cancelled && !touchedRef.current && email) setRecipients(email);
-      })
-      .catch((error: unknown) => {
-        // Only a proposal: the field stays empty and the person can still
-        // type an address or leave it empty. Logged for diagnostics.
-        logger.warn("school_contact_email_load_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [currentRecipients]);
 
   const confirm = async () => {
     errors.clear();
@@ -165,8 +158,7 @@ function RecipientsStep({
           autoComplete="email"
           value={recipients}
           onChange={(event) => {
-            touchedRef.current = true;
-            setRecipients(event.target.value);
+            setEdited(event.target.value);
             errors.clear();
           }}
         />
