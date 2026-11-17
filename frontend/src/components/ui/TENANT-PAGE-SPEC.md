@@ -153,8 +153,8 @@ lg:flex-col`), sonst wächst nur die Hülle und die Fläche bleibt kurz.
    `<div className="compact:gap-4 grid gap-6 max-sm:gap-3">` wie auf der
    Mensa-Seite: so bleibt auch die letzte Karte so hoch wie ihre
    Geschwister (#7304). Ein Leerzustand daneben bleibt außerhalb des
-   Rasters. Verschiedenartige Bereiche (Einstellungen) wachsen weiter.
-   Eine Seite, deren
+   Rasters. Ist der letzte Block keine solche Liste, wächst er weiter
+   (etwa die letzte Kategorie der Träger-Einstellungen). Eine Seite, deren
    letzter Block nicht wächst, verpackt ihn zu tief — nicht mit `min-h-*`
    nachhelfen, die Hülle abbauen.
    **Ausstieg:** Eine Fläche, deren Höhe eine Hülle festlegt und die innen
