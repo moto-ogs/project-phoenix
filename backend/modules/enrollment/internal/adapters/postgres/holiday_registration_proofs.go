@@ -19,16 +19,17 @@ import (
 
 const (
 	insertHolidayProofQuery = `INSERT INTO enrollment.holiday_registration_proofs
-			(organization_id, holiday_period_id, token_hash, filename, content_type, size_bytes, content)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`
+			(organization_id, holiday_period_id, token_hash, filename, content_type, size_bytes, content, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 	// claimHolidayProofsQuery binds only unclaimed proofs of the same period
-	// that are younger than the unclaimed lifetime. Two submissions with the
-	// same token serialize on the row lock; the second binds nothing.
+	// that are younger than the unclaimed lifetime on the owner clock that
+	// stamps them. Two submissions with the same token serialize on the row
+	// lock; the second binds nothing.
 	claimHolidayProofsQuery = `UPDATE enrollment.holiday_registration_proofs
-		SET holiday_registration_id = ?, token_hash = NULL, claimed_at = statement_timestamp()
+		SET holiday_registration_id = ?, token_hash = NULL, claimed_at = ?
 		WHERE organization_id = ? AND holiday_period_id = ? AND holiday_registration_id IS NULL
 			AND token_hash IN (?)
-			AND created_at > statement_timestamp() - (? * INTERVAL '1 second')`
+			AND created_at > ?`
 	readHolidayProofsQuery = `SELECT id, filename, size_bytes, content_type, created_at
 		FROM enrollment.holiday_registration_proofs
 		WHERE organization_id = ? AND holiday_registration_id = ?
@@ -39,13 +40,13 @@ const (
 	// insertClaimedHolidayProofQuery stores a proof the Träger-Büro uploads
 	// as claimed by the registration at once; it never had a token.
 	insertClaimedHolidayProofQuery = `INSERT INTO enrollment.holiday_registration_proofs
-			(organization_id, holiday_period_id, holiday_registration_id, claimed_at, filename, content_type, size_bytes, content)
-		VALUES (?, ?, ?, statement_timestamp(), ?, ?, ?, ?)
+			(organization_id, holiday_period_id, holiday_registration_id, claimed_at, filename, content_type, size_bytes, content, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		RETURNING id`
 	// deleteUnclaimedHolidayProofsQuery ages the proofs on the clock that
-	// stamps and claims them, the database's (ADR 0239).
+	// stamps and claims them, the owner's (ADR 0239, ADR 0281).
 	deleteUnclaimedHolidayProofsQuery = `DELETE FROM enrollment.holiday_registration_proofs
-		WHERE holiday_registration_id IS NULL AND created_at < statement_timestamp() - (? * INTERVAL '1 second')`
+		WHERE holiday_registration_id IS NULL AND created_at < ?`
 )
 
 // InsertHolidayProof stores an unclaimed proof of the period.
@@ -55,7 +56,7 @@ func (s *HolidayRegistrationStore) InsertHolidayProof(ctx context.Context, organ
 		return err
 	}
 	if _, err := db.NewRaw(insertHolidayProofQuery, organizationID, periodID, tokenHash, proof.Filename,
-		proof.ContentType, proof.SizeBytes, proof.Content).Exec(ctx); err != nil {
+		proof.ContentType, proof.SizeBytes, proof.Content, holidayNow(s.now)).Exec(ctx); err != nil {
 		return fmt.Errorf("enrollment postgres: insert holiday proof: %w", err)
 	}
 	return nil
@@ -71,8 +72,9 @@ func (s *HolidayRegistrationStore) ClaimHolidayProofs(ctx context.Context, organ
 	if err != nil {
 		return 0, err
 	}
-	claimed, err := affectedRows(db.NewRaw(claimHolidayProofsQuery, registrationID, organizationID, periodID,
-		bun.List(tokenHashes), int64(enrollment.UnclaimedUploadLifetime.Seconds())).Exec(ctx))
+	now := holidayNow(s.now)
+	claimed, err := affectedRows(db.NewRaw(claimHolidayProofsQuery, registrationID, now, organizationID, periodID,
+		bun.List(tokenHashes), now.Add(-enrollment.UnclaimedUploadLifetime)).Exec(ctx))
 	if err != nil {
 		return 0, fmt.Errorf("enrollment postgres: claim holiday proofs: %w", err)
 	}
@@ -87,8 +89,9 @@ func (s *HolidayRegistrationStore) InsertClaimedHolidayProof(ctx context.Context
 		return 0, err
 	}
 	var id int64
-	if err := db.NewRaw(insertClaimedHolidayProofQuery, organizationID, periodID, registrationID, proof.Filename,
-		proof.ContentType, proof.SizeBytes, proof.Content).Scan(ctx, &id); err != nil {
+	now := holidayNow(s.now)
+	if err := db.NewRaw(insertClaimedHolidayProofQuery, organizationID, periodID, registrationID, now, proof.Filename,
+		proof.ContentType, proof.SizeBytes, proof.Content, now).Scan(ctx, &id); err != nil {
 		return 0, fmt.Errorf("enrollment postgres: insert claimed holiday proof: %w", err)
 	}
 	return id, nil
@@ -152,7 +155,7 @@ func (s *HolidayRegistrationStore) DeleteUnclaimedHolidayProofs(ctx context.Cont
 	if err != nil {
 		return 0, err
 	}
-	deleted, err := affectedRows(db.NewRaw(deleteUnclaimedHolidayProofsQuery, int64(lifetime/time.Second)).Exec(ctx))
+	deleted, err := affectedRows(db.NewRaw(deleteUnclaimedHolidayProofsQuery, holidayNow(s.now).Add(-lifetime)).Exec(ctx))
 	if err != nil {
 		return 0, fmt.Errorf("enrollment postgres: delete unclaimed holiday proofs: %w", err)
 	}
