@@ -26,7 +26,7 @@ import {
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import {
@@ -107,8 +107,8 @@ export function TransitionEditor({
   );
   const [notes, setNotes] = useState(existingDraft?.notes ?? "");
   // The draft is local state and never written into the cache. Until the
-  // first change it shows the cached suggestions; the first change copies
-  // them, so a later refresh of the suggestions never replaces an edit.
+  // first change it waits for this opening’s fresh suggestions; the first
+  // change copies them, so a later refresh never replaces an edit.
   // A saved draft starts from its own mappings and reads no suggestions.
   const [draftRows, setDraftRows] = useState<EditorRow[] | null>(
     existingDraft ? rowsFromTransition(existingDraft) : null,
@@ -117,7 +117,7 @@ export function TransitionEditor({
     data: suggestions,
     error: suggestionsError,
     mutate: reloadSuggestions,
-  } = useSWRAuth(
+  } = useFreshSWR(
     existingDraft ? null : tenantAdminKeys.gradeTransitionSuggestions(),
     fetchSuggestedMappings,
   );
@@ -147,7 +147,7 @@ export function TransitionEditor({
   // added back (the suggestions are only the initial proposal). Bewusst still
   // bei einem Fehler: die Liste dient nur dem Wieder-Hinzufügen einer
   // entfernten Zeile. Die Vorschläge und das Speichern gehen ohne sie.
-  const { data: allClasses = NO_CLASSES } = useSWRAuth(
+  const { data: allClasses = NO_CLASSES } = useFreshSWR(
     tenantAdminKeys.gradeTransitionClasses(),
     fetchTransitionClasses,
   );

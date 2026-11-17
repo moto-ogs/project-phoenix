@@ -28,6 +28,7 @@ import {
   type StaffAbsence,
 } from "~/lib/time-tracking-helpers";
 import { timeTrackingService } from "~/lib/time-tracking-api";
+import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
@@ -118,6 +119,20 @@ export function LeaveRequestsCard() {
     "die Urlaubsübersicht",
     loadAll,
   );
+  const afterWrite = useRefreshAfterWrite("die Urlaubsübersicht", () =>
+    Promise.all([
+      mutateQuota(timeTrackingService.getVacationQuota(year), {
+        revalidate: false,
+      }),
+      mutateAbsences(timeTrackingService.getAbsences(yearStart, yearEnd), {
+        revalidate: false,
+      }),
+      mutateQuestions(timeTrackingService.getQuestionedAbsences(), {
+        revalidate: false,
+      }),
+    ]),
+  );
+  const refreshAfterWrite = afterWrite.refresh;
   const quota = quotaResource.data ?? null;
   const loading =
     !load.failure &&
@@ -209,8 +224,8 @@ export function LeaveRequestsCard() {
 
   const handleResubmitted = useCallback(() => {
     dispatchAbsencesRefresh();
-    void loadAll();
-  }, [loadAll]);
+    void refreshAfterWrite();
+  }, [refreshAfterWrite]);
 
   const confirmCancel = async () => {
     if (!cancelTarget) return;
@@ -234,7 +249,7 @@ export function LeaveRequestsCard() {
     toast.success("Der Antrag ist storniert.");
     setCancelTarget(null);
     dispatchAbsencesRefresh();
-    await loadAll();
+    await refreshAfterWrite();
   };
 
   const remainingDays = quota?.remaining_days ?? 0;
@@ -265,6 +280,7 @@ export function LeaveRequestsCard() {
         }
         bodyClassName="compact:mt-4 mt-5 max-sm:mt-4"
       >
+        <LoadErrorAlert error={afterWrite.error} />
         {load.failure ? (
           <LoadErrorAlert error={load.error} />
         ) : (
@@ -361,7 +377,7 @@ export function LeaveRequestsCard() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmitted={() => {
-          loadAll();
+          void refreshAfterWrite();
         }}
         remainingDays={remainingDays}
         existingVacations={blockingVacations}

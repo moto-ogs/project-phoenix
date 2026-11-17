@@ -24,7 +24,7 @@ import {
 } from "~/lib/guardian-payment-api";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { foldForSearch } from "~/lib/search-fold";
-import { useSWRAuth } from "~/lib/swr";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 
 const NO_ROWS: PaymentOverviewRow[] = [];
@@ -50,16 +50,16 @@ function BankverbindungenContent() {
 
   const canRead = hasPermission(session, "guardians:financial");
 
-  const overview = useSWRAuth(
+  const overview = useConfirmedSWR(
     status === "loading" || !canRead ? null : tenantAdminKeys.paymentOverview(),
     fetchPaymentOverview,
   );
   const rows = overview.data ?? NO_ROWS;
-  const isLoading = !overview.data && !overview.error;
+  const isLoading = !overview.data && !overview.failure;
   // Ladefehler ersetzen die Liste (#2517), nie durch „Noch keine Kinder“;
   // der Export meldet Fehler im offenen Export-Dialog.
   const loadError = useSwrResourceLoadError(
-    [overview],
+    [{ data: overview.data ?? undefined, error: overview.failure }],
     "die Liste der Bankverbindungen",
     () => overview.mutate(),
   );

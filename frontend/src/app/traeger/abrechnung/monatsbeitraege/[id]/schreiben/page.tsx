@@ -141,9 +141,13 @@ export default function TraegerCareRunLettersPage() {
   const fetchLetters = () =>
     mutateLetters(
       async () => {
-        const complete = beginLettersRead(lettersGuard.key);
+        const complete = beginLettersRead(
+          released ? traegerBillingRunKeys.careLetters(runId) : null,
+        );
         try {
-          return await fetchCareLetters(runId);
+          const next = await fetchCareLetters(runId);
+          complete(() => lettersGuard.callbacks.onSuccess());
+          return next;
         } catch (error) {
           complete(() => lettersGuard.callbacks.onError(error));
           throw error;

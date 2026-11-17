@@ -6,6 +6,8 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useInvalidateMatching } from "~/lib/swr";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ApiError } from "~/lib/api-error";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
@@ -163,6 +165,58 @@ describe("monthly invoice reissue", () => {
     vi.clearAllMocks();
     api.fetchCareRun.mockResolvedValue(RUN);
     api.fetchCareRuns.mockResolvedValue({ runs: [] });
+  });
+
+  it("ignores a late refused read after the letters resource was invalidated and reloaded", async () => {
+    const initial = {
+      ...letters([{ ...CANCELLATION, hasLetter: true }]),
+      letters: {
+        paymentDueOn: "2026-09-23",
+        notes: "Bisheriger Hinweis",
+        createdAt: "2026-09-09T08:00:00Z",
+      },
+    };
+    api.fetchCareLetters.mockResolvedValue(initial);
+    let invalidate!: ReturnType<typeof useInvalidateMatching>;
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      invalidate = useInvalidateMatching();
+      const resource = useTraegerResource(
+        traegerBillingRunKeys.careLetters("7"),
+        () => api.fetchCareLetters("7"),
+        "die Liste der Schreiben",
+      );
+      reload = async () => {
+        const next = await api.fetchCareLetters("7");
+        resource.readCallbacks.onSuccess();
+        await resource.mutate(next, { revalidate: false });
+      };
+      return null;
+    }
+    render(
+      <TraegerResourceTestProvider>
+        <TraegerCareRunLettersPage />
+        <Probe />
+      </TraegerResourceTestProvider>,
+    );
+    expect(await screen.findByText("Bisheriger Hinweis")).toBeVisible();
+    const pending = deferred<CareLetters>();
+    api.fetchCareLetters.mockReturnValueOnce(pending.promise);
+    fireEvent.click(screen.getByRole("button", { name: "Neu ausstellen" }));
+    await waitFor(() => expect(api.fetchCareLetters).toHaveBeenCalledTimes(2));
+    api.fetchCareLetters.mockResolvedValue({
+      ...initial,
+      letters: { ...initial.letters, notes: "Frischer Hinweis" },
+    });
+    await act(async () => {
+      await invalidate((key) => key === traegerBillingRunKeys.careLetters("7"));
+      await reload();
+    });
+    expect(await screen.findByText("Frischer Hinweis")).toBeVisible();
+    await act(async () => {
+      pending.reject(new ApiError("gone", 404));
+    });
+    expect(screen.getByText("Frischer Hinweis")).toBeVisible();
   });
 
   it.each([403, 503])(

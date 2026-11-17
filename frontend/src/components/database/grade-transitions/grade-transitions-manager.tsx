@@ -33,7 +33,7 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
@@ -271,6 +271,14 @@ export function GradeTransitionsManager({
     });
   }, [transitions, onSummaryChange]);
 
+  const invalidateMatching = useInvalidateMatching();
+  const refreshClasses = () =>
+    invalidateMatching(
+      (key) =>
+        key === tenantAdminKeys.gradeTransitionSuggestions() ||
+        key === tenantAdminKeys.gradeTransitionClasses(),
+    );
+
   const handleApplied = (result: TransitionResult) => {
     setPreviewFor(null);
     setEditorDraft(null);
@@ -278,6 +286,7 @@ export function GradeTransitionsManager({
       `Der Schuljahreswechsel ist angewendet: ${result.studentsPromoted} Kinder versetzt, ${result.studentsGraduated} Abgänge.`,
     );
     void refresh();
+    void refreshClasses();
   };
 
   const handleRevert = async () => {
@@ -299,6 +308,7 @@ export function GradeTransitionsManager({
       }
       setRevertTarget(null);
       void refresh();
+      void refreshClasses();
     } catch (error) {
       logger.error("revert_failed", {
         transition_id: revertTarget.id,

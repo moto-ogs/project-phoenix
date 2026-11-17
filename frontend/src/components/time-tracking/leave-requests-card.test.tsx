@@ -9,6 +9,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { ABSENCES_REFRESH_EVENT } from "~/lib/absence-helpers";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
@@ -156,6 +157,34 @@ describe("LeaveRequestsCard resubmitted requests", () => {
       expect(listener).toHaveBeenCalledTimes(1);
     });
     window.removeEventListener(ABSENCES_REFRESH_EVENT, listener);
+  });
+
+  it("keeps confirmed requests and offers a reload-only retry after a saved cancellation", async () => {
+    renderWithCache(<LeaveRequestsCard />);
+    expect(
+      await screen.findByText("Vorherige Rückfrage der Leitung:"),
+    ).toBeVisible();
+    mocks.getVacationQuota.mockRejectedValueOnce(
+      new ApiError("offline", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Stornieren" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Stornierung bestätigen" }),
+    );
+    expect(
+      await screen.findByText(
+        `${catalogText("general.unavailable", "die Urlaubsübersicht")} ${SAVED_BUT_STALE_SUFFIX}`,
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("Vorherige Rückfrage der Leitung:")).toBeVisible();
+    expect(mocks.toastSuccess).toHaveBeenCalledWith(
+      "Der Antrag ist storniert.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await waitFor(() =>
+      expect(mocks.getVacationQuota).toHaveBeenCalledTimes(3),
+    );
+    expect(mocks.cancelAbsence).toHaveBeenCalledTimes(1);
   });
 
   it("keeps old and cross-year questions outside the eight-request limit", async () => {

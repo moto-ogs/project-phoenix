@@ -1,3 +1,5 @@
+import { useInvalidateMatching } from "~/lib/swr";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 import {
@@ -188,10 +190,11 @@ describe("TraegerHolidayRegistrationPage", () => {
       mockSplit.mockReset();
     });
 
-    function renderPage() {
+    function renderPage(extra?: React.ReactNode) {
       render(
         <ToastProvider>
           <TraegerHolidayRegistrationPage />
+          {extra}
         </ToastProvider>,
       );
     }
@@ -332,6 +335,44 @@ describe("TraegerHolidayRegistrationPage", () => {
           ).toHaveBeenCalledTimes(1);
         },
       );
+
+      it("ignores a late 404 after the registration resource was invalidated and reloaded", async () => {
+        sessionPermissions.current = [
+          "traeger_enrollment:manage",
+          "traeger_health:read",
+        ];
+        mockContribution.mockResolvedValue({
+          ...HOLIDAY_CONTRIBUTION,
+          siblings: SIBLINGS,
+        });
+        mockSplit.mockResolvedValue(undefined);
+        let invalidate!: ReturnType<typeof useInvalidateMatching>;
+        function Probe() {
+          invalidate = useInvalidateMatching();
+          return null;
+        }
+        renderPage(<Probe />);
+        expect(await screen.findByText("Erdnüsse")).toBeVisible();
+        const pending = deferred<typeof HOLIDAY_REGISTRATION>();
+        mockRegistration.mockReturnValueOnce(pending.promise);
+        await confirmSplit();
+        await waitFor(() => expect(mockRegistration).toHaveBeenCalledTimes(2));
+        await act(async () => {
+          await invalidate(
+            (key) => key === traegerKeys.holidayRegistration("5", "7"),
+          );
+        });
+        expect(screen.getByText("eva@example.org")).toBeVisible();
+        await act(async () => {
+          pending.reject(
+            new ApiError("gone", 404, {
+              code: "enrollment.holiday_registration_not_found",
+            }),
+          );
+        });
+        expect(screen.getByText("eva@example.org")).toBeVisible();
+        expect(screen.getByText("Erdnüsse")).toBeVisible();
+      });
 
       it("withdraws deleted registration and health data after a post-write 404", async () => {
         sessionPermissions.current = [

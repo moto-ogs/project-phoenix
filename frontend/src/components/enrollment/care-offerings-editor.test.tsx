@@ -967,6 +967,41 @@ describe("CareOfferingsEditor", () => {
     );
   });
 
+  it("refreshes aggregate offering counts after saving a phase offering", async () => {
+    const item = offering({ id: "offer-1", name: "Regelbetreuung" });
+    mocks.listPhases.mockResolvedValue([phase()]);
+    mocks.listCareOfferings.mockResolvedValue([item]);
+    mocks.updateCareOffering.mockResolvedValue(item);
+    const aggregate = vi.fn().mockResolvedValue([]);
+    function Counts() {
+      const resource = useSWRAuth(
+        enrollmentKeys.allPhasesCareOfferings([phase().id]),
+        aggregate,
+      );
+      return resource.data ? <p>Alle Phasen geladen</p> : null;
+    }
+    render(
+      <>
+        <CareOfferingsEditor />
+        <Counts />
+      </>,
+    );
+    expect(await screen.findByText("Alle Phasen geladen")).toBeVisible();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Regelbetreuung",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.updateCareOffering).toHaveBeenCalledTimes(1),
+    );
+    await waitFor(() => expect(aggregate).toHaveBeenCalledTimes(2));
+  });
+
   it("hides old occupancy after a failed post-save statistics refresh and restores fresh counts", async () => {
     const item = offering({
       id: "offer-1",

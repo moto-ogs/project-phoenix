@@ -14,6 +14,8 @@ import {
 import type { ReactElement, ReactNode } from "react";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { SWRConfig } from "~/lib/swr/testing";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { GradeTransitionsManager } from "./grade-transitions-manager";
 import type {
   GradeTransition,
@@ -174,6 +176,18 @@ beforeEach(() => {
   api.previewGradeTransition.mockResolvedValue(preview);
 });
 
+function ClassReaders() {
+  const suggestions = useSWRAuth(
+    tenantAdminKeys.gradeTransitionSuggestions(),
+    api.fetchSuggestedMappings,
+  );
+  const classes = useSWRAuth(
+    tenantAdminKeys.gradeTransitionClasses(),
+    api.fetchTransitionClasses,
+  );
+  return suggestions.data && classes.data ? <p>Klassen geladen</p> : null;
+}
+
 describe("GradeTransitionsManager", () => {
   it("shows an empty state and the new-transition action", async () => {
     render(<GradeTransitionsManager />);
@@ -261,7 +275,13 @@ describe("GradeTransitionsManager", () => {
       canRevert: true,
       warnings: [],
     });
-    render(<GradeTransitionsManager />);
+    render(
+      <>
+        <GradeTransitionsManager />
+        <ClassReaders />
+      </>,
+    );
+    expect(await screen.findByText("Klassen geladen")).toBeVisible();
 
     fireEvent.click(
       await screen.findByRole("button", { name: /Neuer Schuljahreswechsel/i }),
@@ -278,6 +298,8 @@ describe("GradeTransitionsManager", () => {
     // Second, explicit confirmation
     const dialog = await screen.findByText(/Wirklich anwenden/i);
     expect(dialog).toBeInTheDocument();
+    const suggestionsBefore = api.fetchSuggestedMappings.mock.calls.length;
+    const classesBefore = api.fetchTransitionClasses.mock.calls.length;
     fireEvent.click(screen.getByRole("button", { name: /Ja, anwenden/i }));
 
     await waitFor(() => {
@@ -289,6 +311,14 @@ describe("GradeTransitionsManager", () => {
       );
     });
     expect(toastSuccess).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(api.fetchSuggestedMappings).toHaveBeenCalledTimes(
+        suggestionsBefore + 1,
+      );
+      expect(api.fetchTransitionClasses).toHaveBeenCalledTimes(
+        classesBefore + 1,
+      );
+    });
   });
 
   it("reverts an applied transition after confirmation", async () => {
@@ -301,7 +331,13 @@ describe("GradeTransitionsManager", () => {
       canRevert: false,
       warnings: [],
     });
-    render(<GradeTransitionsManager />);
+    render(
+      <>
+        <GradeTransitionsManager />
+        <ClassReaders />
+      </>,
+    );
+    expect(await screen.findByText("Klassen geladen")).toBeVisible();
 
     const row = await screen.findByText("2026-2027");
     expect(row).toBeInTheDocument();
@@ -309,12 +345,22 @@ describe("GradeTransitionsManager", () => {
     openRowMenu();
     fireEvent.click(screen.getByRole("menuitem", { name: /Zurücksetzen/i }));
     await screen.findByText(/wirklich zurücksetzen/i);
+    const suggestionsBefore = api.fetchSuggestedMappings.mock.calls.length;
+    const classesBefore = api.fetchTransitionClasses.mock.calls.length;
     fireEvent.click(screen.getByRole("button", { name: /Ja, zurücksetzen/i }));
 
     await waitFor(() => {
       expect(api.revertGradeTransition).toHaveBeenCalledWith("8");
     });
     expect(toastSuccess).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(api.fetchSuggestedMappings).toHaveBeenCalledTimes(
+        suggestionsBefore + 1,
+      );
+      expect(api.fetchTransitionClasses).toHaveBeenCalledTimes(
+        classesBefore + 1,
+      );
+    });
   });
 
   // A revert is only ever partial when children were deleted, moved, or had

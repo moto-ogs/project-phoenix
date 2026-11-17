@@ -70,6 +70,8 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 }));
 
 import BankverbindungenPage from "./page";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 
 function openExportDialog() {
   fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
@@ -101,6 +103,50 @@ describe("BankverbindungenPage", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("withdraws cached financial data after a 403 until an authorized read succeeds", async () => {
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const resource = useSWRAuth(
+        tenantAdminKeys.paymentOverview(),
+        mockFetchOverview,
+      );
+      reload = () => resource.mutate();
+      return null;
+    }
+    mockFetchOverview.mockResolvedValue([row({})]);
+    render(
+      <>
+        <BankverbindungenPage />
+        <Probe />
+      </>,
+    );
+    expect(await screen.findByText("Sabine Schneider")).toBeVisible();
+    mockFetchOverview.mockRejectedValue(
+      new ApiError("forbidden", 403, { code: "general.permission" }),
+    );
+    await act(async () => {
+      await reload();
+    });
+    // Anker: die Ablehnung ersetzt die zuvor geladene Tabelle.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Bankverbindungen"),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Sabine Schneider")).not.toBeInTheDocument();
+    expect(screen.queryByText("•••• 3000")).not.toBeInTheDocument();
+    mockFetchOverview.mockRejectedValue(new ApiError("offline", 503));
+    await act(async () => {
+      await reload();
+    });
+    expect(screen.queryByText("Sabine Schneider")).not.toBeInTheDocument();
+    mockFetchOverview.mockResolvedValue([row({})]);
+    await act(async () => {
+      await reload();
+    });
+    expect(await screen.findByText("Sabine Schneider")).toBeVisible();
   });
 
   it("refuses the page without the bank permission", () => {

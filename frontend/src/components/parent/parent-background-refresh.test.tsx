@@ -29,7 +29,8 @@ vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => null,
   useTenantSafe: () => null,
 }));
-vi.mock("~/lib/hooks/use-sse", () => ({ useSSE: () => undefined }));
+const useSSE = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/hooks/use-sse", () => ({ useSSE }));
 const params = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -237,6 +238,35 @@ describe("parent child status refresh", () => {
       </>
     );
   }
+
+  it("reads each mounted care status once per realtime child update", async () => {
+    mount(<ChildPage studentId="42" />);
+    expect(
+      await screen.findByRole("button", { name: /Felix abmelden/ }),
+    ).toBeVisible();
+    const reads = [
+      api.listSickDays,
+      api.listExcusedRequests,
+      api.listCareExceptions,
+      api.listPickupChangeRequests,
+      api.getChildCareSchedule,
+      api.getChildCareOfferings,
+    ];
+    for (const read of reads) expect(read).toHaveBeenCalledTimes(1);
+    const options = useSSE.mock.calls.at(-1)?.[1];
+    await act(async () => {
+      options.onMessage({
+        type: "parent_child_updated",
+        active_group_id: "",
+        data: { student_id: "42" },
+        timestamp: new Date().toISOString(),
+      });
+    });
+    expect(
+      screen.getByRole("button", { name: /Felix abmelden/ }),
+    ).toBeVisible();
+    for (const read of reads) expect(read).toHaveBeenCalledTimes(2);
+  });
 
   it("reloads the decided child's state when its page opens again", async () => {
     const view = render(<Fixture open />, {

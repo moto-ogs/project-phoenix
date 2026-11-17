@@ -289,7 +289,9 @@ export default function TraegerHolidayRegistrationPage() {
   );
   const beginRegistrationRead = useSWRRequestGuard();
   const fetchRegistration = useCallback(async () => {
-    const complete = beginRegistrationRead(registrationGuard.key);
+    const complete = beginRegistrationRead(
+      ids ? traegerKeys.holidayRegistration(periodId, registrationId) : null,
+    );
     try {
       const [
         loadedRegistration,
@@ -306,6 +308,7 @@ export default function TraegerHolidayRegistrationPage() {
         fetchHolidayConfirmationSettings(),
         fetchHolidayFamilyDebtorNumber(periodId, registrationId),
       ]);
+      complete(() => registrationGuard.callbacks.onSuccess());
       const fresh = { revalidate: false } as const;
       latestContribution.current++;
       setPreviewPending(false);
@@ -332,7 +335,7 @@ export default function TraegerHolidayRegistrationPage() {
     }
   }, [
     beginRegistrationRead,
-    registrationGuard.key,
+    ids,
     registrationGuard.callbacks,
     periodId,
     registrationId,

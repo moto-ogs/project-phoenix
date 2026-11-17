@@ -653,6 +653,14 @@ export function CareOfferingsEditor({
     "die Anzeige der Betreuungsangebote",
     async () => {
       await Promise.all([
+        invalidateMatching(
+          (key) =>
+            key.startsWith(enrollmentKeys.careOfferingsFamily) &&
+            key !==
+              (selectedPhaseId
+                ? enrollmentKeys.careOfferings(selectedPhaseId)
+                : null),
+        ),
         mutatePhases(listPhases(), { revalidate: false }),
         selectedPhaseId
           ? mutateOfferings(listCareOfferings(selectedPhaseId), {

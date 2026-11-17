@@ -138,7 +138,9 @@ export function ParentSepaMandateView({
   const fetchView = useCallback(async () => {
     const complete = beginRead(cacheKey);
     try {
-      await mutate(await fetchSepaMandate(organizationId, contractId), {
+      const next = await fetchSepaMandate(organizationId, contractId);
+      complete(() => guard.callbacks.onSuccess());
+      await mutate(next, {
         revalidate: false,
       });
       void invalidateFamily(parentInboxKeys.documents());

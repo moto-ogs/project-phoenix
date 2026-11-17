@@ -40,6 +40,22 @@ vi.mock("~/lib/parent-sepa-mandate-api", () => ({
   revokeSepaMandate: mocks.revoke,
 }));
 
+let retryMandateRead!: () => Promise<boolean>;
+vi.mock("~/lib/hooks/use-refresh-after-write", async (original) => {
+  const actual =
+    await original<typeof import("~/lib/hooks/use-refresh-after-write")>();
+  return {
+    ...actual,
+    useRefreshAfterWrite: (
+      ...args: Parameters<typeof actual.useRefreshAfterWrite>
+    ) => {
+      const result = actual.useRefreshAfterWrite(...args);
+      retryMandateRead = result.refresh;
+      return result;
+    },
+  };
+});
+
 const IBAN = "DE89370400440532013000";
 
 const open: SepaMandateView = {
@@ -412,6 +428,11 @@ describe("Reload after the revocation (#6652)", () => {
       expect(
         screen.queryByRole("button", { name: "Als Datei speichern" }),
       ).not.toBeInTheDocument();
+      await act(async () => {
+        await retryMandateRead();
+      });
+      expect(await screen.findByLabelText(/^IBAN/)).toBeVisible();
+      expect(mocks.fetch).toHaveBeenCalledTimes(3);
       expect(mocks.revoke).toHaveBeenCalledTimes(1);
     },
   );

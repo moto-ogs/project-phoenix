@@ -98,6 +98,48 @@ describe("TransitionEditor pending lock (#6593)", () => {
     api.fetchTransitionClasses.mockResolvedValue(["1a"]);
   });
 
+  it("waits for this opening's suggestions before creating an editable draft", async () => {
+    const first = [
+      {
+        fromClass: "1a",
+        toClass: "2a",
+        isGraduating: false,
+        ambiguous: false,
+        studentCount: 2,
+      },
+    ];
+    api.fetchSuggestedMappings.mockResolvedValueOnce(first);
+    const answer = deferred<typeof first>();
+    api.fetchSuggestedMappings.mockReturnValueOnce(answer.promise);
+    const props = {
+      existingDraft: null,
+      onClose: vi.fn(),
+      onReadyForPreview: vi.fn(),
+    };
+    const view = render(<TransitionEditor {...props} />);
+    expect(await screen.findByLabelText("Zielklasse für 1a")).toHaveValue("2a");
+    view.rerender(<></>);
+    view.rerender(<TransitionEditor {...props} />);
+    // Anker: die neue Öffnung wartet auf ihre eigenen Vorschläge.
+    expect(
+      screen.getByRole("button", { name: "Weiter zur Vorschau" }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByLabelText("Zielklasse für 1a"),
+    ).not.toBeInTheDocument();
+    await act(async () => {
+      answer.resolve([
+        ...first,
+        { ...first[0]!, fromClass: "2b", toClass: "3b" },
+      ]);
+    });
+    expect(await screen.findByLabelText("Zielklasse für 2b")).toHaveValue("3b");
+    fireEvent.change(screen.getByLabelText("Zielklasse für 1a"), {
+      target: { value: "2c" },
+    });
+    expect(screen.getByLabelText("Zielklasse für 1a")).toHaveValue("2c");
+  });
+
   it("locks the panel while saving and unlocks it after a failure", async () => {
     const { answer, onClose, onReadyForPreview } = renderAndSave();
 
