@@ -17,6 +17,7 @@ vi.mock("~/lib/traeger-billing-api", async (importOriginal) => ({
   saveCareNumberRangeStart: api.saveCareNumberRangeStart,
 }));
 
+import { exportedAtLabel } from "./finance-export-format";
 import { NumberRangeCard } from "./number-range-card";
 
 const FRESH: NumberRange = {
@@ -40,7 +41,7 @@ const RUNNING: NumberRange = {
     {
       nextNumber: 240,
       example: "FE-2026-0240",
-      setAt: `${testClockDay(-1)}T09:15:00+02:00`,
+      setAt: `${testClockDay(-1)}T08:15:00Z`,
       setByYou: false,
       setByAccount: true,
       setByName: "Ute Beispiel",
@@ -48,7 +49,7 @@ const RUNNING: NumberRange = {
     {
       nextNumber: 100,
       example: "FE-2026-0100",
-      setAt: `${testClockDay(-2)}T09:15:00+02:00`,
+      setAt: `${testClockDay(-2)}T08:15:00Z`,
       setByYou: true,
       setByAccount: true,
       setByName: "",
@@ -124,7 +125,10 @@ describe("NumberRangeCard: the next number (#7358)", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent("FE-2026-0240");
     expect(rows[0]).toHaveTextContent("von Ute Beispiel");
-    expect(rows[0]).toHaveTextContent("09:15");
+    // The test clock moves across summer and winter time.
+    expect(rows[0]).toHaveTextContent(
+      exportedAtLabel(RUNNING.starts[0]!.setAt),
+    );
     expect(rows[1]).toHaveTextContent("FE-2026-0100");
     expect(rows[1]).toHaveTextContent("von Ihnen");
   });
