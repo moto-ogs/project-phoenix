@@ -55,7 +55,7 @@ func (s *Store) ListTraegerFeedEntries(ctx context.Context, organizationID, acco
 	}
 	entries := make([]domain.TraegerFeedEntry, 0, len(rows))
 	for _, row := range rows {
-		entries = append(entries, domain.TraegerFeedEntry{FeedEntry: row.feedEntryRow.entry(), SchoolName: row.SchoolName})
+		entries = append(entries, domain.TraegerFeedEntry{FeedEntry: row.entry(), SchoolName: row.SchoolName})
 	}
 	return entries, nil
 }
