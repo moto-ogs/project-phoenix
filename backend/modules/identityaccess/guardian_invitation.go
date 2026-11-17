@@ -65,6 +65,10 @@ type GuardianInvitation struct {
 	// Email is the address the current link was issued for, normalized
 	// (#6294).
 	Email string
+	// Expired reports whether the link ran out at the database time of the
+	// read: the database stamps and judges expires_at (ADR 0285, Nachtrag),
+	// so a reader needs no clock of its own.
+	Expired bool
 }
 
 // AddressedTo reports whether the invitation's link was issued for the

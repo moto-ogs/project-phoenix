@@ -16,7 +16,7 @@ func (l *AccountLifecycle) insertStudentInvitation(ctx context.Context, req doma
 		if err != nil {
 			return err
 		}
-		expiry, err := l.delivery.InvitationExpiry(txCtx)
+		expiresAt, err := l.invitationExpiry(txCtx)
 		if err != nil {
 			return failed(opGuardianInviteToStudent, err)
 		}
@@ -24,7 +24,7 @@ func (l *AccountLifecycle) insertStudentInvitation(ctx context.Context, req doma
 			TenantID:                    tenantID,
 			GuardianProfileID:           profile.ID,
 			CreatedBy:                   req.CreatedBy,
-			ExpiresAt:                   l.sessions.now().Add(expiry),
+			ExpiresAt:                   expiresAt,
 			StudentID:                   &studentID,
 			RequestedByAccountID:        req.RequestedByParentAccountID,
 			ApprovalStatus:              approvalStatus,
@@ -34,7 +34,7 @@ func (l *AccountLifecycle) insertStudentInvitation(ctx context.Context, req doma
 		// A queued approval has no usable mailed link yet. Issuing one does
 		// supersede previous links, but not unrelated approval requests.
 		if approvalStatus != domain.GuardianInvitationApprovalPending {
-			if err := l.invitations.InvalidateGuardianInvitations(txCtx, profile.ID, l.sessions.now(), false); err != nil {
+			if err := l.invitations.InvalidateGuardianInvitations(txCtx, profile.ID, false); err != nil {
 				return failed(opGuardianInviteToStudent, err)
 			}
 		}

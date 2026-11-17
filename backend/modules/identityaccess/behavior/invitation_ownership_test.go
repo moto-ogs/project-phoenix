@@ -122,7 +122,7 @@ func TestInvitationRejectsInvalidOwnerProofWithoutWrites(t *testing.T) {
 			role := testpkg.CreateTestRoleForTenant(t, db, "invited-staff", schoolA)
 			invitation := &testpkg.InvitationTokenFixture{
 				Email: owner.Email, RoleID: role.ID, Token: fmt.Sprintf("owner-proof-%d", schoolA),
-				FirstName: testpkg.StrPtr("Invited"), LastName: testpkg.StrPtr("Owner"), ExpiresAt: time.Now().Add(time.Hour),
+				FirstName: testpkg.StrPtr("Invited"), LastName: testpkg.StrPtr("Owner"), ExpiresAt: testpkg.DatabaseNow(t, db).Add(time.Hour),
 			}
 			invitation.TenantID = schoolA
 			testpkg.InsertTestInvitationToken(t, db, invitation)
@@ -207,11 +207,11 @@ func TestInvitationLifecycleAndImportedSchoolIdentity(t *testing.T) {
 			person := testpkg.CreateTestPerson(t, db, "Imported", "Staff")
 			invitation := &testpkg.InvitationTokenFixture{
 				Email: email, RoleID: roleID, Token: fmt.Sprintf("lifecycle-%d", testpkg.Tenant(t)), PersonID: &person.ID,
-				FirstName: &person.FirstName, LastName: &person.LastName, ExpiresAt: time.Now().Add(time.Hour),
+				FirstName: &person.FirstName, LastName: &person.LastName, ExpiresAt: testpkg.DatabaseNow(t, db).Add(time.Hour),
 			}
 			invitation.TenantID = testpkg.Tenant(t)
 			if strings.HasPrefix(name, "expired") {
-				invitation.ExpiresAt = time.Now().Add(-time.Hour)
+				invitation.ExpiresAt = testpkg.DatabaseNow(t, db).Add(-time.Hour)
 			}
 			testpkg.InsertTestInvitationToken(t, db, invitation)
 			if strings.HasPrefix(name, "revoked") {
@@ -268,7 +268,7 @@ func TestInvitationConcurrentOwnerAcceptanceIsSingleUse(t *testing.T) {
 	role := testpkg.CreateTestRoleForTenant(t, db, "concurrent-staff", schoolA)
 	invitation := &testpkg.InvitationTokenFixture{
 		Email: owner.Email, RoleID: role.ID, Token: fmt.Sprintf("concurrent-%d", schoolA),
-		FirstName: testpkg.StrPtr("Invited"), LastName: testpkg.StrPtr("Owner"), ExpiresAt: time.Now().Add(time.Hour),
+		FirstName: testpkg.StrPtr("Invited"), LastName: testpkg.StrPtr("Owner"), ExpiresAt: testpkg.DatabaseNow(t, db).Add(time.Hour),
 	}
 	invitation.TenantID = schoolA
 	testpkg.InsertTestInvitationToken(t, db, invitation)

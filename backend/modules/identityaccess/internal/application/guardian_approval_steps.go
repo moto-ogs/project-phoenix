@@ -110,11 +110,11 @@ func (l *AccountLifecycle) requeueRoleUpgrade(ctx context.Context, req domain.In
 		openInvitation.ApprovedAt = nil
 		// Restart the window and drop the stale email tracking, exactly
 		// like the pending -> not_required branch.
-		expiry, err := l.delivery.InvitationExpiry(ctx)
+		expiresAt, err := l.invitationExpiry(ctx)
 		if err != nil {
 			return domain.GuardianInvitation{}, failed(opGuardianInviteToStudent, err)
 		}
-		openInvitation.ExpiresAt = l.sessions.now().Add(expiry)
+		openInvitation.ExpiresAt = expiresAt
 		openInvitation.EmailSentAt = nil
 		openInvitation.EmailError = nil
 		if req.RequestedByParentAccountID != nil {
@@ -150,8 +150,11 @@ func (l *AccountLifecycle) parentRevokeDeletesLink(ctx context.Context, req doma
 func (l *AccountLifecycle) cancelPendingStudentInvitations(ctx context.Context, req domain.RevokeAccessRequest, profile domain.GuardianProfile) (bool, error) {
 	deleteLink := true
 	if !profile.HasAccount {
-		now := l.sessions.now()
-		openInvitations, err := l.openStudentInvitations(ctx, req.GuardianProfileID, req.StudentID, now)
+		now, err := l.invitationTime(ctx)
+		if err != nil {
+			return false, failed(opGuardianRevokeAccess, err)
+		}
+		openInvitations, err := l.openStudentInvitations(ctx, req.GuardianProfileID, req.StudentID)
 		if err != nil {
 			return false, failed(opGuardianRevokeAccess, err)
 		}

@@ -32,7 +32,7 @@ func TestSchoolAccountListingsScopeAndInvitationSuppression(t *testing.T) {
 	_, err = db.NewRaw("INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?), (?, ?, ?)",
 		account.ID, role.ID, home, account.ID, foreignRole.ID, other).Exec(ctx)
 	require.NoError(t, err)
-	invitation := testpkg.CreateTestInvitationToken(t, db, "listing-invitation", role.ID, account.ID, time.Now().Add(time.Hour))
+	invitation := testpkg.CreateTestInvitationToken(t, db, "listing-invitation", role.ID, account.ID, testpkg.DatabaseNow(t, db).Add(time.Hour))
 	_, err = db.NewRaw("UPDATE auth.invitation_tokens SET email = ? WHERE id = ?", strings.ToUpper(account.Email), invitation.ID).Exec(ctx)
 	require.NoError(t, err)
 	rows, err := query.ListSchoolAccountListings(ctx, []int64{home})
