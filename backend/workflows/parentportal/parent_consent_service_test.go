@@ -95,7 +95,7 @@ func buildConsentServiceWithPhotos(t *testing.T, adjust func(*parentportalcompos
 	deps := parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
 		GuardianProfileRepo: guardProfiles(t, db),
-		GuardianChanges:     owners.ParentGuardianChanges(time.Now),
+		GuardianChanges:     owners.ParentGuardianChanges(),
 		DeparturePolicy:     owners.ParentDeparturePolicy(),
 		GuardianPolicy:      owners.NewParentGuardianPolicy(),
 		Fingerprints:        owners.SecurityFingerprints{},

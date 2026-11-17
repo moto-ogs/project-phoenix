@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,7 +38,7 @@ func buildHolidayRegistrationFamilyServiceWithProofs(t *testing.T, proofs parent
 		StudentRepo:          guardStudents(t, db),
 		HolidayWishes:        wishStatements,
 		HolidayAccountProofs: proofs,
-		GuardianChanges:      owners.ParentGuardianChanges(time.Now),
+		GuardianChanges:      owners.ParentGuardianChanges(),
 		DeparturePolicy:      owners.ParentDeparturePolicy(),
 		GuardianPolicy:       owners.NewParentGuardianPolicy(),
 		Fingerprints:         owners.SecurityFingerprints{},

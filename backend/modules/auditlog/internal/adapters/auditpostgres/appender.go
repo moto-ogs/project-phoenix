@@ -15,12 +15,9 @@ import (
 )
 
 // Appender is the only Audit persistence adapter allowed to insert ledger
-// rows. Read repositories stay table-specific. now is the Audit clock: every
-// school ledger whose retention compares its time with a cutoff of that
-// clock, or that the Träger access log lists up to an instant of the root
-// clock, is stamped from it when the event comes without its time (ADR 0239,
-// 0281). A repository that appends only ledgers the database stamps passes
-// nil.
+// rows. Read repositories stay table-specific. now is the Audit clock; it
+// stamps only the work session edits (stampRecordedAt). A repository that
+// appends only ledgers the database stamps passes nil.
 type Appender struct {
 	runtime Runtime
 	now     func() time.Time
@@ -258,37 +255,40 @@ func importEventRow(value *auditImports.DataImport) *auditModels.DataImport {
 	return row
 }
 
-// stampRecordedAt gives an event without its time the instant of the Audit
-// clock. A set time stays: the producer recorded when it happened. The
-// ledgers the database stamps and deletes on its own clock (operator,
-// Träger account and document ledgers) and the deviation events, kept by
-// their occurrence date, are not stamped here.
+// stampRecordedAt decides the clock of the event's time. The ledgers a
+// security-definer retention function guards on the database clock, and the
+// change ledgers the access trail orders against them, are stamped by their
+// column default in every writer, so a time the producer set is dropped
+// (ADR 0281, Nachtrag); bun reads the stamp back. Their producers set no
+// time or the instant of their own clock. The consent changes keep the time
+// the producer set: a grant records when the consent was given, which an
+// import of past consents dates back; without a time the column default
+// stamps them. The work session edits, deleted with their session, take the
+// Audit clock when they come without a time. The ledgers without a school
+// are stamped by the database too.
 func (a *Appender) stampRecordedAt(event any) error {
-	stamps := recordedAtStamps(event)
-	if len(stamps) == 0 || !stamps[0].IsZero() {
+	for _, stamp := range databaseStamps(event) {
+		*stamp = time.Time{}
+	}
+	edit, ok := event.(*auditModels.WorkSessionEdit)
+	if !ok || !edit.CreatedAt.IsZero() {
 		return nil
 	}
 	if a.now == nil {
 		return errors.New("audit appender: clock is required to stamp the event")
 	}
-	now := a.now()
-	for _, stamp := range stamps {
-		*stamp = now
-	}
+	edit.CreatedAt = a.now()
 	return nil
 }
 
-// recordedAtStamps names the time columns of a ledger the Audit clock
-// stamps; the first one decides whether the producer set the time.
-func recordedAtStamps(event any) []*time.Time {
+// databaseStamps names the time columns of a ledger the database stamps.
+func databaseStamps(event any) []*time.Time {
 	switch value := event.(type) {
 	case *auditModels.AuthEvent:
 		return []*time.Time{&value.CreatedAt}
 	case *auditModels.DataDeletion:
 		return []*time.Time{&value.DeletedAt}
 	case *auditModels.StudentFieldEdit:
-		return []*time.Time{&value.CreatedAt}
-	case *auditModels.WorkSessionEdit:
 		return []*time.Time{&value.CreatedAt}
 	case *auditModels.DataAccessLog:
 		return []*time.Time{&value.AccessedAt}
@@ -315,10 +315,6 @@ func recordedAtStamps(event any) []*time.Time {
 	case *auditModels.TimeTrackingDeletion:
 		return []*time.Time{&value.OccurredAt}
 	case *auditModels.GuardianChange:
-		return []*time.Time{&value.ChangedAt}
-	case *auditModels.StudentConsentChange:
-		return []*time.Time{&value.CreatedAt, &value.UpdatedAt}
-	case *consents.ConsentChange:
 		return []*time.Time{&value.ChangedAt}
 	case *auditModels.AttendanceCorrection:
 		return []*time.Time{&value.CreatedAt, &value.UpdatedAt}

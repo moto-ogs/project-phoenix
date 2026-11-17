@@ -342,10 +342,18 @@ func (s *Store) DeleteTransition(ctx context.Context, tenantID, id int64) (int64
 	return stats.Rows, stats, nil
 }
 
+// draftCutoff is Berlin midnight of the database's day minus the bound
+// number of days: the trigger stamps a draft's updated_at with the database
+// clock, so its window counts from that clock (ADR 0281 point 3). It is this
+// package's one read of the database clock.
+const draftCutoff = `(((clock_timestamp() AT TIME ZONE 'Europe/Berlin')::date - ?::int)::timestamp AT TIME ZONE 'Europe/Berlin')`
+
 // DeleteTransitionsEndedBefore removes the transitions of the school that
-// ended before cutoff: an applied one at its application, a reverted one at
-// its reversal, a draft at its last change (#4045). Their child rows cascade.
-func (s *Store) DeleteTransitionsEndedBefore(ctx context.Context, tenantID int64, cutoff time.Time) (int64, domain.OperationStats, error) {
+// ended before the window: an applied one at its application and a reverted
+// one at its reversal before cutoff, stamped by the owner, a draft at its
+// last change before the window on the database's day (#4045). Their child
+// rows cascade.
+func (s *Store) DeleteTransitionsEndedBefore(ctx context.Context, tenantID int64, cutoff time.Time, retentionDays int) (int64, domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return 0, domain.OperationStats{}, err
@@ -354,7 +362,10 @@ func (s *Store) DeleteTransitionsEndedBefore(ctx context.Context, tenantID int64
 	started := time.Now()
 	result, err := db.NewDelete().TableExpr(transitionsTable).
 		Where(`"transition".tenant_id = ?`, tenantID).
-		Where(`COALESCE("transition".reverted_at, "transition".applied_at, "transition".updated_at) < ?`, cutoff).
+		WhereGroup(" AND ", func(q *bun.DeleteQuery) *bun.DeleteQuery {
+			return q.Where(`COALESCE("transition".reverted_at, "transition".applied_at) < ?`, cutoff).
+				WhereOr(`"transition".reverted_at IS NULL AND "transition".applied_at IS NULL AND "transition".updated_at < `+draftCutoff, retentionDays)
+		}).
 		Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {

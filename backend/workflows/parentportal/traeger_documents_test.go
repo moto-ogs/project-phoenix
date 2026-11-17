@@ -32,7 +32,7 @@ func sharedDocumentInbox(t *testing.T) (*parentService.Portal, *bun.DB) {
 	return parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
 		StudentGuardianRepo: guardStudentGuardians(t, db),
-		GuardianChanges:     owners.ParentGuardianChanges(time.Now), DeparturePolicy: owners.ParentDeparturePolicy(),
+		GuardianChanges:     owners.ParentGuardianChanges(), DeparturePolicy: owners.ParentDeparturePolicy(),
 		GuardianPolicy: owners.NewParentGuardianPolicy(), Fingerprints: owners.SecurityFingerprints{},
 		Declarations: owners.ParentDeclarationPolicy(), Locales: owners.ParentPortalLocales(), Runtime: owners.ParentPortalRuntime{},
 		ChildRepo: repos.ParentChildReads(), PersonRepo: owners.NewParentPersonReads(people.Person),

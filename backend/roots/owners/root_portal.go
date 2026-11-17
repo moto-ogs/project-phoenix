@@ -68,7 +68,7 @@ func BuildParentPortal(
 	}
 	wishProofs, _ := enrollmentCompose.NewHolidayWishes(env.HealthData, env.Now)
 	return parentportalcompose.New(parentportalcompose.Dependencies{
-		GuardianChanges: ParentGuardianChanges(clockOrReal(env.Now)),
+		GuardianChanges: ParentGuardianChanges(),
 		Signatures:      ParentDeclarationSignatures{Ledger: SignatureLedger()},
 		DeparturePolicy: ParentDeparturePolicy(),
 		GuardianPolicy:  NewParentGuardianPolicy(),

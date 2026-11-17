@@ -137,20 +137,28 @@ func (s *Service) IsDeviceOnline(ctx context.Context, device devicefleet.Device)
 	return s.IsDeviceOnlineAt(ctx, device, s.deps.Now())
 }
 
-// retentionClockMargin keeps the cutoff inside the database retention window
-// when the database clock runs slightly behind the owner clock.
-const retentionClockMargin = time.Minute
-
 // unregisteredTagScanRetentionWindow is the review window as elapsed time.
 // The audit retention function evaluates its 90 days in UTC (migration
 // 1.15.606), so neither side lengthens a day across a clock change.
 const unregisteredTagScanRetentionWindow = time.Duration(devicefleet.UnregisteredTagScanRetentionDays) * 24 * time.Hour
 
 // DeleteUnregisteredTagScansAfterRetention removes the caller tenant's scans
-// after the fixed review window.
+// after the fixed review window. The window counts back from the database
+// time, read in the delete's transaction: the column default stamps the
+// scans and the retention function guards the cutoff on that clock (ADR
+// 0281, Nachtrag).
 func (s *Service) DeleteUnregisteredTagScansAfterRetention(ctx context.Context) (int, int, error) {
-	cutoff := s.deps.Now().Add(-unregisteredTagScanRetentionWindow - retentionClockMargin)
-	deleted, err := s.DeleteExpiredUnregisteredTagScans(ctx, cutoff)
+	var deleted int64
+	err := s.runWrite(ctx, "delete_expired_unregistered_tag_scans", func(ctx context.Context, stats *domain.OperationStats) error {
+		now, err := s.deps.Scans.DatabaseTime(ctx)
+		if err != nil {
+			return err
+		}
+		var queryStats domain.OperationStats
+		deleted, queryStats, err = s.deps.Scans.DeleteExpired(ctx, now.Add(-unregisteredTagScanRetentionWindow))
+		stats.Add(queryStats)
+		return err
+	})
 	return int(deleted), devicefleet.UnregisteredTagScanRetentionDays, err
 }
 

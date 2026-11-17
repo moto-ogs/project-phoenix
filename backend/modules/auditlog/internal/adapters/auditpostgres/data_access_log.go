@@ -15,8 +15,8 @@ type dataAccessLogRepository struct {
 	now     func() time.Time
 }
 
-// NewDataAccessLogRepository creates a new DataAccessLogRepository; now
-// stamps an access recorded without its time.
+// NewDataAccessLogRepository creates a new DataAccessLogRepository. The
+// column default stamps every access (ADR 0281, Nachtrag).
 func NewDataAccessLogRepository(runtime Runtime, now func() time.Time) audit.DataAccessLogRepository {
 	return &dataAccessLogRepository{runtime: requireRuntime(runtime), now: now}
 }
@@ -25,15 +25,31 @@ func (r *dataAccessLogRepository) Create(ctx context.Context, entry *audit.DataA
 	return NewAppender(r.runtime, r.now).Append(ctx, entry)
 }
 
-// ExistsSince implements audit.DataAccessLogRepository. Metadata values are
-// matched as text (`metadata->>key = value`). The generic repository's
-// tenant filter does not cover custom queries, so the tenant clause is added
-// explicitly here (defense in depth next to RLS).
+// ExistsToday implements audit.DataAccessLogRepository: since the start of
+// the database clock's Berlin day.
+func (r *dataAccessLogRepository) ExistsToday(ctx context.Context, actorAccountID int64, resourceType string, metadata map[string]string) (bool, error) {
+	return r.exists(ctx, actorAccountID, resourceType, metadata, 0)
+}
+
+// ExistsWithin implements audit.DataAccessLogRepository: within window
+// before the database time.
+func (r *dataAccessLogRepository) ExistsWithin(ctx context.Context, actorAccountID int64, resourceType string, metadata map[string]string, window time.Duration) (bool, error) {
+	if window <= 0 {
+		return false, fmt.Errorf("data access log dedupe requires a positive window")
+	}
+	return r.exists(ctx, actorAccountID, resourceType, metadata, window)
+}
+
+// exists answers both bounds: within window, or since the start of the
+// Berlin day at zero. Metadata values are matched as text
+// (`metadata->>key = value`). The generic repository's tenant filter does
+// not cover custom queries, so the tenant clause is added explicitly here
+// (defense in depth next to RLS).
 //
 // A missing tenant is an error, never a wider query: this answers a
 // deduplication question, so a foreign-tenant hit would silently swallow the
 // GDPR row this caller is about to write.
-func (r *dataAccessLogRepository) ExistsSince(ctx context.Context, actorAccountID int64, resourceType string, metadata map[string]string, since time.Time) (bool, error) {
+func (r *dataAccessLogRepository) exists(ctx context.Context, actorAccountID int64, resourceType string, metadata map[string]string, window time.Duration) (bool, error) {
 	tenantID := runtimeTenantID(ctx, r.runtime)
 	if tenantID <= 0 {
 		return false, fmt.Errorf("data access log dedupe requires a tenant context")
@@ -47,8 +63,12 @@ func (r *dataAccessLogRepository) ExistsSince(ctx context.Context, actorAccountI
 		ModelTableExpr(`audit.data_access_log AS "data_access_log"`).
 		Where(`"data_access_log".actor_account_id = ?`, actorAccountID).
 		Where(`"data_access_log".resource_type = ?`, resourceType).
-		Where(`"data_access_log".accessed_at >= ?`, since).
 		Where(`"data_access_log".tenant_id = ?`, tenantID)
+	if window > 0 {
+		query = query.Where(`"data_access_log".accessed_at >= `+databaseClock+` - make_interval(secs => ?)`, window.Seconds())
+	} else {
+		query = query.Where(`"data_access_log".accessed_at >= (date_trunc('day', ` + databaseClock + ` AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin')`)
+	}
 	for key, value := range metadata {
 		query = query.Where(`"data_access_log".metadata->>? = ?`, key, value)
 	}

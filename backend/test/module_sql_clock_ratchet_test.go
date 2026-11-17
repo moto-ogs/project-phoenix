@@ -42,12 +42,21 @@ import (
 // slices of #7104 (802 reads in 26 owners); a mismatch prints the measured
 // values.
 var moduleSQLClockBudget = map[string]int{
-	// The retention of the ledgers without a school (ADR 0281): the column
-	// defaults stamp the operator ledger, the Träger account ledger and the
-	// Träger document downloads, so their cutoff reads the database clock.
+	// databaseClock (1), the package's one read of the database clock (ADR
+	// 0281, Nachtrag): the security-definer retention functions guard the
+	// windows of the auth events, the access log, the deletion log, the
+	// student change log and the ten protocols on the database clock, so the
+	// column defaults stamp these ledgers, and the change ledgers the access
+	// trail orders against them, in every writer; their cutoffs count back
+	// from DatabaseTime, read once per retention step, and so does the
+	// window of the cleanup statistics. The access-log deduplication and the
+	// end of the Träger access trail read the same clock. The consent changes
+	// keep the time their producer sets, the date of the grant. The column defaults also stamp the ledgers without a school
+	// (operator ledger, Träger account ledger, Träger document downloads),
+	// whose cutoff the database computes.
 	"modules/auditlog": 1,
-	// Only the finished student document cleanups: their database function
-	// guards the cutoff with the database clock (1.15.606).
+	// Only the finished student document cleanups (1): their database
+	// function guards the cutoff with the database clock (1.15.606).
 	"modules/careplan": 1,
 	// Named exceptions on the database clock: the message retention of ADR
 	// 0277 (7), since PostgreSQL stamps and orders the messages and threads;
@@ -64,6 +73,11 @@ var moduleSQLClockBudget = map[string]int{
 	// (1), which staffannouncementaudience orders against database-stamped
 	// created_at of schools, memberships and accounts (ADR 0281).
 	"modules/communication": 18,
+	// The unregistered tag scans (1, ADR 0281, Nachtrag): the column default
+	// stamps scanned_at and audit.delete_expired_unregistered_tag_scans guards
+	// the 90-day window on the database clock, so the cutoff counts back from
+	// DatabaseTime.
+	"modules/devicefleet": 1,
 	// Named exceptions on the database clock (ADR 0281): the read state of
 	// requests (3), where read_at and parent_changed_at are stamped there and
 	// only compared with each other; family_children_stated_at (1), which
@@ -82,15 +96,17 @@ var moduleSQLClockBudget = map[string]int{
 	// (1): the database stamps the journal and its deletion function guards
 	// the window with clock_timestamp().
 	"modules/exporttransfer": 9,
-	// The finished file and attachment cleanups and the removed files (3):
-	// their security-definer functions guard the cutoff with the database
-	// clock (1.15.606), so the cutoff is taken from statement_timestamp().
-	"modules/filestorage": 3,
-	// The Springer access windows (ADR 0251): the security-definer function
-	// auth.account_tenant_admitted admits a window on the database clock, so
-	// the prune of ended windows reads that clock too. And the deletion of
-	// deactivated operators: a trigger stamps platform.operators.deactivated_at
-	// with now(), so its cutoff compares on the database clock (ADR 0281).
+	// databaseClock (1, ADR 0281, Nachtrag): the finished file and attachment
+	// cleanups and the removed files: their security-definer functions guard
+	// the cutoff with the database clock (1.15.606), so the cutoff is taken
+	// from statement_timestamp().
+	"modules/filestorage": 1,
+	// The Springer access windows (3, ADR 0251): the security-definer
+	// function auth.account_tenant_admitted admits a window on the database
+	// clock, so the prune of ended windows reads that clock too. And the
+	// deletion of deactivated operators (1): a trigger stamps
+	// platform.operators.deactivated_at with now(), so its cutoff compares on
+	// the database clock (ADR 0281).
 	"modules/identityaccess": 4,
 	// Named exceptions on the database clock (ADR 0281): deleted_at of
 	// platform.schools (4), which the demo retirement functions stamp with
@@ -141,6 +157,11 @@ var moduleSQLClockBudget = map[string]int{
 	// compares that column with the cutoff and guards the cutoff with its
 	// own clock.
 	"modules/schoolmembership": 2,
+	// draftCutoff (1, ADR 0281 point 3): the trigger stamps updated_at of a
+	// draft grade transition, so the retention counts a draft's window back
+	// from the database's Berlin day; applied and reverted transitions keep
+	// the owner's cutoff on their owner-stamped times.
+	"modules/schoolstructure": 1,
 	// The visibility window of the operator announcements (2, ADR 0281):
 	// communication stamps published_at with CURRENT_TIMESTAMP, and the
 	// projection orders it against the created_at of schools, memberships
@@ -159,7 +180,10 @@ var moduleSQLClockBudget = map[string]int{
 	// the clock_timestamp() of CompletionTimestamp (completed_at, read after
 	// the completion's own writes), which Reopen orders against the updated_at
 	// of supervisor, attendance and plan rows, and of updated_at of
-	// schedule.instance_students, the plan side of that comparison.
+	// schedule.instance_students, the plan side of that comparison. The same
+	// constant ends the window of a switched-off staff notice
+	// (databaseDayCutoff, ADR 0281 point 3): the trigger stamps its
+	// updated_at.
 	"modules/timetable": 1,
 	// Store.DatabaseTime (1), the cutoffs of the staff document retentions:
 	// users.delete_expired_staff_sick_notes (1.15.453) and

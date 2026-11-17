@@ -271,16 +271,16 @@ type traegerAccessTrail struct {
 	trail auditlog.AccessTrailQuery
 }
 
-func (t traegerAccessTrail) ListAccessTrail(ctx context.Context, query traegerview.AccessTrailQuery) ([]traegerview.AccessTrailEntry, error) {
-	rows, err := t.trail.ListAccessTrail(ctx, auditlog.AccessTrailFilter(query))
+func (t traegerAccessTrail) ListAccessTrail(ctx context.Context, query traegerview.AccessTrailQuery) ([]traegerview.AccessTrailEntry, time.Time, error) {
+	rows, asOf, err := t.trail.ListAccessTrail(ctx, auditlog.AccessTrailFilter(query))
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
 	}
 	entries := make([]traegerview.AccessTrailEntry, 0, len(rows))
 	for _, row := range rows {
 		entries = append(entries, traegerview.AccessTrailEntry(row))
 	}
-	return entries, nil
+	return entries, asOf, nil
 }
 
 func (t traegerAccessTrail) ListAccessTrailActors(ctx context.Context, schools []int64, from, to time.Time) ([]traegerview.AccessTrailActor, error) {

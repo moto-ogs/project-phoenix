@@ -348,7 +348,7 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0276: the time import of the sick note retention clock in
 // modules/workforce/compose (+1) and the clock field of the staff offboarding
 // with its time import in workflows/staffoffboarding/compose (+2).
-const moduleComposeBudgetTotal = 13649
+const moduleComposeBudgetTotal = 13645
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -380,7 +380,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0103: the signature ledger constructor, construction only.
 	// ADR 0155: the signature ledger at the Träger (+8).
 	// ADR 0269: the Audit clock of the persistence and the command (+7).
-	"modules/auditlog/compose": 204,
+	"modules/auditlog/compose": 202,
 	// Raised by ADR 0128: the manual plans port of the booking materialization (+1).
 	// ADR 0151: the school figure constructor (+13).
 	// ADR 0153: the contract offerings constructor (+9).
@@ -502,7 +502,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0234: the note search beside the facade (+2).
 	// ADR 0268: the clock of the rosters, the guardians and the retention (+6).
 	// ADR 0278: the time import of the guardian profile clock (+1).
-	"modules/peopledirectory/compose":    1004,
+	"modules/peopledirectory/compose":    1002,
 	"modules/presenceprojection/compose": 7,
 	"modules/requestreview/compose":      12,
 	"modules/schedulerruntime/compose":   45,

@@ -124,7 +124,7 @@ func BuildPeopleServices(
 		StudentConsents: NewStudentConsentsFor(persons, audit.Persistence.StudentConsentChange),
 		StudentPhotos:   StudentPhotos{Directory: persons, Runtime: photos},
 		StudentChangeLogCleanup: NewStudentChangeLogCleanup(audit.Persistence.StudentFieldEdit, audit.Persistence.DataDeletion,
-			settings, env.Logger.With("service", "student-change-log-cleanup"), env.Now),
+			settings, env.Logger.With("service", "student-change-log-cleanup")),
 	}
 }
 

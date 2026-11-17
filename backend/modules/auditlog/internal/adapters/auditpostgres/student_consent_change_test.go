@@ -1,14 +1,18 @@
 package audit
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/auditlog/consents"
+	auditService "github.com/moto-ogs/project-phoenix/modules/auditlog/internal/application"
 	audit "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 )
 
 // CreateAll appends the consent changes of many students in one insert
@@ -55,4 +59,36 @@ func TestStudentConsentChangeRepository_CreateAll(t *testing.T) {
 		assert.True(t, changedAt.Equal(stored[0].CreatedAt), "the entry keeps the instant of the switch")
 	}
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repo.CreateAll, nil), "an empty batch writes nothing")
+}
+
+// An import records a consent with the date of the CSV: the grant keeps the
+// day the consent was given, years before the import and before both clocks,
+// through the batch path of the recorder. A withdrawal later clears the live
+// timestamp, so the ledger is the only record of the grant date.
+func TestConsentRecorderKeepsTheGrantDateOfAnImport(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	student := testpkg.CreateTestStudent(t, db, "Einwilligung", "Import", "1a")
+	granted := time.Date(2024, time.August, 1, 8, 0, 0, 0, time.UTC)
+	clock := func() time.Time { return auditClockYearsAhead }
+
+	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), db, tenantID, func(ctx context.Context, tx bun.Tx) error {
+		runtime := func(context.Context) (bun.IDB, int64) { return tx, tenantID }
+		command, err := auditService.NewCommand(NewAppender(runtime, clock), func(auditService.AppendObservation) {}, clock)
+		require.NoError(t, err)
+		return auditService.NewConsentRecorder(command).RecordTransitionsAll(ctx, []consents.ConsentTransition{{
+			After:  &consents.ConsentSnapshot{StudentID: student.ID, AGBAcceptedAt: &granted, PhotoConsentGivenAt: &granted},
+			Source: audit.StudentConsentSourceImport, ChangedAt: auditClockYearsAhead,
+		}})
+	}))
+
+	stored, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), db, NewStudentConsentChangeRepository(NewRuntime(db, auditTestTenantID), time.Now).ListByStudentID, student.ID)
+	require.NoError(t, err)
+	require.Len(t, stored, 2)
+	for _, entry := range stored {
+		assert.Equal(t, audit.StudentConsentGranted, entry.Action)
+		assert.True(t, granted.Equal(entry.CreatedAt), "the %s grant keeps the date of the import, not %s", entry.ConsentKey, entry.CreatedAt)
+	}
 }

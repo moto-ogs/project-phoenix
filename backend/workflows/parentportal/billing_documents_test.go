@@ -85,7 +85,7 @@ func documentInboxDependencies(t *testing.T, db *bun.DB, mails *owners.CareContr
 		Memberships:         parentMemberships(t, db),
 		StudentGuardianRepo: guardStudentGuardians(t, db),
 		StudentRepo:         guardStudents(t, db),
-		GuardianChanges:     owners.ParentGuardianChanges(time.Now), DeparturePolicy: owners.ParentDeparturePolicy(),
+		GuardianChanges:     owners.ParentGuardianChanges(), DeparturePolicy: owners.ParentDeparturePolicy(),
 		GuardianPolicy: owners.NewParentGuardianPolicy(), Fingerprints: owners.SecurityFingerprints{},
 		Declarations: owners.ParentDeclarationPolicy(), Locales: owners.ParentPortalLocales(), Runtime: owners.ParentPortalRuntime{},
 		ChildRepo: repos.ParentChildReads(), PersonRepo: owners.NewParentPersonReads(people.Person),

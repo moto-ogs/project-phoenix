@@ -56,6 +56,10 @@ func (s *Store) currentTime() time.Time {
 // and the plan rows Reopen orders against it (ADR 0281).
 const statementClock = "clock_timestamp()"
 
+// databaseDayCutoff is Berlin midnight of the database's day minus the bound
+// number of days, the cutoff of a window over a trigger-stamped column.
+const databaseDayCutoff = `(((` + statementClock + ` AT TIME ZONE 'Europe/Berlin')::date - ?::int)::timestamp AT TIME ZONE 'Europe/Berlin')`
+
 // CompletionTimestamp returns the database's clock at this statement, not at
 // the start of the transaction. The completion reads it after its own
 // writes, so those, and rows a trigger stamps with the transaction start,

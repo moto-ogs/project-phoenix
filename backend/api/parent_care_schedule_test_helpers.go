@@ -4,7 +4,6 @@ package api
 
 import (
 	"log/slog"
-	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -34,7 +33,7 @@ func NewParentCareScheduleTestService(db transactionruntime.Database, module Stu
 		return nil, err
 	}
 	return parentportalcompose.New(parentportalcompose.Dependencies{
-		GuardianChanges: owners.ParentGuardianChanges(time.Now),
+		GuardianChanges: owners.ParentGuardianChanges(),
 		DeparturePolicy: owners.ParentDeparturePolicy(),
 		GuardianPolicy:  owners.NewParentGuardianPolicy(),
 		Fingerprints:    owners.SecurityFingerprints{},

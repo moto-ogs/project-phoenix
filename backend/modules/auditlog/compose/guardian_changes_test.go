@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/auditlog"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -61,8 +60,7 @@ func TestGuardianChangeLogRecordsRowsInAmbientTenantTransaction(t *testing.T) {
 			ChangeType: auditlog.GuardianChangeTypeContact, FieldName: auditlog.GuardianFieldPhones,
 		},
 	}
-	now := time.Date(2031, time.March, 30, 1, 30, 0, 0, calendar.Berlin)
-	log := NewGuardianChangeLog(func() time.Time { return now })
+	log := NewGuardianChangeLog()
 
 	require.NoError(t, testpkg.WithinTenantContext(t, context.Background(), db, tenantID, func(ctx context.Context) error {
 		return log.RecordGuardianChanges(ctx, changes)
@@ -79,7 +77,9 @@ func TestGuardianChangeLogRecordsRowsInAmbientTenantTransaction(t *testing.T) {
 	require.Equal(t, "can_pickup", rows[0].FieldName)
 	require.Equal(t, "false", *rows[0].OldValue)
 	require.Equal(t, "true", *rows[0].NewValue)
-	require.True(t, now.Equal(rows[0].ChangedAt), "changed_at is the instant of the Audit clock")
+	var databaseNow time.Time
+	require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(context.Background(), &databaseNow))
+	require.WithinDuration(t, databaseNow, rows[0].ChangedAt, time.Minute, "the column default stamps changed_at (ADR 0281, Nachtrag)")
 	require.Equal(t, tenantID, rows[1].TenantID)
 	require.Nil(t, rows[1].ActorAccountID)
 	require.Nil(t, rows[1].ActorNameSnapshot)
@@ -92,7 +92,7 @@ func TestGuardianChangeLogRecordsRowsInAmbientTenantTransaction(t *testing.T) {
 
 func TestGuardianChangeLogEmptySliceIsNoOp(t *testing.T) {
 	t.Parallel()
-	log := NewGuardianChangeLog(time.Now)
+	log := NewGuardianChangeLog()
 	require.NoError(t, log.RecordGuardianChanges(context.Background(), nil))
 	require.NoError(t, log.RecordGuardianChanges(context.Background(), []auditlog.GuardianChange{}))
 }
@@ -106,7 +106,7 @@ func TestGuardianChangeLogRefusesWithoutTenantTransaction(t *testing.T) {
 		StudentID: student.ID, GuardianProfileID: guardian.ID,
 		ChangeType: auditlog.GuardianChangeTypeContact, FieldName: auditlog.GuardianFieldEmail,
 	}}
-	log := NewGuardianChangeLog(time.Now)
+	log := NewGuardianChangeLog()
 
 	require.Error(t, log.RecordGuardianChanges(testpkg.Ctx(t), changes), "tenant without transaction")
 	require.Error(t, log.RecordGuardianChanges(context.Background(), changes), "neither tenant nor transaction")
@@ -121,7 +121,7 @@ func TestGuardianChangeLogRowsStayInsideTheirTenant(t *testing.T) {
 	testpkg.EnsureTestTenant(t, db, tenantB)
 	student := testpkg.CreateTestStudent(t, db, "Audit", "Tenant", "1a")
 	guardian := testpkg.CreateTestGuardianProfile(t, db, "guardian-change-tenant")
-	log := NewGuardianChangeLog(time.Now)
+	log := NewGuardianChangeLog()
 
 	require.NoError(t, testpkg.WithinTenantContext(t, context.Background(), db, tenantA, func(ctx context.Context) error {
 		return log.RecordGuardianChanges(ctx, []auditlog.GuardianChange{{

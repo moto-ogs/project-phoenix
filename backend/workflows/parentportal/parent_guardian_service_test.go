@@ -39,7 +39,7 @@ func buildGuardianServiceFeature(t *testing.T, mgmtEnabled bool) (*parentService
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:     parentMemberships(t, db),
-		GuardianChanges: owners.ParentGuardianChanges(time.Now),
+		GuardianChanges: owners.ParentGuardianChanges(),
 		DeparturePolicy: owners.ParentDeparturePolicy(),
 		GuardianPolicy:  owners.NewParentGuardianPolicy(),
 		Fingerprints:    owners.SecurityFingerprints{},
@@ -1343,7 +1343,7 @@ func TestUpdateGuardianContact_PropagatesEmailLookupError(t *testing.T) {
 	lookupErr := fmt.Errorf("simulated guardian email lookup failure")
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:     parentMemberships(t, db),
-		GuardianChanges: owners.ParentGuardianChanges(time.Now),
+		GuardianChanges: owners.ParentGuardianChanges(),
 		DeparturePolicy: owners.ParentDeparturePolicy(),
 		GuardianPolicy:  owners.NewParentGuardianPolicy(),
 		Fingerprints:    owners.SecurityFingerprints{},
