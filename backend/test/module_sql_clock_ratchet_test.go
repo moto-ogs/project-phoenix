@@ -118,8 +118,7 @@ var moduleSQLClockBudget = map[string]int{
 	// handover (2), judged against the transport's fences that lease on the
 	// database clock; and the age of the Beleg deletion log (1), whose entries
 	// parent_billing.log_removed_belege stamps by column default.
-	"modules/parentbilling":   13,
-	"modules/peopledirectory": 18,
+	"modules/parentbilling": 13,
 	// The worker leases of platform.worker_leases (11): several API and worker
 	// processes coordinate through one database, so its clock is the lease
 	// clock; acquire, renew and release stamp and compare lease_until and
@@ -143,10 +142,21 @@ var moduleSQLClockBudget = map[string]int{
 	// projection orders it against the created_at of schools, memberships
 	// and accounts, which the database stamps.
 	"modules/staffannouncementaudience": 2,
-	"modules/studentpresence":           16,
-	// Includes CompletionTimestamp (ADR 0281): completed_at is ordered against
-	// the updated_at of rows the database stamps.
-	"modules/timetable": 4,
+	// Named exception on the database clock (ADR 0281): statementClock (1),
+	// the one clock_timestamp() that stamps updated_at of
+	// active.activity_session_attendance in every writer (UPDATE, INSERT, ON
+	// CONFLICT), and of an activity session on reopen, whose completion
+	// stamps it with completed_at. Timetable's Reopen orders the attendance
+	// stamp against completed_at; only the statement time keeps a correction
+	// that waited for the completion, or follows it in the same transaction,
+	// after it.
+	"modules/studentpresence": 1,
+	// Named exception on the database clock (ADR 0281): statementClock (1),
+	// the clock_timestamp() of CompletionTimestamp (completed_at, read after
+	// the completion's own writes), which Reopen orders against the updated_at
+	// of supervisor, attendance and plan rows, and of updated_at of
+	// schedule.instance_students, the plan side of that comparison.
+	"modules/timetable": 1,
 	// The finished staff document cleanups: their database function guards
 	// the cutoff with the database clock (1.15.606). And the lift of a pool
 	// block by the Träger (ADR 0281): the school lifts its blocks through the

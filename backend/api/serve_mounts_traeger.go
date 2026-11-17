@@ -126,7 +126,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		Sick: sick, OnSite: workforceCompose.NewOnSiteStaff(),
 		KeyDates:    traegerKeyDateCounts{organizations: organizations},
 		Enrollments: enrollmentCompose.NewOpenEnrollments(), Alerts: traegerAlertSettings{settings: settings},
-		Occupancy: traegerOccupancyPorts(), Known: traegerKnownChildrenPorts(), Utilization: traegerUtilizationPorts(statistics),
+		Occupancy: traegerOccupancyPorts(), Known: traegerKnownChildrenPorts(), Utilization: traegerUtilizationPorts(statistics, now),
 		Times: traegerArrivalPickupCounts{times: presence}, Daily: traegerDailyAttendancePorts(presence, sick, calendarSchools),
 		Reports: traegerReportPorts(reportTemplateReads),
 	})

@@ -14,6 +14,15 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 )
 
+// statementClock stamps updated_at of every attendance row, in UPDATEs and
+// INSERTs (a column default would be the transaction start) and in their
+// ON CONFLICT branches. Timetable's Reopen orders the stamp against
+// completed_at, which the completion reads with clock_timestamp() after its
+// own writes (ADR 0281): only the statement time keeps a correction that
+// waited for the completion's locks, or ran after it in the same
+// transaction, after completed_at.
+const statementClock = `clock_timestamp()`
+
 type sessionAttendanceRow struct {
 	bun.BaseModel      `bun:"table:active.activity_session_attendance,alias:attendance"`
 	ID                 int64      `bun:"id,pk,autoincrement"`
@@ -144,13 +153,13 @@ func (s *Store) CheckInParticipants(ctx context.Context, participantIDs []int64,
 	}
 	return s.execSessionAttendance(ctx, "check in participants", db.NewRaw(`
 		INSERT INTO active.activity_session_attendance AS target (tenant_id, instance_student_id, status, checked_in_at, is_unplanned, updated_at)
-		SELECT ?, unnest(?::bigint[]), 'present', ?, ?, now()
+		SELECT ?, unnest(?::bigint[]), 'present', ?, ?, `+statementClock+`
 		ON CONFLICT (tenant_id, instance_student_id) DO UPDATE SET
 			status = 'present',
 			substatus = CASE WHEN target.student_status_day_id IS NOT NULL OR target.pickup_exception_id IS NOT NULL THEN NULL ELSE target.substatus END,
 			student_status_day_id = NULL, pickup_exception_id = NULL,
 			checked_in_at = CASE WHEN target.checked_out_at IS NOT NULL THEN EXCLUDED.checked_in_at ELSE COALESCE(target.checked_in_at, EXCLUDED.checked_in_at) END,
-			checked_out_at = NULL, updated_at = now()
+			checked_out_at = NULL, updated_at = `+statementClock+`
 		WHERE target.status = 'expected' OR target.student_status_day_id IS NOT NULL OR target.pickup_exception_id IS NOT NULL
 		   OR (target.status = 'present' AND target.checked_out_at IS NOT NULL)`,
 		tenantID, pgdialect.Array(participantIDs), at, walkIn))
@@ -167,7 +176,7 @@ func (s *Store) CheckOutParticipants(ctx context.Context, participantIDs []int64
 	return s.execSessionAttendance(ctx, "check out participants", db.NewRaw(`
 		UPDATE active.activity_session_attendance AS target SET
 			checked_out_at = CASE WHEN target.checked_out_at IS NULL OR target.checked_out_at < ?1 THEN ?1 ELSE target.checked_out_at END,
-			updated_at = now()
+			updated_at = `+statementClock+`
 		WHERE target.tenant_id = ?0 AND target.instance_student_id = ANY(?2::bigint[])
 		  AND target.status = 'present' AND target.checked_in_at IS NOT NULL AND target.checked_in_at <= ?1`,
 		tenantID, at, pgdialect.Array(participantIDs)))
@@ -182,7 +191,7 @@ func (s *Store) CloseOpenParticipants(ctx context.Context, participantIDs []int6
 		return ports.Stats{}, err
 	}
 	return s.execSessionAttendance(ctx, "close open participants", db.NewRaw(`
-		UPDATE active.activity_session_attendance AS target SET checked_out_at = ?1, updated_at = ?1
+		UPDATE active.activity_session_attendance AS target SET checked_out_at = ?1, updated_at = `+statementClock+`
 		WHERE target.tenant_id = ?0 AND target.instance_student_id = ANY(?2::bigint[])
 		  AND target.status = 'present' AND target.checked_in_at IS NOT NULL AND target.checked_in_at <= ?1
 		  AND target.checked_out_at IS NULL`,
@@ -195,7 +204,7 @@ func (s *Store) ReconcileParticipantInterval(ctx context.Context, participantID 
 		return ports.Stats{}, err
 	}
 	return s.execSessionAttendance(ctx, "reconcile participant interval", db.NewRaw(`
-		UPDATE active.activity_session_attendance AS target SET checked_in_at = ?2, checked_out_at = ?3, updated_at = now()
+		UPDATE active.activity_session_attendance AS target SET checked_in_at = ?2, checked_out_at = ?3, updated_at = `+statementClock+`
 		WHERE target.tenant_id = ?0 AND target.instance_student_id = ?1 AND target.status = 'present'
 		  AND target.checked_in_at = ?4
 		  AND (target.checked_out_at IS NOT DISTINCT FROM ?5 OR (?6 AND target.checked_out_at IS NULL))`,
@@ -228,7 +237,7 @@ func (s *Store) PatchSessionAttendance(ctx context.Context, participantID int64,
 	// attendance and writes the first row.
 	row := sessionAttendancePatchRow(tenantID, participantID, patch, at, decided)
 	insertStarted := time.Now()
-	_, err = db.NewInsert().Model(&row).ModelTableExpr(`active.activity_session_attendance`).Exec(ctx)
+	_, err = db.NewInsert().Model(&row).ModelTableExpr(`active.activity_session_attendance`).Value("updated_at", statementClock).Exec(ctx)
 	stats.Queries++
 	stats.StatementDuration += time.Since(insertStarted)
 	if err != nil {
@@ -261,11 +270,11 @@ func sessionAttendancePatchSets(query *bun.UpdateQuery, patch studentpresence.Se
 	} else if patch.Note != nil {
 		query = query.Set(`note = ?`, *patch.Note)
 	}
-	return query.Set(`updated_at = ?`, at), decided
+	return query.Set(`updated_at = ` + statementClock), decided
 }
 
 func sessionAttendancePatchRow(tenantID, participantID int64, patch studentpresence.SessionAttendancePatch, at time.Time, decided bool) sessionAttendanceRow {
-	row := sessionAttendanceRow{TenantID: tenantID, ParticipantID: participantID, Status: "expected", UpdatedAt: at}
+	row := sessionAttendanceRow{TenantID: tenantID, ParticipantID: participantID, Status: "expected"}
 	if patch.Status != nil {
 		row.Status = *patch.Status
 	}
@@ -281,7 +290,7 @@ func sessionAttendancePatchRow(tenantID, participantID int64, patch studentprese
 	return row
 }
 
-func (s *Store) TransitionParticipants(ctx context.Context, participantIDs []int64, from, to string, at *time.Time) (ports.Stats, error) {
+func (s *Store) TransitionParticipants(ctx context.Context, participantIDs []int64, from, to string) (ports.Stats, error) {
 	if len(participantIDs) == 0 {
 		return ports.Stats{}, nil
 	}
@@ -291,16 +300,16 @@ func (s *Store) TransitionParticipants(ctx context.Context, participantIDs []int
 	}
 	if from != "expected" {
 		return s.execSessionAttendance(ctx, "transition participants", db.NewRaw(`
-			UPDATE active.activity_session_attendance AS target SET status = ?3, updated_at = COALESCE(?4::timestamptz, now())
+			UPDATE active.activity_session_attendance AS target SET status = ?3, updated_at = `+statementClock+`
 			WHERE target.tenant_id = ?0 AND target.instance_student_id = ANY(?1::bigint[]) AND target.status = ?2`,
-			tenantID, pgdialect.Array(participantIDs), from, to, at))
+			tenantID, pgdialect.Array(participantIDs), from, to))
 	}
 	return s.execSessionAttendance(ctx, "transition participants", db.NewRaw(`
 		INSERT INTO active.activity_session_attendance AS target (tenant_id, instance_student_id, status, updated_at)
-		SELECT ?0, unnest(?1::bigint[]), ?3, COALESCE(?4::timestamptz, now())
-		ON CONFLICT (tenant_id, instance_student_id) DO UPDATE SET status = EXCLUDED.status, updated_at = EXCLUDED.updated_at
+		SELECT ?0, unnest(?1::bigint[]), ?3, `+statementClock+`
+		ON CONFLICT (tenant_id, instance_student_id) DO UPDATE SET status = EXCLUDED.status, updated_at = `+statementClock+`
 		WHERE target.status = ?2`,
-		tenantID, pgdialect.Array(participantIDs), from, to, at))
+		tenantID, pgdialect.Array(participantIDs), from, to))
 }
 
 func (s *Store) MarkParticipantsNotScheduled(ctx context.Context, participantIDs []int64) (ports.Stats, error) {
@@ -313,11 +322,11 @@ func (s *Store) MarkParticipantsNotScheduled(ctx context.Context, participantIDs
 	}
 	return s.execSessionAttendance(ctx, "mark participants not scheduled", db.NewRaw(`
 		INSERT INTO active.activity_session_attendance AS target (tenant_id, instance_student_id, status, not_scheduled, updated_at)
-		SELECT ?0, unnest(?1::bigint[]), 'expected', TRUE, now()
+		SELECT ?0, unnest(?1::bigint[]), 'expected', TRUE, `+statementClock+`
 		ON CONFLICT (tenant_id, instance_student_id) DO UPDATE SET
 			not_scheduled = TRUE, status = 'expected',
 			substatus = CASE WHEN target.student_status_day_id IS NOT NULL OR target.pickup_exception_id IS NOT NULL THEN NULL ELSE target.substatus END,
-			student_status_day_id = NULL, pickup_exception_id = NULL, updated_at = EXCLUDED.updated_at
+			student_status_day_id = NULL, pickup_exception_id = NULL, updated_at = `+statementClock+`
 		WHERE target.manual_status_at IS NULL AND (target.status = 'expected'
 		   OR (target.status = 'absent' AND target.student_status_day_id IS NOT NULL)
 		   OR (target.status = 'absent' AND target.pickup_exception_id IS NOT NULL))`,
@@ -332,14 +341,14 @@ func (s *Store) RestoreSessionAttendance(ctx context.Context, row studentpresenc
 	stats, err := s.execSessionAttendance(ctx, "restore session attendance", db.NewRaw(`
 		INSERT INTO active.activity_session_attendance AS target
 			(tenant_id, instance_student_id, status, substatus, note, checked_in_at, checked_out_at, is_unplanned, not_scheduled, manual_status_at, student_status_day_id, pickup_exception_id, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, `+statementClock+`)
 		ON CONFLICT (tenant_id, instance_student_id) DO UPDATE SET
 			status = EXCLUDED.status, substatus = EXCLUDED.substatus, note = EXCLUDED.note,
 			checked_in_at = EXCLUDED.checked_in_at, checked_out_at = EXCLUDED.checked_out_at,
 			is_unplanned = EXCLUDED.is_unplanned, not_scheduled = EXCLUDED.not_scheduled,
 			manual_status_at = EXCLUDED.manual_status_at,
 			student_status_day_id = EXCLUDED.student_status_day_id,
-			pickup_exception_id = EXCLUDED.pickup_exception_id, updated_at = EXCLUDED.updated_at`,
+			pickup_exception_id = EXCLUDED.pickup_exception_id, updated_at = `+statementClock,
 		tenantID, row.ParticipantID, row.Status, row.Substatus, row.Note, row.CheckedInAt, row.CheckedOutAt,
 		row.IsUnplanned, row.NotScheduled, row.ManualStatusAt, row.StudentStatusDayID, row.PickupExceptionID))
 	if err != nil {
@@ -366,9 +375,9 @@ func (s *Store) ReconnectParticipantPickupExceptions(ctx context.Context, links 
 	}
 	return s.execSessionAttendance(ctx, "reconnect participant pickup exceptions", db.NewRaw(`
 		INSERT INTO active.activity_session_attendance AS target (tenant_id, instance_student_id, status, pickup_exception_id, updated_at)
-		SELECT ?0, link.participant_id, 'expected', link.pickup_exception_id, now()
+		SELECT ?0, link.participant_id, 'expected', link.pickup_exception_id, `+statementClock+`
 		FROM unnest(?1::bigint[], ?2::bigint[]) AS link(participant_id, pickup_exception_id)
-		ON CONFLICT (tenant_id, instance_student_id) DO UPDATE SET pickup_exception_id = EXCLUDED.pickup_exception_id, updated_at = EXCLUDED.updated_at`,
+		ON CONFLICT (tenant_id, instance_student_id) DO UPDATE SET pickup_exception_id = EXCLUDED.pickup_exception_id, updated_at = `+statementClock,
 		tenantID, pgdialect.Array(participantIDs), pgdialect.Array(exceptionIDs)))
 }
 
@@ -392,7 +401,7 @@ func (s *Store) LockSessionAttendance(ctx context.Context, participantIDs []int6
 	return stats, nil
 }
 
-func (s *Store) ApplyStatusDayAbsences(ctx context.Context, absences []ports.StatusDayAbsence, at time.Time) (ports.Stats, error) {
+func (s *Store) ApplyStatusDayAbsences(ctx context.Context, absences []ports.StatusDayAbsence) (ports.Stats, error) {
 	if len(absences) == 0 {
 		return ports.Stats{}, nil
 	}
@@ -408,12 +417,12 @@ func (s *Store) ApplyStatusDayAbsences(ctx context.Context, absences []ports.Sta
 	}
 	return s.execSessionAttendance(ctx, "apply status day absences", db.NewRaw(`
 		INSERT INTO active.activity_session_attendance AS target (tenant_id, instance_student_id, status, substatus, student_status_day_id, updated_at)
-		SELECT ?0, absence.participant_id, 'absent', NULLIF(absence.substatus, ''), absence.status_day_id, ?4
+		SELECT ?0, absence.participant_id, 'absent', NULLIF(absence.substatus, ''), absence.status_day_id, `+statementClock+`
 		FROM unnest(?1::bigint[], ?2::bigint[], ?3::text[]) AS absence(participant_id, status_day_id, substatus)
 		ON CONFLICT (tenant_id, instance_student_id) DO UPDATE SET
-			status = 'absent', substatus = EXCLUDED.substatus, student_status_day_id = EXCLUDED.student_status_day_id, updated_at = EXCLUDED.updated_at
+			status = 'absent', substatus = EXCLUDED.substatus, student_status_day_id = EXCLUDED.student_status_day_id, updated_at = `+statementClock+`
 		WHERE NOT target.not_scheduled AND (target.status = 'expected' OR target.student_status_day_id IS NOT NULL)`,
-		tenantID, pgdialect.Array(participantIDs), pgdialect.Array(dayIDs), pgdialect.Array(substatuses), at))
+		tenantID, pgdialect.Array(participantIDs), pgdialect.Array(dayIDs), pgdialect.Array(substatuses)))
 }
 
 type statusDayReleaseRecord struct {
@@ -434,7 +443,7 @@ func encodeStatusDayReleases(releases []ports.StatusDayRelease) (string, error) 
 	return string(encoded), err
 }
 
-func (s *Store) ReleaseStatusDay(ctx context.Context, statusDayID int64, releases []ports.StatusDayRelease, at time.Time) (ports.Stats, error) {
+func (s *Store) ReleaseStatusDay(ctx context.Context, statusDayID int64, releases []ports.StatusDayRelease) (ports.Stats, error) {
 	if len(releases) == 0 {
 		return ports.Stats{}, nil
 	}
@@ -448,13 +457,13 @@ func (s *Store) ReleaseStatusDay(ctx context.Context, statusDayID int64, release
 	}
 	return s.execSessionAttendance(ctx, "release status day", db.NewRaw(`
 		UPDATE active.activity_session_attendance AS target SET
-			status = release.status, substatus = release.substatus, student_status_day_id = release.replacement_day_id, updated_at = ?2
+			status = release.status, substatus = release.substatus, student_status_day_id = release.replacement_day_id, updated_at = `+statementClock+`
 		FROM `+statusDayReleaseRecordset+`
-		WHERE target.tenant_id = ?0 AND target.instance_student_id = release.participant_id AND target.student_status_day_id = ?3`,
-		tenantID, payload, at, statusDayID))
+		WHERE target.tenant_id = ?0 AND target.instance_student_id = release.participant_id AND target.student_status_day_id = ?2`,
+		tenantID, payload, statusDayID))
 }
 
-func (s *Store) ReleasePartialAbsence(ctx context.Context, pickupExceptionID int64, releases []ports.StatusDayRelease, at time.Time) (ports.Stats, error) {
+func (s *Store) ReleasePartialAbsence(ctx context.Context, pickupExceptionID int64, releases []ports.StatusDayRelease) (ports.Stats, error) {
 	if len(releases) == 0 {
 		return ports.Stats{}, nil
 	}
@@ -469,13 +478,13 @@ func (s *Store) ReleasePartialAbsence(ctx context.Context, pickupExceptionID int
 	return s.execSessionAttendance(ctx, "release partial absence", db.NewRaw(`
 		UPDATE active.activity_session_attendance AS target SET
 			status = release.status, substatus = release.substatus, student_status_day_id = release.replacement_day_id,
-			pickup_exception_id = NULL, updated_at = ?2
+			pickup_exception_id = NULL, updated_at = `+statementClock+`
 		FROM `+statusDayReleaseRecordset+`
-		WHERE target.tenant_id = ?0 AND target.instance_student_id = release.participant_id AND target.pickup_exception_id = ?3`,
-		tenantID, payload, at, pickupExceptionID))
+		WHERE target.tenant_id = ?0 AND target.instance_student_id = release.participant_id AND target.pickup_exception_id = ?2`,
+		tenantID, payload, pickupExceptionID))
 }
 
-func (s *Store) ApplyPartialAbsences(ctx context.Context, absences []ports.PartialAbsence, at time.Time) (ports.Stats, error) {
+func (s *Store) ApplyPartialAbsences(ctx context.Context, absences []ports.PartialAbsence) (ports.Stats, error) {
 	if len(absences) == 0 {
 		return ports.Stats{}, nil
 	}
@@ -490,12 +499,12 @@ func (s *Store) ApplyPartialAbsences(ctx context.Context, absences []ports.Parti
 	}
 	return s.execSessionAttendance(ctx, "apply partial absences", db.NewRaw(`
 		INSERT INTO active.activity_session_attendance AS target (tenant_id, instance_student_id, status, substatus, pickup_exception_id, updated_at)
-		SELECT ?0, absence.participant_id, 'absent', 'excused', absence.pickup_exception_id, ?3
+		SELECT ?0, absence.participant_id, 'absent', 'excused', absence.pickup_exception_id, `+statementClock+`
 		FROM unnest(?1::bigint[], ?2::bigint[]) AS absence(participant_id, pickup_exception_id)
 		ON CONFLICT (tenant_id, instance_student_id) DO UPDATE SET
 			status = 'absent', substatus = 'excused', student_status_day_id = NULL,
-			pickup_exception_id = EXCLUDED.pickup_exception_id, updated_at = EXCLUDED.updated_at
+			pickup_exception_id = EXCLUDED.pickup_exception_id, updated_at = `+statementClock+`
 		WHERE target.manual_status_at IS NULL AND NOT target.not_scheduled
 		  AND (target.status = 'expected' OR (target.status = 'absent' AND target.pickup_exception_id IS NULL AND target.student_status_day_id IS NULL))`,
-		tenantID, pgdialect.Array(participantIDs), pgdialect.Array(exceptionIDs), at))
+		tenantID, pgdialect.Array(participantIDs), pgdialect.Array(exceptionIDs)))
 }

@@ -154,7 +154,7 @@ func newOperatorRouter(
 	isLocalSeedRequest := func(r *http.Request) bool {
 		return apiCommon.IsLocalSeedRequest(r, viper.GetString("app_env"))
 	}
-	mergeRoutes, err := newStaffPersonMergeRoutes(db)
+	mergeRoutes, err := newStaffPersonMergeRoutes(db, now)
 	if err != nil {
 		return nil, err
 	}

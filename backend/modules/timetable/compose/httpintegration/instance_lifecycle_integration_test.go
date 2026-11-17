@@ -594,6 +594,102 @@ func TestInstance_Reopen_OrdersLeavingSchoolOnTheOwnerClock(t *testing.T) {
 	assert.Equal(t, timetable.CodeReopenStudentLeft, coded.Code)
 }
 
+// Attendance rows carry the database clock, the clock of completed_at
+// (#7295): with the owners' clock behind the database's, a correction after
+// the completion still blocks the reopen instead of being overwritten by the
+// snapshot.
+func TestInstance_Reopen_SeesCorrectionWithTheOwnerClockBehind(t *testing.T) {
+	t.Parallel()
+
+	day := calendar.NewDate(2020, 6, 15)
+	now := time.Date(2020, 6, 15, 14, 30, 0, 0, calendar.Berlin)
+	s := buildLifecycle(t, func() time.Time { return now })
+	ai := seedInstanceOn(t, s, day, true, true)
+	_, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	_, err = s.svc.Complete(s.ctx, ai.ID)
+	require.NoError(t, err)
+
+	actor := testpkg.CreateTestAccount(t, s.db, "reopen-correction-clock")
+	require.NoError(t, testpkg.WithinTenantContext(t, s.ctx, s.db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		return correctNoteAfterCompletion(txCtx, s, ai.ID, actor.ID)
+	}))
+
+	requireReopenAttendanceChanged(t, s, ai.ID)
+}
+
+// completed_at is the database's statement time, read after the
+// completion's own writes (#7295): a correction later in the same
+// transaction stamps a later clock_timestamp() and blocks the reopen, where
+// the transaction start compared equal and let the snapshot overwrite it.
+func TestInstance_Reopen_SeesCorrectionInTheCompletingTransaction(t *testing.T) {
+	t.Parallel()
+
+	s := buildLifecycle(t)
+	ai := seedInstance(t, s, true, true)
+	_, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	actor := testpkg.CreateTestAccount(t, s.db, "reopen-correction-same-tx")
+	require.NoError(t, testpkg.WithinTenantContext(t, s.ctx, s.db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		if _, err := s.svc.Complete(txCtx, ai.ID); err != nil {
+			return err
+		}
+		return correctNoteAfterCompletion(txCtx, s, ai.ID, actor.ID)
+	}))
+
+	requireReopenAttendanceChanged(t, s, ai.ID)
+}
+
+// A correction whose transaction began before the completion and wrote after
+// its commit stamps the statement time, after completed_at, and blocks the
+// reopen (#7295); its transaction start lies before the completion.
+func TestInstance_Reopen_SeesCorrectionFromATransactionStartedBeforeCompletion(t *testing.T) {
+	t.Parallel()
+
+	s := buildLifecycle(t)
+	ai := seedInstance(t, s, true, true)
+	_, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	actor := testpkg.CreateTestAccount(t, s.db, "reopen-correction-overlap")
+
+	began, completed, corrected := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+	go func() {
+		corrected <- testpkg.WithTenantTx(t, s.ctx, s.db, testpkg.Tenant(t), func(txCtx context.Context, tx bun.Tx) error {
+			var started time.Time
+			if err := tx.NewRaw("SELECT transaction_timestamp()").Scan(txCtx, &started); err != nil {
+				close(began)
+				return err
+			}
+			close(began)
+			<-completed
+			return correctNoteAfterCompletion(txCtx, s, ai.ID, actor.ID)
+		})
+	}()
+	<-began
+	_, err = s.svc.Complete(s.ctx, ai.ID)
+	close(completed)
+	require.NoError(t, err)
+	require.NoError(t, <-corrected)
+
+	requireReopenAttendanceChanged(t, s, ai.ID)
+}
+
+func correctNoteAfterCompletion(ctx context.Context, s *lifecycleSetup, instanceID, actorID int64) error {
+	note := "Nachtrag"
+	_, err := s.timetableData.AttendanceCorrections.CorrectInstanceStudentAttendance(ctx, instanceID, s.student1,
+		timetable.AttendancePatch{Note: &note}, "Nachtrag nach Abschluss", actorID)
+	return err
+}
+
+func requireReopenAttendanceChanged(t *testing.T, s *lifecycleSetup, instanceID int64) {
+	t.Helper()
+	_, err := s.svc.Reopen(s.ctx, instanceID, 0, true)
+	require.ErrorIs(t, err, timetable.ErrTimetableOperationConflict)
+	coded, ok := timetable.AsCoded(err)
+	require.True(t, ok)
+	assert.Equal(t, timetable.CodeReopenAttendanceChanged, coded.Code)
+}
+
 func TestInstance_Complete_ConfirmationMustMatchOpenVisits(t *testing.T) {
 	t.Parallel()
 

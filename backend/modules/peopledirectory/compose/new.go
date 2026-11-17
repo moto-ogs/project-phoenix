@@ -97,6 +97,11 @@ func New(dependencies Dependencies, memberships GuardianMembershipQuery) (*Direc
 		return nil, errors.New("people directory compose: all dependencies are required")
 	}
 	database := postgres.NewDatabase()
+	now := dependencies.Now
+	if now == nil {
+		now = time.Now
+	}
+	persons := postgres.New(database).WithClock(now)
 
 	observe := application.NewObserver(dependencies.Observe)
 	var companions internalports.StudentCompanions
@@ -104,16 +109,13 @@ func New(dependencies Dependencies, memberships GuardianMembershipQuery) (*Direc
 		companions = application.NewStudentCompanions(dependencies.StudentCompanions)
 	}
 	owners := application.NewStudentOwners(dependencies.StudentOwners)
-	noteStore := postgres.NewStudentNoteStore(database, dependencies.StudentDirectory)
+	studentStore := postgres.NewStudentStore(database, dependencies.StudentDirectory, owners.LockClassWrites, dependencies.StudentClassWriteGateQuery).WithClock(now)
+	noteStore := postgres.NewStudentNoteStore(database, dependencies.StudentDirectory).WithClock(now)
 	var noteDeletionAudit internalports.StudentNoteDeletionAudit
 	if dependencies.StudentNoteDeletionAudit != nil {
 		noteDeletionAudit = dependencies.StudentNoteDeletionAudit
 	}
-	now := dependencies.Now
-	if now == nil {
-		now = time.Now
-	}
-	students := application.NewStudents(postgres.NewStudentStore(database, dependencies.StudentDirectory, owners.LockClassWrites, dependencies.StudentClassWriteGateQuery), noteStore, companions, owners, transaction{}, observe, now)
+	students := application.NewStudents(studentStore, noteStore, companions, owners, transaction{}, observe, now)
 	guardians := application.NewGuardians(postgres.NewGuardianStore(database, postgres.PortalMembershipQuery(memberships), dependencies.GuardianLinkRows, now), dependencies.GuardianLinkOwners, transaction{}, observe)
 	var auditLog internalports.StudentFieldAuditLog
 	if dependencies.StudentFieldAudit != nil {
@@ -123,14 +125,13 @@ func New(dependencies Dependencies, memberships GuardianMembershipQuery) (*Direc
 	studentConsents := application.NewStudentConsents(dependencies.StudentConsentHistory, observe)
 	photoRuntime := application.StudentPhotoPort(dependencies.StudentPhotos)
 	studentPhotos := application.NewStudentPhotos(
-		postgres.NewStudentStore(database, dependencies.StudentDirectory, owners.LockClassWrites, dependencies.StudentClassWriteGateQuery), photoRuntime, transaction{}, observe, now)
-	noteStudents := postgres.NewStudentStore(database, dependencies.StudentDirectory, owners.LockClassWrites, dependencies.StudentClassWriteGateQuery)
-	studentNotes := application.NewStudentNotes(noteStore, postgres.New(database), noteStudents, transaction{}, noteDeletionAudit, observe)
+		studentStore, photoRuntime, transaction{}, observe, now)
+	studentNotes := application.NewStudentNotes(noteStore, persons, studentStore, transaction{}, noteDeletionAudit, observe)
 	providers, err := guardianProviders(dependencies.GuardianProvider)
 	if err != nil {
 		return nil, err
 	}
-	service := application.New(postgres.New(database), transaction{}, observe, application.Services{
+	service := application.New(persons, transaction{}, observe, application.Services{
 		Students: students, Guardians: guardians,
 		StudentAudit: studentAudit, StudentConsents: studentConsents,
 		StudentPhotos: studentPhotos, StudentNotes: studentNotes,
@@ -141,7 +142,7 @@ func New(dependencies Dependencies, memberships GuardianMembershipQuery) (*Direc
 		Owner: service, students: students,
 		PersonWrites:     application.NewPersonRows(service),
 		StudentDirectory: application.NewStudentDirectoryRows(students, studentPhotos),
-		StudentNoteTeam:  application.NewStudentNoteTeam(noteStore, noteStore, noteStudents, postgres.New(database), transaction{}, observe),
+		StudentNoteTeam:  application.NewStudentNoteTeam(noteStore, noteStore, studentStore, persons, transaction{}, observe),
 		StudentNotes:     service,
 	}, nil
 }

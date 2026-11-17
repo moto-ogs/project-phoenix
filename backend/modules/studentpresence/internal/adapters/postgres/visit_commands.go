@@ -19,10 +19,10 @@ func (s *Store) CloseGroupVisits(ctx context.Context, ids []int64) (ports.Stats,
 		return ports.Stats{}, nil
 	}
 	started := time.Now()
-	// The app's check-in clock may be ahead of the DB clock. Preserve the
-	// existing zero-duration clamp so one skewed interval cannot abort a batch.
+	// The owner's clock stamps entry and exit (ADR 0281). The zero-duration
+	// clamp stays so one entry dated ahead cannot abort a batch.
 	result, err := db.NewUpdate().Table("active.visits").
-		Set("exit_time = GREATEST(now(), entry_time)").Where("tenant_id = ?", tenantID).
+		Set("exit_time = GREATEST(?::timestamptz, entry_time)", s.now()).Where("tenant_id = ?", tenantID).
 		Where("active_group_id IN (?)", bun.List(ids)).Where("exit_time IS NULL").Exec(ctx)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {

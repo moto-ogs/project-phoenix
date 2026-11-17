@@ -137,25 +137,18 @@ func validSessionAttendanceSubstatus(value string) bool {
 	}
 }
 
-func (s *Service) TransitionParticipants(ctx context.Context, participantIDs []int64, from, to string, at time.Time) (int64, error) {
+func (s *Service) TransitionParticipants(ctx context.Context, participantIDs []int64, from, to string) (int64, error) {
 	if !validSessionAttendanceStatus(from) || !validSessionAttendanceStatus(to) {
 		return 0, s.runWrite(ctx, "transition_participants", func(ctx context.Context) (ports.Stats, error) {
 			return ports.Stats{}, errors.New("student presence: invalid attendance transition")
 		})
-	}
-	// A zero instant stamps the rows with the transaction time, so a
-	// completion that reads the same time from the database sees the rows
-	// as unchanged since then.
-	var stamp *time.Time
-	if !at.IsZero() {
-		stamp = &at
 	}
 	var rows int64
 	err := s.runWrite(ctx, "transition_participants", func(txCtx context.Context) (ports.Stats, error) {
 		if !validIDs(participantIDs) {
 			return ports.Stats{}, errInvalidParticipants
 		}
-		stats, err := s.store.TransitionParticipants(txCtx, participantIDs, from, to, stamp)
+		stats, err := s.store.TransitionParticipants(txCtx, participantIDs, from, to)
 		rows = stats.Rows
 		return stats, err
 	})
