@@ -459,3 +459,16 @@ func TestImportedChildrenAreDecidedAgainstTheConfirmedNumber(t *testing.T) {
 	assert.Equal(t, []parentbilling.ImportedFamilyChildren{{FamilyEmail: "eva@example.org", ContractID: 1, Children: 2, ValidFrom: start}}, stored,
 		"a row of a preview and a number the family has store nothing")
 }
+
+// The review tells a number that ran out from one that never was (#7356),
+// also when a later confirmation is stored as the current one.
+func TestUncountedStatesReadTheRetainedConfirmations(t *testing.T) {
+	t.Parallel()
+	december := calendar.NewDate(2026, 12, 1)
+	autumn, january := calendar.NewDate(2026, 9, 1), calendar.NewDate(2027, 1, 1)
+	november := calendar.NewDate(2026, 11, 30)
+	counts := []parentbilling.FamilyChildCount{{FamilyEmail: "eva@example.org", ConfirmedChildren: ptr(3), ValidFrom: &january,
+		Confirmations: []parentbilling.FamilyChildConfirmation{{Children: ptr(2), ValidFrom: &autumn, ValidUntil: &november}}}}
+	states := uncountedStates(map[string][]int64{"eva@example.org": {1}, "new@example.org": {1}}, counts, nil, december)
+	assert.Equal(t, map[string]string{"eva@example.org": parentbilling.FamilyChildrenExpired, "new@example.org": parentbilling.FamilyChildrenMissing}, states)
+}

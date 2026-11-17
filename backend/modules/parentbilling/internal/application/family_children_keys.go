@@ -76,6 +76,15 @@ func (n *familyNumbers) confirmed() *parentbilling.FamilyChildCount {
 	return nil
 }
 
+// all are the stored numbers of the family: its own and those its
+// contracts brought along.
+func (n *familyNumbers) all() []*parentbilling.FamilyChildCount {
+	if n.own == nil {
+		return n.brought
+	}
+	return append([]*parentbilling.FamilyChildCount{n.own}, n.brought...)
+}
+
 // decided tells whether the family's own number settles the question: the
 // office confirmed one under the family's key.
 func (n *familyNumbers) decided() bool {
@@ -114,10 +123,14 @@ func equalPtr[T comparable](a, b *T) bool {
 
 // confirmedIn is the number that counts for the family in the month that
 // starts on first: its own confirmation, else what its contracts brought
-// along when every one valid in the month says the same.
+// along when every one valid in the month says the same. The family's own
+// number decides from its first day on; the months before keep what the
+// contracts brought, so a number confirmed for February leaves January's.
 func (n *familyNumbers) confirmedIn(first calendar.Date) (int, bool) {
 	if n.decided() {
-		return n.own.ConfirmedIn(first)
+		if number, ok := n.own.ConfirmedIn(first); ok || !monthEnd(first).Before(firstConfirmedDay(n.own)) {
+			return number, ok
+		}
 	}
 	number, found := 0, false
 	for _, count := range n.brought {
@@ -133,16 +146,37 @@ func (n *familyNumbers) confirmedIn(first calendar.Date) (int, bool) {
 	return number, found
 }
 
-// endedBefore tells whether a confirmation of the family ended before day:
-// its number ran out, where a family without one never had a number.
+// confirmations are the confirmations of a number, the current one first.
+func confirmations(count *parentbilling.FamilyChildCount) []parentbilling.FamilyChildConfirmation {
+	return append([]parentbilling.FamilyChildConfirmation{{Children: count.ConfirmedChildren, ValidFrom: count.ValidFrom, ValidUntil: count.ValidUntil}},
+		count.Confirmations...)
+}
+
+// firstConfirmedDay is the earliest day a confirmation of the number
+// starts on.
+func firstConfirmedDay(count *parentbilling.FamilyChildCount) calendar.Date {
+	var first calendar.Date
+	for _, confirmation := range confirmations(count) {
+		if confirmation.ValidFrom != nil && (first.IsZero() || confirmation.ValidFrom.Before(first)) {
+			first = *confirmation.ValidFrom
+		}
+	}
+	return first
+}
+
+// endedBefore tells whether a confirmation of the family, a retained one
+// included, ended before day: its number ran out, where a family without
+// one never had a number.
 func (n *familyNumbers) endedBefore(day calendar.Date) bool {
 	counts := n.brought
-	if n.decided() {
-		counts = []*parentbilling.FamilyChildCount{n.own}
+	if n.own != nil {
+		counts = append([]*parentbilling.FamilyChildCount{n.own}, counts...)
 	}
 	for _, count := range counts {
-		if count.ValidUntil != nil && count.ValidUntil.Before(day) {
-			return true
+		for _, confirmation := range confirmations(count) {
+			if confirmation.ValidUntil != nil && confirmation.ValidUntil.Before(day) {
+				return true
+			}
 		}
 	}
 	return false

@@ -363,22 +363,49 @@ func (f *FamilyNumbers) RemoveFamilyChildren(ctx context.Context, reviewer paren
 	if err := f.store.LockCareBilling(ctx, reviewer.OrganizationID); err != nil {
 		return parentbilling.FamilyChildrenSet{}, fmt.Errorf("parent billing: hold the monthly billing: %w", err)
 	}
-	removed, err := f.store.DeleteFamilyChildren(ctx, reviewer.OrganizationID, family)
-	if own := parentbilling.ContractFamilyKey("", contractID); errors.Is(err, parentbilling.ErrFamilyChildrenNotFound) && own != family {
-		// The number the contract brought along when its family got a mail
-		// address is still stored under the contract (#7356).
-		removed, err = f.store.DeleteFamilyChildren(ctx, reviewer.OrganizationID, own)
-	}
+	removed, err := f.removeFamilyNumbers(ctx, reviewer.OrganizationID, family, contractID)
 	if err != nil {
 		return parentbilling.FamilyChildrenSet{}, err
 	}
 	event := parentbilling.FamilyChildEvent{Action: parentbilling.FamilyChildEventDelete, Actor: parentbilling.FamilyChildActorOffice,
 		AccountID: reviewer.AccountID}
-	target := parentbilling.FamilyChildTarget{ContractID: removed.ContractID}
-	if err := f.store.InsertFamilyChildEvents(ctx, reviewer.OrganizationID, event, []parentbilling.FamilyChildTarget{target}); err != nil {
+	if err := f.store.InsertFamilyChildEvents(ctx, reviewer.OrganizationID, event, removed); err != nil {
 		return parentbilling.FamilyChildrenSet{}, fmt.Errorf("parent billing: record family child count removal: %w", err)
 	}
 	return f.FamilyChildren(ctx, reviewer)
+}
+
+// removeFamilyNumbers removes every number of the family of a contract: its
+// own and those its contracts brought along when the family got its mail
+// address (#7356). Else a number the office removed would give way to an
+// older one. It answers the contracts the removed numbers hung on.
+func (f *FamilyNumbers) removeFamilyNumbers(ctx context.Context, organizationID int64, family string, contractID int64) ([]parentbilling.FamilyChildTarget, error) {
+	counts, err := f.store.FamilyChildCounts(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int64, 0, len(counts)+1)
+	for _, count := range counts {
+		ids = append(ids, count.ContractID)
+	}
+	recipients, err := f.contracts.Recipients(ctx, organizationID, append(ids, contractID))
+	if err != nil {
+		return nil, fmt.Errorf("parent billing: read the contract parties: %w", err)
+	}
+	numbers, _ := numbersByFamily(counts, recipients)
+	found, ok := numbers[family]
+	if !ok {
+		return nil, parentbilling.ErrFamilyChildrenNotFound
+	}
+	var removed []parentbilling.FamilyChildTarget
+	for _, count := range found.all() {
+		deleted, err := f.store.DeleteFamilyChildren(ctx, organizationID, count.FamilyEmail)
+		if err != nil {
+			return nil, err
+		}
+		removed = append(removed, parentbilling.FamilyChildTarget{ContractID: deleted.ContractID})
+	}
+	return removed, nil
 }
 
 // familyOfContract is the family of a contract of the Träger: the address

@@ -133,8 +133,9 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
   Familie (Adresse oder Vertrag), nicht mit Zahlen, die ein anderer Vertrag
   mitbringt: Er kennt keine Empfänger fremder Verträge. Das wird erst
   erreichbar, wenn eine Adresse nachgetragen werden kann (#7161).
-- Entfernt das Büro die eigene Zahl einer Familie, deren Vertrag noch eine
-  mitgebrachte Zahl trägt, zeigt die Liste diese; ein zweites Entfernen nimmt
-  auch sie weg.
+- „Kinderzahl entfernen“ nimmt alle Zahlen der Familie weg, die eigene und
+  die mitgebrachten, und trägt jede in den Verlauf ihres Vertrags ein.
+- Die eigene Zahl einer Familie entscheidet ab ihrem ersten Gültigkeitstag.
+  Monate davor behalten, was die Verträge mitgebracht haben.
 - Offen: das Dateiformat von SJR. Die Zuordnung der Spalten deckt beliebige
   Überschriften ab; die Überschrift von OGS Connect erkennt moto selbst.

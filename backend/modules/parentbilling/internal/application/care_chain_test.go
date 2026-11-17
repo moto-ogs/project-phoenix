@@ -605,6 +605,22 @@ func TestCareMonthRuleChainTable(t *testing.T) {
 			totals: map[int64]int64{contractMia: 8000},
 		},
 		{
+			// The office confirmed three for the family's address from
+			// March on. January keeps the two the contract brought along:
+			// Mia stays the 2nd child, 40,00 €.
+			name: "a later number of the family leaves the earlier months to the contract's",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+			},
+			rules: familySiblingRule(true),
+			families: func(t *testing.T) []parentbilling.FamilyChildCount {
+				return append(confirmedFamily(parentbilling.ContractFamilyKey("", contractMia), 2, "2026-09-01", nil)(t),
+					confirmedFamily(familyEva, 3, "2027-03-01", nil)(t)...)
+			},
+			totals: map[int64]int64{contractMia: 4000},
+			lines:  map[int64][]reductionOf{contractMia: {{parentbilling.RuleSibling, -4000, 2}}},
+		},
+		{
 			// Another family's number never reaches Eva's family.
 			name: "another family's number does not count",
 			children: []careChainChild{

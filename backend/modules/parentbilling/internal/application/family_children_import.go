@@ -130,6 +130,7 @@ func (c *CareReductions) familyImportCandidates(ctx context.Context, reviewer pa
 	for i, cells := range table.rows {
 		candidates[i] = check.candidate(cells, table.lines[i])
 	}
+	refuseDisagreeingRepeats(candidates)
 	numbers, _ := numbersByFamily(counts, recipients)
 	shown := decideFamilyImport(candidates, numbers, today)
 	event := parentbilling.FamilyChildEvent{Action: parentbilling.FamilyChildEventRead, Actor: parentbilling.FamilyChildActorOffice,
@@ -138,6 +139,26 @@ func (c *CareReductions) familyImportCandidates(ctx context.Context, reviewer pa
 		return nil, fmt.Errorf("parent billing: record family child count read: %w", err)
 	}
 	return candidates, nil
+}
+
+// refuseDisagreeingRepeats takes the first row of a child back when a later
+// row names the same child with another number: different numbers take
+// over none.
+func refuseDisagreeingRepeats(candidates []familyImportCandidate) {
+	at := map[int]int{}
+	for i, candidate := range candidates {
+		at[candidate.row.Line] = i
+	}
+	for _, candidate := range candidates {
+		first, ok := at[candidate.row.RepeatsLine]
+		if !ok || candidate.row.RepeatsLine == 0 || candidates[first].row.Status != "" {
+			continue
+		}
+		if a, b := candidates[first].row.Children, candidate.row.Children; a != nil && b != nil && *a != *b {
+			problemOf(&candidates[first].row, parentbilling.FamilyImportFieldChildren, parentbilling.FamilyImportProblemRowsDiffer)
+			candidates[first].row.Status = parentbilling.FamilyImportConflict
+		}
+	}
 }
 
 // decideFamilyImport gives every row without a problem its status from the

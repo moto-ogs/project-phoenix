@@ -53,9 +53,9 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 	contract := func(child string) int64 {
 		return careContract(t, f.db, f.office.organization, school, child, careReductionStart, sjrServices()...)
 	}
-	mia, noah, lia, tom, ben := contract("Mia"), contract("Noah"), contract("Lia"), contract("Tom"), contract("Ben")
+	mia, noah, lia, tom, ben, ida := contract("Mia"), contract("Noah"), contract("Lia"), contract("Tom"), contract("Ben"), contract("Ida")
 	ctx := context.Background()
-	_, err := f.db.ExecContext(ctx, `UPDATE care_contract.contract_parties SET email = '' WHERE contract_id IN (?, ?, ?)`, mia, noah, lia)
+	_, err := f.db.ExecContext(ctx, `UPDATE care_contract.contract_parties SET email = '' WHERE contract_id IN (?, ?, ?, ?)`, mia, noah, lia, ida)
 	require.NoError(t, err)
 	_, err = f.db.ExecContext(ctx, `UPDATE care_contract.contract_parties SET email = 'geschwister@example.org' WHERE contract_id IN (?, ?)`, tom, ben)
 	require.NoError(t, err)
@@ -78,6 +78,8 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 		"Ben;Beispiel;3",
 		"Mia;Beispiel;2",
 		"Lia;Beispiel;zwei",
+		"Ida;Beispiel;2",
+		"Ida;Beispiel;3",
 	}, "\r\n") + "\r\n"
 	content, err := charmap.Windows1252.NewEncoder().Bytes([]byte(csv))
 	require.NoError(t, err)
@@ -93,7 +95,7 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview := decodeSchoolPortalData[familyImportBody](t, rec.Body.Bytes())
 	assert.Empty(t, preview.Unmapped)
-	require.Len(t, preview.Rows, 8)
+	require.Len(t, preview.Rows, 10)
 	statuses, problems := make([]string, len(preview.Rows)), make([]string, len(preview.Rows))
 	for i, row := range preview.Rows {
 		statuses[i] = row.Status
@@ -101,15 +103,16 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 			problems[i] = row.Problems[0].Field + ":" + row.Problems[0].Code
 		}
 	}
-	assert.Equal(t, []string{"ready", "differs", "same", "invalid", "conflict", "conflict", "conflict", "invalid"}, statuses)
+	assert.Equal(t, []string{"ready", "differs", "same", "invalid", "conflict", "conflict", "conflict", "invalid", "conflict", "conflict"}, statuses,
+		"a child named twice with different numbers takes over none")
 	assert.Equal(t, []string{"", "", "", "child_last_name:no_contract", "children:rows_differ", "children:rows_differ",
-		"child_last_name:repeated", "children:invalid"}, problems)
+		"child_last_name:repeated", "children:invalid", "children:rows_differ", "child_last_name:repeated"}, problems)
 	assert.Equal(t, mia, preview.Rows[0].ContractID)
 	require.NotNil(t, preview.Rows[0].ValidFrom)
 	assert.Equal(t, careReductionStart, *preview.Rows[0].ValidFrom, "the number counts from the first day of the contract")
 	require.NotNil(t, preview.Rows[1].ConfirmedChildren)
 	assert.Equal(t, 2, *preview.Rows[1].ConfirmedChildren, "the row names the number the office confirmed")
-	assert.Equal(t, map[string]int{"ready": 1, "same": 1, "differs": 1, "conflict": 3, "invalid": 2, "imported": 0}, preview.Counts)
+	assert.Equal(t, map[string]int{"ready": 1, "same": 1, "differs": 1, "conflict": 5, "invalid": 2, "imported": 0}, preview.Counts)
 	assert.NotContains(t, rec.Body.String(), "example.org", "the answer names no address")
 
 	rec = importForm(t, f.traeger, f.office.token, familyImportPath, "kinderzahl.csv", content, fields)
@@ -157,7 +160,7 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 			assert.Equal(t, int64(3875), invoice.TotalCents, "Mia is the 2nd child of two: 77,50 € − 50 %")
 		}
 	}
-	assert.Equal(t, 1, review.UncountedFamilies, "the siblings whose rows disagree still wait for a number")
+	assert.Equal(t, 2, review.UncountedFamilies, "the siblings and the child whose rows disagree still wait for a number")
 }
 
 // The import refuses what is no file of numbers, needs the right
