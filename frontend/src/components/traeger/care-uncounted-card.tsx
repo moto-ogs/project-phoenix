@@ -70,18 +70,19 @@ export function CareUncountedCard({
         <ResponsiveActionList>
           {shown.map((contract) => (
             <ResponsiveActionRow key={contract.contractId}>
+              {/* The reason stands beside the name: a display, no action. */}
               <div className="min-w-0">
-                <p className="text-sm font-semibold wrap-anywhere text-gray-900">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-semibold wrap-anywhere text-gray-900">
                   {`${contract.childFirstName} ${contract.childLastName}`.trim()}
+                  <StatusBadge
+                    tone={STATUS_TONES[contract.status]}
+                    label={STATUS_LABELS[contract.status]}
+                  />
                 </p>
                 <p className="mt-0.5 text-sm wrap-anywhere text-gray-600">
                   {contract.schoolName}
                 </p>
               </div>
-              <StatusBadge
-                tone={STATUS_TONES[contract.status]}
-                label={STATUS_LABELS[contract.status]}
-              />
             </ResponsiveActionRow>
           ))}
         </ResponsiveActionList>
