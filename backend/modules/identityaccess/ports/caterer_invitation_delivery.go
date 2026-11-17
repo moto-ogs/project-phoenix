@@ -11,6 +11,9 @@ import (
 // 0074) through the outbox, in the school's transaction. The link exists
 // only in the mail; a failed enqueue fails the invitation.
 type CatererInvitationDelivery interface {
+	// EnqueueCatererInvitation states the days until expiresAt, an instant
+	// on the composition's clock: the invitation's database expiry moved by
+	// that clock's distance to the database (ADR 0285).
 	EnqueueCatererInvitation(ctx context.Context, invitationID, schoolID int64, email, catererName, token string, expiresAt time.Time) error
 	// CatererInvitationMailStates reports, in one read, what became of the
 	// mail of each invitation (#5960); an invitation without a mail has no key.

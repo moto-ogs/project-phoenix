@@ -50,7 +50,8 @@ type catererInvitationDelivery struct {
 	outbox     IdentityMailOutbox
 	outcomes   deliveryRuntime.EmailOutcomes
 	catererURL string
-	// now counts the days the mail states (nil at composition: the real clock).
+	// now counts the days the mail states, on the clock the root binds for
+	// Identity & Access, which hands expiresAt on that clock (ADR 0285).
 	now func() time.Time
 }
 
