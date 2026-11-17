@@ -7,7 +7,6 @@
 // Rechnungsposition ihre Werte fest; DATEV-Datei und Sollstellung buchen
 // damit. Nur das Recht „Finanz-Export“ sieht die Seite.
 
-import { useCallback, useEffect, useState } from "react";
 import {
   CostCentersCard,
   RevenueAccountsCard,
@@ -17,22 +16,20 @@ import {
   costCenterTimeline,
 } from "~/components/traeger/booking-accounts-format";
 import { DATEV_SETTINGS_PATH } from "~/components/traeger/finance-export-datev";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError, useToast } from "~/contexts/ToastContext";
+import { useToast } from "~/contexts/ToastContext";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { createLogger } from "~/lib/logger";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import {
   addCostCenter,
-  type BookingAccounts,
   deleteCostCenter,
   fetchBookingAccounts,
   saveRevenueAccount,
 } from "~/lib/traeger-finance-exports-api";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerBookingAccountsPage" });
 
 const EXPORTS_PATH = "/traeger/abrechnung/exporte";
 
@@ -41,29 +38,17 @@ const INFO =
 
 export default function TraegerBookingAccountsPage() {
   const today = useBerlinToday();
-  const [page, setPage] = useState<BookingAccounts | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
+  const {
+    data: page,
+    loading,
+    error,
+    mutate,
+  } = useTraegerResource(
+    traegerBillingKeys.bookingAccounts(),
+    fetchBookingAccounts,
+    "die Konten und Kostenstellen",
+  );
   const { success } = useToast();
-
-  const load = useCallback(async () => {
-    try {
-      setPage(await fetchBookingAccounts());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_booking_accounts_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Konten und Kostenstellen",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const schoolsWithCenter = page
     ? page.schools.filter(
@@ -101,9 +86,9 @@ export default function TraegerBookingAccountsPage() {
           />
         ) : null
       }
-      statsLoading={!page && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!page && !pageLoad.error}
+      statsLoading={loading}
+      error={error}
+      loading={loading}
     >
       {page ? (
         <>
@@ -127,7 +112,9 @@ export default function TraegerBookingAccountsPage() {
           <RevenueAccountsCard
             page={page}
             onSave={async (scope, scopeId, account) => {
-              setPage(await saveRevenueAccount(scope, scopeId, account));
+              await mutate(await saveRevenueAccount(scope, scopeId, account), {
+                revalidate: false,
+              });
               success(
                 account
                   ? "Das Erlöskonto ist gespeichert."
@@ -140,20 +127,30 @@ export default function TraegerBookingAccountsPage() {
             page={page}
             today={today}
             onAdd={async (scope, scopeId, validFrom, code) => {
-              setPage(await addCostCenter({ scope, scopeId, validFrom, code }));
+              await mutate(
+                await addCostCenter({ scope, scopeId, validFrom, code }),
+                { revalidate: false },
+              );
               success("Die Kostenstelle ist gespeichert.");
             }}
-            onDeleted={async (id) => setPage(await deleteCostCenter(id))}
+            onDeleted={async (id) => {
+              await mutate(await deleteCostCenter(id), { revalidate: false });
+            }}
           />
           <CostCentersCard
             kind="kost2"
             page={page}
             today={today}
             onAdd={async (scope, scopeId, validFrom, code) => {
-              setPage(await addCostCenter({ scope, scopeId, validFrom, code }));
+              await mutate(
+                await addCostCenter({ scope, scopeId, validFrom, code }),
+                { revalidate: false },
+              );
               success("Die Kostenstelle ist gespeichert.");
             }}
-            onDeleted={async (id) => setPage(await deleteCostCenter(id))}
+            onDeleted={async (id) => {
+              await mutate(await deleteCostCenter(id), { revalidate: false });
+            }}
           />
         </>
       ) : null}

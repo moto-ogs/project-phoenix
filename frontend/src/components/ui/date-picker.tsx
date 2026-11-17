@@ -130,12 +130,6 @@ type DatePickerProps =
       readonly className?: string;
       /** Optional visual treatment for compact filter toolbars. */
       readonly triggerClassName?: string;
-      /**
-       * @deprecated No longer read. The panel measures the viewport and flips
-       * up or down on its own; callers cannot know which side fits. Kept so the
-       * existing call sites keep compiling.
-       */
-      readonly dropdownPlacement?: "up" | "down";
       readonly calendarLayout?: CalendarLayout;
       // Earliest selectable day (inclusive). Days before it are disabled — used
       // to forbid past-date selection while keeping today choosable.
@@ -200,8 +194,6 @@ type DatePickerProps =
       readonly onChangeDates: (dates: Date[]) => void;
       readonly placeholder?: string;
       readonly className?: string;
-      /** @deprecated No longer read — see the single-mode prop. */
-      readonly dropdownPlacement?: "up" | "down";
       readonly calendarLayout?: CalendarLayout;
       readonly disabledDates?: Date[];
     };
@@ -705,7 +697,6 @@ export function ISODatePicker({
   readonly placeholder?: string;
   readonly className?: string;
   readonly triggerClassName?: string;
-  readonly dropdownPlacement?: "up" | "down";
   readonly calendarLayout?: CalendarLayout;
   readonly monthYearNavigation?: boolean;
   readonly hideClearButton?: boolean;
@@ -772,6 +763,9 @@ export function ISODatePicker({
   );
 }
 
+const INVALID_DATE_ERROR =
+  "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.";
+
 interface ISODateInputProps {
   readonly id: string;
   readonly label: string;
@@ -780,7 +774,6 @@ interface ISODateInputProps {
   readonly onValidityChange?: (valid: boolean) => void;
   readonly min?: string;
   readonly max?: string;
-  readonly invalidDateError?: string;
   readonly minDateError?: string;
   readonly maxDateError?: string;
   readonly disabled?: boolean;
@@ -807,7 +800,6 @@ export function ISODateInput({
   onValidityChange,
   min,
   max,
-  invalidDateError = "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.",
   minDateError = "Das Datum liegt vor dem zulässigen Zeitraum.",
   maxDateError = "Das Datum liegt nach dem zulässigen Zeitraum.",
   disabled,
@@ -819,14 +811,7 @@ export function ISODateInput({
     formatISODateInputValue(value),
   );
   const [inputError, setInputError] = useState<string | null>(() =>
-    validateStoredISODate(
-      value,
-      min,
-      max,
-      invalidDateError,
-      minDateError,
-      maxDateError,
-    ),
+    validateStoredISODate(value, min, max, minDateError, maxDateError),
   );
   const shownError = inputError ?? error ?? null;
   const ids = useFieldIds({ id, error: shownError });
@@ -837,21 +822,12 @@ export function ISODateInput({
       value,
       min,
       max,
-      invalidDateError,
       minDateError,
       maxDateError,
     );
     setInputError(nextError);
     onValidityChange?.(nextError === null);
-  }, [
-    value,
-    min,
-    max,
-    invalidDateError,
-    minDateError,
-    maxDateError,
-    onValidityChange,
-  ]);
+  }, [value, min, max, minDateError, maxDateError, onValidityChange]);
 
   const validate = (nextValue: string, showIncompleteError: boolean) => {
     const trimmed = nextValue.trim();
@@ -866,7 +842,7 @@ export function ISODateInput({
     let nextError: string | null = null;
     if (!isoDate) {
       if (showIncompleteError || trimmed.length >= 10) {
-        nextError = invalidDateError;
+        nextError = INVALID_DATE_ERROR;
       }
     } else if (min && isoDate < min) {
       nextError = minDateError;
@@ -945,13 +921,12 @@ function validateStoredISODate(
   value: string,
   min: string | undefined,
   max: string | undefined,
-  invalidDateError: string,
   minDateError: string,
   maxDateError: string,
 ): string | null {
   if (value === "") return null;
   const isoDate = value.slice(0, 10);
-  if (!isValidISODate(isoDate)) return invalidDateError;
+  if (!isValidISODate(isoDate)) return INVALID_DATE_ERROR;
   if (min && isoDate < min) return minDateError;
   if (max && isoDate > max) return maxDateError;
   return null;

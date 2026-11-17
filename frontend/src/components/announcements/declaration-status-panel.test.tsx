@@ -6,10 +6,11 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { DeclarationStatus } from "~/lib/parent-announcements-api";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { catalogText } from "~/test/error-catalog-text";
@@ -25,6 +26,16 @@ const { statusMock, remindMock, downloadMock } = vi.hoisted(() => ({
   downloadMock: vi.fn(),
 }));
 
+// Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
+
 vi.mock("~/lib/parent-announcements-api", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/lib/parent-announcements-api")>();
@@ -38,7 +49,13 @@ vi.mock("~/lib/parent-announcements-api", async (importOriginal) => {
 
 // Erfolg und Aktionsfehler kommen als Toast (#2517).
 function render(ui: ReactElement) {
-  return rtlRender(ui, { wrapper: ToastProvider });
+  return rtlRender(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>{children}</ToastProvider>
+      </SWRConfig>
+    ),
+  });
 }
 
 const HASH = "a1b2c3d4e5f6".padEnd(64, "0");

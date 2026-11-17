@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ModalProvider } from "~/components/ui/modal-context";
 import {
@@ -7,12 +9,24 @@ import {
 } from "./notification-setup-dialog";
 import { ToastProvider } from "~/contexts/ToastContext";
 
-// The shared error path shows failures through the toast provider (#2517).
+// The shared error path shows failures through the toast provider (#2517);
+// the component refreshes the scoped cache, which needs the session.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <ToastProvider>{children}</ToastProvider>
+    </SessionProvider>
+  );
+}
+
 function renderWithToast(
   ui: Parameters<typeof render>[0],
   options?: Parameters<typeof render>[1],
 ) {
-  return render(ui, { wrapper: ToastProvider, ...options });
+  return render(ui, { wrapper: Providers, ...options });
 }
 
 const mocks = vi.hoisted(() => ({

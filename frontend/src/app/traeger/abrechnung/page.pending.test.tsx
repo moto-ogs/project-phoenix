@@ -13,7 +13,7 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { BillingRun } from "~/lib/traeger-billing-api";
 import {
   deferred,
@@ -30,9 +30,12 @@ const { api, mockPush } = vi.hoisted(() => ({
   mockPush: vi.fn(),
 }));
 // The page reads the session for the link to the holiday care (#7054).
-vi.mock("next-auth/react", () => ({
+vi.mock("next-auth/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-auth/react")>()),
   useSession: () => ({
-    data: { user: { permissions: [] } },
+    data: {
+      user: { id: "traeger-test", scope: "org", orgId: 7, permissions: [] },
+    },
     status: "authenticated",
   }),
 }));
@@ -47,6 +50,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 import TraegerAbrechnungPage from "./page";
+
+vi.unmock("swr");
 
 const TITLE = "Lauf starten";
 
@@ -66,9 +71,9 @@ const RUN: BillingRun = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerAbrechnungPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

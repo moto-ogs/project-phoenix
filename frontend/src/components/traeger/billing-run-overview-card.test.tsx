@@ -7,7 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type {
   BillingDocument,
@@ -18,6 +18,8 @@ import type {
   ExportProtocolEntry,
   InvoiceHistory,
 } from "~/lib/traeger-finance-exports-api";
+
+vi.unmock("swr");
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -163,9 +165,9 @@ afterEach(() => {
 
 function renderCard(run: BillingRunDetail = RUN) {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <BillingRunOverviewCard run={run} onDownloadLetter={vi.fn()} />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -231,9 +233,9 @@ describe("BillingRunOverviewCard letter preview (#5692)", () => {
       if (tag === "li") setViewportWidth(PHONE_WIDTH);
       const onCancel = vi.fn();
       render(
-        <ToastProvider>
+        <TraegerResourceTestProvider>
           <BillingRunOverviewCard run={RUN} onCancel={onCancel} />
-        </ToastProvider>,
+        </TraegerResourceTestProvider>,
       );
       const documentRow = row("Muster, Eva", tag);
       const menu = within(documentRow).getByRole("button", {

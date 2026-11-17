@@ -2,7 +2,6 @@
 
 import {
   useCallback,
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -16,15 +15,14 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { SectionCard } from "~/components/ui/section-card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDeviceLabelFromUserAgent } from "~/lib/device-label";
 import { createLogger } from "~/lib/logger";
 import { hasSessionAccess } from "~/lib/session-access";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import {
   listTrustedDevices,
   revokeTrustedDevice,
@@ -116,12 +114,9 @@ export function TrustedDevicesSection({
   copy = GERMAN_TRUSTED_DEVICES_COPY,
   headingLevel = 3,
 }: TrustedDevicesSectionProps = {}) {
-  const { data: session, status: sessionStatus } = useSession();
+  const { data: session } = useSession();
   const hasAccess = hasSessionAccess(session);
   const toast = useToast();
-  const [devices, setDevices] = useState<TrustedDeviceDTO[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
   const [revokingId, setRevokingId] = useState<number | null>(null);
   // Entfernen läuft erst nach der Rückfrage (Bauart 2 Regel 6, #3109); ein
   // Fehler bleibt im Dialog stehen. Ladefehler stehen vor Ort mit
@@ -129,53 +124,35 @@ export function TrustedDevicesSection({
   const [revokeTarget, setRevokeTarget] = useState<TrustedDeviceDTO | null>(
     null,
   );
-  const { error: loadError, show: showLoadError, clear } = useApiLoadError();
   const revokeRef = useRef<HTMLParagraphElement>(null);
   const revokeErrors = useApiFormError(revokeRef);
-  const latestLoadRef = useRef<() => void>(() => undefined);
   const latestRevokeRef = useRef<(deviceId: number) => void>(() => undefined);
 
-  // The routes read the session cookie (#5005); a stripped session sends no
-  // request. Rejects on failure: after a write the caller shows it as a
-  // reload of a saved change and keeps the shown list (#6652).
-  const readDevices = useCallback(async () => {
-    if (!hasAccess) return;
-    const list = await listTrustedDevices(scope);
-    setDevices(list);
-  }, [hasAccess, scope]);
-  // Never rejects: a failed load shows its error in place of the list.
-  const load = useCallback(async () => {
-    if (!hasAccess) return;
-    setLoading(true);
-    setLoadFailed(false);
-    clear();
-    try {
-      await readDevices();
-    } catch (err) {
-      logger.error("list_trusted_devices_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setLoadFailed(true);
-      void showLoadError(err, {
-        object: copy.loadObject,
-        retry: () => latestLoadRef.current(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [hasAccess, clear, readDevices, showLoadError, copy.loadObject]);
+  // The routes read the session cookie (#5005); the shared reader sends no
+  // request without session access.
+  const {
+    data: devices,
+    error,
+    mutate,
+  } = useSWRAuth(tenantAdminKeys.trustedDevices(scope), () =>
+    listTrustedDevices(scope),
+  );
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [{ data: devices, error }],
+    copy.loadObject,
+    () => mutate(),
+  );
+  // Rejects on failure: after a write the hook shows it as a reload of a
+  // saved change and keeps the shown list (#6652).
   const { error: reloadError, refresh: refreshDevices } = useRefreshAfterWrite(
     copy.reloadObject,
-    readDevices,
+    async () => {
+      if (!hasAccess) return;
+      await mutate(await listTrustedDevices(scope), { revalidate: false });
+    },
   );
-
-  useEffect(() => {
-    if (sessionStatus === "authenticated") {
-      // Fire-and-forget pattern is the project convention for async work in
-      // useEffect; errors are surfaced via the function's own try/catch.
-      void load();
-    }
-  }, [sessionStatus, load]);
+  const loading = !devices && (!failure || !loadError);
+  const loadFailed = !devices && Boolean(failure);
 
   const handleRevoke = useCallback(
     async (deviceId: number) => {
@@ -205,7 +182,6 @@ export function TrustedDevicesSection({
   );
 
   useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
     latestRevokeRef.current = (deviceId) => void handleRevoke(deviceId);
   });
 
@@ -216,7 +192,7 @@ export function TrustedDevicesSection({
       description={copy.description}
     >
       {/* Bis der Text eines Ladefehlers da ist, bleibt das Skelett stehen. */}
-      {(loading || (loadFailed && !loadError)) && (
+      {loading && (
         <div className="space-y-2">
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-16 w-full" />

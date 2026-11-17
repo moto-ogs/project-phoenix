@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
 import {
   listPendingApprovals,
@@ -30,12 +24,13 @@ import { CardSkeleton, SkeletonRegion } from "~/components/ui/page-skeletons";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
-import { ApiError } from "~/lib/api-error";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import type { ParentInviteMode } from "~/lib/user-context-types";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { accountsConcept } from "~/lib/concepts/accounts";
@@ -186,16 +181,9 @@ export default function GuardianApprovalQueue({
   /** Meldet die Zahl offener Anfragen an den Seitenkopf; `null` = am Laden. */
   readonly onCountChange?: (count: number | null) => void;
 }) {
-  const [requests, setRequests] = useState<PendingApproval[]>([]);
+  // Requests decided in this view; a reload that still lists one does not
+  // bring it back.
   const completed = useRef(new Set<string>());
-  const [accessRefused, setAccessRefused] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  // Ladefehler stehen vor Ort, mit Wiederholen (#2517).
-  const [loadFailed, setLoadFailed] = useState(false);
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
-  const latestLoadRef = useRef<() => void>(() => undefined);
   const [actingId, setActingId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<PendingApproval | null>(
     null,
@@ -207,62 +195,52 @@ export default function GuardianApprovalQueue({
   const rejectErrors = useApiFormError();
   const clearRejectError = rejectErrors.clear;
   const latestRejectRef = useRef<() => void>(() => undefined);
-  const request = useRef(0);
 
-  // Rejects on failure: after a decision the caller shows it as a reload of
-  // a saved change and keeps the shown list (#6652).
-  const readRequests = useCallback(async () => {
-    const current = ++request.current;
-    try {
-      const next = await listPendingApprovals();
-      if (current !== request.current) return;
-      setRequests(next.filter((req) => !completed.current.has(req.id)));
-      setAccessRefused(false);
-      setLoadFailed(false);
-      clearLoadError();
-    } catch (err) {
-      if (current !== request.current) return;
-      if (
-        err instanceof ApiError &&
-        (err.status === 401 || err.status === 403)
-      ) {
-        setAccessRefused(true);
-        setRequests([]);
-        setRejectTarget(null);
-        setActingId(null);
-      }
-      throw err;
-    }
-  }, [clearLoadError]);
-  // Never rejects: a failed load shows its error where the list belongs.
-  const load = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      await readRequests();
-    } catch (err) {
-      logger.error("approvals_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setLoadFailed(true);
-      void showLoadError(err, {
-        object: "die Liste der Anfragen",
-        retry: () => latestLoadRef.current(),
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [showLoadError, readRequests]);
+  const {
+    data,
+    failure: error,
+    refused: accessRefused,
+    mutate: mutateRequests,
+    readCallbacks,
+  } = useConfirmedSWR(enrollmentKeys.pendingGuardianApprovals(), () =>
+    listPendingApprovals(),
+  );
+  useEffect(() => {
+    if (!accessRefused) return;
+    setRejectTarget(null);
+    setActingId(null);
+  }, [accessRefused]);
+  // Ladefehler stehen vor Ort, mit Wiederholen (#2517).
+  const loadError = useSwrResourceLoadError(
+    [{ data: data ?? undefined, error }],
+    "die Liste der Anfragen",
+    () => mutateRequests(),
+  );
+  const requests = accessRefused
+    ? []
+    : (data ?? []).filter((req) => !completed.current.has(req.id));
+  const loadFailed = loadError.failure !== undefined;
+  const isLoading = !data && !loadFailed;
+  // Rejects on failure: after a decision the hook shows it as a reload of a
+  // saved change and keeps the shown list (#6652).
   const afterDecision = useRefreshAfterWrite(
     "die Anzeige der Anfragen",
-    readRequests,
+    async () => {
+      await mutateRequests(
+        listPendingApprovals().then(
+          (data) => {
+            readCallbacks.onSuccess();
+            return data;
+          },
+          (err: unknown) => {
+            readCallbacks.onError(err);
+            throw err;
+          },
+        ),
+        { revalidate: false },
+      );
+    },
   );
-  useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
-  });
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const reportedCount =
     isLoading || loadFailed || accessRefused ? null : requests.length;
@@ -287,7 +265,10 @@ export default function GuardianApprovalQueue({
       return;
     }
     completed.current.add(req.id);
-    setRequests((current) => current.filter((item) => item.id !== req.id));
+    void mutateRequests(
+      (current) => current?.filter((item) => item.id !== req.id),
+      { revalidate: false },
+    );
     setActingId(null);
     toastSuccess(
       `Der Zugang für ${req.guardianName || req.guardianEmail || "die Bezugsperson"} ist freigegeben.`,
@@ -315,7 +296,10 @@ export default function GuardianApprovalQueue({
       return;
     }
     completed.current.add(req.id);
-    setRequests((current) => current.filter((item) => item.id !== req.id));
+    void mutateRequests(
+      (current) => current?.filter((item) => item.id !== req.id),
+      { revalidate: false },
+    );
     setActingId(null);
     setRejectTarget(null);
     toastSuccess("Die Anfrage ist abgelehnt.");

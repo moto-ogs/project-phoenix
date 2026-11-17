@@ -6,7 +6,7 @@ import {
   useRefusalGuard,
 } from "./use-traeger-confirmed-resource";
 import { useSWRAuth } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { fetchTraegerSchoolsAlerts } from "~/lib/traeger-api";
 
 /** The Träger portal has no live channel; the figures refresh by the minute. */

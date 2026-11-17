@@ -125,74 +125,84 @@ vi.mock("~/lib/database/service-factory", () => ({
   }),
 }));
 
-vi.mock("~/lib/swr", () => ({
-  useSWRSeedFrom: () => () => undefined,
-  useTenantMutate: () => mockTenantMutate,
-  useTenantMutateMatching: () => vi.fn(),
-  useInvalidateMatching: () => vi.fn(),
-  useSWRAuth: (key: string | null, fetcher?: () => Promise<unknown>) => {
-    if (key?.startsWith("staff-pending-absences-")) pending.fetcher = fetcher;
-    if (key?.startsWith("staff-history-"))
-      return { data: [], isLoading: false, error: null };
-    if (key?.startsWith("staff-record-")) {
-      void fetcher?.();
-      if (detailRequest.error) {
+vi.mock("~/lib/swr", () => {
+  const lib = {
+    useSWRSeedFrom: () => () => undefined,
+    useTenantMutate: () => mockTenantMutate,
+    useTenantMutateMatching: () => vi.fn(),
+    useInvalidateMatching: () => vi.fn(),
+    useSWRAuth: (key: string | null, fetcher?: () => Promise<unknown>) => {
+      if (key?.startsWith("staff-pending-absences-")) pending.fetcher = fetcher;
+      if (key?.startsWith("staff-history-"))
+        return { data: [], isLoading: false, error: null };
+      if (key?.startsWith("staff-record-")) {
+        void fetcher?.();
+        if (detailRequest.error) {
+          return {
+            data: undefined,
+            isLoading: false,
+            error: detailRequest.error,
+            mutate: detailRequest.mutate,
+          };
+        }
         return {
-          data: undefined,
+          data: staffRecord(),
           isLoading: false,
-          error: detailRequest.error,
+          error: detailRequest.staleError,
           mutate: detailRequest.mutate,
         };
       }
-      return {
-        data: staffRecord(),
-        isLoading: false,
-        error: detailRequest.staleError,
-        mutate: detailRequest.mutate,
-      };
-    }
-    if (key?.startsWith("staff-detail-")) {
-      void fetcher?.();
-      if (detailRequest.error) {
+      if (key?.startsWith("staff-detail-")) {
+        void fetcher?.();
+        if (detailRequest.error) {
+          return {
+            data: undefined,
+            isLoading: false,
+            error: detailRequest.error,
+            mutate: detailRequest.mutate,
+          };
+        }
         return {
-          data: undefined,
+          data: {
+            id: "42",
+            startedOn: "2024-09-02",
+            endedOn: detailRequest.endedOn,
+            avatarUrl: detailRequest.avatarUrl,
+            name: "Mila Muster",
+            firstName: "Mila",
+            lastName: "Muster",
+            hasRfid: false,
+            isTeacher: false,
+            isSupervising: false,
+            supervisions: [],
+          },
           isLoading: false,
-          error: detailRequest.error,
-          mutate: detailRequest.mutate,
+          error: null,
         };
       }
-      return {
-        data: {
-          id: "42",
-          startedOn: "2024-09-02",
-          endedOn: detailRequest.endedOn,
-          avatarUrl: detailRequest.avatarUrl,
-          name: "Mila Muster",
-          firstName: "Mila",
-          lastName: "Muster",
-          hasRfid: false,
-          isTeacher: false,
-          isSupervising: false,
-          supervisions: [],
-        },
-        isLoading: false,
-        error: null,
-      };
-    }
-    if (key?.startsWith("staff-role-assignment-")) {
-      return {
-        data: {
-          options: [{ id: "1", name: "Administration", systemName: "admin" }],
-          currentRoleIds: ["1"],
-          currentIsLehrkraft: roleAssignment.currentIsLehrkraft,
-        },
-        isLoading: false,
-        error: null,
-      };
-    }
-    return { data: 0, isLoading: false, error: null };
-  },
-}));
+      if (key?.startsWith("staff-role-assignment-")) {
+        return {
+          data: {
+            options: [{ id: "1", name: "Administration", systemName: "admin" }],
+            currentRoleIds: ["1"],
+            currentIsLehrkraft: roleAssignment.currentIsLehrkraft,
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      return { data: 0, isLoading: false, error: null };
+    },
+  };
+  return {
+    ...lib,
+    // A read that is new per opening answers like the cache here.
+    useFreshSWR: (key: string | null, fetcher?: () => Promise<unknown>) => ({
+      ...lib.useSWRAuth(key, fetcher),
+      fresh: true,
+    }),
+  };
+});
 
 vi.mock("~/lib/staff-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/staff-api")>()),

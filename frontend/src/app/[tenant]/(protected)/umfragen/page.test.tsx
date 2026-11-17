@@ -15,6 +15,27 @@ const state = vi.hoisted(() => ({
   // there is neither data nor a running request.
   sessionPending: false,
   push: vi.fn(),
+  form: {
+    school_name: "OGS am Park",
+    participated: false,
+    survey: {
+      id: "11",
+      title: "Teamklima",
+      intro: "Wie geht es Ihnen im Team?",
+      anonymous: true,
+      closes_at: "2026-09-30T16:00:00Z",
+      questions: [
+        {
+          id: "q1",
+          position: 1,
+          kind: "scale",
+          prompt: "Ich fühle mich im Team wohl.",
+          required: true,
+          options: [],
+        },
+      ],
+    },
+  },
 }));
 
 vi.mock("next/navigation", () => ({
@@ -46,7 +67,10 @@ vi.mock("~/lib/swr", () => ({
         ? state.toAnswer
         : key === "surveys-list"
           ? state.surveys
-          : undefined,
+          : // Der Fragebogen der Umfrage „Teamklima“ im Dialog.
+            key === "staff-survey-form-11-"
+            ? state.form
+            : undefined,
     error: undefined,
     isLoading: false,
     mutate: vi.fn(() => Promise.resolve(undefined)),
@@ -55,29 +79,7 @@ vi.mock("~/lib/swr", () => ({
 
 vi.mock("~/lib/surveys-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/surveys-api")>()),
-  fetchSurveyForm: vi.fn(() =>
-    Promise.resolve({
-      school_name: "OGS am Park",
-      participated: false,
-      survey: {
-        id: "11",
-        title: "Teamklima",
-        intro: "Wie geht es Ihnen im Team?",
-        anonymous: true,
-        closes_at: "2026-09-30T16:00:00Z",
-        questions: [
-          {
-            id: "q1",
-            position: 1,
-            kind: "scale",
-            prompt: "Ich fühle mich im Team wohl.",
-            required: true,
-            options: [],
-          },
-        ],
-      },
-    }),
-  ),
+  fetchSurveyForm: vi.fn(() => Promise.resolve(state.form)),
 }));
 
 const openSurvey: SurveyToAnswer = {

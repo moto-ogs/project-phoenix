@@ -12,11 +12,8 @@ import {
 import { GroupedList } from "~/components/database/grouped-list";
 import { MasterDetailLayout } from "~/components/database/master-detail-layout";
 import { useGroupedItems } from "~/components/database/use-grouped-items";
-import {
-  DataField,
-  DataGrid,
-  InfoSection,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoSection } from "~/components/ui/info-section";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import type { Permission } from "@/lib/auth-helpers";
 import {

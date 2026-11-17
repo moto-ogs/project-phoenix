@@ -15,6 +15,24 @@ export function isAccessRefusal(error: unknown): error is { status: number } {
   return status === 401 || status === 403;
 }
 
+// A 401/403 that says nothing about the right to read: the service is away,
+// or this tab's session belongs to another account (TenantGuard switches it).
+const NO_ACCESS_DECISION = new Set([
+  "general.unavailable",
+  "general.server",
+  "identity.session_account_mismatch",
+]);
+
+/**
+ * The server decided that the account may not read this: the shared reader
+ * withdraws the key's data on it (~/lib/swr, useSWRAuth).
+ */
+export function isReadRefusal(error: unknown): boolean {
+  if (!isAccessRefusal(error)) return false;
+  const code = (error as { code?: unknown }).code;
+  return typeof code !== "string" || !NO_ACCESS_DECISION.has(code);
+}
+
 let shownDataRefusals = 0;
 
 /** A refused revalidation of a key that still holds shown data. */

@@ -1,10 +1,16 @@
+import { resetSWRScope } from "~/lib/swr/scope";
 import {
   act,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
   fireEvent,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
+import { useInvalidateFamily } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { SWRConfig } from "~/lib/swr/testing";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import GuardianApprovalQueue from "./guardian-approval-queue";
@@ -16,6 +22,28 @@ import {
   expectPageReloadedAfterRefusal,
   resetPageReloads,
 } from "~/test/helpers/refused-refresh";
+
+vi.unmock("swr");
+
+// The list reads through real SWR under a staff session, a fresh cache per
+// render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 
 const { mockToastSuccess, mockToastError, mockShowActionError } = vi.hoisted(
   () => ({
@@ -95,6 +123,7 @@ const staffApprovalMode = {
 describe("GuardianApprovalQueue", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSWRScope({ revalidate: false });
     mockList.mockResolvedValue([sampleRequest]);
     mockApprove.mockResolvedValue(undefined);
     mockReject.mockResolvedValue(undefined);
@@ -366,6 +395,7 @@ describe("reload after a write (#6652)", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSWRScope({ revalidate: false });
     mockList
       .mockReset()
       .mockResolvedValueOnce([sampleRequest])
@@ -438,3 +468,64 @@ describe("reload after a write (#6652)", () => {
     expect(mockToastSuccess).toHaveBeenCalledWith("Die Anfrage ist abgelehnt.");
   });
 });
+
+function ReloadQueue() {
+  const invalidate = useInvalidateFamily();
+  return (
+    <button
+      onClick={() => void invalidate(enrollmentKeys.pendingGuardianApprovals())}
+    >
+      Reload queue
+    </button>
+  );
+}
+
+it.each([401, 403])(
+  "removes cached requests and an open decision dialog on a reader %s",
+  async (status) => {
+    mockList.mockReset().mockResolvedValue([sampleRequest]);
+    resetSWRScope({ revalidate: false });
+    render(
+      <>
+        <ReloadQueue />
+        <GuardianApprovalQueue inviteModeState={staffApprovalMode} />
+      </>,
+    );
+    expect(await screen.findByText(sampleRequest.guardianEmail!)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Ablehnen" }));
+    expect(await screen.findByTestId("confirm-modal")).toBeVisible();
+    mockList.mockRejectedValue(new ApiError("denied", status));
+    fireEvent.click(screen.getByRole("button", { name: "Reload queue" }));
+    const refusalText = catalogText(
+      "general.permission",
+      "die Liste der Anfragen",
+    );
+    if (status === 401) {
+      await waitFor(() =>
+        expect(
+          screen.getByLabelText("Konto-Anfragen werden geladen"),
+        ).toBeVisible(),
+      );
+      expect(
+        screen.queryByText(sampleRequest.guardianEmail!),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId("confirm-modal")).not.toBeInTheDocument();
+      return;
+    }
+    expect(await screen.findByText(refusalText)).toBeVisible();
+    expect(
+      screen.queryByText(sampleRequest.guardianEmail!),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("confirm-modal")).not.toBeInTheDocument();
+    mockList.mockRejectedValue(new ApiError("offline", 503));
+    fireEvent.click(screen.getByRole("button", { name: "Reload queue" }));
+    await waitFor(() => expect(mockList).toHaveBeenCalledTimes(3));
+    expect(await screen.findByText(refusalText)).toBeVisible();
+    expect(
+      screen.queryByText(sampleRequest.studentName!),
+    ).not.toBeInTheDocument();
+    mockList.mockResolvedValue([sampleRequest]);
+    fireEvent.click(screen.getByRole("button", { name: "Reload queue" }));
+    expect(await screen.findByText(sampleRequest.guardianEmail!)).toBeVisible();
+  },
+);

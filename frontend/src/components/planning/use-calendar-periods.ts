@@ -9,18 +9,11 @@
  * Beides greift auf denselben Zustand zu, ohne ihn zweimal zu laden.
  */
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { LinkablePhase } from "~/components/timetable/calendar-period-modal";
 import type { FormErrorInput } from "~/components/ui/form-error";
-import { useApiLoadError, useToast } from "~/contexts/ToastContext";
+import { useToast } from "~/contexts/ToastContext";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
 import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
 import { berlinTodayISO } from "~/lib/date-helpers";
@@ -29,7 +22,12 @@ import {
   listPhases,
   setPhaseCalendarPeriod,
 } from "~/lib/enrollment-phase-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { databaseKeys } from "~/lib/swr/portal-keys";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 
 const logger = createLogger({ component: "CalendarPeriodsEditor" });
 
@@ -70,7 +68,7 @@ export interface CalendarPeriodsState {
   readonly beginCreateSemester: () => void;
   readonly beginEdit: (period: CalendarPeriod) => void;
   readonly closeModal: () => void;
-  readonly reload: (opts?: { silent?: boolean }) => Promise<void>;
+  readonly reload: () => Promise<void>;
   readonly handlePhaseLinkToggle: (
     phase: LinkablePhase,
     link: boolean,
@@ -113,71 +111,63 @@ function nextSemesterDefaults(todayIso: string): SemesterDefaults {
   };
 }
 
+const NO_PHASES: Phase[] = [];
+
 export function useCalendarPeriods(): CalendarPeriodsState {
-  const [periods, setPeriods] = useState<CalendarPeriod[]>([]);
-  const [phases, setPhases] = useState<Phase[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const load = useApiLoadError();
-  const showLoadError = load.show;
-  const clearLoadError = load.clear;
-  // „Wiederholen“ lädt mit dem dann aktuellen Stand neu.
-  const latestReloadRef = useRef<() => void>(() => undefined);
+  // Derselbe Eintrag wie im Dienst- und Betreuungsplan: Schreiben hier frischt
+  // deren Zeiträume mit auf.
+  const {
+    data: periodData,
+    error: periodsError,
+    mutate: mutatePeriods,
+  } = useSWRAuth(databaseKeys.calendarPeriods(), () =>
+    calendarPeriodService.list(),
+  );
+  // Die Phasen füllen nur den Verknüpfungsbereich des Dialogs.
+  // Bewusst still: ihr Fehler darf die Zeitraumliste nicht mitreißen,
+  // und der Dialog hat keinen Platz für einen eigenen Ladefehler. Sein
+  // Verknüpfungsbereich zeigt dann keine Phasen.
+  const { data: phaseData, mutate: mutatePhases } = useSWRAuth(
+    enrollmentKeys.phases(),
+    listPhases,
+    {
+      onError: (err: unknown) =>
+        logger.warn("calendar_periods_phases_load_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        }),
+    },
+  );
+  const load = useSwrResourceLoadError(
+    [{ data: periodData, error: periodsError }],
+    "die Liste der Zeiträume",
+    () => mutatePeriods(),
+  );
+  const loadFailed = load.failure !== undefined;
+  const loading = periodData === undefined && !loadFailed;
+  const periods = useMemo(
+    () =>
+      [...(periodData ?? [])].sort((a, b) =>
+        a.startDate.localeCompare(b.startDate),
+      ),
+    [periodData],
+  );
+  const phases = phaseData ?? NO_PHASES;
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CalendarPeriod | null>(null);
   const [createDefaults, setCreateDefaults] =
     useState<Partial<SemesterDefaults>>();
   const { success: toastSuccess } = useToast();
 
-  // silent: neu laden ohne den Ladezustand der ganzen Fläche — nach dem
-  // Verknüpfen einer Anmeldephase, damit der offene Dialog stehen bleibt.
-  const reload = useCallback(
-    async (opts?: { silent?: boolean }) => {
-      if (!opts?.silent) setLoading(true);
-      try {
-        const [periodData, phaseData] = await Promise.all([
-          calendarPeriodService.list(),
-          // Die Phasen füllen nur den Verknüpfungsbereich des Dialogs.
-          // Bewusst still: ihr Fehler darf die Zeitraumliste nicht mitreißen,
-          // und der Dialog hat keinen Platz für einen eigenen Ladefehler. Sein
-          // Verknüpfungsbereich zeigt dann keine Phasen.
-          listPhases().catch((err: unknown) => {
-            logger.warn("calendar_periods_phases_load_failed", {
-              error: err instanceof Error ? err.message : String(err),
-            });
-            return [] as Phase[];
-          }),
-        ]);
-        setPeriods(
-          [...periodData].sort((a, b) =>
-            a.startDate.localeCompare(b.startDate),
-          ),
-        );
-        setPhases(phaseData);
-        setLoadFailed(false);
-        clearLoadError();
-      } catch (err) {
-        logger.error("calendar_periods_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setLoadFailed(true);
-        void showLoadError(err, {
-          object: "die Liste der Zeiträume",
-          retry: () => latestReloadRef.current(),
-        });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [showLoadError, clearLoadError],
-  );
-  useLayoutEffect(() => {
-    latestReloadRef.current = () => void reload();
-  });
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const invalidateFamily = useInvalidateFamily();
+  // Lädt nach einem Schreiben neu; die Seite bleibt dabei stehen, damit ein
+  // offener Dialog nicht verschwindet.
+  const reload = useCallback(async () => {
+    await Promise.all([
+      mutatePeriods(),
+      mutatePhases(),
+      invalidateFamily(tenantAdminKeys.enrollmentPhaseFamily),
+    ]);
+  }, [mutatePeriods, mutatePhases, invalidateFamily]);
 
   const beginCreate = useCallback(() => {
     setEditing(null);
@@ -220,7 +210,7 @@ export function useCalendarPeriods(): CalendarPeriodsState {
         // Verknüpfungen schreibt und dort erneut versuchen lässt.
         throw err;
       } finally {
-        await reload({ silent: true });
+        await reload();
       }
     },
     [editing, phases, reload, toastSuccess],

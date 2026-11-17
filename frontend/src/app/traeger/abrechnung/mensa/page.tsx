@@ -6,7 +6,7 @@
 // OGS-Leitung freigegeben hat.
 
 import { ForkKnifeIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   billingAreaTitle,
   billingTabs,
@@ -14,19 +14,16 @@ import {
 import { formatMonth, monthOf } from "~/components/traeger/care-billing-format";
 import { CareMealPriceModal } from "~/components/traeger/care-meal-price-modal";
 import { CareMealSchoolCard } from "~/components/traeger/care-meal-school-card";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { EmptyState } from "~/components/ui/empty-state";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import {
   type CareMealTariff,
-  type CareMealTariffs,
   deleteCareMealTariff,
   fetchCareMealTariffs,
   mealTariffOn,
@@ -41,43 +38,32 @@ interface SchoolRef {
 
 export default function TraegerMensaPage() {
   const currentMonth = monthOf(berlinTodayISO());
-  const [data, setData] = useState<CareMealTariffs | null>(null);
+  const {
+    data,
+    loading,
+    error: loadError,
+    mutate,
+  } = useTraegerResource(
+    traegerBillingKeys.careMealTariffs(),
+    fetchCareMealTariffs,
+    "die Übersicht der Mensa-Preise",
+  );
   const [editing, setEditing] = useState<SchoolRef | null>(null);
   const [deleting, setDeleting] = useState<
     (SchoolRef & { tariff: CareMealTariff }) | null
   >(null);
   const [busy, setBusy] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const deleteErrors = useApiFormError();
   const { success } = useToast();
-
-  const load = useCallback(async () => {
-    try {
-      setData(await fetchCareMealTariffs());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_meal_tariffs_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Übersicht der Mensa-Preise",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const remove = async () => {
     if (!deleting) return;
     setBusy(true);
     deleteErrors.clear();
     try {
-      setData(
+      await mutate(
         await deleteCareMealTariff(deleting.id, deleting.tariff.validFrom),
+        { revalidate: false },
       );
       success(
         `Der Mensa-Preis ab ${formatMonth(deleting.tariff.validFrom)} ist gelöscht.`,
@@ -117,10 +103,10 @@ export default function TraegerMensaPage() {
           />
         ) : null
       }
-      statsLoading={!data && !pageLoad.error}
+      statsLoading={loading}
       tabs={billingTabs("mensa")}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !data}
+      error={loadError}
+      loading={loading}
       overlays={
         data ? (
           <>
@@ -130,7 +116,7 @@ export default function TraegerMensaPage() {
               currentMonth={currentMonth}
               onClose={() => setEditing(null)}
               onSaved={(next) => {
-                setData(next);
+                void mutate(next, { revalidate: false });
                 setEditing(null);
               }}
             />

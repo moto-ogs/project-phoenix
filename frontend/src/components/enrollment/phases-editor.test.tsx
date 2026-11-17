@@ -3,13 +3,30 @@ import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
 import {
   fireEvent,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Reads run through real SWR, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 
 const careExit = vi.hoisted(() => ({
   permissions: [] as string[],
@@ -27,7 +44,12 @@ vi.mock("~/lib/care-exit-api", async (importOriginal) => ({
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "1", permissions: careExit.permissions },
+      user: {
+        id: "1",
+        permissions: careExit.permissions,
+        scope: "tenant",
+        tenantId: 42,
+      },
       expires: "2099-01-01",
     },
     status: "authenticated",
@@ -108,11 +130,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
     show: mocks.showActionError,
     showMessage: mocks.showActionMessage,
   }),
-}));
-
-vi.mock("~/lib/swr", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useSWRAuth: () => ({ data: [], error: undefined, isLoading: false }),
 }));
 
 vi.mock("./rollover-form", async () =>
@@ -1072,6 +1089,35 @@ describe("PhasesEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     await waitFor(() => expect(mocks.listPhases).toHaveBeenCalledTimes(3));
     expect(mocks.updatePhase).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes a single read phase after a status change", async () => {
+    mocks.listPhases.mockReset().mockResolvedValue([phase()]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    mocks.updatePhase.mockResolvedValue(phase({ is_active: false }));
+    const readPhase = vi.fn(() => Promise.resolve(phase()));
+    function RolloverPhase() {
+      useSWRAuth(tenantAdminKeys.enrollmentPhase("10"), readPhase);
+      return null;
+    }
+
+    render(
+      <>
+        <PhasesEditor />
+        <RolloverPhase />
+      </>,
+    );
+    await waitFor(() => expect(readPhase).toHaveBeenCalledTimes(1));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Deaktivieren" }),
+    );
+
+    await waitFor(() => expect(readPhase).toHaveBeenCalledTimes(2));
   });
 
   it("keeps the confirmed inactive state when editing after a failed reload", async () => {

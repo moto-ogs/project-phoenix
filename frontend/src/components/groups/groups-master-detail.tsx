@@ -14,7 +14,7 @@ import { GroupedList } from "~/components/database/grouped-list";
 import { MasterDetailLayout } from "~/components/database/master-detail-layout";
 import { useGroupedItems } from "~/components/database/use-grouped-items";
 import { DatabaseForm } from "~/components/database/database-form";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { groupsConfig } from "@/components/database/configs/groups.config";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -14,7 +14,6 @@ import { Input } from "~/components/ui/input";
 import { Loading } from "~/components/ui/loading";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { parseLocation } from "~/lib/location-helper";
-import { createLogger } from "~/lib/logger";
 import { useLocalStorageValue } from "~/lib/hooks/use-local-storage-value";
 import {
   mayWritePersonalStorage,
@@ -24,14 +23,14 @@ import { useMinuteClock } from "~/lib/pickup-helpers";
 import { fetchCareOfferingOptions, fetchStudents } from "~/lib/student-api";
 import type { CareOfferingOption } from "~/lib/student-helpers";
 import type { Student } from "~/lib/student-helpers";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 import {
   presentChildCandidates,
   type PresentChildScope,
 } from "~/lib/timetable-roster-helpers";
 import { foldForSearch } from "~/lib/search-fold";
-
-const logger = createLogger({ component: "PresentChildrenPicker" });
 
 const PRESENT_PAGE_SIZE = 100;
 
@@ -125,9 +124,7 @@ type LoadState =
   | { readonly kind: "failed" }
   | { readonly kind: "loaded"; readonly children: readonly PresentChild[] };
 
-type OfferingsState =
-  | { readonly kind: "loading" }
-  | { readonly kind: "loaded"; readonly items: readonly CareOfferingOption[] };
+const NO_OFFERINGS: readonly CareOfferingOption[] = [];
 
 export interface PresentChildrenPickerProps {
   readonly isOpen: boolean;
@@ -162,10 +159,14 @@ export function PresentChildrenPicker({
   const formId = useId();
   const now = useMinuteClock();
   const add = useFormModalPending(isOpen, instanceId);
-  const [load, setLoad] = useState<LoadState>({ kind: "loading" });
-  const [offerings, setOfferings] = useState<OfferingsState>({
-    kind: "loading",
-  });
+  const offerings = useSWRAuth(
+    isOpen ? tenantDailyKeys.careOfferingOptions() : null,
+    () => fetchCareOfferingOptions(),
+  );
+  // The offering selection is an extra: without it the dialog works as
+  // before, so a failure only hides "Nach Angebot".
+  const offeringsLoaded =
+    offerings.data !== undefined || offerings.error !== undefined;
   // null until the person chooses in this opening; until then the stored
   // offering, or else "Noch in Betreuung", applies.
   const [scopeChoice, setScopeChoice] = useState<PresentChildScope | null>(
@@ -189,7 +190,7 @@ export function PresentChildrenPicker({
     setSelected(new Set());
   }
 
-  const offeringItems = offerings.kind === "loaded" ? offerings.items : [];
+  const offeringItems = offerings.data ?? NO_OFFERINGS;
   const storedOffering = offeringItems.some(
     (offering) => offering.id === storedOfferingId,
   )
@@ -202,59 +203,22 @@ export function PresentChildrenPicker({
   const source =
     scope === "offering" && offeringId ? offeringId : PRESENT_SOURCE;
 
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    setOfferings({ kind: "loading" });
-    fetchCareOfferingOptions()
-      .then((items) => {
-        if (!cancelled) setOfferings({ kind: "loaded", items });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        // The offering selection is an extra: without it the dialog works
-        // as before, so a failure only hides "Nach Angebot".
-        logger.warn("failed to load care offerings", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setOfferings({ kind: "loaded", items: [] });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, instanceId]);
-
-  const offeringsLoaded = offerings.kind === "loaded";
-  useEffect(() => {
-    if (!isOpen || !offeringsLoaded) return;
-    let cancelled = false;
-    setLoad({ kind: "loading" });
-    fetchPresentChildren(source === PRESENT_SOURCE ? null : source)
-      .then((result) => {
-        if (cancelled) return;
-        setLoad({
-          kind: "loaded",
-          children: result,
-        });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        logger.warn("failed to load present children", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setLoad({ kind: "failed" });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, instanceId, offeringsLoaded, source]);
+  const children = useSWRAuth(
+    isOpen && offeringsLoaded ? tenantDailyKeys.presentChildren(source) : null,
+    () => fetchPresentChildren(source === PRESENT_SOURCE ? null : source),
+    { keepPreviousData: false },
+  );
+  const presentChildren = children.data;
+  let load: LoadState = { kind: "loading" };
+  if (presentChildren) load = { kind: "loaded", children: presentChildren };
+  else if (children.error) load = { kind: "failed" };
 
   const candidates = useMemo(
     () =>
-      load.kind === "loaded"
-        ? presentChildCandidates(load.children, inBlockStudentIds, now, scope)
+      presentChildren
+        ? presentChildCandidates(presentChildren, inBlockStudentIds, now, scope)
         : [],
-    [load, inBlockStudentIds, now, scope],
+    [presentChildren, inBlockStudentIds, now, scope],
   );
   const term = foldForSearch(search.trim());
   const visible = term
@@ -321,8 +285,6 @@ export function PresentChildrenPicker({
     setSearch("");
     setScopeChoice(null);
     setOfferingChoice(null);
-    // The next opening loads the offerings first, then the children.
-    setOfferings({ kind: "loading" });
     onClose();
   };
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {

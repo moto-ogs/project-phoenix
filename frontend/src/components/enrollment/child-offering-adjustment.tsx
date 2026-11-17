@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Pencil } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -30,7 +23,7 @@ import {
 } from "~/components/enrollment/offering-row-shell";
 import { formatDateTime } from "~/components/enrollment/enrollment-request-display";
 import { CarePlanImpact } from "~/components/students/care-plan-impact";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { type CareOffering, listCareOfferings } from "~/lib/care-offering-api";
 import {
@@ -52,13 +45,20 @@ import {
   updateAdminChildOfferings,
 } from "~/lib/enrollment-admin-api";
 import { supportedGradeLevelMax } from "~/lib/grade-level";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { describeOfferingAdjustmentChanges } from "~/lib/offering-adjustment-history";
 import { mapRosterImpact, type RosterImpact } from "~/lib/roster-impact";
 import { useCareOfferingsEnabled, useTenant } from "~/lib/tenant-context";
 import { weekdayShortLabel, weekdayShortList } from "~/lib/weekdays";
 
 const logger = createLogger({ component: "ChildOfferingAdjustment" });
+
+const NO_OFFERINGS: CareOffering[] = [];
+const NO_STATS: Record<string, CareOfferingBookingStats> = {};
+const NO_ADJUSTMENTS: AdminOfferingAdjustment[] = [];
 
 /**
  * An offering the child's grade level rules out. Parents never see these;
@@ -166,17 +166,50 @@ export function ChildOfferingAdjustment({
   // Der Bearbeiten-Zustand der Fläche (Bauart 2 Regel 3, #3119): die
   // Auswahl erscheint an Ort und Stelle, kein Modal.
   const [editing, setEditing] = useState(false);
-  const [catalog, setCatalog] = useState<CareOffering[]>([]);
+  // The phase's offerings load while the editor is open.
+  const catalogRead = useSWRAuth(
+    editing ? enrollmentKeys.careOfferings(phaseId) : null,
+    () => listCareOfferings(phaseId),
+    { keepPreviousData: false },
+  );
+  const rawCatalog = catalogRead.data ?? NO_OFFERINGS;
+  const catalogLoaded = catalogRead.data !== undefined;
   // Offerings the child's grade level rules out. Kept separate from `catalog`
   // so payload building and the auto-add preview keep operating on exactly
   // the selectable set, while the UI can still SHOW the blocked ones with a
   // reason instead of leaving a silent gap in the list (#2186).
-  const [blockedCatalog, setBlockedCatalog] = useState<CareOffering[]>([]);
-  const [rawCatalog, setRawCatalog] = useState<CareOffering[]>([]);
-  const [bookingStats, setBookingStats] = useState<
-    Record<string, CareOfferingBookingStats>
-  >({});
-  const [history, setHistory] = useState<AdminOfferingAdjustment[]>([]);
+  const { catalog, blockedCatalog } = useMemo(() => {
+    const available = availableCareOfferings(
+      rawCatalog,
+      child.target_grade_level,
+    );
+    const availableIDs = new Set(available.map((offering) => offering.id));
+    return {
+      catalog: available,
+      blockedCatalog: rawCatalog.filter(
+        (offering) => !availableIDs.has(offering.id),
+      ),
+    };
+  }, [rawCatalog, child.target_grade_level]);
+  // Occupancy is advisory: without it a full offering only announces itself
+  // as an error after the whole correction is submitted (#2186). Loaded
+  // beside the catalog rather than with it — a slow or failing stats call
+  // must never keep the editor in its loading state; SWR logs a failure.
+  const statsRead = useSWRAuth(
+    editing ? enrollmentKeys.bookingStats(phaseId) : null,
+    () => fetchCareOfferingBookingStats(phaseId),
+    { keepPreviousData: false },
+  );
+  const bookingStats: Record<string, CareOfferingBookingStats> =
+    statsRead.data ?? NO_STATS;
+  const historyRead = useSWRAuth(
+    enrollmentKeys.offeringAdjustments(requestId, child.id),
+    () => listAdminChildOfferingAdjustments(requestId, child.id),
+    { keepPreviousData: false },
+  );
+  const { mutate: mutateHistory } = historyRead;
+  const history = historyRead.data ?? NO_ADJUSTMENTS;
+  const invalidateFamily = useInvalidateFamily();
   const [selected, setSelected] = useState<Set<string>>(() =>
     initialManualOfferingIDs(child.offerings),
   );
@@ -184,21 +217,28 @@ export function ChildOfferingAdjustment({
     initialManualOfferingDays(child.offerings),
   );
   const [reason, setReason] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [catalogLoaded, setCatalogLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   // Fehler stehen oben im Bearbeiten-Bereich (Bauart 2 Regel 5).
   const errors = useApiFormError();
-  const catalogError = useApiLoadError();
-  const historyError = useApiLoadError();
-  const showHistoryError = historyError.show;
-  const clearHistoryError = historyError.clear;
+  const catalogError = useSwrResourceLoadError(
+    [{ data: catalogRead.data, error: catalogRead.error }],
+    "die Angebotsliste",
+    () => catalogRead.mutate(),
+  );
+  // A failed load stays loading until its error text is there, so no empty
+  // list shows in its place.
+  const loading =
+    editing &&
+    !catalogLoaded &&
+    (!catalogError.failure || catalogError.error === null);
+  // Ohne Hinweis läse sich die fehlende Liste als "nie geändert".
+  const historyError = useSwrResourceLoadError(
+    [{ data: historyRead.data, error: historyRead.error }],
+    "die Änderungshistorie",
+    () => mutateHistory(),
+  );
   // „Wiederholen“ ruft die aktuelle Fassung auf, nicht die vom Fehler.
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
-  const latestOpenEditorRef = useRef<() => Promise<void>>(
-    async () => undefined,
-  );
-  const latestHistoryRef = useRef<() => Promise<void>>(async () => undefined);
   const [withdrawalConfirmationOpen, setWithdrawalConfirmationOpen] =
     useState(false);
   const [pendingWithdrawalInput, setPendingWithdrawalInput] = useState<{
@@ -212,105 +252,34 @@ export function ChildOfferingAdjustment({
     if (!careOfferingsEnabled) setEditing(false);
   }, [careOfferingsEnabled]);
 
-  const loadHistory = useCallback(async () => {
-    clearHistoryError();
-    try {
-      const rows = await listAdminChildOfferingAdjustments(requestId, child.id);
-      setHistory(rows);
-    } catch (err) {
-      logger.warn("offering_adjustment_history_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        child_id: child.id,
-      });
-      // Ohne Hinweis läse sich die fehlende Liste als "nie geändert".
-      await showHistoryError(err, {
-        object: "die Änderungshistorie",
-        retry: () => void latestHistoryRef.current(),
-      });
-    }
-  }, [child.id, requestId, clearHistoryError, showHistoryError]);
-  useLayoutEffect(() => {
-    latestHistoryRef.current = loadHistory;
-  });
-
+  // The selection is a draft: it starts once per opening from the child's
+  // bookings and the catalog, and a revalidated catalog leaves it alone.
+  const [selectionStarted, setSelectionStarted] = useState(false);
   useEffect(() => {
-    void loadHistory();
-  }, [loadHistory]);
-
-  const resetEditorSelection = (offerings: CareOffering[]) => {
-    const available = availableCareOfferings(
-      offerings,
-      child.target_grade_level,
-    );
-    const availableIDs = new Set(available.map((offering) => offering.id));
+    if (!editing || selectionStarted || !catalogLoaded) return;
+    setSelectionStarted(true);
     // Bestandsschutz: a booking the child already holds survives a rule that
     // was tightened after the fact. Dropping it here would silently delete
     // the booking on the next save — the exact failure mode #2186 reports,
     // in the flow meant to fix it. adjustmentPayloadOfferings carries such
     // ids through via the child's existing offerings.
     const nextSelected = new Set(initialManualOfferingIDs(child.offerings));
-    for (const offering of available) {
+    for (const offering of catalog) {
       if (offering.is_active && offering.is_required) {
         nextSelected.add(offering.id);
       }
     }
-    setCatalog(available);
-    setBlockedCatalog(
-      offerings.filter((offering) => !availableIDs.has(offering.id)),
-    );
     setSelected(nextSelected);
-  };
+  }, [editing, selectionStarted, catalogLoaded, catalog, child.offerings]);
 
-  const openEditor = async () => {
+  const openEditor = () => {
     if (!careOfferingsEnabled) return;
     setEditing(true);
+    setSelectionStarted(false);
     setRosterImpact(null);
     errors.clear();
-    catalogError.clear();
     setDays(initialManualOfferingDays(child.offerings));
-    // Occupancy is advisory: without it a full offering only announces itself
-    // as an error after the whole correction is submitted (#2186). Loaded
-    // beside the catalog rather than awaited with it — a slow or failing
-    // stats call must never keep the editor in its loading state.
-    void fetchCareOfferingBookingStats(phaseId)
-      .then(setBookingStats)
-      .catch((statsErr: unknown) => {
-        setBookingStats({});
-        logger.warn("offering_adjustment_booking_stats_failed", {
-          error:
-            statsErr instanceof Error ? statsErr.message : String(statsErr),
-        });
-      });
-    if (catalogLoaded) {
-      resetEditorSelection(rawCatalog);
-      return;
-    }
-    setLoading(true);
-    try {
-      const offerings = await listCareOfferings(phaseId);
-      setRawCatalog(offerings);
-      resetEditorSelection(offerings);
-      setCatalogLoaded(true);
-    } catch (err) {
-      logger.warn("offering_adjustment_catalog_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        child_id: child.id,
-      });
-      setCatalog([]);
-      setBlockedCatalog([]);
-      setRawCatalog([]);
-      setCatalogLoaded(false);
-      await catalogError.show(err, {
-        object: "die Angebotsliste",
-        retry: () => void latestOpenEditorRef.current(),
-      });
-    } finally {
-      setLoading(false);
-    }
   };
-  useLayoutEffect(() => {
-    latestOpenEditorRef.current = openEditor;
-  });
 
   const preview = useMemo(() => {
     const { automaticDays } = materializeCareSelection(
@@ -389,7 +358,9 @@ export function ChildOfferingAdjustment({
     setPendingWithdrawalInput(null);
     setEditing(false);
     setReason("");
-    await loadHistory();
+    // The adjustment changed the phase's occupancy.
+    void invalidateFamily(enrollmentKeys.bookingStatsFamily);
+    await mutateHistory();
     onSaved();
   };
 
@@ -485,7 +456,6 @@ export function ChildOfferingAdjustment({
   const cancelEditing = () => {
     setEditing(false);
     errors.clear();
-    catalogError.clear();
   };
 
   if (!careOfferingsEnabled && history.length === 0 && !historyError.error)
@@ -519,7 +489,7 @@ export function ChildOfferingAdjustment({
               type="button"
               variant="outline"
               size="md"
-              onClick={() => void openEditor()}
+              onClick={openEditor}
               tooltip="Öffnet die gebuchten Angebote des Kindes zum Ändern."
               className="inline-flex items-center justify-center gap-2"
             >

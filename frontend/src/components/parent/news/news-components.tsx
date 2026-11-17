@@ -28,7 +28,11 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
@@ -885,42 +889,23 @@ export function NewsCard({
  * is one message's attachment, not the entrance to a folder the family could
  * browse.
  */
+const NO_ATTACHMENTS: ParentAnnouncementAttachment[] = [];
+
 function NewsAttachments({
   item,
 }: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
   const t = useTranslations("parentDashboard");
-  const [attachments, setAttachments] = useState<
-    ParentAnnouncementAttachment[]
-  >([]);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const [reloadToken, setReloadToken] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    setAttachments([]);
-    clearLoadError();
-    void listAnnouncementAttachments(item.id)
-      .then((list) => {
-        if (!cancelled) setAttachments(list);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("parent_announcement_attachments_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: t("newsErrorObjectAttachments"),
-          retry: () => setReloadToken((n) => n + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [item.id, reloadToken, clearLoadError, showLoadError, t]);
+  const resource = useSWRAuth(
+    parentInboxKeys.announcementAttachments(item.id),
+    () => listAnnouncementAttachments(item.id),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const attachments = resource.data ?? NO_ATTACHMENTS;
+  const { error: loadError } = useSwrResourceLoadError(
+    [resource],
+    t("newsErrorObjectAttachments"),
+    () => resource.mutate(),
+  );
 
   if (loadError) {
     return (

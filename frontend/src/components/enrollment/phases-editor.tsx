@@ -72,6 +72,11 @@ import {
 } from "~/lib/enrollment-form-schema-api";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { databaseKeys } from "~/lib/swr/portal-keys";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { createLogger } from "~/lib/logger";
 import { RolloverForm } from "./rollover-form";
 import {
@@ -148,6 +153,10 @@ import {
 } from "~/lib/enrollment-phase-labels";
 
 const logger = createLogger({ component: "PhasesEditor" });
+
+const NO_PHASES: Phase[] = [];
+const NO_SCHEMAS: FormSchema[] = [];
+const NO_PERIODS: CalendarPeriod[] = [];
 
 const KIND_LABELS = PHASE_KIND_LABELS;
 const OVERFLOW_LABELS = PHASE_OVERFLOW_LABELS;
@@ -259,13 +268,39 @@ export function PhasesEditor() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
-  const [phases, setPhases] = useState<Phase[]>([]);
-  const [schemas, setSchemas] = useState<FormSchema[]>([]);
-  const [periods, setPeriods] = useState<CalendarPeriod[]>([]);
-  const [loading, setLoading] = useState(true);
-  const pageLoad = useApiLoadError();
-  const showLoadError = pageLoad.show;
-  const clearLoadError = pageLoad.clear;
+  const phasesRead = useSWRAuth(enrollmentKeys.phases(), () => listPhases());
+  // Without the templates the form column and the template picker would
+  // claim „Eigene Vorlage“ / none; the page fails as a whole.
+  const schemasRead = useSWRAuth(enrollmentKeys.formSchemas(), () =>
+    listSchemas(),
+  );
+  // Calendar periods are optional context for the phase form — a load
+  // failure (SWR logs it) must not block phase management. The form then
+  // offers no period to link.
+  const periodsRead = useSWRAuth(databaseKeys.calendarPeriods(), () =>
+    calendarPeriodService.list(),
+  );
+  const { mutate: mutatePhases } = phasesRead;
+  const { mutate: mutateSchemas } = schemasRead;
+  const { mutate: mutatePeriods } = periodsRead;
+  const phases = phasesRead.data ?? NO_PHASES;
+  const schemas = schemasRead.data ?? NO_SCHEMAS;
+  const periods = periodsRead.data ?? NO_PERIODS;
+  const pageLoad = useSwrResourceLoadError(
+    [
+      { data: phasesRead.data, error: phasesRead.error },
+      { data: schemasRead.data, error: schemasRead.error },
+    ],
+    "die Liste der Anmeldephasen",
+    () => Promise.all([mutatePhases(), mutateSchemas(), mutatePeriods()]),
+  );
+  // A failed load stays loading until its error text is there, so the empty
+  // state never shows in its place.
+  const loading = pageLoad.failure
+    ? pageLoad.error === null
+    : !phasesRead.data ||
+      !schemasRead.data ||
+      (!periodsRead.data && !periodsRead.error);
   // Saving the slide-over form: alert in the panel, field errors at the field.
   const formErrors = useApiFormError();
   const clearFormErrors = formErrors.clear;
@@ -343,63 +378,23 @@ export function PhasesEditor() {
     return names;
   }, [schemas]);
 
-  // „Wiederholen“ lädt mit der aktuellen Fassung neu.
-  const latestLoadAll = useRef<() => Promise<void>>(async () => undefined);
-  const loadAll = useCallback(
-    async (options: { rethrow?: boolean } = {}) => {
-      // Nach einem Schreiben bleibt die bestätigte Liste stehen (#6652).
-      if (!options.rethrow) setLoading(true);
-      try {
-        const [phasesData, schemasData, periodsData] = await Promise.all([
-          listPhases(),
-          // Without the templates the form column and the template picker
-          // would claim „Eigene Vorlage“ / none; the load fails as a whole.
-          listSchemas(),
-          // Calendar periods are optional context for the phase form —
-          // a load failure must not block phase management. Deliberately
-          // silent beyond the log: the form then offers no period to link.
-          calendarPeriodService.list().catch((periodError: unknown) => {
-            logger.warn("phase_calendar_periods_load_failed", {
-              error:
-                periodError instanceof Error
-                  ? periodError.message
-                  : String(periodError),
-            });
-            return [] as CalendarPeriod[];
-          }),
-        ]);
-        setPhases(phasesData);
-        setSchemas(schemasData);
-        setPeriods(periodsData);
-        clearLoadError();
-      } catch (err) {
-        logger.error("phases_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        // Nach einem Schreiben zeigt der Aufrufer den Fehler als Nachladefehler
-        // über der stehenden Liste (#6652).
-        if (options.rethrow) throw err;
-        await showLoadError(err, {
-          object: "die Liste der Anmeldephasen",
-          retry: () => void latestLoadAll.current(),
-        });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [showLoadError, clearLoadError],
-  );
-  useLayoutEffect(() => {
-    latestLoadAll.current = loadAll;
-  });
-
-  useEffect(() => {
-    void loadAll();
-  }, [loadAll]);
+  const invalidateFamily = useInvalidateFamily();
   // Nachladen nach Speichern, Löschen oder Umschalten: ein Fehler dabei ist
-  // ein Ladefehler, kein Fehler der Aktion (#6652).
-  const afterWrite = useRefreshAfterWrite("die Anzeige der Anmeldephasen", () =>
-    loadAll({ rethrow: true }),
+  // ein Ladefehler, kein Fehler der Aktion (#6652). Die Übertragen-Seite liest
+  // eine Phase einzeln.
+  const afterWrite = useRefreshAfterWrite(
+    "die Anzeige der Anmeldephasen",
+    async () => {
+      void invalidateFamily(tenantAdminKeys.enrollmentPhaseFamily);
+      await Promise.all([
+        mutatePhases(listPhases(), { revalidate: false }),
+        mutateSchemas(listSchemas(), { revalidate: false }),
+        // Optional context: its failure stays out of the reload's result.
+        mutatePeriods(calendarPeriodService.list(), {
+          revalidate: false,
+        }).catch(() => undefined),
+      ]);
+    },
   );
 
   useEffect(() => {
@@ -743,7 +738,7 @@ export function PhasesEditor() {
     toast.success(
       `Die Anschlussphase „${result.phase.name}“ ist angelegt${detail}.`,
     );
-    void loadAll();
+    void mutatePhases();
     refreshPhaseExpiryWarnings();
   };
 
@@ -758,8 +753,10 @@ export function PhasesEditor() {
           ...phaseToInput(phase),
           is_active: !phase.is_active,
         });
-        setPhases((current) =>
-          current.map((item) => (item.id === updated.id ? updated : item)),
+        void mutatePhases(
+          (current) =>
+            current?.map((item) => (item.id === updated.id ? updated : item)),
+          { revalidate: false },
         );
         toast.success(
           updated.is_active
@@ -780,7 +777,13 @@ export function PhasesEditor() {
         setTogglingActive(false);
       }
     },
-    [afterWrite, refreshPhaseExpiryWarnings, showActionError, toast],
+    [
+      afterWrite,
+      mutatePhases,
+      refreshPhaseExpiryWarnings,
+      showActionError,
+      toast,
+    ],
   );
   useLayoutEffect(() => {
     latestToggleActive.current = handleToggleActive;

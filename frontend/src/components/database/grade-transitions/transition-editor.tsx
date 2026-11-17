@@ -5,7 +5,7 @@ import { parseISODate, berlinTodayISO } from "~/lib/date-helpers";
 // Editor for a Jahrgangswechsel draft: one row per class with the target
 // class or "Abgang" (child leaves the OGS, soft-deactivated as alumnus).
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { Input } from "~/components/ui/input";
@@ -23,8 +23,11 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useFreshSWR } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import {
   createGradeTransition,
@@ -33,6 +36,7 @@ import {
   updateGradeTransition,
   type GradeTransition,
   type MappingInput,
+  type SuggestedMapping,
 } from "~/lib/grade-transition-api";
 
 const logger = createLogger({ component: "GradeTransitionEditor" });
@@ -43,6 +47,8 @@ export interface EditorRow {
   toClass: string;
   studentCount: number | null;
 }
+
+const NO_CLASSES: string[] = [];
 
 const MODE_OPTIONS = [
   { value: "promote", label: "Versetzen nach" },
@@ -57,6 +63,23 @@ function suggestAcademicYear(now: Date): string {
   return `${year}-${year + 1}`;
 }
 
+function rowsFromSuggestions(suggestions: SuggestedMapping[]): EditorRow[] {
+  return suggestions.map((s) => ({
+    fromClass: s.fromClass,
+    // An ambiguous class (no grade pattern, e.g. "offen" or a free-form
+    // name) must not be preselected as Abgang — default it to a
+    // non-destructive "Versetzen" with an empty target so the admin has
+    // to make an explicit choice before continuing.
+    mode: !s.ambiguous && s.isGraduating ? "graduate" : "promote",
+    toClass: s.ambiguous ? "" : (s.toClass ?? ""),
+    studentCount: s.studentCount,
+  }));
+}
+
+/**
+ * Rows of a saved draft. The draft stores no child counts, so its rows show
+ * none until the preview counts them.
+ */
 function rowsFromTransition(transition: GradeTransition): EditorRow[] {
   return transition.mappings.map((m) => ({
     fromClass: m.fromClass,
@@ -67,6 +90,7 @@ function rowsFromTransition(transition: GradeTransition): EditorRow[] {
 }
 
 interface TransitionEditorProps {
+  /** The draft to edit; null starts a new transition from the suggestions. */
   readonly existingDraft: GradeTransition | null;
   readonly onClose: () => void;
   readonly onReadyForPreview: (transition: GradeTransition) => void;
@@ -82,17 +106,33 @@ export function TransitionEditor({
       suggestAcademicYear(parseISODate(berlinTodayISO())),
   );
   const [notes, setNotes] = useState(existingDraft?.notes ?? "");
-  const [rows, setRows] = useState<EditorRow[] | null>(
+  // The draft is local state and never written into the cache. Until the
+  // first change it waits for this opening’s fresh suggestions; the first
+  // change copies them, so a later refresh never replaces an edit.
+  // A saved draft starts from its own mappings and reads no suggestions.
+  const [draftRows, setDraftRows] = useState<EditorRow[] | null>(
     existingDraft ? rowsFromTransition(existingDraft) : null,
   );
+  const {
+    data: suggestions,
+    error: suggestionsError,
+    mutate: reloadSuggestions,
+  } = useFreshSWR(
+    existingDraft ? null : tenantAdminKeys.gradeTransitionSuggestions(),
+    fetchSuggestedMappings,
+  );
+  const suggestionRows = useMemo(
+    () => (suggestions ? rowsFromSuggestions(suggestions) : null),
+    [suggestions],
+  );
+  const rows = draftRows ?? suggestionRows;
   // Lade- und Speicherfehler bleiben im Panel, mit Katalogtext und
   // Wiederholen (#2517).
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const [suggestionsKey, setSuggestionsKey] = useState(0);
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data: suggestions, error: suggestionsError }],
+    "die Liste der Vorschläge",
+    () => reloadSuggestions(),
+  );
   const {
     error: saveError,
     show: showSaveError,
@@ -101,81 +141,35 @@ export function TransitionEditor({
   const latestContinueRef = useRef<() => void>(() => undefined);
   // Mounted only while open: one session per editor (#6593).
   const save = useFormModalPending();
-  const [allClasses, setAllClasses] = useState<string[]>([]);
   const [classToAdd, setClassToAdd] = useState("");
 
   // All classes with children, so a row removed via "Nicht ändern" can be
-  // added back (the suggestions are only the initial proposal).
-  useEffect(() => {
-    let cancelled = false;
-    fetchTransitionClasses()
-      .then((classes) => {
-        if (!cancelled) setAllClasses(classes);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        // Bewusst still: die Liste dient nur dem Wieder-Hinzufügen einer
-        // entfernten Zeile. Die Vorschläge und das Speichern gehen ohne sie.
-        logger.error("classes_load_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (rows !== null) return;
-    let cancelled = false;
-    fetchSuggestedMappings()
-      .then((suggestions) => {
-        if (cancelled) return;
-        clearLoadError();
-        setRows(
-          suggestions.map((s) => ({
-            fromClass: s.fromClass,
-            // An ambiguous class (no grade pattern, e.g. "offen" or a free-form
-            // name) must not be preselected as Abgang — default it to a
-            // non-destructive "Versetzen" with an empty target so the admin has
-            // to make an explicit choice before continuing.
-            mode: !s.ambiguous && s.isGraduating ? "graduate" : "promote",
-            toClass: s.ambiguous ? "" : (s.toClass ?? ""),
-            studentCount: s.studentCount,
-          })),
-        );
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        logger.error("suggestions_load_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        void showLoadError(error, {
-          object: "die Liste der Vorschläge",
-          retry: () => setSuggestionsKey((key) => key + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [rows, suggestionsKey, showLoadError, clearLoadError]);
+  // added back (the suggestions are only the initial proposal). Bewusst still
+  // bei einem Fehler: die Liste dient nur dem Wieder-Hinzufügen einer
+  // entfernten Zeile. Die Vorschläge und das Speichern gehen ohne sie.
+  const { data: allClasses = NO_CLASSES } = useFreshSWR(
+    tenantAdminKeys.gradeTransitionClasses(),
+    fetchTransitionClasses,
+  );
 
   const updateRow = (index: number, patch: Partial<EditorRow>) => {
-    setRows((current) =>
-      (current ?? []).map((row, i) =>
+    setDraftRows((current) =>
+      (current ?? suggestionRows ?? []).map((row, i) =>
         i === index ? { ...row, ...patch } : row,
       ),
     );
   };
 
   const removeRow = (index: number) => {
-    setRows((current) => (current ?? []).filter((_, i) => i !== index));
+    setDraftRows((current) =>
+      (current ?? suggestionRows ?? []).filter((_, i) => i !== index),
+    );
   };
 
   const addRow = (fromClass: string) => {
     if (!fromClass) return;
-    setRows((current) => {
-      const next = current ?? [];
+    setDraftRows((current) => {
+      const next = current ?? suggestionRows ?? [];
       if (next.some((r) => r.fromClass === fromClass)) return next;
       return [
         ...next,

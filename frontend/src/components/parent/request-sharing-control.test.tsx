@@ -1,4 +1,6 @@
+import { deferred } from "~/test/helpers/form-modal-pending";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -19,6 +21,13 @@ import {
   RequestSharingControl,
   RequestSharingSelector,
 } from "./request-sharing-control";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
+
+function renderParent(ui: Parameters<typeof render>[0]) {
+  return render(ui, { wrapper: ParentResourceTestProvider });
+}
 
 vi.mock("~/lib/parent-api", () => ({
   getRequestSharing: vi.fn(),
@@ -31,7 +40,7 @@ const setSharing = vi.mocked(setRequestSharing);
 const getOptions = vi.mocked(getRequestSharingOptions);
 
 function renderControl(isSelf = true) {
-  return render(
+  return renderParent(
     <ModalProvider>
       <RequestSharingControl
         studentId="42"
@@ -82,6 +91,95 @@ describe("RequestSharingControl", () => {
     renderControl(true);
     // Anker: für die einreichende Person steht dieselbe Aktion da.
     expect(await screen.findByText("Anfrage teilen")).toBeInTheDocument();
+  });
+
+  it("initializes a warm remount and discards cancelled recipient changes on reopening", async () => {
+    getSharing.mockResolvedValue({
+      family_protected: false,
+      recipients: [
+        {
+          guardian_profile_id: "7",
+          first_name: "Mara",
+          last_name: "Muster",
+          selected: true,
+        },
+      ],
+    });
+    const control = (show: boolean) => (
+      <ModalProvider>
+        {show ? (
+          <RequestSharingControl
+            studentId="42"
+            requestType="excused"
+            requestId="9"
+            isSelf
+          />
+        ) : null}
+      </ModalProvider>
+    );
+    const { rerender } = renderParent(control(true));
+    await screen.findByText("Anfrage teilen");
+    rerender(control(false));
+    rerender(control(true));
+    fireEvent.click(await screen.findByText("Anfrage teilen"));
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "Mara Muster",
+    });
+    await waitFor(() => expect(getSharing).toHaveBeenCalledTimes(2));
+    expect(checkbox).toBeChecked();
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    fireEvent.click(await screen.findByText("Anfrage teilen"));
+    await waitFor(() => expect(getSharing).toHaveBeenCalledTimes(3));
+    expect(
+      await screen.findByRole("checkbox", { name: "Mara Muster" }),
+    ).toBeChecked();
+    fireEvent.click(screen.getByText("Auswahl speichern"));
+    await waitFor(() =>
+      expect(setSharing).toHaveBeenCalledWith("42", "excused", "9", ["7"]),
+    );
+  });
+
+  it("waits for this opening's recipients before enabling edits or Save", async () => {
+    const shared = {
+      family_protected: false,
+      recipients: [
+        {
+          guardian_profile_id: "7",
+          first_name: "Mara",
+          last_name: "Muster",
+          selected: true,
+        },
+      ],
+    };
+    getSharing.mockResolvedValueOnce(shared);
+    renderControl();
+    await screen.findByText("Anfrage teilen");
+    const pending = deferred<typeof shared>();
+    getSharing.mockReturnValueOnce(pending.promise);
+    fireEvent.click(screen.getByText("Anfrage teilen"));
+    const dialog = await screen.findByRole("dialog");
+    const save = within(dialog).queryByRole("button", {
+      name: "Auswahl speichern",
+    });
+    if (save) expect(save).toBeDisabled();
+    for (const checkbox of within(dialog).queryAllByRole("checkbox"))
+      expect(checkbox).toBeDisabled();
+    await act(async () =>
+      pending.resolve({
+        ...shared,
+        recipients: [{ ...shared.recipients[0]!, selected: false }],
+      }),
+    );
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "Mara Muster",
+    });
+    expect(checkbox).not.toBeChecked();
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("button", { name: "Auswahl speichern" }));
+    await waitFor(() =>
+      expect(setSharing).toHaveBeenCalledWith("42", "excused", "9", ["7"]),
+    );
   });
 
   it("saves only the explicitly selected guardian", async () => {
@@ -150,7 +248,7 @@ describe("RequestSharingControl", () => {
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
     const onChange = vi.fn();
-    render(
+    renderParent(
       <RequestSharingSelector
         studentId="42"
         selected={["7"]}
@@ -171,7 +269,7 @@ describe("RequestSharingControl", () => {
     getOptions.mockRejectedValueOnce(
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
-    render(
+    renderParent(
       <RequestSharingSelector
         studentId="42"
         selected={[]}
@@ -223,7 +321,7 @@ describe("RequestSharingControl", () => {
   });
 
   it("shows named recipients before a request is submitted", async () => {
-    render(
+    renderParent(
       <RequestSharingSelector
         studentId="42"
         selected={[]}
@@ -246,7 +344,7 @@ describe("RequestSharingControl", () => {
   // (scripts/product-screenshots/capture.ts).
   it("marks the recipient loading line as busy", () => {
     getOptions.mockReturnValue(new Promise(() => undefined));
-    render(
+    renderParent(
       <RequestSharingSelector
         studentId="42"
         selected={[]}

@@ -4,7 +4,7 @@
 // Lastschriftdatei war, was noch offen ist und was nicht abgebucht werden
 // darf. Nur zur Information; eingereicht wird auf der Seite des Laufs.
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import {
   SEPA_DEBIT_LEFT_LABELS,
@@ -16,16 +16,14 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import type { SepaMandate } from "~/lib/traeger-sepa-api";
 import {
   type SepaDebit,
   fetchSepaMandateCollections,
 } from "~/lib/traeger-sepa-debits-api";
-
-const logger = createLogger({ component: "SepaCollectionsCard" });
+import { useTraegerResource } from "./use-traeger-resource";
 
 function debitState(debit: SepaDebit) {
   if (debit.status === "submitted") {
@@ -102,46 +100,39 @@ const columns: DataTableColumn<SepaDebit>[] = [
 export function SepaCollectionsCard({
   mandates,
 }: Readonly<{ mandates: readonly SepaMandate[] }>) {
-  const [debits, setDebits] = useState<SepaDebit[] | null>(null);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
-  const ids = mandates.map((mandate) => mandate.id).join(",");
-  const mandateState = JSON.stringify(mandates);
-
-  const reload = useCallback(async () => {
-    try {
+  const ids = mandates.map((mandate) => mandate.id);
+  const {
+    data: debits,
+    error,
+    reload,
+  } = useTraegerResource(
+    ids.length > 0 ? traegerBillingRunKeys.sepaMandateCollections(ids) : null,
+    async () => {
       const lists = await Promise.all(
-        ids
-          .split(",")
-          .filter(Boolean)
-          .map((id) => fetchSepaMandateCollections(id)),
+        ids.map((id) => fetchSepaMandateCollections(id)),
       );
-      setDebits(lists.flat().sort((a, b) => b.dueOn.localeCompare(a.dueOn)));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_sepa_collections_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Abbuchungen",
-        retry: () => void reload(),
-      });
-    }
-  }, [ids, clearLoadError, showLoadError]);
-
+      return lists.flat().sort((a, b) => b.dueOn.localeCompare(a.dueOn));
+    },
+    "die Abbuchungen",
+  );
+  // A revoked mandate keeps its ID; its debits change all the same.
+  const mandateState = JSON.stringify(mandates);
+  const shownState = useRef(mandateState);
   useEffect(() => {
-    void reload();
-  }, [reload, mandateState]);
+    if (shownState.current === mandateState) return;
+    shownState.current = mandateState;
+    reload();
+  }, [mandateState, reload]);
 
   if (mandates.length === 0) return null;
   return (
     <SectionCard
       title="Abbuchungen"
       description="Jede Rechnung und jede Rate eines Bescheids, die per Lastschrift abgebucht wird. Nur zur Information: Die Datei für die Bank laden Sie auf der Seite des Laufs."
-      loading={debits === null && !load.error}
+      loading={debits === null && !error}
     >
-      {load.error ? (
-        <LoadErrorAlert error={load.error} actionLayout="responsive" />
+      {error ? (
+        <LoadErrorAlert error={error} actionLayout="responsive" />
       ) : debits && debits.length > 0 ? (
         <DataTable
           columns={columns}

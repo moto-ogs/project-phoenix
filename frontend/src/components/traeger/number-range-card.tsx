@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";

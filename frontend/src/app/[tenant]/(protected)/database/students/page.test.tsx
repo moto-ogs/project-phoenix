@@ -71,10 +71,6 @@ vi.mock("@/lib/database/service-factory", () => ({
 }));
 
 // Mock hooks
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => false),
-}));
-
 const mockShowMessage = vi.fn();
 const actionErrorApi = { showMessage: mockShowMessage };
 vi.mock("~/contexts/ToastContext", () => ({

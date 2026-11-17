@@ -17,7 +17,7 @@ import {
  * Das Feld „Mehr“: Name, Bild (Konzept oder eigenes Icon), Zähler und die
  * Klassen der übrigen Felder. Zustand und Öffnen regelt die Leiste.
  */
-export type PortalMoreButtonProps = WithoutOpenState<
+type PortalMoreButtonProps = WithoutOpenState<
   ComponentProps<typeof PortalBottomNavButton>
 > & { readonly [attribute: `data-${string}`]: string | undefined };
 

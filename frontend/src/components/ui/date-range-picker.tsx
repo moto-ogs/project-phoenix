@@ -1,5 +1,5 @@
 "use client";
-import { BELOW_SM } from "~/lib/hooks/use-media-query";
+import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { Z_LAYER } from "./overlay-styles";
 import {
   MODAL_SCOPE_SELECTOR,
@@ -399,20 +399,6 @@ function RangeCalendar({
   );
 }
 
-function useIsSingleMonthCalendar(): boolean {
-  const [isSingleMonth, setIsSingleMonth] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia(BELOW_SM);
-    const update = () => setIsSingleMonth(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-
-  return isSingleMonth;
-}
-
 function formatDraftRangeLabel(
   draftFrom: Date | undefined,
   draftTo: Date | undefined,
@@ -450,7 +436,7 @@ export function RangeCalendarInline({
 }: RangeCalendarProps) {
   const today = useBerlinToday();
   const [month, setMonth] = useState(value?.from ?? parseISODate(today));
-  const isSingleMonth = useIsSingleMonthCalendar();
+  const isSingleMonth = useMediaQuery(BELOW_SM);
   // Manual draft state. We use `mode="multiple"` on the underlying DayPicker
   // and manage the two-click range logic ourselves, react-day-picker v10's
   // mode="range" calls onSelect with surprising payloads (sometimes a complete

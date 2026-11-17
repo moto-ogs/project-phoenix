@@ -44,7 +44,8 @@ vi.mock("~/lib/hooks/use-settings-schema", () => ({
 }));
 // The help path has its own test (school-search-help.test.ts).
 vi.mock("./school-search-help", () => ({
-  helpSearchEntries: async () => [],
+  loadHelpIndex: async () => [],
+  helpEntriesOf: () => [],
 }));
 vi.mock("~/contexts/ToastContext", () => ({
   useApiLoadError: () => ({

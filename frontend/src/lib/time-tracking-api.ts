@@ -470,7 +470,7 @@ interface VacationRequestPayload {
   substitute_staff_id?: number;
 }
 
-export interface VacationQuotaSummary {
+interface VacationQuotaSummary {
   staff_id: number;
   year: number;
   entitled_days: number;

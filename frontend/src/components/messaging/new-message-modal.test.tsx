@@ -1,8 +1,36 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
+
+// Echtes SWR statt des globalen Stubs: Laden, Fehler und Wiederholen laufen
+// über den echten Abruf, mit frischem Cache je Render.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    ),
+  });
+}
 
 const {
   mockFetchGuardians,

@@ -12,11 +12,8 @@ import {
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { FramedList } from "~/components/ui/framed-list";
-import {
-  DataField,
-  DataGrid,
-  InfoSection,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoSection } from "~/components/ui/info-section";
 import {
   SlideOver,
   SlideOverContent,

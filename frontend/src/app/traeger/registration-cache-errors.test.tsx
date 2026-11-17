@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { useTenantMutateMatching } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import {

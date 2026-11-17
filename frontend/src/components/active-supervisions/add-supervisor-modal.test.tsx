@@ -1,4 +1,14 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
+import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
@@ -66,6 +76,28 @@ vi.mock("~/components/ui/custom-select", () => ({
 
 import { AddSupervisorModal } from "./add-supervisor-modal";
 
+vi.unmock("swr");
+
+function SWRTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(
+  ui: Parameters<typeof rtlRender>[0],
+  options?: Parameters<typeof rtlRender>[1],
+) {
+  return rtlRender(ui, { wrapper: SWRTestWrapper, ...options });
+}
+
 const overview = {
   id: "41",
   name: "Freispiel",
@@ -107,6 +139,34 @@ describe("AddSupervisorModal", () => {
       "Toni Test ist jetzt als Betreuer eingetragen.",
     );
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("reloads the supervision and the Schulhof supervisors after adding", async () => {
+    const readSupervisors = vi.fn(() => Promise.resolve([]));
+    function SchulhofSupervisors() {
+      useSWRAuth(tenantDailyKeys.activeGroupSupervisors("41"), readSupervisors);
+      return null;
+    }
+    render(
+      <>
+        <AddSupervisorModal
+          activeGroupId="41"
+          isOpen
+          onAdded={vi.fn().mockResolvedValue(undefined)}
+          onClose={vi.fn()}
+        />
+        <SchulhofSupervisors />
+      </>,
+    );
+    expect(await screen.findByText(/Alex Alt/)).toBeInTheDocument();
+    await waitFor(() => expect(readSupervisors).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByLabelText("Betreuer auswählen"), {
+      target: { value: "73" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Hinzufügen" }));
+
+    await waitFor(() => expect(readSupervisors).toHaveBeenCalledTimes(2));
+    expect(fetchRunningSupervision).toHaveBeenCalledTimes(2);
   });
 
   it("explains when nobody else can be added", async () => {

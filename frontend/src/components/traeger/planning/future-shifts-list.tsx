@@ -4,55 +4,24 @@
 // Einsatzplanung (#4708, ADR 0242 Punkt 6). Sie bleiben alle bestehen; die
 // Liste zeigt, wo die Schulen noch mit Schichten aus moto arbeiten.
 
-import { useEffect, useState } from "react";
-
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { FramedList } from "~/components/ui/framed-list";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Loading } from "~/components/ui/loading";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
-import {
-  fetchTraegerFutureShifts,
-  type TraegerFutureShifts,
-} from "~/lib/traeger-planning-api";
-
-const logger = createLogger({ component: "FutureShiftsList" });
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
+import { fetchTraegerFutureShifts } from "~/lib/traeger-planning-api";
 
 export function FutureShiftsList() {
-  const [schools, setSchools] = useState<TraegerFutureShifts[] | null>(null);
-  const load = useApiLoadError();
-  const { show, clear } = load;
+  const { data: schools, error } = useTraegerResource(
+    traegerStaffKeys.futureShifts(),
+    fetchTraegerFutureShifts,
+    "die Schulen mit geplanten Schichten",
+  );
 
-  useEffect(() => {
-    let cancelled = false;
-    const read = async () => {
-      try {
-        const found = await fetchTraegerFutureShifts();
-        if (cancelled) return;
-        clear();
-        setSchools(found);
-      } catch (err) {
-        logger.error("traeger_future_shifts_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!cancelled) {
-          await show(err, {
-            object: "die Schulen mit geplanten Schichten",
-            retry: () => void read(),
-          });
-        }
-      }
-    };
-    void read();
-    return () => {
-      cancelled = true;
-    };
-  }, [clear, show]);
-
-  if (load.error) {
+  if (error) {
     return (
       <div className="mt-4">
-        <LoadErrorAlert error={load.error} actionLayout="responsive" />
+        <LoadErrorAlert error={error} actionLayout="responsive" />
       </div>
     );
   }

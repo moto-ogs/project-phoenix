@@ -246,21 +246,10 @@ interface ListboxDropdownProps<K extends string> {
   readonly searchValue?: string;
   readonly onSearchChange?: (value: string) => void;
   readonly searchPlaceholder?: string;
-  /** Keys the search field does not use itself (Enter and the like). */
-  readonly onSearchKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   /** Slot between the search field and the option list. */
   readonly menuHeader?: ReactNode;
-  /** Slot under the option list, e.g. a row that adds the typed name. */
-  readonly menuFooter?: ReactNode;
   /** Content shown inside the listbox when filtering leaves no options. */
   readonly emptyState?: ReactNode;
-  /**
-   * Controls rendered next to an option, OUTSIDE its button — a button inside
-   * a button is invalid, and the row must stay one option to a screen reader.
-   */
-  readonly renderOptionActions?: (
-    option: ListboxDropdownOption<K>,
-  ) => ReactNode;
   /**
    * Visual content for an option (next to the checkbox in multi mode). The
    * option keeps its standard role and accessible name from
@@ -396,11 +385,8 @@ export function ListboxDropdown<K extends string>({
   searchValue,
   onSearchChange,
   searchPlaceholder = "Suchen",
-  onSearchKeyDown,
   menuHeader,
-  menuFooter,
   emptyState,
-  renderOptionActions,
   renderOption,
 }: ListboxDropdownProps<K>) {
   const menuLayer = useMenuLayer();
@@ -817,8 +803,7 @@ export function ListboxDropdown<K extends string>({
     setFocusIndex((prev) => nextEnabledIndex(options, prev, direction));
   };
 
-  const hasPanel =
-    searchable || menuHeader !== undefined || menuFooter !== undefined;
+  const hasPanel = searchable || menuHeader !== undefined;
 
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -841,9 +826,7 @@ export function ListboxDropdown<K extends string>({
       event.stopPropagation();
       event.nativeEvent.stopImmediatePropagation();
       closeAndReturnFocus();
-      return;
     }
-    onSearchKeyDown?.(event);
   };
 
   const handlePanelKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -958,15 +941,10 @@ export function ListboxDropdown<K extends string>({
           ? selectedValueSet.has(option.value)
           : option.value === value;
         const isFocused = index === focusIndex;
-        const actions = renderOptionActions?.(option);
         return (
           // The option role lives on the inner button; the list item
           // is pure structure and must not surface in the a11y tree.
-          <li
-            key={option.value}
-            role="presentation"
-            className={actions ? "flex items-center gap-1" : undefined}
-          >
+          <li key={option.value} role="presentation">
             <button
               ref={(el) => {
                 optionRefs.current[index] = el;
@@ -997,7 +975,6 @@ export function ListboxDropdown<K extends string>({
                   : isActive || isFocused
                     ? OPTION_ACTIVE_CLASS
                     : OPTION_IDLE_CLASS,
-                actions && "min-w-0 flex-1",
               )}
             >
               {isMulti ? (
@@ -1011,16 +988,15 @@ export function ListboxDropdown<K extends string>({
                   )}
                 </>
               ) : (
-                // The label must be able to shrink and clip whether or not the
-                // row carries actions: as a bare flex child its min-width stays
-                // auto, so one long custom name widens the option past the menu
-                // and scrolls the list sideways on narrow viewports.
+                // The label must be able to shrink and clip: as a bare flex
+                // child its min-width stays auto, so one long custom name
+                // widens the option past the menu and scrolls the list sideways
+                // on narrow viewports.
                 (renderOption?.(option, isActive) ?? (
                   <OptionLabel option={option} />
                 ))
               )}
             </button>
-            {actions}
           </li>
         );
       })}
@@ -1147,7 +1123,6 @@ export function ListboxDropdown<K extends string>({
                 ) : null}
                 {menuHeader}
                 {optionList}
-                {menuFooter}
               </div>
             ) : (
               optionList

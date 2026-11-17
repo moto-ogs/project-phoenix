@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
-import { act } from "react";
+import {
+  renderHook as renderBareHook,
+  waitFor,
+  type RenderHookOptions,
+} from "@testing-library/react";
+import { act, createElement, type ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { ActivityCategory } from "~/lib/activity-api";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
@@ -19,6 +24,31 @@ describe("parseParticipantLimit", () => {
     expect(parseParticipantLimit("75")).toBe(75);
   });
 });
+
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1", token: "test-token" } },
+  }),
+}));
+
+function wrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return createElement(
+    SWRConfig,
+    { value: { provider: () => new Map(), errorRetryCount: 0 } },
+    children,
+  );
+}
+
+/** Real SWR with a fresh cache and a signed-in session per render. */
+function renderHook<Result, Props>(
+  render: (props: Props) => Result,
+  options?: RenderHookOptions<Props>,
+) {
+  return renderBareHook(render, { ...options, wrapper });
+}
 
 // Mock the activity API
 vi.mock("~/lib/activity-api", () => ({
