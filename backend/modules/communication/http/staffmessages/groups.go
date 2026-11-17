@@ -16,6 +16,11 @@ type groupRequest struct {
 	AccountIDs []string `json:"account_ids"`
 }
 
+// renameGroupRequest is the body of PUT /threads/{threadID}/name.
+type renameGroupRequest struct {
+	Name string `json:"name"`
+}
+
 // parseAccountIDs turns the wire's string ids into account ids.
 func parseAccountIDs(raw []string) ([]int64, bool) {
 	ids := make([]int64, 0, len(raw))
@@ -61,9 +66,7 @@ func (rs *Resource) renameGroup(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var body struct {
-		Name string `json:"name"`
-	}
+	var body renameGroupRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
