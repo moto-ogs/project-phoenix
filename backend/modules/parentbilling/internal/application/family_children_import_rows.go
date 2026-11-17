@@ -300,22 +300,25 @@ func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, sc
 	return c.targets(row, found)
 }
 
-// targets names the families of the child's contracts, each once, and
-// marks a row whose child an earlier row named.
+// targets names the families of the child's contracts, each once. A child
+// an earlier row named is a conflict; its row still names its families, so
+// its number speaks against theirs.
 func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, found []familyImportContract) []familyImportTarget {
 	if c.named == nil {
 		c.named = map[int64]int{}
 	}
+	repeated := false
 	for _, contract := range found {
-		if line, repeated := c.named[contract.id]; repeated {
+		if line, named := c.named[contract.id]; named && !repeated {
 			problemOf(row, parentbilling.FamilyImportFieldChildLastName, parentbilling.FamilyImportProblemRepeated)
-			row.Status, row.RepeatsLine = parentbilling.FamilyImportConflict, line
-			return nil
+			row.Status, row.RepeatsLine, repeated = parentbilling.FamilyImportConflict, line, true
 		}
 	}
 	var targets []familyImportTarget
 	for _, contract := range found {
-		c.named[contract.id] = row.Line
+		if !repeated {
+			c.named[contract.id] = row.Line
+		}
 		family := parentbilling.ContractFamilyKey(c.recipients[contract.id].Email, contract.id)
 		position := slices.IndexFunc(targets, func(target familyImportTarget) bool { return target.family == family })
 		switch {
@@ -325,6 +328,8 @@ func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, 
 			targets[position].contractID, targets[position].firstDay = contract.id, contract.firstDay
 		}
 	}
-	row.ContractID, row.ValidFrom = targets[0].contractID, &targets[0].firstDay
+	if !repeated {
+		row.ContractID, row.ValidFrom = targets[0].contractID, &targets[0].firstDay
+	}
 	return targets
 }

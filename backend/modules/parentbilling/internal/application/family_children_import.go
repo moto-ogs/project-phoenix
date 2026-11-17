@@ -130,7 +130,6 @@ func (c *CareReductions) familyImportCandidates(ctx context.Context, reviewer pa
 	for i, cells := range table.rows {
 		candidates[i] = check.candidate(cells, table.lines[i])
 	}
-	refuseDisagreeingRepeats(candidates)
 	numbers, _ := numbersByFamily(counts, recipients)
 	shown := decideFamilyImport(candidates, numbers, today)
 	event := parentbilling.FamilyChildEvent{Action: parentbilling.FamilyChildEventRead, Actor: parentbilling.FamilyChildActorOffice,
@@ -141,41 +140,10 @@ func (c *CareReductions) familyImportCandidates(ctx context.Context, reviewer pa
 	return candidates, nil
 }
 
-// refuseDisagreeingRepeats takes the first row of a child back when a later
-// row names the same child with another number: different numbers take
-// over none.
-func refuseDisagreeingRepeats(candidates []familyImportCandidate) {
-	at := map[int]int{}
-	for i, candidate := range candidates {
-		at[candidate.row.Line] = i
-	}
-	for _, candidate := range candidates {
-		first, ok := at[candidate.row.RepeatsLine]
-		if !ok || candidate.row.RepeatsLine == 0 || candidates[first].row.Status != "" {
-			continue
-		}
-		if a, b := candidates[first].row.Children, candidate.row.Children; a != nil && b != nil && *a != *b {
-			problemOf(&candidates[first].row, parentbilling.FamilyImportFieldChildren, parentbilling.FamilyImportProblemRowsDiffer)
-			candidates[first].row.Status = parentbilling.FamilyImportConflict
-		}
-	}
-}
-
 // decideFamilyImport gives every row without a problem its status from the
 // numbers of its families and answers the numbers the answer tells.
 func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*familyNumbers, today calendar.Date) []parentbilling.FamilyChildTarget {
-	var rows []importedChildren
-	var owner []int
-	for i, candidate := range candidates {
-		if candidate.row.Status != "" {
-			continue
-		}
-		for _, target := range candidate.targets {
-			rows = append(rows, importedChildren{family: target.family, number: parentbilling.ImportedFamilyChildren{
-				Line: candidate.row.Line, ContractID: target.contractID, Children: *candidate.row.Children, ValidFrom: target.firstDay}})
-			owner = append(owner, i)
-		}
-	}
+	rows, owner := familyImportRows(candidates)
 	current := func(family string) *parentbilling.FamilyChildCount {
 		if found, ok := numbers[family]; ok {
 			return found.confirmed()
@@ -186,6 +154,9 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
+		if row.witness {
+			continue
+		}
 		candidates[owner[i]].decided = append(candidates[owner[i]].decided, row)
 		if count := current(row.family); count != nil && row.confirmed != nil && !seen[count.ID] {
 			seen[count.ID] = true
@@ -196,6 +167,24 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 		candidates[i].settle()
 	}
 	return shown
+}
+
+// familyImportRows are the numbers of the candidates per family, with the
+// candidate each belongs to. A row that names a child a second time takes
+// over nothing, but its number speaks against the rows of its families.
+func familyImportRows(candidates []familyImportCandidate) (rows []importedChildren, owner []int) {
+	for i, candidate := range candidates {
+		witness := candidate.row.RepeatsLine > 0
+		if (candidate.row.Status != "" && !witness) || candidate.row.Children == nil {
+			continue
+		}
+		for _, target := range candidate.targets {
+			rows = append(rows, importedChildren{family: target.family, witness: witness, number: parentbilling.ImportedFamilyChildren{
+				Line: candidate.row.Line, ContractID: target.contractID, Children: *candidate.row.Children, ValidFrom: target.firstDay}})
+			owner = append(owner, i)
+		}
+	}
+	return rows, owner
 }
 
 // settle gives a row the status of its families; the most urgent one wins:

@@ -25,6 +25,10 @@ type importedChildren struct {
 	// confirmed is the number the Abrechnung confirmed before, for a row
 	// that is the same or differs.
 	confirmed *int
+	// witness marks a row that takes over nothing itself, as it names a
+	// child a second time, but whose number still speaks against the other
+	// rows of its family.
+	witness bool
 }
 
 // previewChildrenFamily keys a row of a preview without a mail address and
@@ -49,19 +53,10 @@ func importedChildrenFamily(number parentbilling.ImportedFamilyChildren) string 
 func decideImportedChildren(rows []importedChildren, current func(family string) *parentbilling.FamilyChildCount,
 	day func(row importedChildren) calendar.Date,
 ) {
-	distinct := map[string]map[int]bool{}
-	for _, row := range rows {
-		if row.status != "" {
-			continue
-		}
-		if distinct[row.family] == nil {
-			distinct[row.family] = map[int]bool{}
-		}
-		distinct[row.family][row.number.Children] = true
-	}
+	distinct := distinctImportedChildren(rows)
 	for i := range rows {
 		row := &rows[i]
-		if row.status != "" {
+		if row.status != "" || row.witness {
 			continue
 		}
 		count := current(row.family)
@@ -83,6 +78,22 @@ func decideImportedChildren(rows []importedChildren, current func(family string)
 	}
 }
 
+// distinctImportedChildren collects per family the numbers its rows name,
+// those of a witness included.
+func distinctImportedChildren(rows []importedChildren) map[string]map[int]bool {
+	distinct := map[string]map[int]bool{}
+	for _, row := range rows {
+		if row.status != "" && !row.witness {
+			continue
+		}
+		if distinct[row.family] == nil {
+			distinct[row.family] = map[int]bool{}
+		}
+		distinct[row.family][row.number.Children] = true
+	}
+	return distinct
+}
+
 // newImportedChildren are the numbers to store: each family once, from the
 // earliest first day its rows name, on the contract of that row. A row of a
 // preview names no family to keep.
@@ -90,7 +101,7 @@ func newImportedChildren(rows []importedChildren) []parentbilling.ImportedFamily
 	var numbers []parentbilling.ImportedFamilyChildren
 	at := map[string]int{}
 	for _, row := range rows {
-		if row.status != parentbilling.ImportedChildrenNew || row.number.ContractID <= 0 {
+		if row.witness || row.status != parentbilling.ImportedChildrenNew || row.number.ContractID <= 0 {
 			continue
 		}
 		number := row.number
