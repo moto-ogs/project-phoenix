@@ -124,7 +124,7 @@ async function fetchRosterStudents(): Promise<RosterStudent[]> {
   let totalPages = 1;
   while (page <= totalPages) {
     const response = await transportFetch(
-      `/api/students?page=${page}&page_size=${ROSTER_PAGE_SIZE}`,
+      `/api/students?page=${page}&page_size=${ROSTER_PAGE_SIZE}&include_pending_withdrawals=true`,
       { credentials: "include", cache: "no-store" },
     );
     if (!response.ok) {
