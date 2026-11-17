@@ -115,9 +115,9 @@ func (s *requestStore) CloseOpenCareRequests(ctx context.Context, studentIDs []i
 		return nil
 	}
 	queries := []*bun.UpdateQuery{
-		withTenant(db.NewUpdate().TableExpr(`users.student_data_change_requests AS "request"`).Set(`status = ?`, requestCareEnded).Set(`review_reason = ?`, reason).Set(`reviewed_by = ?`, reviewedBy).Set(`reviewed_at = ?`, at).Set(`updated_at = ?`, at).Where(`"request".student_id IN (?)`, bun.List(studentIDs)).Where(`"request".status = ?`, requestPending), "request", tenantID),
-		withTenant(db.NewUpdate().TableExpr(`active.excused_absence_requests AS "request"`).Set(`status = ?`, requestCareEnded).Set(`decision_reason = ?`, reason).Set(`reviewed_by = ?`, reviewedBy).Set(`reviewed_at = ?`, at).Set(`updated_at = ?`, at).Where(`"request".student_id IN (?)`, bun.List(studentIDs)).Where(`"request".status = ?`, requestPending), "request", tenantID),
-		withTenant(db.NewUpdate().TableExpr(`schedule.care_schedule_change_requests AS "request"`).Set(`status = ?`, requestCareEnded).Set(`decision_reason = ?`, reason).Set(`reviewed_by = ?`, reviewedBy).Set(`reviewed_at = ?`, at).Set(`updated_at = ?`, at).Where(`"request".student_id IN (?)`, bun.List(studentIDs)).Where(`"request".status = ?`, requestPending), "request", tenantID),
+		withTenant(db.NewUpdate().TableExpr(`users.student_data_change_requests AS "request"`).Set(`status = ?`, requestCareEnded).Set(`review_reason = ?`, reason).Set(`reviewed_by = ?`, reviewedBy).Set(`reviewed_at = ?`, at).Set(requestStamp).Where(`"request".student_id IN (?)`, bun.List(studentIDs)).Where(`"request".status = ?`, requestPending), "request", tenantID),
+		withTenant(db.NewUpdate().TableExpr(`active.excused_absence_requests AS "request"`).Set(`status = ?`, requestCareEnded).Set(`decision_reason = ?`, reason).Set(`reviewed_by = ?`, reviewedBy).Set(`reviewed_at = ?`, at).Set(requestStamp).Where(`"request".student_id IN (?)`, bun.List(studentIDs)).Where(`"request".status = ?`, requestPending), "request", tenantID),
+		withTenant(db.NewUpdate().TableExpr(`schedule.care_schedule_change_requests AS "request"`).Set(`status = ?`, requestCareEnded).Set(`decision_reason = ?`, reason).Set(`reviewed_by = ?`, reviewedBy).Set(`reviewed_at = ?`, at).Set(requestStamp).Where(`"request".student_id IN (?)`, bun.List(studentIDs)).Where(`"request".status = ?`, requestPending), "request", tenantID),
 	}
 	for _, query := range queries {
 		if err := closeRequest(query); err != nil {
@@ -128,6 +128,13 @@ func (s *requestStore) CloseOpenCareRequests(ctx context.Context, studentIDs []i
 	stats.StatementDuration = time.Since(started)
 	return total, stats, nil
 }
+
+// requestStamp hands updated_at of a parent request to the database in every
+// writer: the trigger stamps care-schedule and excused-absence requests, the
+// column default the master-data requests. The change history orders all of
+// them, the offering changes and the direct corrections against each other,
+// so they share the database clock (ADR 0281, point 4).
+const requestStamp = "updated_at = DEFAULT"
 
 func requestStats(elapsed time.Duration, rows int64) carePlanCompose.RequestStoreStats {
 	return carePlanCompose.RequestStoreStats{Queries: 1, Rows: rows, StatementDuration: elapsed}
@@ -311,7 +318,7 @@ func (s *requestStore) UpdatePendingExcusedAbsenceRequest(ctx context.Context, i
 	}
 	query := withTenant(db.NewUpdate().Model((*excusedAbsenceRequestRow)(nil)).
 		ModelTableExpr(`active.excused_absence_requests AS "excused_absence_request"`).
-		Set("dates = ?", rowDates).Set("note = ?", note).Set("absence_status = ?", absenceStatus).Set("updated_at = ?", s.currentTime()).
+		Set("dates = ?", rowDates).Set("note = ?", note).Set("absence_status = ?", absenceStatus).Set(requestStamp).
 		Where(`"excused_absence_request".id = ?`, id).Where(`"excused_absence_request".status = ?`, requestPending), "excused_absence_request", tenantID)
 	return execRequest(ctx, query, "update pending excused absence request", careplan.ErrExcusedRequestNotPending)
 }
@@ -324,7 +331,7 @@ func (s *requestStore) DecideExcusedAbsenceRequest(ctx context.Context, value ca
 	now := s.currentTime()
 	query := db.NewUpdate().Model((*excusedAbsenceRequestRow)(nil)).
 		ModelTableExpr(`active.excused_absence_requests AS "excused_absence_request"`).
-		Set("status = ?", value.Status).Set("decision_reason = ?", value.Reason).Set("updated_at = ?", now).
+		Set("status = ?", value.Status).Set("decision_reason = ?", value.Reason).Set(requestStamp).
 		Where(`"excused_absence_request".id = ?`, value.ID)
 	if correction {
 		query = query.Set("reviewed_by = ?", reviewerID(value.ReviewedBy)).Set("reviewed_at = ?", now).
@@ -487,7 +494,7 @@ func (s *requestStore) UpdatePendingCareScheduleRequest(ctx context.Context, id 
 	}
 	query := withTenant(db.NewUpdate().Model((*careScheduleRequestRow)(nil)).
 		ModelTableExpr(`schedule.care_schedule_change_requests AS "care_schedule_change_request"`).
-		Set("payload = ?", payload).Set("updated_at = ?", s.currentTime()).
+		Set("payload = ?", payload).Set(requestStamp).
 		Where(`"care_schedule_change_request".id = ?`, id).Where(`"care_schedule_change_request".status = ?`, requestPending), "care_schedule_change_request", tenantID)
 	return execRequest(ctx, query, "update pending care schedule change request", careplan.ErrCareScheduleRequestNotPending)
 }
@@ -500,7 +507,7 @@ func (s *requestStore) DecideCareScheduleRequest(ctx context.Context, value care
 	now := s.currentTime()
 	query := db.NewUpdate().Model((*careScheduleRequestRow)(nil)).
 		ModelTableExpr(`schedule.care_schedule_change_requests AS "care_schedule_change_request"`).
-		Set("status = ?", value.Status).Set("decision_reason = ?", value.Reason).Set("updated_at = ?", now).
+		Set("status = ?", value.Status).Set("decision_reason = ?", value.Reason).Set(requestStamp).
 		Where(`"care_schedule_change_request".id = ?`, value.ID)
 	if correction {
 		query = query.Set("reviewed_by = ?", reviewerID(value.ReviewedBy)).Set("reviewed_at = ?", now).
@@ -530,7 +537,7 @@ func (s *requestStore) UpdateCareScheduleRequestSnapshot(ctx context.Context, id
 	}
 	query := withTenant(db.NewUpdate().Model((*careScheduleRequestRow)(nil)).
 		ModelTableExpr(`schedule.care_schedule_change_requests AS "care_schedule_change_request"`).
-		Set("decision_snapshot = ?", snapshot).Set("updated_at = ?", s.currentTime()).
+		Set("decision_snapshot = ?", snapshot).Set(requestStamp).
 		Where(`"care_schedule_change_request".id = ?`, id), "care_schedule_change_request", tenantID)
 	return execRequest(ctx, query, "update care request decision snapshot", careplan.ErrCareScheduleRequestNotFound)
 }
@@ -659,7 +666,7 @@ func (s *requestStore) CreateStudentDataRequest(ctx context.Context, value carep
 		return careplan.StudentDataChangeRequest{}, carePlanCompose.RequestStoreStats{}, err
 	}
 	row := studentDataRequestFromPublic(value)
-	row.TenantID = tenantID
+	row.TenantID, row.UpdatedAt = tenantID, time.Time{}
 	if row.CreatedAt.IsZero() {
 		row.CreatedAt = s.currentTime() // the parent request feed orders on the owner's clock
 	}
@@ -683,7 +690,7 @@ func (s *requestStore) UpdatePendingStudentDataRequest(ctx context.Context, id i
 	}
 	query := withTenant(db.NewUpdate().Model((*studentDataRequestRow)(nil)).
 		ModelTableExpr(`users.student_data_change_requests AS "student_data_change_request"`).
-		Set("new_value = ?", value).Set("updated_at = ?", s.currentTime()).
+		Set("new_value = ?", value).Set(requestStamp).
 		Where(`"student_data_change_request".id = ?`, id).Where(`"student_data_change_request".status = ?`, requestPending), "student_data_change_request", tenantID)
 	return execRequest(ctx, query, "update pending student data change request", careplan.ErrStudentDataRequestNotPending)
 }
@@ -697,7 +704,7 @@ func (s *requestStore) DecideStudentDataRequest(ctx context.Context, value carep
 	query := db.NewUpdate().Model((*studentDataRequestRow)(nil)).
 		ModelTableExpr(`users.student_data_change_requests AS "student_data_change_request"`).
 		Set("status = ?", value.Status).Set("review_reason = ?", value.Reason).
-		Set("reviewed_at = ?", now).Set("updated_at = ?", now).
+		Set("reviewed_at = ?", now).Set(requestStamp).
 		Where(`"student_data_change_request".id = ?`, value.ID)
 	if value.ReviewedBy > 0 {
 		query = query.Set("reviewed_by = ?", value.ReviewedBy)
