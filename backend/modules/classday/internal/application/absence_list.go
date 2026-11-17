@@ -247,7 +247,8 @@ func schoolMemberDays(child classday.AbsenceListChild, from, until calendar.Date
 
 // recordedBeforeMembership is a day before a child without an OGS place
 // was created that carries a mark or status: its class list entry's
-// morning attendance moved to it with the conversion (ADR 0283).
+// morning attendance moved to it when the class list entries became
+// children (#4803).
 func recordedBeforeMembership(child classday.AbsenceListChild, day calendar.Date, recorded bool) bool {
 	if !child.SchoolMemberOnly || !recorded || child.SchoolMemberFrom == nil || !day.Before(*child.SchoolMemberFrom) {
 		return false

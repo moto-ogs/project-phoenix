@@ -67,7 +67,7 @@ func (b enrollmentRosterStudents) ListClassRoster(ctx context.Context, schoolCla
 			ID: student.ID, PersonID: student.PersonID, SchoolClass: student.SchoolClass, GroupID: student.GroupID,
 			AllowedDepartureModes: student.AllowedDepartureModes, DepartureDays: student.DepartureDays,
 			DepartureCompanionNote: student.DepartureCompanionNote,
-			WithoutCarePlace:       student.WithoutCarePlace, Alumnus: student.Status == peopleValues.StudentStatusAlumnus,
+			WithoutCarePlace:       student.WithoutCarePlace, Departed: rosterStudentDeparted(student.Status),
 			MemberFrom: rosterMemberFrom(student), MemberUntil: student.EnrolledUntil,
 		})
 	}
@@ -189,4 +189,10 @@ func rosterMemberFrom(student *peopleValues.StudentState) calendar.Date {
 		return *student.EnrolledFrom
 	}
 	return calendar.DateFromTime(student.CreatedAt)
+}
+
+// rosterStudentDeparted reports a child that left the school: neither
+// active nor waiting for its start.
+func rosterStudentDeparted(status string) bool {
+	return status != peopleValues.StudentStatusActive && status != peopleValues.StudentStatusPending
 }
