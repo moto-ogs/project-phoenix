@@ -83,9 +83,12 @@ func (s *Store) RenewStudentEnrollment(ctx context.Context, input schoolmembersh
 			bun.SafeQuery(firstCareFromNextValue, day, input.Status, from)).
 		Set(carePausedAfterNext, restart).Set(careResumedFromNext, day, input.Status, from, restart).
 		// Granting the place moves the enrollment start to the place; the
-		// class time before it stays the child's (#4803).
+		// class time before it stays the child's (#4803). A class time kept
+		// from an earlier class does not carry over into the current one.
 		Set(`class_member_from = CASE WHEN student.without_care_place AND NOT ?::boolean
-            THEN COALESCE(student.class_member_from, student.enrolled_from, (student.created_at AT TIME ZONE 'Europe/Berlin')::date)
+            THEN COALESCE(CASE WHEN LOWER(TRIM(student.class_member_class)) = LOWER(TRIM(student.school_class))
+                THEN student.class_member_from END,
+                student.enrolled_from, (student.created_at AT TIME ZONE 'Europe/Berlin')::date)
             ELSE student.class_member_from END`, input.WithoutCarePlace).
 		Set(`class_member_class = CASE WHEN student.without_care_place AND NOT ?::boolean
             THEN student.school_class ELSE student.class_member_class END`, input.WithoutCarePlace).

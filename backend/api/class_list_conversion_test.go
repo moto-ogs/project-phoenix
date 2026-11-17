@@ -132,7 +132,10 @@ func TestRenewalGivesAChildWithoutCarePlaceItsPlace(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	child := testpkg.CreateTestStudent(t, db, "Bald", "Angemeldet", "3c")
 	testpkg.MarkTestStudentWithoutCarePlace(t, db, child.ID)
-	_, err = db.ExecContext(testpkg.Ctx(t), `UPDATE users.student_school_memberships SET enrolled_from = '2026-08-03'
+	// A class time kept from an earlier class (place granted there, lost
+	// again, class changed since) does not carry over into 3c.
+	_, err = db.ExecContext(testpkg.Ctx(t), `UPDATE users.student_school_memberships SET enrolled_from = '2026-08-03',
+		class_member_from = '2025-09-01', class_member_class = '1x'
 		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID)
 	require.NoError(t, err)
 
@@ -172,6 +175,7 @@ func TestRenewalGivesAChildWithoutCarePlaceItsPlace(t *testing.T) {
 	require.NotNil(t, granted.SchoolMemberFrom)
 	require.NotNil(t, granted.SchoolMemberUntil)
 	assert.True(t, granted.SchoolMemberFrom.Before(today), "the class time starts before the place")
+	assert.Equal(t, "2026-08-03", granted.SchoolMemberFrom.String(), "the class time in 3c, not the one kept from 1x")
 	assert.Equal(t, yesterday, granted.SchoolMemberUntil.String(), "it ends the day before the place")
 
 	// An approval dated into the running year (phase start 1 August) starts
@@ -330,8 +334,10 @@ func TestClassListConversionKeepsTheClassTimeOfAChildWhoseCareStartsLater(t *tes
 		WHERE tenant_id = ? AND id = ?`, tenantID, entry.ID)
 	require.NoError(t, err)
 	waiting := testpkg.CreateTestStudent(t, db, "Max", "Morgen", "1c")
+	// A class time kept from another class (9z) gives way to the entry's.
 	_, err = db.ExecContext(ctx, `UPDATE users.student_school_memberships
-		SET status = 'pending', enrolled_from = '2099-02-01', first_care_from = '2099-02-01'
+		SET status = 'pending', enrolled_from = '2099-02-01', first_care_from = '2099-02-01',
+			class_member_from = '2025-09-01', class_member_class = '9z'
 		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, tenantID, waiting.ID)
 	require.NoError(t, err)
 

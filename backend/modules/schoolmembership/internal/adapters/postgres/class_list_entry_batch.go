@@ -129,7 +129,7 @@ func classListEntryKeyColumns(fields []schoolmembership.ClassListEntryFields) (f
 // keepClassTimeSQL gives a child a class-list entry joins the class time the
 // entry stood for (#4803): from the Berlin day the entry was created, when
 // the child's care starts later. A child without an OGS place and a child in
-// care already need none.
+// care already need none. A class time kept from another class gives way.
 const keepClassTimeSQL = `UPDATE users.student_school_memberships AS m
 SET class_member_from = joined.since, class_member_class = joined.school_class
 FROM (
@@ -142,7 +142,8 @@ FROM (
 WHERE m.tenant_id = ? AND m.student_profile_id = joined.student_id AND m.deleted_at IS NULL
 	AND NOT m.without_care_place
 	AND COALESCE(m.first_care_from, m.enrolled_from) > joined.since
-	AND (m.class_member_from IS NULL OR m.class_member_from > joined.since)`
+	AND (m.class_member_from IS NULL OR m.class_member_from > joined.since
+		OR LOWER(TRIM(m.class_member_class)) IS DISTINCT FROM LOWER(TRIM(m.school_class)))`
 
 // KeepClassTimeOfJoinedChildren records, in one statement, the class time
 // of the children class-list entries join before the entries go (#4803).
