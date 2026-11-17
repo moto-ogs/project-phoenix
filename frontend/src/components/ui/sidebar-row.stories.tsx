@@ -45,8 +45,6 @@ export const WithCount: Story = {
 };
 
 export const RailWithCount: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   decorators: [
     (Story) => (
       <div className="w-11">
@@ -97,8 +95,6 @@ export const RailActive: Story = {
 
 /** Mitten in der Blende zum Streifen: Zähler rechts und Punkt stehen beide im Baum. */
 export const FadingToRail: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     badge: COUNT,
     trailing: <ModuleLockMark />,

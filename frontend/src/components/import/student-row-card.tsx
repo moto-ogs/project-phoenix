@@ -57,7 +57,9 @@ export function StudentRowCard({ student, index }: StudentRowCardProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h4 className="text-sm font-semibold text-gray-900">
-              {student.first_name} {student.last_name}
+              {/* A row without a name still needs a heading text (#7112). */}
+              {`${student.first_name} ${student.last_name}`.trim() ||
+                "Ohne Namen"}
             </h4>
             {getStatusBadge(student.status)}
           </div>

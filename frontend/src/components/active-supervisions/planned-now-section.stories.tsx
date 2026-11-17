@@ -87,8 +87,6 @@ export const SingleUpcoming: Story = {
 };
 
 export const OverdueAndSoon: Story = {
-  // axe meldet hier noch aria-prohibited-attr; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     plannedNow: [
       makeInstance({

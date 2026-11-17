@@ -17,6 +17,7 @@ function Example() {
     <NumberStepper
       id="story-stepper"
       name="story-stepper"
+      aria-label="Anzahl"
       value={value}
       onChange={(event) => setValue(event.target.value)}
       onStep={(delta) => setValue(String(current + delta))}
@@ -28,7 +29,5 @@ function Example() {
 }
 
 export const Default: StoryObj = {
-  // axe meldet hier noch label; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   render: () => <Example />,
 };

@@ -81,7 +81,7 @@ describe("PortalBottomNav (#5603)", () => {
     ).toBeInTheDocument();
   });
 
-  it("zeigt den Namen nur am aktiven Feld, das aria-label an jedem", () => {
+  it("zeigt den Namen nur am aktiven Feld, versteckt als Text an jedem", () => {
     render(
       <PortalBottomNav listClassName="gap-1">
         <PortalBottomNavLink
@@ -105,13 +105,15 @@ describe("PortalBottomNav (#5603)", () => {
       "page",
     );
     expect(screen.getByText("Start")).toBeVisible();
+    expect(screen.getByText("Start")).not.toHaveClass("sr-only");
     expect(screen.getByRole("button", { name: "Mehr" })).toHaveAttribute(
       "data-active",
       "false",
     );
     expect(screen.getByTestId("eigenes-icon")).toBeInTheDocument();
-    // Anker: Das aktive Feld zeigt seinen Namen, die Leiste ist also gerendert.
-    expect(screen.queryByText("Mehr")).not.toBeInTheDocument();
+    // Das inaktive Feld zeigt seinen Namen nicht, es nennt ihn nur als
+    // versteckten Text (WCAG 2.5.3, #7112).
+    expect(screen.getByText("Mehr")).toHaveClass("sr-only");
   });
 
   it("schiebt die gleitende Fläche unter das Ziel und nimmt sie ohne Ziel weg", async () => {

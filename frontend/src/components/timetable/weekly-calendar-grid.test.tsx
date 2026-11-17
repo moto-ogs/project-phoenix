@@ -73,7 +73,7 @@ describe("WeeklyCalendarGrid gapInstanceIds", () => {
 
     // Anker: der Block selbst ist gerendert, nur ohne Lücken-Icon.
     expect(
-      screen.getByLabelText(/^Mensa, 12:00 bis 13:00/),
+      screen.getByRole("button", { name: /^12:00 – 13:00 ?Mensa\b/ }),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Offene Lücke")).not.toBeInTheDocument();
   });
@@ -83,7 +83,7 @@ describe("WeeklyCalendarGrid gapInstanceIds", () => {
 
     // Anker: der Block selbst ist gerendert, nur ohne Lücken-Icon.
     expect(
-      screen.getByLabelText(/^Mensa, 12:00 bis 13:00/),
+      screen.getByRole("button", { name: /^12:00 – 13:00 ?Mensa\b/ }),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Offene Lücke")).not.toBeInTheDocument();
   });
@@ -118,7 +118,7 @@ describe("WeeklyCalendarGrid showDayHeader", () => {
 
     // Anker: das Raster mit dem besetzten Block ist gerendert.
     expect(
-      screen.getByLabelText(/^Mensa, 12:00 bis 13:00/),
+      screen.getByRole("button", { name: /^12:00 – 13:00 ?Mensa\b/ }),
     ).toBeInTheDocument();
     expect(screen.queryByText("1 P.")).not.toBeInTheDocument();
   });
@@ -311,11 +311,15 @@ describe("WeeklyCalendarGrid column widths", () => {
     renderParallelMonday();
 
     const third = 100 / 3;
-    expect(screen.getByLabelText(/^AG-B, /)).toHaveStyle({
+    expect(
+      screen.getByRole("button", { name: /^14:00.*\bAG-B\b/ }),
+    ).toHaveStyle({
       width: `${third}%`,
     });
     // Spiel starts when AG-B and AG-C end: it covers lanes 2 and 3.
-    expect(screen.getByLabelText(/^Spiel, /)).toHaveStyle({
+    expect(
+      screen.getByRole("button", { name: /^15:00.*\bSpiel\b/ }),
+    ).toHaveStyle({
       left: `${third}%`,
       width: `${2 * third}%`,
     });

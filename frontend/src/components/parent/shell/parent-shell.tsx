@@ -2,6 +2,7 @@
 
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { Fragment, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useSWRCacheKey } from "~/lib/swr";
 import { ParentPageSkeleton } from "~/components/parent/parent-page";
 
@@ -41,6 +42,7 @@ export function ParentShell({
 }: {
   readonly children: React.ReactNode;
 }) {
+  const tNav = useTranslations("parentNav");
   const shellAuth = useShellAuth();
   const { status } = shellAuth;
   const authenticated = status === "authenticated";
@@ -119,6 +121,7 @@ export function ParentShell({
                   : "sticky top-0 z-50 hidden lg:block"
             }
             backgroundClassName="moto-dotted-background--parent"
+            skipLinkLabel={tNav("skipToContent")}
             topLayer={
               <>
                 {demoBannerShown ? <DemoBanner /> : null}

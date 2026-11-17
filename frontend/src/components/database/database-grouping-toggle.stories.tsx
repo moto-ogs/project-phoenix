@@ -20,8 +20,6 @@ export default meta;
 type Story = StoryObj<typeof DatabaseGroupingToggle<GroupKey>>;
 
 export const Default: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   render: () => {
     function Wrapper() {
       const [value, setValue] = useState<GroupKey>("none");
@@ -38,8 +36,6 @@ export const Default: Story = {
 };
 
 export const GroupSelected: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   render: () => {
     function Wrapper() {
       const [value, setValue] = useState<GroupKey>("group");

@@ -568,13 +568,21 @@ export function DienstplanResourceGrid({
       />
     ) : undefined;
 
-    const ariaParts = [`${timeRange} ${label}`];
+    // Zeit und Titel zeigt der Block; hier steht, was er nicht zeigt (#7112).
+    const ariaParts: string[] = [];
     if (shift.cancelled) {
       ariaParts.push("fällt aus");
     } else {
       if (isReplacement) ariaParts.push("Vertretung");
       if (shift.plannedByTraeger) ariaParts.push("vom Träger geplant");
       if (dayIsAbsent) ariaParts.push("abwesend");
+    }
+    if (showSeriesIcon) {
+      ariaParts.push(
+        shift.detached
+          ? "Serie, für diese Woche angepasst"
+          : "Teil einer Serie",
+      );
     }
 
     // "Verschieben nach" only on non-cancelled shifts: moving an ausgefallene
@@ -606,7 +614,7 @@ export function DienstplanResourceGrid({
               color={resolveShiftColor(shift, typesById)}
               statusIcon={statusIcon}
               onClick={() => openCell(member, date, shift)}
-              aria-label={ariaParts.join(", ")}
+              details={ariaParts.join(", ") || undefined}
             />
           </div>
           {moveMenuItems.length > 0 && (

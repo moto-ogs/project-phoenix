@@ -57,7 +57,6 @@ export function ParentAttentionBadge({
           variant="count_badge"
           size="icon"
           className={className}
-          aria-label={parentAttentionLabel(attention, studentName)}
           tooltip="Öffnet neue Nachrichten und offene Anfragen der Eltern."
           data-parent-attention={attention.total}
           onClick={() => {
@@ -71,7 +70,9 @@ export function ParentAttentionBadge({
           <NotificationBadge
             count={attention.total}
             tone={COUNTER_TONE.parents}
-            ariaLabel=""
+            // The visible number leads the name, the sentence follows hidden
+            // (WCAG 2.5.3, #7112).
+            ariaLabel={`${attention.total}: ${parentAttentionLabel(attention, studentName)}`}
           />
         </Button>
       ) : null}

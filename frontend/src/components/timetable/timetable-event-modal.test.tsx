@@ -381,8 +381,8 @@ function renderModal(
  * to walk there first. These helpers only navigate — they never assert.
  */
 function currentStep(): number {
-  const stepper = document.querySelector('[aria-label^="Schritt "]');
-  const label = stepper?.getAttribute("aria-label") ?? "";
+  // The stepper says its position as visible text (#7112).
+  const label = screen.queryByText(/^Schritt \d+ von \d+$/)?.textContent ?? "";
   return Number(/Schritt (\d+) von/.exec(label)?.[1] ?? 1);
 }
 

@@ -26,8 +26,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const StaffMode: Story = {
-  // axe meldet hier noch landmark-unique; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   decorators: [
     (Story) => (
       <SessionProvider session={mockTeacherSessionData()}>
@@ -42,8 +40,6 @@ export const StaffMode: Story = {
 };
 
 export const AdminMode: Story = {
-  // axe meldet hier noch landmark-unique; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   decorators: [
     (Story) => (
       <SessionProvider
@@ -76,8 +72,6 @@ export const OperatorMode: Story = {
 };
 
 export const ParentMode: Story = {
-  // axe meldet hier noch landmark-unique; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   decorators: [
     (Story) => (
       <SessionProvider

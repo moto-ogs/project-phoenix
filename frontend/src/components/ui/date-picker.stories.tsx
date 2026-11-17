@@ -184,8 +184,6 @@ function SizesDemo() {
 
 /** Die Auslöser-Größen und der reine Symbol-Auslöser. */
 export const Sizes: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   render: () => <SizesDemo />,
 };
 
