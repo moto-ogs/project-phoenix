@@ -458,13 +458,13 @@ describe("TraegerVertraegePage", () => {
         "Der Vertrag entsteht in wenigen Minuten von selbst.",
       ),
     ).toHaveLength(1);
-    // Consent to an earlier version names what is known and the next step.
+    // Consent that does not match the current terms names what is known and the next step.
     expect(
-      screen.getByText("Zustimmung nur zu früheren Bedingungen"),
+      screen.getByText("Zustimmung passt nicht zu den aktuellen Bedingungen"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Die Eltern haben einer früheren Fassung der Bedingungen zugestimmt\. Für die aktuellen Bedingungen gilt das nicht\./,
+        /Die Eltern haben anderen Bedingungen zugestimmt als den aktuellen\. Es entsteht kein Vertrag\./,
       ),
     ).toBeInTheDocument();
     expect(
