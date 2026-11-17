@@ -48,7 +48,11 @@ Owner an.
   `operations.children_without_care_place` und `module.unterricht_vormittag`
   (`api/root_settings_writes.go`) wandelt um, sobald beide an sind. Er läuft
   in der Transaktion des Schreibens; scheitert die Umwandlung, bleibt der
-  Schalter, wie er war. Ausschalten wandelt nichts zurück.
+  Schalter, wie er war. Beide Schalter nehmen vor jedem Setzen oder
+  Rücksetzen dieselbe exklusive Mandanten-Transaktionssperre. Der Hook liest
+  den jeweils anderen Wert direkt aus dieser Transaktion, ohne vorgeladenen
+  Snapshot oder Request-Cache. So wandelt auch gleichzeitiges Einschalten
+  beider Schalter die Einträge um. Ausschalten wandelt nichts zurück.
 - **Danach.** Ein Klassenlisten-Import bei eingeschaltetem Schalter wandelt
   die importierten Einträge in der Mandanten-Transaktion jedes Import-Batches
   gleich mit um. Einträge, Umwandlung und Checkpoint committen gemeinsam;

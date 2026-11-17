@@ -88,15 +88,17 @@ func attendanceLogSettingSideEffect(visits studentpresence.PresenceCleanup) sett
 // write's transaction, so a failed conversion keeps the switch where it was.
 // Switching off converts nothing back.
 func classListConversionSideEffects(settings interface {
-	ResolveBool(context.Context, string) (bool, error)
+	ResolveBoolForTenantInTx(context.Context, int64, string) (bool, error)
 }, classList importModels.ClassListConverter) [2]settingsCompose.SettingSideEffect {
 	convertWhenOn := func(other string) func(context.Context, int64, any) (func(), error) {
-		return func(ctx context.Context, _ int64, value any) (func(), error) {
+		return func(ctx context.Context, tenantID int64, value any) (func(), error) {
 			on, ok := value.(bool)
 			if !ok || !on {
 				return nil, nil
 			}
-			otherOn, err := settings.ResolveBool(ctx, other)
+			// Re-read under the shared writer lock, bypassing any pre-write
+			// snapshot or request-cache entry from this request.
+			otherOn, err := settings.ResolveBoolForTenantInTx(ctx, tenantID, other)
 			if err != nil || !otherOn {
 				return nil, err
 			}
