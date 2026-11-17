@@ -94,11 +94,12 @@ func TestDecisionService_SkippedClassSwitchStillGrantsThePlace(t *testing.T) {
 	assert.Equal(t, "1b", class, "the school's class stays")
 }
 
-// TestDecisionService_FullChildQuotaHoldsOnlyTheSwitchThatGrantsAPlace keeps
-// the rollover running when the Kinderkontingent is full on the first day of
-// the school year (#4803 review): the switch that would give a child without
-// an OGS place its place waits, and a later run grants it once one is free.
-func TestDecisionService_FullChildQuotaHoldsOnlyTheSwitchThatGrantsAPlace(t *testing.T) {
+// TestDecisionService_FullChildQuotaHoldsOnlyThePlace keeps the rollover
+// running when the Kinderkontingent is full on the first day of the school
+// year (#4803 review): the child without an OGS place moves into its new
+// class all the same, only its place waits, and a later run grants it once
+// one is free.
+func TestDecisionService_FullChildQuotaHoldsOnlyThePlace(t *testing.T) {
 	t.Parallel()
 
 	env := setupDecisionTest(t)
@@ -113,11 +114,12 @@ func TestDecisionService_FullChildQuotaHoldsOnlyTheSwitchThatGrantsAPlace(t *tes
 	testpkg.CreateTestStudent(t, env.db, "Paul", "Platz", "1a")
 	child := testpkg.CreateTestStudent(t, env.db, "Lea", "Wartend", "1a")
 	testpkg.MarkTestStudentWithoutCarePlace(t, env.db, child.ID)
-	withoutPlace := func() bool {
+	membership := func() (bool, string) {
 		var mark bool
-		require.NoError(t, env.db.NewRaw(`SELECT without_care_place FROM users.student_school_memberships
-			WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID).Scan(ctx, &mark))
-		return mark
+		var class string
+		require.NoError(t, env.db.NewRaw(`SELECT without_care_place, school_class FROM users.student_school_memberships
+			WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID).Scan(ctx, &mark, &class))
+		return mark, class
 	}
 
 	requestID, childID := submitReEnrollment(t, env, "Eltern", "Wartend", "renewal-quota@example.com", nil,
@@ -138,12 +140,16 @@ func TestDecisionService_FullChildQuotaHoldsOnlyTheSwitchThatGrantsAPlace(t *tes
 
 	applied, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), decisionOwner(t, env.decision).ApplyDueClassSwitches, newYearStart)
 	require.NoError(t, err, "a full Kinderkontingent must not stop the run")
-	assert.Equal(t, 0, applied)
-	assert.True(t, withoutPlace(), "no place while the Kinderkontingent is full")
+	assert.Equal(t, 1, applied, "the class switch applies")
+	mark, class := membership()
+	assert.True(t, mark, "no place while the Kinderkontingent is full")
+	assert.NotEqual(t, "1a", class, "the child is in its new class")
 
 	testpkg.SetTestChildQuota(t, env.db, occupied+1, 1)
 	applied, err = testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), decisionOwner(t, env.decision).ApplyDueClassSwitches, newYearStart)
 	require.NoError(t, err)
-	assert.Equal(t, 1, applied, "the held switch applies once a place is free")
-	assert.False(t, withoutPlace())
+	assert.Equal(t, 1, applied, "the held place is granted once one is free")
+	mark, after := membership()
+	assert.False(t, mark)
+	assert.Equal(t, class, after, "the class stays")
 }

@@ -86,6 +86,40 @@ func TestClassListConversionTurnsEntriesIntoChildrenWithoutCarePlace(t *testing.
 	assert.Equal(t, lea.StudentID, matched[newcomer.ID])
 }
 
+// TestClassListConversionLeavesAChildWhoseCareEndedItsOGSHistory converts an
+// entry the school kept for a child after its OGS care ended (#4803 review):
+// the entry becomes its own child without an OGS place, so its morning marks
+// stay in the class views; the ended child keeps its OGS history.
+func TestClassListConversionLeavesAChildWhoseCareEndedItsOGSHistory(t *testing.T) {
+	t.Parallel()
+	db, module, _, _ := setupImportModule(t)
+	ctx := testpkg.Ctx(t)
+	tenantID := testpkg.Tenant(t)
+
+	ended := testpkg.CreateTestStudent(t, db, "Emma", "Ende", "4b")
+	_, err := db.ExecContext(ctx, `UPDATE users.student_school_memberships SET enrolled_until = '2020-07-31'
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, tenantID, ended.ID)
+	require.NoError(t, err)
+	entry := testpkg.CreateTestClassListEntry(t, db, "Emma", "Ende", "4b")
+
+	actor := testpkg.CreateTestAccount(t, db, "konvertierung-ende@example.com")
+	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, tenantID, func(txCtx context.Context) error {
+		result, err := module.ClassListConversion.ConvertClassListEntries(txCtx, &actor.ID)
+		assert.Equal(t, 1, result.Created)
+		assert.Zero(t, result.Joined)
+		return err
+	}))
+
+	var matched int64
+	require.NoError(t, db.NewRaw(`SELECT matched_student_id FROM audit.class_list_entry_changes
+		WHERE tenant_id = ? AND action = 'assigned' AND entry_id = ?`, tenantID, entry.ID).Scan(ctx, &matched))
+	assert.NotEqual(t, ended.ID, matched, "the entry does not join the child whose care ended")
+	var withoutPlace bool
+	require.NoError(t, db.NewRaw(`SELECT without_care_place FROM users.student_school_memberships
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, tenantID, matched).Scan(ctx, &withoutPlace))
+	assert.True(t, withoutPlace)
+}
+
 // TestRenewalGivesAChildWithoutCarePlaceItsPlace renews the enrollment of a
 // child without an OGS place, as an approved enrollment for the existing
 // child does (#4803): the child gets its OGS place.

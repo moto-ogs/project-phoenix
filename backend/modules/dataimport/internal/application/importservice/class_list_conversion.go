@@ -10,6 +10,7 @@ import (
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/classlist"
 	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
 	"github.com/moto-ogs/project-phoenix/modules/dataimport/ports"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // ClassListConversion turns the class-list entries of a school into children
@@ -59,8 +60,13 @@ func (c *ClassListConversion) ConvertClassListEntries(ctx context.Context, chang
 }
 
 // existingChildren finds, per entry, the not graduated child of its class
-// carrying its name, from one read of the namesakes; zero means none.
+// carrying its name whose OGS care has not ended, from one read of the
+// namesakes; zero means none. An entry for a child whose care ended stands
+// for the time after it: it becomes its own child without an OGS place, so
+// its morning marks stay in the class views and the ended child keeps its
+// OGS history.
 func (c *ClassListConversion) existingChildren(ctx context.Context, entries []ports.ClassListEntry) ([]int64, error) {
+	today := c.students.todayDate()
 	pairs := make([]ports.PersonName, len(entries))
 	for i, entry := range entries {
 		pairs[i] = ports.PersonName{FirstName: entry.FirstName, LastName: entry.LastName}
@@ -75,9 +81,17 @@ func (c *ClassListConversion) existingChildren(ctx context.Context, entries []po
 		if err != nil {
 			return nil, fmt.Errorf("convert class list: find existing children: %w", err)
 		}
-		targets[i] = lowestStudentID(found)
+		targets[i] = lowestStudentID(slices.DeleteFunc(found, func(student ports.Student) bool {
+			return careEndedBefore(student, today)
+		}))
 	}
 	return targets, nil
+}
+
+// careEndedBefore reports whether the child's OGS care ended before today;
+// its last care day still counts.
+func careEndedBefore(student ports.Student, today timezone.Date) bool {
+	return student.EnrolledUntil != "" && today.After(timezone.Date(student.EnrolledUntil))
 }
 
 // createChildren creates a child without an OGS place for every entry
