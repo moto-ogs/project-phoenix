@@ -69,9 +69,9 @@ var decisionTestStarted = time.Now()
 
 // decisionTestClock is the one clock of the decision harness: it starts at
 // the beginning of decisionTestToday and runs. Enrollment stamps reviewed_at
-// on it and Timetable the roster rows' created_at, which enrollment
-// provenance orders against each other; two decisions still get two
-// instants.
+// on it; Timetable stamps the roster rows' created_at at the start of that
+// day (WithBookingToday), which enrollment provenance orders against
+// reviewed_at; two decisions still get two instants.
 func decisionTestClock() time.Time {
 	return decisionTestToday.BerlinMidnight().Add(time.Since(decisionTestStarted))
 }
@@ -181,7 +181,6 @@ func newBookingsForTest(
 	options := []api.BookingMaterializationOption{
 		api.WithBookingCatalog(env.offeringCatalog),
 		api.WithBookingToday(func() calendar.Date { return decisionTestToday }),
-		api.WithBookingClock(decisionTestClock),
 		api.WithBookingSettings(bookingSettings),
 		api.WithBookingWithdrawals(careWithdrawal),
 	}

@@ -50,8 +50,6 @@ type BookingMaterializationTestOptions struct {
 		BroadcastChildUpdateToGuardians(tenantID, studentID int64)
 	}
 	Today func() calendar.Date
-	// Now is the instant clock of Timetable; nil is the start of Today.
-	Now func() time.Time
 }
 
 // BookingMaterializationTestModule is the booking materialization over the
@@ -89,7 +87,7 @@ func newBookingMaterializationTestModule(db transactionruntime.Database, unit te
 	if err != nil {
 		return BookingMaterializationTestModule{}, err
 	}
-	clock := bookingTestClock(options)
+	clock := bookingTestClock(options.Today)
 	reposTimetable := NewEnrollmentTimetableRows(db, clock)
 	reposCalendar := MustNewTimetableSchoolCalendar(db)
 	settings, err := bookingTestSettings(db, unit, options)
@@ -140,16 +138,11 @@ func newBookingMaterializationTestModule(db transactionruntime.Database, unit te
 	return BookingMaterializationTestModule{Bookings: bookings, Catalog: catalog}, nil
 }
 
-// bookingTestClock is the instant clock of a pinned calendar day: the
-// suite's clock from WithBookingClock, otherwise the start of that Berlin
-// day. A nil day keeps the real clock. The pinned day decides
+// bookingTestClock is the instant clock of a pinned calendar day: the start
+// of that Berlin day. A nil day keeps the real clock. The pinned day decides
 // the Timetable owner and the occurrence reconciliation too, so every
 // collaborator of the materialization plans on the same day.
-func bookingTestClock(options BookingMaterializationTestOptions) func() time.Time {
-	if options.Now != nil {
-		return options.Now
-	}
-	today := options.Today
+func bookingTestClock(today func() calendar.Date) func() time.Time {
 	if today == nil {
 		return nil
 	}
@@ -252,13 +245,6 @@ func WithBookingPickupWeekdayExtension(clear func(context.Context, int64, int) e
 // WithBookingToday pins the materialization's calendar day.
 func WithBookingToday(today func() calendar.Date) BookingMaterializationOption {
 	return func(options *BookingMaterializationTestOptions) { options.Today = today }
-}
-
-// WithBookingClock gives Timetable the suite's instant clock instead of the
-// start of the pinned day, for a suite whose other owners stamp on that
-// clock. Its instants must fall on the pinned day.
-func WithBookingClock(now func() time.Time) BookingMaterializationOption {
-	return func(options *BookingMaterializationTestOptions) { options.Now = now }
 }
 
 // NewBookingMaterialization composes Care Plan's booking materialization
