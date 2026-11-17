@@ -69,10 +69,20 @@ Owner an.
   „Ohne OGS-Platz“ im Anlegen-Dialog an. Ein Kind ohne OGS-Platz bekommt
   weder Gruppe noch Zeiten (`students.without_care_place_group`).
 
+- **Im Root, nicht in einem Owner.** Der Seiteneffekt, der Dekorator und die
+  Prüfung der Schalter im Klassenlisten-Import leben im Root
+  (`api/root_settings_writes.go`, `api/class_list_entries_composition.go`,
+  `api/import_composition.go`). Dort treffen sich Einstellungen, Data Import
+  und School Membership; keiner dieser Owner darf die Capability eines
+  anderen einbinden. Die Regel, wann beide Schalter an sind, steht einmal in
+  `settings.ChildrenWithoutCarePlaceOn`; der Root ruft sie auf.
+
 ## Folgen
 
 - Die Anlage zählt nicht für das Kinderkontingent; eine spätere Verlängerung
-  der Anmeldung gibt dem Kind seinen Platz und zählt dann.
+  der Anmeldung gibt dem Kind seinen Platz und zählt dann. Der Platz beginnt
+  frühestens am Tag der Zusage; beginnt die Anmeldung erst im nächsten
+  Schuljahr, gibt ihn der geplante Klassenwechsel an diesem Tag.
 - Ein Rücksetzen des Vormittagsmoduls auf seine eingeschaltete
   Voreinstellung führt denselben Seiteneffekt wie das Einschalten aus.
   Scheitert die Umwandlung, bleibt das Modul ausgeschaltet.

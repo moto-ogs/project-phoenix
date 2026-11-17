@@ -822,6 +822,17 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.RemoveClassListEntry",
+      "classification": "platform",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.RemoveClassListEntry",
+      "reason": "Platform protocol participation (lock): school-membership reaches modules/settings.ClassListConversionLock.LockClassListConversionShared (settings-platform) through api.classListEntriesWhileChildrenKept.RemoveClassListEntry, the shared side of the lock both class-list conversion switches take (ADR 0283). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.RemoveClassListEntry",
       "classification": "query",
       "effect": "query",
@@ -852,6 +863,17 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ResolveClassListEntry",
+      "classification": "platform",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ResolveClassListEntry",
+      "reason": "Platform protocol participation (lock): school-membership reaches modules/settings.ClassListConversionLock.LockClassListConversionShared (settings-platform) through api.classListEntriesWhileChildrenKept.ResolveClassListEntry, the shared side of the lock both class-list conversion switches take (ADR 0283). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ResolveClassListEntry",
       "classification": "query",
       "effect": "query",
@@ -880,6 +902,17 @@
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ReviseClassListEntry",
+      "classification": "platform",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ReviseClassListEntry",
+      "reason": "Platform protocol participation (lock): school-membership reaches modules/settings.ClassListConversionLock.LockClassListConversionShared (settings-platform) through api.classListEntriesWhileChildrenKept.ReviseClassListEntry, the shared side of the lock both class-list conversion switches take (ADR 0283). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.ReviseClassListEntry",

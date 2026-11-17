@@ -136,7 +136,12 @@ func (d *Decisions) renewExistingStudent(ctx context.Context, child *enrollmentN
 	if existing.Status != studentStatusActive {
 		existing.Status = plan.StudentStatus
 	}
-	if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, existing.ID, enrollmentStudentInput(existing)); err != nil {
+	input := enrollmentStudentInput(existing)
+	// A deferred renewal keeps a child without an OGS place (#4803) without
+	// one until its care starts: the planned class switch grants the place on
+	// that day, so nothing counts or lists the child for the OGS before.
+	input.PreserveCarePlaceStatus = deferred
+	if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, existing.ID, input); err != nil {
 		return nil, fmt.Errorf("decision: update existing student: %w", err)
 	}
 	var planned *enrollmentNative.ClassSwitch

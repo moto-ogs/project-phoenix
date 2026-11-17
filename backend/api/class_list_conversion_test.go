@@ -115,6 +115,32 @@ func TestRenewalGivesAChildWithoutCarePlaceItsPlace(t *testing.T) {
 	roster, err := people.ListStudentRosterOverlapping(ctx, yesterday, yesterday, today.String())
 	require.NoError(t, err)
 	assert.Empty(t, roster, "granting the first place must not add the child to historical care reports")
+
+	// An approval dated into the running year (phase start 1 August) starts
+	// the place today all the same (#4803 review).
+	late := testpkg.CreateTestStudent(t, db, "Spaet", "Angemeldet", "3c")
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, late.ID)
+	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		return people.RenewEnrollmentStudent(txCtx, late.ID, peopledirectory.EnrollmentStudent{
+			SchoolClass: "3c", Status: peopledirectory.StudentStatusActive, EnrolledFrom: "2026-08-01",
+		})
+	}))
+	var lateFrom calendar.Date
+	require.NoError(t, db.NewRaw(`SELECT enrolled_from FROM users.student_school_memberships
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), late.ID).Scan(ctx, &lateFrom))
+	assert.Equal(t, today, lateFrom, "the place starts no earlier than the day it is granted")
+
+	// A deferred renewal keeps the child without a place until its start.
+	waiting := testpkg.CreateTestStudent(t, db, "Spaeter", "Angemeldet", "3c")
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, waiting.ID)
+	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		return people.RenewEnrollmentStudent(txCtx, waiting.ID, peopledirectory.EnrollmentStudent{
+			SchoolClass: "3c", Status: peopledirectory.StudentStatusActive, EnrolledUntil: "2028-07-31", PreserveCarePlaceStatus: true,
+		})
+	}))
+	require.NoError(t, db.NewRaw(`SELECT without_care_place FROM users.student_school_memberships
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), waiting.ID).Scan(ctx, &withoutPlace))
+	assert.True(t, withoutPlace)
 }
 
 // A second switch must wait for the first commit, then convert even when its

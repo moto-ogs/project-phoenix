@@ -293,10 +293,10 @@ func (req *StudentRequest) Bind(_ *http.Request) error {
 		return err
 	}
 	if req.WithoutCarePlace && req.GroupID != nil {
-		return ErrWithoutCarePlaceCareData
+		return ErrWithoutCarePlaceGroupRefused
 	}
 	if req.WithoutCarePlace && (len(req.ArrivalSchedules) > 0 || len(req.PickupSchedules) > 0 || req.hasDeparturePlan()) {
-		return ErrWithoutCarePlaceCareTimes
+		return ErrWithoutCarePlaceCareData
 	}
 	if err := req.normalizeDayFields(); err != nil {
 		return err
