@@ -295,11 +295,13 @@ function CostCenterState({
   today,
   required,
   inherited,
+  none,
 }: Readonly<{
   timeline: readonly CostCenter[];
   today: string;
   required: boolean;
   inherited?: InheritedCostCenter;
+  none: string;
 }>) {
   const current = costCenterOn(timeline, today);
   const next = nextCostCenter(timeline, today);
@@ -334,7 +336,7 @@ function CostCenterState({
               {next.code}
             </span>
           ) : (
-            "keine Kostenstelle mehr"
+            `${none} mehr`
           )}
         </span>
       ) : null}
@@ -346,11 +348,13 @@ function CostCenterState({
 function CostCenterForm({
   title,
   today,
+  none,
   onCancel,
   onAdd,
 }: Readonly<{
   title: string;
   today: string;
+  none: string;
   onCancel: () => void;
   onAdd: (validFrom: string, code: string) => Promise<void>;
 }>) {
@@ -392,7 +396,7 @@ function CostCenterForm({
           <Input
             name="code"
             label="Kostenstelle"
-            hint="Leer lassen: Ab diesem Tag gibt es keine."
+            hint={`Leer lassen: Ab diesem Tag gibt es ${none.replace(" Kostenstelle", "")}.`}
             autoComplete="off"
             controlSize="compact"
             className="font-mono"
@@ -446,6 +450,12 @@ function CostCenterRow({
   const [history, setHistory] = useState(false);
   const timeline = costCenterTimeline(page.costCenters, scope, scopeId);
   const label = scope === "offering" ? "KOST2" : "KOST1";
+  // An ended holiday cost center of a school is no end of all: its weeks
+  // book on the school's again.
+  const none =
+    scope === "school_holiday"
+      ? "keine eigene Kostenstelle"
+      : "keine Kostenstelle";
   return (
     <ResponsiveActionRow>
       <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-6">
@@ -459,6 +469,7 @@ function CostCenterRow({
             today={today}
             required={required}
             inherited={inherited}
+            none={none}
           />
           {timeline.length > 0 ? (
             <Button
@@ -499,6 +510,7 @@ function CostCenterRow({
           <CostCenterForm
             title={object}
             today={today}
+            none={none}
             onCancel={() => setAdding(false)}
             onAdd={async (validFrom, code) => {
               await onAdd(scope, scopeId, validFrom, code);
@@ -527,7 +539,7 @@ function CostCenterRow({
                       {center.code}
                     </span>
                   ) : (
-                    <span className="text-gray-600">keine Kostenstelle</span>
+                    <span className="text-gray-600">{none}</span>
                   )}
                   {center.validFrom > today ? (
                     <StatusBadge tone="blue" size="xs" label="geplant" />

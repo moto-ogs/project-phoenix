@@ -146,6 +146,15 @@ it("shows per school where its holiday care books", async () => {
     ),
   ).toBeInTheDocument();
   expect(within(own).getByText("5570")).toBeInTheDocument();
+  fireEvent.click(
+    within(own).getByRole("button", {
+      name: "Neue KOST1 für die Ferienbetreuung an GS Birkenfeld",
+    }),
+  );
+  expect(
+    screen.getByText("Leer lassen: Ab diesem Tag gibt es keine eigene."),
+    "an ended holiday cost center falls back, it does not end all",
+  ).toBeInTheDocument();
   expect(
     within(schoolRow("GS Birkenfeld", "Monatsbeiträge und Mensa")).getByText(
       "Keine Kostenstelle",
