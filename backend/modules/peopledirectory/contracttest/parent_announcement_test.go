@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	userModels "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/rows"
@@ -21,12 +20,11 @@ import (
 
 // reflect the persisted version so callers can pass it to MarkRead/MarkAcknowledged
 
-func databaseTimestamp(t *testing.T, db *bun.DB) time.Time {
-	t.Helper()
-	var now time.Time
-	require.NoError(t, db.NewSelect().ColumnExpr("CURRENT_TIMESTAMP").Scan(context.Background(), &now))
-	return now
-}
+// publishedNow is the instant a fixture publishes an announcement at: the
+// clock the audience projection judges "published" on (#7295). The
+// database's clock can run a few milliseconds ahead of this process, which
+// would leave a fresh publication in the future.
+func publishedNow() time.Time { return time.Now() }
 
 // TestParentAnnouncementAudience exercises the audience resolver against a real
 // guardian->student link: school-wide and class targets reach the linked
@@ -43,21 +41,21 @@ func TestParentAnnouncementAudience(t *testing.T) {
 	tenantIDs := []int64{chain.TenantID}
 
 	schoolWide := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Schulweit", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetSchoolAll},
 		}))
 
 	classMatch := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Klasse 1a", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetClass, TargetRefText: strp("1a")},
 		}))
 
 	classMiss := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Klasse 9z", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetClass, TargetRefText: strp("9z")},
@@ -150,13 +148,13 @@ func TestParentAnnouncementAudienceRecipients(t *testing.T) {
 	require.NoError(t, err)
 
 	schoolWide := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Schulweit Empfänger", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetSchoolAll},
 		}))
 	classMiss := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Klasse 9z Empfänger", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetClass, TargetRefText: strp("9z")},
@@ -220,7 +218,7 @@ func TestParentAnnouncementUpdate_AtomicAndClearsReads(t *testing.T) {
 	t.Cleanup(func() { _ = testpkg.TenantCommand1(t, ctx, db, repo.Delete, a.ID) })
 
 	// Publish, then the guardian reads + acknowledges.
-	now := databaseTimestamp(t, db)
+	now := publishedNow()
 	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, repo.SetPublished, a.ID, &now))
 	readApplied, err := testpkg.TenantQuery4(t, ctx, db, repo.MarkRead, chain.TenantID, a.ID, chain.AccountID, now)
 	require.NoError(t, err)
@@ -281,7 +279,7 @@ func TestParentAnnouncementReplaceTargets_RefusesPublished(t *testing.T) {
 	t.Cleanup(func() { _ = testpkg.TenantCommand1(t, ctx, db, repo.Delete, a.ID) })
 
 	// Publish it, then attempt to swap the audience to a single student.
-	now := databaseTimestamp(t, db)
+	now := publishedNow()
 	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, repo.SetPublished, a.ID, &now))
 	studentID := chain.StudentID
 	err := testpkg.TenantCommand3(t, ctx, db, repo.ReplaceTargets, chain.TenantID, a.ID, api.ParentStoreTargetValues([]api.ParentStoreTargetInput{{TargetType: userModels.AnnouncementTargetStudent, TargetRefID: &studentID}}))
@@ -340,7 +338,7 @@ func TestParentAnnouncementMarkRead_VersionGuard(t *testing.T) {
 	ctx := tenantCtx(t)
 
 	a := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Versioniert", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetSchoolAll},
@@ -386,7 +384,7 @@ func TestParentAnnouncementAudience_InactiveMembershipExcluded(t *testing.T) {
 	tenantIDs := []int64{chain.TenantID}
 
 	ann := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Schulweit", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetSchoolAll},
@@ -438,7 +436,7 @@ func TestParentAnnouncementAudience_ClassMatchIsCaseInsensitive(t *testing.T) {
 
 	// Uppercase + padded target text against a lowercase "1a" student class.
 	ann := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Klasse 1A", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetClass, TargetRefText: strp(" 1A ")},
@@ -482,7 +480,7 @@ func TestParentAnnouncementAudience_FutureEnrollmentExcluded(t *testing.T) {
 	require.NoError(t, err)
 
 	ann := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"AG-Mitteilung", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetActivityGroup, TargetRefID: &group.ID},
@@ -601,7 +599,7 @@ func TestParentAnnouncementAudience_PendingEnrollmentEmailFallback(t *testing.T)
 	testpkg.CreateTestUnstampedEnrollmentApplicant(t, db, chain.TenantID, chain.Email)
 
 	ann := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Offene Anmeldungen", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetPendingEnrollment},
