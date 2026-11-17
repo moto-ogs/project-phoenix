@@ -1,3 +1,5 @@
+//go:build testhooks
+
 package mealplan_test
 
 // Der geänderte Speiseplan im Benachrichtigungs-Feed der Eltern (#7145), von

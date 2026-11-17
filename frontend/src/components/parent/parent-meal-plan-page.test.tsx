@@ -231,7 +231,9 @@ describe("ParentMealPlanPage", () => {
 
   // Ein Hinweis zum geänderten Speiseplan öffnet seine Woche (#7145).
   it("opens the week a notice links to", async () => {
-    render(<ParentMealPlanPage initialWeek="2026-08-17" />);
+    const { rerender } = render(
+      <ParentMealPlanPage initialWeek="2026-08-17" />,
+    );
 
     const weekStatus = within(
       await screen.findByRole("navigation", { name: "Kalenderwoche wechseln" }),
@@ -242,6 +244,16 @@ describe("ParentMealPlanPage", () => {
         "2026-08-17",
       );
       expect(weekStatus).toHaveTextContent(/KW 34\s*· Nächste Woche/);
+    });
+
+    rerender(<ParentMealPlanPage />);
+
+    await waitFor(() => {
+      expect(mocks.getChildMealPlan).toHaveBeenLastCalledWith(
+        "child-1",
+        "2026-08-10",
+      );
+      expect(weekStatus).toHaveTextContent(/KW 33\s*· Diese Woche/);
     });
   });
 

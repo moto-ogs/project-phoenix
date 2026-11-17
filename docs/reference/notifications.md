@@ -393,8 +393,7 @@ ten minutes update the unread entry without a second push. Feed and push
 within 14 days, feed only later. The push is off by default (`FilterOptedIn`),
 in the guardian's language and without child or dish; the entry names the
 week and links to `/meal-plan?week=<Monday>`. The school switch is
-`notifications.meal_plan_changed_enabled`. The caterer's notice about the same
-change follows with the caterer portal's feed.
+`notifications.meal_plan_changed_enabled`.
 
 ### Web Push (#2003)
 

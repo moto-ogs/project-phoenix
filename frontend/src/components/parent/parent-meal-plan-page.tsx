@@ -1296,7 +1296,7 @@ export function ParentMealPlanPage({
   const [linkedWeek, setLinkedWeek] = useState(initialWeek);
   if (initialWeek !== linkedWeek) {
     setLinkedWeek(initialWeek);
-    if (initialWeek) setWeekOffset(weekOffsetFromParam(today, initialWeek));
+    setWeekOffset(weekOffsetFromParam(today, initialWeek));
   }
   // Distinguish operational failures (backend/network/session errors) from a
   // genuinely empty result: a failed request must not render as "no meal
