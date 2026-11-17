@@ -26,7 +26,7 @@ func liveTokens(t *testing.T, db *bun.DB, accountID int64) []liveTokenRow {
 		TableExpr("auth.tokens").
 		Where("account_id = ?", accountID).
 		Where("rotated_at IS NULL").
-		Where("expiry > NOW()").
+		Where("expiry > ?", time.Now()).
 		OrderExpr("id DESC").
 		Scan(context.Background(), &rows))
 	return rows

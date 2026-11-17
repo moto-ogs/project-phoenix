@@ -77,7 +77,7 @@ func newReattachScanFixture(t *testing.T) reattachScanFixture {
 	takenOver := testpkg.CreateTestStudent(t, k.db, "Uebernommen", "Kind", "2a")
 	f.takenOver = takenOver.ID
 	testpkg.CreateTestVisit(t, k.db, takenOver.ID, ended, time.Now().Add(-time.Hour), nil)
-	_, err = k.db.NewUpdate().TableExpr("active.groups").Set("end_time = NOW() - INTERVAL '5 minutes'").
+	_, err = k.db.NewUpdate().TableExpr("active.groups").Set("end_time = ?", time.Now().Add(-5*time.Minute)).
 		Where("id = ?", ended).Where("tenant_id = ?", testpkg.Tenant(t)).Exec(testpkg.Ctx(t))
 	require.NoError(t, err)
 	return f

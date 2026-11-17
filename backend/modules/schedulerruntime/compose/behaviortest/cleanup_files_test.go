@@ -17,6 +17,11 @@ import (
 	"github.com/uptrace/bun"
 )
 
+// nightlyRunAt is the pinned clock of the nightly run these tests drive.
+// Every owner of the run computes its cutoffs on it; the database guards
+// only cap a cutoff against their own clock, which is later.
+var nightlyRunAt = time.Date(2026, time.October, 14, 2, 0, 0, 0, calendar.Berlin)
+
 func seedSickNoteFile(t *testing.T, admin *bun.DB, school int64, publicDir string) (int64, string) {
 	t.Helper()
 	staff, uploader := testpkg.CreateTestStaffWithAccountForTenant(t, admin, school, "Test", "Dokument")
@@ -24,11 +29,13 @@ func seedSickNoteFile(t *testing.T, admin *bun.DB, school int64, publicDir strin
 		ID       int64
 		Filename string
 	}
+	// Workforce stamps the upload on its clock; the nightly run's clock
+	// counts the window back from nightlyRunAt.
+	uploaded := nightlyRunAt.AddDate(0, 0, -400)
 	require.NoError(t, admin.NewRaw(`INSERT INTO users.staff_documents
  (tenant_id, staff_id, category, filename_display, filename_stored, size_bytes, content_type, uploaded_by, created_at, updated_at)
- SELECT ?, ?, 'au_bescheinigung', 'Test.pdf', gen_random_uuid()::text || '.pdf', 18, 'application/pdf', ?, at, at
- FROM (SELECT CURRENT_TIMESTAMP - INTERVAL '400 days' AS at) AS upload
- RETURNING id, filename_stored AS filename`, school, staff.ID, uploader.ID).Scan(context.Background(), &row))
+ VALUES (?, ?, 'au_bescheinigung', 'Test.pdf', gen_random_uuid()::text || '.pdf', 18, 'application/pdf', ?, ?, ?)
+ RETURNING id, filename_stored AS filename`, school, staff.ID, uploader.ID, uploaded, uploaded).Scan(context.Background(), &row))
 	dir := filepath.Join(publicDir, "uploads", "staff-documents", strconv.FormatInt(school, 10))
 	require.NoError(t, os.MkdirAll(dir, 0o700))
 	path := filepath.Join(dir, row.Filename)
@@ -51,7 +58,7 @@ func TestSoftDeletedSchoolRetentionRemovesSickNoteFile(t *testing.T) {
 	require.NoError(t, err)
 	serve := testpkg.SetupServeTestDB(t)
 	t.Cleanup(func() { require.NoError(t, serve.Close()) })
-	now := func() time.Time { return time.Date(2026, time.October, 14, 2, 0, 0, 0, calendar.Berlin) }
+	now := func() time.Time { return nightlyRunAt }
 	deps, err := owners.NewSchedulerFileRetentionTestDependencies(testpkg.NewDatabase(t, serve), testpkg.TenantRuntime(t, serve), now, publicDir)
 	require.NoError(t, err)
 	var workerErr error
