@@ -281,7 +281,7 @@ type GuardianPortDecorator func(GuardianDirectory) GuardianDirectory
 // ClassListEntryRemoval is School Membership's batch delete of class-list
 // entries (#4803); the conversion appends the change trail itself.
 type ClassListEntryRemoval interface {
-	RemoveClassListEntries(context.Context, []int64) error
+	RemoveClassListEntries(context.Context, []ClassListEntryJoin) error
 }
 
 // ClassListMarkTransfer is Student Presence's move of the morning marks of

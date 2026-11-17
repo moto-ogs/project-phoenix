@@ -31,7 +31,10 @@ Owner an.
   gleichnamigen Kindes schon beendet, steht der Eintrag für die Zeit danach:
   er wird ein eigenes Kind ohne OGS-Platz, damit seine Vormittags-Marken in
   den Klassenansichten bleiben und das beendete Kind seine OGS-Geschichte
-  behält. Für jeden anderen Eintrag legt die Stapelanlage des
+  behält. Beginnt die Betreuung des zugeordneten Kindes erst später, behält
+  es die Zeit des Eintrags in der Klasse: School Membership setzt beim
+  Löschen der Einträge `class_member_from` auf den Tag, an dem der Eintrag
+  angelegt wurde. Für jeden anderen Eintrag legt die Stapelanlage des
   Kinder-Imports (`StudentImportConfig.CreateChunk`) ein Kind ohne OGS-Platz
   an. Danach liest ein zweiter Lesezugriff die neuen Kinder nach Name und
   Klasse; beides ist mengenbasiert. Dann zieht die Anwesenheit am Vormittag

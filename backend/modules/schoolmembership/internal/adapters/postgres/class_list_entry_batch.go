@@ -126,6 +126,45 @@ func classListEntryKeyColumns(fields []schoolmembership.ClassListEntryFields) (f
 	return firsts, lasts, classes
 }
 
+// keepClassTimeSQL gives a child a class-list entry joins the class time the
+// entry stood for (#4803): from the Berlin day the entry was created, when
+// the child's care starts later. A child without an OGS place and a child in
+// care already need none.
+const keepClassTimeSQL = `UPDATE users.student_school_memberships AS m
+SET class_member_from = LEAST(COALESCE(m.class_member_from, joined.since), joined.since)
+FROM (
+	SELECT pair.student_id, MIN((entry.created_at AT TIME ZONE 'Europe/Berlin')::date) AS since
+	FROM unnest(?::bigint[], ?::bigint[]) AS pair(entry_id, student_id)
+	JOIN users.class_list_entries AS entry ON entry.tenant_id = ? AND entry.id = pair.entry_id
+	GROUP BY pair.student_id
+) AS joined
+WHERE m.tenant_id = ? AND m.student_profile_id = joined.student_id AND m.deleted_at IS NULL
+	AND NOT m.without_care_place
+	AND COALESCE(m.first_care_from, m.enrolled_from) > joined.since`
+
+// KeepClassTimeOfJoinedChildren records, in one statement, the class time
+// of the children class-list entries join before the entries go (#4803).
+func (s *Store) KeepClassTimeOfJoinedChildren(ctx context.Context, joins []schoolmembership.ClassListEntryJoin) (domain.OperationStats, error) {
+	db, scope, err := s.database(ctx)
+	if err != nil {
+		return domain.OperationStats{}, err
+	}
+	entries := make([]int64, len(joins))
+	students := make([]int64, len(joins))
+	for i, join := range joins {
+		entries[i], students[i] = join.EntryID, join.StudentID
+	}
+	stats := domain.OperationStats{Queries: 1}
+	started := time.Now()
+	result, err := db.NewRaw(keepClassTimeSQL, pgdialect.Array(entries), pgdialect.Array(students), scope.TenantID, scope.TenantID).Exec(ctx)
+	stats.StatementDuration = time.Since(started)
+	if err != nil {
+		return stats, fmt.Errorf("school membership postgres: keep class time of joined children: %w", err)
+	}
+	stats.Rows, _ = result.RowsAffected()
+	return stats, nil
+}
+
 // DeleteClassListEntries deletes the tenant's entries with the given IDs in
 // one statement (#4803).
 func (s *Store) DeleteClassListEntries(ctx context.Context, ids []int64) (int64, domain.OperationStats, error) {

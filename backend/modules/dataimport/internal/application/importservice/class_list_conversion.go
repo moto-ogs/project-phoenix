@@ -133,13 +133,13 @@ func (c *ClassListConversion) createChildren(ctx context.Context, entries []port
 // "assigned" trail row per entry naming its child.
 func (c *ClassListConversion) finish(ctx context.Context, entries []ports.ClassListEntry, targets []int64, changedBy *int64) error {
 	moves := make([]ports.ClassListEntryMarkMove, len(entries))
-	ids := make([]int64, len(entries))
+	joins := make([]ports.ClassListEntryJoin, len(entries))
 	events := make([]any, len(entries))
 	actor := *changedBy
 	for i, entry := range entries {
 		matched := targets[i]
 		moves[i] = ports.ClassListEntryMarkMove{ClassListEntryID: entry.ID, StudentID: matched}
-		ids[i] = entry.ID
+		joins[i] = ports.ClassListEntryJoin{EntryID: entry.ID, StudentID: matched}
 		events[i] = &auditModels.ClassListEntryChange{
 			EntryID: entry.ID, Action: auditModels.ClassListEntryActionAssigned,
 			OldValue: classListEntryDisplay(entry.FirstName, entry.LastName, entry.SchoolClass), NewValue: "",
@@ -149,7 +149,7 @@ func (c *ClassListConversion) finish(ctx context.Context, entries []ports.ClassL
 	if err := c.deps.Marks.TransferClassListEntryMarks(ctx, moves); err != nil {
 		return fmt.Errorf("convert class list: move morning marks: %w", err)
 	}
-	if err := c.deps.Removal.RemoveClassListEntries(ctx, ids); err != nil {
+	if err := c.deps.Removal.RemoveClassListEntries(ctx, joins); err != nil {
 		return fmt.Errorf("convert class list: remove entries: %w", err)
 	}
 	if batch, ok := c.deps.Audit.(ports.AuditBatchCommand); ok {

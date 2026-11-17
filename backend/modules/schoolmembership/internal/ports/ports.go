@@ -84,6 +84,9 @@ type Store interface {
 	// DeleteClassListEntries deletes the entries in one statement and
 	// returns how many it deleted.
 	DeleteClassListEntries(ctx context.Context, ids []int64) (int64, domain.OperationStats, error)
+	// KeepClassTimeOfJoinedChildren gives the children the entries join
+	// the class time before their care starts (#4803).
+	KeepClassTimeOfJoinedChildren(ctx context.Context, joins []schoolmembership.ClassListEntryJoin) (domain.OperationStats, error)
 	UpdateClassListEntry(context.Context, int64, schoolmembership.ClassListEntryFields) (schoolmembership.ClassListEntry, domain.OperationStats, error)
 	DeleteClassListEntry(context.Context, int64) (domain.OperationStats, error)
 
