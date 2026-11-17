@@ -54,6 +54,9 @@ type ImportService[T any] struct {
 	savepointLost func(error) bool
 	// now stamps the run, its batches and its row messages.
 	now func() time.Time
+	// beforeBatchCommit completes writes inside each batch transaction.
+	beforeBatchCommit func(context.Context, int64) error
+
 	// config keeps request-specific reference data after PreloadReferenceData.
 	// Serialize processing while that mutable configuration is shared.
 	importMu sync.Mutex
@@ -102,6 +105,8 @@ func NewImportService[T any](config ports.ImportConfig[T], runtime ports.ImportR
 		connectionLost:  runtime.ConnectionLost,
 		savepointLost:   runtime.SavepointLost,
 		now:             runtime.Now,
+
+		beforeBatchCommit: runtime.BeforeBatchCommit,
 	}
 }
 
@@ -121,7 +126,7 @@ func (s *ImportService[T]) renewed() *ImportService[T] {
 	}
 	return &ImportService[T]{
 		config: config, transactions: s.transactions, batchSize: s.batchSize, audit: s.audit, observe: s.observe,
-		fingerprint: s.fingerprint, checkpoints: s.checkpoints,
+		fingerprint: s.fingerprint, checkpoints: s.checkpoints, beforeBatchCommit: s.beforeBatchCommit,
 		boundStatements: s.boundStatements, batchLimit: s.batchLimit, connectionLost: s.connectionLost, savepointLost: s.savepointLost,
 		now: s.now,
 	}

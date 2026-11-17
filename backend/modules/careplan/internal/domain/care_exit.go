@@ -48,6 +48,8 @@ func CareExitBlocker(student *CareStudent, lastCareDay, today calendar.Date) str
 		return careplan.CareBlockerUnknown
 	case student.IsAlumnus():
 		return careplan.CareBlockerAlumnus
+	case student.WithoutCarePlace:
+		return careplan.CareBlockerWithoutCarePlace
 	case student.CareEndedOn(today):
 		return careplan.CareBlockerAlreadyEnded
 	case student.EnrolledFrom != nil && lastCareDay.Before(*student.EnrolledFrom):

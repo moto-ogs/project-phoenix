@@ -201,3 +201,20 @@ func validateTimeFormat(s string) error {
 	}
 	return nil
 }
+
+// The two switches jointly activate class-list conversion. Serialize every
+// set/reset before mutation, keeping the lock through the caller's side effect
+// and commit, so the last activation sees the other committed switch.
+func (s *settingsService) lockClassListConversionSettings(ctx context.Context, key string) error {
+	if key != config.KeyChildrenWithoutCarePlace && key != config.KeyModuleUnterrichtVormittag {
+		return nil
+	}
+	if s.runtime == nil || !s.runtime.HasTransaction(ctx) {
+		return config.ErrRuntimeUnavailable
+	}
+	if err := s.runtime.AcquireLock(ctx, fmt.Sprintf("class-list-conversion-settings:%d", s.tenantID(ctx)), false); err != nil {
+		return fmt.Errorf("lock class-list conversion settings: %w", err)
+	}
+	s.flushRequestCacheForLock(ctx)
+	return nil
+}

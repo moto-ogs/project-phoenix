@@ -20,7 +20,9 @@ import (
 //   - A bound already reached may have seen care, so it only moves earlier.
 //   - A bound still ahead saw no care: it follows the start, or becomes today
 //     for an activation before the start or a child without a start.
-const firstCareFromNext = `first_care_from = CASE
+const firstCareFromNext = "first_care_from = " + firstCareFromNextValue
+
+const firstCareFromNextValue = `CASE
 	WHEN "student".first_care_from IS NULL THEN NULL
 	WHEN "student".first_care_from <= ?0::date THEN LEAST("student".first_care_from, ?2::date)
 	WHEN ?1::text = 'active' OR ?2::date IS NULL THEN LEAST(?2::date, ?0::date)

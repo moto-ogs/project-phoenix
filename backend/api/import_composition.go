@@ -50,7 +50,7 @@ type imports struct {
 	ClassListConversion importModels.ClassListConverter
 }
 
-// classListImportConversion runs the conversion after a class-list import
+// classListImportConversion runs the conversion inside each class-list import batch
 // when the school keeps children without an OGS place; otherwise the entries
 // stay as imported.
 func classListImportConversion(converter importModels.ClassListConverter, settings interface {
@@ -178,8 +178,9 @@ func newStaffImport(
 // audit trail apply to imported rows too.
 func newClassListImport(
 	runtime importPorts.ImportRuntime, membership schoolmembership.Capability, persons peopledirectory.Capability,
-	batches importPorts.ClassListEntryBatches,
+	batches importPorts.ClassListEntryBatches, convert func(context.Context, int64) error,
 ) importModels.RowImporter[importModels.ClassListEntryImportRow] {
+	runtime.BeforeBatchCommit = convert
 	return dataImportRetained.NewImportService(dataImportRetained.NewClassListImportConfig(
 		importPorts.ClassListImportDeps{
 			Transactions: runtime.Transactions,
@@ -286,17 +287,20 @@ func newServeImports(
 	audit owners.AuditOwner, identity identityaccess.Owner, groups schoolstructure.GroupListing, rooms facilities.Query,
 	persons peopledirectory.Capability, carePlan careplan.Capability, presence owners.PresenceOwner, organizations organizationtenancy.Capability,
 	membership schoolmembership.Capability, workTime workforceModule.Capability, workforce owners.WorkforcePlanning,
-	cohorts importCohorts, now func() time.Time,
+	cohorts importCohorts, now func() time.Time, settings interface {
+		ResolveBool(context.Context, string) (bool, error)
+	},
 ) imports {
 	runtime := newImportRuntime(audit.Command, observeDataImport, now)
+	converter := newClassListConversion(audit, identity, groups, rooms, persons, carePlan, presence, membership, now)
 	return imports{
-		ClassListConversion: newClassListConversion(audit, identity, groups, rooms, persons, carePlan, presence, membership, now),
+		ClassListConversion: converter,
 		Student: newStudentImport(
 			runtime, identity, groups, rooms, persons, personBatches(persons), persons, carePlan, presence.Presence,
 			auditCompose.NewConsentRecorder(audit.Command), nil, cohorts,
 		),
 		Staff:     newStaffImport(runtime, identity, identity, organizations, persons, membership, workTime),
-		ClassList: newClassListImport(runtime, membership, persons, classListBatches(membership)),
+		ClassList: newClassListImport(runtime, membership, persons, classListBatches(membership), classListImportConversion(converter, settings)),
 		OpeningBalance: newOpeningBalanceImport(runtime, importPorts.OpeningBalanceImportDeps{
 			BalanceAdjustService: workforce.TimeTracking.OpeningBalances,
 			StaffAbsenceService:  workforce.TimeTracking.VacationTakeovers,

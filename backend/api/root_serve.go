@@ -496,7 +496,7 @@ func composeServeRoot(
 			guardianProfiles = peopleCompose.NewGuardianProfileLoader(people.GuardianProfiles, db.Pool(), env.Logger.With("service", "guardian-profile-loader"))
 			birthdays, err = buildBirthdayEntry(db, membership, BirthdayRepositories{Students: people.Students, Staff: people.Staff, Persons: people.Persons},
 				settings.Service, env.Logger.With("service", "birthdays"), env.Now)
-			dataImports = newServeImports(audit, identity, groups, rooms, persons, carePlan, presence, organizations, membership, workTime, workforce, newImportCohorts(offerings.Bookings, timetableRows.CohortRosters), env.Now)
+			dataImports = newServeImports(audit, identity, groups, rooms, persons, carePlan, presence, organizations, membership, workTime, workforce, newImportCohorts(offerings.Bookings, timetableRows.CohortRosters), env.Now, settings.Service)
 			databaseStats = newDatabaseStats(people.Repositories, structure.Groups, facilities, timetableRepos, identity, devices, env.Logger)
 			return err
 		},

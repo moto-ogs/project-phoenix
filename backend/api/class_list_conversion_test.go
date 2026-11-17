@@ -3,8 +3,16 @@ package api
 import (
 	"context"
 	"testing"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
+	config "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -83,7 +91,10 @@ func TestClassListConversionTurnsEntriesIntoChildrenWithoutCarePlace(t *testing.
 // child does (#4803): the child gets its OGS place.
 func TestRenewalGivesAChildWithoutCarePlaceItsPlace(t *testing.T) {
 	t.Parallel()
-	db, _, people, _ := setupImportModule(t)
+	db := testpkg.SetupTestDB(t)
+	today := calendar.Date("2026-11-17")
+	people, err := owners.NewPeopleDirectory(testpkg.NewDatabase(t, db), func() time.Time { return today.BerlinMidnight() })
+	require.NoError(t, err)
 	ctx := testpkg.Ctx(t)
 	child := testpkg.CreateTestStudent(t, db, "Bald", "Angemeldet", "3c")
 	testpkg.MarkTestStudentWithoutCarePlace(t, db, child.ID)
@@ -93,8 +104,129 @@ func TestRenewalGivesAChildWithoutCarePlaceItsPlace(t *testing.T) {
 	}))
 
 	var withoutPlace, dated bool
-	require.NoError(t, db.NewRaw(`SELECT without_care_place, enrolled_from IS NOT NULL FROM users.student_school_memberships
-		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID).Scan(ctx, &withoutPlace, &dated))
+	var firstCare *calendar.Date
+	require.NoError(t, db.NewRaw(`SELECT without_care_place, enrolled_from IS NOT NULL, first_care_from FROM users.student_school_memberships
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID).Scan(ctx, &withoutPlace, &dated, &firstCare))
 	assert.False(t, withoutPlace, "the renewal gives the child its OGS place")
 	assert.True(t, dated, "the OGS care starts with the place, so no past day turns into OGS participation")
+	require.NotNil(t, firstCare, "the first OGS place must bound historical care")
+	assert.Equal(t, today, *firstCare)
+	yesterday := today.AddDays(-1).String()
+	roster, err := people.ListStudentRosterOverlapping(ctx, yesterday, yesterday, today.String())
+	require.NoError(t, err)
+	assert.Empty(t, roster, "granting the first place must not add the child to historical care reports")
+}
+
+// A second switch must wait for the first commit, then convert even when its
+// request read both disabled values before the other request started.
+func TestClassListConversionSerializesSettingActivation(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name, first, second string
+		reset, snapshot     bool
+	}{
+		{name: "children then morning with cache", first: config.KeyChildrenWithoutCarePlace, second: config.KeyModuleUnterrichtVormittag},
+		{name: "morning then children with snapshot", first: config.KeyModuleUnterrichtVormittag, second: config.KeyChildrenWithoutCarePlace, snapshot: true},
+		{name: "children then morning reset", first: config.KeyChildrenWithoutCarePlace, second: config.KeyModuleUnterrichtVormittag, reset: true, snapshot: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testpkg.OwnTenant(t)
+			db, imports, _, _ := setupImportModule(t)
+			settings, _, err := NewOperatorSettingsTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
+			require.NoError(t, err)
+			actor := testpkg.CreateTestAccount(t, db, "activation@example.com")
+			ctx := context.WithValue(testpkg.Ctx(t), sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: int(actor.ID)})
+			tenantID := testpkg.Tenant(t)
+			keys := []string{config.KeyChildrenWithoutCarePlace, config.KeyModuleUnterrichtVormittag}
+			require.NoError(t, testpkg.WithTenantTx(t, ctx, db, tenantID, func(txCtx context.Context, _ bun.Tx) error {
+				for _, key := range keys {
+					if err := settings.Settings.SetValue(txCtx, key, false, &actor.ID, nil); err != nil {
+						return err
+					}
+				}
+				return nil
+			}))
+			testpkg.CreateTestClassListEntry(t, db, "Lea", "Parallel", "2a")
+			effects := classListConversionSideEffects(settings.Settings, imports.ClassListConversion)
+			registry, err := settingsCompose.NewSideEffects(func(string) {}, effects[0], effects[1])
+			require.NoError(t, err)
+			writes := settings.OperatorSchoolSettings(registry.Dispatch)
+			secondCtx := config.WithSettingsRequestCache(ctx)
+			var snapshot *config.SettingsSnapshot
+			require.NoError(t, testpkg.WithTenantTx(t, secondCtx, db, tenantID, func(txCtx context.Context, _ bun.Tx) error {
+				var err error
+				snapshot, err = settings.Settings.ResolveMany(txCtx, keys)
+				return err
+			}))
+			if tc.snapshot {
+				secondCtx = config.WithSettingsSnapshot(secondCtx, snapshot)
+			}
+			done := make(chan error, 1)
+			pidReady := make(chan int, 1)
+			require.NoError(t, testpkg.WithTenantTx(t, ctx, db, tenantID, func(firstCtx context.Context, first bun.Tx) error {
+				if err := writes.SetValue(firstCtx, tenantID, tc.first, true, actor.ID, false); err != nil {
+					return err
+				}
+				var holder int
+				if err := first.NewRaw("SELECT pg_backend_pid()").Scan(firstCtx, &holder); err != nil {
+					return err
+				}
+				go func() {
+					err := testpkg.WithTenantTx(t, secondCtx, db, tenantID, func(txCtx context.Context, tx bun.Tx) error {
+						var pid int
+						if err := tx.NewRaw("SELECT pg_backend_pid()").Scan(txCtx, &pid); err != nil {
+							return err
+						}
+						pidReady <- pid
+						if tc.reset {
+							return writes.ResetValue(txCtx, tenantID, tc.second, actor.ID)
+						}
+						return writes.SetValue(txCtx, tenantID, tc.second, true, actor.ID, false)
+					})
+					done <- err
+				}()
+				var pid int
+				select {
+				case pid = <-pidReady:
+				case err := <-done:
+					return err
+				case <-time.After(5 * time.Second):
+					return context.DeadlineExceeded
+				}
+				blocked, finished := false, false
+				var secondErr error
+				assert.Eventually(t, func() bool {
+					select {
+					case secondErr = <-done:
+						finished = true
+						return true
+					default:
+					}
+					var waiting bool
+					if err := db.NewRaw("SELECT ?::int = ANY(pg_blocking_pids(?::int))", holder, pid).Scan(ctx, &waiting); err != nil {
+						return false
+					}
+					blocked = waiting
+					return blocked
+				}, 5*time.Second, 10*time.Millisecond)
+				assert.True(t, blocked, "the second setting must wait before writing while the first activation is uncommitted")
+				if finished {
+					done <- secondErr
+				}
+				return nil
+			}))
+			select {
+			case err := <-done:
+				require.NoError(t, err)
+			case <-time.After(5 * time.Second):
+				t.Fatal("second activation did not finish")
+			}
+			var entries, children int
+			require.NoError(t, db.NewRaw("SELECT COUNT(*) FROM users.class_list_entries WHERE tenant_id = ?", tenantID).Scan(ctx, &entries))
+			require.NoError(t, db.NewRaw("SELECT COUNT(*) FROM users.student_school_memberships WHERE tenant_id = ? AND without_care_place", tenantID).Scan(ctx, &children))
+			assert.Zero(t, entries, "the last activation converts every legacy entry")
+			assert.Equal(t, 1, children)
+		})
+	}
 }

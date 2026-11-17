@@ -101,6 +101,11 @@ type OpeningBalanceImportDeps struct {
 // Audit makes RecordAuditInTransaction fail. Transactions is required for
 // ImportBatches, which owns the transaction lifecycle.
 type ImportRuntime struct {
+	// BeforeBatchCommit completes written rows in the batch's tenant transaction,
+	// before its checkpoint. A failure rolls back the batch. The account is the
+	// importer; previews and batches without writes do not call it.
+	BeforeBatchCommit func(context.Context, int64) error
+
 	Transactions importModels.Transactions
 	Audit        AuditCommand
 	Observe      func(importModels.ImportObservation)
