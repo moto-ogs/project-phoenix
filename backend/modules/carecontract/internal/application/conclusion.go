@@ -270,7 +270,9 @@ func sendHoldBack(err error) error {
 // agreement; the contract waits when its conditions have not been accepted.
 //
 // A ticked text that equals a saved version of the template the contract no
-// longer has means the conditions changed since. The ticked text and the
+// longer has is consent to an earlier version: it does not cover the current
+// conditions. Nothing tells when that version was replaced, before or after
+// the submission, nor who left the form on it. The ticked text and the
 // template versions are compared for equality: the parents' submission is
 // stamped by Enrollment's clock, the template row by the database (ADR
 // 0281). Only a template whose history the trail does not hold completely,

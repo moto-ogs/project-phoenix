@@ -458,13 +458,13 @@ describe("TraegerVertraegePage", () => {
         "Der Vertrag entsteht in wenigen Minuten von selbst.",
       ),
     ).toHaveLength(1);
-    // Changed conditions name the real state and the next step.
+    // Consent to an earlier version names what is known and the next step.
     expect(
-      screen.getByText("Bedingungen nach der Anmeldung geändert"),
+      screen.getByText("Zustimmung nur zu früheren Bedingungen"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Sie haben die Bedingungen nach der Anmeldung geändert\. Die Eltern haben ihnen nicht zugestimmt\./,
+        /Die Eltern haben einer früheren Fassung der Bedingungen zugestimmt\. Für die aktuellen Bedingungen gilt das nicht\./,
       ),
     ).toBeInTheDocument();
     expect(

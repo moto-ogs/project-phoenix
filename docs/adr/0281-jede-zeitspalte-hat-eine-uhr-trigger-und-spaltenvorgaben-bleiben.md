@@ -191,8 +191,8 @@ bekannten Grenzen dieser alten Prüfung bleiben für diese Einträge:
 
 ## Nachtrag 2026-11-17: Geänderte Vertragsbedingungen erkennt der Träger am Text, nicht an der Zeit
 
-Die Vertragsvorbereitung unterscheidet „Bedingungen nach der Anmeldung
-geändert“ (`acceptance_changed`) von „Zustimmung fehlt“
+Die Vertragsvorbereitung unterscheidet „Zustimmung nur zu früheren
+Bedingungen“ (`acceptance_changed`) von „Zustimmung fehlt“
 (`acceptance_missing`), wenn der angekreuzte Bedingungsblock nicht den
 aktuellen Bedingungen der Vorlage entspricht. Bisher ordnete sie dafür
 `updated_at` der Vorlage (`care_contract.contract_templates`, Trigger) gegen
@@ -221,5 +221,8 @@ Grenzen:
   angekreuzte Text nur aus einer Fassung vor dieser Änderung stammt.
 - Kreuzen Eltern einen Text an, den die Vorlage schon vor dem Ankreuzen
   ersetzt hatte (die Schule hat ihr Formular nicht nachgezogen), lautet der
-  Grund jetzt „geändert“ statt „fehlt“. In beiden Fällen entsteht kein
-  Vertrag.
+  Grund jetzt „Zustimmung nur zu früheren Bedingungen“ statt „fehlt“. In
+  beiden Fällen entsteht kein Vertrag. Der Text sagt deshalb nur, was die
+  Gleichheit belegt: Die Zustimmung gilt einer früheren Fassung. Wann die
+  Fassung ersetzt wurde und wer das Formular nicht nachgezogen hat, behauptet
+  er nicht.

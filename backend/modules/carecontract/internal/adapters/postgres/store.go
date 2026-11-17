@@ -89,10 +89,6 @@ const templateColumns = `id, school_id, care_offering_id, term_kind, term_months
 	special_termination, special_termination_note, statute_required, statute_title, statute_url,
 	contract_partner, updated_at`
 
-// templateSaves are the template entries of the trail for template t.
-const templateSaves = `e.organization_id = t.organization_id AND e.contract_id IS NULL AND e.action = ?1
-	AND e.details->>'template_id' = t.id::text`
-
 func (Store) Templates(ctx context.Context, organizationID int64) ([]ports.TemplateRow, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
@@ -105,16 +101,22 @@ func (Store) Templates(ctx context.Context, organizationID int64) ([]ports.Templ
 	}
 	// The trail holds the conditions texts of every saved version of a template
 	// (ports.VersionsDetail). A save before they were recorded left an entry
-	// without them: that template's history is incomplete.
+	// without them: that template's history is incomplete. The Träger's
+	// template entries are grouped by template once and joined, so the read
+	// stays one pass over the trail however many templates there are.
 	// Binds: ?0 the detail, ?1 the template action, ?2 the Träger.
-	if err := db.NewRaw(`SELECT `+templateColumns+`,
-			ARRAY(SELECT DISTINCT version FROM care_contract.contract_events AS e
-				CROSS JOIN LATERAL jsonb_array_elements_text(CASE jsonb_typeof(e.details->?0) WHEN 'array' THEN e.details->?0 ELSE '[]' END) AS version
-				WHERE `+templateSaves+` ORDER BY version) AS versions,
-			EXISTS (SELECT 1 FROM care_contract.contract_events AS e WHERE `+templateSaves+`)
-				AND NOT EXISTS (SELECT 1 FROM care_contract.contract_events AS e WHERE `+templateSaves+`
-					AND jsonb_typeof(e.details->?0) IS DISTINCT FROM 'array') AS versions_complete
+	if err := db.NewRaw(`SELECT t.id, t.school_id, t.care_offering_id, t.term_kind, t.term_months,
+			t.notice_months, t.notice_to, t.special_termination, t.special_termination_note,
+			t.statute_required, t.statute_title, t.statute_url, t.contract_partner, t.updated_at,
+			COALESCE(h.versions, '{}') AS versions, COALESCE(h.complete, false) AS versions_complete
 		FROM care_contract.contract_templates AS t
+		LEFT JOIN (SELECT e.details->>'template_id' AS template_id,
+				COALESCE(array_agg(DISTINCT v.version ORDER BY v.version) FILTER (WHERE v.version IS NOT NULL), '{}') AS versions,
+				bool_and(jsonb_typeof(e.details->?0) IS NOT DISTINCT FROM 'array') AS complete
+			FROM care_contract.contract_events AS e
+			LEFT JOIN LATERAL jsonb_array_elements_text(CASE jsonb_typeof(e.details->?0) WHEN 'array' THEN e.details->?0 ELSE '[]' END) AS v(version) ON true
+			WHERE e.organization_id = ?2 AND e.contract_id IS NULL AND e.action = ?1
+			GROUP BY e.details->>'template_id') AS h ON h.template_id = t.id::text
 		WHERE t.organization_id = ?2 ORDER BY t.school_id, t.care_offering_id`,
 		ports.VersionsDetail, ports.ActionTemplate, organizationID).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: templates: %w", err)
