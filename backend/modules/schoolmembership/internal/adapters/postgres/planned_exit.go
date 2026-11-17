@@ -48,7 +48,7 @@ func (s *Store) SavePlannedExit(ctx context.Context, plan schoolmembership.PlanE
 		Set(`planned_exit_by_account_id = ?`, plan.PlannedByAccountID).
 		Set(`planned_exit_by_staff_id = ?`, plan.PlannedByStaffID).
 		Set(`planned_exit_by_name = ?`, plan.PlannedByName).
-		Set(`planned_exit_at = NOW()`)
+		Set(`planned_exit_at = ?`, s.now())
 	if !keepProgress {
 		query = setNull(query, plannedExitProgressColumns)
 	}

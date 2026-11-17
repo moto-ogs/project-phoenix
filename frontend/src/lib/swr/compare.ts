@@ -21,6 +21,11 @@ export function swrDataEqual(a: unknown, b: unknown): boolean {
   ) {
     return false;
   }
+  // Blob contents are not enumerable. Only the exact same response may
+  // reuse a cached PDF; comparing bytes would require an asynchronous read.
+  if (typeof Blob !== "undefined" && (a instanceof Blob || b instanceof Blob)) {
+    return false;
+  }
   if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false;
 
   if (a instanceof Map && b instanceof Map) {

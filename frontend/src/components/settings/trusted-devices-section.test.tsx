@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
-  render,
+  render as rtlRender,
   screen,
   waitFor,
   fireEvent,
@@ -10,6 +10,18 @@ import { TrustedDevicesSection } from "./trusted-devices-section";
 import { clearSessionCache } from "~/lib/session-cache";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import type { ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {ui}
+    </SWRConfig>,
+  );
+}
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -26,7 +38,7 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 
 const { providerSession, mockGetSession } = vi.hoisted(() => ({
   providerSession: {
-    current: { user: {}, expires: "2099-01-01" } as {
+    current: { user: { id: "1" }, expires: "2099-01-01" } as {
       user: Record<string, unknown>;
       error?: string;
       expires: string;
@@ -73,7 +85,7 @@ describe("TrustedDevicesSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     providerSession.current = {
-      user: {},
+      user: { id: "1" },
       expires: "2099-01-01",
     };
     clearSessionCache();
@@ -151,7 +163,7 @@ describe("TrustedDevicesSection", () => {
 
   it("sends no request for a session whose token was stripped", async () => {
     providerSession.current = {
-      user: {},
+      user: { id: "1" },
       error: "RefreshTokenError",
       expires: "2099-01-01",
     };

@@ -6,6 +6,7 @@ import {
   screen,
 } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { setTestClock } from "~/test/clock";
 
 const { tenantState } = vi.hoisted(() => ({
   tenantState: { tolerance: 15 as number | null },
@@ -22,10 +23,13 @@ import {
   useEarlyCheckoutDialog,
 } from "./early-checkout-note";
 
-// The test clock stands at Wednesday 2026-09-09 12:00 Berlin.
+// The pickup times below are measured against 12:00 Berlin on a school day,
+// so every test pins the clock to Wednesday 2026-09-09 12:00.
+const NOON = "2026-09-09T12:00:00+02:00";
 
 describe("useEarlyCheckoutCheck (#3324)", () => {
   beforeEach(() => {
+    setTestClock(NOON);
     tenantState.tolerance = 15;
   });
 
@@ -77,6 +81,7 @@ function DialogHarness({
 
 describe("useEarlyCheckoutDialog (#3324)", () => {
   beforeEach(() => {
+    setTestClock(NOON);
     tenantState.tolerance = 15;
   });
 

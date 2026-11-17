@@ -111,6 +111,9 @@ func (i CatererInvitation) Open(now time.Time) bool {
 type CatererRegistration struct {
 	Password        string
 	ConfirmPassword string
+	// IPAddress and UserAgent audit a refused password, as at the login.
+	IPAddress string
+	UserAgent string
 }
 
 // CatererAcceptance is the outcome of an accepted invitation: the account

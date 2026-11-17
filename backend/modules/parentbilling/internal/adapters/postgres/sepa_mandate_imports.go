@@ -29,7 +29,7 @@ type sepaMandateImportEventRow struct {
 	ActorAccountID *int64    `bun:"actor_account_id"`
 	ImportFile     string    `bun:"import_file"`
 	ImportLine     int       `bun:"import_line"`
-	OccurredAt     time.Time `bun:"occurred_at,nullzero,default:current_timestamp"`
+	OccurredAt     time.Time `bun:"occurred_at,nullzero"`
 }
 
 // InsertSEPAMandateImportEvents records the creation of each imported

@@ -3,13 +3,30 @@ import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
 import {
   fireEvent,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Reads run through real SWR, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 
 const careExit = vi.hoisted(() => ({
   permissions: [] as string[],
@@ -27,7 +44,12 @@ vi.mock("~/lib/care-exit-api", async (importOriginal) => ({
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "1", permissions: careExit.permissions },
+      user: {
+        id: "1",
+        permissions: careExit.permissions,
+        scope: "tenant",
+        tenantId: 42,
+      },
       expires: "2099-01-01",
     },
     status: "authenticated",
@@ -108,11 +130,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
     show: mocks.showActionError,
     showMessage: mocks.showActionMessage,
   }),
-}));
-
-vi.mock("~/lib/swr", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useSWRAuth: () => ({ data: [], error: undefined, isLoading: false }),
 }));
 
 vi.mock("./rollover-form", async () =>
@@ -205,6 +222,7 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
 }));
 
 import { PhasesEditor } from "./phases-editor";
+import { setTestClock, testClockDay } from "~/test/clock";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
@@ -324,6 +342,8 @@ describe("PhasesEditor", () => {
   ])(
     "names every child and explains the proposed end %s",
     async (phaseEnd, explanation) => {
+      // Die Phase 2026/27 läuft am 09.09.2026, ihr altes Ende liegt danach.
+      setTestClock("2026-09-09T12:00:00+02:00");
       careExit.permissions = ["users:delete"];
       mocks.listPhases.mockResolvedValue([phase()]);
       mocks.listSchemas.mockResolvedValue([schema()]);
@@ -406,6 +426,8 @@ describe("PhasesEditor", () => {
   ])(
     "can exclude blocked children: %s",
     async (_scenario, allBlocked, changedAfterPreview) => {
+      // Die Phase 2026/27 läuft am 09.09.2026, ihr altes Ende liegt danach.
+      setTestClock("2026-09-09T12:00:00+02:00");
       careExit.permissions = ["users:delete"];
       const children = ["7", "8"].map((studentId) => ({
         studentId,
@@ -541,6 +563,8 @@ describe("PhasesEditor", () => {
   );
 
   it("confirms at most 500 children at a time and keeps the rest", async () => {
+    // Die Phase 2026/27 läuft am 09.09.2026, ihr altes Ende liegt danach.
+    setTestClock("2026-09-09T12:00:00+02:00");
     careExit.permissions = ["users:delete"];
     const children = Array.from({ length: 501 }, (_, index) => ({
       studentId: String(index + 1),
@@ -829,10 +853,11 @@ describe("PhasesEditor", () => {
   });
 
   it("keeps the follow-up hint off a phase that has not started", async () => {
+    // Die Phase beginnt morgen.
     mocks.listPhases.mockResolvedValue([
       phase({
-        service_start_date: "2026-10-01",
-        service_end_date: "2027-07-31",
+        service_start_date: testClockDay(1),
+        service_end_date: testClockDay(300),
       }),
     ]);
     mocks.listSchemas.mockResolvedValue([schema()]);
@@ -846,9 +871,9 @@ describe("PhasesEditor", () => {
       await screen.findByRole("menuitem", { name: "Bearbeiten" }),
     );
     const endInput = await waitForInputByName("service_end_date");
-    fireEvent.change(endInput, { target: { value: "2027-08-31" } });
+    fireEvent.change(endInput, { target: { value: testClockDay(330) } });
     // Anker: das Feld hat den neuen Wert übernommen.
-    await waitFor(() => expect(endInput).toHaveValue("2027-08-31"));
+    await waitFor(() => expect(endInput).toHaveValue(testClockDay(330)));
     expect(
       screen.queryByText(/bleibt das Betreuungsende, wie es ist/),
     ).not.toBeInTheDocument();
@@ -1072,6 +1097,35 @@ describe("PhasesEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     await waitFor(() => expect(mocks.listPhases).toHaveBeenCalledTimes(3));
     expect(mocks.updatePhase).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes a single read phase after a status change", async () => {
+    mocks.listPhases.mockReset().mockResolvedValue([phase()]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    mocks.updatePhase.mockResolvedValue(phase({ is_active: false }));
+    const readPhase = vi.fn(() => Promise.resolve(phase()));
+    function RolloverPhase() {
+      useSWRAuth(tenantAdminKeys.enrollmentPhase("10"), readPhase);
+      return null;
+    }
+
+    render(
+      <>
+        <PhasesEditor />
+        <RolloverPhase />
+      </>,
+    );
+    await waitFor(() => expect(readPhase).toHaveBeenCalledTimes(1));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Deaktivieren" }),
+    );
+
+    await waitFor(() => expect(readPhase).toHaveBeenCalledTimes(2));
   });
 
   it("keeps the confirmed inactive state when editing after a failed reload", async () => {

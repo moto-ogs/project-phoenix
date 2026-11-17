@@ -10,7 +10,6 @@
 import {
   type ReactNode,
   useCallback,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -44,19 +43,20 @@ import {
   type ClosingDay,
   formatClosingDayRange,
 } from "~/lib/closing-day-helpers";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { useInvalidateClosingDays } from "~/lib/hooks/use-closing-days";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { closingDayKeys } from "~/lib/swr/staff-keys";
 import { formatDate } from "~/lib/date-helpers";
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
 const logger = createLogger({ component: "ClosingDaysEditor" });
+
+const EMPTY: ClosingDay[] = [];
 
 export function ClosingDaysEditor({
   onAppointmentsCancelled,
@@ -64,14 +64,20 @@ export function ClosingDaysEditor({
   /** Nach „Termine absagen“: die Verwendung der Zeiträume neu laden. */
   readonly onAppointmentsCancelled?: () => void;
 } = {}) {
-  const [closingDays, setClosingDays] = useState<ClosingDay[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
-  // „Wiederholen“ lädt bzw. löscht mit dem dann aktuellen Stand.
-  const latestLoadRef = useRef<() => void>(() => undefined);
+  const {
+    data,
+    error: listError,
+    mutate,
+  } = useSWRAuth(closingDayKeys.list(), () => closingDayService.list());
+  const closingDays = data ?? EMPTY;
+  const loadError = useSwrResourceLoadError(
+    [{ data, error: listError }],
+    "die Liste der Schließtage",
+    () => mutate(),
+  );
+  const loadFailed = loadError.failure !== undefined;
+  const loading = data === undefined && !loadFailed;
+  // „Wiederholen“ löscht mit dem dann aktuellen Stand.
   const latestDeleteRef = useRef<() => void>(() => undefined);
   const [modalOpen, setModalOpen] = useState(false);
   // Ferienwochen, die die Schule in dem Zeitraum ausrichtet (#6434).
@@ -101,37 +107,6 @@ export function ClosingDaysEditor({
   // vorschlagen (ADR 0196); die Liste lädt dann neu.
   const [noticesVersion, setNoticesVersion] = useState(0);
 
-  const load = useCallback(
-    async (opts?: { silent?: boolean }) => {
-      if (!opts?.silent) setLoading(true);
-      try {
-        const data = await closingDayService.list();
-        setClosingDays(data);
-        setLoadFailed(false);
-        clearLoadError();
-      } catch (err) {
-        logger.error("closing_days_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setLoadFailed(true);
-        void showLoadError(err, {
-          object: "die Liste der Schließtage",
-          retry: () => latestLoadRef.current(),
-        });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [showLoadError, clearLoadError],
-  );
-  useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
-  });
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   const refreshAfterMutation = useCallback(() => {
     // Bewusst still: gespeichert ist der Schließtag schon. Scheitert nur das
     // Auffrischen der Plan-Zwischenspeicher, laden Dienst- und Betreuungsplan
@@ -141,9 +116,9 @@ export function ClosingDaysEditor({
         error: err instanceof Error ? err.message : String(err),
       });
     });
-    void load({ silent: true });
+    void mutate();
     setNoticesVersion((value) => value + 1);
-  }, [invalidateClosingDays, load]);
+  }, [invalidateClosingDays, mutate]);
 
   const beginCreate = () => {
     setEditing(null);

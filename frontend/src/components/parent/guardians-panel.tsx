@@ -36,9 +36,15 @@ import {
   updateGuardianContact,
   updateGuardianRelationship,
 } from "~/lib/parent-api";
+import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-resource";
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import { displayEmail, isDemoBuild } from "~/lib/demo-build";
 import { ConfirmationModal, Modal } from "~/components/ui/modal";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -51,11 +57,7 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import {
-  useApiErrorDisplay,
-  useApiFormError,
-  useApiLoadError,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { ParentSection } from "~/components/parent/shell/parent-section";
 import { ParentSectionSkeleton } from "~/components/parent/parent-page";
 import {
@@ -145,15 +147,57 @@ export default function GuardiansPanel({
   const t = useCareTermTranslations("parentChildDetail");
   const visibilityT = useCareTermTranslations("parentVisibility");
   const tPermission = useCareTermTranslations("parentPickupPermission");
-  const [guardians, setGuardians] = useState<ChildGuardian[]>([]);
-  const [accounts, setAccounts] = useState<RelatedAccount[]>([]);
-  // Offene Abholerlaubnis-Anfragen je Kontakt (#4780).
-  const [permissionRequests, setPermissionRequests] = useState<
-    PickupPermissionRequest[]
-  >([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [accessRefused, setAccessRefused] = useState(false);
-  const latestRequest = useRef(0);
+  const guardiansGuard = useRefusalGuard(parentKeys.guardians(studentId));
+  const accountsGuard = useRefusalGuard(parentKeys.relatedAccounts(studentId));
+  const guardiansResource = useSWRAuth(
+    parentKeys.guardians(studentId),
+    () => listChildGuardians(studentId),
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      onSuccess: guardiansGuard.callbacks.onSuccess,
+      onError: (error) => {
+        if (isAccessRefusal(error)) guardiansGuard.callbacks.onError(error);
+      },
+    },
+  );
+  const accountsResource = useSWRAuth(
+    parentKeys.relatedAccounts(studentId),
+    () => listRelatedAccounts(studentId),
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      onSuccess: accountsGuard.callbacks.onSuccess,
+      onError: (error) => {
+        if (isAccessRefusal(error)) accountsGuard.callbacks.onError(error);
+      },
+    },
+  );
+  // Offene Abholerlaubnis-Anfragen je Kontakt (#4780). Ohne die Liste fehlt
+  // nur der Hinweis „Wartet auf die OGS“; die Kontakte bleiben vollständig.
+  // Kind ohne OGS-Platz (#4803): es gibt keine Abholerlaubnis-Anfragen.
+  const requestsResource = useSWRAuth(
+    withoutCarePlace ? null : parentKeys.pickupPermissionRequests(studentId),
+    () => listPickupPermissionRequests(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  // Contacts and accounts project each other's data and actions: a refusal
+  // of either withdraws both.
+  const accessRefused =
+    guardiansGuard.refusal !== undefined ||
+    accountsGuard.refusal !== undefined ||
+    [guardiansResource.error, accountsResource.error].some(
+      (error) =>
+        error instanceof ApiError &&
+        (error.status === 401 || error.status === 403),
+    );
+  const guardians: ChildGuardian[] = accessRefused
+    ? []
+    : (guardiansResource.data ?? []);
+  const accounts: RelatedAccount[] = accessRefused
+    ? []
+    : (accountsResource.data ?? []);
+  const permissionRequests: PickupPermissionRequest[] = accessRefused
+    ? []
+    : (requestsResource.data ?? []);
   const [editingContact, setEditingContact] = useState<ChildGuardian | null>(
     null,
   );
@@ -169,16 +213,32 @@ export default function GuardiansPanel({
     fieldError: inviteFieldError,
     clear: clearInviteError,
   } = useApiFormError(inviteFormRef);
-  const {
-    error: guardiansLoadError,
-    show: showGuardiansLoadError,
-    clear: clearGuardiansLoadError,
-  } = useApiLoadError();
-  const {
-    error: accountsLoadError,
-    show: showAccountsLoadError,
-    clear: clearAccountsLoadError,
-  } = useApiLoadError();
+  // A retry shows the loading state again, not the error it repeats.
+  const presented = (
+    resource: typeof guardiansResource | typeof accountsResource,
+  ) => ({
+    data: accessRefused ? undefined : resource.data,
+    error:
+      guardiansGuard.refusal ??
+      accountsGuard.refusal ??
+      (resource.data === undefined && resource.isValidating
+        ? undefined
+        : resource.error),
+  });
+  const { error: guardiansLoadError } = useSwrResourceLoadError(
+    [presented(guardiansResource)],
+    t("guardians.errorObjectContacts"),
+    () => guardiansResource.mutate(),
+  );
+  const { error: accountsLoadError } = useSwrResourceLoadError(
+    [presented(accountsResource)],
+    t("guardians.errorObjectAccounts"),
+    () => accountsResource.mutate(),
+  );
+  const isLoading = [guardiansResource, accountsResource].some(
+    (resource) =>
+      resource.data === undefined && (!resource.error || resource.isValidating),
+  );
   const { show: showActionError } = useApiErrorDisplay();
   const [busy, setBusy] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
@@ -192,169 +252,71 @@ export default function GuardiansPanel({
   // error path (#2518).
   const [message, setMessage] = useState<string | null>(null);
 
-  const discardRefusedAccess = useCallback((failures: unknown[]) => {
-    const refusal = failures.find(
-      (error) =>
-        error instanceof ApiError &&
-        (error.status === 401 || error.status === 403),
-    );
-    if (!refusal) return;
-    // Contacts and accounts project each other's data and actions.
-    setAccessRefused(true);
-    setGuardians([]);
-    setAccounts([]);
-    setPermissionRequests([]);
+  useEffect(() => {
+    if (!accessRefused) return;
     setEditingContact(null);
     setEditingPickup(null);
     setAddMode(null);
     setUpgradePrompt(null);
     setConfirmRemoveId(null);
-    return refusal;
-  }, []);
+  }, [accessRefused]);
 
-  const load = useCallback(async () => {
-    const request = ++latestRequest.current;
-    setIsLoading(true);
-    clearGuardiansLoadError();
-    clearAccountsLoadError();
-    // Both lists load side by side; each section reports its own failure, so
-    // a failed account list never shows up as "no accounts connected".
-    const [guardianResult, accountResult, requestResult] =
-      await Promise.allSettled([
-        listChildGuardians(studentId),
-        listRelatedAccounts(studentId),
-        withoutCarePlace
-          ? NO_PICKUP_PERMISSION_REQUESTS
-          : listPickupPermissionRequests(studentId),
-      ]);
-    if (request !== latestRequest.current) return;
-    const refused = discardRefusedAccess(
-      [guardianResult, accountResult].flatMap((result) =>
-        result.status === "rejected" ? [result.reason as unknown] : [],
-      ),
-    );
-    if (
-      guardianResult.status === "fulfilled" &&
-      accountResult.status === "fulfilled"
-    ) {
-      setAccessRefused(false);
-    }
-    // Ohne die Liste fehlt nur der Hinweis „Wartet auf die OGS“; die
-    // Kontakte bleiben vollständig.
-    if (requestResult.status === "fulfilled" && !refused) {
-      setPermissionRequests(requestResult.value);
-    } else if (requestResult.status === "rejected") {
-      logger.warn("pickup_permission_requests_load_failed", {
-        error:
-          requestResult.reason instanceof Error
-            ? requestResult.reason.message
-            : String(requestResult.reason),
-      });
-    }
-    if (guardianResult.status === "fulfilled") {
-      if (!refused) setGuardians(guardianResult.value);
-    } else {
-      logger.error("guardians_load_failed", {
-        error:
-          guardianResult.reason instanceof Error
-            ? guardianResult.reason.message
-            : String(guardianResult.reason),
-      });
-      void showGuardiansLoadError(guardianResult.reason, {
-        object: t("guardians.errorObjectContacts"),
-        retry: () => void loadRef.current(),
-      });
-    }
-    if (accountResult.status === "fulfilled") {
-      if (!refused) setAccounts(accountResult.value);
-    } else {
-      logger.error("related_accounts_load_failed", {
-        error:
-          accountResult.reason instanceof Error
-            ? accountResult.reason.message
-            : String(accountResult.reason),
-      });
-      void showAccountsLoadError(accountResult.reason, {
-        object: t("guardians.errorObjectAccounts"),
-        retry: () => void loadRef.current(),
-      });
-    }
-    setIsLoading(false);
-  }, [
-    clearAccountsLoadError,
-    clearGuardiansLoadError,
-    discardRefusedAccess,
-    showAccountsLoadError,
-    showGuardiansLoadError,
-    studentId,
-    withoutCarePlace,
-    t,
-  ]);
-  // The retry runs the latest load, not the one of the failed attempt.
-  const loadRef = useRef(load);
-  useLayoutEffect(() => {
-    loadRef.current = load;
-  });
-
-  const invalidateRequest = useCallback(() => {
-    latestRequest.current++;
-  }, []);
+  const { data: cachedGuardians, mutate: clearGuardians } = guardiansResource;
+  const { data: cachedAccounts, mutate: clearAccounts } = accountsResource;
+  const { data: cachedRequests, mutate: clearRequests } = requestsResource;
+  const wasRefused = useRef(false);
   useEffect(() => {
-    void load();
-    return invalidateRequest;
-  }, [load, invalidateRequest]);
+    if (!accessRefused) {
+      if (wasRefused.current) {
+        if (cachedGuardians === undefined) void clearGuardians();
+        if (cachedAccounts === undefined) void clearAccounts();
+        if (cachedRequests === undefined) void clearRequests();
+      }
+      wasRefused.current = false;
+      return;
+    }
+    wasRefused.current = true;
+    if (cachedGuardians !== undefined)
+      void clearGuardians(undefined, { revalidate: false });
+    if (cachedAccounts !== undefined)
+      void clearAccounts(undefined, { revalidate: false });
+    if (cachedRequests !== undefined)
+      void clearRequests(undefined, { revalidate: false });
+  }, [
+    accessRefused,
+    cachedGuardians,
+    cachedAccounts,
+    cachedRequests,
+    clearGuardians,
+    clearAccounts,
+    clearRequests,
+  ]);
 
-  // The reload after a confirmed write (#6652) only reads and sets: the shown
-  // contacts and accounts stay while it runs, and a failure rejects, so the
-  // hook reports it as a load error that says the change is saved.
+  // The reload after a confirmed write (#6652) keeps the shown lists while it
+  // runs; a failed or refused list rejects, so the hook reports it.
+  const { mutate: mutateGuardians } = guardiansResource;
+  const { mutate: mutateAccounts } = accountsResource;
+  const { mutate: mutateRequests } = requestsResource;
   const readGuardians = useCallback(async () => {
-    const request = ++latestRequest.current;
-    const [nextGuardians, nextAccounts, nextRequests] =
-      await Promise.allSettled([
-        listChildGuardians(studentId),
-        listRelatedAccounts(studentId),
+    await Promise.all([
+      mutateGuardians(listChildGuardians(studentId), { revalidate: false }),
+      mutateAccounts(listRelatedAccounts(studentId), { revalidate: false }),
+      // Wie beim Erstabruf fehlt nur der optionale Hinweis auf offene Anfragen.
+      mutateRequests(
         withoutCarePlace
           ? NO_PICKUP_PERMISSION_REQUESTS
           : listPickupPermissionRequests(studentId),
-      ]);
-    if (request !== latestRequest.current) return;
-    setIsLoading(false);
-    const failures = [nextGuardians, nextAccounts].flatMap((result) =>
-      result.status === "rejected" ? [result.reason as unknown] : [],
-    );
-    const refusal = discardRefusedAccess(failures);
-    if (refusal) throw refusal;
-    if (
-      nextGuardians.status === "fulfilled" &&
-      nextAccounts.status === "fulfilled"
-    ) {
-      setAccessRefused(false);
-    }
-    if (nextGuardians.status === "fulfilled") {
-      clearGuardiansLoadError();
-      setGuardians(nextGuardians.value);
-    }
-    if (nextAccounts.status === "fulfilled") {
-      clearAccountsLoadError();
-      setAccounts(nextAccounts.value);
-    }
-    if (nextRequests.status === "fulfilled") {
-      setPermissionRequests(nextRequests.value);
-    } else {
-      // Wie beim Erstabruf fehlt nur der optionale Hinweis auf offene Anfragen.
-      logger.warn("pickup_permission_requests_load_failed", {
-        error:
-          nextRequests.reason instanceof Error
-            ? nextRequests.reason.message
-            : String(nextRequests.reason),
-      });
-    }
-    if (nextGuardians.status === "rejected") throw nextGuardians.reason;
-    if (nextAccounts.status === "rejected") throw nextAccounts.reason;
+        { revalidate: false },
+      ).catch((err: unknown) => {
+        logger.warn("pickup_permission_requests_load_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }),
+    ]);
   }, [
-    clearAccountsLoadError,
-    clearGuardiansLoadError,
-    discardRefusedAccess,
+    mutateAccounts,
+    mutateGuardians,
+    mutateRequests,
     studentId,
     withoutCarePlace,
   ]);

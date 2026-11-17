@@ -3,41 +3,32 @@
 // Die bisherigen Mandatsimporte (#6198): welche Datei, wann, von wem und wie
 // viele Mandate. Nur zur Information; die Datei selbst bewahrt moto nicht auf.
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatBerlinDate, formatBerlinTime } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { fetchTraegerBuero } from "~/lib/traeger-api";
 import type { ImportLogEntry } from "~/lib/traeger-sepa-import-api";
-
-const logger = createLogger({ component: "SepaImportLogCard" });
+import { useTraegerResource } from "./use-traeger-resource";
 
 export function SepaImportLogCard({
   entries,
 }: Readonly<{ entries: readonly ImportLogEntry[] }>) {
-  const [emails, setEmails] = useState<ReadonlyMap<string, string>>(new Map());
-
-  useEffect(() => {
-    if (entries.length === 0) return;
-    let current = true;
-    // Die Personen des Träger-Büros nennen die Konten; ohne Leserecht
-    // bleibt die Kontonummer.
-    fetchTraegerBuero()
-      .then((buero) => {
-        if (current) {
-          setEmails(new Map(buero.members.map((m) => [m.accountId, m.email])));
-        }
-      })
-      .catch((err: unknown) => {
-        logger.warn("sepa_import_log_people_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      current = false;
-    };
-  }, [entries.length]);
+  // Die Personen des Träger-Büros nennen die Konten; ohne Leserecht
+  // bleibt die Kontonummer, ohne Fehlermeldung.
+  const { data: buero } = useTraegerResource(
+    entries.length > 0 ? traegerKeys.buero() : null,
+    fetchTraegerBuero,
+    "die Personen des Träger-Büros",
+  );
+  const emails = useMemo(
+    () =>
+      new Map<string, string>(
+        buero?.members.map((m) => [m.accountId, m.email] as const) ?? [],
+      ),
+    [buero],
+  );
 
   const columns: DataTableColumn<ImportLogEntry>[] = [
     {

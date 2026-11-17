@@ -5,10 +5,11 @@
 import {
   act,
   fireEvent,
-  render,
+  render as renderUi,
   screen,
   waitFor,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -46,8 +47,31 @@ vi.mock("~/lib/calendar-period-api", () => ({
 
 import { ApiError } from "~/lib/api-error";
 import type { StaffShift } from "~/lib/shift-helpers";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import { ShiftEditModal } from "./shift-edit-modal";
+
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1" }, expires: "2099-01-01" },
+  }),
+}));
+
+// Real SWR with a fresh cache per render: the modal reads calendar periods
+// and the series rule through the shared cache.
+function FreshCache({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderUi(ui, { wrapper: FreshCache });
+}
 
 const TITLE = /^Schicht bearbeiten/;
 const FOOTER = ["Schicht löschen", "Abbrechen", "Speichern…"];

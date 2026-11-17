@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 
@@ -71,10 +72,10 @@ type parentSEPAMandates struct {
 }
 
 // NewParentSEPAMandates binds the parents' mandates to the Elternabrechnung
-// on the root's day clock.
-func NewParentSEPAMandates(settings ParentMandateSettings, cipher BankDataCipher, today func() calendar.Date) parentportal.SEPAMandatesPort {
+// on the root's clocks.
+func NewParentSEPAMandates(settings ParentMandateSettings, cipher BankDataCipher, today func() calendar.Date, now func() time.Time) parentportal.SEPAMandatesPort {
 	return parentSEPAMandates{mandates: parentBillingCompose.NewParentSEPAMandates(
-		parentMandateParties{billing: careContractCompose.NewContractVersions()}, cipher, parentOnlineMandateSettings{settings: settings}, SecurityFingerprints{}, today)}
+		parentMandateParties{billing: careContractCompose.NewContractVersions()}, cipher, parentOnlineMandateSettings{settings: settings}, SecurityFingerprints{}, today, now)}
 }
 
 func (m parentSEPAMandates) SEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader) (parentportal.SEPAMandateView, error) {

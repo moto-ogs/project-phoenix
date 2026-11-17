@@ -4146,7 +4146,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
-      "binding_digest": "0fcff147cfa1182d54ad96f0054c919b",
+      "binding_digest": "f5d4fd9b662334626aee55d568fb52eb",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
@@ -4154,7 +4154,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
-      "binding_digest": "79b97962620b56147fa14d75c553d57e",
+      "binding_digest": "2278e081c5fc09985e61a4bab0fee490",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
@@ -4162,7 +4162,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
-      "binding_digest": "79b97962620b56147fa14d75c553d57e",
+      "binding_digest": "2278e081c5fc09985e61a4bab0fee490",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
@@ -6370,7 +6370,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.TransitionParticipants",
-      "binding_digest": "2296149a016d802917bb5df7a1ee9d49",
+      "binding_digest": "224f410ed956fcbc3a966f45591d20fc",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.TransitionParticipants",
@@ -6378,7 +6378,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
-      "binding_digest": "79b97962620b56147fa14d75c553d57e",
+      "binding_digest": "2278e081c5fc09985e61a4bab0fee490",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
@@ -31122,7 +31122,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
-      "binding_digest": "79b97962620b56147fa14d75c553d57e",
+      "binding_digest": "2278e081c5fc09985e61a4bab0fee490",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ParticipantPresence.TransitionParticipants",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
@@ -31130,7 +31130,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.legacyParticipantPresence.TransitionParticipants",
-      "binding_digest": "79b97962620b56147fa14d75c553d57e",
+      "binding_digest": "2278e081c5fc09985e61a4bab0fee490",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ParticipantPresence.TransitionParticipants",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",

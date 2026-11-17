@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ func TestCarePriceListsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newCareScope(t, db, "Träger Preisformen A")
 	other := newCareScope(t, db, "Träger Preisformen B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	account := testpkg.CreateTestAccount(t, db, "preisformen@example.org").ID
 	january := calendar.NewDate(2030, 1, 1)
 	rollback := errors.New("roll the price lists back")
@@ -99,7 +100,7 @@ func TestCareBilledPricesNameTheScaleStep(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	own := newCareScope(t, db, "Träger Staffel abgerechnet")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the invoice back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
@@ -152,7 +153,7 @@ func TestCarePriceListsJoinKeepsTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newCareScope(t, db, "Träger Preisbuch A")
 	other := newCareScope(t, db, "Träger Preisbuch B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	january := calendar.NewDate(2030, 1, 1)
 	rollback := errors.New("roll the price lists back")
 

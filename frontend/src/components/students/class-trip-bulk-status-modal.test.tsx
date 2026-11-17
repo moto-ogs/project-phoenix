@@ -11,7 +11,12 @@ import {
   it,
   vi,
 } from "vitest";
-import { releaseFakeTimers } from "~/test/clock";
+import {
+  releaseFakeTimers,
+  setTestClock,
+  TEST_CLOCK_TODAY,
+  testClockDay,
+} from "~/test/clock";
 import { ApiError } from "~/lib/api-error";
 import { ClassTripBulkStatusModal } from "./class-trip-bulk-status-modal";
 import {
@@ -318,7 +323,7 @@ describe("ClassTripBulkStatusModal in moto schule (#4799)", () => {
 
     fireEvent.click(screen.getByLabelText("Ben Ausflug"));
     fireEvent.change(screen.getByLabelText("Bis"), {
-      target: { value: "2026-09-11" },
+      target: { value: testClockDay(2) },
     });
     // A trip over several days has no return time.
     expect(screen.queryByLabelText(/Rückkehrzeit/)).not.toBeInTheDocument();
@@ -331,8 +336,8 @@ describe("ClassTripBulkStatusModal in moto schule (#4799)", () => {
     await waitFor(() => {
       expect(save).toHaveBeenCalledWith({
         studentIds: ["11"],
-        from: "2026-09-09",
-        to: "2026-09-11",
+        from: TEST_CLOCK_TODAY,
+        to: testClockDay(2),
         reason: "Jugendherberge",
         returnTime: undefined,
       });
@@ -343,6 +348,8 @@ describe("ClassTripBulkStatusModal in moto schule (#4799)", () => {
   });
 
   it("offers a return time for one day and sends it", async () => {
+    // Eine Rückkehrzeit gibt es nur an einem Schultag: ein Mittwoch.
+    setTestClock("2026-09-09T12:00:00+02:00");
     const save = vi.fn().mockResolvedValue(undefined);
     render(
       <ClassTripBulkStatusModal
@@ -451,6 +458,8 @@ describe("ClassTripBulkStatusModal date defaults in moto schule (#4799)", () => 
   ];
 
   it("starts on the day the class view shows and offers no return time on a weekend", () => {
+    // Samstag 12.09. und Montag 14.09. müssen nach dem heutigen Tag liegen.
+    setTestClock("2026-09-09T12:00:00+02:00");
     render(
       <ClassTripBulkStatusModal
         isOpen
@@ -487,10 +496,10 @@ describe("ClassTripBulkStatusModal date defaults in moto schule (#4799)", () => 
         onClose={vi.fn()}
         targetLabel="Klasse 3b"
         students={child}
-        schoolReport={{ save: vi.fn(), defaultDate: "2026-09-01" }}
+        schoolReport={{ save: vi.fn(), defaultDate: testClockDay(-8) }}
       />,
     );
 
-    expect(screen.getByLabelText("Von")).toHaveValue("2026-09-09");
+    expect(screen.getByLabelText("Von")).toHaveValue(TEST_CLOCK_TODAY);
   });
 });

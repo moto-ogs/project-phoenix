@@ -30,9 +30,11 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { LOCATION_COLORS } from "~/lib/location-helper";
@@ -218,17 +220,20 @@ export function GradeTransitionsManager({
   ) => void;
 }) {
   const toast = useToast();
-  const [transitions, setTransitions] = useState<GradeTransition[] | null>(
-    null,
-  );
+  const {
+    data,
+    error: transitionsError,
+    mutate,
+  } = useSWRAuth(tenantAdminKeys.gradeTransitions(), listGradeTransitions);
+  const transitions = data ?? null;
   // Ladefehler vor Ort, Fehler in offenen Dialogen im Dialog, sonst als
   // Toast (#2517). Codes steuern nur, was danach passiert; den Text liefert
   // der Katalog.
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data, error: transitionsError }],
+    "die Liste der Schuljahreswechsel",
+    () => mutate(),
+  );
   const revertErrors = useApiFormError();
   const deleteErrors = useApiFormError();
   const { show: showActionError } = useApiErrorDisplay();
@@ -248,30 +253,7 @@ export function GradeTransitionsManager({
   );
   const [busy, setBusy] = useState(false);
 
-  // Returns the freshly fetched list (null when the fetch failed) so callers
-  // that must act on the new server state — the stale-revert conflict path —
-  // can read it without waiting for the state update to land.
-  const refresh = useCallback(async (): Promise<GradeTransition[] | null> => {
-    try {
-      const list = await listGradeTransitions();
-      setTransitions(list);
-      clearLoadError();
-      return list;
-    } catch (error) {
-      logger.error("transitions_load_failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      void showLoadError(error, {
-        object: "die Liste der Schuljahreswechsel",
-        retry: () => void refresh(),
-      });
-      return null;
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const refresh = useCallback(() => mutate(), [mutate]);
 
   useEffect(() => {
     if (!onSummaryChange) return;
@@ -289,6 +271,14 @@ export function GradeTransitionsManager({
     });
   }, [transitions, onSummaryChange]);
 
+  const invalidateMatching = useInvalidateMatching();
+  const refreshClasses = () =>
+    invalidateMatching(
+      (key) =>
+        key === tenantAdminKeys.gradeTransitionSuggestions() ||
+        key === tenantAdminKeys.gradeTransitionClasses(),
+    );
+
   const handleApplied = (result: TransitionResult) => {
     setPreviewFor(null);
     setEditorDraft(null);
@@ -296,6 +286,7 @@ export function GradeTransitionsManager({
       `Der Schuljahreswechsel ist angewendet: ${result.studentsPromoted} Kinder versetzt, ${result.studentsGraduated} Abgänge.`,
     );
     void refresh();
+    void refreshClasses();
   };
 
   const handleRevert = async () => {
@@ -317,6 +308,7 @@ export function GradeTransitionsManager({
       }
       setRevertTarget(null);
       void refresh();
+      void refreshClasses();
     } catch (error) {
       logger.error("revert_failed", {
         transition_id: revertTarget.id,
@@ -331,7 +323,17 @@ export function GradeTransitionsManager({
         error instanceof ApiError &&
         error.code === NOT_LATEST_TRANSITION_CODE
       ) {
-        const list = await refresh();
+        // Der neue Stand wird hier gebraucht, nicht erst nach dem Rendern.
+        const list = await listGradeTransitions().catch((reloadError) => {
+          logger.error("transitions_load_failed", {
+            error:
+              reloadError instanceof Error
+                ? reloadError.message
+                : String(reloadError),
+          });
+          return null;
+        });
+        if (list) void mutate(list, { revalidate: false });
         const latest = list ? pickLatestRevertable(list) : null;
         setRevertTarget(latest);
         // Der Dialog zeigt jetzt den neuesten; der Grund steht darin.

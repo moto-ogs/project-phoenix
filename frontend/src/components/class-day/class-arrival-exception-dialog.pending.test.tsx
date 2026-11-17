@@ -1,7 +1,15 @@
 // #6533: Speichert das eingebettete Panel, sperrt der Dialog X, Escape,
 // Hintergrund und Fußleiste; eine späte Antwort meldet sich nicht in einem
 // neu geöffneten Dialog. Echter FormModal.
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as rtlRender,
+  screen,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode as TenantSWRNode } from "react";
+import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
@@ -49,6 +57,39 @@ vi.mock("~/components/ui/date-picker", () => ({
 }));
 
 import { ClassArrivalExceptionDialog } from "./class-arrival-exception-dialog";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in school-portal session per render.
+function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "1", scope: "school", tenantId: 1 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <TenantSWRConfig
+        value={{ provider: () => new Map(), errorRetryCount: 0 }}
+      >
+        {children}
+      </TenantSWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  const Outer = options?.wrapper;
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: TenantSWRNode }>) => (
+      <TenantSWRWrapper>
+        {Outer ? <Outer>{children}</Outer> : children}
+      </TenantSWRWrapper>
+    ),
+  });
+}
 
 const TITLE = "Ankunftszeit an einem Tag für Klasse 4a";
 

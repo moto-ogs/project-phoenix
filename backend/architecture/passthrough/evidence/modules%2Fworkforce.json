@@ -324,13 +324,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) CurrentStaffSchedule(ctx context.Context, staffID int64) ([]workforce.StaffWorkSchedule, error) {\n\tif staffID \u003c= 0 {\n\t\treturn nil, invalid(\"staff ID is required\")\n\t}\n\tvar result []domain.StaffWorkSchedule\n\tvar err error\n\terr = s.run(ctx, \"current_staff_schedule\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tvar queryStats domain.OperationStats\n\t\tresult, queryStats, err = s.store.CurrentStaffSchedule(ctx, staffID)\n\t\tstats.Add(queryStats)\n\t\treturn err\n\t})\n\treturn schedulesToPublic(result), MapError(err)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/workforce/internal/application/Service.CurrentStaffSchedule",
-      "owner": "modules/workforce"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) ExpiredWorkSessionBreaks(ctx context.Context, before time.Time) ([]workforce.WorkSessionBreak, error) {\n\tvar result []workforce.WorkSessionBreak\n\tvar err error\n\terr = s.run(ctx, \"expired_work_session_breaks\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tvar queryStats domain.OperationStats\n\t\tresult, queryStats, err = s.store.ExpiredWorkSessionBreaks(ctx, before)\n\t\tstats.Add(queryStats)\n\t\treturn err\n\t})\n\treturn result, mapWorkSessionError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/Service.ExpiredWorkSessionBreaks",

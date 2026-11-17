@@ -54,7 +54,7 @@ func TestParentAnnouncementRecipients_RecordedAtPublication(t *testing.T) {
 	}
 
 	letter := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, leaver.AccountID, leaver.TenantID,
 		"Elternbrief 1a", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetClass, TargetRefText: strp("1a")},
@@ -133,7 +133,7 @@ func TestParentAnnouncementRecipients_LetterStatusKeepsTheRecordedChildren(t *te
 	repo := api.NewPeopleRepositorySuiteAnnouncements(testpkg.NewDatabase(t, db))
 	ctx := tenantCtx(t)
 	letter := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, leaver.AccountID, leaver.TenantID,
 		"Elternbrief 1a", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetClass, TargetRefText: strp("1a")},

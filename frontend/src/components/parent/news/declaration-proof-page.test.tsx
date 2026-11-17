@@ -13,10 +13,17 @@ import * as parentApi from "~/lib/parent-api";
 import { type ParentDeclarationProof } from "~/lib/parent-api";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { catalogText } from "~/test/error-catalog-text";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
 
 // The PDF download reports its error as a toast of the shared error path.
 function render(ui: ReactElement) {
-  return rtlRender(ui, { wrapper: ToastProvider });
+  return rtlRender(
+    <ParentResourceTestProvider>
+      <ToastProvider>{ui}</ToastProvider>
+    </ParentResourceTestProvider>,
+  );
 }
 
 const searchParams = vi.hoisted(() => new URLSearchParams("student=5"));

@@ -149,7 +149,7 @@ func TestStaffPersonMergeAndOffboardingDoNotDeadlock(t *testing.T) {
 		return tenant.HoldsLock(ctx, tenant.LockStaffRows, tenant.LockIDKey(subject.StaffID)) &&
 			tenant.HoldsLock(ctx, tenant.LockStaffPersonMerge, tenant.LockIDKey(testpkg.Tenant(t)))
 	}}
-	merge, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(), membershipCompose.NewStaffPersonMerge(), audit,
+	merge, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(time.Now), membershipCompose.NewStaffPersonMerge(), audit,
 		func(context.Context) int64 { return operator.ID })
 	require.NoError(t, err)
 	var candidates []staffpersonmerge.Candidate

@@ -55,7 +55,7 @@ func (r *AccountMFARecords) UpsertGlobalOverride(ctx context.Context, override d
  VALUES (?, NULL, ?, ?, ?, ?)
  ON CONFLICT (account_id) WHERE tenant_id IS NULL DO UPDATE
  SET override = EXCLUDED.override, set_by = EXCLUDED.set_by, set_by_type = EXCLUDED.set_by_type,
- reason = EXCLUDED.reason, updated_at = CURRENT_TIMESTAMP`,
+ reason = EXCLUDED.reason`,
 		override.AccountID, override.Override, override.SetBy, override.SetByType, override.Reason).Exec(ctx)
 	return err
 }
@@ -75,7 +75,7 @@ func (r *AccountMFARecords) UpsertTenantOverride(ctx context.Context, override d
  VALUES (?, ?, ?, ?, ?, ?)
  ON CONFLICT (account_id, tenant_id) WHERE tenant_id IS NOT NULL DO UPDATE
  SET override = EXCLUDED.override, set_by = EXCLUDED.set_by, set_by_type = EXCLUDED.set_by_type,
- reason = EXCLUDED.reason, updated_at = CURRENT_TIMESTAMP`,
+ reason = EXCLUDED.reason`,
 		override.AccountID, override.TenantID, override.Override, override.SetBy, override.SetByType, override.Reason).Exec(ctx)
 	return err
 }

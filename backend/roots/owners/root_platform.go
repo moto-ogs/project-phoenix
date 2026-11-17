@@ -154,12 +154,11 @@ func BuildSettingsOwner(db transactionruntime.Database, unit rootUnitOfWork, env
 		ClassRestrictionGuard: phases.HasActiveClassRestrictedPhase,
 		GradeRestrictionGuard: phases.HasActiveGradeRestrictedPhase,
 		GradeCapGuard:         phases.MaxActivePhaseGrade,
-		Now:                   env.Now,
 	})
 	if err != nil {
 		return SettingsOwner{}, err
 	}
-	traeger, err := BuildTraegerSettings(db, unit, env.Logger, organizations, hub, env.Now)
+	traeger, err := BuildTraegerSettings(db, unit, env.Logger, organizations, hub)
 	if err != nil {
 		return SettingsOwner{}, err
 	}
@@ -185,9 +184,8 @@ func schoolTraeger(organizations organizationtenancy.SchoolListQuery) func(conte
 
 // BuildTraegerSettings binds the Träger level to the Träger transaction of the
 // root's unit of work, the Träger's schools for the change notice and the
-// Träger rights of Identity & Access (ADR 0086 sections 6 and 8); now is the
-// root's clock.
-func BuildTraegerSettings(db transactionruntime.Database, unit rootUnitOfWork, logger *slog.Logger, organizations organizationtenancy.TraegerMembershipQuery, hub *realtime.Hub, now func() time.Time) (*settingsCompose.TraegerSettings, error) {
+// Träger rights of Identity & Access (ADR 0086 sections 6 and 8).
+func BuildTraegerSettings(db transactionruntime.Database, unit rootUnitOfWork, logger *slog.Logger, organizations organizationtenancy.TraegerMembershipQuery, hub *realtime.Hub) (*settingsCompose.TraegerSettings, error) {
 	notify := SettingsChangedNotifier(hub)
 	if notify == nil {
 		notify = func(context.Context, int64, string) {}
@@ -195,7 +193,7 @@ func BuildTraegerSettings(db transactionruntime.Database, unit rootUnitOfWork, l
 	return settingsCompose.NewTraegerSettings(settingsCompose.TraegerSettingsDependencies{
 		Values:  settingsCompose.NewTraegerSettingRepository(settingsCompose.NewTenantSettingsRuntime(db.Pool(), nil)),
 		Runtime: settingsCompose.NewTenantSettingsRuntime(db.Pool(), &unit),
-		Schools: organizations.ListTraegerSchoolIDs, Notify: notify, Logger: logger, Now: now,
+		Schools: organizations.ListTraegerSchoolIDs, Notify: notify, Logger: logger,
 		Rights: map[configModels.TraegerRight]string{
 			configModels.TraegerRightSettings: identityaccess.TraegerRightSettingsManage,
 			configModels.TraegerRightStaff:    identityaccess.TraegerRightStaffManage,

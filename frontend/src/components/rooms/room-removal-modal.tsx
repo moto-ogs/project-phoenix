@@ -19,7 +19,8 @@ import { FramedList } from "~/components/ui/framed-list";
 import { IconTile } from "~/components/ui/icon-tile";
 import { SectionLabel } from "~/components/ui/section-label";
 import { SkeletonRows } from "~/components/ui/skeleton";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import {
   fetchRoomRemovalImpact,
@@ -27,6 +28,8 @@ import {
   type RoomRemovalImpact,
   type RoomRemovalOutcome,
 } from "~/lib/room-removal-api";
+import { useFreshSWR } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 const logger = createLogger({ component: "RoomRemovalModal" });
 
@@ -178,49 +181,33 @@ export function RoomRemovalModal({
   onClose,
   onRemoved,
 }: RoomRemovalModalProps) {
-  const [impact, setImpact] = useState<RoomRemovalImpact | null>(null);
-  const [loadingImpact, setLoadingImpact] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [attempt, setAttempt] = useState(0);
   const errors = useApiFormError();
   const clearErrors = errors.clear;
-  const impactLoad = useApiLoadError();
-  const showImpactError = impactLoad.show;
-  const clearImpactError = impactLoad.clear;
+  // Bestätigt wird nur gegen die Vorschau dieser Öffnung; auch nach einem
+  // abgelehnten Entfernen erst wieder gegen die neue.
+  const {
+    data: freshData,
+    error: impactError,
+    mutate: reloadImpact,
+  } = useFreshSWR(
+    isOpen ? tenantDailyKeys.roomRemovalImpact(roomId) : null,
+    () => fetchRoomRemovalImpact(roomId),
+  );
+  // Scheitert das Laden dieser Öffnung, zeigt der Dialog den Fehler, nicht
+  // eine frühere Vorschau.
+  const data = impactError ? undefined : freshData;
+  const impact: RoomRemovalImpact | null = data ?? null;
+  const loadingImpact = isOpen && data === undefined && !impactError;
+  const impactLoad = useSwrResourceLoadError(
+    [{ data, error: impactError }],
+    "die Vorschau",
+    () => reloadImpact(),
+  );
 
   useEffect(() => {
-    if (!isOpen) {
-      setImpact(null);
-      clearErrors();
-      clearImpactError();
-      return;
-    }
-    let active = true;
-    setLoadingImpact(true);
-    clearImpactError();
-    void fetchRoomRemovalImpact(roomId)
-      .then((result) => {
-        if (active) setImpact(result);
-      })
-      .catch((loadError: unknown) => {
-        logger.warn("room_removal_impact_failed", {
-          room_id: roomId,
-          error:
-            loadError instanceof Error ? loadError.message : String(loadError),
-        });
-        if (!active) return;
-        void showImpactError(loadError, {
-          object: "die Vorschau",
-          retry: () => setAttempt((count) => count + 1),
-        });
-      })
-      .finally(() => {
-        if (active) setLoadingImpact(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [attempt, clearErrors, clearImpactError, isOpen, roomId, showImpactError]);
+    if (!isOpen) clearErrors();
+  }, [clearErrors, isOpen]);
 
   const outcome = impact?.outcome ?? "delete";
   const blockers = impact ? blockingRows(impact) : [];
@@ -242,7 +229,7 @@ export function RoomRemovalModal({
             : String(removeError),
       });
       // Hält jemand den Raum inzwischen, zeigt die neue Vorschau, was.
-      setAttempt((count) => count + 1);
+      void reloadImpact();
       await errors.show(removeError, { object: "das Entfernen des Raums" });
       setRemoving(false);
       return;

@@ -28,7 +28,9 @@ type appendOnceStore interface {
 }
 
 // Command is the single application entry point for append-only Audit writes.
-// now is the Audit clock the retention windows count back from (ADR 0239).
+// now is the Audit clock of the composition (ADR 0239). The ledger
+// retentions count back from the database time instead (ADR 0281,
+// Nachtrag).
 type Command struct {
 	store   appendStore
 	observe func(AppendObservation)

@@ -91,6 +91,7 @@ func (s *Store) CreateWorkSessionBreak(ctx context.Context, value workforce.Work
 	if row.TenantID == 0 {
 		row.TenantID = scope.TenantID
 	}
+	s.stampNew(&row.CreatedAt, &row.UpdatedAt)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	_, err = db.NewInsert().Model(row).ModelTableExpr(tableWorkSessionBreaks).Returning("*").Exec(ctx)
@@ -114,7 +115,7 @@ func (s *Store) UpdateWorkSessionBreak(ctx context.Context, value workforce.Work
 	query := withTenant(db.NewUpdate().Model(row).
 		ModelTableExpr(tableWorkSessionBreaks+` AS "work_session_break"`).
 		ExcludeColumn("created_at", "updated_at").
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.stamp()).
 		WherePK().
 		Returning("*"), aliasWorkSessionBreak, scope)
 	stats, err := execAffected(ctx, query, "update work session break")
@@ -148,7 +149,7 @@ func (s *Store) EndWorkSessionBreak(ctx context.Context, id int64, endedAt time.
 		ModelTableExpr(tableWorkSessionBreaks+` AS "work_session_break"`).
 		Set("ended_at = ?", endedAt).
 		Set("duration_minutes = ?", durationMinutes).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.stamp()).
 		Where(`"work_session_break".id = ?`, id).
 		Where(`"work_session_break".ended_at IS NULL`), aliasWorkSessionBreak, scope)
 	stats, err := execAffected(ctx, query, "end work session break")
@@ -164,7 +165,7 @@ func (s *Store) SetWorkSessionBreakDuration(ctx context.Context, id int64, durat
 		ModelTableExpr(tableWorkSessionBreaks+` AS "work_session_break"`).
 		Set("duration_minutes = ?", durationMinutes).
 		Set("ended_at = ?", endedAt).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.stamp()).
 		Where(`"work_session_break".id = ?`, id), aliasWorkSessionBreak, scope)
 	stats, err := execAffected(ctx, query, "update work session break duration")
 	return stats.Rows, stats, err

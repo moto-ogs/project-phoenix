@@ -76,7 +76,7 @@ export function CollectionViewSwitch({
   );
 }
 
-export interface ColumnMenuColumn {
+interface ColumnMenuColumn {
   readonly key: string;
   readonly header: string;
   /** Columns that carry the row (the name) stay out of the menu. */

@@ -1,11 +1,14 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { setTestClock, TEST_CLOCK_TODAY } from "~/test/clock";
 import type {
   TraegerUtilization,
   UtilizationChildren,
 } from "~/lib/traeger-utilization-api";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
+
+vi.unmock("swr");
 
 const {
   mockFetchUtilization,
@@ -24,7 +27,10 @@ const {
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path,
 }));
-vi.mock("next-auth/react", () => ({ useSession: mockUseSession }));
+vi.mock("next-auth/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-auth/react")>()),
+  useSession: mockUseSession,
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/auslastung",
   useRouter: () => ({ push: vi.fn() }),
@@ -66,6 +72,22 @@ vi.mock("~/env.client", () => ({
 }));
 
 import TraegerUtilizationPage from "./page";
+
+/**
+ * Die letzten drei Monate enden heute und beginnen am Tag nach demselben
+ * Kalendertag drei Monate zuvor (am Monatsende der letzte Tag des Monats).
+ */
+function lastThreeMonths(): { from: string; to: string } {
+  const [year = 0, month = 1, day = 1] =
+    TEST_CLOCK_TODAY.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, month - 3, 0)).getUTCDate();
+  const from = new Date(Date.UTC(year, month - 4, Math.min(day, lastDay) + 1));
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return {
+    from: `${from.getUTCFullYear()}-${pad(from.getUTCMonth() + 1)}-${pad(from.getUTCDate())}`,
+    to: TEST_CLOCK_TODAY,
+  };
+}
 
 const DAYS = ["2026-09-07", "2026-09-08"];
 
@@ -170,9 +192,9 @@ function signIn(permissions: string[]) {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerUtilizationPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -201,10 +223,7 @@ describe("TraegerUtilizationPage", () => {
 
     // 17 of 20 places booked on average: (8+5 + 10+5) / 2.
     expect(await screen.findByText("70 %")).toBeInTheDocument();
-    expect(mockFetchUtilization).toHaveBeenCalledWith({
-      from: "2026-06-10",
-      to: "2026-09-09",
-    });
+    expect(mockFetchUtilization).toHaveBeenCalledWith(lastThreeMonths());
     expect(screen.getByText("Ø 14 von 20 Plätzen")).toBeInTheDocument();
     // The fullest day is Tuesday: 15 of 20.
     expect(screen.getByText("75 %")).toBeInTheDocument();
@@ -284,7 +303,7 @@ describe("TraegerUtilizationPage", () => {
       expect(mockDownloadBlob).toHaveBeenCalledWith(blob, "auslastung.csv"),
     );
     expect(mockDownload).toHaveBeenCalledWith(
-      { from: "2026-06-10", to: "2026-09-09" },
+      lastThreeMonths(),
       undefined,
       "csv",
     );
@@ -306,6 +325,8 @@ describe("TraegerUtilizationPage", () => {
   });
 
   it("loads the names of one school only on request", async () => {
+    // Der erste Check-in am 07.09.2026 liegt nur so im Fenster bis heute.
+    setTestClock("2026-09-09T12:00:00+02:00");
     signIn(["traeger_reports:read", "traeger_contracts:manage"]);
     mockFetchUtilization.mockResolvedValue(UTILIZATION);
     mockFetchChildren.mockResolvedValue(CHILDREN);

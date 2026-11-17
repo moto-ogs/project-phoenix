@@ -13,11 +13,14 @@ import (
 )
 
 // TransitionRetentionStore takes the transition gate and deletes the
-// transitions of a school that ended before cutoff, their mappings, history,
-// class-list ledger, class teachers and roster removals by cascade.
+// transitions of a school that ended before cutoff, the Berlin midnight of
+// the first day a window of retentionDays keeps, their mappings, history,
+// class-list ledger, class teachers and roster removals by cascade. A draft
+// ends at its trigger-stamped last change, which counts the window back from
+// the database's day (ADR 0281 point 3).
 type TransitionRetentionStore interface {
 	LockTransitions(ctx context.Context, tenantID int64) (domain.OperationStats, error)
-	DeleteTransitionsEndedBefore(ctx context.Context, tenantID int64, cutoff time.Time) (int64, domain.OperationStats, error)
+	DeleteTransitionsEndedBefore(ctx context.Context, tenantID int64, cutoff time.Time, retentionDays int) (int64, domain.OperationStats, error)
 }
 
 // TransitionRetention is the School Structure grade-transition retention.
@@ -57,6 +60,6 @@ func (r *TransitionRetention) DeleteExpiredGradeTransitions(ctx context.Context,
 	if _, err := lockTransitionGate(ctx, r.store, tenantID.Int64()); err != nil {
 		return 0, err
 	}
-	deleted, _, err := r.store.DeleteTransitionsEndedBefore(ctx, tenantID.Int64(), r.today().AddDays(-retentionDays).BerlinMidnight())
+	deleted, _, err := r.store.DeleteTransitionsEndedBefore(ctx, tenantID.Int64(), r.today().AddDays(-retentionDays).BerlinMidnight(), retentionDays)
 	return int(deleted), err
 }

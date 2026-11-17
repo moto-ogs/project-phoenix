@@ -12,7 +12,7 @@
 import dynamic from "next/dynamic";
 import { ArchiveX, Inbox } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   CARE_RUN_STATUS_LABELS,
   CARE_RUN_STATUS_TONES,
@@ -34,6 +34,7 @@ import {
   earliestDebitDay,
 } from "~/components/traeger/care-debit-hints";
 import { usePrenotificationDays } from "~/components/traeger/use-prenotification-days";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { CareLettersSummaryCard } from "~/components/traeger/care-letters-summary-card";
 import {
   type OpenPoint,
@@ -56,7 +57,7 @@ import { formatEuro } from "~/components/traeger/contribution-format";
 import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
@@ -65,18 +66,16 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { runDocumentKindLabel } from "~/components/traeger/run-document-kind";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { numberPatternPreview } from "~/components/traeger/billing-format";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import {
   type CareFeeNoticeHold,
   type CareInvoice,
-  type CareLetters,
   type CareRunDetail,
   discardCareRun,
   fetchCareLetters,
@@ -184,68 +183,54 @@ export default function TraegerCareRunPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const runId = params?.id ?? "";
-  const [run, setRun] = useState<CareRunDetail | null>(null);
+  const {
+    data: run,
+    loading,
+    error: loadError,
+    mutate,
+    reload,
+  } = useTraegerResource(
+    runId ? traegerBillingRunKeys.careRun(runId) : null,
+    () => fetchCareRun(runId),
+    "der Monatslauf",
+  );
+  const invalidateFamily = useInvalidateFamily();
   const [confirming, setConfirming] = useState(false);
   const [releasing, setReleasing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const releaseErrors = useApiErrorDisplay();
   const { success } = useToast();
-  const [letters, setLetters] = useState<CareLetters | null>(null);
   const [excluding, setExcluding] = useState<CareInvoice | null>(null);
   const [editingDate, setEditingDate] = useState(false);
   const [returning, setReturning] = useState<string | null>(null);
   const reviewErrors = useApiErrorDisplay();
-  const lettersLoad = useApiLoadError();
-  const { show: showLettersError, clear: clearLettersError } = lettersLoad;
-
-  const load = useCallback(async () => {
-    try {
-      setRun(await fetchCareRun(runId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_run_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "der Monatslauf",
-        retry: () => void load(),
-      });
-    }
-  }, [runId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const released = run?.status === "released";
-  const loadLetters = useCallback(async () => {
-    try {
-      setLetters(await fetchCareLetters(runId));
-      clearLettersError();
-    } catch (err) {
-      logger.error("traeger_care_letters_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLettersError(err, {
-        object: "die Liste der Schreiben",
-        retry: () => void loadLetters(),
-      });
-    }
-  }, [runId, clearLettersError, showLettersError]);
+  const { data: letters, error: lettersError } = useTraegerResource(
+    released && run.previewCount > 0
+      ? traegerBillingRunKeys.careLetters(runId)
+      : null,
+    () => fetchCareLetters(runId),
+    "die Liste der Schreiben",
+  );
 
-  useEffect(() => {
-    if (released && run.previewCount > 0) void loadLetters();
-  }, [released, run?.previewCount, loadLetters]);
+  // The list of runs and the start dialog's open run per school show the
+  // new state of this one.
+  const changed = async (next: CareRunDetail) => {
+    await mutate(next, { revalidate: false });
+    void invalidateFamily(traegerBillingRunKeys.careRuns());
+    void invalidateFamily(traegerBillingRunKeys.careRunSchoolsFamily);
+  };
 
   const release = async () => {
     if (!run) return;
     setReleasing(true);
     try {
       const released = await releaseCareRun(run);
-      setRun(released);
+      await changed(released);
+      // The exports list the released run.
+      void invalidateFamily(traegerBillingKeys.exportRuns());
       setConfirming(false);
       success(
         released.previewCount === 0
@@ -260,7 +245,7 @@ export default function TraegerCareRunPage() {
       });
       setConfirming(false);
       void releaseErrors.show(err, { object: "der Monatslauf" });
-      void load();
+      reload();
     } finally {
       setReleasing(false);
     }
@@ -270,7 +255,7 @@ export default function TraegerCareRunPage() {
     if (!run) return;
     setDiscarding(true);
     try {
-      setRun(await discardCareRun(run.id));
+      await changed(await discardCareRun(run.id));
       setConfirmingDiscard(false);
       success(
         `Der Lauf ist verworfen. Für ${formatMonth(run.billingMonth)} können Sie einen neuen Lauf starten.`,
@@ -281,7 +266,7 @@ export default function TraegerCareRunPage() {
       });
       setConfirmingDiscard(false);
       void releaseErrors.show(err, { object: "der Monatslauf" });
-      void load();
+      reload();
     } finally {
       setDiscarding(false);
     }
@@ -291,7 +276,9 @@ export default function TraegerCareRunPage() {
     if (!run) return;
     setReturning(`${invoice.contractId}-${invoice.service}`);
     try {
-      setRun(await includeCareInvoice(run.id, invoice));
+      await mutate(await includeCareInvoice(run.id, invoice), {
+        revalidate: false,
+      });
       success(
         `${invoiceKindLabel(invoice)} von ${invoice.childFirstName} ${invoice.childLastName} ist wieder im Lauf.`,
       );
@@ -300,7 +287,7 @@ export default function TraegerCareRunPage() {
         error: err instanceof Error ? err.message : String(err),
       });
       void reviewErrors.show(err, { object: "die Rechnung" });
-      void load();
+      reload();
     } finally {
       setReturning(null);
     }
@@ -457,7 +444,7 @@ export default function TraegerCareRunPage() {
           </HolidayHeadFacts>
         ) : null
       }
-      statsLoading={!run && !pageLoad.error}
+      statsLoading={loading}
       actions={
         empty ? (
           <Button
@@ -487,8 +474,8 @@ export default function TraegerCareRunPage() {
           </Button>
         ) : undefined
       }
-      error={pageLoad.error}
-      loading={!pageLoad.error && !run}
+      error={loadError}
+      loading={loading}
       overlays={
         run && empty ? (
           <ConfirmationModal
@@ -646,7 +633,7 @@ export default function TraegerCareRunPage() {
                 invoices={run.invoices}
                 onClose={() => setExcluding(null)}
                 onExcluded={(next: CareRunDetail, invoice: CareInvoice) => {
-                  setRun(next);
+                  void mutate(next, { revalidate: false });
                   setExcluding(null);
                   success(
                     `${invoiceKindLabel(invoice)} von ${invoice.childFirstName} ${invoice.childLastName} ist ausgeschlossen.`,
@@ -658,7 +645,7 @@ export default function TraegerCareRunPage() {
                 isOpen={editingDate}
                 onClose={() => setEditingDate(false)}
                 onSaved={(next: CareRunDetail) => {
-                  setRun(next);
+                  void mutate(next, { revalidate: false });
                   setEditingDate(false);
                   success("Das Rechnungsdatum ist gespeichert.");
                 }}
@@ -924,7 +911,7 @@ export default function TraegerCareRunPage() {
                 `/traeger/abrechnung/monatsbeitraege/${run.id}/schreiben`,
               )}
               letters={letters}
-              loadError={lettersLoad.error}
+              loadError={lettersError}
             />
           ) : null}
           {released && run.previewCount > 0 ? (

@@ -7,31 +7,32 @@
 // Vormonat, denn den rechnet das Lohnbüro ab.
 
 import { LockKeyIcon } from "@phosphor-icons/react";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { PayrollFilePanel } from "~/components/traeger/staff/payroll-file-panel";
 import { PayrollSettingsPanel } from "~/components/traeger/staff/payroll-settings-panel";
 import { TimeExportPanel } from "~/components/traeger/staff/time-export-panel";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { EmptyState } from "~/components/ui/empty-state";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { monthLabel } from "~/lib/duration-format";
 import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   downloadPayrollFile,
   downloadTimeFile,
   fetchPayrollReport,
   fetchTimeReport,
   type PayrollFormat,
-  type PayrollReport,
-  type TimeReport,
 } from "~/lib/traeger-staff-exports-api";
 
 const logger = createLogger({ component: "TraegerPayrollExportPage" });
@@ -101,102 +102,36 @@ function PayrollExportContent() {
   const thisMonth = monthOf(today);
   const [shown, setShown] = useState<MonthKey>(() => shift(monthOf(today), -1));
   const [format, setFormat] = useState<PayrollFormat>("datev_lodas");
-  const [payroll, setPayroll] = useState<PayrollReport | null>(null);
-  const [times, setTimes] = useState<TimeReport | null>(null);
-  const [notReleased, setNotReleased] = useState(false);
   const [downloading, setDownloading] = useState<"payroll" | "times" | null>(
     null,
   );
-  // Each report keeps its own load error: a failed time report must not
-  // stand over the payroll file, and its retry clears only its own error.
-  const payrollLoad = useApiLoadError();
-  const timesLoad = useApiLoadError();
-  const { show: showPayrollError, clear: clearPayrollError } = payrollLoad;
-  const { show: showTimesError, clear: clearTimesError } = timesLoad;
   const display = useApiErrorDisplay();
   const settings = useTraegerSettingsSchema();
+  const invalidateFamily = useInvalidateFamily();
   const shownLabel = monthLabel(shown.year, shown.month);
 
-  // Only the latest request may show its answer: a slow answer for the
-  // month before must not replace the month now shown.
-  const payrollRequest = useRef(0);
-  const timesRequest = useRef(0);
-  // A retry or the refresh after a failed download loads what the page shows
-  // now, not the month that was shown when the request started.
-  const current = useRef({ month: shown, format });
-  useEffect(() => {
-    current.current = { month: shown, format };
-  }, [shown, format]);
-
-  const loadPayroll = useCallback(
-    async (month: MonthKey, chosen: PayrollFormat) => {
-      const request = ++payrollRequest.current;
-      setPayroll(null);
-      try {
-        const report = await fetchPayrollReport(
-          month.year,
-          month.month,
-          chosen,
-        );
-        if (request !== payrollRequest.current) return;
-        setPayroll(report);
-        setNotReleased(false);
-        clearPayrollError();
-      } catch (err) {
-        if (request !== payrollRequest.current) return;
-        if (err instanceof ApiError && err.code === NOT_RELEASED) {
-          setNotReleased(true);
-          clearPayrollError();
-          return;
-        }
-        logger.error("traeger_payroll_report_load_failed", {
-          error: errorText(err),
-        });
-        await showPayrollError(err, {
-          object: "die Prüfung der Lohndatei",
-          retry: () =>
-            void loadPayroll(current.current.month, current.current.format),
-        });
-      }
-    },
-    [clearPayrollError, showPayrollError],
+  // Each report keeps its own load error: a failed time report must not
+  // stand over the payroll file, and its retry clears only its own error.
+  const payrollLoad = useTraegerResource(
+    traegerStaffKeys.payrollReport(shown.year, shown.month, format),
+    () => fetchPayrollReport(shown.year, shown.month, format),
+    "die Prüfung der Lohndatei",
+    // Die Prüfung entscheidet über den Download: jeder Wechsel des Monats
+    // fragt den Stand neu ab, auch kurz nach der letzten Abfrage.
+    { dedupingInterval: 0 },
   );
-
-  const loadTimes = useCallback(
-    async (month: MonthKey) => {
-      const request = ++timesRequest.current;
-      setTimes(null);
-      try {
-        const report = await fetchTimeReport(month.year, month.month);
-        if (request !== timesRequest.current) return;
-        setTimes(report);
-        clearTimesError();
-      } catch (err) {
-        if (request !== timesRequest.current) return;
-        if (err instanceof ApiError && err.code === NOT_RELEASED) {
-          setNotReleased(true);
-          clearTimesError();
-          return;
-        }
-        logger.error("traeger_time_report_load_failed", {
-          error: errorText(err),
-        });
-        await showTimesError(err, {
-          object: "die Prüfung des Zeitexports",
-          retry: () => void loadTimes(current.current.month),
-        });
-      }
-    },
-    [clearTimesError, showTimesError],
+  const timesLoad = useTraegerResource(
+    tab === "zeitexport"
+      ? traegerStaffKeys.timeReport(shown.year, shown.month)
+      : null,
+    () => fetchTimeReport(shown.year, shown.month),
+    "die Prüfung des Zeitexports",
   );
-
-  useEffect(() => {
-    void loadPayroll(shown, format);
-  }, [loadPayroll, shown, format]);
-
-  useEffect(() => {
-    if (tab === "zeitexport") void loadTimes(shown);
-  }, [loadTimes, shown, tab]);
+  const payroll = payrollLoad.data;
+  const times = timesLoad.data;
+  const notReleased = [payrollLoad.failure, timesLoad.failure].some(
+    (failure) => failure instanceof ApiError && failure.code === NOT_RELEASED,
+  );
 
   const download = async (kind: "payroll" | "times") => {
     setDownloading(kind);
@@ -220,9 +155,10 @@ function PayrollExportContent() {
       await display.show(err, {
         object: kind === "payroll" ? "die Lohndatei" : "der Zeitexport",
       });
-      // Ein abgelehnter Download kommt mit dem neuen Stand der Prüfung.
+      // Ein abgelehnter Download kommt mit dem neuen Stand der Prüfung, für
+      // den Monat, den die Seite jetzt zeigt.
       if (kind === "payroll") {
-        void loadPayroll(current.current.month, current.current.format);
+        void invalidateFamily(traegerStaffKeys.payrollFamily);
       }
     } finally {
       setDownloading(null);
@@ -274,10 +210,12 @@ function PayrollExportContent() {
             }
       }
       error={
-        tab === "zeitexport"
-          ? timesLoad.error
-          : (payrollLoad.error ??
-            (tab === "lohnarten" ? settings.loadError : null))
+        notReleased
+          ? null
+          : tab === "zeitexport"
+            ? timesLoad.error
+            : (payrollLoad.error ??
+              (tab === "lohnarten" ? settings.loadError : null))
       }
     >
       {notReleased ? (
@@ -320,7 +258,8 @@ function PayrollExportContent() {
           gaps={payroll?.unconfigured ?? []}
           onSaved={async () => {
             await settings.mutate();
-            await loadPayroll(current.current.month, current.current.format);
+            // Die Lohnarten ändern die Prüfung jedes Monats.
+            await invalidateFamily(traegerStaffKeys.payrollFamily);
           }}
         />
       ) : null}

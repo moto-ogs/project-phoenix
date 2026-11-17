@@ -15,7 +15,7 @@ import { searchEntry, type SearchEntry } from "./school-search-catalog";
  */
 let indexLoad: Promise<readonly HelpSearchIndexEntry[]> | null = null;
 
-function loadHelpIndex(): Promise<readonly HelpSearchIndexEntry[]> {
+export function loadHelpIndex(): Promise<readonly HelpSearchIndexEntry[]> {
   indexLoad ??= fetch(HELP_SEARCH_INDEX_PATH).then(async (response) => {
     if (!response.ok) {
       throw new Error(`help search index failed (${response.status})`);
@@ -30,10 +30,10 @@ function loadHelpIndex(): Promise<readonly HelpSearchIndexEntry[]> {
 }
 
 /** Die Themen, die die Hilfe dieser Rolle mit diesen Einstellungen zeigt. */
-export async function helpSearchEntries(
+export function helpEntriesOf(
+  index: readonly HelpSearchIndexEntry[],
   context: HelpUrlContext,
-): Promise<readonly SearchEntry[]> {
-  const index = await loadHelpIndex();
+): readonly SearchEntry[] {
   return index
     .filter((topic) =>
       isHelpTopicAvailable(
@@ -57,4 +57,11 @@ export async function helpSearchEntries(
         topic.summary,
       ),
     );
+}
+
+/** Lädt den Index und liefert die Themen dieser Rolle. */
+export async function helpSearchEntries(
+  context: HelpUrlContext,
+): Promise<readonly SearchEntry[]> {
+  return helpEntriesOf(await loadHelpIndex(), context);
 }

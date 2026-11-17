@@ -1,6 +1,14 @@
 // #6593: Speichern und das Entfernen eines Anhangs sperren das Panel; eine
 // späte Antwort frischt nur die Liste auf.
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as rtlRender,
+  screen,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -46,12 +54,27 @@ vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => "testschule",
   useTenantRoutingModeSafe: () => "subdomain",
 }));
-vi.mock("~/lib/swr", () => ({
-  useSWRAuth: (key: string | null) =>
-    key === "parent-announcements-list"
-      ? { ...listState, mutate: listMutate }
-      : { data: undefined, isLoading: false, error: null, mutate: vi.fn() },
-}));
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  return {
+    ...actual,
+    useSWRAuth: ((
+      key: string | null,
+      fetcher: () => Promise<unknown>,
+      options?: object,
+    ) =>
+      key?.startsWith("announcement-attachments-")
+        ? actual.useSWRAuth(key, fetcher, options)
+        : key === "parent-announcements-list"
+          ? { ...listState, mutate: listMutate }
+          : {
+              data: undefined,
+              isLoading: false,
+              error: null,
+              mutate: vi.fn(),
+            }) as typeof actual.useSWRAuth,
+  };
+});
 vi.mock("~/lib/parent-announcements-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-announcements-api")>()),
   fetchAnnouncements: vi.fn(() => Promise.resolve([])),
@@ -77,6 +100,25 @@ import {
   type Announcement,
 } from "~/lib/parent-announcements-api";
 import ParentAnnouncementsPage from "./page";
+
+vi.unmock("swr");
+
+// The draft's attachments read through real SWR under a staff session; the
+// other resources stay per-key fakes.
+function render(ui: ReactElement) {
+  return rtlRender(
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {ui}
+      </SWRConfig>
+    </SessionProvider>,
+  );
+}
 
 const TITLE = "Elternmitteilung bearbeiten";
 

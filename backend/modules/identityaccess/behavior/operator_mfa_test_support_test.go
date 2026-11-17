@@ -73,7 +73,7 @@ func activeOperatorChallenge(t *testing.T, db *bun.DB, operatorID int64) *operat
 	err := db.NewSelect().Model(row).
 		Where("operator_id = ?", operatorID).
 		Where("consumed_at IS NULL").
-		Where("expires_at > now()").
+		Where("expires_at > ?", time.Now()).
 		Order("expires_at DESC").
 		Limit(1).
 		Scan(context.Background())

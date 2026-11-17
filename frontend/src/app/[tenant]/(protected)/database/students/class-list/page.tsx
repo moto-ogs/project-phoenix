@@ -803,7 +803,7 @@ export default function ClassListEntriesPage() {
     >
       <SectionCard
         title="Kinder im Klassenverband"
-        description={`Reguläre Kinder werden in der Kinder-Datenbank gepflegt. Hier kommen nur Kinder ohne OGS-Betreuung dazu.${rosterSummary}`}
+        description={`${childrenWithoutCarePlace ? "Alle Kinder werden in den Kinderdaten gepflegt." : "Reguläre Kinder werden in der Kinder-Datenbank gepflegt. Hier kommen nur Kinder ohne OGS-Betreuung dazu."}${rosterSummary}`}
       >
         {childrenWithoutCarePlace ? (
           <Alert

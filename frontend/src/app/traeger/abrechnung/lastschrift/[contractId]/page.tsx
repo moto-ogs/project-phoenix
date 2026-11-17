@@ -6,42 +6,26 @@
 // E-Mail-Adresse der Vertragspartei; ihr Mandat gilt auch für Geschwister.
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import { SepaCollectionsCard } from "~/components/traeger/sepa-collections-card";
 import { SepaMandatesCard } from "~/components/traeger/sepa-mandates-card";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
-import { type SepaMandate, fetchSepaMandates } from "~/lib/traeger-sepa-api";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
+import { fetchSepaMandates } from "~/lib/traeger-sepa-api";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerSepaMandatePage" });
 
 export default function TraegerSepaMandatePage() {
   const params = useParams<{ contractId: string }>();
   const contractId = params?.contractId ?? "";
-  const [mandates, setMandates] = useState<SepaMandate[] | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      setMandates(await fetchSepaMandates(contractId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_sepa_mandate_page_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "das Mandat",
-        retry: () => void load(),
-      });
-    }
-  }, [contractId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const {
+    data: mandates,
+    loading,
+    error,
+  } = useFreshTraegerResource(
+    traegerBillingRunKeys.sepaMandates(contractId),
+    () => fetchSepaMandates(contractId),
+    "das Mandat",
+  );
 
   const party = mandates?.[0];
   const family = party
@@ -56,8 +40,8 @@ export default function TraegerSepaMandatePage() {
       back
       backHref={traegerPath("/traeger/abrechnung/lastschrift")}
       backLabel="Zurück zur Lastschrift"
-      error={pageLoad.error}
-      loading={!pageLoad.error && mandates === null}
+      error={error}
+      loading={loading}
     >
       {mandates !== null ? (
         <>
@@ -65,7 +49,6 @@ export default function TraegerSepaMandatePage() {
             contractId={contractId}
             holder={family}
             mandates={mandates}
-            onChanged={() => void load()}
           />
           <SepaCollectionsCard mandates={mandates} />
         </>

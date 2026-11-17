@@ -14,6 +14,7 @@ import {
   expectSlideOverSaveLocked,
   expectSlideOverUnlocked,
 } from "~/test/helpers/form-modal-pending";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 
 // Wie page.test.tsx: echter Übersetzungskontext aus dem Schul-Guard.
 vi.unmock("next-intl");
@@ -100,18 +101,24 @@ function render(ui: ReactElement) {
   });
 }
 
-// Die Testuhr steht auf Mittwoch, 09.09.2026.
+// Wochentag des Testtags, Montag = 0.
+const [year = 0, month = 1, day = 1] = TEST_CLOCK_TODAY.split("-").map(Number);
+const WEEKDAY = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+// Montag der Woche des Testtags: die Wochenansicht blendet das Wochenende aus.
+const MONDAY = testClockDay(-WEEKDAY);
+
+// Die Woche des Testtags mit dem Termin an ihrem Montag.
 const data: SchoolCalendarResponse = {
-  from: "2026-09-07",
-  to: "2026-09-13",
+  from: MONDAY,
+  to: testClockDay(6 - WEEKDAY),
   events: [
     {
-      id: "appointment:3:2026-09-09",
+      id: `appointment:3:${MONDAY}`,
       source: "appointment",
       appointment_id: "3",
       title: "Zoo-Ausflug",
-      start_date: "2026-09-09",
-      end_date: "2026-09-09",
+      start_date: MONDAY,
+      end_date: MONDAY,
       start_time: "08:30",
       end_time: "12:00",
       all_day: false,

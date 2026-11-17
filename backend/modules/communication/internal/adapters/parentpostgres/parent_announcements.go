@@ -43,8 +43,8 @@ type parentAnnouncementRow struct {
 	bun.BaseModel           `bun:"table:users.parent_announcements,alias:parent_announcement"`
 	ID                      int64      `bun:"id,pk,autoincrement"`
 	TenantID                int64      `bun:"tenant_id,notnull"`
-	CreatedAt               time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt               time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt               time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt               time.Time  `bun:"updated_at,nullzero,notnull"`
 	Title                   string     `bun:"title,notnull"`
 	Body                    string     `bun:"body,notnull"`
 	Priority                string     `bun:"priority,notnull"`
@@ -106,7 +106,7 @@ type parentTargetRow struct {
 	TargetType     string    `bun:"target_type,notnull"`
 	TargetRefID    *int64    `bun:"target_ref_id"`
 	TargetRefText  *string   `bun:"target_ref_text"`
-	CreatedAt      time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time `bun:"created_at,nullzero,notnull"`
 }
 
 func (r *parentTargetRow) value() *domain.ParentAnnouncementTarget {
@@ -123,7 +123,7 @@ type parentOptionRow struct {
 	AnnouncementID int64     `bun:"announcement_id,notnull"`
 	Label          string    `bun:"label,notnull"`
 	Position       int       `bun:"position,notnull"`
-	CreatedAt      time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time `bun:"created_at,nullzero,notnull"`
 }
 
 func (r *parentOptionRow) value() *domain.ParentAnnouncementOption {
@@ -150,7 +150,7 @@ type parentAnnouncementResponseRow struct {
 	OptionID       int64     `bun:"option_id,notnull"`
 	StudentID      int64     `bun:"student_id,notnull"`
 	AccountID      int64     `bun:"account_id,notnull"`
-	RespondedAt    time.Time `bun:"responded_at,nullzero,notnull,default:current_timestamp"`
+	RespondedAt    time.Time `bun:"responded_at,nullzero,notnull"`
 }
 
 // Create inserts one announcement row. A zero tenant takes the ambient one,

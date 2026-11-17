@@ -247,6 +247,9 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 	t.Parallel()
 	testpkg.SetupIsolatedTestDB(t)
 	f := newReviewFixture(t, "Familie Frist")
+	// The writing routes run on the fixture's instant clock, so the trail
+	// entries carry its instant and not the real or the database's (#7295).
+	f.traeger = traegerPortalWithDaysOn(t, f.db, testpkg.TenantRuntime(t, f.db), owners.HolidayTestSchoolCalendar{}, holidayFixtureToday, holidayFixtureNow)
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.siblings, map[string]any{"debtor_number": "10 4711"}).Code)
 
 	summer := januaryHolidays(f.office)
@@ -272,11 +275,11 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 	retain := func(today calendar.Date) {
 		t.Helper()
 		admin(func(adminCtx context.Context) error {
-			_, err := owners.NewHolidayRegistrationRetention(func() calendar.Date { return today }).DeleteExpiredHolidayRegistrations(adminCtx)
+			_, err := owners.NewHolidayRegistrationRetention(func() time.Time { return today.BerlinMidnight().Add(10 * time.Hour) }).DeleteExpiredHolidayRegistrations(adminCtx)
 			return err
 		})
 		admin(func(adminCtx context.Context) error {
-			_, err := owners.NewBelegRetention(func() calendar.Date { return today }).ApplyBelegRetention(adminCtx)
+			_, err := owners.NewBelegRetention(func() time.Time { return today.BerlinMidnight() }).ApplyBelegRetention(adminCtx)
 			return err
 		})
 	}
@@ -284,6 +287,13 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 		var count int
 		require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM enrollment.holiday_registrations WHERE id = ?`, f.siblings).Scan(ctx, &count))
 		return count
+	}
+	for _, table := range []string{"family_billing_events", "child_debtor_number_events"} {
+		var stamps []time.Time
+		require.NoError(t, f.db.NewRaw(`SELECT DISTINCT occurred_at FROM parent_billing.`+table+` WHERE organization_id = ?`,
+			f.office.organization).Scan(ctx, &stamps))
+		require.Len(t, stamps, 1, "one write stamps the trail of %s", table)
+		assert.True(t, stamps[0].Equal(holidayFixtureNow()), "the owner's clock stamps %s, not %v", table, stamps[0])
 	}
 
 	// The winter period ends on 15.01.2027; its registrations go the day
@@ -318,13 +328,23 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 
 	_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.beleg_retention_suspensions SET lifted_at = now() WHERE id = ?`, suspension)
 	require.NoError(t, err)
-	// The trail entries carry the database's write time (DEFAULT
-	// CURRENT_TIMESTAMP), the retention runs on the fixed days above. They
-	// are dated to the winter period the test stands for, so their age does
-	// not depend on the day the test runs: written in 2028 or later they
-	// would outlive the cutoff of 2031 (#7104).
-	_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.family_billing_events SET occurred_at = ? WHERE organization_id = ?`,
-		calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(12*time.Hour), f.office.organization)
+	// The owner's clock stamps the trail entries (#7295, ADR 0281), so the
+	// cutoff of the retention day dates them: 1 January 2028 for the run on
+	// 3 January 2031. The entries of the fixture's clock (2026) go with the
+	// numbers; one stamped in 2028 stays until the run of 2032.
+	trailEntries := func() (family, children int) {
+		require.NoError(t, f.db.NewRaw(`SELECT
+				(SELECT count(*) FROM parent_billing.family_billing_events WHERE organization_id = ?0 AND care_contract_id IS NULL),
+				(SELECT count(*) FROM parent_billing.child_debtor_number_events WHERE organization_id = ?0)`, f.office.organization).
+			Scan(ctx, &family, &children))
+		return family, children
+	}
+	familyTrail, childTrail := trailEntries()
+	require.Greater(t, familyTrail, 1, "the family has a trail to delete and one to keep")
+	require.Positive(t, childTrail, "and the children's numbers have a trail")
+	_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.family_billing_events SET occurred_at = ?
+		WHERE id = (SELECT max(id) FROM parent_billing.family_billing_events WHERE organization_id = ? AND care_contract_id IS NULL)`,
+		calendar.NewDate(2028, time.June, 1).BerlinMidnight(), f.office.organization)
 	require.NoError(t, err)
 	retain(calendar.NewDate(2031, time.January, 3))
 	assert.Equal(t, "-", f.familyNumber(t, "eva.muster@example.org"), "then the family without a document goes")
@@ -346,10 +366,12 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.child_debtor_numbers
 		WHERE organization_id = ?`, f.office.organization).Scan(ctx, &children))
 	assert.Zero(t, children, "the children's identities follow the same retention")
-	var trail int
-	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.family_billing_events
-		WHERE organization_id = ? AND care_contract_id IS NULL`, f.office.organization).Scan(ctx, &trail))
-	assert.Zero(t, trail, "and its trail with it")
+	familyTrail, childTrail = trailEntries()
+	assert.Equal(t, 1, familyTrail, "the trail goes with the number, but an entry after the cutoff stays")
+	assert.Zero(t, childTrail, "and the trail of the children's numbers goes with them")
+	retain(calendar.NewDate(2032, time.January, 2))
+	familyTrail, _ = trailEntries()
+	assert.Zero(t, familyTrail, "the entry of 2028 goes once the cutoff passes it")
 }
 
 // A confirmation without a number tells the family nothing (#6692, data

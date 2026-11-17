@@ -1,5 +1,4 @@
-// Package compose wires the Care Plan module over the shared tenant runtime
-// and Bun database.
+// Package compose wires Care Plan over the shared tenant runtime and Bun database.
 package compose
 
 import (
@@ -46,7 +45,7 @@ func New(dependencies Dependencies) (careplan.Owner, error) {
 	postgres.BindCareLocks(dependencies.DB, dependencies.StudentLock, dependencies.StudentNotFound, dependencies.AmbientDB)
 	store := postgres.New(postgres.CarePlanDatabase(dependencies.DB)).WithClock(dependencies.Now)
 	return application.NewService(application.Dependencies{
-		OfferingBookings: NewOfferingBookings(),
+		OfferingBookings: NewOfferingBookings(dependencies.Now),
 		Store:            store, Requests: postgres.NewRequestStore(store, dependencies.StudentDirectory),
 		StatusDays:  postgres.NewStatusDayStore(store, dependencies.StatusStudents, dependencies.StatusSlots),
 		Withdrawals: postgres.NewDirectoryStore(store, dependencies.StudentDirectory), Observe: dependencies.Observe, People: dependencies.People,

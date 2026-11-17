@@ -22,7 +22,7 @@ func (s *Store) SetCareOfferingTemplateGapAck(ctx context.Context, offeringID, c
 	key := strconv.FormatInt(calendarPeriodID, 10)
 	query := db.NewUpdate().Model((*careOfferingRow)(nil)).
 		ModelTableExpr(`enrollment.care_offerings AS "care_offering"`).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.currentTime()).
 		Where(`"care_offering".id = ?`, offeringID)
 	if len(schoolClasses) == 0 {
 		query = query.Set(`template_gap_acks = NULLIF(COALESCE(template_gap_acks, '{}'::jsonb) - ?::text, '{}'::jsonb)`, key)

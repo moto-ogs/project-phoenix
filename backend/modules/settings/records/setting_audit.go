@@ -17,7 +17,7 @@ type SettingAuditEntry struct {
 	NewValue   json.RawMessage `bun:"new_value,type:jsonb" json:"new_value,omitempty"`
 	Action     string          `bun:"action,notnull" json:"action"` // set, reset, delete
 	ChangedBy  *int64          `bun:"changed_by" json:"changed_by,omitempty"`
-	ChangedAt  time.Time       `bun:"changed_at,notnull,default:current_timestamp" json:"changed_at"`
+	ChangedAt  time.Time       `bun:"changed_at,nullzero,notnull" json:"changed_at"`
 }
 
 // GetTenantID returns the tenant ID (satisfies base.TenantScoped interface).
@@ -38,8 +38,10 @@ func (e *SettingAuditEntry) Validate() error {
 	return nil
 }
 
-// NewAuditEntry creates a new audit entry for a setting change made at
-// changedAt, the caller's clock.
+// NewAuditEntry creates a new audit entry for a setting change. Its
+// changed_at stays empty: the column default stamps it, because the
+// retention function config.delete_expired_setting_audit compares it with
+// the database clock (ADR 0281).
 func NewAuditEntry(
 	tenantID int64,
 	key string,
@@ -47,7 +49,6 @@ func NewAuditEntry(
 	oldValue json.RawMessage,
 	newValue json.RawMessage,
 	changedBy *int64,
-	changedAt time.Time,
 ) *SettingAuditEntry {
 	return &SettingAuditEntry{
 		TenantID:   tenantID,
@@ -56,6 +57,5 @@ func NewAuditEntry(
 		OldValue:   oldValue,
 		NewValue:   newValue,
 		ChangedBy:  changedBy,
-		ChangedAt:  changedAt,
 	}
 }

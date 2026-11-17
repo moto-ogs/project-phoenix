@@ -1,11 +1,57 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render as rtlRender,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode as TenantSWRNode } from "react";
+import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 import { PersonalInfoEditPanel } from "./personal-info-edit-panel";
 import type { Student } from "~/lib/student-helpers";
 import type { StudentCompanion } from "~/lib/student-companion-api";
 import { CompanionPlanConflictError } from "~/lib/student-update-errors";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in OGS session per render.
+function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <TenantSWRConfig
+        value={{ provider: () => new Map(), errorRetryCount: 0 }}
+      >
+        {children}
+      </TenantSWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  const Outer = options?.wrapper;
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: TenantSWRNode }>) => (
+      <TenantSWRWrapper>
+        {Outer ? <Outer>{children}</Outer> : children}
+      </TenantSWRWrapper>
+    ),
+  });
+}
+
+// The stored consent arrives through the shared cache, one tick after the
+// first render; saving waits for it.
+async function consentLoaded() {
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled(),
+  );
+}
 
 function resolvedPrivacyConsent(): Promise<{
   accepted: boolean;
@@ -314,6 +360,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       const saveButton = screen.getByText("Speichern");
       fireEvent.click(saveButton);
@@ -333,6 +380,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       const saveButton = screen.getByText("Speichern");
       fireEvent.click(saveButton);
@@ -359,6 +407,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       fireEvent.click(screen.getByText("Speichern"));
 
@@ -396,6 +445,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       fireEvent.click(screen.getByText("Speichern"));
 
@@ -425,6 +475,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       fireEvent.click(screen.getByText("Speichern"));
 
@@ -452,6 +503,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       const saveButton = screen.getByText("Speichern");
       fireEvent.click(saveButton);
@@ -539,6 +591,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       fireEvent.click(screen.getByRole("checkbox", { name: "Montag: Bus" }));
       fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
@@ -571,6 +624,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       fireEvent.click(screen.getByRole("checkbox", { name: "Montag: Zu Fuß" }));
       fireEvent.click(
@@ -607,6 +661,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       fireEvent.change(screen.getByLabelText<HTMLInputElement>("Vorname"), {
         target: { value: "Maja" },
@@ -791,6 +846,7 @@ describe("PersonalInfoEditPanel", () => {
           ]}
         />,
       );
+      await consentLoaded();
 
       fireEvent.click(screen.getByRole("combobox", { name: "Gruppe" }));
       fireEvent.click(screen.getByRole("option", { name: "Füchse" }));
@@ -943,6 +999,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       const section = screen.getByTestId("photo-section");
       expect(section).toHaveAttribute("data-uploads", "0");
@@ -980,6 +1037,7 @@ describe("PersonalInfoEditPanel", () => {
           onStudentRefresh={onStudentRefresh}
         />,
       );
+      await consentLoaded();
 
       fireEvent.click(screen.getByTestId("toggle-photo-consent"));
       fireEvent.click(screen.getByTestId("pick-photo"));
@@ -1024,6 +1082,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       fireEvent.click(screen.getByTestId("pick-photo"));
       fireEvent.click(screen.getByText("Speichern"));
@@ -1055,6 +1114,7 @@ describe("PersonalInfoEditPanel", () => {
           onSave={mockOnSave}
         />,
       );
+      await consentLoaded();
 
       fireEvent.click(screen.getByTestId("pick-photo"));
       fireEvent.click(screen.getByText("Speichern"));
@@ -1148,6 +1208,7 @@ describe("PersonalInfoEditPanel — companion plan conflicts", () => {
         onSave={onSave}
       />,
     );
+    await consentLoaded();
 
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await screen.findByRole("button", { name: "Ergänzen und speichern" });

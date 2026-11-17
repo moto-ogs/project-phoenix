@@ -3,7 +3,9 @@ import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as notifications } from "./notifications.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
 import { routes as parentMe } from "./parent-me.generated";
+import { routes as schoolNotifications } from "./school-notifications.generated";
 import { routes as schoolStaffMessages } from "./school-staff-messages.generated";
+import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as students } from "./students.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
 
@@ -23,10 +25,49 @@ export const portalRoutes = {
     operatorBilling["PUT /operator/billing/key-day"],
   ],
   school: [
+    schoolNotifications["DELETE /school/notifications/preferences/"],
+    schoolNotifications["DELETE /school/notifications/push/subscriptions"],
+    schoolNotifications["GET /school/notifications/feed/"],
+    schoolNotifications["GET /school/notifications/feed/unread-count"],
+    schoolNotifications["GET /school/notifications/preferences/"],
+    schoolNotifications["GET /school/notifications/push/public-key"],
+    schoolNotifications["POST /school/notifications/feed/read-all"],
+    schoolNotifications["POST /school/notifications/feed/{id}/read"],
+    schoolNotifications["POST /school/notifications/push/subscriptions"],
+    schoolNotifications["POST /school/notifications/test"],
+    schoolNotifications["PUT /school/notifications/preferences/{type}"],
+    schoolStaffMessages["GET /school/staff-messages/"],
+    schoolStaffMessages["GET /school/staff-messages/recipients"],
+    schoolStaffMessages["GET /school/staff-messages/threads/{threadID}"],
     schoolStaffMessages["GET /school/staff-messages/unread-count"],
+    schoolStaffMessages["POST /school/staff-messages/threads/open"],
+    schoolStaffMessages["POST /school/staff-messages/threads/{threadID}"],
+    schoolStaffMessages["POST /school/staff-messages/threads/{threadID}/leave"],
   ],
   tenant: [
+    notifications["DELETE /api/notifications/preferences/"],
+    notifications["DELETE /api/notifications/push/subscriptions"],
+    notifications["GET /api/notifications/email-subscriptions/{type}"],
+    notifications["GET /api/notifications/feed/"],
     notifications["GET /api/notifications/feed/unread-count"],
+    notifications["GET /api/notifications/preferences/"],
+    notifications["GET /api/notifications/push/public-key"],
+    notifications["POST /api/notifications/feed/read-all"],
+    notifications["POST /api/notifications/feed/{id}/read"],
+    notifications["POST /api/notifications/push/subscriptions"],
+    notifications["POST /api/notifications/test"],
+    notifications["PUT /api/notifications/email-subscriptions/{type}"],
+    notifications["PUT /api/notifications/preferences/{type}"],
+    staffMessages["GET /api/staff-messages/"],
+    staffMessages["GET /api/staff-messages/recipients"],
+    staffMessages["GET /api/staff-messages/threads/{threadID}"],
+    staffMessages["GET /api/staff-messages/unread-count"],
+    staffMessages["POST /api/staff-messages/groups"],
+    staffMessages["POST /api/staff-messages/threads/open"],
+    staffMessages["POST /api/staff-messages/threads/{threadID}"],
+    staffMessages["POST /api/staff-messages/threads/{threadID}/leave"],
+    staffMessages["POST /api/staff-messages/threads/{threadID}/members"],
+    staffMessages["PUT /api/staff-messages/threads/{threadID}/name"],
     students["GET /api/students/"],
     students["GET /api/students/{id}"],
     students["POST /api/students/"],

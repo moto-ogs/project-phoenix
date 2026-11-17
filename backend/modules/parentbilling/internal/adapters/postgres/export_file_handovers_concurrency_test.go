@@ -33,7 +33,7 @@ func newHandoverRace(t *testing.T, name string) handoverRace {
 	own := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{Name: name,
 		Slug: fmt.Sprintf("handover-race-%d", testpkg.UniqueTestTenantID(t))}).ID
 	race := handoverRace{t: t, ctx: testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db)),
-		store: NewStore(), own: own}
+		store: NewStore(time.Now), own: own}
 	race.within(func(ctx context.Context) {
 		require.NoError(t, testpkg.WithoutRequestRole(ctx))
 		tx, err := traegerDB(ctx, own)

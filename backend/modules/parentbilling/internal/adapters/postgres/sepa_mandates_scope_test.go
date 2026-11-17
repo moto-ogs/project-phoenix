@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,7 +60,7 @@ func TestSEPAMandateFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newMandateScope(t, db, "Träger A")
 	other := newMandateScope(t, db, "Träger B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the mandates back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
@@ -131,7 +132,7 @@ func TestSEPAMandateHistoryNeverChanges(t *testing.T) {
 	own := newMandateScope(t, db, "Träger Historie")
 	creator := testpkg.CreateTestAccount(t, db, "sepa-creator@example.org")
 	revoker := testpkg.CreateTestAccount(t, db, "sepa-revoker@example.org")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the mandate back")
 
 	school := testpkg.CreateTestSchoolInOrganization(t, db, own.organization, "OGS Historie")

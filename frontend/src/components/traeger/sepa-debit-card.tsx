@@ -8,7 +8,7 @@
 // nicht in die Datei dürfen, stehen mit Grund darunter.
 
 import { DownloadIcon, LandmarkIcon } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import {
   HandoverMenu,
@@ -36,18 +36,14 @@ import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { wireErrorCode } from "~/lib/api-error";
 import { formatDate } from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import {
   type SepaDebit,
-  type SepaDebitRun,
   type SepaDebitRunKind,
   downloadSepaDebitFile,
   messageIdOfDebitFile,
@@ -55,6 +51,7 @@ import {
   submitSepaDebits,
 } from "~/lib/traeger-sepa-debits-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { useTraegerResource } from "./use-traeger-resource";
 
 const logger = createLogger({ component: "SepaDebitCard" });
 
@@ -155,7 +152,16 @@ export function SepaDebitCard({
    * with it the card stays when nothing is to collect. */
   control?: ReactNode;
 }>) {
-  const [run, setRun] = useState<SepaDebitRun | null>(null);
+  const {
+    data: run,
+    error: loadError,
+    mutate,
+    reload,
+  } = useTraegerResource(
+    traegerBillingRunKeys.sepaDebitRun(kind, runId),
+    () => fetchSepaDebitRun(kind, runId),
+    "die Lastschrift",
+  );
   const [downloaded, setDownloaded] = useState<{
     key: string;
     messageId: string;
@@ -165,29 +171,8 @@ export function SepaDebitCard({
   const [downloading, setDownloading] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
   const errors = useApiErrorDisplay();
   const { success } = useToast();
-
-  const reload = useCallback(async () => {
-    try {
-      setRun(await fetchSepaDebitRun(kind, runId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_sepa_debits_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Lastschrift",
-        retry: () => void reload(),
-      });
-    }
-  }, [kind, runId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
 
   const handoverRun = {
     pathKind: kind,
@@ -203,7 +188,7 @@ export function SepaDebitCard({
         messageId: messageIdOfDebitFile(arrived.fileName),
       });
     }
-    void reload();
+    reload();
   });
 
   const download = async () => {
@@ -220,7 +205,7 @@ export function SepaDebitCard({
         error: err instanceof Error ? err.message : String(err),
       });
       void errors.show(err, { object: "die Lastschriftdatei" });
-      void reload();
+      reload();
     } finally {
       setDownloading(false);
     }
@@ -230,7 +215,9 @@ export function SepaDebitCard({
     if (!run || !downloadedId) return;
     setSubmitting(true);
     try {
-      setRun(await submitSepaDebits(kind, runId, downloadedId));
+      await mutate(await submitSepaDebits(kind, runId, downloadedId), {
+        revalidate: false,
+      });
       setConfirming(false);
       success("Die Lastschriften sind als eingereicht vermerkt.");
     } catch (err) {
@@ -242,18 +229,18 @@ export function SepaDebitCard({
         setDownloaded(null);
       }
       void errors.show(err, { object: "die Lastschriftdatei" });
-      void reload();
+      reload();
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (load.error) {
+  if (loadError) {
     return (
       <SectionCard title={title}>
         <div className="flex flex-col gap-4">
           {control}
-          <LoadErrorAlert error={load.error} actionLayout="responsive" />
+          <LoadErrorAlert error={loadError} actionLayout="responsive" />
         </div>
       </SectionCard>
     );

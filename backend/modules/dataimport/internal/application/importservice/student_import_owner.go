@@ -391,6 +391,9 @@ func (c *StudentImportConfig) Update(ctx context.Context, studentID int64, row i
 }
 
 func (c *StudentImportConfig) updateAllEntities(ctx context.Context, record ports.EnrollmentRecord, row importModels.StudentImportRow) error {
+	if record.WithoutCarePlace {
+		row = withoutOGSCells(row)
+	}
 
 	person, err := c.Persons.FindPerson(ctx, record.PersonID)
 	if err != nil {
@@ -416,6 +419,17 @@ func (c *StudentImportConfig) updateAllEntities(ctx context.Context, record port
 		return err
 	}
 	return c.createPrivacyConsentIfMissing(ctx, record.ID, row)
+}
+
+// withoutOGSCells drops the OGS cells of a row that updates a child without
+// an OGS place (#4803): such a child has no group, no OGS times and no way
+// home, as when the school edits it. The place itself comes only with an
+// accepted enrollment, so the school's file cannot give it one.
+func withoutOGSCells(row importModels.StudentImportRow) importModels.StudentImportRow {
+	row.GroupID = nil
+	row.ArrivalSchedules, row.PickupSchedules = nil, nil
+	row.DepartureDays, row.DepartureCompanionNote = nil, ""
+	return row
 }
 
 func (c *StudentImportConfig) updatePersonFromRow(ctx context.Context, person ports.Person, row importModels.StudentImportRow) error {

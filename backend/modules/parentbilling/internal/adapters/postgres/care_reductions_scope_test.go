@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,7 +62,7 @@ func TestCareReductionFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	ownBase := newCareScope(t, db, "Träger A")
 	otherBase := newCareScope(t, db, "Träger B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the rows back")
 	september := calendar.NewDate(2029, 9, 1)
 

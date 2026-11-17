@@ -4,42 +4,26 @@
 // Sonderkündigung, Satzung und Vertragspartner. Jeder neue Vertrag eines
 // Angebots übernimmt sie; ohne sie entsteht für das Angebot kein Entwurf.
 
-import { useCallback, useEffect, useState } from "react";
 import { CareContractConditions } from "~/components/traeger/care-contract-conditions";
 import { careContractTabs } from "~/components/traeger/care-contract-tabs";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
-import {
-  type OfferingTemplate,
-  fetchContractTemplates,
-} from "~/lib/traeger-care-contracts-api";
-
-const logger = createLogger({ component: "TraegerVertragsbedingungenPage" });
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
+import { fetchContractTemplates } from "~/lib/traeger-care-contracts-api";
 
 export default function TraegerVertragsbedingungenPage() {
-  const [offerings, setOfferings] = useState<OfferingTemplate[] | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      setOfferings(await fetchContractTemplates());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_contract_conditions_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Übersicht der Vertragsbedingungen",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const {
+    data: offerings,
+    loading,
+    error,
+    mutate,
+  } = useTraegerResource(
+    traegerContractKeys.templates(),
+    fetchContractTemplates,
+    "die Übersicht der Vertragsbedingungen",
+  );
+  const invalidateFamily = useInvalidateFamily();
 
   const active = offerings?.filter((offering) => offering.active) ?? [];
   const missing = active.filter((offering) => !offering.template).length;
@@ -63,23 +47,26 @@ export default function TraegerVertragsbedingungenPage() {
           />
         ) : null
       }
-      statsLoading={!offerings && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !offerings}
+      statsLoading={loading}
+      error={error}
+      loading={loading}
     >
       {offerings ? (
         <CareContractConditions
           offerings={offerings}
-          onSaved={(saved) =>
-            setOfferings((current) =>
-              (current ?? []).map((offering) =>
+          onSaved={(saved) => {
+            void mutate(
+              offerings.map((offering) =>
                 offering.schoolId === saved.schoolId &&
                 offering.offeringId === saved.offeringId
                   ? saved
                   : offering,
               ),
-            )
-          }
+              { revalidate: false },
+            );
+            // Whether a child can get a draft depends on the conditions.
+            void invalidateFamily(traegerContractKeys.candidates());
+          }}
         />
       ) : null}
     </TenantPage>

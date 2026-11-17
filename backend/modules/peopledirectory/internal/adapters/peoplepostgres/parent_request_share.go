@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"fmt"
+	"time"
 
 	userModels "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/rows"
 	ports "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
@@ -12,15 +13,16 @@ const parentRequestShareTable = "users.parent_request_share_events"
 
 type ParentRequestShareEventRepository struct {
 	runtime Runtime
+	now     func() time.Time // stamps created_at (ADR 0281)
 }
 
-func NewParentRequestShareEventRepository(runtime Runtime) ports.ParentRequestShareRecords {
-	return &ParentRequestShareEventRepository{runtime: requireRuntime(runtime)}
+func NewParentRequestShareEventRepository(runtime Runtime, now func() time.Time) ports.ParentRequestShareRecords {
+	return &ParentRequestShareEventRepository{runtime: requireRuntime(runtime), now: requireClock(now)}
 }
 
-// Create overrides the generic insert so created_at uses clock_timestamp().
+// Create overrides the generic insert so created_at is the owner's instant.
 // Sharing and protection events live in separate tables, and visibility compares
-// their real creation order even when both are written in one transaction.
+// their creation order, so both ledgers stamp on the same clock (ADR 0281).
 func (r *ParentRequestShareEventRepository) Create(ctx context.Context, event *userModels.ParentRequestShareEvent) error {
 	if event == nil {
 		return fmt.Errorf("parent request share event cannot be nil")
@@ -29,14 +31,15 @@ func (r *ParentRequestShareEventRepository) Create(ctx context.Context, event *u
 	if event.RecipientAccountIDs == nil {
 		event.RecipientAccountIDs = []int64{}
 	}
+	at := r.now()
 	ambientDB1, databaseErr1 := r.runtime.DB(ctx)
 	if databaseErr1 != nil {
 		return databaseErr1
 	}
 	if _, err := ambientDB1.NewInsert().Model(event).
 		ModelTableExpr(parentRequestShareTable).
-		Value("created_at", "clock_timestamp()").
-		Value("updated_at", "clock_timestamp()").
+		Value("created_at", "?", at).
+		Value("updated_at", "?", at).
 		Exec(ctx); err != nil {
 		return &ports.DatabaseError{Op: "create parent request share event", Err: translateNotFound(err)}
 	}

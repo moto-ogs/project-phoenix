@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -135,7 +136,7 @@ func TestDemoResetRejectsUnknownAndExpiredTokens(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "identity.demo_access_unknown")
 
 	token, _ := env.requestOwnSchool(t, env.address())
-	_, err := env.db.NewRaw(`UPDATE auth.demo_accesses SET expires_at = NOW() - INTERVAL '1 minute' WHERE token_hash = encode(sha256(?::bytea), 'hex')`, token).Exec(context.Background())
+	_, err := env.db.NewRaw(`UPDATE auth.demo_accesses SET expires_at = ? WHERE token_hash = encode(sha256(?::bytea), 'hex')`, time.Now().Add(-time.Minute), token).Exec(context.Background())
 	require.NoError(t, err)
 	rr = env.reset(t, token)
 	assert.Equal(t, http.StatusGone, rr.Code)
@@ -176,7 +177,7 @@ func TestDemoAccessUseExtendsItsLifetime(t *testing.T) {
 	env := newDemoEnv(t)
 	env.provisionDemoAdmin(t)
 	token := env.requestToken(t)
-	_, err := env.db.NewRaw(`UPDATE auth.demo_accesses SET expires_at = NOW() + INTERVAL '1 day' WHERE token_hash = encode(sha256(?::bytea), 'hex')`, token).Exec(context.Background())
+	_, err := env.db.NewRaw(`UPDATE auth.demo_accesses SET expires_at = ? WHERE token_hash = encode(sha256(?::bytea), 'hex')`, time.Now().Add(24*time.Hour), token).Exec(context.Background())
 	require.NoError(t, err)
 
 	env.enterAs(t, token, "")

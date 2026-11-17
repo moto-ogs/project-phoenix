@@ -23,7 +23,7 @@ func TestHolidayCriterionScopeWaitsForTheFirstOfficeAnswer(t *testing.T) {
   VALUES (?, 'Berufstätig', 'Sind Sie berufstätig?', 'family', 1) RETURNING id`, w.organization).Scan(t.Context(), &criterion))
 	runtimeCtx, cancel := context.WithTimeout(testpkg.ContextWithTenantRuntime(t.Context(), testpkg.TenantRuntime(t, db)), 10*time.Second)
 	defer cancel()
-	store := postgres.NewHolidayRegistrationStore()
+	store := postgres.NewHolidayRegistrationStore().WithClock(time.Now)
 	done := make(chan error, 1)
 	pidReady := make(chan int, 1)
 	var finished bool
@@ -87,7 +87,7 @@ func TestHolidayCriteriaSerializesTheFirstCatalogSaves(t *testing.T) {
 	w := newPlacesWeek(t, db, "Träger erster Kriterienkatalog")
 	runtimeCtx, cancel := context.WithTimeout(testpkg.ContextWithTenantRuntime(t.Context(), testpkg.TenantRuntime(t, db)), 10*time.Second)
 	defer cancel()
-	store := postgres.NewHolidayRegistrationStore()
+	store := postgres.NewHolidayRegistrationStore().WithClock(time.Now)
 	done := make(chan error, 1)
 	pidReady := make(chan int, 1)
 	var finished bool

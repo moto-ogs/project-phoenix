@@ -27,7 +27,7 @@ type rosterRemovalRow struct {
 	NotScheduled       bool       `bun:"not_scheduled,notnull"`
 	ManualStatusAt     *time.Time `bun:"manual_status_at"`
 	StudentStatusDayID *int64     `bun:"student_status_day_id"`
-	CreatedAt          time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt          time.Time  `bun:"created_at,nullzero,notnull"`
 }
 
 // ArchivePlannedInstanceStudents deletes the given participants and parks
@@ -70,7 +70,7 @@ func (s *Store) ArchivePlannedInstanceStudents(ctx context.Context, transitionID
 			NotScheduled: attendance.NotScheduled, ManualStatusAt: attendance.ManualStatusAt,
 			StudentStatusDayID: attendance.StudentStatusDayID})
 	}
-	queryStats, err := upsertRosterRemovals(ctx, db, archive)
+	queryStats, err := upsertRosterRemovals(ctx, db, archive, s.currentTime())
 	stats.Add(queryStats)
 	if err != nil {
 		return 0, stats, err
@@ -78,7 +78,10 @@ func (s *Store) ArchivePlannedInstanceStudents(ctx context.Context, transitionID
 	return int64(len(removed)), stats, nil
 }
 
-func upsertRosterRemovals(ctx context.Context, db bun.IDB, rows []rosterRemovalRow) (domain.OperationStats, error) {
+func upsertRosterRemovals(ctx context.Context, db bun.IDB, rows []rosterRemovalRow, at time.Time) (domain.OperationStats, error) {
+	for i := range rows {
+		rows[i].CreatedAt = at
+	}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	result, err := db.NewInsert().Model(&rows).ModelTableExpr(`schedule.grade_transition_roster_removals`).
@@ -86,7 +89,7 @@ func upsertRosterRemovals(ctx context.Context, db bun.IDB, rows []rosterRemovalR
 		Set(`room_id = EXCLUDED.room_id`).Set(`status = EXCLUDED.status`).Set(`substatus = EXCLUDED.substatus`).
 		Set(`note = EXCLUDED.note`).Set(`is_unplanned = EXCLUDED.is_unplanned`).
 		Set(`not_scheduled = EXCLUDED.not_scheduled`).Set(`manual_status_at = EXCLUDED.manual_status_at`).
-		Set(`student_status_day_id = EXCLUDED.student_status_day_id`).Set(`created_at = NOW()`).Exec(ctx)
+		Set(`student_status_day_id = EXCLUDED.student_status_day_id`).Set(`created_at = EXCLUDED.created_at`).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return stats, classifyWriteError("archive planned instance students", err, &stats)

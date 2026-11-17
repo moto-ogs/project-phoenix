@@ -1793,6 +1793,14 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.DatabaseTime",
+      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/ports.Store.DatabaseTime",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.DeleteClassAssignment",
       "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/ports.Store.DeleteClassAssignment",

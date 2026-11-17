@@ -13,6 +13,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -32,11 +33,19 @@ import {
   ParentPageHeader,
   ParentPageSkeleton,
 } from "~/components/parent/parent-page";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import {
+  PARENT_RESOURCE_OPTIONS,
+  useParentChildren,
+  useParentFeatures,
+} from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
+import { useInvalidateFamily } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   type GroupThreadChild,
-  type GroupThreadView as GroupThreadData,
-  getChildFeatures,
   getGroupThread,
   postChildMessage,
 } from "~/lib/parent-api";
@@ -46,7 +55,6 @@ import {
   parentReadersLine,
 } from "~/lib/messaging-status";
 import { parentPath } from "~/lib/parent-url";
-import { useParentChildren } from "~/lib/hooks/use-parent-resources";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { useParentCareTerms } from "~/lib/parent-care-term";
 
@@ -72,27 +80,58 @@ function childName(child: GroupThreadChild): string {
 export function ParentGroupThreadView({
   groupThreadId,
 }: Readonly<{ groupThreadId: string }>) {
-  const [thread, setThread] = useState<GroupThreadData | null>(null);
+  const threadResource = useConfirmedSWR(
+    parentInboxKeys.groupThread(groupThreadId),
+    () => getGroupThread(groupThreadId),
+    // Opening the thread marks it read: the sidebar badge refetches. Every
+    // opening reads anew, as the unread refresh leaves the thread out
+    // (parentKeys.isMessagesResource).
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      revalidateOnMount: true,
+      dedupingInterval: 0,
+      onSuccess: nudgeUnreadBadge,
+    },
+  );
+  const thread = threadResource.data ?? null;
   // Eine Gruppennachricht kommt von einer Schule: ihre Texte nennen die
   // Betreuung so, wie diese Schule sie nennt (#6082).
   const { termOfSchool } = useParentCareTerms();
-  const linkedChildren = useParentChildren().data;
   const threadTerm = termOfSchool(thread?.school_name);
   const t = useCareTermTranslations("parentGroupThreads", threadTerm);
   const tm = useCareTermTranslations("parentMessages", threadTerm);
   const locale = useLocale();
-  const [loading, setLoading] = useState(true);
-  // Children of the thread the guardian may write for (notes.write).
-  const [writable, setWritable] = useState<GroupThreadChild[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  // The composer follows the 1:1 chat's rule: only children whose
+  // relationship grants writing (child features notes_enabled). A child
+  // whose features do not load stays out of the picker: offering it would
+  // end in a refused answer.
+  const linked = useParentChildren();
+  const features = useParentFeatures(linked.data);
+  const featuresPending =
+    (!linked.data && !linked.error) ||
+    (linked.data !== undefined && !features.data && !features.error);
+  const writable = useMemo(
+    () =>
+      !thread || featuresPending
+        ? null
+        : thread.children.filter(
+            (child) => features.data?.[child.student_id]?.notes_enabled,
+          ),
+    [thread, featuresPending, features.data],
+  );
+  const [chosen, setSelected] = useState<string | null>(null);
+  const selected =
+    chosen && writable?.some((child) => child.student_id === chosen)
+      ? chosen
+      : (writable?.[0]?.student_id ?? null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sentFor, setSentFor] = useState<string | null>(null);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data: threadResource.data ?? undefined, error: threadResource.failure }],
+    t("errorObjectThread"),
+    () => threadResource.mutate(),
+  );
   const {
     error: sendError,
     show: showSendError,
@@ -106,66 +145,7 @@ export function ParentGroupThreadView({
     };
   }, []);
 
-  const load = useCallback(async () => {
-    try {
-      const view = await getGroupThread(groupThreadId);
-      if (!mountedRef.current) return;
-      setThread(view);
-      clearLoadError();
-      nudgeUnreadBadge();
-      // The composer follows the 1:1 chat's rule: only children whose
-      // relationship grants writing (child features notes_enabled).
-      const features = await Promise.all(
-        view.children.map((child) =>
-          getChildFeatures(child.student_id).then(
-            (value) => value.notes_enabled,
-            (err: unknown) => {
-              // A child whose features do not load is left out of the
-              // picker: offering it would end in a refused answer.
-              logger.warn("group_thread_child_features_failed", {
-                error: err instanceof Error ? err.message : String(err),
-              });
-              return false;
-            },
-          ),
-        ),
-      );
-      if (!mountedRef.current) return;
-      const allowed = view.children.filter((_, index) => features[index]);
-      setWritable(allowed);
-      setSelected((current) =>
-        current && allowed.some((child) => child.student_id === current)
-          ? current
-          : (allowed[0]?.student_id ?? null),
-      );
-    } catch (err) {
-      logger.warn("group_thread_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      if (mountedRef.current) {
-        void showLoadError(err, {
-          object: t("errorObjectThread"),
-          retry: () => void loadRef.current(),
-        });
-      }
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, [groupThreadId, clearLoadError, showLoadError, t]);
-  const loadRef = useRef(load);
-  useLayoutEffect(() => {
-    loadRef.current = load;
-  });
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-  useEffect(() => {
-    const refresh = () => void loadRef.current();
-    window.addEventListener("focus", refresh);
-    return () => window.removeEventListener("focus", refresh);
-  }, []);
-
+  const invalidateFamily = useInvalidateFamily();
   const attachmentLabels = useParentAttachmentLabels();
   const attempt = useMessageSendAttempt(
     `parent-group-reply:${groupThreadId}:${selected ?? ""}`,
@@ -199,6 +179,11 @@ export function ParentGroupThreadView({
         );
         attempt.complete(clientMessageId);
         sentFiles.current = [];
+        // The answer lands in the child's chat: a cached copy without it
+        // goes, so the chat opens with the answer instead of seeming lost.
+        void invalidateFamily(parentKeys.conversationFamily(selected), {
+          clear: true,
+        });
         if (!mountedRef.current) return;
         setDraft("");
         setSentFor(selected);
@@ -221,6 +206,7 @@ export function ParentGroupThreadView({
       selected,
       groupThreadId,
       attempt,
+      invalidateFamily,
       clearSendError,
       showSendError,
       t,
@@ -231,7 +217,8 @@ export function ParentGroupThreadView({
     sendRef.current = handleSend;
   });
 
-  if (loading) return <ParentPageSkeleton rows={2} />;
+  if (!thread && !threadResource.failure)
+    return <ParentPageSkeleton rows={2} />;
 
   if (!thread) {
     return (
@@ -257,7 +244,7 @@ export function ParentGroupThreadView({
   // A child without an OGS place (#4803) has no chat with the OGS, so the
   // link leads to the conversation of a child that has one, or is left out.
   const withoutPlace = new Set(
-    (linkedChildren ?? [])
+    (linked.data ?? [])
       .filter((child) => child.without_care_place === true)
       .map((child) => child.student_id),
   );

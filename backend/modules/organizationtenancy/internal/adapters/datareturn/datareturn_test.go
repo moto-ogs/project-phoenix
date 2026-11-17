@@ -97,7 +97,7 @@ func newFixtureOn(t *testing.T, db *bun.DB) *fixture {
 	store := t.TempDir()
 	conn := roleSession(t, db, "phoenix_auth")
 	f := &fixture{db: db, store: store, operator: operator.ID, release: NewRelease(db, testCrypto(), store, time.Now),
-		retrieval: NewRetrieval(conn, testCrypto(), store, time.Now, nil)}
+		retrieval: NewRetrieval(conn, testCrypto(), store, nil)}
 	t.Cleanup(func() {
 		_, err := db.ExecContext(context.Background(), `DELETE FROM platform.data_return_grants WHERE issued_by = ?`, f.operator)
 		require.NoError(t, err)
@@ -207,7 +207,7 @@ func TestDownloadBudgetHoldsUnderConcurrentDownloads(t *testing.T) {
 	f := newFixture(t)
 	issued := f.releaseSchool(t, f.school(t), "Synthetic", 2)
 	// The pool, not the single phoenix_auth session: downloads run in parallel.
-	pool := NewRetrieval(f.db, testCrypto(), f.store, time.Now, nil)
+	pool := NewRetrieval(f.db, testCrypto(), f.store, nil)
 	var wg sync.WaitGroup
 	results := make(chan error, 6)
 	for range 6 {
@@ -461,11 +461,12 @@ func TestRolesHoldExactlyTheirRights(t *testing.T) {
 }
 
 // issueRelease calls data_return_issue for a release of school with the
-// given archive name, inside db (a transaction or a pool).
+// given archive name, inside db (a transaction or a pool). The token lives an
+// hour of database time, as Release derives it from the database clock.
 func issueRelease(ctx context.Context, db bun.IDB, operator, school int64, archive string, keepUntil time.Time) error {
 	hex64 := strings.Repeat("ab", 32)
-	_, err := db.NewRaw(`SELECT platform.data_return_issue(?, 'release', 'school', ?, ?, 10, ?, ?, 1, ?, 'customer', 'Schule', ?, '\x01'::bytea, ?, ?, 1)`,
-		operator, school, archive, hex64, hex64, hex64, strings.Repeat("cd", 16)+archive, time.Now().Add(time.Hour), keepUntil).Exec(ctx)
+	_, err := db.NewRaw(`SELECT platform.data_return_issue(?, 'release', 'school', ?, ?, 10, ?, ?, 1, ?, 'customer', 'Schule', ?, '\x01'::bytea, now() + interval '1 hour', ?, 1)`,
+		operator, school, archive, hex64, hex64, hex64, strings.Repeat("cd", 16)+archive, keepUntil).Exec(ctx)
 	return err
 }
 
@@ -478,7 +479,8 @@ func TestReleaseAndErasureOfTheSameSchoolAreSerialized(t *testing.T) {
 	holdSeveralConnections(t)
 	f := newFixture(t)
 	school := f.school(t)
-	keep := time.Now().Add(30 * 24 * time.Hour)
+	// The database clock bounds the retrieval period (ADR 0274).
+	keep := testpkg.DatabaseNow(t, f.db).Add(30 * 24 * time.Hour)
 
 	release, err := f.db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
@@ -524,9 +526,11 @@ func TestIssueTrustsNoCallerValuesForAGrant(t *testing.T) {
 	var keyCheck string
 	require.NoError(t, f.db.NewRaw(`SELECT key_check FROM platform.data_return_grants WHERE id = ?`, issued.GrantID).Scan(t.Context(), &keyCheck))
 	bogus := strings.Repeat("ef", 32)
+	// The caller passes an expiry of database time, as Release does (ADR 0284).
+	issuedAt := testpkg.DatabaseNow(t, f.db)
 	var id int64
 	require.NoError(t, f.db.NewRaw(`SELECT platform.data_return_issue(?, 'grant', 'organization', 1, ?, 999999, ?, ?, 7, ?, 'customer', 'X', ?, '\x01'::bytea, ?, ?, 1)`,
-		f.operator, issued.ArchiveName, bogus, bogus, keyCheck, strings.Repeat("9", 64), time.Now().Add(time.Hour), time.Now().AddDate(5, 0, 0)).Scan(t.Context(), &id))
+		f.operator, issued.ArchiveName, bogus, bogus, keyCheck, strings.Repeat("9", 64), issuedAt.Add(time.Hour), issuedAt.AddDate(5, 0, 0)).Scan(t.Context(), &id))
 	var same bool
 	require.NoError(t, f.db.NewRaw(`SELECT g.package = o.package AND g.subject_id = o.subject_id AND g.archive_bytes = o.archive_bytes
 		AND g.archive_sha256 = o.archive_sha256 AND g.manifest_sha256 = o.manifest_sha256 AND g.format_version = o.format_version
@@ -547,11 +551,13 @@ func TestReleaseRefusesASubjectWhoseErasureHasBegun(t *testing.T) {
 	school := f.school(t)
 	var organization int64
 	require.NoError(t, f.db.NewRaw(`SELECT organization_id FROM platform.schools WHERE id = ?`, school).Scan(t.Context(), &organization))
-	keep := time.Now().Add(30 * 24 * time.Hour)
+	// Release derives expiry from the database clock, which also bounds the
+	// retrieval period (ADR 0274, ADR 0284).
+	keep := testpkg.DatabaseNow(t, f.db).Add(30 * 24 * time.Hour)
 	hex64 := strings.Repeat("ab", 32)
 	releaseOrganization := func(archive string) error {
-		_, err := f.db.NewRaw(`SELECT platform.data_return_issue(?, 'release', 'organization', ?, ?, 10, ?, ?, 1, ?, 'customer', 'Träger', ?, '\x01'::bytea, ?, ?, 1)`,
-			f.operator, organization, archive, hex64, hex64, hex64, strings.Repeat("ef", 16)+archive, time.Now().Add(time.Hour), keep).Exec(t.Context())
+		_, err := f.db.NewRaw(`SELECT platform.data_return_issue(?, 'release', 'organization', ?, ?, 10, ?, ?, 1, ?, 'customer', 'Träger', ?, '\x01'::bytea, now() + interval '1 hour', ?, 1)`,
+			f.operator, organization, archive, hex64, hex64, hex64, strings.Repeat("ef", 16)+archive, keep).Exec(t.Context())
 		return err
 	}
 	t.Cleanup(func() {
@@ -632,8 +638,10 @@ func TestReleaseAndStartOfTheTraegerErasureAreSerialized(t *testing.T) {
 			VALUES (?, 'ORDER-6665', '2026-01-02', '2026-01-03', ?, now(), 'erasure_chosen')`, organization, f.operator)
 		require.NoError(t, err)
 		archive := fmt.Sprintf("%032x", organization)
+		// Expiry and retrieval period on the database clock (ADR 0274, ADR 0284).
+		issuedAt := testpkg.DatabaseNow(t, f.db)
 		return organization, []any{f.operator, organization, archive, hex64, hex64, hex64, strings.Repeat("ef", 16) + archive,
-			time.Now().Add(time.Hour), time.Now().Add(30 * 24 * time.Hour)}
+			issuedAt.Add(time.Hour), issuedAt.Add(30 * 24 * time.Hour)}
 	}
 	state := func(t *testing.T, organization int64) (started bool, packages int) {
 		t.Helper()
@@ -703,4 +711,55 @@ func TestRevocationRecordsItsOrigin(t *testing.T) {
 		}
 	}
 	t.Fatal("revoked grant not listed")
+}
+
+// The release functions bound a grant against PostgreSQL's now() (ADR 0274),
+// so release, grant and retrieval decide on that clock too: with the host
+// clock a month away, a 24-hour token is issued for 24 hours of database
+// time, and it stops opening once that database time has passed.
+func TestReleaseAndRetrievalDecideOnTheDatabaseClock(t *testing.T) {
+	t.Parallel()
+	const skew = 31 * 24 * time.Hour
+	for name, offset := range map[string]time.Duration{"host clock behind": -skew, "host clock ahead": skew} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			f := newFixture(t)
+			release := NewRelease(f.db, testCrypto(), f.store, func() time.Time { return time.Now().Add(offset) })
+			dayToken := organizationtenancy.DataReturnRecipient{Recipient: organizationtenancy.DataReturnCustomer, Name: "Schule am Berg",
+				ValidFor: 24 * time.Hour, MaxDownloads: 2}
+			school := f.school(t)
+			issuedAt := testpkg.DatabaseNow(t, f.db)
+			issued, err := release.Release(t.Context(), organizationtenancy.DataReturnReleaseRequest{Package: writePackage(t, school, "x", nil),
+				SchoolID: school, OperatorID: f.operator, KeepUntil: issuedAt.Add(40 * 24 * time.Hour), DataReturnRecipient: dayToken})
+			require.NoError(t, err)
+			require.WithinDuration(t, issuedAt.Add(24*time.Hour), issued.ExpiresAt, time.Minute)
+			granted, err := release.Grant(t.Context(), organizationtenancy.DataReturnGrantRequest{ArchiveName: issued.ArchiveName,
+				ArchiveKey: issued.ArchiveKey, OperatorID: f.operator, DataReturnRecipient: dayToken})
+			require.NoError(t, err)
+			require.WithinDuration(t, issuedAt.Add(24*time.Hour), granted.ExpiresAt, time.Minute)
+
+			_, err = f.retrieval.Package(t.Context(), issued.Token)
+			require.NoError(t, err)
+			// The database time passes the expiry of both tokens.
+			_, err = f.db.ExecContext(t.Context(), `UPDATE platform.data_return_grants SET expires_at = now() - interval '1 minute' WHERE id IN (?, ?)`,
+				issued.GrantID, granted.GrantID)
+			require.NoError(t, err)
+			_, err = f.retrieval.Package(t.Context(), issued.Token)
+			require.ErrorIs(t, err, organizationtenancy.ErrDataReturnDenied)
+			_, _, err = download(f.retrieval, granted.Token)
+			require.ErrorIs(t, err, organizationtenancy.ErrDataReturnDenied)
+		})
+	}
+}
+
+// The download itself spends the budget only while the grant is unexpired
+// on the database clock, also when the check before it has passed.
+func TestDownloadCountsOnlyAnUnexpiredGrant(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	issued := f.releaseSchool(t, f.school(t), "Synthetic", 2)
+	_, err := f.db.ExecContext(t.Context(), `UPDATE platform.data_return_grants SET expires_at = now() - interval '1 minute' WHERE id = ?`, issued.GrantID)
+	require.NoError(t, err)
+	_, _, err = f.retrieval.store.countDownload(t.Context(), issued.GrantID)
+	require.ErrorIs(t, err, organizationtenancy.ErrDataReturnDenied)
 }

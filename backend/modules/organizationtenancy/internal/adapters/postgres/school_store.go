@@ -22,8 +22,8 @@ const childQuotaLockKey = int32(0x6b6f6e74)
 type schoolRow struct {
 	bun.BaseModel  `bun:"table:schools,alias:school"`
 	ID             int64      `bun:"id,pk,autoincrement"`
-	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull"`
 	OrganizationID int64      `bun:"organization_id,notnull"`
 	Name           string     `bun:"name,notnull"`
 	Slug           string     `bun:"slug,notnull"`

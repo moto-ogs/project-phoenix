@@ -44,6 +44,8 @@ import { useLocalStorageValue } from "~/lib/hooks/use-local-storage-value";
 import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { useSWRAuth, useTenantMutate, useSWRSeedFrom } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import type { Student, SupervisorContact } from "~/lib/student-helpers";
 import {
   allowedDepartureModesFromDeparture,
@@ -117,10 +119,7 @@ import { parseISODate, berlinTodayISO } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useModuleBooked, useWeekendFollowsFriday } from "~/lib/tenant-context";
 import { careWithdrawalNotice } from "~/lib/care-withdrawal-notice";
-import {
-  fetchStudentCareWithdrawal,
-  type CareWithdrawalCompletion,
-} from "~/lib/care-exit-api";
+import { fetchStudentCareWithdrawal } from "~/lib/care-exit-api";
 import { fetchStudentCarePlanDay } from "~/lib/student-care-plan-api";
 import {
   deleteStudentPartialAbsence,
@@ -642,13 +641,31 @@ function StudentDetailPageContent() {
   // dieselbe Berechtigung wie das frühere Pane der Kinderdaten (#2487, #3115).
   const canManageRecord =
     sessionStatus === "authenticated" && hasPermission(session, "users:delete");
-  const [careWithdrawal, setCareWithdrawal] =
-    useState<CareWithdrawalCompletion | null>(null);
-  const careWithdrawalLoad = useApiLoadError();
-  const showCareWithdrawalError = careWithdrawalLoad.show;
-  const clearCareWithdrawalError = careWithdrawalLoad.clear;
-  // Bumped by „Wiederholen“ on a failed load of the open withdrawal.
-  const [careWithdrawalAttempt, setCareWithdrawalAttempt] = useState(0);
+  const {
+    data: loadedCareWithdrawal,
+    error: careWithdrawalError,
+    mutate: mutateCareWithdrawal,
+  } = useSWRAuth(
+    canCompleteCareWithdrawal && studentId
+      ? tenantStudentKeys.careWithdrawal(studentId)
+      : null,
+    () => fetchStudentCareWithdrawal(studentId),
+    { keepPreviousData: false },
+  );
+  const careWithdrawal = loadedCareWithdrawal ?? null;
+  const careWithdrawalLoad = useSwrResourceLoadError(
+    [{ data: loadedCareWithdrawal, error: careWithdrawalError }],
+    "die offene Abmeldung",
+    () => mutateCareWithdrawal(),
+  );
+  // A request decided, corrected or created elsewhere on the page can close
+  // or open the withdrawal.
+  useEffect(() => {
+    const reload = () => void mutateCareWithdrawal();
+    window.addEventListener(CHANGE_REQUESTS_REFRESH_EVENT, reload);
+    return () =>
+      window.removeEventListener(CHANGE_REQUESTS_REFRESH_EVENT, reload);
+  }, [mutateCareWithdrawal]);
   const [careWithdrawalModalOpen, setCareWithdrawalModalOpen] = useState(false);
   const visibleTabs = useMemo(
     () =>
@@ -974,47 +991,6 @@ function StudentDetailPageContent() {
   // while data is still loading: hasFullAccess defaults to false then, so acting
   // early would wrongly strip a valid full-access deep-link before it resolves.
   const urlTab = searchParams.get("tab");
-  useEffect(() => {
-    if (!canCompleteCareWithdrawal || !studentId) {
-      setCareWithdrawal(null);
-      clearCareWithdrawalError();
-      return;
-    }
-    let cancelled = false;
-    const load = () => {
-      void fetchStudentCareWithdrawal(studentId)
-        .then((result) => {
-          if (cancelled) return;
-          setCareWithdrawal(result);
-          clearCareWithdrawalError();
-        })
-        .catch((error: unknown) => {
-          if (cancelled) return;
-          logger.warn("care_withdrawal_warning_load_failed", {
-            student_id: studentId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          setCareWithdrawal(null);
-          void showCareWithdrawalError(error, {
-            object: "die offene Abmeldung",
-            retry: () => setCareWithdrawalAttempt((attempt) => attempt + 1),
-          });
-        });
-    };
-    load();
-    window.addEventListener(CHANGE_REQUESTS_REFRESH_EVENT, load);
-    return () => {
-      cancelled = true;
-      window.removeEventListener(CHANGE_REQUESTS_REFRESH_EVENT, load);
-    };
-  }, [
-    canCompleteCareWithdrawal,
-    careWithdrawalAttempt,
-    clearCareWithdrawalError,
-    showCareWithdrawalError,
-    studentId,
-  ]);
-
   useEffect(() => {
     if (loading || !student || sessionStatus === "loading") return;
     if (urlTab !== null && urlTab !== activeTab) {
@@ -1834,7 +1810,7 @@ function StudentDetailPageContent() {
             onClose={() => setCareWithdrawalModalOpen(false)}
             onFinished={() => {
               setCareWithdrawalModalOpen(false);
-              setCareWithdrawal(null);
+              void mutateCareWithdrawal(null, { revalidate: false });
               announceChangeRequestsChanged();
             }}
           />

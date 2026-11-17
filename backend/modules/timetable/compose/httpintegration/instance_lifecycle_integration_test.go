@@ -492,19 +492,35 @@ func TestInstance_Complete_HappyPath(t *testing.T) {
 	require.NotNil(t, group.EndTime, "active.group should have been ended")
 }
 
-func TestInstance_Complete_BasesReopenWindowOnCompletionTimestamp(t *testing.T) {
+// The reopen window runs on the owner's clock, which Reopen reads again
+// (#7295): with that clock on another day than the database's, a block
+// completed after its planned end can be reopened for five minutes and no
+// longer.
+func TestInstance_ReopenWindowRunsOnTheOwnerClock(t *testing.T) {
 	t.Parallel()
 
-	s := buildLifecycle(t)
-	ai := seedInstance(t, s, true, false)
+	day := calendar.NewDate(2099, 6, 15)
+	now := time.Date(2099, 6, 15, 16, 0, 0, 0, calendar.Berlin)
+	s := buildLifecycle(t, func() time.Time { return now })
+	ai := seedInstanceOn(t, s, day, true, false)
 	_, err := s.svc.Start(s.ctx, ai.ID, 0)
 	require.NoError(t, err)
 
 	completed, err := s.svc.Complete(s.ctx, ai.ID)
 	require.NoError(t, err)
-	require.NotNil(t, completed.CompletedAt)
 	require.NotNil(t, completed.ReopenUntil)
-	assert.Equal(t, completed.CompletedAt.Add(5*time.Minute), *completed.ReopenUntil)
+	assert.True(t, now.Add(5*time.Minute).Equal(*completed.ReopenUntil), "reopen_until %s, want five minutes after %s", completed.ReopenUntil, now)
+
+	now = now.Add(4 * time.Minute)
+	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
+	require.NoError(t, err, "inside the window on the owner's clock")
+
+	completed, err = s.svc.Complete(s.ctx, ai.ID)
+	require.NoError(t, err)
+	assert.True(t, now.Add(5*time.Minute).Equal(*completed.ReopenUntil))
+	now = now.Add(6 * time.Minute)
+	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
+	require.ErrorIs(t, err, timetable.ErrInvalidInstanceTransition, "past the window on the owner's clock")
 }
 
 // TestInstance_Complete_EarlyCompletionReopensUntilPlannedEnd covers #5676:
@@ -548,6 +564,130 @@ func TestInstance_Reopen_RefusesChildThatLeftSchool(t *testing.T) {
 	coded, ok := timetable.AsCoded(err)
 	require.True(t, ok)
 	assert.Equal(t, timetable.CodeReopenStudentLeft, coded.Code)
+}
+
+// A checkout carries the owners' clock, so Reopen orders it against the
+// completion on that clock (#7295): with the clock behind the database's, a
+// child that left school after the completion still blocks the reopen.
+func TestInstance_Reopen_OrdersLeavingSchoolOnTheOwnerClock(t *testing.T) {
+	t.Parallel()
+
+	day := calendar.NewDate(2020, 6, 15)
+	now := time.Date(2020, 6, 15, 14, 30, 0, 0, calendar.Berlin)
+	s := buildLifecycle(t, func() time.Time { return now })
+	ai := seedInstanceOn(t, s, day, true, true)
+	started, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	checkIn := now.Add(-10 * time.Minute)
+	device := testpkg.CreateTestDevice(t, s.db, "reopen-left-school-clock")
+	testpkg.CreateTestAttendanceForDate(t, s.db, s.student1, s.staffID, device.ID, day, checkIn, nil)
+	testpkg.CreateTestVisit(t, s.db, s.student1, started.ActiveGroupID, checkIn, nil)
+
+	_, err = s.svc.Complete(s.ctx, ai.ID)
+	require.NoError(t, err)
+	testpkg.CheckOutTestAttendanceByStaff(t, s.db, s.student1, day.String(), now.Add(time.Second), s.staffID)
+
+	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
+	require.ErrorIs(t, err, timetable.ErrTimetableOperationConflict)
+	coded, ok := timetable.AsCoded(err)
+	require.True(t, ok)
+	assert.Equal(t, timetable.CodeReopenStudentLeft, coded.Code)
+}
+
+// Attendance rows carry the database clock, the clock of completed_at
+// (#7295): with the owners' clock behind the database's, a correction after
+// the completion still blocks the reopen instead of being overwritten by the
+// snapshot.
+func TestInstance_Reopen_SeesCorrectionWithTheOwnerClockBehind(t *testing.T) {
+	t.Parallel()
+
+	day := calendar.NewDate(2020, 6, 15)
+	now := time.Date(2020, 6, 15, 14, 30, 0, 0, calendar.Berlin)
+	s := buildLifecycle(t, func() time.Time { return now })
+	ai := seedInstanceOn(t, s, day, true, true)
+	_, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	_, err = s.svc.Complete(s.ctx, ai.ID)
+	require.NoError(t, err)
+
+	actor := testpkg.CreateTestAccount(t, s.db, "reopen-correction-clock")
+	require.NoError(t, testpkg.WithinTenantContext(t, s.ctx, s.db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		return correctNoteAfterCompletion(txCtx, s, ai.ID, actor.ID)
+	}))
+
+	requireReopenAttendanceChanged(t, s, ai.ID)
+}
+
+// completed_at is the database's statement time, read after the
+// completion's own writes (#7295): a correction later in the same
+// transaction stamps a later clock_timestamp() and blocks the reopen, where
+// the transaction start compared equal and let the snapshot overwrite it.
+func TestInstance_Reopen_SeesCorrectionInTheCompletingTransaction(t *testing.T) {
+	t.Parallel()
+
+	s := buildLifecycle(t)
+	ai := seedInstance(t, s, true, true)
+	_, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	actor := testpkg.CreateTestAccount(t, s.db, "reopen-correction-same-tx")
+	require.NoError(t, testpkg.WithinTenantContext(t, s.ctx, s.db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		if _, err := s.svc.Complete(txCtx, ai.ID); err != nil {
+			return err
+		}
+		return correctNoteAfterCompletion(txCtx, s, ai.ID, actor.ID)
+	}))
+
+	requireReopenAttendanceChanged(t, s, ai.ID)
+}
+
+// A correction whose transaction began before the completion and wrote after
+// its commit stamps the statement time, after completed_at, and blocks the
+// reopen (#7295); its transaction start lies before the completion.
+func TestInstance_Reopen_SeesCorrectionFromATransactionStartedBeforeCompletion(t *testing.T) {
+	t.Parallel()
+
+	s := buildLifecycle(t)
+	ai := seedInstance(t, s, true, true)
+	_, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	actor := testpkg.CreateTestAccount(t, s.db, "reopen-correction-overlap")
+
+	began, completed, corrected := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+	go func() {
+		corrected <- testpkg.WithTenantTx(t, s.ctx, s.db, testpkg.Tenant(t), func(txCtx context.Context, tx bun.Tx) error {
+			var started time.Time
+			if err := tx.NewRaw("SELECT transaction_timestamp()").Scan(txCtx, &started); err != nil {
+				close(began)
+				return err
+			}
+			close(began)
+			<-completed
+			return correctNoteAfterCompletion(txCtx, s, ai.ID, actor.ID)
+		})
+	}()
+	<-began
+	_, err = s.svc.Complete(s.ctx, ai.ID)
+	close(completed)
+	require.NoError(t, err)
+	require.NoError(t, <-corrected)
+
+	requireReopenAttendanceChanged(t, s, ai.ID)
+}
+
+func correctNoteAfterCompletion(ctx context.Context, s *lifecycleSetup, instanceID, actorID int64) error {
+	note := "Nachtrag"
+	_, err := s.timetableData.AttendanceCorrections.CorrectInstanceStudentAttendance(ctx, instanceID, s.student1,
+		timetable.AttendancePatch{Note: &note}, "Nachtrag nach Abschluss", actorID)
+	return err
+}
+
+func requireReopenAttendanceChanged(t *testing.T, s *lifecycleSetup, instanceID int64) {
+	t.Helper()
+	_, err := s.svc.Reopen(s.ctx, instanceID, 0, true)
+	require.ErrorIs(t, err, timetable.ErrTimetableOperationConflict)
+	coded, ok := timetable.AsCoded(err)
+	require.True(t, ok)
+	assert.Equal(t, timetable.CodeReopenAttendanceChanged, coded.Code)
 }
 
 func TestInstance_Complete_ConfirmationMustMatchOpenVisits(t *testing.T) {
@@ -975,9 +1115,11 @@ func TestInstance_Reopen_RejectsAttendanceChangedAfterComplete(t *testing.T) {
 	_, err = s.svc.Complete(s.ctx, ai.ID)
 	require.NoError(t, err)
 
+	// Attendance stamps updated_at, like completed_at, on the database's
+	// statement time (ADR 0281).
 	_, err = s.db.NewUpdate().
 		Table("schedule.instance_students").
-		Set("updated_at = ?", time.Now().Add(time.Minute)).
+		Set("updated_at = clock_timestamp() + INTERVAL '1 minute'").
 		Where("instance_id = ?", ai.ID).
 		Exec(s.ctx)
 	require.NoError(t, err)

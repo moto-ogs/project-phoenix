@@ -26,8 +26,9 @@ func (r *Store) InsertSchemaVersion(ctx context.Context, schema *enrollment.Form
 		CoreRequirements: schema.CoreRequirements, LegalBlocks: schema.LegalBlocks,
 		IsActive: schema.IsActive, CreatedBy: schema.CreatedBy,
 	}
+	row.CreatedAt = r.currentTime()
+	row.UpdatedAt = row.CreatedAt
 	_, err = db.NewInsert().Model(&row).
-		Value("created_at", "NOW()").Value("updated_at", "NOW()").
 		Returning("*").Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create form schema: %w", err)
@@ -187,7 +188,7 @@ func (r *Store) RenameSchemaLineage(ctx context.Context, oldName, newName string
 		Model((*formSchemaRow)(nil)).
 		ModelTableExpr(`enrollment.form_schemas AS "form_schema"`).
 		Set("name = ?", newName).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", r.currentTime()).
 		Where(`"form_schema".name = ?`, oldName)
 
 	query = query.Where(`"form_schema".tenant_id = ?`, tenantID)

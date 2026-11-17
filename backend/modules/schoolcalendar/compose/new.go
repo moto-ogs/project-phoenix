@@ -58,7 +58,7 @@ func NewRecords(dependencies RecordsDependencies) (schoolcalendar.Days, error) {
 	if now == nil {
 		now = time.Now
 	}
-	return application.New(postgres.New(postgres.NewCompositionDatabase(), dependencies.ClosingDayReads), ports.Observer(dependencies.Observe), application.Administration{Transaction: writeTransaction, Today: application.BerlinDay(now), FederalState: dependencies.FederalState}, application.LocalCalendar{}), nil
+	return application.New(postgres.New(postgres.NewCompositionDatabase(), dependencies.ClosingDayReads, now), ports.Observer(dependencies.Observe), application.Administration{Transaction: writeTransaction, Today: application.BerlinDay(now), FederalState: dependencies.FederalState}, application.LocalCalendar{}), nil
 }
 
 // AdministrationDependencies are the collaborators of the period administration.

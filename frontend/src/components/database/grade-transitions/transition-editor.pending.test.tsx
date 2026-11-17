@@ -1,10 +1,17 @@
 // #6593: Während der Entwurf gespeichert wird, ist das Panel gesperrt; eine
 // späte Antwort wechselt keinen geschlossenen Editor zur Vorschau. Echter
 // SlideOver über dem gemeinsamen Vaul-Mock.
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as rtlRender,
+  screen,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { GradeTransition } from "~/lib/grade-transition-api";
 import { catalogText } from "~/test/error-catalog-text";
 import {
@@ -14,6 +21,23 @@ import {
 } from "~/test/helpers/form-modal-pending";
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
+vi.unmock("swr");
+
+const session = {
+  data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+  status: "authenticated",
+};
+vi.mock("next-auth/react", () => ({ useSession: () => session }));
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }: { readonly children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    ),
+  });
+}
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -72,6 +96,48 @@ describe("TransitionEditor pending lock (#6593)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.fetchTransitionClasses.mockResolvedValue(["1a"]);
+  });
+
+  it("waits for this opening's suggestions before creating an editable draft", async () => {
+    const first = [
+      {
+        fromClass: "1a",
+        toClass: "2a",
+        isGraduating: false,
+        ambiguous: false,
+        studentCount: 2,
+      },
+    ];
+    api.fetchSuggestedMappings.mockResolvedValueOnce(first);
+    const answer = deferred<typeof first>();
+    api.fetchSuggestedMappings.mockReturnValueOnce(answer.promise);
+    const props = {
+      existingDraft: null,
+      onClose: vi.fn(),
+      onReadyForPreview: vi.fn(),
+    };
+    const view = render(<TransitionEditor {...props} />);
+    expect(await screen.findByLabelText("Zielklasse für 1a")).toHaveValue("2a");
+    view.rerender(<></>);
+    view.rerender(<TransitionEditor {...props} />);
+    // Anker: die neue Öffnung wartet auf ihre eigenen Vorschläge.
+    expect(
+      screen.getByRole("button", { name: "Weiter zur Vorschau" }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByLabelText("Zielklasse für 1a"),
+    ).not.toBeInTheDocument();
+    await act(async () => {
+      answer.resolve([
+        ...first,
+        { ...first[0]!, fromClass: "2b", toClass: "3b" },
+      ]);
+    });
+    expect(await screen.findByLabelText("Zielklasse für 2b")).toHaveValue("3b");
+    fireEvent.change(screen.getByLabelText("Zielklasse für 1a"), {
+      target: { value: "2c" },
+    });
+    expect(screen.getByLabelText("Zielklasse für 1a")).toHaveValue("2c");
   });
 
   it("locks the panel while saving and unlocks it after a failure", async () => {

@@ -11,11 +11,11 @@ import { schedulePostHogInitialization } from "~/lib/posthog-client";
 /**
  * Root providers — auth-free.
  *
- * SessionProvider has been moved into scope-specific layouts:
- * - Tenant: [tenant]/layout.tsx (basePath="/api/auth")
- * - Operator: operator/layout.tsx (basePath="/api/operator/auth")
- *
- * This prevents operator cookies from leaking to tenant subdomains.
+ * Each portal mounts its own SessionProvider: the tenant in
+ * [tenant]/providers.tsx, the portals on their own host (operator, parents,
+ * school, caterer, Träger) through PortalProviders
+ * (~/components/auth/portal-providers), with the base path of the portal
+ * table (~/lib/portal-paths). No portal's session reaches another's host.
  */
 export function Providers({
   children,

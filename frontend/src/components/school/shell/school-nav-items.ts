@@ -10,6 +10,11 @@
  * der Konzeptdefinition (`~/lib/concepts`), damit das Schul-Portal dieselbe Bildsprache spricht wie
  * das übrige Produkt.
  */
+import {
+  SCHOOL_PRIMARY_PAGES,
+  SCHOOL_SETTINGS_PAGE,
+  type SchoolNavPage,
+} from "./school-nav-pages";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { announcementsConcept } from "~/lib/concepts/announcements";
 import { calendarConcept } from "~/lib/concepts/calendar";
@@ -24,34 +29,8 @@ import { devicesConcept } from "~/lib/concepts/devices";
 import { privacyConcept } from "~/lib/concepts/privacy";
 import { settingsConcept } from "~/lib/concepts/settings";
 
-export interface SchoolNavItem {
-  /** Stabiler Schlüssel für Listen und Tests. */
-  readonly key: string;
-  readonly href: string;
-  readonly label: string;
+export interface SchoolNavItem extends SchoolNavPage {
   readonly concept: MotoConcept;
-  /**
-   * Ziele außerhalb des Portals öffnen in einem neuen Tab, damit die
-   * Klassenansicht beim Nachschlagen nicht verloren geht.
-   */
-  readonly newTab?: boolean;
-  /**
-   * `true` für Portal-Pfade, die auf dem Schul-Host ohne /school-Präfix
-   * laufen. Die Hilfe ist host-unabhängig und wird nicht umgeschrieben.
-   */
-  readonly portalPath?: boolean;
-  /**
-   * Welcher Zähler neben dem Eintrag steht. Die Leisten holen den Wert aus
-   * dem passenden Hook; die Liste selbst kennt keine Zahlen.
-   */
-  readonly badge?: "teamChat" | "notices";
-  /**
-   * `true` für Ziele, die es nur gibt, solange die Schule die Funktion
-   * nicht ausgeschaltet hat. Die Leisten blenden den Eintrag aus, solange das
-   * nicht feststeht oder verneint ist — ein toter Link ist schlimmer als
-   * ein fehlender.
-   */
-  readonly optional?: "teamChat";
 }
 
 /**
@@ -63,63 +42,21 @@ export interface SchoolNavItem {
  * zur OGS dazwischen, die Tagesinformationen das, was die OGS-Leitung allen
  * Lehrkräften mitteilt.
  */
-export const SCHOOL_PRIMARY_NAV: readonly SchoolNavItem[] = [
-  {
-    key: "classDay",
-    href: "/school",
-    label: "Klassenansicht",
-    concept: classDayConcept,
-    portalPath: true,
-  },
-  {
-    key: "supervisions",
-    href: "/school/aufsichten",
-    label: "Meine Aufsichten",
-    concept: presentConcept,
-    portalPath: true,
-  },
-  {
-    key: "messages",
-    href: "/school/nachrichten",
-    label: "Nachrichten",
-    concept: messagesConcept,
-    portalPath: true,
-    badge: "teamChat",
-    optional: "teamChat",
-  },
-  {
-    key: "notices",
-    href: "/school/tagesinformationen",
-    label: "Hinweise der Leitung",
-    concept: announcementsConcept,
-    portalPath: true,
-    badge: "notices",
-  },
-  // Fehltage je Kind einer Klasse für Klassenbuch und Zeugnis (#4793).
-  {
-    key: "absenceList",
-    href: "/school/fehlzeiten",
-    label: "Fehlzeiten",
-    concept: excusedConcept,
-    portalPath: true,
-  },
-  // Briefe der Lehrkraft an die Eltern ihrer Klasse (#4800).
-  {
-    key: "parentLetters",
-    href: "/school/elternbriefe",
-    label: "Elternbriefe",
-    concept: newsConcept,
-    portalPath: true,
-  },
-  // Termine der OGS, Schließtage, Ferien und die eigenen Schultermine (#4798).
-  {
-    key: "calendar",
-    href: "/school/kalender",
-    label: "Kalender",
-    concept: calendarConcept,
-    portalPath: true,
-  },
-];
+const PRIMARY_CONCEPTS = {
+  classDay: classDayConcept,
+  supervisions: presentConcept,
+  messages: messagesConcept,
+  notices: announcementsConcept,
+  absenceList: excusedConcept,
+  parentLetters: newsConcept,
+  calendar: calendarConcept,
+} satisfies Record<(typeof SCHOOL_PRIMARY_PAGES)[number]["key"], MotoConcept>;
+
+export const SCHOOL_PRIMARY_NAV: readonly SchoolNavItem[] =
+  SCHOOL_PRIMARY_PAGES.map((page) => ({
+    ...page,
+    concept: PRIMARY_CONCEPTS[page.key],
+  }));
 
 /**
  * Unten angeheftet: nicht der Alltag, sondern das Nachschlagen. Die Hilfe
@@ -141,11 +78,8 @@ export const SCHOOL_SECONDARY_NAV: readonly SchoolNavItem[] = [
 
 /** Der Einstieg in die Einstellungen, unten in der Seitenleiste (#5750). */
 export const SCHOOL_SETTINGS_ENTRY: SchoolNavItem = {
-  key: "settings",
-  href: "/school/einstellungen",
-  label: "Einstellungen",
+  ...SCHOOL_SETTINGS_PAGE,
   concept: settingsConcept,
-  portalPath: true,
 };
 
 export interface SchoolSettingsSection {

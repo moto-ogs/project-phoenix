@@ -62,12 +62,13 @@ vi.mock("~/lib/swr", () => ({
 
 import { BulkSubstitutionModal } from "./bulk-substitution-modal";
 import { ApiError } from "~/lib/api-error";
+import { testClockDay } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
 const TITLE = "Sammel-Vertretung";
 const CLOSE = "Sammel-Vertretung schließen";
 // Der Tag nach TEST_CLOCK_TODAY: vergangene Tage zeigt das Panel nicht.
-const DAY = "2026-09-10";
+const DAY = testClockDay(1);
 const STAFF_OPTIONS = [
   { id: "11", name: "Anna Alt" },
   { id: "12", name: "Bernd Neu" },

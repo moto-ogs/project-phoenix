@@ -2,20 +2,18 @@
 // #6976): receipt, acceptance, place, closing day notice and parent account
 // offer. The office learns it here, so it can check the address and reach
 // the family another way.
-import { useEffect, useState } from "react";
 
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { JumpButton } from "~/components/ui/jump-button";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { MailOutcome } from "~/lib/email-delivery-status";
-import { createLogger } from "~/lib/logger";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchHolidayRegistrationMailProblems,
   type HolidayRegistrationMailKind,
   type HolidayRegistrationMailProblem,
 } from "~/lib/traeger-holiday-registrations-api";
-
-const logger = createLogger({ component: "HolidayRegistrationMailProblems" });
 
 type MailProblems = ReadonlyMap<
   string,
@@ -32,37 +30,17 @@ export function useHolidayRegistrationMailProblems(
   periodId: string,
   reload: string,
 ): MailProblems {
-  const [loaded, setLoaded] = useState<{
-    key: string;
-    problems: MailProblems;
-  } | null>(null);
-  const key = `${periodId}|${reload}`;
-  useEffect(() => {
-    if (!periodId || reload === "") return;
-    let current = true;
-    const load = async () => {
-      let next = NO_MAIL_PROBLEMS;
-      try {
-        next = await fetchHolidayRegistrationMailProblems(periodId);
-      } catch (err) {
-        // Silent on purpose: the mark only adds to the list, which works
-        // without it; each registration still shows its mails.
-        logger.warn("holiday_mail_problems_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-      if (current) setLoaded({ key, problems: next });
-    };
-    void load();
-    return () => {
-      current = false;
-    };
-  }, [periodId, reload, key]);
-  return loaded?.key === key ? loaded.problems : NO_MAIL_PROBLEMS;
+  // Silent on purpose: the list stays complete without the mail states.
+  const problems = useTraegerResource(
+    periodId && reload !== ""
+      ? traegerKeys.holidayMailProblems(periodId, reload)
+      : null,
+    () => fetchHolidayRegistrationMailProblems(periodId),
+    "die Zustellung der Mails",
+  ).data;
+  return problems ?? NO_MAIL_PROBLEMS;
 }
 
-// The receipt is no acceptance yet; its name keeps it apart from the
-// office's „Bestätigen“. Every name is feminine, so „die“ and „der“ fit.
 export const HOLIDAY_MAIL_LABELS: Readonly<
   Record<HolidayRegistrationMailKind, string>
 > = {

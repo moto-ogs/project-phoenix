@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { TraegerAbsenceAccount } from "~/lib/traeger-absence-api";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchTraegerAbsenceAccounts: vi.fn(),
@@ -15,17 +18,20 @@ vi.mock("~/lib/traeger-url", () => ({
 
 import { StaffAbsenceAccountsCard } from "./staff-absence-accounts-card";
 
+// The card asks for the Kontingent of the current Berlin year.
+const YEAR = Number(TEST_CLOCK_TODAY.slice(0, 4));
+
 const ACCOUNT: TraegerAbsenceAccount = {
   absenceTypeId: "7",
   absenceTypeName: "Regenerationstag",
-  year: 2026,
+  year: YEAR,
   entitledDays: 3,
   individual: true,
   standardDays: 2,
   takenDays: 1,
   reservedDays: 1,
   remainingDays: 1,
-  expiresOn: "2026-12-31",
+  expiresOn: `${YEAR}-12-31`,
   expiredDays: 0,
   carriedIn: null,
   schools: [
@@ -50,9 +56,9 @@ const ACCOUNT: TraegerAbsenceAccount = {
 
 function renderCard() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <StaffAbsenceAccountsCard recordId="5" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -66,7 +72,7 @@ describe("StaffAbsenceAccountsCard", () => {
   it("shows one Kontingent over all schools with each school's share", async () => {
     renderCard();
     const card = await screen.findByRole("region", {
-      name: "Regenerationstag 2026",
+      name: `Regenerationstag ${YEAR}`,
     });
     expect(within(card).getByText("für diese Person")).toBeInTheDocument();
     expect(within(card).getByText("OGS Nord")).toBeInTheDocument();
@@ -75,7 +81,7 @@ describe("StaffAbsenceAccountsCard", () => {
         "0 Tage genommen · 1 Tag beantragt · hier höchstens 1,5 Tage",
       ),
     ).toBeInTheDocument();
-    expect(api.fetchTraegerAbsenceAccounts).toHaveBeenCalledWith("5", 2026);
+    expect(api.fetchTraegerAbsenceAccounts).toHaveBeenCalledWith("5", YEAR);
   });
 
   it("refuses a claim below the booked days and saves a valid one with its reason", async () => {
@@ -85,7 +91,7 @@ describe("StaffAbsenceAccountsCard", () => {
         name: "Anspruch ändern: Regenerationstag",
       }),
     );
-    const days = screen.getByLabelText("Anspruch 2026 in Tagen");
+    const days = screen.getByLabelText(`Anspruch ${YEAR} in Tagen`);
     fireEvent.change(days, { target: { value: "1,5" } });
     fireEvent.change(screen.getByLabelText("Begründung"), {
       target: { value: "Vertrag" },
@@ -102,7 +108,7 @@ describe("StaffAbsenceAccountsCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await vi.waitFor(() =>
       expect(api.setTraegerAbsenceAllowance).toHaveBeenCalledWith("5", "7", {
-        year: 2026,
+        year: YEAR,
         entitledDays: 4,
         reason: "Vertrag",
       }),
@@ -119,4 +125,20 @@ describe("StaffAbsenceAccountsCard", () => {
       screen.getByRole("link", { name: "Zu den Abwesenheitsarten" }),
     ).toHaveAttribute("href", "/personal/abwesenheitsarten");
   });
+});
+
+it("performs a new audited read on immediate reopening", async () => {
+  api.fetchTraegerAbsenceAccounts.mockReset().mockResolvedValue([ACCOUNT]);
+  const view = render(<StaffAbsenceAccountsCard recordId="5" />, {
+    wrapper: TraegerResourceTestProvider,
+  });
+  expect(
+    await screen.findByRole("region", { name: `Regenerationstag ${YEAR}` }),
+  ).toBeVisible();
+  expect(api.fetchTraegerAbsenceAccounts).toHaveBeenCalledTimes(1);
+  view.rerender(<div>away</div>);
+  view.rerender(<StaffAbsenceAccountsCard recordId="5" />);
+  await vi.waitFor(() =>
+    expect(api.fetchTraegerAbsenceAccounts).toHaveBeenCalledTimes(2),
+  );
 });

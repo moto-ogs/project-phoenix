@@ -194,14 +194,14 @@ type (
 	}
 	// AccessLog appends the school portal's reads to the GDPR access log.
 	AccessLog interface {
-		// ClassDayViewSeenSince reports whether the actor was served the day
-		// view of the class and date since the given instant.
-		ClassDayViewSeenSince(ctx context.Context, actorAccountID int64, schoolClass, date string, since time.Time) (bool, error)
+		// ClassDayViewSeenToday reports whether the actor was served the day
+		// view of the class and date today, on the clock of the access log.
+		ClassDayViewSeenToday(ctx context.Context, actorAccountID int64, schoolClass, date string) (bool, error)
 		RecordClassDayView(ctx context.Context, entry AccessRecord) error
-		// SchoolDayViewSeenSince reports whether the actor was served the
-		// school-wide day overview of the date since the given instant
-		// (#4802).
-		SchoolDayViewSeenSince(ctx context.Context, actorAccountID int64, date string, since time.Time) (bool, error)
+		// SchoolDayViewSeenToday reports whether the actor was served the
+		// school-wide day overview of the date today, on the clock of the
+		// access log (#4802).
+		SchoolDayViewSeenToday(ctx context.Context, actorAccountID int64, date string) (bool, error)
 		RecordSchoolDayView(ctx context.Context, entry AccessRecord) error
 		RecordSupervisionSheet(ctx context.Context, entry AccessRecord) error
 		// RecordSharedNotes records one read of a child's notes the OGS

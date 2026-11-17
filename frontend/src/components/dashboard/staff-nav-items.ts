@@ -1,13 +1,42 @@
 import type { MotoConcept } from "~/lib/moto-concepts";
 import type { Session } from "next-auth";
-import { hasPermission } from "~/lib/auth-utils";
+import { useMemo } from "react";
+import {
+  hasEffectiveAdminScope,
+  hasPermission,
+  hasRole,
+  isCaregiver,
+} from "~/lib/auth-utils";
+import { useChangeRequestAccess } from "~/lib/hooks/use-change-request-access";
+import {
+  useModuleNavigation,
+  type ModuleNavigation,
+} from "~/lib/hooks/use-module-navigation";
+import { useSchoolParentNewsEnabled } from "~/lib/hooks/use-school-switches";
+import type { ModuleVisibility } from "~/lib/module-register";
+import { PLANNING_SUB_PAGES } from "~/lib/planning-navigation";
 import { STUDENT_READ_PERMISSIONS } from "~/lib/student-access";
-import { STAFF_FLAT_PAGES } from "~/lib/section-navigation";
+import {
+  COMMUNICATION_SUB_PAGES,
+  PARENT_SUB_PAGES,
+  STAFF_FLAT_PAGES,
+} from "~/lib/section-navigation";
 import {
   useAttendanceLogEnabled,
   useDisplayEnabled,
+  useMealPlanEnabled,
+  useOpenCareGroupMode,
+  usePresenceMode,
+  useStaffMessagingEnabled,
   useTimetableEnabled,
 } from "~/lib/tenant-context";
+import {
+  communicationPageRule,
+  moduleGate,
+  parentPageRule,
+  planningPageRule,
+  type StaffCatalogViewer,
+} from "./staff-nav-pages";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
@@ -252,7 +281,7 @@ export interface StaffNavViewer {
 }
 
 /** Ein Einstieg der Betreuungskräfte, den eine Admin-Rolle nicht sieht. */
-export function staffNavHiddenForAdmin(
+function staffNavHiddenForAdmin(
   item: Pick<StaffNavItem, "hideForAdmin">,
   viewer: StaffNavViewer,
 ): boolean {
@@ -306,6 +335,224 @@ export function useStaffNavSettings(): Readonly<
     timetable: useTimetableEnabled(),
     display: useDisplayEnabled(),
     attendanceLog: useAttendanceLogEnabled(),
+  };
+}
+
+/**
+ * Wie eine Seite in der Navigation erscheint: offen, mit Schloss (Modul nicht
+ * gebucht, #4894) oder gar nicht (`null`).
+ */
+export type StaffNavPageState = "open" | "locked" | null;
+
+/**
+ * Wo Seitenleiste und mobile Leiste heute verschieden entscheiden. Jede
+ * Fläche nennt ihren Wert beim Aufruf; die Abweichungen hält #6708 fest.
+ */
+export interface StaffNavPageRules {
+  /**
+   * „Heute“ verlangt das Recht der Route (schedules:read) auch von der Rolle
+   * Admin. Die mobile Leiste prüft es, die Seitenleiste lässt es dort aus.
+   */
+  readonly tagesplanRouteRightForAdmins: boolean;
+  /**
+   * „Hinweise der Leitung“ steht der Rolle Admin auch ohne users:read offen.
+   * Die mobile Leiste lässt die Rolle durch, die Seitenleiste prüft nur das
+   * Recht.
+   */
+  readonly staffNoticesOpenForAdminRole: boolean;
+  /**
+   * Ob die Schulschalter (Elternmitteilungen) geladen werden. Die mobile
+   * Leiste fragt sie nur im Mitarbeiter-Portal.
+   */
+  readonly loadSchoolSwitches: boolean;
+}
+
+/** Was die Seitenregeln über Person und Schule wissen müssen. */
+export interface StaffNavPageInputs {
+  readonly viewer: StaffNavViewer;
+  /** Das Modul-Register (#4894) für die Seite hinter `href`. */
+  readonly modulePage: (href: string) => ModuleVisibility;
+  readonly isBinaryMode: boolean;
+  readonly settings: Readonly<Record<StaffNavSetting, boolean>>;
+  readonly canOpenRequestsPage: boolean;
+  readonly staffMessagingEnabled: boolean;
+  readonly parentNewsEnabled: boolean;
+  readonly mealPlanEnabled: boolean;
+}
+
+const PARENT_SUB_PAGES_BY_HREF = new Map(
+  PARENT_SUB_PAGES.map((page) => [page.href, page]),
+);
+const COMMUNICATION_SUB_PAGES_BY_HREF = new Map(
+  COMMUNICATION_SUB_PAGES.map((page) => [page.href, page]),
+);
+const PLANNING_SUB_PAGES_BY_HREF: ReadonlyMap<
+  string,
+  (typeof PLANNING_SUB_PAGES)[number]
+> = new Map(PLANNING_SUB_PAGES.map((page) => [page.href, page]));
+
+/**
+ * Recht und Schulschalter einer Seite mit eigenem Eintrag: aus der Liste
+ * oben oder aus den Katalogen der Gruppen Eltern, Team und Planung.
+ * `undefined` für eine Adresse ohne solchen Eintrag.
+ */
+function staffNavPageRule(
+  href: string,
+  inputs: StaffNavPageInputs,
+  rules: StaffNavPageRules,
+): readonly [permitted: boolean, settingOn: boolean] | undefined {
+  const { viewer } = inputs;
+  const session = viewer.session;
+  const item = STAFF_NAV_ITEMS_BY_HREF.get(href);
+  if (item) {
+    // Anfragen (#2429/#2911): JWT-Rechte allein reichen nicht. Für
+    // Elternanfragen muss zusätzlich der aktuelle serverseitige Prüfbereich
+    // (Admin, Gruppenleitung oder Vertretung) gelten.
+    if (item.href === STAFF_FLAT_PAGES.anfragen.href) {
+      return [inputs.canOpenRequestsPage, true];
+    }
+    // Der Schulschalter zählt hier als Teil des Rechts: eine Seite mit
+    // Schloss erklärt das Modul auch bei ausgeschaltetem Schalter.
+    const permitted =
+      staffNavSettingOn(item, inputs.settings) &&
+      staffNavItemPermitted(item, viewer) &&
+      !(
+        rules.tagesplanRouteRightForAdmins &&
+        item.href === STAFF_FLAT_PAGES.tagesplan.href &&
+        !hasPermission(session, "schedules:read")
+      );
+    return [permitted, true];
+  }
+  // Die Regeln der Katalogseiten stehen in staff-nav-pages.ts, damit
+  // Seitenleiste, mobile Leiste und Suche dieselben lesen.
+  const catalogViewer = {
+    session,
+    isAdmin: viewer.isAdmin,
+    openCareGroupMode: viewer.openCareGroupMode,
+    timetableEnabled: inputs.settings.timetable,
+    parentNewsEnabled: inputs.parentNewsEnabled,
+    mealPlanEnabled: inputs.mealPlanEnabled,
+    staffMessagingEnabled: inputs.staffMessagingEnabled,
+  };
+  const parentPage = PARENT_SUB_PAGES_BY_HREF.get(href);
+  if (parentPage) return parentPageRule(parentPage, catalogViewer);
+  const communicationPage = COMMUNICATION_SUB_PAGES_BY_HREF.get(href);
+  if (communicationPage) {
+    const rule = communicationPageRule(communicationPage, catalogViewer);
+    return communicationPage.feature === "staffNotices" &&
+      rules.staffNoticesOpenForAdminRole &&
+      viewer.isAdmin
+      ? [true, rule[1]]
+      : rule;
+  }
+  const planningPage = PLANNING_SUB_PAGES_BY_HREF.get(href);
+  if (planningPage) return planningPageRule(planningPage, catalogViewer);
+  return undefined;
+}
+
+/** Wie die Seite hinter `href` erscheint; `null` auch für fremde Adressen. */
+export function staffNavPageState(
+  href: string,
+  inputs: StaffNavPageInputs,
+  rules: StaffNavPageRules,
+): StaffNavPageState {
+  // Der Binärmodus schließt diese Seiten vollständig aus. Auch eine Leitung
+  // sieht hier kein Schloss, weil die Zielseite nicht erklärt, sondern als
+  // nicht passende Anwesenheitsart gesperrt ist.
+  if (inputs.isBinaryMode && STAFF_NAV_BINARY_HIDDEN_HREFS.has(href)) {
+    return null;
+  }
+  const rule = staffNavPageRule(href, inputs, rules);
+  if (!rule) return null;
+  const gate = moduleGate(inputs.modulePage(href), ...rule);
+  if (!gate.show) return null;
+  return gate.locked ? "locked" : "open";
+}
+
+export interface StaffNavPages {
+  /** Wie die Seite hinter `href` erscheint; `null` auch für fremde Adressen. */
+  readonly pageState: (href: string) => StaffNavPageState;
+  readonly viewer: StaffNavViewer;
+  readonly moduleNav: ModuleNavigation;
+  readonly isBinaryMode: boolean;
+  readonly timetableEnabled: boolean;
+  /**
+   * Dieselben Schulschalter für die Kataloglisten aus staff-nav-pages.ts,
+   * damit eine Fläche die Hooks nicht ein zweites Mal ruft.
+   */
+  readonly catalogViewer: StaffCatalogViewer;
+}
+
+/**
+ * Welche Seiten der Mitarbeiter-Navigation die Person an dieser Schule sieht,
+ * offen oder mit Schloss. Seitenleiste und mobile Leiste fragen beide hier;
+ * eine neue Regel kommt nur hierher.
+ */
+export function useStaffNavPages(
+  session: Session | null,
+  rules: StaffNavPageRules,
+): StaffNavPages {
+  const moduleNav = useModuleNavigation();
+  const isBinaryMode = usePresenceMode() === "binary";
+  const settings = useStaffNavSettings();
+  const openCareGroupMode = useOpenCareGroupMode();
+  const staffMessagingEnabled = useStaffMessagingEnabled();
+  const parentNewsEnabled = useSchoolParentNewsEnabled(
+    rules.loadSchoolSwitches,
+  );
+  const mealPlanEnabled = useMealPlanEnabled();
+  const { canOpenRequestsPage } = useChangeRequestAccess();
+  const isAdmin = hasRole(session, "admin");
+  const effectiveAdminScope = hasEffectiveAdminScope(session);
+  const viewer: StaffNavViewer = {
+    session,
+    isAdmin,
+    isCaregiver: isCaregiver(session),
+    openCareGroupMode,
+  };
+  // Stabil, solange sich nichts ändert: die Seitenleiste merkt sich ihre
+  // Kataloglisten an diesem Objekt.
+  const catalogViewer: StaffCatalogViewer = useMemo(
+    () => ({
+      session,
+      isAdmin,
+      effectiveAdminScope,
+      openCareGroupMode,
+      moduleNav,
+      timetableEnabled: settings.timetable,
+      parentNewsEnabled,
+      mealPlanEnabled,
+      staffMessagingEnabled,
+    }),
+    [
+      session,
+      isAdmin,
+      effectiveAdminScope,
+      openCareGroupMode,
+      moduleNav,
+      settings.timetable,
+      parentNewsEnabled,
+      mealPlanEnabled,
+      staffMessagingEnabled,
+    ],
+  );
+  const inputs: StaffNavPageInputs = {
+    viewer,
+    modulePage: moduleNav.page,
+    isBinaryMode,
+    settings,
+    canOpenRequestsPage,
+    staffMessagingEnabled,
+    parentNewsEnabled,
+    mealPlanEnabled,
+  };
+  return {
+    pageState: (href) => staffNavPageState(href, inputs, rules),
+    viewer,
+    moduleNav,
+    isBinaryMode,
+    timetableEnabled: settings.timetable,
+    catalogViewer,
   };
 }
 

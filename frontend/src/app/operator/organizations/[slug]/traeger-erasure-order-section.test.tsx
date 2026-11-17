@@ -19,6 +19,7 @@ import {
 } from "@testing-library/react";
 import { ApiError } from "~/lib/api-error";
 import { STALE_DATA_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -256,6 +257,8 @@ describe("TraegerErasureOrderSection", () => {
   });
 
   it("records the handover of the Rückgabe export with its day and checksum", async () => {
+    // The handover day lies between confirmation (1.9.) and erasure (31.12.2026).
+    setTestClock("2026-09-09T12:00:00+02:00");
     mockGetOrder.mockResolvedValueOnce(null).mockResolvedValue(openOrder);
     mockRecordOrder.mockResolvedValue(openOrder);
 
@@ -487,7 +490,10 @@ describe("TraegerErasureOrderSection", () => {
       ).getByRole("button", { name: "Zurücknehmen" }),
     );
 
-    const loadText = catalogText("general.unavailable", "die Anzeige des Löschauftrags");
+    const loadText = catalogText(
+      "general.unavailable",
+      "die Anzeige des Löschauftrags",
+    );
     expect(
       await screen.findByText((text) => text.startsWith(loadText)),
     ).toBeInTheDocument();

@@ -94,9 +94,9 @@ func newPeopleRepositorySuiteFactory(
 		MembershipTestRepositories: members,
 		GuardianPhoneNumber:        peopleCompose.NewGuardianPhoneNumberRepository(db.Pool()),
 		GuardianFinancialData:      peopleCompose.NewGuardianFinancialDataRepository(db.Pool()),
-		FamilyProtection:           peopleCompose.NewFamilyProtectionEventRepository(db.Pool()),
-		ParentRequestShare:         peopleCompose.NewParentRequestShareEventRepository(db.Pool()),
-		ParentRequestEvent:         peopleCompose.NewParentRequestEventRepository(db.Pool()),
+		FamilyProtection:           peopleCompose.NewFamilyProtectionEventRepository(db.Pool(), time.Now),
+		ParentRequestShare:         peopleCompose.NewParentRequestShareEventRepository(db.Pool(), time.Now),
+		ParentRequestEvent:         peopleCompose.NewParentRequestEventRepository(db.Pool(), time.Now),
 		GroupSubstitution:          owners.NewGroupSubstitutionRepository(owners.NewSchoolStructureRepositories(db, persons, identity, membership, rooms, workTime).Group, membership, workTime, timezone.TodayDate),
 		CaregiverBindingLock:       owners.NewCaregiverBindingLocker(membership, workTime, NewStudentPresenceForTests(db), capability),
 		CareWithdrawal:             owners.NewCareWithdrawalCompletionRepository(carePlan),
@@ -262,7 +262,7 @@ type EnrollmentSuiteRepositories struct {
 
 // Enrollment is the Enrollment booking projection.
 func (f *EnrollmentSuiteRepositories) Enrollment() owners.EnrollmentBookingProjection {
-	return owners.NewEnrollmentBookingProjection(owners.ComposeEnrollmentBookings(f.enrollment), owners.UngatedEnrollmentPhaseBounds())
+	return owners.NewEnrollmentBookingProjection(owners.ComposeEnrollmentBookings(f.enrollment, time.Now), owners.UngatedEnrollmentPhaseBounds(), time.Now)
 }
 
 // NewEnrollmentSuiteRepositories composes the projection's owner.

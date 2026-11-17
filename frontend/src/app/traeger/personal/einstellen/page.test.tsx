@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { StaffOverview, StaffRecordDetail } from "~/lib/traeger-staff-api";
 import TraegerStaffHirePage from "./page";
@@ -10,6 +10,9 @@ const api = vi.hoisted(() => ({
   fetchStaffOverview: vi.fn(),
   hireStaff: vi.fn(),
 }));
+// The page reads through the shared cache.
+vi.unmock("swr");
+
 vi.mock("~/lib/traeger-staff-api", async (original) => ({
   ...(await original<object>()),
   ...api,
@@ -44,9 +47,9 @@ const HIRED = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerStaffHirePage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

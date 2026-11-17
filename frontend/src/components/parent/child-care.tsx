@@ -42,6 +42,7 @@ import {
   type StudentStatusKind,
   deleteCareException,
   downloadPickupRequestProofPdf,
+  getChildCareSchedule,
   listCareExceptions,
   listChildGuardians,
   listPickupChangeRequests,
@@ -55,10 +56,7 @@ import {
   RequestEditModal,
   useRequestVersion,
 } from "~/components/parent/request-edit-modal";
-import {
-  useChildRequests,
-  useSharedParentFeatures,
-} from "~/components/parent/child-requests-context";
+import { useChildFeatures } from "~/components/parent/child-requests-context";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Textarea } from "~/components/ui/textarea";
@@ -70,6 +68,10 @@ import {
 } from "~/lib/localized-date-format";
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useInvalidateFamily, useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import type { SignatureValue } from "~/lib/signature";
 import {
   PickupSignatureField,
@@ -109,6 +111,9 @@ export type AbsenceSubmissionOutcome = "applied" | "pending" | "partly_pending";
 // react/no-object-type-as-default-prop).
 const EMPTY_EXCUSED_REQUESTS: readonly ExcusedRequest[] = [];
 const EMPTY_PICKUP_CHANGE_REQUESTS: PickupChangeRequest[] = [];
+const NO_STATUS_DAY_LIST: StatusDay[] = [];
+const NO_EXCUSED_REQUEST_LIST: ExcusedRequest[] = [];
+const NO_CARE_EXCEPTION_LIST: CareException[] = [];
 
 // --- date helpers (native <input type=date> already yields YYYY-MM-DD) ---
 
@@ -331,268 +336,119 @@ export function useChildCare(
   }> = {},
 ): ChildCare {
   const withoutCarePlace = options.withoutCarePlace === true;
-  const childRequests = useChildRequests();
-  const sharedFeatures = useSharedParentFeatures();
-  const hasSharedFeatures = sharedFeatures !== null;
-  const sharedFailure =
-    sharedFeatures?.errorsByChild[studentId] ??
-    (sharedFeatures && !sharedFeatures.data?.[studentId]
-      ? sharedFeatures.error
-      : undefined);
   const tChild = useCareTermTranslations("parentChild");
-  const { failure: sharedFeatureError } = useSwrResourceLoadError(
-    [{ data: sharedFeatures?.data?.[studentId], error: sharedFailure }],
+  // Today's calendar day in the SCHOOL's timezone (Europe/Berlin): the axis
+  // the backend resolves absences and overrides against. It advances at
+  // midnight in a tab left open, and with it every day-bound key (#1725).
+  const today = useBerlinToday();
+  const featureState = useChildFeatures(studentId);
+  const { failure: featureFailure } = useSwrResourceLoadError(
+    [{ data: featureState.features, error: featureState.failure }],
     tChild("errorObjectCare"),
-    () => sharedFeatures?.mutate(),
+    () => featureState.reload(),
   );
-  const [sickDays, setSickDays] = useState<StatusDay[]>([]);
-  const [excusedRequests, setExcusedRequests] = useState<ExcusedRequest[]>([]);
-  const [careExceptions, setCareExceptions] = useState<CareException[]>([]);
-  const [careExceptionsLoaded, setCareExceptionsLoaded] = useState(false);
-  const [pickupChangeRequests, setPickupChangeRequests] = useState<
-    PickupChangeRequest[]
-  >([]);
-  const [pickupChangeRequestsLoaded, setPickupChangeRequestsLoaded] =
-    useState(false);
-  // The child's standard weekly plan, used only to resolve today's base pickup
-  // time for the "Heute" tile. weekPlanLoaded stays false on a failed fetch so
-  // the tile shows a neutral state instead of falsely claiming "no pickup".
-  const [weekdays, setWeekdays] = useState<ChildCareSchedule["weekdays"]>([]);
-  const [weekPlanLoaded, setWeekPlanLoaded] = useState(false);
-  // The child's authoritative all-source absence for today (sick / excused /
-  // class trip), carried on the care-schedule response. Only trusted when
-  // weekPlanLoaded — it rides that same fetch.
-  const [todayAbsent, setTodayAbsent] = useState(false);
-  // The Berlin day the week-plan signal (todayAbsent above) was resolved for.
-  // The server computes today_absent against ITS current day, so a response is
-  // only valid while that day is still "today". A tab left open across midnight
-  // advances `today` (below) before the reload lands — without this stamp the
-  // stale absence boolean would be applied to the new date, asserting a wrong
-  // absence or pickup until the reload finishes, and indefinitely if it hangs
-  // (#1725 review). null until the first successful load.
-  const [weekPlanDate, setWeekPlanDate] = useState<string | null>(null);
-  const [features, setFeatures] = useState<ChildFeatures>(DEFAULT_FEATURES);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<unknown>(null);
-  // Today's calendar day in the SCHOOL's timezone (Europe/Berlin) — the axis the
-  // backend resolves absences/overrides against. A guardian's browser may sit in
-  // another timezone, so deriving "today" from the local clock can land on the
-  // wrong weekday around midnight. Kept in state (not recomputed inline) so a tab
-  // left open across midnight advances instead of freezing on yesterday (#1725
-  // review) — see the rollover effect below.
-  const [today, setToday] = useState(() => berlinTodayISO());
-  // Stale-response guard: load re-runs on every studentId change, and on a fast
-  // child A→B switch (same hook instance reused) a late-resolving load(A) must
-  // not overwrite B's data — one child's sick days / care exceptions / feature
-  // flags shown under another would mis-set the pickup-modal safety gate. Each
-  // run claims the next token; only the most-recently-started run may setState.
-  // Mirrors OgsConversation.refresh. mountedRef additionally blocks post-unmount.
-  const loadSeqRef = useRef(0);
-  const mountedRef = useRef(true);
-  // The child this hook instance currently serves. A mutation (report sick,
-  // save/remove pickup override, edit request) captures the studentId in its
-  // closure at call time, then awaits a POST; if the guardian navigates A→B
-  // during that await the SAME hook instance is reused for B (only the prop
-  // changes — see ChildDetailContent). Applying A's result would setState on B —
-  // most damagingly mark B absent with A's just-submitted absence, which A's
-  // later SSE event (filtered by studentId) never corrects. This ref is bumped
-  // SYNCHRONOUSLY in the reset block below, so a resolving A-write reads the new
-  // identity and bails before touching B's state (#1725 review).
+  const sick = useSWRAuth(
+    parentKeys.sickDays(studentId, today),
+    () => listSickDays(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  // Always fetched: the response is empty for schools without the approval
+  // gate, so gating it on the feature flag would only add an ordering
+  // dependency.
+  const excused = useSWRAuth(
+    parentKeys.excusedRequests(studentId, today),
+    () => listExcusedRequests(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const exceptions = useSWRAuth(
+    withoutCarePlace ? null : parentKeys.careExceptions(studentId, today),
+    () => listCareExceptions(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const pickupRequests = useSWRAuth(
+    withoutCarePlace ? null : parentKeys.pickupChangeRequests(studentId, today),
+    () => listPickupChangeRequests(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  // Not part of loadError: the Heute card says the pickup time is
+  // unavailable, and the care-schedule section shows its own load error with
+  // retry. A third box would repeat the same outage.
+  const schedule = useSWRAuth(
+    withoutCarePlace ? null : parentKeys.careSchedule(studentId, today),
+    () => getChildCareSchedule(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const mutateKey = useTenantMutate();
+  // A write captures its child; if the guardian moved on to another child
+  // meanwhile, the readers' mutate belongs to that child (#1725 review).
   const currentStudentIdRef = useRef(studentId);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  // Reset all per-child state before paint when studentId changes. The returned
-  // values are also masked below until this layout effect commits, so data from
-  // the previous child can never render under the new child's name.
-  const [loadedStudentId, setLoadedStudentId] = useState(studentId);
-  // This state is an ownership guard for asynchronous writes, not UI-derived
-  // state: it deliberately changes only after the old child's data is masked.
   useLayoutEffect(() => {
-    if (loadedStudentId === studentId) return;
-    setLoadedStudentId(studentId);
-    loadSeqRef.current += 1;
     currentStudentIdRef.current = studentId;
-    setSickDays([]);
-    setExcusedRequests([]);
-    setCareExceptions([]);
-    setCareExceptionsLoaded(false);
-    setPickupChangeRequests([]);
-    setPickupChangeRequestsLoaded(false);
-    setWeekdays([]);
-    setWeekPlanLoaded(false);
-    setTodayAbsent(false);
-    setWeekPlanDate(null);
-    setFeatures(DEFAULT_FEATURES);
-    setLoadError(null);
-    setLoading(true);
-  }, [loadedStudentId, studentId]);
+  });
+  const { mutate: reloadSick } = sick;
+  const { mutate: reloadExcused } = excused;
+  const { mutate: reloadExceptions } = exceptions;
+  const { mutate: reloadPickupRequests } = pickupRequests;
+  const { mutate: reloadSchedule } = schedule;
 
-  const hasCurrentStudentData = loadedStudentId === studentId;
+  // A failed list keeps its last confirmed answer; empty only until the first
+  // one arrived. The pickup modal relies on careExceptionsLoaded to avoid
+  // clearing a leg it never prefilled.
+  const careExceptionsLoaded = !!exceptions.data && !exceptions.error;
+  const pickupChangeRequestsLoaded =
+    !!pickupRequests.data && !pickupRequests.error;
+  // Ohne OGS-Platz (#4803) laden Abholung und Ausnahmen nicht; sie zählen
+  // dann weder als ladend noch als fehlgeschlagen.
+  const lists = withoutCarePlace
+    ? [sick, excused]
+    : [sick, excused, exceptions, pickupRequests];
+  const listsLoading = lists.some(
+    (list) => list.data === undefined && !list.error,
+  );
+  const listFailure = lists.find((list) => list.error)?.error;
 
-  const load = useCallback(async (): Promise<{
-    requestsOk: boolean;
-    requests: ExcusedRequest[];
-  }> => {
-    const seq = ++loadSeqRef.current;
-    setLoading(true);
-    // Track each fetch's success separately so a failed one PRESERVES the last
-    // known list instead of wiping it to []. An empty list from a failed fetch
-    // is indistinguishable from "nothing here" and would erase already-shown
-    // sick days / pending requests / care overrides on a transient hiccup — the
-    // pickup modal also relies on careExceptionsLoaded to avoid clearing a leg it
-    // never prefilled, and a gated sick-note submit relies on requestsOk to know
-    // whether the freshly created request was actually loaded (#1845 review).
-    let sickOk = true;
-    let requestsOk = true;
-    let exceptionsOk = true;
-    let pickupRequestsOk = true;
-    let weekPlanOk = true;
-    // Each list keeps its own fallback above; the first failure is what the
-    // page reports (see ChildCare.loadError).
-    const failures: unknown[] = [];
-    try {
-      const [days, requests, exceptions, pickupRequests, plan, flags] =
-        await Promise.all([
-          listSickDays(studentId).catch((err: unknown) => {
-            sickOk = false;
-            failures.push(err);
-            return [] as StatusDay[];
-          }),
-          // Always fetch: it's a cheap call and the response is empty for schools
-          // without the approval gate, so gating it on the (separately fetched)
-          // feature flag would only add an ordering dependency for no real saving.
-          listExcusedRequests(studentId).catch((err: unknown) => {
-            requestsOk = false;
-            failures.push(err);
-            return [] as ExcusedRequest[];
-          }),
-          withoutCarePlace
-            ? Promise.resolve([] as CareException[])
-            : listCareExceptions(studentId).catch((err: unknown) => {
-                exceptionsOk = false;
-                failures.push(err);
-                return [] as CareException[];
-              }),
-          withoutCarePlace
-            ? Promise.resolve([] as PickupChangeRequest[])
-            : listPickupChangeRequests(studentId).catch((err: unknown) => {
-                pickupRequestsOk = false;
-                failures.push(err);
-                return [] as PickupChangeRequest[];
-              }),
-          // Not part of loadError: the Heute card says the pickup time is
-          // unavailable, and the care-schedule section shows its own load
-          // error with retry. A third box would repeat the same outage.
-          withoutCarePlace
-            ? Promise.resolve(null)
-            : childRequests.careSchedule(studentId).catch(() => {
-                weekPlanOk = false;
-                return null;
-              }),
-          // Approval settings have no safe fallback: keep them unknown when
-          // the feature request fails so the modal uses neutral wording.
-          (hasSharedFeatures
-            ? Promise.resolve(DEFAULT_FEATURES)
-            : childRequests.features(studentId)
-          ).catch((err: unknown) => {
-            failures.push(err);
-            return DEFAULT_FEATURES;
-          }),
-        ]);
-      if (!mountedRef.current || seq !== loadSeqRef.current)
-        return { requestsOk, requests };
-      // Only overwrite a list whose fetch succeeded; keep the previous state
-      // otherwise (see above).
-      if (sickOk) setSickDays(days);
-      if (requestsOk) setExcusedRequests(requests);
-      if (exceptionsOk) setCareExceptions(exceptions);
-      setCareExceptionsLoaded(exceptionsOk);
-      if (pickupRequestsOk) setPickupChangeRequests(pickupRequests);
-      setPickupChangeRequestsLoaded(pickupRequestsOk);
-      if (weekPlanOk && plan) {
-        setWeekdays(plan.weekdays);
-        setTodayAbsent(plan.today_absent);
-        // Stamp the day this signal describes with the SERVER-resolved date
-        // (the day the backend computed today_absent against), not a
-        // client-captured request-start day. If the request crosses Berlin
-        // midnight — start just before, handled just after — the two disagree
-        // and the client date would bind the new day's today_absent onto
-        // yesterday's tile until the rollover poll runs. Fall back to the local
-        // Berlin day only for an older backend that omits today_date (#1725
-        // review).
-        setWeekPlanDate(plan.today_date ?? berlinTodayISO());
-      }
-      setWeekPlanLoaded(weekPlanOk);
-      setFeatures(flags);
-      setLoadError(failures[0] ?? null);
-      return { requestsOk, requests };
-    } catch (err) {
-      logger.warn("child_care_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        student_id: studentId,
-      });
-      if (mountedRef.current && seq === loadSeqRef.current) setLoadError(err);
-      return { requestsOk: false, requests: [] };
-    } finally {
-      // Only the latest run owns the loading flag, so a stale load resolving
-      // after a newer one can't flip it back off prematurely.
-      if (mountedRef.current && seq === loadSeqRef.current) setLoading(false);
-    }
-  }, [childRequests, hasSharedFeatures, studentId, withoutCarePlace]);
+  const reload = useCallback(
+    () =>
+      Promise.all([
+        reloadSick(),
+        reloadExcused(),
+        reloadExceptions(),
+        reloadPickupRequests(),
+        reloadSchedule(),
+      ]),
+    [
+      reloadExceptions,
+      reloadExcused,
+      reloadPickupRequests,
+      reloadSchedule,
+      reloadSick,
+    ],
+  );
 
-  // Reload on mount, on a studentId change (load identity), AND when the Berlin
-  // calendar day rolls over while the tab stays open — the windowed lists and
-  // today_absent are all resolved against a specific day, so a stale `today`
-  // would otherwise show yesterday's absence/override indefinitely (#1725 review).
-  useEffect(() => {
-    void load();
-  }, [load, today]);
-
-  // Advance `today` at the Berlin midnight boundary. A 60s poll (rather than a
-  // single timeout to next midnight) keeps this correct regardless of the
-  // browser's own timezone and across DST shifts; the functional updater returns
-  // the previous value on an unchanged day so React bails out with no re-render.
-  useEffect(() => {
-    const id = setInterval(() => {
-      const current = berlinTodayISO();
-      setToday((prev) => (prev === current ? prev : current));
-    }, 60_000);
-    return () => clearInterval(id);
-  }, []);
-
-  // A parent write or a staff decision on an absence request flips the request's
-  // state / writes status days server-side but emits only an SSE trigger — no
-  // payload and no local state change here. The portal-wide ParentRealtimeBridge
-  // turns the backend's message-INDEPENDENT parent_child_updated event into a
-  // `parent-conversation-refresh` window event (carrying the affected studentId);
-  // refetch on a match so an open parent tab drops a resolved "Freigabe ausstehend",
-  // shows a rejection reason, or surfaces a newly approved absence in real time
-  // without a manual reload. That event fans out to EVERY guardian of the child and
-  // fires regardless of whether parent messaging is enabled (#1845 review), so it
-  // reaches a second guardian's tab and a messaging-off school too — the gaps the
-  // old parent_message-only path had (submitter-only, suppressed when messaging is
-  // off). marksRead:false — load() reads no messages and advances no read cursor,
-  // so it fires even in a background tab. refetchOnFocus:true stays as the fallback
-  // for a tab whose SSE stream had dropped entirely (no event ever arrives), mirroring
-  // the conversation views' focus healing.
-  const reloadSharedFeatures = sharedFeatures?.mutate;
-  const retryChildCare = useCallback(() => {
-    void reloadSharedFeatures?.();
-    void load();
-  }, [load, reloadSharedFeatures]);
-  const refreshChildCare = useCallback(() => void load(), [load]);
+  // A parent write or a staff decision on an absence request flips the
+  // request's state or writes status days server-side but emits only an SSE
+  // trigger. ParentRealtimeBridge turns the backend's message-independent
+  // parent_child_updated event into a `parent-conversation-refresh` window
+  // event with the affected studentId, which reaches every guardian of the
+  // child even when messaging is off (#1845 review). Focus revalidation of
+  // the readers heals a tab whose SSE stream had dropped.
+  // SWR's own revalidation per key: an answer already on its way is dropped
+  // and every reader of the key waits for the one fresh read.
+  const refreshChildStatus = useCallback(() => {
+    void reload();
+    void mutateKey(parentKeys.careOfferings(studentId));
+  }, [mutateKey, reload, studentId]);
   useMessagesActivity({
     eventName: "parent-conversation-refresh",
     studentId,
-    onMatch: refreshChildCare,
+    onMatch: refreshChildStatus,
     marksRead: false,
-    refetchOnFocus: true,
   });
+  const reloadFeatures = featureState.reload;
+  const retryChildCare = useCallback(() => {
+    void reloadFeatures();
+    void reload();
+  }, [reload, reloadFeatures]);
 
   const reportSick = useCallback(
     async (
@@ -608,136 +464,131 @@ export function useChildCare(
         status,
         recipientGuardianProfileIds,
       );
-      // If the guardian navigated to another child mid-submit, this hook now
-      // serves child B: applying A's status days (above all the optimistic
-      // setTodayAbsent below) would mark B absent, and A's own later SSE event
-      // is filtered out by studentId so B would stay absent indefinitely. The
-      // write already committed server-side for A; A's tab reflects it (#1725
-      // review). Bail before any setState.
       if (currentStudentIdRef.current !== studentId) return;
+      const day = berlinTodayISO();
       // A direct write (sick note, or an excused absence without the approval
-      // gate) returns the just-recorded days. Merge them into the already-loaded
-      // list (replacing any same-date entries) so previously reported absences
-      // don't disappear after a non-overlapping submit.
+      // gate) returns the just-recorded days. Merge them into the loaded list
+      // (replacing same-date entries) so previously reported absences stay.
       if (status_days.length > 0) {
-        setSickDays((prev) => {
-          const submittedDates = new Set(status_days.map((d) => d.date));
-          return [
-            ...prev.filter((d) => !submittedDates.has(d.date)),
-            ...status_days,
-          ].sort((a, b) => a.date.localeCompare(b.date));
-        });
-        // If the report covers today, the child is absent NOW. todayPickup reads
-        // todayAbsent exclusively, so update it here too — otherwise the "Heute →
-        // Abholung" tile keeps showing the normal pickup time next to the
-        // just-reported absence until an unrelated reload. Both submittable
-        // statuses (sick/excused) count as an absence, so a today status day is
-        // sufficient; the authoritative server signal agrees on the next load
-        // (#1725 review). Only meaningful once the week plan loaded, but setting
-        // it early is harmless — the tile shows "unknown" until then. Re-stamp
-        // the signal's date to today so the midnight-rollover guard keeps trusting
-        // this optimistic absence (we're asserting today's, which we just wrote).
-        if (status_days.some((d) => d.date === berlinTodayISO())) {
-          setTodayAbsent(true);
-          setWeekPlanDate(berlinTodayISO());
+        const submittedDates = new Set(status_days.map((d) => d.date));
+        void reloadSick(
+          (prev) =>
+            [
+              ...(prev ?? []).filter((d) => !submittedDates.has(d.date)),
+              ...status_days,
+            ].sort((a, b) => a.date.localeCompare(b.date)),
+          { revalidate: false },
+        );
+        // A report that covers today makes the child absent now. todayPickup
+        // reads today_absent exclusively, so the "Heute → Abholung" tile
+        // follows at once; the server signal agrees on the next load (#1725
+        // review). The day is stamped so the midnight guard trusts it.
+        if (status_days.some((d) => d.date === day)) {
+          void reloadSchedule(
+            (plan) => plan && { ...plan, today_absent: true, today_date: day },
+            { revalidate: false },
+          );
         }
         if (!pending_request) return "applied" as const;
       }
       // Empty status days means the school gated this absence: the backend
       // created a pending request instead. Reload authoritatively to surface
-      // the new "Freigabe ausstehend" request. An authoritative reload (rather
-      // than an optimistic prepend) also avoids the duplicate-row race the
-      // prepend had with a load() that an after-commit parent_message could
-      // trigger before this POST resolved.
-      const { requestsOk } = await load();
+      // the new "Freigabe ausstehend" request.
+      void Promise.all([
+        reloadSick(),
+        reloadExceptions(),
+        reloadPickupRequests(),
+        reloadSchedule(),
+      ]);
+      const requestsOk = await reloadExcused(listExcusedRequests(studentId), {
+        revalidate: false,
+      }).then(
+        () => true,
+        () => false,
+      );
       if (!requestsOk) {
-        // The request WAS created server-side, but the reload that would surface
-        // it failed — closing silently would leave the parent with no pending
-        // confirmation, as if nothing happened. Propagate so the modal stays open
-        // and says so. A retry is safe: the backend treats an identical resubmit
-        // idempotently, so it won't create a duplicate request (#1845 review).
+        // The request WAS created server-side, but the reload that would
+        // surface it failed. Propagate so the modal stays open and says so.
+        // A retry is safe: the backend treats an identical resubmit
+        // idempotently (#1845 review).
         throw new ChildCareRefreshError();
       }
       return status_days.length > 0
         ? ("partly_pending" as const)
         : ("pending" as const);
     },
-    [studentId, load],
+    [
+      reloadExceptions,
+      reloadExcused,
+      reloadPickupRequests,
+      reloadSchedule,
+      reloadSick,
+      studentId,
+    ],
   );
 
   const saveCareException = useCallback(
     async (params: PickupChangeSubmitParams) => {
       const saved = await submitCareException(studentId, params);
-      // Bail if we navigated to another child mid-save — A's override must not
-      // land in B's exception list (#1725 review).
       if (currentStudentIdRef.current !== studentId) return;
-      setPickupChangeRequests((prev) => [
-        saved,
-        ...prev.filter((request) => request.id !== saved.id),
-      ]);
+      void reloadPickupRequests(
+        (prev) => [
+          saved,
+          ...(prev ?? []).filter((request) => request.id !== saved.id),
+        ],
+        { revalidate: false },
+      );
       return saved.id;
     },
-    [studentId],
+    [reloadPickupRequests, studentId],
   );
 
   const removeCareException = useCallback(
     async (date: string) => {
       await deleteCareException(studentId, date);
-      // Bail if we navigated to another child mid-delete — the removal must not
-      // apply to B's exception list (#1725 review).
       if (currentStudentIdRef.current !== studentId) return;
-      setCareExceptions((prev) => prev.filter((e) => e.date !== date));
+      void reloadExceptions(
+        (prev) => (prev ?? []).filter((e) => e.date !== date),
+        { revalidate: false },
+      );
     },
-    [studentId],
+    [reloadExceptions, studentId],
   );
 
+  const plan = schedule.data;
+  const careExceptions = exceptions.data ?? NO_CARE_EXCEPTION_LIST;
   const todayPickup = useMemo(
     () =>
       resolveTodayPickup({
-        weekdays: hasCurrentStudentData ? weekdays : [],
-        // The week-plan signal (base plan AND todayAbsent) is only valid for the
-        // day it was resolved for. If the tab crossed midnight, `today` advanced
-        // ahead of the reload; treat the signal as not-yet-loaded for the new
-        // date so the tile shows "unknown" (asserting nothing) instead of a stale
-        // absence or pickup — safe even if the reload hangs (#1725 review).
+        weekdays: plan?.weekdays ?? [],
+        // The week-plan signal (base plan AND today_absent) is only valid for
+        // the day the server resolved it for. Across midnight the tile shows
+        // "unknown" instead of a stale absence or pickup (#1725 review). An
+        // older backend omits today_date.
         weekPlanLoaded:
-          hasCurrentStudentData && weekPlanLoaded && weekPlanDate === today,
-        todayAbsent: hasCurrentStudentData && todayAbsent,
-        careExceptions: hasCurrentStudentData ? careExceptions : [],
-        careExceptionsLoaded: hasCurrentStudentData && careExceptionsLoaded,
+          !!plan && !schedule.error && (plan.today_date ?? today) === today,
+        todayAbsent: plan?.today_absent ?? false,
+        careExceptions,
+        careExceptionsLoaded,
         today,
       }),
-    [
-      weekdays,
-      weekPlanLoaded,
-      weekPlanDate,
-      todayAbsent,
-      careExceptions,
-      careExceptionsLoaded,
-      hasCurrentStudentData,
-      today,
-    ],
+    [plan, schedule.error, careExceptions, careExceptionsLoaded, today],
   );
 
   return {
-    sickDays: hasCurrentStudentData ? sickDays : [],
-    excusedRequests: hasCurrentStudentData ? excusedRequests : [],
-    careExceptions: hasCurrentStudentData ? careExceptions : [],
-    pickupChangeRequests: hasCurrentStudentData ? pickupChangeRequests : [],
-    careExceptionsLoaded: hasCurrentStudentData && careExceptionsLoaded,
-    pickupChangeRequestsLoaded:
-      hasCurrentStudentData && pickupChangeRequestsLoaded,
+    sickDays: sick.data ?? NO_STATUS_DAY_LIST,
+    excusedRequests: excused.data ?? NO_EXCUSED_REQUEST_LIST,
+    careExceptions,
+    pickupChangeRequests: pickupRequests.data ?? EMPTY_PICKUP_CHANGE_REQUESTS,
+    careExceptionsLoaded,
+    pickupChangeRequestsLoaded,
     todayPickup,
-    features: hasCurrentStudentData
-      ? sharedFeatures
-        ? (sharedFeatures.data?.[studentId] ?? DEFAULT_FEATURES)
-        : features
-      : DEFAULT_FEATURES,
+    features: featureState.features ?? DEFAULT_FEATURES,
     loading:
-      !hasCurrentStudentData ||
-      loading ||
-      (!!sharedFeatures && !sharedFeatures.data && !sharedFeatures.error),
-    loadError: hasCurrentStudentData ? (sharedFeatureError ?? loadError) : null,
+      listsLoading ||
+      (!withoutCarePlace && schedule.data === undefined && !schedule.error) ||
+      featureState.loading,
+    loadError: featureFailure ?? listFailure ?? null,
     reportSick,
     saveCareException,
     removeCareException,
@@ -1183,30 +1034,17 @@ const DAY_SIGNATURE_FIELD = "pickup-day-signature";
  * alle eingetragenen Personen außer dem eigenen Konto.
  */
 function useDayPickupContacts(studentId: string | undefined): ChildGuardian[] {
-  const [contacts, setContacts] = useState<ChildGuardian[]>([]);
-  useEffect(() => {
-    if (!studentId) return;
-    let active = true;
-    listChildGuardians(studentId)
-      .then((rows) => {
-        if (active) {
-          setContacts(
-            rows.filter((row) => !row.is_self && row.can_manage_pickup),
-          );
-        }
-      })
-      .catch((err: unknown) => {
-        // Ohne die Liste fehlt nur die Auswahl „Wer holt ab?“; Abholzeit und
-        // Abholart bleiben anfragbar.
-        logger.warn("pickup_contacts_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      active = false;
-    };
-  }, [studentId]);
-  return contacts;
+  // Without the list only the choice „Wer holt ab?“ is missing; pickup time
+  // and mode stay requestable, so a failure stays silent.
+  const { data } = useSWRAuth(
+    studentId ? parentKeys.guardians(studentId) : null,
+    () => listChildGuardians(studentId ?? ""),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  return useMemo(
+    () => (data ?? []).filter((row) => !row.is_self && row.can_manage_pickup),
+    [data],
+  );
 }
 
 export function PickupTimeModal({
@@ -1393,6 +1231,7 @@ export function PickupTimeModal({
   // Eine offene eigene Anfrage wird geändert, nicht zurückgezogen (#2267).
   const canEditRequest =
     pending && studentId !== undefined && request?.is_self !== false;
+  const invalidateFamily = useInvalidateFamily();
   const { version, editedAt } = useRequestVersion(
     studentId ?? "",
     "pickup_change",
@@ -1600,6 +1439,8 @@ export function PickupTimeModal({
         expectedVersion: version,
         ...dayPickup,
       });
+      // A reopened dialog must send the new version, not the cached one.
+      void invalidateFamily(parentKeys.requestEventsFamily(studentId));
       onClose();
     } catch (err) {
       if (

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useApiFormError } from "~/contexts/ToastContext";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import {
@@ -65,6 +65,9 @@ import {
 } from "~/lib/student-arrival-api";
 import { fetchPrivacyConsentDefaults } from "~/lib/student-api";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   mapBulkPickupScheduleFormToBackend,
   type BackendPickupScheduleRequest,
@@ -75,6 +78,8 @@ import { groupsConcept } from "~/lib/concepts/groups";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "StudentCreateModal" });
+
+const NO_SCHOOL_PERIODS: readonly SchoolPeriod[] = [];
 
 // Shape returned by GuardianFormModal's onSubmit for each entry.
 type GuardianSubmitEntry = {
@@ -246,26 +251,48 @@ export function StudentCreateModal({
     PickupScheduleFormData[]
   >([]);
   const [carePlanModalOpen, setCarePlanModalOpen] = useState(false);
-  const [careDaysSource, setCareDaysSource] = useState<CareDaysSource | null>(
-    null,
+  // The tenant decides where care days come from. Resolve that boundary as
+  // soon as the dialog opens: in booking mode this direct form must not create
+  // an OGS child without the approved offering links that define its days.
+  const arrivalSettings = useSWRAuth(
+    isOpen ? tenantStudentKeys.arrivalSettings() : null,
+    fetchArrivalSettings,
   );
-  const [schoolPeriods, setSchoolPeriods] = useState<readonly SchoolPeriod[]>(
-    [],
+  const settingsLoad = useSwrResourceLoadError(
+    [arrivalSettings],
+    "die Einstellung für Betreuungstage",
+    () => arrivalSettings.mutate(),
   );
-  const [timePresets, setTimePresets] = useState<CareTimePresets>();
-  const [arrivalSettingsLoading, setArrivalSettingsLoading] = useState(false);
-  // Erneut laden nach einem Ladefehler: zählt hoch, der Effekt lädt neu.
-  const [arrivalSettingsReload, setArrivalSettingsReload] = useState(0);
-  const settingsLoad = useApiLoadError();
-  const showSettingsLoadError = settingsLoad.show;
-  const clearSettingsLoadError = settingsLoad.clear;
+  const settings = arrivalSettings.data;
+  const careDaysSource: CareDaysSource | null =
+    settings?.careDaysSource ?? null;
+  const schoolPeriods = settings?.schoolPeriods ?? NO_SCHOOL_PERIODS;
+  const timePresets = useMemo<CareTimePresets | undefined>(
+    () =>
+      settings
+        ? {
+            arrival: settings.defaultArrivalTime ?? "",
+            pickup: settings.defaultPickupTime ?? "",
+          }
+        : undefined,
+    [settings],
+  );
+  const arrivalSettingsLoading =
+    isOpen && !settings && settingsLoad.failure === undefined;
   // The consent fields start at the school's defaults and are only sent when
   // the person changed one: the stored consent then follows the school
   // setting until somebody decides otherwise for this child.
-  const [consentDefaultsReload, setConsentDefaultsReload] = useState(0);
-  const consentDefaultsLoad = useApiLoadError();
-  const showConsentDefaultsError = consentDefaultsLoad.show;
-  const clearConsentDefaultsError = consentDefaultsLoad.clear;
+  const consentDefaults = useFreshSWR(
+    isOpen ? tenantStudentKeys.privacyConsentDefaults() : null,
+    fetchPrivacyConsentDefaults,
+  );
+  const consentDefaultsLoad = useSwrResourceLoadError(
+    [consentDefaults],
+    "die Datenschutz-Voreinstellung",
+    () => consentDefaults.mutate(),
+  );
+  // Whether this opening's form already took the school's defaults.
+  const [consentDefaultsApplied, setConsentDefaultsApplied] = useState(false);
   const touchedConsentFieldsRef = useRef(new Set<string>());
   const [guardianPickerOpen, setGuardianPickerOpen] = useState(false);
   // The inline picker panel is tall; collapsing it (on add or cancel) shrinks
@@ -305,93 +332,41 @@ export function StudentCreateModal({
       setArrivalSchedules([]);
       setPickupSchedules([]);
       setCarePlanModalOpen(false);
-      setCareDaysSource(null);
-      setSchoolPeriods([]);
-      setTimePresets(undefined);
-      setArrivalSettingsLoading(false);
       setGuardianPickerOpen(false);
       pendingGuardianScrollRef.current = false;
       touchedConsentFieldsRef.current = new Set();
     }
+    setConsentDefaultsApplied(false);
   }, [isOpen, clearErrors]);
 
+  // Take the defaults once per opening, from an answer read in this opening,
+  // and only into fields nobody touched yet.
+  const consentDefaultsData = consentDefaults.data;
+  const consentDefaultsValidating = consentDefaults.isValidating;
   useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    clearConsentDefaultsError();
-    void fetchPrivacyConsentDefaults()
-      .then((defaults) => {
-        if (cancelled) return;
-        const touched = touchedConsentFieldsRef.current;
-        setFormData((prev) => ({
-          ...prev,
-          ...(!touched.has("privacy_consent_accepted") && {
-            privacy_consent_accepted: defaults.accepted,
-          }),
-          ...(!touched.has("data_retention_days") && {
-            data_retention_days: defaults.dataRetentionDays,
-          }),
-        }));
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          void showConsentDefaultsError(error, {
-            object: "die Datenschutz-Voreinstellung",
-            retry: () => setConsentDefaultsReload((count) => count + 1),
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
+    if (
+      !isOpen ||
+      consentDefaultsApplied ||
+      !consentDefaultsData ||
+      consentDefaultsValidating
+    )
+      return;
+    setConsentDefaultsApplied(true);
+    const touched = touchedConsentFieldsRef.current;
+    setFormData((prev) => ({
+      ...prev,
+      ...(!touched.has("privacy_consent_accepted") && {
+        privacy_consent_accepted: consentDefaultsData.accepted,
+      }),
+      ...(!touched.has("data_retention_days") && {
+        data_retention_days: consentDefaultsData.dataRetentionDays,
+      }),
+    }));
   }, [
     isOpen,
-    consentDefaultsReload,
-    showConsentDefaultsError,
-    clearConsentDefaultsError,
-  ]);
-
-  // The tenant decides where care days come from. Resolve that boundary as
-  // soon as the dialog opens: in booking mode this direct form must not create
-  // an OGS child without the approved offering links that define its days.
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    setArrivalSettingsLoading(true);
-    clearSettingsLoadError();
-    void fetchArrivalSettings()
-      .then((settings) => {
-        if (!cancelled) {
-          setCareDaysSource(settings.careDaysSource);
-          setSchoolPeriods(settings.schoolPeriods);
-          setTimePresets({
-            arrival: settings.defaultArrivalTime ?? "",
-            pickup: settings.defaultPickupTime ?? "",
-          });
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setCareDaysSource(null);
-          setSchoolPeriods([]);
-          setTimePresets(undefined);
-          void showSettingsLoadError(error, {
-            object: "die Einstellung für Betreuungstage",
-            retry: () => setArrivalSettingsReload((count) => count + 1),
-          });
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setArrivalSettingsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isOpen,
-    arrivalSettingsReload,
-    showSettingsLoadError,
-    clearSettingsLoadError,
+    consentDefaultsApplied,
+    consentDefaultsData,
+    consentDefaultsValidating,
   ]);
 
   // After the inline picker collapses (add or cancel), re-anchor to the guardian

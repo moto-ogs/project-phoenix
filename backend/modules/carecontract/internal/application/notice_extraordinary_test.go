@@ -155,7 +155,7 @@ func TestNoticesOfAnotherTraegerFindNothingBeneathRLS(t *testing.T) {
 		Name: "Träger Erklärung B", Slug: fmt.Sprintf("traeger-erklaerung-b-%d", testpkg.UniqueTestTenantID(t)),
 	}).ID
 	testpkg.OwnTraegerCareContracts(t, f.db, other)
-	store := postgres.NewStore()
+	store := postgres.NewStore(calendar.TodayDate)
 	end := calendar.NewDate(2026, 12, 31)
 
 	beneath := func(step func(context.Context) error) error {
@@ -235,7 +235,7 @@ func TestNoticeEndIsSetOnceInTheStore(t *testing.T) {
 	f := newNoticeFixture(t, "Träger Ende einmal", noticeToday)
 	_, err := f.parentDeclare(extraordinary)
 	require.NoError(t, err)
-	store := postgres.NewStore()
+	store := postgres.NewStore(calendar.TodayDate)
 	first, second := calendar.NewDate(2026, 12, 31), calendar.NewDate(2027, 1, 31)
 	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
 		return store.SetNoticeEnd(txCtx, f.org, f.contract, setEnd(first))

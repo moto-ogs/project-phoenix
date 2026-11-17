@@ -33,11 +33,11 @@ func (s *StudentNoteStore) UpsertTeamNotices(ctx context.Context, noteID int64, 
 	started := time.Now()
 	result, err := db.NewRaw(`
 		INSERT INTO `+studentNoteTeamNoticesTable+` (tenant_id, note_id, recipient_account_id, informed_at, read_at)
-		SELECT ?, ?, recipient, clock_timestamp(), NULL
+		SELECT ?, ?, recipient, ?::timestamptz, NULL
 		FROM unnest(?::bigint[]) AS recipient
 		ON CONFLICT (note_id, recipient_account_id)
 		DO UPDATE SET informed_at = EXCLUDED.informed_at, read_at = NULL`,
-		scope.TenantID, noteID, pgdialect.Array(recipientAccountIDs)).Exec(ctx)
+		scope.TenantID, noteID, s.stamp(), pgdialect.Array(recipientAccountIDs)).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return 0, stats, fmt.Errorf("store student note team notices: %w", err)
@@ -111,7 +111,7 @@ func (s *StudentNoteStore) MarkTeamNoticesRead(ctx context.Context, readerAccoun
 	started := time.Now()
 	result, err := db.NewRaw(`
 		UPDATE `+studentNoteTeamNoticesTable+` AS notice
-		SET read_at = clock_timestamp()
+		SET read_at = ?
 		FROM `+studentNotesTable+` AS note,
 			unnest(?::bigint[], ?::timestamptz[]) AS observed(note_id, informed_at)
 		WHERE notice.tenant_id = ?
@@ -122,7 +122,7 @@ func (s *StudentNoteStore) MarkTeamNoticesRead(ctx context.Context, readerAccoun
 			AND note.id = notice.note_id
 			AND note.tenant_id = notice.tenant_id
 			AND note.student_id = ?`,
-		pgdialect.Array(noteIDs), pgdialect.Array(informedAt), scope.TenantID, readerAccountID, studentID).Exec(ctx)
+		s.stamp(), pgdialect.Array(noteIDs), pgdialect.Array(informedAt), scope.TenantID, readerAccountID, studentID).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return stats, fmt.Errorf("mark student note team notices read: %w", err)

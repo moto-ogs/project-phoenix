@@ -14,8 +14,8 @@ type arrivalScheduleRow struct {
 	bun.BaseModel   `bun:"table:student_arrival_schedules,alias:student_arrival_schedule"`
 	ID              int64     `bun:"id,pk,autoincrement"`
 	TenantID        int64     `bun:"tenant_id,notnull"`
-	CreatedAt       time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time `bun:"updated_at,nullzero,notnull"`
 	StudentID       int64     `bun:"student_id,notnull"`
 	Weekday         int       `bun:"weekday,notnull"`
 	ExpectedArrival time.Time `bun:"expected_arrival,nullzero"`
@@ -27,8 +27,8 @@ type arrivalExceptionRow struct {
 	bun.BaseModel     `bun:"table:student_arrival_exceptions,alias:student_arrival_exception"`
 	ID                int64        `bun:"id,pk,autoincrement"`
 	TenantID          int64        `bun:"tenant_id,notnull"`
-	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull"`
 	StudentID         int64        `bun:"student_id,notnull"`
 	ExceptionDate     calendarDate `bun:"exception_date,notnull,type:date"`
 	ExpectedArrival   *time.Time   `bun:"expected_arrival"`
@@ -42,8 +42,8 @@ type arrivalNoteRow struct {
 	bun.BaseModel `bun:"table:student_arrival_notes,alias:student_arrival_note"`
 	ID            int64        `bun:"id,pk,autoincrement"`
 	TenantID      int64        `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull"`
 	StudentID     int64        `bun:"student_id,notnull"`
 	NoteDate      calendarDate `bun:"note_date,notnull,type:date"`
 	Content       string       `bun:"content,notnull"`
@@ -54,8 +54,8 @@ type pickupScheduleRow struct {
 	bun.BaseModel  `bun:"table:student_pickup_schedules,alias:student_pickup_schedule"`
 	ID             int64     `bun:"id,pk,autoincrement"`
 	TenantID       int64     `bun:"tenant_id,notnull"`
-	CreatedAt      time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time `bun:"updated_at,nullzero,notnull"`
 	StudentID      int64     `bun:"student_id,notnull"`
 	Weekday        int       `bun:"weekday,notnull"`
 	PickupTime     time.Time `bun:"pickup_time,notnull"`
@@ -69,8 +69,8 @@ type pickupExceptionRow struct {
 	bun.BaseModel         `bun:"table:student_pickup_exceptions,alias:student_pickup_exception"`
 	ID                    int64        `bun:"id,pk,autoincrement"`
 	TenantID              int64        `bun:"tenant_id,notnull"`
-	CreatedAt             time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt             time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt             time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt             time.Time    `bun:"updated_at,nullzero,notnull"`
 	StudentID             int64        `bun:"student_id,notnull"`
 	ExceptionDate         calendarDate `bun:"exception_date,notnull,type:date"`
 	PickupTime            *time.Time   `bun:"pickup_time"`
@@ -264,7 +264,7 @@ func (s *Store) CreateArrivalSchedule(ctx context.Context, v careplan.ArrivalSch
 		return careplan.ArrivalSchedule{}, domain.OperationStats{}, err
 	}
 	row := arrivalScheduleFromPublic(v)
-	row.TenantID = tid
+	row.TenantID, row.UpdatedAt = tid, s.currentTime()
 	stats, err := createStudentScheduleRow(ctx, db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_arrival_schedules`), "create arrival schedule")
 	return arrivalScheduleToPublic(row), stats, err
 }
@@ -274,7 +274,7 @@ func (s *Store) UpdateArrivalSchedule(ctx context.Context, v careplan.ArrivalSch
 		return domain.OperationStats{}, err
 	}
 	row := arrivalScheduleFromPublic(v)
-	row.TenantID = tid
+	row.TenantID, row.UpdatedAt = tid, s.currentTime()
 	return execGuarded(ctx, db.NewUpdate().Model(&row).
 		ModelTableExpr(`schedule.student_arrival_schedules AS "student_arrival_schedule"`).
 		Where(`"student_arrival_schedule".id = ?`, row.ID).
@@ -286,10 +286,10 @@ func (s *Store) UpsertArrivalSchedule(ctx context.Context, v careplan.ArrivalSch
 		return careplan.ArrivalSchedule{}, domain.OperationStats{}, err
 	}
 	row := arrivalScheduleFromPublic(v)
-	row.TenantID = tid
+	row.TenantID, row.UpdatedAt = tid, s.currentTime()
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_arrival_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("expected_arrival = EXCLUDED.expected_arrival").Set("notes = EXCLUDED.notes").Set("updated_at = NOW()").Returning("*").Scan(ctx)
+	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_arrival_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("expected_arrival = EXCLUDED.expected_arrival").Set("notes = EXCLUDED.notes").Set("updated_at = EXCLUDED.updated_at").Returning("*").Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return careplan.ArrivalSchedule{}, stats, fmt.Errorf("care plan postgres: upsert arrival schedule: %w", err)
@@ -521,7 +521,7 @@ func (s *Store) CreatePickupSchedule(ctx context.Context, v careplan.PickupSched
 		return careplan.PickupSchedule{}, domain.OperationStats{}, err
 	}
 	row := pickupScheduleFromPublic(v)
-	row.TenantID = tid
+	row.TenantID, row.UpdatedAt = tid, s.currentTime()
 	stats, err := createStudentScheduleRow(ctx, db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_pickup_schedules`), "create pickup schedule")
 	return pickupScheduleToPublic(row), stats, err
 }
@@ -531,7 +531,7 @@ func (s *Store) UpdatePickupSchedule(ctx context.Context, v careplan.PickupSched
 		return domain.OperationStats{}, err
 	}
 	row := pickupScheduleFromPublic(v)
-	row.TenantID = tid
+	row.TenantID, row.UpdatedAt = tid, s.currentTime()
 	return execGuarded(ctx, db.NewUpdate().Model(&row).ModelTableExpr(`schedule.student_pickup_schedules AS "student_pickup_schedule"`).Where(`"student_pickup_schedule".id = ?`, row.ID).Where(`"student_pickup_schedule".tenant_id = ?`, tid), "update pickup schedule", careplan.ErrStudentScheduleNotFound)
 }
 func (s *Store) UpsertPickupSchedule(ctx context.Context, v careplan.PickupSchedule) (careplan.PickupSchedule, domain.OperationStats, error) {
@@ -540,10 +540,10 @@ func (s *Store) UpsertPickupSchedule(ctx context.Context, v careplan.PickupSched
 		return careplan.PickupSchedule{}, domain.OperationStats{}, err
 	}
 	row := pickupScheduleFromPublic(v)
-	row.TenantID = tid
+	row.TenantID, row.UpdatedAt = tid, s.currentTime()
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_pickup_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("pickup_time = EXCLUDED.pickup_time").Set("notes = EXCLUDED.notes").Set("source = EXCLUDED.source").Set("care_offering_id = EXCLUDED.care_offering_id").Set("updated_at = NOW()").Returning("*").Scan(ctx)
+	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_pickup_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("pickup_time = EXCLUDED.pickup_time").Set("notes = EXCLUDED.notes").Set("source = EXCLUDED.source").Set("care_offering_id = EXCLUDED.care_offering_id").Set("updated_at = EXCLUDED.updated_at").Returning("*").Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return careplan.PickupSchedule{}, stats, fmt.Errorf("care plan postgres: upsert pickup schedule: %w", err)

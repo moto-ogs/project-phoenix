@@ -2,7 +2,7 @@
 
 import { StatusBadge } from "~/components/ui/status-badge";
 import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRightLeft, Trash2 } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
 import {
@@ -13,17 +13,13 @@ import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { ConfirmationModal } from "~/components/ui/modal";
-import { InfoSection } from "~/components/ui/detail-modal-components";
+import { InfoSection } from "~/components/ui/info-section";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import {
   OverflowMenu,
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import type {
   BlockerActivity,
   BlockerGroup,
@@ -31,11 +27,11 @@ import type {
   BlockerSupervision,
   CaregiverCapabilityState,
 } from "~/lib/caregiver-capability-api";
-import {
-  fetchGroupLeaderCandidates,
-  type StaffGroupLeaderCandidate,
-} from "~/lib/staff-role-api";
+import { fetchGroupLeaderCandidates } from "~/lib/staff-role-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { groupAccessConcept } from "~/lib/concepts/groupAccess";
 import { groupsConcept } from "~/lib/concepts/groups";
@@ -154,17 +150,26 @@ export function CaregiverBlockerResolutionPanel({
   onConfirmationVisibilityChange,
 }: CaregiverBlockerResolutionPanelProps) {
   const { success: toastSuccess } = useToast();
-  const [availableStaff, setAvailableStaff] = useState<
-    StaffGroupLeaderCandidate[]
-  >([]);
-  const [loadingStaff, setLoadingStaff] = useState(false);
+  const {
+    data: candidates,
+    error: candidatesError,
+    mutate: reloadCandidates,
+  } = useSWRAuth(
+    active ? staffAccessKeys.groupLeaderCandidates() : null,
+    fetchGroupLeaderCandidates,
+  );
+  const availableStaff = useMemo(
+    () => (candidates ?? []).filter((s) => s.id !== state.staffId),
+    [candidates, state.staffId],
+  );
+  const loadingStaff = active && !candidates && !candidatesError;
   // Ladefehler der Ersatzkräfte vor Ort, Fehler beim Auflösen im Panel des
   // Dialogs, beide mit Katalogtext (#2517).
-  const {
-    error: staffLoadError,
-    show: showStaffLoadError,
-    clear: clearStaffLoadError,
-  } = useApiLoadError();
+  const { error: staffLoadError } = useSwrResourceLoadError(
+    [{ data: candidates, error: candidatesError }],
+    "die Liste der Ersatzkräfte",
+    () => reloadCandidates(),
+  );
 
   const [supervisions, setSupervisions] = useState<BlockerSupervision[]>([]);
   const [substitutions, setSubstitutions] = useState<BlockerSubstitution[]>([]);
@@ -286,25 +291,6 @@ export function CaregiverBlockerResolutionPanel({
     activities.length +
     groups.length;
 
-  const loadStaff = useCallback(async () => {
-    try {
-      setLoadingStaff(true);
-      const staff = await fetchGroupLeaderCandidates();
-      setAvailableStaff(staff.filter((s) => s.id !== state.staffId));
-      clearStaffLoadError();
-    } catch (error) {
-      logger.error("failed to load available staff", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      void showStaffLoadError(error, {
-        object: "die Liste der Ersatzkräfte",
-        retry: () => void loadStaff(),
-      });
-    } finally {
-      setLoadingStaff(false);
-    }
-  }, [state.staffId, clearStaffLoadError, showStaffLoadError]);
-
   useEffect(() => {
     if (!active) return;
     setSupervisions(state.activeSupervisions);
@@ -314,8 +300,7 @@ export function CaregiverBlockerResolutionPanel({
     setActivityReplacements({});
     setGroupReplacements({});
     clearActionErrors();
-    void loadStaff();
-  }, [active, state, loadStaff, clearActionErrors]);
+  }, [active, state, clearActionErrors]);
 
   function setItemProcessing(key: string, value: boolean) {
     setProcessing((prev) => ({ ...prev, [key]: value }));

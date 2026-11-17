@@ -144,8 +144,8 @@ func TestFamilyChildrenOnTheStatusPageStayInTheOwnRegistration(t *testing.T) {
 	}
 
 	// An expired status link opens nothing.
-	_, err := env.db.ExecContext(context.Background(), `UPDATE enrollment.requests SET status_token_expires = NOW() - INTERVAL '1 day'
-		WHERE status_token = ?`, env.other)
+	_, err := env.db.ExecContext(context.Background(), `UPDATE enrollment.requests SET status_token_expires = ?
+		WHERE status_token = ?`, time.Now().Add(-24*time.Hour), env.other)
 	require.NoError(t, err)
 	rec = env.put(t, env.other, `{"children":4}`)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())

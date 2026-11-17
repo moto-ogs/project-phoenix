@@ -13,23 +13,28 @@ import (
 
 type Database func(context.Context) (bun.IDB, error)
 
-type Store struct{ database Database }
+type Store struct {
+	database Database
+	now      func() time.Time
+}
 
 type groupRow struct {
 	bun.BaseModel `bun:"table:groups,alias:group"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	Name          string    `bun:"name,notnull"`
 	RoomID        *int64    `bun:"room_id"`
 }
 
-func New(database Database) *Store {
-	if database == nil {
-		panic("school structure postgres: database runtime is required")
+// New builds the store on the owner's clock (ADR 0239), which stamps the
+// columns without a trigger.
+func New(database Database, now func() time.Time) *Store {
+	if database == nil || now == nil {
+		panic("school structure postgres: database runtime and clock are required")
 	}
-	return &Store{database: database}
+	return &Store{database: database, now: now}
 }
 
 func (s *Store) FindByID(ctx context.Context, id int64) (domain.Group, bool, domain.OperationStats, error) {

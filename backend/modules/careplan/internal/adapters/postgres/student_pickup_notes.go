@@ -17,8 +17,8 @@ type pickupNoteRow struct {
 	bun.BaseModel `bun:"table:student_pickup_notes,alias:student_pickup_note"`
 	ID            int64         `bun:"id,pk,autoincrement"`
 	TenantID      int64         `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time     `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time     `bun:"updated_at,nullzero,notnull"`
 	StudentID     int64         `bun:"student_id,notnull"`
 	NoteDate      *calendarDate `bun:"note_date,type:date"`
 	Weekday       *int          `bun:"weekday"`

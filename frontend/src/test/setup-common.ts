@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, vi } from "vitest";
 
 import { installSessionCookieExit } from "~/lib/session-cookie-exit.server";
+import { liftAllRefusals } from "~/lib/resource-refusals";
 import { freezeTestClock } from "./clock";
 
 process.env.API_URL = "http://server:8080";
@@ -39,6 +40,9 @@ if (ProcessBroadcastChannel) {
 }
 
 beforeEach(() => {
+  // Access refusals hold per key for the whole tab (~/lib/swr); a test with
+  // a fresh cache must not inherit the refusal of the test before it.
+  liftAllRefusals();
   fakeTimersInstalledBeforeTest = vi.isFakeTimers();
   freezeTestClock();
 });

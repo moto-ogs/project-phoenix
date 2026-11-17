@@ -9,11 +9,14 @@ import (
 )
 
 // childlessGuardian stores a parent contact of the school that has had no
-// child for daysAgo days.
+// child for daysAgo days. The Worker composes the guardian retention on the
+// wall clock, not the root clock (newGuardianRetention): its People
+// Directory reads mark the contacts and set the cutoff, and the open
+// invitations are judged on it. The guardian rows are dated there.
 func (s retentionSuite) childlessGuardian(t *testing.T, tenantID int64, email string, daysAgo int) int64 {
 	t.Helper()
 	return s.insertID(t, `INSERT INTO users.guardian_profiles (tenant_id, first_name, last_name, email, childless_since)
-		VALUES (?, 'Ohne', 'Kind', ?, CURRENT_TIMESTAMP - make_interval(days => ?)) RETURNING id`, tenantID, email, daysAgo)
+		VALUES (?, 'Ohne', 'Kind', ?, WALL_NOW - make_interval(days => ?)) RETURNING id`, tenantID, email, daysAgo)
 }
 
 // The nightly run deletes a parent contact 90 days after its last child went
@@ -33,10 +36,10 @@ func TestNightlyRetentionDeletesParentContactsWithoutAChild(t *testing.T) {
 	payment := suite.insertID(t, `INSERT INTO users.guardian_financial_data (tenant_id, guardian_profile_id, iban_sealed, iban_masked)
 		VALUES (?, ?, '\x01', '•••• 2051') RETURNING id`, school, expired)
 	spent := suite.insertID(t, `INSERT INTO auth.guardian_invitations (tenant_id, token, guardian_profile_id, created_by, expires_at)
-		VALUES (?, encode(sha256('retention-spent'::bytea), 'hex'), ?, ?, CURRENT_TIMESTAMP - INTERVAL '1 day') RETURNING id`, school, expired, inviter.ID)
+		VALUES (?, encode(sha256('retention-spent'::bytea), 'hex'), ?, ?, WALL_NOW - INTERVAL '1 day') RETURNING id`, school, expired, inviter.ID)
 	invited := suite.childlessGuardian(t, school, "retention-invited@example.com", 91)
 	suite.insertID(t, `INSERT INTO auth.guardian_invitations (tenant_id, token, guardian_profile_id, created_by, expires_at)
-		VALUES (?, encode(sha256('retention-open'::bytea), 'hex'), ?, ?, CURRENT_TIMESTAMP + INTERVAL '1 day') RETURNING id`, school, invited, inviter.ID)
+		VALUES (?, encode(sha256('retention-open'::bytea), 'hex'), ?, ?, WALL_NOW + INTERVAL '1 day') RETURNING id`, school, invited, inviter.ID)
 	recent := suite.childlessGuardian(t, school, "retention-recent@example.com", 89)
 	linked := testpkg.CreateTestGuardianProfileForTenant(t, suite.admin, school, "Mit", "Kind", "retention-linked")
 	child := testpkg.CreateTestStudentForTenant(t, suite.admin, school, "Bleibt", "Kind", "1a")

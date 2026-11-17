@@ -1,18 +1,13 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useCallback,
-} from "react";
+import { useState, useLayoutEffect, useRef, useCallback } from "react";
 import {
   OverflowMenu,
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
 import { useSession } from "next-auth/react";
-import { mutate } from "~/lib/swr";
+import { mutate, useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import {
   listAvailableTenants,
   performTenantSwitch,
@@ -42,6 +37,8 @@ import {
 import { SCHOOL_SIGN_IN_LABEL } from "./school-sign-in";
 
 const logger = createLogger({ component: "BrandTenantSwitcher" });
+
+const NO_TENANTS: TenantSummary[] = [];
 
 const SWITCH_REFUSALS = [
   "identity.tenant_access_denied",
@@ -111,9 +108,14 @@ export function BrandTenantSwitcher({
   // The tenant layout preloads the list on the server (#2973); without a
   // seed the list is fetched once the session is authenticated.
   const seededTenants = useShellSeed()?.accountTenants;
-  const [tenants, setTenants] = useState<TenantSummary[]>(
-    () => seededTenants ?? [],
+  // Bewusst still bei einem Fehler: ohne Liste bleibt der Markenbereich ein
+  // normaler Link zur Startseite, die Kopfzeile funktioniert weiter. Ein
+  // Fehler hier ist kein Schritt, den die Person angestoßen hat.
+  const { data: loadedTenants } = useSWRAuth(
+    seededTenants ? null : tenantAdminKeys.availableTenants(),
+    listAvailableTenants,
   );
+  const tenants: TenantSummary[] = seededTenants ?? loadedTenants ?? NO_TENANTS;
   const [isSwitching, setIsSwitching] = useState(false);
   // Lehrkraft-Konto: kein Fehler, sondern der Weg zum richtigen Portal.
   const [schoolPortalHint, setSchoolPortalHint] = useState<{
@@ -126,22 +128,7 @@ export function BrandTenantSwitcher({
     () => undefined,
   );
   const currentSlug = useTenantSlugSafe();
-  const { status, data: session, update } = useSession();
-
-  // Fetch available tenants once authenticated
-  useEffect(() => {
-    if (status !== "authenticated" || seededTenants) return;
-    listAvailableTenants()
-      .then(setTenants)
-      .catch((err: unknown) => {
-        // Bewusst still: ohne Liste bleibt der Markenbereich ein normaler
-        // Link zur Startseite, die Kopfzeile funktioniert weiter. Ein
-        // Fehler hier ist kein Schritt, den die Person angestoßen hat.
-        logger.error("list_tenants_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-  }, [status, seededTenants]);
+  const { data: session, update } = useSession();
 
   const handleSwitch = useCallback(
     async (targetTenant: TenantSummary) => {

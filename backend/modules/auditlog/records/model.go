@@ -6,8 +6,8 @@ import "time"
 // read models that expose conventional created/updated timestamps.
 type Model struct {
 	ID        int64     `bun:"id,pk,autoincrement" json:"id"`
-	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 }
 
 // TenantModel keeps tenant attribution inside the Audit domain instead of

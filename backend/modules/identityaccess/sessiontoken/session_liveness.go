@@ -18,6 +18,10 @@ var (
 	// read. It fails closed and answers 503, not 401, so a database hiccup
 	// does not end sessions.
 	ErrSessionCheckUnavailable = errors.New("session check temporarily unavailable, please retry")
+	// ErrSessionCheckCanceled refuses a token whose family check ended because
+	// the client closed the request. It answers 499: the disconnect is not a
+	// server fault and must not reach Sentry or the ERROR log.
+	ErrSessionCheckCanceled = errors.New("client closed request")
 )
 
 // SessionLiveness reports whether the refresh-token family an access token
@@ -63,6 +67,9 @@ func sessionRefusal(ctx context.Context, live SessionLiveness, claims AppClaims)
 		return ErrSessionCheckUnavailable
 	}
 	alive, err := live(ctx, claims)
+	if err != nil && errors.Is(ctx.Err(), context.Canceled) {
+		return ErrSessionCheckCanceled
+	}
 	if err != nil {
 		slog.ErrorContext(ctx, "session family check failed",
 			slog.Int("account_id", claims.ID),

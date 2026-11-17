@@ -79,12 +79,12 @@ func (s *Service) applySourcedRosterAttendance(ctx context.Context, ids []int64,
 		return stats, err
 	}
 	statusRows, partialRows := sourcedAttendanceChanges(participants, statuses, exceptions)
-	statusStats, err := s.store.ApplyStatusDayAbsences(ctx, statusRows, s.now().UTC())
+	statusStats, err := s.store.ApplyStatusDayAbsences(ctx, statusRows)
 	addStats(&stats, statusStats)
 	if err != nil {
 		return stats, err
 	}
-	partialStats, err := s.store.ApplyPartialAbsences(ctx, partialRows, s.now().UTC())
+	partialStats, err := s.store.ApplyPartialAbsences(ctx, partialRows)
 	addStats(&stats, partialStats)
 	return stats, err
 }

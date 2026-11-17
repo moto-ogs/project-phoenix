@@ -22,9 +22,14 @@ func TestListNewParentRequestsReturnsOnlyRequestsAwaitingReview(t *testing.T) {
 		Kind string `bun:"kind"`
 		ID   int64  `bun:"id"`
 	}
+	// Each owner stamps created_at on its own clock (ADR 0281), so the rows
+	// carry the instant the feed's window is opened from, not a column default.
+	createdAt := time.Date(2026, time.November, 18, 9, 0, 0, 0, time.UTC)
 	expected := []expectedEntry{}
 	require.NoError(t, db.NewRaw(`
-		WITH enrollment_request AS (
+		WITH stamp AS (
+			SELECT ?::timestamptz AS at
+		), enrollment_request AS (
 			INSERT INTO enrollment.requests
 				(tenant_id, phase_id, guardian_first_name, guardian_last_name, guardian_email, status_token)
 			VALUES (?, ?, 'Feed', 'Guardian', ?, ?)
@@ -37,37 +42,48 @@ func TestListNewParentRequestsReturnsOnlyRequestsAwaitingReview(t *testing.T) {
 			RETURNING id, request_id
 		), master_data AS (
 			INSERT INTO users.student_data_change_requests
-				(tenant_id, student_id, submitted_by, target, field_key, new_value, status)
-			VALUES
-				(?, ?, ?, 'student', 'school_class', '"2a"'::jsonb, 'pending'),
-				(?, ?, ?, 'student', 'school_class', '"2b"'::jsonb, 'approved')
+				(tenant_id, student_id, submitted_by, target, field_key, new_value, status, created_at)
+			SELECT tenant_id, student_id, submitted_by, target, field_key, new_value::jsonb, status, stamp.at
+			FROM (VALUES
+				(?::bigint, ?::bigint, ?::bigint, 'student', 'school_class', '"2a"', 'pending'),
+				(?, ?, ?, 'student', 'school_class', '"2b"', 'approved')
+			) AS rows(tenant_id, student_id, submitted_by, target, field_key, new_value, status)
+			CROSS JOIN stamp
 			RETURNING id, status
 		), care_schedule AS (
 			INSERT INTO schedule.care_schedule_change_requests
-				(tenant_id, student_id, submitted_by, payload, status)
-			VALUES
-				(?, ?, ?, '{}'::jsonb, 'pending'),
-				(?, ?, ?, '{}'::jsonb, 'rejected')
+				(tenant_id, student_id, submitted_by, payload, status, created_at)
+			SELECT tenant_id, student_id, submitted_by, '{}'::jsonb, status, stamp.at
+			FROM (VALUES
+				(?::bigint, ?::bigint, ?::bigint, 'pending'),
+				(?, ?, ?, 'rejected')
+			) AS rows(tenant_id, student_id, submitted_by, status)
+			CROSS JOIN stamp
 			RETURNING id, status
 		), offering AS (
 			INSERT INTO enrollment.offering_change_requests
-				(tenant_id, student_id, request_child_id, submitted_by, payload, effective_from, status)
-			SELECT ?, ?, id, ?, '{"offerings":[]}'::jsonb, CURRENT_DATE, status
+				(tenant_id, student_id, request_child_id, submitted_by, payload, effective_from, status, created_at)
+			SELECT ?, ?, id, ?, '{"offerings":[]}'::jsonb, CURRENT_DATE, status, stamp.at
 			FROM request_child
+			CROSS JOIN stamp
 			CROSS JOIN (VALUES ('pending'), ('withdrawn')) AS statuses(status)
 			RETURNING id, status
 		), excused_absence AS (
 			INSERT INTO active.excused_absence_requests
-				(tenant_id, student_id, submitted_by, dates, note, status, absence_status)
-			VALUES
-				(?, ?, ?, to_jsonb(ARRAY[CURRENT_DATE::TEXT]), 'Feed test', 'pending', 'excused'),
-				(?, ?, ?, to_jsonb(ARRAY[CURRENT_DATE::TEXT]), 'Feed test', 'done', 'excused')
+				(tenant_id, student_id, submitted_by, dates, note, status, absence_status, created_at)
+			SELECT tenant_id, student_id, submitted_by, to_jsonb(ARRAY[CURRENT_DATE::TEXT]), 'Feed test', status, 'excused', stamp.at
+			FROM (VALUES
+				(?::bigint, ?::bigint, ?::bigint, 'pending'),
+				(?, ?, ?, 'done')
+			) AS rows(tenant_id, student_id, submitted_by, status)
+			CROSS JOIN stamp
 			RETURNING id, status
 		), enrollment_change AS (
 			INSERT INTO enrollment.change_requests
-				(tenant_id, request_id, request_child_id, origin, status, base_snapshot, proposed_snapshot, diff_json)
-			SELECT ?, request_id, id, 'parent', status, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb
+				(tenant_id, request_id, request_child_id, origin, status, base_snapshot, proposed_snapshot, diff_json, created_at)
+			SELECT ?, request_id, id, 'parent', status, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, stamp.at
 			FROM request_child
+			CROSS JOIN stamp
 			CROSS JOIN (VALUES ('pending_review'), ('approved')) AS statuses(status)
 			RETURNING id, status
 		)
@@ -77,6 +93,7 @@ func TestListNewParentRequestsReturnsOnlyRequestsAwaitingReview(t *testing.T) {
 		UNION ALL SELECT 'excused_absence', id FROM excused_absence WHERE status = 'pending'
 		UNION ALL SELECT 'enrollment', id FROM enrollment_change WHERE status = 'pending_review'
 	`,
+		createdAt,
 		chain.TenantID, phase.ID, chain.Email, "feed-"+chain.Email,
 		chain.TenantID, chain.StudentID,
 		chain.TenantID, chain.StudentID, chain.AccountID,
@@ -92,7 +109,7 @@ func TestListNewParentRequestsReturnsOnlyRequestsAwaitingReview(t *testing.T) {
 	var entries []Entry
 	err := testpkg.WithTenantTx(t, testpkg.Ctx(t), db, chain.TenantID, func(ctx context.Context, tx bun.Tx) error {
 		var listErr error
-		entries, listErr = ListNewParentRequests(ctx, tx, chain.TenantID, time.Now().Add(-time.Hour), true, true)
+		entries, listErr = ListNewParentRequests(ctx, tx, chain.TenantID, createdAt.Add(-time.Hour), true, true)
 		return listErr
 	})
 	require.NoError(t, err)

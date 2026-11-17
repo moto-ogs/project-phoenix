@@ -5,7 +5,10 @@ import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { getChildCareOfferings, getChildCareSchedule } from "~/lib/parent-api";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { BookedCareSection } from "./booked-care-section";
+
+vi.unmock("swr");
 
 vi.mock("~/lib/parent-api", () => ({
   getChildCareOfferings: vi.fn(),
@@ -76,12 +79,14 @@ function pendingSchedule() {
 function renderSection(careEnded = false, enrolledUntil?: string) {
   return render(
     <NextIntlClientProvider locale="de" messages={deMessages}>
-      <BookedCareSection
-        studentId="42"
-        childFirstName="Hannah"
-        careEnded={careEnded}
-        enrolledUntil={enrolledUntil}
-      />
+      <ParentResourceTestProvider>
+        <BookedCareSection
+          studentId="42"
+          childFirstName="Hannah"
+          careEnded={careEnded}
+          enrolledUntil={enrolledUntil}
+        />
+      </ParentResourceTestProvider>
     </NextIntlClientProvider>,
   );
 }

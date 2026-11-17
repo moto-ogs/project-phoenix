@@ -10,7 +10,7 @@ import {
   DataField,
   DataFieldSkeleton,
   DataGrid,
-} from "~/components/ui/detail-modal-components";
+} from "~/components/ui/data-field";
 import {
   FormErrorAlert,
   LoadErrorAlert,

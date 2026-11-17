@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -21,8 +22,9 @@ import (
 // adapts them to the owner's ports and composes the administration over them.
 
 // composeClassListEntries composes the observed School Membership owner with
-// its audited class-list administration. The Klassenliste routes mount it.
-func composeClassListEntries(db transactionruntime.Database, persons peopledirectory.Capability, audit auditModels.Command) (schoolmembership.Owner, error) {
+// its audited class-list administration, on the root clock now. The
+// Klassenliste routes mount it.
+func composeClassListEntries(db transactionruntime.Database, persons peopledirectory.Capability, audit auditModels.Command, now func() time.Time) (schoolmembership.Owner, error) {
 	if persons == nil || audit == nil {
 		return nil, errors.New("class list entry administration: people directory and audit command are required")
 	}
@@ -31,6 +33,7 @@ func composeClassListEntries(db transactionruntime.Database, persons peopledirec
 		return nil, err
 	}
 	dependencies.ClassListStudents, dependencies.ClassListTrail = classListEntryStudents{persons: persons}, classListEntryAuditTrail{audit: audit}
+	dependencies.Now = now
 	return schoolMembershipCompose.New(dependencies)
 }
 

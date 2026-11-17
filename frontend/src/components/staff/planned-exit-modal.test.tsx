@@ -8,6 +8,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { testClockDay } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import { suppressConsole } from "~/test/helpers/console";
 
@@ -58,7 +59,12 @@ function renderModal(
   return { onSaved, onClose, ...view };
 }
 
-// The test clock stands on Wednesday, 2026-09-09.
+// Days relative to the test clock: the contract ends in the future or is over.
+const CONTRACT_END = testClockDay(113);
+const CONTRACT_ENDED = testClockDay(-9);
+const PLANNED_DAY = testClockDay(51);
+const SELECTED_DAY = testClockDay(36);
+
 describe("PlannedExitModal", () => {
   suppressConsole("error");
 
@@ -67,11 +73,11 @@ describe("PlannedExitModal", () => {
   });
 
   it("suggests the contract end and plans that day", async () => {
-    mocks.plan.mockResolvedValue("2026-12-31");
-    const { onSaved } = renderModal({ contractEndDate: "2026-12-31" });
+    mocks.plan.mockResolvedValue(CONTRACT_END);
+    const { onSaved } = renderModal({ contractEndDate: CONTRACT_END });
 
     expect(screen.getByLabelText("Letzter Arbeitstag")).toHaveValue(
-      "2026-12-31",
+      CONTRACT_END,
     );
     expect(
       screen.getByText(/Vorgeschlagen ist das Vertragsende/),
@@ -79,13 +85,13 @@ describe("PlannedExitModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Austritt planen" }));
 
     await waitFor(() =>
-      expect(mocks.plan).toHaveBeenCalledWith("7", "2026-12-31"),
+      expect(mocks.plan).toHaveBeenCalledWith("7", CONTRACT_END),
     );
-    expect(onSaved).toHaveBeenCalledWith("2026-12-31");
+    expect(onSaved).toHaveBeenCalledWith(CONTRACT_END);
   });
 
   it("does not suggest a contract end that is already over", () => {
-    renderModal({ contractEndDate: "2026-08-31" });
+    renderModal({ contractEndDate: CONTRACT_ENDED });
 
     expect(screen.getByLabelText("Letzter Arbeitstag")).toHaveValue("");
     expect(
@@ -101,14 +107,14 @@ describe("PlannedExitModal", () => {
         isOpen
         staffId="7"
         staffName="Ada Lovelace"
-        contractEndDate="2026-12-31"
+        contractEndDate={CONTRACT_END}
         onClose={vi.fn()}
         onSaved={vi.fn()}
       />,
     );
 
     expect(screen.getByLabelText("Letzter Arbeitstag")).toHaveValue(
-      "2026-12-31",
+      CONTRACT_END,
     );
   });
 
@@ -116,32 +122,32 @@ describe("PlannedExitModal", () => {
     const { rerender } = renderModal();
 
     fireEvent.change(screen.getByLabelText("Letzter Arbeitstag"), {
-      target: { value: "2026-10-15" },
+      target: { value: SELECTED_DAY },
     });
     rerender(
       <PlannedExitModal
         isOpen
         staffId="7"
         staffName="Ada Lovelace"
-        contractEndDate="2026-12-31"
+        contractEndDate={CONTRACT_END}
         onClose={vi.fn()}
         onSaved={vi.fn()}
       />,
     );
 
     expect(screen.getByLabelText("Letzter Arbeitstag")).toHaveValue(
-      "2026-10-15",
+      SELECTED_DAY,
     );
   });
 
   it("opens a planned exit on its day for changing", () => {
-    renderModal({ plannedDay: "2026-10-30", contractEndDate: "2026-12-31" });
+    renderModal({ plannedDay: PLANNED_DAY, contractEndDate: CONTRACT_END });
 
     expect(
       screen.getByRole("heading", { name: "Austritt ändern" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Letzter Arbeitstag")).toHaveValue(
-      "2026-10-30",
+      PLANNED_DAY,
     );
     expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled();
   });
@@ -150,7 +156,7 @@ describe("PlannedExitModal", () => {
     mocks.plan.mockRejectedValue(
       new ApiError("exit already due", 409, { code: "staff.exit_already_due" }),
     );
-    const { onSaved } = renderModal({ plannedDay: "2026-10-30" });
+    const { onSaved } = renderModal({ plannedDay: PLANNED_DAY });
 
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 

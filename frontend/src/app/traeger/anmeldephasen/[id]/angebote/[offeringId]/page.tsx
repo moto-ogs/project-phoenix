@@ -10,7 +10,7 @@ import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
 import { useInvalidateFamily } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { updateTraegerOffering } from "~/lib/traeger-catalog-api";
 import { traegerPath } from "~/lib/traeger-url";
 

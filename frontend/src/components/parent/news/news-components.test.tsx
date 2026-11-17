@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { ApiError } from "~/lib/api-error";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as baseRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NewsCard, NewsDetailModal, isOpenPoll } from "./news-components";
@@ -9,6 +14,13 @@ import * as parentApi from "~/lib/parent-api";
 import { catalogText } from "~/test/error-catalog-text";
 import * as dateHelpers from "~/lib/date-helpers";
 import { BELOW_SM } from "~/lib/hooks/use-media-query";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
+
+// The detail view reads its attachments through the shared parent cache.
+const render: typeof baseRender = ((ui: React.ReactElement) =>
+  baseRender(ui, { wrapper: ParentResourceTestProvider })) as typeof baseRender;
 
 // Poll (Umfrage, #1371) behaviour in the parent portal: the feed card only
 // flags that an answer is due. The detail view is where it is given, one row

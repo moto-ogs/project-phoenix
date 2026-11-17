@@ -123,11 +123,11 @@ func (s *Store) ListTraegerMemberships(ctx context.Context, organizationID int64
 
 const upsertActiveTraegerMembershipQuery = `INSERT INTO platform.organization_accounts
 		(organization_id, account_id, status, activated_at)
-	VALUES (?, ?, 'active', CURRENT_TIMESTAMP)
+	VALUES (?, ?, 'active', ?)
 	ON CONFLICT ON CONSTRAINT uq_organization_accounts_member DO UPDATE
 		SET status = 'active',
 			activated_at = CASE WHEN platform.organization_accounts.status = 'active'
-				THEN platform.organization_accounts.activated_at ELSE CURRENT_TIMESTAMP END,
+				THEN platform.organization_accounts.activated_at ELSE EXCLUDED.activated_at END,
 			deactivated_at = NULL
 	RETURNING organization_id, account_id, status, activated_at, created_at, COALESCE(display_name, '') AS display_name`
 
@@ -138,9 +138,13 @@ func (s *Store) UpsertActiveTraegerMembership(ctx context.Context, organizationI
 	if err != nil {
 		return organizationtenancy.TraegerMembership{}, domain.OperationStats{}, err
 	}
+	at, err := s.stamp()
+	if err != nil {
+		return organizationtenancy.TraegerMembership{}, domain.OperationStats{}, err
+	}
 	var row traegerMembershipRow
 	started := time.Now()
-	err = db.NewRaw(upsertActiveTraegerMembershipQuery, organizationID, accountID).Scan(ctx, &row)
+	err = db.NewRaw(upsertActiveTraegerMembershipQuery, organizationID, accountID, at).Scan(ctx, &row)
 	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started), Rows: 1}
 	if err != nil {
 		return organizationtenancy.TraegerMembership{}, stats, fmt.Errorf("organization tenancy postgres: activate Träger membership: %w", err)
@@ -149,7 +153,7 @@ func (s *Store) UpsertActiveTraegerMembership(ctx context.Context, organizationI
 }
 
 const deactivateTraegerMembershipQuery = `UPDATE platform.organization_accounts
-	SET status = 'inactive', deactivated_at = CURRENT_TIMESTAMP
+	SET status = 'inactive', deactivated_at = ?
 	WHERE organization_id = ? AND account_id = ? AND status = 'active'`
 
 // DeactivateTraegerMembership ends an active membership and reports whether
@@ -159,8 +163,12 @@ func (s *Store) DeactivateTraegerMembership(ctx context.Context, organizationID,
 	if err != nil {
 		return false, domain.OperationStats{}, err
 	}
+	at, err := s.stamp()
+	if err != nil {
+		return false, domain.OperationStats{}, err
+	}
 	started := time.Now()
-	result, err := db.NewRaw(deactivateTraegerMembershipQuery, organizationID, accountID).Exec(ctx)
+	result, err := db.NewRaw(deactivateTraegerMembershipQuery, at, organizationID, accountID).Exec(ctx)
 	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
 		return false, stats, fmt.Errorf("organization tenancy postgres: deactivate Träger membership: %w", err)

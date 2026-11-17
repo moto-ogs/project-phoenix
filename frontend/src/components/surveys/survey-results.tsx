@@ -12,7 +12,7 @@
 
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SectionCard } from "~/components/ui/section-card";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
 import type {
   Survey,

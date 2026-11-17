@@ -1,6 +1,8 @@
 package compose
 
 import (
+	"time"
+
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/application"
@@ -16,14 +18,15 @@ func NewTraegerDocumentTemplates() organizationtenancy.TraegerDocumentTemplates 
 	return application.NewTraegerDocumentTemplates(postgres.NewTraegerMasterDataStore())
 }
 
-// NewTraegerDocuments builds the Träger-Büro's shared documents (#4692).
+// NewTraegerDocuments builds the Träger-Büro's shared documents (#4692); the
+// real clock stamps revocations and deletions, the root sets none (ADR 0272).
 func NewTraegerDocuments(dependencies organizationtenancy.TraegerDocumentPorts) organizationtenancy.TraegerDocuments {
-	return application.NewTraegerDocuments(postgres.NewTraegerDocumentStore(), dependencies)
+	return application.NewTraegerDocuments(postgres.NewTraegerDocumentStore(time.Now), dependencies)
 }
 
 // NewSharedTraegerDocuments builds the parents' and schools' reads (#4692).
 func NewSharedTraegerDocuments() *postgres.TraegerDocumentStore {
-	return postgres.NewTraegerDocumentStore()
+	return postgres.NewTraegerDocumentStore(time.Now)
 }
 
 // NewTraegerReportTemplates builds the report templates of a Träger (#4716, ADR 0246) in the Träger transaction and the Träger projection's read of one in its administrative transaction.

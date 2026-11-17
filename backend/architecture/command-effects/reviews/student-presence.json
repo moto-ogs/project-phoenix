@@ -26747,13 +26747,13 @@
       "target_owner": "audit-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsAuditLog.SeenStatisticsAccessSince",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsAuditLog.SeenStatisticsAccessWithin",
       "classification": "query",
       "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.StatisticsAccessLog.SeenStatisticsAccessSince",
-      "reason": "Read-only newly exposed target: student-presence reaches modules/auditlog/records.DataAccessLogRepository.ExistsSince (audit-platform) through roots/owners.StatisticsAuditLog.SeenStatisticsAccessSince. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.StatisticsAccessLog.SeenStatisticsAccessWithin",
+      "reason": "Read-only newly exposed target: student-presence reaches modules/auditlog/records.DataAccessLogRepository.ExistsWithin (audit-platform) through roots/owners.StatisticsAuditLog.SeenStatisticsAccessWithin, the renamed deduplication that bounds on the database clock (ADR 0281, Nachtrag, #7295). No persistent, lock or scope effect.",
       "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.ExistsSince",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.ExistsWithin",
       "target_owner": "audit-platform"
     },
     {

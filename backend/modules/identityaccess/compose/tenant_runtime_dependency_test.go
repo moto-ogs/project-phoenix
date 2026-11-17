@@ -41,7 +41,9 @@ type sweepPush struct {
 	identityPorts.PushSubscriptionCleanup
 }
 
-func (sweepPush) DeleteOrphaned(context.Context) error { return nil }
+func (sweepPush) ListLinks(context.Context) ([]identityaccess.PushSubscriptionLink, error) {
+	return nil, nil
+}
 
 // The unit of work passed in Dependencies is bound at construction: the
 // session sweep opens every transaction under it. Without it the sweep
