@@ -264,7 +264,7 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 	steps = append(append(steps, seedStaffPersonMergeStep{}, seedDemoNeighbourSchoolsStep{seeder: seeder}), traegerSteps(seeder)...)
 	if !seeder.options.DeferHistory {
 		// Erst jetzt sind alle Kinder der Schule angelegt (#5031).
-		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
+		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedBillingKeyDateCountsStep{})
 	}
 	if seeder.options.SeedWeekProtocols {
 		steps = append(steps, seedWeekProtocolStep{})
