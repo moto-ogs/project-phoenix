@@ -641,7 +641,6 @@ export function ExportHandoverHistoryCard({
       title="Letzte Übergaben"
       description="Jeder Versuch steht hier, auch wenn die Datei nicht angekommen ist. moto versucht nichts von selbst noch einmal."
       icon={Send}
-      flush
     >
       <DataTable
         columns={handoverColumns(showRecipient)}

@@ -163,6 +163,11 @@ lg:flex-col`), sonst wächst nur die Hülle und die Fläche bleibt kurz.
    einen Wert. Auf dem Telefon bleibt das Band ein Band: es scrollt
    waagerecht und zeigt jeden Reiter. Keine Auswahlliste — die zeigte nur
    den aktiven Wert („Status", „Betrieb") und las sich als Filter.
+   Ab `sm` trägt das Band eine Grundlinie nur, wenn unter den Reitern noch
+   etwas folgt (Suchzeile, `searchSlot`); sie trennt Reiter und Suche. Sind
+   die Reiter die letzte Zeile des Kopfes, schließen sie die Karte ab: kein
+   unterer Innenrand, die Unterstreichung des aktiven Reiters sitzt auf der
+   Kartenkante, keine zweite Linie darüber (#7303).
 8. **Kopfkarte mobil**: keine seiteneigenen Umbruch-Wrapper um `actions`
    (kein `w-full flex-col sm:flex-row`). Ob die Aktionen neben dem Titel
    stehen oder rechtsbündig in eine eigene Zeile brechen, entscheidet die
