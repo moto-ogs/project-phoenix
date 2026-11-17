@@ -180,6 +180,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
       "Lastschrift des Jahreslaufs",
     "/abrechnung/jahresbescheide/:id/versand": "Versand der Jahresbescheide",
     "/abrechnung/kinderzahl": "Kinderzahl",
+    "/abrechnung/kinderzahl/import": "Kinderzahl nachtragen",
     "/abrechnung/kostentraeger": "Kostenübernahmen",
     "/abrechnung/lastschrift": "Lastschrift",
     "/abrechnung/lastschrift/:contractId": "Lastschriftmandat",

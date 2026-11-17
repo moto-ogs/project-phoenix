@@ -11692,6 +11692,7 @@ export const traegerCareContractsTopic =
             "Hat Ihre Datei keine Spalte für die Schule, das Modul oder den Vertragsbeginn? Dann wählen Sie `Schule für alle Zeilen`, `Modul für alle Zeilen` und `Vertragsbeginn für alle Zeilen`.",
             "Nennt eine Zeile keine Eltern? moto übernimmt den Vertrag trotzdem. Er hat dann keinen Vertragspartner.",
             "Steht die `Debitorennummer` in der Datei? Ordnen Sie die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach Ihrer Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto nur über dieselbe E-Mail.",
+            "Zählt Ihre Geschwisterregel alle Kinder der Familie? Ordnen Sie die Spalte `Kinder in der Familie` zu. Die Zahl gilt dann als bestätigt ab Vertragsbeginn. Das Feld sehen Sie nur mit dem Recht `Abrechnung`. Ohne das Recht trägt die Abrechnung die Zahlen später unter `Kinderzahl` nach.",
             "Prüfen Sie die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. `Schon vorhanden` heißt: Das Kind hat an der Schule schon einen Vertrag. Bei `Fehlerhaft` steht der Grund in der Spalte `Hinweis`.",
             "Wählen Sie unten `übernehmen`. Die Verträge stehen danach in der Liste mit dem Status `Aktiv`.",
             "Fehler in der Datei? Korrigieren Sie die Datei und laden Sie sie noch einmal. moto legt kein Kind doppelt an.",
@@ -11765,6 +11766,7 @@ export const traegerCareContractsTopic =
       troubleshootingDetails: [
         "Beim Import steht `Für das Modul fehlen die Vertragsbedingungen`? Tragen Sie unter `Vertragsbedingungen` Laufzeit und Frist für das Modul ein. Wählen Sie danach im Import `Erneut prüfen` oder laden Sie die Datei noch einmal.",
         "Beim Import steht `Dieses Modul gibt es an der Schule nicht`? Der Name in der Datei muss so heißen wie das Angebot der Schule. Ändern Sie den Namen in der Datei, oder wählen Sie `Modul für alle Zeilen`.",
+        "Beim Import steht `„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20`? moto übernimmt die Zeile nicht. Korrigieren Sie die Zahl in der Datei und laden Sie die Datei noch einmal.",
         "Ein importierter Vertrag ist falsch? Einen übernommenen Vertrag können Sie nicht löschen und nicht noch einmal importieren. Tragen Sie für ihn eine Kündigung ein. Prüfen Sie die Vorschau deshalb, bevor Sie übernehmen.",
         "In `Vertrag beenden` steht `Die Mitteilung zum Vertragsende ging nicht raus`? Der Hinweis nennt den Grund: Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft. Oder keine Adresse des Vertrags gehört noch einer Bezugsperson, die für das Kind handeln darf. Bei älteren Entscheidungen kennt moto den Grund nicht. Die Entscheidung gilt trotzdem. Schicken Sie den Eltern die Mitteilung per Brief. Sie steht darunter als `Mitteilung zum Vertragsende (nicht verschickt)`.",
         "`Vertragsende festlegen` oder `Grund nicht anerkennen` meldet, dass kein Ende mehr offen ist? Eine andere Person hat schon entschieden. Laden Sie die Seite neu. Die Entscheidung steht in `Vertrag beenden`.",
@@ -12308,6 +12310,21 @@ export const traegerCareReductionsTopic =
           ],
         },
         {
+          title: "Kinderzahl aus einer Datei nachtragen",
+          description:
+            "Sie führen die Kinderzahl schon in einem anderen Programm, zum Beispiel OGS Connect? Dann tragen Sie viele Zahlen auf einmal aus einer CSV-Datei nach. Jede Zahl gilt als von Ihnen bestätigt. moto bewahrt die Datei nicht auf.",
+          steps: [
+            "Speichern Sie die Liste als CSV-Datei. Jede Zeile nennt ein Kind mit Vertrag: Vorname, Nachname und die Zahl der Kinder in der Familie.",
+            "Wählen Sie `Familien und Zahlung`, den Reiter `Kinderzahl` und oben `Aus Datei nachtragen`.",
+            "Sie kennen den Aufbau noch nicht? Wählen Sie `Beispieldatei`.",
+            "Ziehen Sie die Datei in das Feld oder wählen Sie `Datei wählen`.",
+            "Prüfen Sie unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Hat die Datei keine Spalte für die Schule, wählen Sie `Schule für alle Zeilen`.",
+            "Prüfen Sie die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. Bei `Fehlerhaft` und `Widerspruch in der Datei` steht der Grund in der Spalte `Hinweis`.",
+            "`Andere Zahl bestätigt` heißt: Für die Familie gilt schon eine andere Zahl. moto ändert sie nicht. Ändern Sie sie in der Liste über `Kinderzahl ändern`.",
+            "Wählen Sie unten `übernehmen`. Die Zahlen stehen danach in der Liste mit dem Stand `Bestätigt`.",
+          ],
+        },
+        {
           title: "Nachweis eintragen",
           description:
             "Einkommensstufe und Ermäßigung für Alleinerziehende brauchen einen Nachweis je Kind.",
@@ -12347,7 +12364,10 @@ export const traegerCareReductionsTopic =
         "Gilt ein Nachweis erst ab Mitte des Monats, zählt er für den ganzen Monat.",
         "Zählt eine Regel die Kinderzahl, gilt die bestätigte Zahl. Es zählen aber immer mindestens die Kinder mit Vertrag. Geschwister ohne Vertrag stehen in der Reihe vorn: Bei 3 Kindern und einem Kind mit Vertrag ist es das 3. Kind.",
         "Geschwister zählen je Schule getrennt. Ein Kind mit Vertrag an einer anderen Schule zählt bei der Kinderzahl nur mit, wenn die Regel unter `Geschwister zählen an` auch diese Schule nennt. Geschwister ohne Vertrag zählen an jeder Schule mit.",
-        "Eine Angabe der Eltern, die Sie noch nicht bestätigt haben, zählt nicht. Ist die Zahl abgelaufen, zählen nur die Kinder mit Vertrag. Der Monatslauf zeigt dann einen Hinweis.",
+        "Eine Angabe der Eltern, die Sie noch nicht bestätigt haben, zählt nicht. Ist die Zahl abgelaufen, zählen nur die Kinder mit Vertrag. Der Monatslauf nennt diese Kinder dann unter `Kinderzahl der Familie fehlt`.",
+        "Ein Vertrag ohne E-Mail-Adresse der Eltern ist eine eigene Familie, zum Beispiel nach einem Import. Die Liste nennt sie nach dem Kind und zeigt `Vertrag Nr.`. Sie bekommt ihre eigene Kinderzahl.",
+        "Aus einer Datei kommt die Zahl ab dem ersten Tag des Vertrags, frühestens ab drei Monaten zurück. Einen anderen Beginn wählen Sie über `Kinderzahl ändern`.",
+        "Steht bei einer Familie `Verschiedene Angaben`? Ihre Verträge nennen verschiedene Zahlen. Bestätigen Sie eine Zahl für die Familie. Bis dahin zählen nur die Kinder mit Vertrag.",
         "Eine Rechnung, die schon ausgestellt ist, bleibt, wie sie ist. Eine geänderte Regel gilt ab dem nächsten Monatslauf.",
       ],
       notes: [

@@ -71,6 +71,13 @@ function doneDescription(done: ContractImportResult): string {
         : `${counts.debtorNumbers} Debitorennummern eingetragen`,
     );
   }
+  if (counts.familyChildren > 0) {
+    parts.push(
+      counts.familyChildren === 1
+        ? "1 Kinderzahl bestätigt"
+        : `${counts.familyChildren} Kinderzahlen bestätigt`,
+    );
+  }
   return `${parts.join(", ")}. Sie finden die Verträge unter Verträge mit dem Stand „Aktiv“.`;
 }
 
@@ -303,6 +310,7 @@ export default function TraegerContractImportPage() {
                 unmapped={result.unmapped}
                 schools={result.schools}
                 debtorNumberScope={result.debtorNumberScope}
+                familyChildrenAllowed={result.familyChildrenAllowed}
                 disabled={applying}
                 onChange={remap}
               />

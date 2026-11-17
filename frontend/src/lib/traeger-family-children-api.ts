@@ -17,7 +17,9 @@ export type FamilyChildrenStatus =
   | "confirmed"
   | "expiring"
   | "expired"
-  | "upcoming";
+  | "upcoming"
+  /** Contracts that became one family brought different numbers (#7356). */
+  | "differing";
 
 export interface FamilyChildCount {
   readonly id: string;
@@ -39,8 +41,14 @@ interface FamilyContractChild {
 }
 
 export interface FamilyChildren {
+  /**
+   * One contract of the family: it names the family in a request. A family
+   * without a mail address is known only by this contract (#7356).
+   */
+  readonly contractId: string;
   readonly recipientFirstName: string;
   readonly recipientLastName: string;
+  /** "" for a family without a mail address. */
   readonly recipientEmail: string;
   readonly children: readonly FamilyContractChild[];
   readonly count: FamilyChildCount | null;
@@ -72,6 +80,7 @@ interface BackendCount {
 }
 
 interface BackendFamily {
+  contract_id: number;
   recipient_first_name: string;
   recipient_last_name: string;
   recipient_email: string;
@@ -110,6 +119,7 @@ function countFromBackend(count: BackendCount): FamilyChildCount {
 function familyChildrenSetFromBackend(body: BackendSet): FamilyChildrenSet {
   return {
     families: (body.families ?? []).map((family) => ({
+      contractId: String(family.contract_id),
       recipientFirstName: family.recipient_first_name,
       recipientLastName: family.recipient_last_name,
       recipientEmail: family.recipient_email,

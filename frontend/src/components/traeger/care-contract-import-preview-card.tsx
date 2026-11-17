@@ -23,6 +23,7 @@ import {
   contractCountLabel,
   contractImportChild,
   contractImportDebtorText,
+  contractImportFamilyChildrenText,
   contractImportHintText,
   contractImportPeriod,
   contractImportProblemText,
@@ -52,6 +53,8 @@ function NotesCell({ row }: Readonly<{ row: ContractImportRow }>) {
   );
   const debtor = contractImportDebtorText(row);
   if (debtor) lines.push(debtor);
+  const familyChildren = contractImportFamilyChildrenText(row);
+  if (familyChildren) lines.push(familyChildren);
   if (lines.length === 0) return <span className="text-gray-500">–</span>;
   return (
     <ul className="space-y-0.5 text-sm text-gray-700">

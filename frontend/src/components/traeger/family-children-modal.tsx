@@ -108,8 +108,7 @@ export function FamilyChildrenModal({
       );
       return;
     }
-    const contract = family.count?.contractId ?? family.children[0]?.contractId;
-    if (!contract) return;
+    const contract = family.count?.contractId ?? family.contractId;
     await save.run(async (op) => {
       try {
         const result = await confirmFamilyChildren({

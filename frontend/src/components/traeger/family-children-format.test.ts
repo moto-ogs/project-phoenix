@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 import type { FamilyChildren } from "~/lib/traeger-family-children-api";
-import { checkReason } from "./family-children-format";
+import {
+  checkReason,
+  familyAddress,
+  familyKey,
+  familyName,
+} from "./family-children-format";
 
 const family = (
   status: FamilyChildren["status"],
   validFrom: string,
   validUntil: string | null,
 ): FamilyChildren => ({
+  contractId: "31",
   recipientFirstName: "Eva",
   recipientLastName: "Beispiel",
   recipientEmail: "eva@example.org",
@@ -44,6 +50,52 @@ describe("checkReason", () => {
       checkReason(family("expiring", "2027-01-01", null), "2026-11-10"),
     ).toBe(
       "Die bisherige Kinderzahl läuft bald ab. Die neue gilt erst ab 01.01.2027.",
+    );
+  });
+});
+
+describe("a family without a mail address (#7356)", () => {
+  const imported: FamilyChildren = {
+    contractId: "77",
+    recipientFirstName: "",
+    recipientLastName: "",
+    recipientEmail: "",
+    children: [
+      {
+        contractId: "77",
+        schoolName: "OGS Birkenfeld",
+        childFirstName: "Mia",
+        childLastName: "Beispiel",
+      },
+    ],
+    count: null,
+    status: "missing",
+  };
+
+  it("is named by its child and told apart by its contract", () => {
+    expect(familyName(imported)).toBe("Familie von Mia Beispiel");
+    expect(familyAddress(imported)).toBe("Vertrag Nr. 77 · ohne E-Mail");
+    expect(familyKey(imported)).toBe("contract:77");
+  });
+
+  it("keeps the name of its recipient when the contract has one", () => {
+    const named = { ...imported, recipientLastName: "Zeller" };
+    expect(familyName(named)).toBe("Zeller");
+    expect(familyAddress(named)).toBe("Vertrag Nr. 77 · ohne E-Mail");
+  });
+
+  it("names a family with an address by it", () => {
+    const family = { ...imported, recipientEmail: "eva@example.org" };
+    expect(familyName(family)).toBe("eva@example.org");
+    expect(familyAddress(family)).toBe("eva@example.org");
+    expect(familyKey(family)).toBe("eva@example.org");
+  });
+
+  it("says why different numbers of its contracts need a decision", () => {
+    expect(
+      checkReason({ ...imported, status: "differing" }, "2026-09-09"),
+    ).toBe(
+      "Die Verträge der Familie nennen verschiedene Kinderzahlen. Bis Sie eine bestätigen, zählen nur die Kinder mit Vertrag.",
     );
   });
 });

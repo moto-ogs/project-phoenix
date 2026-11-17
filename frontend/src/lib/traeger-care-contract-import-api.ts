@@ -27,7 +27,8 @@ export type ContractImportField =
   | "party_first_name"
   | "party_last_name"
   | "party_email"
-  | "debtor_number";
+  | "debtor_number"
+  | "family_children";
 
 export type ContractImportRowStatus =
   "ready" | "duplicate" | "conflict" | "invalid" | "imported";
@@ -35,6 +36,13 @@ export type ContractImportRowStatus =
 /** What the import does with the debtor number of a row; "" without one. */
 type ContractDebtorNumberStatus =
   "" | "new" | "same" | "differs" | "rows_differ" | "invalid";
+
+/**
+ * What the import does with the number of the family's children of a row
+ * (#7356); "" without one.
+ */
+type ContractFamilyChildrenStatus =
+  "" | "new" | "same" | "differs" | "rows_differ";
 
 /** Header of the column each field comes from; "" leaves it unmapped. */
 type ContractImportColumns = Readonly<Record<ContractImportField, string>>;
@@ -79,6 +87,9 @@ export interface ContractImportRow {
   readonly repeatsLine: number | null;
   readonly debtorNumber: string;
   readonly debtorNumberStatus: ContractDebtorNumberStatus;
+  /** How many children the family has, as the row names it; null without. */
+  readonly familyChildren: number | null;
+  readonly familyChildrenStatus: ContractFamilyChildrenStatus;
 }
 
 interface ContractImportCounts {
@@ -89,6 +100,8 @@ interface ContractImportCounts {
   readonly imported: number;
   readonly debtorNumbers: number;
   readonly debtorConflicts: number;
+  /** Families whose number of children the import takes over (#7356). */
+  readonly familyChildren: number;
 }
 
 interface ContractImportModule {
@@ -113,6 +126,11 @@ export interface ContractImportResult {
   readonly schools: readonly ContractImportSchool[];
   /** Whom a debtor number of the Träger names. */
   readonly debtorNumberScope: "payer" | "child";
+  /**
+   * Whether the account may map the column of the family's children: the
+   * number counts as confirmed by the Abrechnung, so it needs that right.
+   */
+  readonly familyChildrenAllowed: boolean;
   readonly fingerprint: string;
   readonly applied: boolean;
   readonly counts: ContractImportCounts;
@@ -160,6 +178,8 @@ interface BackendRow {
   repeats_line?: number;
   debtor_number?: string;
   debtor_number_status?: ContractDebtorNumberStatus;
+  family_children?: number;
+  family_children_status?: ContractFamilyChildrenStatus;
 }
 
 interface BackendResult {
@@ -178,6 +198,7 @@ interface BackendResult {
       }[]
     | null;
   debtor_number_scope: "payer" | "child";
+  family_children_allowed?: boolean;
   fingerprint?: string;
   applied: boolean;
   counts: {
@@ -188,6 +209,7 @@ interface BackendResult {
     imported: number;
     debtor_numbers?: number;
     debtor_conflicts?: number;
+    family_children?: number;
   };
   rows: BackendRow[] | null;
 }
@@ -228,6 +250,8 @@ function mapRow(row: BackendRow): ContractImportRow {
     repeatsLine: row.repeats_line ?? null,
     debtorNumber: row.debtor_number ?? "",
     debtorNumberStatus: row.debtor_number_status ?? "",
+    familyChildren: row.family_children ?? null,
+    familyChildrenStatus: row.family_children_status ?? "",
   };
 }
 
@@ -255,6 +279,7 @@ function mapImportResult(result: BackendResult): ContractImportResult {
       })),
     })),
     debtorNumberScope: result.debtor_number_scope,
+    familyChildrenAllowed: result.family_children_allowed ?? false,
     fingerprint: result.fingerprint ?? "",
     applied: result.applied,
     counts: {
@@ -265,6 +290,7 @@ function mapImportResult(result: BackendResult): ContractImportResult {
       imported: result.counts.imported,
       debtorNumbers: result.counts.debtor_numbers ?? 0,
       debtorConflicts: result.counts.debtor_conflicts ?? 0,
+      familyChildren: result.counts.family_children ?? 0,
     },
     rows: (result.rows ?? []).map(mapRow),
   };

@@ -29,6 +29,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const stated: FamilyChildren = {
+  contractId: "31",
   recipientFirstName: "Eva",
   recipientLastName: "Beispiel",
   recipientEmail: "eva@example.org",
@@ -53,6 +54,7 @@ const stated: FamilyChildren = {
   status: "stated",
 };
 const confirmed: FamilyChildren = {
+  contractId: "32",
   recipientFirstName: "Jonas",
   recipientLastName: "Muster",
   recipientEmail: "jonas@example.org",
@@ -127,6 +129,70 @@ describe("TraegerKinderzahlPage", () => {
         validUntil: null,
       }),
     );
+  });
+
+  it("lists a contract without a mail address as a family of its own", async () => {
+    const imported: FamilyChildren = {
+      contractId: "77",
+      recipientFirstName: "",
+      recipientLastName: "",
+      recipientEmail: "",
+      children: [
+        {
+          contractId: "77",
+          schoolName: "OGS Birkenfeld",
+          childFirstName: "Noah",
+          childLastName: "Zeller",
+        },
+      ],
+      count: null,
+      status: "missing",
+    };
+    renderPage({ ...data, families: [imported] });
+    expect(
+      await screen.findByText("Familie von Noah Zeller"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Vertrag Nr. 77 · ohne E-Mail"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Aus Datei nachtragen" }),
+    ).toHaveAttribute("href", "/abrechnung/kinderzahl/import");
+
+    confirmFamilyChildren.mockResolvedValue({ ...data, families: [imported] });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Kinderzahl: Familie von Noah Zeller",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Kinderzahl bestätigen/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Kinderzahl bestätigen" }),
+    );
+    await vi.waitFor(() =>
+      expect(confirmFamilyChildren).toHaveBeenCalledWith(
+        expect.objectContaining({ contractId: "77", children: 1 }),
+      ),
+    );
+  });
+
+  it("asks the office when the contracts of a family bring different numbers", async () => {
+    renderPage({
+      ...data,
+      families: [{ ...stated, count: null, status: "differing" }],
+    });
+    const checks = (
+      await screen.findByRole("heading", { name: "Zu prüfen" })
+    ).closest("section") as HTMLElement;
+    expect(
+      within(checks).getByText(/nennen verschiedene Kinderzahlen/),
+    ).toBeInTheDocument();
+    expect(
+      within(checks).getByText("Verschiedene Angaben"),
+    ).toBeInTheDocument();
   });
 
   it("says when no sibling rule counts the number yet", async () => {

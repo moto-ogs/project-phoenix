@@ -3,6 +3,7 @@ import type { ContractImportRow } from "~/lib/traeger-care-contract-import-api";
 import { formatConclusion } from "./care-contract-format";
 import {
   contractImportDebtorText,
+  contractImportFamilyChildrenText,
   contractImportPeriod,
   contractImportProblemText,
   contractImportWeekdays,
@@ -28,6 +29,8 @@ const row: ContractImportRow = {
   repeatsLine: null,
   debtorNumber: "",
   debtorNumberStatus: "",
+  familyChildren: null,
+  familyChildrenStatus: "",
 };
 
 describe("care contract import format", () => {
@@ -82,6 +85,32 @@ describe("care contract import format", () => {
     ).toBe(
       "Am 06.11.2026 um 16:12 Uhr, mit dem unterschriebenen Vertrag auf Papier",
     );
+  });
+
+  it("says what happens with the number of the family's children", () => {
+    expect(contractImportFamilyChildrenText(row)).toBeNull();
+    expect(
+      contractImportFamilyChildrenText({
+        ...row,
+        familyChildren: 2,
+        familyChildrenStatus: "new",
+      }),
+    ).toBe("Kinderzahl der Familie: 2 Kinder, bestätigt ab Vertragsbeginn.");
+    expect(
+      contractImportFamilyChildrenText({
+        ...row,
+        familyChildren: 3,
+        familyChildrenStatus: "differs",
+      }),
+    ).toBe(
+      "Kinderzahl der Familie: In moto ist schon eine andere Zahl bestätigt. moto ändert sie nicht.",
+    );
+    expect(
+      contractImportProblemText(
+        { field: "family_children", code: "invalid" },
+        row,
+      ),
+    ).toBe("„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20.");
   });
 
   it("sorts rows into the filters", () => {

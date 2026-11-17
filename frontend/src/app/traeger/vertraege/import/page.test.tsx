@@ -59,6 +59,8 @@ function row(
     repeatsLine: null,
     debtorNumber: "70001",
     debtorNumberStatus: "new",
+    familyChildren: null,
+    familyChildrenStatus: "",
     ...overrides,
   };
 }
@@ -85,6 +87,7 @@ function preview(
         party_last_name: "Zahler",
         party_email: "",
         debtor_number: "",
+        family_children: "",
       },
       schoolId: "1",
       moduleName: "OGS bis 16 Uhr",
@@ -102,6 +105,7 @@ function preview(
       { id: "2", name: "Grundschule Süd", modules: [] },
     ],
     debtorNumberScope: "payer",
+    familyChildrenAllowed: false,
     fingerprint: "preview-1",
     applied: false,
     counts: {
@@ -112,6 +116,7 @@ function preview(
       imported: 0,
       debtorNumbers: 1,
       debtorConflicts: 0,
+      familyChildren: 0,
     },
     rows: [
       row(2),
@@ -216,6 +221,41 @@ describe("Vertragsimport", () => {
     await screen.findByText("1 Vertrag übernommen");
 
     await waitFor(() => expect(readCandidates).toHaveBeenCalledTimes(2));
+  });
+
+  it("offers the children of the family only to an account that bills", async () => {
+    await choose();
+    // The folded card counts the fields it offers: 13 without the number.
+    expect(
+      screen.getByText(/4 von 13 Feldern sind zugeordnet/),
+    ).toBeInTheDocument();
+  });
+
+  it("names what happens with the children of the family of a row", async () => {
+    await choose(
+      preview({
+        familyChildrenAllowed: true,
+        mapping: {
+          ...preview().mapping,
+          columns: { ...preview().mapping.columns, family_children: "Kinder" },
+        },
+        rows: [row(2, { familyChildren: 2, familyChildrenStatus: "new" })],
+      }),
+    );
+    expect(
+      screen.getByText(/5 von 14 Feldern sind zugeordnet/),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Spalten zuordnen ausklappen" }),
+    );
+    expect(
+      screen.getByRole("combobox", { name: /Kinder in der Familie/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        "Kinderzahl der Familie: 2 Kinder, bestätigt ab Vertragsbeginn.",
+      ).length,
+    ).toBeGreaterThan(0);
   });
 
   it("asks for the school and the module of a file without those columns", async () => {

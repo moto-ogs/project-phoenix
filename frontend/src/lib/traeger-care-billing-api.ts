@@ -384,6 +384,20 @@ export interface CareDuplicate {
   }[];
 }
 
+/**
+ * An invoice of a monthly run whose family has no confirmed number of
+ * children for the month (#7356): the sibling rule counts its children with
+ * a contract alone.
+ */
+export interface CareUncountedContract {
+  readonly contractId: string;
+  readonly schoolName: string;
+  readonly childFirstName: string;
+  readonly childLastName: string;
+  /** No number at all, or one that ended before the month. */
+  readonly status: "missing" | "expired";
+}
+
 export interface CareRunDetail extends CareRun {
   readonly invoices: readonly CareInvoice[];
   readonly unpriced: readonly CareUnpriced[];
@@ -396,6 +410,8 @@ export interface CareRunDetail extends CareRun {
    * contract alone.
    */
   readonly uncountedFamilies?: number;
+  /** The invoices of those families, each with the reason (#7356). */
+  readonly uncountedContracts?: readonly CareUncountedContract[];
   readonly billed: number;
   /** Contracts a free month of their price list bills nothing for. */
   readonly freeOfCharge?: number;
@@ -670,6 +686,15 @@ export interface BackendRunDetail extends BackendRun {
     | null;
   duplicate_children: number;
   uncounted_families?: number;
+  uncounted_contracts?:
+    | {
+        contract_id: number;
+        school_name: string;
+        child_first_name: string;
+        child_last_name: string;
+        status: "missing" | "expired";
+      }[]
+    | null;
   billed: number;
   free_of_charge?: number;
   preview_count: number;
@@ -879,6 +904,13 @@ export function detailFromBackend(detail: BackendRunDetail): CareRunDetail {
     })),
     duplicateChildren: detail.duplicate_children ?? 0,
     uncountedFamilies: detail.uncounted_families ?? 0,
+    uncountedContracts: (detail.uncounted_contracts ?? []).map((contract) => ({
+      contractId: String(contract.contract_id),
+      schoolName: contract.school_name,
+      childFirstName: contract.child_first_name,
+      childLastName: contract.child_last_name,
+      status: contract.status,
+    })),
     billed: detail.billed,
     freeOfCharge: detail.free_of_charge ?? 0,
     previewCount: detail.preview_count,

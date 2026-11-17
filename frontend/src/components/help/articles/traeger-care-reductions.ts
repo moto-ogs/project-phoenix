@@ -59,6 +59,21 @@ export function traegerCareReductionsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Kinderzahl aus einer Datei nachtragen",
+        description:
+          "Sie führen die Kinderzahl schon in einem anderen Programm, zum Beispiel OGS Connect? Dann tragen Sie viele Zahlen auf einmal aus einer CSV-Datei nach. Jede Zahl gilt als von Ihnen bestätigt. moto bewahrt die Datei nicht auf.",
+        steps: [
+          "Speichern Sie die Liste als CSV-Datei. Jede Zeile nennt ein Kind mit Vertrag: Vorname, Nachname und die Zahl der Kinder in der Familie.",
+          "Wählen Sie `Familien und Zahlung`, den Reiter `Kinderzahl` und oben `Aus Datei nachtragen`.",
+          "Sie kennen den Aufbau noch nicht? Wählen Sie `Beispieldatei`.",
+          "Ziehen Sie die Datei in das Feld oder wählen Sie `Datei wählen`.",
+          "Prüfen Sie unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Hat die Datei keine Spalte für die Schule, wählen Sie `Schule für alle Zeilen`.",
+          "Prüfen Sie die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. Bei `Fehlerhaft` und `Widerspruch in der Datei` steht der Grund in der Spalte `Hinweis`.",
+          "`Andere Zahl bestätigt` heißt: Für die Familie gilt schon eine andere Zahl. moto ändert sie nicht. Ändern Sie sie in der Liste über `Kinderzahl ändern`.",
+          "Wählen Sie unten `übernehmen`. Die Zahlen stehen danach in der Liste mit dem Stand `Bestätigt`.",
+        ],
+      },
+      {
         title: "Nachweis eintragen",
         description:
           "Einkommensstufe und Ermäßigung für Alleinerziehende brauchen einen Nachweis je Kind.",
@@ -98,7 +113,10 @@ export function traegerCareReductionsTopic(): HelpTopic {
       "Gilt ein Nachweis erst ab Mitte des Monats, zählt er für den ganzen Monat.",
       "Zählt eine Regel die Kinderzahl, gilt die bestätigte Zahl. Es zählen aber immer mindestens die Kinder mit Vertrag. Geschwister ohne Vertrag stehen in der Reihe vorn: Bei 3 Kindern und einem Kind mit Vertrag ist es das 3. Kind.",
       "Geschwister zählen je Schule getrennt. Ein Kind mit Vertrag an einer anderen Schule zählt bei der Kinderzahl nur mit, wenn die Regel unter `Geschwister zählen an` auch diese Schule nennt. Geschwister ohne Vertrag zählen an jeder Schule mit.",
-      "Eine Angabe der Eltern, die Sie noch nicht bestätigt haben, zählt nicht. Ist die Zahl abgelaufen, zählen nur die Kinder mit Vertrag. Der Monatslauf zeigt dann einen Hinweis.",
+      "Eine Angabe der Eltern, die Sie noch nicht bestätigt haben, zählt nicht. Ist die Zahl abgelaufen, zählen nur die Kinder mit Vertrag. Der Monatslauf nennt diese Kinder dann unter `Kinderzahl der Familie fehlt`.",
+      "Ein Vertrag ohne E-Mail-Adresse der Eltern ist eine eigene Familie, zum Beispiel nach einem Import. Die Liste nennt sie nach dem Kind und zeigt `Vertrag Nr.`. Sie bekommt ihre eigene Kinderzahl.",
+      "Aus einer Datei kommt die Zahl ab dem ersten Tag des Vertrags, frühestens ab drei Monaten zurück. Einen anderen Beginn wählen Sie über `Kinderzahl ändern`.",
+      "Steht bei einer Familie `Verschiedene Angaben`? Ihre Verträge nennen verschiedene Zahlen. Bestätigen Sie eine Zahl für die Familie. Bis dahin zählen nur die Kinder mit Vertrag.",
       "Eine Rechnung, die schon ausgestellt ist, bleibt, wie sie ist. Eine geänderte Regel gilt ab dem nächsten Monatslauf.",
     ],
     notes: [

@@ -26,6 +26,7 @@ import {
   CareDuplicatesCard,
   CareUnpricedCard,
 } from "~/components/traeger/care-run-invoices";
+import { CareUncountedCard } from "~/components/traeger/care-uncounted-card";
 import {
   careDebitItems,
   debitHints,
@@ -865,21 +866,10 @@ export default function TraegerCareRunPage() {
               }
             />
           ) : null}
-          {preview && (run.uncountedFamilies ?? 0) > 0 ? (
-            // The release lists it under „Noch offen“: orange here too.
-            <Alert
-              type="warning"
-              message={`${run.uncountedFamilies === 1 ? "Für 1 Familie" : `Für ${run.uncountedFamilies ?? 0} Familien`} gibt es in diesem Monat keine bestätigte Kinderzahl. Die Geschwisterregel zählt dort nur die Kinder mit Vertrag.`}
-              action={
-                <ButtonLink
-                  href={traegerPath("/traeger/abrechnung/kinderzahl")}
-                  variant="surface"
-                  size="compact"
-                  tooltip="Öffnet die Kinderzahl der Familien zum Bestätigen."
-                >
-                  Kinderzahl prüfen
-                </ButtonLink>
-              }
+          {preview ? (
+            <CareUncountedCard
+              families={run.uncountedFamilies ?? 0}
+              contracts={run.uncountedContracts ?? []}
             />
           ) : null}
           <CareDuplicatesCard duplicates={run.duplicates} released={!preview} />

@@ -15,6 +15,8 @@ import {
 import {
   checkReason,
   childrenLabel,
+  familyAddress,
+  familyKey,
   familyName,
   NEEDS_CHECK,
   STATUS_LABELS,
@@ -142,6 +144,9 @@ function checkCardText(
     toCheck.some((family) => family.status === "stated")
       ? "Eine neue Angabe der Eltern zählt erst, wenn Sie sie bestätigen."
       : null,
+    toCheck.some((family) => family.status === "differing")
+      ? "Bei verschiedenen Angaben zählt keine Zahl, bis Sie eine bestätigen."
+      : null,
     missing > 0
       ? expired
         ? `Das gilt auch für ${missing === 1 ? "die Familie" : `die ${missing} Familien`} ohne Angabe.`
@@ -201,7 +206,7 @@ export default function TraegerKinderzahlPage() {
       needle
         ? [
             familyName(family),
-            family.recipientEmail,
+            familyAddress(family),
             ...family.children.map(
               (child) => `${child.childFirstName} ${child.childLastName}`,
             ),
@@ -223,7 +228,7 @@ export default function TraegerKinderzahlPage() {
         <div className="min-w-0">
           <p className="font-semibold text-gray-900">{familyName(family)}</p>
           <p className="mt-0.5 truncate text-sm text-gray-600">
-            {family.recipientEmail}
+            {familyAddress(family)}
           </p>
         </div>
       ),
@@ -305,7 +310,7 @@ export default function TraegerKinderzahlPage() {
   return (
     <TenantPage
       title={billingAreaTitle("kinderzahl")}
-      info="Hier steht, wie viele Kinder eine Familie hat, auch Geschwister ohne Betreuungsvertrag. Eltern geben die Zahl im Vertrag an. Sie bestätigen oder ändern sie. Eine Geschwisterregel nutzt die Zahl nur, wenn Sie das unter „Ermäßigungen“ einschalten. moto speichert nur die Zahl, keine Namen der Geschwister. Jedes Öffnen dieser Seite steht im Zugriffsprotokoll."
+      info="Hier steht, wie viele Kinder eine Familie hat, auch Geschwister ohne Betreuungsvertrag. Eltern geben die Zahl im Vertrag an. Sie bestätigen oder ändern sie. Ein Vertrag ohne E-Mail-Adresse der Eltern ist eine eigene Familie. Eine Geschwisterregel nutzt die Zahl nur, wenn Sie das unter „Ermäßigungen“ einschalten. moto speichert nur die Zahl, keine Namen der Geschwister. Jedes Öffnen dieser Seite steht im Zugriffsprotokoll."
       stats={
         families.length > 0 ? (
           <TenantPageStats
@@ -337,22 +342,32 @@ export default function TraegerKinderzahlPage() {
       }
       statsLoading={loading}
       actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList("/api/traeger/family-children/export", format)
-          }
-          scope="Alle Familien, ohne Suche"
-          ariaLabel="Kinderzahl herunterladen"
-          tooltip="Zeigt die Formate für alle Familien, ohne Suche. Jeder Download wird protokolliert."
-          fallbackName="kinderzahl"
-          errorObject="die Kinderzahl der Familien"
-          unavailable={families.length === 0}
-        />
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList("/api/traeger/family-children/export", format)
+            }
+            scope="Alle Familien, ohne Suche"
+            ariaLabel="Kinderzahl herunterladen"
+            tooltip="Zeigt die Formate für alle Familien, ohne Suche. Jeder Download wird protokolliert."
+            fallbackName="kinderzahl"
+            errorObject="die Kinderzahl der Familien"
+            unavailable={families.length === 0}
+          />
+          <ButtonLink
+            href={traegerPath("/traeger/abrechnung/kinderzahl/import")}
+            variant="outline"
+            size="md"
+            tooltip="Öffnet das Nachtragen der Kinderzahlen aus einer CSV-Datei."
+          >
+            Aus Datei nachtragen
+          </ButtonLink>
+        </>
       }
       search={{
         value: search,
         onChange: setSearch,
-        placeholder: "Familie, Adresse oder Kind",
+        placeholder: "Familie, Adresse, Vertrag oder Kind",
       }}
       tabs={billingTabs("kinderzahl")}
       error={loadError}
@@ -429,7 +444,7 @@ export default function TraegerKinderzahlPage() {
           <ResponsiveActionList>
             {(checksExpanded ? toCheck : toCheck.slice(0, INITIAL_CHECKS)).map(
               (family) => (
-                <ResponsiveActionRow key={family.recipientEmail}>
+                <ResponsiveActionRow key={familyKey(family)}>
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">
                       {familyName(family)}
@@ -491,7 +506,7 @@ export default function TraegerKinderzahlPage() {
         <DataTable
           columns={columns}
           rows={rows}
-          getRowKey={(family) => family.recipientEmail}
+          getRowKey={familyKey}
           // Six columns on a tablet: narrower cells keep the state pills
           // whole beside the row menu.
           dense

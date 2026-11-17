@@ -124,6 +124,7 @@ export function traegerCareContractsTopic(): HelpTopic {
           "Hat Ihre Datei keine Spalte für die Schule, das Modul oder den Vertragsbeginn? Dann wählen Sie `Schule für alle Zeilen`, `Modul für alle Zeilen` und `Vertragsbeginn für alle Zeilen`.",
           "Nennt eine Zeile keine Eltern? moto übernimmt den Vertrag trotzdem. Er hat dann keinen Vertragspartner.",
           "Steht die `Debitorennummer` in der Datei? Ordnen Sie die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach Ihrer Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto nur über dieselbe E-Mail.",
+          "Zählt Ihre Geschwisterregel alle Kinder der Familie? Ordnen Sie die Spalte `Kinder in der Familie` zu. Die Zahl gilt dann als bestätigt ab Vertragsbeginn. Das Feld sehen Sie nur mit dem Recht `Abrechnung`. Ohne das Recht trägt die Abrechnung die Zahlen später unter `Kinderzahl` nach.",
           "Prüfen Sie die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. `Schon vorhanden` heißt: Das Kind hat an der Schule schon einen Vertrag. Bei `Fehlerhaft` steht der Grund in der Spalte `Hinweis`.",
           "Wählen Sie unten `übernehmen`. Die Verträge stehen danach in der Liste mit dem Status `Aktiv`.",
           "Fehler in der Datei? Korrigieren Sie die Datei und laden Sie sie noch einmal. moto legt kein Kind doppelt an.",
@@ -197,6 +198,7 @@ export function traegerCareContractsTopic(): HelpTopic {
     troubleshootingDetails: [
       "Beim Import steht `Für das Modul fehlen die Vertragsbedingungen`? Tragen Sie unter `Vertragsbedingungen` Laufzeit und Frist für das Modul ein. Wählen Sie danach im Import `Erneut prüfen` oder laden Sie die Datei noch einmal.",
       "Beim Import steht `Dieses Modul gibt es an der Schule nicht`? Der Name in der Datei muss so heißen wie das Angebot der Schule. Ändern Sie den Namen in der Datei, oder wählen Sie `Modul für alle Zeilen`.",
+      "Beim Import steht `„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20`? moto übernimmt die Zeile nicht. Korrigieren Sie die Zahl in der Datei und laden Sie die Datei noch einmal.",
       "Ein importierter Vertrag ist falsch? Einen übernommenen Vertrag können Sie nicht löschen und nicht noch einmal importieren. Tragen Sie für ihn eine Kündigung ein. Prüfen Sie die Vorschau deshalb, bevor Sie übernehmen.",
       "In `Vertrag beenden` steht `Die Mitteilung zum Vertragsende ging nicht raus`? Der Hinweis nennt den Grund: Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft. Oder keine Adresse des Vertrags gehört noch einer Bezugsperson, die für das Kind handeln darf. Bei älteren Entscheidungen kennt moto den Grund nicht. Die Entscheidung gilt trotzdem. Schicken Sie den Eltern die Mitteilung per Brief. Sie steht darunter als `Mitteilung zum Vertragsende (nicht verschickt)`.",
       "`Vertragsende festlegen` oder `Grund nicht anerkennen` meldet, dass kein Ende mehr offen ist? Eine andere Person hat schon entschieden. Laden Sie die Seite neu. Die Entscheidung steht in `Vertrag beenden`.",
