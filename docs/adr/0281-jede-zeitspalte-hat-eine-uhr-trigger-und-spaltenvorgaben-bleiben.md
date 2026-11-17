@@ -58,15 +58,17 @@ Owner-Uhr folgen sollen. Der Bestand auf `development` `e93e86fb67`:
 | Abgeschlossene Abmeldungen (`careplan`) | Owner | Die Grenze kommt als Parameter. Sie bleibt 365 Berliner Kalendertage, wie `TestNightlyRetentionCleanupCutoffsAcrossDST` sie vorschrieb, hängt aber nicht mehr an der Zeitzone der Sitzung. Dasselbe gilt für die Offboarding-Jobs von `workforce` (30 Tage). |
 | `CompletionTimestamp` (`timetable`) | beide, getrennt | `completed_at` bleibt der Transaktionszeitpunkt der Datenbank: Reopen ordnet ihn gegen `updated_at` der Aufsichten (Trigger) und Teilnahmen. Das Reopen-Fenster, das Ende spontaner Blöcke und der Vergleich mit dem Auschecken eines Kindes rechnen mit der Owner-Uhr; der Abschluss legt deren Zeitpunkt als `owner_completed_at` im Snapshot ab. |
 | Umfrage-Entwürfe (`communication`) | Datenbank | `users.surveys` trägt den Trigger. Die Aufbewahrung der Entwürfe vergleicht `updated_at` mit der Datenbankuhr; veröffentlichte Umfragen bleiben über `closes_at` auf der Owner-Uhr. |
-| Nummern-Ereignisse (`parentbilling`) | Datenbank | Die Datenbank stempelt die Protokolle `family_billing_events` und `child_debtor_number_events` per Vorgabe. Ihr Alter rechnet die Abfrage mit der Datenbankuhr; die Nummern selbst gehen weiter am Tag der Owner-Uhr. |
+| Nummern-Ereignisse (`parentbilling`) | Owner | Der Store stempelt die Protokolle `family_billing_events` und `child_debtor_number_events` an jeder Schreibstelle selbst. Ihr Alter vergleicht die Löschung mit der Grenze des Löschtags, Mitternacht in Berlin, wie die Nummern selbst. |
 
-Zustell-Protokolle und Nummern-Ereignisse stempelt beide eine Vorgabe ohne
-Trigger, und sie sind verschieden entschieden. Der Store von `delivery` trägt
-die Owner-Uhr schon und hat eine Schreibstelle. `parentbilling` schreibt seine
-Protokolle an rund dreißig Stellen aus Stores ohne Uhr; dort bleibt die
-Datenbank die eine Uhr der Spalte, bis der Owner-Schnitt von #7295 dem Store
-seine Uhr gibt. Die Ausnahme gilt dem Alter der Einträge: Dass ein Eintrag
-erst mit seiner Nummer geht, entscheidet weiter der Tag der Owner-Uhr.
+Zustell-Protokolle und Nummern-Ereignisse stempelte beide eine Vorgabe ohne
+Trigger. Zuerst war nur der Store von `delivery` mit der Owner-Uhr
+entschieden; `parentbilling` blieb auf der Datenbankuhr, weil sein Store
+keine Uhr trug. Der Owner-Schnitt von #7295 gibt ihm seine Uhr, und damit
+gehen die Protokolle wie die Nummern am Tag der Owner-Uhr. Auf der
+Datenbankuhr bleiben in `parentbilling` nur Spalten, die eine
+Datenbankfunktion stempelt oder vergleicht oder die gegen Stempel von
+Spaltenvorgaben oder anderer Owner geordnet werden; sie stehen mit Grund
+über dem Budget-Eintrag.
 
 ## Folgen
 

@@ -198,27 +198,26 @@ func (s *Store) InsertInstruction(ctx context.Context, organizationID, operatorI
 	if err := lockTraeger(ctx, db, organizationID); err != nil {
 		return parentbilling.RetentionInstruction{}, err
 	}
-	if _, err := db.NewRaw(`UPDATE parent_billing.beleg_retention_instructions SET replaced_at = CURRENT_TIMESTAMP
-		WHERE organization_id = ? AND beleg_type = ? AND replaced_at IS NULL`, organizationID, input.BelegType).Exec(ctx); err != nil {
+	now := s.now()
+	if _, err := db.NewRaw(`UPDATE parent_billing.beleg_retention_instructions SET replaced_at = ?
+		WHERE organization_id = ? AND beleg_type = ? AND replaced_at IS NULL`, now, organizationID, input.BelegType).Exec(ctx); err != nil {
 		return parentbilling.RetentionInstruction{}, fmt.Errorf("parent billing postgres: replace retention instruction: %w", err)
 	}
 	row := &instructionRow{
 		OrganizationID: organizationID, BelegType: input.BelegType, TriggerEvent: input.TriggerEvent, Period: input.Period,
 		Basis: input.Basis, LegalBasis: input.LegalBasis, InstructedBy: input.InstructedBy, InstructedOn: input.InstructedOn,
 		InstructionReference: input.InstructionReference, RecordedByOperatorID: optionalOperator(operatorID),
-		Confirmed: input.StatutesNotApplicableConfirmed,
+		Confirmed: input.StatutesNotApplicableConfirmed, RecordedAt: now,
 	}
 	if input.BasisJustification != "" {
 		row.BasisJustification = &input.BasisJustification
 	}
-	insert := db.NewInsert().Model(row)
 	if row.Confirmed {
 		// The confirmation names the operator of the session and the time
-		// the database records it.
-		row.ConfirmedByOperator = optionalOperator(operatorID)
-		insert = insert.Value("confirmed_at", "CURRENT_TIMESTAMP")
+		// the instruction is recorded.
+		row.ConfirmedByOperator, row.ConfirmedAt = optionalOperator(operatorID), &now
 	}
-	if _, err := insert.Returning("id, recorded_at, confirmed_at").Exec(ctx); err != nil {
+	if _, err := db.NewInsert().Model(row).Returning("id, recorded_at, confirmed_at").Exec(ctx); err != nil {
 		return parentbilling.RetentionInstruction{}, fmt.Errorf("parent billing postgres: insert retention instruction: %w", writeError(err))
 	}
 	return row.instruction(), nil
@@ -235,7 +234,7 @@ func (s *Store) InsertSuspension(ctx context.Context, organizationID, operatorID
 	}
 	row := &suspensionRow{
 		OrganizationID: organizationID, BelegType: input.BelegType, Reason: input.Reason, Scope: input.Scope,
-		Responsible: input.Responsible, ReviewOn: input.ReviewOn, CreatedByOperatorID: optionalOperator(operatorID),
+		Responsible: input.Responsible, ReviewOn: input.ReviewOn, CreatedByOperatorID: optionalOperator(operatorID), CreatedAt: s.now(),
 	}
 	if input.BelegID > 0 {
 		row.BelegID = &input.BelegID
@@ -258,8 +257,8 @@ func (s *Store) LiftSuspension(ctx context.Context, organizationID, suspensionID
 		return err
 	}
 	result, err := db.NewRaw(`UPDATE parent_billing.beleg_retention_suspensions
-		SET lifted_at = CURRENT_TIMESTAMP, lifted_by_operator_id = ?
-		WHERE organization_id = ? AND id = ? AND lifted_at IS NULL`, optionalOperator(operatorID), organizationID, suspensionID).Exec(ctx)
+		SET lifted_at = ?, lifted_by_operator_id = ?
+		WHERE organization_id = ? AND id = ? AND lifted_at IS NULL`, s.now(), optionalOperator(operatorID), organizationID, suspensionID).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("parent billing postgres: lift retention suspension: %w", err)
 	}

@@ -21,7 +21,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
-	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -277,7 +276,7 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 			return err
 		})
 		admin(func(adminCtx context.Context) error {
-			_, err := owners.NewBelegRetention(func() calendar.Date { return today }).ApplyBelegRetention(adminCtx)
+			_, err := owners.NewBelegRetention(func() time.Time { return today.BerlinMidnight() }).ApplyBelegRetention(adminCtx)
 			return err
 		})
 	}
@@ -319,12 +318,10 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 
 	_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.beleg_retention_suspensions SET lifted_at = now() WHERE id = ?`, suspension)
 	require.NoError(t, err)
-	retain(calendar.NewDate(2031, time.January, 3))
-	assert.Equal(t, "-", f.familyNumber(t, "eva.muster@example.org"), "then the family without a document goes")
-	// The database stamps the trail entries (DEFAULT CURRENT_TIMESTAMP), so
-	// its clock dates them too (#7295, ADR 0281): written today, they outlive
-	// a retention whose day lies years ahead, and go once they are as old on
-	// the database clock.
+	// The owner's clock stamps the trail entries (#7295, ADR 0281), so the
+	// cutoff of the retention day dates them: 1 January 2028 for the run on
+	// 3 January 2031. The entries of the fixture's clock (2026) go with the
+	// numbers; one stamped in 2028 stays until the run of 2032.
 	trailEntries := func() (family, children int) {
 		require.NoError(t, f.db.NewRaw(`SELECT
 				(SELECT count(*) FROM parent_billing.family_billing_events WHERE organization_id = ?0 AND care_contract_id IS NULL),
@@ -333,14 +330,14 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 		return family, children
 	}
 	familyTrail, childTrail := trailEntries()
-	assert.Positive(t, familyTrail, "a trail entry written today is not yet as old as the retention asks")
-	assert.Positive(t, childTrail, "nor is the trail of the children's numbers")
-	for _, table := range []string{"family_billing_events", "child_debtor_number_events"} {
-		_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.`+table+` SET occurred_at = occurred_at - make_interval(years => ?)
-			WHERE organization_id = ?`, parentbilling.FamilyDebtorNumberRetentionYears+1, f.office.organization)
-		require.NoError(t, err)
-	}
+	require.Greater(t, familyTrail, 1, "the family has a trail to delete and one to keep")
+	require.Positive(t, childTrail, "and the children's numbers have a trail")
+	_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.family_billing_events SET occurred_at = ?
+		WHERE id = (SELECT max(id) FROM parent_billing.family_billing_events WHERE organization_id = ? AND care_contract_id IS NULL)`,
+		calendar.NewDate(2028, time.June, 1).BerlinMidnight(), f.office.organization)
+	require.NoError(t, err)
 	retain(calendar.NewDate(2031, time.January, 3))
+	assert.Equal(t, "-", f.familyNumber(t, "eva.muster@example.org"), "then the family without a document goes")
 	var logged []struct {
 		Type    string `bun:"beleg_type"`
 		On      string `bun:"deleted_on"`
@@ -360,8 +357,11 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 		WHERE organization_id = ?`, f.office.organization).Scan(ctx, &children))
 	assert.Zero(t, children, "the children's identities follow the same retention")
 	familyTrail, childTrail = trailEntries()
-	assert.Zero(t, familyTrail, "and its trail with it")
-	assert.Zero(t, childTrail, "and the trail of the children's numbers")
+	assert.Equal(t, 1, familyTrail, "the trail goes with the number, but an entry after the cutoff stays")
+	assert.Zero(t, childTrail, "and the trail of the children's numbers goes with them")
+	retain(calendar.NewDate(2032, time.January, 2))
+	familyTrail, _ = trailEntries()
+	assert.Zero(t, familyTrail, "the entry of 2028 goes once the cutoff passes it")
 }
 
 // A confirmation without a number tells the family nothing (#6692, data

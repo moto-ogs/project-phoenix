@@ -588,7 +588,8 @@ func carePositionRows(organizationID int64, rows []careInvoiceRow, invoices []pa
 }
 
 // MarkCareRunReleased closes a calculated run with its issue date, sums
-// and the rule it billed by.
+// and the rule it billed by. The database dates the release, as in
+// MarkRunReleased.
 func (s *Store) MarkCareRunReleased(ctx context.Context, organizationID, runID int64, issuedOn calendar.Date, count int, totalCents int64, rule string) (parentbilling.CareRun, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {

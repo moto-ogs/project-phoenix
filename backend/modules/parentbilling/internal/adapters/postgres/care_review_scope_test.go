@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,7 +39,7 @@ func TestCareReviewFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newCareScope(t, db, "Träger A")
 	other := newCareScope(t, db, "Träger B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	october := calendar.NewDate(2029, 10, 1)
 	rollback := errors.New("roll the review rows back")
 
@@ -95,7 +96,7 @@ func TestCareReviewReplaysExclusionsInWriteOrder(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	scope := newCareScope(t, db, "Träger Ausschluss Reihenfolge")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the review rows back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {
@@ -134,7 +135,7 @@ func TestCareRunExclusionsAreKeptPerInvoice(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	scope := newCareScope(t, db, "Träger Ausschluss je Rechnung")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the review rows back")
 	care := parentbilling.CareInvoiceKey{ContractID: 0, Service: parentbilling.ServiceCare}
 	meal := parentbilling.CareInvoiceKey{ContractID: 0, Service: parentbilling.ServiceMeal}

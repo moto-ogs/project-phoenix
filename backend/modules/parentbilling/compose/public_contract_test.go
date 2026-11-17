@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -125,7 +126,8 @@ func TestPublicParentBillingContractFreezesTheHolidayContribution(t *testing.T) 
 		}}},
 	}}
 	rules := compose.NewContributionRules()
-	contributions, _ := compose.NewHolidayContributions(enrollment, settingsDouble{}, func() calendar.Date { return week.AddDays(-28) })
+	contributions, _ := compose.NewHolidayContributions(enrollment, settingsDouble{}, func() calendar.Date { return week.AddDays(-28) },
+		func() time.Time { return week.AddDays(-28).BerlinMidnight() })
 	reviewer := parentbilling.HolidayReviewer{OrganizationID: organization, AccountID: account.ID}
 
 	var exemption parentbilling.ContributionRule

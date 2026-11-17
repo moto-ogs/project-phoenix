@@ -184,6 +184,7 @@ func (s *Store) InsertCareEvidence(ctx context.Context, organizationID, accountI
 		return 0, err
 	}
 	row := newCareEvidenceRow(organizationID, accountID, input)
+	row.UpdatedAt = s.now()
 	if _, err := db.NewInsert().Model(row).Returning("id").Exec(ctx); err != nil {
 		return 0, evidenceWriteError(err)
 	}
@@ -200,7 +201,7 @@ func (s *Store) UpdateCareEvidence(ctx context.Context, organizationID, accountI
 	row := newCareEvidenceRow(organizationID, accountID, input)
 	if err := db.NewUpdate().Model(row).
 		Column("kind", "rule_id", "valid_from", "valid_until", "evidence", "checked_on", "recorded_by_account_id").
-		Set("updated_at = CURRENT_TIMESTAMP").
+		Set("updated_at = ?", s.now()).
 		Where("id = ?", evidenceID).Where("organization_id = ?", organizationID).Where("care_contract_id = ?", input.ContractID).
 		Returning("care_contract_id").Scan(ctx, &row.CareContractID); err != nil {
 		if isNoRows(err) {

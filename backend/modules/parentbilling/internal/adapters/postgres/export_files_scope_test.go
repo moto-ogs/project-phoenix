@@ -7,6 +7,7 @@ import (
 	"sort"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,7 @@ func TestExportFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 	otherScope := newMandateScope(t, db, "Träger Export B")
 	ownSchool := testpkg.CreateTestSchoolInOrganization(t, db, ownScope.organization, "OGS Export A")
 	otherSchool := testpkg.CreateTestSchoolInOrganization(t, db, otherScope.organization, "OGS Export B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the exports back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
@@ -137,7 +138,7 @@ func TestExportFileNumbersStayUniqueAndGaplessUnderConcurrentDownloads(t *testin
 	db := testpkg.SetupIsolatedTestDB(t)
 	scope := newMandateScope(t, db, "Träger Dateinummern")
 	school := testpkg.CreateTestSchoolInOrganization(t, db, scope.organization, "OGS Dateinummern")
-	store := NewStore()
+	store := NewStore(time.Now)
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	var seeded debitScope
 	require.NoError(t, testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {
@@ -217,7 +218,7 @@ func TestExportFileKeepsWhatTheDownloadWrote(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	scope := newMandateScope(t, db, "Träger Protokoll")
 	school := testpkg.CreateTestSchoolInOrganization(t, db, scope.organization, "OGS Protokoll")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the protocol back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {
@@ -260,7 +261,7 @@ func TestDebitExportRepeatsAndMealHistory(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	scope := newMandateScope(t, db, "Träger Wiederholung")
 	school := testpkg.CreateTestSchoolInOrganization(t, db, scope.organization, "OGS Wiederholung")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the export history back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {
@@ -314,7 +315,7 @@ func TestExportRunContentNamesBothParentsAndThePeriodOfThePositions(t *testing.T
 	db := testpkg.SetupTestDB(t)
 	scope := newMandateScope(t, db, "Träger Sollstellung Inhalt")
 	school := testpkg.CreateTestSchoolInOrganization(t, db, scope.organization, "OGS Sollstellung Inhalt")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the content back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {
@@ -365,7 +366,7 @@ func TestHolidayInvoiceHistoryShowsTheMailOfItsCancellation(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	scope := newMandateScope(t, db, "Träger Ferienverlauf")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the holiday history back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {
