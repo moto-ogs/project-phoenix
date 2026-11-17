@@ -237,3 +237,30 @@ func expireInvitationWhileLocked(t *testing.T, db *bun.DB, table string, invitat
 	require.NoError(t, holder.Commit())
 	return <-result
 }
+
+// The test helper api.NewAuthTestModule composes the guardian mail on the
+// real clock, whatever WithAuthTestClock injects into Identity & Access:
+// binding the injected clock there changes the frozen command-effect
+// evidence of guardianInvitationDelivery.EnqueueWelcomeEmail (#7295). This
+// pins the composition the helper does keep consistent, both on the real
+// clock: the mail states the lifetime issued on the database clock. With
+// the clocks apart the root binding states it too
+// (assertGuardianInvitationOnTheDatabaseClock); a test that shifts the
+// Identity & Access clock and reads the guardian mail composes through
+// api.NewTestIdentityAccessWithConfig instead of the helper.
+func TestAuthTestModuleGuardianMailStatesTheLifetimeOnTheRealClock(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, err := api.NewAuthTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
+	require.NoError(t, err)
+	profile := testpkg.CreateTestGuardianProfile(t, db, "helper-clock-guardian")
+	creator := testpkg.CreateTestAccount(t, db, "helper-clock-guardian-creator")
+
+	invitation, err := module.GuardianInvitation.CreateGuardianInvitation(testpkg.Ctx(t), identityaccess.GuardianInvitationRequest{GuardianProfileID: profile.ID, CreatedBy: creator.ID})
+	require.NoError(t, err)
+
+	var expiryHours int
+	require.NoError(t, db.NewRaw(`SELECT (payload->>'expiry_hours')::int FROM platform.email_outbox
+		WHERE related_entity_type = ? AND related_entity_id = ?`, identityaccess.MailRelatedGuardianInvitation, invitation.ID).Scan(t.Context(), &expiryHours))
+	assert.Equal(t, int(invitationLifetime/time.Hour), expiryHours, "the helper's guardian mail counts on the clock Identity & Access issues on")
+}

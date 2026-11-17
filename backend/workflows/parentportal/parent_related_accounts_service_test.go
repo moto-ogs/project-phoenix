@@ -22,32 +22,36 @@ import (
 	parentportalcompose "github.com/moto-ogs/project-phoenix/workflows/parentportal/compose"
 )
 
-// stubInvites records the calls the parent service makes into the guardian
-// invitation service, so tests can assert on delegation (mode → RequireApproval,
-// ByParent) without standing up the full invite machinery. Embeds the interface
-// so the un-overridden methods exist but panic if unexpectedly called.
 // guardianInvitationReads reads the owner's invitations straight from the
 // table, which is what the serving root's port does through the Identity &
-// Access capability.
+// Access capability. Like Identity & Access it decides Expired on the
+// database clock, at the time of its read (ADR 0285), never on the clock of
+// the parent portal.
 type guardianInvitationReads struct{ db *bun.DB }
 
 func (r guardianInvitationReads) ListByProfile(ctx context.Context, guardianProfileID int64) ([]parentService.GuardianInvitationRecord, error) {
-	var invitations []*testpkg.GuardianInvitation
-	err := r.db.NewSelect().
-		Model(&invitations).
-		ModelTableExpr(`auth.guardian_invitations AS "guardian_invitation"`).
-		Where(`"guardian_invitation".guardian_profile_id = ?`, guardianProfileID).
-		OrderExpr(`"guardian_invitation".created_at DESC`).
-		Scan(ctx)
+	var rows []struct {
+		ID                int64      `bun:"id"`
+		GuardianProfileID int64      `bun:"guardian_profile_id"`
+		StudentID         *int64     `bun:"student_id"`
+		ExpiresAt         time.Time  `bun:"expires_at"`
+		AcceptedAt        *time.Time `bun:"accepted_at"`
+		ApprovalStatus    string     `bun:"approval_status"`
+		Expired           bool       `bun:"expired"`
+	}
+	err := r.db.NewRaw(`SELECT id, guardian_profile_id, student_id, expires_at, accepted_at, approval_status,
+			expires_at <= statement_timestamp() AS expired
+		FROM auth.guardian_invitations WHERE guardian_profile_id = ? ORDER BY created_at DESC`, guardianProfileID).
+		Scan(ctx, &rows)
 	if err != nil {
 		return nil, err
 	}
-	records := make([]parentService.GuardianInvitationRecord, 0, len(invitations))
-	for _, invitation := range invitations {
+	records := make([]parentService.GuardianInvitationRecord, 0, len(rows))
+	for _, row := range rows {
 		records = append(records, parentService.GuardianInvitationRecord{
-			ID: invitation.ID, GuardianProfileID: invitation.GuardianProfileID, StudentID: invitation.StudentID,
-			ExpiresAt: invitation.ExpiresAt, AcceptedAt: invitation.AcceptedAt, Rejected: invitation.ApprovalStatus == identityaccess.GuardianInvitationApprovalRejected,
-			Expired: !invitation.ExpiresAt.After(time.Now()),
+			ID: row.ID, GuardianProfileID: row.GuardianProfileID, StudentID: row.StudentID,
+			ExpiresAt: row.ExpiresAt, AcceptedAt: row.AcceptedAt, Rejected: row.ApprovalStatus == identityaccess.GuardianInvitationApprovalRejected,
+			Expired: row.Expired,
 		})
 	}
 	return records, nil
@@ -75,7 +79,13 @@ func (s *stubInvites) RevokeAccess(_ context.Context, revocation parentService.G
 
 func buildRelAcctService(t *testing.T, inviteMode string, canRemove bool) (*parentService.Portal, *stubInvites, *bun.DB) {
 	t.Helper()
-	db := testpkg.SetupTestDB(t)
+	return buildRelAcctServiceOn(t, testpkg.SetupTestDB(t), inviteMode, canRemove, nil)
+}
+
+// buildRelAcctServiceOn composes the parent portal over db on now (the real
+// clock when nil).
+func buildRelAcctServiceOn(t *testing.T, db *bun.DB, inviteMode string, canRemove bool, now func() time.Time) (*parentService.Portal, *stubInvites, *bun.DB) {
+	t.Helper()
 	repos := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db))
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	invites := &stubInvites{}
@@ -110,6 +120,7 @@ func buildRelAcctService(t *testing.T, inviteMode string, canRemove bool) (*pare
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
 		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
+		Now:            now,
 	})
 	return svc, invites, db
 }
@@ -183,7 +194,7 @@ func TestListRelatedAccounts_NoAccountWithOpenInviteIsPending(t *testing.T) {
 		Token:             fmt.Sprintf("pending-parent-status-test-%d", time.Now().UnixNano()),
 		GuardianProfileID: profile.ID,
 		CreatedBy:         chain.AccountID,
-		ExpiresAt:         time.Now().Add(time.Hour),
+		ExpiresAt:         testpkg.DatabaseNow(t, db).Add(time.Hour),
 		StudentID:         &studentID,
 		ApprovalStatus:    identityaccess.GuardianInvitationApprovalNotRequired,
 	}
@@ -226,7 +237,7 @@ func TestListRelatedAccounts_OpenInviteForAnotherChildIsNotPending(t *testing.T)
 		Token:             fmt.Sprintf("sibling-pending-parent-status-test-%d", time.Now().UnixNano()),
 		GuardianProfileID: profile.ID,
 		CreatedBy:         chain.AccountID,
-		ExpiresAt:         time.Now().Add(time.Hour),
+		ExpiresAt:         testpkg.DatabaseNow(t, db).Add(time.Hour),
 		StudentID:         &otherStudentID,
 		ApprovalStatus:    identityaccess.GuardianInvitationApprovalNotRequired,
 	}
@@ -244,6 +255,67 @@ func TestListRelatedAccounts_OpenInviteForAnotherChildIsNotPending(t *testing.T)
 	}
 	require.NotNil(t, found)
 	assert.Equal(t, parentService.RelatedAccountNoAccount, found.Status)
+}
+
+// The related accounts take an invitation's expiry as Identity & Access
+// delivers it, decided on the database clock that stamps it (#7295). The
+// portal's clock lies a month off in both directions: ahead, a link still
+// valid on the database keeps its contact pending; behind, a link that ran
+// out on the database does not. A portal that judged ExpiresAt on its own
+// clock again would turn both around.
+func TestListRelatedAccounts_InviteExpiryFollowsTheDatabaseClock(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name    string
+		offset  time.Duration
+		expiry  time.Duration
+		pending bool
+	}{
+		{name: "portal ahead, link valid", offset: 31 * 24 * time.Hour, expiry: 48 * time.Hour, pending: true},
+		{name: "portal behind, link expired", offset: -31 * 24 * time.Hour, expiry: -time.Hour, pending: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			db := testpkg.SetupTestDB(t)
+			databaseNow := testpkg.DatabaseNow(t, db)
+			svc, _, _ := buildRelAcctServiceOn(t, db, parentService.ParentInviteModeDirect, false, func() time.Time { return databaseNow.Add(tc.offset) })
+
+			chain := testpkg.CreateTestParentGuardianChain(t, db)
+			repos := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
+			profile := testpkg.CreateTestGuardianProfile(t, db, "clock-pending-contact")
+			link := &parentfixture.GuardianLinkFixture{
+				StudentID: chain.StudentID, GuardianProfileID: profile.ID, RelationshipType: "guardian", EmergencyPriority: 1,
+			}
+			link.TenantID = testpkg.Tenant(t)
+			require.NoError(t, repos.CreateGuardianLinkFixture(testpkg.Ctx(t), link))
+			studentID := chain.StudentID
+			invitation := &testpkg.GuardianInvitation{
+				Token:             fmt.Sprintf("clock-pending-parent-status-test-%d", time.Now().UnixNano()),
+				GuardianProfileID: profile.ID,
+				CreatedBy:         chain.AccountID,
+				ExpiresAt:         databaseNow.Add(tc.expiry),
+				StudentID:         &studentID,
+				ApprovalStatus:    identityaccess.GuardianInvitationApprovalNotRequired,
+			}
+			invitation.TenantID = testpkg.Tenant(t)
+			testpkg.InsertTestGuardianInvitation(t, db, invitation)
+
+			accounts, err := svc.ListRelatedAccounts(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)
+			require.NoError(t, err)
+			var found *parentService.RelatedAccount
+			for _, account := range accounts {
+				if account.GuardianProfileID == profile.ID {
+					found = account
+				}
+			}
+			require.NotNil(t, found)
+			expected := parentService.RelatedAccountNoAccount
+			if tc.pending {
+				expected = parentService.RelatedAccountPending
+			}
+			assert.Equal(t, expected, found.Status)
+		})
+	}
 }
 
 func TestInviteRelatedAccount_DisabledIsRejected(t *testing.T) {
@@ -680,7 +752,7 @@ func TestListRelatedAccounts_AccountWithoutAccessWithOpenInviteIsPending(t *test
 		Token:             fmt.Sprintf("no-access-pending-%d", time.Now().UnixNano()),
 		GuardianProfileID: profile.ID,
 		CreatedBy:         chain.AccountID,
-		ExpiresAt:         time.Now().Add(time.Hour),
+		ExpiresAt:         testpkg.DatabaseNow(t, db).Add(time.Hour),
 		StudentID:         &studentID,
 		ApprovalStatus:    identityaccess.GuardianInvitationApprovalPending,
 		RoleUpgrade:       true,
