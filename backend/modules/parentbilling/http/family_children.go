@@ -15,22 +15,26 @@ import (
 
 // FamilyChildrenResource serves the children of the families (#5918) at
 // /traeger/family-children: the list, the confirmation of a number for the
-// family of a contract and its removal. Every route sits behind the Träger
+// family of a contract, its removal and the numbers from a file (#7356). Every route sits behind the Träger
 // session, needs the Träger right "Abrechnung" and runs in the Träger
 // transaction of the session's Träger. A family is named by one of its
 // contracts, so no address travels in a path.
 type FamilyChildrenResource struct {
 	office         capability.FamilyChildrenOffice
+	imports        capability.FamilyChildrenImports
 	requireBilling common.Middleware
 	lists          common.ListRenderer
 }
 
 // NewFamilyChildrenResource builds the resource.
-func NewFamilyChildrenResource(office capability.FamilyChildrenOffice, requireBilling common.Middleware, lists common.ListRenderer) *FamilyChildrenResource {
+func NewFamilyChildrenResource(office interface {
+	capability.FamilyChildrenOffice
+	capability.FamilyChildrenImports
+}, requireBilling common.Middleware, lists common.ListRenderer) *FamilyChildrenResource {
 	if office == nil || requireBilling == nil || lists == nil {
 		panic("parent billing http: the family children, the right check and the list export are required")
 	}
-	return &FamilyChildrenResource{office: office, requireBilling: requireBilling, lists: lists}
+	return &FamilyChildrenResource{office: office, imports: office, requireBilling: requireBilling, lists: lists}
 }
 
 // Router returns the routes mounted at /traeger/family-children.
@@ -43,6 +47,8 @@ func (rs *FamilyChildrenResource) Router(protectedTraegerRoutes func(chi.Router,
 		billing.Get("/export", rs.exportList)
 		billing.Put("/", rs.confirm)
 		billing.Delete("/{contractId}", rs.remove)
+		billing.Post("/imports/preview", rs.previewImport)
+		billing.Post("/imports", rs.applyImport)
 	})
 	return r
 }

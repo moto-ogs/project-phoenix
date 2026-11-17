@@ -24,6 +24,7 @@ const familyChildrenPath = "/traeger/family-children"
 
 type familyChildrenSetBody struct {
 	Families []struct {
+		ContractID     int64  `json:"contract_id"`
 		RecipientEmail string `json:"recipient_email"`
 		Status         string `json:"status"`
 		Children       []struct {
@@ -114,7 +115,7 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 	assert.Equal(t, 3, *released.Invoices[0].Reductions[0].FamilyChildren, "and the number it counted")
 }
 
-// The routes check the number, the family's address and the Träger, need
+// The routes check the number and the Träger, need
 // the right "Abrechnung" and record every read and change.
 func TestFamilyChildrenAreCheckedNeedTheRightAndAreRecorded(t *testing.T) {
 	t.Parallel()
@@ -133,16 +134,9 @@ func TestFamilyChildrenAreCheckedNeedTheRightAndAreRecorded(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code, "%v: %s", body, rec.Body.String())
 		assert.Contains(t, rec.Body.String(), "parent_billing.family_children_invalid")
 	}
-	noAddress := careContract(t, f.db, f.office.organization, school, "Noah", careReductionStart, sjrServices()...)
-	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_parties SET email = '' WHERE contract_id = ?`, noAddress)
-	require.NoError(t, err)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(noAddress, 2, "2026-09-01"))
-	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
-	assert.Contains(t, rec.Body.String(), "parent_billing.family_without_address")
-
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Kinderzahl Prüfung Fremd", identityaccess.TraegerRoleBilling)
 	testpkg.OwnTraegerCareContracts(t, f.db, foreign.organization)
-	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2026-09-01"))
+	rec := traegerJSON(t, f.traeger, foreign.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2026-09-01"))
 	assert.Equal(t, http.StatusNotFound, rec.Code, "another Träger finds no family of the contract: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.family_children_not_found")
 
@@ -199,6 +193,74 @@ func TestFamilyChildrenAreCheckedNeedTheRightAndAreRecorded(t *testing.T) {
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.family_child_count_events
 		WHERE organization_id = ? AND care_contract_id = ? AND action = 'read'`, f.office.organization, mia).Scan(context.Background(), &reads))
 	assert.Equal(t, 5, reads, "two reads of the page and three downloads")
+}
+
+// Birkenfeld (#7356): an imported contract has no mail address, so it is a
+// family of its own, known by its contract. Its confirmed number of two
+// makes Mia the 2nd child without a second contract: 77,50 € − 50 % =
+// 38,75 €. Noah's family has no number: he is the 1st child and the review
+// names his contract as missing. Removing Mia's number names hers too.
+func TestFamilyChildrenOfContractsWithoutAMailAddressThroughTheRoutes(t *testing.T) {
+	t.Parallel()
+	f := newCareBillingFixture(t, "Träger Kinderzahl ohne Adresse")
+	school := f.office.schools[0]
+	mia := careContract(t, f.db, f.office.organization, school, "Mia", careReductionStart, sjrServices()...)
+	noah := careContract(t, f.db, f.office.organization, school, "Noah", careReductionStart, sjrServices()...)
+	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_parties SET email = '' WHERE contract_id IN (?, ?)`, mia, noah)
+	require.NoError(t, err)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	f.saveRule(t, careRule("sibling", "Geschwister mit Familie", []int64{school},
+		map[string]any{"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true}))
+
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2026-09-01"))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	set := decodeSchoolPortalData[familyChildrenSetBody](t, rec.Body.Bytes())
+	require.Len(t, set.Families, 2, "each contract without an address is a family of its own")
+	states := map[int64]string{}
+	for _, family := range set.Families {
+		assert.Empty(t, family.RecipientEmail)
+		states[family.ContractID] = family.Status
+	}
+	assert.Equal(t, map[int64]string{mia: "confirmed", noah: "missing"}, states)
+
+	run := f.startRun(t, careMonth)
+	type reviewBody struct {
+		careReductionRunBody
+		UncountedContracts []struct {
+			ContractID     int64  `json:"contract_id"`
+			ChildFirstName string `json:"child_first_name"`
+			Status         string `json:"status"`
+		} `json:"uncounted_contracts"`
+	}
+	review := func() (map[int64]int64, reviewBody) {
+		body := decodeSchoolPortalData[reviewBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
+			careRunPath(run.ID, ""), nil).Body.Bytes())
+		totals := map[int64]int64{}
+		for _, invoice := range body.Invoices {
+			totals[invoice.ContractID] = invoice.TotalCents
+		}
+		return totals, body
+	}
+	totals, preview := review()
+	assert.Equal(t, map[int64]int64{mia: 3875, noah: 7750}, totals, "Mia pays the sibling price, Noah the full one")
+	assert.Equal(t, 1, preview.UncountedFamilies)
+	require.Len(t, preview.UncountedContracts, 1)
+	assert.Equal(t, noah, preview.UncountedContracts[0].ContractID)
+	assert.Equal(t, "missing", preview.UncountedContracts[0].Status)
+
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, familyChildrenPath+"/"+strconv.FormatInt(mia, 10), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	totals, preview = review()
+	assert.Equal(t, map[int64]int64{mia: 7750, noah: 7750}, totals)
+	assert.Equal(t, 2, preview.UncountedFamilies)
+	lines := billingListCSV(t, f.traeger, f.office.token, familyChildrenPath+"/export")
+	assert.Contains(t, strings.Join(lines, "\n"), "Vertrag Nr. "+strconv.FormatInt(mia, 10), "the file names a family without an address by its contract")
+
+	var trail []string
+	require.NoError(t, f.db.NewRaw(`SELECT action FROM parent_billing.family_child_count_events
+		WHERE organization_id = ? AND care_contract_id = ? AND action <> 'read' ORDER BY id`, f.office.organization, mia).Scan(context.Background(), &trail))
+	assert.Equal(t, []string{"confirm", "delete"}, trail, "every change stands in the trail of the contract")
 }
 
 // The page reads the same statements for any number of families.

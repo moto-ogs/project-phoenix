@@ -27,7 +27,7 @@ var (
 		capability.FamilyChildrenMissing: "Keine Angabe", capability.FamilyChildrenStated: "Neu von Eltern",
 		capability.FamilyChildrenChanged: "Eltern melden Änderung", capability.FamilyChildrenConfirmed: "Bestätigt",
 		capability.FamilyChildrenExpiring: "Läuft bald ab", capability.FamilyChildrenExpired: "Abgelaufen",
-		capability.FamilyChildrenUpcoming: "Gilt später",
+		capability.FamilyChildrenUpcoming: "Gilt später", capability.FamilyChildrenDiffering: "Verschiedene Angaben",
 	}
 	mandateKindLabels = map[string]string{capability.MandateRecurring: "Dauermandat", capability.MandateOneOff: "Einzelmandat"}
 )
@@ -184,8 +184,14 @@ func (rs *FamilyChildrenResource) exportList(w http.ResponseWriter, r *http.Requ
 			stated, confirmed = optionalCount(count.StatedChildren), optionalCount(count.ConfirmedChildren)
 			valid = validityText(count.ValidFrom, count.ValidUntil)
 		}
+		// A family without an address is known by its contract (ADR 0232
+		// point 7); the key is no address.
+		address := family.RecipientEmail
+		if address == "" {
+			address = "Vertrag Nr. " + strconv.FormatInt(family.ContractID, 10)
+		}
 		table.Rows = append(table.Rows, []string{
-			family.RecipientLastName, family.RecipientFirstName, family.RecipientEmail, strings.Join(children, ", "),
+			family.RecipientLastName, family.RecipientFirstName, address, strings.Join(children, ", "),
 			stated, confirmed, valid, familyChildrenStates[family.Status],
 		})
 	}

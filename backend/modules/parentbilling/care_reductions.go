@@ -192,6 +192,8 @@ type CareReductions interface {
 	SaveCareEvidence(ctx context.Context, reviewer HolidayReviewer, evidenceID int64, input CareEvidenceInput) (CareEvidenceSet, error)
 	DeleteCareEvidence(ctx context.Context, reviewer HolidayReviewer, evidenceID int64) (CareEvidenceSet, error)
 	CareCostShares
-	// The Abrechnung checks the children of the families (#5918).
+	// The Abrechnung checks the children of the families (#5918) and adds
+	// their numbers from a file (#7356).
 	FamilyChildrenOffice
+	FamilyChildrenImports
 }

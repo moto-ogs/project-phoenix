@@ -518,6 +518,93 @@ func TestCareMonthRuleChainTable(t *testing.T) {
 			totals:    map[int64]int64{contractMia: 8000},
 		},
 		{
+			// Birkenfeld (#7356): an imported contract without a mail
+			// address is a family of its own. Its confirmed number of two
+			// makes Mia the 2nd child without a second contract: 40,00 €.
+			name: "a contract without a mail address takes its family's number",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, "", "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+			},
+			rules:    familySiblingRule(true),
+			families: confirmedFamily(parentbilling.ContractFamilyKey("", contractMia), 2, "2026-09-01", nil),
+			totals:   map[int64]int64{contractMia: 4000},
+			lines:    map[int64][]reductionOf{contractMia: {{parentbilling.RuleSibling, -4000, 2}}},
+		},
+		{
+			// The same contract without a number is the 1st child, and
+			// the review names its family as uncounted.
+			name: "a contract without a mail address and without a number is uncounted",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, "", "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+			},
+			rules:     familySiblingRule(true),
+			uncounted: 1,
+			totals:    map[int64]int64{contractMia: 8000},
+		},
+		{
+			// The number was confirmed while the contract had no mail
+			// address; the family has one now. The number goes with it.
+			name: "the number of a contract goes with the family's mail address",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+			},
+			rules:    familySiblingRule(true),
+			families: confirmedFamily(parentbilling.ContractFamilyKey("", contractMia), 2, "2026-09-01", nil),
+			totals:   map[int64]int64{contractMia: 4000},
+			lines:    map[int64][]reductionOf{contractMia: {{parentbilling.RuleSibling, -4000, 2}}},
+		},
+		{
+			// Two contracts became one family and brought different
+			// numbers: none counts by itself, the office decides. The rule
+			// counts the two contracts, Noah is the 2nd: 30,00 €.
+			name: "different numbers of one family's contracts count none",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolIspringen, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1630}},
+			},
+			rules: familySiblingRule(true),
+			families: func(t *testing.T) []parentbilling.FamilyChildCount {
+				return append(confirmedFamily(parentbilling.ContractFamilyKey("", contractMia), 3, "2026-09-01", nil)(t),
+					confirmedFamily(parentbilling.ContractFamilyKey("", contractNoah), 4, "2026-09-01", nil)(t)...)
+			},
+			uncounted: 1,
+			totals:    map[int64]int64{contractMia: 8000, contractNoah: 3000},
+			lines:     map[int64][]reductionOf{contractNoah: {{parentbilling.RuleSibling, -3000, 2}}},
+		},
+		{
+			// The same numbers of both contracts are the family's number:
+			// Mia is the 2nd, Noah the 3rd of three.
+			name: "the same number of one family's contracts counts",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolIspringen, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1630}},
+			},
+			rules: familySiblingRule(true),
+			families: func(t *testing.T) []parentbilling.FamilyChildCount {
+				return append(confirmedFamily(parentbilling.ContractFamilyKey("", contractMia), 3, "2026-09-01", nil)(t),
+					confirmedFamily(parentbilling.ContractFamilyKey("", contractNoah), 3, "2026-09-01", nil)(t)...)
+			},
+			totals: map[int64]int64{contractMia: 4000, contractNoah: 3000},
+			lines: map[int64][]reductionOf{
+				contractMia:  {{parentbilling.RuleSibling, -4000, 2}},
+				contractNoah: {{parentbilling.RuleSibling, -3000, 3}},
+			},
+		},
+		{
+			// The number confirmed for the family's address is its own and
+			// goes before one a contract brought along.
+			name: "the family's own number goes before a contract's",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+			},
+			rules: familySiblingRule(true),
+			families: func(t *testing.T) []parentbilling.FamilyChildCount {
+				return append(confirmedFamily(parentbilling.ContractFamilyKey("", contractMia), 3, "2026-09-01", nil)(t),
+					confirmedFamily(familyEva, 1, "2026-09-01", nil)(t)...)
+			},
+			totals: map[int64]int64{contractMia: 8000},
+		},
+		{
 			// Another family's number never reaches Eva's family.
 			name: "another family's number does not count",
 			children: []careChainChild{

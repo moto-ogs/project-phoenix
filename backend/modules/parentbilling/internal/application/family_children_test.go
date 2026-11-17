@@ -293,3 +293,119 @@ func TestFamilyChildrenStatusSeesAConfirmationInBetween(t *testing.T) {
 		}}
 	assert.Equal(t, parentbilling.FamilyChildrenUpcoming, familyChildrenStatus(&count, calendar.NewDate(2026, 11, 10)))
 }
+
+// The review names the contracts of the families a sibling rule ranked
+// without a number, each with the reason (#7356): a contract without a mail
+// address is a family too, and only the run's schools show.
+func TestReviewNamesTheContractsWithoutAConfirmedNumber(t *testing.T) {
+	t.Parallel()
+	january := calendar.NewDate(2027, 1, 1)
+	ended := calendar.NewDate(2026, 12, 31)
+	contractFamily := parentbilling.ContractFamilyKey("", 7)
+	counts := []parentbilling.FamilyChildCount{{FamilyEmail: "eva@example.org", ConfirmedChildren: ptr(3),
+		ValidFrom: ptr(calendar.NewDate(2026, 9, 1)), ValidUntil: &ended}}
+	uncounted := map[string][]int64{contractFamily: {1}, "eva@example.org": {1}, "other@example.org": {2}}
+	month := careMonth{
+		invoices: []parentbilling.CareInvoice{
+			{ContractID: 7, SchoolID: 1, SchoolName: "Birkenfeld", ChildFirstName: "Mia", ChildLastName: "Meier", FamilyEmail: contractFamily},
+			{ContractID: 8, SchoolID: 1, SchoolName: "Birkenfeld", ChildFirstName: "Noah", ChildLastName: "Beispiel", FamilyEmail: "eva@example.org"},
+			{ContractID: 9, SchoolID: 2, SchoolName: "Ispringen", ChildFirstName: "Lea", ChildLastName: "Other", FamilyEmail: "other@example.org"},
+			{ContractID: 10, SchoolID: 1, SchoolName: "Birkenfeld", ChildFirstName: "Tom", ChildLastName: "Counted", FamilyEmail: "tom@example.org"},
+		},
+		uncountedSchools: uncounted,
+		uncountedStates:  uncountedStates(uncounted, counts, nil, january),
+	}
+	review := narrowMonth(month, []int64{1}, nil)
+	assert.Equal(t, 2, review.uncounted)
+	assert.Equal(t, []parentbilling.CareUncountedContract{
+		{ContractID: 7, SchoolName: "Birkenfeld", ChildFirstName: "Mia", ChildLastName: "Meier", Status: parentbilling.FamilyChildrenMissing},
+		{ContractID: 8, SchoolName: "Birkenfeld", ChildFirstName: "Noah", ChildLastName: "Beispiel", Status: parentbilling.FamilyChildrenExpired},
+	}, review.uncountedContracts)
+}
+
+// A contract whose invoice goes to no mail address is a family of its own
+// in the office's list (#7356): named by its contract, with its number and
+// the same states as every family.
+func TestFamilyChildrenListsContractsWithoutAMailAddress(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2027, 1, 10)
+	from := calendar.NewDate(2026, 9, 1)
+	ended := calendar.NewDate(2026, 12, 31)
+	versions := []parentbilling.CareContractVersion{
+		{ContractID: 1, SchoolName: "Birkenfeld", ChildFirstName: "Mia", ChildLastName: "Zeller"},
+		{ContractID: 2, SchoolName: "Birkenfeld", ChildFirstName: "Noah", ChildLastName: "Zeller"},
+		{ContractID: 3, SchoolName: "Birkenfeld", ChildFirstName: "Lea", ChildLastName: "Adam"},
+		{ContractID: 4, SchoolName: "Birkenfeld", ChildFirstName: "Tom", ChildLastName: "Mail"},
+	}
+	recipients := map[int64]parentbilling.CareRecipient{
+		1: {FirstName: "Ute", LastName: "Zeller"}, 2: {FirstName: "Ute", LastName: "Zeller"},
+		4: {FirstName: "Eva", LastName: "Mail", Email: "Eva@Example.org"},
+	}
+	counts := []parentbilling.FamilyChildCount{
+		{ID: 11, ContractID: 1, FamilyEmail: parentbilling.ContractFamilyKey("", 1), ConfirmedChildren: ptr(2), ValidFrom: &from},
+		{ID: 12, ContractID: 3, FamilyEmail: parentbilling.ContractFamilyKey("", 3), ConfirmedChildren: ptr(3), ValidFrom: &from, ValidUntil: &ended},
+	}
+	families := groupFamilies(versions, recipients, counts, today)
+	require.Len(t, families, 4, "siblings without a mail address stay apart until an address joins them")
+	type row struct {
+		contract int64
+		child    string
+		status   string
+		children *int
+	}
+	got := make([]row, len(families))
+	for i, family := range families {
+		got[i] = row{contract: family.ContractID, child: family.Children[0].ChildFirstName, status: family.Status}
+		if family.Count != nil {
+			got[i].children = family.Count.ConfirmedChildren
+		}
+		assert.Len(t, family.Children, 1)
+	}
+	assert.Equal(t, []row{
+		{3, "Lea", parentbilling.FamilyChildrenExpired, ptr(3)},
+		{4, "Tom", parentbilling.FamilyChildrenMissing, nil},
+		{1, "Mia", parentbilling.FamilyChildrenConfirmed, ptr(2)},
+		{2, "Noah", parentbilling.FamilyChildrenMissing, nil},
+	}, got, "a family without a recipient sorts by its child")
+	assert.Empty(t, families[2].RecipientEmail)
+}
+
+// A number confirmed for a contract goes with the mail address its family
+// got since (#7356). Contracts that bring different numbers into one family
+// show none and ask the office; the family's own confirmation settles it.
+func TestFamilyChildrenNumberGoesWithTheFamily(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2027, 1, 10)
+	from := calendar.NewDate(2026, 9, 1)
+	versions := []parentbilling.CareContractVersion{
+		{ContractID: 1, ChildFirstName: "Mia", ChildLastName: "Zeller"},
+		{ContractID: 2, ChildFirstName: "Noah", ChildLastName: "Zeller"},
+	}
+	recipients := map[int64]parentbilling.CareRecipient{
+		1: {LastName: "Zeller", Email: "ute@example.org"}, 2: {LastName: "Zeller", Email: "ute@example.org"},
+	}
+	brought := func(contract int64, children int) parentbilling.FamilyChildCount {
+		return parentbilling.FamilyChildCount{ID: contract, ContractID: contract, FamilyEmail: parentbilling.ContractFamilyKey("", contract),
+			ConfirmedChildren: ptr(children), ValidFrom: &from}
+	}
+
+	families := groupFamilies(versions, recipients, []parentbilling.FamilyChildCount{brought(1, 3)}, today)
+	require.Len(t, families, 1)
+	assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status)
+	assert.Equal(t, ptr(3), families[0].Count.ConfirmedChildren)
+
+	families = groupFamilies(versions, recipients, []parentbilling.FamilyChildCount{brought(1, 3), brought(2, 3)}, today)
+	assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status, "the same number twice is the family's number")
+
+	differing := []parentbilling.FamilyChildCount{brought(1, 3), brought(2, 4)}
+	families = groupFamilies(versions, recipients, differing, today)
+	require.Len(t, families, 1)
+	assert.Equal(t, parentbilling.FamilyChildrenDiffering, families[0].Status)
+	assert.True(t, families[0].Differing)
+	assert.Nil(t, families[0].Count, "no number counts by itself")
+
+	own := parentbilling.FamilyChildCount{ID: 9, ContractID: 2, FamilyEmail: "ute@example.org", ConfirmedChildren: ptr(4), ValidFrom: &from}
+	families = groupFamilies(versions, recipients, append(differing, own), today)
+	assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status)
+	assert.Equal(t, int64(9), families[0].Count.ID, "the office's confirmation for the family decides")
+}
