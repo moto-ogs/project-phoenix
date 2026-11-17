@@ -18,7 +18,7 @@ func TestStudentConsentChangeRepository_CreateAll(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
-	repo := NewStudentConsentChangeRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewStudentConsentChangeRepository(NewRuntime(db, auditTestTenantID), time.Now)
 	ctx := testpkg.Ctx(t)
 	first := testpkg.CreateTestStudent(t, db, "Einwilligung", "Eins", "1a")
 	second := testpkg.CreateTestStudent(t, db, "Einwilligung", "Zwei", "1a")

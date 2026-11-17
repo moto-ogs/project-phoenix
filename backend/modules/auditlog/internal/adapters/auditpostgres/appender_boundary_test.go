@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/auditlog/classlist"
+	"github.com/moto-ogs/project-phoenix/modules/auditlog/consents"
 	audit "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -33,6 +35,16 @@ func TestAuditAppenderStampsEventsWithoutTheirTime(t *testing.T) {
 	enrollment, restoration := &audit.EnrollmentDeletion{}, &audit.EnrollmentRestoration{}
 	stamps := map[any]*time.Time{auth: &auth.CreatedAt, deletion: &deletion.DeletedAt, field: &field.CreatedAt, session: &session.CreatedAt,
 		access: &access.AccessedAt, student: &student.DeletedAt, enrollment: &enrollment.DeletedAt, restoration: &restoration.RestoredAt}
+	file, substitution := &audit.FileEvent{}, &audit.SubstitutionChange{}
+	classRow, classEvent := &audit.ClassListEntryChange{}, &classlist.ClassListEntryChange{}
+	staff, number, bank, timeDeletion := &audit.StaffMasterDataChange{}, &audit.PersonnelNumberChange{}, &audit.GuardianFinancialChange{}, &audit.TimeTrackingDeletion{}
+	guardian, consentRow, consentEvent, correction := &audit.GuardianChange{}, &audit.StudentConsentChange{}, &consents.ConsentChange{}, &audit.AttendanceCorrection{}
+	for event, stamp := range map[any]*time.Time{file: &file.CreatedAt, substitution: &substitution.CreatedAt, classRow: &classRow.OccurredAt,
+		classEvent: &classEvent.OccurredAt, staff: &staff.OccurredAt, number: &number.OccurredAt, bank: &bank.OccurredAt,
+		timeDeletion: &timeDeletion.OccurredAt, guardian: &guardian.ChangedAt, consentRow: &consentRow.CreatedAt,
+		consentEvent: &consentEvent.ChangedAt, correction: &correction.CreatedAt} {
+		stamps[event] = stamp
+	}
 	for event, stamp := range stamps {
 		require.True(t, stamp.IsZero(), "%T is built without its time", event)
 		require.NoError(t, appender.stampRecordedAt(event))

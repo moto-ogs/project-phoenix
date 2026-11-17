@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/parentfixture"
 
@@ -51,7 +52,7 @@ func TestRequestSharingIsNamedAndFamilyProtectionDoesNotReviveOldShares(t *testi
 
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:     parentMemberships(t, db),
-		GuardianChanges: owners.ParentGuardianChanges(),
+		GuardianChanges: owners.ParentGuardianChanges(time.Now),
 		DeparturePolicy: owners.ParentDeparturePolicy(),
 		GuardianPolicy:  owners.NewParentGuardianPolicy(),
 		Fingerprints:    owners.SecurityFingerprints{},

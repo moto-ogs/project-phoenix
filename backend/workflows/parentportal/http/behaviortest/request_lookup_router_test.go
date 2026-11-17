@@ -44,7 +44,7 @@ func newRequestLookupRouter(t *testing.T, db *bun.DB) (http.Handler, careplan.Ca
 	carePlan := repos.CarePlan()
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:     parentMemberships(t, db),
-		GuardianChanges: owners.ParentGuardianChanges(),
+		GuardianChanges: owners.ParentGuardianChanges(time.Now),
 		DeparturePolicy: owners.ParentDeparturePolicy(),
 		GuardianPolicy:  owners.NewParentGuardianPolicy(),
 		Fingerprints:    owners.SecurityFingerprints{},

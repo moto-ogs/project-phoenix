@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 )
@@ -12,14 +13,15 @@ const studentConsentChangeTableExpr = `audit.student_consent_changes AS "student
 
 type studentConsentChangeRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
-func NewStudentConsentChangeRepository(runtime Runtime) auditModels.StudentConsentChangeRepository {
-	return &studentConsentChangeRepository{runtime: requireRuntime(runtime)}
+func NewStudentConsentChangeRepository(runtime Runtime, now func() time.Time) auditModels.StudentConsentChangeRepository {
+	return &studentConsentChangeRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 func (r *studentConsentChangeRepository) Create(ctx context.Context, entry *auditModels.StudentConsentChange) error {
-	return NewAppender(r.runtime, nil).Append(ctx, entry)
+	return NewAppender(r.runtime, r.now).Append(ctx, entry)
 }
 
 // CreateAll appends every entry in one statement, all or nothing.
@@ -28,7 +30,7 @@ func (r *studentConsentChangeRepository) CreateAll(ctx context.Context, entries 
 	if err != nil || len(events) == 0 {
 		return err
 	}
-	return NewAppender(r.runtime, nil).AppendAll(ctx, events)
+	return NewAppender(r.runtime, r.now).AppendAll(ctx, events)
 }
 
 // studentConsentChangeEvents rejects a nil entry before any row is written.

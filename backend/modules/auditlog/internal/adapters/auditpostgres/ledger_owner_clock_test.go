@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	auditService "github.com/moto-ogs/project-phoenix/modules/auditlog/internal/application"
 	audit "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -59,4 +60,42 @@ func TestLedgersWithAGoCutoffStampOnTheAuditClock(t *testing.T) {
 	assert.True(t, now.Equal(stored(`SELECT deleted_at FROM audit.student_deletions WHERE id = ?`, student.ID)), "student deletion")
 	assert.True(t, now.Equal(stored(`SELECT deleted_at FROM audit.enrollment_deletions WHERE id = ?`, enrollment.ID)), "enrollment deletion")
 	assert.True(t, now.Equal(stored(`SELECT restored_at FROM audit.enrollment_restorations WHERE id = ?`, restoration.ID)), "enrollment restoration")
+}
+
+// TestFileEventRetentionComparesOnTheAuditClock pins a protocol the nightly
+// retention deletes with a cutoff of the Audit clock (ADR 0281): a file
+// event the producer records without its time carries the instant of the
+// Audit clock, so the following-year cutoff of that clock keeps it and
+// deletes only an event of two years before. The Audit clock stands years
+// after the database clock; a column default would date the fresh event
+// before the cutoff and the retention would delete it.
+func TestFileEventRetentionComparesOnTheAuditClock(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	now := time.Date(2031, time.March, 30, 1, 30, 0, 0, calendar.Berlin)
+	clock := func() time.Time { return now }
+	event := func() *audit.FileEvent {
+		return &audit.FileEvent{Action: audit.FileEventFolderCreated, ActorName: "Verwaltung", Detail: "Ordner Elternbriefe"}
+	}
+	fresh, aged := event(), event()
+	aged.CreatedAt, aged.UpdatedAt = now.AddDate(-2, 0, 0), now.AddDate(-2, 0, 0)
+
+	var deleted int
+	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), db, tenantID, func(ctx context.Context, tx bun.Tx) error {
+		runtime := func(context.Context) (bun.IDB, int64) { return tx, tenantID }
+		files := NewFileEventRepository(runtime, clock)
+		require.NoError(t, files.Create(ctx, fresh))
+		require.NoError(t, files.Create(ctx, aged))
+		command, err := auditService.NewCommand(NewAppender(runtime, clock), func(auditService.AppendObservation) {}, clock)
+		require.NoError(t, err)
+		deleted, _, err = command.DeleteExpiredProtocol(ctx, audit.DeletionTypeFileEventRetention)
+		return err
+	}))
+
+	var remaining []int64
+	require.NoError(t, db.NewRaw(`SELECT id FROM audit.file_events WHERE tenant_id = ? ORDER BY id`, tenantID).Scan(context.Background(), &remaining))
+	assert.Equal(t, 1, deleted, "only the event of two years before is past the cutoff")
+	assert.Equal(t, []int64{fresh.ID}, remaining, "the fresh event stays")
 }

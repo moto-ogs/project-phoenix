@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -75,7 +76,7 @@ func buildAbsenceApprovalServices(t *testing.T, sickRequiresApproval, excusedReq
 		Memberships:         parentMemberships(t, db),
 		StudentGuardianRepo: guardStudentGuardians(t, db),
 		GuardianProfileRepo: guardProfiles(t, db),
-		GuardianChanges:     owners.ParentGuardianChanges(),
+		GuardianChanges:     owners.ParentGuardianChanges(time.Now),
 		DeparturePolicy:     owners.ParentDeparturePolicy(),
 		GuardianPolicy:      owners.NewParentGuardianPolicy(),
 		Fingerprints:        owners.SecurityFingerprints{},

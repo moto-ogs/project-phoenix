@@ -114,7 +114,8 @@ func traegerPortalRoutes(t *testing.T, db *bun.DB, identity TraegerPortalIdentit
 
 // traegerPortalRoutesOn is traegerPortalRoutes whose day-bound services read
 // today, the day clock the serving root binds to its real clock, and whose
-// instant-bound services read now. Most callers keep the real instant clock:
+// instant-bound services read now, the Audit persistence included, as the
+// serving root binds its clock to both. Most callers keep the real instant clock:
 // the contract and billing routes compare their stamps with PostgreSQL's
 // now(), as before #7104.
 func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date, now func() time.Time) http.Handler {
@@ -122,7 +123,7 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
-	audit, err := auditCompose.NewTenantPersistence(db, time.Now)
+	audit, err := auditCompose.NewTenantPersistence(db, now)
 	require.NoError(t, err)
 	membership, err := owners.ComposeSchoolMembership(database, time.Now)
 	require.NoError(t, err)
