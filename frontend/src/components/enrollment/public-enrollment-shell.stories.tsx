@@ -57,8 +57,6 @@ export const StepsDone: Story = {
 };
 
 export const LocaleSwitcher: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   render: () => <PublicEnrollmentLocaleSwitcher />,
 };
 
@@ -75,8 +73,6 @@ export const InfoCard: Story = {
 };
 
 export const Composition: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   render: () => (
     <PublicEnrollmentPageShell withInlineSwitcher>
       <div className="mb-6 flex items-center justify-between gap-4">

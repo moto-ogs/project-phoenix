@@ -46,7 +46,11 @@ func (d *Decisions) replanApprovedChildClass(ctx context.Context, run *approvedC
 	if planned == nil {
 		return false, nil
 	}
-	if !calendar.Date(planned.On).After(d.todayDate()) {
+	// A plan that still owes a child without an OGS place (#4803) its place,
+	// held by the Kinderkontingent or not yet applied by the tick, is
+	// re-derived like a future one: the tick then writes the edited class
+	// together with the place.
+	if !calendar.Date(planned.On).After(d.todayDate()) && !run.student.WithoutCarePlace {
 		// The switch day has come but the tick has not run yet: the edit
 		// writes the class now, which makes the plan obsolete.
 		return false, d.planClassSwitch(ctx, run.child.ID, nil)

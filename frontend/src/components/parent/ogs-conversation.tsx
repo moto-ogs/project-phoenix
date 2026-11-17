@@ -116,8 +116,14 @@ export function OgsConversation({
   audience: audienceProp,
   onAudienceChange,
   tourAnchor,
+  headingLevel = 1,
 }: {
   readonly studentId: string;
+  /**
+   * 2 when the page above already carries the h1 (the messages page of a
+   * family with one child): a page has exactly one h1 (#7112).
+   */
+  readonly headingLevel?: 1 | 2;
   readonly showBack?: boolean;
   readonly showChild?: boolean;
   /**
@@ -136,6 +142,7 @@ export function OgsConversation({
 }) {
   const t = useTranslations("parentOgsMessaging");
   const tm = useCareTermTranslations("parentMessages");
+  const Heading = headingLevel === 1 ? "h1" : "h2";
   const careTerm = useCareFacilityTerm();
   const locale = useLocale();
   // A child has a team conversation and, once begun, one with the leadership
@@ -493,13 +500,13 @@ export function OgsConversation({
           ) : (
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-base leading-tight font-semibold tracking-tight break-words text-gray-900 sm:text-lg">
+                <Heading className="text-base leading-tight font-semibold tracking-tight break-words text-gray-900 sm:text-lg">
                   {thread?.school_name
                     ? tm(leadershipView ? "ogsLeadership" : "ogsTeam", {
                         school: thread.school_name,
                       })
                     : counterpart}
-                </h1>
+                </Heading>
               </div>
               {showChild && thread?.student_name ? (
                 // oxlint-disable-next-line ui-kit/no-hand-rolled-notice -- Namensschild des Kindes im Gesprächskopf, kein Hinweis

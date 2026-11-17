@@ -59,8 +59,6 @@ export const ChildrenAndPeople: Story = {
 };
 
 export const DivModeDayHeader: Story = {
-  // axe meldet hier noch aria-required-parent; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     as: "div",
     position: "header",

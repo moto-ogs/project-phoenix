@@ -141,13 +141,15 @@ export function StaffNewsButton() {
           variant="ghost"
           size="icon"
           onClick={toggle}
-          aria-label={`${STAFF_NEWS_TITLE} (${count})`}
           aria-expanded={isOpen}
           aria-haspopup="dialog"
           aria-controls={isOpen ? panelId : undefined}
           tooltip="Zeigt neue Notizen vom Team und geänderte Abholzeiten."
           className="relative"
         >
+          {/* Name from content: the visible count stays part of it (WCAG
+              2.5.3, #7112). */}
+          <span className="sr-only">{STAFF_NEWS_TITLE}</span>
           <Newspaper className="h-5 w-5" aria-hidden="true" />
           <NotificationBadge
             count={count}

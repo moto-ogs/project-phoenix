@@ -398,9 +398,10 @@ describe("RemindersBell — Zähler", () => {
       name: "5 Benachrichtigungen",
     });
     expect(bell).toBeInTheDocument();
-    expect(
-      within(bell).getByLabelText("5 Benachrichtigungen"),
-    ).toHaveTextContent("5");
+    // The badge shows the count; the rest of its sentence is hidden text.
+    expect(within(bell).getByText("5")).toHaveTextContent(
+      "5 Benachrichtigungen",
+    );
   });
 
   it("does not count reminders while the school has them switched off", async () => {

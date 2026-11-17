@@ -3,6 +3,8 @@
 import { CONTROL_HEIGHT_CLASS, iconOnlyMarker } from "../control-geometry";
 import { Z_LAYER } from "../overlay-styles";
 import {
+  Fragment,
+  isValidElement,
   useEffect,
   useId,
   useRef,
@@ -37,7 +39,11 @@ export type { OverflowMenuEntry, OverflowMenuItem } from "./types";
 interface OverflowMenuProps {
   /** Menu items to render. Empty array → renders nothing. */
   readonly items: readonly OverflowMenuEntry[];
-  /** Accessible label for the trigger button. */
+  /**
+   * Name of the menu, and of the kebab trigger (default „Weitere Aktionen“).
+   * A trigger with `triggerContent` is named by that content; this name
+   * follows it as hidden text (WCAG 2.5.3, #7112).
+   */
   readonly ariaLabel?: string;
   /**
    * Rolle und Auswahlzustand des Auslösers. Nötig für den gebündelten
@@ -124,7 +130,7 @@ const TEXT_TRIGGER_TOOLTIP = "Öffnet die Auswahl, noch passiert nichts.";
  */
 export function OverflowMenu({
   items,
-  ariaLabel = "Weitere Aktionen",
+  ariaLabel: ariaLabelProp,
   triggerRole,
   triggerAriaSelected,
   triggerTabIndex,
@@ -421,6 +427,22 @@ export function OverflowMenu({
 
   if (items.length === 0) return null;
 
+  const ariaLabel = ariaLabelProp ?? "Weitere Aktionen";
+  // A trigger with visible content is named by it (WCAG 2.5.3, #7112). A
+  // given name that does not already contain a plain-text label follows it
+  // as hidden text instead of replacing it.
+  const textContent = plainText(triggerContent);
+  // No text to show (an icon): the given name is the whole name.
+  const labelKeepsText =
+    textContent === "" ||
+    ariaLabel
+      .toLocaleLowerCase("de-DE")
+      .includes(textContent.toLocaleLowerCase("de-DE"));
+  const triggerAriaLabel =
+    triggerContent == null || labelKeepsText ? ariaLabel : undefined;
+  const hiddenTriggerName =
+    triggerContent != null && !labelKeepsText ? ariaLabelProp : undefined;
+
   const blocked = disabled && Boolean(disabledReason);
   const triggerHint = blocked
     ? disabledReason
@@ -442,7 +464,7 @@ export function OverflowMenu({
       role={triggerRole}
       aria-selected={triggerAriaSelected}
       tabIndex={triggerTabIndex}
-      aria-label={ariaLabel}
+      aria-label={triggerAriaLabel}
       aria-haspopup="menu"
       aria-expanded={isOpen}
       aria-controls={isOpen ? menuId : undefined}
@@ -456,6 +478,9 @@ export function OverflowMenu({
       }
     >
       {triggerContent ?? <MoreVertical className={iconSizeClass} aria-hidden />}
+      {hiddenTriggerName ? (
+        <span className="sr-only">{`, ${hiddenTriggerName}`}</span>
+      ) : null}
     </button>
   );
 
@@ -707,4 +732,23 @@ export function OverflowMenu({
         : null}
     </div>
   );
+}
+
+/**
+ * The text a trigger shows, from strings and the children of its elements;
+ * empty when a component draws it (a name from a hook).
+ */
+function plainText(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node).trim();
+  }
+  if (Array.isArray(node)) {
+    return node.map(plainText).filter(Boolean).join(" ");
+  }
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    return typeof node.type === "string" || node.type === Fragment
+      ? plainText(node.props.children)
+      : "";
+  }
+  return "";
 }

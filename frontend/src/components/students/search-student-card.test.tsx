@@ -69,8 +69,12 @@ describe("SearchStudentCard", () => {
   it("renders the child with class, group and the two time rows", () => {
     render(renderCard({}));
 
+    // Named by what the card shows, name first; the target follows hidden
+    // (#7112).
     expect(
-      screen.getByLabelText("Max Mustermann - Details öffnen"),
+      screen.getByRole("button", {
+        name: /^Max Mustermann .*, Details öffnen$/,
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText("1a")).toBeInTheDocument();
     expect(screen.getByText("Gruppe: Bärengruppe")).toBeInTheDocument();

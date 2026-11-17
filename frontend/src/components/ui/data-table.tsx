@@ -8,7 +8,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent,
   type ReactNode,
 } from "react";
 
@@ -164,9 +163,10 @@ interface DataTableProps<T> {
    * no button role). Without it every row opens.
    */
   canClickRow?: (row: T) => boolean;
-  // Rows with their own buttons or menus must not also become an ARIA button:
-  // nested interactive elements have ambiguous keyboard and screen-reader
-  // semantics. Their explicit action is the keyboard path to the detail view.
+  // Rows with their own buttons or menus must not also become an ARIA button
+  // in the phone list: nested interactive elements have ambiguous keyboard
+  // and screen-reader semantics. The desktop table reaches every opening row
+  // through a button in its first cell instead (#7112).
   rowHasInteractiveControls?: boolean;
   emptyState?: ReactNode;
   headerActions?: ReactNode;
@@ -276,6 +276,10 @@ const bodyRowClass = "border-b border-gray-50 last:border-0";
 const PINNED_COLUMN_KEY = "actions";
 // The row shown beside the table: the tint plus a dark bar on its leading
 // edge, so it stays apart from a row under the pointer.
+// The keyboard reaches a row's action through a button in its first cell
+// (#7112); while that button has keyboard focus, the whole row shows it.
+const ROW_ACTION_FOCUS_CLASS =
+  "has-[[data-row-action]:focus-visible]:outline-2 has-[[data-row-action]:focus-visible]:-outline-offset-2 has-[[data-row-action]:focus-visible]:outline-gray-600";
 const ACTIVE_ROW_CLASS =
   "bg-gray-50 shadow-[inset_3px_0_0_0_var(--color-gray-900)]";
 // While columns scroll beneath it, the pinned cell casts a shadow onto them
@@ -965,16 +969,13 @@ export function DataTable<T>({
         : columns,
     [columns, hiddenColumns],
   );
-  // Selection checkboxes are controls inside the row, so the row itself must
-  // not also become an ARIA button (see rowHasInteractiveControls).
-  const rowControls = rowHasInteractiveControls || selection !== undefined;
   const stackedDetail =
     stackedDetailKey == null
       ? undefined
       : columns.find((col) => col.key === stackedDetailKey);
   const cellCount = shownColumns.length + (selection ? 1 : 0);
   const selectAllId = useId();
-  const keyboardClickable = clickable && !rowControls;
+  const rowActionId = useId();
   // Only one of the two layouts belongs in the document (#6220). Both run the
   // same cell renderers, so a named control would otherwise exist twice:
   // duplicate ids break its label, and the API error path focuses the first
@@ -1305,8 +1306,6 @@ export function DataTable<T>({
                       const tinted = selected || active || expanded;
                       const rowClickable =
                         clickable && (canClickRow?.(row) ?? true);
-                      const rowKeyboardClickable =
-                        keyboardClickable && rowClickable;
                       const interactive = rowClickable || canExpand;
                       const tone = tinted ? null : (rowTone?.(row) ?? null);
                       const rowClasses = [
@@ -1321,45 +1320,40 @@ export function DataTable<T>({
                       ]
                         .filter(Boolean)
                         .join(" ");
-                      const handleRowKey =
-                        canExpand || rowKeyboardClickable
-                          ? (event: KeyboardEvent<HTMLTableRowElement>) => {
-                              if (event.target !== event.currentTarget) return;
-                              if (event.key !== "Enter" && event.key !== " ") {
-                                return;
-                              }
-                              event.preventDefault();
-                              if (canExpand) toggle();
-                              else onRowClick?.(row);
-                            }
-                          : undefined;
                       const summary = summaryRow?.(row);
+                      // A row that opens (not expands) gets its keyboard path
+                      // as a button in the first cell, named by that cell.
+                      const opensRow =
+                        !canExpand && onRowClick !== undefined && rowClickable;
+                      const rowActionLabelId = `${rowActionId}-${String(rowKey)}`;
+                      const rowAction = opensRow ? (
+                        <button
+                          type="button"
+                          data-row-action
+                          aria-labelledby={rowActionLabelId}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onRowClick(row);
+                          }}
+                          className="sr-only"
+                        />
+                      ) : null;
                       return (
                         <Fragment key={rowKey}>
+                          {/* The row stays a table row: a click anywhere on
+                              it still acts, the keyboard reaches the same
+                              action through a real button in its first cell
+                              (#7112). A row is no button, and aria-expanded
+                              belongs on the control that expands. */}
                           <tr
                             aria-current={active ? "true" : undefined}
-                            aria-expanded={canExpand ? expanded : undefined}
-                            aria-label={
-                              canExpand
-                                ? expandable.rowLabel(row, expanded)
-                                : undefined
-                            }
-                            className={rowClasses}
+                            className={`${rowClasses} ${ROW_ACTION_FOCUS_CLASS}`}
                             onClick={
                               canExpand
                                 ? toggle
                                 : onRowClick && rowClickable
                                   ? () => onRowClick(row)
                                   : undefined
-                            }
-                            onKeyDown={handleRowKey}
-                            tabIndex={
-                              canExpand || rowKeyboardClickable ? 0 : undefined
-                            }
-                            role={
-                              !canExpand && rowKeyboardClickable
-                                ? "button"
-                                : undefined
                             }
                           >
                             {selection ? (
@@ -1404,17 +1398,47 @@ export function DataTable<T>({
                                   {expandable && colIndex === 0 ? (
                                     <div className="flex items-center gap-2">
                                       {canExpand ? (
-                                        <ChevronRight
-                                          aria-hidden="true"
-                                          className={`h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform ${expanded ? "rotate-90" : ""}`}
-                                        />
+                                        <button
+                                          type="button"
+                                          data-row-action
+                                          aria-expanded={expanded}
+                                          aria-label={expandable.rowLabel(
+                                            row,
+                                            expanded,
+                                          )}
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            toggle();
+                                          }}
+                                          className="-m-1 inline-flex shrink-0 rounded p-1 focus:outline-none"
+                                        >
+                                          <ChevronRight
+                                            aria-hidden="true"
+                                            className={`h-3.5 w-3.5 text-gray-500 transition-transform ${expanded ? "rotate-90" : ""}`}
+                                          />
+                                        </button>
                                       ) : (
                                         <span className="h-3.5 w-3.5 shrink-0" />
                                       )}
-                                      <div className="min-w-0">
+                                      {opensRow ? rowAction : null}
+                                      <div
+                                        className="min-w-0"
+                                        id={
+                                          opensRow
+                                            ? rowActionLabelId
+                                            : undefined
+                                        }
+                                      >
                                         {col.render(row)}
                                       </div>
                                     </div>
+                                  ) : colIndex === 0 && opensRow ? (
+                                    <>
+                                      {rowAction}
+                                      <div id={rowActionLabelId}>
+                                        {col.render(row)}
+                                      </div>
+                                    </>
                                   ) : (
                                     col.render(row)
                                   )}

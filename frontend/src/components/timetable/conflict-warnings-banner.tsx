@@ -253,18 +253,15 @@ export function ConflictWarningsBanner({
             size="compact"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
-            aria-label={
-              expanded
-                ? "Konfliktdetails verbergen"
-                : "Konfliktdetails anzeigen"
-            }
             tooltip={
               expanded
                 ? "Klappt die Liste der Konflikte wieder zu."
                 : "Zeigt, wer wann doppelt eingeplant ist."
             }
           >
-            Details
+            {/* Visible word first (WCAG 2.5.3, #7112); open or closed is
+                aria-expanded. */}
+            Details<span className="sr-only"> zu den Konflikten</span>
             <ChevronDown
               className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`}
               aria-hidden

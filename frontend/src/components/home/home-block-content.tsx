@@ -288,7 +288,6 @@ function ActiveGroupsCard({ data }: { readonly data: HomeBlockData }) {
             <ListRow
               key={`${group.type}-${group.name}`}
               href={data.tenantPath("/ogs-groups")}
-              aria-label={`${group.name}, ${GROUP_STATUS_LABEL[group.status] ?? UNKNOWN_STATUS_LABEL}: Betreuung öffnen`}
             >
               <p className="min-w-0 flex-1 truncate text-sm">
                 <span className="font-medium text-gray-900">{group.name}</span>
@@ -316,6 +315,9 @@ function ActiveGroupsCard({ data }: { readonly data: HomeBlockData }) {
                 size="lg"
                 decorative
               />
+              {/* Named by its visible text first (WCAG 2.5.3, #7112); the
+                  status the dot shows and the target follow hidden. */}
+              <span className="sr-only">{`, ${GROUP_STATUS_LABEL[group.status] ?? UNKNOWN_STATUS_LABEL}: Betreuung öffnen`}</span>
             </ListRow>
           ))}
           <HomeMoreRow
