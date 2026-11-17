@@ -313,10 +313,11 @@ export function HolidayRegistrationSummary({
       {accountQuestion}
 
       {/* The security check sits in the row of the send button: one step,
-          no gap below the contribution. */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          no gap below the contribution. Its failure notice wraps onto a line
+          of its own above the buttons. */}
+      <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-center md:justify-between">
         {securityCheck}
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end md:ml-auto">
           <Button
             type="button"
             variant="outline"

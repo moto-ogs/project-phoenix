@@ -91,7 +91,16 @@
   "captchaHelp": {
     "hint": "Die Sicherheitsprüfung lädt nicht oder bleibt stehen?",
     "restart": "Prüfung neu starten",
-    "restartTooltip": "Lädt die Prüfung neu, Ihre Angaben bleiben erhalten."
+    "restartTooltip": "Lädt die Prüfung neu, Ihre Angaben bleiben erhalten.",
+    "failedTitle": "Die Sicherheitsprüfung lädt nicht",
+    "failedText": "Oft blockiert ein Werbeblocker die Prüfung. So geht es weiter:",
+    "failedStepBlocker": "Schalten Sie den Werbeblocker für diese Seite aus.",
+    "failedStepRestart": "Wählen Sie „Prüfung neu starten“.",
+    "failedStepBrowser": "Klappt es nicht? Kopieren Sie den Link und öffnen Sie ihn in einem anderen Browser, zum Beispiel Chrome. Dort tragen Sie Ihre Angaben neu ein.",
+    "copyLink": "Link kopieren",
+    "copyLinkTooltip": "Kopiert die Adresse dieser Seite für einen anderen Browser.",
+    "linkCopied": "Link kopiert",
+    "copyFailed": "Kopieren geht hier nicht. Das ist der Link:"
   },
   "toSummary": "Weiter zur Zusammenfassung",
   "checkFields": "Bitte prüfen Sie die markierten Felder.",
