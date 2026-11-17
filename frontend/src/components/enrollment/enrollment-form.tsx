@@ -48,6 +48,7 @@ import {
   type FormField,
   type PublicFormSchema,
   type PublicLegalBlock,
+  type PublicLegalTexts,
 } from "~/lib/enrollment-form-schema-api";
 import {
   EmailContactNotice,
@@ -85,7 +86,7 @@ import { ToggleChip } from "~/components/ui/toggle-chip";
 import { createLogger } from "~/lib/logger";
 import { formatDate } from "~/lib/date-helpers";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import {
   FormErrorAlert,
   LoadErrorAlert,
@@ -194,6 +195,12 @@ interface PropsBase {
    */
   readonly previewOfferings?: PreviewCareOfferings;
   /**
+   * STAFF PREVIEW ONLY. The school's legal texts, read by the preview page
+   * through the shared cache; shown when the template has no blocks of its
+   * own.
+   */
+  readonly previewLegalTexts?: PublicLegalTexts;
+  /**
    * Replaces the public submit, e.g. with the parent-scope endpoint. Returns
    * `null` when it stopped before sending and shows the reason itself.
    */
@@ -257,6 +264,7 @@ export function EnrollmentForm({
   previewMode = false,
   previewSchema,
   previewOfferings,
+  previewLegalTexts,
   submitter,
   skipCaptcha,
   localizedCopy = false,
@@ -299,7 +307,6 @@ export function EnrollmentForm({
           },
     [localizedCopy, tr],
   );
-  const loadErrorObject = tr("errorObject");
   // A template preview without phase offerings shows every weekday; with the
   // staff page's offerings (#6044) the care days follow them as for parents.
   const templatePreview =
@@ -338,8 +345,21 @@ export function EnrollmentForm({
     previewMode,
   });
 
+  // Preview: no phase, so the template, the legal texts and the offerings
+  // come from the staff page (#6044); nothing loads here.
+  const previewConfig = useMemo(
+    () =>
+      prefetchedData === undefined
+        ? previewFormConfig(
+            previewSchema ?? null,
+            resolvePreviewLegalTexts(previewSchema ?? null, previewLegalTexts),
+            previewOfferings,
+          )
+        : undefined,
+    [prefetchedData, previewSchema, previewLegalTexts, previewOfferings],
+  );
   const [initial] = useState(() => {
-    const startConfig = formConfig(prefetchedData);
+    const startConfig = previewConfig ?? formConfig(prefetchedData);
     return {
       config: startConfig,
       draft: initialFormDraft(startConfig, initialDraft),
@@ -399,7 +419,6 @@ export function EnrollmentForm({
   const [availabilityNotices, setAvailabilityNotices] = useState<
     Record<string, boolean>
   >({});
-  const [loading, setLoading] = useState(prefetchedData === undefined);
   const [submitting, setSubmitting] = useState(false);
   const [childOfferingErrors, setChildOfferingErrors] = useState<
     Record<number, boolean>
@@ -415,12 +434,6 @@ export function EnrollmentForm({
   const formRef = useRef<HTMLFormElement>(null);
   const formError = useApiFormError(formRef);
   const { fieldError } = formError;
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const [loadAttempt, setLoadAttempt] = useState(0);
 
   const [guardian, setGuardian] = useState<GuardianDraft>(
     initial.draft.guardian,
@@ -489,9 +502,7 @@ export function EnrollmentForm({
     if (appliedPrefetch.current === prefetchedData) return;
     appliedPrefetch.current = prefetchedData;
     applyConfig(formConfig(prefetchedData));
-    clearLoadError();
-    setLoading(false);
-  }, [prefetchedData, applyConfig, clearLoadError]);
+  }, [prefetchedData, applyConfig]);
 
   // A new edit draft replaces the values; the first one seeded the state.
   const appliedDraft = useRef(initialDraft);
@@ -506,52 +517,14 @@ export function EnrollmentForm({
     setCustomData(draft.customData);
   }, [initialDraft, config]);
 
-  // Preview: no phase, so only the legal texts load; the offerings come from
-  // the staff page (#6044) or stay empty. A real load failure stops the form
-  // instead of collecting consent without the texts.
-  // oxlint-disable-next-line swr/no-effect-load -- template preview only: seeds the draft state of a form that sessionless public pages share; a shared-cache read belongs in the preview page, which would hand the legal texts in
+  // A changed preview after mount (the first one seeded the state above).
+  const appliedPreview = useRef(previewConfig);
   useEffect(() => {
-    if (prefetchedData !== undefined) return;
-    let cancelled = false;
-    setLoading(true);
-    clearLoadError();
-    const schemaToPreview = previewSchema ?? null;
-    resolvePreviewLegalTexts(tenantSlug, schemaToPreview)
-      .then((legalTexts) => {
-        if (!cancelled) {
-          applyConfig(
-            previewFormConfig(schemaToPreview, legalTexts, previewOfferings),
-          );
-        }
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("enrollment_form_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          code: (err as Partial<ApiError> | undefined)?.code,
-        });
-        void showLoadError(err, {
-          object: loadErrorObject,
-          retry: () => setLoadAttempt((n) => n + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    tenantSlug,
-    prefetchedData,
-    previewSchema,
-    previewOfferings,
-    loadErrorObject,
-    loadAttempt,
-    applyConfig,
-    clearLoadError,
-    showLoadError,
-  ]);
+    if (previewConfig === undefined) return;
+    if (appliedPreview.current === previewConfig) return;
+    appliedPreview.current = previewConfig;
+    applyConfig(previewConfig);
+  }, [previewConfig, applyConfig]);
 
   const captchaRef = useRef<TurnstileInstance>(undefined);
   const [captchaToken, setCaptchaToken] = useState("");
@@ -1017,20 +990,6 @@ export function EnrollmentForm({
       setSubmitting(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="moto-content-surface rounded-xl border p-5 text-sm font-medium text-gray-600 sm:p-6">
-        {tr("loading")}
-      </div>
-    );
-  }
-
-  // Without schema, offerings and legal texts the form cannot be filled in
-  // correctly, so a failed load replaces it instead of showing it empty.
-  if (loadError) {
-    return <LoadErrorAlert error={loadError} />;
-  }
 
   return (
     <EnrollmentUploadScope target={uploadTarget}>
