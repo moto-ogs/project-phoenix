@@ -574,6 +574,8 @@ interface DisplayedError {
   requestIdLabel?: string;
   /** The registered code, for the link to where it is fixed (#7092). */
   code?: string;
+  /** The failed action was activated from an open dialog or slide-over. */
+  fixInNewTab?: boolean;
 }
 
 /**
@@ -669,6 +671,11 @@ function useApiErrorCore(
     async (error: unknown, options: ApiErrorDisplayOptions) => {
       const version = showVersion.current + 1;
       showVersion.current = version;
+      // The hook may belong to the component that renders the dialog, above
+      // its provider. Capture the action's actual rendered context before the
+      // asynchronous catalog lookup, while its focused trigger is still in it.
+      const fixInNewTab =
+        document.activeElement?.closest('[role="dialog"]') !== null;
       const locale = normalizeLocale(document.documentElement.lang);
       // The presenter remains a separate chunk. The mounted error path starts
       // its load ahead of time, and concurrent failures share that request.
@@ -754,6 +761,7 @@ function useApiErrorCore(
           requestId: presentation.requestId,
           requestIdLabel: labels.requestId,
           code: error instanceof ApiError ? error.code : undefined,
+          fixInNewTab,
         },
         locale,
       );
@@ -822,7 +830,11 @@ export function useApiErrorDisplay(formRef?: RefObject<HTMLElement | null>) {
             ? {
                 label: fix.label,
                 tooltip: fix.tooltip,
-                onClick: () => openFixTarget(fix.href, inOverlay),
+                onClick: () =>
+                  openFixTarget(
+                    fix.href,
+                    inOverlay || shown.fixInNewTab === true,
+                  ),
               }
             : undefined),
         requestId: shown.requestId,

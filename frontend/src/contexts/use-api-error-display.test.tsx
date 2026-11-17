@@ -7,8 +7,8 @@ import {
 } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ErrorFixProvider } from "~/components/ui/error-fix-slot";
-import { InOverlayContext } from "~/components/ui/in-overlay";
 import { Input } from "~/components/ui/input";
+import { Modal } from "~/components/ui/modal";
 import {
   loginUrl,
   ToastProvider,
@@ -38,22 +38,27 @@ describe("useApiErrorDisplay", () => {
   // #7092: a refusal fixed elsewhere offers the way there in the toast.
   it("leads a refusal from a dialog to where it is fixed, in a new tab", async () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
+    const assign = vi
+      .spyOn(window.location, "assign")
+      .mockImplementation(() => undefined);
     function TestAction() {
       const display = useApiErrorDisplay();
       return (
-        <button
-          type="button"
-          onClick={() =>
-            display.show(
-              new ApiError("not ready", 409, {
-                code: "parent_billing.datev_not_ready",
-              }),
-              { object: "Die DATEV-Datei" },
-            )
-          }
-        >
-          Herunterladen
-        </button>
+        <Modal isOpen onClose={vi.fn()} title="DATEV-Export">
+          <button
+            type="button"
+            onClick={() =>
+              display.show(
+                new ApiError("not ready", 409, {
+                  code: "parent_billing.datev_not_ready",
+                }),
+                { object: "Die DATEV-Datei" },
+              )
+            }
+          >
+            Herunterladen
+          </button>
+        </Modal>
       );
     }
     render(
@@ -69,14 +74,14 @@ describe("useApiErrorDisplay", () => {
               : null
           }
         >
-          <InOverlayContext.Provider value>
-            <TestAction />
-          </InOverlayContext.Provider>
+          <TestAction />
         </ErrorFixProvider>
       </ToastProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Herunterladen" }));
+    const download = screen.getByRole("button", { name: "Herunterladen" });
+    download.focus();
+    fireEvent.click(download);
     fireEvent.click(
       await screen.findByRole("button", { name: "DATEV-Werte eintragen" }),
     );
@@ -86,6 +91,8 @@ describe("useApiErrorDisplay", () => {
       "_blank",
       "noopener,noreferrer",
     );
+    expect(assign).not.toHaveBeenCalled();
+    assign.mockRestore();
     open.mockRestore();
   });
 
