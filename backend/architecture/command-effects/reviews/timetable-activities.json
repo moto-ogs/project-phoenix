@@ -33134,7 +33134,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33154,7 +33154,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByIDForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33175,7 +33175,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33195,7 +33195,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByIDsForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33216,7 +33216,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindReadScopeByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34477,7 +34477,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities.SupervisorDirectory.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.TimetableSupervisorDirectory.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.TimetableSupervisorDirectory.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34717,7 +34717,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34737,7 +34737,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByIDForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34758,7 +34758,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34778,7 +34778,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByIDsForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -34799,7 +34799,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindReadScopeByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -37664,7 +37664,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ConflictStaffDirectory.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -37784,7 +37784,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CorrectionPeople.FindByAccountID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.timetableCorrectionPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.timetableCorrectionPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -38352,7 +38352,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindByID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -38402,7 +38402,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -38452,7 +38452,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40084,7 +40084,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindByID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40134,7 +40134,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40184,7 +40184,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPerson",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40254,7 +40254,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40314,7 +40314,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40334,7 +40334,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStudents.FindByIDsForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40355,7 +40355,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStudents.FindReadScopeByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40638,7 +40638,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.FindByAccountID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40658,7 +40658,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.FindByAccountID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40678,7 +40678,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40698,7 +40698,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40758,7 +40758,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffByPersonID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffByPersonID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffByPersonID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40818,7 +40818,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40898,7 +40898,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -41091,7 +41091,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"

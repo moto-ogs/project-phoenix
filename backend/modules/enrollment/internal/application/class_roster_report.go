@@ -211,9 +211,10 @@ func (s *Reports) classRosterStudents(ctx context.Context, filters enrollmentNat
 	} else {
 		students = studentsWithClass(students)
 	}
-	students, withoutPlace := splitWithoutCarePlace(students)
 	today := s.today()
-	students, err = s.filterClassParticipation(ctx, students, classRosterCareDate(filters, today), today)
+	day := classRosterCareDate(filters, today)
+	students, withoutPlace := splitWithoutCarePlace(students, day)
+	students, err = s.filterClassParticipation(ctx, students, day, today)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -224,19 +225,33 @@ func (s *Reports) classRosterStudents(ctx context.Context, filters enrollmentNat
 }
 
 // splitWithoutCarePlace separates the children without an OGS place
-// (#4803) from the care candidates; graduates among them drop out.
-func splitWithoutCarePlace(students []*RosterStudent) ([]*RosterStudent, []*RosterStudent) {
+// (#4803) from the care candidates. Of those it keeps the ones in the class
+// on day: from their start to their enrollment end; a graduate only with a
+// dated end.
+func splitWithoutCarePlace(students []*RosterStudent, day calendar.Date) ([]*RosterStudent, []*RosterStudent) {
 	care := make([]*RosterStudent, 0, len(students))
 	var withoutPlace []*RosterStudent
 	for _, student := range students {
 		switch {
 		case !student.WithoutCarePlace:
 			care = append(care, student)
-		case !student.Alumnus:
+		case student.inClassOn(day):
 			withoutPlace = append(withoutPlace, student)
 		}
 	}
 	return care, withoutPlace
+}
+
+// inClassOn reports whether a child without an OGS place belongs to its
+// class on day.
+func (s *RosterStudent) inClassOn(day calendar.Date) bool {
+	if s.Alumnus && s.MemberUntil == nil {
+		return false
+	}
+	if !s.MemberFrom.IsZero() && day.Before(s.MemberFrom) {
+		return false
+	}
+	return s.MemberUntil == nil || !day.After(*s.MemberUntil)
 }
 
 func studentsInClass(students []*RosterStudent, schoolClass string) []*RosterStudent {

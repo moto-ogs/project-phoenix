@@ -65,6 +65,7 @@ func withClassDayAbsenceList(
 			for _, row := range rows {
 				children = append(children, classday.AbsenceListChild{
 					StudentID: row.StudentID, FirstName: row.FirstName, LastName: row.LastName, SchoolMemberOnly: row.SchoolMemberOnly,
+					SchoolMemberFrom: row.SchoolMemberFrom, SchoolMemberUntil: row.SchoolMemberUntil,
 				})
 			}
 			return children, nil

@@ -3432,7 +3432,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.PhaseResponseRoster.ListRunningStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRoster; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRoster; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Leaves out children without an OGS place, whose families no Anmeldephase asks (ADR 0282).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRoster",
       "target_owner": "people-directory"
@@ -3442,7 +3442,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.PhaseResponseRoster.ListRunningStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRoster; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRoster; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Leaves out children without an OGS place, whose families no Anmeldephase asks (ADR 0282).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRoster",
       "target_owner": "people-directory"
@@ -3452,7 +3452,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.PhaseResponseRoster.ListRunningStudents",
-      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory.StudentRosterQuery.ListStudentRoster. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
+      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory.StudentRosterQuery.ListStudentRoster. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. Leaves out children without an OGS place, whose families no Anmeldephase asks (ADR 0282).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRosterQuery.ListStudentRoster",
       "target_owner": "people-directory"

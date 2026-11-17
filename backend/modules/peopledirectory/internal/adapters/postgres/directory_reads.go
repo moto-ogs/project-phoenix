@@ -154,7 +154,12 @@ func (s *studentDirectoryReads) ListNamesByClass(ctx context.Context, schoolClas
 	rows := []directory.StudentName{}
 	query := withStudentTenant(s.studentRows(db, scope).
 		ColumnExpr(`"student".id AS student_id, "person".first_name, "person".last_name`).
-		ColumnExpr(`("student".without_care_place AND "student".status <> ?) AS school_member_only`, directory.StudentStatusAlumnus).
+		// A child without an OGS place (#4803) belongs to the class from its
+		// enrollment start, or the Berlin day it was created, to its
+		// enrollment end; a graduate only with a dated end.
+		ColumnExpr(`("student".without_care_place AND ("student".status <> ? OR "student".enrolled_until IS NOT NULL)) AS school_member_only`, directory.StudentStatusAlumnus).
+		ColumnExpr(`CASE WHEN "student".without_care_place THEN COALESCE("student".enrolled_from, ("student".created_at AT TIME ZONE 'Europe/Berlin')::date) END AS school_member_from`).
+		ColumnExpr(`CASE WHEN "student".without_care_place THEN "student".enrolled_until END AS school_member_until`).
 		Join(`JOIN users.persons AS "person" ON "person".tenant_id = "student".tenant_id AND "person".id = "student".person_id`).
 		Where(`LOWER(TRIM("student".school_class)) = ?`, strings.ToLower(strings.TrimSpace(schoolClass))).
 		Where(`"person".deleted_at IS NULL`), scope).

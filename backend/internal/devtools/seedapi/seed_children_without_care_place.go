@@ -9,8 +9,11 @@ import (
 // place on every dev machine (#4803, ADR 0282): two class list entries, then
 // the moto team's switch, which converts them, then one child created
 // directly. It runs after the children of the school exist, so the entries
-// share a real class.
+// join a class of the demo school.
 type seedChildrenWithoutCarePlaceStep struct{}
+
+// seedClassWithoutCarePlace is a class every demo profile seeds.
+const seedClassWithoutCarePlace = "Klasse 1a"
 
 func (seedChildrenWithoutCarePlaceStep) Name() string {
 	return "Seeding children without an OGS place"
@@ -20,10 +23,7 @@ func (seedChildrenWithoutCarePlaceStep) Run(_ context.Context, rt *Runtime) erro
 	if rt == nil || rt.Client == nil || rt.Bootstrap == nil {
 		return fmt.Errorf("children without an OGS place: prerequisites not available")
 	}
-	class, err := seedFirstSchoolClass(rt)
-	if err != nil {
-		return err
-	}
+	const class = seedClassWithoutCarePlace
 	for _, name := range [][2]string{{"Lea", "Lang"}, {"Mats", "Möller"}} {
 		if _, err := rt.Client.PostWithAuth(rt.TenantAuth, "/api/class-list-entries", map[string]any{
 			"first_name": name[0], "last_name": name[1], "school_class": class,
@@ -42,24 +42,4 @@ func (seedChildrenWithoutCarePlaceStep) Run(_ context.Context, rt *Runtime) erro
 	}
 	fmt.Printf("  Kinder ohne OGS-Platz: 3 in Klasse %s\n", class)
 	return nil
-}
-
-// seedFirstSchoolClass is the class of the first child of the school.
-func seedFirstSchoolClass(rt *Runtime) (string, error) {
-	raw, err := rt.Client.GetWithAuth(rt.TenantAuth, "/api/students?page_size=1")
-	if err != nil {
-		return "", fmt.Errorf("children without an OGS place: read a class: %w", err)
-	}
-	var payload struct {
-		Data []struct {
-			SchoolClass string `json:"school_class"`
-		} `json:"data"`
-	}
-	if err := parseJSON(raw, &payload); err != nil {
-		return "", fmt.Errorf("children without an OGS place: parse a class: %w", err)
-	}
-	if len(payload.Data) == 0 || payload.Data[0].SchoolClass == "" {
-		return "", fmt.Errorf("children without an OGS place: the school has no child with a class")
-	}
-	return payload.Data[0].SchoolClass, nil
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 var (
@@ -62,9 +63,12 @@ type StudentName struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	// SchoolMemberOnly is set by the class read for a child without an OGS
-	// place (#4803) that has not graduated: a child of the class every day,
-	// whatever the care participation says. Not on the wire.
-	SchoolMemberOnly bool `json:"-"`
+	// place (#4803): a child of the class from SchoolMemberFrom to
+	// SchoolMemberUntil (nil: no end), whatever the care participation says.
+	// A graduate counts only with a dated end. Not on the wire.
+	SchoolMemberOnly  bool           `json:"-"`
+	SchoolMemberFrom  *calendar.Date `json:"-"`
+	SchoolMemberUntil *calendar.Date `json:"-"`
 }
 
 func (s Student) IsAlumnus() bool { return s.Status == StudentStatusAlumnus }

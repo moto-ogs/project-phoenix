@@ -81,6 +81,13 @@ Deshalb erreichen sie Familien ohne OGS-Platz nicht. Ein zweiter Weg für Eltern
 
 - Neue OGS-Leser müssen das Merkmal beachten. Die Teilnahmeregel von Care Plan
   ist der Standardweg dafür.
+- Wer ein Kind in ein OGS-Angebot schreibt, prüft das Merkmal selbst: Eine
+  AG-Anmeldung lehnt ein solches Kind ab, und die Antwortübersicht einer
+  Anmeldephase fragt seine Familie nicht.
+- Ein Kind ohne OGS-Platz gehört zur Klasse ab dem Beginn seiner Anmeldung,
+  sonst ab dem Tag seiner Anlage, bis zum Ende seiner Anmeldung. Klassenliste
+  und Fehlzeitenliste zeigen und zählen es nur in dieser Zeit. Vormittagsmarken,
+  die ein umgewandelter Klassenlisteneintrag mitbringt, zählen auch davor.
 - Im Glossar stehen die Begriffe „Kind ohne OGS-Platz“ und „Klassenlisteneintrag“
   getrennt.
 - Löschfristen: Für ein Kind ohne OGS-Platz gelten die Fristen eines

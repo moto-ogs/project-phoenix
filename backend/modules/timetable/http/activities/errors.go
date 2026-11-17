@@ -38,6 +38,7 @@ var errorRules = []common.ErrorRule{
 	{Target: activityContract.ErrNotEnrolled, Render: common.ErrorNotFound},
 	{Target: activityContract.ErrStudentIsAlumnus, Render: common.ErrorInvalidRequest},
 	{Target: activityContract.ErrStudentCareEnded, Render: common.ErrorInvalidRequest},
+	{Target: activityContract.ErrStudentWithoutCarePlace, Render: common.ErrorInvalidRequest},
 	{Target: activityContract.ErrSystemActivityProtected, Render: systemActivityForbidden},
 	{Target: activityContract.ErrSystemCategoryProtected, Render: common.ErrorForbidden},
 	{Target: activityContract.ErrSystemCategoryNameReserved, Render: common.ErrorConflict},
