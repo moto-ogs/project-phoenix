@@ -229,6 +229,9 @@ func rejectAlumniFrom(locked map[int64]*timetable.OperationStudent, studentIDs [
 		if student.CareEndedOn(today) {
 			return activityContract.ErrStudentCareEnded
 		}
+		if student.WithoutCarePlace {
+			return activityContract.ErrStudentWithoutCarePlace
+		}
 	}
 	return nil
 }

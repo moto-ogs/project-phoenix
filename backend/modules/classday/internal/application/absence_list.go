@@ -203,9 +203,10 @@ func (a absenceList) children(ctx context.Context, schoolClass string, from, unt
 	return children, participation, nil
 }
 
-// withSchoolMembersOnly counts a child without an OGS place (#4803) on
-// every requested day: it never takes part in OGS care, yet it belongs to
-// the class and its absences go into the Klassenbuch.
+// withSchoolMembersOnly counts a child without an OGS place (#4803) on the
+// requested days it belongs to the class: it never takes part in OGS care,
+// yet its absences go into the Klassenbuch. count adds the earlier days a
+// converted class list entry brought marks for.
 func withSchoolMembersOnly(participation map[calendar.Date]map[int64]bool, children []classday.AbsenceListChild, from, until calendar.Date) map[calendar.Date]map[int64]bool {
 	if participation == nil {
 		participation = map[calendar.Date]map[int64]bool{}
@@ -214,7 +215,8 @@ func withSchoolMembersOnly(participation map[calendar.Date]map[int64]bool, child
 		if !child.SchoolMemberOnly {
 			continue
 		}
-		for day := from; !day.After(until); day = day.AddDays(1) {
+		first, last := schoolMemberDays(child, from, until)
+		for day := first; !day.After(last); day = day.AddDays(1) {
 			if participation[day] == nil {
 				participation[day] = map[int64]bool{}
 			}
@@ -222,6 +224,28 @@ func withSchoolMembersOnly(participation map[calendar.Date]map[int64]bool, child
 		}
 	}
 	return participation
+}
+
+// schoolMemberDays bounds the requested period by the class membership of a
+// child without an OGS place.
+func schoolMemberDays(child classday.AbsenceListChild, from, until calendar.Date) (calendar.Date, calendar.Date) {
+	if child.SchoolMemberFrom != nil && child.SchoolMemberFrom.After(from) {
+		from = *child.SchoolMemberFrom
+	}
+	if child.SchoolMemberUntil != nil && child.SchoolMemberUntil.Before(until) {
+		until = *child.SchoolMemberUntil
+	}
+	return from, until
+}
+
+// recordedBeforeMembership is a day before a child without an OGS place
+// was created that carries a mark or status: its class list entry's
+// morning attendance moved to it with the conversion (ADR 0283).
+func recordedBeforeMembership(child classday.AbsenceListChild, day calendar.Date, recorded bool) bool {
+	if !child.SchoolMemberOnly || !recorded || child.SchoolMemberFrom == nil || !day.Before(*child.SchoolMemberFrom) {
+		return false
+	}
+	return child.SchoolMemberUntil == nil || !day.After(*child.SchoolMemberUntil)
 }
 
 // count applies the retained window and each child's dated participation.
@@ -239,7 +263,9 @@ func (a absenceList) count(ctx context.Context, report *classday.AbsenceListRepo
 		childID := children[i].StudentID
 		childSchoolDays := make(map[calendar.Date]bool)
 		for day := from; !day.After(until); day = day.AddDays(1) {
-			if !participation[day][childID] {
+			_, recorded := days[childID][day]
+			takesPart := participation[day][childID] || recordedBeforeMembership(children[i], day, recorded)
+			if !takesPart {
 				delete(days[childID], day)
 			} else if schoolDays[day] {
 				childSchoolDays[day] = true

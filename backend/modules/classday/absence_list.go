@@ -95,9 +95,13 @@ type AbsenceListChild struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	// SchoolMemberOnly marks a child without an OGS place (#4803): it
-	// belongs to the class on every counted day without taking part in OGS
-	// care. Not on the wire.
-	SchoolMemberOnly bool `json:"-"`
+	// belongs to the class from SchoolMemberFrom to SchoolMemberUntil (nil:
+	// open) without taking part in OGS care, and on any earlier day with a
+	// morning mark or status (a converted class list entry brings its marks
+	// along). Not on the wire.
+	SchoolMemberOnly  bool           `json:"-"`
+	SchoolMemberFrom  *calendar.Date `json:"-"`
+	SchoolMemberUntil *calendar.Date `json:"-"`
 	AbsenceListCounts
 }
 

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 
@@ -285,4 +287,34 @@ func TestStudentLookupOmitsPurgedChildren(t *testing.T) {
 	assert.True(t, states[graduate.ID], "this is the one read whose whole purpose is to see graduates")
 	assert.False(t, states[active.ID])
 	assert.NotContains(t, states, missingID)
+}
+
+// TestStudentNamesByClassBoundChildrenWithoutCarePlace hands the absence
+// list the class membership of a child without an OGS place (#4803 review):
+// its enrollment start and end; a graduate only with a dated end.
+func TestStudentNamesByClassBoundChildrenWithoutCarePlace(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module := buildStudentOwnersModule(t, db)
+	const class = "3w"
+	from, until := calendar.Date("2026-08-03"), calendar.Date("2026-12-18")
+	child := testpkg.CreateTestStudent(t, db, "Ohne", "Platz", class)
+	testpkg.SetStudentLifecycle(t, db, child.ID, "active", &from, &until)
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, child.ID)
+	graduate := testpkg.CreateTestStudent(t, db, "Ehemals", "Ohne", class)
+	testpkg.SetStudentLifecycle(t, db, graduate.ID, "alumnus", &from, nil)
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, graduate.ID)
+
+	err := tenant.WithinCurrentTenant(testpkg.Ctx(t), func(txCtx context.Context) error {
+		names, err := module.ListStudentNamesByClass(txCtx, class)
+		require.NoError(t, err)
+		require.Len(t, names, 2)
+		byID := map[int64]peopledirectory.StudentName{names[0].StudentID: names[0], names[1].StudentID: names[1]}
+		assert.True(t, byID[child.ID].SchoolMemberOnly)
+		assert.Equal(t, &from, byID[child.ID].SchoolMemberFrom)
+		assert.Equal(t, &until, byID[child.ID].SchoolMemberUntil)
+		assert.False(t, byID[graduate.ID].SchoolMemberOnly, "a graduate without a dated end has no counted class days")
+		return nil
+	})
+	require.NoError(t, err)
 }

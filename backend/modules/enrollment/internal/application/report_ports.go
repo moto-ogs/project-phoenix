@@ -59,6 +59,11 @@ type RosterStudent struct {
 	// "Keine Betreuung" row instead of passing the care participation.
 	WithoutCarePlace bool
 	Alumnus          bool
+	// MemberFrom and MemberUntil bound the class membership of a child
+	// without an OGS place: its enrollment start or the day it was created,
+	// and its enrollment end (nil: open).
+	MemberFrom  calendar.Date
+	MemberUntil *calendar.Date
 }
 
 // RosterPerson is a student's name.

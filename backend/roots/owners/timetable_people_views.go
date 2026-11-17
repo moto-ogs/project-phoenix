@@ -135,7 +135,7 @@ func timetableLifecycleStudent(row *peopleValues.StudentState) *timetable.Lifecy
 	if row == nil {
 		return nil
 	}
-	return &timetable.LifecycleStudent{ID: row.ID, GroupID: row.GroupID, Alumnus: row.IsAlumnus(), EnrolledUntil: row.EnrolledUntil}
+	return &timetable.LifecycleStudent{ID: row.ID, GroupID: row.GroupID, Alumnus: row.IsAlumnus(), EnrolledUntil: row.EnrolledUntil, WithoutCarePlace: row.WithoutCarePlace}
 }
 
 func timetableOperationStudent(row *peopleValues.StudentState) *timetable.OperationStudent {

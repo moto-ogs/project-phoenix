@@ -9,6 +9,7 @@ import (
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // NewEnrollmentReports composes Enrollment's reports over the root's reads.
@@ -67,6 +68,7 @@ func (b enrollmentRosterStudents) ListClassRoster(ctx context.Context, schoolCla
 			AllowedDepartureModes: student.AllowedDepartureModes, DepartureDays: student.DepartureDays,
 			DepartureCompanionNote: student.DepartureCompanionNote,
 			WithoutCarePlace:       student.WithoutCarePlace, Alumnus: student.Status == peopleValues.StudentStatusAlumnus,
+			MemberFrom: rosterMemberFrom(student), MemberUntil: student.EnrolledUntil,
 		})
 	}
 	return out, nil
@@ -178,4 +180,13 @@ type EnrollmentReportSources struct {
 	// Now is the clock of the reports' day and export audits (ADR 0239);
 	// required.
 	Now func() time.Time
+}
+
+// rosterMemberFrom is the first class day of a child without an OGS place:
+// its enrollment start, else the Berlin day its record was created.
+func rosterMemberFrom(student *peopleValues.StudentState) calendar.Date {
+	if student.EnrolledFrom != nil {
+		return *student.EnrolledFrom
+	}
+	return calendar.DateFromTime(student.CreatedAt)
 }
