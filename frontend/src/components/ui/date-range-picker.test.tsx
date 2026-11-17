@@ -55,7 +55,19 @@ describe("DateRangePicker", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Aug/ }));
+    const trigger = screen.getByRole("button", { name: /Aug/ });
+    // Fills the group and draws its focus outline inside, where the group's
+    // overflow-hidden cannot clip it (#7300).
+    expect(trigger).toHaveAttribute("data-control-part");
+    expect(trigger.className.split(" ")).toEqual(
+      expect.arrayContaining([
+        "h-full",
+        "focus-visible:outline-2",
+        "focus-visible:-outline-offset-2",
+      ]),
+    );
+
+    fireEvent.click(trigger);
 
     await waitFor(() => {
       expect(document.querySelector("[data-range-panel]")).toBeInTheDocument();

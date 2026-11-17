@@ -120,6 +120,36 @@ describe("DatePicker", () => {
     ).toBeInTheDocument();
   });
 
+  it("draws no frame of its own between the arrows of a group", () => {
+    render(
+      <ISODatePicker
+        embedded
+        value="2024-01-15"
+        onChange={mockOnChange}
+        ariaLabel="Stichtag"
+        hideClearButton
+      />,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Stichtag: 15.01.2024",
+    });
+    const classes = trigger.className.split(" ");
+    // Frame and radius come from the group (#7300).
+    expect(classes).not.toContain("rounded-lg");
+    expect(classes).not.toContain("border");
+    expect(classes).not.toContain("bg-white");
+    expect(classes).toEqual(
+      expect.arrayContaining([
+        "h-full",
+        "rounded-none",
+        "hover:bg-gray-100",
+        "focus-visible:-outline-offset-2",
+      ]),
+    );
+    expect(trigger).toHaveAttribute("data-control-part");
+  });
+
   it("preserves a trigger name that already contains its displayed date", () => {
     render(
       <DatePicker

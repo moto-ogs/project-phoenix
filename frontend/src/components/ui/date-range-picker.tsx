@@ -27,6 +27,7 @@ import {
   type PanelGeometry,
 } from "~/components/ui/calendar-panel-position";
 import { selectTriggerClassName } from "~/components/ui/select-trigger-styles";
+import { CONTROL_PART } from "~/components/ui/control-geometry";
 import {
   DAY_PICKER_CLASSNAMES,
   preloadDayPicker,
@@ -167,11 +168,15 @@ export function DateRangePicker({
         onPointerEnter={preloadDayPicker}
         onFocus={preloadDayPicker}
         // Derselbe Auslöser wie jedes Auswahlfeld (`CustomSelect`).
+        {...(embedded && CONTROL_PART)}
         className={
           embedded
             ? cn(
-                "flex h-9 w-full items-center justify-center gap-2 px-3 text-sm transition-colors",
-                isOpen ? "bg-gray-50" : "hover:bg-gray-50",
+                selectTriggerClassName({
+                  embedded: true,
+                  className: "w-full justify-center",
+                }),
+                isOpen && "bg-gray-50",
               )
             : cn(
                 selectTriggerClassName({ className: triggerClassName }),
