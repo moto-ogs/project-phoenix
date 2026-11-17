@@ -36,6 +36,15 @@ func TestEnsureTestTenant_IsConcurrentSafe(t *testing.T) {
 	for err := range errs {
 		require.NoError(t, err)
 	}
+
+	var federalState string
+	err := db.NewRaw(`
+		SELECT value #>> '{}'
+		FROM config.setting_values
+		WHERE tenant_id = ? AND setting_key = 'operations.federal_state'`, tenantID).
+		Scan(context.Background(), &federalState)
+	require.NoError(t, err)
+	require.Equal(t, TestSchoolFederalState, federalState)
 }
 
 func TestCleanupTenantTestDataRemovesPlatformOwners(t *testing.T) {
