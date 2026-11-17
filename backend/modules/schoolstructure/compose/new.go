@@ -30,6 +30,6 @@ func New(dependencies Dependencies) (schoolstructure.Owner, error) {
 	if dependencies.DB == nil || dependencies.Observe == nil {
 		return nil, errors.New("school structure compose: all dependencies are required")
 	}
-	store := postgres.New(postgres.NewAmbientDatabase(tenant.TransactionFromContext))
+	store := postgres.New(postgres.NewAmbientDatabase(tenant.TransactionFromContext), calendar.InstantClock(dependencies.Now))
 	return application.New(store, application.NewTransitionRetention(store, calendar.CalendarDateClock(dependencies.Now)), dependencies.Observe), nil
 }

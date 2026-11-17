@@ -3,19 +3,20 @@ package compose
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/application"
 	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
 
 type Observation = ports.Observation
 
-// RoomUsage is the room deletion's question to Student Presence (running
-// sessions) and Care Plan (care offerings).
+// RoomUsage asks Student Presence (sessions) and Care Plan (offerings) whether a room is in use.
 type RoomUsage = ports.RoomUsage
 
 type Dependencies struct {
@@ -25,6 +26,7 @@ type Dependencies struct {
 	Usage      RoomUsage
 	References func(context.Context, int64) (facilities.RoomReferences, error)
 	Observe    func(Observation)
+	Now        func() time.Time // the root's clock; it stamps a room's archive (nil: the real one)
 }
 
 // NewRooms composes the Facilities Catalog without the room deletion over
@@ -34,9 +36,7 @@ func NewRooms(dependencies Dependencies) (facilities.Catalog, error) {
 	if dependencies.DB == nil || dependencies.Observe == nil {
 		return nil, errors.New("facilities compose: all dependencies are required")
 	}
-	observe := ports.Observer(dependencies.Observe)
-	service := application.NewRooms(postgres.New(postgres.DatabaseRuntime(dependencies.DB)), transaction{}, observe)
-	return service, nil
+	return application.NewRooms(postgres.New(postgres.DatabaseRuntime(dependencies.DB), calendar.InstantClock(dependencies.Now)), transaction{}, ports.Observer(dependencies.Observe)), nil
 }
 
 // New composes the Facilities module. Every operation requires the caller's
@@ -45,7 +45,7 @@ func New(dependencies Dependencies) (facilities.Capability, error) {
 	if dependencies.DB == nil || dependencies.DeletionLock == nil || dependencies.Usage == nil || dependencies.References == nil || dependencies.Observe == nil {
 		return nil, errors.New("facilities compose: all dependencies are required")
 	}
-	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB))
+	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB), calendar.InstantClock(dependencies.Now))
 	return application.New(store, transaction{}, dependencies.DeletionLock, dependencies.Usage, dependencies.References, ports.Observer(dependencies.Observe)), nil
 }
 

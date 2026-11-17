@@ -34,16 +34,20 @@ type Store struct {
 	// today is the composition's day clock: an external caregiver record
 	// counts for a staff member on the days of its window.
 	today func() calendar.Date
+	// now is the composition's clock: it stamps deleted_at, which the
+	// automatic deletion of staff compares with its cutoff, and the other
+	// columns this store sets in time.
+	now func() time.Time
 }
 
-func New(database Database, today func() calendar.Date) *Store {
+func New(database Database, today func() calendar.Date, now func() time.Time) *Store {
 	if database == nil {
 		panic("school membership postgres: database runtime is required")
 	}
-	if today == nil {
-		panic("school membership postgres: the day clock is required")
+	if today == nil || now == nil {
+		panic("school membership postgres: the day clock and the clock are required")
 	}
-	return &Store{database: database, today: today}
+	return &Store{database: database, today: today, now: now}
 }
 
 // staffRow is a staff membership (#2753). The employment half of a staff
@@ -258,7 +262,7 @@ func (s *Store) SoftDeleteStaff(ctx context.Context, id int64) (domain.Operation
 	// retires the member.
 	query := withTenant(clearPlannedExit(db.NewUpdate().Model((*staffRow)(nil)).
 		ModelTableExpr(`users.staff_school_memberships AS "staff"`)).
-		Set(`deleted_at = NOW()`).
+		Set(`deleted_at = ?`, s.now()).
 		Where(`"staff".id = ?`, id).
 		Where(`"staff".deleted_at IS NULL`), "staff", scope)
 	return execOne(ctx, query, "soft delete staff", schoolmembership.ErrStaffNotFound)
@@ -415,7 +419,7 @@ func (s *Store) SoftDeleteTeacher(ctx context.Context, id int64) (domain.Operati
 	}
 	query := withTenant(db.NewUpdate().Model((*teacherRow)(nil)).
 		ModelTableExpr(`users.teachers AS "teacher"`).
-		Set(`deleted_at = NOW()`).
+		Set(`deleted_at = ?`, s.now()).
 		Where(`"teacher".id = ?`, id).
 		Where(`"teacher".deleted_at IS NULL`), "teacher", scope)
 	return execOne(ctx, query, "soft delete teacher", schoolmembership.ErrTeacherNotFound)

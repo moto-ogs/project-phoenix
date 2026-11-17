@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
-	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/adapters/rendering"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/application"
 )
@@ -15,7 +14,7 @@ type NoticePorts = application.NoticePorts
 
 // NewNotices builds withdrawal and termination (#4682): the office operations open their own Träger unit, the parents' run in the parents portal's.
 func NewNotices(contracts ContractPorts, notices NoticePorts, now func() time.Time) carecontract.Notices {
-	store, clock := postgres.NewStore(), application.Clock{Now: now}
+	store, clock := storeOn(now), application.Clock{Now: now}
 	return application.NewNotices(store, store, notices, clock,
 		application.NewContracts(store, rendering.NewRenderer(), contracts, clock, NewContractVersions()))
 }
@@ -23,7 +22,7 @@ func NewNotices(contracts ContractPorts, notices NoticePorts, now func() time.Ti
 // NewParentNotices builds the declarations of the parents portal alone,
 // in its Träger unit; it needs no letterhead or access log.
 func NewParentNotices(notices NoticePorts, now func() time.Time) carecontract.Notices {
-	store := postgres.NewStore()
+	store := storeOn(now)
 	return application.NewNotices(store, store, notices, application.Clock{Now: now}, nil)
 }
 

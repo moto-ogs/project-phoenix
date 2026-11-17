@@ -63,7 +63,7 @@ func ComposeSchoolMembership(db transactionruntime.Database, now func() time.Tim
 	if err != nil {
 		return nil, err
 	}
-	dependencies.Today = calendar.CalendarDateClock(now)
+	dependencies.Today, dependencies.Now = calendar.CalendarDateClock(now), now
 	return schoolMembershipCompose.New(dependencies)
 }
 

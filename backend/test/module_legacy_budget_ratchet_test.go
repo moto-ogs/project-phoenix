@@ -348,7 +348,7 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0276: the time import of the sick note retention clock in
 // modules/workforce/compose (+1) and the clock field of the staff offboarding
 // with its time import in workflows/staffoffboarding/compose (+2).
-const moduleComposeBudgetTotal = 13652
+const moduleComposeBudgetTotal = 13651
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -517,7 +517,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0151: the school figure constructor (+6).
 	// ADR 0202: the pending-window constructor (+5).
 	// ADR 0268: the day clock of the store and the Kontingentzahl (+5).
-	"modules/schoolmembership/compose": 205,
+	// #7295: the store's clock fits in shortened comments (-1).
+	"modules/schoolmembership/compose": 204,
 	// ADR 0231: the school search projection binds the school transaction.
 	// ADR 0278: the calendar import of the search's day clock (+1).
 	"modules/schoolsearchview/compose": 39,

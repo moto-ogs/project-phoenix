@@ -42,12 +42,10 @@ import (
 // slices of #7104 (802 reads in 26 owners); a mismatch prints the measured
 // values.
 var moduleSQLClockBudget = map[string]int{
-	"modules/appointments": 2,
 	// The retention of the ledgers without a school (ADR 0281): the column
 	// defaults stamp the operator ledger, the Träger account ledger and the
 	// Träger document downloads, so their cutoff reads the database clock.
-	"modules/auditlog":     1,
-	"modules/carecontract": 2,
+	"modules/auditlog": 1,
 	// Only the finished student document cleanups: their database function
 	// guards the cutoff with the database clock (1.15.606).
 	"modules/careplan": 1,
@@ -84,8 +82,10 @@ var moduleSQLClockBudget = map[string]int{
 	// (1): the database stamps the journal and its deletion function guards
 	// the window with clock_timestamp().
 	"modules/exporttransfer": 9,
-	"modules/facilities":     1,
-	"modules/filestorage":    3,
+	// The finished file and attachment cleanups and the removed files (3):
+	// their security-definer functions guard the cutoff with the database
+	// clock (1.15.606), so the cutoff is taken from statement_timestamp().
+	"modules/filestorage": 3,
 	// The Springer access windows (ADR 0251): the security-definer function
 	// auth.account_tenant_admitted admits a window on the database clock, so
 	// the prune of ended windows reads that clock too. And the deletion of
@@ -131,9 +131,11 @@ var moduleSQLClockBudget = map[string]int{
 	// list (14 days) and the retirement (30 days) compare together with
 	// processed_at, and the confirmed_at, requested_at and prepared_at that
 	// the same statements set beside next_attempt_at and processed_at.
-	"modules/schoolcalendar":            20,
-	"modules/schoolmembership":          4,
-	"modules/schoolstructure":           4,
+	"modules/schoolcalendar": 20,
+	// The visibility window of the operator announcements (2, ADR 0281):
+	// communication stamps published_at with CURRENT_TIMESTAMP, and the
+	// projection orders it against the created_at of schools, memberships
+	// and accounts, which the database stamps.
 	"modules/staffannouncementaudience": 2,
 	"modules/studentpresence":           16,
 	// Includes CompletionTimestamp (ADR 0281): completed_at is ordered against

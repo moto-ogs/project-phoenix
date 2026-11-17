@@ -29,7 +29,7 @@ func (s *Store) MarkNextRetiredStaffErased(ctx context.Context, before time.Time
 	var rows []schoolmembership.RetiredStaffErasure
 	query := withTenant(db.NewUpdate().Model((*staffRow)(nil)).
 		ModelTableExpr(`users.staff_school_memberships AS "staff"`).
-		Set(`personal_data_erased_at = NOW()`).
+		Set(`personal_data_erased_at = ?`, s.now()).
 		Where(`"staff".id = (?)`, due).
 		Returning(`"staff".id AS staff_id, "staff".person_id`), "staff", scope)
 	stats := domain.OperationStats{Queries: 1}

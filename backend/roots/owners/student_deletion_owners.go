@@ -30,7 +30,7 @@ func NewStudentDeletionOwners(db transactionruntime.Database, now func() time.Ti
 	if err != nil {
 		return studentdeletioncompose.Owners{}, err
 	}
-	structure, err := schoolStructureCompose.New(schoolStructureCompose.Dependencies{DB: db.Pool(), Observe: func(schoolStructureCompose.Observation) {}})
+	structure, err := schoolStructureCompose.New(schoolStructureCompose.Dependencies{DB: db.Pool(), Observe: func(schoolStructureCompose.Observation) {}, Now: now})
 	if err != nil {
 		return studentdeletioncompose.Owners{}, err
 	}
