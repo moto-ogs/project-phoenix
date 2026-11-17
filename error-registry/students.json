@@ -597,6 +597,12 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "students.class_list_entries_replaced"
+    },
+    {
+      "code": "students.without_care_place_care_data",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "students.without_care_place_care_data"
     }
   ]
 }

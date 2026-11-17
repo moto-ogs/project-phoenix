@@ -47,9 +47,15 @@ func TestCreateStudentWithoutCarePlace(t *testing.T) {
 	status, code = post(body(map[string]any{"group_id": group.ID}))
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Equal(t, "students.without_care_place_group", code)
-	status, code = post(body(map[string]any{"bus_days": map[string]bool{"mon": true}}))
-	assert.Equal(t, http.StatusBadRequest, status, "no way home of the OGS either")
-	assert.Equal(t, "students.without_care_place_group", code)
+	for _, wayHome := range []map[string]any{
+		{"bus_days": map[string]bool{"mon": true}},
+		{"pickup_status": "Wird abgeholt"},
+		{"bus": true},
+	} {
+		status, code = post(body(wayHome))
+		assert.Equal(t, http.StatusConflict, status, "no way home of the OGS either: %v", wayHome)
+		assert.Equal(t, "students.without_care_place_care_data", code)
+	}
 
 	unterricht, ok := settings.LookupModule(settings.ModuleUnterrichtVormittag)
 	require.True(t, ok)
@@ -93,6 +99,6 @@ func TestCreateStudentWithoutCarePlace(t *testing.T) {
 	// No OGS arrival or pickup times for it either.
 	times := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", created.Data.ID), map[string]any{"schedules": []any{}})
 	rr = authExec(t, tc, times, testutil.AdminTestClaims(1), []string{"admin:*"})
-	assert.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
-	assert.Contains(t, rr.Body.String(), "students.without_care_place_group")
+	assert.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), "students.without_care_place_care_data")
 }

@@ -97,6 +97,7 @@ const CodeStudentsStaffValueInvalid = "students.staff_value_invalid"
 const CodeStudentsStaffValueUnsupported = "students.staff_value_unsupported"
 const CodeStudentsStatusDayConflict = "students.status_day_conflict"
 const CodeStudentsStatusDayOccupied = "students.status_day_occupied"
+const CodeStudentsWithoutCarePlaceCareData = "students.without_care_place_care_data"
 const CodeStudentsWithoutCarePlaceGroup = "students.without_care_place_group"
 const CodeStudentsWithoutCarePlaceOff = "students.without_care_place_off"
 
@@ -197,6 +198,7 @@ var errorCodeClassesStudents = []errorCodeClass{
 	{CodeStudentsStaffValueUnsupported, "input"},
 	{CodeStudentsStatusDayConflict, "business_rejection"},
 	{CodeStudentsStatusDayOccupied, "business_rejection"},
+	{CodeStudentsWithoutCarePlaceCareData, "business_rejection"},
 	{CodeStudentsWithoutCarePlaceGroup, "input"},
 	{CodeStudentsWithoutCarePlaceOff, "business_rejection"},
 }
