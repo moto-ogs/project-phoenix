@@ -122,10 +122,12 @@ async function choose(result = preview) {
       files: [new File(["Referenz;IBAN"], "mandate.csv", { type: "text/csv" })],
     },
   });
-  await screen.findByRole("heading", {
+  const heading = await screen.findByRole("heading", {
     name:
       result.unmapped.length > 0 ? "Spalten zuordnen" : "Prüfen und übernehmen",
   });
+  // The step's focus effect must finish before the next interaction.
+  await waitFor(() => expect(heading).toHaveFocus());
 }
 
 function importButton() {
