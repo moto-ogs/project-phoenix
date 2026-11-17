@@ -55,11 +55,16 @@ type imports struct {
 // stay as imported.
 func classListImportConversion(converter importModels.ClassListConverter, settings interface {
 	ResolveBool(context.Context, string) (bool, error)
-}) func(context.Context, int64) error {
+}, lock settingsModule.ClassListConversionLock) func(context.Context, int64) error {
 	if converter == nil {
 		return nil
 	}
 	return func(ctx context.Context, accountID int64) error {
+		// Held to the batch's commit: a switch turned on meanwhile either
+		// waited for this batch's entries or is read here.
+		if err := lock.LockClassListConversionShared(ctx); err != nil {
+			return err
+		}
 		kept, err := settingsModule.ChildrenWithoutCarePlaceOn(func(key string) (bool, error) { return settings.ResolveBool(ctx, key) })
 		if err != nil || !kept {
 			return err
@@ -300,7 +305,7 @@ func newServeImports(
 			auditCompose.NewConsentRecorder(audit.Command), nil, cohorts,
 		),
 		Staff:     newStaffImport(runtime, identity, identity, organizations, persons, membership, workTime),
-		ClassList: newClassListImport(runtime, membership, persons, classListBatches(membership), classListImportConversion(converter, settings)),
+		ClassList: newClassListImport(runtime, membership, persons, classListBatches(membership), classListImportConversion(converter, settings, classListConversionLockOf(settings))),
 		OpeningBalance: newOpeningBalanceImport(runtime, importPorts.OpeningBalanceImportDeps{
 			BalanceAdjustService: workforce.TimeTracking.OpeningBalances,
 			StaffAbsenceService:  workforce.TimeTracking.VacationTakeovers,

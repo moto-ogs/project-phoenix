@@ -212,9 +212,30 @@ func (s *settingsService) lockClassListConversionSettings(ctx context.Context, k
 	if s.runtime == nil || !s.runtime.HasTransaction(ctx) {
 		return config.ErrRuntimeUnavailable
 	}
-	if err := s.runtime.AcquireLock(ctx, fmt.Sprintf("class-list-conversion-settings:%d", s.tenantID(ctx)), false); err != nil {
+	if err := s.runtime.AcquireLock(ctx, classListConversionLockKey(s.tenantID(ctx)), false); err != nil {
 		return fmt.Errorf("lock class-list conversion settings: %w", err)
 	}
 	s.flushRequestCacheForLock(ctx)
 	return nil
+}
+
+// LockClassListConversionShared takes the shared side of the class-list
+// conversion lock for class-list writes (#4803): a new entry or an import
+// batch reads the switches under it and keeps it to commit. Flushes the
+// request cache like every lock helper.
+func (s *settingsService) LockClassListConversionShared(ctx context.Context) error {
+	s.flushRequestCacheForLock(ctx)
+	if s.runtime == nil || !s.runtime.HasTransaction(ctx) {
+		return nil
+	}
+	if err := s.runtime.AcquireLock(ctx, classListConversionLockKey(s.tenantID(ctx)), true); err != nil {
+		return fmt.Errorf("lock class-list conversion settings (shared): %w", err)
+	}
+	return nil
+}
+
+// classListConversionLockKey is the per-tenant key the switch writes and
+// the class-list writes share.
+func classListConversionLockKey(tenantID int64) string {
+	return fmt.Sprintf("class-list-conversion-settings:%d", tenantID)
 }

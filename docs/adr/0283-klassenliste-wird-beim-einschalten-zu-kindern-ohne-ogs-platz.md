@@ -32,8 +32,9 @@ Owner an.
   an. Danach liest ein zweiter Lesezugriff die neuen Kinder nach Name und
   Klasse; beides ist mengenbasiert. Dann zieht die Anwesenheit am Vormittag
   zum Kind, die Einträge gehen, und die Spur hält mit `assigned` fest,
-  welches Kind ein Eintrag wurde. Der Handelnde ist das Konto, das den
-  Schalter umgelegt hat.
+  welches Kind ein Eintrag wurde. Der Handelnde ist, wie im Audit der
+  Einstellungen, wer den Schalter umgelegt hat; beim moto-Team die
+  Operator-ID, kein Schulkonto.
 - **Zwei Leaf-Befehle außerhalb der Capabilities** (wie
   `ClassListEntryBatches`, #5827):
   - School Membership `RemoveClassListEntries`: alle oder keine, in einem
@@ -58,6 +59,11 @@ Owner an.
   gleich mit um. Einträge, Umwandlung und Checkpoint committen gemeinsam;
   ein Fehler rollt nur den betroffenen Batch zurück. Bereits bestätigte
   Batches sind auch bei einem späteren Importfehler vollständig umgewandelt.
+  Ein neuer Eintrag und jeder Import-Stapel nehmen vor dem Lesen der
+  Schalter die geteilte Seite der Sperre, die beide Schalter beim Schreiben
+  exklusiv nehmen (`settings.ClassListConversionLock`), und halten sie bis zum
+  Commit. So wartet ein gleichzeitiges Einschalten auf ihre Einträge oder
+  wird von ihnen gelesen; kein Eintrag bleibt unumgewandelt liegen.
   Einen einzelnen neuen Eintrag lehnt ein Dekorator im Root ab
   (`students.class_list_entries_replaced`); die Schule legt das Kind über
   „Ohne OGS-Platz“ im Anlegen-Dialog an. Ein Kind ohne OGS-Platz bekommt

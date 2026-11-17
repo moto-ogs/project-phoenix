@@ -86,9 +86,26 @@ type classListEntriesWhileChildrenKept struct {
 	settings interface {
 		ResolveBool(context.Context, string) (bool, error)
 	}
+	lock interface {
+		LockClassListConversionShared(context.Context) error
+	}
+}
+
+// classListConversionLockOf binds the shared conversion lock of the
+// settings service; a service without it is a composition error.
+func classListConversionLockOf(settings any) settingsFacts.ClassListConversionLock {
+	lock, ok := settings.(settingsFacts.ClassListConversionLock)
+	if !ok {
+		panic("class list: settings service has no class-list conversion lock")
+	}
+	return lock
 }
 
 func (c classListEntriesWhileChildrenKept) AddClassListEntry(ctx context.Context, in schoolMembershipModule.AddClassListEntry) (schoolMembershipModule.ClassListEntry, error) {
+	// Held to commit: a concurrent switch-on waits for this entry or is seen.
+	if err := c.lock.LockClassListConversionShared(ctx); err != nil {
+		return schoolMembershipModule.ClassListEntry{}, err
+	}
 	kept, err := settingsFacts.ChildrenWithoutCarePlaceOn(func(key string) (bool, error) { return c.settings.ResolveBool(ctx, key) })
 	if err != nil {
 		return schoolMembershipModule.ClassListEntry{}, err
