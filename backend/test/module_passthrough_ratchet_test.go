@@ -285,7 +285,7 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 // room move leaves updated_at to the database trigger (-1, ADR 0268).
 // Lowered by #4496: revoking a caterer invitation also stops its unsent
 // mail instead of forwarding (-1).
-const modulePassthroughOwnerBudgetTotal = 1395
+const modulePassthroughOwnerBudgetTotal = 1394
 
 // modulePassthroughOwnerBudgets is the register: module directory →
 // pass-throughs measured in its application layer and its compositions
@@ -363,7 +363,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Lowered by #7058: the payroll dispatch overview reads its mails too (-1).
 	// Raised by ADR 0243: the month close of the Träger maps its close, its
 	// reopen and the staff the school leaves out onto the public failures (+3).
-	"modules/workforce":      138,
+	"modules/workforce":      137,
 	"workflows/openroommove": 1,
 	// Raised by ADR 0078: the week change of the meal plan adapter.
 	"workflows/parentportal": 18,

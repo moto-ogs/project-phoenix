@@ -160,7 +160,7 @@ func (s *Store) UpdatePayrollWageType(ctx context.Context, value workforce.Payro
 		Set("name = ?", value.Name).Set("number = ?", value.Number).Set("unit = ?", value.Unit).
 		Where("tenant_id = ? AND id = ? AND archived_at IS NULL", tenantID, value.ID)
 	if value.Archived {
-		query = query.Set("archived_at = now()")
+		query = query.Set("archived_at = ?", s.stamp())
 	}
 	result, err := query.Exec(ctx)
 	if err != nil {
@@ -204,7 +204,7 @@ func (s *Store) UpdatePayrollSurchargeRule(ctx context.Context, value workforce.
 		Set("wage_type_id = ?", row.WageTypeID).
 		Where("tenant_id = ? AND id = ? AND archived_at IS NULL", tenantID, value.ID)
 	if value.Archived {
-		query = query.Set("archived_at = now()")
+		query = query.Set("archived_at = ?", s.stamp())
 	}
 	result, err := query.Exec(ctx)
 	if err != nil {

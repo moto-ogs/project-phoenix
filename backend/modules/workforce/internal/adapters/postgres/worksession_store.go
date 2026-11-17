@@ -230,6 +230,7 @@ func (s *Store) CreateWorkSession(ctx context.Context, value workforce.WorkSessi
 	if row.TenantID == 0 {
 		row.TenantID = scope.TenantID
 	}
+	s.stampNew(&row.CreatedAt, &row.UpdatedAt)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	_, err = db.NewInsert().Model(row).ModelTableExpr(tableWorkSessions).Returning("*").Exec(ctx)
@@ -256,7 +257,7 @@ func (s *Store) UpdateWorkSession(ctx context.Context, value workforce.WorkSessi
 	query := withTenant(db.NewUpdate().Model(row).
 		ModelTableExpr(tableWorkSessions+` AS "work_session"`).
 		ExcludeColumn("created_at", "updated_at").
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.stamp()).
 		WherePK().
 		Returning("*"), aliasWorkSession, scope)
 	stats, err := execAffected(ctx, query, "update work session")
@@ -292,7 +293,7 @@ func (s *Store) SetWorkSessionBreakMinutes(ctx context.Context, id int64, minute
 	query := withTenant(db.NewUpdate().Model((*workSessionRow)(nil)).
 		ModelTableExpr(tableWorkSessions+` AS "work_session"`).
 		Set("break_minutes = ?", minutes).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.stamp()).
 		Where(`"work_session".id = ?`, id), aliasWorkSession, scope)
 	stats, err := execAffected(ctx, query, "update work session break minutes")
 	return stats.Rows, stats, err
@@ -310,7 +311,7 @@ func (s *Store) CloseWorkSession(ctx context.Context, id int64, checkOut time.Ti
 		Set("pack_up_minutes = ?", credit.PackUpMinutes).
 		Set("rounding_interval_minutes = ?", credit.RoundingIntervalMinutes).
 		Set("rounding_mode = ?", credit.RoundingMode).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.stamp()).
 		Where(`"work_session".id = ?`, id).
 		Where(`"work_session".check_out_time IS NULL`), aliasWorkSession, scope)
 	stats, err := execAffected(ctx, query, "close work session")
@@ -519,6 +520,7 @@ func (s *Store) CreateStaffVacationOpening(ctx context.Context, value domain.Sta
 	if row.TenantID == 0 {
 		row.TenantID = scope.TenantID
 	}
+	s.stampNew(&row.CreatedAt, &row.UpdatedAt)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	_, err = db.NewInsert().Model(row).ModelTableExpr(tableStaffVacationOpenings).Returning("*").Exec(ctx)
@@ -542,7 +544,7 @@ func (s *Store) UpdateStaffVacationOpening(ctx context.Context, value domain.Sta
 	query := withTenant(db.NewUpdate().Model(row).
 		ModelTableExpr(tableStaffVacationOpenings+` AS "staff_vacation_opening"`).
 		ExcludeColumn("created_at", "updated_at").
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.stamp()).
 		WherePK().
 		Returning("*"), aliasStaffVacationOpening, scope)
 	stats, err := execAffected(ctx, query, "update staff vacation opening")
@@ -614,6 +616,7 @@ func (s *Store) CreateStaffVacationQuota(ctx context.Context, value workforce.St
 	if row.TenantID == 0 {
 		row.TenantID = scope.TenantID
 	}
+	s.stampNew(&row.CreatedAt, &row.UpdatedAt)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	_, err = db.NewInsert().Model(row).ModelTableExpr(tableStaffVacationQuota).Returning("*").Exec(ctx)
@@ -637,7 +640,7 @@ func (s *Store) UpdateStaffVacationQuota(ctx context.Context, value workforce.St
 	query := withTenant(db.NewUpdate().Model(row).
 		ModelTableExpr(tableStaffVacationQuota+` AS "staff_vacation_quota"`).
 		ExcludeColumn("created_at", "updated_at").
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.stamp()).
 		WherePK().
 		Returning("*"), aliasStaffVacationQuota, scope)
 	stats, err := execAffected(ctx, query, "update staff vacation quota")
@@ -690,12 +693,13 @@ func (s *Store) UpsertStaffVacationQuota(ctx context.Context, value workforce.St
 			return stats, fmt.Errorf("workforce postgres: load staff vacation quota: %w", err)
 		}
 	}
+	s.stampNew(&row.CreatedAt, &row.UpdatedAt)
 	query := db.NewInsert().Model(row).
 		ModelTableExpr(tableStaffVacationQuota).
 		On("CONFLICT (staff_id, year) DO UPDATE").
 		Set("entitled_days = EXCLUDED.entitled_days").
 		Set("carryover_days = EXCLUDED.carryover_days").
-		Set("updated_at = CURRENT_TIMESTAMP")
+		Set("updated_at = ?", s.stamp())
 	upsertStats, err := execAffected(ctx, query, "upsert staff vacation quota")
 	stats.Add(upsertStats)
 	if err != nil || value.ChangedBy <= 0 {

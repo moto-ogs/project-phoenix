@@ -131,17 +131,17 @@ func (s *TraegerStaffStore) TraegerAbsencePool(ctx context.Context, organization
 }
 
 // SaveTraegerAbsenceAllowance stores the days of one person, type and year
-// with its trail entry.
-func (s *TraegerStaffStore) SaveTraegerAbsenceAllowance(ctx context.Context, organizationID, accountID int64, input workforce.SetTraegerAbsenceAllowance, previous *float64) error {
+// with its trail entry; now stamps the days.
+func (s *TraegerStaffStore) SaveTraegerAbsenceAllowance(ctx context.Context, organizationID, accountID int64, input workforce.SetTraegerAbsenceAllowance, previous *float64, now time.Time) error {
 	db, err := traegerStaffDB(ctx, organizationID)
 	if err != nil {
 		return err
 	}
-	if _, err := db.ExecContext(ctx, `INSERT INTO workforce.absence_allowances (organization_id, staff_record_id, absence_type_id, year, entitled_days)
-		VALUES (?, ?, ?, ?, ?)
+	if _, err := db.ExecContext(ctx, `INSERT INTO workforce.absence_allowances (organization_id, staff_record_id, absence_type_id, year, entitled_days, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT (organization_id, staff_record_id, absence_type_id, year)
-		DO UPDATE SET entitled_days = EXCLUDED.entitled_days, updated_at = now()`,
-		organizationID, input.RecordID, input.AbsenceTypeID, input.Year, input.EntitledDays); err != nil {
+		DO UPDATE SET entitled_days = EXCLUDED.entitled_days, updated_at = EXCLUDED.updated_at`,
+		organizationID, input.RecordID, input.AbsenceTypeID, input.Year, input.EntitledDays, now); err != nil {
 		return fmt.Errorf("workforce postgres: save traeger absence allowance: %w", err)
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO workforce.absence_allowance_changes
