@@ -594,6 +594,45 @@ describe("Kopf der Kindakte", () => {
       expect(screen.queryByTestId("today-time-row-pickup")).toBeNull();
     });
 
+    // #4803: ein Kind ohne OGS-Platz hat keinen OGS-Tag. Der Kopf sagt
+    // „Keine Betreuung“ statt „Kommt heute nicht (kein Plan für heute)“.
+    it("shows no OGS day for a child without an OGS place", () => {
+      renderHeaderWithTimes({
+        student: {
+          ...mockStudent,
+          group_name: undefined,
+          without_care_place: true,
+          current_location: "Zuhause",
+          day_planning_status: "not_coming_today",
+          day_planning_label: "kein Plan für heute",
+        },
+        todayArrivalPlannedTime: undefined,
+        todayPickupPlannedTime: undefined,
+      });
+
+      expect(screen.getByText("Keine Betreuung")).toBeInTheDocument();
+      expect(screen.queryByTestId("today-absence-row")).toBeNull();
+      expect(screen.queryByTestId("today-time-row-arrival")).toBeNull();
+      expect(screen.queryByText(/kein Plan für heute/)).toBeNull();
+    });
+
+    it("keeps a sick note of a child without an OGS place in the header", () => {
+      renderHeaderWithTimes({
+        student: {
+          ...mockStudent,
+          group_name: undefined,
+          without_care_place: true,
+          sick: true,
+        },
+        sickReason: "Fieber",
+      });
+
+      expect(screen.queryByText("Keine Betreuung")).toBeNull();
+      expect(screen.getByTestId("today-absence-row")).toHaveTextContent(
+        "Kommt heute nicht (krank gemeldet: Fieber)",
+      );
+    });
+
     it("renders the actual time even when no planned time was scheduled (walk-in)", () => {
       // Walk-in scenario: a student arrives without a planned arrival
       // configured. The row still renders the actual but suppresses the
@@ -810,6 +849,17 @@ describe("PersonalInfoReadOnly", () => {
   it("renders section title", () => {
     render(<PersonalInfoReadOnly student={mockStudent} />);
     expect(screen.getByText("Persönliche Informationen")).toBeInTheDocument();
+  });
+
+  it("leaves out group and way home for a child without an OGS place", () => {
+    render(
+      <PersonalInfoReadOnly
+        student={{ ...mockStudent, without_care_place: true }}
+      />,
+    );
+    expect(screen.getByText("Klasse")).toBeInTheDocument();
+    expect(screen.queryByText("Gruppe")).toBeNull();
+    expect(screen.queryByText("Erlaubte Heimwege")).toBeNull();
   });
 
   // Ein Ladefehler der Laufgemeinschaft steht im Feld „Geht mit“, mit

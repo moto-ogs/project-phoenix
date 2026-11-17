@@ -2,6 +2,7 @@ package careplanhttp_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -60,8 +61,18 @@ func TestCreateStudentWithoutCarePlace(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 	var created createStudentResponse
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &created))
-	var withoutPlace bool
-	require.NoError(t, tc.db.NewRaw(`SELECT without_care_place FROM users.student_school_memberships
-		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), created.Data.ID).Scan(ctx, &withoutPlace))
-	assert.True(t, withoutPlace)
+	withoutPlace := func() bool {
+		var mark bool
+		require.NoError(t, tc.db.NewRaw(`SELECT without_care_place FROM users.student_school_memberships
+			WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), created.Data.ID).Scan(ctx, &mark))
+		return mark
+	}
+	assert.True(t, withoutPlace())
+
+	// Every later write of the child (an edit, a sick note) rewrites its
+	// membership; it keeps the mark and gives the child no OGS place.
+	update := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", created.Data.ID), map[string]any{"extra_info": "Brille"})
+	rr = authExec(t, tc, update, testutil.AdminTestClaims(1), []string{"admin:*"})
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	assert.True(t, withoutPlace(), "an edit keeps the child without an OGS place")
 }

@@ -397,6 +397,20 @@ export function StudentHeaderLocation({
     arrival_notes: todayArrivalNote,
   };
 
+  // Ein Kind ohne OGS-Platz (#4803) hat keinen Ort in der OGS. Eine
+  // Krankmeldung oder Entschuldigung zeigt der Badge weiter.
+  if (
+    student.without_care_place &&
+    !getStudentAbsence({
+      sick: student.sick,
+      classTrip: student.class_trip,
+      excused: student.excused,
+      currentLocation: student.current_location,
+    })
+  ) {
+    return <StatusBadge label="Keine Betreuung" tone="gray" />;
+  }
+
   return (
     <LocationBadge
       student={badgeStudent}
@@ -483,7 +497,8 @@ export function StudentHeaderStats({
         <span>Keine Klasse und keine Gruppe hinterlegt</span>
       )}
 
-      {notComingLabel && !todayPickupActualTime ? (
+      {student.without_care_place && !absence ? null : notComingLabel &&
+        !todayPickupActualTime ? (
         <span
           data-testid="today-absence-row"
           className="mt-1.5 flex items-center gap-2 text-sm text-gray-600"
@@ -942,9 +957,13 @@ export function PersonalInfoReadOnly({
             {student.school_class}
           </ParentVisibleValue>
         </DataField>
-        <DataField label="Gruppe">
-          {student.group_name ?? "Nicht zugewiesen"}
-        </DataField>
+        {/* Ein Kind ohne OGS-Platz (#4803) hat keine Gruppe und keinen
+            Heimweg aus der OGS. */}
+        {student.without_care_place ? null : (
+          <DataField label="Gruppe">
+            {student.group_name ?? "Nicht zugewiesen"}
+          </DataField>
+        )}
         <DataField label="Geburtsdatum">
           <ParentVisibleValue hint={PARENT_VISIBLE_HINTS.birthday}>
             {birthdayDisplay}
@@ -955,34 +974,36 @@ export function PersonalInfoReadOnly({
             {addressDisplay}
           </DataField>
         )}
-        <DataField label="Erlaubte Heimwege" fullWidth>
-          <div className="flex items-start gap-1.5">
-            <div className="min-w-0 flex-1">
-              <div className="inline-flex items-start gap-1.5">
-                <AllowedDepartureModesDisplay
-                  value={
-                    student.allowed_departure_modes ??
-                    allowedDepartureModesFromDeparture(
-                      student.departure_days ??
-                        departureDaysFromLegacy(
-                          student.bus_days,
-                          student.pickup_days,
-                        ),
-                    )
-                  }
-                />
-                <VisibilityBadge
-                  compact
-                  hint={PARENT_VISIBLE_HINTS.departure}
-                />
+        {student.without_care_place ? null : (
+          <DataField label="Erlaubte Heimwege" fullWidth>
+            <div className="flex items-start gap-1.5">
+              <div className="min-w-0 flex-1">
+                <div className="inline-flex items-start gap-1.5">
+                  <AllowedDepartureModesDisplay
+                    value={
+                      student.allowed_departure_modes ??
+                      allowedDepartureModesFromDeparture(
+                        student.departure_days ??
+                          departureDaysFromLegacy(
+                            student.bus_days,
+                            student.pickup_days,
+                          ),
+                      )
+                    }
+                  />
+                  <VisibilityBadge
+                    compact
+                    hint={PARENT_VISIBLE_HINTS.departure}
+                  />
+                </div>
               </div>
+              <FieldHistoryInfo
+                studentId={student.id}
+                fields={["departure_days", "pickup_status"]}
+              />
             </div>
-            <FieldHistoryInfo
-              studentId={student.id}
-              fields={["departure_days", "pickup_status"]}
-            />
-          </div>
-        </DataField>
+          </DataField>
+        )}
         {companionsUnavailable && (
           <DataField label="Geht mit" fullWidth>
             <LoadErrorAlert error={companionsLoad.error} />

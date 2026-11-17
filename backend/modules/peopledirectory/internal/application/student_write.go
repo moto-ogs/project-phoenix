@@ -60,10 +60,6 @@ func (s *StudentService) CreateStudent(ctx context.Context, write StudentWrite) 
 		if err != nil {
 			return err
 		}
-		// The profile row carries no membership facts; the mark of a child
-		// without an OGS place (#4803) travels to the enrollment from the
-		// write.
-		record.WithoutCarePlace = write.Record.WithoutCarePlace
 		membershipID, err := s.owners.Enroll(txCtx, record)
 		if err != nil {
 			return err
