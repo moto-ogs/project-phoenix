@@ -247,6 +247,56 @@ func TestUpdateGuardianContact_EditsContactOnlyGuardian(t *testing.T) {
 	require.Len(t, found.Phones, 1)
 }
 
+// The form of address is each person's own, voluntary choice (#7362): the
+// caller sets, keeps and clears it on their own profile, and cannot choose
+// one for another guardian.
+func TestUpdateGuardianContact_SalutationIsThePersonsOwnChoice(t *testing.T) {
+	t.Parallel()
+
+	svc, db := buildGuardianService(t)
+	ctx := testpkg.WithPackageTenantRuntime(context.Background())
+	chain := testpkg.CreateTestParentGuardianChain(t, db)
+	stored := func(profileID int64) *string {
+		var salutation *string
+		require.NoError(t, db.NewRaw(`SELECT salutation FROM users.guardian_profiles WHERE id = ?`, profileID).Scan(context.Background(), &salutation))
+		return salutation
+	}
+	own := parentService.GuardianContactInput{FirstName: "Karin", LastName: "Klein", Salutation: ptr("ms")}
+
+	updated, err := svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
+	require.NoError(t, err)
+	assert.Equal(t, "ms", updated.Salutation)
+	require.NotNil(t, stored(chain.GuardianProfileID))
+	assert.Equal(t, "ms", *stored(chain.GuardianProfileID))
+
+	profile, err := svc.GetProfile(ctx, chain.AccountID)
+	require.NoError(t, err)
+	assert.Equal(t, "ms", profile.Salutation, "the portal greets with the chosen form of address")
+
+	own.Salutation = nil
+	updated, err = svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
+	require.NoError(t, err)
+	assert.Equal(t, "ms", updated.Salutation, "a client that does not send the field keeps the choice")
+
+	contactID := linkContactOnlyGuardian(t, db, chain.StudentID, "oma-anrede")
+	other, err := svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+		FirstName: "Helga", LastName: "Schneider", Salutation: ptr("ms"),
+	})
+	require.NoError(t, err)
+	assert.Empty(t, other.Salutation)
+	assert.Nil(t, stored(contactID), "nobody chooses a form of address for someone else")
+
+	own.Salutation = ptr("")
+	updated, err = svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
+	require.NoError(t, err)
+	assert.Empty(t, updated.Salutation)
+	assert.Nil(t, stored(chain.GuardianProfileID))
+
+	own.Salutation = ptr("Frau")
+	_, err = svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
+	require.ErrorIs(t, err, parentService.ErrGuardianContactInvalid)
+}
+
 func TestUpdateGuardianContact_PromotesFirstPhoneWhenNoPrimarySubmitted(t *testing.T) {
 	t.Parallel()
 

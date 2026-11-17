@@ -4279,7 +4279,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.GuardianDirectory.ListPortalContacts",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts; modules/peopledirectory/guardian_portal_contacts.go:26. May-bind method surface, not a production-call/liveness claim. Since #7141 the binding reads the stored permission through the shared root helper guardianPortalAccessGranted, which the room change notice uses too; effect and target are unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts; modules/peopledirectory/guardian_portal_contacts.go:26. May-bind method surface, not a production-call/liveness claim. Since #7141 the binding reads the stored permission through the shared root helper guardianPortalAccessGranted, which the room change notice uses too; effect and target are unchanged. Since #7362 the binding also hands on the guardian's chosen form of address for the mail greeting; it stays a read.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",
       "target_owner": "people-directory"

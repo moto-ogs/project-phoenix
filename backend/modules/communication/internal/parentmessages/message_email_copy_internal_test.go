@@ -45,7 +45,7 @@ func TestMessageEmailCopyCoversEveryLocale(t *testing.T) {
 	for field, pick := range fields {
 		got := map[string]string{}
 		for _, locale := range parentEmailLocales {
-			got[locale] = pick(messageEmailCopy(locale, "Anna", "Nowak", "Grundschule Musterstadt", "", "OGS", deliveryPolicy.ParentDeliveryPolicy{}))
+			got[locale] = pick(messageEmailCopy(locale, "", "Anna", "Nowak", "Grundschule Musterstadt", "", "OGS", deliveryPolicy.ParentDeliveryPolicy{}))
 		}
 		assertDistinctEmailField(t, field, got)
 	}
@@ -55,7 +55,7 @@ func TestMessageEmailCopyWithoutSchoolUsesNeutralFooter(t *testing.T) {
 	t.Parallel()
 
 	for _, locale := range parentEmailLocales {
-		copy := messageEmailCopy(locale, "", "", "", "", "OGS", deliveryPolicy.ParentDeliveryPolicy{})
+		copy := messageEmailCopy(locale, "", "", "", "", "", "OGS", deliveryPolicy.ParentDeliveryPolicy{})
 		assert.NotEmpty(t, copy.FooterText, "locale %s", locale)
 		assert.NotEmpty(t, copy.Greeting, "locale %s", locale)
 		assert.NotContains(t, copy.Intro, "  ", "locale %s intro has a double space without a school", locale)
@@ -65,7 +65,7 @@ func TestMessageEmailCopyWithoutSchoolUsesNeutralFooter(t *testing.T) {
 func TestMessageEmailCopyFallsBackToGerman(t *testing.T) {
 	t.Parallel()
 
-	assert.Equal(t, messageEmailCopy("de", "", "", "", "", "OGS", deliveryPolicy.ParentDeliveryPolicy{}), messageEmailCopy("fr", "", "", "", "", "OGS", deliveryPolicy.ParentDeliveryPolicy{}))
+	assert.Equal(t, messageEmailCopy("de", "", "", "", "", "", "OGS", deliveryPolicy.ParentDeliveryPolicy{}), messageEmailCopy("fr", "", "", "", "", "", "OGS", deliveryPolicy.ParentDeliveryPolicy{}))
 }
 
 // A school that calls its care GTS (#6082) reads GTS in subject, intro and
@@ -74,10 +74,24 @@ func TestMessageEmailCopyNamesTheSchoolsCareTerm(t *testing.T) {
 	t.Parallel()
 
 	for _, locale := range parentEmailLocales {
-		copy := messageEmailCopy(locale, "Anna", "Nowak", "", "", "GTS", deliveryPolicy.ParentDeliveryPolicy{})
+		copy := messageEmailCopy(locale, "", "Anna", "Nowak", "", "", "GTS", deliveryPolicy.ParentDeliveryPolicy{})
 		for field, text := range map[string]string{"Subject": copy.Subject, "Intro": copy.Intro, "DefaultSchoolName": copy.DefaultSchoolName} {
 			assert.Contains(t, text, "GTS", "locale %s %s", locale, field)
 			assert.NotContains(t, text, "OGS", "locale %s %s", locale, field)
 		}
 	}
+}
+
+// The chosen form of address (#7362) is a German convention: other languages
+// keep first and last name, and so does German without a choice.
+func TestMessageEmailCopyGreetsWithTheChosenSalutation(t *testing.T) {
+	t.Parallel()
+
+	greeting := func(locale, salutation string) string {
+		return messageEmailCopy(locale, salutation, "Anna", "Nowak", "", "", "OGS", deliveryPolicy.ParentDeliveryPolicy{}).Greeting
+	}
+	assert.Equal(t, "Guten Tag Frau Nowak,", greeting("de", "ms"))
+	assert.Equal(t, "Guten Tag Herr Nowak,", greeting("de", "mr"))
+	assert.Equal(t, "Guten Tag Anna Nowak,", greeting("de", ""))
+	assert.Equal(t, "Hello Anna Nowak,", greeting("en", "ms"))
 }

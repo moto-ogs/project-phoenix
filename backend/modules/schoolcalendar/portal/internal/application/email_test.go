@@ -173,3 +173,21 @@ func TestAppointmentRenderer_SubjectWithoutSchool(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Neuer Termin: Elternabend", msg.Subject)
 }
+
+// The greeting names the guardian by the form of address they chose (#7362);
+// without one, and in a mail queued before the choice existed, it keeps first
+// and last name.
+func TestAppointmentRenderer_GreetsWithTheChosenSalutation(t *testing.T) {
+	t.Parallel()
+
+	render := NewAppointmentRenderer(EmailConfig{})
+	for salutation, want := range map[string]string{"ms": "Frau Mustermann", "mr": "Herr Mustermann", "": "Erika Mustermann"} {
+		row := appointmentOutboxRow(emailKindAppointmentPublished)
+		if salutation != "" {
+			row.Payload[apptPayloadSalutation] = salutation
+		}
+		msg, err := render(context.Background(), row)
+		require.NoError(t, err)
+		assert.Equal(t, want, msg.Content["GuardianName"], "salutation %q", salutation)
+	}
+}

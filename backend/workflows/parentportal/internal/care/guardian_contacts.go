@@ -197,7 +197,7 @@ func (s *Service) updateGuardianProfile(ctx context.Context, profile *GuardianPr
 
 func guardianContactRecord(profile *GuardianProfile) GuardianContactRecord {
 	return GuardianContactRecord{
-		FirstName: profile.FirstName, LastName: profile.LastName, Email: profile.Email,
+		FirstName: profile.FirstName, LastName: profile.LastName, Salutation: profile.Salutation, Email: profile.Email,
 		AddressStreet: profile.AddressStreet, AddressCity: profile.AddressCity, AddressPostalCode: profile.AddressPostalCode,
 		PreferredContactMethod: profile.PreferredContactMethod, LanguagePreference: profile.LanguagePreference,
 	}

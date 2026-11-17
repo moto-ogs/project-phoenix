@@ -20,6 +20,7 @@ func (s *Service) ListGuardianPortalContacts(ctx context.Context, guardianIDs, s
 		result = append(result, peopledirectory.GuardianPortalContact{
 			GuardianProfileID: value.GuardianProfileID, TenantID: value.TenantID, AccountID: value.AccountID,
 			FirstName: value.FirstName, LastName: value.LastName, Email: value.Email,
+			Salutation:   value.Salutation,
 			PortalLocale: value.PortalLocale, StudentID: value.StudentID, PortalPermission: value.PortalPermission,
 		})
 	}

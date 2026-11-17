@@ -200,8 +200,10 @@ type CareException struct {
 type Profile struct {
 	FirstName string
 	LastName  string
-	Locale    string
-	Explicit  bool
+	// Salutation is the chosen form of address, empty without a choice.
+	Salutation string
+	Locale     string
+	Explicit   bool
 }
 
 // StudentPhotoUnlinker is the part of the photo lifecycle a photo-consent
@@ -246,6 +248,7 @@ func (s *Service) readPortalProfile(ctx context.Context, accountID int64, profil
 	var locale *string
 	if row != nil {
 		profile.FirstName, profile.LastName = row.FirstName, row.LastName
+		profile.Salutation = deref(row.Salutation)
 		locale = row.PortalLocale
 	}
 	if (locale == nil || *locale == "") && s.ParentAccounts != nil {
@@ -301,6 +304,7 @@ func (s *Service) UpdatePortalLocale(ctx context.Context, accountID int64, local
 		if row != nil {
 			profile.FirstName = row.FirstName
 			profile.LastName = row.LastName
+			profile.Salutation = deref(row.Salutation)
 		}
 		return nil
 	})

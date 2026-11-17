@@ -18,12 +18,15 @@ const (
 	messagePayloadRecipient    = "recipient_email"
 	messagePayloadFirstName    = "first_name"
 	messagePayloadLastName     = "last_name"
-	messagePayloadLocale       = "locale"
-	messagePayloadSchoolName   = "school_name"
-	messagePayloadMessagesURL  = "messages_url"
-	messagePayloadLogoURL      = "logo_url"
-	messagePayloadMotoLogoURL  = "moto_logo_url"
-	messagePayloadCareTerm     = "care_facility_term"
+	// messagePayloadSalutation is the form of address the guardian chose
+	// (#7362); a mail queued before it existed has none.
+	messagePayloadSalutation  = "salutation"
+	messagePayloadLocale      = "locale"
+	messagePayloadSchoolName  = "school_name"
+	messagePayloadMessagesURL = "messages_url"
+	messagePayloadLogoURL     = "logo_url"
+	messagePayloadMotoLogoURL = "moto_logo_url"
+	messagePayloadCareTerm    = "care_facility_term"
 	// defaultCareFacilityTerm names the care in a mail queued before the
 	// payload carried the school's term (#6082).
 	defaultCareFacilityTerm = "OGS"
@@ -118,6 +121,7 @@ func (s *Service) notifyGuardianEmail(ctx context.Context, thread *ParentMessage
 			messagePayloadRecipient:   deliveryPorts.JSONString(recipient),
 			messagePayloadFirstName:   deliveryPorts.JSONString(profile.FirstName),
 			messagePayloadLastName:    deliveryPorts.JSONString(profile.LastName),
+			messagePayloadSalutation:  deliveryPorts.JSONString(profile.Salutation),
 			messagePayloadLocale:      deliveryPorts.JSONString(locale),
 			messagePayloadSchoolName:  deliveryPorts.JSONString(schoolName),
 			messagePayloadMessagesURL: deliveryPorts.JSONString(strings.TrimRight(s.ParentsURL, "/") + "/messages/" + strconv.FormatInt(thread.StudentID, 10)),
@@ -171,7 +175,8 @@ func NewParentMessageRenderer(cfg ParentMessageRendererConfig, policy deliveryPo
 		if careTerm == "" {
 			careTerm = defaultCareFacilityTerm
 		}
-		copy := messageEmailCopy(locale, first, last, schoolName, "", careTerm, policy)
+		salutation := row.Payload.String(messagePayloadSalutation)
+		copy := messageEmailCopy(locale, salutation, first, last, schoolName, "", careTerm, policy)
 		return &deliveryPorts.MailMessage{
 			From:     cfg.DefaultFrom,
 			To:       deliveryPorts.NewMailAddress(strings.TrimSpace(first+" "+last), recipient),
@@ -203,7 +208,10 @@ func NewParentMessageRenderer(cfg ParentMessageRendererConfig, policy deliveryPo
 	})
 }
 
-func messageEmailCopy(locale, firstName, lastName, schoolName, childName, careTerm string, policy deliveryPorts.LocaleNormalizer) parentMessageEmailCopy {
+// messageEmailCopy picks the mail's wording. Only the German greeting uses
+// the chosen form of address ("Guten Tag Frau Klein,"); every other language
+// keeps first and last name.
+func messageEmailCopy(locale, salutation, firstName, lastName, schoolName, childName, careTerm string, policy deliveryPorts.LocaleNormalizer) parentMessageEmailCopy {
 	name := strings.TrimSpace(firstName + " " + lastName)
 	school := strings.TrimSpace(schoolName)
 	child := strings.TrimSpace(childName)
@@ -221,7 +229,7 @@ func messageEmailCopy(locale, firstName, lastName, schoolName, childName, careTe
 	case "uk":
 		return ukrainianMessageEmailCopy(name, school, child, careTerm)
 	default:
-		return germanMessageEmailCopy(name, school, child, careTerm)
+		return germanMessageEmailCopy(textnorm.GermanFormalName(salutation, firstName, lastName), school, child, careTerm)
 	}
 }
 

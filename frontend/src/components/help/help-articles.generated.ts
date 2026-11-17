@@ -6726,6 +6726,16 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
         ],
       },
       {
+        title: "Die eigene Anrede wählen",
+        description:
+          "Die Anrede ist freiwillig. Mit Anrede schreibt moto zum Beispiel `Guten Tag Frau Klein`, ohne Anrede mit Vor- und Nachname.",
+        steps: [
+          "Tippen Sie bei Ihrem eigenen Namen auf den Stift `Bearbeiten`.",
+          "Wählen Sie bei `Anrede` `Frau`, `Herr` oder `Keine Angabe`.",
+          "Tippen Sie auf `Speichern`.",
+        ],
+      },
+      {
         title: "Einer Person App-Zugang geben",
         steps: [
           "Gehen Sie zur Karte `Verbundene Konten`.",
@@ -6743,6 +6753,7 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
       "Das Abholrecht wegnehmen geht sofort und ohne Unterschrift.",
       "Holt jemand nur an einem einzigen Tag ab? Dann ändern Sie die Abholung für diesen Tag.",
       "Ein Kontakt braucht kein eigenes Konto. Zum Beispiel Oma oder Opa.",
+      "Eine Anrede wählt jede Person nur für sich selbst. Bei anderen Kontakten fehlt das Feld.",
       "Eine E-Mail beim Kontakt lädt niemanden ein. Der App-Zugang ist ein eigener Schritt.",
     ],
     differences: [

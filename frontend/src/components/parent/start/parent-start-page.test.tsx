@@ -220,6 +220,21 @@ describe("ParentStartPage", () => {
       ).toBeInTheDocument();
     });
 
+    it("gruesst mit der gewaehlten Anrede und dem Nachnamen", async () => {
+      mockedProfile.mockResolvedValue({
+        first_name: "Karin",
+        last_name: "Klein",
+        salutation: "ms",
+        portal_locale: "de",
+      });
+      renderPage();
+      expect(
+        await screen.findByRole("heading", {
+          name: "Guten Morgen, Frau Klein",
+        }),
+      ).toBeInTheDocument();
+    });
+
     it("gruesst mittags mit 'Guten Tag'", async () => {
       vi.setSystemTime(new Date("2026-08-17T12:00:00Z")); // 14:00 Berlin
       renderPage();

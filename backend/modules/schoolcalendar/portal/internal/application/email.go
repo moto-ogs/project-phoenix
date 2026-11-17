@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // GuardianChildAccessChecker answers, at the moment a queued mail is sent, which
@@ -46,6 +47,8 @@ func NewAppointmentRenderer(cfg EmailConfig) func(context.Context, *ports.EmailO
 		schoolName, _ := row.Payload[apptPayloadSchoolName].(string)
 		first, _ := row.Payload[apptPayloadFirstName].(string)
 		last, _ := row.Payload[apptPayloadLastName].(string)
+		// A mail queued before #7362 carries no form of address.
+		salutation, _ := row.Payload[apptPayloadSalutation].(string)
 		portalURL, _ := row.Payload[apptPayloadPortalURL].(string)
 		logoURL, _ := row.Payload[apptPayloadLogoURL].(string)
 		motoLogoURL, _ := row.Payload[apptPayloadMotoLogoURL].(string)
@@ -69,6 +72,7 @@ func NewAppointmentRenderer(cfg EmailConfig) func(context.Context, *ports.EmailO
 				"SchoolName":        schoolName,
 				"GuardianFirstName": first,
 				"GuardianLastName":  last,
+				"GuardianName":      textnorm.GermanFormalName(salutation, first, last),
 				"PortalURL":         portalURL,
 				"LogoURL":           logoURL,
 				"MotoLogoURL":       motoLogoURL,

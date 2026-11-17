@@ -31,6 +31,11 @@ type GuardianProfile struct {
 	FirstName string `bun:"first_name" json:"first_name"`
 	LastName  string `bun:"last_name" json:"last_name"`
 
+	// Salutation is the form of address the guardian chose for themselves
+	// (textnorm.SalutationMs or SalutationMr). nil means no choice, and
+	// greetings keep first and last name (#7362).
+	Salutation *string `bun:"salutation" json:"salutation,omitempty"`
+
 	// Contact Information
 	Email *string `bun:"email" json:"email,omitempty"`
 	// Note: Phone numbers are stored in guardian_phone_numbers table (see PhoneNumbers relation)
@@ -85,6 +90,13 @@ func (g *GuardianProfile) Validate() error {
 		if _, err := mail.ParseAddress(*g.Email); err != nil {
 			return errors.New("invalid email format")
 		}
+	}
+
+	if g.Salutation != nil && *g.Salutation == "" {
+		g.Salutation = nil
+	}
+	if g.Salutation != nil && !textnorm.ValidSalutation(*g.Salutation) {
+		return errors.New("invalid salutation")
 	}
 
 	// Validate preferred contact method
