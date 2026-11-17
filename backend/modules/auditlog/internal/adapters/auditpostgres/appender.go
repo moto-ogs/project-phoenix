@@ -259,9 +259,13 @@ func importEventRow(value *auditImports.DataImport) *auditModels.DataImport {
 // security-definer retention function guards on the database clock, and the
 // change ledgers the access trail orders against them, are stamped by their
 // column default in every writer, so a time the producer set is dropped
-// (ADR 0281, Nachtrag); bun reads the stamp back. The work session edits,
-// deleted with their session, take the Audit clock when they come without a
-// time. The ledgers without a school are stamped by the database too.
+// (ADR 0281, Nachtrag); bun reads the stamp back. Their producers set no
+// time or the instant of their own clock. The consent changes keep the time
+// the producer set: a grant records when the consent was given, which an
+// import of past consents dates back; without a time the column default
+// stamps them. The work session edits, deleted with their session, take the
+// Audit clock when they come without a time. The ledgers without a school
+// are stamped by the database too.
 func (a *Appender) stampRecordedAt(event any) error {
 	for _, stamp := range databaseStamps(event) {
 		*stamp = time.Time{}
@@ -311,10 +315,6 @@ func databaseStamps(event any) []*time.Time {
 	case *auditModels.TimeTrackingDeletion:
 		return []*time.Time{&value.OccurredAt}
 	case *auditModels.GuardianChange:
-		return []*time.Time{&value.ChangedAt}
-	case *auditModels.StudentConsentChange:
-		return []*time.Time{&value.CreatedAt, &value.UpdatedAt}
-	case *consents.ConsentChange:
 		return []*time.Time{&value.ChangedAt}
 	case *auditModels.AttendanceCorrection:
 		return []*time.Time{&value.CreatedAt, &value.UpdatedAt}

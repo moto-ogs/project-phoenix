@@ -23,7 +23,7 @@ func auditTestClock() time.Time { return auditTestNow }
 // TestAuditAppenderLeavesTheDatabaseStampsToTheColumnDefault pins the
 // recording time of the ledgers (ADR 0281, Nachtrag): the Appender clears a
 // time the producer set on every ledger the database stamps, so the column
-// default stamps it, and gives a work session edit without its time the
+// default stamps it, keeps the time of a consent change, and gives a work session edit without its time the
 // instant of the Audit clock, keeps one the producer set, and refuses to
 // stamp it without a clock.
 func TestAuditAppenderLeavesTheDatabaseStampsToTheColumnDefault(t *testing.T) {
@@ -40,17 +40,26 @@ func TestAuditAppenderLeavesTheDatabaseStampsToTheColumnDefault(t *testing.T) {
 	file, substitution := &audit.FileEvent{}, &audit.SubstitutionChange{}
 	classRow, classEvent := &audit.ClassListEntryChange{}, &classlist.ClassListEntryChange{}
 	staff, number, bank, timeDeletion := &audit.StaffMasterDataChange{}, &audit.PersonnelNumberChange{}, &audit.GuardianFinancialChange{}, &audit.TimeTrackingDeletion{}
-	guardian, consentRow, consentEvent, correction := &audit.GuardianChange{}, &audit.StudentConsentChange{}, &consents.ConsentChange{}, &audit.AttendanceCorrection{}
+	guardian, correction := &audit.GuardianChange{}, &audit.AttendanceCorrection{}
 	for event, stamp := range map[any]*time.Time{file: &file.CreatedAt, substitution: &substitution.CreatedAt, classRow: &classRow.OccurredAt,
 		classEvent: &classEvent.OccurredAt, staff: &staff.OccurredAt, number: &number.OccurredAt, bank: &bank.OccurredAt,
-		timeDeletion: &timeDeletion.OccurredAt, guardian: &guardian.ChangedAt, consentRow: &consentRow.CreatedAt,
-		consentEvent: &consentEvent.ChangedAt, correction: &correction.CreatedAt} {
+		timeDeletion: &timeDeletion.OccurredAt, guardian: &guardian.ChangedAt, correction: &correction.CreatedAt} {
 		stamps[event] = stamp
 	}
 	for event, stamp := range stamps {
 		*stamp = auditTestNow
 		require.NoError(t, appender.stampRecordedAt(event))
 		assert.True(t, stamp.IsZero(), "%T is left to the column default", event)
+	}
+
+	granted := time.Date(2024, time.August, 1, 8, 0, 0, 0, time.UTC)
+	consentRow := &audit.StudentConsentChange{Model: audit.Model{CreatedAt: granted, UpdatedAt: granted}}
+	consentEvent := &consents.ConsentChange{ChangedAt: granted}
+	unset := &consents.ConsentChange{}
+	for event, stamp := range map[any]*time.Time{consentRow: &consentRow.CreatedAt, consentEvent: &consentEvent.ChangedAt, unset: &unset.ChangedAt} {
+		want := *stamp
+		require.NoError(t, appender.stampRecordedAt(event))
+		assert.True(t, want.Equal(*stamp), "%T keeps the time the producer set, or none for the column default", event)
 	}
 
 	session := &audit.WorkSessionEdit{}
