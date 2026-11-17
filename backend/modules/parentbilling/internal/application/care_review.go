@@ -101,17 +101,19 @@ func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbillin
 		if !inRun(invoice.SchoolID) {
 			continue
 		}
+		// An excluded invoice still belongs to a family the run counts as
+		// uncounted, so the list names it too.
+		if slices.Contains(month.uncountedSchools[invoice.FamilyEmail], invoice.SchoolID) && !namesContract(review.uncountedContracts, invoice.ContractID) {
+			review.uncountedContracts = append(review.uncountedContracts, parentbilling.CareUncountedContract{
+				ContractID: invoice.ContractID, SchoolName: invoice.SchoolName, ChildFirstName: invoice.ChildFirstName,
+				ChildLastName: invoice.ChildLastName, Status: month.uncountedStates[invoice.FamilyEmail]})
+		}
 		if exclusion, ok := exclusions[careInvoiceKeyOf(invoice)]; ok {
 			invoice.Exclusion = &exclusion
 			review.excluded = append(review.excluded, invoice)
 			continue
 		}
 		review.invoices = append(review.invoices, invoice)
-		if slices.Contains(month.uncountedSchools[invoice.FamilyEmail], invoice.SchoolID) {
-			review.uncountedContracts = append(review.uncountedContracts, parentbilling.CareUncountedContract{
-				ContractID: invoice.ContractID, SchoolName: invoice.SchoolName, ChildFirstName: invoice.ChildFirstName,
-				ChildLastName: invoice.ChildLastName, Status: month.uncountedStates[invoice.FamilyEmail]})
-		}
 	}
 	for _, unpriced := range month.unpriced {
 		if inRun(unpriced.SchoolID) {
@@ -127,6 +129,12 @@ func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbillin
 		}
 	}
 	return review
+}
+
+// namesContract tells whether the list names a contract already: a Mensa
+// invoice of its own repeats the contract of its care invoice.
+func namesContract(contracts []parentbilling.CareUncountedContract, contractID int64) bool {
+	return slices.ContainsFunc(contracts, func(contract parentbilling.CareUncountedContract) bool { return contract.ContractID == contractID })
 }
 
 // narrowFeeNotices keeps the Jahresbescheide of the run's schools that

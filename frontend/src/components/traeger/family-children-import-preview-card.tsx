@@ -79,9 +79,9 @@ export function FamilyChildrenImportPreviewCard({
     { value: "ready", label: `Bereit ${counts.ready + counts.imported}` },
     {
       value: "problems",
-      label: `Nicht übernommen ${counts.conflict + counts.invalid + counts.differs}`,
+      label: `Offen ${counts.conflict + counts.invalid + counts.differs}`,
     },
-    { value: "unchanged", label: `Schon bestätigt ${counts.same}` },
+    { value: "unchanged", label: `Bestätigt ${counts.same}` },
   ];
 
   const columns: DataTableColumn<FamilyImportRow>[] = [
@@ -129,7 +129,7 @@ export function FamilyChildrenImportPreviewCard({
     },
     {
       key: "children",
-      header: "Kinder in der Familie",
+      header: "Kinderzahl",
       render: (row) =>
         row.children === null ? (
           <span className="text-gray-500">–</span>

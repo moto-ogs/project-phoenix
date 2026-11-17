@@ -160,14 +160,15 @@ export async function confirmFamilyChildren(
   );
 }
 
-/** Removes the number of the family of a contract. */
+/**
+ * Removes the number of the family of a contract and reads the list again:
+ * the route answers a removal without a body, as every DELETE does.
+ */
 export async function removeFamilyChildren(
   contractId: string,
 ): Promise<FamilyChildrenSet> {
-  return familyChildrenSetFromBackend(
-    await traegerRequest<BackendSet>(
-      `${PATH}/${encodeURIComponent(contractId)}`,
-      { method: "DELETE" },
-    ),
-  );
+  await traegerRequest<void>(`${PATH}/${encodeURIComponent(contractId)}`, {
+    method: "DELETE",
+  });
+  return fetchFamilyChildren();
 }

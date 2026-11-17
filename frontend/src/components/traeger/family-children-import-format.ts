@@ -15,8 +15,8 @@ export const FAMILY_IMPORT_FIELDS: readonly FamilyImportField[] = [
   "child_first_name",
   "child_last_name",
   "child_birth_date",
-  "school",
   "children",
+  "school",
 ];
 
 /** Felder, die jede Datei als Spalte braucht; die Schule auch als Wahl. */
