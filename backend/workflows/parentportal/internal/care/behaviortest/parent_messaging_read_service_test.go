@@ -241,6 +241,31 @@ func TestListChildThreads_NotOwnedDenied(t *testing.T) {
 
 // --- UnreadMessageCount -------------------------------------------------
 
+func TestUnreadMessageCount_ExcludesChildWithoutCarePlace(t *testing.T) {
+	t.Parallel()
+	svc, _, db, repos := buildReadService(t, true)
+	chain := testpkg.CreateTestParentGuardianChain(t, db)
+	control := testpkg.CreateTestParentGuardianChain(t, db)
+	seedStaffReply(t, db, repos, chain, "Hallo")
+	seedStaffReply(t, db, repos, control, "Hallo")
+	ctx := testpkg.WithPackageTenantRuntime(context.Background())
+
+	before, err := svc.UnreadMessageCount(ctx, chain.AccountID)
+	require.NoError(t, err)
+	require.Equal(t, 1, before)
+
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, chain.StudentID)
+	_, err = svc.GetChildConversation(ctx, chain.AccountID, chain.StudentID)
+	require.ErrorIs(t, err, parentportal.ErrChildWithoutCarePlace)
+
+	count, err := svc.UnreadMessageCount(ctx, chain.AccountID)
+	require.NoError(t, err)
+	assert.Zero(t, count, "an inaccessible conversation must not leave an unread badge")
+	count, err = svc.UnreadMessageCount(ctx, control.AccountID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count, "accessible conversations at the same school still count")
+}
+
 func TestUnreadMessageCount_ZeroWhenSchoolDisabled(t *testing.T) {
 	t.Parallel()
 
