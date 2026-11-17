@@ -32,7 +32,6 @@ type rawPersonRepository interface {
 	LinkToRFIDCard(ctx context.Context, personID int64, tagID string) error
 	UnlinkFromRFIDCard(ctx context.Context, personID int64) error
 	FindWithAccount(ctx context.Context, id int64) (*models.Person, error)
-	AnonymizeAndSoftDelete(ctx context.Context, personID int64) error
 }
 type rawStudentRepository interface {
 	directory.StudentSnapshotReads

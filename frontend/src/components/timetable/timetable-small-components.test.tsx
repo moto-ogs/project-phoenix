@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { testClockDay } from "~/test/clock";
+
 import { InstanceBlock } from "./instance-block";
 import { MonthPlannerGrid } from "./month-planner-grid";
 import { TemplateCard } from "./template-card";
@@ -77,6 +79,12 @@ const template: TimetableTemplate = {
     },
   ],
 };
+
+/** "2026-10-23" -> "23\\.10\\.2026" (escaped for a RegExp). */
+function germanDay(iso: string): string {
+  const [year, month, day] = iso.split("-");
+  return `${day}\\.${month}\\.${year}`;
+}
 
 describe("small timetable components", () => {
   it("renders an instance block with live/conflict metadata and handles click", () => {
@@ -334,30 +342,35 @@ describe("small timetable components", () => {
   });
 
   it("shows the last day of a series that ends early (#3594)", () => {
+    const endDate = testClockDay(44);
     render(
       <TemplateCard
-        template={{ ...template, endDate: "2026-10-23" }}
+        template={{ ...template, endDate }}
         onEdit={vi.fn()}
         onApply={vi.fn()}
         onArchive={vi.fn()}
       />,
     );
 
-    expect(screen.getByText(/, bis 23\.10\.2026/)).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`, bis ${germanDay(endDate)}`)),
+    ).toBeInTheDocument();
   });
 
   it("keeps a finished series listed and marks it as ended (#3594)", () => {
-    // The shared test clock stands on 2026-09-09.
+    const endDate = testClockDay(-5);
     render(
       <TemplateCard
-        template={{ ...template, endDate: "2026-09-04" }}
+        template={{ ...template, endDate }}
         onEdit={vi.fn()}
         onApply={vi.fn()}
         onArchive={vi.fn()}
       />,
     );
 
-    expect(screen.getByText(/, beendet am 04\.09\.2026/)).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`, beendet am ${germanDay(endDate)}`)),
+    ).toBeInTheDocument();
   });
 
   it("gives compact ratio pills a screen-reader label", () => {

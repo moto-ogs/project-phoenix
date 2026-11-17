@@ -53,7 +53,7 @@ func buildReasonPolicyServices(t *testing.T, policy string) (*parentService.Port
 	repos := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db))
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	excused, err := api.NewTestExcusedAbsenceRequests(api.ExcusedRequestTestOptions{
-		CarePlan: repos.CarePlan(), Logger: slog.Default(),
+		CarePlan: repos.CarePlan(), Logger: slog.Default(), Today: careFixtureToday,
 	}, api.ExcusedRequestTestPeople{Students: reposPeople.Student, Persons: reposPeople.Person, Events: reposPeople.ParentRequestEvent}, nil, nil)
 	require.NoError(t, err)
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
@@ -78,6 +78,7 @@ func buildReasonPolicyServices(t *testing.T, policy string) (*parentService.Port
 		ExcusedRequests:     owners.NewParentExcusedAbsenceRequests(excused),
 		ExcusedRequestRepo:  repos.ExcusedAbsenceRequest,
 		Logger:              slog.Default(),
+		Now:                 careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
@@ -110,7 +111,7 @@ func TestGuardianNoteFollowsReasonPolicy(t *testing.T) {
 			ctx := testpkg.WithPackageTenantRuntime(context.Background())
 
 			res, err := svc.SubmitSickNote(ctx, chain.AccountID, chain.StudentID,
-				[]calendar.Date{calendar.TodayDate().AddDays(3)}, "  ", absencerecords.StudentStatusDayExcused, nil)
+				[]calendar.Date{careFixtureToday().AddDays(3)}, "  ", absencerecords.StudentStatusDayExcused, nil)
 			if tc.wantRefusal {
 				require.ErrorIs(t, err, parentService.ErrEmptyNote)
 				return
@@ -144,7 +145,7 @@ func TestStaffApprovalReasonFollowsReasonPolicy(t *testing.T) {
 			ctx := testpkg.WithPackageTenantRuntime(context.Background())
 
 			res, err := svc.SubmitSickNote(ctx, chain.AccountID, chain.StudentID,
-				[]calendar.Date{calendar.TodayDate().AddDays(3)}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
+				[]calendar.Date{careFixtureToday().AddDays(3)}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
 			require.NoError(t, err)
 
 			decideErr := testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
@@ -176,7 +177,7 @@ func TestStaffRejectionAlwaysNeedsAReason(t *testing.T) {
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 
 	res, err := svc.SubmitSickNote(ctx, chain.AccountID, chain.StudentID,
-		[]calendar.Date{calendar.TodayDate().AddDays(3)}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
+		[]calendar.Date{careFixtureToday().AddDays(3)}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
 	require.NoError(t, err)
 
 	decideErr := testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {

@@ -69,7 +69,7 @@ func newSentryTestScheduler(t *testing.T, options sentryTestSchedulerOptions) (*
 		run = func(ports.JobID, string, time.Duration) {}
 	}
 	hub, transport := newRecordingHub(t)
-	scheduler := newScheduler(ports.WorkerDependencies{
+	scheduler := newScheduler(ports.WorkerDependencies{Now: time.Now,
 		Logger:        slog.New(slog.DiscardHandler),
 		TenantRuntime: scriptedTenantRuntime(nil, retryable),
 		Tracer: ports.WorkerTracer{

@@ -18,8 +18,8 @@ const monthSnapshotOrdinal = `("staff_month_balance_snapshot".year * 12 + "staff
 type monthSnapshotRow struct {
 	bun.BaseModel         `bun:"table:active.staff_month_balance_snapshots,alias:staff_month_balance_snapshot"`
 	ID                    int64      `bun:"id,pk,autoincrement"`
-	CreatedAt             time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt             time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt             time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt             time.Time  `bun:"updated_at,nullzero,notnull"`
 	TenantID              int64      `bun:"tenant_id,notnull"`
 	StaffID               int64      `bun:"staff_id,notnull"`
 	Year                  int        `bun:"year,notnull"`
@@ -30,7 +30,7 @@ type monthSnapshotRow struct {
 	ActualMinutes         int        `bun:"actual_minutes,notnull"`
 	CreditedMinutes       int        `bun:"credited_minutes,notnull"`
 	AdjustmentMinutes     int        `bun:"adjustment_minutes,notnull"`
-	ClosedAt              time.Time  `bun:"closed_at,notnull,default:current_timestamp"`
+	ClosedAt              time.Time  `bun:"closed_at,notnull"`
 	ClosedBy              int64      `bun:"closed_by,nullzero"`
 	ClosedByAccountID     int64      `bun:"closed_by_account_id,nullzero"`
 	CloseReason           string     `bun:"close_reason,notnull,default:''"`
@@ -121,6 +121,7 @@ func (s *Store) RecordClosedMonth(ctx context.Context, value domain.StaffMonthBa
 	}
 	row := monthSnapshotFromDomain(value)
 	row.TenantID = tenantID
+	s.stampNew(&row.ClosedAt)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	_, err = db.NewInsert().Model(&row).ModelTableExpr(tableMonthSnapshots).Returning("*").Exec(ctx)

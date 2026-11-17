@@ -88,7 +88,7 @@ func (s *recordingStore) DeleteTransition(context.Context, int64, int64) (int64,
 	return 1, domain.OperationStats{}, nil
 }
 
-func (s *recordingStore) DeleteTransitionsEndedBefore(context.Context, int64, time.Time) (int64, domain.OperationStats, error) {
+func (s *recordingStore) DeleteTransitionsEndedBefore(context.Context, int64, time.Time, int) (int64, domain.OperationStats, error) {
 	s.calls++
 	return 0, domain.OperationStats{}, nil
 }

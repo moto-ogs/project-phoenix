@@ -165,6 +165,7 @@ func (m *mockDecisionService) RecordPhaseExportAudit(_ context.Context, _ int64,
 
 func buildAdminDecisionRouter(svc DecisionService) chi.Router {
 	rs := &Resource{
+		Now:             resourceTestClock,
 		Failures:        DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
 		DecisionService: svc,
 		// db nil → runInTenantTx short-circuits straight to the closure.
@@ -270,6 +271,7 @@ func TestListAdminRequestsHandler_ConfigReadDoesNotReturnStatusToken(t *testing.
 		listResult: []*RequestSummary{summary},
 	}
 	w := executeAdminRouteWithPermissions(t, &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, DecisionService: mock}, http.MethodGet, "/admin/requests", []string{"config:read"})
 	require.Equal(t, http.StatusOK, w.Code)
 
@@ -291,6 +293,7 @@ func TestAdminRequestRoutes_DetailRequiresConfigManage(t *testing.T) {
 		},
 	}
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, DecisionService: mock}
 
 	listReadOnly := executeAdminRouteWithPermissions(t, rs, http.MethodGet, "/admin/requests", []string{"config:read"})

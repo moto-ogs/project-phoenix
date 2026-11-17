@@ -2,10 +2,17 @@
 // späte Antwort öffnet keinen Chat, wenn das Panel zu ist oder inzwischen ein
 // anderer Leserkreis gewählt wurde. Echter SlideOver über dem gemeinsamen
 // Vaul-Mock.
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as rtlRender,
+  screen,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { ThreadDetail } from "~/lib/parent-messages-api";
 import { catalogText } from "~/test/error-catalog-text";
 import {
@@ -15,6 +22,27 @@ import {
 } from "~/test/helpers/form-modal-pending";
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
+
+// Echtes SWR statt des globalen Stubs: Laden, Fehler und Wiederholen laufen
+// über den echten Abruf, mit frischem Cache je Render.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    ),
+  });
+}
 
 const { mockFetchGuardians, mockOpenThread } = vi.hoisted(() => ({
   mockFetchGuardians: vi.fn(),

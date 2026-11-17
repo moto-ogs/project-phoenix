@@ -1,8 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { DocumentKindOverview } from "~/lib/traeger-document-kinds-api";
 
+vi.unmock("swr");
 const { kindsApi, session } = vi.hoisted(() => ({
   kindsApi: {
     fetchDocumentKinds: vi.fn(),
@@ -20,7 +22,14 @@ vi.mock("~/lib/traeger-url", () => ({
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", permissions: session.permissions } },
+    data: {
+      user: {
+        id: "A",
+        scope: "org",
+        orgId: 7,
+        permissions: session.permissions,
+      },
+    },
     status: "authenticated",
   }),
 }));
@@ -53,9 +62,11 @@ function overview(
 
 function renderPage() {
   return render(
-    <ToastProvider>
-      <TraegerDocumentKindsPage />
-    </ToastProvider>,
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>
+        <TraegerDocumentKindsPage />
+      </ToastProvider>
+    </SWRConfig>,
   );
 }
 

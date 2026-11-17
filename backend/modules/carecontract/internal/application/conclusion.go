@@ -31,6 +31,7 @@ var _ carecontract.Conclusion = (*Conclusions)(nil)
 // reads the schools and builds the contract, and the contracts, which send
 // it.
 func NewConclusions(intake *Intake, contracts *Contracts, clock Clock) *Conclusions {
+	requireClock(clock, "conclusions")
 	if intake == nil || contracts == nil {
 		panic("care contract: the intake and the contracts are required")
 	}

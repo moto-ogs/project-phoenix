@@ -111,6 +111,7 @@ func newPlanSyncEnv(t *testing.T, cascadeBroadcaster realtime.Broadcaster, now f
 		Broadcaster:       broadcaster,
 		Logger:            logger,
 		Runtime:           testpkg.TenantTransactionRuntime{},
+		Today:             today,
 	})
 	require.NoError(t, err)
 

@@ -12,7 +12,7 @@
  * where the parents sign it (#4679).
  */
 
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
@@ -20,11 +20,18 @@ import { ParentSepaMandateEntry } from "~/components/parent/parent-sepa-mandate-
 import { ParentSection } from "~/components/parent/shell/parent-section";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { formatDate } from "~/lib/date-helpers";
 import { formatBytes } from "~/lib/file-format";
 import {
@@ -92,29 +99,30 @@ function inboxEntries(
 
 export function ParentDocumentsPage() {
   const t = useTranslations("parentDocuments");
-  const [documents, setDocuments] = useState<InboxEntry[] | null>(null);
-  const { error, show: showLoadError, clear } = useApiLoadError();
-
-  const load = useCallback(async () => {
-    clear();
-    try {
-      const result = await listMyDocuments();
-      setDocuments(inboxEntries(result.documents, result.shared));
-      if (result.failedSource) {
-        void showLoadError(result.error, {
-          object: t(FAILED_OBJECTS[result.failedSource]),
-          retry: () => void load(),
-        });
-      }
-    } catch (err) {
-      setDocuments([]);
-      void showLoadError(err, { object: t("errorObject") });
-    }
-  }, [clear, showLoadError, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const inbox = useSWRAuth(
+    parentInboxKeys.documents(),
+    listMyDocuments,
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const { data, mutate } = inbox;
+  const retry = () => mutate();
+  const { error: inboxError, failure } = useSwrResourceLoadError(
+    [inbox],
+    t("errorObject"),
+    retry,
+  );
+  // One source of the inbox failed: the others stay shown beside its error.
+  const sourceError = useSwrLoadError(
+    data?.failedSource ? data.error : undefined,
+    t(FAILED_OBJECTS[data?.failedSource ?? "several"]),
+    retry,
+  );
+  const error = inboxError ?? (data?.failedSource ? sourceError : null);
+  const documents = useMemo(
+    () =>
+      data ? inboxEntries(data.documents, data.shared) : failure ? [] : null,
+    [data, failure],
+  );
 
   return (
     <ParentPage

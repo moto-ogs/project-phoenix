@@ -8,11 +8,19 @@ import {
 import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
+
+vi.unmock("swr");
 
 // Fehler einer Aktion ohne Formular kommen als Toast (#2517).
 function render(ui: ReactElement) {
-  return rtlRender(ui, { wrapper: ToastProvider });
+  return rtlRender(
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {ui}
+    </SWRConfig>,
+    { wrapper: ToastProvider },
+  );
 }
 import StaffImportPage from "./page";
 

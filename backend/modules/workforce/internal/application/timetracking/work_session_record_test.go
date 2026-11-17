@@ -13,7 +13,7 @@ import (
 func TestWorkSession_Validate(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := testNow()
 	validSession := func() *WorkSession {
 		return &WorkSession{
 			StaffID:     1,
@@ -100,7 +100,7 @@ func TestWorkSession_IsActive(t *testing.T) {
 	})
 
 	t.Run("inactive when checked out", func(t *testing.T) {
-		now := time.Now()
+		now := testNow()
 		ws := &WorkSession{CheckOutTime: &now}
 		assert.False(t, ws.IsActive())
 	})

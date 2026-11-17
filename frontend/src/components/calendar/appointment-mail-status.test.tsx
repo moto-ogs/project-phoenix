@@ -1,12 +1,16 @@
+import { releaseFakeTimers } from "~/test/clock";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CalendarAppointmentMails } from "~/lib/personal-calendar-api";
+import { SWRConfig } from "~/lib/swr/testing";
 
 import {
   AppointmentMailStatus,
   appointmentMailNote,
 } from "./appointment-mail-status";
+
+vi.unmock("swr");
 
 const { mockGetStaffAppointmentMails } = vi.hoisted(() => ({
   mockGetStaffAppointmentMails: vi.fn(),
@@ -16,9 +20,19 @@ vi.mock("~/lib/personal-calendar-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/personal-calendar-api")>()),
   getStaffAppointmentMails: mockGetStaffAppointmentMails,
 }));
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1" }, expires: "2099-01-01" },
+  }),
+}));
 
 function renderStatus() {
-  return render(<AppointmentMailStatus appointmentId="42" />);
+  return render(
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <AppointmentMailStatus appointmentId="42" />
+    </SWRConfig>,
+  );
 }
 
 const BOUNCED: CalendarAppointmentMails = {
@@ -32,6 +46,32 @@ const BOUNCED: CalendarAppointmentMails = {
 describe("AppointmentMailStatus", () => {
   beforeEach(() => {
     mockGetStaffAppointmentMails.mockReset();
+  });
+
+  it("recovers polling after transient failures exhaust the retry budget", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    mockGetStaffAppointmentMails
+      .mockResolvedValueOnce(BOUNCED)
+      .mockRejectedValue(new Error("offline"));
+    const view = renderStatus();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("appointment-mails")).toBeVisible();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(45_000);
+    });
+    mockGetStaffAppointmentMails.mockResolvedValue({
+      kinds: { appointment_published: { delivered: 1 } },
+      not_arrived: {},
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+    expect(screen.getByText("1 zugestellt")).toBeVisible();
+    view.unmount();
+    releaseFakeTimers();
   });
 
   it("shows each kind of mail with its results, the problem first, and whom to call", async () => {

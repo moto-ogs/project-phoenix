@@ -54,6 +54,7 @@ type NoticePorts struct {
 // NewNotices builds the declarations. office, the contracts of the
 // Träger-Büro, may be nil for the parents portal alone.
 func NewNotices(store ContractStore, notices NoticeStore, noticePorts NoticePorts, clock Clock, office *Contracts) *Notices {
+	requireClock(clock, "notices")
 	if store == nil || notices == nil || noticePorts.Templates == nil || noticePorts.Post == nil || noticePorts.Holidays == nil {
 		panic("care contract: the store, the notice store, the templates, the post and the school holidays are required")
 	}

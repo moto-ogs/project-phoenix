@@ -10,14 +10,15 @@ import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { RejectReasonModal } from "./care-contract-notice-modal";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { ContractNoticeOptions } from "~/lib/care-contract-notices";
 import { unavailableApiError } from "~/lib/api-error";
 
 function render(ui: React.ReactElement) {
-  return renderPlain(ui, { wrapper: ToastProvider });
+  return renderPlain(ui, { wrapper: TraegerResourceTestProvider });
 }
 
+vi.unmock("swr");
 const mocks = vi.hoisted(() => ({
   fetchContractNoticeOptions: vi.fn(),
   recordContractNotice: vi.fn(),
@@ -37,6 +38,7 @@ vi.mock("~/lib/traeger-url", () => ({
 }));
 
 import { parseISODate, toISODate } from "~/lib/date-helpers";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 vi.mock("~/components/ui/date-picker", () => ({
   DatePicker: ({
     id,
@@ -344,7 +346,8 @@ describe("CareContractNoticeCard (#4682)", () => {
       expect(mocks.recordContractNotice).toHaveBeenCalledWith("25", {
         kind: "widerruf",
         terminationKind: "ordentlich",
-        receivedOn: "2026-09-09",
+        // Eingang ist heute, nach der Widerrufsfrist.
+        receivedOn: TEST_CLOCK_TODAY,
         dispatchedOn: "2026-09-01",
       }),
     );

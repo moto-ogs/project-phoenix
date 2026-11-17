@@ -20,10 +20,10 @@ func (s *Store) SetWorkTimeModelArchived(ctx context.Context, id int64, archived
 	query := db.NewUpdate().
 		Model(row).
 		ModelTableExpr(tableWorkTimeModels).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.stamp()).
 		Where("id = ?", id)
 	if archived {
-		query = query.Set("archived_at = COALESCE(archived_at, NOW())")
+		query = query.Set("archived_at = COALESCE(archived_at, ?)", s.stamp())
 	} else {
 		query = query.Set("archived_at = NULL")
 	}

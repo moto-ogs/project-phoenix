@@ -34,7 +34,7 @@ func NewTimetableRepositories(
 	rooms facilities.Query, calendar schoolcalendar.Capability, membership schoolmembership.Capability, workTime workforce.Capability,
 	now func() time.Time,
 ) TimetableRepositories {
-	return NewTimetableRepositoriesWithPresence(db, capability, students, groups, rooms, calendar, membership, workTime, NewUnloggedStudentPresence(db), now)
+	return NewTimetableRepositoriesWithPresence(db, capability, students, groups, rooms, calendar, membership, workTime, NewUnloggedStudentPresence(db, now), now)
 }
 
 // NewTimetableRepositoriesWithPresence is NewTimetableRepositories with the
@@ -62,11 +62,11 @@ func NewUnobservedTimetable(db transactionruntime.Database, students peopledirec
 	return newTimetable(db, students, rooms, membership, func(timetableCompose.Observation) {}, firstTimetableClock(clocks))
 }
 
-// firstTimetableClock is the first given clock, nil (the real one) when none
-// is given.
+// firstTimetableClock is the first given clock, the real one when none is
+// given.
 func firstTimetableClock(clocks []func() time.Time) func() time.Time {
-	if len(clocks) == 0 {
-		return nil
+	if len(clocks) == 0 || clocks[0] == nil {
+		return time.Now
 	}
 	return clocks[0]
 }

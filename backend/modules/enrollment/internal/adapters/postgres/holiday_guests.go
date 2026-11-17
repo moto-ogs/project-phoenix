@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/driver/pgdriver"
@@ -24,10 +25,15 @@ import (
 
 // HolidayGuestStore reads and writes the holiday guests of the hosting
 // school.
-type HolidayGuestStore struct{}
+type HolidayGuestStore struct{ now holidayClock }
 
 // NewHolidayGuestStore builds the store.
 func NewHolidayGuestStore() *HolidayGuestStore { return &HolidayGuestStore{} }
+
+// WithClock returns the store stamping its writes with now (ADR 0239).
+func (s *HolidayGuestStore) WithClock(now func() time.Time) *HolidayGuestStore {
+	return &HolidayGuestStore{now: now}
+}
 
 type holidayHostGroupRow struct {
 	OrganizationID      int64 `bun:"organization_id"`
@@ -182,13 +188,14 @@ func (s *HolidayGuestStore) SetHostGroup(ctx context.Context, schoolID int64, gr
 	if err != nil {
 		return err
 	}
+	now := holidayNow(s.now)
 	if _, err := db.NewRaw(`INSERT INTO enrollment.holiday_host_groups
-			(tenant_id, organization_id, holiday_period_week_id, group_id, assigned_by_account_id)
-		VALUES (?, ?, ?, ?, ?)
+			(tenant_id, organization_id, holiday_period_week_id, group_id, assigned_by_account_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (tenant_id, holiday_period_week_id) DO UPDATE
 			SET group_id = EXCLUDED.group_id, organization_id = EXCLUDED.organization_id,
-				assigned_by_account_id = EXCLUDED.assigned_by_account_id, updated_at = CURRENT_TIMESTAMP`,
-		schoolID, group.OrganizationID, group.WeekID, group.GroupID, group.AssignedByAccountID).Exec(ctx); err != nil {
+				assigned_by_account_id = EXCLUDED.assigned_by_account_id, updated_at = EXCLUDED.updated_at`,
+		schoolID, group.OrganizationID, group.WeekID, group.GroupID, group.AssignedByAccountID, now, now).Exec(ctx); err != nil {
 		return hostGroupError(fmt.Errorf("enrollment postgres: set holiday host group: %w", err))
 	}
 	return nil
@@ -341,8 +348,8 @@ func (s *HolidayGuestStore) ReopenGuest(ctx context.Context, schoolID, guestID i
 	if err != nil {
 		return err
 	}
-	if _, err := db.NewRaw(`UPDATE enrollment.holiday_guests SET ended_on = NULL, updated_at = CURRENT_TIMESTAMP
-		WHERE tenant_id = ? AND id = ?`, schoolID, guestID).Exec(ctx); err != nil {
+	if _, err := db.NewRaw(`UPDATE enrollment.holiday_guests SET ended_on = NULL, updated_at = ?
+		WHERE tenant_id = ? AND id = ?`, holidayNow(s.now), schoolID, guestID).Exec(ctx); err != nil {
 		return fmt.Errorf("enrollment postgres: reopen holiday guest: %w", err)
 	}
 	return nil
@@ -358,14 +365,15 @@ func (s *HolidayGuestStore) InsertGuest(ctx context.Context, schoolID int64, gue
 	if err != nil {
 		return err
 	}
+	now := holidayNow(s.now)
 	var id int64
 	if err := db.NewRaw(`INSERT INTO enrollment.holiday_guests (tenant_id, organization_id, holiday_period_week_id,
 			holiday_registration_child_id, student_id, starts_on, ends_on, home_school_id, home_school_name, guest_school_name,
-			time_model_name, time_model_starts_at, time_model_ends_at, answers, health_data, days, lunch)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, NULLIF(?, '')::date[], ?) RETURNING id`,
+			time_model_name, time_model_starts_at, time_model_ends_at, answers, health_data, days, lunch, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, NULLIF(?, '')::date[], ?, ?, ?) RETURNING id`,
 		schoolID, guest.OrganizationID, guest.WeekID, guest.ChildID, guest.StudentID, guest.StartsOn, guest.EndsOn,
 		guest.HomeSchoolID, guest.HomeSchoolName, guest.GuestSchoolName, guest.TimeModelName, guest.TimeModelStarts, guest.TimeModelEnds, answers,
-		guest.HealthSealed, holidayDaysLiteral(guest.Days), guest.Lunch,
+		guest.HealthSealed, holidayDaysLiteral(guest.Days), guest.Lunch, now, now,
 	).Scan(ctx, &id); err != nil {
 		return fmt.Errorf("enrollment postgres: insert holiday guest: %w", err)
 	}
@@ -385,10 +393,10 @@ func (s *HolidayGuestStore) UpdateGuest(ctx context.Context, schoolID int64, gue
 	}
 	if _, err := db.NewRaw(`UPDATE enrollment.holiday_guests
 		SET starts_on = ?, ends_on = ?, home_school_id = ?, home_school_name = ?, guest_school_name = ?, time_model_name = ?,
-			time_model_starts_at = ?, time_model_ends_at = ?, answers = ?::jsonb, health_data = ?, days = NULLIF(?, '')::date[], lunch = ?, updated_at = CURRENT_TIMESTAMP
+			time_model_starts_at = ?, time_model_ends_at = ?, answers = ?::jsonb, health_data = ?, days = NULLIF(?, '')::date[], lunch = ?, updated_at = ?
 		WHERE tenant_id = ? AND organization_id = ? AND id = ?`,
 		guest.StartsOn, guest.EndsOn, guest.HomeSchoolID, guest.HomeSchoolName, guest.GuestSchoolName, guest.TimeModelName,
-		guest.TimeModelStarts, guest.TimeModelEnds, answers, guest.HealthSealed, holidayDaysLiteral(guest.Days), guest.Lunch, schoolID, guest.OrganizationID, guest.ID).Exec(ctx); err != nil {
+		guest.TimeModelStarts, guest.TimeModelEnds, answers, guest.HealthSealed, holidayDaysLiteral(guest.Days), guest.Lunch, holidayNow(s.now), schoolID, guest.OrganizationID, guest.ID).Exec(ctx); err != nil {
 		return fmt.Errorf("enrollment postgres: update holiday guest: %w", err)
 	}
 	if _, err := db.NewRaw(`DELETE FROM enrollment.holiday_guest_contacts WHERE tenant_id = ? AND holiday_guest_id = ?`,
@@ -434,8 +442,8 @@ func (s *HolidayGuestStore) EndGuest(ctx context.Context, schoolID, guestID int6
 		return err
 	}
 	if _, err := db.NewRaw(`UPDATE enrollment.holiday_guests
-		SET ended_on = ?, answers = '[]'::jsonb, health_data = NULL, updated_at = CURRENT_TIMESTAMP
-		WHERE tenant_id = ? AND id = ?`, endedOn, schoolID, guestID).Exec(ctx); err != nil {
+		SET ended_on = ?, answers = '[]'::jsonb, health_data = NULL, updated_at = ?
+		WHERE tenant_id = ? AND id = ?`, endedOn, holidayNow(s.now), schoolID, guestID).Exec(ctx); err != nil {
 		return fmt.Errorf("enrollment postgres: end holiday guest: %w", err)
 	}
 	if _, err := db.NewRaw(`DELETE FROM enrollment.holiday_guest_contacts WHERE tenant_id = ? AND holiday_guest_id = ?`,
@@ -461,11 +469,11 @@ func (s *HolidayGuestStore) PurgeContacts(ctx context.Context, schoolID int64, l
 			FOR UPDATE
 		)
 		UPDATE enrollment.holiday_guests AS guest
-		SET answers = '[]'::jsonb, health_data = NULL, updated_at = CURRENT_TIMESTAMP
+		SET answers = '[]'::jsonb, health_data = NULL, updated_at = ?
 		FROM expired
 		WHERE guest.tenant_id = ? AND guest.id = expired.id
 		RETURNING COALESCE(CASE WHEN expired.had_health THEN guest.student_id END, 0)`,
-		schoolID, lastReadableEnd, schoolID).Scan(ctx, &purged); err != nil {
+		schoolID, lastReadableEnd, holidayNow(s.now), schoolID).Scan(ctx, &purged); err != nil {
 		return nil, fmt.Errorf("enrollment postgres: delete expired holiday guest answers: %w", err)
 	}
 	if _, err := db.NewRaw(`DELETE FROM enrollment.holiday_guest_contacts AS contact
@@ -491,9 +499,9 @@ func (s *HolidayGuestStore) PurgeHealth(ctx context.Context, schoolID int64, tod
 		return nil, err
 	}
 	var students []int64
-	if err := db.NewRaw(`UPDATE enrollment.holiday_guests SET health_data = NULL, updated_at = CURRENT_TIMESTAMP
+	if err := db.NewRaw(`UPDATE enrollment.holiday_guests SET health_data = NULL, updated_at = ?
 		WHERE tenant_id = ? AND ends_on < ? AND health_data IS NOT NULL
-		RETURNING student_id`, schoolID, today).Scan(ctx, &students); err != nil {
+		RETURNING student_id`, holidayNow(s.now), schoolID, today).Scan(ctx, &students); err != nil {
 		return nil, fmt.Errorf("enrollment postgres: delete ended holiday guest health information: %w", err)
 	}
 	return students, nil

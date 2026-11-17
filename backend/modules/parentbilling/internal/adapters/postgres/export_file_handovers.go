@@ -69,7 +69,9 @@ func (s *Store) InsertExportFileHandover(ctx context.Context, organizationID, ex
 	return nil
 }
 
-// SettleExportFileHandover settles a pending handover once.
+// SettleExportFileHandover settles a pending handover once. The database
+// dates the handover like its start: whether it is unknown runs against the
+// fences of the transport, which leases on the database clock.
 func (s *Store) SettleExportFileHandover(ctx context.Context, organizationID, exportFileID int64, state, reason string) error {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {

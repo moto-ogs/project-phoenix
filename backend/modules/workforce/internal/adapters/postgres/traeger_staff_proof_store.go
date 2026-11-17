@@ -104,9 +104,9 @@ func (s *TraegerStaffStore) SaveProofType(ctx context.Context, kind domain.Traeg
 			kind.OrganizationID, kind.Name, kind.ValidityMonths, kind.ReminderLeadWeeks, kind.Mandatory, kind.OrganizationID).Scan(ctx, &rows)
 	} else {
 		err = db.NewRaw(`UPDATE workforce.staff_proof_types SET name = ?, validity_months = ?, reminder_lead_weeks = ?, mandatory = ?,
-			archived_at = CASE WHEN ? THEN COALESCE(archived_at, now()) ELSE NULL END
+			archived_at = CASE WHEN ? THEN COALESCE(archived_at, ?) ELSE NULL END
 			WHERE organization_id = ? AND id = ? RETURNING `+staffProofTypeColumns,
-			kind.Name, kind.ValidityMonths, kind.ReminderLeadWeeks, kind.Mandatory, kind.ArchivedAt != nil,
+			kind.Name, kind.ValidityMonths, kind.ReminderLeadWeeks, kind.Mandatory, kind.ArchivedAt != nil, kind.ArchivedAt,
 			kind.OrganizationID, kind.ID).Scan(ctx, &rows)
 	}
 	switch {
@@ -291,8 +291,8 @@ func (s *TraegerStaffStore) ListProofTypeMappings(ctx context.Context, organizat
 }
 
 // SaveProofTypeMapping maps a school kind onto a Träger kind, or with a zero
-// ProofTypeID removes its mapping.
-func (s *TraegerStaffStore) SaveProofTypeMapping(ctx context.Context, organizationID, accountID int64, mapping domain.TraegerProofTypeMapping) error {
+// ProofTypeID removes its mapping. now stamps the mapping.
+func (s *TraegerStaffStore) SaveProofTypeMapping(ctx context.Context, organizationID, accountID int64, mapping domain.TraegerProofTypeMapping, now time.Time) error {
 	db, err := traegerStaffDB(ctx, organizationID)
 	if err != nil {
 		return err
@@ -301,12 +301,12 @@ func (s *TraegerStaffStore) SaveProofTypeMapping(ctx context.Context, organizati
 		_, err = db.ExecContext(ctx, `DELETE FROM workforce.staff_proof_type_mappings WHERE organization_id = ? AND school_id = ? AND school_type_id = ?`,
 			organizationID, mapping.SchoolID, mapping.SchoolTypeID)
 	} else {
-		_, err = db.ExecContext(ctx, `INSERT INTO workforce.staff_proof_type_mappings (organization_id, school_id, school_type_id, proof_type_id, mapped_by_account_id)
-			VALUES (?, ?, ?, ?, ?)
+		_, err = db.ExecContext(ctx, `INSERT INTO workforce.staff_proof_type_mappings (organization_id, school_id, school_type_id, proof_type_id, mapped_by_account_id, mapped_at)
+			VALUES (?, ?, ?, ?, ?, ?)
 			ON CONFLICT (school_id, school_type_id) DO UPDATE SET proof_type_id = EXCLUDED.proof_type_id,
-				mapped_by_account_id = EXCLUDED.mapped_by_account_id, mapped_at = now()
+				mapped_by_account_id = EXCLUDED.mapped_by_account_id, mapped_at = EXCLUDED.mapped_at
 			WHERE workforce.staff_proof_type_mappings.organization_id = EXCLUDED.organization_id`,
-			organizationID, mapping.SchoolID, mapping.SchoolTypeID, mapping.ProofTypeID, accountID)
+			organizationID, mapping.SchoolID, mapping.SchoolTypeID, mapping.ProofTypeID, accountID, now)
 	}
 	if err != nil {
 		return fmt.Errorf("workforce postgres: save proof type mapping: %w", err)

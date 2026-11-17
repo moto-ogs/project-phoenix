@@ -1810,7 +1810,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayGuestAccessLog.RecordHolidayGuestAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/compose.Command.Append (audit-platform) through roots/owners.holidayGuestAccessLog.RecordHolidayGuestAccess. ADR 0120 (#4666): every transfer of holiday guests into the hosting school and every read of a guest's sheet appends one data access log entry in the hosting school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). ADR 0120 addendum (#6678): a read of what the registrations say about a child of the hosting school itself appends the same kind of entry, naming the child and the weeks. ADR 0116 addendum (#6679): a read of the confirmed bookings of the school's own children at other schools of its Träger appends one entry in the home school's tenant transaction, naming the weeks and the number of children.",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/compose.Command.Append (audit-platform) through roots/owners.holidayGuestAccessLog.RecordHolidayGuestAccess. ADR 0120 (#4666): every transfer of holiday guests into the hosting school and every read of a guest's sheet appends one data access log entry in the hosting school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). ADR 0120 addendum (#6678): a read of what the registrations say about a child of the hosting school itself appends the same kind of entry, naming the child and the weeks. ADR 0116 addendum (#6679): a read of the confirmed bookings of the school's own children at other schools of its Träger appends one entry in the home school's tenant transaction, naming the weeks and the number of children. Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/auditlog/compose.Command.Append",
       "target_owner": "audit-platform"
@@ -1821,7 +1821,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayGuestAccessLog.RecordHolidayGuestAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.AppendStore.Append (audit-platform) through roots/owners.holidayGuestAccessLog.RecordHolidayGuestAccess. ADR 0120 (#4666): every transfer of holiday guests into the hosting school and every read of a guest's sheet appends one data access log entry in the hosting school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). ADR 0120 addendum (#6678): a read of what the registrations say about a child of the hosting school itself appends the same kind of entry, naming the child and the weeks. ADR 0116 addendum (#6679): a read of the confirmed bookings of the school's own children at other schools of its Träger appends one entry in the home school's tenant transaction, naming the weeks and the number of children.",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.AppendStore.Append (audit-platform) through roots/owners.holidayGuestAccessLog.RecordHolidayGuestAccess. ADR 0120 (#4666): every transfer of holiday guests into the hosting school and every read of a guest's sheet appends one data access log entry in the hosting school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). ADR 0120 addendum (#6678): a read of what the registrations say about a child of the hosting school itself appends the same kind of entry, naming the child and the weeks. ADR 0116 addendum (#6679): a read of the confirmed bookings of the school's own children at other schools of its Träger appends one entry in the home school's tenant transaction, naming the weeks and the number of children. Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.AppendStore.Append",
       "target_owner": "audit-platform"
@@ -1832,7 +1832,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayGuestAccessLog.RecordHolidayGuestAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.Command.Append (audit-platform) through roots/owners.holidayGuestAccessLog.RecordHolidayGuestAccess. ADR 0120 (#4666): every transfer of holiday guests into the hosting school and every read of a guest's sheet appends one data access log entry in the hosting school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). ADR 0120 addendum (#6678): a read of what the registrations say about a child of the hosting school itself appends the same kind of entry, naming the child and the weeks. ADR 0116 addendum (#6679): a read of the confirmed bookings of the school's own children at other schools of its Träger appends one entry in the home school's tenant transaction, naming the weeks and the number of children.",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.Command.Append (audit-platform) through roots/owners.holidayGuestAccessLog.RecordHolidayGuestAccess. ADR 0120 (#4666): every transfer of holiday guests into the hosting school and every read of a guest's sheet appends one data access log entry in the hosting school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). ADR 0120 addendum (#6678): a read of what the registrations say about a child of the hosting school itself appends the same kind of entry, naming the child and the weeks. ADR 0116 addendum (#6679): a read of the confirmed bookings of the school's own children at other schools of its Träger appends one entry in the home school's tenant transaction, naming the weeks and the number of children. Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.Command.Append",
       "target_owner": "audit-platform"
@@ -1843,7 +1843,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayGuestAccessLog.RecordHolidayGuestAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.holidayGuestAccessLog.RecordHolidayGuestAccess. ADR 0120 (#4666): every transfer of holiday guests into the hosting school and every read of a guest's sheet appends one data access log entry in the hosting school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). ADR 0120 addendum (#6678): a read of what the registrations say about a child of the hosting school itself appends the same kind of entry, naming the child and the weeks. ADR 0116 addendum (#6679): a read of the confirmed bookings of the school's own children at other schools of its Träger appends one entry in the home school's tenant transaction, naming the weeks and the number of children.",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.holidayGuestAccessLog.RecordHolidayGuestAccess. ADR 0120 (#4666): every transfer of holiday guests into the hosting school and every read of a guest's sheet appends one data access log entry in the hosting school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). ADR 0120 addendum (#6678): a read of what the registrations say about a child of the hosting school itself appends the same kind of entry, naming the child and the weeks. ADR 0116 addendum (#6679): a read of the confirmed bookings of the school's own children at other schools of its Träger appends one entry in the home school's tenant transaction, naming the weeks and the number of children. Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
       "target_owner": "audit-platform"
@@ -2173,7 +2173,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
-      "reason": "Computes the statutory holidays of the hosting school's federal state locally, without database or network access (#5631).",
+      "reason": "Computes the statutory holidays of the hosting school's federal state locally, without database or network access (#5631). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListHolidays",
       "target_owner": "school-calendar"
@@ -2183,7 +2183,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
-      "reason": "Checks the federal state against the known regions in memory (#5631).",
+      "reason": "Checks the federal state against the known regions in memory (#5631). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ValidHolidayRegion",
       "target_owner": "school-calendar"
@@ -2306,7 +2306,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayParticipantAccessLog.RecordHolidayParticipantAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/compose.Command.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayParticipantAccess. ADR 0116 (#4665): every read and export of a participant list appends one data access log entry in the hosting school's tenant transaction, with the number of children whose health information the list showed (#4722); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/compose.Command.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayParticipantAccess. ADR 0116 (#4665): every read and export of a participant list appends one data access log entry in the hosting school's tenant transaction, with the number of children whose health information the list showed (#4722); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/auditlog/compose.Command.Append",
       "target_owner": "audit-platform"
@@ -2317,7 +2317,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayParticipantAccessLog.RecordHolidayParticipantAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.AppendStore.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayParticipantAccess. ADR 0116 (#4665): every read and export of a participant list appends one data access log entry in the hosting school's tenant transaction, with the number of children whose health information the list showed (#4722); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.AppendStore.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayParticipantAccess. ADR 0116 (#4665): every read and export of a participant list appends one data access log entry in the hosting school's tenant transaction, with the number of children whose health information the list showed (#4722); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.AppendStore.Append",
       "target_owner": "audit-platform"
@@ -2328,7 +2328,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayParticipantAccessLog.RecordHolidayParticipantAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.Command.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayParticipantAccess. ADR 0116 (#4665): every read and export of a participant list appends one data access log entry in the hosting school's tenant transaction, with the number of children whose health information the list showed (#4722); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.Command.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayParticipantAccess. ADR 0116 (#4665): every read and export of a participant list appends one data access log entry in the hosting school's tenant transaction, with the number of children whose health information the list showed (#4722); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.Command.Append",
       "target_owner": "audit-platform"
@@ -2339,7 +2339,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayParticipantAccessLog.RecordHolidayParticipantAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayParticipantAccess. ADR 0116 (#4665): every read and export of a participant list appends one data access log entry in the hosting school's tenant transaction, with the number of children whose health information the list showed (#4722); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayParticipantAccess. ADR 0116 (#4665): every read and export of a participant list appends one data access log entry in the hosting school's tenant transaction, with the number of children whose health information the list showed (#4722); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
       "target_owner": "audit-platform"
@@ -2350,7 +2350,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayParticipantAccessLog.RecordHolidayStudentHealthAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/compose.Command.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayStudentHealthAccess. ADR 0116 addendum (#4722): every read of the holiday health information of a child of the hosting school appends one data access log entry in the school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/compose.Command.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayStudentHealthAccess. ADR 0116 addendum (#4722): every read of the holiday health information of a child of the hosting school appends one data access log entry in the school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/auditlog/compose.Command.Append",
       "target_owner": "audit-platform"
@@ -2361,7 +2361,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayParticipantAccessLog.RecordHolidayStudentHealthAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.AppendStore.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayStudentHealthAccess. ADR 0116 addendum (#4722): every read of the holiday health information of a child of the hosting school appends one data access log entry in the school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.AppendStore.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayStudentHealthAccess. ADR 0116 addendum (#4722): every read of the holiday health information of a child of the hosting school appends one data access log entry in the school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.AppendStore.Append",
       "target_owner": "audit-platform"
@@ -2372,7 +2372,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayParticipantAccessLog.RecordHolidayStudentHealthAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.Command.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayStudentHealthAccess. ADR 0116 addendum (#4722): every read of the holiday health information of a child of the hosting school appends one data access log entry in the school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.Command.Append (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayStudentHealthAccess. ADR 0116 addendum (#4722): every read of the holiday health information of a child of the hosting school appends one data access log entry in the school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.Command.Append",
       "target_owner": "audit-platform"
@@ -2383,7 +2383,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayParticipantAccessLog.RecordHolidayStudentHealthAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayStudentHealthAccess. ADR 0116 addendum (#4722): every read of the holiday health information of a child of the hosting school appends one data access log entry in the school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.holidayParticipantAccessLog.RecordHolidayStudentHealthAccess. ADR 0116 addendum (#4722): every read of the holiday health information of a child of the hosting school appends one data access log entry in the school's tenant transaction; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
       "target_owner": "audit-platform"
@@ -2474,7 +2474,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolCalendar.HolidayNoCareDays",
-      "reason": "Computes the statutory holidays of a federal state locally, without database or network access (#4702).",
+      "reason": "Computes the statutory holidays of a federal state locally, without database or network access (#4702). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListHolidays",
       "target_owner": "school-calendar"
@@ -2484,7 +2484,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolCalendar.HolidayNoCareDays",
-      "reason": "Checks a federal-state code against School Calendar's supported regions, a pure value check (#4702).",
+      "reason": "Checks a federal-state code against School Calendar's supported regions, a pure value check (#4702). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ValidHolidayRegion",
       "target_owner": "school-calendar"
@@ -3432,7 +3432,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.PhaseResponseRoster.ListRunningStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRoster; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRoster; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Leaves out children without an OGS place, whose families no Anmeldephase asks (ADR 0282).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRoster",
       "target_owner": "people-directory"
@@ -3442,7 +3442,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.PhaseResponseRoster.ListRunningStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRoster; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRoster; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Leaves out children without an OGS place, whose families no Anmeldephase asks (ADR 0282).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRoster",
       "target_owner": "people-directory"
@@ -3452,7 +3452,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.PhaseResponseRoster.ListRunningStudents",
-      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory.StudentRosterQuery.ListStudentRoster. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
+      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory.StudentRosterQuery.ListStudentRoster. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. Leaves out children without an OGS place, whose families no Anmeldephase asks (ADR 0282).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRosterQuery.ListStudentRoster",
       "target_owner": "people-directory"
@@ -4073,7 +4073,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.UploadAccessLog.RecordUploadAccess",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.enrollmentUploadAccessLog.RecordUploadAccess. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.enrollmentUploadAccessLog.RecordUploadAccess. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7295: the entry no longer carries a time of the real clock; the Audit appender stamps it from the Audit clock, the clock of the access-log retention (ADR 0281); effect and classification are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
       "target_owner": "audit-platform"
@@ -8106,7 +8106,27 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
-      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory/ports.StudentRepository.ListClassRoster. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.ClassMemberFrom; modules/peopledirectory/student_state.go:121. Pure value method stating the class membership of a child without an OGS place (ADR 0282). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "enrollment",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassMemberFrom",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.LeftSchool; modules/peopledirectory/student_state.go:131. Pure value method stating the class membership of a child without an OGS place (ADR 0282). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "enrollment",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.LeftSchool",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
+      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory/ports.StudentRepository.ListClassRoster. Also maps the mark of a child without an OGS place and the graduate status (ADR 0282). No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.ListClassRoster",
       "target_owner": "people-directory"

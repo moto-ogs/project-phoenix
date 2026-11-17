@@ -154,7 +154,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			calendar, err = owners.BuildSchoolCalendarRecords(db, owners.ObserveSchoolCalendar, settings.Service)
+			calendar, err = owners.BuildSchoolCalendarRecords(db, owners.ObserveSchoolCalendar, settings.Service, env.Now)
 			return
 		},
 		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, env, membership, calendar); return },
@@ -187,7 +187,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		func() error { operatorAuditLog = owners.NewOperatorAuditLog(db); return nil },
 		func() (err error) {
 			structure = owners.BuildStructureRows(db, persons, people, peopleIdentity, rooms, membership, workTime)
-			presencePeople = owners.BuildPresencePeopleReads(db, env.Logger, persons, groups, organizations, people)
+			presencePeople = owners.BuildPresencePeopleReads(db, env.Logger, persons, groups, organizations, people, env.Now)
 			careRows = owners.BuildTimetableCareRows(carePlan)
 			devices, err = owners.NewDeviceFleet(db, env.Now)
 			return owners.StepError("compose device fleet", err)
@@ -228,7 +228,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			messaging = owners.NewParentMessagingRepositories(messageDB, groups, membership, peopleIdentity, enrollmentCompose.NewClocked(env.Now), nil, organizations)
+			messaging = owners.NewParentMessagingRepositories(messageDB, groups, membership, peopleIdentity, enrollmentCompose.NewClocked(env.Now), env.Now, organizations)
 			consent, err = communicationCompose.NewNotificationConsent(communicationCompose.NotificationConsentConfig{
 				DB: messageDB.Pool(), Observe: env.Observe.Communication,
 			})
@@ -291,7 +291,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() (err error) {
 			lifecycle, err = owners.BuildTimetableLifecycle(db, env, hub, timetableRows, days, people, careRows, presence, supervisions,
-				owners.WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, owners.NewTimetableSickReports(workTime), owners.NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime))
+				owners.WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, owners.NewTimetableSickReports(workTime), owners.NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime).WithGuardianContacts(persons))
 			return
 		},
 		func() (err error) {
@@ -460,6 +460,14 @@ func caregiverProfilesForTests(db transactionruntime.Database) (owners.Caregiver
 		return owners.CaregiverProfiles{}, err
 	}
 	return owners.CaregiverProfiles{Persons: persons, Membership: membership}, nil
+}
+
+// realClockUnless is the clock a test graph pins, or the real one.
+func realClockUnless(clocks []func() time.Time) func() time.Time {
+	if now := OptionalClock(clocks); now != nil {
+		return now
+	}
+	return time.Now
 }
 
 // OptionalClock is the clock a test graph pins, or nil for the real one.

@@ -242,15 +242,20 @@ type DayRow struct {
 	// cohort with NO OGS record ("Keine Betreuung"). StudentID is 0;
 	// ListEntryID carries the users.class_list_entries id, serialized as a
 	// JSON string because JavaScript clients round numbers beyond 2^53.
-	ListEntry   bool     `json:"list_entry,omitempty"`
-	ListEntryID int64    `json:"list_entry_id,string,omitempty"`
-	GroupName   string   `json:"group_name,omitempty"`
-	Registered  bool     `json:"registered"`
-	StaysToday  bool     `json:"stays_today"`
-	Offerings   []string `json:"offerings"`
-	Arrival     string   `json:"arrival,omitempty"`
-	Pickup      string   `json:"pickup,omitempty"`
-	Departure   string   `json:"departure,omitempty"`
+	ListEntry   bool  `json:"list_entry,omitempty"`
+	ListEntryID int64 `json:"list_entry_id,string,omitempty"`
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803, "Keine Betreuung"): unlike a list entry it has a StudentID,
+	// so its day status and morning mark show, but it never stays in the
+	// OGS and has no departure.
+	WithoutCarePlace bool     `json:"without_care_place,omitempty"`
+	GroupName        string   `json:"group_name,omitempty"`
+	Registered       bool     `json:"registered"`
+	StaysToday       bool     `json:"stays_today"`
+	Offerings        []string `json:"offerings"`
+	Arrival          string   `json:"arrival,omitempty"`
+	Pickup           string   `json:"pickup,omitempty"`
+	Departure        string   `json:"departure,omitempty"`
 	// Status is the scheduled day status ("sick" / "excused" / "class_trip",
 	// plus the derived "cancelled" when a pickup exception calls the care day
 	// off), empty when none is reported. The free-text note stays private.
@@ -286,6 +291,10 @@ type DayRow struct {
 	// afterwards in moto schule (#4791); only it takes the report back.
 	StatusBySchool bool `json:"status_by_school,omitempty"`
 }
+
+// NoCare reports a row without OGS care: a class-list-only entry (#2382) or
+// a child without an OGS place (#4803).
+func (r DayRow) NoCare() bool { return r.ListEntry || r.WithoutCarePlace }
 
 // DayMorningAttendance is one child's school-morning status on the wire.
 type DayMorningAttendance struct {
@@ -646,10 +655,12 @@ type SchoolDayChild struct {
 	StudentID int64 `json:"student_id,string,omitempty"`
 	// ListEntry marks a class-list-only entry (#2382); ListEntryID carries
 	// its id as a JSON string.
-	ListEntry   bool   `json:"list_entry,omitempty"`
-	ListEntryID int64  `json:"list_entry_id,string,omitempty"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
+	ListEntry   bool  `json:"list_entry,omitempty"`
+	ListEntryID int64 `json:"list_entry_id,string,omitempty"`
+	// WithoutCarePlace marks a child without an OGS place (#4803).
+	WithoutCarePlace bool   `json:"without_care_place,omitempty"`
+	FirstName        string `json:"first_name"`
+	LastName         string `json:"last_name"`
 	// Status is the day status as in the class view ("sick", "excused",
 	// "class_trip", "cancelled"), empty without one.
 	Status string `json:"status,omitempty"`

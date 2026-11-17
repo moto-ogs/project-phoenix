@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -633,10 +634,15 @@ func TestCareContractMailFollowsTheCurrentStateOfTheAddress(t *testing.T) {
 		return rec.Body.String()
 	}
 	require.Contains(t, send(), fmt.Sprintf(`"sent":[%d]`, id))
+	// Delivery stamps sent_at on its own clock, the time.Now of the portal
+	// (ADR 0281). delivery_state_at is the provider's event time, which
+	// EmailOutcomeAt ages against that clock; a provider reporting in real
+	// time reports the owner's now.
 	set := func(state string) {
 		t.Helper()
-		_, err := f.db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET status = 'sent', sent_at = NOW(), delivery_state = ?, delivery_state_at = NOW()
-			WHERE organization_id = ? AND kind = 'care_contract' AND related_entity_id = ?`, state, f.office.organization, id)
+		now := time.Now()
+		_, err := f.db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET status = 'sent', sent_at = ?, delivery_state = ?, delivery_state_at = ?
+			WHERE organization_id = ? AND kind = 'care_contract' AND related_entity_id = ?`, now, state, now, f.office.organization, id)
 		require.NoError(t, err)
 	}
 	latest := func() (state, outcome, block, recipient string) {

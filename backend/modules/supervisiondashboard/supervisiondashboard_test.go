@@ -288,12 +288,16 @@ func TestDashboardFailsFast(t *testing.T) {
 	require.ErrorContains(t, err, "operational overview scope")
 }
 
-func TestServiceDefaultsTheClock(t *testing.T) {
+func TestServiceRequiresTheClock(t *testing.T) {
 	t.Parallel()
 
-	svc := New(Dependencies{}).(*service)
-	assert.NotNil(t, svc.deps.Now)
-	assert.False(t, svc.deps.complete())
+	f := &fakes{}
+	deps := newService(f).deps
+	require.True(t, deps.complete())
+	deps.Now = nil
+	require.False(t, deps.complete(), "the root's clock is a required port")
+	_, err := New(deps).Dashboard(context.Background(), 0)
+	require.ErrorIs(t, err, ErrIncompleteDependencies)
 }
 
 func TestResolveGroupsBroadScope(t *testing.T) {

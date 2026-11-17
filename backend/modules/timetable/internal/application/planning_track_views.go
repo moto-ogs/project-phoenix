@@ -14,9 +14,12 @@ type PlanningTrackViews struct {
 }
 
 // NewPlanningTrackViews reads and archives the planning tracks; now stamps
-// an archived track, nil is the real clock.
+// an archived track and is required.
 func NewPlanningTrackViews(tracks timetable.PlanningTrackCapability, now func() time.Time) *PlanningTrackViews {
-	return &PlanningTrackViews{tracks: tracks, now: NewClock(now)}
+	if now == nil {
+		panic("timetable planning track views: the clock is required")
+	}
+	return &PlanningTrackViews{tracks: tracks, now: now}
 }
 func (a *PlanningTrackViews) ListAllPlanningTracks(ctx context.Context) ([]timetable.PlanningTrack, error) {
 	return a.tracks.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{Ordered: true})

@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/tenant"
 
 	offeringContract "github.com/moto-ogs/project-phoenix/modules/enrollment/offeringcontract"
@@ -156,7 +158,7 @@ func newTestRequestService(cfg owners.EnrollmentIntakeSources) enrollmentAPI.Req
 	}
 	if cfg.Capacity == nil {
 		offerings, _ := cfg.CareOfferingRepo.(capacityOfferings)
-		cfg.Capacity = owners.NewEnrollmentOfferingCapacity(offerings, cfg.Children, cfg.Settings, nil)
+		cfg.Capacity = owners.NewEnrollmentOfferingCapacity(offerings, cfg.Children, cfg.Settings, calendar.TodayDate)
 	}
 	return requestFixtureRoot{enrollmentAPI.NewRequestService(owners.NewEnrollmentIntake(cfg))}
 }
@@ -170,7 +172,7 @@ func newTestChangeRequestService(cfg owners.EnrollmentChangeRequestSources) enro
 	}
 	if cfg.Capacity == nil {
 		offerings, _ := cfg.CareOfferingRepo.(capacityOfferings)
-		cfg.Capacity = owners.NewEnrollmentOfferingCapacity(offerings, cfg.Children, cfg.Settings, nil)
+		cfg.Capacity = owners.NewEnrollmentOfferingCapacity(offerings, cfg.Children, cfg.Settings, calendar.TodayDate)
 	}
 	return enrollmentAPI.NewChangeRequestService(owners.NewEnrollmentChangeRequests(cfg))
 }
@@ -186,6 +188,7 @@ func newTestRolloverService(src owners.EnrollmentRolloverSources) enrollmentAPI.
 	}
 	if src.PhaseEligibility == nil && src.Settings != nil {
 		src.PhaseEligibility = NewTestPhases(TestPhaseDependencies{
+			Now:     time.Now,
 			Records: unusedPhaseRecords{}, Offerings: phaseOfferings{}, LockTemplateRecurrence: func(context.Context) error { return nil },
 			Resyncer: &recordingSourcedTemplateResyncer{}, Settings: collectionSettings{settings: src.Settings},
 		})

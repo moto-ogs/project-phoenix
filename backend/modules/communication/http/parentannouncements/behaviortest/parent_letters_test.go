@@ -138,7 +138,7 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 		emil.StudentID: {first: "Emil", last: "Weber", class: "1a", group: "Igel"},
 	}
 	access := &countingLetterAccess{}
-	service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}},
+	service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}, Now: time.Now},
 		settings.Settings, delivery.EmailOutbox, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes,
 		owners.DeliveryNotifications{Notifier: delivery.Notifications, Preferences: delivery.NotificationPreferences}, repos.MessagingRepositories, files,
 		communicationCompose.ParentLetterPorts{Sources: values.ports(), Access: access})

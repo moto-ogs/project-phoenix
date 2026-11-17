@@ -15,6 +15,7 @@ import type { SessionFamilyState } from "./token-validation";
  */
 const BROWSER_USER_FIELDS = {
   id: true,
+  sentryUserId: true,
   name: true,
   email: true,
   image: true,

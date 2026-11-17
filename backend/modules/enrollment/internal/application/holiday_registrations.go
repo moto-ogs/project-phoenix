@@ -124,11 +124,11 @@ func NewHolidayRegistrations(deps HolidayRegistrationDependencies) *HolidayRegis
 	if deps.Retention == nil {
 		panic(errHolidayRetentionRequired)
 	}
-	if deps.Today == nil {
-		deps.Today = calendar.TodayDate
-	}
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("enrollment: the holiday registrations need the clock")
+	}
+	if deps.Today == nil {
+		deps.Today = calendar.CalendarDateClock(deps.Now)
 	}
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
@@ -756,7 +756,7 @@ func NewHolidayRegistrationRetention(store HolidayRegistrationRetentionStore, ma
 		panic("enrollment: the holiday registration retention store and mail erasure are required")
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("enrollment: the holiday registration retention needs the day clock")
 	}
 	return &HolidayRegistrationRetention{store: store, mail: mail, today: today}
 }

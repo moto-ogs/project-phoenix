@@ -94,7 +94,7 @@ type TimeTrackingCleanupDependencies struct {
 	Audit    DeletionAudit
 	Settings TimeTrackingCleanupSettings
 	Logger   *slog.Logger
-	Now      func() time.Time // nil: the wall clock (ADR 0239)
+	Now      func() time.Time // required: the root's clock (ADR 0239)
 }
 
 // NewTimeTrackingCleanup builds the time-tracking retention cleanup over the

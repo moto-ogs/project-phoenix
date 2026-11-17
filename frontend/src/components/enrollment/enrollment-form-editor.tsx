@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Info, Plus } from "lucide-react";
 import {
   DraftDocumentContext,
@@ -71,7 +64,6 @@ import { FormSkeleton, SkeletonRegion } from "~/components/ui/page-skeletons";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
 import {
@@ -100,6 +92,9 @@ import {
   prepareLegalBlocksForSave,
 } from "~/lib/enrollment-legal-blocks";
 import { listPhases, type Phase } from "~/lib/enrollment-phase-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import type { Translations } from "~/lib/enrollment-translations";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
@@ -110,6 +105,9 @@ import {
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 
 const logger = createLogger({ component: "EnrollmentFormEditor" });
+
+const NO_SCHEMAS: FormSchema[] = [];
+const NO_PHASES: Phase[] = [];
 
 const NEW_SCHEMA_VALUE = "__new__";
 const LEGAL_DOCUMENT_UPLOAD_PENDING_MESSAGE =
@@ -130,30 +128,19 @@ export function EnrollmentFormEditor({
   const toast = useToast();
   const tenantSlug = useTenantSlugSafe();
   const templatePreviewHref = useTemplatePreviewHref();
-  const [allSchemas, setAllSchemas] = useState<FormSchema[]>([]);
-  const [phases, setPhases] = useState<Phase[]>([]);
   const [selectedKey, setSelectedKey] = useState<string>(NEW_SCHEMA_VALUE);
   const [name, setName] = useState("");
   const [fields, setFields] = useState<FormField[]>([]);
   const [coreRequirements, setCoreRequirements] = useState<CoreRequirements>(
     {},
   );
-  const [standardLegalBlocks, setStandardLegalBlocks] = useState<
-    FormLegalBlock[]
-  >(STANDARD_LEGAL_BLOCKS);
   const [legalBlocks, setLegalBlocks] = useState<FormLegalBlock[]>(
     STANDARD_LEGAL_BLOCKS,
   );
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const builderRef = useRef<HTMLDivElement>(null);
   const fieldListRef = useRef<HTMLDivElement>(null);
   const revealAddedFieldRef = useRef(false);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
   const {
     error: saveError,
     show: showSaveError,
@@ -185,64 +172,57 @@ export function EnrollmentFormEditor({
     ? undefined
     : LEGAL_DOCUMENT_UPLOAD_PENDING_MESSAGE;
 
+  // Legal texts are NOT best-effort: silently swallowing a fetch failure
+  // would seed the builder with all-disabled standard blocks and nudge
+  // admins into saving a template without the tenant's consent contract. A
+  // failure fails the whole load instead. The phases fail it too: without
+  // them every template would read as "not used by any phase".
+  const schemasRead = useSWRAuth(enrollmentKeys.formSchemas(), () =>
+    listSchemas(),
+  );
+  const phasesRead = useSWRAuth(enrollmentKeys.phases(), () => listPhases());
+  const legalRead = useSWRAuth(
+    tenantSlug ? enrollmentKeys.publicLegalTexts(tenantSlug) : null,
+    () => fetchPublicLegalTexts(tenantSlug ?? ""),
+    { keepPreviousData: false },
+  );
+  const { mutate: mutateSchemas } = schemasRead;
+  const { mutate: mutatePhases } = phasesRead;
+  const { mutate: mutateLegal } = legalRead;
+  const allSchemas = schemasRead.data ?? NO_SCHEMAS;
+  const phases = phasesRead.data ?? NO_PHASES;
+  const legalTexts = legalRead.data;
+  const standardLegalBlocks = useMemo(
+    () => mergeStandardLegalBlocks(legalTexts ?? null),
+    [legalTexts],
+  );
+  const pageLoad = useSwrResourceLoadError(
+    [
+      { data: schemasRead.data, error: schemasRead.error },
+      { data: phasesRead.data, error: phasesRead.error },
+      ...(tenantSlug ? [{ data: legalTexts, error: legalRead.error }] : []),
+    ],
+    "die Übersicht der Anmeldeformulare",
+    () =>
+      Promise.all([
+        mutateSchemas(),
+        mutatePhases(),
+        tenantSlug ? mutateLegal() : undefined,
+      ]),
+  );
+  const loadError = pageLoad.error;
+  // Until the catalog text of a failure is there, the loading state stays.
+  const loading = pageLoad.failure
+    ? loadError === null
+    : !schemasRead.data ||
+      !phasesRead.data ||
+      (tenantSlug !== null && !legalTexts);
+
   const latestByName = useMemo(
     () => latestSchemasByName(allSchemas),
     [allSchemas],
   );
 
-  // The retry of a failed load closes over the latest loadAll.
-  const loadAllRef = useRef<() => Promise<FormSchema[]>>(async () => []);
-  const loadAll = useCallback(
-    async (options: { rethrow?: boolean } = {}) => {
-      // Nach einem Schreiben bleibt die bestätigte Liste stehen (#6652).
-      if (!options.rethrow) {
-        setLoading(true);
-        clearLoadError();
-      }
-      try {
-        // Legal texts are NOT best-effort: silently swallowing a fetch
-        // failure would seed the builder with all-disabled standard blocks
-        // and nudge admins into saving a template without the tenant's
-        // consent contract. A failure fails the whole load instead. The
-        // phases fail it too: without them every template would read as
-        // "not used by any phase".
-        const [list, phaseList, legalTexts] = await Promise.all([
-          listSchemas(),
-          listPhases(),
-          tenantSlug
-            ? fetchPublicLegalTexts(tenantSlug)
-            : Promise.resolve(null),
-        ]);
-        const legalDefaults = mergeStandardLegalBlocks(legalTexts);
-        setStandardLegalBlocks(legalDefaults);
-        setAllSchemas(list);
-        setPhases(phaseList);
-        return list;
-      } catch (err) {
-        logger.error("schema_list_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        // Nach einem Schreiben zeigt der Aufrufer den Fehler als Nachladefehler
-        // über den stehenden Vorlagen (#6652).
-        if (options.rethrow) throw err;
-        void showLoadError(err, {
-          object: "die Übersicht der Anmeldeformulare",
-          retry: () => void loadAllRef.current(),
-        });
-        return [];
-      } finally {
-        setLoading(false);
-      }
-    },
-    [clearLoadError, showLoadError, tenantSlug],
-  );
-  useLayoutEffect(() => {
-    loadAllRef.current = loadAll;
-  });
-
-  useEffect(() => {
-    void loadAll();
-  }, [loadAll]);
   // Nachladen nach Speichern, Löschen oder Umbenennen: ein Fehler dabei ist
   // ein Ladefehler, kein Fehler der Aktion (#6652). Die geladene Liste liest
   // das Speichern danach aus `reloadedSchemas`.
@@ -251,7 +231,16 @@ export function EnrollmentFormEditor({
     "die Anzeige der Anmeldeformulare",
     async () => {
       reloadedSchemas.current = [];
-      reloadedSchemas.current = await loadAll({ rethrow: true });
+      const [list] = await Promise.all([
+        mutateSchemas(listSchemas(), { revalidate: false }),
+        mutatePhases(listPhases(), { revalidate: false }),
+        tenantSlug
+          ? mutateLegal(fetchPublicLegalTexts(tenantSlug), {
+              revalidate: false,
+            })
+          : undefined,
+      ]);
+      reloadedSchemas.current = list ?? [];
     },
   );
 

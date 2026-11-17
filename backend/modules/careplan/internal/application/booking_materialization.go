@@ -81,7 +81,7 @@ func NewBookingMaterialization(deps BookingMaterializationDependencies) (*Bookin
 		deps.Logger = slog.Default()
 	}
 	if deps.Today == nil {
-		deps.Today = calendar.TodayDate
+		return nil, errors.New("booking materialization: the composition's day clock is required")
 	}
 	return &BookingMaterialization{deps: deps, catalog: deps.Catalog}, nil
 }

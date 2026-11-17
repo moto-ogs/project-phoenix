@@ -18,6 +18,13 @@ import {
   updateOfferingChangeRequest,
   type OfferingCatalog,
 } from "~/lib/parent-api";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
+
+function renderParent(ui: Parameters<typeof render>[0]) {
+  return render(ui, { wrapper: ParentResourceTestProvider });
+}
 
 vi.mock("~/lib/parent-api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/parent-api")>();
@@ -122,7 +129,7 @@ describe("OfferingChangeRequestModal", () => {
   });
 
   it("prefills the current booking and its days", async () => {
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -140,7 +147,7 @@ describe("OfferingChangeRequestModal", () => {
 
   it("submits a selection matching the earliest booking for a later date", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -165,7 +172,7 @@ describe("OfferingChangeRequestModal", () => {
 
   it("schickt beim Bearbeiten dieselbe Form wie beim Anlegen", async () => {
     const onEdited = vi.fn();
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -206,7 +213,7 @@ describe("OfferingChangeRequestModal", () => {
         }),
       )
       .mockResolvedValueOnce(undefined);
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         childName="Lara"
@@ -251,7 +258,7 @@ describe("OfferingChangeRequestModal", () => {
   it("explains and disables submission when the catalog is empty", async () => {
     mockCatalog.mockResolvedValue(catalog({ items: [] }));
     const onSubmit = vi.fn();
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -273,7 +280,7 @@ describe("OfferingChangeRequestModal", () => {
 
   it("sends the complete desired booking with the effective date", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -318,7 +325,7 @@ describe("OfferingChangeRequestModal", () => {
         ],
       }),
     );
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -361,7 +368,7 @@ describe("OfferingChangeRequestModal", () => {
           ],
         }),
       );
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -402,7 +409,7 @@ describe("OfferingChangeRequestModal", () => {
         ],
       }),
     );
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -451,7 +458,7 @@ describe("OfferingChangeRequestModal", () => {
       }),
     );
     const onSubmit = vi.fn();
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -490,7 +497,7 @@ describe("OfferingChangeRequestModal", () => {
       }),
     );
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -545,7 +552,7 @@ describe("OfferingChangeRequestModal", () => {
         ],
       }),
     );
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -563,7 +570,7 @@ describe("OfferingChangeRequestModal", () => {
         new ApiError("diag", 503, { code: "general.unavailable" }),
       )
       .mockResolvedValueOnce(catalog());
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -591,7 +598,7 @@ describe("OfferingChangeRequestModal", () => {
       .mockRejectedValue(
         new ApiError("backend sentence", 500, { code: "general.server" }),
       );
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -617,7 +624,7 @@ describe("OfferingChangeRequestModal", () => {
         code: "students.offering_changes_no_enrollment",
       }),
     );
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}
@@ -641,7 +648,7 @@ describe("OfferingChangeRequestModal", () => {
         code: "students.offering_change_capacity_full",
       }),
     );
-    render(
+    renderParent(
       <OfferingChangeRequestModal
         studentId="42"
         onClose={vi.fn()}

@@ -237,7 +237,7 @@ func (s *Store) InsertParticipationSchedule(ctx context.Context, studentID, acco
 	result, err := db.NewInsert().Model(&row).
 		ModelTableExpr(`schedule.meal_participation_schedules`).
 		On(`CONFLICT (tenant_id, student_id, effective_from) DO UPDATE`).
-		Set(`monday = EXCLUDED.monday, tuesday = EXCLUDED.tuesday, wednesday = EXCLUDED.wednesday, thursday = EXCLUDED.thursday, friday = EXCLUDED.friday, changed_by_account_id = EXCLUDED.changed_by_account_id, updated_at = NOW()`).
+		Set(`monday = EXCLUDED.monday, tuesday = EXCLUDED.tuesday, wednesday = EXCLUDED.wednesday, thursday = EXCLUDED.thursday, friday = EXCLUDED.friday, changed_by_account_id = EXCLUDED.changed_by_account_id`).
 		Exec(ctx)
 	stats.Queries++
 	stats.StatementDuration += time.Since(started)
@@ -259,7 +259,7 @@ func (s *Store) UpsertParticipationOverride(ctx context.Context, studentID, acco
 	result, err := db.NewInsert().Model(&row).
 		ModelTableExpr(`schedule.meal_participation_overrides`).
 		On(`CONFLICT (tenant_id, student_id, date) DO UPDATE`).
-		Set(`participating = EXCLUDED.participating, changed_by_account_id = EXCLUDED.changed_by_account_id, updated_at = NOW()`).
+		Set(`participating = EXCLUDED.participating, changed_by_account_id = EXCLUDED.changed_by_account_id`).
 		Exec(ctx)
 	stats.Queries = 1
 	stats.StatementDuration = time.Since(started)
@@ -289,7 +289,7 @@ func (s *Store) UpsertParticipationOverrides(ctx context.Context, studentID, acc
 	result, err := db.NewInsert().Model(&rows).
 		ModelTableExpr(`schedule.meal_participation_overrides`).
 		On(`CONFLICT (tenant_id, student_id, date) DO UPDATE`).
-		Set(`participating = EXCLUDED.participating, changed_by_account_id = EXCLUDED.changed_by_account_id, updated_at = NOW()`).
+		Set(`participating = EXCLUDED.participating, changed_by_account_id = EXCLUDED.changed_by_account_id`).
 		Exec(ctx)
 	stats.Queries = 1
 	stats.StatementDuration = time.Since(started)

@@ -3,7 +3,7 @@
  * caller's decision (#6582, `~/lib/counter-tones`).
  */
 export type NotificationBadgeTone = "orange" | "blue" | "coral" | "red";
-export type NotificationBadgeSize = "sm" | "md";
+type NotificationBadgeSize = "sm" | "md";
 
 // The count is small bold text, so WCAG AA wants 4.5:1 against the pill.
 // bg-moto-orange (#F78C10) carries white at 2.41:1 — below even the 3:1

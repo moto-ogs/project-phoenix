@@ -87,7 +87,7 @@ func NewProvisioning(dependencies ProvisioningDependencies, dashboard organizati
 	}
 	provisioning, err := application.NewProvisioning(application.ProvisioningDependencies{
 		PWAUsageWindowDays: dependencies.PWAUsageWindowDays, Organizations: dependencies.Organizations,
-		ErasureOrderRecords: application.New(postgresNative.New(postgresNative.NewDatabase()), postgresNative.Transaction{}, dependencies.Observe, calendar.CalendarDateClock(dependencies.Now)),
+		ErasureOrderRecords: application.New(postgresNative.New(postgresNative.NewDatabase(), dependencies.Now), postgresNative.Transaction{}, dependencies.Observe, calendar.CalendarDateClock(dependencies.Now)),
 		Transaction:         postgresNative.Transaction{}, Dashboard: dashboard,
 		Identity: dependencies.Identity, Devices: dependencies.Devices, People: dependencies.People,
 		Presence: dependencies.Presence, Categories: dependencies.Categories, Settings: dependencies.Settings,

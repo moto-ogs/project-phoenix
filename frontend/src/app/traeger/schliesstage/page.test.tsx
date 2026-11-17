@@ -15,6 +15,7 @@ import {
 } from "~/test/helpers/viewport";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import type {
   HolidayClosureImpact,
@@ -234,6 +235,8 @@ describe("TraegerClosingDaysPage (#4702)", () => {
   });
 
   it("shows the closing days, the year overview and each school's federal state read only", async () => {
+    // Der Kalender-Fixture liegt im Jahr 2026; die Übersicht zeigt das laufende Jahr.
+    setTestClock("2026-09-09T12:00:00+02:00");
     render(<TraegerClosingDaysPage />);
 
     const table = await screen.findByRole("table");
@@ -655,6 +658,66 @@ describe("TraegerClosingDaysPage (#4702)", () => {
       "Der Schließtag „Brückentag“ ist gelöscht. 3 Familien bekommen eine E-Mail.",
     );
     expect(api.deleteTraegerClosingDay).toHaveBeenCalledWith("9", "del456");
+  });
+
+  it("waits for a new preview each time the delete dialog opens (#6457)", async () => {
+    session.permissions = ["traeger_overview:read", "traeger_settings:manage"];
+    let finish!: (impact: HolidayClosureImpact) => void;
+    api.previewTraegerClosingDayHolidayBookings
+      .mockResolvedValueOnce({ ...summerImpact, token: "first" })
+      .mockReturnValueOnce(
+        new Promise<HolidayClosureImpact>((resolve) => {
+          finish = resolve;
+        }),
+      );
+    api.deleteTraegerClosingDay.mockResolvedValue(3);
+    render(<TraegerClosingDaysPage />);
+    const openDelete = async () => {
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Aktionen für Brückentag" }),
+      );
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Löschen" }));
+      return screen.findByRole("dialog", { name: "Schließtag löschen" });
+    };
+
+    let dialog = await openDelete();
+    expect(
+      await within(dialog).findByText(
+        "3 Familien bekommen nach dem Löschen eine E-Mail",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Abbrechen" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Schließtag löschen" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    dialog = await openDelete();
+    await waitFor(() =>
+      expect(api.previewTraegerClosingDayHolidayBookings).toHaveBeenCalledTimes(
+        2,
+      ),
+    );
+    expect(
+      within(dialog).getByRole("button", { name: "Ja, löschen" }),
+    ).toBeDisabled();
+
+    finish({ ...summerImpact, token: "second" });
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("button", { name: "Ja, löschen" }),
+      ).toBeEnabled(),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Ja, löschen" }),
+    );
+    fireEvent.click(
+      await within(dialog).findByRole("button", { name: "Endgültig löschen" }),
+    );
+    await waitFor(() =>
+      expect(api.deleteTraegerClosingDay).toHaveBeenCalledWith("9", "second"),
+    );
   });
 
   it("refreshes pending notices when their closing day is deleted", async () => {

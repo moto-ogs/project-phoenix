@@ -173,7 +173,7 @@ func (h dayHints) classStudentIDs(ctx context.Context, schoolClass string, day c
 	}
 	ids := make([]int64, 0, len(roster.Rows))
 	for _, row := range roster.Rows {
-		if !row.ListEntry && row.StudentID > 0 {
+		if !row.NoCare() && row.StudentID > 0 {
 			ids = append(ids, row.StudentID)
 		}
 	}
@@ -208,13 +208,14 @@ func (h dayHints) attachDayHints(ctx context.Context, report *classday.DayReport
 	return nil
 }
 
-// reportStudentRows indexes the rows of children with an OGS record; a
-// class-list-only entry has no note card and therefore no hint.
+// reportStudentRows indexes the rows of children with OGS care; a
+// class-list-only entry and a child without an OGS place (#4803) have no
+// note card and therefore no hint.
 func reportStudentRows(report *classday.DayReport) (map[int64]int, []int64) {
 	rowIndex := make(map[int64]int, len(report.Rows))
 	studentIDs := make([]int64, 0, len(report.Rows))
 	for index, row := range report.Rows {
-		if row.ListEntry || row.StudentID <= 0 {
+		if row.NoCare() || row.StudentID <= 0 {
 			continue
 		}
 		rowIndex[row.StudentID] = index

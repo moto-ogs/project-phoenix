@@ -191,7 +191,7 @@ func (s *stubShiftTypeService) CreateDefaultShiftTypes(context.Context) ([]*work
 func shiftServiceFixture() (StaffShiftService, *shiftMockRepo, *shiftMockStaffRepo) {
 	repo := &shiftMockRepo{}
 	staffRepo := &shiftMockStaffRepo{}
-	return NewStaffShiftService(repo, staffRepo, nil, nil, nil), repo, staffRepo
+	return NewStaffShiftService(repo, staffRepo, nil, nil, nil, pinnedShiftToday()), repo, staffRepo
 }
 
 // shiftServiceWithTypes wires a stub ShiftTypeService so tests can exercise the
@@ -199,7 +199,7 @@ func shiftServiceFixture() (StaffShiftService, *shiftMockRepo, *shiftMockStaffRe
 func shiftServiceWithTypes(types map[int64]*workforce.ShiftTypeRecord) (StaffShiftService, *shiftMockRepo, *shiftMockStaffRepo) {
 	repo := &shiftMockRepo{}
 	staffRepo := &shiftMockStaffRepo{}
-	svc := NewStaffShiftService(repo, staffRepo, &stubShiftTypeService{types: types}, nil, nil)
+	svc := NewStaffShiftService(repo, staffRepo, &stubShiftTypeService{types: types}, nil, nil, pinnedShiftToday())
 	return svc, repo, staffRepo
 }
 
@@ -297,7 +297,7 @@ func TestShiftService_CreatePropagatesLockError(t *testing.T) {
 	repo := &shiftMockRepo{}
 	staffRepo := &shiftMockStaffRepo{}
 	lockErr := errors.New("staff shift lock refused")
-	svc := NewStaffShiftService(repo, staffRepo, nil, func(context.Context, int64) error { return lockErr }, nil)
+	svc := NewStaffShiftService(repo, staffRepo, nil, func(context.Context, int64) error { return lockErr }, nil, pinnedShiftToday())
 
 	_, err := svc.CreateShift(context.Background(), validShift(7))
 	require.Error(t, err)
@@ -678,7 +678,7 @@ func TestShiftService_UpdatePropagatesLockError(t *testing.T) {
 	repo := &shiftMockRepo{}
 	staffRepo := &shiftMockStaffRepo{}
 	lockErr := errors.New("staff shift lock refused")
-	svc := NewStaffShiftService(repo, staffRepo, nil, func(context.Context, int64) error { return lockErr }, nil)
+	svc := NewStaffShiftService(repo, staffRepo, nil, func(context.Context, int64) error { return lockErr }, nil, pinnedShiftToday())
 	existing := validShift(7)
 	existing.ID = 5
 	repo.findByIDFunc = func(_ context.Context, _ any) (*workforce.ShiftRecord, error) {
@@ -887,7 +887,7 @@ func TestStaffShiftServiceDefaultsLogger(t *testing.T) {
 
 	repo := &shiftMockRepo{}
 	staffRepo := &shiftMockStaffRepo{}
-	svc := NewStaffShiftService(repo, staffRepo, nil, nil, nil).(*staffShiftService)
+	svc := NewStaffShiftService(repo, staffRepo, nil, nil, nil, pinnedShiftToday()).(*staffShiftService)
 	assert.Same(t, slog.Default(), svc.getLogger())
 }
 
@@ -895,7 +895,7 @@ func TestStaffShiftServiceUsesInjectedLogger(t *testing.T) {
 	t.Parallel()
 
 	logger := slog.New(slog.DiscardHandler)
-	svc := NewStaffShiftService(&shiftMockRepo{}, &shiftMockStaffRepo{}, nil, nil, logger).(*staffShiftService)
+	svc := NewStaffShiftService(&shiftMockRepo{}, &shiftMockStaffRepo{}, nil, nil, logger, pinnedShiftToday()).(*staffShiftService)
 	assert.Same(t, logger, svc.getLogger())
 }
 
@@ -1033,7 +1033,7 @@ func TestShiftService_UpdateAllowsSwitchToActiveType(t *testing.T) {
 // read-time Schichtart enrichment (name + color) can be exercised end to end.
 func shiftServiceWithStub(stub *stubShiftTypeService) (StaffShiftService, *shiftMockRepo) {
 	repo := &shiftMockRepo{}
-	svc := NewStaffShiftService(repo, &shiftMockStaffRepo{}, stub, nil, nil)
+	svc := NewStaffShiftService(repo, &shiftMockStaffRepo{}, stub, nil, nil, pinnedShiftToday())
 	return svc, repo
 }
 
@@ -1173,4 +1173,10 @@ func (m *shiftMockRepo) DeleteRegenerableSeriesShifts(ctx context.Context, id in
 }
 func (m *shiftMockRepo) RepointDetachedSeriesShifts(ctx context.Context, fromID, toID int64, from string) (int64, error) {
 	return m.RepointDetachedSeriesFrom(ctx, fromID, toID, calendar.Date(from))
+}
+
+// pinnedShiftToday pins the sick-state guard's school day to the day the
+// series tests plan around.
+func pinnedShiftToday() StaffShiftOption {
+	return WithStaffShiftToday(func() calendar.Date { return seriesTestToday })
 }

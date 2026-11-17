@@ -5,6 +5,11 @@ import type { ErrorCode } from "~/lib/error-codes.generated";
 import { problemResponse } from "../api-response-error.server";
 import { unwrapEnvelope } from "../backend-client.server";
 import type { JsonProxyOptions } from "../json-proxy.server";
+import {
+  makeCatalogProxy,
+  type CatalogMethod,
+  type CatalogRoute,
+} from "../contract/catalog-proxy.server";
 import { makePortalHandlers } from "../portal-handlers.server";
 
 export { isStringParam } from "../route-wrapper-utils.server";
@@ -60,3 +65,12 @@ export const operatorApiPost = async <T, B = unknown>(
 
 export const operatorApiDelete = async <T>(endpoint: string, token: string) =>
   unwrapEnvelope<T>(await operator.api("DELETE", endpoint, token));
+
+/**
+ * The operator portal's proxy: forwards `/api/operator/…` to the backend's `/operator/…`
+ * for the routes the contract registers for this portal.
+ */
+export const catalogProxy = (
+  routes: readonly CatalogRoute[],
+  method: CatalogMethod,
+) => makeCatalogProxy(operator, "/operator", routes, method);

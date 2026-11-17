@@ -57,7 +57,7 @@ func TestEnrollmentHistorySharesOnePhaseRead(t *testing.T) {
 		phase.Name = "Committed phase edit"
 		require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, &phase))
 	}}
-	f.resource.DecisionService = newTestDecisionService(compose.DecisionDependencies{Requests: env.repos.Enrollment(), Children: children, Guardians: env.repos.Enrollment(), Phases: env.repos.Enrollment(), Schemas: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan)}, f.settings.Settings)
+	f.resource.DecisionService = newTestDecisionService(compose.DecisionDependencies{Now: time.Now, Requests: env.repos.Enrollment(), Children: children, Guardians: env.repos.Enrollment(), Phases: env.repos.Enrollment(), Schemas: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan)}, f.settings.Settings)
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/students/%d/requests/", student.ID), nil)
 	req.Header.Set("Authorization", "Bearer "+f.token)
 	rec := httptest.NewRecorder()

@@ -28,7 +28,7 @@ func NewPickupAutoExcusal(pickups ports.PickupExcusalStore, weekly careplan.Pick
 	today func() calendar.Date,
 ) careplan.PickupAutoExcusal {
 	if today == nil {
-		today = calendar.TodayDate
+		panic("care plan pickup auto excusal: the composition's day clock is required")
 	}
 	return &PickupAutoExcusalSyncer{pickups: pickups, weekly: weekly, slots: slots, preview: preview, extensions: extensions, locker: locker, today: today}
 }

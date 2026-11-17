@@ -26,6 +26,7 @@ import {
   expectDialogUnlocked,
   expectSaveLocksDialog,
 } from "~/test/helpers/form-modal-pending";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 
 const mocks = vi.hoisted(() => ({
   getOverview: vi.fn(),
@@ -54,7 +55,8 @@ vi.mock("~/components/ui/date-picker", async (importOriginal) => ({
 
 import { TraegerBelegRetentionSection } from "./traeger-beleg-retention-section";
 
-// The test clock stands on 2026-09-09.
+// Days relative to the test day: the SEPA row is reviewed yesterday and due in
+// 30 days, so its review needs no escalation.
 const overview: BelegRetentionOverview = mapBelegRetentionOverview({
   instructions: [
     {
@@ -65,9 +67,9 @@ const overview: BelegRetentionOverview = mapBelegRetentionOverview({
       basis: "booking_voucher",
       legal_basis: "§ 147 AO",
       instructed_by: "Kämmerei",
-      instructed_on: "2026-09-01",
+      instructed_on: testClockDay(-8),
       instruction_reference: "AVV-Nachtrag",
-      recorded_at: "2026-09-01T10:00:00Z",
+      recorded_at: `${testClockDay(-8)}T10:00:00Z`,
     },
   ],
   suspensions: [],
@@ -87,8 +89,8 @@ const overview: BelegRetentionOverview = mapBelegRetentionOverview({
       reason: "no_instruction",
       count: 12,
       overdue: 12,
-      listed_on: "2026-08-01",
-      review_on: "2026-08-31",
+      listed_on: testClockDay(-39),
+      review_on: testClockDay(-9),
       responsible: "Florian (Abstimmung mit dem Träger)",
     },
     {
@@ -96,21 +98,21 @@ const overview: BelegRetentionOverview = mapBelegRetentionOverview({
       reason: "no_collection",
       count: 1,
       overdue: 0,
-      listed_on: "2026-09-08",
-      review_on: "2026-10-08",
+      listed_on: testClockDay(-1),
+      review_on: testClockDay(29),
       responsible: "Florian (Abstimmung mit dem Träger)",
       last_review: {
         id: 5,
         note: "Bank prüft den letzten Einzug",
         escalated: true,
         escalation_reason: "Träger antwortet nicht",
-        reviewed_on: "2026-09-08",
-        next_review_on: "2026-10-08",
+        reviewed_on: testClockDay(-1),
+        next_review_on: testClockDay(29),
       },
     },
   ],
   deletions: [],
-  evaluated_on: "2026-09-09",
+  evaluated_on: TEST_CLOCK_TODAY,
 });
 
 function renderSection() {
@@ -149,7 +151,7 @@ describe("TraegerBelegRetentionSection pending lock (#6533)", () => {
       "Bank prüft",
     );
     fireEvent.change(within(dialog).getByLabelText(/Nächste Prüfung/), {
-      target: { value: "2026-09-20" },
+      target: { value: testClockDay(11) },
     });
     await user.click(
       within(dialog).getByRole("button", { name: "Prüfung erfassen" }),
@@ -183,7 +185,7 @@ describe("TraegerBelegRetentionSection pending lock (#6533)", () => {
       "Frau Beispiel",
     );
     fireEvent.change(within(dialog).getByLabelText(/Weisung vom/), {
-      target: { value: "2026-09-01" },
+      target: { value: testClockDay(-8) },
     });
     await user.type(
       within(dialog).getByLabelText(/Nachweis der schriftlichen Weisung/),
@@ -219,7 +221,7 @@ describe("TraegerBelegRetentionSection pending lock (#6533)", () => {
     await user.type(within(dialog).getByLabelText(/Grund/), "Betriebsprüfung");
     await user.type(within(dialog).getByLabelText(/Zuständig/), "Florian");
     fireEvent.change(within(dialog).getByLabelText(/Nächste Prüfung/), {
-      target: { value: "2026-10-01" },
+      target: { value: testClockDay(22) },
     });
     await user.click(within(dialog).getByRole("button", { name: "Aussetzen" }));
 

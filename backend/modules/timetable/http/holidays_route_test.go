@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,6 +52,7 @@ func setupHolidayRoute(t *testing.T) holidayRouteSetup {
 	resource := timetableAPI.NewResource(timetableAPI.Dependencies{
 		Holidays:        holidays,
 		SettingsService: schoolSettings.Settings,
+		Now:             func() time.Time { return time.Date(2026, time.November, 16, 10, 0, 0, 0, calendar.Berlin) },
 	})
 	router := chi.NewRouter()
 	router.Mount("/timetable", resource.Router(rootAPI.ProtectedTenantRoutes))
@@ -145,7 +148,14 @@ func TestHolidayRouteServesEveryFederalState(t *testing.T) {
 		Where("tenant_id = ? AND setting_key = 'operations.federal_state'", school).Exec(context.Background())
 	require.NoError(t, err)
 	missing := getHolidays(t, setup, school, "?from=2027-01-01&to=2027-12-31", permissions.SchedulesRead)
-	assert.Equal(t, http.StatusInternalServerError, missing.Code, "no default state: body=%s", missing.Body.String())
+	// No default state (#7174): the school is told what is missing instead
+	// of getting a server error.
+	require.Equal(t, http.StatusConflict, missing.Code, "body=%s", missing.Body.String())
+	var problem struct {
+		Code string `json:"code"`
+	}
+	require.NoError(t, json.Unmarshal(missing.Body.Bytes(), &problem))
+	assert.Equal(t, schoolcalendar.CodeFederalStateMissing, problem.Code)
 }
 
 // The calendar page reads the holidays with calendar:own, the period page

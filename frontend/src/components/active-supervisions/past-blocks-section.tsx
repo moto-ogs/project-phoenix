@@ -2,14 +2,7 @@
 
 import { EmptyState } from "~/components/ui/empty-state";
 import { ListRow } from "~/components/ui/list-row";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, History } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -22,21 +15,19 @@ import {
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { berlinClockFromISO } from "~/lib/date-helpers";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { LOCATION_COLORS } from "~/lib/location-helper";
-import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { rosterPickupTimeLabel } from "~/lib/timetable-roster-helpers";
 import { isCareDayExpected } from "~/lib/timetable-types";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import { REOPEN_TOOLTIP } from "~/components/active-supervisions/supervision-action-hints";
 import type {
   PlannedTimetableInstance,
-  TimetableRoster,
   TimetableRosterRow,
 } from "~/lib/timetable-operations-types";
-
-const logger = createLogger({ component: "PastBlocksSection" });
 
 // End-of-day review (#2335): today's completed blocks plus planned blocks
 // whose end time passed without a start. No start button, no attendance
@@ -81,15 +72,26 @@ export function PastBlocksSection({
   onReopen,
 }: Readonly<PastBlocksSectionProps> = {}) {
   const [expanded, setExpanded] = useState(false);
-  const [blocks, setBlocks] = useState<PlannedTimetableInstance[] | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  // Erhöht von „Wiederholen“ und nach „Wieder öffnen“: lädt die Liste erneut.
-  const [attempt, setAttempt] = useState(0);
+  // Lazy: the list loads when the section opens, and revalidates on every
+  // open so a block that ended in the meantime shows up.
+  const past = useSWRAuth(expanded ? tenantDailyKeys.pastBlocks() : null, () =>
+    timetableOperationsApi.plannedNow({ scope: "past" }),
+  );
+  const { error, mutate } = past;
+  const data = expanded ? past.data : undefined;
+  const blocks = useMemo(
+    () =>
+      data
+        ? [...data].sort((a, b) => a.startTime.localeCompare(b.startTime))
+        : null,
+    [data],
+  );
+  const isLoading = expanded && data === undefined && !error;
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data, error }],
+    "die Liste der vergangenen Blöcke",
+    () => mutate(),
+  );
   // Nach dem Wiederöffnen gehört der Block nicht mehr hierher; scheitert es,
   // zeigt die neue Liste, ob er sich noch öffnen lässt (#5676).
   const reopenAndReload = useMemo(
@@ -97,44 +99,11 @@ export function PastBlocksSection({
       onReopen
         ? async (block: PlannedTimetableInstance) => {
             await onReopen(block);
-            setAttempt((value) => value + 1);
+            void mutate();
           }
         : undefined,
-    [onReopen],
+    [onReopen, mutate],
   );
-
-  // Lazy: the list loads when the section opens, and reloads on every open so
-  // a block that ended in the meantime shows up without a page refresh.
-  useEffect(() => {
-    if (!expanded) return;
-    let cancelled = false;
-    setIsLoading(true);
-    clearLoadError();
-    timetableOperationsApi
-      .plannedNow({ scope: "past" })
-      .then((instances) => {
-        if (cancelled) return;
-        setBlocks(
-          [...instances].sort((a, b) => a.startTime.localeCompare(b.startTime)),
-        );
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("past_blocks_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: "die Liste der vergangenen Blöcke",
-          retry: () => setAttempt((value) => value + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [expanded, attempt, showLoadError, clearLoadError]);
 
   return (
     <SectionCard
@@ -208,13 +177,21 @@ function PastBlockCard({
     return () => window.clearTimeout(timeoutId);
   }, [reopenDeadline]);
   const [expanded, setExpanded] = useState(false);
-  const [roster, setRoster] = useState<TimetableRoster | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+    data: roster,
+    error: rosterError,
+    mutate: reloadRoster,
+  } = useSWRAuth(
+    expanded ? tenantDailyKeys.timetableRoster(block.id) : null,
+    () => timetableOperationsApi.roster(block.id),
+    { keepPreviousData: false },
+  );
+  const isLoading = roster === undefined && !rosterError;
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data: roster, error: rosterError }],
+    "die Kinderliste",
+    () => reloadRoster(),
+  );
   const completed = block.status === "completed";
   const reopenUntil =
     completed &&
@@ -224,36 +201,8 @@ function PastBlockCard({
     !reopenExpired
       ? berlinClockFromISO(block.reopenUntil)
       : "";
-  // „Wiederholen“ lädt die Kinderliste dieses Blocks erneut.
-  const reloadRef = useRef<() => void>(() => undefined);
 
-  const loadRoster = useCallback(() => {
-    setIsLoading(true);
-    clearLoadError();
-    timetableOperationsApi
-      .roster(block.id)
-      .then(setRoster)
-      .catch((err: unknown) => {
-        logger.error("past_block_roster_load_failed", {
-          instance_id: block.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: "die Kinderliste",
-          retry: () => reloadRef.current(),
-        });
-      })
-      .finally(() => setIsLoading(false));
-  }, [block.id, showLoadError, clearLoadError]);
-  useLayoutEffect(() => {
-    reloadRef.current = loadRoster;
-  });
-
-  const toggleRoster = () => {
-    const next = !expanded;
-    setExpanded(next);
-    if (next && roster === null && !isLoading) loadRoster();
-  };
+  const toggleRoster = () => setExpanded((value) => !value);
 
   return (
     <SectionCard
@@ -297,7 +246,7 @@ function PastBlockCard({
                 </SkeletonRegion>
               ) : loadError ? (
                 <LoadErrorAlert error={loadError} />
-              ) : roster !== null ? (
+              ) : roster ? (
                 <div className="space-y-2">
                   {!completed ? (
                     <p className="text-moto-amber-strong text-xs">

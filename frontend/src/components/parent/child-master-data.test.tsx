@@ -1,11 +1,13 @@
 import {
   act,
   fireEvent,
-  render,
+  render as renderUi,
   screen,
   waitFor,
   within,
+  type RenderOptions,
 } from "@testing-library/react";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type React from "react";
 import Link from "next/link";
@@ -25,6 +27,13 @@ import {
   type ChildFeatures,
   type ChildMasterData,
 } from "~/lib/parent-api";
+
+vi.unmock("swr");
+
+// Real SWR with a parent session, a fresh cache per render.
+function render(ui: React.ReactElement, options?: RenderOptions) {
+  return renderUi(ui, { wrapper: ParentResourceTestProvider, ...options });
+}
 
 // The birthday field moved from a native input to the kit picker; this stub
 // keeps it readable/settable as an input. Imported inside the factory because
@@ -63,6 +72,9 @@ vi.mock("~/lib/parent-api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/parent-api")>();
   return {
     ...actual,
+    listMyChildren: vi
+      .fn()
+      .mockResolvedValue([{ student_id: "42", tenant_id: "1" }]),
     getChildFeatures: vi.fn(),
     getChildMasterData: vi.fn(),
     getChildCareOfferings: vi.fn().mockResolvedValue({

@@ -161,6 +161,25 @@ func TestBillingCaptureDoesNotBackdateAChangedKeyDay(t *testing.T) {
 	assert.Zero(t, written)
 }
 
+// TestBillingKeyDayIsStampedOnTheReportClock pins that the change of the key
+// day carries the report's clock (#7295): set on the 1st of March 2025 by
+// that clock, it is in place on the key date of the same month, whatever
+// day the database clock reads.
+func TestBillingKeyDayIsStampedOnTheReportClock(t *testing.T) {
+	t.Parallel()
+	counts := &stubBillingCounts{}
+	db, billing, schoolID := billingTestSetup(t, counts, berlinTime(2025, time.March, 1, 12, 0))
+	_, err := db.ExecContext(context.Background(), "UPDATE platform.schools SET created_at = ? WHERE id = ?", berlinTime(2025, time.January, 1, 12, 0), schoolID)
+	require.NoError(t, err)
+	ctx := adminCtx(t, db)
+
+	_, err = billing.SetBillingKeyDay(ctx, 10, testpkg.UniqueTestTenantID(t))
+	require.NoError(t, err)
+	written, err := billing.RecordDueBillingKeyDates(ctx, berlinTime(2025, time.March, 10, 6, 0))
+	require.NoError(t, err)
+	assert.Positive(t, written, "the key day set before the capture hour captures the month")
+}
+
 func TestBillingSeedCaptureWritesOneCurrentDaySnapshot(t *testing.T) {
 	t.Parallel()
 	counts := &stubBillingCounts{}

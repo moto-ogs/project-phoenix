@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -14,7 +15,7 @@ import (
 func TestRequestLocksRequireAmbientTransactionAndReleaseOnRollback(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.NewClocked(nil)
+	module := enrollmentCompose.NewClocked(time.Now)
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)
 	ctx := testpkg.Ctx(t)
 	for _, tc := range []struct {

@@ -21,12 +21,12 @@ func (r *Store) PinDecisionNotificationMode(ctx context.Context, requestID int64
 		UPDATE enrollment.requests
 		SET decision_notification_mode = COALESCE(decision_notification_mode, ?),
 			updated_at = CASE
-				WHEN decision_notification_mode IS NULL THEN NOW()
+				WHEN decision_notification_mode IS NULL THEN ?::timestamptz
 				ELSE updated_at
 			END
 		WHERE id = ? AND tenant_id = ?
 		RETURNING decision_notification_mode
-	`, proposed, requestID, tenantID).Scan(ctx, &mode)
+	`, proposed, r.currentTime(), requestID, tenantID).Scan(ctx, &mode)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", fmt.Errorf("enrollment request %d not found for notification mode pin", requestID)

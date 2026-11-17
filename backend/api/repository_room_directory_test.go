@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"testing"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -15,7 +16,7 @@ func TestSessionCleanupRootResolvesRoomsThroughOwner(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	tenantID := testpkg.Tenant(t)
-	sessions, _, _ := NewSessionCleanupRepositories(testpkg.NewDatabase(t, db), owners.NewTestTimetable(t, testpkg.MustDatabase(db)))
+	sessions, _, _ := NewSessionCleanupRepositories(testpkg.NewDatabase(t, db), owners.NewTestTimetable(t, testpkg.MustDatabase(db)), time.Now)
 	room := testpkg.CreateTestRoom(t, db, "Igelraum")
 	activity := testpkg.CreateTestActivityGroup(t, db, "Room Activity")
 	group := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)

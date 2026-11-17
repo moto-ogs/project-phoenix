@@ -28,8 +28,8 @@ type passwordResetTokenRow struct {
 	// CredentialGeneration is the account's credential generation the link
 	// was issued under; it redeems only while that is current (#6289).
 	CredentialGeneration int64     `bun:"credential_generation,notnull"`
-	CreatedAt            time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt            time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt            time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt            time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r passwordResetTokenRow) toDomain() domain.PasswordResetToken {

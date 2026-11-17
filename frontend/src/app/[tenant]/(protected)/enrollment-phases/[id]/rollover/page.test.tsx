@@ -1,8 +1,12 @@
 import { Suspense } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
 
 import type { Phase } from "~/lib/enrollment-phase-api";
+
+vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   getPhase: vi.fn(),
@@ -22,7 +26,8 @@ vi.mock("~/lib/tenant-router", () => ({
   useTenantRouter: () => ({ replace: mocks.replace }),
 }));
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
   useTenantMutate: () => mocks.tenantMutate,
 }));
 
@@ -59,9 +64,19 @@ import MobileRolloverPage from "./page";
 async function renderPage() {
   await act(async () => {
     render(
-      <Suspense fallback={null}>
-        <MobileRolloverPage params={Promise.resolve({ id: "7" })} />
-      </Suspense>,
+      <SessionProvider
+        session={{
+          user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+          expires: "2099-01-01",
+        }}
+        refetchOnWindowFocus={false}
+      >
+        <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+          <Suspense fallback={null}>
+            <MobileRolloverPage params={Promise.resolve({ id: "7" })} />
+          </Suspense>
+        </SWRConfig>
+      </SessionProvider>,
     );
   });
   return screen.findByTestId("rollover-form");

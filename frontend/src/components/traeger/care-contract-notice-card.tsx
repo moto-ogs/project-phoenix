@@ -9,17 +9,16 @@
 
 import { CalendarX2 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { JumpButton } from "~/components/ui/jump-button";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { CareContractStatus } from "~/lib/traeger-care-contracts-api";
 import { TERMINATION_KIND_LABELS } from "./care-contract-format";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import type { ContractNoticeOptions } from "~/lib/care-contract-notices";
 import { fetchContractNoticeOptions } from "~/lib/care-contract-notices-api";
 import {
@@ -30,9 +29,8 @@ import {
   parseISODate,
   toISODate,
 } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
-
-const logger = createLogger({ component: "CareContractNoticeCard" });
+import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
+import { useTraegerResource } from "./use-traeger-resource";
 
 // The entry form carries the date picker; it loads when the office opens it,
 // so the contract page stays as light as before (bundle budget).
@@ -99,29 +97,28 @@ export function CareContractNoticeCard({
   concludedAt: string;
   onChanged: () => void;
 }>) {
-  const [options, setOptions] = useState<ContractNoticeOptions | null>(null);
+  const {
+    data: options,
+    error,
+    mutate,
+    reload,
+  } = useTraegerResource(
+    traegerContractKeys.notice(contractId),
+    () => fetchContractNoticeOptions(contractId),
+    "die Kündigung",
+  );
   const [open, setOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
-  const { error, show, clear } = useApiLoadError();
-
-  const load = useCallback(async () => {
-    try {
-      setOptions(await fetchContractNoticeOptions(contractId));
-      clear();
-    } catch (err) {
-      logger.error("traeger_care_contract_notice_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await show(err, { object: "die Kündigung", retry: () => void load() });
-    }
-  }, [contractId, clear, show]);
 
   // The status of the contract changes when the parents declare in the
   // parents app; the card reads again with it.
+  const readForStatus = useRef(status);
   useEffect(() => {
-    void load();
-  }, [load, status]);
+    if (readForStatus.current === status) return;
+    readForStatus.current = status;
+    reload();
+  }, [status, reload]);
 
   const notice = options?.notice ?? null;
   const active = options?.status === "aktiv";
@@ -180,7 +177,7 @@ export function CareContractNoticeCard({
           options={options}
           concludedAt={concludedAt}
           onRecorded={(next: ContractNoticeOptions) => {
-            setOptions(next);
+            void mutate(next, { revalidate: false });
             setOpen(false);
             onChanged();
           }}
@@ -193,7 +190,7 @@ export function CareContractNoticeCard({
           contractId={contractId}
           receivedOn={notice.receivedOn}
           onSet={(next: ContractNoticeOptions) => {
-            setOptions(next);
+            void mutate(next, { revalidate: false });
             setEndOpen(false);
             onChanged();
           }}
@@ -208,7 +205,7 @@ export function CareContractNoticeCard({
           receivedOn={notice.receivedOn}
           endsOn={options.reinterpretedEndsOn}
           onRejected={(next: ContractNoticeOptions) => {
-            setOptions(next);
+            void mutate(next, { revalidate: false });
             setRejectOpen(false);
             onChanged();
           }}

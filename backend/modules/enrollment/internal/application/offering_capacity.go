@@ -55,7 +55,7 @@ var _ enrollmentNative.OfferingCapacity = (*OfferingCapacity)(nil)
 // today starts the phase's remaining capacity window; nil reads the real day.
 func NewOfferingCapacity(offerings CapacityOfferings, peaks CapacityPeaks, waitlistEnabled func(context.Context) (bool, error), today func() calendar.Date) *OfferingCapacity {
 	if today == nil {
-		today = calendar.TodayDate
+		panic("enrollment: the offering capacity needs the day clock")
 	}
 	return &OfferingCapacity{offerings: offerings, peaks: peaks, waitlistEnabled: waitlistEnabled, today: today}
 }

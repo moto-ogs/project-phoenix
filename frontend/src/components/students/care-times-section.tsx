@@ -4,11 +4,11 @@
 // the actual attendance, with overruns marked in colour AND text. Read-only:
 // the booked times are changed in the weekly plan above.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { Alert } from "~/components/ui/alert";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   buildDefaultPresets,
   DateRangePicker,
@@ -17,7 +17,6 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import {
   CARE_TIME_DAY_LABELS,
   classTimesHint,
@@ -26,7 +25,6 @@ import {
   formatDeviation,
   overrunReason,
   type CareTimeDay,
-  type StudentCareTimes,
 } from "~/lib/care-times";
 import {
   berlinTodayISO,
@@ -37,9 +35,9 @@ import {
 } from "~/lib/date-helpers";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { getAccessibleTextColor } from "~/lib/kit-palette";
-import { createLogger } from "~/lib/logger";
-
-const logger = createLogger({ component: "StudentCareTimesSection" });
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 /** Laufender Monat bis heute: der Bericht reicht nie in die Zukunft. */
 function currentMonthRange(today: Date): DateRange {
@@ -164,54 +162,30 @@ export function StudentCareTimesSection({
         }
       : currentMonthRange(parseISODate(berlinTodayISO())),
   );
-  const [data, setData] = useState<StudentCareTimes | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
   const presets = useMemo(() => monthPresets(today), [today]);
 
   const fromISO = range.from ? toISODate(range.from) : null;
   const toISO = range.to ? toISODate(range.to) : null;
 
+  const { data, error, mutate } = useSWRAuth(
+    active && fromISO && toISO
+      ? tenantStudentKeys.careTimes(studentId, fromISO, toISO)
+      : null,
+    () => fetchStudentCareTimes(studentId, fromISO ?? "", toISO ?? ""),
+    { keepPreviousData: false },
+  );
+  const load = useSwrResourceLoadError([{ data, error }], "Soll und Ist", () =>
+    mutate(),
+  );
+  const loading = active && !data && !error;
+
+  // A changed booking changes the comparison of the same range (#5994).
+  const refreshKeyRef = useRef(refreshKey);
   useEffect(() => {
-    if (!active || !fromISO || !toISO) return;
-    let cancelled = false;
-    setLoading(true);
-    setData(null);
-    clearLoadError();
-    fetchStudentCareTimes(studentId, fromISO, toISO)
-      .then((result) => {
-        if (!cancelled) setData(result);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        setData(null);
-        logger.error("student_care_times_fetch_failed", {
-          student_id: studentId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        void showLoadError(error, {
-          object: "Soll und Ist",
-          retry: () => setReloadKey((key) => key + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    active,
-    studentId,
-    fromISO,
-    toISO,
-    reloadKey,
-    refreshKey,
-    showLoadError,
-    clearLoadError,
-  ]);
+    if (refreshKeyRef.current === refreshKey) return;
+    refreshKeyRef.current = refreshKey;
+    void mutate();
+  }, [refreshKey, mutate]);
 
   const summary = data?.summary;
   const tolerance = data?.tolerance_minutes ?? 15;

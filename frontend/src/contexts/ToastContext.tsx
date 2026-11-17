@@ -566,6 +566,8 @@ interface DisplayedError {
   retry?: { label: string; onClick: () => void };
   requestId?: string;
   requestIdLabel?: string;
+  /** The registered code, for the link to where it is fixed (#7092). */
+  code?: string;
 }
 
 /**
@@ -745,6 +747,7 @@ function useApiErrorCore(
               : undefined),
           requestId: presentation.requestId,
           requestIdLabel: labels.requestId,
+          code: error instanceof ApiError ? error.code : undefined,
         },
         locale,
       );
@@ -836,6 +839,7 @@ function toFormErrorDetail(
   return {
     message: shown.message,
     notBookedModule: shown.notBookedModule,
+    code: shown.code,
     retry: shown.retry,
     requestId: shown.requestId
       ? {

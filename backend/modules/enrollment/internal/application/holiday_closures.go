@@ -66,7 +66,7 @@ func NewHolidayClosures(store HolidayClosureStore, schoolCalendar enrollment.Hol
 		panic("enrollment: the holiday closure store, the host schools' calendar, the Träger directory, the mail outbox and the key functions are required")
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("enrollment: the holiday closures need the day clock")
 	}
 	return &HolidayClosures{store: store, calendar: schoolCalendar, operation: operationCalendar, traeger: traeger, mail: mail, random: random, keyed: keyed, today: today}
 }

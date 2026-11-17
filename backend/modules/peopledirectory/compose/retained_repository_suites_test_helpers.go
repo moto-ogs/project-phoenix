@@ -3,6 +3,8 @@
 package compose
 
 import (
+	"time"
+
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	usersRepo "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application"
@@ -35,9 +37,9 @@ func NewRetainedPersonRepository(db *bun.DB) peoplePorts.PersonRepository {
 }
 
 // NewRetainedGuardianProfileRepository is the guardian profile repository with
-// only the given options bound.
-func NewRetainedGuardianProfileRepository(db *bun.DB, students usersRepo.StudentDirectoryRows, links usersRepo.GuardianLinkRows, options ...RetainedGuardianProfileOption) peoplePorts.GuardianProfileRepository {
-	return application.NewGuardianProfileCommands(usersRepo.NewGuardianProfileRepository(NewLegacyRepositoryRuntime(db), students, links, options...), NewLegacyRepositoryRuntime(db))
+// only the given options bound and the given clock.
+func NewRetainedGuardianProfileRepository(db *bun.DB, students usersRepo.StudentDirectoryRows, links usersRepo.GuardianLinkRows, now func() time.Time, options ...RetainedGuardianProfileOption) peoplePorts.GuardianProfileRepository {
+	return application.NewGuardianProfileCommands(usersRepo.NewGuardianProfileRepository(NewLegacyRepositoryRuntime(db), students, links, now, options...), NewLegacyRepositoryRuntime(db))
 }
 
 // NewRetainedGuardianRelationshipRepository is the relationship store with

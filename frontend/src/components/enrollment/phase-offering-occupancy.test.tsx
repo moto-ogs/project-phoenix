@@ -1,7 +1,18 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import type { ReactNode } from "react";
+import {
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import type { CareOffering } from "~/lib/care-offering-api";
 import type { CareOfferingBookingStats } from "~/lib/care-offering-booking-stats";
+
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   listCareOfferings: vi.fn(),
@@ -23,6 +34,23 @@ import {
   PHONE_WIDTH,
   setViewportWidth,
 } from "~/test/helpers/viewport";
+
+// Real SWR under a staff session, a fresh cache per render.
+function render(ui: ReactNode) {
+  return rtlRender(
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {ui}
+      </SWRConfig>
+    </SessionProvider>,
+  );
+}
 
 // DataTable renders only the layout for the window width (#6220).
 afterEach(() => setViewportWidth(DESKTOP_WIDTH));

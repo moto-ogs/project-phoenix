@@ -13,7 +13,11 @@ import (
 
 // DemoStateStore is only composed in the isolated demo CLI with its privileged
 // database connection. HTTP roles have no access to the credentials table.
-type DemoStateStore struct{ db *bun.DB }
+// now stamps the claim of an order (ADR 0281); a store without it claims none.
+type DemoStateStore struct {
+	db  *bun.DB
+	now func() time.Time
+}
 
 type DemoState struct {
 	TenantID               int64  `bun:"tenant_id"`
@@ -22,7 +26,9 @@ type DemoState struct {
 	VisitorParentAccountID int64  `bun:"visitor_parent_account_id"`
 }
 
-func NewDemoStateStore(db *bun.DB) *DemoStateStore { return &DemoStateStore{db: db} }
+func NewDemoStateStore(db *bun.DB, now func() time.Time) *DemoStateStore {
+	return &DemoStateStore{db: db, now: now}
+}
 
 func (s *DemoStateStore) Load(ctx context.Context, name string) (*DemoState, error) {
 	var state DemoState
@@ -243,14 +249,17 @@ func (s *DemoStateStore) RequeueDeferred(ctx context.Context, name string) error
 
 // Claim takes the oldest waiting order, or none.
 func (s *DemoStateStore) Claim(ctx context.Context) (*DemoOrder, error) {
+	if s.now == nil {
+		return nil, errors.New("claim demo school order: the store needs the owner's clock")
+	}
 	var order DemoOrder
 	err := s.db.NewRaw(`UPDATE platform.demo_school_states AS state
-		SET claimed_at = CURRENT_TIMESTAMP, attempts = state.attempts + 1
+		SET claimed_at = ?, attempts = state.attempts + 1
 		WHERE state.name = (
 			SELECT name FROM platform.demo_school_states
 			WHERE status = 'preparing' AND claimed_at IS NULL
 			ORDER BY created_at, name LIMIT 1 FOR UPDATE SKIP LOCKED)
-		RETURNING state.name, state.school_name, state.first_name, state.last_name, state.attempts, state.seed_state IS NOT NULL AS seeded`).Scan(ctx, &order)
+		RETURNING state.name, state.school_name, state.first_name, state.last_name, state.attempts, state.seed_state IS NOT NULL AS seeded`, s.now()).Scan(ctx, &order)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

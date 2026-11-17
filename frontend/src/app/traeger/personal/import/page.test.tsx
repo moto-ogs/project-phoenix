@@ -1,13 +1,15 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type {
   StaffImportResult,
   StaffImportRow,
 } from "~/lib/traeger-staff-import-api";
 import TraegerStaffImportPage from "./page";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   previewStaffImport: vi.fn(),
@@ -103,9 +105,9 @@ const preview: StaffImportResult = {
 async function choose() {
   api.previewStaffImport.mockResolvedValueOnce(preview);
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerStaffImportPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Datei wählen" })).toBeEnabled(),
@@ -209,9 +211,9 @@ describe("TraegerStaffImportPage", () => {
       },
     ]);
     render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <TraegerStaffImportPage />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
 
     expect(await screen.findByText("Ines Lindner")).toBeInTheDocument();
@@ -225,9 +227,9 @@ describe("TraegerStaffImportPage", () => {
       }),
     );
     render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <TraegerStaffImportPage />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
 
     await screen.findByText(

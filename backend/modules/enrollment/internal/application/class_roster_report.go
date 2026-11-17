@@ -56,7 +56,7 @@ func (s *Reports) classRoster(ctx context.Context, filters enrollmentNative.Clas
 	if s.deps.Students == nil {
 		return nil, fmt.Errorf("class roster report: student repo not configured")
 	}
-	students, err := s.classRosterStudents(ctx, filters)
+	students, withoutPlace, err := s.classRosterStudents(ctx, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (s *Reports) classRoster(ctx context.Context, filters enrollmentNative.Clas
 	if err != nil {
 		return nil, err
 	}
-	if err := s.appendClassListEntries(ctx, filters, report); err != nil {
+	if err := s.appendClassListEntries(ctx, filters, withoutPlace, report); err != nil {
 		return nil, err
 	}
 	return report, nil
@@ -94,13 +94,13 @@ func classRosterCareDate(filters enrollmentNative.ClassRosterFilters, today cale
 	return today
 }
 
-// appendClassListEntries folds the class-list-only entries (#2382) into the
-// roster: children of the Klassenverband without any OGS record, marked
-// "Keine Betreuung". They sort into their class alphabetically like every
+// appendClassListEntries folds the class-list-only entries (#2382) and the
+// children without an OGS place (#4803) into the roster: children of the
+// Klassenverband without OGS care, marked "Keine Betreuung". They sort into their class alphabetically like every
 // student row; the AllClasses heading logic keys off the row's class, so a
 // class that exists only through entries gets its own section automatically.
-func (s *Reports) appendClassListEntries(ctx context.Context, filters enrollmentNative.ClassRosterFilters, report *enrollmentNative.ClassRosterReport) error {
-	rows, err := s.classListEntryRows(ctx, filters.SchoolClass, filters.AllClasses)
+func (s *Reports) appendClassListEntries(ctx context.Context, filters enrollmentNative.ClassRosterFilters, withoutPlace []*RosterStudent, report *enrollmentNative.ClassRosterReport) error {
+	rows, err := s.noCareRows(ctx, filters, withoutPlace)
 	if err != nil {
 		return err
 	}
@@ -115,6 +115,58 @@ func (s *Reports) appendClassListEntries(ctx context.Context, filters enrollment
 	report.Totals.Students += len(rows)
 	report.Totals.ListEntries += len(rows)
 	return nil
+}
+
+// noCareRows renders the class's children without OGS care: the
+// class-list-only entries and the children without an OGS place.
+func (s *Reports) noCareRows(ctx context.Context, filters enrollmentNative.ClassRosterFilters, withoutPlace []*RosterStudent) ([]enrollmentNative.ClassRosterRow, error) {
+	rows, err := s.classListEntryRows(ctx, filters.SchoolClass, filters.AllClasses)
+	if err != nil {
+		return nil, err
+	}
+	studentRows, err := s.withoutPlaceRows(ctx, withoutPlace)
+	if err != nil {
+		return nil, err
+	}
+	return append(rows, studentRows...), nil
+}
+
+// withoutPlaceRows renders the children without an OGS place (#4803) like
+// list entries, but under their student ID: one bulk name read.
+func (s *Reports) withoutPlaceRows(ctx context.Context, students []*RosterStudent) ([]enrollmentNative.ClassRosterRow, error) {
+	if len(students) == 0 {
+		return nil, nil
+	}
+	persons, err := s.deps.Persons.PersonsByID(ctx, classRosterPersonIDs(students))
+	if err != nil {
+		return nil, fmt.Errorf("class roster report: names of children without an OGS place: %w", err)
+	}
+	rows := make([]enrollmentNative.ClassRosterRow, 0, len(students))
+	for _, student := range students {
+		row := noCareRow(student.SchoolClass)
+		row.StudentID = student.ID
+		row.WithoutCarePlace = true
+		if person := persons[student.PersonID]; person != nil {
+			row.FirstName, row.LastName = person.FirstName, person.LastName
+		}
+		rows = append(rows, row)
+	}
+	return rows, nil
+}
+
+// noCareRow is the empty "Keine Betreuung" row of a child of the class.
+func noCareRow(schoolClass string) enrollmentNative.ClassRosterRow {
+	return enrollmentNative.ClassRosterRow{
+		SchoolClass:       schoolClass,
+		EnrollmentSummary: enrollmentNative.ClassListEntryNoCareLabel,
+		Offerings:         []enrollmentNative.CareUsageRowOffering{},
+		OfferingsByDay:    map[string][]string{},
+		CareDays:          []string{},
+		ArrivalByDay:      map[string]string{},
+		PickupByDay:       map[string]string{},
+		DepartureByDay:    map[string]string{},
+		Guardians:         []enrollmentNative.ClassRosterGuardian{},
+	}
 }
 
 // classListEntryRows loads the class-list-only entries — one class or all —
@@ -132,36 +184,27 @@ func (s *Reports) classListEntryRows(ctx context.Context, schoolClass string, al
 	}
 	rows := make([]enrollmentNative.ClassRosterRow, 0, len(entries))
 	for _, entry := range entries {
-		rows = append(rows, enrollmentNative.ClassRosterRow{
-			ListEntry:         true,
-			ListEntryID:       entry.ID,
-			FirstName:         entry.FirstName,
-			LastName:          entry.LastName,
-			SchoolClass:       entry.SchoolClass,
-			EnrollmentSummary: enrollmentNative.ClassListEntryNoCareLabel,
-			Offerings:         []enrollmentNative.CareUsageRowOffering{},
-			OfferingsByDay:    map[string][]string{},
-			CareDays:          []string{},
-			ArrivalByDay:      map[string]string{},
-			PickupByDay:       map[string]string{},
-			DepartureByDay:    map[string]string{},
-			Guardians:         []enrollmentNative.ClassRosterGuardian{},
-		})
+		row := noCareRow(entry.SchoolClass)
+		row.ListEntry, row.ListEntryID = true, entry.ID
+		row.FirstName, row.LastName = entry.FirstName, entry.LastName
+		rows = append(rows, row)
 	}
 	return rows, nil
 }
 
 // classRosterStudents loads one selected class or every student carrying a
 // non-empty class name. The shared participation rule filters that candidate
-// set after the one bulk query.
-func (s *Reports) classRosterStudents(ctx context.Context, filters enrollmentNative.ClassRosterFilters) ([]*RosterStudent, error) {
+// set after the one bulk query. The children without an OGS place (#4803)
+// never take part in care; they come back separately, graduates excluded,
+// so the roster lists them as "Keine Betreuung".
+func (s *Reports) classRosterStudents(ctx context.Context, filters enrollmentNative.ClassRosterFilters) ([]*RosterStudent, []*RosterStudent, error) {
 	schoolClass := ""
 	if !filters.AllClasses {
 		schoolClass = filters.SchoolClass
 	}
 	students, err := s.deps.Students.ListClassRoster(ctx, schoolClass)
 	if err != nil {
-		return nil, fmt.Errorf("class roster report: list students: %w", err)
+		return nil, nil, fmt.Errorf("class roster report: list students: %w", err)
 	}
 	if !filters.AllClasses {
 		students = studentsInClass(students, filters.SchoolClass)
@@ -169,14 +212,46 @@ func (s *Reports) classRosterStudents(ctx context.Context, filters enrollmentNat
 		students = studentsWithClass(students)
 	}
 	today := s.today()
-	students, err = s.filterClassParticipation(ctx, students, classRosterCareDate(filters, today), today)
+	day := classRosterCareDate(filters, today)
+	students, withoutPlace := splitWithoutCarePlace(students, day)
+	students, err = s.filterClassParticipation(ctx, students, day, today)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if len(students) > maxReportRows {
-		return nil, fmt.Errorf("class roster report: %d students: %w", len(students), enrollmentNative.ErrReportExportTooLarge)
+	if len(students)+len(withoutPlace) > maxReportRows {
+		return nil, nil, fmt.Errorf("class roster report: %d students: %w", len(students)+len(withoutPlace), enrollmentNative.ErrReportExportTooLarge)
 	}
-	return students, nil
+	return students, withoutPlace, nil
+}
+
+// splitWithoutCarePlace separates the children without an OGS place
+// (#4803) from the care candidates. Of those it keeps the ones in the class
+// on day: from their start to their enrollment end; a child that left the
+// school (graduate or inactive) only with a dated end.
+func splitWithoutCarePlace(students []*RosterStudent, day calendar.Date) ([]*RosterStudent, []*RosterStudent) {
+	care := make([]*RosterStudent, 0, len(students))
+	var withoutPlace []*RosterStudent
+	for _, student := range students {
+		switch {
+		case !student.WithoutCarePlace:
+			care = append(care, student)
+		case student.inClassOn(day):
+			withoutPlace = append(withoutPlace, student)
+		}
+	}
+	return care, withoutPlace
+}
+
+// inClassOn reports whether a child without an OGS place belongs to its
+// class on day.
+func (s *RosterStudent) inClassOn(day calendar.Date) bool {
+	if s.Departed && s.MemberUntil == nil {
+		return false
+	}
+	if !s.MemberFrom.IsZero() && day.Before(s.MemberFrom) {
+		return false
+	}
+	return s.MemberUntil == nil || !day.After(*s.MemberUntil)
 }
 
 func studentsInClass(students []*RosterStudent, schoolClass string) []*RosterStudent {

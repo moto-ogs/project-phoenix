@@ -93,14 +93,14 @@ func statusFailures() DatabaseFailures {
 // savepoint-control rule and return the HTTP status per mapping.
 func statusMappings(t *testing.T, ctx context.Context, err error) map[string]int {
 	t.Helper()
-	rs := &Resource{Failures: statusFailures()}
+	rs := &Resource{Now: resourceTestClock, Failures: statusFailures()}
 	answer := func(write func(w http.ResponseWriter, r *http.Request)) int {
 		w := httptest.NewRecorder()
 		write(w, httptest.NewRequestWithContext(ctx, http.MethodPost, "/", nil))
 		return w.Code
 	}
 	care := &mockCareOfferingService{deleteErr: err}
-	careRS := &Resource{Failures: statusFailures(), CareOfferingService: care}
+	careRS := &Resource{Now: resourceTestClock, Failures: statusFailures(), CareOfferingService: care}
 	router := chi.NewRouter()
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 	router.Delete("/enrollment/care-offerings/{id}", careRS.deleteCareOffering)

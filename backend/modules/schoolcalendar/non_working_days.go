@@ -11,6 +11,32 @@ import (
 // cannot be resolved or names no supported holiday region.
 var ErrFederalStateUnavailable = errors.New("federal state is not available")
 
+// CodeFederalStateMissing is the registered wire code of ErrFederalStateMissing.
+const CodeFederalStateMissing = "calendar.federal_state_missing"
+
+// ErrFederalStateMissing is returned when a school has no federal state set,
+// or one that names no supported holiday region (#7174 removed the default).
+// It is a business rejection: the request is valid, but the school's
+// holidays cannot be known until the school sets the state, so every
+// endpoint answers 409 with its code instead of a server error. It matches
+// ErrFederalStateUnavailable, so callers that tolerate an unknown state
+// keep doing so. A failure to read the setting stays
+// ErrFederalStateUnavailable and remains a server error.
+var ErrFederalStateMissing error = federalStateMissing{}
+
+type federalStateMissing struct{}
+
+func (federalStateMissing) Error() string { return "federal state is not set" }
+
+// Is lets errors.Is(err, ErrFederalStateUnavailable) match a missing state.
+func (federalStateMissing) Is(target error) bool { return target == ErrFederalStateUnavailable }
+
+// ErrorCode is the registered wire code of the rejection.
+func (federalStateMissing) ErrorCode() string { return CodeFederalStateMissing }
+
+// ErrorDetails carries no values: the text names none.
+func (federalStateMissing) ErrorDetails() any { return nil }
+
 // HolidayRegion is the federal state whose statutory holidays apply to a
 // tenant: its ISO code (operations.federal_state) and its German name.
 type HolidayRegion struct {

@@ -49,7 +49,7 @@ func TestNativeBulkPickupRollsBackTheWholeSelection(t *testing.T) {
 			t.Parallel()
 			db := testpkg.SetupTestDB(t)
 			ctx := testpkg.Ctx(t)
-			owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+			owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 			first := testpkg.CreateTestStudent(t, db, "First", "Pickup", "1a")
 			second := testpkg.CreateTestStudent(t, db, "Second", "Pickup", "1a")
 			staff := testpkg.CreateTestStaff(t, db, "Pickup", "Staff")
@@ -83,7 +83,7 @@ func TestNativeBulkPickupRollsBackTheWholeSelection(t *testing.T) {
 				directory.nameFailure = second.ID
 				want = directory.err
 			}
-			service, err := compose.NewPickupSchedules(db, owner, excusalBaseline{}, nil, directory, nil, nil)
+			service, err := compose.NewPickupSchedules(db, owner, excusalBaseline{}, nil, directory, nil, decisionTestDay)
 			require.NoError(t, err)
 			result, err := service.BulkUpsertPickupSchedules(ctx, filter, []careplan.PickupScheduleInput{{Weekday: 1, PickupTime: "16:00"}}, staff.ID)
 			require.ErrorIs(t, err, want)

@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
@@ -46,7 +48,7 @@ func operatorListBudgetRouter(t *testing.T, db *bun.DB) (chi.Router, identityacc
 		require.NoError(t, err)
 		mountOperatorSchoolRoutes(r, resource, routes.mfaAdmin, &operatorSchoolSettings{
 			values:                 settingsHTTP.NewSettingsResource(settingsHTTP.SettingsConfig{Settings: module.OperatorSchoolSettings(module.SettingsSideEffects.Dispatch), OperatorID: operatorIDFromSession}),
-			bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle),
+			bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.TodayDate),
 		}, nil)
 		routes.mountAccountTenantAccessRoutes(r, resource)
 		routes.mountPasskeyRoutes(r)

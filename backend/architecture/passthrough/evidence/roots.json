@@ -618,9 +618,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (l classDayAccessLog) ClassDayViewSeenSince(ctx context.Context, actorAccountID int64, schoolClass, date string, since time.Time) (bool, error) {\n\treturn l.repo.ExistsSince(ctx, actorAccountID, auditModels.ResourceTypeClassDayView, map[string]string{\"school_class\": schoolClass, \"date\": date}, since)\n}",
+      "evidence": "func (l classDayAccessLog) ClassDayViewSeenToday(ctx context.Context, actorAccountID int64, schoolClass, date string) (bool, error) {\n\treturn l.repo.ExistsToday(ctx, actorAccountID, auditModels.ResourceTypeClassDayView, map[string]string{\"school_class\": schoolClass, \"date\": date})\n}",
       "form": "unclassified-evidence",
-      "id": "api/classDayAccessLog.ClassDayViewSeenSince",
+      "id": "api/classDayAccessLog.ClassDayViewSeenToday",
       "owner": "roots"
     },
     {
@@ -667,9 +667,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (l classDayAccessLog) SchoolDayViewSeenSince(ctx context.Context, actorAccountID int64, date string, since time.Time) (bool, error) {\n\treturn l.repo.ExistsSince(ctx, actorAccountID, auditModels.ResourceTypeSchoolDayView, map[string]string{\"date\": date}, since)\n}",
+      "evidence": "func (l classDayAccessLog) SchoolDayViewSeenToday(ctx context.Context, actorAccountID int64, date string) (bool, error) {\n\treturn l.repo.ExistsToday(ctx, actorAccountID, auditModels.ResourceTypeSchoolDayView, map[string]string{\"date\": date})\n}",
       "form": "unclassified-evidence",
-      "id": "api/classDayAccessLog.SchoolDayViewSeenSince",
+      "id": "api/classDayAccessLog.SchoolDayViewSeenToday",
       "owner": "roots"
     },
     {
@@ -1724,7 +1724,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (t traegerAccessTrail) ListAccessTrail(ctx context.Context, query traegerview.AccessTrailQuery) ([]traegerview.AccessTrailEntry, error) {\n\trows, err := t.trail.ListAccessTrail(ctx, auditlog.AccessTrailFilter(query))\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tentries := make([]traegerview.AccessTrailEntry, 0, len(rows))\n\tfor _, row := range rows {\n\t\tentries = append(entries, traegerview.AccessTrailEntry(row))\n\t}\n\treturn entries, nil\n}",
+      "evidence": "func (t traegerAccessTrail) ListAccessTrail(ctx context.Context, query traegerview.AccessTrailQuery) ([]traegerview.AccessTrailEntry, time.Time, error) {\n\trows, asOf, err := t.trail.ListAccessTrail(ctx, auditlog.AccessTrailFilter(query))\n\tif err != nil {\n\t\treturn nil, time.Time{}, err\n\t}\n\tentries := make([]traegerview.AccessTrailEntry, 0, len(rows))\n\tfor _, row := range rows {\n\t\tentries = append(entries, traegerview.AccessTrailEntry(row))\n\t}\n\treturn entries, asOf, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerAccessTrail.ListAccessTrail",
       "owner": "roots"
@@ -3341,9 +3341,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (p PushSubscriptionCleanup) DeleteOrphaned(ctx context.Context) error {\n\tif p.Subscriptions == nil {\n\t\treturn nil\n\t}\n\treturn p.Subscriptions.DeleteOrphanedSubscriptions(ctx)\n}",
-      "form": "guard-debt",
-      "id": "roots/owners/PushSubscriptionCleanup.DeleteOrphaned",
+      "evidence": "func (p PushSubscriptionCleanup) DeleteLinks(ctx context.Context, links []identityaccess.PushSubscriptionLink) error {\n\tif p.Subscriptions == nil {\n\t\treturn nil\n\t}\n\trows := make([]deliveryModels.SessionLink, len(links))\n\tfor i, link := range links {\n\t\trows[i] = deliveryModels.SessionLink(link)\n\t}\n\treturn p.Subscriptions.DeleteSessionLinks(ctx, rows)\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/PushSubscriptionCleanup.DeleteLinks",
       "owner": "roots"
     },
     {
@@ -3372,6 +3372,13 @@
       "evidence": "func (p PushSubscriptionCleanup) DeleteUnboundByAccount(ctx context.Context, accountID, tenantID int64, portal string) error {\n\tif p.Subscriptions == nil {\n\t\treturn nil\n\t}\n\treturn p.Subscriptions.DeleteUnboundByAccountForPortal(ctx, accountID, tenantID, portal)\n}",
       "form": "guard-debt",
       "id": "roots/owners/PushSubscriptionCleanup.DeleteUnboundByAccount",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (p PushSubscriptionCleanup) ListLinks(ctx context.Context) ([]identityaccess.PushSubscriptionLink, error) {\n\tif p.Subscriptions == nil {\n\t\treturn nil, nil\n\t}\n\tlinks, err := p.Subscriptions.ListSessionLinks(ctx)\n\tresult := make([]identityaccess.PushSubscriptionLink, len(links))\n\tfor i, link := range links {\n\t\tresult[i] = identityaccess.PushSubscriptionLink(link)\n\t}\n\treturn result, err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/PushSubscriptionCleanup.ListLinks",
       "owner": "roots"
     },
     {
@@ -3607,9 +3614,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (a StatisticsAuditLog) SeenStatisticsAccessSince(ctx context.Context, actorID int64, metadata map[string]string, since time.Time) (bool, error) {\n\treturn a.Log.ExistsSince(ctx, actorID, auditModels.ResourceTypeAttendanceStatistics, metadata, since)\n}",
+      "evidence": "func (a StatisticsAuditLog) SeenStatisticsAccessWithin(ctx context.Context, actorID int64, metadata map[string]string, window time.Duration) (bool, error) {\n\treturn a.Log.ExistsWithin(ctx, actorID, auditModels.ResourceTypeAttendanceStatistics, metadata, window)\n}",
       "form": "unclassified-evidence",
-      "id": "roots/owners/StatisticsAuditLog.SeenStatisticsAccessSince",
+      "id": "roots/owners/StatisticsAuditLog.SeenStatisticsAccessWithin",
       "owner": "roots"
     },
     {
@@ -5077,6 +5084,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (d catererInvitationDelivery) CancelCatererInvitation(ctx context.Context, invitationID int64) error {\n\t_, err := d.outbox.CancelPendingByRelatedEntity(ctx, identityaccess.MailRelatedCatererInvitation, invitationID, \"caterer invitation revoked\")\n\treturn err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/catererInvitationDelivery.CancelCatererInvitation",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (s classArrivalExceptionRecords) Delete(ctx context.Context, class string, date timezone.Date) (bool, error) {\n\treturn s.records.DeleteClassArrivalException(ctx, class, date.String())\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/classArrivalExceptionRecords.Delete",
@@ -5255,6 +5269,13 @@
       "evidence": "func (r communicationAnnouncementAudience) Stats(ctx context.Context, schoolID, announcementID int64) (*communication.PortalAnnouncementStats, error) {\n\trows, err := r.source.Stats(ctx, schoolID, announcementID)\n\treturn (*communication.PortalAnnouncementStats)(rows), err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/communicationAnnouncementAudience.Stats",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (r communicationAnnouncementAudience) StudentAnnouncements(ctx context.Context, schoolID, studentID int64, history []*communication.PortalDeclarationSubmission) ([]*communication.PortalStudentAnnouncement, error) {\n\trows, err := r.source.StudentAnnouncements(ctx, schoolID, studentID, projectionDeclarationHistory(history))\n\tif errors.Is(err, parentaudience.ErrStudentNotInSchool) {\n\t\treturn nil, communication.ErrStudentNotInSchool\n\t}\n\treturn mapProjectionRows(rows, func(row *parentaudience.StudentAnnouncement) *communication.PortalStudentAnnouncement {\n\t\treturn (*communication.PortalStudentAnnouncement)(row)\n\t}), err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/communicationAnnouncementAudience.StudentAnnouncements",
       "owner": "roots"
     },
     {
@@ -6274,7 +6295,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (a holidayParticipantAccessLog) RecordHolidayStudentHealthAccess(ctx context.Context, access enrollmentOwner.HolidayStudentHealthAccess) error {\n\tstudentID := access.StudentID\n\treturn a.writer.Create(ctx, \u0026auditModels.DataAccessLog{ActorAccountID: access.ActorAccountID, ActorRole: access.ActorRole, ResourceType: auditModels.ResourceTypeHolidayStudentHealth, StudentID: \u0026studentID, RangeStart: access.StartsOn.BerlinMidnight(), RangeEnd: access.EndsOn.EndOfDay(), AccessedAt: time.Now(), Metadata: map[string]any{\"week_ids\": access.WeekIDs}})\n}",
+      "evidence": "func (a holidayParticipantAccessLog) RecordHolidayStudentHealthAccess(ctx context.Context, access enrollmentOwner.HolidayStudentHealthAccess) error {\n\tstudentID := access.StudentID\n\treturn a.writer.Create(ctx, \u0026auditModels.DataAccessLog{ActorAccountID: access.ActorAccountID, ActorRole: access.ActorRole, ResourceType: auditModels.ResourceTypeHolidayStudentHealth, StudentID: \u0026studentID, RangeStart: access.StartsOn.BerlinMidnight(), RangeEnd: access.EndsOn.EndOfDay(), Metadata: map[string]any{\"week_ids\": access.WeekIDs}})\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/holidayParticipantAccessLog.RecordHolidayStudentHealthAccess",
       "owner": "roots"
@@ -6974,7 +6995,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (a payrollRuleAudit) RecordPayrollRuleChange(ctx context.Context, change workforceModule.PayrollRuleChange) error {\n\ttenantID, err := tenant.TenantFromContext(ctx)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"payroll rule audit: %w\", err)\n\t}\n\tvar changedBy *int64\n\tif change.ActorAccountID \u003e 0 {\n\t\tactor := change.ActorAccountID\n\t\tchangedBy = \u0026actor\n\t}\n\treturn a.audit.Create(ctx, configModels.NewAuditEntry(tenantID.Int64(), change.Key, change.Action, change.Old, change.New, changedBy, a.now()))\n}",
+      "evidence": "func (a payrollRuleAudit) RecordPayrollRuleChange(ctx context.Context, change workforceModule.PayrollRuleChange) error {\n\ttenantID, err := tenant.TenantFromContext(ctx)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"payroll rule audit: %w\", err)\n\t}\n\tvar changedBy *int64\n\tif change.ActorAccountID \u003e 0 {\n\t\tactor := change.ActorAccountID\n\t\tchangedBy = \u0026actor\n\t}\n\treturn a.audit.Create(ctx, configModels.NewAuditEntry(tenantID.Int64(), change.Key, change.Action, change.Old, change.New, changedBy))\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/payrollRuleAudit.RecordPayrollRuleChange",
       "owner": "roots"
@@ -7005,13 +7026,6 @@
       "evidence": "func (d phaseResponseCareExits) StudentsWithCareExit(ctx context.Context, studentIDs []int64) (map[int64]bool, error) {\n\texits, err := d.query.FindCareExits(ctx, studentIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]bool, len(exits))\n\tfor studentID := range exits {\n\t\tresult[studentID] = true\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/phaseResponseCareExits.StudentsWithCareExit",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (d phaseResponseRoster) ListRunningStudents(ctx context.Context, today timezone.Date) ([]enrollmentOwner.PhaseResponseStudent, error) {\n\tentries, err := d.query.ListStudentRoster(ctx, today.String())\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]enrollmentOwner.PhaseResponseStudent, 0, len(entries))\n\tfor _, entry := range entries {\n\t\tresult = append(result, enrollmentOwner.PhaseResponseStudent{ID: entry.Record.ID, FirstName: entry.FirstName, LastName: entry.LastName, SchoolClass: entry.Record.SchoolClass, NotActive: entry.Record.Status != peopledirectory.StudentStatusActive})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/phaseResponseRoster.ListRunningStudents",
       "owner": "roots"
     },
     {

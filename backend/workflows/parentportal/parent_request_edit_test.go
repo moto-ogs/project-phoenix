@@ -52,6 +52,7 @@ func buildEditableMasterDataService(t *testing.T) (*parentService.Portal, api.Pa
 		Settings:            masterDataSettings(false, true, false),
 		StudentUpdates:      owners.BindParentStudentUpdates(testpkg.NewRecordingBroadcaster()),
 		Logger:              slog.Default(),
+		Now:                 careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(reposCare.CarePlan()),
 
@@ -104,7 +105,7 @@ func TestEditExcusedRequestRefusesStaleVersion(t *testing.T) {
 	svc, _, _, db := buildLedgerServices(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
-	day := calendar.TodayDate().AddDays(6)
+	day := careFixtureToday().AddDays(6)
 
 	res, err := svc.SubmitSickNote(ctx, chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
@@ -128,7 +129,7 @@ func TestEditExcusedRequestRevalidatesPayload(t *testing.T) {
 	svc, _, _, db := buildLedgerServices(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
-	day := calendar.TodayDate().AddDays(7)
+	day := careFixtureToday().AddDays(7)
 
 	res, err := svc.SubmitSickNote(ctx, chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
@@ -148,7 +149,7 @@ func TestEditDecidedExcusedRequestIsRefused(t *testing.T) {
 	svc, requests, _, db := buildLedgerServices(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
-	day := calendar.TodayDate().AddDays(10)
+	day := careFixtureToday().AddDays(10)
 
 	res, err := svc.SubmitSickNote(ctx, chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
@@ -175,7 +176,7 @@ func TestEditExcusedRequestOfAnotherFamilyIsNotFound(t *testing.T) {
 	mine := testpkg.CreateTestParentGuardianChain(t, db)
 	theirs := testpkg.CreateTestParentGuardianChain(t, db)
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
-	day := calendar.TodayDate().AddDays(8)
+	day := careFixtureToday().AddDays(8)
 
 	res, err := svc.SubmitSickNote(ctx, theirs.AccountID, theirs.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
@@ -257,7 +258,7 @@ func TestListRequestEventsIsSubmitterOnly(t *testing.T) {
 	mine := testpkg.CreateTestParentGuardianChain(t, db)
 	theirs := testpkg.CreateTestParentGuardianChain(t, db)
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
-	day := calendar.TodayDate().AddDays(9)
+	day := careFixtureToday().AddDays(9)
 
 	res, err := svc.SubmitSickNote(ctx, mine.AccountID, mine.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)

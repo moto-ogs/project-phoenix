@@ -32,7 +32,7 @@ func newOperatorProvisioning(
 	// the administrative unit of the school creation or fail.
 	callerUnit := settingsCompose.TenantSettingsRuntime{}
 	schoolCreation, err := settingsCompose.NewSchoolCreationSettings(configModels.DefaultRegistry(),
-		settingsCompose.NewSettingValueRepository(callerUnit), settingsCompose.NewSettingAuditRepository(callerUnit), tenant.IsAdminTx, now)
+		settingsCompose.NewSettingValueRepository(callerUnit), settingsCompose.NewSettingAuditRepository(callerUnit), tenant.IsAdminTx)
 	if err != nil {
 		return organizationtenancy.OperatorProvisioning{}, err
 	}

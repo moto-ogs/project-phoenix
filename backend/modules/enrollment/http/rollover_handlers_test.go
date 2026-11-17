@@ -77,6 +77,7 @@ func (m *mockRolloverService) RunDeadlineWorker(_ context.Context, _ time.Time) 
 // the mock service handles the business logic.
 func buildRolloverRouter(svc RolloverService) chi.Router {
 	rs := &Resource{
+		Now:             resourceTestClock,
 		Failures:        DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
 		RolloverService: svc,
 		// db: nil so runInTenantTx skips the tenant.WithTenantTx wrap.

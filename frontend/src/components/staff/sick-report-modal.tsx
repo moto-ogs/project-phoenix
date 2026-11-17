@@ -261,7 +261,6 @@ export function SickReportModal({
                 id="managed-absence-start"
                 value={dateStart ? parseISODate(dateStart) : null}
                 onChange={handleStartDateChange}
-                dropdownPlacement="down"
                 placeholder="Datum auswählen"
               />
             </div>
@@ -274,7 +273,6 @@ export function SickReportModal({
                   onChange={(picked) =>
                     setDateEnd(picked ? toISODate(picked) : "")
                   }
-                  dropdownPlacement="down"
                   placeholder="Datum auswählen"
                 />
               </div>

@@ -24,6 +24,10 @@ func (*trackingStudentChangeLogStore) DeleteOlderThan(context.Context, time.Time
 	return 0, nil
 }
 
+func (*trackingStudentChangeLogStore) DatabaseTime(context.Context) (time.Time, error) {
+	return time.Now(), nil
+}
+
 func TestStudentChangeLogCleanup_StopsWhenRetentionResolutionFails(t *testing.T) {
 	t.Parallel()
 
@@ -34,7 +38,6 @@ func TestStudentChangeLogCleanup_StopsWhenRetentionResolutionFails(t *testing.T)
 		nil,
 		func(context.Context) (int, error) { return 0, resolveErr },
 		nil,
-		time.Now,
 	)
 	ctx := tenant.WithTenantID(context.Background(), 42)
 
@@ -49,7 +52,7 @@ func TestStudentChangeLogCleanup_StopsWhenSettingsAreNotConfigured(t *testing.T)
 	t.Parallel()
 
 	store := &trackingStudentChangeLogStore{}
-	service := NewStudentChangeLogCleanupService(store, nil, nil, nil, time.Now)
+	service := NewStudentChangeLogCleanupService(store, nil, nil, nil)
 	ctx := tenant.WithTenantID(context.Background(), 42)
 
 	result, err := service.CleanupExpiredChangeLog(ctx)

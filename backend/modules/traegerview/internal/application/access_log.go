@@ -28,9 +28,11 @@ const (
 )
 
 // window is the instant range of a filter: the Berlin day From from
-// midnight to the midnight after To.
+// midnight to the midnight after To. asOf, when set, ends the list at that
+// instant; zero ends it at the database time of the school trail's read,
+// also when no school is read.
 type window struct {
-	from, to time.Time
+	from, to, asOf time.Time
 }
 
 func accessLogWindow(from, to calendar.Date) (window, error) {
@@ -65,20 +67,21 @@ func (o *Overview) AccessLog(ctx context.Context, viewer traegerview.Viewer, fil
 		return traegerview.AccessLogPage{}, fmt.Errorf("%w: the page starts at 1", traegerview.ErrInvalidAccessLogFilter)
 	}
 	result := traegerview.AccessLogPage{Entries: []traegerview.AccessLogEntry{}, AsOf: filter.AsOf}
-	if result.AsOf.IsZero() {
-		result.AsOf = o.now()
-	}
 	// The pages of one list end at the same instant, so the reads this list
-	// records below never push an earlier entry onto a later page.
+	// records below never push an earlier entry onto a later page. The
+	// database stamps every ledger of the trail, so the first page ends at
+	// the database time its trail read returns (ADR 0281, Nachtrag).
 	listed := span
-	if result.AsOf.Before(listed.to) {
-		listed.to = result.AsOf
+	listed.asOf = filter.AsOf
+	if !listed.asOf.IsZero() && listed.asOf.Before(listed.to) {
+		listed.to = listed.asOf
 	}
 	err = o.read(ctx, viewer.OrganizationID, func(adminCtx context.Context, schools []int64) error {
-		entries, err := o.entries(adminCtx, viewer, schools, filter, listed, traegerview.AccessLogPageSize+1, (page-1)*traegerview.AccessLogPageSize)
+		entries, asOf, err := o.entries(adminCtx, viewer, schools, filter, listed, traegerview.AccessLogPageSize+1, (page-1)*traegerview.AccessLogPageSize)
 		if err != nil {
 			return err
 		}
+		result.AsOf = asOf
 		if len(entries) > traegerview.AccessLogPageSize {
 			entries, result.HasMore = entries[:traegerview.AccessLogPageSize], true
 		}
@@ -103,7 +106,7 @@ func (o *Overview) AccessLogExport(ctx context.Context, viewer traegerview.Viewe
 	entries := []traegerview.AccessLogEntry{}
 	err = o.read(ctx, viewer.OrganizationID, func(adminCtx context.Context, schools []int64) error {
 		var err error
-		entries, err = o.entries(adminCtx, viewer, schools, filter, span, traegerview.AccessLogExportLimit+1, 0)
+		entries, _, err = o.entries(adminCtx, viewer, schools, filter, span, traegerview.AccessLogExportLimit+1, 0)
 		return err
 	})
 	if err != nil {
@@ -207,25 +210,30 @@ func distinctPeople(actors []traegerview.AccessTrailActor, names actorIndex) ([]
 
 // entries reads the trail of the filter at the Träger's schools and the
 // Träger's holiday trail, merges them, and names their schools and people.
-// A school outside the Träger reads nothing.
-func (o *Overview) entries(adminCtx context.Context, viewer traegerview.Viewer, schools []int64, filter traegerview.AccessLogFilter, span window, limit, offset int) ([]traegerview.AccessLogEntry, error) {
+// A school outside the Träger reads nothing. It returns the instant the
+// list ends at: span.asOf, or the database time of the school trail's read,
+// which also ends the holiday entries read before it.
+func (o *Overview) entries(adminCtx context.Context, viewer traegerview.Viewer, schools []int64, filter traegerview.AccessLogFilter, span window, limit, offset int) ([]traegerview.AccessLogEntry, time.Time, error) {
 	holiday, err := o.holidayTrail(adminCtx, viewer, filter, span, offset+limit)
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
 	}
-	rows, err := o.schoolTrail(adminCtx, schools, filter, span, limit, offset, len(holiday) > 0)
+	rows, asOf, err := o.schoolTrail(adminCtx, schools, filter, span, limit, offset, len(holiday) > 0)
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
+	}
+	if span.asOf.IsZero() && !asOf.IsZero() {
+		holiday = slices.DeleteFunc(holiday, func(row traegerview.AccessTrailEntry) bool { return !row.OccurredAt.Before(asOf) })
 	}
 	if len(holiday) > 0 {
 		rows = mergedPage(rows, holiday, limit, offset)
 	}
 	if len(rows) == 0 {
-		return []traegerview.AccessLogEntry{}, nil
+		return []traegerview.AccessLogEntry{}, asOf, nil
 	}
 	schoolNames, err := o.schoolNames(adminCtx, schools)
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
 	}
 	refs := make([]actorRef, 0, len(rows))
 	for _, row := range rows {
@@ -233,7 +241,7 @@ func (o *Overview) entries(adminCtx context.Context, viewer traegerview.Viewer, 
 	}
 	names, err := o.actorIndex(adminCtx, viewer.OrganizationID, schools, refs)
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
 	}
 	entries := make([]traegerview.AccessLogEntry, 0, len(rows))
 	for i, row := range rows {
@@ -243,28 +251,34 @@ func (o *Overview) entries(adminCtx context.Context, viewer traegerview.Viewer, 
 			AccountID: resolved.account, Person: resolved.name, Kind: row.Kind, Data: row.Data, DataLabel: dataLabel(row.Data),
 		})
 	}
-	return entries, nil
+	return entries, asOf, nil
 }
 
 // schoolTrail reads the trail of the filter at the Träger's schools. A
 // school outside the Träger reads nothing. To be merged with the holiday
 // trail, it reads the newest offset+limit entries instead of the page.
-func (o *Overview) schoolTrail(adminCtx context.Context, schools []int64, filter traegerview.AccessLogFilter, span window, limit, offset int, merged bool) ([]traegerview.AccessTrailEntry, error) {
+// Without a school to read, the first page still ends at the database time,
+// which also stamps the holiday trail: the trail reads it over no school.
+func (o *Overview) schoolTrail(adminCtx context.Context, schools []int64, filter traegerview.AccessLogFilter, span window, limit, offset int, merged bool) ([]traegerview.AccessTrailEntry, time.Time, error) {
 	if len(schools) == 0 || (filter.SchoolID != 0 && !slices.Contains(schools, filter.SchoolID)) {
-		return nil, nil
+		if !span.asOf.IsZero() {
+			return nil, span.asOf, nil
+		}
+		_, asOf, err := o.trail.ListAccessTrail(adminCtx, traegerview.AccessTrailQuery{Schools: []int64{}, From: span.from, To: span.to, Limit: 1})
+		return nil, asOf, err
 	}
 	var staffIDs []int64
 	if filter.AccountID != 0 {
 		var err error
 		if staffIDs, err = o.staffOfAccount(adminCtx, schools, filter.AccountID); err != nil {
-			return nil, err
+			return nil, time.Time{}, err
 		}
 	}
 	if merged {
 		limit, offset = offset+limit, 0
 	}
 	return o.trail.ListAccessTrail(adminCtx, traegerview.AccessTrailQuery{
-		Schools: schools, From: span.from, To: span.to, SchoolID: filter.SchoolID,
+		Schools: schools, From: span.from, To: span.to, AsOf: span.asOf, SchoolID: filter.SchoolID,
 		AccountID: filter.AccountID, StaffIDs: staffIDs, Kind: filter.Kind, Limit: limit, Offset: offset,
 	})
 }

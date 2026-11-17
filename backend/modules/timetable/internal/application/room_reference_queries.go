@@ -19,7 +19,7 @@ type RoomReferenceRecords interface {
 // which Timetable rows still use a room (#6845).
 func NewRoomReferenceQueries(store RoomReferenceRecords, observe func(internalports.Observation), today func() calendar.Date) timetable.RoomReferenceQuery {
 	if today == nil {
-		today = calendar.TodayDate
+		panic("timetable room reference queries: the school day clock is required")
 	}
 	return roomReferenceQueries{store: store, observe: observe, today: today}
 }

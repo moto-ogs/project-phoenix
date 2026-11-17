@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -126,7 +127,7 @@ func newHolidayHostRouter(t *testing.T, f holidayRegistrationFixture, today *ato
 	require.NoError(t, err)
 	resource := NewHolidayHostHTTP(organizations, owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, f.db)),
 		owners.NewTestAuditPersistence(testpkg.NewDatabase(t, f.db), nil).DataAccessLog, testHealthCipher(), holidayTestNoCare(noCare),
-		func() calendar.Date { return today.Load().(calendar.Date) })
+		func() time.Time { return today.Load().(calendar.Date).BerlinMidnight().Add(10 * time.Hour) })
 	unit := testpkg.TenantRuntime(t, f.db)
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {

@@ -3,7 +3,6 @@
 import {
   type ReactNode,
   useCallback,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -54,7 +53,7 @@ import { LOCATION_COLORS } from "~/lib/location-helper";
 import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { ISODatePicker } from "~/components/ui/date-picker";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
 import {
@@ -76,7 +75,6 @@ import { Textarea } from "~/components/ui/textarea";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
@@ -97,7 +95,13 @@ import {
   type StaffVacationOpening,
   type StaffVacationQuotaSummary,
 } from "~/lib/staff-api";
-import { useTenantMutateMatching } from "~/lib/swr";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useSWRAuth,
+  useTenantMutate,
+  useTenantMutateMatching,
+} from "~/lib/swr";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import {
   VERTRETUNG_GAPS_KEY_PREFIX,
   VERTRETUNG_WEEK_KEY_PREFIX,
@@ -150,7 +154,9 @@ function statusMeta(status: string) {
   return absenceStatusMeta(status);
 }
 
-function pendingAbsences(absences: StaffAbsenceRow[]): StaffAbsenceRow[] {
+function pendingAbsences(
+  absences: readonly StaffAbsenceRow[],
+): StaffAbsenceRow[] {
   return absences.filter(
     (absence) =>
       absence.status === "requested" || absence.status === "question",
@@ -158,7 +164,7 @@ function pendingAbsences(absences: StaffAbsenceRow[]): StaffAbsenceRow[] {
 }
 
 function upcomingAbsences(
-  absences: StaffAbsenceRow[],
+  absences: readonly StaffAbsenceRow[],
   today: string,
 ): StaffAbsenceRow[] {
   return absences.filter(
@@ -169,7 +175,7 @@ function upcomingAbsences(
 }
 
 function historicalAbsences(
-  absences: StaffAbsenceRow[],
+  absences: readonly StaffAbsenceRow[],
   today: string,
 ): StaffAbsenceRow[] {
   return absences
@@ -215,6 +221,37 @@ function TabLoadingBoundary({
   return children;
 }
 
+interface ShownYear {
+  readonly staffId: string;
+  readonly year: number;
+  readonly quota: StaffVacationQuotaSummary;
+  readonly absences: readonly StaffAbsenceRow[];
+  readonly types: readonly AbsenceType[];
+  readonly allowances: readonly CustomAllowance[];
+}
+
+interface CustomAllowance {
+  readonly type: AbsenceType;
+  readonly summary: AbsenceTypeAllowanceSummary;
+}
+
+const NO_TYPES: readonly AbsenceType[] = [];
+const NO_ABSENCES: readonly StaffAbsenceRow[] = [];
+const NO_ALLOWANCES: readonly CustomAllowance[] = [];
+
+async function loadAllowances(
+  staffId: string,
+  year: number,
+  types: readonly AbsenceType[],
+): Promise<readonly CustomAllowance[]> {
+  const summaries = await Promise.all(
+    types.map((type) =>
+      absenceTypeService.getAllowance(type.id, staffId, year),
+    ),
+  );
+  return types.map((type, index) => ({ type, summary: summaries[index]! }));
+}
+
 export function AbwesenheitenTab({
   staffId,
   canEdit,
@@ -240,11 +277,6 @@ export function AbwesenheitenTab({
   // Ein Jahr für alle Kontingente und die Listen darunter (#3256): im
   // Dezember lässt sich so der Anspruch fürs nächste Jahr eintragen.
   const [year, setYear] = useState(currentYear);
-  const [quota, setQuota] = useState<StaffVacationQuotaSummary | null>(null);
-  const [absenceTypes, setAbsenceTypes] = useState<AbsenceType[]>([]);
-  const [customAllowances, setCustomAllowances] = useState<
-    { type: AbsenceType; summary: AbsenceTypeAllowanceSummary }[]
-  >([]);
   // Welche Kontingent-Karte gerade bearbeitet wird: "vacation" oder die ID
   // der eigenen Art (BAUARTEN-SPEC Bauart 2 Regel 3, #3119).
   const [editing, setEditing] = useState<string | null>(null);
@@ -254,8 +286,6 @@ export function AbwesenheitenTab({
   const [rebookSelection, setRebookSelection] =
     useState<ReadonlySet<number> | null>(null);
   const [rebookOpen, setRebookOpen] = useState(false);
-  const [absences, setAbsences] = useState<StaffAbsenceRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [pendingActionId, setPendingActionId] = useState<number | null>(null);
   const [denyModal, setDenyModal] = useState<StaffAbsenceRow | null>(null);
   const [questionModal, setQuestionModal] = useState<StaffAbsenceRow | null>(
@@ -278,15 +308,6 @@ export function AbwesenheitenTab({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const deleteErrors = useApiFormError();
   const { show: showActionError } = useApiErrorDisplay();
-  const load = useApiLoadError();
-  const showLoadError = load.show;
-  const clearLoadError = load.clear;
-  // Das Jahr, dessen Daten gerade angezeigt werden. Scheitert ein Laden für
-  // ein anderes Jahr, wären die angezeigten Zahlen falsch.
-  const [loadedYear, setLoadedYear] = useState<number | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-  // „Wiederholen“ lädt das aktuell gewählte Jahr.
-  const latestReloadRef = useRef<() => Promise<void>>(async () => undefined);
   // Page-level tab badge SWR (staff-pending-absences-${staffId}) lives
   // outside this component and otherwise stays stale after approvals,
   // denials and stornos.
@@ -303,71 +324,142 @@ export function AbwesenheitenTab({
     VERTRETUNG_GAPS_KEY_PREFIX,
   ]);
 
-  // silent skips the loading flag: the loading boundary unmounts the
-  // whole tab subtree including any open modal, which would wipe the
-  // SickReportModal's success state right after a report (#1843).
-  const reloadRequest = useRef(0);
-  const reload = useCallback(
-    async (opts?: { silent?: boolean; rethrow?: boolean }) => {
-      const requestId = ++reloadRequest.current;
-      if (!opts?.silent) {
-        setLoading(true);
-      }
-      try {
-        const [q, abs, types] = await Promise.all([
-          staffAbsenceService.getVacationQuota(staffId, year),
-          staffAbsenceService.getAbsences(
-            staffId,
-            `${year}-01-01`,
-            `${year}-12-31`,
-          ),
-          staff ? absenceTypeService.getAbsenceTypes() : Promise.resolve([]),
-        ]);
-        const allowanceTypes = types.filter((type) => type.allowanceEnabled);
-        const summaries = await Promise.all(
-          allowanceTypes.map((type) =>
-            absenceTypeService.getAllowance(type.id, staffId, year),
-          ),
-        );
-        if (requestId !== reloadRequest.current) return;
-        setQuota(q);
-        setAbsences(abs);
-        setLoadedYear(year);
-        setLoadFailed(false);
-        clearLoadError();
-        setAbsenceTypes(types);
-        setCustomAllowances(
-          allowanceTypes.map((type, index) => ({
-            type,
-            summary: summaries[index]!,
-          })),
-        );
-        void refreshPendingBadges();
-        // Sidebar pending counter (#1419) listens for this event.
-        dispatchAbsencesRefresh();
-      } catch (err) {
-        if (requestId !== reloadRequest.current) return;
-        logger.error("load_failed", {
-          staff_id: staffId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setLoadFailed(true);
-        // After a write the caller shows the failure as a reload of a saved
-        // change (useRefreshAfterWrite, #6652).
-        if (opts?.rethrow) throw err;
-        void showLoadError(err, {
-          object: "die Übersicht der Abwesenheiten",
-          retry: () => void latestReloadRef.current(),
-        });
-      } finally {
-        if (requestId === reloadRequest.current) setLoading(false);
-      }
-    },
-    [staff, staffId, year, refreshPendingBadges, showLoadError, clearLoadError],
+  const tenantMutate = useTenantMutate();
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+  const afterLoad = useCallback(() => {
+    void refreshPendingBadges();
+    // Sidebar pending counter (#1419) listens for this event.
+    dispatchAbsencesRefresh();
+  }, [refreshPendingBadges]);
+  const quotaResource = useSWRAuth(
+    staffAbsenceKeys.vacationQuota(staffId, year),
+    () => staffAbsenceService.getVacationQuota(staffId, year),
+    { keepPreviousData: false },
   );
-  useLayoutEffect(() => {
-    latestReloadRef.current = () => reload();
-  });
+  const absencesResource = useSWRAuth(
+    staffAbsenceKeys.list(staffId, yearStart, yearEnd),
+    () => staffAbsenceService.getAbsences(staffId, yearStart, yearEnd),
+    { keepPreviousData: false, onSuccess: afterLoad },
+  );
+  // Die Arten braucht nur, wer Abwesenheiten eintragen kann (#1843).
+  const typesResource = useSWRAuth(
+    staff ? staffAbsenceKeys.types() : null,
+    () => absenceTypeService.getAbsenceTypes(),
+  );
+  const loadedTypes = staff ? typesResource.data : NO_TYPES;
+  const allowanceTypes = useMemo(
+    () => loadedTypes?.filter((type) => type.allowanceEnabled),
+    [loadedTypes],
+  );
+  const allowancesResource = useSWRAuth(
+    allowanceTypes
+      ? staffAbsenceKeys.allowances(
+          staffId,
+          year,
+          allowanceTypes.map((type) => type.id),
+        )
+      : null,
+    () => loadAllowances(staffId, year, allowanceTypes ?? []),
+    { keepPreviousData: false },
+  );
+  const resources = [
+    quotaResource,
+    absencesResource,
+    staff ? typesResource : { data: NO_TYPES },
+    allowanceTypes ? allowancesResource : { data: undefined },
+  ];
+  const load = useSwrResourceLoadError(
+    resources,
+    "die Übersicht der Abwesenheiten",
+    () =>
+      Promise.all([
+        quotaResource.mutate(),
+        absencesResource.mutate(),
+        staff ? typesResource.mutate() : undefined,
+        allowancesResource.mutate(),
+      ]),
+  );
+  const loadFailed = Boolean(load.failure);
+
+  // Die Zahlen eines Jahres bleiben stehen, bis das gewählte Jahr ganz
+  // geladen ist: ein Jahreswechsel lädt still nach, der Reiter bleibt stehen.
+  // Scheitert das Laden für ein anderes Jahr, wären die angezeigten Zahlen
+  // falsch; dann steht nur der Fehler da.
+  const [shown, setShown] = useState<ShownYear | null>(null);
+  if (
+    quotaResource.data &&
+    absencesResource.data &&
+    loadedTypes &&
+    allowancesResource.data &&
+    (shown?.staffId !== staffId ||
+      shown.year !== year ||
+      shown.quota !== quotaResource.data ||
+      shown.absences !== absencesResource.data ||
+      shown.types !== loadedTypes ||
+      shown.allowances !== allowancesResource.data)
+  ) {
+    setShown({
+      staffId,
+      year,
+      quota: quotaResource.data,
+      absences: absencesResource.data,
+      types: loadedTypes,
+      allowances: allowancesResource.data,
+    });
+  }
+  const current = shown?.staffId === staffId ? shown : null;
+  const loadedYear = current?.year ?? null;
+  const quota = current?.quota ?? null;
+  const absences = current?.absences ?? NO_ABSENCES;
+  const absenceTypes = current?.types ?? NO_TYPES;
+  const customAllowances = current?.allowances ?? NO_ALLOWANCES;
+  const loading = current === null && !loadFailed;
+
+  // The reload after a write fetches anew and rejects on failure, so
+  // useRefreshAfterWrite can say that the change is saved (#6652).
+  const reload = useCallback(async () => {
+    const reloadTypes = async () => {
+      if (!staff) return NO_TYPES;
+      const fresh = (await tenantMutate(
+        staffAbsenceKeys.types(),
+        absenceTypeService.getAbsenceTypes(),
+        { revalidate: false },
+      )) as AbsenceType[] | undefined;
+      const types = fresh ?? [];
+      const withAllowance = types.filter((type) => type.allowanceEnabled);
+      await tenantMutate(
+        staffAbsenceKeys.allowances(
+          staffId,
+          year,
+          withAllowance.map((type) => type.id),
+        ),
+        loadAllowances(staffId, year, withAllowance),
+        { revalidate: false },
+      );
+      return types;
+    };
+    await Promise.all([
+      tenantMutate(
+        staffAbsenceKeys.vacationQuota(staffId, year),
+        staffAbsenceService.getVacationQuota(staffId, year),
+        { revalidate: false },
+      ),
+      tenantMutate(
+        staffAbsenceKeys.list(staffId, yearStart, yearEnd),
+        staffAbsenceService.getAbsences(staffId, yearStart, yearEnd),
+        { revalidate: false },
+      ),
+      staff
+        ? reloadTypes()
+        : tenantMutate(
+            staffAbsenceKeys.allowances(staffId, year, []),
+            loadAllowances(staffId, year, []),
+            { revalidate: false },
+          ),
+    ]);
+    afterLoad();
+  }, [afterLoad, staff, staffId, tenantMutate, year, yearEnd, yearStart]);
   // A write's reload runs after the write; its failure stands above the tab
   // as a load error, never as an error of the write or its closed dialog
   // (#6652).
@@ -375,21 +467,11 @@ export function AbwesenheitenTab({
     "die Anzeige der Abwesenheiten",
     async (options: { silent?: boolean; planCaches?: boolean } = {}) => {
       await Promise.all([
-        reload({ silent: options.silent, rethrow: true }),
+        reload(),
         options.planCaches ? refreshPlanCaches() : undefined,
       ]);
     },
   );
-
-  const cancelReload = useCallback(() => {
-    ++reloadRequest.current;
-  }, []);
-
-  useEffect(() => {
-    // Ein Jahreswechsel lädt still nach: der Reiter bleibt stehen.
-    void reload({ silent: true });
-    return cancelReload;
-  }, [reload, cancelReload]);
 
   const pending = useMemo(() => pendingAbsences(absences), [absences]);
   const upcoming = useMemo(
@@ -758,18 +840,9 @@ export function AbwesenheitenTab({
             canManageSickReports ? { canSetTarget: canEdit } : undefined
           }
           onClose={() => setSickStaff(null)}
-          onCreated={() => {
-            // reload zeigt seinen Ladefehler selbst; hier bleibt nur das
-            // Auffrischen der Plan-Caches, das der Dialog nicht anzeigen kann.
-            Promise.all([refreshPlanCaches(), reload({ silent: true })]).catch(
-              (err: unknown) => {
-                logger.error("post_create_refresh_failed", {
-                  staff_id: staffId,
-                  error: err instanceof Error ? err.message : String(err),
-                });
-              },
-            );
-          }}
+          onCreated={() =>
+            void afterWrite.refresh({ silent: true, planCaches: true })
+          }
         />
       )}
       <ConfirmDeleteModal

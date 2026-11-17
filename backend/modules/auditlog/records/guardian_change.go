@@ -49,7 +49,7 @@ type GuardianChange struct {
 	FieldName          string    `bun:"field_name,notnull" json:"field_name"`
 	OldValue           *string   `bun:"old_value" json:"old_value,omitempty"`
 	NewValue           *string   `bun:"new_value" json:"new_value,omitempty"`
-	ChangedAt          time.Time `bun:"changed_at,notnull,default:now()" json:"changed_at"`
+	ChangedAt          time.Time `bun:"changed_at,nullzero,notnull" json:"changed_at"`
 }
 
 type GuardianChangeRepository interface {

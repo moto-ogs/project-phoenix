@@ -94,3 +94,23 @@ scheiterte der zweite Weg an zwei Stellen:
   Schreiber. Fertige Generatoren über OpenAPI setzen Punkt 3 voraus.
 - Verworfen: ein handgepflegtes OpenAPI-Dokument als Vertrag (#2341) und
   OpenAPI als Zwischenformat (dieser Versuch).
+
+## Nachtrag vom 2026-11-16: Request-Bodys und ein zweites Portal
+
+Zwei Schreibrouten (`POST /api/students/`, `PUT /api/students/{id}`) und eine
+Leseroute des Elternportals (`GET /parent/me/enrollable-schools`) sind
+angemeldet. Daraus folgen drei Ergänzungen:
+
+- **Punkt 8 gilt auch beim Lesen.** Ein Request-Typ mit eigenem
+  `UnmarshalJSON` braucht einen Eintrag, der sagt, was er liest: die Felder
+  wie `encoding/json` oder zusätzlich jede Kennung als Zahl oder String. Ohne
+  Eintrag bricht die Erzeugung ab.
+- **Eine Kennung im Request ist im Client ein String**, außer Go liest das
+  Feld noch nur als Zahl. Diese Felder stehen in derselben Liste der
+  numerischen Alt-Kennungen und sind im erzeugten Typ `number`. Ihr Wechsel
+  zu `common.ID` braucht zwei Releases in umgekehrter Reihenfolge zu Punkt 5:
+  zuerst liest Go beide Formen, einen Release später sendet der Client
+  Strings.
+- **Eine Route, deren Antwort ein anderer Owner rendert**, meldet der Owner
+  des Handlers an; die Wurzel nennt den Antworttyp, so wie sie auch die
+  Antwortfunktion bindet.

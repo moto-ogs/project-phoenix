@@ -14185,6 +14185,14 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentFieldEditRepository.DatabaseTime",
+      "binding_digest": "6648beca805e6ebcdf4e569475865b04",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentChangeLogStore.DatabaseTime",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentFieldEditRepository.DatabaseTime",
+      "target_owner": "audit-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentFieldEditRepository.DeleteOlderThan",
       "binding_digest": "393cc9cf11806a9cc87eac717ace6394",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentChangeLogStore.DeleteOlderThan",

@@ -75,7 +75,7 @@ func TestApplyDashboardAbsencesCountsHomeFromCandidates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			counts := tt.counts
-			s := &service{StudentStatusRepo: dashboardCountsRepo{counts: &counts}}
+			s := &service{Now: presenceTestNow, StudentStatusRepo: dashboardCountsRepo{counts: &counts}}
 			analytics := &DashboardAnalytics{StudentsPresent: tt.presentCount}
 
 			s.applyDashboardAbsences(context.Background(), analytics, calendar.NewDate(2026, 10, 22), tt.present)
@@ -105,7 +105,7 @@ func TestApplyDashboardAbsencesCountsEachChildOnce(t *testing.T) {
 		UnaccountedIDs: []int64{atHome, presentOnly},
 	}
 	present := map[int64]bool{presentOnly: true, sickHere: true, excusedHere: true, classTripHere: true}
-	s := &service{StudentStatusRepo: dashboardCountsRepo{counts: &counts}}
+	s := &service{Now: presenceTestNow, StudentStatusRepo: dashboardCountsRepo{counts: &counts}}
 	analytics := &DashboardAnalytics{StudentsPresent: len(present)}
 
 	s.applyDashboardAbsences(context.Background(), analytics, calendar.NewDate(2026, 11, 10), present)

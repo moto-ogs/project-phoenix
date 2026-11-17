@@ -48,7 +48,7 @@ type careCostShareRow struct {
 	Reference           string        `bun:"reference"`
 	CheckedOn           calendar.Date `bun:"checked_on,type:date"`
 	RecordedByAccountID *int64        `bun:"recorded_by_account_id"`
-	UpdatedAt           time.Time     `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt           time.Time     `bun:"updated_at,nullzero"`
 	CostBearerName      string        `bun:"cost_bearer_name,scanonly"`
 }
 
@@ -100,6 +100,7 @@ func (s *Store) InsertCareCostShare(ctx context.Context, organizationID, account
 		return 0, err
 	}
 	row := newCareCostShareRow(organizationID, accountID, input)
+	row.UpdatedAt = s.now()
 	if _, err := db.NewInsert().Model(row).Returning("id").Exec(ctx); err != nil {
 		return 0, costShareWriteError(err)
 	}
@@ -117,7 +118,7 @@ func (s *Store) UpdateCareCostShare(ctx context.Context, organizationID, account
 	if err := db.NewUpdate().Model(row).
 		Column("kind", "cost_bearer_id", "share_basis_points", "share_cents", "scope", "valid_from", "valid_until", "reference",
 			"checked_on", "recorded_by_account_id").
-		Set("updated_at = CURRENT_TIMESTAMP").
+		Set("updated_at = ?", s.now()).
 		Where("id = ?", shareID).Where("organization_id = ?", organizationID).Where("care_contract_id = ?", input.ContractID).
 		Returning("care_contract_id").Scan(ctx, &row.CareContractID); err != nil {
 		if isNoRows(err) {

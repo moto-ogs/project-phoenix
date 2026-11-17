@@ -311,7 +311,7 @@ func TestStudentStatusDayHandlers_RepositoryErrors(t *testing.T) {
 	baseResource := newStatusDayTestResource(db)
 
 	t.Run("get maps repository error to internal server error", func(t *testing.T) {
-		baseResource.StudentStatusDayService = presenceservice.NewStatusDays(&fakeStatusDayRepo{findRangeErr: errors.New("find failed")}, nil, nil, lockExceptionDay)
+		baseResource.StudentStatusDayService = presenceservice.NewStatusDays(&fakeStatusDayRepo{findRangeErr: errors.New("find failed")}, nil, nil, lockExceptionDay, baseResource.Now)
 		req := testutil.NewRequest("GET", fmt.Sprintf("/%d/status-days?from=2026-05-25&to=2026-05-26", student.ID), nil)
 		rr := executeStatusDayHandler(t, statusDayTestRouter(baseResource), req, testutil.AdminTestClaims(statusDayAdmin(t, db)), []string{"admin:*"})
 		assert.Equal(t, http.StatusInternalServerError, rr.Code)
@@ -322,7 +322,7 @@ func TestStudentStatusDayHandlers_RepositoryErrors(t *testing.T) {
 		resource.StudentStatusDayService = presenceservice.NewStatusDays(&fakeStatusDayRepo{
 			clearForDatesErr: errors.New("clear failed"),
 			findRangeRows:    []*absencerecords.StudentStatusDay{},
-		}, nil, nil, lockExceptionDay)
+		}, nil, nil, lockExceptionDay, resource.Now)
 		req := testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/%d/status-days", student.ID), map[string]any{
 			"status": absencerecords.StudentStatusDaySick,
 			"dates":  []string{"2026-05-25"},
@@ -336,7 +336,7 @@ func TestStudentStatusDayHandlers_RepositoryErrors(t *testing.T) {
 		resource.StudentStatusDayService = presenceservice.NewStatusDays(&fakeStatusDayRepo{
 			upsertErr:     errors.New("upsert failed"),
 			findRangeRows: []*absencerecords.StudentStatusDay{},
-		}, nil, nil, lockExceptionDay)
+		}, nil, nil, lockExceptionDay, resource.Now)
 		req := testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/%d/status-days", student.ID), map[string]any{
 			"status": absencerecords.StudentStatusDayExcused,
 			"dates":  []string{"2026-05-25"},
@@ -347,7 +347,7 @@ func TestStudentStatusDayHandlers_RepositoryErrors(t *testing.T) {
 
 	t.Run("create maps conflict lookup error to internal server error", func(t *testing.T) {
 		resource := newStatusDayTestResource(db)
-		resource.StudentStatusDayService = presenceservice.NewStatusDays(&fakeStatusDayRepo{findRangeErr: errors.New("fetch failed")}, nil, nil, lockExceptionDay)
+		resource.StudentStatusDayService = presenceservice.NewStatusDays(&fakeStatusDayRepo{findRangeErr: errors.New("fetch failed")}, nil, nil, lockExceptionDay, baseResource.Now)
 		req := testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/%d/status-days", student.ID), map[string]any{
 			"status": absencerecords.StudentStatusDaySick,
 			"dates":  []string{"2026-05-25"},
@@ -358,12 +358,12 @@ func TestStudentStatusDayHandlers_RepositoryErrors(t *testing.T) {
 
 	t.Run("delete maps missing or foreign status day to not found", func(t *testing.T) {
 		resource := newStatusDayTestResource(db)
-		resource.StudentStatusDayService = presenceservice.NewStatusDays(&fakeStatusDayRepo{findByIDErr: errFakeRowNotFound}, nil, nil, lockExceptionDay)
+		resource.StudentStatusDayService = presenceservice.NewStatusDays(&fakeStatusDayRepo{findByIDErr: errFakeRowNotFound}, nil, nil, lockExceptionDay, baseResource.Now)
 		missingReq := testutil.NewRequest("DELETE", fmt.Sprintf("/%d/status-days/42", student.ID), nil)
 		missingRR := executeStatusDayHandler(t, statusDayTestRouter(resource), missingReq, testutil.AdminTestClaims(statusDayAdmin(t, db)), []string{"admin:*"})
 		assert.Equal(t, http.StatusNotFound, missingRR.Code)
 
-		resource.StudentStatusDayService = presenceservice.NewStatusDays(&fakeStatusDayRepo{findByIDRow: &absencerecords.StudentStatusDay{StudentID: 99}}, nil, nil, lockExceptionDay)
+		resource.StudentStatusDayService = presenceservice.NewStatusDays(&fakeStatusDayRepo{findByIDRow: &absencerecords.StudentStatusDay{StudentID: 99}}, nil, nil, lockExceptionDay, baseResource.Now)
 		foreignReq := testutil.NewRequest("DELETE", fmt.Sprintf("/%d/status-days/42", student.ID), nil)
 		foreignRR := executeStatusDayHandler(t, statusDayTestRouter(resource), foreignReq, testutil.AdminTestClaims(statusDayAdmin(t, db)), []string{"admin:*"})
 		assert.Equal(t, http.StatusNotFound, foreignRR.Code)
@@ -374,7 +374,7 @@ func TestStudentStatusDayHandlers_RepositoryErrors(t *testing.T) {
 		resource.StudentStatusDayService = presenceservice.NewStatusDays(&fakeStatusDayRepo{
 			findByIDRow:  &absencerecords.StudentStatusDay{ID: 42, StudentID: student.ID, Date: calendar.TodayDate(), Status: absencerecords.StudentStatusDaySick},
 			clearByIDErr: errors.New("clear failed"),
-		}, nil, nil, lockExceptionDay)
+		}, nil, nil, lockExceptionDay, resource.Now)
 		req := testutil.NewRequest("DELETE", fmt.Sprintf("/%d/status-days/42", student.ID), nil)
 		rr := executeStatusDayHandler(t, statusDayTestRouter(resource), req, testutil.AdminTestClaims(statusDayAdmin(t, db)), []string{"admin:*"})
 		assert.Equal(t, http.StatusInternalServerError, rr.Code)
@@ -393,8 +393,8 @@ type StudentRows struct {
 
 func newStatusDayTestResource(db *bun.DB, clocks ...func() time.Time) *studentsAPI.Resource {
 	rows := composeStudentRows(db)
-	var clock func() time.Time
-	if len(clocks) > 0 {
+	clock := time.Now
+	if len(clocks) > 0 && clocks[0] != nil {
 		clock = clocks[0]
 	}
 	return studentsAPI.NewResource(studentsAPI.ResourceConfig{

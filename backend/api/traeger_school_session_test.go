@@ -456,11 +456,13 @@ func TestTraegerSchoolSessionSurvivesAFullSessionCap(t *testing.T) {
 	account := traegerAccount(t, db, password)
 	testpkg.CreateTestTraegerMember(t, db, organization, account.ID, identityaccess.TraegerRoleSchoolAccess)
 	traeger := signInTraegerWithSecondFactor(t, router, account.Email, password)
+	// Identity & Access issues and caps sessions on its own clock, the
+	// portal's time.Now (ADR 0281); the fixture sessions carry its expiry.
 	for range 5 {
 		_, err := db.ExecContext(context.Background(), `INSERT INTO auth.tokens
 			(account_id, token, expiry, family_id, switched_from_family_id, generation, tenant_id, organization_id, portal_scope, identifier, mfa_verified)
-			SELECT ?, encode(sha256(convert_to(f, 'UTF8')), 'hex'), now() + interval '7 days', f, f, 0, ?, ?, 'tenant', 'refresh', true
-			FROM (SELECT gen_random_uuid()::text AS f) AS family`, account.ID, school, organization)
+			SELECT ?, encode(sha256(convert_to(f, 'UTF8')), 'hex'), ?, f, f, 0, ?, ?, 'tenant', 'refresh', true
+			FROM (SELECT gen_random_uuid()::text AS f) AS family`, account.ID, time.Now().Add(7*24*time.Hour), school, organization)
 		require.NoError(t, err)
 	}
 
@@ -473,7 +475,7 @@ func TestTraegerSchoolSessionSurvivesAFullSessionCap(t *testing.T) {
 
 	var live int
 	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM auth.tokens WHERE account_id = ? AND portal_scope = 'tenant'
-		AND rotated_at IS NULL AND expiry > now()`, account.ID).Scan(context.Background(), &live))
+		AND rotated_at IS NULL AND expiry > ?`, account.ID, time.Now()).Scan(context.Background(), &live))
 	assert.Equal(t, 5, live, "the Absprung evicted the oldest other session instead")
 }
 

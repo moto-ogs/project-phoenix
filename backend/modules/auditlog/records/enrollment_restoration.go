@@ -15,7 +15,7 @@ type EnrollmentRestoration struct {
 	RequestID      int64     `bun:"request_id,notnull" json:"request_id"`
 	ChildIDs       []int64   `bun:"child_ids,type:jsonb,notnull" json:"child_ids"`
 	ActorAccountID *int64    `bun:"actor_account_id" json:"actor_account_id,omitempty"`
-	RestoredAt     time.Time `bun:"restored_at,notnull,default:now()" json:"restored_at"`
+	RestoredAt     time.Time `bun:"restored_at,nullzero,notnull" json:"restored_at"`
 }
 
 type EnrollmentRestorationRepository interface {

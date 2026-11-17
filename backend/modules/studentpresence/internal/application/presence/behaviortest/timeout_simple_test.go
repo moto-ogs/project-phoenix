@@ -104,6 +104,31 @@ func TestUpdateSessionActivity(t *testing.T) {
 	})
 }
 
+// A timeout request measures the inactivity on the service clock that
+// stamped the last activity (#7104): with the clock years before the real
+// day, a session started now is not yet timed out, and is half an hour on.
+func TestValidateSessionTimeoutOnTheServiceClock(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	now := time.Date(2019, time.February, 4, 9, 0, 0, 0, time.UTC)
+	service := setupActiveService(t, db, func() time.Time { return now })
+	ctx := testpkg.Ctx(t)
+	activity := testpkg.CreateTestActivityGroup(t, db, "Pinned Timeout Activity")
+	device := testpkg.CreateTestDevice(t, db, "pinned-timeout-device-001")
+	room := testpkg.CreateTestRoom(t, db, "Pinned Timeout Room")
+	staff := testpkg.CreateTestStaff(t, db, "Pinned", "Timeout")
+	_, err := service.StartActivitySessionWithSupervisors(ctx, activity.ID, device.ID, []int64{staff.ID}, &room.ID)
+	require.NoError(t, err)
+
+	err = service.ValidateSessionTimeout(ctx, device.ID, 30)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not yet timed out")
+
+	now = now.Add(35 * time.Minute)
+	require.NoError(t, service.ValidateSessionTimeout(ctx, device.ID, 30))
+}
+
 // TestValidateSessionTimeout tests timeout validation logic
 func TestValidateSessionTimeout(t *testing.T) {
 	t.Parallel()

@@ -46,6 +46,7 @@ func TestPickupSignatureStatementWeeklyKeepsEveryWeekday(t *testing.T) {
 
 	service := &Service{Config: Config{
 		Runtime: pickupSignatureRuntimeStub{},
+		Now:     fixedCareNow,
 		ChildRepo: pickupSignatureChildReadsStub{child: &ChildSummary{
 			StudentID: 7,
 			TenantID:  8,

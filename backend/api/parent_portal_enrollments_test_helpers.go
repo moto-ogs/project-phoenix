@@ -3,6 +3,8 @@
 package api
 
 import (
+	"time"
+
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 )
@@ -11,5 +13,5 @@ import (
 // an Enrollment owner over the ambient tenant transaction, as the root does,
 // for the Care Plan repository suites.
 func NewParentPortalEnrollments() owners.ParentPortalEnrollments {
-	return owners.ParentPortalEnrollments{Enrollment: enrollmentCompose.NewClocked(nil)}
+	return owners.ParentPortalEnrollments{Enrollment: enrollmentCompose.NewClocked(time.Now)}
 }

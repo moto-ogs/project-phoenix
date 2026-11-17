@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Button } from "~/components/ui/button";
@@ -15,6 +15,8 @@ import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
 import { createLogger } from "~/lib/logger";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import { useFreshSWR, useInvalidateFamily } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   listParentRequestEvents,
   updateExcusedRequest,
@@ -61,38 +63,24 @@ export function useRequestVersion(
   requestId: string,
   active: boolean,
 ): { version: string; editedAt: string | null } {
-  const [version, setVersion] = useState("");
-  const [editedAt, setEditedAt] = useState<string | null>(null);
-  useEffect(() => {
-    if (!active) return;
-    let running = true;
-    void (async () => {
-      try {
-        const events = await listParentRequestEvents(
-          studentId,
-          requestType,
-          requestId,
-        );
-        if (!running) return;
-        setVersion(events.at(-1)?.version ?? "");
-        const edited = events
-          .filter((event) => event.event_type === "guardian_edited")
-          .at(-1);
-        setEditedAt(edited?.created_at ?? null);
-      } catch (err) {
-        // Die Geschichte ist nur eine Zusatzangabe. Fehlt sie, bleibt das
-        // Bearbeiten möglich; das Backend prüft dann ohne Fassungsvergleich.
-        logger.warn("parent_request_events_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          request_type: requestType,
-        });
-      }
-    })();
-    return () => {
-      running = false;
+  // Die Geschichte ist nur eine Zusatzangabe. Fehlt sie, bleibt das
+  // Bearbeiten möglich; das Backend prüft dann ohne Fassungsvergleich.
+  // Jedes Öffnen liest sie neu: die OGS oder ein anderer Elternteil kann die
+  // Anfrage seitdem geändert haben, und eine alte Fassung lehnt das Backend ab.
+  const { data: events } = useFreshSWR(
+    active ? parentKeys.requestEvents(studentId, requestType, requestId) : null,
+    () => listParentRequestEvents(studentId, requestType, requestId),
+  );
+  return useMemo(() => {
+    if (!events) return { version: "", editedAt: null };
+    const edited = events
+      .filter((event) => event.event_type === "guardian_edited")
+      .at(-1);
+    return {
+      version: events.at(-1)?.version ?? "",
+      editedAt: edited?.created_at ?? null,
     };
-  }, [active, requestId, requestType, studentId]);
-  return { version, editedAt };
+  }, [events]);
 }
 
 async function saveRequest(
@@ -197,6 +185,7 @@ export function RequestEditModal({
     request.id,
     true,
   );
+  const invalidateFamily = useInvalidateFamily();
 
   const set = (patch: Partial<Draft>) =>
     setDraft((current) => ({ ...current, ...patch }));
@@ -219,6 +208,8 @@ export function RequestEditModal({
     clear();
     try {
       await saveRequest(studentId, request, draft, version);
+      // A reopened dialog must send the new version, not the cached one.
+      void invalidateFamily(parentKeys.requestEventsFamily(studentId));
       onSaved();
       onClose();
     } catch (err) {

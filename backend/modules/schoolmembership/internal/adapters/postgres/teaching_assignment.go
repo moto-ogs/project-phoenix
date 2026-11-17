@@ -16,8 +16,8 @@ type classAssignmentRow struct {
 	bun.BaseModel `bun:"table:class_teachers,alias:class_assignment"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	StaffID       int64     `bun:"staff_id,notnull"`
 	SchoolClass   string    `bun:"school_class,notnull"`
 }
@@ -26,8 +26,8 @@ type groupAssignmentRow struct {
 	bun.BaseModel `bun:"table:group_teacher,alias:group_assignment"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	GroupID       int64     `bun:"group_id,notnull"`
 	TeacherID     int64     `bun:"teacher_id,notnull"`
 }

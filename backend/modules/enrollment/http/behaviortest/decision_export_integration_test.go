@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -32,6 +33,7 @@ import (
 // setupDecisionTest's config (which omits the audit repo).
 func newExportDecisionService(env *decisionTestEnv, auditRepo api.EnrollmentFlowDataAccessLogs) enrollmentAPI.DecisionService {
 	return newTestDecisionService(enrollmentCompose.DecisionDependencies{
+		Now:       time.Now,
 		Requests:  env.repos.Enrollment(),
 		Children:  env.repos.Enrollment(),
 		Phases:    env.repos.Enrollment(),
@@ -69,6 +71,7 @@ func (failingPhaseRepo) Phase(_ context.Context, _ int64) (*capability.Phase, er
 // can prove the export fails closed when a pinned schema cannot be loaded.
 func newExportDecisionServiceFailingSchema(env *decisionTestEnv, auditRepo api.EnrollmentFlowDataAccessLogs) enrollmentAPI.DecisionService {
 	return newTestDecisionService(enrollmentCompose.DecisionDependencies{
+		Now:       time.Now,
 		Requests:  env.repos.Enrollment(),
 		Children:  env.repos.Enrollment(),
 		Phases:    env.repos.Enrollment(),
@@ -84,6 +87,7 @@ func newExportDecisionServiceFailingSchema(env *decisionTestEnv, auditRepo api.E
 
 func newExportDecisionServiceFailingPhase(env *decisionTestEnv, auditRepo api.EnrollmentFlowDataAccessLogs) enrollmentAPI.DecisionService {
 	return newTestDecisionService(enrollmentCompose.DecisionDependencies{
+		Now:       time.Now,
 		Requests:  env.repos.Enrollment(),
 		Children:  env.repos.Enrollment(),
 		Phases:    failingPhaseRepo{env.repos.Enrollment()},

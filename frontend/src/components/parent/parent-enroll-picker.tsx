@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -16,8 +9,10 @@ import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { useLocale } from "next-intl";
 import { type EnrollablePhase, listEnrollableSchools } from "~/lib/parent-api";
-import { createLogger } from "~/lib/logger";
-import { useApiLoadError } from "~/contexts/ToastContext";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import {
   formatLocalizedDate,
   formatLocalizedDateTime,
@@ -28,7 +23,7 @@ import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { SectionCard } from "~/components/ui/section-card";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 
-const logger = createLogger({ component: "ParentEnrollPicker" });
+const NO_PHASES: EnrollablePhase[] = [];
 
 interface SchoolGroup {
   readonly schoolId: string;
@@ -63,42 +58,20 @@ function groupBySchool(phases: readonly EnrollablePhase[]): SchoolGroup[] {
 export function ParentEnrollPicker() {
   const t = useCareTermTranslations("parentEnroll");
   const locale = useLocale();
-  const [phases, setPhases] = useState<EnrollablePhase[]>([]);
-  const [loading, setLoading] = useState(true);
+  const resource = useSWRAuth(
+    parentInboxKeys.enrollableSchools(),
+    listEnrollableSchools,
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const phases = resource.data ?? NO_PHASES;
   // A failed load replaces the list (#2515), so it never reads as "no
   // phase open".
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    clearLoadError();
-    try {
-      setPhases(await listEnrollableSchools());
-    } catch (err) {
-      logger.warn("parent_enrollable_schools_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showLoadError(err, {
-        object: t("errorObject"),
-        retry: () => void loadRef.current(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [clearLoadError, showLoadError, t]);
-  // The retry runs the latest load, not the one of the failed attempt.
-  const loadRef = useRef(load);
-  useLayoutEffect(() => {
-    loadRef.current = load;
-  });
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { error: loadError } = useSwrResourceLoadError(
+    [resource],
+    t("errorObject"),
+    () => resource.mutate(),
+  );
+  const loading = !resource.data && !resource.error;
 
   const { linked, other } = useMemo(() => {
     const groups = groupBySchool(phases);

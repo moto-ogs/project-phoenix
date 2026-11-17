@@ -1,13 +1,13 @@
 import { type Page } from "@playwright/test";
 
 import { expect, test } from "./a11y/scan";
+import { runToday, uniqueTitle } from "./clock";
 import {
   loginToTenant,
   MISSING_SEED_ACCESS,
   seedAccess as access,
   tenantBase as base,
 } from "./tenant-session";
-import { berlinTodayISO } from "../src/lib/date-helpers";
 import { nextWorkdayISO } from "../src/lib/timetable-helpers";
 
 // Der Zweiteiler /vertretung. Diese Spec testet AUSSCHLIESSLICH die UI-Verdrahtung, nicht die
@@ -105,7 +105,7 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
     // --- Testdaten: zwei Termine derselben Person am selben Tag ------------
     // Die View zeigt nur Mo–Fr und snappt Wochenendtage auf den nächsten
     // Montag — Testdaten also immer auf einen Werktag legen.
-    const day = nextWorkdayISO(berlinTodayISO());
+    const day = nextWorkdayISO(runToday());
     const rooms = (await (
       await page.request.get(`${base}/api/rooms`)
     ).json()) as
@@ -166,7 +166,7 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
     ).toBeTruthy();
     const plannedStaffId = Number(planned!.id);
 
-    const title = `Playwright Vertretung ${Date.now()}`;
+    const title = uniqueTitle("Playwright Vertretung");
     const created = (await (
       await page.request.post(`${base}/api/timetable/instances`, {
         data: {

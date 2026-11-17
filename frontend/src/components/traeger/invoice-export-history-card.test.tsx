@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { InvoiceExportHistoryCard } from "./invoice-export-history-card";
+
+vi.unmock("swr");
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -38,9 +40,9 @@ it("names who did each step of the invoice", async () => {
   );
 
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <InvoiceExportHistoryCard kind="holiday-documents" invoiceId="5" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 
   expect(await screen.findByText(/· von Eva Müller$/)).toBeInTheDocument();

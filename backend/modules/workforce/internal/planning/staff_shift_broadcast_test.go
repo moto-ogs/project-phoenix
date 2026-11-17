@@ -23,7 +23,7 @@ func TestStaffShiftCreateBroadcastsTimeTrackingChangeAfterCommit(t *testing.T) {
 		&shiftMockStaffRepo{},
 		nil,
 		nil,
-		nil,
+		nil, pinnedShiftToday(),
 	).(*staffShiftService)
 	broadcaster := testpkg.NewRecordingBroadcaster()
 	service.broadcaster = broadcaster
@@ -54,7 +54,7 @@ func TestStaffShiftCreateDoesNotBroadcastAfterFailure(t *testing.T) {
 		&shiftMockStaffRepo{},
 		nil,
 		nil,
-		nil,
+		nil, pinnedShiftToday(),
 	).(*staffShiftService)
 	broadcaster := testpkg.NewRecordingBroadcaster()
 	service.broadcaster = broadcaster
@@ -81,7 +81,7 @@ func TestStaffShiftUpdateCanDeferTimeTrackingBroadcast(t *testing.T) {
 		&shiftMockStaffRepo{},
 		nil,
 		nil,
-		nil,
+		nil, pinnedShiftToday(),
 	).(*staffShiftService)
 	broadcaster := testpkg.NewRecordingBroadcaster()
 	service.broadcaster = broadcaster

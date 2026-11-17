@@ -3,6 +3,8 @@
 package api
 
 import (
+	"time"
+
 	"log/slog"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -35,17 +37,17 @@ func newStaffTestResource(module schoolmembership.Capability, svc StaffTestModul
 	return resource
 }
 
-func newCareScheduleTestRouter(db transactionruntime.Database, module StudentTestModule, live ActiveTestModule, liveSettings ActiveSettings, liveCaller *owners.CallerRows) (chi.Router, error) {
+func newCareScheduleTestRouter(db transactionruntime.Database, module StudentTestModule, live ActiveTestModule, liveSettings ActiveSettings, liveCaller *owners.CallerRows, now func() time.Time) (chi.Router, error) {
 	parent, err := NewParentCareScheduleTestService(db, module, live, liveSettings)
 	if err != nil {
 		return nil, err
 	}
 	students := NewCareHTTPUnitResource(careStudentsHTTP.ResourceConfig{
 		CareRequestService: module.CareRequests, UserContextService: liveCaller,
-		SettingsService: liveSettings.Settings, Logger: slog.Default(),
+		SettingsService: liveSettings.Settings, Logger: slog.Default(), Now: now,
 	})
 	router := chi.NewRouter()
-	router.Mount("/parent", parentAPI.NewResource(parentAPI.ResourceConfig{Parent: parent}).Router(ParentSessionChain))
+	router.Mount("/parent", parentAPI.NewResource(parentAPI.ResourceConfig{Now: time.Now, Parent: parent}).Router(ParentSessionChain))
 	router.Mount("/api/students", students.Router(ProtectedTenantRoutes))
 	return router, nil
 }

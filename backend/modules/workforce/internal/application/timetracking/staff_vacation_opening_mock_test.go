@@ -86,7 +86,7 @@ func voService(openingRepo *voOpeningRepoMock) (*staffAbsenceService, *absStaffA
 		quotaRepo:    &absVacationQuotaRepoMock{},
 		openingRepo:  openingRepo,
 		deletionRepo: deletionRepo,
-		todayFunc:    func() Date { return voToday },
+		todayFunc:    func() Date { return voToday }, nowFunc: testNow,
 	}
 	return svc, absenceRepo, deletionRepo
 }
@@ -201,7 +201,7 @@ func TestSetVacationOpening_CurrentYearGuardAlsoAppliesPerStaff(t *testing.T) {
 func TestSetVacationOpening_WithoutRepositoryFailsLoudly(t *testing.T) {
 	t.Parallel()
 
-	svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}}
+	svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}, nowFunc: testNow}
 
 	_, err := svc.SetVacationOpening(context.Background(), 41, 42, voRequest())
 
@@ -352,7 +352,7 @@ func TestDeleteVacationOpening_Rejects(t *testing.T) {
 	year := voToday.Year()
 
 	t.Run("without repository", func(t *testing.T) {
-		svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}}
+		svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}, nowFunc: testNow}
 
 		err := svc.DeleteVacationOpening(context.Background(), 41, 42, year)
 
@@ -461,7 +461,7 @@ func TestGetVacationOpening(t *testing.T) {
 	})
 
 	t.Run("without repository there is no takeover", func(t *testing.T) {
-		svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}}
+		svc := &staffAbsenceService{absenceRepo: &absStaffAbsenceRepoMock{}, nowFunc: testNow}
 
 		opening, err := svc.GetVacationOpening(context.Background(), 41, 2026)
 

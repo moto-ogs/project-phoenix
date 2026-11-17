@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +23,7 @@ func TestSettingAuditEntryHasHonestShape(t *testing.T) {
 		t.Fatal("SettingAuditEntry must keep its direct audit identity mapping")
 	}
 	changedAtField, ok := modelType.FieldByName("ChangedAt")
-	if !ok || changedAtField.Tag.Get("bun") != "changed_at,notnull,default:current_timestamp" {
+	if !ok || changedAtField.Tag.Get("bun") != "changed_at,nullzero,notnull" {
 		t.Fatal("SettingAuditEntry must keep its changed_at mapping")
 	}
 }
@@ -91,8 +90,7 @@ func TestNewAuditEntry(t *testing.T) {
 	newValue := json.RawMessage(`"new"`)
 
 	const tenantID int64 = 5
-	changedAt := time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC)
-	entry := NewAuditEntry(tenantID, "test.key", "set", oldValue, newValue, changedBy, changedAt)
+	entry := NewAuditEntry(tenantID, "test.key", "set", oldValue, newValue, changedBy)
 
 	assert.Equal(t, tenantID, entry.TenantID)
 	assert.Equal(t, "test.key", entry.SettingKey)
@@ -100,14 +98,13 @@ func TestNewAuditEntry(t *testing.T) {
 	assert.Equal(t, json.RawMessage(`"old"`), entry.OldValue)
 	assert.Equal(t, json.RawMessage(`"new"`), entry.NewValue)
 	assert.Equal(t, changedBy, entry.ChangedBy)
-	assert.False(t, entry.ChangedAt.IsZero())
-	assert.Equal(t, changedAt, entry.ChangedAt)
+	assert.True(t, entry.ChangedAt.IsZero(), "the column default stamps changed_at on the database clock")
 }
 
 func TestNewAuditEntry_NilValues(t *testing.T) {
 	t.Parallel()
 
-	entry := NewAuditEntry(1, "test.reset", "reset", nil, nil, nil, time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC))
+	entry := NewAuditEntry(1, "test.reset", "reset", nil, nil, nil)
 
 	assert.Equal(t, "reset", entry.Action)
 	assert.Nil(t, entry.OldValue)

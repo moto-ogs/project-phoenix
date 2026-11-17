@@ -19,7 +19,7 @@ import {
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import type { ActiveFilter } from "~/components/ui/page-header/types";
-import { useIsMobile } from "~/components/ui/hooks/useIsMobile";
+import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { StaffList } from "@/components/teachers/staff-list";
 import {
   ExternalCaregiverCreateModal,
@@ -102,7 +102,7 @@ function TeachersPageContent() {
   const [searchTerm, setSearchTerm] = useState(
     () => searchParams.get("search") ?? "",
   );
-  const isMobile = useIsMobile();
+  const isMobile = useMediaQuery(BELOW_MD);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [invitationRefreshKey, setInvitationRefreshKey] = useState<number>(

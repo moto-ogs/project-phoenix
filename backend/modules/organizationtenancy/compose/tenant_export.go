@@ -42,9 +42,9 @@ func NewDataReturn(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root
 }
 
 // NewDataReturnRelease binds the operator side; it runs as phoenix_data_return.
-func NewDataReturnRelease(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root string) (organizationtenancy.DataReturnRelease, error) {
-	if db == nil || !crypto.Complete() || root == "" {
-		return nil, errors.New("data return release requires a database and its cryptography")
+func NewDataReturnRelease(db *bun.DB, crypto organizationtenancy.DataReturnCrypto, root string, now func() time.Time) (organizationtenancy.DataReturnRelease, error) {
+	if db == nil || !crypto.Complete() || root == "" || now == nil {
+		return nil, errors.New("data return release requires a database, its cryptography and the clock")
 	}
-	return datareturn.NewRelease(db, crypto, root), nil
+	return datareturn.NewRelease(db, crypto, root, now), nil
 }

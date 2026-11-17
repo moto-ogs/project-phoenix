@@ -133,8 +133,12 @@ type indexedStaff struct {
 	LastName        string
 }
 
-// NewStaffImportConfig creates a new staff import configuration.
+// NewStaffImportConfig creates a new staff import configuration; the clock
+// (deps.Now) is required.
 func NewStaffImportConfig(deps ports.StaffImportDeps) *StaffImportConfig {
+	if deps.Now == nil {
+		panic("data import: the staff import requires the clock")
+	}
 	deps.Persons = ports.ObservePersonDirectory(deps.Persons)
 	deps.Membership = ports.ObserveStaffMembership(deps.Membership)
 	deps.Records = ports.ObserveStaffRecords(deps.Records)
@@ -192,7 +196,7 @@ func (c *StaffImportConfig) Validate(ctx context.Context, row *importModels.Staf
 	if requiresCreateFields {
 		errs = append(errs, c.validateRole(ctx, row)...)
 	}
-	errs = append(errs, validateStaffMasterFields(row, clockOr(c.Now)())...)
+	errs = append(errs, validateStaffMasterFields(row, c.Now())...)
 
 	return errs
 }

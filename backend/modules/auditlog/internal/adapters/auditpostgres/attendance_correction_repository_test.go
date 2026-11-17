@@ -2,6 +2,7 @@ package audit
 
 import (
 	"testing"
+	"time"
 
 	audit "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -28,7 +29,7 @@ func newCorrectionFixture(t *testing.T, tenantID int64) correctionFixture {
 
 func newCorrectionRepo(t *testing.T) audit.AttendanceCorrectionRepository {
 	t.Helper()
-	return NewAttendanceCorrectionRepository(NewRuntime(testpkg.SetupTestDB(t), auditTestTenantID))
+	return NewAttendanceCorrectionRepository(NewRuntime(testpkg.SetupTestDB(t), auditTestTenantID), time.Now)
 }
 
 func newCorrection(fixture correctionFixture, field, reason string) *audit.AttendanceCorrection {

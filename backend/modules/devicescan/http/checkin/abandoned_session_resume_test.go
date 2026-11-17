@@ -55,7 +55,7 @@ func TestAbandonedSessionCleanupRechecksTheLockedSession(t *testing.T) {
 				awaitWaiterOf(t, f.k.db, holder.pid)
 			}
 			if scenario.deviceContact {
-				_, err := f.k.db.NewRaw("UPDATE iot.devices SET last_seen = NOW() WHERE tenant_id = ? AND id = ?", testpkg.Tenant(t), f.device).Exec(testpkg.Ctx(t))
+				_, err := f.k.db.NewRaw("UPDATE iot.devices SET last_seen = ? WHERE tenant_id = ? AND id = ?", time.Now(), testpkg.Tenant(t), f.device).Exec(testpkg.Ctx(t))
 				require.NoError(t, err)
 			}
 			holder.commit(t)
@@ -112,9 +112,9 @@ func newAbandonedSweepFixture(t *testing.T) abandonedSweepFixture {
 	f := abandonedSweepFixture{bulkMoveScanFixture: base}
 	ctx := testpkg.Ctx(t)
 	require.NoError(t, f.k.db.NewRaw("SELECT device_id FROM active.groups WHERE tenant_id = ? AND id = ?", testpkg.Tenant(t), f.scanStay).Scan(ctx, &f.device))
-	_, err := f.k.db.NewRaw("UPDATE iot.devices SET last_seen = NOW() - INTERVAL '2 hours' WHERE tenant_id = ? AND id = ?", testpkg.Tenant(t), f.device).Exec(ctx)
+	_, err := f.k.db.NewRaw("UPDATE iot.devices SET last_seen = ? WHERE tenant_id = ? AND id = ?", time.Now().Add(-2*time.Hour), testpkg.Tenant(t), f.device).Exec(ctx)
 	require.NoError(t, err)
-	_, err = f.k.db.NewRaw("UPDATE active.visits SET exit_time = NOW() - INTERVAL '30 minutes' WHERE tenant_id = ? AND active_group_id = ? AND exit_time IS NULL", testpkg.Tenant(t), f.scanStay).Exec(ctx)
+	_, err = f.k.db.NewRaw("UPDATE active.visits SET exit_time = ? WHERE tenant_id = ? AND active_group_id = ? AND exit_time IS NULL", time.Now().Add(-30*time.Minute), testpkg.Tenant(t), f.scanStay).Exec(ctx)
 	require.NoError(t, err)
 	f.instance = testpkg.CreateTestActivityInstance(t, f.k.db, testpkg.TodayDate(), f.scanRoom, testpkg.ActivityInstanceOpts{
 		IsSpontaneous: true, StartHHMM: "00:00", EndHHMM: "23:59", ActiveGroupID: &f.scanStay,

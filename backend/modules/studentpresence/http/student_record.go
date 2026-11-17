@@ -19,18 +19,19 @@ func presenceRecord(s *peopleModule.StudentState) *studentpresence.StudentRecord
 		return nil
 	}
 	return &studentpresence.StudentRecord{
-		ID:            s.ID,
-		TenantID:      s.TenantID,
-		PersonID:      s.PersonID,
-		GroupID:       s.GroupID,
-		SchoolClass:   s.SchoolClass,
-		Lifecycle:     studentLifecycle(s.Status),
-		EnrolledFrom:  s.EnrolledFrom,
-		EnrolledUntil: s.EnrolledUntil,
-		Sick:          s.Sick,
-		SickSince:     s.SickSince,
-		Excused:       s.Excused,
-		ExcusedSince:  s.ExcusedSince,
+		ID:               s.ID,
+		TenantID:         s.TenantID,
+		PersonID:         s.PersonID,
+		GroupID:          s.GroupID,
+		SchoolClass:      s.SchoolClass,
+		Lifecycle:        studentLifecycle(s.Status),
+		EnrolledFrom:     s.EnrolledFrom,
+		EnrolledUntil:    s.EnrolledUntil,
+		WithoutCarePlace: s.WithoutCarePlace,
+		Sick:             s.Sick,
+		SickSince:        s.SickSince,
+		Excused:          s.Excused,
+		ExcusedSince:     s.ExcusedSince,
 	}
 }
 

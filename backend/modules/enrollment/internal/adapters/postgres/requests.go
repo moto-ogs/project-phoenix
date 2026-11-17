@@ -38,6 +38,11 @@ func (r *Store) InsertRequest(ctx context.Context, req *enrollment.Request) erro
 		return err
 	}
 	row.TenantID = tenantID
+	row.CreatedAt = r.currentTime()
+	row.UpdatedAt = row.CreatedAt
+	if row.SubmittedAt.IsZero() {
+		row.SubmittedAt = row.CreatedAt
+	}
 
 	_, err = db.NewInsert().
 		Model(row).
@@ -195,7 +200,7 @@ func (r *Store) UpdateRequestGuardian(ctx context.Context, req *enrollment.Reque
 		Set("consent_flags = ?", row.ConsentFlags).
 		Set("legal_blocks_snapshot = ?", row.LegalBlocksSnapshot).
 		Set("custom_data = ?", row.CustomData).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", r.currentTime()).
 		Where(`"request".id = ?`, req.ID)
 	if includeEmail {
 		q = q.Set("guardian_email = ?", req.GuardianEmail)

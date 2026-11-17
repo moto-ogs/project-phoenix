@@ -30,8 +30,8 @@ type BillingResource struct {
 }
 
 // NewBillingResource creates the billing routes' handlers; now is the
-// root's clock the demo capture stamps its snapshot with.
-// A nil logger falls back to slog.Default, a nil clock to the real one.
+// root's clock the demo capture stamps its snapshot with; it is required.
+// A nil logger falls back to slog.Default.
 func NewBillingResource(service organizationtenancy.BillingReport, logger *slog.Logger, isLocalSeedRequest func(*http.Request) bool, now func() time.Time) *BillingResource {
 	if service == nil {
 		panic("organization tenancy operator: billing report is required")
@@ -40,14 +40,14 @@ func NewBillingResource(service organizationtenancy.BillingReport, logger *slog.
 		logger = slog.Default()
 	}
 	if now == nil {
-		now = time.Now
+		panic("organization tenancy operator: billing clock is required")
 	}
 	return &BillingResource{service: service, logger: logger, isLocalSeedRequest: isLocalSeedRequest, now: now}
 }
 
 type billingKeyDayResponse struct {
 	KeyDay      int       `json:"key_day"`
-	NextKeyDate string    `json:"next_key_date"`
+	NextKeyDate string    `json:"next_key_date" contract:"date"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 

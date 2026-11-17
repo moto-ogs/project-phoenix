@@ -70,7 +70,7 @@ func (r *Store) HoldAutoRenewedChild(ctx context.Context, id int64, reviewReason
 		Where(`"request_child".tenant_id = ?`, tenantID).
 		Set("status = ?", enrollment.ChildStatusSubmitted).
 		Set("review_reason = ?", reviewReason).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", r.currentTime()).
 		Where(`"request_child".id = ?`, id).
 		Where(`"request_child".status = ?`, enrollment.ChildStatusAutoRenewed).
 		Exec(ctx)

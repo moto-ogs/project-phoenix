@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -43,7 +44,7 @@ func TestParentPushNeedsElternApp(t *testing.T) {
 	t.Parallel()
 
 	broadcaster := testpkg.NewRecordingBroadcaster()
-	svc := notifications.NewService(moduleSettings(42), nil, notifications.NewSSEChannel(broadcaster))
+	svc := notifications.NewService(moduleSettings(42), nil, time.Now, notifications.NewSSEChannel(broadcaster))
 
 	err := svc.Notify(context.Background(), guardianEvent(42, 77))
 	require.ErrorIs(t, err, notifications.ErrDisabled, "producers treat it as a silent no-op")
@@ -57,7 +58,7 @@ func TestParentPushNeedsElternApp(t *testing.T) {
 func TestParentPushNeedsElternAppOnEveryDispatchPath(t *testing.T) {
 	t.Parallel()
 
-	svc := notifications.NewService(moduleSettings(42), nil)
+	svc := notifications.NewService(moduleSettings(42), nil, time.Now)
 	ctx := context.Background()
 
 	_, err := svc.NotifyDurably(ctx, guardianEvent(42, 77))
@@ -73,7 +74,7 @@ func TestStaffPushIgnoresElternApp(t *testing.T) {
 	t.Parallel()
 
 	broadcaster := testpkg.NewRecordingBroadcaster()
-	svc := notifications.NewService(moduleSettings(42), nil, notifications.NewSSEChannel(broadcaster))
+	svc := notifications.NewService(moduleSettings(42), nil, time.Now, notifications.NewSSEChannel(broadcaster))
 
 	require.NoError(t, svc.Notify(context.Background(), tenantEvent(42)), "the team keeps its notifications")
 }
@@ -89,7 +90,7 @@ func TestUnreadableModuleSwitchFailsTheDispatch(t *testing.T) {
 			}
 			return true, nil
 		},
-	}, nil)
+	}, nil, time.Now)
 
 	err := svc.Notify(context.Background(), guardianEvent(41, 77))
 	require.ErrorIs(t, err, readErr)

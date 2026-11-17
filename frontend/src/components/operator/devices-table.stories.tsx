@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { storyNow } from "~storybook/clock";
 import { fn } from "storybook/test";
 import type { OperatorDevice } from "~/lib/operator/provisioning-helpers";
 import { DevicesTable } from "./devices-table";
@@ -19,15 +20,15 @@ const devices: OperatorDevice[] = [
     deviceType: "checkin_kiosk",
     status: "active",
     isOnline: true,
-    lastSeen: new Date().toISOString(),
+    lastSeen: storyNow().toISOString(),
     apiKey: "",
     maskedApiKey: "****-ab12",
     schoolId: "1",
     schoolName: "Grundschule Musterstadt",
     organizationId: "1",
     organizationName: "Musterträger e.V.",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: storyNow().toISOString(),
+    updatedAt: storyNow().toISOString(),
   },
   {
     id: "2",
@@ -43,8 +44,8 @@ const devices: OperatorDevice[] = [
     schoolName: "Grundschule Musterstadt",
     organizationId: "1",
     organizationName: "Musterträger e.V.",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: storyNow().toISOString(),
+    updatedAt: storyNow().toISOString(),
   },
 ];
 

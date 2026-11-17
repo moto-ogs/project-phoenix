@@ -23,7 +23,7 @@ type BookingConsistencyAudit func(context.Context, auditModels.Date) (*auditMode
 // the fallback outside one; People Directory names the alumni the audit
 // excludes, Care Plan supplies the offerings and Enrollment the approved
 // bookings, each through a port the Audit composition declares; now is
-// Enrollment's root clock (ADR 0265), nil the real one.
+// Enrollment's root clock (ADR 0265) and required.
 func NewBookingConsistencyAudit(db transactionruntime.Database, students peopledirectory.StudentQuery, carePlan careplan.Query, now func() time.Time) (BookingConsistencyAudit, error) {
 	if db.Pool() == nil || students == nil || carePlan == nil {
 		return nil, fmt.Errorf("booking consistency audit: database, People Directory and Care Plan are required")

@@ -3,7 +3,8 @@
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { CalendarPlus, SquarePen, Thermometer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useInvalidateMatching } from "~/lib/swr";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import { staffTimeKeys } from "~/lib/swr/staff-keys";
 
 import { EditHistoryAccordion } from "~/components/time-tracking/edit-history-accordion";
 import { Alert } from "~/components/ui/alert";
@@ -36,7 +37,7 @@ import {
   type LaborHint,
 } from "~/lib/labor-time-hints";
 import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import type {
   StaffAbsenceRow,
   StaffHistorySession,
@@ -70,8 +71,6 @@ import {
 } from "./admin-session-edit-modal";
 import { formatSignedDuration } from "./staff-time-views";
 
-const logger = createLogger({ component: "StaffSessionTable" });
-
 const dayLabels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
 // Every cache that a correction or backfill in the admin edit modal makes
@@ -101,6 +100,8 @@ export function isStaleAfterSessionSave(
 }
 
 // Tooltip der beiden Zeit-Zellen auf einem Mehrblock-Tag (#2402).
+const NO_EDITS: WorkSessionEdit[] = [];
+
 const multiBlockBoundsHint =
   "Tagesgrenzen über alle Blöcke — die Zeit zwischen zwei Blöcken zählt nicht als Arbeitszeit. Die gearbeiteten Zeiten stehen je Block darunter.";
 
@@ -1282,53 +1283,38 @@ function SessionEditHistory({
     sessionId: string,
   ) => Promise<WorkSessionEdit[]>;
 }) {
-  const [edits, setEdits] = useState<WorkSessionEdit[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  const load = useApiLoadError();
-  const showLoadError = load.show;
-  const clearLoadError = load.clear;
-
-  useEffect(() => {
-    if (sessionId == null) return;
-    let cancelled = false;
-    setIsLoading(true);
-    setEdits([]);
-    clearLoadError();
-    const fetchSessionEdits =
-      fetchEdits ??
-      ((sid: string, sess: string) =>
-        staffSessionEditsService.getEdits(sid, sess));
-    fetchSessionEdits(staffId, sessionId)
-      .then((result) => {
-        if (!cancelled) setEdits(result);
-      })
-      .catch((error: unknown) => {
-        logger.error("session_edits_fetch_failed", {
-          staff_id: staffId,
-          session_id: sessionId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        if (cancelled) return;
-        void showLoadError(error, {
-          object: "die Liste der Änderungen",
-          retry: () => setAttempt((current) => current + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [staffId, sessionId, fetchEdits, attempt, showLoadError, clearLoadError]);
+  // Ohne eigenen Abrufer liest die Leitung über die Admin-Route; die eigene
+  // Sicht auf /time-tracking reicht ihren Abrufer herein (#1842 AC8).
+  const history = useSWRAuth(
+    sessionId == null
+      ? null
+      : staffTimeKeys.sessionEdits(
+          fetchEdits ? "own" : "admin",
+          staffId,
+          sessionId,
+        ),
+    () =>
+      fetchEdits
+        ? fetchEdits(staffId, sessionId ?? "")
+        : staffSessionEditsService.getEdits(staffId, sessionId ?? ""),
+    { keepPreviousData: false },
+  );
+  const { error: loadError } = useSwrResourceLoadError(
+    [history],
+    "die Liste der Änderungen",
+    () => history.mutate(),
+  );
 
   // Ein Ladefehler steht an Stelle der Liste, nicht als „keine Änderungen“.
-  if (load.error) {
-    return <LoadErrorAlert error={load.error} />;
+  if (loadError) {
+    return <LoadErrorAlert error={loadError} />;
   }
   return (
-    <EditHistoryAccordion edits={edits} isLoading={isLoading} onEdit={onEdit} />
+    <EditHistoryAccordion
+      edits={history.data ?? NO_EDITS}
+      isLoading={sessionId != null && !history.data}
+      onEdit={onEdit}
+    />
   );
 }
 

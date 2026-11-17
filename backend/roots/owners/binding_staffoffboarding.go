@@ -33,7 +33,7 @@ func AuthorizeStaffOffboarding(ctx context.Context, resolveActor func(context.Co
 // It does not build or retain a service/repository factory.
 func NewStaffOffboarding(deps staffoffboardingcompose.Dependencies, work staffoffboarding.Workforce, groupAccessChanged, timeTrackingChanged func(context.Context)) (*staffoffboarding.Workflow, error) {
 	if deps.DB == nil || deps.Access == nil || deps.Membership == nil || deps.Retirement == nil || deps.Timetable == nil || deps.LockSupervision == nil || deps.Authorize == nil || deps.Cleanup == nil ||
-		deps.Audit == nil || deps.StaffDeletionRecord == nil {
+		deps.Audit == nil || deps.StaffDeletionRecord == nil || deps.Now == nil {
 		return nil, errors.New("staff offboarding composition: required dependency is missing")
 	}
 	logger := deps.Logger
@@ -43,7 +43,7 @@ func NewStaffOffboarding(deps staffoffboardingcompose.Dependencies, work staffof
 	membership := deps.Membership
 	return staffoffboardingcompose.New(staffoffboarding.Dependencies{
 		UnitOfWork: tenant.NewTransactionRunner().RunInTx, Authorize: deps.Authorize,
-		Today: func() string { return calendar.TodayDate().String() }, FindStaff: membership.FindStaff, ListStaff: membership.ListStaff,
+		Today: func() string { return calendar.DateFromTime(deps.Now()).String() }, FindStaff: membership.FindStaff, ListStaff: membership.ListStaff,
 		Membership: deps.Retirement, Workforce: work, Timetable: deps.Timetable, People: deps.People,
 		LockSupervision: deps.LockSupervision,
 		LockAccounts:    identitycompose.NewStaffOffboardingAccountLocks(deps.DB).LockStaffOffboardingAccounts,

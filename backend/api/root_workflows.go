@@ -21,7 +21,7 @@ func buildGradeTransition(
 	db transactionruntime.Database, env owners.RootEnvironment, persons peopledirectory.Capability, membership schoolmembership.Capability,
 	owner owners.TimetableOwner, resyncOfferingRosters func(context.Context, timezone.Date) error, audit owners.AuditOwner,
 ) (*gradetransition.Workflow, error) {
-	structure, presence, err := NewGradeTransitionOwners(db)
+	structure, presence, err := NewGradeTransitionOwners(db, env.Now)
 	if err != nil {
 		return nil, fmt.Errorf("compose grade transition owners: %w", err)
 	}

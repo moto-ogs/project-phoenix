@@ -1360,7 +1360,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r staffMessageRecords) DeleteOlderThan(ctx context.Context, before time.Time) (int64, error) {\n\treturn r.source.DeleteStaffMessagesBefore(ctx, before)\n}",
+      "evidence": "func (r staffMessageRecords) DeleteOlderThan(ctx context.Context, retentionDays int) (int64, error) {\n\treturn r.source.DeleteStaffMessagesBefore(ctx, retentionDays)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/communication/internal/staffmessages/staffMessageRecords.DeleteOlderThan",
       "owner": "modules/communication"
@@ -1416,7 +1416,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r staffThreadRecords) DeleteEmpty(ctx context.Context, before time.Time) (int64, error) {\n\treturn r.source.DeleteEmptyStaffThreads(ctx, before)\n}",
+      "evidence": "func (r staffThreadRecords) DeleteEmpty(ctx context.Context, retentionDays int) (int64, error) {\n\treturn r.source.DeleteEmptyStaffThreads(ctx, retentionDays)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/communication/internal/staffmessages/staffThreadRecords.DeleteEmpty",
       "owner": "modules/communication"

@@ -46,6 +46,9 @@ func buildNoticeFeedService(t *testing.T, newsEnabled bool) (*parentportal.Porta
 			},
 		},
 		Logger: slog.Default(),
+		// The notices are published on the real clock and Communication
+		// filters them with PostgreSQL's now().
+		Now: time.Now,
 	})
 	return svc, db, reposMessages
 }

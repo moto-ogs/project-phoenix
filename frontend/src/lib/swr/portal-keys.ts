@@ -175,6 +175,9 @@ export const studentKeys = {
   pickupChangeNotices: (accountId: string) =>
     `student-pickup-change-notices:${encodeURIComponent(accountId)}`,
   enrollments: (id: string) => `student-enrollments-${encodeURIComponent(id)}`,
+  /** Elternbriefe and Einverständnisse of the child (#4814). */
+  parentRecords: (id: string) =>
+    `student-parent-records-${encodeURIComponent(id)}`,
   holidayGuest: (id: string) => `holiday-guest:${encodeURIComponent(id)}`,
   carePlanDay: (id: string, date: string) =>
     `${STUDENT_KEY_FAMILIES.carePlanDay}${encodeURIComponent(id)}-${date}`,
@@ -408,7 +411,6 @@ export const traegerKeys = {
     return name ? { id, name } : undefined;
   },
 } as const;
-
 /** Exact list identity shared with intent; preserve the SSE group segment. */
 function searchKey(params: {
   groupIds: readonly string[];

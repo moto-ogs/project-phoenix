@@ -53,6 +53,7 @@ type ContractPorts struct {
 var _ carecontract.Contracts = (*Contracts)(nil)
 
 func NewContracts(store ContractStore, renderer LetterRenderer, ports ContractPorts, clock Clock, versions carecontract.ContractVersions) *Contracts {
+	requireClock(clock, "contracts")
 	if store == nil || renderer == nil || ports.Letterheads == nil || ports.Post == nil || ports.Runtime == nil || ports.Access == nil ||
 		ports.Ledger == nil || ports.Links.Tokens == nil || ports.Links.Fingerprint == nil || versions == nil || ports.Holidays == nil {
 		panic("care contract: the store, the renderer, the letterhead, the post, the runtime, the access log, the ledger, the link tokens, the versions and the school holidays are required")
@@ -466,11 +467,12 @@ func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer,
 	if err := c.enqueueDocumentNotice(ctx, reviewer.OrganizationID, contractID, party.Email); err != nil {
 		return err
 	}
-	if err := c.store.InsertMailing(ctx, reviewer.OrganizationID, reviewer.AccountID, contractID, documentID, outboxID, party.Email); err != nil {
+	now := c.clock.now()
+	if err := c.store.InsertMailing(ctx, reviewer.OrganizationID, reviewer.AccountID, contractID, documentID, outboxID, party.Email, now); err != nil {
 		return err
 	}
 	if record.Summary.Status == carecontract.StatusDraft {
-		if err := c.store.MarkSent(ctx, reviewer.OrganizationID, contractID, c.clock.now()); err != nil {
+		if err := c.store.MarkSent(ctx, reviewer.OrganizationID, contractID, now); err != nil {
 			return err
 		}
 	}

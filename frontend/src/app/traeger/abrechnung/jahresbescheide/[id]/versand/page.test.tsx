@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   CareNoticeLetters,
   CareNoticeMailing,
 } from "~/lib/traeger-care-notice-letters-api";
 import type { CareNoticeRunDetail } from "~/lib/traeger-care-notices-api";
 import { usePhoneViewport } from "~/test/helpers/viewport";
+
+vi.unmock("swr");
 
 const { notices, letters } = vi.hoisted(() => ({
   notices: { fetchCareNoticeRun: vi.fn() },
@@ -93,9 +95,9 @@ function state(mailing: CareNoticeMailing): CareNoticeLetters {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerCareNoticeDeliveryPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

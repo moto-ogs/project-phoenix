@@ -34,7 +34,7 @@ func TestStudentExtraFieldRequestsPreservesScalarResults(t *testing.T) {
 			case "invalid student":
 				studentID = 0
 			}
-			decisions := NewDecisions(DecisionDependencies{Requests: records, Children: records, Phases: records, Guardians: guardians, Settings: unusedDecisionSettings{}})
+			decisions := NewDecisions(DecisionDependencies{Now: enrollmentTestClock, Requests: records, Children: records, Phases: records, Guardians: guardians, Settings: unusedDecisionSettings{}})
 			want, wantErr := scalarStudentDecisionRequests(t.Context(), decisions, studentID)
 			for _, read := range []func(context.Context, int64) ([]*enrollment.DecisionSummary, error){decisions.StudentDecisionRequests, decisions.StudentExtraFieldRequests} {
 				got, err := read(t.Context(), studentID)
@@ -162,7 +162,7 @@ func TestStudentExtraFieldRequestsExcludeOfficeMatchesButKeepHistory(t *testing.
 				child.MatchedByOffice = true
 				child.CustomData = formValues(map[string]any{"health_info": "unrelated answer"})
 			}
-			decisions := NewDecisions(DecisionDependencies{Requests: records, Children: records, Phases: records, Guardians: records, Settings: unusedDecisionSettings{}})
+			decisions := NewDecisions(DecisionDependencies{Now: enrollmentTestClock, Requests: records, Children: records, Phases: records, Guardians: records, Settings: unusedDecisionSettings{}})
 			extra, err := decisions.StudentExtraFieldRequests(t.Context(), 41)
 			require.NoError(t, err)
 			require.Len(t, extra, 1, "only authorized submission answers belong in the student profile")

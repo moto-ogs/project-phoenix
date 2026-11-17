@@ -17,7 +17,8 @@ type Store struct {
 	resolve  func(context.Context) (bun.IDB, error)
 	tenantID func(context.Context) (int64, error)
 	// now stamps the rows the store writes (updated_at, reviewed_at,
-	// late-invite creation); nil is the real clock.
+	// late-invite creation). Only WithClock sets it; a store without it
+	// serves reads.
 	now func() time.Time
 }
 
@@ -25,20 +26,24 @@ func NewStore(resolve func(context.Context) (bun.IDB, error), tenantID func(cont
 	return &Store{resolve: resolve, tenantID: tenantID}
 }
 
-// WithClock returns the store stamping its writes with now (ADR 0239).
+// WithClock returns the store stamping its writes with now (ADR 0239); a
+// nil clock is a wiring error.
 func (r *Store) WithClock(now func() time.Time) *Store {
+	if now == nil {
+		panic("enrollment store: the clock is required")
+	}
 	clocked := *r
 	clocked.now = now
 	return &clocked
 }
 
-// currentTime is the instant the store stamps a write with.
+// currentTime is the instant the store stamps a write with. A write through
+// a store built without WithClock is a wiring error (ADR 0275).
 func (r *Store) currentTime() time.Time {
-	now := r.now
-	if now == nil {
-		now = time.Now
+	if r.now == nil {
+		panic("enrollment store: a write needs the clock of WithClock")
 	}
-	return now()
+	return r.now()
 }
 
 // IncrementAttempts mirrors auth.PasswordResetRateLimitRepository.IncrementAttempts
@@ -68,15 +73,15 @@ func (r *Store) IncrementAttempts(ctx context.Context, tenantID int64, keyType, 
 		WindowStart   time.Time `bun:"window_start"`
 		UpdatedAt     time.Time `bun:"updated_at"`
 	}
-	row := bucket{TenantID: tenantID, KeyType: keyType, KeyValue: keyValue, Attempts: 1}
+	now := r.currentTime()
+	windowStart := now.Add(-time.Duration(windowSeconds) * time.Second)
+	row := bucket{TenantID: tenantID, KeyType: keyType, KeyValue: keyValue, Attempts: 1, WindowStart: now, UpdatedAt: now}
 	var state result
 	err = db.NewInsert().Model(&row).
-		Value("window_start", "NOW()").
-		Value("updated_at", "NOW()").
 		On("CONFLICT (tenant_id, key_type, key_value) DO UPDATE").
-		Set("attempts = CASE WHEN submission_rate_limits.window_start > NOW() - (? * INTERVAL '1 second') THEN submission_rate_limits.attempts + 1 ELSE 1 END", windowSeconds).
-		Set("window_start = CASE WHEN submission_rate_limits.window_start > NOW() - (? * INTERVAL '1 second') THEN submission_rate_limits.window_start ELSE NOW() END", windowSeconds).
-		Set("updated_at = NOW()").
+		Set("attempts = CASE WHEN submission_rate_limits.window_start > ? THEN submission_rate_limits.attempts + 1 ELSE 1 END", windowStart).
+		Set("window_start = CASE WHEN submission_rate_limits.window_start > ? THEN submission_rate_limits.window_start ELSE EXCLUDED.window_start END", windowStart).
+		Set("updated_at = EXCLUDED.updated_at").
 		Returning("attempts").
 		Scan(ctx, &state)
 	if err != nil {
@@ -105,7 +110,7 @@ func (r *Store) CleanupExpired(ctx context.Context, olderThan time.Duration) (in
 	res, err := db.NewDelete().
 		Table("enrollment.submission_rate_limits").
 		Where("tenant_id = ?", tenantID).
-		Where("window_start < NOW() - (? * INTERVAL '1 second')", seconds).
+		Where("window_start < ?", r.currentTime().Add(-time.Duration(seconds)*time.Second)).
 		Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("cleanup enrollment submission rate limits: %w", err)

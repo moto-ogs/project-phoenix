@@ -12,7 +12,7 @@ import {
   DownloadSimpleIcon,
   LockKeyIcon,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { StaffImportLogCard } from "~/components/traeger/staff/staff-import-log-card";
 import { StaffImportMappingCard } from "~/components/traeger/staff/staff-import-mapping-card";
 import {
@@ -22,6 +22,7 @@ import {
   staffImportDoneTitle,
 } from "~/components/traeger/staff/staff-import-format";
 import { StaffImportPreviewCard } from "~/components/traeger/staff/staff-import-preview-card";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { Dropzone } from "~/components/ui/dropzone";
@@ -30,20 +31,17 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   MAX_STAFF_IMPORT_FILE_BYTES,
   applyStaffImport,
   fetchStaffImportLog,
   previewStaffImport,
-  type StaffImportLogEntry,
   type StaffImportMapping,
   type StaffImportResult,
 } from "~/lib/traeger-staff-import-api";
@@ -78,54 +76,28 @@ function isCode(err: unknown, code: string): boolean {
 }
 
 export default function TraegerStaffImportPage() {
-  const [log, setLog] = useState<StaffImportLogEntry[] | null>(null);
-  const [locked, setLocked] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<StaffImportResult | null>(null);
   const [verified, setVerified] = useState(false);
   const [reading, setReading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [done, setDone] = useState<StaffImportResult | null>(null);
-  const pageLoad = useApiLoadError();
-  const logLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-  const { show: showLogError, clear: clearLogError } = logLoad;
+  const {
+    data: log,
+    error: loadError,
+    failure,
+    mutate: reloadLog,
+  } = useTraegerResource(
+    traegerStaffKeys.importLog(),
+    fetchStaffImportLog,
+    "den Personal-Import",
+  );
+  const locked = isCode(failure, "workforce.traeger_staff_not_released");
+  const invalidateFamily = useInvalidateFamily();
   const { show, showMessage } = useApiErrorDisplay();
   const { success } = useToast();
   // Only the answer to the newest look at the file counts.
   const request = useRef(0);
-
-  const load = useCallback(
-    async (initial: boolean) => {
-      try {
-        setLog(await fetchStaffImportLog());
-        clearLoadError();
-        clearLogError();
-      } catch (err) {
-        if (isCode(err, "workforce.traeger_staff_not_released")) {
-          setLocked(true);
-          return;
-        }
-        logger.error("staff_import_load_failed", { error: errorText(err) });
-        if (initial) {
-          await showLoadError(err, {
-            object: "den Personal-Import",
-            retry: () => void load(true),
-          });
-          return;
-        }
-        await showLogError(err, {
-          object: "die Liste der Importe",
-          action: { label: "Erneut laden", onClick: () => void load(false) },
-        });
-      }
-    },
-    [clearLoadError, clearLogError, showLoadError, showLogError],
-  );
-
-  useEffect(() => {
-    void load(true);
-  }, [load]);
 
   const read = useCallback(
     async (chosen: File, mapping: StaffImportMapping | null) => {
@@ -192,7 +164,9 @@ export default function TraegerStaffImportPage() {
     } finally {
       setApplying(false);
     }
-    await load(false);
+    // Neue Akten stehen danach in der Liste der Personalakten.
+    void invalidateFamily(traegerStaffKeys.overviewFamily);
+    await reloadLog();
   };
 
   const restart = () => {
@@ -214,7 +188,8 @@ export default function TraegerStaffImportPage() {
     );
 
   const step = !result ? 0 : result.unmapped.length > 0 ? 1 : 2;
-  const loading = !pageLoad.error && !locked && log === null;
+  const error = locked ? null : loadError;
+  const loading = !error && !locked && log === null;
 
   return (
     <TenantPage
@@ -223,7 +198,7 @@ export default function TraegerStaffImportPage() {
       back
       backHref={traegerPath(PERSONAL)}
       backLabel="Zurück zu den Personalakten"
-      error={pageLoad.error}
+      error={log ? null : error}
       loading={loading}
       actions={
         locked ? undefined : (
@@ -379,8 +354,8 @@ export default function TraegerStaffImportPage() {
               ) : null}
             </>
           )}
-          {logLoad.error ? (
-            <LoadErrorAlert error={logLoad.error} />
+          {log && error ? (
+            <LoadErrorAlert error={error} />
           ) : log ? (
             <StaffImportLogCard entries={log} />
           ) : null}

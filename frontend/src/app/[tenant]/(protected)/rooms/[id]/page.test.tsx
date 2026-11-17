@@ -73,7 +73,41 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   useApiErrorDisplay: () => ({ show: showErrorMock }),
 }));
 
+// The removal preview of a room (#6845), as the removal API answers it.
+const { removalImpact } = vi.hoisted(() => ({
+  removalImpact: {
+    outcome: "delete",
+    active_session: false,
+    care_offering: false,
+    references: {
+      activity_groups: 0,
+      upcoming_blocks: 0,
+      education_groups: 0,
+      devices: 0,
+      past_blocks: 0,
+      archived_activity_groups: 0,
+      has_session_history: false,
+    },
+  },
+}));
+
 vi.mock("~/lib/swr", () => ({
+  useSWRAuth: () => ({
+    data: undefined,
+    error: undefined,
+    isLoading: false,
+    isValidating: false,
+    mutate: () => Promise.resolve(undefined),
+  }),
+  // Der Löschdialog liest die Vorschau je Öffnen neu.
+  useFreshSWR: (key: string | null) => ({
+    data: key?.startsWith("room-removal-impact-") ? removalImpact : undefined,
+    error: undefined,
+    isLoading: false,
+    isValidating: false,
+    fresh: true,
+    mutate: () => Promise.resolve(undefined),
+  }),
   useSWRSeedFrom: () => () => undefined,
   useTenantMutate: () => vi.fn(() => Promise.resolve()),
   useTenantMutateMatching: () => vi.fn(() => Promise.resolve()),
@@ -88,21 +122,7 @@ vi.mock("~/lib/database/service-factory", () => ({
 // Löschen geht direkt an den Raum-Client: dessen ApiError trägt Code und
 // Vorgangskennung in den Löschdialog (#2517).
 vi.mock("~/lib/room-removal-api", () => ({
-  fetchRoomRemovalImpact: () =>
-    Promise.resolve({
-      outcome: "delete",
-      active_session: false,
-      care_offering: false,
-      references: {
-        activity_groups: 0,
-        upcoming_blocks: 0,
-        education_groups: 0,
-        devices: 0,
-        past_blocks: 0,
-        archived_activity_groups: 0,
-        has_session_history: false,
-      },
-    }),
+  fetchRoomRemovalImpact: () => Promise.resolve(removalImpact),
   removeRoom: serviceDeleteMock,
 }));
 

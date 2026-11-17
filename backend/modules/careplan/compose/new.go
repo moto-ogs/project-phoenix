@@ -1,5 +1,4 @@
-// Package compose wires the Care Plan module over the shared tenant runtime
-// and Bun database.
+// Package compose wires Care Plan over the shared tenant runtime and Bun database.
 package compose
 
 import (
@@ -40,13 +39,13 @@ type Dependencies struct {
 
 func New(dependencies Dependencies) (careplan.Owner, error) {
 	if dependencies.DB == nil || dependencies.Observe == nil || dependencies.AmbientDB == nil || dependencies.StatusStudents == nil || dependencies.StatusSlots == nil ||
-		dependencies.People == nil || dependencies.StudentLock == nil || dependencies.StudentNotFound == nil || dependencies.StudentDirectory == nil {
-		return nil, errors.New("care plan compose: database, observer, ambient database resolver, people directory, status-student directory, status-slot directory, student lock, and student directory are required")
+		dependencies.People == nil || dependencies.StudentLock == nil || dependencies.StudentNotFound == nil || dependencies.StudentDirectory == nil || dependencies.Now == nil {
+		return nil, errors.New("care plan compose: database, observer, ambient database resolver, people directory, status-student directory, status-slot directory, student lock, student directory, and clock are required")
 	}
 	postgres.BindCareLocks(dependencies.DB, dependencies.StudentLock, dependencies.StudentNotFound, dependencies.AmbientDB)
 	store := postgres.New(postgres.CarePlanDatabase(dependencies.DB)).WithClock(dependencies.Now)
 	return application.NewService(application.Dependencies{
-		OfferingBookings: NewOfferingBookings(),
+		OfferingBookings: NewOfferingBookings(dependencies.Now),
 		Store:            store, Requests: postgres.NewRequestStore(store, dependencies.StudentDirectory),
 		StatusDays:  postgres.NewStatusDayStore(store, dependencies.StatusStudents, dependencies.StatusSlots),
 		Withdrawals: postgres.NewDirectoryStore(store, dependencies.StudentDirectory), Observe: dependencies.Observe, People: dependencies.People,

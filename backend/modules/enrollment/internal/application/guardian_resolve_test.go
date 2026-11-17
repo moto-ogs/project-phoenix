@@ -80,7 +80,7 @@ func guardianDecisions(deps DecisionDependencies) *Decisions {
 }
 
 func withGuardianProfiles(profiles GuardianProfiles) DecisionDependencies {
-	return DecisionDependencies{People: PeopleDirectory{GuardianProfiles: profiles}}
+	return DecisionDependencies{Now: enrollmentTestClock, People: PeopleDirectory{GuardianProfiles: profiles}}
 }
 
 func TestResolveGuardianProfile_PreservesEmailReadFailure(t *testing.T) {
@@ -124,6 +124,7 @@ func TestDecide_PreservesRequestReadFailure(t *testing.T) {
 	t.Parallel()
 	failure := errors.New("request storage unavailable")
 	svc := guardianDecisions(DecisionDependencies{
+		Now:      enrollmentTestClock,
 		Requests: failingDecisionRequestReader{err: failure},
 		Runtime:  Runtime{NotFound: func(err error) bool { return errors.Is(err, errNoDecisionRow) }},
 	})
@@ -150,7 +151,7 @@ func TestGuardianIdentityRequest_UsesLateInviteRecipient(t *testing.T) {
 	t.Parallel()
 
 	repo := &stubLateInvites{invite: &enrollmentNative.LateInvite{GuardianEmail: "invited@example.test"}}
-	svc := guardianDecisions(DecisionDependencies{LateInvites: repo})
+	svc := guardianDecisions(DecisionDependencies{Now: enrollmentTestClock, LateInvites: repo})
 	request := &enrollmentNative.Request{
 		SubmissionSource: enrollmentNative.RequestSourceLateInvite,
 		GuardianEmail:    "corrected@example.test",
@@ -169,7 +170,7 @@ func TestGuardianIdentityRequest_AuthenticatedSubmitKeepsAccountIdentity(t *test
 	t.Parallel()
 
 	repo := &stubLateInvites{invite: &enrollmentNative.LateInvite{GuardianEmail: "invited@example.test"}}
-	svc := guardianDecisions(DecisionDependencies{LateInvites: repo})
+	svc := guardianDecisions(DecisionDependencies{Now: enrollmentTestClock, LateInvites: repo})
 	request := &enrollmentNative.Request{
 		SubmissionSource:  enrollmentNative.RequestSourceLateInvite,
 		GuardianAccountID: int64Ptr(23),
@@ -186,7 +187,7 @@ func TestGuardianIdentityRequest_AuthenticatedSubmitKeepsAccountIdentity(t *test
 func TestGuardianIdentityRequest_MissingLateInviteFailsClosed(t *testing.T) {
 	t.Parallel()
 
-	svc := guardianDecisions(DecisionDependencies{})
+	svc := guardianDecisions(DecisionDependencies{Now: enrollmentTestClock})
 	request := &enrollmentNative.Request{
 		SubmissionSource: enrollmentNative.RequestSourceLateInvite,
 		GuardianEmail:    "corrected@example.test",
@@ -469,7 +470,7 @@ func TestAttachGuardianAccountIfPresent_ReactivatesLinkedAccountTenant(t *testin
 	}
 
 	access := &stubGuardianAccess{byID: map[int64]identityaccess.Account{}}
-	svc := guardianDecisions(DecisionDependencies{GuardianAccess: access})
+	svc := guardianDecisions(DecisionDependencies{Now: enrollmentTestClock, GuardianAccess: access})
 
 	ctx := withTestTenant(context.Background(), tenantID)
 	require.NoError(t, svc.attachGuardianAccountIfPresent(ctx, &enrollmentNative.Request{}, guardian, false))
@@ -486,7 +487,7 @@ func TestAttachGuardianAccountIfPresent_RequiresGuardianAccess(t *testing.T) {
 	t.Parallel()
 
 	guardian := &GuardianProfile{ID: 5, AccountID: int64Ptr(4242), HasAccount: true}
-	svc := guardianDecisions(DecisionDependencies{})
+	svc := guardianDecisions(DecisionDependencies{Now: enrollmentTestClock})
 	ctx := withTestTenant(context.Background(), 77)
 	err := svc.attachGuardianAccountIfPresent(ctx, &enrollmentNative.Request{}, guardian, false)
 	require.ErrorIs(t, err, errDecisionGuardianAccessRequired)

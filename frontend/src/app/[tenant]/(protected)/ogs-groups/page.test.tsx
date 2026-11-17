@@ -14,6 +14,10 @@ import {
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DESKTOP_WIDTH, setViewportWidth } from "~/test/helpers/viewport";
 import { groupKeys } from "~/lib/swr/groups-keys";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 function createLocalStorageMock() {
   const store: Record<string, string> = {};
@@ -524,13 +528,23 @@ vi.mock("~/lib/hooks/use-holiday-guest-group-hint", () => ({
     holidayGroupHintMock(groupId) as unknown,
 }));
 
-// Mock SWR hook
-vi.mock("~/lib/swr", () => ({
-  useSWRAuth: vi.fn(),
-  useTenantMutate: vi.fn(() => mockTenantMutate),
-}));
+// The live view is faked per test; the handover dialog's overview (and every
+// closed reader) reads through real SWR, so its reloads run the fetcher.
+const liveSWRAuth = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  return {
+    ...actual,
+    useSWRAuth: ((key, fetcher, options) =>
+      key === null || key === tenantListKeys.substitutionOverview()
+        ? actual.useSWRAuth(key, fetcher, options)
+        : liveSWRAuth(key, fetcher, options)) as typeof actual.useSWRAuth,
+    useTenantMutate: vi.fn(() => mockTenantMutate),
+  };
+});
 
-import { useSWRAuth } from "~/lib/swr";
+const useSWRAuth =
+  liveSWRAuth as unknown as typeof import("~/lib/swr").useSWRAuth;
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { useSession } from "next-auth/react";
 import { isHomeLocation } from "~/lib/location-helper";
@@ -543,6 +557,15 @@ import type {
 } from "~/lib/ogs-group-live-api";
 import type { PresenceStudent } from "~/lib/presence-status";
 import OGSGroupPage from "./page";
+
+/** A cache of its own per render, so no dialog data leaks between tests. */
+function FreshSwrCache({ children }: { children: React.ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
 
 // ── Aggregated live-view mock builders (#2056) ──────────────────────────────
 // The page now consumes ONE useSWRAuth call returning OgsLiveViewData (the
@@ -3737,7 +3760,7 @@ describe("OGSGroupPage ID-based selection: currentGroup useMemo", () => {
       isValidating: false,
     } as never);
 
-    render(<OGSGroupPage />);
+    render(<OGSGroupPage />, { wrapper: FreshSwrCache });
 
     // Wait for page to render
     await waitFor(() => {
@@ -3775,7 +3798,7 @@ describe("OGSGroupPage ID-based selection: currentGroup useMemo", () => {
       isValidating: false,
     } as never);
 
-    render(<OGSGroupPage />);
+    render(<OGSGroupPage />, { wrapper: FreshSwrCache });
     fireEvent.click(await screen.findByLabelText("Gruppe übergeben"));
 
     await waitFor(() => {
@@ -3822,7 +3845,7 @@ describe("OGSGroupPage ID-based selection: currentGroup useMemo", () => {
       isValidating: false,
     } as never);
 
-    render(<OGSGroupPage />);
+    render(<OGSGroupPage />, { wrapper: FreshSwrCache });
     fireEvent.click(await screen.findByLabelText("Gruppe übergeben"));
 
     await waitFor(() => {

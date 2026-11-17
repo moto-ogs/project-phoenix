@@ -8,7 +8,7 @@ import { CatalogPhaseForm } from "~/components/traeger/catalog-phase-form";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useInvalidateFamily } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { createTraegerPhase } from "~/lib/traeger-catalog-api";
 import { traegerPath } from "~/lib/traeger-url";
 

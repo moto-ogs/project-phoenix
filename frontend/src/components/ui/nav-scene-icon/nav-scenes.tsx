@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
  * die sich beim Überfahren einzeln bewegen. Die Bewegung steht in
  * `src/styles/nav-scenes.css` unter denselben `ns-*`-Klassen.
  */
-export interface NavScene {
+interface NavScene {
   /** Was die Szene zeigt, in einem halben Satz. */
   readonly description: string;
   /** Gefülltes Original-Glyph statt Kontur (nur das Zahnrad). */

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
@@ -25,7 +26,7 @@ func TestParentMyEnrollmentsPositiveGrowthQueryBudget(t *testing.T) {
 	database := testpkg.NewDatabase(t, db)
 	repos := api.NewCarePlanSuiteRepositories(database)
 	portal := portalCompose.New(portalCompose.Dependencies{GuardianPolicy: owners.NewParentGuardianPolicy(), DeparturePolicy: owners.ParentDeparturePolicy(), Fingerprints: owners.SecurityFingerprints{}, Declarations: owners.ParentDeclarationPolicy(), Locales: owners.ParentPortalLocales(), Runtime: owners.ParentPortalRuntime{}, Logger: slog.Default(), EnrollmentRequestRepo: repos.ParentEnrollmentReads()})
-	router := testpkg.TenantRuntimeMiddleware(t, db)(parentHTTP.NewResource(parentHTTP.ResourceConfig{Parent: portal}).Router(api.ParentSessionChain))
+	router := testpkg.TenantRuntimeMiddleware(t, db)(parentHTTP.NewResource(parentHTTP.ResourceConfig{Now: time.Now, Parent: portal}).Router(api.ParentSessionChain))
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	other := testpkg.CreateTestParentGuardianChain(t, db)
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)

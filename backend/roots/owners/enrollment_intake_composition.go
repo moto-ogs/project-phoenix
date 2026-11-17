@@ -171,7 +171,7 @@ type EnrollmentIntakeSources struct {
 	// LockTemplateRecurrence is the recurrence gate the phase bounds reader
 	// takes before a write reads the phase (#6657); the root always binds it.
 	LockTemplateRecurrence func(context.Context) error
-	// Now is the intake's clock (ADR 0239); nil is the real clock.
+	// Now is the intake's clock (ADR 0239); required.
 	Now func() time.Time
 }
 
@@ -209,7 +209,7 @@ type EnrollmentChangeRequestSources struct {
 	// LockTemplateRecurrence is the recurrence gate the phase bounds reader
 	// takes before a change request reads the phase (#6657).
 	LockTemplateRecurrence func(context.Context) error
-	// Now is the clock of the change requests (ADR 0239); nil is the real clock.
+	// Now is the clock of the change requests (ADR 0239); required.
 	Now func() time.Time
 }
 

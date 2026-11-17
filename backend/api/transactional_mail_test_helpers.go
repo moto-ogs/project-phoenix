@@ -35,7 +35,7 @@ func newAuthFixtureOutbox(outbox owners.OutboxEnqueuer, runtime *deliveryCompose
 			provider := &deliveryCompose.MailPushProvider{
 				Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{
 					owners.TransactionalMailKind: owners.TransactionalMailRenderer{Identity: identity(), Logger: logger},
-				}), Mailer: mailer, Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(nil),
+				}), Mailer: mailer, Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(nil), Now: runtime.Now,
 			}
 			if err := deliveryCompose.DrainEmailForTest(sendCtx, runtime, provider, mail.TenantID, queued.ID); err != nil {
 				logger.Error("fixture outbox worker failed", "error", err.Error())

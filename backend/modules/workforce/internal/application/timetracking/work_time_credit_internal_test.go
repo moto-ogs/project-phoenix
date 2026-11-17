@@ -192,11 +192,11 @@ func creditCheckoutService(t *testing.T, rule workforce.WorkSessionCreditRule) (
 	t.Helper()
 	svc, sessionRepo, breakRepo, _, _ := wsCreateTestService()
 	svc.settings = &wsMockSettingsResolver{credit: rule}
-	open := &WorkSession{Model: Model{ID: 70}, StaffID: 100, Date: TodayDate(), CheckInTime: time.Now().Add(-4 * time.Hour)}
+	open := &WorkSession{Model: Model{ID: 70}, StaffID: 100, Date: TodayDate(), CheckInTime: testNow().Add(-4 * time.Hour)}
 	sessionRepo.getCurrentByStaffIDFunc = func(context.Context, int64) (*WorkSession, error) { return open, nil }
 	sessionRepo.findByIDFunc = func(_ context.Context, id any) (*WorkSession, error) {
 		closed := *open
-		now := time.Now()
+		now := testNow()
 		closed.CheckOutTime = &now
 		return &closed, nil
 	}
@@ -368,7 +368,7 @@ func TestBuildWeeklySummaries_StatutoryLimitUsesStampedMinutes(t *testing.T) {
 				block.CheckOutTime = &end
 				sessions = append(sessions, &SessionResponse{WorkSession: block})
 			}
-			svc := &workSessionService{}
+			svc := &workSessionService{nowFunc: testNow}
 			summaries := svc.buildWeeklySummaries(sessions, nil, monday, monday.AddDays(6))
 			require.Len(t, summaries, 1)
 			assert.Equal(t, 48*60+6*tc.packUp, summaries[0].TotalNetMinutes)

@@ -10,6 +10,8 @@ import {
 import { useReportTemplates } from "~/components/traeger/use-report-templates";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { TenantPage } from "~/components/ui/tenant-page";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
 import { updateReportTemplate } from "~/lib/traeger-reports-api";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -18,6 +20,7 @@ export default function EditReportTemplatePage() {
   const { id } = useParams<{ id: string }>();
   const { schools, error: schoolsError } = useTraegerSchools();
   const { templates, error: templatesError, mutate } = useReportTemplates();
+  const invalidateFamily = useInvalidateFamily();
   const listHref = traegerPath("/traeger/berichte");
   const template = templates?.find((entry) => entry.id === id) ?? null;
   const error = schoolsError ?? templatesError;
@@ -55,6 +58,8 @@ export default function EditReportTemplatePage() {
           onCancel={() => router.push(listHref)}
           onSaved={(saved) => {
             void mutate();
+            // A report already read with this template shows its old sections.
+            void invalidateFamily(traegerReportKeys.keyDateReportFamily);
             router.push(
               traegerPath(
                 `/traeger/berichte?vorlage=${encodeURIComponent(saved.id)}`,

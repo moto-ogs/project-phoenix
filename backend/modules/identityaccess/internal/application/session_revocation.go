@@ -155,7 +155,7 @@ func (s *AccountAuthentication) recordPendingAccountWideWipe(ctx context.Context
 	}
 	return s.audit.RecordAuthEvent(ctx, domain.AuthEvent{
 		AccountID: accountID, TenantID: tenantID, Type: domain.AuthEventTokenRevoked, Success: true,
-		IPAddress: domain.InternalRevocationAuditIP, PendingWipe: &domain.PendingWipeEvidence{Reason: reason},
+		IPAddress: domain.InternalRevocationAuditIP, PendingWipe: &domain.PendingWipeEvidence{Reason: reason, Cutoff: s.sessions.now()},
 	})
 }
 
@@ -253,11 +253,18 @@ func pendingWipeReason(claimed []domain.PendingAccountWideWipe, fallback string)
 	return reason
 }
 
+// pendingWipeCutoff is the latest recorded cutoff of the claimed wipes. It
+// is on the clock that stamps auth.tokens.created_at, never the audit row's
+// database-stamped created_at (#7295). A wipe recorded without a cutoff
+// answers zero: the wipe then ends every session of the account.
 func pendingWipeCutoff(claimed []domain.PendingAccountWideWipe) time.Time {
 	var cutoff time.Time
 	for _, wipe := range claimed {
-		if cutoff.IsZero() || wipe.CreatedAt.After(cutoff) {
-			cutoff = wipe.CreatedAt
+		if wipe.Cutoff.IsZero() {
+			return time.Time{}
+		}
+		if cutoff.IsZero() || wipe.Cutoff.After(cutoff) {
+			cutoff = wipe.Cutoff
 		}
 	}
 	return cutoff

@@ -3,7 +3,6 @@ package owners
 import (
 	"context"
 	"fmt"
-	"time"
 
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
@@ -17,13 +16,12 @@ import (
 // config.setting_audit, written in the request's tenant transaction.
 type payrollRuleAudit struct {
 	audit configModels.SettingAuditRepository
-	now   func() time.Time
 }
 
 // NewPayrollRuleAudit writes over the settings runtime of the caller's
-// transaction and stamps each entry with the real clock.
+// transaction; the column default stamps each entry (ADR 0281).
 func NewPayrollRuleAudit(db transactionruntime.Database) workforceModule.PayrollRuleAudit {
-	return payrollRuleAudit{audit: settingsCompose.NewSettingAuditRepository(settingsCompose.NewTenantSettingsRuntime(db.Pool(), nil)), now: time.Now}
+	return payrollRuleAudit{audit: settingsCompose.NewSettingAuditRepository(settingsCompose.NewTenantSettingsRuntime(db.Pool(), nil))}
 }
 
 func (a payrollRuleAudit) RecordPayrollRuleChange(ctx context.Context, change workforceModule.PayrollRuleChange) error {
@@ -36,7 +34,7 @@ func (a payrollRuleAudit) RecordPayrollRuleChange(ctx context.Context, change wo
 		actor := change.ActorAccountID
 		changedBy = &actor
 	}
-	return a.audit.Create(ctx, configModels.NewAuditEntry(tenantID.Int64(), change.Key, change.Action, change.Old, change.New, changedBy, a.now()))
+	return a.audit.Create(ctx, configModels.NewAuditEntry(tenantID.Int64(), change.Key, change.Action, change.Old, change.New, changedBy))
 }
 
 // BuildPayrollRules composes the wage type and surcharge rule maintenance of

@@ -23,7 +23,7 @@ func TestGetSchulhofRoomColor(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := t.Context()
 			calls := 0
-			svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, YardRoomColor: func(got context.Context) (*string, error) {
+			svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, YardRoomColor: func(got context.Context) (*string, error) {
 				calls++
 				require.Equal(t, ctx, got)
 				return tc.color, tc.err
@@ -40,7 +40,7 @@ func TestGetSchulhofRoomColor(t *testing.T) {
 			}
 		})
 	}
-	svc := &service{}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
 	got, err := svc.GetSchulhofRoomColor(t.Context())
 	require.NoError(t, err)
 	require.Nil(t, got)

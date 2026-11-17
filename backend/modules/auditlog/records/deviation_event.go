@@ -91,7 +91,7 @@ type DeviationEvent struct {
 
 	Reason *string `bun:"reason" json:"reason,omitempty"`
 
-	OccurredAt time.Time `bun:"occurred_at,notnull,default:now()" json:"occurred_at"`
+	OccurredAt time.Time `bun:"occurred_at,nullzero,notnull" json:"occurred_at"`
 }
 
 // Validate checks the minimal invariants before an insert.

@@ -128,7 +128,7 @@ An unexplained bespoke component is a review failure, not a style preference.
 | Count on an icon or nav row | `NotificationBadge` — `tone`, `size` | `~/components/ui/notification-badge` |
 | Selectable row or tile (label around a Checkbox/Radio, mode-picker button, row with a selection state) | `ChoiceTile` — `as` = `label` (default) / `button` / `div`, `selected`, `disabled`, `tone` = `gray` `green` `blue` `red` (serious choice); padding via `className` | `~/components/ui/choice-tile` |
 | Inner surface | `InsetPanel` (`tone`, `framed`, `dashed`, `padding`, `as`). A message with icon stays `Alert` | `~/components/ui/inset-panel` |
-| Label/value fields | `DataField` in a `dl`, `InfoSection`, `DataGrid`, `InfoText` | `~/components/ui/detail-modal-components` |
+| Label/value fields | `DataField` (`dl`), `DataGrid`, `InfoSection`, `InfoText` | `ui/`: `data-field`, `info-section`, `detail-modal-components` |
 | Select | `CustomSelect`, `MultiSelect`; own content: `ListboxDropdown`; typed + suggested: `SuggestInput` | `~/components/ui/<kebab-name>` |
 | Weekday choice | `WeekdayToggleGroup` | `~/components/ui/weekday-toggle-group` |
 | Chosen entry with a remove X; read-only without `onRemove` | `RemovableChip` | `~/components/ui/removable-chip` |
@@ -212,7 +212,7 @@ Decided in #5529, enforced since #5531. Not up for renegotiation: if code cannot
 - `noTooltip` only if the word says it all with no side effect („Abbrechen“, „Zurück“, a pure „Speichern“); never deleting, sending, releasing, icon buttons.
 - Menu entries: visible `description` or `noDescription: "<Grund>"` (`ui-kit/menu-item-needs-description`: `label` + `onClick`; not `kind`, `selected`, `retry: {…}`). Full stop optional; deleting says „sofort“ or „moto fragt vorher nach“.
 
-Kit pieces bring their sentence (#6744); override if the click does more: `closeTooltip`, `confirmTooltip`, `confirmDisabledReason` (modals), `saveTooltip`/`disabledReason` (`EditActions`), `buttonTooltip`, `collapseTooltip`, `loadMoreTooltip`, `triggerTooltip`, `tooltip` (`ExportMenu`), `dismissTooltip`, `removeTooltip`, `*Hint` date/time labels. German defaults drop under a non-German `KitLocaleProvider` (parents, enrollment): pass one.
+Kit pieces bring their sentence (#6744); override if the click does more: `closeTooltip`, `confirmTooltip`, `confirmDisabledReason` (modals), `saveTooltip`/`disabledReason` (`EditActions`), `buttonTooltip`, `collapseTooltip`, `loadMoreTooltip`, `triggerTooltip`, `tooltip` (`ExportMenu`), `removeTooltip`, `*Hint` date/time labels. German defaults drop under a non-German `KitLocaleProvider` (parents, enrollment): pass one.
 
 Examples: „Löscht die PDF sofort aus dem Anmeldeformular.“ · „Öffnet den Rechtstext für Eltern zum Ändern.“
 
@@ -324,7 +324,9 @@ The three places where following the vendored skill literally produces wrong out
 
 ## Motion
 
-`ui-skills` beats `better-ui/animations.md`: animate if asked, only `opacity`/`transform` (#7252). No `backdrop-filter`, `transition-all` or size/position transition (bars: `translateX`; reveals: `grid-template-rows`); `@keyframes` only in `src/styles`. Lint: `ui-kit/no-costly-motion`, `css-motion.node-test.mjs`.
+`ui-skills` beats `better-ui/animations.md`: animate if asked, only `opacity`/`transform` (#7252). Blur only via `OVERLAY_BACKDROP_BLUR_CLASS` (overlays, with the tint) or `moto-glass` (small chips), written unprefixed; no `transition-all` or size/position transition; `@keyframes` only in `src/styles`. Lint: `ui-kit/no-costly-motion`, `css-motion.node-test.mjs`.
+
+No text over a control or other text: the Storybook test checks every story at 1200 and 360 px (`.storybook/text-collisions.ts`). Text beside actions wraps (`flex-wrap`, `min-w-48`) or truncates.
 
 ## Detection
 

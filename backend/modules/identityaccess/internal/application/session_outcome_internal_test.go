@@ -72,6 +72,7 @@ var renewalRetries = map[string]string{
 	"errPortalBookingChanged":                   "the booking changed between its two reads",
 	"errMissingClaimsPayload":                   "a guard returned no claims",
 	"errSchoolMFARequiredAtMint":                "a school sign-in's MFA gate went stale; a renewal never re-decides the gate",
+	"errAuthEventWithoutSchool":                 "the audit of a rejected refresh logs it and never returns it to the renewal",
 	"identityaccess.ErrOperatorSessionNotFound": "the operator family read; the operator path maps a miss to ErrInvalidToken",
 	"identityaccess.ErrOperatorNotFound":        "the operator read; the operator path maps a miss to ErrInvalidToken",
 	"identityaccess.ErrAccountSessionNotFound":  "the family and row reads; both paths map a miss to ErrInvalidToken",

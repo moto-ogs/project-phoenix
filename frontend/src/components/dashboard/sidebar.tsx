@@ -8,13 +8,8 @@ import { useTenantRouter } from "~/lib/tenant-router";
 import { normalizeTenantPathname, useTenantAwarePath } from "~/lib/tenant-path";
 import {
   useChildSearchOnlyNavigation,
-  useStaffMessagingEnabled,
-  useOpenCareGroupMode,
-  usePresenceMode,
   useTenantRoutingModeSafe,
   useTenantSlugSafe,
-  useMealPlanEnabled,
-  useTimetableEnabled,
 } from "~/lib/tenant-context";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
@@ -28,14 +23,8 @@ import { useTraegerReturnHref } from "~/lib/hooks/use-traeger-return-href";
 import { TRAEGER_RETURN_LABEL } from "~/lib/traeger-handoff";
 import { isDemoBannerShown } from "~/components/demo/demo-banner";
 import { useDemoEveningActive } from "~/components/demo/demo-evening-notice";
-import {
-  hasEffectiveAdminScope,
-  hasRole,
-  isCaregiver,
-  leadsSchool,
-} from "~/lib/auth-utils";
+import { hasEffectiveAdminScope, leadsSchool } from "~/lib/auth-utils";
 import { useCareWithdrawalsPending } from "~/lib/hooks/use-care-withdrawals-pending";
-import { useChangeRequestAccess } from "~/lib/hooks/use-change-request-access";
 import { operatorPath } from "~/lib/operator-url";
 import { useSidebarAccordion } from "~/lib/hooks/use-sidebar-accordion";
 import { useSidebarGroups } from "~/lib/hooks/use-sidebar-groups";
@@ -62,8 +51,6 @@ import { useStaffNoticesPending } from "~/lib/hooks/use-staff-notices-pending";
 import { useChangeRequestsPending } from "~/lib/hooks/use-change-requests-pending";
 import { useEnrollmentRequestsPending } from "~/lib/hooks/use-enrollment-requests-pending";
 import { useEnrollmentsUnread } from "~/lib/hooks/use-enrollments-unread";
-import { useModuleNavigation } from "~/lib/hooks/use-module-navigation";
-import { useSchoolParentNewsEnabled } from "~/lib/hooks/use-school-switches";
 import { ModuleLockMark } from "~/components/ui/module-lock-mark";
 import { useHelpHref } from "~/lib/hooks/use-help-href";
 import { useGroupAttendanceCounts } from "~/lib/group-attendance-count-context";
@@ -108,20 +95,15 @@ import {
   communicationNavPages,
   databaseNavPages,
   groupsSectionVisible,
-  moduleGate,
   parentNavPages,
   planningNavPages,
   supervisionsSectionVisible,
-  type StaffCatalogViewer,
 } from "./staff-nav-pages";
 import {
   STAFF_NAV_ITEMS,
   staffNavBorrowedActiveHref,
-  staffNavItemPermitted,
   staffNavPathActive,
-  staffNavSettingOn,
-  useStaffNavSettings,
-  type StaffNavItem,
+  useStaffNavPages,
 } from "./staff-nav-items";
 import {
   getStaffNavDefaultOpenGroups,
@@ -408,7 +390,6 @@ function SidebarContent({
   const traegerReturnHref = useTraegerReturnHref();
   const demoBannerShown = isDemoBannerShown({ mode, isPreview });
   const eveningRow = useDemoEveningActive() && demoBannerShown;
-  const changeRequestAccess = useChangeRequestAccess();
   // Compare every active state against clean tenant-internal paths. The helper
   // only strips in path-routing mode, avoiding slug/route collisions on tenant
   // subdomains.
@@ -468,9 +449,7 @@ function SidebarContent({
     fromParam,
     "groups",
   );
-  const userIsAdmin = hasRole(session, "admin");
   const userHasEffectiveAdminScope = hasEffectiveAdminScope(session);
-  const userIsCaregiver = isCaregiver(session);
   // Leitung der Einrichtung: Adminzuschnitt oder config:manage, das Recht
   // hinter Anmeldungen und Einstellungen (#3469). Entscheidet über die
   // Anmeldungen, die Rolle der Hilfe und die beim ersten Besuch offenen
@@ -484,61 +463,23 @@ function SidebarContent({
     fromParam,
     getStaffNavDefaultOpenGroups(userLeadsSchool),
   );
-  const presenceMode = usePresenceMode();
-  const isBinaryMode = presenceMode === "binary";
-  // Gebuchte Module (#4894): offen, mit Schloss oder gar nicht.
-  const moduleNav = useModuleNavigation();
-  // Schulschalter der Seiten aus der geteilten Liste.
-  const navSettings = useStaffNavSettings();
-  // Betreuungsplan-Flag für den Tagesplan-Eintrag (#2383): vom Tenant-Resolve,
-  // damit es auch für Betreuungskräfte ohne config:read aufgelöst ist.
-  const tagesplanEnabled = useTimetableEnabled();
-  const staffMessagingEnabled = useStaffMessagingEnabled();
+  // Welche Seiten die Person sieht, offen oder mit Schloss: die flachen
+  // Seiten nach derselben Regel wie in der mobilen Leiste
+  // (staff-nav-items.ts), die Katalogseiten nach den Regeln, die auch die
+  // Suche liest (staff-nav-pages.ts).
+  const {
+    pageState,
+    viewer: { openCareGroupMode },
+    moduleNav,
+    isBinaryMode,
+    catalogViewer,
+  } = useStaffNavPages(session ?? null, {
+    tagesplanRouteRightForAdmins: false,
+    staffNoticesOpenForAdminRole: false,
+    loadSchoolSwitches: true,
+  });
   const { counts: groupAttendanceCounts } = useGroupAttendanceCounts();
   const canShowGroupAttendanceCounts = pathname.startsWith("/ogs-groups");
-  // Aus dem Navigationskontext (#4996): die Navigation lädt für ihre Schulschalter
-  // nicht das ganze Settings-Schema.
-  const parentNewsEnabled = useSchoolParentNewsEnabled();
-
-  // Vom Tenant-Resolve (#3873): eine Küchenrolle hält meals:*, aber kein
-  // config:read und liest das Settings-Schema nicht.
-  const mealPlanEnabled = useMealPlanEnabled();
-
-  // Planung-Akkordeon (#1946): dasselbe timetable.enabled wie der
-  // Tagesplan-Eintrag und das Route-Gate in betreuungsplan-view.tsx.
-  const timetableEnabled = tagesplanEnabled;
-
-  // Nur die Seiten des Betreuungsplans hängen an timetable.enabled.
-  // Kalenderzeiträume bleiben erreichbar (Anmeldephasen verknüpfen sich mit
-  // ihnen); Dienstplan und Abrechnung folgen ihren Modulen (#4894).
-  // Gruppenübergaben (#1940) sind nur bei
-  // festen Gruppen sinnvoll; bei offener Betreuung arbeiten ohnehin alle
-  // Berechtigten mit allen Kindern.
-  const openCareGroupMode = useOpenCareGroupMode();
-  const catalogViewer: StaffCatalogViewer = useMemo(
-    () => ({
-      session,
-      isAdmin: userIsAdmin,
-      effectiveAdminScope: userHasEffectiveAdminScope,
-      openCareGroupMode,
-      moduleNav,
-      timetableEnabled,
-      parentNewsEnabled,
-      mealPlanEnabled,
-      staffMessagingEnabled,
-    }),
-    [
-      session,
-      userIsAdmin,
-      userHasEffectiveAdminScope,
-      openCareGroupMode,
-      moduleNav,
-      timetableEnabled,
-      parentNewsEnabled,
-      mealPlanEnabled,
-      staffMessagingEnabled,
-    ],
-  );
   const planningSubPages = useMemo(
     () => planningNavPages(catalogViewer),
     [catalogViewer],
@@ -586,49 +527,21 @@ function SidebarContent({
     "/tagesinformationen": staffNoticesPendingCount,
   };
 
-  // Die Seiten aus der geteilten Liste (staff-nav-items.ts). Das Modul der
-  // Seite entscheidet zuerst (#4894): nicht gebucht heißt weg oder Schloss.
-  const navViewer = {
-    session,
-    isAdmin: userIsAdmin,
-    isCaregiver: userIsCaregiver,
-    openCareGroupMode,
-  };
+  // Die Seiten aus der geteilten Liste (staff-nav-items.ts).
   const filteredNavItems: NavItem[] = STAFF_NAV_ITEMS.flatMap((item) => {
-    // Der Binärmodus schließt diese Seiten vollständig aus. Auch eine Leitung
-    // darf hier kein Schloss sehen, weil die Zielseite nicht erklärt, sondern
-    // als nicht passende Anwesenheitsart gesperrt ist.
-    if (isBinaryMode && item.binaryHidden) return [];
-    const gate = moduleGate(
-      moduleNav.page(item.href),
-      isNavItemPermitted(item),
-      true,
-    );
-    return gate.show
+    const state = pageState(item.href);
+    return state
       ? [
           {
             href: item.href,
             label: item.label,
             concept: item.concept,
             newTab: item.newTab,
-            locked: gate.locked,
+            locked: state === "locked",
           },
         ]
       : [];
   });
-
-  function isNavItemPermitted(item: StaffNavItem): boolean {
-    // Anfragen (#2429/#2911): JWT-Rechte allein reichen nicht. Für
-    // Elternanfragen muss zusätzlich der aktuelle serverseitige Prüfbereich
-    // (Admin, Gruppenleitung oder Vertretung) gelten.
-    if (item.href === STAFF_FLAT_PAGES.anfragen.href) {
-      return changeRequestAccess.canOpenRequestsPage;
-    }
-    return (
-      staffNavSettingOn(item, navSettings) &&
-      staffNavItemPermitted(item, navViewer)
-    );
-  }
 
   // Helper to determine active href for student detail pages based on referrer
   const getStudentDetailActiveHref = (from: string | null): string => {

@@ -23,7 +23,7 @@ type ExportFile struct {
 }
 
 // Runtime is what the root binds: the caller's account, the list renderer
-// (PDF and Excel), the password reset, and the caterer's sign-in and
+// (PDF and Excel), the password reset, the caterer's sign-in and
 // second factor (#4497), which Identity & Access serves (#6172). A zero
 // reset runtime answers its routes as unavailable.
 type Runtime struct {
@@ -48,8 +48,8 @@ type Resource struct {
 	runtime Runtime
 }
 
-// NewResource builds the resource; the portal, the account and the
-// renderer are required.
+// NewResource builds the resource; the portal, the account, the renderer
+// and the auth routes are required.
 func NewResource(portal catererportal.Portal, runtime Runtime) *Resource {
 	if portal == nil || runtime.CurrentAccountID == nil || runtime.RenderList == nil || runtime.Auth == nil {
 		panic("caterer portal HTTP: portal, account, renderer and auth routes are required")

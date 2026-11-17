@@ -117,7 +117,7 @@ func TestVerifyAccessSessionRefusesForeignAndMissingFamilies(t *testing.T) {
 	otherPortal.Scope = "parent"
 	require.ErrorIs(t, module.VerifyAccessSession(ctx, otherPortal), identityaccess.ErrInvalidToken)
 
-	_, err = db.ExecContext(ctx, `UPDATE auth.tokens SET expiry = NOW() - INTERVAL '1 second' WHERE family_id = ?`, session.FamilyID)
+	_, err = db.ExecContext(ctx, `UPDATE auth.tokens SET expiry = ? WHERE family_id = ?`, time.Now().Add(-time.Second), session.FamilyID)
 	require.NoError(t, err)
 	require.ErrorIs(t, module.VerifyAccessSession(ctx, session), identityaccess.ErrInvalidToken, "an expired family ends its access tokens")
 }

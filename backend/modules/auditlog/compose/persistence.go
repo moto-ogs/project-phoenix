@@ -51,7 +51,7 @@ type PersistenceDependencies struct {
 	// Students and CarePlan are bound into the booking consistency audit.
 	Students StudentDirectory
 	CarePlan CareOfferingDirectory
-	Now      func() time.Time // stamps events appended without a time; nil is the real clock
+	Now      func() time.Time // stamps work session edits appended without a time; nil is the real clock
 }
 
 // NewPersistence builds the Audit runtime, every retained repository, the

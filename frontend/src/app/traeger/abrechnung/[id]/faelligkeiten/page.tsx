@@ -6,49 +6,31 @@
 // Freigabe ändern sich die Daten nicht mehr.
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import { holidayDebitItems } from "~/components/traeger/care-debit-hints";
 import { RunDueDatesForm } from "~/components/traeger/run-due-dates-form";
 import { usePrenotificationDays } from "~/components/traeger/use-prenotification-days";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
-import {
-  type BillingRunDetail,
-  fetchBillingRun,
-} from "~/lib/traeger-billing-api";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
+import { fetchBillingRun } from "~/lib/traeger-billing-api";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerHolidayRunDueDatesPage" });
 
 export default function TraegerHolidayRunDueDatesPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const runId = params?.id ?? "";
-  const [run, setRun] = useState<BillingRunDetail | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
+  const {
+    data: run,
+    loading,
+    error,
+    reload,
+  } = useTraegerResource(
+    runId ? traegerBillingKeys.holidayRun(runId) : null,
+    () => fetchBillingRun(runId),
+    "der Abrechnungslauf",
+  );
   const runHref = traegerPath(`/traeger/abrechnung/${runId}`);
-
-  const load = useCallback(async () => {
-    try {
-      setRun(await fetchBillingRun(runId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_holiday_run_due_dates_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "der Abrechnungslauf",
-        retry: () => void load(),
-      });
-    }
-  }, [runId, showLoadError, clearLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   // The pre-notification days name the rule under the direct debit date.
   const prenotificationDays = usePrenotificationDays();
@@ -60,9 +42,9 @@ export default function TraegerHolidayRunDueDatesPage() {
       backHref={runHref}
       backLabel="Zurück zum Abrechnungslauf"
       stats={run ? <span>{run.periodName}</span> : null}
-      statsLoading={!run && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !run}
+      statsLoading={loading}
+      error={error}
+      loading={loading}
     >
       {run && run.status !== "calculated" ? (
         <Alert
@@ -78,7 +60,11 @@ export default function TraegerHolidayRunDueDatesPage() {
           debitItems={holidayDebitItems(run.documents)}
           prenotificationDays={prenotificationDays}
           onCancel={() => router.push(runHref)}
-          onSaved={() => router.push(runHref)}
+          onSaved={() => {
+            // The run's page shows the new due dates.
+            reload();
+            router.push(runHref);
+          }}
         />
       ) : null}
     </TenantPage>

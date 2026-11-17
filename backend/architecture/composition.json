@@ -80,7 +80,7 @@
       "declaration": "TestNewWorkerRejectsMissingJobs",
       "target": "services/scheduler.NewWorker",
       "lines": [
-        101
+        102
       ],
       "tables": []
     },
@@ -90,7 +90,7 @@
       "declaration": "TestNewWorkerRejectsMissingRuntimeDependencies",
       "target": "services/scheduler.NewWorker",
       "lines": [
-        93
+        94
       ],
       "tables": []
     },
@@ -100,8 +100,8 @@
       "declaration": "TestNewWorkerRejectsMissingSettings",
       "target": "services/scheduler.NewWorker",
       "lines": [
-        280,
-        284
+        281,
+        285
       ],
       "tables": []
     },
@@ -111,7 +111,7 @@
       "declaration": "TestNewWorkerRejectsMissingTokenCleanupDependencies",
       "target": "services/scheduler.NewWorker",
       "lines": [
-        130
+        131
       ],
       "tables": []
     },
@@ -121,8 +121,8 @@
       "declaration": "TestNewWorkerRejectsTypedNilDependencies",
       "target": "services/scheduler.NewWorker",
       "lines": [
-        146,
-        157
+        147,
+        158
       ],
       "tables": []
     }

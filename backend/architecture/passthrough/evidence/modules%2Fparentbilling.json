@@ -30,9 +30,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (r *Renderer) CombineLetters(letters [][]byte, title, filenameBase string) (parentbilling.BillingLetterFile, error) {\n\tfile, err := r.letters.CombineLetters(letters, title, filenameBase)\n\tif errors.Is(err, lists.ErrNoLetters) {\n\t\treturn parentbilling.BillingLetterFile{}, fmt.Errorf(\"%w: %w\", parentbilling.ErrBillingLettersMissing, err)\n\t}\n\tif err != nil {\n\t\treturn parentbilling.BillingLetterFile{}, err\n\t}\n\treturn parentbilling.BillingLetterFile{Filename: file.Filename, ContentType: file.ContentType, Data: file.Data}, nil\n}",
+      "evidence": "func (r *LetterRenderer) CombineLetters(letters [][]byte, title, filenameBase string) (parentbilling.BillingLetterFile, error) {\n\tfile, err := r.letters.CombineLetters(letters, title, filenameBase)\n\tif errors.Is(err, lists.ErrNoLetters) {\n\t\treturn parentbilling.BillingLetterFile{}, fmt.Errorf(\"%w: %w\", parentbilling.ErrBillingLettersMissing, err)\n\t}\n\tif err != nil {\n\t\treturn parentbilling.BillingLetterFile{}, err\n\t}\n\treturn parentbilling.BillingLetterFile{Filename: file.Filename, ContentType: file.ContentType, Data: file.Data}, nil\n}",
       "form": "unclassified-evidence",
-      "id": "modules/parentbilling/internal/adapters/rendering/Renderer.CombineLetters",
+      "id": "modules/parentbilling/internal/adapters/rendering/LetterRenderer.CombineLetters",
       "owner": "modules/parentbilling"
     },
     {

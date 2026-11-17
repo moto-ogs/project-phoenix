@@ -12,7 +12,7 @@
  * jeder Sitzungsaufzeichnung.
  */
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Alert } from "~/components/ui/alert";
@@ -27,9 +27,12 @@ import {
 import { Radio } from "~/components/ui/radio";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Textarea } from "~/components/ui/textarea";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import { berlinClockFromISO, formatBerlinDate } from "~/lib/date-helpers";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import {
   SURVEY_SCALE_VALUES,
   SURVEY_TEXT_MAX_LENGTH,
@@ -247,6 +250,13 @@ function QuestionField({
 }
 
 export interface SurveyAnswerPanelProps {
+  /**
+   * Welcher Fragebogen: die Umfrage (Team) oder die Mitteilung (Eltern), mit
+   * einem Stand, etwa dem Veröffentlichungszeitpunkt. Ein neuer Wert lädt
+   * neu und verwirft die Antworten.
+   */
+  readonly formId: string;
+  readonly formVersion?: string;
   /** Lädt den Fragebogen; ein Fehler steht im Panel mit Wiederholen. */
   readonly load: () => Promise<SurveyForm>;
   /** Schickt die Antworten einmal ab. */
@@ -256,8 +266,6 @@ export interface SurveyAnswerPanelProps {
   readonly onSubmitted?: () => void;
   /** Meldet, ob gerade abgeschickt wird (Dialog nicht schließen). */
   readonly onBusyChange?: (busy: boolean) => void;
-  /** Ein neuer Wert lädt den Fragebogen neu. */
-  readonly reloadKey?: string;
   /**
    * Die Einleitung zeigen. Im Elternportal steht sie schon als Text der
    * Mitteilung darüber.
@@ -270,58 +278,44 @@ export interface SurveyAnswerPanelProps {
  * betten es in ihren Dialog ein.
  */
 export function SurveyAnswerPanel({
+  formId,
+  formVersion = "",
   load,
   submit,
   respondent,
   onSubmitted,
   onBusyChange,
-  reloadKey = "",
   showIntro = true,
 }: SurveyAnswerPanelProps) {
   const t = useTranslations("surveyForm");
   const closesAtLabel = useSurveyClosesAtLabel();
-  const [form, setForm] = useState<SurveyForm | null>(null);
+  const cacheKey = tenantDailyKeys.surveyForm(respondent, formId, formVersion);
+  const {
+    data,
+    error: formError,
+    mutate: reloadForm,
+  } = useSWRAuth(cacheKey, load, { keepPreviousData: false });
+  const form: SurveyForm | null = data ?? null;
   const [draft, setDraft] = useState<SurveyDraft>({});
   const [attempted, setAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [reloadToken, setReloadToken] = useState(0);
-  const loadErrors = useApiLoadError();
-  const submitErrors = useApiFormError();
-  const fieldPrefix = useId();
-  const fieldName = (questionId: string) => `${fieldPrefix}-q${questionId}`;
-  const { show: showLoadError, clear: clearLoadError } = loadErrors;
-  const loadRef = useRef(load);
-  useLayoutEffect(() => {
-    loadRef.current = load;
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-    setForm(null);
+  // Another questionnaire starts without the previous answers.
+  const [draftKey, setDraftKey] = useState(cacheKey);
+  if (draftKey !== cacheKey) {
+    setDraftKey(cacheKey);
     setDraft({});
     setAttempted(false);
     setSubmitted(false);
-    clearLoadError();
-    loadRef
-      .current()
-      .then((loaded) => {
-        if (!cancelled) setForm(loaded);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("survey_form_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: t("loadObject"),
-          retry: () => setReloadToken((n) => n + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadKey, reloadToken, clearLoadError, showLoadError, t]);
+  }
+  const loadErrors = useSwrResourceLoadError(
+    [{ data, error: formError }],
+    t("loadObject"),
+    () => reloadForm(),
+  );
+  const submitErrors = useApiFormError();
+  const fieldPrefix = useId();
+  const fieldName = (questionId: string) => `${fieldPrefix}-q${questionId}`;
 
   useEffect(() => {
     onBusyChange?.(submitting);
@@ -363,6 +357,8 @@ export function SurveyAnswerPanel({
       await submit(buildSurveyAnswers(questions, draft));
       setSubmitted(true);
       setDraft({});
+      // The cached questionnaire learns that this account took part.
+      void reloadForm();
       onSubmitted?.();
     } catch (err: unknown) {
       // Nur die Fehlermeldung, nie der Rumpf mit den Antworten.

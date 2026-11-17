@@ -8,6 +8,7 @@ import { GroupAttendanceCountProvider } from "~/lib/group-attendance-count-conte
 import { TeacherShellProvider } from "~/lib/shell-auth-context";
 import { AppShell } from "~/components/dashboard/app-shell";
 import { NotBookedPageProvider } from "~/components/tenant/module-not-booked-state";
+import { ErrorFixTargetsProvider } from "~/components/tenant/error-fix-targets";
 import { TenantPagePathProvider } from "~/components/tenant/tenant-page-path";
 import { ShellIntlProvider } from "~/components/dashboard/shell-intl-provider";
 import { AnnouncementModal } from "~/components/platform/announcement-modal";
@@ -41,10 +42,13 @@ export default function ProtectedLayout({
                     (#4894); der Rückweg des Gerüsts führt in die Schule. */}
                   <TenantPagePathProvider>
                     <NotBookedPageProvider>
-                      <ParentAttentionOverlayProvider>
-                        {children}
-                        {parentAttention}
-                      </ParentAttentionOverlayProvider>
+                      {/* Fehler führen zur Stelle, an der man sie behebt (#7092). */}
+                      <ErrorFixTargetsProvider>
+                        <ParentAttentionOverlayProvider>
+                          {children}
+                          {parentAttention}
+                        </ParentAttentionOverlayProvider>
+                      </ErrorFixTargetsProvider>
                     </NotBookedPageProvider>
                   </TenantPagePathProvider>
                 </AppShell>

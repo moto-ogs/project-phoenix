@@ -94,6 +94,7 @@ func (m *mockCareOfferingService) ListBookingStats(_ context.Context, phaseID in
 
 func buildCareOfferingRouter(svc CareOfferingCatalog) chi.Router {
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, CareOfferingService: svc}
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))
@@ -659,6 +660,7 @@ func TestCareOfferingRouter_BookingStatsIsNotTreatedAsAnID(t *testing.T) {
 
 	mock := &mockCareOfferingService{bookingStatsResult: []CareOfferingBookingStat{}}
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, CareOfferingService: mock}
 	router := chi.NewRouter()
 	router.Use(render.SetContentType(render.ContentTypeJSON))

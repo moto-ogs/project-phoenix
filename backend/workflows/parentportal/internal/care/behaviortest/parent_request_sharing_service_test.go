@@ -63,6 +63,7 @@ func buildRequestSharing(db *bun.DB, repos *api.RepositoryTestFactory, reposPeop
 		ChangeRequestRepo:      owners.NewParentDataRequestReads(repos.CarePlan()),
 		FamilyProtectionEvents: owners.BindParentFamilyProtectionReads(reposPeople.FamilyProtection), ParentRequestShares: owners.BindParentRequestShareRecords(reposPeople.ParentRequestShare),
 		Logger: slog.Default(),
+		Now:    fixedPortalNow,
 	})
 }
 
