@@ -139,6 +139,18 @@ func TestClosingDayReachesTheBellOfTheSchoolsTraegerOnly(t *testing.T) {
 	entries, unread = f.traegerFeed(t, office.ID, own)
 	require.Len(t, entries, 3)
 	assert.Equal(t, 3, unread)
+	// The bell pages like the staff portal's: newest first, then the cursor.
+	var firstPage, nextPage struct {
+		Entries    []traegerFeedEntry `json:"entries"`
+		NextCursor *string            `json:"next_cursor"`
+	}
+	f.traegerFeedCall(t, office.ID, own, http.MethodGet, "/?limit=2", &firstPage)
+	require.Len(t, firstPage.Entries, 2)
+	require.NotNil(t, firstPage.NextCursor)
+	f.traegerFeedCall(t, office.ID, own, http.MethodGet, "/?limit=2&cursor="+*firstPage.NextCursor, &nextPage)
+	require.Len(t, nextPage.Entries, 1)
+	assert.Nil(t, nextPage.NextCursor)
+	assert.Equal(t, entries[2].ID, nextPage.Entries[0].ID)
 	var count struct {
 		UnreadCount int `json:"unread_count"`
 	}

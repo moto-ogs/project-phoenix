@@ -45,12 +45,12 @@ func (s *Store) ListTraegerFeedEntries(ctx context.Context, organizationID, acco
 	if err != nil {
 		return nil, err
 	}
-	query, args := listTraegerFeedFirstPageSQL, []any{organizationID, accountID, pgdialect.Array(types), limit}
-	if after != nil {
-		query, args = listTraegerFeedNextPageSQL, append(args, after.UpdatedAt, after.ID)
-	}
 	var rows []traegerFeedEntryRow
-	if err := db.NewRaw(query, args...).Scan(ctx, &rows); err != nil {
+	query := db.NewRaw(listTraegerFeedFirstPageSQL, organizationID, accountID, pgdialect.Array(types), limit)
+	if after != nil {
+		query = db.NewRaw(listTraegerFeedNextPageSQL, organizationID, accountID, pgdialect.Array(types), limit, after.UpdatedAt, after.ID)
+	}
+	if err := query.Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("delivery postgres: list Träger feed entries: %w", err)
 	}
 	entries := make([]domain.TraegerFeedEntry, 0, len(rows))
