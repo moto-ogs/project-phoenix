@@ -121,11 +121,11 @@ func (s *StudentService) RenewEnrollment(ctx context.Context, id int64, input do
 		}
 		record.SchoolClass, record.Status = input.SchoolClass, input.Status
 		record.EnrolledFrom, record.EnrolledUntil = input.EnrolledFrom, input.EnrolledUntil
-		// A renewal is an enrollment for OGS care (approval, rollover,
-		// import): a child without an OGS place gets its place with it
-		// (#4803, ADR 0282) and from then on counts for the child quota,
-		// which School Membership checks on this write.
-		record.WithoutCarePlace = false
+		// Accepted enrollments grant an OGS place; administrative imports keep
+		// the status read under the student lock.
+		if !input.PreserveCarePlaceStatus {
+			record.WithoutCarePlace = false
+		}
 		_, err = s.owners.Renew(txCtx, record)
 		return err
 	})

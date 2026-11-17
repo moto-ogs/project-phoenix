@@ -59,7 +59,8 @@ type EnrollmentStudent struct {
 	EnrolledFrom   string
 	EnrolledUntil  string
 	// WithoutCarePlace marks a created child without an OGS place (#4803).
-	WithoutCarePlace bool
+	WithoutCarePlace        bool
+	PreserveCarePlaceStatus bool
 }
 
 // StudentStatusAlumnus is the lifecycle status of a graduated child. Rows
