@@ -51,8 +51,10 @@ func (c guardianEmailRoute) mark(t *testing.T, address, reason string) {
 
 func (c guardianEmailRoute) invitationMail(t *testing.T, address, state string) {
 	t.Helper()
-	// Delivery stamps these columns on its own clock, the time.Now of the route
-	// (ADR 0281), and judges a delayed mail's wait against it.
+	// Delivery stamps next_retry_at and sent_at on its own clock, the time.Now
+	// of the route (ADR 0281). delivery_state_at is the provider's event time,
+	// which EmailOutcomeAt ages against that clock; a provider reporting in
+	// real time reports the owner's now.
 	now := time.Now()
 	_, err := c.db.ExecContext(testpkg.Ctx(t), `INSERT INTO platform.email_outbox
 		(tenant_id, kind, recipient, payload, status, next_retry_at, sent_at, delivery_state, delivery_state_at)

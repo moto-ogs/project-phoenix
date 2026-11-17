@@ -107,8 +107,9 @@ func TestBillingLetterMailShowsTheProvidersWord(t *testing.T) {
 		assert.Equal(t, "accepted", mailing.MailOutcome, "acceptance is no delivery")
 	}
 
-	// Delivery stamps a provider's report on its own clock, the time.Now of the
-	// portal (ADR 0281), and judges a delayed mail's wait against it.
+	// delivery_state_at is the provider's event time; EmailOutcomeAt ages it
+	// against Delivery's clock, the time.Now of the portal. A provider
+	// reporting in real time reports that now.
 	_, err = f.db.ExecContext(ctx, `UPDATE platform.email_outbox SET delivery_state = 'delayed', delivery_state_at = ? WHERE id = ?`, time.Now(), mails[0].ID)
 	require.NoError(t, err)
 	_, err = f.db.ExecContext(ctx, `UPDATE platform.email_outbox SET delivery_state = 'delivered', delivery_state_at = ? WHERE id = ?`, time.Now(), mails[1].ID)

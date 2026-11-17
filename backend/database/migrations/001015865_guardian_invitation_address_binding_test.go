@@ -28,10 +28,13 @@ func TestGuardianInvitationAddressBinding(t *testing.T) {
 		created := testpkg.CreateTestGuardianProfile(t, db, seed)
 		return created.ID, *created.Email
 	}
-	// Expiry and the profile's updated_at are written by PostgreSQL, and the
-	// migration compares them with its now(). Fixture times and assertions use
-	// that same clock: a local container's clock and the host clock can
-	// differ by milliseconds, and the Go clock may be on another day.
+	// Named limit (#7295): in production Identity & Access stamps expires_at
+	// on its own clock (CreateGuardianInvitation), but this migration's Up and
+	// its rollback (Down) judge it against statement_timestamp(), the
+	// database clock; the profile's updated_at is stamped by its trigger.
+	// Migration SQL stays unchanged, so the fixture places expiry on the
+	// clock the migration judges with. With the Go clock on another day an
+	// owner-stamped expiry would be judged on the wrong day by Up and Down.
 	databaseNow := func() time.Time {
 		t.Helper()
 		var now time.Time

@@ -618,8 +618,10 @@ func TestCareContractMailFollowsTheCurrentStateOfTheAddress(t *testing.T) {
 		return rec.Body.String()
 	}
 	require.Contains(t, send(), fmt.Sprintf(`"sent":[%d]`, id))
-	// Delivery stamps the mail on its own clock, the time.Now of the portal
-	// (ADR 0281), and judges a delayed mail's wait against it.
+	// Delivery stamps sent_at on its own clock, the time.Now of the portal
+	// (ADR 0281). delivery_state_at is the provider's event time, which
+	// EmailOutcomeAt ages against that clock; a provider reporting in real
+	// time reports the owner's now.
 	set := func(state string) {
 		t.Helper()
 		now := time.Now()

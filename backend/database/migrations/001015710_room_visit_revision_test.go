@@ -3,6 +3,7 @@ package migrations
 import (
 	"context"
 	"testing"
+	"time"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -31,10 +32,11 @@ func TestSchoolErasureRemovesRoomRevisionEvents(t *testing.T) {
 	open := func(schoolID int64) int64 {
 		student := testpkg.CreateTestStudentForTenant(t, db, schoolID, "Room", "Erasure", "2b")
 		group := testpkg.CreateTestActiveGroupForTenant(t, db, schoolID)
-		_, err := db.ExecContext(ctx, `INSERT INTO active.visits (tenant_id, student_id, active_group_id, entry_time) VALUES (?, ?, ?, NOW() - INTERVAL '1 hour')`,
-			schoolID, student.ID, group.ID)
+		now := time.Now()
+		_, err := db.ExecContext(ctx, `INSERT INTO active.visits (tenant_id, student_id, active_group_id, entry_time) VALUES (?, ?, ?, ?)`,
+			schoolID, student.ID, group.ID, now.Add(-time.Hour))
 		require.NoError(t, err)
-		_, err = db.ExecContext(ctx, `UPDATE active.groups SET end_time = NOW() WHERE id = ?`, group.ID)
+		_, err = db.ExecContext(ctx, `UPDATE active.groups SET end_time = ? WHERE id = ?`, now, group.ID)
 		require.NoError(t, err)
 		_, err = db.ExecContext(ctx, `UPDATE active.groups SET end_time = NULL WHERE id = ?`, group.ID)
 		require.NoError(t, err)
@@ -57,8 +59,9 @@ func TestSchoolErasureRemovesRoomRevisionEvents(t *testing.T) {
 
 // TestRoomVisitRevisionMigrationRoundTrip pins that 1.15.710 runs twice,
 // rolls back to the session-only events of 1.15.705 and applies again. The
-// visit enters on the database clock because the fixture ends it with NOW()
-// and chk_entry_before_exit orders both instants.
+// owner of sessions and visits stamps entry, end and exit on its Go clock,
+// and chk_entry_before_exit orders them, so the fixture writes all three on
+// that clock; the triggers read none.
 func TestRoomVisitRevisionMigrationRoundTrip(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
@@ -74,10 +77,11 @@ func TestRoomVisitRevisionMigrationRoundTrip(t *testing.T) {
 	testpkg.EnsureTestTenant(t, db, school)
 	student := testpkg.CreateTestStudentForTenant(t, db, school, "Room", "RoundTrip", "2b")
 	group := testpkg.CreateTestActiveGroupForTenant(t, db, school)
-	_, err := db.ExecContext(ctx, `INSERT INTO active.visits (tenant_id, student_id, active_group_id, entry_time) VALUES (?, ?, ?, NOW() - INTERVAL '1 hour')`,
-		school, student.ID, group.ID)
+	now := time.Now()
+	_, err := db.ExecContext(ctx, `INSERT INTO active.visits (tenant_id, student_id, active_group_id, entry_time) VALUES (?, ?, ?, ?)`,
+		school, student.ID, group.ID, now.Add(-time.Hour))
 	require.NoError(t, err)
-	_, err = db.ExecContext(ctx, `UPDATE active.groups SET end_time = NOW() WHERE id = ?`, group.ID)
+	_, err = db.ExecContext(ctx, `UPDATE active.groups SET end_time = ? WHERE id = ?`, now, group.ID)
 	require.NoError(t, err)
 	require.Equal(t, 1, countRevisionEvents(t, db, school), "one session event")
 	require.Equal(t, 3, countAllRevisionRows(t, db, school), "the session event, the entry at the start and the room row of the end")
@@ -88,7 +92,7 @@ func TestRoomVisitRevisionMigrationRoundTrip(t *testing.T) {
 	assert.Equal(t, 1, countAllRevisionRows(t, db, school), "the session event stays, the entry and room rows go")
 	_, err = db.ExecContext(ctx, `UPDATE active.groups SET end_time = NULL WHERE id = ?`, group.ID)
 	require.NoError(t, err)
-	_, err = db.ExecContext(ctx, `UPDATE active.visits SET exit_time = NOW() WHERE active_group_id = ?`, group.ID)
+	_, err = db.ExecContext(ctx, `UPDATE active.visits SET exit_time = ? WHERE active_group_id = ?`, time.Now(), group.ID)
 	require.NoError(t, err, "the 1.15.705 trigger still writes session events")
 	assert.Equal(t, 2, countAllRevisionRows(t, db, school), "without the room scope a reopening records nothing")
 	require.NoError(t, roomVisitRevisionUp(ctx, db))

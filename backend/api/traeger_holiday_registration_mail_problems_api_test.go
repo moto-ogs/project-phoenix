@@ -182,9 +182,10 @@ func TestHolidayRegistrationMailsNameSuppressedAndRefusedMails(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Mailstand Zurückgehalten")
 	ctx := context.Background()
-	// Delivery stamps its mails on its own clock, the time.Now of the fixture
-	// (ADR 0281), and lists them in the order of created_at: the acceptance
-	// comes about after the receipt.
+	// Delivery stamps sent_at and created_at on its own clock, the time.Now of
+	// the fixture (ADR 0281), and lists the mails in the order of created_at:
+	// the acceptance comes about after the receipt. delivery_state_at is the
+	// provider's event time; a provider reporting in real time reports that now.
 	set := func(id int64, kind, state string) {
 		now := time.Now()
 		_, err := f.db.NewRaw(`UPDATE platform.email_outbox SET status = 'sent', sent_at = ?, delivery_state = ?, delivery_state_at = ?
