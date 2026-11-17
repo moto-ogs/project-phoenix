@@ -75,9 +75,12 @@ var moduleSQLClockBudget = map[string]int{
 	// Includes CompletionTimestamp (ADR 0281): completed_at is ordered against
 	// the updated_at of rows the database stamps.
 	"modules/timetable": 4,
-	// Includes the finished staff document cleanups: their database function
-	// guards the cutoff with the database clock (1.15.606).
-	"modules/workforce": 32,
+	// The finished staff document cleanups: their database function guards
+	// the cutoff with the database clock (1.15.606). And the lift of a pool
+	// block by the Träger (ADR 0281): the school lifts its blocks through the
+	// database function workforce.pool_lift, which stamps lifted_at with
+	// now(), so the Träger's lift stamps the column on the same clock.
+	"modules/workforce": 2,
 }
 
 var sqlClockRead = regexp.MustCompile(`(?i)\b(?:now|clock_timestamp|statement_timestamp|transaction_timestamp)\s*\(\s*\)|\b(?:current_timestamp|current_date|current_time|localtimestamp|localtime)\b`)

@@ -201,7 +201,7 @@ func (s *Store) RetireStaffQualifications(ctx context.Context, staffID int64, id
 	}
 	query := withTenant(db.NewUpdate().Model((*staffQualificationRow)(nil)).
 		ModelTableExpr(tableStaffQualifications+` AS "staff_qualification"`).
-		Set("deleted_at = NOW()").
+		Set("deleted_at = ?", s.stamp()).
 		Where(`"staff_qualification".staff_id = ?`, staffID).
 		Where(`"staff_qualification".id IN (?)`, bun.List(ids)).
 		Where(`"staff_qualification".deleted_at IS NULL`), aliasStaffQualification, scope)
