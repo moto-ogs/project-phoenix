@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { testClockDay } from "~/test/clock";
 
 import { RequestReviewCard, RequestRowHeader } from "./request-review-card";
 
@@ -9,7 +10,7 @@ describe("RequestReviewCard", () => {
       <RequestReviewCard
         childName="Lina Beispiel"
         type="enrollment"
-        submittedAt="2026-08-20T09:00:00Z"
+        submittedAt={`${testClockDay(-20)}T09:00:00Z`}
         history={{ kind: "readonly", label: "Offen", tone: "orange" }}
       />,
     );
