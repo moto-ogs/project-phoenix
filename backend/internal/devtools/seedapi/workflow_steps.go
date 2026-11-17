@@ -222,9 +222,9 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 		steps = append(steps, parentRequestsSeedStep{seeder: seeder}, seedEnrollmentPlacementStep{}, seedEnrollmentIncomeProofStep{}, seedEnrollmentSignatureStep{}, seedOfferingRosterStep{seeder: seeder}, seedBookingLeftoverStep{seeder: seeder}, seedFamilyAppAccountsStep{seeder: seeder})
 	}
 	steps = append(steps,
-		seedParentEngagementStep{}, seedParentCancellationNoticeStep{}, seedMealPlanChangeStep{}, seedRoomChangeNoticeStep{}, seedAnalyticsConsentStep{}, seedSchoolLifeStep{},
+		seedParentEngagementStep{}, seedParentCancellationNoticeStep{}, seedRoomChangeNoticeStep{}, seedAnalyticsConsentStep{}, seedSchoolLifeStep{},
 		// After the parents: it orders lunch for the children they registered.
-		seedMealOrdersStep{seeder: seeder}, seedEmailStopStep{},
+		seedMealOrdersStep{seeder: seeder}, seedMealPlanChangeStep{}, seedEmailStopStep{},
 	)
 	if !seeder.options.DeferHistory {
 		// After the meal orders: books care and lunch for the children who eat.
