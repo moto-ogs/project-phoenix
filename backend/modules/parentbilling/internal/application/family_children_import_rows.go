@@ -179,8 +179,9 @@ type familyImportCheck struct {
 	named      map[int64]int
 }
 
-func problemOf(row *parentbilling.FamilyChildrenImportRow, field, code string) {
-	row.Problems = append(row.Problems, parentbilling.FamilyChildrenImportProblem{Field: field, Code: code})
+// problemOf notes what holds a row back: the field and the kind of problem.
+func problemOf(row *parentbilling.FamilyChildrenImportRow, field, problem string) {
+	row.Problems = append(row.Problems, parentbilling.FamilyChildrenImportProblem{Field: field, Code: problem})
 }
 
 // candidate reads one row.

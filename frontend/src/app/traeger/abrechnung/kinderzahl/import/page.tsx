@@ -10,6 +10,7 @@ import { CheckCircle, Download } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import {
   FAMILY_IMPORT_SAMPLE,
+  familyImportOpenRows,
   numberCountLabel,
 } from "~/components/traeger/family-children-import-format";
 import { FamilyChildrenImportMappingCard } from "~/components/traeger/family-children-import-mapping-card";
@@ -52,8 +53,7 @@ function errorText(err: unknown): string {
 
 function doneDescription(done: FamilyImportResult): string {
   const { counts } = done;
-  const left = counts.conflict + counts.invalid + counts.differs;
-  return `${counts.same} schon bestätigt, ${left} nicht übernommen. Die Zahlen stehen unter Kinderzahl mit dem Stand „Bestätigt“. Neue Monatsläufe rechnen damit.`;
+  return `${counts.same} schon bestätigt, ${familyImportOpenRows(counts)} nicht übernommen. Die Zahlen stehen unter Kinderzahl mit dem Stand „Bestätigt“. Neue Monatsläufe rechnen damit.`;
 }
 
 export default function TraegerKinderzahlImportPage() {
@@ -138,7 +138,8 @@ export default function TraegerKinderzahlImportPage() {
       void show(err, { object: "die Kinderzahlen" });
       if (
         err instanceof ApiError &&
-        err.code === wireErrorCode("parent_billing.sepa_import_changed")
+        err.code ===
+          wireErrorCode("parent_billing.family_children_import_changed")
       ) {
         // The rows changed since the office looked: show the current ones,
         // the import waits for a new confirmation.

@@ -98,8 +98,11 @@ func (n *familyNumbers) count() (count *parentbilling.FamilyChildCount, differin
 	return first, false
 }
 
+// sameConfirmation tells whether two contracts brought the same number.
+// The run compares the numbers valid in its month (confirmedIn), so the
+// list compares the numbers too, not their days.
 func sameConfirmation(a, b *parentbilling.FamilyChildCount) bool {
-	return equalPtr(a.ConfirmedChildren, b.ConfirmedChildren) && equalPtr(a.ValidFrom, b.ValidFrom) && equalPtr(a.ValidUntil, b.ValidUntil)
+	return equalPtr(a.ConfirmedChildren, b.ConfirmedChildren)
 }
 
 func equalPtr[T comparable](a, b *T) bool {

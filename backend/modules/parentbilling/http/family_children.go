@@ -121,8 +121,6 @@ func renderFamilyChildrenError(w http.ResponseWriter, r *http.Request, err error
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingFamilyChildrenInvalid))
 	case errors.Is(err, capability.ErrFamilyChildrenNotFound):
 		common.RenderError(w, r, common.ErrorNotFoundWithCode(err, common.CodeParentBillingFamilyChildrenNotFound))
-	case errors.Is(err, capability.ErrFamilyWithoutAddress):
-		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeParentBillingFamilyWithoutAddress))
 	default:
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 	}

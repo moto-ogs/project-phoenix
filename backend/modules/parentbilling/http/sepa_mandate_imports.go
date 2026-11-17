@@ -82,36 +82,48 @@ func (rs *SEPAMandateResource) importLog(w http.ResponseWriter, r *http.Request)
 // errImportFileType reports a file whose name is no CSV export.
 var errImportFileType = errors.New("the import file must be a .csv or .txt file")
 
-// importRequestOf reads the form: the file within the size limit and with
-// a CSV name, and the optional mapping, delimiter and answers.
-func importRequestOf(w http.ResponseWriter, r *http.Request) (capability.SEPAMandateImportRequest, error) {
+// importFileOf reads the multipart form of an import: the file within the
+// size limit and with a CSV name. The caller reads the other fields from
+// r and removes the form (closeForm) when it is done.
+func importFileOf(w http.ResponseWriter, r *http.Request) (content []byte, name string, closeForm func(), err error) {
 	r.Body = http.MaxBytesReader(w, r.Body, capability.MaxImportFileBytes+importFormOverhead)
 	if err := r.ParseMultipartForm(capability.MaxImportFileBytes + importFormOverhead); err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			return capability.SEPAMandateImportRequest{}, capability.ErrImportFileTooLarge
+			return nil, "", func() {}, capability.ErrImportFileTooLarge
 		}
-		return capability.SEPAMandateImportRequest{}, capability.ErrImportFileInvalid
+		return nil, "", func() {}, capability.ErrImportFileInvalid
 	}
 	// The limit keeps the whole form in memory; RemoveAll drops any part
 	// the parser still spilled to disk, so no copy of the file stays.
-	defer func() { _ = r.MultipartForm.RemoveAll() }()
+	closeForm = func() { _ = r.MultipartForm.RemoveAll() }
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		return capability.SEPAMandateImportRequest{}, capability.ErrImportFileInvalid
+		return nil, "", closeForm, capability.ErrImportFileInvalid
 	}
 	defer func() { _ = file.Close() }()
 	if !containsExtension(strings.ToLower(filepath.Ext(header.Filename))) {
-		return capability.SEPAMandateImportRequest{}, errImportFileType
+		return nil, "", closeForm, errImportFileType
 	}
-	content, err := io.ReadAll(io.LimitReader(file, capability.MaxImportFileBytes+1))
+	content, err = io.ReadAll(io.LimitReader(file, capability.MaxImportFileBytes+1))
 	if err != nil {
-		return capability.SEPAMandateImportRequest{}, capability.ErrImportFileInvalid
+		return nil, "", closeForm, capability.ErrImportFileInvalid
 	}
 	if len(content) > capability.MaxImportFileBytes {
-		return capability.SEPAMandateImportRequest{}, capability.ErrImportFileTooLarge
+		return nil, "", closeForm, capability.ErrImportFileTooLarge
 	}
-	request := capability.SEPAMandateImportRequest{Content: content, FileName: header.Filename, Delimiter: r.FormValue("delimiter"),
+	return content, header.Filename, closeForm, nil
+}
+
+// importRequestOf reads the form: the file and the optional mapping,
+// delimiter and answers.
+func importRequestOf(w http.ResponseWriter, r *http.Request) (capability.SEPAMandateImportRequest, error) {
+	content, name, closeForm, err := importFileOf(w, r)
+	defer closeForm()
+	if err != nil {
+		return capability.SEPAMandateImportRequest{}, err
+	}
+	request := capability.SEPAMandateImportRequest{Content: content, FileName: name, Delimiter: r.FormValue("delimiter"),
 		Fingerprint: r.FormValue("fingerprint")}
 	if raw := r.FormValue("mapping"); raw != "" {
 		mapping := &capability.SEPAMandateImportMapping{}

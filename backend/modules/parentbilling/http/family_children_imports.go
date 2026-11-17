@@ -3,11 +3,9 @@ package parentbillinghttp
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
-	"path/filepath"
-	"strings"
 
+	"github.com/go-chi/render"
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -21,9 +19,7 @@ import (
 // file comes as multipart field "file" (.csv or .txt, at most
 // capability.MaxImportFileBytes); "mapping" (JSON of
 // capability.FamilyChildrenImportMapping), "delimiter" and "fingerprint" are
-// optional fields. The file is read in memory and never stored. A refused
-// file answers with the codes of the mandate import, whose texts name no
-// mandate.
+// optional fields. The file is read in memory and never stored.
 
 func (rs *FamilyChildrenResource) previewImport(w http.ResponseWriter, r *http.Request) {
 	rs.importNumbers(w, r, false)
@@ -57,57 +53,59 @@ func (rs *FamilyChildrenResource) importNumbers(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, status, result, "Family children import read successfully")
 }
 
-// familyImportRequestOf reads the form: the file within the size limit and
-// with a CSV name, and the optional mapping, delimiter and fingerprint. The
-// owner checks the content: text with a header row, never a binary file.
+// familyImportRequestOf reads the form: the file (importFileOf) and the
+// optional mapping, delimiter and fingerprint. The owner checks the content:
+// text with a header row, never a binary file.
 func familyImportRequestOf(w http.ResponseWriter, r *http.Request) (capability.FamilyChildrenImportRequest, error) {
-	none := capability.FamilyChildrenImportRequest{}
-	r.Body = http.MaxBytesReader(w, r.Body, capability.MaxImportFileBytes+importFormOverhead)
-	if err := r.ParseMultipartForm(capability.MaxImportFileBytes + importFormOverhead); err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
-			return none, capability.ErrImportFileTooLarge
-		}
-		return none, capability.ErrImportFileInvalid
-	}
-	defer func() { _ = r.MultipartForm.RemoveAll() }()
-	file, header, err := r.FormFile("file")
+	content, _, closeForm, err := importFileOf(w, r)
+	defer closeForm()
 	if err != nil {
-		return none, capability.ErrImportFileInvalid
-	}
-	defer func() { _ = file.Close() }()
-	if !containsExtension(strings.ToLower(filepath.Ext(header.Filename))) {
-		return none, errImportFileType
-	}
-	content, err := io.ReadAll(io.LimitReader(file, capability.MaxImportFileBytes+1))
-	if err != nil {
-		return none, capability.ErrImportFileInvalid
+		return capability.FamilyChildrenImportRequest{}, err
 	}
 	request := capability.FamilyChildrenImportRequest{Content: content, Delimiter: r.FormValue("delimiter"), Fingerprint: r.FormValue("fingerprint")}
 	if raw := r.FormValue("mapping"); raw != "" {
 		mapping := &capability.FamilyChildrenImportMapping{}
 		if err := json.Unmarshal([]byte(raw), mapping); err != nil {
-			return none, validation.Errors{"mapping": errors.New("is no mapping")}
+			return capability.FamilyChildrenImportRequest{}, validation.Errors{"mapping": errors.New("is no mapping")}
 		}
 		request.Mapping = mapping
 	}
 	return request, nil
 }
 
-// renderFamilyImportError answers a refused import. No message repeats a
-// value of the file.
+// familyImportErrorRules answer a refused file. No message repeats a value
+// of the file.
+var familyImportErrorRules = []struct {
+	err    error
+	render func(error) render.Renderer
+}{
+	{capability.ErrImportFileTooLarge, func(err error) render.Renderer {
+		return common.ErrorRequestTooLargeWithCode(err, common.CodeParentBillingFamilyChildrenImportFileTooLarge)
+	}},
+	{capability.ErrImportFileInvalid, func(err error) render.Renderer {
+		return common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingFamilyChildrenImportFileInvalid)
+	}},
+	{errImportFileType, func(err error) render.Renderer {
+		return common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingFamilyChildrenImportFileInvalid)
+	}},
+	{capability.ErrImportChanged, func(err error) render.Renderer {
+		return common.ErrorConflictWithCode(err, common.CodeParentBillingFamilyChildrenImportChanged)
+	}},
+}
+
+// renderFamilyImportError answers a refused import: the file, the changed
+// preview, a mapping that names no column, else as the list of the numbers.
 func renderFamilyImportError(w http.ResponseWriter, r *http.Request, err error) {
-	var fields validation.Errors
-	switch {
-	case errors.Is(err, capability.ErrImportFileTooLarge):
-		common.RenderError(w, r, common.ErrorRequestTooLargeWithCode(err, common.CodeParentBillingSepaImportFileTooLarge))
-	case errors.Is(err, capability.ErrImportFileInvalid), errors.Is(err, errImportFileType):
-		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingSepaImportFileInvalid))
-	case errors.Is(err, capability.ErrImportChanged):
-		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeParentBillingSepaImportChanged))
-	case errors.As(err, &fields):
-		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingSepaImportMappingInvalid))
-	default:
-		renderFamilyChildrenError(w, r, err)
+	for _, rule := range familyImportErrorRules {
+		if errors.Is(err, rule.err) {
+			common.RenderError(w, r, rule.render(err))
+			return
+		}
 	}
+	var fields validation.Errors
+	if errors.As(err, &fields) {
+		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingFamilyChildrenImportMappingInvalid))
+		return
+	}
+	renderFamilyChildrenError(w, r, err)
 }

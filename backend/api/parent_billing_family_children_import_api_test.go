@@ -114,7 +114,7 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 
 	rec = importForm(t, f.traeger, f.office.token, familyImportPath, "kinderzahl.csv", content, fields)
 	assert.Equal(t, http.StatusConflict, rec.Code, "an import without the confirmed preview is refused: %s", rec.Body.String())
-	assert.Contains(t, rec.Body.String(), "parent_billing.sepa_import_changed")
+	assert.Contains(t, rec.Body.String(), "parent_billing.family_children_import_changed")
 	fields["fingerprint"] = preview.Fingerprint
 	rec = importForm(t, f.traeger, f.office.token, familyImportPath, "kinderzahl.csv", content, fields)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -171,13 +171,13 @@ func TestFamilyChildrenImportIsCheckedAndNeedsTheRight(t *testing.T) {
 
 	rec := importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.pdf", file, nil)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
-	assert.Contains(t, rec.Body.String(), "parent_billing.sepa_import_file_invalid")
+	assert.Contains(t, rec.Body.String(), "parent_billing.family_children_import_file_invalid")
 	rec = importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.csv", []byte{0x00, 0x01, 0x02}, nil)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	rec = importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.csv", file,
 		map[string]string{"mapping": `{"columns":{"child_first_name":"Vorname","child_last_name":"Gibt es nicht","children":"Kinderzahl"}}`})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
-	assert.Contains(t, rec.Body.String(), "parent_billing.sepa_import_mapping_invalid")
+	assert.Contains(t, rec.Body.String(), "parent_billing.family_children_import_mapping_invalid")
 	// A school of another Träger is no school of the file.
 	rec = importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.csv", file,
 		map[string]string{"mapping": `{"columns":{"child_first_name":"Vorname","child_last_name":"Nachname","children":"Kinderzahl"},"school_id":999999999}`})

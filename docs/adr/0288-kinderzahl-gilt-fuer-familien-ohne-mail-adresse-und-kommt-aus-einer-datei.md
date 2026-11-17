@@ -42,7 +42,8 @@ Punkt 7 (Familie `contract:<Vertrag>`).
    Eine unter der Adresse bestätigte Zahl ist die Zahl der Familie. Sonst
    zählt, was ihre Verträge mitbringen, wenn alle dasselbe sagen. Bringen sie
    verschiedene Zahlen mit, zählt keine: Die Liste zeigt „Verschiedene
-   Angaben“ (`differing`), das Büro bestätigt eine Zahl für die Familie, und
+   Angaben“ (`differing`; verglichen werden die Zahlen, nicht ihre Tage), das
+   Büro bestätigt eine Zahl für die Familie, und
    die steht dann unter dem Schlüssel der Familie. Die Zuordnung geschieht
    beim Lesen (`numbersByFamily`), im Monatslauf wie in der Liste; kein
    Schreiben in Care Contract zieht Zeilen um.
@@ -68,15 +69,18 @@ Punkt 7 (Familie `contract:<Vertrag>`).
    oder Auswahl) und die Zahl. moto sucht den Vertrag des Kindes unter den
    Verträgen der Kinderzahl-Seite (wirksam von drei Monaten zurück bis neun
    voraus), wie der Vertragsimport Kinder vergleicht: gleiche Schule und
-   Namen, zwei verschiedene Geburtsdaten trennen. Vorschau, Bestätigung mit
-   Fingerabdruck und `sepa_import_changed` wie beim Mandatsimport. Die Zahl
-   gilt ab dem ersten Tag des Vertrags, frühestens ab Beginn dieses Fensters.
-   Die Datei wird nie gespeichert.
+   Namen, zwei verschiedene Geburtsdaten trennen. Vorschau und Bestätigung mit
+   Fingerabdruck wie beim Mandatsimport, mit eigenen Fehlercodes
+   `parent_billing.family_children_import_*`. Die Zahl gilt ab dem ersten Tag
+   des Vertrags, frühestens ab Beginn dieses Fensters. Die Datei wird nie
+   gespeichert.
 6. **Dieselben Regeln für beide Wege** (`decideImportedChildren`): Eine
-   bestätigte Zahl wird nie überschrieben (`differs`), dieselbe Zahl ist
-   `same`, Zeilen einer Familie mit verschiedenen Zahlen übernehmen keine
-   (`rows_differ`). Übernommene Zahlen und ihr Verlaufseintrag entstehen in
-   einem Statement unter der Sperre der Monatsabrechnung.
+   bestätigte Zahl, die noch gilt, wird nie überschrieben (`differs`),
+   dieselbe Zahl ist `same`, Zeilen einer Familie mit verschiedenen Zahlen
+   übernehmen keine (`rows_differ`). Eine abgelaufene Bestätigung erneuert die
+   Datei ab dem Tag nach ihrem Ende; die Monate davor behalten ihre Zahl. Der
+   Import hält die Sperre der Monatsabrechnung, bevor er die Zahlen liest;
+   übernommene Zahlen und ihr Verlaufseintrag entstehen in einem Statement.
 7. **Datenminimierung.** Gespeichert wird nur die Zahl, kein Name und kein
    Geburtsdatum eines Geschwisterkinds ohne Vertrag. Vorschau und Antwort
    nennen keine Mail-Adresse.
@@ -110,8 +114,10 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
   die Vorschau, das Büro ändert sie in der Liste.
 - **Daten der Geschwister speichern.** Für den Geschwisterpreis genügt die
   Zahl (ADR 0088 §4).
-- **Eigene Fehlercodes für die Datei.** Die Texte von
-  `parent_billing.sepa_import_*` nennen kein Mandat und passen wörtlich.
+- **Fehlercodes des Mandatsimports wiederverwenden.** Die Texte passen
+  wörtlich, aber der Code ist die Identität (ADR 0006): Eine veraltete
+  Vorschau der Kinderzahl stünde in Protokoll und Auswertung als Fehler des
+  Mandatsimports.
 
 ## Folgen
 
@@ -123,5 +129,12 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
 - Die Rolle „Verwaltung“ kann die Spalte im Vertragsimport nicht nutzen; sie
   braucht zusätzlich die Rolle „Abrechnung“, oder die Abrechnung trägt per
   Datei nach.
+- Der Vertragsimport vergleicht eine Zahl nur mit dem eigenen Schlüssel der
+  Familie (Adresse oder Vertrag), nicht mit Zahlen, die ein anderer Vertrag
+  mitbringt: Er kennt keine Empfänger fremder Verträge. Das wird erst
+  erreichbar, wenn eine Adresse nachgetragen werden kann (#7161).
+- Entfernt das Büro die eigene Zahl einer Familie, deren Vertrag noch eine
+  mitgebrachte Zahl trägt, zeigt die Liste diese; ein zweites Entfernen nimmt
+  auch sie weg.
 - Offen: das Dateiformat von SJR. Die Zuordnung der Spalten deckt beliebige
   Überschriften ab; die Überschrift von OGS Connect erkennt moto selbst.

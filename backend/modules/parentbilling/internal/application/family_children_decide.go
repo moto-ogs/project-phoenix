@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // Deciding the numbers a file names for families (#7356), for the numbers'
@@ -40,9 +41,14 @@ func importedChildrenFamily(number parentbilling.ImportedFamilyChildren) string 
 	return previewChildrenFamily(number.Line)
 }
 
-// decideImportedChildren gives every row its status. confirmedOf answers
-// the number the Abrechnung confirmed for a family, nil without one.
-func decideImportedChildren(rows []importedChildren, confirmedOf func(family string) *int) {
+// decideImportedChildren gives every row its status. current answers the
+// number the Abrechnung confirmed for a family, nil without one; day the
+// day a row's number has to hold on. A confirmation that ended before that
+// day no longer speaks: the file renews it from the day after its end, so
+// the months it covered keep what they had.
+func decideImportedChildren(rows []importedChildren, current func(family string) *parentbilling.FamilyChildCount,
+	day func(row importedChildren) calendar.Date,
+) {
 	distinct := map[string]map[int]bool{}
 	for _, row := range rows {
 		if row.status != "" {
@@ -58,16 +64,21 @@ func decideImportedChildren(rows []importedChildren, confirmedOf func(family str
 		if row.status != "" {
 			continue
 		}
-		confirmed := confirmedOf(row.family)
+		count := current(row.family)
 		switch {
 		case len(distinct[row.family]) > 1:
 			row.status = parentbilling.ImportedChildrenRowsDiffer
-		case confirmed == nil:
+		case count == nil || count.ConfirmedChildren == nil:
 			row.status = parentbilling.ImportedChildrenNew
-		case *confirmed == row.number.Children:
-			row.status, row.confirmed = parentbilling.ImportedChildrenSame, confirmed
+		case count.ValidUntil != nil && count.ValidUntil.Before(day(*row)):
+			row.status = parentbilling.ImportedChildrenNew
+			if next := count.ValidUntil.AddDays(1); next.After(row.number.ValidFrom) {
+				row.number.ValidFrom = next
+			}
+		case *count.ConfirmedChildren == row.number.Children:
+			row.status, row.confirmed = parentbilling.ImportedChildrenSame, count.ConfirmedChildren
 		default:
-			row.status, row.confirmed = parentbilling.ImportedChildrenDiffers, confirmed
+			row.status, row.confirmed = parentbilling.ImportedChildrenDiffers, count.ConfirmedChildren
 		}
 	}
 }
@@ -96,21 +107,46 @@ func newImportedChildren(rows []importedChildren) []parentbilling.ImportedFamily
 	return numbers
 }
 
-// saveImportedChildren takes the new numbers over under the lock of the
-// monthly billing, so a release counts a family before or after the
-// import, never in between.
+// holdForImport holds the monthly billing of the Träger before an import
+// reads the numbers it decides on: a release counts a family before or
+// after the import, never in between, and a confirmation made meanwhile is
+// read, not overwritten.
+func (f *FamilyNumbers) holdForImport(ctx context.Context, organizationID int64) error {
+	if err := f.store.LockCareBilling(ctx, organizationID); err != nil {
+		return fmt.Errorf("parent billing: hold the monthly billing: %w", err)
+	}
+	return nil
+}
+
+// saveImportedChildren takes the new numbers over; the caller holds the
+// monthly billing (holdForImport).
 func (f *FamilyNumbers) saveImportedChildren(ctx context.Context, reviewer parentbilling.HolidayReviewer, rows []importedChildren) error {
 	numbers := newImportedChildren(rows)
 	if len(numbers) == 0 {
 		return nil
 	}
-	if err := f.store.LockCareBilling(ctx, reviewer.OrganizationID); err != nil {
-		return fmt.Errorf("parent billing: hold the monthly billing: %w", err)
-	}
 	if err := f.store.ConfirmImportedFamilyChildren(ctx, reviewer.OrganizationID, reviewer.AccountID, numbers); err != nil {
 		return fmt.Errorf("parent billing: take over the numbers of the families: %w", err)
 	}
 	return nil
+}
+
+// confirmedOfRows answers the confirmed numbers of the rows' families by
+// their key, and the numbers a decision reads.
+func confirmedOfRows(counts []parentbilling.FamilyChildCount, rows []importedChildren) (map[string]*parentbilling.FamilyChildCount, []parentbilling.FamilyChildTarget) {
+	wanted := map[string]bool{}
+	for _, row := range rows {
+		wanted[row.family] = true
+	}
+	confirmed := map[string]*parentbilling.FamilyChildCount{}
+	var read []parentbilling.FamilyChildTarget
+	for i := range counts {
+		if wanted[counts[i].FamilyEmail] && counts[i].ConfirmedChildren != nil {
+			confirmed[counts[i].FamilyEmail] = &counts[i]
+			read = append(read, parentbilling.FamilyChildTarget{ContractID: counts[i].ContractID, CountID: &counts[i].ID})
+		}
+	}
+	return confirmed, read
 }
 
 // DecideImportedFamilyChildren decides the numbers an import of contracts
@@ -126,27 +162,23 @@ func (f *FamilyNumbers) DecideImportedFamilyChildren(ctx context.Context, review
 	if len(numbers) == 0 {
 		return []parentbilling.ImportedFamilyChildrenDecision{}, nil
 	}
+	if save {
+		if err := f.holdForImport(ctx, reviewer.OrganizationID); err != nil {
+			return nil, err
+		}
+	}
 	counts, err := f.store.FamilyChildCounts(ctx, reviewer.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
-	confirmed := map[string]*int{}
-	var read []parentbilling.FamilyChildTarget
 	rows := make([]importedChildren, len(numbers))
-	wanted := map[string]bool{}
 	for i, number := range numbers {
 		rows[i] = importedChildren{number: number, family: importedChildrenFamily(number)}
 		if validChildren(number.Children) != nil {
 			rows[i].status = parentbilling.ImportedChildrenInvalid
 		}
-		wanted[rows[i].family] = true
 	}
-	for i := range counts {
-		if wanted[counts[i].FamilyEmail] && counts[i].ConfirmedChildren != nil {
-			confirmed[counts[i].FamilyEmail] = counts[i].ConfirmedChildren
-			read = append(read, parentbilling.FamilyChildTarget{ContractID: counts[i].ContractID, CountID: &counts[i].ID})
-		}
-	}
+	confirmed, read := confirmedOfRows(counts, rows)
 	// The answer tells whether a family has the number or another one: a
 	// read of that number, recorded like the list of the families.
 	event := parentbilling.FamilyChildEvent{Action: parentbilling.FamilyChildEventRead, Actor: parentbilling.FamilyChildActorOffice,
@@ -154,7 +186,10 @@ func (f *FamilyNumbers) DecideImportedFamilyChildren(ctx context.Context, review
 	if err := f.store.InsertFamilyChildEvents(ctx, reviewer.OrganizationID, event, read); err != nil {
 		return nil, fmt.Errorf("parent billing: record family child count read: %w", err)
 	}
-	decideImportedChildren(rows, func(family string) *int { return confirmed[family] })
+	// An import of contracts has no clock of its own: a confirmation that
+	// ended before the first day of the row's contract has run out.
+	decideImportedChildren(rows, func(family string) *parentbilling.FamilyChildCount { return confirmed[family] },
+		func(row importedChildren) calendar.Date { return row.number.ValidFrom })
 	if save {
 		if err := f.saveImportedChildren(ctx, reviewer, rows); err != nil {
 			return nil, err

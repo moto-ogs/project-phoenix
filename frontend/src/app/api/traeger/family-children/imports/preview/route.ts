@@ -10,6 +10,6 @@ export const POST = proxyUpload(
   IMPORT_MAX_BYTES,
   {
     method: "POST",
-    tooLargeCode: "parent_billing.sepa_import_file_too_large",
+    tooLargeCode: "parent_billing.family_children_import_file_too_large",
   },
 );

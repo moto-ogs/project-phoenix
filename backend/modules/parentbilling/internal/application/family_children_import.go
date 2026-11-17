@@ -57,25 +57,45 @@ func (c *CareReductions) ImportFamilyChildren(ctx context.Context, reviewer pare
 		}
 		return result, nil
 	}
-	candidates, err := c.familyImportCandidates(ctx, reviewer, table, index, schools)
+	candidates, err := c.decideFamilyImportFile(ctx, reviewer, request, table, index, schools, &result)
 	if err != nil {
 		return parentbilling.FamilyChildrenImport{}, err
-	}
-	result.Fingerprint = familyImportFingerprint(result.Mapping, candidates)
-	if request.Apply {
-		if request.Fingerprint != result.Fingerprint {
-			return parentbilling.FamilyChildrenImport{}, parentbilling.ErrImportChanged
-		}
-		if err := c.applyFamilyImport(ctx, reviewer, candidates); err != nil {
-			return parentbilling.FamilyChildrenImport{}, err
-		}
-		result.Applied = true
 	}
 	for _, candidate := range candidates {
 		result.Rows = append(result.Rows, candidate.row)
 		countFamilyImportRow(&result.Counts, candidate.row.Status)
 	}
 	return result, nil
+}
+
+// decideFamilyImportFile reads and decides the rows, names them by their
+// fingerprint and, with Apply, stores the ready rows of the confirmed
+// preview. With Apply it holds the monthly billing before it reads.
+func (c *CareReductions) decideFamilyImportFile(ctx context.Context, reviewer parentbilling.HolidayReviewer,
+	request parentbilling.FamilyChildrenImportRequest, table importTable, index familyImportIndex, schools []parentbilling.CareSchool,
+	result *parentbilling.FamilyChildrenImport,
+) ([]familyImportCandidate, error) {
+	if request.Apply {
+		if err := c.holdForImport(ctx, reviewer.OrganizationID); err != nil {
+			return nil, err
+		}
+	}
+	candidates, err := c.familyImportCandidates(ctx, reviewer, table, index, schools)
+	if err != nil {
+		return nil, err
+	}
+	result.Fingerprint = familyImportFingerprint(result.Mapping, candidates)
+	if !request.Apply {
+		return candidates, nil
+	}
+	if request.Fingerprint != result.Fingerprint {
+		return nil, parentbilling.ErrImportChanged
+	}
+	if err := c.applyFamilyImport(ctx, reviewer, candidates); err != nil {
+		return nil, err
+	}
+	result.Applied = true
+	return candidates, nil
 }
 
 // familyImportCandidates reads the rows against the contracts and the
@@ -111,7 +131,7 @@ func (c *CareReductions) familyImportCandidates(ctx context.Context, reviewer pa
 		candidates[i] = check.candidate(cells, table.lines[i])
 	}
 	numbers, _ := numbersByFamily(counts, recipients)
-	shown := decideFamilyImport(candidates, numbers)
+	shown := decideFamilyImport(candidates, numbers, today)
 	event := parentbilling.FamilyChildEvent{Action: parentbilling.FamilyChildEventRead, Actor: parentbilling.FamilyChildActorOffice,
 		AccountID: reviewer.AccountID}
 	if err := c.FamilyNumbers.store.InsertFamilyChildEvents(ctx, organizationID, event, shown); err != nil {
@@ -122,7 +142,7 @@ func (c *CareReductions) familyImportCandidates(ctx context.Context, reviewer pa
 
 // decideFamilyImport gives every row without a problem its status from the
 // numbers of its families and answers the numbers the answer tells.
-func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*familyNumbers) []parentbilling.FamilyChildTarget {
+func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*familyNumbers, today calendar.Date) []parentbilling.FamilyChildTarget {
 	var rows []importedChildren
 	var owner []int
 	for i, candidate := range candidates {
@@ -141,17 +161,12 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 		}
 		return nil
 	}
-	decideImportedChildren(rows, func(family string) *int {
-		if count := current(family); count != nil {
-			return count.ConfirmedChildren
-		}
-		return nil
-	})
+	decideImportedChildren(rows, current, func(importedChildren) calendar.Date { return today })
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
 		candidates[owner[i]].decided = append(candidates[owner[i]].decided, row)
-		if count := current(row.family); count != nil && !seen[count.ID] {
+		if count := current(row.family); count != nil && row.confirmed != nil && !seen[count.ID] {
 			seen[count.ID] = true
 			shown = append(shown, parentbilling.FamilyChildTarget{ContractID: count.ContractID, CountID: &count.ID})
 		}
@@ -168,6 +183,12 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 func (c *familyImportCandidate) settle() {
 	if c.row.Status != "" {
 		return
+	}
+	// The day the number counts from, as decided: a renewed number starts
+	// after the confirmation that ran out.
+	if len(c.decided) > 0 {
+		from := c.decided[0].number.ValidFrom
+		c.row.ValidFrom = &from
 	}
 	has := func(status string) bool {
 		return slices.ContainsFunc(c.decided, func(row importedChildren) bool { return row.status == status })

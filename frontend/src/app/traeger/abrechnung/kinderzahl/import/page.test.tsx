@@ -195,7 +195,7 @@ describe("Kinderzahl nachtragen", () => {
     await choose();
     api.applyFamilyChildrenImport.mockRejectedValueOnce(
       new ApiError("Request failed (409)", 409, {
-        code: "parent_billing.sepa_import_changed",
+        code: "parent_billing.family_children_import_changed",
       }),
     );
     api.previewFamilyChildrenImport.mockResolvedValueOnce(

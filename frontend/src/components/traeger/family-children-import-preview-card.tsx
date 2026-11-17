@@ -21,6 +21,7 @@ import {
   FAMILY_IMPORT_STATUS,
   type FamilyImportFilter,
   familyImportChild,
+  familyImportOpenRows,
   familyImportOutcomeText,
   familyImportProblemText,
   matchesFamilyImportFilter,
@@ -47,7 +48,7 @@ function NotesCell({ row }: Readonly<{ row: FamilyImportRow }>) {
 
 function footerText(result: FamilyImportResult): string {
   const { counts } = result;
-  const left = counts.conflict + counts.invalid + counts.differs;
+  const left = familyImportOpenRows(counts);
   if (counts.ready === 0 && left === 0 && counts.same > 0) {
     return "Alle Zahlen der Datei sind schon bestätigt.";
   }
@@ -79,7 +80,7 @@ export function FamilyChildrenImportPreviewCard({
     { value: "ready", label: `Bereit ${counts.ready + counts.imported}` },
     {
       value: "problems",
-      label: `Offen ${counts.conflict + counts.invalid + counts.differs}`,
+      label: `Offen ${familyImportOpenRows(counts)}`,
     },
     { value: "unchanged", label: `Bestätigt ${counts.same}` },
   ];

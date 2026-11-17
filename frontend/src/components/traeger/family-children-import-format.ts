@@ -5,6 +5,7 @@
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
 import type {
   FamilyImportField,
+  FamilyImportResult,
   FamilyImportRow,
   FamilyImportRowStatus,
 } from "~/lib/traeger-family-children-import-api";
@@ -109,6 +110,16 @@ export function familyImportOutcomeText(row: FamilyImportRow): string | null {
     default:
       return null;
   }
+}
+
+/** Rows the import leaves out: wrong, contradicting, or another number confirmed. */
+export function familyImportOpenRows(
+  counts: Pick<
+    FamilyImportResult["counts"],
+    "conflict" | "invalid" | "differs"
+  >,
+): number {
+  return counts.conflict + counts.invalid + counts.differs;
 }
 
 export type FamilyImportFilter = "all" | "ready" | "problems" | "unchanged";

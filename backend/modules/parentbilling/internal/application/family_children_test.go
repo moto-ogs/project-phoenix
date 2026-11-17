@@ -409,3 +409,53 @@ func TestFamilyChildrenNumberGoesWithTheFamily(t *testing.T) {
 	assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status)
 	assert.Equal(t, own.ID, families[0].Count.ID, "the office's confirmation for the family decides")
 }
+
+// What a file does with the number of a family (#7356): a confirmed number
+// in force stays, rows of one family that disagree take over none, and a
+// confirmation that ran out is renewed from the day after its end, so the
+// months it covered keep what they had.
+func TestImportedChildrenAreDecidedAgainstTheConfirmedNumber(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2027, 1, 10)
+	start := calendar.NewDate(2026, 9, 1)
+	ended := calendar.NewDate(2026, 12, 31)
+	confirmed := map[string]*parentbilling.FamilyChildCount{
+		"same@example.org":    {ConfirmedChildren: ptr(2), ValidFrom: &start},
+		"other@example.org":   {ConfirmedChildren: ptr(3), ValidFrom: &start},
+		"expired@example.org": {ConfirmedChildren: ptr(3), ValidFrom: &start, ValidUntil: &ended},
+		"stated@example.org":  {StatedChildren: ptr(4)},
+	}
+	row := func(family string, children int) importedChildren {
+		return importedChildren{family: family, number: parentbilling.ImportedFamilyChildren{Children: children, ValidFrom: start}}
+	}
+	rows := []importedChildren{
+		row("same@example.org", 2), row("other@example.org", 2), row("expired@example.org", 3), row("stated@example.org", 2),
+		row("contract:7", 2), row("split@example.org", 2), row("split@example.org", 3),
+		{family: "contract:8", status: parentbilling.ImportedChildrenInvalid},
+	}
+	decideImportedChildren(rows, func(family string) *parentbilling.FamilyChildCount { return confirmed[family] },
+		func(importedChildren) calendar.Date { return today })
+	statuses := make([]string, len(rows))
+	for i, decided := range rows {
+		statuses[i] = decided.status
+	}
+	assert.Equal(t, []string{
+		parentbilling.ImportedChildrenSame, parentbilling.ImportedChildrenDiffers, parentbilling.ImportedChildrenNew,
+		parentbilling.ImportedChildrenNew, parentbilling.ImportedChildrenNew, parentbilling.ImportedChildrenRowsDiffer,
+		parentbilling.ImportedChildrenRowsDiffer, parentbilling.ImportedChildrenInvalid,
+	}, statuses)
+	assert.Equal(t, ptr(3), rows[1].confirmed, "a row that differs names the confirmed number")
+	assert.Equal(t, calendar.NewDate(2027, 1, 1), rows[2].number.ValidFrom, "the renewed number starts after the one that ran out")
+	assert.Equal(t, start, rows[3].number.ValidFrom, "a number the parents only stated is confirmed from the contract's first day")
+
+	// Each family is stored once, from the earliest first day its rows name.
+	later := calendar.NewDate(2026, 10, 1)
+	stored := newImportedChildren([]importedChildren{
+		{family: "eva@example.org", status: parentbilling.ImportedChildrenNew, number: parentbilling.ImportedFamilyChildren{ContractID: 2, Children: 2, ValidFrom: later}},
+		{family: "eva@example.org", status: parentbilling.ImportedChildrenNew, number: parentbilling.ImportedFamilyChildren{ContractID: 1, Children: 2, ValidFrom: start}},
+		{family: "line:4", status: parentbilling.ImportedChildrenNew, number: parentbilling.ImportedFamilyChildren{Children: 2, ValidFrom: start}},
+		{family: "contract:7", status: parentbilling.ImportedChildrenSame, number: parentbilling.ImportedFamilyChildren{ContractID: 7, Children: 2, ValidFrom: start}},
+	})
+	assert.Equal(t, []parentbilling.ImportedFamilyChildren{{FamilyEmail: "eva@example.org", ContractID: 1, Children: 2, ValidFrom: start}}, stored,
+		"a row of a preview and a number the family has store nothing")
+}

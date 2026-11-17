@@ -69,16 +69,11 @@ const (
 	FamilyChildrenDiffering = "differing"
 )
 
-var (
-	// ErrFamilyChildrenNotFound reports a family the Träger has no number
-	// or no contract for.
-	ErrFamilyChildrenNotFound = errors.New("no number of children for this family")
-	// ErrFamilyWithoutAddress reported a contract whose invoice goes to no
-	// address. Since #7356 such a contract is a family of its own with a
-	// number (ContractFamilyKey); nothing returns it, its code stays
-	// registered.
-	ErrFamilyWithoutAddress = errors.New("the contract's invoice goes to no address")
-)
+// ErrFamilyChildrenNotFound reports a family the Träger has no number or no
+// contract for. A contract whose invoice goes to no address is a family of
+// its own since #7356; the code parent_billing.family_without_address stays
+// registered and is no longer sent.
+var ErrFamilyChildrenNotFound = errors.New("no number of children for this family")
 
 // FamilyChildCount is the number of a family: what the parents stated and
 // what the Abrechnung confirmed with its validity.
