@@ -52,10 +52,7 @@ func (l *CareLetters) MailCareLetters(ctx context.Context, reviewer parentbillin
 	if err != nil {
 		return parentbilling.BillingLetterSeries{}, err
 	}
-	traeger, err := l.traegerName(ctx, reviewer.OrganizationID)
-	if err != nil {
-		return parentbilling.BillingLetterSeries{}, err
-	}
+	var traeger string
 	var series parentbilling.BillingLetterSeries
 	var queued []int64
 	for _, letter := range letters {
@@ -69,6 +66,12 @@ func (l *CareLetters) MailCareLetters(ctx context.Context, reviewer parentbillin
 		case !sameRecipient(letter.invoice, recipients):
 			series.RecipientChanged++
 			continue
+		}
+		if traeger == "" {
+			traeger, err = l.traegerName(ctx, reviewer.OrganizationID)
+			if err != nil {
+				return parentbilling.BillingLetterSeries{}, err
+			}
 		}
 		if _, err := l.send(ctx, reviewer, &current, letter, traeger); err != nil {
 			return parentbilling.BillingLetterSeries{}, err

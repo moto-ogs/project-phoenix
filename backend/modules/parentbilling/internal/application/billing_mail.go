@@ -94,10 +94,7 @@ func (m *BillingLetterMail) MailBillingLetters(ctx context.Context, reviewer par
 	for _, file := range files {
 		byDocument[file.DocumentID] = file.File
 	}
-	traeger, err := m.traegerName(ctx, reviewer.OrganizationID)
-	if err != nil {
-		return parentbilling.BillingLetterSeries{}, err
-	}
+	var traeger string
 	var series parentbilling.BillingLetterSeries
 	for _, document := range current.documents {
 		switch {
@@ -112,7 +109,8 @@ func (m *BillingLetterMail) MailBillingLetters(ctx context.Context, reviewer par
 		if !ok {
 			return parentbilling.BillingLetterSeries{}, parentbilling.ErrBillingLetterNotFound
 		}
-		if _, err := m.send(ctx, reviewer, current, document, file, traeger); err != nil {
+		traeger, err = m.sendNextBillingLetter(ctx, reviewer, current, document, file, traeger)
+		if err != nil {
 			return parentbilling.BillingLetterSeries{}, err
 		}
 		series.Queued++
@@ -123,6 +121,24 @@ func (m *BillingLetterMail) MailBillingLetters(ctx context.Context, reviewer par
 		return parentbilling.BillingLetterSeries{}, err
 	}
 	return series, nil
+}
+
+// sendNextBillingLetter resolves the sender only for a letter that will be
+// sent. The sender is the same for the complete series.
+func (m *BillingLetterMail) sendNextBillingLetter(ctx context.Context, reviewer parentbilling.HolidayReviewer, current letterRun,
+	document parentbilling.BillingDocument, file parentbilling.BillingLetterFile, traeger string,
+) (string, error) {
+	if traeger == "" {
+		var err error
+		traeger, err = m.traegerName(ctx, reviewer.OrganizationID)
+		if err != nil {
+			return "", err
+		}
+	}
+	if _, err := m.send(ctx, reviewer, current, document, file, traeger); err != nil {
+		return "", err
+	}
+	return traeger, nil
 }
 
 // MailBillingLetter mails the letter of one family, first or again. A send
