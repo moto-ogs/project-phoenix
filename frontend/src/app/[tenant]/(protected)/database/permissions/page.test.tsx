@@ -2,10 +2,26 @@ import "@testing-library/jest-dom/vitest";
 import type { TenantPageSearchRowProps } from "~/components/ui/tenant-page-search-row";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
 import PermissionsPage from "./page";
+
+vi.unmock("swr");
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {ui}
+    </SWRConfig>,
+  );
+}
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
@@ -38,10 +54,6 @@ vi.mock("@/lib/database/service-factory", () => ({
   createCrudService: vi.fn(() => ({
     getList: mockGetList,
   })),
-}));
-
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => false),
 }));
 
 vi.mock("~/components/database/database-page-layout", async () => {

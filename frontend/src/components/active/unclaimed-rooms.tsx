@@ -1,14 +1,7 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { activeService } from "~/lib/active-api";
-import { userContextService } from "~/lib/usercontext-api";
 import type { Supervisor } from "~/lib/active-helpers";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
@@ -20,6 +13,10 @@ import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { schoolyardConcept } from "~/lib/concepts/schoolyard";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SCHULHOF_SUPERVISE_TOOLTIP } from "~/components/active-supervisions/supervision-action-hints";
+import { useSWRAuth } from "~/lib/swr";
+import { me } from "~/lib/swr/me";
+import { checkinTargetKeys } from "~/lib/swr/rooms-keys";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 const logger = createLogger({ component: "UnclaimedRooms" });
 
@@ -46,139 +43,94 @@ interface UnclaimedRoomsProps {
   readonly currentStaffId?: string;
 }
 
-interface SchulhofState {
-  /** We only need the group ID for API calls */
-  activeGroupId: string | null;
-  supervisors: Supervisor[];
-  isUserSupervisor: boolean;
-  loading: boolean;
+const NO_SUPERVISORS: readonly Supervisor[] = [];
+
+/**
+ * Schulhof is now handled by the permanent tab in active-supervisions page.
+ * While the banner is disabled it reads nothing.
+ */
+export function UnclaimedRooms(props: UnclaimedRoomsProps) {
+  if (!ENABLE_SCHULHOF_BANNER) return null;
+  return <SchulhofBanner {...props} />;
 }
 
-export function UnclaimedRooms({
+function SchulhofBanner({
   onClaimed,
   activeGroups: providedGroups,
   currentStaffId: providedStaffId,
 }: UnclaimedRoomsProps) {
-  const [state, setState] = useState<SchulhofState>({
-    activeGroupId: null,
-    supervisors: [],
-    isUserSupervisor: false,
-    loading: true,
-  });
+  // Use provided groups if available and non-empty, otherwise read all
+  // active groups: the banner shows even when the parent has no cached groups.
+  const hasProvidedGroups = !!providedGroups && providedGroups.length > 0;
+  const groups = useSWRAuth(
+    hasProvidedGroups ? null : checkinTargetKeys.activeGroups(),
+    () => activeService.getActiveGroups({ active: true }),
+  );
+  const allGroups: ReadonlyArray<MinimalActiveGroup> | undefined =
+    hasProvidedGroups ? providedGroups : groups.data;
+  const schulhofGroup = allGroups?.find(
+    (g) => g.room?.name === SCHULHOF_ROOM_NAME,
+  );
+  // A failed supervisor list counts as none: the banner is an extra offer,
+  // the Schulhof tab stays the way to take over.
+  const supervisorList = useSWRAuth(
+    schulhofGroup
+      ? tenantDailyKeys.activeGroupSupervisors(schulhofGroup.id)
+      : null,
+    () => activeService.getActiveGroupSupervisors(schulhofGroup?.id ?? ""),
+    { keepPreviousData: false },
+  );
+  // Bewusst still: ohne Personalprofil gilt niemand als Aufsicht, das Banner
+  // bietet die Übernahme dann an.
+  const ownStaff = useSWRAuth(providedStaffId ? null : me.key(), me.fetcher);
+  const supervisors = (supervisorList.data ?? NO_SUPERVISORS).filter(
+    (s) => s.isActive,
+  );
+  const supervisorsSettled =
+    supervisorList.data !== undefined || supervisorList.error !== undefined;
+  const loading = hasProvidedGroups
+    ? schulhofGroup !== undefined && !supervisorsSettled
+    : groups.data === undefined
+      ? !groups.error
+      : schulhofGroup !== undefined && !supervisorsSettled;
+  const staffId = providedStaffId ?? ownStaff.data?.id ?? null;
+  const isUserSupervisor =
+    staffId !== null && supervisors.some((s) => s.staffId === staffId);
+
   const [claiming, setClaiming] = useState(false);
   const { show: showError } = useApiErrorDisplay();
   // „Wiederholen“ übernimmt mit dem aktuellen Stand.
   const retryClaimRef = useRef<() => void>(() => undefined);
   const [dismissed, setDismissed] = useState(false);
 
-  // Schulhof is now handled by the permanent tab in active-supervisions page
-  // This banner is disabled to avoid duplicate UI
-  // Hooks must be called unconditionally, so we return null after them
-  const isDisabled = !ENABLE_SCHULHOF_BANNER;
-
-  const loadSchulhofStatus = useCallback(async () => {
-    try {
-      // Use provided groups if available and non-empty, otherwise fetch all active groups
-      // This ensures Schulhof banner shows even when parent has no cached groups
-      const allGroups =
-        providedGroups && providedGroups.length > 0
-          ? providedGroups
-          : await activeService.getActiveGroups({ active: true });
-      const schulhofGroup = allGroups.find(
-        (g) => g.room?.name === SCHULHOF_ROOM_NAME,
-      );
-
-      if (!schulhofGroup) {
-        setState({
-          activeGroupId: null,
-          supervisors: [],
-          isUserSupervisor: false,
-          loading: false,
-        });
-        return;
-      }
-
-      // Fetch supervisors (and staff if not provided) in parallel
-      const needsStaffFetch = !providedStaffId;
-      const promises: [Promise<Supervisor[]>, Promise<{ id: string } | null>] =
-        [
-          activeService.getActiveGroupSupervisors(schulhofGroup.id),
-          needsStaffFetch
-            ? // Bewusst still: ohne Personalprofil gilt niemand als Aufsicht,
-              // das Banner bietet die Übernahme dann an.
-              userContextService.getCurrentStaff().catch(() => null)
-            : Promise.resolve(null),
-        ];
-
-      const [supervisorsResult, staffResult] =
-        await Promise.allSettled(promises);
-
-      // Extract supervisors (gracefully handle failure)
-      let activeSupervisors: Supervisor[] = [];
-      if (supervisorsResult.status === "fulfilled") {
-        activeSupervisors = supervisorsResult.value.filter((s) => s.isActive);
-      } else {
-        logger.warn("failed to load supervisors", {
-          reason: String(supervisorsResult.reason),
-        });
-      }
-
-      // Check if current user is a supervisor
-      let isUserSupervisor = false;
-      const staffId =
-        providedStaffId ??
-        (staffResult.status === "fulfilled" && staffResult.value
-          ? staffResult.value.id
-          : null);
-
-      if (staffId) {
-        isUserSupervisor = activeSupervisors.some((s) => s.staffId === staffId);
-      }
-
-      // If there are no supervisors, reset dismissed state
-      if (activeSupervisors.length === 0) {
-        setDismissed(false);
-        localStorage.removeItem(DISMISSED_KEY);
-      }
-
-      setState({
-        activeGroupId: schulhofGroup.id,
-        supervisors: activeSupervisors,
-        isUserSupervisor,
-        loading: false,
-      });
-    } catch (err) {
-      // Bewusst still: das Banner ist ein Zusatzangebot; ohne Status bleibt
-      // es aus, die Aufsicht übernimmt man weiter über den Schulhof-Reiter.
-      logger.error("failed to load schulhof status", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setState((prev) => ({ ...prev, loading: false }));
-    }
-  }, [providedGroups, providedStaffId]);
-
   // Nach dem Übernehmen lädt das Banner nach; ein Fehler dabei ist kein
   // Fehler der Übernahme (#6652).
   const claimAfterWrite = useRefreshAfterWrite(
     "die Anzeige des Schulhofs",
-    loadSchulhofStatus,
+    () => supervisorList.mutate(),
   );
 
-  // Load on mount and check dismissed state
   useEffect(() => {
-    const wasDismissed = localStorage.getItem(DISMISSED_KEY) === "true";
-    setDismissed(wasDismissed);
-    void loadSchulhofStatus();
-  }, [loadSchulhofStatus]);
+    setDismissed(localStorage.getItem(DISMISSED_KEY) === "true");
+  }, []);
+
+  // Without supervisors the dismissal ends: the next supervisor brings the
+  // banner back.
+  const noSupervisors =
+    supervisorList.data !== undefined && supervisors.length === 0;
+  useEffect(() => {
+    if (!noSupervisors) return;
+    setDismissed(false);
+    localStorage.removeItem(DISMISSED_KEY);
+  }, [noSupervisors]);
 
   async function handleClaim() {
-    if (!state.activeGroupId) return;
+    if (!schulhofGroup) return;
 
     try {
       setClaiming(true);
-      await activeService.claimActiveGroup(state.activeGroupId);
+      await activeService.claimActiveGroup(schulhofGroup.id);
       onClaimed();
-      // Reload to update supervisor list
       await claimAfterWrite.refresh();
     } catch (err) {
       logger.error("failed to claim schulhof", {
@@ -202,33 +154,15 @@ export function UnclaimedRooms({
     retryClaimRef.current = () => void handleClaim();
   });
 
-  // Schulhof banner is disabled - permanent tab handles this now
-  if (isDisabled) {
-    return null;
-  }
-
-  // Don't show if loading
-  if (state.loading) {
-    return null;
-  }
-
-  // Don't show if no active Schulhof group
-  if (!state.activeGroupId) {
-    return null;
-  }
-
-  // Don't show if user is already a supervisor
-  if (state.isUserSupervisor) {
-    return null;
-  }
+  if (loading || !schulhofGroup || isUserSupervisor) return null;
 
   // Don't show if dismissed (but only when there ARE supervisors)
-  if (dismissed && state.supervisors.length > 0) {
+  if (dismissed && supervisors.length > 0) {
     return null;
   }
 
-  const hasSupervisors = state.supervisors.length > 0;
-  const supervisorNames = state.supervisors
+  const hasSupervisors = supervisors.length > 0;
+  const supervisorNames = supervisors
     .map((s) => s.staffName ?? "Unbekannt")
     .join(", ");
 

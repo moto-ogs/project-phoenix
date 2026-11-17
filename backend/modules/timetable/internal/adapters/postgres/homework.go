@@ -23,8 +23,8 @@ type classHomeworkRow struct {
 	Subject          *string       `bun:"subject"`
 	Description      string        `bun:"description,notnull"`
 	CreatedByStaffID *int64        `bun:"created_by_staff_id"`
-	CreatedAt        time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt        time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt        time.Time     `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time     `bun:"updated_at,nullzero,notnull"`
 }
 
 // homeworkFeedbackRow is one row of education.homework_feedback (#4796).
@@ -36,8 +36,8 @@ type homeworkFeedbackRow struct {
 	Date          calendar.Date `bun:"date,notnull,type:date"`
 	Status        string        `bun:"status,notnull"`
 	Note          *string       `bun:"note"`
-	CreatedAt     time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time     `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time     `bun:"updated_at,nullzero,notnull"`
 }
 
 func (row classHomeworkRow) entry() timetable.HomeworkEntry {

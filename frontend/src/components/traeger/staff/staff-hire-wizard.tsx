@@ -12,7 +12,9 @@ import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { CheckboxCard } from "~/components/ui/checkbox-card";
 import { ISODatePicker } from "~/components/ui/date-picker";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
@@ -568,6 +570,8 @@ export function StaffHireWizard({
     setDraft((current) => ({ ...current, ...patch }));
   };
 
+  // The Personalakten list shows the new person.
+  const invalidateFamily = useInvalidateFamily();
   const send = async (confirmDuplicate: boolean) => {
     if (saving) return;
     const invalidStep = firstInvalidHireStep(draft);
@@ -580,6 +584,7 @@ export function StaffHireWizard({
     errors.clear();
     try {
       const record = await hireStaff(hireInput(draft, confirmDuplicate));
+      void invalidateFamily(traegerStaffKeys.overviewFamily);
       setMatches(null);
       setHired(record);
     } catch (err) {
@@ -594,6 +599,7 @@ export function StaffHireWizard({
       setMatches(null);
       if (isCode(err, "workforce.traeger_staff_hire_incomplete")) {
         // Something exists already: no form to send again.
+        void invalidateFamily(traegerStaffKeys.overviewFamily);
         setIncomplete(staffHireIncomplete(err.details));
         return;
       }

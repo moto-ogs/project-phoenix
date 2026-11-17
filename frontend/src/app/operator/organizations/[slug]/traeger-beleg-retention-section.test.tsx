@@ -19,6 +19,7 @@ import {
   type BelegRetentionOverview,
 } from "~/lib/operator/beleg-retention-api";
 import { catalogText } from "~/test/error-catalog-text";
+import { setTestClock } from "~/test/clock";
 
 const { mockGetOverview, mockRecordReview, mockRecordInstruction } = vi.hoisted(
   () => ({
@@ -51,7 +52,10 @@ vi.mock("~/components/ui/date-picker", async (importOriginal) => ({
 import { ToastProvider } from "~/contexts/ToastContext";
 import { TraegerBelegRetentionSection } from "./traeger-beleg-retention-section";
 
-// The test clock stands on 2026-09-09.
+// The fixture's review dates (overdue, review window) are fixed around
+// 2026-09-09, so every test pins the clock to that day.
+beforeEach(() => setTestClock("2026-09-09T12:00:00+02:00"));
+
 const overview: BelegRetentionOverview = mapBelegRetentionOverview({
   instructions: [
     {

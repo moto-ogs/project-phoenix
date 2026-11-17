@@ -1,21 +1,18 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Cake } from "lucide-react";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Skeleton } from "~/components/ui/skeleton";
 import { SectionCard } from "~/components/ui/section-card";
 import { SwitchRow } from "~/components/ui/switch";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { fetchBirthdayOptOut, updateBirthdayOptOut } from "~/lib/birthdays-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 
 const logger = createLogger({ component: "BirthdayVisibilitySection" });
 
@@ -31,71 +28,41 @@ const logger = createLogger({ component: "BirthdayVisibilitySection" });
  * answers workforce.staff_profile_missing) rather than offering a setting that cannot apply to anyone.
  */
 export function BirthdayVisibilitySection() {
-  const [visible, setVisible] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [available, setAvailable] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const {
+    data: optOut,
+    error: optOutError,
+    mutate,
+  } = useSWRAuth(tenantAdminKeys.birthdayOptOut(), fetchBirthdayOptOut);
+  // Konten ohne Personaldatensatz haben nichts abzuwählen: die Karte
+  // blendet sich aus, statt einen Fehler zu zeigen.
+  const unavailable =
+    optOut === undefined &&
+    optOutError instanceof ApiError &&
+    wireErrorCode(optOutError.code) === "workforce.staff_profile_missing";
   // Laden: Fehler vor Ort mit Wiederholen. Umschalten ist ein Schalter ohne
   // Formular: ein Fehler kommt als Toast (#2517).
-  const { error: loadError, show: showLoadError, clear } = useApiLoadError();
-  const { show: showSaveError } = useApiErrorDisplay();
-  const latestLoadRef = useRef<() => void>(() => undefined);
-  const latestToggleRef = useRef<(next: boolean) => void>(() => undefined);
-
-  const load = useCallback(
-    async (isCancelled: () => boolean = () => false) => {
-      setLoading(true);
-      setLoadFailed(false);
-      clear();
-      try {
-        const optOut = await fetchBirthdayOptOut();
-        if (!isCancelled()) setVisible(!optOut);
-      } catch (err) {
-        if (isCancelled()) return;
-        // Konten ohne Personaldatensatz haben nichts abzuwählen: die Karte
-        // blendet sich aus, statt einen Fehler zu zeigen.
-        if (
-          err instanceof ApiError &&
-          wireErrorCode(err.code) === "workforce.staff_profile_missing"
-        ) {
-          setAvailable(false);
-          return;
-        }
-        setLoadFailed(true);
-        logger.error("birthday_opt_out_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: "die Einstellung zum Geburtstag",
-          retry: () => latestLoadRef.current(),
-        });
-      } finally {
-        if (!isCancelled()) setLoading(false);
-      }
-    },
-    [clear, showLoadError],
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [{ data: optOut, error: unavailable ? undefined : optOutError }],
+    "die Einstellung zum Geburtstag",
+    () => mutate(),
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    void load(() => cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [load]);
+  const { show: showSaveError } = useApiErrorDisplay();
+  const latestToggleRef = useRef<(next: boolean) => void>(() => undefined);
+  const visible = optOut === undefined ? true : !optOut;
 
   const toggle = async (nextVisible: boolean) => {
     // Optimistic: the switch answers immediately and rolls back on failure.
+    const previous = optOut;
     setBusy(true);
-    setVisible(nextVisible);
+    void mutate(!nextVisible, { revalidate: false });
     try {
       await updateBirthdayOptOut(!nextVisible);
     } catch (err) {
       logger.error("birthday_opt_out_save_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      setVisible(!nextVisible);
+      void mutate(previous, { revalidate: false });
       void showSaveError(err, {
         object: "die Einstellung zum Geburtstag",
         retry: () => latestToggleRef.current(nextVisible),
@@ -106,11 +73,10 @@ export function BirthdayVisibilitySection() {
   };
 
   useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
     latestToggleRef.current = (next) => void toggle(next);
   });
 
-  if (!available) return null;
+  if (unavailable) return null;
 
   return (
     <SectionCard
@@ -121,9 +87,9 @@ export function BirthdayVisibilitySection() {
     >
       {/* Bis der Text eines Ladefehlers da ist, bleibt das Skelett stehen:
           kein Schalter mit geratenem Stand. */}
-      {loading || (loadFailed && !loadError) ? (
+      {(optOut === undefined && !failure) || (failure && !loadError) ? (
         <Skeleton className="h-10 w-full" />
-      ) : loadFailed ? (
+      ) : failure ? (
         <LoadErrorAlert error={loadError} />
       ) : (
         <SwitchRow

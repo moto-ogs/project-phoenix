@@ -492,7 +492,7 @@ type recentDeletionRow struct {
 
 // queryRecentDeletions fetches recent deletion activity from the audit table.
 func queryRecentDeletions(ctx context.Context, db transactionruntime.Database) ([]recentDeletionRow, error) {
-	summaries, err := listRecentAuditRetentionSummaries(ctx, db, time.Now().AddDate(0, 0, -30), 10)
+	summaries, err := listRecentAuditRetentionSummaries(ctx, db, 30, 10)
 	if err != nil {
 		return nil, err
 	}

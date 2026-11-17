@@ -36,6 +36,9 @@ type RouteContract struct {
 	Response any
 	// Paginated says the route answers through RespondPaginated.
 	Paginated bool
+	// NoData replaces Response on a route that answers no data: a 204, or
+	// the envelope without a data member.
+	NoData bool
 	// Variants replaces Response on a legacy route whose query selects the
 	// response shape. New routes may not use it.
 	Variants *ResponseVariants

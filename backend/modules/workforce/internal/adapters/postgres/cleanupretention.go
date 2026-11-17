@@ -4,7 +4,27 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
+
+// DatabaseTime reads the clock that guards the cutoffs of the staff
+// document retentions: users.delete_expired_staff_sick_notes (1.15.453) and
+// users.delete_finished_staff_document_file_cleanups (1.15.449) refuse a
+// cutoff outside their window on clock_timestamp(), and the column default
+// stamps created_at of a staff document on the same clock (ADR 0281 point 3).
+func (s *Store) DatabaseTime(ctx context.Context) (time.Time, error) {
+	db, _, err := s.database(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	var now time.Time
+	if err := db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &now); err != nil {
+		return time.Time{}, fmt.Errorf("workforce postgres: read the database time: %w", err)
+	}
+	return now, nil
+}
 
 // DeleteFinishedStaffDocumentFileCleanups goes through the database function
 // of 1.15.449: the direct DELETE on the intents stays revoked from the
@@ -15,22 +35,29 @@ func (s *Store) DeleteFinishedStaffDocumentFileCleanups(ctx context.Context, win
 	if err != nil {
 		return 0, err
 	}
+	now, err := s.DatabaseTime(ctx)
+	if err != nil {
+		return 0, err
+	}
 	var deleted int64
-	// The function's guard runs in UTC (1.15.606): subtract the same elapsed
-	// 24-hour days, not Berlin calendar days of 23 or 25 hours.
-	if err := db.NewRaw(`SELECT users.delete_finished_staff_document_file_cleanups(?, statement_timestamp() - (? * INTERVAL '1 second'))`, scope.TenantID, window.Seconds()).Scan(ctx, &deleted); err != nil {
+	cutoff := domain.FinishedFileCleanupCutoff(now, window)
+	if err := db.NewRaw(`SELECT users.delete_finished_staff_document_file_cleanups(?, ?)`, scope.TenantID, cutoff).Scan(ctx, &deleted); err != nil {
 		return 0, fmt.Errorf("workforce postgres: delete finished staff document file cleanups: %w", err)
 	}
 	return int(deleted), nil
 }
 
+// DeleteCompletedOffboardingCleanups deletes the jobs completed before the
+// window, counted in Berlin calendar days on the store's clock, which stamps
+// completed_at (#7295, ADR 0281).
 func (s *Store) DeleteCompletedOffboardingCleanups(ctx context.Context, window time.Duration) (int, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
 		return 0, err
 	}
 	result, err := db.NewRaw(`DELETE FROM users.staff_offboarding_cleanup
-		WHERE tenant_id = ? AND completed_at IS NOT NULL AND completed_at < statement_timestamp() - (? * INTERVAL '1 day')`, scope.TenantID, window.Hours()/24).Exec(ctx)
+		WHERE tenant_id = ? AND completed_at IS NOT NULL AND completed_at < ?`, scope.TenantID,
+		s.stamp().In(calendar.Berlin).AddDate(0, 0, -int(window.Hours()/24))).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("workforce postgres: delete completed offboarding cleanups: %w", err)
 	}

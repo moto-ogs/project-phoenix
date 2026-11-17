@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { Button } from "../button";
 import { PlanningContextBar, PlanningDayChip } from "./planning-context-bar";
 import { SegmentedControl } from "../segmented-control";
+import { CustomSelect } from "../custom-select";
 
 const meta = {
   title: "components/ui/planning/PlanningContextBar",
@@ -83,6 +84,29 @@ export const WithContextRow: Story = {
           1 quittiert
         </Button>
       </>
+    ),
+  },
+};
+
+/** Monatsauswahl zwischen den Pfeilen (Stichtagszahlen, #7300): ein Rahmen. */
+export const WithSelectInGroup: Story = {
+  args: {
+    dateLabel: undefined,
+    withoutContextRow: true,
+    navigationInGroup: true,
+    previousLabel: "Monat davor",
+    nextLabel: "Monat danach",
+    navigationSlot: (
+      <CustomSelect
+        embedded
+        ariaLabel="Monat"
+        value="2026-11"
+        onChange={() => {}}
+        options={[
+          { value: "2026-11", label: "November 2026" },
+          { value: "2026-10", label: "Oktober 2026" },
+        ]}
+      />
     ),
   },
 };

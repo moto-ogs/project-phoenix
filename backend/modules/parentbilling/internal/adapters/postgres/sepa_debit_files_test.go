@@ -129,7 +129,7 @@ func waitForLock(t *testing.T, db *bun.DB, marker string, done <-chan error) {
 // comes after the download stored its file waits for it and takes the file.
 func TestSEPADebitFileDownloadRacesTheDeletionOfAMember(t *testing.T) {
 	t.Parallel()
-	store := NewStore()
+	store := NewStore(time.Now)
 
 	t.Run("member deleted before the file is stored", func(t *testing.T) {
 		f := newFileScope(t, "Träger Datei Wettlauf A")
@@ -246,7 +246,7 @@ func TestSubmittedSEPADebitFileGoesWhenItsLastDebitsGoConcurrently(t *testing.T)
 func TestRequestRoleCannotDeleteASEPADebitFile(t *testing.T) {
 	t.Parallel()
 	f := newFileScope(t, "Träger Datei Rechte")
-	store := NewStore()
+	store := NewStore(time.Now)
 	original, download := fmt.Sprintf("MSG-R-%d", f.unique), fmt.Sprintf("MSG-S-%d", f.unique)
 	f.keep(t, original, true, 0, []int64{f.debit, f.second}, []int64{f.mandate})
 	f.keep(t, download, false, 0, []int64{f.second}, []int64{f.mandate, f.otherMandate})
@@ -302,7 +302,7 @@ func TestRequestRoleCannotDeleteASEPADebitFile(t *testing.T) {
 func TestUnsubmittedSEPADebitDownloadsExpire(t *testing.T) {
 	t.Parallel()
 	f := newFileScope(t, "Träger Datei Ablauf")
-	store := NewStore()
+	store := NewStore(time.Now)
 	expired, fresh, original := fmt.Sprintf("MSG-E-%d", f.unique), fmt.Sprintf("MSG-F-%d", f.unique), fmt.Sprintf("MSG-G-%d", f.unique)
 	f.keep(t, expired, false, 31*24*time.Hour, []int64{f.debit}, []int64{f.mandate})
 	f.keep(t, fresh, false, 29*24*time.Hour, []int64{f.second}, []int64{f.mandate})

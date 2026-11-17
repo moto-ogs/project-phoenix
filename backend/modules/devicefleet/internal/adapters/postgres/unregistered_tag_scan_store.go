@@ -21,11 +21,11 @@ type unregisteredTagScanRow struct {
 
 	ID                   int64      `bun:"id,pk,autoincrement"`
 	TenantID             int64      `bun:"tenant_id,notnull"`
-	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt            time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt            time.Time  `bun:"updated_at,nullzero,notnull"`
 	TagUID               string     `bun:"tag_uid,notnull"`
 	DeviceID             *int64     `bun:"device_id"`
-	ScannedAt            time.Time  `bun:"scanned_at,notnull"`
+	ScannedAt            time.Time  `bun:"scanned_at,nullzero,notnull"`
 	ResolvedAt           *time.Time `bun:"resolved_at"`
 	ResolvedByOperatorID *int64     `bun:"resolved_by_operator_id"`
 	ResolutionNote       *string    `bun:"resolution_note"`
@@ -69,7 +69,7 @@ func (s *UnregisteredTagScanStore) Insert(ctx context.Context, input devicefleet
 		return devicefleet.UnregisteredTagScan{}, domain.OperationStats{}, devicefleet.ErrTenantRequired
 	}
 	row := unregisteredTagScanRow{
-		TenantID: scope.TenantID, TagUID: input.TagUID, DeviceID: input.DeviceID, ScannedAt: input.ScannedAt,
+		TenantID: scope.TenantID, TagUID: input.TagUID, DeviceID: input.DeviceID,
 	}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -195,6 +195,20 @@ func (s *UnregisteredTagScanStore) DeleteExpired(ctx context.Context, cutoff tim
 	}
 	stats.Rows = deleted
 	return deleted, stats, nil
+}
+
+// DatabaseTime reads the clock the column default stamps scanned_at with and
+// audit.delete_expired_unregistered_tag_scans guards its window on.
+func (s *UnregisteredTagScanStore) DatabaseTime(ctx context.Context) (time.Time, error) {
+	db, _, err := s.database(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	var now time.Time
+	if err := db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &now); err != nil {
+		return time.Time{}, fmt.Errorf("devicefleet postgres: read the database time: %w", err)
+	}
+	return now, nil
 }
 
 func toUnregisteredTagScanDomain(row unregisteredTagScanRow) devicefleet.UnregisteredTagScan {

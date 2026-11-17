@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 var ErrOffboardingConflict = errors.New("staff membership changed since offboarding preview")
@@ -33,6 +35,10 @@ type Offboarding struct {
 	// PlannedExits are the planned exits the workflow runs (#4809); a graph
 	// that never plans an exit may leave them nil.
 	*PlannedExits
+	// RetirementDay is the Berlin day of the database clock, which stamps the
+	// retirement and guards the window of the erasure function; the automatic
+	// deletion of staff counts its cutoff from it (ADR 0281 point 3).
+	RetirementDay func(context.Context) (calendar.Date, error)
 }
 
 // Reinstatement binds the Wiederaufnahme of ADR 0021, the way back from a

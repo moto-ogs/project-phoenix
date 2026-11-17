@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { catalogText } from "~/test/error-catalog-text";
 import { ERROR_CATALOG } from "~/lib/error-catalog.generated";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 /** What the shared path shows for a failure that is no API error. */
 function crashText(object: string) {
@@ -60,6 +63,14 @@ vi.mock("~/components/settings/trusted-devices-section", () => ({
 
 import OperatorSettingsPage from "./page";
 
+function renderPage() {
+  return render(
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <OperatorSettingsPage />
+    </SWRConfig>,
+  );
+}
+
 const defaultProfile = {
   id: 1,
   email: "mail@yannickwenger.de",
@@ -72,7 +83,12 @@ describe("OperatorSettingsPage", () => {
     mockUpdateSession.mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
       data: {
-        user: { name: "John Doe", email: "john@example.com" },
+        user: {
+          id: "1",
+          scope: "platform",
+          name: "John Doe",
+          email: "john@example.com",
+        },
       },
       status: "authenticated",
       update: mockUpdateSession,
@@ -120,7 +136,7 @@ describe("OperatorSettingsPage", () => {
       update: mockUpdateSession,
     });
 
-    render(<OperatorSettingsPage />);
+    renderPage();
 
     await waitFor(() => {
       expect(
@@ -130,7 +146,7 @@ describe("OperatorSettingsPage", () => {
   });
 
   it("renders settings form with operator data", async () => {
-    render(<OperatorSettingsPage />);
+    renderPage();
 
     await waitFor(() => {
       expect(screen.getByText("yonnock")).toBeInTheDocument();
@@ -141,13 +157,18 @@ describe("OperatorSettingsPage", () => {
   it("loads canonical backend email instead of a platform token subject", async () => {
     mockUseSession.mockReturnValue({
       data: {
-        user: { name: "yonnock", email: "operator:2" },
+        user: {
+          id: "1",
+          scope: "platform",
+          name: "yonnock",
+          email: "operator:2",
+        },
       },
       status: "authenticated",
       update: mockUpdateSession,
     });
 
-    render(<OperatorSettingsPage />);
+    renderPage();
 
     await waitFor(() => {
       expect(screen.getByText("mail@yannickwenger.de")).toBeInTheDocument();
@@ -158,14 +179,19 @@ describe("OperatorSettingsPage", () => {
   it("does not show a non-email session fallback when profile loading fails", async () => {
     mockUseSession.mockReturnValue({
       data: {
-        user: { name: "yonnock", email: "operator:2" },
+        user: {
+          id: "1",
+          scope: "platform",
+          name: "yonnock",
+          email: "operator:2",
+        },
       },
       status: "authenticated",
       update: mockUpdateSession,
     });
     mockSessionFetch.mockRejectedValueOnce(new Error("Network error"));
 
-    render(<OperatorSettingsPage />);
+    renderPage();
 
     await waitFor(() => {
       expect(mockSessionFetch).toHaveBeenCalledWith("/api/operator/profile", {
@@ -182,7 +208,7 @@ describe("OperatorSettingsPage", () => {
   it("keeps an email session fallback when profile loading fails", async () => {
     mockSessionFetch.mockRejectedValueOnce(new Error("Network error"));
 
-    render(<OperatorSettingsPage />);
+    renderPage();
 
     expect(
       await screen.findByText(crashText("das Profil")),
@@ -198,7 +224,7 @@ describe("OperatorSettingsPage", () => {
       }),
     );
 
-    render(<OperatorSettingsPage />);
+    renderPage();
 
     expect(
       await screen.findByText(catalogText("general.unavailable", "das Profil")),
@@ -213,7 +239,7 @@ describe("OperatorSettingsPage", () => {
   });
 
   it("updates profile on save", async () => {
-    render(<OperatorSettingsPage />);
+    renderPage();
 
     fireEvent.click(await screen.findByText("Bearbeiten"));
 
@@ -262,7 +288,7 @@ describe("OperatorSettingsPage", () => {
       },
     );
 
-    render(<OperatorSettingsPage />);
+    renderPage();
 
     fireEvent.click(await screen.findByText("Bearbeiten"));
 
@@ -282,7 +308,7 @@ describe("OperatorSettingsPage", () => {
   });
 
   it("cancels editing and restores original values", async () => {
-    render(<OperatorSettingsPage />);
+    renderPage();
 
     fireEvent.click(await screen.findByText("Bearbeiten"));
 
@@ -298,7 +324,7 @@ describe("OperatorSettingsPage", () => {
   });
 
   it("displays initials correctly", async () => {
-    render(<OperatorSettingsPage />);
+    renderPage();
 
     await waitFor(() => {
       expect(screen.getByText("Y")).toBeInTheDocument();
@@ -308,7 +334,12 @@ describe("OperatorSettingsPage", () => {
   it("handles single word name initials", async () => {
     mockUseSession.mockReturnValue({
       data: {
-        user: { name: "Admin", email: "admin@example.com" },
+        user: {
+          id: "1",
+          scope: "platform",
+          name: "Admin",
+          email: "admin@example.com",
+        },
       },
       status: "authenticated",
       update: mockUpdateSession,
@@ -320,7 +351,7 @@ describe("OperatorSettingsPage", () => {
       }),
     }));
 
-    render(<OperatorSettingsPage />);
+    renderPage();
 
     await waitFor(() => {
       expect(screen.getByText("A")).toBeInTheDocument();
@@ -332,14 +363,14 @@ describe("OperatorSettingsPage", () => {
     // and is reachable without entering the edit state of the master data
     // (#3117).
     it("offers the email change without entering the edit state", async () => {
-      render(<OperatorSettingsPage />);
+      renderPage();
 
       expect(await screen.findByText("E-Mail ändern")).toBeInTheDocument();
       expect(screen.queryByLabelText("Anzeigename")).not.toBeInTheDocument();
     });
 
     it("opens email change dialog with form fields", async () => {
-      render(<OperatorSettingsPage />);
+      renderPage();
 
       fireEvent.click(await screen.findByText("E-Mail ändern"));
 
@@ -356,7 +387,7 @@ describe("OperatorSettingsPage", () => {
     });
 
     it("submits email change request successfully", async () => {
-      render(<OperatorSettingsPage />);
+      renderPage();
 
       fireEvent.click(await screen.findByText("E-Mail ändern"));
 
@@ -394,7 +425,7 @@ describe("OperatorSettingsPage", () => {
     });
 
     it("does not submit an invalid email address", async () => {
-      render(<OperatorSettingsPage />);
+      renderPage();
 
       fireEvent.click(await screen.findByText("E-Mail ändern"));
 
@@ -414,7 +445,7 @@ describe("OperatorSettingsPage", () => {
     });
 
     it("does not submit an email address without a top-level domain", async () => {
-      render(<OperatorSettingsPage />);
+      renderPage();
 
       fireEvent.click(await screen.findByText("E-Mail ändern"));
 
@@ -434,7 +465,7 @@ describe("OperatorSettingsPage", () => {
     });
 
     it("closes dialog after successful submission", async () => {
-      render(<OperatorSettingsPage />);
+      renderPage();
 
       fireEvent.click(await screen.findByText("E-Mail ändern"));
 
@@ -480,7 +511,7 @@ describe("OperatorSettingsPage", () => {
         },
       );
 
-      render(<OperatorSettingsPage />);
+      renderPage();
 
       fireEvent.click(await screen.findByText("E-Mail ändern"));
 
@@ -546,7 +577,7 @@ describe("OperatorSettingsPage", () => {
         },
       );
 
-      render(<OperatorSettingsPage />);
+      renderPage();
 
       fireEvent.click(await screen.findByText("E-Mail ändern"));
 
@@ -589,7 +620,7 @@ describe("OperatorSettingsPage", () => {
         },
       );
 
-      render(<OperatorSettingsPage />);
+      renderPage();
 
       fireEvent.click(await screen.findByText("E-Mail ändern"));
 
@@ -625,7 +656,7 @@ describe("OperatorSettingsPage", () => {
     });
 
     it("closes dialog and resets fields on cancel", async () => {
-      render(<OperatorSettingsPage />);
+      renderPage();
 
       fireEvent.click(await screen.findByText("E-Mail ändern"));
 
@@ -658,7 +689,7 @@ describe("OperatorSettingsPage", () => {
   // #2519: the password dialog runs on the shared form error path, so a
   // refused current password marks its field with the catalog text.
   it("hands the password dialog the shared form error path", async () => {
-    render(<OperatorSettingsPage />);
+    renderPage();
     fireEvent.click(await screen.findByText("Passwort ändern"));
 
     const props = passwordModalProps.current;

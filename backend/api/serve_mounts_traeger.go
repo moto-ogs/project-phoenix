@@ -121,24 +121,24 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 	overview, reports, keyDateReports, err := traegerViewCompose.New(traegerview.Ports{
 		SchoolIDs: traegerSchoolIDs{organizations: organizations}, Trail: traegerAccessTrail{trail: audit.Trail},
 		Recorder: traegerAccessRecorder{log: audit.Log}, Holiday: traegerHolidayTrail{trail: enrollmentCompose.NewHolidayAccessTrail()}, Persons: traegerPersonDirectory{persons: persons}, Staff: traegerStaffDirectory{staff: staff},
-		Bureau: traegerBureauAddresses{roles: identity}, Now: time.Now,
+		Bureau: traegerBureauAddresses{roles: identity}, Now: now,
 		Rosters: schoolMembershipCompose.NewSchoolRosters(), Present: presence,
 		Sick: sick, OnSite: workforceCompose.NewOnSiteStaff(),
 		KeyDates:    traegerKeyDateCounts{organizations: organizations},
 		Enrollments: enrollmentCompose.NewOpenEnrollments(), Alerts: traegerAlertSettings{settings: settings},
-		Occupancy: traegerOccupancyPorts(), Known: traegerKnownChildrenPorts(), Utilization: traegerUtilizationPorts(statistics),
+		Occupancy: traegerOccupancyPorts(), Known: traegerKnownChildrenPorts(), Utilization: traegerUtilizationPorts(statistics, now),
 		Times: traegerArrivalPickupCounts{times: presence}, Daily: traegerDailyAttendancePorts(presence, sick, calendarSchools),
 		Reports: traegerReportPorts(reportTemplateReads),
 	})
 	if err != nil {
 		return nil, err
 	}
-	review, places, allocation, records := enrollmentCompose.NewHolidayRegistrationReview(healthData, holidayMail, holidayTraeger, holidayCalendar, holidayMails, today)
-	_, allocationBilling := parentBillingCompose.NewHolidayContributions(parentBillingHolidayRegistrations{review: review}, parentBillingSettings{settings: settings}, today)
+	review, places, allocation, records := enrollmentCompose.NewHolidayRegistrationReview(healthData, holidayMail, holidayTraeger, holidayCalendar, holidayMails, now)
+	_, allocationBilling := parentBillingCompose.NewHolidayContributions(parentBillingHolidayRegistrations{review: review}, parentBillingSettings{settings: settings}, today, now)
 	decide := newHolidayAllocation(allocationBilling, review, places, allocation)
 	_, wishes := enrollmentCompose.NewHolidayWishes(healthData, now)
 	traegerLists := traegerListRenderer(NewSimpleListRenderer())
-	holidayPeriods := enrollmentAPI.NewHolidayPeriodResource(enrollmentCompose.NewHolidayPeriods(today, holidayCalendar), review, records, wishes, places, allocation, decide, holidaySchoolNames{overview: overview},
+	holidayPeriods := enrollmentAPI.NewHolidayPeriodResource(enrollmentCompose.NewHolidayPeriods(now, holidayCalendar), review, records, wishes, places, allocation, decide, holidaySchoolNames{overview: overview},
 		holidayKnownChildren{overview: overview}, enrollmentCompose.NewHolidayKnownChildTrail(), traegerLists,
 		common.RequiresPermission(identityaccess.TraegerRightEnrollmentManage), common.RequiresPermission(identityaccess.TraegerRightHealthRead), now)
 	traegerSettings := settingsHTTP.NewTraegerSettingsResource(settings, identityaccess.TraegerRightOverviewRead,
@@ -271,16 +271,16 @@ type traegerAccessTrail struct {
 	trail auditlog.AccessTrailQuery
 }
 
-func (t traegerAccessTrail) ListAccessTrail(ctx context.Context, query traegerview.AccessTrailQuery) ([]traegerview.AccessTrailEntry, error) {
-	rows, err := t.trail.ListAccessTrail(ctx, auditlog.AccessTrailFilter(query))
+func (t traegerAccessTrail) ListAccessTrail(ctx context.Context, query traegerview.AccessTrailQuery) ([]traegerview.AccessTrailEntry, time.Time, error) {
+	rows, asOf, err := t.trail.ListAccessTrail(ctx, auditlog.AccessTrailFilter(query))
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
 	}
 	entries := make([]traegerview.AccessTrailEntry, 0, len(rows))
 	for _, row := range rows {
 		entries = append(entries, traegerview.AccessTrailEntry(row))
 	}
-	return entries, nil
+	return entries, asOf, nil
 }
 
 func (t traegerAccessTrail) ListAccessTrailActors(ctx context.Context, schools []int64, from, to time.Time) ([]traegerview.AccessTrailActor, error) {

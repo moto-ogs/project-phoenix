@@ -36,10 +36,10 @@ type HolidayGuestDirectory interface {
 // school's access log at the Audit Platform; health opens and seals the
 // health information (#4722). The school's own children of a hosted week
 // (#6678) are found among students and planned in Care Plan, on the root's
-// day clock today.
-func NewHolidayGuests(people HolidayGuestDirectory, students HolidayOwnChildStudents, schools HolidayHostSchools, care HolidayGuestCarePlan, accessLog DataAccessAppender, health enrollmentOwner.HolidayHealthCipher, today func() calendar.Date) enrollmentOwner.HolidayGuests {
+// clock now.
+func NewHolidayGuests(people HolidayGuestDirectory, students HolidayOwnChildStudents, schools HolidayHostSchools, care HolidayGuestCarePlan, accessLog DataAccessAppender, health enrollmentOwner.HolidayHealthCipher, now func() time.Time) enrollmentOwner.HolidayGuests {
 	return enrollmentCompose.NewHolidayGuests(NewHolidayGuestPeople(people), NewHolidayHostSchoolNames(schools), NewHolidayGuestCareDays(care),
-		StatisticsHolidayStudents{Students: students}, NewHolidayOwnChildPlans(care), health, NewHolidayGuestAccessLog(accessLog), today)
+		StatisticsHolidayStudents{Students: students}, NewHolidayOwnChildPlans(care), health, NewHolidayGuestAccessLog(accessLog), now)
 }
 
 // HolidayOwnChildStudents reads the children of the school by date of birth
@@ -89,9 +89,9 @@ func (n holidayHostSchoolNames) HolidayHostSchoolNames(ctx context.Context, scho
 
 // schedulerHolidayGuests binds the Worker's hourly reconciliation to the
 // holiday guests of the school whose tenant transaction the Worker opened,
-// on the root's day today.
-func schedulerHolidayGuests(people HolidayGuestDirectory, students HolidayOwnChildStudents, schools HolidayHostSchools, care HolidayGuestCarePlan, accessLog DataAccessAppender, health enrollmentOwner.HolidayHealthCipher, today func() calendar.Date) schedulerPorts.HolidayGuestReconciliation {
-	guests := NewHolidayGuests(people, students, schools, care, accessLog, health, today)
+// on the root's clock now.
+func schedulerHolidayGuests(people HolidayGuestDirectory, students HolidayOwnChildStudents, schools HolidayHostSchools, care HolidayGuestCarePlan, accessLog DataAccessAppender, health enrollmentOwner.HolidayHealthCipher, now func() time.Time) schedulerPorts.HolidayGuestReconciliation {
+	guests := NewHolidayGuests(people, students, schools, care, accessLog, health, now)
 	return func(ctx context.Context) error {
 		return guests.ReconcileHolidayGuests(ctx, tenant.FromContext(ctx))
 	}

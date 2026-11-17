@@ -179,6 +179,9 @@ function listOf(week: HostedHolidayWeek): HolidayParticipantList {
 
 describe("FerienwochenPage", () => {
   beforeEach(() => {
+    // Die Ferienwochen liegen fest im September/Oktober 2026; ihr Abstand zu
+    // heute (laufend, kommend, vorbei) ist Teil der Tests.
+    setTestClock("2026-09-09T12:00:00+02:00");
     vi.clearAllMocks();
     vi.mocked(useTenantSlugSafe).mockReturnValue("test-tenant");
     downloadMock.mockResolvedValue(undefined);

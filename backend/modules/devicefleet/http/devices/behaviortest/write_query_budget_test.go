@@ -115,7 +115,10 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					want.UpdatedAt, want.RoomName = row.UpdatedAt, roomName
 					if scenario == "create-no-room" {
 						require.Equal(t, "no-store", response.Header().Get("Cache-Control"))
-						require.True(t, row.CreatedAt.Equal(row.UpdatedAt))
+						// The owner stamps created_at on its clock: ListOffline
+						// compares it with an owner-clock cutoff (ADR 0281).
+						require.False(t, row.CreatedAt.Before(hostStart))
+						require.False(t, row.CreatedAt.After(hostEnd))
 						require.NotNil(t, row.LastSeen)
 						require.False(t, row.LastSeen.Before(hostStart))
 						require.False(t, row.LastSeen.After(hostEnd))

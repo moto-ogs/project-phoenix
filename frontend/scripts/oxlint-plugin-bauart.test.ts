@@ -919,7 +919,8 @@ describe.concurrent("bauart rules", () => {
     it("rejects the object-view field groups inside a SlideOver", async () => {
       const { status, output } = await lintSource(
         `import { SlideOver, SlideOverContent, SlideOverBody } from "~/components/ui/slide-over";
-      import { InfoSection, DataGrid, DataField } from "~/components/ui/detail-modal-components";
+      import { DataGrid, DataField } from "~/components/ui/data-field";
+      import { InfoSection } from "~/components/ui/info-section";
       export function Probe({ room }: { room: { name: string } }) {
         return (
           <SlideOver open onOpenChange={() => {}}>
@@ -965,7 +966,8 @@ describe.concurrent("bauart rules", () => {
     it("allows field groups on a page and in a FormModal", async () => {
       const { output } = await lintSource(
         `import { FormModal } from "~/components/ui/modal";
-      import { InfoSection, DataGrid, DataField } from "~/components/ui/detail-modal-components";
+      import { DataGrid, DataField } from "~/components/ui/data-field";
+      import { InfoSection } from "~/components/ui/info-section";
       export function Probe({ room }: { room: { name: string } }) {
         return (
           <>
@@ -1131,7 +1133,7 @@ describe.concurrent("bauart rules", () => {
 
     it("accepts the kit's DataField and DataGrid", async () => {
       const { output } = await lintSource(
-        `import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+        `import { DataField, DataGrid } from "~/components/ui/data-field";
       export function Probe({ name }: { name: string }) {
         return (
           <DataGrid>

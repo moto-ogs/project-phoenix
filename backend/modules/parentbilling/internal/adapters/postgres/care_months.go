@@ -48,7 +48,7 @@ type careTariffRow struct {
 	SiblingCents       *int64        `bun:"sibling_cents"`
 	MealExtra          bool          `bun:"meal_extra"`
 	CreatedByAccountID *int64        `bun:"created_by_account_id"`
-	CreatedAt          time.Time     `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt          time.Time     `bun:"created_at,nullzero"`
 }
 
 type careRunRow struct {
@@ -58,7 +58,7 @@ type careRunRow struct {
 	OrganizationID     int64          `bun:"organization_id"`
 	BillingMonth       calendar.Date  `bun:"billing_month,type:date"`
 	Status             string         `bun:"status"`
-	CreatedAt          time.Time      `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt          time.Time      `bun:"created_at,nullzero"`
 	CreatedByAccountID *int64         `bun:"created_by_account_id"`
 	ReleasedAt         *time.Time     `bun:"released_at"`
 	IssuedOn           *calendar.Date `bun:"issued_on,type:date"`
@@ -588,7 +588,8 @@ func carePositionRows(organizationID int64, rows []careInvoiceRow, invoices []pa
 }
 
 // MarkCareRunReleased closes a calculated run with its issue date, sums
-// and the rule it billed by.
+// and the rule it billed by. The database dates the release, as in
+// MarkRunReleased.
 func (s *Store) MarkCareRunReleased(ctx context.Context, organizationID, runID int64, issuedOn calendar.Date, count int, totalCents int64, rule string) (parentbilling.CareRun, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {

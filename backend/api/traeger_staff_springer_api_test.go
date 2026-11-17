@@ -158,10 +158,13 @@ func TestStaffPoolFirstBlockEmploysTheSpringer(t *testing.T) {
 		// family check, #5194) while no window is open.
 		identity, err := lifecycleTestModule(testpkg.NewDatabase(t, db), unit, GuardianInvitationTestConfig{})
 		require.NoError(t, err)
+		// The session expires on the clock of Identity & Access, here time.Now
+		// (ADR 0281); the access windows stay on the database clock of
+		// auth.account_tenant_admitted.
 		var family string
 		require.NoError(t, db.NewRaw(`INSERT INTO auth.tokens (account_id, token, expiry, family_id, generation, tenant_id, portal_scope, identifier)
-			SELECT ?, encode(sha256(convert_to(f, 'UTF8')), 'hex'), now() + interval '7 days', f, 0, ?, 'tenant', 'refresh'
-			FROM (SELECT gen_random_uuid()::text AS f) AS family RETURNING family_id`, account, south).Scan(t.Context(), &family))
+			SELECT ?, encode(sha256(convert_to(f, 'UTF8')), 'hex'), ?, f, 0, ?, 'tenant', 'refresh'
+			FROM (SELECT gen_random_uuid()::text AS f) AS family RETURNING family_id`, account, time.Now().Add(7*24*time.Hour), south).Scan(t.Context(), &family))
 		session := identityaccess.AccessSession{AccountID: account, FamilyID: family}
 		ctx := tenant.WithUnitOfWork(t.Context(), unit)
 		assert.ErrorIs(t, identity.VerifyAccessSession(ctx, session), identityaccess.ErrInvalidToken, "no open window ends the session")

@@ -89,8 +89,8 @@ func (r staffNoticeRepository) Delete(ctx context.Context, id int64) error {
 
 // DeleteEndedBefore löscht die beendeten Hinweise der Löschfrist (#4045);
 // die Kenntnisnahmen fallen per CASCADE mit.
-func (r staffNoticeRepository) DeleteEndedBefore(ctx context.Context, cutoff calendar.Date) (int, error) {
-	deleted, err := r.store.DeleteStaffNoticesEndedBefore(ctx, cutoff)
+func (r staffNoticeRepository) DeleteEndedBefore(ctx context.Context, cutoff calendar.Date, retentionDays int) (int, error) {
+	deleted, err := r.store.DeleteStaffNoticesEndedBefore(ctx, cutoff, retentionDays)
 	if err != nil {
 		return 0, &domain.StoreError{Op: "delete ended staff notices", Err: err}
 	}

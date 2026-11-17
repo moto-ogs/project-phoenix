@@ -27,7 +27,8 @@ vi.mock("~/lib/parent-api", () => ({
 
 const mockedOffers = vi.mocked(listHolidayOffers);
 
-// The frozen test clock is Wednesday 2026-09-09 in Berlin.
+// The fixtures are dated around Wednesday 2026-09-09 in Berlin; every test
+// starts on that day (see beforeEach).
 const winter: HolidayOffer = {
   token: "winter-key",
   name: "Weihnachtsferien 2026",
@@ -56,6 +57,8 @@ function renderOffers() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Deadlines and registration windows are fixed dates around this day.
+  setTestClock("2026-09-09T12:00:00+02:00");
 });
 
 describe("HolidayOffers", () => {

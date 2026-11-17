@@ -1,6 +1,7 @@
 "use client";
 
 import { groupKeys } from "~/lib/swr/groups-keys";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 
 import {
   HANDOVER_ABSENT_WORDING,
@@ -14,7 +15,6 @@ import {
   useMemo,
   useCallback,
   useRef,
-  useLayoutEffect,
 } from "react";
 import { useSession } from "next-auth/react";
 import { hasSessionAccess } from "~/lib/session-access";
@@ -57,7 +57,7 @@ import { SSEErrorBoundary } from "~/components/sse/SSEErrorBoundary";
 import { GroupTransferModal } from "~/components/groups/group-transfer-modal";
 import { substitutionService } from "~/lib/substitution-api";
 import type { Substitution } from "~/lib/substitution-helpers";
-import { useApiLoadError, useToast } from "~/contexts/ToastContext";
+import { useToast } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useLocalStorageValue } from "~/lib/hooks/use-local-storage-value";
@@ -172,13 +172,7 @@ function groupTransfers(
     }));
 }
 
-async function fetchGroupTransferContext(groupId: string) {
-  const overview = await substitutionService.fetchOverview();
-  return {
-    users: overview.targets,
-    transfers: groupTransfers(overview.groupHandovers, groupId),
-  };
-}
+const NO_TRANSFER_USERS: Array<{ id: string; fullName: string }> = [];
 
 async function assignGroupForToday(groupId: string, targetStaffId: string) {
   const today = berlinTodayISO();
@@ -195,42 +189,32 @@ function useGroupTransferData(
   open: boolean,
   initialTransfers: GroupTransfer[],
 ) {
-  const [users, setUsers] = useState<Array<{ id: string; fullName: string }>>(
-    [],
+  const reading = open && !!groupId;
+  // Every opening reads the current availability again (no deduplication
+  // window): a transfer is planned against who is free now.
+  const overview = useSWRAuth(
+    reading ? tenantListKeys.substitutionOverview() : null,
+    () => substitutionService.fetchOverview(),
+    { dedupingInterval: 0, keepPreviousData: false },
   );
-  const [transfers, setTransfers] = useState<GroupTransfer[]>([]);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+  const failed = reading && overview.error != null;
+  const loadError = useSwrLoadError(
+    failed ? overview.error : null,
+    "die Liste der Fachkräfte und Übergaben",
+    () => overview.mutate(),
+  );
+  const loaded = reading && !failed ? overview.data : undefined;
+  // A failed reload shows no data of an earlier opening beside its error.
+  const users = loaded?.targets ?? NO_TRANSFER_USERS;
+  const transfers = useMemo(() => {
+    if (failed) return EMPTY_GROUP_TRANSFERS;
+    if (!loaded || !groupId) return initialTransfers;
+    return groupTransfers(loaded.groupHandovers, groupId);
+  }, [failed, groupId, loaded, initialTransfers]);
+  const { mutate } = overview;
   const reload = useCallback(async () => {
-    if (!groupId) return;
-    try {
-      const context = await fetchGroupTransferContext(groupId);
-      setUsers(context.users);
-      setTransfers(context.transfers);
-      clearLoadError();
-    } catch (error) {
-      logger.error("failed to load group handover modal", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      setUsers([]);
-      setTransfers([]);
-      void showLoadError(error, {
-        object: "die Liste der Fachkräfte und Übergaben",
-        retry: () => void reloadRef.current(),
-      });
-    }
-  }, [groupId, showLoadError, clearLoadError]);
-  const reloadRef = useRef(reload);
-  useLayoutEffect(() => {
-    reloadRef.current = reload;
-  });
-  useEffect(() => {
-    if (open) void reload();
-  }, [open, reload]);
-  useEffect(() => setTransfers(initialTransfers), [initialTransfers]);
+    await mutate();
+  }, [mutate]);
   return { users, transfers, loadError, reload };
 }
 

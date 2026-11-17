@@ -168,6 +168,8 @@ func TestBuildRejects(t *testing.T) {
 	}
 	noPortal := get("/api/rows/", inner{})
 	noPortal.Portals = nil
+	bothAnswers := get("/api/rows/", inner{})
+	bothAnswers.NoData = true
 	strayEnum := get("/api/rows/", inner{})
 	strayEnum.Enums = []EnumSpec{{Name: "Gone", Fields: []string{"inner.gone"}, Values: []string{"x"}}}
 
@@ -182,6 +184,7 @@ func TestBuildRejects(t *testing.T) {
 			S stamp `json:"s"`
 		}{})}, Options{Identifiers: identifiers}, "anonymous struct"},
 		"an unknown marshaler in a named type":      {[]Registration{get("/api/rows/", []stamp{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
+		"a response on a route without data":        {[]Registration{bothAnswers}, Options{Identifiers: identifiers}, "registers a response and no data"},
 		"a route without a portal":                  {[]Registration{noPortal}, Options{Identifiers: identifiers}, "names no portal"},
 		"a route registered twice":                  {[]Registration{get("/api/rows/", inner{}), get("/api/rows/", inner{})}, Options{Identifiers: identifiers}, "registered twice"},
 		"a numeric id entry nothing uses":           {[]Registration{get("/api/rows/", inner{})}, Options{NumericIDs: []string{"gone.Type.ID"}, Identifiers: identifiers}, "numeric id gone.Type.ID"},
@@ -308,9 +311,80 @@ func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
 		assert.Contains(t, table, line)
 	}
 
-	taken := get("/api/portals/", inner{})
-	doc, err = Build([]Registration{taken}, Options{Identifiers: identifiers})
+	for _, pattern := range []string{"/api/portals/", "/api/shared/"} {
+		doc, err = Build([]Registration{get(pattern, inner{})}, Options{Identifiers: identifiers})
+		require.NoError(t, err)
+		_, err = TypeScript(doc)
+		assert.ErrorContains(t, err, "taken by a generated table")
+	}
+}
+
+// A route that answers 204 or the bare envelope names no response type; its
+// decoder takes exactly those two answers.
+func TestTypeScriptWritesARouteWithoutData(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{{Method: "DELETE", Pattern: "/api/rows/{id}", Portals: []string{"tenant"}, NoData: true}}, Options{Identifiers: identifiers})
 	require.NoError(t, err)
-	_, err = TypeScript(doc)
-	assert.ErrorContains(t, err, "taken by the portal table")
+	assert.True(t, doc.Routes[0].NoData)
+	assert.Nil(t, doc.Routes[0].Response)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	source := files["rows.generated.ts"]
+	assert.Contains(t, source, "import {\n  noData,\n} from \"./runtime\";")
+	assert.Contains(t, source, "    response: noData,\n")
+	assert.NotContains(t, source, "success")
+}
+
+// Two portals mount the same handlers, so two resources answer with one Go
+// type. It is written once and both files import it.
+func TestTypeScriptWritesATypeOfTwoResourcesOnce(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{rowRoute(), get("/school/rows/{id}", row{}), get("/api/others/", inner{})}, rowOptions)
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	shared := files["shared.generated.ts"]
+	assert.Contains(t, shared, "  type OpenEnum,\n} from \"./runtime\";")
+	assert.Contains(t, shared, "  mode: OpenEnum<mode>;")
+	assert.Contains(t, shared, `export const MODE_VALUES = ["a", "b"] as const;`)
+	assert.Contains(t, shared, "export const rowSchema: z.ZodType<row, unknown> = z.object({")
+	assert.NotContains(t, shared, "export const routes")
+	for _, name := range []string{"rows.generated.ts", "school-rows.generated.ts"} {
+		assert.Contains(t, files[name], "import {\n  rowSchema,\n} from \"./shared.generated\";", name)
+		assert.NotContains(t, files[name], "export interface row ", name)
+		assert.NotContains(t, files[name], "type OpenEnum", name)
+		assert.NotContains(t, files[name], `from "zod"`, name)
+		assert.Contains(t, files[name], "    response: success(rowSchema),", name)
+	}
+	// A type of one resource stays in its file.
+	assert.Contains(t, files["others.generated.ts"], "export interface inner {")
+	assert.NotContains(t, shared, "interface inner ")
+}
+
+func TestTypeScriptImportsOpenEnumForASharedRequest(t *testing.T) {
+	t.Parallel()
+	type enumBody struct {
+		Modes map[string][]mode `json:"modes"`
+	}
+	first := post(enumBody{})
+	first.Response = ""
+	first.Enums = []EnumSpec{{Type: mode(""), Values: []string{"a", "b"}}}
+	second := first
+	second.Pattern = "/school/rows/"
+	doc, err := Build([]Registration{first, second}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	shared := files["shared.generated.ts"]
+	assert.Contains(t, shared, "import {\n  type OpenEnum,\n} from \"./runtime\";")
+	assert.Contains(t, shared, "  modes?: Record<string, OpenEnum<mode>[] | null> | null;")
+	assert.NotContains(t, shared, `from "zod"`, "a request has no decoder")
+	for _, name := range []string{"rows.generated.ts", "school-rows.generated.ts"} {
+		assert.Contains(t, files[name], "type enumBody,", name)
+		assert.Contains(t, files[name], "    request: requestBody<enumBody>(),", name)
+		assert.NotContains(t, files[name], "type OpenEnum", name)
+	}
 }

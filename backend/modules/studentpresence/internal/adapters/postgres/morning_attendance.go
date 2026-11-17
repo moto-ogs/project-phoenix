@@ -24,8 +24,8 @@ type morningAttendanceRow struct {
 	ClassListEntryID  int64      `bun:"class_list_entry_id,nullzero"`
 	Status            string     `bun:"status,notnull"`
 	RecordedByStaffID int64      `bun:"recorded_by_staff_id,nullzero"`
-	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 func (s *Store) ListMorningAttendance(ctx context.Context, from, to ports.Date, studentIDs, classListEntryIDs []int64) ([]studentpresence.MorningAttendanceEntry, ports.Stats, error) {

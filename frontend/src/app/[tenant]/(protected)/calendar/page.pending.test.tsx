@@ -1,7 +1,7 @@
 // #6593: Während ein Termin gespeichert wird, lässt sich das Panel nicht
 // schließen; eine späte Antwort schließt kein neu geöffnetes Panel.
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setTestClock } from "~/test/clock";
 import {
@@ -110,6 +110,10 @@ async function startCreating() {
 }
 
 describe("Kalender: Speichern sperrt das Panel (#6593)", () => {
+  beforeAll(async () => {
+    await import("~/lib/error-presentation");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     setTestClock(new Date(2026, 0, 7));

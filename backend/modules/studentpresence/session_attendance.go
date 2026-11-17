@@ -140,7 +140,7 @@ type SessionAttendanceCommand interface {
 	PatchSessionAttendance(context.Context, int64, SessionAttendancePatch) error
 	// TransitionParticipants moves participants from one status to another;
 	// participants in any other status are left alone.
-	TransitionParticipants(context.Context, []int64, string, string, time.Time) (int64, error)
+	TransitionParticipants(context.Context, []int64, string, string) (int64, error)
 	// MarkParticipantsNotScheduled freezes the non-booking marker onto
 	// participants that are still expected or owned by a care-plan absence
 	// and were not decided by hand.

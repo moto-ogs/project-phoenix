@@ -101,6 +101,7 @@ type Store interface {
 	LockGroupAssignments(context.Context) (domain.OperationStats, error)
 
 	// The erasure of retired staff (#3963).
+	DatabaseTime(context.Context) (time.Time, error)
 	MarkNextRetiredStaffErased(ctx context.Context, before time.Time, afterID int64) (schoolmembership.RetiredStaffErasure, bool, domain.OperationStats, error)
 	DeleteGroupAssignmentsByStaff(context.Context, int64) (domain.OperationStats, error)
 	DeleteTeachersByStaff(context.Context, int64) (domain.OperationStats, error)

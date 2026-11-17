@@ -3,6 +3,8 @@
 package api
 
 import (
+	"time"
+
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	parentStore "github.com/moto-ogs/project-phoenix/modules/communication/parentstore"
@@ -65,9 +67,9 @@ func NewStudentPeopleRows(db transactionruntime.Database, members owners.Members
 		return StudentPeopleRows{}, err
 	}
 	return StudentPeopleRows{
-		ParentRequestShare: peopleCompose.NewParentRequestShareEventRepository(db.Pool()),
-		ParentRequestEvent: peopleCompose.NewParentRequestEventRepository(db.Pool()),
-		FamilyProtection:   peopleCompose.NewFamilyProtectionEventRepository(db.Pool()),
+		ParentRequestShare: peopleCompose.NewParentRequestShareEventRepository(db.Pool(), time.Now),
+		ParentRequestEvent: peopleCompose.NewParentRequestEventRepository(db.Pool(), time.Now),
+		FamilyProtection:   peopleCompose.NewFamilyProtectionEventRepository(db.Pool(), time.Now),
 		CareWithdrawal:     lifecycle.CareWithdrawal(),
 	}, nil
 }

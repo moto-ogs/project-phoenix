@@ -42,9 +42,9 @@ func TestOperatorBelegRetentionOverviewQueryBudget(t *testing.T) {
 	router := chi.NewRouter()
 	router.Use(routes.sessions.Operator(ReadOnlyPreviewMiddleware, SecurityPrincipalMiddleware)...)
 	router.Route("/operator", func(r chi.Router) {
-		mountOperatorBelegRetentionRoutes(r, provisioningHTTP.NewProvisioningResource(provisioningHTTP.ProvisioningConfig{Service: provisioning, BelegRetentionAudit: belegRetentionAuditOf(t, provisioning)}), calendar.TodayDate)
+		mountOperatorBelegRetentionRoutes(r, provisioningHTTP.NewProvisioningResource(provisioningHTTP.ProvisioningConfig{Service: provisioning, BelegRetentionAudit: belegRetentionAuditOf(t, provisioning)}), time.Now)
 	})
-	retention := owners.NewBelegRetention(calendar.TodayDate)
+	retention := owners.NewBelegRetention(time.Now)
 	counter := testpkg.CaptureQueriesForContext(t, db)
 	suspensions := 0
 	for _, n := range []int{3, 8} {

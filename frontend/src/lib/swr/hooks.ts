@@ -29,11 +29,23 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   useSyncExternalStore,
 } from "react";
 import { useSession } from "next-auth/react";
+import {
+  liftAllRefusals,
+  liftRefusal,
+  markRefused,
+  refusalFor,
+  subscribeRefusals,
+} from "~/lib/resource-refusals";
 import { swrConfig, immutableConfig } from "./config";
-import { isAccessRefusal, noteShownDataRefusal } from "~/lib/access-refusal";
+import {
+  isAccessRefusal,
+  isReadRefusal,
+  noteShownDataRefusal,
+} from "~/lib/access-refusal";
 import {
   DiscardedAnswer,
   currentSWRDataGeneration,
@@ -57,6 +69,7 @@ import {
 } from "./generation";
 import {
   authGeneration,
+  onSWRScopeReset,
   isSWRSessionPending,
   useSWRSessionRefresh,
   discardScopedEntries,
@@ -67,6 +80,9 @@ import {
 } from "./scope";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
+
+// A refusal belongs to the session that got it.
+onSWRScopeReset(liftAllRefusals);
 
 /**
  * The scope of the signed-in session: the prefix of every key the wrappers
@@ -99,6 +115,7 @@ function useSWRScope(): {
  *   The live flag is read because a timer or mutation can run before React
  *   commits the disabled keys after an owner-change event.
  */
+type OnSuccess = NonNullable<SWRConfiguration["onSuccess"]>;
 type OnError = NonNullable<SWRConfiguration["onError"]>;
 type Compare = NonNullable<SWRConfiguration["compare"]>;
 type OnErrorRetry = NonNullable<SWRConfiguration["onErrorRetry"]>;
@@ -107,12 +124,21 @@ const generationLockMiddleware: Middleware =
   (useSWRNext) => (key, fetcher, config) => {
     const locked =
       typeof key === "string" && fetcher ? lockFetcher(key, fetcher) : fetcher;
+    const onSuccess: OnSuccess = (data, successKey, current) => {
+      // Every successful read lifts a refusal, even without a resource guard.
+      // Cache writes never come through this callback.
+      liftRefusal(successKey);
+      config.onSuccess?.(data, successKey, current);
+    };
     const onError: OnError = (error, errorKey, current) => {
       if (isDiscardedAnswer(error)) return;
       // SWR keeps the data next to a refusal; useRefreshAfterWrite learns
       // of it here, since the revalidation itself never rejects (#6801).
       const shown = (current as { cache?: Cache }).cache?.get(errorKey)?.data;
       if (isAccessRefusal(error) && shown !== undefined) noteShownDataRefusal();
+      // Every reader of the key stops showing its data (useScopedSWR)
+      // until a read succeeds; SWR alone would keep it next to the error.
+      if (isReadRefusal(error)) markRefused(errorKey, error);
       config.onError?.(error, errorKey, current);
     };
     const onErrorRetry: OnErrorRetry = (
@@ -157,6 +183,7 @@ const generationLockMiddleware: Middleware =
         if (typeof key === "string") expireIntentPreload(key);
         return isSWRSessionPending() || config.isPaused?.() === true;
       },
+      onSuccess,
       onError,
       onErrorRetry,
     });
@@ -354,6 +381,11 @@ function lockBoundMutate<T>(
  * generation moved since it arrived: a new key after an account switch, a
  * logout or a discard starts empty. The marker moves once data of the
  * current key arrived.
+ *
+ * Access refusal: after the server refused a read of the key (401, 403), no
+ * reader of it shows data until a read succeeds. A later 5xx, a network
+ * failure or a cache write does not bring the data back. Logout and an
+ * account switch lift every refusal.
  */
 type ScopedSWRResponse<T, E> = SWRResponse<T, E> & {
   /** Current protected values, including between renders. Never raw cache. */
@@ -365,6 +397,7 @@ function useScopedSWR<T, E>(
   fetcher: () => Promise<T>,
   options: ReaderOptions<T, E> | undefined,
   base: SWRConfiguration = swrConfig,
+  revalidateMissing = true,
 ): ScopedSWRResponse<T, E> {
   const { prefix, generation } = useSWRScope();
   const { cache, mutate: cacheMutate, fallback } = useSWRConfig();
@@ -443,7 +476,16 @@ function useScopedSWR<T, E>(
   }, [data]);
   const errorVisible =
     !discarded && (fullKey === null || isCurrentSWRError(fullKey, rawError));
-  const error = errorVisible ? rawError : undefined;
+  const ownError = errorVisible ? rawError : undefined;
+  const refusal = useSyncExternalStore(
+    subscribeRefusals,
+    () => (fullKey === null ? undefined : refusalFor(fullKey)),
+    () => undefined,
+  );
+  const refused = refusal !== undefined || isReadRefusal(ownError);
+  // SWR's own failure when it has one; the cache removal clears it, then
+  // the refusal in force is the failure.
+  const error = ownError ?? (refusal as E | undefined);
 
   const arrived = configured === true && !keep && data !== undefined;
   useLayoutEffect(() => {
@@ -457,7 +499,7 @@ function useScopedSWR<T, E>(
       ? null
       : discarded
         ? `request:${fullKey}:${requestGenerationOf(fullKey)}`
-        : !visible && error === undefined
+        : revalidateMissing && !visible && error === undefined
           ? `data:${fullKey}:${dataGenerationOf(fullKey)}`
           : null;
   const reloaded = useRef<string | null>(null);
@@ -473,8 +515,23 @@ function useScopedSWR<T, E>(
     () => lockBoundMutate<T>(fullKey, cacheMutate, mutationGeneration),
     [fullKey, cacheMutate, mutationGeneration],
   );
+  // The refused answer leaves the cache itself, so no cache read and no
+  // later render can show it; the refusal stays in its own store.
+  const withdraw = refused && raw !== undefined;
+  useEffect(() => {
+    if (!withdraw) return;
+    // Counted here too: this effect can run before SWR calls onError, and
+    // then the cache no longer holds the data that callback looks for.
+    if (isAccessRefusal(ownError ?? refusal)) noteShownDataRefusal();
+    // SWR calls onError only for the hook that started the request and still
+    // reads its key. A refusal known from the cache alone is recorded here,
+    // before the removal clears that error.
+    if (fullKey !== null && isReadRefusal(ownError))
+      markRefused(fullKey, ownError);
+    void mutate(undefined, { revalidate: false });
+  }, [withdraw, mutate, fullKey, ownError, refusal]);
   return {
-    data,
+    data: refused ? undefined : data,
     error,
     mutate,
     readCurrent() {
@@ -485,14 +542,16 @@ function useScopedSWR<T, E>(
       )
         return { data: undefined, error: undefined };
       const current = cache.get(fullKey);
+      const held = refusalFor(fullKey);
       return {
         data:
+          held === undefined &&
           isCurrentSWRValue(fullKey, current?.data) === true
             ? (current?.data as T)
             : undefined,
         error: isCurrentSWRError(fullKey, current?.error)
           ? (current?.error as E)
-          : undefined,
+          : (held as E | undefined),
       };
     },
     get isValidating() {
@@ -532,6 +591,114 @@ export function useSWRAuth<T, E = Error>(
   // Fetches only while the session grants access (hasSessionAccess) and, in
   // the school portal, carries its school: swrScopePrefix is null otherwise.
   return useScopedSWR<T, E>(key, fetcher, options);
+}
+
+/**
+ * A read that has to be fresh each time its surface opens: the preview of a
+ * deletion, the version an edit is saved against, a form's template. `data`
+ * stays undefined until this opening's own request has answered, so nothing
+ * decides or types against the cached answer of an earlier opening; `fresh`
+ * says that it has. A `null` key closes the opening, the next key starts a
+ * new one. Focus and reconnect do not replace what the person is looking at.
+ */
+export function useFreshSWR<T, E = Error>(
+  key: string | null,
+  fetcher: () => Promise<T>,
+  options?: ReaderOptions<T, E>,
+): ScopedSWRResponse<T, E> & { fresh: boolean } {
+  const { prefix, generation } = useSWRScope();
+  const opening =
+    key === null || prefix === null
+      ? null
+      : JSON.stringify([prefix, generation, key]);
+  const paused = options?.isPaused?.() === true;
+  const requestReady = useRef(false);
+  const requestOwner = useRef<SWRResponse<T, E>["mutate"] | null>(null);
+  const [openingKey, setOpeningKey] = useState(opening);
+  const [flightKey, setFlightKey] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<{
+    opening: string | null;
+    owner: SWRResponse<T, E>["mutate"];
+  } | null>(null);
+  const sameOpening = openingKey === opening;
+  if (!sameOpening) {
+    setOpeningKey(opening);
+    setFlightKey(null);
+    setConfirmation(null);
+  }
+  // Reset only committed openings, before SWR's own layout effects can read.
+  // An abandoned render must not pause the still-visible opening's requests.
+  useLayoutEffect(() => {
+    requestReady.current = false;
+    requestOwner.current = null;
+  }, [opening]);
+  const read = useScopedSWR<T, E>(
+    key,
+    fetcher,
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      ...options,
+      // SWR also starts automatic reads on key changes, even with mount
+      // revalidation disabled. Only this opening's explicit read may start it.
+      isPaused: () => !requestReady.current || options?.isPaused?.() === true,
+      revalidateOnMount: false,
+      dedupingInterval: 0,
+    },
+    swrConfig,
+    false,
+  );
+  const { mutate } = read;
+  useEffect(() => {
+    if (opening === null || paused) return;
+    requestReady.current = true;
+    requestOwner.current = mutate;
+    // mutate() removes the pending FETCH marker. A zero deduping interval
+    // alone still borrows a request that has not settled.
+    void mutate();
+    setFlightKey(opening);
+    return () => {
+      requestReady.current = false;
+      requestOwner.current = null;
+    };
+  }, [opening, mutate, paused]);
+  // A later explicit reload can overtake this opening's first request. Its
+  // confirmed answer counts too; never wait for the superseded flight.
+  const currentOpening =
+    !paused &&
+    sameOpening &&
+    opening !== null &&
+    flightKey === opening &&
+    requestOwner.current === mutate;
+  const confirmedHere =
+    confirmation !== null &&
+    confirmation.opening === opening &&
+    confirmation.owner === mutate;
+  const accessRefused = isAccessRefusal(read.error);
+  if (currentOpening && confirmedHere && accessRefused) setConfirmation(null);
+  if (
+    currentOpening &&
+    !confirmedHere &&
+    !read.isValidating &&
+    read.error === undefined &&
+    read.data !== undefined
+  ) {
+    setConfirmation({ opening, owner: mutate });
+  }
+  // Confirmation survives refreshes, not a new opening or data generation.
+  // The reader still owns the value, so a scope/access discard stays empty.
+  const fresh = currentOpening && (confirmedHere || !read.isValidating);
+  return {
+    ...read,
+    data:
+      fresh && !accessRefused && (confirmedHere || read.error === undefined)
+        ? read.data
+        : undefined,
+    error: fresh ? read.error : undefined,
+    isLoading: key !== null && !fresh,
+    fresh,
+  };
 }
 
 /**

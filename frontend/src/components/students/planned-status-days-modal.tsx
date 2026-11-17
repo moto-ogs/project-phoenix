@@ -1079,7 +1079,6 @@ export function PlannedStatusDaysModal({
                         onChangeDates={setSortedDates}
                         disabledDates={disabledDates}
                         placeholder="Tage auswählen"
-                        dropdownPlacement="down"
                         calendarLayout="inline"
                       />
                     )}

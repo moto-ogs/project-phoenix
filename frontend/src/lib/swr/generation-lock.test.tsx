@@ -1093,8 +1093,8 @@ describe.each([
         await run(ui, async () => {
           await flush();
           // Focus revalidation is throttled against Date.now(), which the
-          // test clock freezes.
-          setTestClock("2026-09-09T12:00:01+02:00");
+          // test clock freezes: one second later.
+          setTestClock(new Date(Date.now() + 1000));
           act(() => trigger());
           await flush();
           // Anker: die Revalidierung läuft.

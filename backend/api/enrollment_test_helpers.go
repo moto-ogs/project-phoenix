@@ -14,7 +14,7 @@ import (
 type ApprovedOfferingTestProjection = enrollmentCompose.ApprovedOfferingProjection
 
 func NewOwnerApprovedOfferingTestProjection(db transactionruntime.Database) (*ApprovedOfferingTestProjection, error) {
-	return NewApprovedOfferingTestProjection(db, owners.NewEnrollmentBookingProjection(owners.NewEnrollmentBookings(time.Now), owners.UngatedEnrollmentPhaseBounds()))
+	return NewApprovedOfferingTestProjection(db, owners.NewEnrollmentBookingProjection(owners.NewEnrollmentBookings(time.Now), owners.UngatedEnrollmentPhaseBounds(), time.Now))
 }
 
 func NewApprovedOfferingTestProjection(db transactionruntime.Database, selections enrollmentCompose.ApprovedSelections) (*enrollmentCompose.ApprovedOfferingProjection, error) {

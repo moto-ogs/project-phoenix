@@ -508,7 +508,8 @@ func TestOperatorManagesTheOpenInvitationsOfATraegerBuero(t *testing.T) {
 	assert.Positive(t, audited, "reading the addresses is in the operator audit")
 
 	// The expired invitation stays listed and marked until the cleanup.
-	_, err := db.ExecContext(ctx, `UPDATE auth.traeger_invitations SET expires_at = now() - interval '1 minute' WHERE id = ?`, byEmail[second].ID)
+	// Identity & Access dates invitations on its clock, time.Now (ADR 0281).
+	_, err := db.ExecContext(ctx, `UPDATE auth.traeger_invitations SET expires_at = ? WHERE id = ?`, time.Now().Add(-time.Minute), byEmail[second].ID)
 	require.NoError(t, err)
 	open = list()
 	require.Len(t, open, 2)

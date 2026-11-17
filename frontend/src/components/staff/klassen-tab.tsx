@@ -12,14 +12,7 @@
 // jeder Chip-Klick sofort, ohne Abbrechen und ohne Hinweis.
 
 import { Plus } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
 import {
@@ -30,15 +23,20 @@ import { SuggestInput } from "~/components/ui/suggest-input";
 import { SectionCard } from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { RemovableChip } from "~/components/ui/removable-chip";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import { authFetch } from "~/lib/api-helpers";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { fetchSchoolClasses } from "~/lib/student-api";
+import { useSWRAuth } from "~/lib/swr";
+import { studentKeys } from "~/lib/swr/portal-keys";
+import { staffAccessKeys } from "~/lib/swr/staff-keys";
 
 const logger = createLogger({ component: "StaffKlassenTab" });
 
 const OBJECT = "die Zuweisung der Schulklassen";
+const NO_CLASSES: readonly string[] = [];
 
 interface ProxyResponse<T> {
   success: boolean;
@@ -76,57 +74,38 @@ export function KlassenTab({
   staffId,
   canEdit,
 }: Readonly<{ staffId: string; canEdit: boolean }>) {
-  const [assigned, setAssigned] = useState<string[] | null>(null);
-  const [known, setKnown] = useState<string[]>([]);
+  const {
+    data: assignedData,
+    error: assignedError,
+    mutate: mutateAssigned,
+  } = useSWRAuth(
+    staffAccessKeys.schoolClasses(staffId),
+    () => fetchAssignedClasses(staffId),
+    { keepPreviousData: false },
+  );
+  const assigned = assignedData ?? null;
+  // Vorschläge sind optional: ohne sie funktioniert der Freitext weiterhin.
+  const { data: known = NO_CLASSES } = useSWRAuth(
+    studentKeys.schoolClasses(),
+    fetchSchoolClasses,
+  );
   // Entwurf des Bearbeiten-Zustands; null heißt: nicht im Bearbeiten.
   const [draft, setDraft] = useState<string[] | null>(null);
   const [newClass, setNewClass] = useState("");
   const [saving, setSaving] = useState(false);
   // Ladefehler stehen vor Ort, Speicherfehler oben im Bearbeiten-Bereich
   // und am Feld (#2514).
-  const load = useApiLoadError();
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data: assignedData, error: assignedError }],
+    OBJECT,
+    () => mutateAssigned(),
+  );
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearFormError, show: showFormError } = formErrors;
   // „Wiederholen“ speichert den aktuellen Entwurf, nicht den vom
   // Fehlerzeitpunkt.
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
-  // Zählt die Ladeversuche: ein fehlgeschlagener Initial-Load (transienter
-  // 500) darf die Zuweisungs-UI nicht dauerhaft sperren — „Wiederholen“
-  // stößt den Effect neu an, statt einen Full Reload zu erzwingen.
-  const [loadAttempt, setLoadAttempt] = useState(0);
-  const showLoadError = load.show;
-  const clearLoadError = load.clear;
-
-  useEffect(() => {
-    let cancelled = false;
-    clearLoadError();
-    fetchAssignedClasses(staffId)
-      .then((classes) => {
-        if (!cancelled) setAssigned(classes);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("staff_school_classes_fetch_failed", {
-          staff_id: staffId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: OBJECT,
-          retry: () => setLoadAttempt((attempt) => attempt + 1),
-        });
-      });
-    fetchSchoolClasses()
-      .then((classes) => {
-        if (!cancelled) setKnown(classes);
-      })
-      .catch(() => {
-        // Vorschläge sind optional — Freitext funktioniert weiterhin.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [staffId, loadAttempt, showLoadError, clearLoadError]);
 
   const startEditing = useCallback(() => {
     if (!assigned) return;
@@ -164,7 +143,7 @@ export function KlassenTab({
     clearFormError();
     try {
       const stored = await saveAssignedClasses(staffId, draft);
-      setAssigned(stored);
+      await mutateAssigned(stored, { revalidate: false });
       setDraft(null);
       setNewClass("");
     } catch (err) {
@@ -179,7 +158,7 @@ export function KlassenTab({
     } finally {
       setSaving(false);
     }
-  }, [draft, staffId, clearFormError, showFormError]);
+  }, [draft, staffId, mutateAssigned, clearFormError, showFormError]);
 
   useLayoutEffect(() => {
     latestSaveRef.current = handleSave;
@@ -214,9 +193,9 @@ export function KlassenTab({
         ) : undefined
       }
     >
-      {assigned === null ? <LoadErrorAlert error={load.error} /> : null}
+      {assigned === null ? <LoadErrorAlert error={loadError} /> : null}
 
-      {assigned === null && !load.error ? (
+      {assigned === null && !loadError ? (
         <div className="space-y-2">
           <Skeleton className="h-9 w-64" />
           <Skeleton className="h-9 w-40" />

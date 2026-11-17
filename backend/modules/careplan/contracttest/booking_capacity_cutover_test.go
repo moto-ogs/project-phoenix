@@ -18,7 +18,7 @@ import (
 func TestBookingCapacityCutoverPreservesBoundariesAndTenantIsolation(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	bookings := carePlanTest.NewOfferingBookings()
+	bookings := carePlanTest.NewOfferingBookings(time.Now)
 	projection := api.NewEnrollmentBookings(time.Now)
 	type school struct {
 		ctx                               context.Context

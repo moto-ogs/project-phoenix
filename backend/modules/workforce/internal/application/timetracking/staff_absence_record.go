@@ -64,7 +64,7 @@ type StaffAbsence struct {
 	CreatedBy         int64         `bun:"created_by,notnull" json:"created_by"`
 	WorkingDays       *float64      `bun:"working_days" json:"working_days,omitempty"`
 	DecisionNote      string        `bun:"decision_note" json:"decision_note,omitempty"`
-	RequestedAt       time.Time     `bun:"requested_at,notnull,default:current_timestamp" json:"requested_at"`
+	RequestedAt       time.Time     `bun:"requested_at,nullzero,notnull" json:"requested_at"`
 	SubstituteStaffID *int64        `bun:"substitute_staff_id" json:"substitute_staff_id,omitempty"`
 }
 

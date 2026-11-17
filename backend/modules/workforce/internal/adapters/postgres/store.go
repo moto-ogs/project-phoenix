@@ -27,8 +27,9 @@ type Database func(context.Context) (bun.IDB, TenantScope, error)
 
 type Store struct {
 	database Database
-	// now stamps the schedule versions the store writes: the composition's
-	// clock, bound WithClock (ADR 0239, ADR 0272).
+	// now stamps the rows the store writes and dates its cleanup retention:
+	// the composition's clock, bound WithClock (ADR 0239, ADR 0272, ADR 0281).
+	// Every column the store stamps follows it; none falls back to now().
 	now func() time.Time
 }
 
@@ -50,13 +51,25 @@ func (s *Store) WithClock(now func() time.Time) *Store {
 	return &clocked
 }
 
-// stamp is the instant a schedule version write carries; only a store
-// composed WithClock writes schedule versions.
+// stamp is the instant a write stamps and the cleanup retention counts from;
+// only a store composed WithClock does either.
 func (s *Store) stamp() time.Time {
 	if s.now == nil {
-		panic("workforce postgres: a schedule version write needs the store composed WithClock")
+		panic("workforce postgres: a stamped write or cleanup retention needs the store composed WithClock")
 	}
 	return s.now()
+}
+
+// stampNew sets the unset write stamps of a new row to the store's clock, so
+// no column of the row falls back to the database clock of its default
+// (ADR 0281).
+func (s *Store) stampNew(stamps ...*time.Time) {
+	now := s.stamp()
+	for _, stamp := range stamps {
+		if stamp.IsZero() {
+			*stamp = now
+		}
+	}
 }
 
 // calendarDate binds the module's YYYY-MM-DD strings to PostgreSQL DATE
@@ -121,8 +134,8 @@ type workTimeModelRow struct {
 	Name               string       `bun:"name,notnull"`
 	RotationLength     int          `bun:"rotation_length,notnull"`
 	RotationAnchorDate calendarDate `bun:"rotation_anchor_date,notnull,type:date"`
-	CreatedAt          time.Time    `bun:"created_at,nullzero,notnull,default:now()"`
-	UpdatedAt          time.Time    `bun:"updated_at,nullzero,notnull,default:now()"`
+	CreatedAt          time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt          time.Time    `bun:"updated_at,nullzero,notnull"`
 	ArchivedAt         *time.Time   `bun:"archived_at"`
 }
 
@@ -134,8 +147,8 @@ type workTimeModelEntryRow struct {
 	DayOfWeek     int        `bun:"day_of_week,notnull"`
 	TargetMinutes int        `bun:"target_minutes,notnull"`
 	StartTime     *time.Time `bun:"start_time"`
-	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull,default:now()"`
-	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull,default:now()"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffWorkScheduleRow struct {
@@ -274,6 +287,7 @@ func (s *Store) CreateWorkTimeModel(ctx context.Context, fields domain.WorkTimeM
 		RotationLength:     fields.RotationLength,
 		RotationAnchorDate: calendarDate(fields.RotationAnchorDate),
 	}
+	s.stampNew(&row.CreatedAt, &row.UpdatedAt)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	_, err = db.NewInsert().Model(row).ModelTableExpr(tableWorkTimeModels).Exec(ctx)
@@ -303,7 +317,7 @@ func (s *Store) UpdateWorkTimeModel(ctx context.Context, id int64, fields domain
 		Set("name = ?", fields.Name).
 		Set("rotation_length = ?", fields.RotationLength).
 		Set("rotation_anchor_date = ?", calendarDate(fields.RotationAnchorDate)).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.stamp()).
 		Where("id = ?", id)
 	query = scopeQuery(scope, query, "tenant_id = ?")
 
@@ -436,13 +450,15 @@ func (s *Store) DeleteWorkTimeModel(ctx context.Context, id int64) (bool, domain
 
 // staffSollKeptExpr tells, in the statement that reads the schedule, whether
 // a contract of the Träger that has not ended names the employment (#4706).
-// The school reads only the Soll of its own employments (RLS).
+// The school reads only the Soll of its own employments (RLS). Its one
+// parameter is today, the school day of the owner's clock: ends_on is a day
+// the Personalverwaltung sets, so the database clock has no say in it.
 const staffSollKeptExpr = `EXISTS (SELECT FROM workforce.staff_contract_targets AS target
 	JOIN workforce.staff_contracts AS contract ON contract.id = target.contract_id
 	WHERE target.school_id = "staff_work_schedule".tenant_id AND target.membership_id = "staff_work_schedule".staff_id
-	  AND (contract.ends_on IS NULL OR contract.ends_on >= (now() AT TIME ZONE 'Europe/Berlin')::date))`
+	  AND (contract.ends_on IS NULL OR contract.ends_on >= ?))`
 
-func (s *Store) CurrentStaffSchedule(ctx context.Context, staffID int64) ([]domain.StaffWorkSchedule, domain.OperationStats, error) {
+func (s *Store) CurrentStaffSchedule(ctx context.Context, staffID int64, today string) ([]domain.StaffWorkSchedule, domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
 		return nil, domain.OperationStats{}, err
@@ -452,7 +468,7 @@ func (s *Store) CurrentStaffSchedule(ctx context.Context, staffID int64) ([]doma
 		Model(&rows).
 		ModelTableExpr(tableStaffWorkSchedules+` AS "staff_work_schedule"`).
 		ColumnExpr(`"staff_work_schedule".*`).
-		ColumnExpr(staffSollKeptExpr+` AS kept_by_traeger`).
+		ColumnExpr(staffSollKeptExpr+` AS kept_by_traeger`, calendarDate(today)).
 		Where("staff_id = ?", staffID).
 		Where("valid_until IS NULL").
 		OrderExpr("day_of_week ASC"), "staff_work_schedule", scope)

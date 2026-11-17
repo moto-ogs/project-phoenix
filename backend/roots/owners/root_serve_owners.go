@@ -83,7 +83,7 @@ func BuildServeRooms(db transactionruntime.Database) (facilitiesModule.Catalog, 
 // care-offering catalog for the rooms its offerings need (#4010), and
 // Timetable, School Structure, Device Fleet and Student Presence what else
 // still uses the room (#6845).
-func BuildFacilitiesModule(db transactionruntime.Database, observe func(facilitiesCompose.Observation), lock timetable.RecurrenceWriteLock, sessions studentpresence.Owner, offerings careplan.CareOfferingGuards, groups schoolstructure.GroupListing, devices devicefleet.Capability, today func() timezone.Date) (facilitiesModule.Capability, error) {
+func BuildFacilitiesModule(db transactionruntime.Database, observe func(facilitiesCompose.Observation), lock timetable.RecurrenceWriteLock, sessions studentpresence.Owner, offerings careplan.CareOfferingGuards, groups schoolstructure.GroupListing, devices devicefleet.Capability, today func() timezone.Date, now func() time.Time) (facilitiesModule.Capability, error) {
 	references, err := NewRoomReferences(db, sessions, groups, devices, today)
 	if err != nil {
 		return nil, err
@@ -93,6 +93,7 @@ func BuildFacilitiesModule(db transactionruntime.Database, observe func(faciliti
 		Usage:      &RoomUsage{Sessions: sessions, Offerings: offerings},
 		References: references,
 		Observe:    observe,
+		Now:        now,
 	})
 }
 

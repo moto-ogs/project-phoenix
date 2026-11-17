@@ -3,7 +3,6 @@ package owners
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
@@ -21,7 +20,6 @@ func NewStudentChangeLogCleanup(
 	deletions DataDeletionAppender,
 	settings RetentionSettings,
 	logger *slog.Logger,
-	now func() time.Time,
 ) peoplePorts.StudentChangeLogCleanupService {
 	var deletionLog peoplePorts.StudentChangeLogDeletionLog
 	if deletions != nil {
@@ -37,5 +35,5 @@ func NewStudentChangeLogCleanup(
 			return settings.ResolveInt(ctx, configModels.KeyGDPRStudentChangeLogRetentionDays)
 		}
 	}
-	return peopleCompose.NewStudentChangeLogCleanupService(edits, deletionLog, retention, logger, now)
+	return peopleCompose.NewStudentChangeLogCleanupService(edits, deletionLog, retention, logger)
 }

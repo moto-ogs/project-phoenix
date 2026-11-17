@@ -5,15 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import deMessages from "~/i18n/messages/de.generated";
 import * as parentApi from "~/lib/parent-api";
-import type { ChildCareSchedule, ChildFeatures } from "~/lib/parent-api";
+import type { Child, ChildCareSchedule, ChildFeatures } from "~/lib/parent-api";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { useChildCare } from "./child-care";
 import { useChildMasterData } from "./child-master-data";
 import { BookedCareSection } from "./child/booked-care-section";
-import {
-  ChildRequestsProvider,
-  useChildRequests,
-} from "./child-requests-context";
 
+vi.unmock("swr");
 vi.mock("~/lib/parent-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-api")>()),
 }));
@@ -23,11 +21,12 @@ const schedule = {
   weekdays: [],
   today_absent: false,
 } as unknown as ChildCareSchedule;
+const child = { student_id: "42", tenant_id: "1" } as Child;
 
 function withProvider({ children }: { children: ReactNode }) {
   return (
     <NextIntlClientProvider locale="de" messages={deMessages}>
-      <ChildRequestsProvider>{children}</ChildRequestsProvider>
+      <ParentResourceTestProvider>{children}</ParentResourceTestProvider>
     </NextIntlClientProvider>
   );
 }
@@ -44,85 +43,12 @@ function deferred<T>() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.spyOn(parentApi, "listMyChildren").mockResolvedValue([child]);
 });
 
-describe("ChildRequestsProvider (#4994)", () => {
-  it.each([
-    ["parent-conversation-refresh", { studentId: "42" }, false],
-    ["parent-conversation-refresh", { studentId: null }, false],
-    ["parent-conversation-refresh", undefined, false],
-    ["focus", undefined, false],
-    ["parent-conversation-refresh", { studentId: "42" }, true],
-  ])(
-    "erneuert laufende Abrufe nach %s (%j, Fehler: %s)",
-    async (eventName, detail, fails) => {
-      const oldFeatures = deferred<ChildFeatures>();
-      const getFeatures = vi
-        .spyOn(parentApi, "getChildFeatures")
-        .mockReturnValueOnce(oldFeatures.promise)
-        .mockResolvedValue(features);
-      const { result } = renderHook(() => useChildRequests(), {
-        wrapper: withProvider,
-      });
-      const first = result.current.features("42");
-      window.dispatchEvent(new CustomEvent(eventName, { detail }));
-      // Multiple consumers and notifications still share one follow-up read.
-      window.dispatchEvent(new CustomEvent(eventName, { detail }));
-      const second = result.current.features("42");
-      expect(second).toBe(first);
-      if (fails) oldFeatures.reject(new Error("offline"));
-      else oldFeatures.resolve({ ...features, sick_note_enabled: false });
-
-      await expect(first).resolves.toBe(features);
-      await expect(second).resolves.toBe(features);
-      expect(getFeatures).toHaveBeenCalledTimes(2);
-      await result.current.features("42");
-      expect(getFeatures).toHaveBeenCalledTimes(3);
-    },
-  );
-
-  it("erneuert keine Abrufe für ein anderes Kind und entfernt den Listener beim Abbau", async () => {
-    const pending = deferred<ChildCareSchedule>();
-    const getSchedule = vi
-      .spyOn(parentApi, "getChildCareSchedule")
-      .mockReturnValue(pending.promise);
-    const { result, unmount } = renderHook(() => useChildRequests(), {
-      wrapper: withProvider,
-    });
-    const first = result.current.careSchedule("42");
-    window.dispatchEvent(
-      new CustomEvent("parent-conversation-refresh", {
-        detail: { studentId: "43" },
-      }),
-    );
-    unmount();
-    window.dispatchEvent(new CustomEvent("parent-conversation-refresh"));
-    window.dispatchEvent(new Event("focus"));
-    pending.resolve(schedule);
-
-    await expect(first).resolves.toBe(schedule);
-    expect(getSchedule).toHaveBeenCalledTimes(1);
-  });
-
-  it("erneuert keine Abrufe, wenn nur ein Eingabefeld den Fokus bekommt", async () => {
-    const pending = deferred<ChildCareSchedule>();
-    const getSchedule = vi
-      .spyOn(parentApi, "getChildCareSchedule")
-      .mockReturnValue(pending.promise);
-    const { result } = renderHook(() => useChildRequests(), {
-      wrapper: withProvider,
-    });
-    const input = document.createElement("input");
-    document.body.append(input);
-    const first = result.current.careSchedule("42");
-    input.focus();
-    pending.resolve(schedule);
-
-    await expect(first).resolves.toBe(schedule);
-    expect(getSchedule).toHaveBeenCalledTimes(1);
-    input.remove();
-  });
-
+// The child page's sections share one cached read per child and endpoint
+// (#4994).
+describe("shared child requests (#4994)", () => {
   it("liefert beiden Betreuungsabschnitten nach einer Änderung frische Daten", async () => {
     const oldSchedule = deferred<ChildCareSchedule>();
     const previousSchedule = {
@@ -160,14 +86,14 @@ describe("ChildRequestsProvider (#4994)", () => {
     const { result } = renderHook(() => useChildCare("42"), {
       wrapper: ({ children }) => (
         <NextIntlClientProvider locale="de" messages={deMessages}>
-          <ChildRequestsProvider>
+          <ParentResourceTestProvider>
             {children}
             <BookedCareSection
               studentId="42"
               childFirstName="Mia"
               careEnded={false}
             />
-          </ChildRequestsProvider>
+          </ParentResourceTestProvider>
         </NextIntlClientProvider>
       ),
     });
@@ -189,78 +115,6 @@ describe("ChildRequestsProvider (#4994)", () => {
       expect(screen.getByText("16:30 Uhr")).toBeInTheDocument();
     });
     expect(getSchedule).toHaveBeenCalledTimes(2);
-  });
-
-  it("teilt laufende Abrufe je Kind und Endpunkt", async () => {
-    const getFeatures = vi
-      .spyOn(parentApi, "getChildFeatures")
-      .mockResolvedValue(features);
-    const getSchedule = vi
-      .spyOn(parentApi, "getChildCareSchedule")
-      .mockResolvedValue(schedule);
-    const { result } = renderHook(() => useChildRequests(), {
-      wrapper: withProvider,
-    });
-
-    const first = result.current.features("42");
-    expect(result.current.features("42")).toBe(first);
-    void result.current.features("43");
-    void result.current.careSchedule("42");
-    void result.current.careSchedule("42");
-    await first;
-
-    expect(getFeatures).toHaveBeenCalledTimes(2);
-    expect(getFeatures).toHaveBeenCalledWith("42");
-    expect(getFeatures).toHaveBeenCalledWith("43");
-    expect(getSchedule).toHaveBeenCalledTimes(1);
-  });
-
-  it("holt nach dem Ende eines Abrufs wieder frisch", async () => {
-    const getFeatures = vi
-      .spyOn(parentApi, "getChildFeatures")
-      .mockResolvedValue(features);
-    const { result } = renderHook(() => useChildRequests(), {
-      wrapper: withProvider,
-    });
-
-    await result.current.features("42");
-    await result.current.features("42");
-
-    expect(getFeatures).toHaveBeenCalledTimes(2);
-  });
-
-  it("gibt einen Fehler an alle Wartenden und versucht danach neu", async () => {
-    const failed = deferred<ChildFeatures>();
-    const getFeatures = vi
-      .spyOn(parentApi, "getChildFeatures")
-      .mockReturnValueOnce(failed.promise)
-      .mockResolvedValueOnce(features);
-    const { result } = renderHook(() => useChildRequests(), {
-      wrapper: withProvider,
-    });
-
-    const first = result.current.features("42");
-    const second = result.current.features("42");
-    failed.reject(new Error("offline"));
-
-    await expect(first).rejects.toThrow("offline");
-    await expect(second).rejects.toThrow("offline");
-    await expect(result.current.features("42")).resolves.toBe(features);
-    expect(getFeatures).toHaveBeenCalledTimes(2);
-  });
-
-  it("holt ohne Provider direkt", async () => {
-    const getFeatures = vi
-      .spyOn(parentApi, "getChildFeatures")
-      .mockResolvedValue(features);
-    const { result } = renderHook(() => useChildRequests());
-
-    await Promise.all([
-      result.current.features("42"),
-      result.current.features("42"),
-    ]);
-
-    expect(getFeatures).toHaveBeenCalledTimes(2);
   });
 
   // Betreuung und Angaben brauchen beide die Schulschalter; auf einer

@@ -4,11 +4,14 @@
  */
 import {
   act,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
   fireEvent,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PendingInvitationsList } from "./pending-invitations-list";
 import type { PendingInvitation } from "~/lib/invitation-helpers";
@@ -19,6 +22,28 @@ import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 
 // Mock dependencies. Load and dialog errors run through the real hooks; the
 // resend error is spied at the action path (#2517).
+vi.unmock("swr");
+
+// The list reads through real SWR under a staff session, a fresh cache per
+// render; a rerender keeps it.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
+
 const { mockShowActionError, mockToastError } = vi.hoisted(() => ({
   mockShowActionError: vi.fn(),
   mockToastError: vi.fn(),

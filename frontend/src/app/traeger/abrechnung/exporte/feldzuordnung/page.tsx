@@ -6,18 +6,16 @@
 // „Finanz-Export“ sieht die Seite.
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { ExportFileNumberCard } from "~/components/traeger/export-file-number-card";
 import { SollMappingEditor } from "~/components/traeger/soll-mapping-editor";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Button } from "~/components/ui/button";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import {
   type ExportSettings,
   fetchExportSettings,
@@ -34,39 +32,29 @@ const INFO =
 
 export default function TraegerSollMappingPage() {
   const router = useRouter();
-  const [settings, setSettings] = useState<ExportSettings | null>(null);
+  const {
+    data: settings,
+    loading,
+    error: loadError,
+    mutate,
+  } = useTraegerResource(
+    traegerBillingKeys.exportSettings(),
+    fetchExportSettings,
+    "die Feldzuordnung",
+  );
+  const setSettings = (next: ExportSettings) =>
+    void mutate(next, { revalidate: false });
   // A new key starts the editor again from the stored mapping.
   const [version, setVersion] = useState(0);
   const [resetting, setResetting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const errors = useApiErrorDisplay();
   const { success } = useToast();
-
-  const load = useCallback(async () => {
-    try {
-      setSettings(await fetchExportSettings());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_soll_mapping_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Feldzuordnung",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const reset = async () => {
     setResetting(true);
     try {
-      setSettings(await resetSollMapping());
+      await mutate(await resetSollMapping(), { revalidate: false });
       setVersion((current) => current + 1);
       setConfirmReset(false);
       success("Die Feldzuordnung ist wieder die Vorgabe von moto.");
@@ -99,7 +87,7 @@ export default function TraegerSollMappingPage() {
           />
         ) : null
       }
-      statsLoading={!settings && !pageLoad.error}
+      statsLoading={loading}
       info={INFO}
       back
       backHref={traegerPath(EXPORTS_PATH)}
@@ -117,8 +105,8 @@ export default function TraegerSollMappingPage() {
           </Button>
         ) : null
       }
-      error={pageLoad.error}
-      loading={!settings && !pageLoad.error}
+      error={loadError}
+      loading={loading}
     >
       {settings ? (
         <>

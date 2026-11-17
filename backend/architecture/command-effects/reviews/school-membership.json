@@ -2249,6 +2249,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.DatabaseTime",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/ports.Store.DatabaseTime",
+      "reason": "Read-only target: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership/internal/adapters/postgres.Store.DatabaseTime to read the database clock in the tenant transaction, the day the automatic deletion of staff counts its cutoff from (#7295, ADR 0281 point 3). No persistent, lock or scope effect in tenant-runtime.",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.DeleteClassAssignment",
       "classification": "query",
       "effect": "query",

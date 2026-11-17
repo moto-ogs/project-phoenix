@@ -24,10 +24,12 @@ func TestDeleteExpiredChildlessGuardiansKeepsLinkedRecentAndInvitedContacts(t *t
 	module := buildLifecycleModule(t, db)
 	ctx := testpkg.Ctx(t)
 	school := testpkg.Tenant(t)
+	// The owner marks childless_since and cuts it off on its clock, the real
+	// clock buildLifecycleModule composes it with.
 	childlessFor := func(guardianID int64, days int) {
 		t.Helper()
 		_, err := db.ExecContext(context.Background(),
-			`UPDATE users.guardian_profiles SET childless_since = NOW() - make_interval(days => ?) WHERE id = ?`, days, guardianID)
+			`UPDATE users.guardian_profiles SET childless_since = ? WHERE id = ?`, time.Now().Add(-time.Duration(days)*24*time.Hour), guardianID)
 		require.NoError(t, err)
 	}
 

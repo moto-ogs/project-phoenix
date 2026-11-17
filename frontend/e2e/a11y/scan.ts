@@ -54,10 +54,10 @@ export interface ScanReport {
  */
 async function settle(page: Page): Promise<string | null> {
   await page.waitForLoadState("domcontentloaded");
-  const deadline = Date.now() + 10_000;
+  const deadline = performance.now() + 10_000;
   let quiet = 0;
   let busy: string | null = null;
-  while (Date.now() < deadline && quiet < 2) {
+  while (performance.now() < deadline && quiet < 2) {
     busy = await page
       .evaluate(() => {
         const element = Array.from(
@@ -126,7 +126,7 @@ export class A11yRecorder {
    * Ergebnis nicht, und die neue Seite wird geprüft.
    */
   async scan(page: Page, state?: string): Promise<void> {
-    const started = Date.now();
+    const started = performance.now();
     try {
       await this.scanOnce(page, state);
     } catch (error) {
@@ -136,7 +136,7 @@ export class A11yRecorder {
       );
       throw error;
     } finally {
-      this.ms += Date.now() - started;
+      this.ms += performance.now() - started;
     }
   }
 
@@ -148,9 +148,9 @@ export class A11yRecorder {
         return;
       }
       if (this.scanned.has(before)) return;
-      const settleStarted = Date.now();
+      const settleStarted = performance.now();
       const busy = await settle(page);
-      this.settleMs += Date.now() - settleStarted;
+      this.settleMs += performance.now() - settleStarted;
       if (busy) {
         this.complete = false;
         this.info.annotations.push({

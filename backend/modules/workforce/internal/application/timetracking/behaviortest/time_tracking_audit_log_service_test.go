@@ -307,19 +307,17 @@ func TestTimeTrackingAuditLog_Filters(t *testing.T) {
 		day := calendar.NewDate(2025, time.September, 3)
 		finalFraction := time.Date(2025, time.September, 3, 23, 59, 59, 500_000_000, calendar.Berlin)
 		nextMidnight := day.AddDays(1).BerlinMidnight()
+		// The column default stamps occurred_at (ADR 0281, Nachtrag), so the
+		// protocol rows of a past day are seeded with their time.
 		for sourceID, occurredAt := range map[int64]time.Time{
 			9001: finalFraction,
 			9002: nextMidnight,
 		} {
-			require.NoError(t, testpkg.TenantCommand1(t, f.ctx, testpkg.SetupTestDB(t), owners.NewTimeTrackingDeletionAudit(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, f.db), nil).TimeTrackingDeletion).Create, &timetracking.TimeTrackingDeletionEvent{
-				StaffID:    f.staffA,
-				Source:     "absence",
-				SourceID:   sourceID,
-				DeletedBy:  f.admin,
-				Payload:    json.RawMessage(`{"test":true}`),
-				Note:       "Datumsgrenze",
-				OccurredAt: occurredAt,
-			}))
+			_, err := f.db.ExecContext(f.ctx, `INSERT INTO audit.time_tracking_deletions
+				(tenant_id, staff_id, source, source_id, deleted_by, payload, note, occurred_at)
+				VALUES (?, ?, 'absence', ?, ?, '{"test":true}'::jsonb, 'Datumsgrenze', ?)`,
+				f.tenantID, f.staffA, sourceID, f.admin, occurredAt)
+			require.NoError(t, err)
 		}
 
 		page, err := testpkg.TenantQuery1(t, f.ctx, f.db, f.svc.ListAuditLog, timetracking.AuditLogListRequest{

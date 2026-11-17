@@ -25,10 +25,10 @@ import (
 
 const (
 	lockHolidayClosureCalendarSQL = `SELECT pg_advisory_xact_lock(hashtextextended('school-calendar:holiday-closure:' || ?::text, 0))`
-	bumpHolidayClosureRevisionSQL = `INSERT INTO calendar.holiday_closure_revisions (tenant_id, revision)
-		VALUES (?, 1)
+	bumpHolidayClosureRevisionSQL = `INSERT INTO calendar.holiday_closure_revisions (tenant_id, revision, updated_at)
+		VALUES (?, 1, ?)
 		ON CONFLICT (tenant_id) DO UPDATE
-			SET revision = calendar.holiday_closure_revisions.revision + 1, updated_at = CURRENT_TIMESTAMP
+			SET revision = calendar.holiday_closure_revisions.revision + 1, updated_at = EXCLUDED.updated_at
 		RETURNING revision`
 	openHolidayClosureProposalSQL = `SELECT id, previous_start, previous_end, span_from, span_to, supersedes_event_id
 		FROM calendar.holiday_closure_proposals
@@ -181,13 +181,14 @@ func (s *HolidayClosureEventStore) schoolDB(ctx context.Context) (bun.IDB, int64
 }
 
 // BumpHolidayClosureRevision raises the school's revision and holds its row
-// until the school transaction ends: the calendar lock of ADR 0196.
-func BumpHolidayClosureRevision(ctx context.Context, db bun.IDB, schoolID int64) (int64, error) {
+// until the school transaction ends: the calendar lock of ADR 0196. at is
+// the instant of the store's clock.
+func BumpHolidayClosureRevision(ctx context.Context, db bun.IDB, schoolID int64, at time.Time) (int64, error) {
 	var revision int64
 	if _, err := db.NewRaw(lockHolidayClosureCalendarSQL, schoolID).Exec(ctx); err != nil {
 		return 0, fmt.Errorf("school calendar postgres: lock the closing day calendar: %w", err)
 	}
-	if err := db.NewRaw(bumpHolidayClosureRevisionSQL, schoolID).Scan(ctx, &revision); err != nil {
+	if err := db.NewRaw(bumpHolidayClosureRevisionSQL, schoolID, at).Scan(ctx, &revision); err != nil {
 		return 0, fmt.Errorf("school calendar postgres: raise the closing day revision: %w", err)
 	}
 	return revision, nil
@@ -703,8 +704,12 @@ func (s *Store) LockHolidayClosureRevision(ctx context.Context) (int64, domain.O
 	if err != nil {
 		return 0, domain.OperationStats{}, err
 	}
+	at, err := s.stamp()
+	if err != nil {
+		return 0, domain.OperationStats{}, err
+	}
 	started := time.Now()
-	revision, err := BumpHolidayClosureRevision(ctx, db, tenantID)
+	revision, err := BumpHolidayClosureRevision(ctx, db, tenantID, at)
 	return revision, domain.OperationStats{Queries: 2, Rows: 1, StatementDuration: time.Since(started)}, err
 }
 

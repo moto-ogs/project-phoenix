@@ -5,7 +5,7 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import { Alert } from "~/components/ui/alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { DataTable } from "~/components/ui/data-table";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";

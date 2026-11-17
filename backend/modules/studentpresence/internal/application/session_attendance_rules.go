@@ -135,7 +135,7 @@ func (s *Service) ApplyStatusDay(ctx context.Context, studentID int64, date stri
 		if err != nil {
 			return stats, err
 		}
-		applyStats, err := s.store.ApplyStatusDayAbsences(txCtx, statusDayAbsencesFor(participants, statusDayID, substatus), s.now().UTC())
+		applyStats, err := s.store.ApplyStatusDayAbsences(txCtx, statusDayAbsencesFor(participants, statusDayID, substatus))
 		addStats(&stats, applyStats)
 		rows = int(applyStats.Rows)
 		return stats, err
@@ -234,7 +234,7 @@ func (s *Service) releaseStatusDayRows(ctx context.Context, statusDayID int64, r
 	if err != nil {
 		return 0, err
 	}
-	releaseStats, err := s.store.ReleaseStatusDay(ctx, statusDayID, releases, s.now().UTC())
+	releaseStats, err := s.store.ReleaseStatusDay(ctx, statusDayID, releases)
 	addStats(stats, releaseStats)
 	return releaseStats.Rows, err
 }
@@ -342,7 +342,7 @@ func (s *Service) applyPartialAbsence(ctx context.Context, exception ports.Picku
 		}
 		absences = append(absences, ports.PartialAbsence{ParticipantID: participant.ID, PickupExceptionID: exception.ID})
 	}
-	applyStats, err := s.store.ApplyPartialAbsences(ctx, absences, s.now().UTC())
+	applyStats, err := s.store.ApplyPartialAbsences(ctx, absences)
 	addStats(stats, applyStats)
 	return applyStats.Rows, err
 }
@@ -372,7 +372,7 @@ func (s *Service) ApplyActiveStatusDaysForInstances(ctx context.Context, instanc
 		if err != nil {
 			return stats, err
 		}
-		applyStats, err := s.store.ApplyStatusDayAbsences(txCtx, statusDayAbsencesByStudent(participants, statuses), s.now().UTC())
+		applyStats, err := s.store.ApplyStatusDayAbsences(txCtx, statusDayAbsencesByStudent(participants, statuses))
 		addStats(&stats, applyStats)
 		rows = int(applyStats.Rows)
 		return stats, err
@@ -491,7 +491,7 @@ func (s *Service) releasePartialAbsenceRows(ctx context.Context, pickupException
 	if err != nil {
 		return 0, err
 	}
-	releaseStats, err := s.store.ReleasePartialAbsence(ctx, pickupExceptionID, releases, s.now().UTC())
+	releaseStats, err := s.store.ReleasePartialAbsence(ctx, pickupExceptionID, releases)
 	addStats(stats, releaseStats)
 	return releaseStats.Rows, err
 }
@@ -522,7 +522,7 @@ func (s *Service) ApplyActivePartialAbsencesForInstances(ctx context.Context, in
 		if err != nil {
 			return stats, err
 		}
-		applyStats, err := s.store.ApplyPartialAbsences(txCtx, partialAbsencesFor(participants, cutoffs), s.now().UTC())
+		applyStats, err := s.store.ApplyPartialAbsences(txCtx, partialAbsencesFor(participants, cutoffs))
 		addStats(&stats, applyStats)
 		rows = int(applyStats.Rows)
 		return stats, err
@@ -605,7 +605,7 @@ func (s *Service) MarkExpectedAbsentByActiveGroupIDs(ctx context.Context, active
 			}
 			ids = append(ids, participant.ID)
 		}
-		transitionStats, err := s.store.TransitionParticipants(txCtx, ids, "expected", "absent", &at)
+		transitionStats, err := s.store.TransitionParticipants(txCtx, ids, "expected", "absent")
 		addStats(&stats, transitionStats)
 		return stats, err
 	}))

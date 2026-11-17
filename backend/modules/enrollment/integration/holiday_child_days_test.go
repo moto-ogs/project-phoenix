@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -97,7 +98,7 @@ func TestHolidayChildBookingsCountTheSameChildOverItsRegistrations(t *testing.T)
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	p := newChildDaysPeriod(t, db, "Träger Kindtage")
-	store := postgres.NewHolidayRegistrationStore()
+	store := postgres.NewHolidayRegistrationStore().WithClock(time.Now)
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	require.NoError(t, testpkg.WithinTraeger(ctx, p.organization, func(ctx context.Context) error {
@@ -130,7 +131,7 @@ func TestHolidayChildBookingsKeepTheirTraegerBeneathRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newChildDaysPeriod(t, db, "Träger Kindtage A")
 	foreign := newChildDaysPeriod(t, db, "Träger Kindtage B")
-	store := postgres.NewHolidayRegistrationStore()
+	store := postgres.NewHolidayRegistrationStore().WithClock(time.Now)
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	require.NoError(t, testpkg.WithinTraeger(ctx, own.organization, func(ctx context.Context) error {

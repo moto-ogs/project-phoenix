@@ -94,7 +94,6 @@ func (s *StudentStore) UpdateRecord(
 	result, err := db.NewUpdate().Model(&row).
 		ModelTableExpr(`users.student_profiles AS "student"`).
 		Column(studentWritableColumnList()...).
-		Set(`updated_at = NOW()`).
 		Where(`"student".id = ?`, record.ID).
 		Where(`"student".tenant_id = ?`, scope.TenantID).
 		Returning(studentReturningColumns).

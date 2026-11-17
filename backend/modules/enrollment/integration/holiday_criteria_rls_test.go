@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,7 +47,7 @@ func TestHolidayAllocationStatementsKeepTheirTraegerBeneathRLS(t *testing.T) {
 			holiday_registration_child_id, holiday_period_week_id, week_starts_on, week_ends_on, placement, proposal, rank)
 		VALUES (?, ?, ?, ?, ?, '2027-07-05', '2027-07-09', 'placed', 'placed', 1)`, foreign.organization, foreign.period, foreign.waiting, child, foreign.week)
 	require.NoError(t, err)
-	store := postgres.NewHolidayRegistrationStore()
+	store := postgres.NewHolidayRegistrationStore().WithClock(time.Now)
 	yes := true
 
 	ctx := testpkg.ContextWithTenantRuntime(bg, testpkg.TenantRuntime(t, db))

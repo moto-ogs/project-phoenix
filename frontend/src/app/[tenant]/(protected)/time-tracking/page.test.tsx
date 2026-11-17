@@ -10,7 +10,7 @@ import {
   act,
   within,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { releaseFakeTimers, setTestClock } from "~/test/clock";
 
@@ -56,14 +56,31 @@ vi.mock("next/navigation", () => ({
   })),
 }));
 
-vi.mock("~/lib/swr", () => ({
-  // No SSE stream in these tests: readers keep their fallback interval.
-  useLiveRefreshInterval: (fallbackMs = 60_000) => fallbackMs,
-  useSWRAuth: vi.fn(),
-  useTenantMutate: vi.fn(() => mockTenantMutate),
-  useTenantMutateMatching: vi.fn(() => vi.fn()),
-  useInvalidateMatching: () => vi.fn(),
+// The breaks of the open session read through real SWR, so their reload
+// count is the page's; every other reader is the per-key fake. The real hook
+// runs on every call (with a null key for the fakes) to keep the hook order.
+const { routedSWRAuth } = vi.hoisted(() => ({
+  routedSWRAuth: (real: typeof import("~/lib/swr").useSWRAuth) =>
+    new Proxy(vi.fn(), {
+      apply(fake, thisArg, args: Parameters<typeof real>) {
+        const [key, fetcher, options] = args;
+        const breaks = key?.startsWith("time-tracking-session-breaks-");
+        const response = real(breaks ? key : null, fetcher, options);
+        return breaks ? response : Reflect.apply(fake, thisArg, args);
+      },
+    }),
 }));
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  return {
+    // No SSE stream in these tests: readers keep their fallback interval.
+    useLiveRefreshInterval: (fallbackMs = 60_000) => fallbackMs,
+    useSWRAuth: routedSWRAuth(actual.useSWRAuth),
+    useTenantMutate: vi.fn(() => mockTenantMutate),
+    useTenantMutateMatching: vi.fn(() => vi.fn()),
+    useInvalidateMatching: () => vi.fn(),
+  };
+});
 
 // The own staff ID comes from the preloaded user context (#4992); the hook's
 // own tests cover the context and its `/api/me/staff` fallback.
@@ -478,12 +495,24 @@ import TimeTrackingPage from "./page";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ToastProvider, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
+vi.unmock("swr");
+
+/** A fresh SWR cache per render, so no breaks leak between tests. */
+function Providers({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
+
 function render(ui: ReactElement) {
-  return rtlRender(ui, { wrapper: ToastProvider });
+  return rtlRender(ui, { wrapper: Providers });
 }
 
 /** A failed save in a dialog stays in the dialog (#2514). */
@@ -754,6 +783,36 @@ function setupDefaultMocks(overrides?: {
         mutate: mockMutate,
         isValidating: false,
         error: overrides?.tableAbsencesError,
+      } as never;
+      // The leave and allowance cards read their own keys (the same
+      // fixtures getVacationQuota / getQuestionedAbsences /
+      // getOwnAbsenceAllowances answer below).
+    } else if (
+      key === "time-tracking-absences-questioned" ||
+      key === "time-tracking-absences-allowances"
+    ) {
+      return {
+        data: [],
+        isLoading: false,
+        mutate: mockMutate,
+        isValidating: false,
+        error: undefined,
+      } as never;
+    } else if (key?.startsWith("time-tracking-absences-quota-")) {
+      return {
+        data: {
+          staff_id: 10,
+          year: new Date().getFullYear(),
+          entitled_days: 30,
+          carryover_days: 0,
+          taken_days: 0,
+          reserved_days: 0,
+          remaining_days: 30,
+        },
+        isLoading: false,
+        mutate: mockMutate,
+        isValidating: false,
+        error: undefined,
       } as never;
     } else if (key?.startsWith("time-tracking-absences-")) {
       return {

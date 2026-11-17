@@ -29,13 +29,16 @@ const (
 // Cross-school administrative access is an explicit scope, never tenant 0.
 type Database func(context.Context) (bun.IDB, TenantScope, error)
 
-type Store struct{ database Database }
+type Store struct {
+	database Database
+	clock
+}
 
 type personRow struct {
 	bun.BaseModel `bun:"table:persons,alias:person"`
 	ID            int64     `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
 	FirstName     string    `bun:"first_name,notnull"`
 	LastName      string    `bun:"last_name,notnull"`
@@ -101,7 +104,6 @@ func (s *Store) Update(ctx context.Context, input peopledirectory.UpdatePerson) 
 	query := db.NewUpdate().Model(&row).
 		ModelTableExpr(`users.persons AS "person"`).
 		Column("first_name", "last_name", "birthday", "tag_id", "account_id").
-		Set(`updated_at = NOW()`).
 		Where(`"person".id = ?`, input.ID).
 		Where(`"person".deleted_at IS NULL`)
 	query = withTenant(query, scope)
@@ -316,8 +318,7 @@ func (s *Store) SoftDelete(ctx context.Context, id int64) (domain.OperationStats
 	}
 	query := withTenant(db.NewUpdate().Model((*personRow)(nil)).
 		ModelTableExpr(`users.persons AS "person"`).
-		Set(`deleted_at = NOW()`).
-		Set(`updated_at = NOW()`).
+		Set(`deleted_at = ?`, s.stamp()).
 		Where(`"person".id = ?`, id).
 		Where(`"person".deleted_at IS NULL`), scope)
 	return execOne(ctx, query, "soft delete person")
@@ -339,7 +340,7 @@ func (s *Store) AnonymizeAndSoftDelete(ctx context.Context, id int64) (domain.Op
 		Set(`first_name = ?`, deletedPersonFirstName).
 		Set(`last_name = ?`, deletedPersonLastName).
 		Set(`birthday = NULL`).
-		Set(`deleted_at = NOW()`).
+		Set(`deleted_at = ?`, s.stamp()).
 		Where(`"person".id = ?`, id), scope)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -362,7 +363,6 @@ func (s *Store) SetAccount(ctx context.Context, personID int64, accountID *int64
 	query := withTenant(db.NewUpdate().Model((*personRow)(nil)).
 		ModelTableExpr(`users.persons AS "person"`).
 		Set(`account_id = ?`, accountID).
-		Set(`updated_at = NOW()`).
 		Where(`"person".id = ?`, personID).
 		Where(`"person".deleted_at IS NULL`), scope)
 	return execOne(ctx, query, "set person account")
@@ -410,7 +410,6 @@ func (s *Store) SetTag(ctx context.Context, personID int64, tagID *string) (doma
 	query := withTenant(db.NewUpdate().Model((*personRow)(nil)).
 		ModelTableExpr(`users.persons AS "person"`).
 		Set(`tag_id = ?`, tagID).
-		Set(`updated_at = NOW()`).
 		Where(`"person".id = ?`, personID).
 		Where(`"person".deleted_at IS NULL`), scope)
 	return execOne(ctx, query, "set person tag")
@@ -463,7 +462,6 @@ func (s *Store) ClearTags(ctx context.Context, personIDs []int64) (domain.Operat
 	query := db.NewUpdate().Model((*personRow)(nil)).
 		ModelTableExpr(`users.persons AS "person"`).
 		Set(`tag_id = NULL`).
-		Set(`updated_at = NOW()`).
 		Where(`"person".id IN (?)`, bun.List(personIDs)).
 		Where(`"person".tenant_id = ?`, scope.TenantID)
 	stats := domain.OperationStats{Queries: 1}
@@ -496,7 +494,6 @@ func (s *Store) RestoreTag(ctx context.Context, personID int64, tagID string) (b
 	query := db.NewUpdate().Model((*personRow)(nil)).
 		ModelTableExpr(`users.persons AS "person"`).
 		Set(`tag_id = ?`, tagID).
-		Set(`updated_at = NOW()`).
 		Where(`"person".id = ?`, personID).
 		Where(`"person".tenant_id = ?`, scope.TenantID).
 		Where(`"person".tag_id IS NULL`).

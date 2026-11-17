@@ -40,7 +40,7 @@ func mountCareContractRoutes(root chi.Router, organizations HolidayOrganizations
 	root.Mount("/traeger/contracts", resource.ContractRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/contract-templates", resource.TemplateRouter(ProtectedTraegerRoutes))
 	mountCareContractNoticeRoutes(root, organizations, settings, schoolSettings, delivery, outcomes, accessLog, addressees, holidays, parentsURL, now)
-	mountCareContractImportRoutes(root, organizations, settings, accessLog, today)
+	mountCareContractImportRoutes(root, organizations, settings, accessLog, today, now)
 	// The one-time link of a contract mail (#4679), without an account.
 	signing := careContractCompose.NewSigning(careContractSignaturePorts(organizations, settings, delivery, outcomes, holidays, parentsURL), now)
 	root.Mount("/public/care-contract-signing", careContractHTTP.NewSigningResource(signing).PublicRouter())
@@ -70,7 +70,7 @@ func careContractSignaturePorts(organizations HolidayOrganizations, settings Tra
 func NewCareContractHTTP(organizations HolidayOrganizations, settings TraegerBrandingSettings,
 	schoolSettings CareContractSchoolSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
 	holidays carecontract.SchoolHolidays, parentsURL string, today func() calendar.Date, now func() time.Time) *careContractHTTP.Resource {
-	contractPorts, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL)
+	contractPorts, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL, now)
 	paper := careContractCompose.NewPaperSignatures(contractPorts, careContractSignaturePorts(organizations, settings, delivery, outcomes, holidays, parentsURL), now)
 	return careContractHTTP.NewResource(careContractCompose.NewContracts(contractPorts, now), careContractCompose.NewIntake(intakePorts, today), paper,
 		common.RequiresPermission(identityaccess.TraegerRightContractsManage), traegerListRenderer(NewSimpleListRenderer()))
@@ -83,13 +83,13 @@ func NewCareContractHTTP(organizations HolidayOrganizations, settings TraegerBra
 func NewCareContractConclusion(organizations HolidayOrganizations, settings TraegerBrandingSettings,
 	schoolSettings CareContractSchoolSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
 	holidays carecontract.SchoolHolidays, parentsURL string, now func() time.Time) carecontract.Conclusion {
-	contractPorts, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL)
+	contractPorts, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL, now)
 	return careContractCompose.NewConclusion(contractPorts, intakePorts, now)
 }
 
 func careContractPorts(organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings CareContractSchoolSettings,
 	delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
-	holidays carecontract.SchoolHolidays, parentsURL string) (careContractCompose.ContractPorts, careContractCompose.IntakePorts) {
+	holidays carecontract.SchoolHolidays, parentsURL string, now func() time.Time) (careContractCompose.ContractPorts, careContractCompose.IntakePorts) {
 	if schoolSettings == nil {
 		panic("care contract: the school settings are required")
 	}
@@ -102,7 +102,7 @@ func careContractPorts(organizations HolidayOrganizations, settings TraegerBrand
 		Notices: owners.CareContractDocumentNotices{Delivery: delivery}, Holidays: holidays,
 	}, careContractCompose.IntakePorts{
 		Schools: careContractSchools{organizations: organizations}, Applications: careContractApplications{applications: enrollmentCompose.NewContractApplications(securityruntime.Fingerprint)},
-		Bookings: careContractBookings{offerings: carePlanCompose.NewContractOfferings(), bookings: carePlanCompose.NewOfferingBookings()},
+		Bookings: careContractBookings{offerings: carePlanCompose.NewContractOfferings(), bookings: carePlanCompose.NewOfferingBookings(now)},
 		Access:   careContractAccessLog{log: accessLog}, Runtime: owners.CareContractRuntime{},
 		Modes: careContractModes{settings: schoolSettings}, Mail: owners.CareContractPost{Delivery: delivery, Outcomes: outcomes},
 		Letterheads: letterheads, Families: owners.NewCareContractFamilyNumbers(),

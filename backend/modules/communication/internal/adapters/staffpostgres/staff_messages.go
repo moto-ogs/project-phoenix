@@ -29,8 +29,8 @@ type staffMessageRow struct {
 	SendReplayed    bool   `bun:"send_replayed,scanonly"`
 	bun.BaseModel   `bun:"table:users.staff_messages,alias:staff_message"`
 	ID              int64           `bun:"id,pk,autoincrement"`
-	CreatedAt       time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time       `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time       `bun:"updated_at,nullzero,notnull"`
 	TenantID        int64           `bun:"tenant_id,notnull"`
 	ThreadID        int64           `bun:"thread_id,notnull"`
 	SenderAccountID int64           `bun:"sender_account_id,notnull"`
@@ -99,7 +99,7 @@ func (s *MessageStore) CreateStaffMessage(ctx context.Context, input *communicat
 	if row.SendReplayed {
 		return nil
 	}
-	return claimMessageAttachments(ctx, db, db.NewUpdate().TableExpr("users.message_attachments AS attachment").Set("staff_message_id = ?", row.ID), row.TenantID, attachmentIDs)
+	return claimMessageAttachments(ctx, db, db.NewUpdate().TableExpr("users.message_attachments AS attachment").Set("staff_message_id = ?", row.ID), row.TenantID, attachmentIDs, row.CreatedAt)
 }
 
 // ListByThread returns the thread's messages oldest-first, which is the order

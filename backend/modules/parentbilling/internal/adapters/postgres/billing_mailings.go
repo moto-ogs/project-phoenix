@@ -23,7 +23,7 @@ type documentMailingRow struct {
 	DeliveryID           int64     `bun:"delivery_id"`
 	RecipientEmail       string    `bun:"recipient_email"`
 	RequestedByAccountID *int64    `bun:"requested_by_account_id"`
-	CreatedAt            time.Time `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt            time.Time `bun:"created_at,nullzero"`
 }
 
 func (r documentMailingRow) mailing() parentbilling.BillingLetterSend {

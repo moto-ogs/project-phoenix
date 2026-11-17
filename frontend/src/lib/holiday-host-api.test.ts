@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import { ApiError } from "./api-error";
 import {
   assignHolidayGuestGroup,
@@ -507,28 +508,34 @@ describe("Feriengruppe vor ihrer Woche", () => {
   });
 
   it("derives upcoming hints from the shared list without including a current week", async () => {
+    // Eine Woche beginnt heute, die andere liegt später.
+    const upcoming = {
+      ...week,
+      startsOn: testClockDay(117),
+      endsOn: testClockDay(121),
+    };
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse(200, {
         data: [
           {
             group_id: 3,
             week_id: 50,
-            starts_on: "2026-09-09",
-            ends_on: "2026-09-13",
+            starts_on: TEST_CLOCK_TODAY,
+            ends_on: testClockDay(4),
             guests: 2,
           },
           {
             group_id: 7,
             week_id: 51,
-            starts_on: "2027-01-04",
-            ends_on: "2027-01-08",
+            starts_on: upcoming.startsOn,
+            ends_on: upcoming.endsOn,
             guests: 3,
           },
         ],
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    await expect(fetchHolidayGuestGroupHints()).resolves.toEqual([week]);
+    await expect(fetchHolidayGuestGroupHints()).resolves.toEqual([upcoming]);
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/holiday-guests/groups");
   });
 

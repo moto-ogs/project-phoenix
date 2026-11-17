@@ -62,13 +62,30 @@ vi.mock("next/navigation", () => ({
     prefetch: vi.fn(),
   }),
 }));
-vi.mock("~/lib/swr", () => ({
-  useLiveRefreshInterval: (fallbackMs = 60_000) => fallbackMs,
-  useSWRAuth: vi.fn(),
-  useTenantMutate: () => vi.fn(),
-  useTenantMutateMatching: () => vi.fn(),
-  useInvalidateMatching: () => vi.fn(),
+// The breaks of the open session read through real SWR, so their reload
+// count is the page's; every other reader is the per-key fake. The real hook
+// runs on every call (with a null key for the fakes) to keep the hook order.
+const { routedSWRAuth } = vi.hoisted(() => ({
+  routedSWRAuth: (real: typeof import("~/lib/swr").useSWRAuth) =>
+    new Proxy(vi.fn(), {
+      apply(fake, thisArg, args: Parameters<typeof real>) {
+        const [key, fetcher, options] = args;
+        const breaks = key?.startsWith("time-tracking-session-breaks-");
+        const response = real(breaks ? key : null, fetcher, options);
+        return breaks ? response : Reflect.apply(fake, thisArg, args);
+      },
+    }),
 }));
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  return {
+    useLiveRefreshInterval: (fallbackMs = 60_000) => fallbackMs,
+    useSWRAuth: routedSWRAuth(actual.useSWRAuth),
+    useTenantMutate: () => vi.fn(),
+    useTenantMutateMatching: () => vi.fn(),
+    useInvalidateMatching: () => vi.fn(),
+  };
+});
 vi.mock("~/lib/hooks/use-user-context", () => ({
   useUserContext: () => ({
     userContext: { currentStaff: { id: "10", personId: "1" } },
@@ -156,6 +173,7 @@ vi.mock("~/components/help/context-help-link", () => ({
   ContextHelpLink: () => null,
 }));
 
+import { SWRConfig } from "~/lib/swr/testing";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { useSWRAuth } from "~/lib/swr";
@@ -165,8 +183,19 @@ import type {
 } from "~/lib/time-tracking-helpers";
 import TimeTrackingPage from "./page";
 
+vi.unmock("swr");
+
+/** A fresh SWR cache per render, so no breaks leak between tests. */
+function Providers({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
+
 function render(ui: ReactElement) {
-  return rtlRender(ui, { wrapper: ToastProvider });
+  return rtlRender(ui, { wrapper: Providers });
 }
 
 // Die Testuhr steht auf Mittwoch, 09.09.2026.
@@ -237,6 +266,24 @@ function mockData(absences: StaffAbsence[]) {
     }
     if (key.startsWith("time-tracking-month-summary")) return answer(undefined);
     if (key.startsWith("time-tracking-table-absences")) return answer(absences);
+    // The leave and allowance cards: the fixtures of the service mocks below.
+    if (
+      key === "time-tracking-absences-questioned" ||
+      key === "time-tracking-absences-allowances"
+    ) {
+      return answer([]);
+    }
+    if (key.startsWith("time-tracking-absences-quota-")) {
+      return answer({
+        staff_id: 10,
+        year: 2026,
+        entitled_days: 30,
+        carryover_days: 0,
+        taken_days: 0,
+        reserved_days: 0,
+        remaining_days: 30,
+      });
+    }
     if (key.startsWith("time-tracking-absences-")) return answer(absences);
     if (
       key.startsWith("time-tracking-history") ||

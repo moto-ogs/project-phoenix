@@ -25,6 +25,9 @@ type StudentChangeLogStore interface {
 	// DeleteOlderThan removes every row created strictly before cutoff and
 	// returns how many it removed.
 	DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error)
+	// DatabaseTime reads the clock that stamps the rows and guards their
+	// retention window; the cutoff counts back from its Berlin day.
+	DatabaseTime(ctx context.Context) (time.Time, error)
 }
 
 // StudentChangeLogDeletion is one child's share of a retention run, as the

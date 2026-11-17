@@ -7,7 +7,7 @@
 import { CircleHelp, Sun, SunDim } from "lucide-react";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
-import { InfoSection } from "~/components/ui/detail-modal-components";
+import { InfoSection } from "~/components/ui/info-section";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import {
   StatusBadge,

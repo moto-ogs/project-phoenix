@@ -12,6 +12,8 @@ import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateMatching } from "~/lib/swr";
+import { staffNoticeKeys } from "~/lib/swr/staff-keys";
 import {
   acknowledgeStaffNotice,
   describeRecurrence,
@@ -61,6 +63,7 @@ export function TodayNoticeList({
   const latestConfirmRef = useRef<(notice: StaffNotice) => void>(
     () => undefined,
   );
+  const invalidate = useInvalidateMatching();
 
   const confirm = async (notice: StaffNotice) => {
     setPending(notice.id);
@@ -78,6 +81,9 @@ export function TodayNoticeList({
       return;
     }
     setPending(null);
+    // The leadership's list of who confirmed it.
+    const acknowledgements = staffNoticeKeys.acknowledgements(notice.id);
+    void invalidate((key) => key === acknowledgements);
     await afterAcknowledge.refresh();
     window.dispatchEvent(new Event(STAFF_NOTICES_REFRESH_EVENT));
   };

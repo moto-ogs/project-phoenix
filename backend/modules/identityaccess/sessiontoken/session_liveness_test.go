@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -98,6 +99,25 @@ func TestRequireLiveSession(t *testing.T) {
 		require.NoError(t, err)
 		rr := serveWithToken(router, http.MethodGet, "/protected", token)
 		assert.Equal(t, http.StatusServiceUnavailable, rr.Code)
+		var body sessiontoken.ErrResponse
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+		assert.Equal(t, "general.unavailable", body.Code)
+	})
+
+	t.Run("a check the client canceled answers 499, not a server fault", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(context.Background())
+		auth, router := livenessRouter(t, func(checkCtx context.Context, _ sessiontoken.AppClaims) (bool, error) {
+			cancel()
+			return false, fmt.Errorf("latest account session in family: %w", checkCtx.Err())
+		})
+		token, err := tokentest.CreateJWT(auth, accessClaims("family-a"))
+		require.NoError(t, err)
+		req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+		assert.Equal(t, 499, rr.Code)
 		var body sessiontoken.ErrResponse
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
 		assert.Equal(t, "general.unavailable", body.Code)

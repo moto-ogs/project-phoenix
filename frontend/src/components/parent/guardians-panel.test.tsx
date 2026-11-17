@@ -1,3 +1,5 @@
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import "@testing-library/jest-dom/vitest";
 import { ApiError } from "~/lib/api-error";
 import {
@@ -12,6 +14,7 @@ import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import GuardiansPanel from "./guardians-panel";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { catalogText } from "~/test/error-catalog-text";
@@ -24,9 +27,19 @@ import { reloadDocument } from "~/lib/reload-document";
 
 // The shared error path reports row actions through the toast provider
 // (#2518).
-function render(ui: React.ReactElement) {
-  return renderPlain(ui, { wrapper: ToastProvider });
+function Providers({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <ParentResourceTestProvider>
+      <ToastProvider>{children}</ToastProvider>
+    </ParentResourceTestProvider>
+  );
 }
+
+function render(ui: React.ReactElement) {
+  return renderPlain(ui, { wrapper: Providers });
+}
+
+vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   listChildGuardians: vi.fn(),
@@ -124,6 +137,71 @@ describe("GuardiansPanel", () => {
       async (_studentId, input) =>
         `Ich erlaube, dass ${input.personName} das Kind Felix Schneider ${input.weekdays?.length ? "dienstags" : "an allen Tagen"} von der OGS abholt.`,
     );
+  });
+
+  it("keeps refused contacts and accounts withdrawn after a later server failure", async () => {
+    mocks.listRelatedAccounts.mockResolvedValue([
+      {
+        guardian_profile_id: "8",
+        first_name: "Eva",
+        last_name: "Elternkonto",
+        email: "eva@example.test",
+        relationship_type: "parent",
+        is_primary: false,
+        status: "active",
+        is_self: false,
+      },
+    ] satisfies RelatedAccount[]);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(parentKeys.guardians("42"), () =>
+        mocks.listChildGuardians(),
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <>
+        <GuardiansPanel studentId="42" canInvite canRemove />
+        <Probe />
+      </>,
+    );
+    expect(await screen.findByText("Helga Schneider")).toBeVisible();
+    expect(await screen.findByText("Eva Elternkonto")).toBeVisible();
+    mocks.listChildGuardians.mockRejectedValueOnce(
+      new ApiError("forbidden", 403, {
+        code: "care.guardian_permission_denied",
+      }),
+    );
+    await act(async () => {
+      await reload();
+    });
+    await screen.findByText(
+      catalogText("care.guardian_permission_denied", "die Liste der Kontakte"),
+    );
+    mocks.listChildGuardians.mockRejectedValueOnce(new ApiError("down", 500));
+    await act(async () => {
+      await reload();
+    });
+    // Anker: der Fehler bleibt sichtbar, Kontakt und Aktionen bleiben entzogen.
+    expect(
+      screen.getByText(
+        catalogText(
+          "care.guardian_permission_denied",
+          "die Liste der Kontakte",
+        ),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Helga Schneider")).not.toBeInTheDocument();
+    expect(screen.queryByText("Eva Elternkonto")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Bearbeiten" }),
+    ).not.toBeInTheDocument();
+    mocks.listChildGuardians.mockResolvedValue([editableGuardian]);
+    await act(async () => {
+      await reload();
+    });
+    expect(await screen.findByText("Helga Schneider")).toBeVisible();
   });
 
   it("preserves phone labels and the existing primary phone on contact save", async () => {

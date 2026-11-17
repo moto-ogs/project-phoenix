@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { EditActions } from "~/components/ui/edit-actions";
-import { formErrorMessage } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import {
-  type MessageableStaff,
   type StaffMessagesApi,
   type StaffThreadDetail,
   staffRoleKindLabel,
@@ -21,14 +19,15 @@ import { createLogger } from "~/lib/logger";
 import { foldForSearch } from "~/lib/search-fold";
 import { Loading } from "~/components/ui/loading";
 
+import { useTeamRecipients } from "./new-team-message-modal";
+
 const logger = createLogger({ component: "TeamGroupModals" });
 
 /** Längster Gruppenname; das Backend prüft dieselbe Grenze. */
 export const GROUP_NAME_MAX = 80;
 
 /**
- * Personen der Schule zum Ankreuzen (#4776), mit Suche. Lädt die Liste
- * selbst; `exclude` blendet aus, wer schon in der Gruppe ist.
+ * Personen der Schule zum Ankreuzen (#4776), mit Suche; `exclude` blendet aus, wer schon in der Gruppe ist.
  */
 function PeoplePicker({
   api,
@@ -42,43 +41,7 @@ function PeoplePicker({
   readonly onToggle: (accountId: string) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [people, setPeople] = useState<MessageableStaff[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [loadAttempt, setLoadAttempt] = useState(0);
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
-
-  useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
-    setLoadFailed(false);
-    clearLoadError();
-    api
-      .fetchRecipients()
-      .then((rows) => {
-        if (!cancelled) setPeople(rows);
-      })
-      .catch((err: unknown) => {
-        logger.error("team_group_people_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!cancelled) {
-          setLoadFailed(true);
-          void showLoadError(err, {
-            object: "die Liste der Personen",
-            retry: () => setLoadAttempt((attempt) => attempt + 1),
-          });
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [api, loadAttempt, showLoadError, clearLoadError]);
+  const { people, loadFailed, loadError, loading } = useTeamRecipients(api);
 
   const filtered = useMemo(() => {
     const term = foldForSearch(query.trim());
@@ -89,9 +52,6 @@ function PeoplePicker({
     );
   }, [people, query, exclude]);
 
-  const loading =
-    isLoading || (loadFailed && formErrorMessage(loadError.error) === null);
-
   return (
     <div className="space-y-2">
       <Input
@@ -100,7 +60,7 @@ function PeoplePicker({
         placeholder="Person suchen..."
         aria-label="Person suchen"
       />
-      <LoadErrorAlert error={loadError.error} />
+      <LoadErrorAlert error={loadError} />
       <div className="max-h-64 space-y-1 overflow-y-auto">
         {loading && <Loading message="Wird geladen …" />}
         {!loading && !loadFailed && filtered.length === 0 && (

@@ -9,7 +9,8 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -17,6 +18,8 @@ import {
   expectSlideOverSaveLocked,
   expectSlideOverUnlocked,
 } from "~/test/helpers/form-modal-pending";
+
+vi.unmock("swr");
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
 
@@ -46,14 +49,21 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
     submitter,
     onSubmitted,
     submitLabel,
+    prefetchedData,
   }: {
     submitter: (payload: unknown) => Promise<{ status_url: string } | null>;
     onSubmitted: (url: string) => void;
     submitLabel: string;
+    prefetchedData: { offerings: { name: string }[] };
   }) {
     const [failed, setFailed] = useState(false);
+    // Like the real form, the template is read once when it mounts.
+    const [offerings] = useState(prefetchedData.offerings);
     return (
       <div>
+        {offerings.map((offering) => (
+          <p key={offering.name}>Angebot {offering.name}</p>
+        ))}
         {failed ? <p>Senden fehlgeschlagen</p> : null}
         <button
           type="button"
@@ -77,10 +87,29 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
 }));
 
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import type { Phase } from "~/lib/enrollment-phase-api";
 import { schema } from "~/test/enrollment-editors";
+import { catalogText } from "~/test/error-catalog-text";
 import { ManualApprovedEnrollmentModal } from "./phase-enrollment-actions";
+
+// Reads run through real SWR under a staff session, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>{children}</ToastProvider>
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
 
 const TITLE = "Kind manuell über Anmeldung freigeben";
 const SUBMIT = "Kind anlegen und freigeben";
@@ -129,7 +158,7 @@ describe("ManualApprovedEnrollmentModal: Senden sperrt das Panel (#6593)", () =>
   it("locks the panel while sending and unlocks it after a failure", async () => {
     const answer = deferred<{ status_url: string }>();
     mocks.createManualApprovedEnrollment.mockReturnValue(answer.promise);
-    render(<Modal />, { wrapper: ToastProvider });
+    render(<Modal />, { wrapper: Providers });
     await fillAndSend();
 
     expectSlideOverSaveLocked(TITLE, []);
@@ -158,7 +187,7 @@ describe("ManualApprovedEnrollmentModal: Senden sperrt das Panel (#6593)", () =>
         }),
       )
       .mockResolvedValueOnce({ status_url: "/anmeldung/status/abc" });
-    render(<Modal />, { wrapper: ToastProvider });
+    render(<Modal />, { wrapper: Providers });
     await fillAndSend();
 
     expect(
@@ -183,7 +212,7 @@ describe("ManualApprovedEnrollmentModal: Senden sperrt das Panel (#6593)", () =>
   it("shows no success of a late answer in a panel opened again", async () => {
     const answer = deferred<{ status_url: string }>();
     mocks.createManualApprovedEnrollment.mockReturnValue(answer.promise);
-    const { rerender } = render(<Modal />, { wrapper: ToastProvider });
+    const { rerender } = render(<Modal />, { wrapper: Providers });
     await fillAndSend();
 
     rerender(<Modal isOpen={false} />);
@@ -199,5 +228,67 @@ describe("ManualApprovedEnrollmentModal: Senden sperrt das Panel (#6593)", () =>
 
     expectSlideOverUnlocked(TITLE);
     expect(screen.queryByText(SUCCESS)).not.toBeInTheDocument();
+  });
+
+  it("waits for this opening's template instead of the cached one", async () => {
+    const offering = (name: string) => ({
+      id: name,
+      name,
+      days_of_week_mode: "fixed",
+      available_days: [],
+      includes_holiday_care: false,
+      includes_lunch: false,
+    });
+    const bootstrap = (name: string) => ({
+      schema: schema(),
+      offerings: [offering(name)],
+      care_offering_selection_mode: "optional",
+      captcha_config: null,
+      legal_texts: { blocks: [] },
+    });
+    const second = deferred<ReturnType<typeof bootstrap>>();
+    mocks.fetchManualEnrollmentBootstrap
+      .mockResolvedValueOnce(bootstrap("Frühbetreuung"))
+      .mockReturnValueOnce(second.promise);
+    const { rerender } = render(<Modal />, { wrapper: Providers });
+    expect(await screen.findByText("Angebot Frühbetreuung")).toBeVisible();
+
+    rerender(<Modal isOpen={false} />);
+    rerender(<Modal />);
+    expect(
+      await screen.findByText("Formularvorlage wird geladen..."),
+    ).toBeVisible();
+    expect(screen.queryByText("Angebot Frühbetreuung")).not.toBeInTheDocument();
+
+    await act(async () => {
+      second.resolve(bootstrap("Spätbetreuung"));
+    });
+    expect(await screen.findByText("Angebot Spätbetreuung")).toBeVisible();
+    expect(screen.queryByText("Angebot Frühbetreuung")).not.toBeInTheDocument();
+  });
+
+  it("shows the failed load of a reopened panel instead of the old template", async () => {
+    mocks.fetchManualEnrollmentBootstrap
+      .mockResolvedValueOnce({
+        schema: schema(),
+        offerings: [],
+        care_offering_selection_mode: "optional",
+        captcha_config: null,
+        legal_texts: { blocks: [] },
+      })
+      .mockRejectedValueOnce(
+        new ApiError("kaputt", 500, { code: "general.server" }),
+      );
+    const { rerender } = render(<Modal />, { wrapper: Providers });
+    expect(await screen.findByRole("button", { name: SUBMIT })).toBeVisible();
+
+    rerender(<Modal isOpen={false} />);
+    rerender(<Modal />);
+    expect(
+      await screen.findByText(catalogText("general.server", "das Formular")),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: SUBMIT }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"testing"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -14,7 +15,7 @@ func TestStudentDeletionRepository_Create(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
-	repo := NewStudentDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewStudentDeletionRepository(NewRuntime(db, auditTestTenantID), time.Now)
 
 	assert.ErrorContains(t, repo.Create(context.Background(), nil), "audit event is required")
 

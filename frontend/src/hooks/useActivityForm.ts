@@ -1,18 +1,15 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { FormError } from "~/components/ui/form-error";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { getCategories, type ActivityCategory } from "~/lib/activity-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 const logger = createLogger({ component: "useActivityForm" });
+const NO_CATEGORIES: ActivityCategory[] = [];
 
 /**
  * Activity form state shape.
@@ -80,43 +77,36 @@ export function useActivityForm(
   isOpen: boolean,
 ): UseActivityFormReturn {
   const [form, setForm] = useState<ActivityFormState>(initialForm);
-  const [categories, setCategories] = useState<ActivityCategory[]>([]);
-  const [loading, setLoading] = useState(false);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  // „Wiederholen“ lädt die Kategorien erneut.
-  const reloadRef = useRef<() => void>(() => undefined);
-
-  // Load categories when modal opens
+  // Loads only when the modal opens or `loadCategories` asks, and then
+  // always fresh: a category created elsewhere shows up at the next open.
+  const { data, error, isValidating, mutate } = useSWRAuth(
+    tenantDailyKeys.activityCategories(),
+    getCategories,
+    {
+      revalidateOnMount: false,
+      revalidateOnFocus: false,
+    },
+  );
+  const categories = data ?? NO_CATEGORIES;
+  const loading = isValidating && data === undefined;
   const loadCategories = useCallback(async () => {
-    clearLoadError();
-    try {
-      setLoading(true);
-      const categoriesData = await getCategories();
-      setCategories(categoriesData ?? []);
-    } catch (err) {
-      logger.error("failed to load categories", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showLoadError(err, {
-        object: "die Liste der Kategorien",
-        retry: () => reloadRef.current(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [showLoadError, clearLoadError]);
-  useLayoutEffect(() => {
-    reloadRef.current = () => void loadCategories();
-  });
-
-  // Auto-load categories when modal opens
+    await mutate();
+  }, [mutate]);
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data, error }],
+    "die Liste der Kategorien",
+    () => mutate(),
+  );
   useEffect(() => {
-    if (isOpen) void loadCategories();
-  }, [isOpen, loadCategories]);
+    if (error === undefined) return;
+    logger.error("failed to load categories", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }, [error]);
+
+  useEffect(() => {
+    if (isOpen) void mutate();
+  }, [isOpen, mutate]);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

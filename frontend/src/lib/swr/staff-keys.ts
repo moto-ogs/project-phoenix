@@ -86,4 +86,112 @@ export const staffMonthSummaryKeys = {
 export const staffNoticeKeys = {
   linked: (accountId: string, noticeId: string) =>
     `staff-notice:${accountId}:${encodeURIComponent(noticeId)}`,
+  /** Wer eine Tagesinformation wann bestätigt hat (#2208). */
+  acknowledgements: (noticeId: string) =>
+    `staff-notice-acknowledgements-${encodeURIComponent(noticeId)}`,
+} as const;
+
+/**
+ * Abwesenheiten, Kontingente und ihre Vorschauen je Person. Das Präfix
+ * „staff-absences-“ hält sie im SSE-Satz von staff_time_tracking_changed.
+ */
+export const staffAbsenceKeys = {
+  /** Abwesenheitsarten der Schule; derselbe Eintrag wie Zeiterfassung und
+   *  Auswahl der Arten. */
+  types: () => "staff-absence-types",
+  /** Abwesenheiten einer Person im Zeitraum; derselbe Eintrag wie der Reiter
+   *  „Zeiterfassung“. */
+  list: (staffId: string, from: string, to: string) =>
+    `staff-absences-${encodeURIComponent(staffId)}-${from}-${to}`,
+  vacationQuota: (staffId: string, year: number) =>
+    `staff-absences-quota-${encodeURIComponent(staffId)}-${year}`,
+  allowances: (staffId: string, year: number, typeIds: readonly string[]) =>
+    `staff-absences-allowances-${encodeURIComponent(staffId)}-${year}-${typeIds.join(",")}`,
+  /** Urlaubsrest und Kontingente je Jahr für die Buchungsdialoge. */
+  yearAccounts: (
+    staffId: string,
+    years: readonly number[],
+    typeIds: readonly string[],
+  ) =>
+    `staff-absences-year-accounts-${encodeURIComponent(staffId)}-${years.join(",")}-${typeIds.join(",")}`,
+  compTimePreview: (
+    staffId: string,
+    dateStart: string,
+    dateEnd: string,
+    halfDay: boolean,
+  ) =>
+    `staff-absences-comp-time-preview-${encodeURIComponent(staffId)}-${dateStart}-${dateEnd}-${halfDay}`,
+  allowancePreview: (
+    typeId: string,
+    staffId: string,
+    dateStart: string,
+    dateEnd: string,
+    halfDay: boolean,
+  ) =>
+    `staff-absences-allowance-preview-${encodeURIComponent(staffId)}-${encodeURIComponent(typeId)}-${dateStart}-${dateEnd}-${halfDay}`,
+  /** Probelauf einer Umbuchung (#3258), je Auswahl und Zielart. */
+  rebookingPreview: (
+    staffId: string,
+    absenceIds: readonly number[],
+    value: string,
+  ) =>
+    `staff-absences-rebooking-preview-${encodeURIComponent(staffId)}-${absenceIds.join(",")}-${encodeURIComponent(value)}`,
+  /** Eigene Abwesenheiten im Zeitraum; derselbe Eintrag wie die Seite
+   *  „Zeiterfassung“. */
+  ownList: (from: string, to: string) => `time-tracking-absences-${from}-${to}`,
+  ownVacationQuota: (year: number) => `time-tracking-absences-quota-${year}`,
+  ownQuestioned: () => "time-tracking-absences-questioned",
+  ownAllowances: () => "time-tracking-absences-allowances",
+} as const;
+
+/** Zeiterfassung, Schichten und Protokoll je Person. */
+export const staffTimeKeys = {
+  /** Erste Seite des Änderungsprotokolls (#1417) je Filter; „Weitere
+   *  Einträge laden“ hängt Folgeseiten nur in der Ansicht an. */
+  auditLog: (query: object) => resourceKey("staff-audit-log-", query),
+  /** DATEV-Vorschau je Format und Monat, vor dem Export. */
+  datevReport: (format: string, year: number, month: number) =>
+    `staff-time-datev-report-${format}-${year}-${month}`,
+  /** Änderungen eines Arbeitsblocks. Die eigene Sicht nutzt einen anderen
+   *  Endpunkt als die Leitung. Das Präfix „staff-history-“ hält sie im
+   *  SSE-Satz und in `isStaleAfterSessionSave`. */
+  sessionEdits: (view: "admin" | "own", staffId: string, sessionId: string) =>
+    `staff-history-session-edits-${view}-${encodeURIComponent(staffId)}-${encodeURIComponent(sessionId)}`,
+  /** Regel einer Schichtserie (#2028). Das Präfix „dienstplan-shifts-“
+   *  frischt sie mit jeder Planänderung auf (PLAN_CACHE_KEY_PREFIXES). */
+  shiftSeries: (seriesId: string) =>
+    `dienstplan-shifts-series-${encodeURIComponent(seriesId)}`,
+} as const;
+
+/** Rollen, Klassen und Betreuungsrechte der Mitarbeitenden. */
+export const staffAccessKeys = {
+  /** Personen, deren Ansicht die Leitung lesend öffnen kann (#2893). */
+  previewCandidates: () => "staff-preview-candidates",
+  /** Zugewiesene Schulklassen einer Lehrkraft (#1772). */
+  schoolClasses: (staffId: string) =>
+    `staff-school-classes-${encodeURIComponent(staffId)}`,
+  /** Mögliche Ersatzkräfte beim Auflösen offener Zuordnungen. */
+  groupLeaderCandidates: () => "staff-group-leader-candidates",
+  /** Betreuungsrecht eines Kontos der eigenen Schule. */
+  caregiverCapability: (accountId: string) =>
+    `caregiver-capability-${encodeURIComponent(accountId)}`,
+  /** Betreuungsrecht eines Kontos, aus dem Operator-Portal je Schule. */
+  operatorCaregiverCapability: (schoolId: string, accountId: string) =>
+    `operator-caregiver-capability-${encodeURIComponent(schoolId)}-${encodeURIComponent(accountId)}`,
+  /** Die Rechte einer Rolle (`authService.getRolePermissions`). */
+  rolePermissions: (roleId: string) =>
+    `role-permissions-${encodeURIComponent(roleId)}`,
+  /** Alle Rechte zur Auswahl im Rollen-Reiter (`authService.getPermissions`). */
+  permissionCatalog: () => "role-permission-catalog",
+} as const;
+
+/**
+ * Alle gespeicherten Schließtag-Zeiträume (#2032). Derselbe Schlüssel wie in
+ * `useClosingDaysState`, damit Editor und Planraster eine Antwort teilen.
+ */
+export const closingDayKeys = {
+  list: () => "planning-closing-days",
+  /** Das Fenster des Zeiterfassungs-Endpunkts ohne `schedules:read`. */
+  window: (fromISO: string, toISO: string) =>
+    `planning-closing-days-${fromISO}-${toISO}`,
 } as const;

@@ -63,7 +63,9 @@ func TestCatererInvitationMailStatesShowEachMailInOneRead(t *testing.T) {
 		listed, err := caterers.ListCatererInvitations(ctx)
 		require.NoError(t, err)
 		require.Len(t, listed, 2)
-		bounced, waiting := listed[0].ID, listed[1].ID
+		// Newest first: the second invitation took the first back and
+		// stopped its mail (#4496), so the open one is still waiting.
+		waiting, bounced := listed[0].ID, listed[1].ID
 		_, err = db.ExecContext(ctx, `UPDATE platform.email_outbox SET status = 'sent', sent_at = NOW(), delivery_state = 'failed'
 			WHERE kind = 'caterer_invitation' AND related_entity_id = ?`, bounced)
 		require.NoError(t, err)

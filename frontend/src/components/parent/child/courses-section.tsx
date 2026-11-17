@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import { Button } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -18,7 +12,11 @@ import { ParentSection } from "~/components/parent/shell/parent-section";
 import { ParentSectionSkeleton } from "~/components/parent/parent-page";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { Textarea } from "~/components/ui/textarea";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import { formatDate } from "~/lib/date-helpers";
 import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
@@ -66,16 +64,21 @@ export function CoursesSection({
 }>) {
   const t = useCareTermTranslations("parentMasterData");
   const locale = useLocale();
-  const [courses, setCourses] = useState<ChildCourses | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const resource = useSWRAuth(
+    parentKeys.courses(studentId),
+    () => getChildCourses(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const { mutate } = resource;
+  const courses = resource.data ?? null;
   const [busyCourseId, setBusyCourseId] = useState<string | null>(null);
   const [note, setNote] = useState("");
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+  const { error: loadError, failure: loadFailed } = useSwrResourceLoadError(
+    [resource],
+    t("courses.errorObjectList"),
+    () => mutate(),
+  );
+  const loading = !resource.data && !resource.error;
   // Eine Anfrage trägt die Nachricht aus dem Textfeld: ihr Fehler steht im
   // Abschnitt, ein Feldfehler am Feld.
   const actionErrors = useApiFormError();
@@ -84,40 +87,9 @@ export function CoursesSection({
     clear: clearActionError,
     invalid: invalidAction,
   } = actionErrors;
-  const latestLoadRef = useRef<() => void>(() => undefined);
   const latestRunRef = useRef<
     (courseId: string, kind: "request" | "withdraw") => void
   >(() => undefined);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    clearLoadError();
-    try {
-      setCourses(await getChildCourses(studentId));
-      setLoadFailed(false);
-    } catch (err: unknown) {
-      setCourses(null);
-      setLoadFailed(true);
-      logger.warn("parent_courses_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        student_id: studentId,
-      });
-      void showLoadError(err, {
-        object: t("courses.errorObjectList"),
-        retry: () => latestLoadRef.current(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [clearLoadError, showLoadError, studentId, t]);
-
-  useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
-  });
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const dayList = useCallback(
     (days: string[]) => {
@@ -139,14 +111,14 @@ export function CoursesSection({
       setBusyCourseId(courseId);
       clearActionError();
       try {
-        setCourses(
+        const next: ChildCourses =
           kind === "request"
             ? await requestChildCourse(studentId, courseId, note)
             : await withdrawChildCourseRequest(
                 studentId,
                 courses?.pending_request_id ?? "",
-              ),
-        );
+              );
+        await mutate(next, { revalidate: false });
       } catch (err: unknown) {
         // Der Satz des Servers steht im Log, auf dem Bildschirm steht der
         // Text des Fehlerkatalogs. Die Liste wird neu geladen, damit ein
@@ -163,7 +135,7 @@ export function CoursesSection({
           err.code === "students.offering_changes_no_enrollment"
         ) {
           invalidAction(t("errorNoEnrollment"));
-          void load();
+          void mutate();
           return;
         }
         void showActionError(err, {
@@ -174,7 +146,7 @@ export function CoursesSection({
           // Wiederholen sendet die Nachricht, die jetzt im Feld steht.
           retry: () => latestRunRef.current(courseId, kind),
         });
-        void load();
+        void mutate();
       } finally {
         setBusyCourseId(null);
       }
@@ -183,7 +155,7 @@ export function CoursesSection({
       clearActionError,
       courses?.pending_request_id,
       invalidAction,
-      load,
+      mutate,
       note,
       showActionError,
       studentId,

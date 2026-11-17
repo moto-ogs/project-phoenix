@@ -359,7 +359,7 @@ func TestSubmissionRateLimitCleanupRollbackAndIdempotentRetry(t *testing.T) {
 		}))
 	}
 	_, err := db.NewUpdate().Table("enrollment.submission_rate_limits").
-		Set("window_start = NOW() - INTERVAL '25 hours'").
+		Set("window_start = ?", time.Now().Add(-25*time.Hour)).
 		Where("tenant_id = ? AND key_value = ?", tenantID, expiredKey).Exec(testpkg.Ctx(t))
 	require.NoError(t, err)
 	failure := errors.New("after rate-limit cleanup")

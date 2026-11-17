@@ -4,7 +4,7 @@ import type { MotoDuotoneTone } from "~/lib/kit-palette";
 import { MOTO_DUOTONE_PALETTE } from "~/lib/kit-palette";
 import { cn } from "~/lib/utils";
 
-export interface MotoDuotoneIconProps {
+interface MotoDuotoneIconProps {
   readonly icon: PhosphorIcon;
   readonly tone: MotoDuotoneTone;
   /**

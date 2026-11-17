@@ -1,8 +1,14 @@
 import "@testing-library/jest-dom/vitest";
 import type { TenantPageSearchRowProps } from "~/components/ui/tenant-page-search-row";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { useState, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
 import ActivitiesPage from "./page";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
@@ -13,6 +19,16 @@ function errorText(error: unknown): string | null {
   return typeof error === "string"
     ? error
     : (error as { message: string }).message;
+}
+
+vi.unmock("swr");
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {ui}
+    </SWRConfig>,
+  );
 }
 
 vi.mock("next-auth/react", () => ({
@@ -41,28 +57,19 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => currentSearch,
 }));
 
-vi.mock("~/lib/swr", () => ({
-  useSWRAuth: vi.fn(),
-  mutate: vi.fn(),
-  useTenantMutate: vi.fn(() => vi.fn()),
-}));
-
+const mockGetList = vi.fn();
 const mockGetOne = vi.fn();
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
 const mockRemove = vi.fn();
 vi.mock("@/lib/database/service-factory", () => ({
   createCrudService: vi.fn(() => ({
-    getList: vi.fn(),
+    getList: mockGetList,
     getOne: mockGetOne,
     create: mockCreate,
     update: mockUpdate,
     remove: mockRemove,
   })),
-}));
-
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => false),
 }));
 
 const mockToastSuccess = vi.fn();
@@ -326,8 +333,6 @@ vi.mock("@/components/activities/activities-master-detail", () => ({
   },
 }));
 
-import { useSWRAuth } from "~/lib/swr";
-
 const mockActivities = [
   {
     id: "1",
@@ -356,13 +361,7 @@ describe("ActivitiesPage", () => {
     vi.clearAllMocks();
     currentSearch = new URLSearchParams();
 
-    vi.mocked(useSWRAuth).mockReturnValue({
-      data: mockActivities,
-      isLoading: false,
-      error: null,
-      isValidating: false,
-      mutate: vi.fn(),
-    } as ReturnType<typeof useSWRAuth>);
+    mockGetList.mockResolvedValue({ data: mockActivities });
 
     mockGetOne.mockImplementation((id: string) =>
       Promise.resolve(
@@ -381,13 +380,7 @@ describe("ActivitiesPage", () => {
   });
 
   it("shows loading state when data is loading", () => {
-    vi.mocked(useSWRAuth).mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      error: null,
-      isValidating: false,
-      mutate: vi.fn(),
-    } as ReturnType<typeof useSWRAuth>);
+    mockGetList.mockReturnValue(new Promise(() => undefined));
 
     render(<ActivitiesPage />);
 
@@ -398,15 +391,11 @@ describe("ActivitiesPage", () => {
   });
 
   it("shows error message when fetch fails", async () => {
-    vi.mocked(useSWRAuth).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new ApiError("Failed to fetch", 503, {
+    mockGetList.mockRejectedValue(
+      new ApiError("Failed to fetch", 503, {
         code: "general.unavailable",
       }),
-      isValidating: false,
-      mutate: vi.fn(),
-    } as ReturnType<typeof useSWRAuth>);
+    );
 
     render(<ActivitiesPage />);
 
@@ -416,13 +405,7 @@ describe("ActivitiesPage", () => {
   });
 
   it("shows empty state when no activities exist", async () => {
-    vi.mocked(useSWRAuth).mockReturnValue({
-      data: [],
-      isLoading: false,
-      error: null,
-      isValidating: false,
-      mutate: vi.fn(),
-    } as ReturnType<typeof useSWRAuth>);
+    mockGetList.mockResolvedValue({ data: [] });
 
     render(<ActivitiesPage />);
 
@@ -562,7 +545,7 @@ describe("ActivitiesPage", () => {
   it("syncs activity selection into the URL when a row is clicked", async () => {
     render(<ActivitiesPage />);
 
-    fireEvent.click(screen.getByTestId("activity-row-1"));
+    fireEvent.click(await screen.findByTestId("activity-row-1"));
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith(

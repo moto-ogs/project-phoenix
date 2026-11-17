@@ -154,7 +154,7 @@ func newOperatorRouter(
 	isLocalSeedRequest := func(r *http.Request) bool {
 		return apiCommon.IsLocalSeedRequest(r, viper.GetString("app_env"))
 	}
-	mergeRoutes, err := newStaffPersonMergeRoutes(db)
+	mergeRoutes, err := newStaffPersonMergeRoutes(db, now)
 	if err != nil {
 		return nil, err
 	}
@@ -246,6 +246,12 @@ func newSessionTokenAuth() (*sessiontoken.TokenAuth, error) {
 		viper.GetDuration("auth_jwt_expiry"),
 		viper.GetDuration("auth_jwt_refresh_expiry"),
 	)
+}
+
+// newSentryUserPseudonym keys the Sentry pseudonym of an account with the
+// session secret the verifier above reads (#3843).
+func newSentryUserPseudonym() (SentryUserPseudonym, error) {
+	return NewSentryUserPseudonym(viper.GetString("auth_jwt_secret"))
 }
 
 // newProvisioningConfig binds the operator provisioning routes to the

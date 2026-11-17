@@ -25,11 +25,11 @@ func TestPrivacyEventsTimestampAfterTheSerializedWriteStarts(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	protection := familyProtectionEvent(chain.StudentID, chain.AccountID, chain.TenantID, true)
 	share := requestShareEvent(chain.StudentID, chain.AccountID, chain.TenantID, nil)
+	// Both ledgers stamp created_at on the owner's clock, the real clock the
+	// factory composes them with (ADR 0281); the start is read on that clock.
 	var transactionStarted time.Time
-	err := testpkg.WithinTenantTransaction(ctx, db, chain.TenantID, func(txCtx context.Context, tx bun.Tx) error {
-		if err := tx.NewSelect().ColumnExpr("CURRENT_TIMESTAMP").Scan(txCtx, &transactionStarted); err != nil {
-			return err
-		}
+	err := testpkg.WithinTenantTransaction(ctx, db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
+		transactionStarted = time.Now()
 		time.Sleep(5 * time.Millisecond)
 		if err := repos.FamilyProtection.Create(txCtx, protection); err != nil {
 			return err

@@ -26,7 +26,7 @@ func TestBookingAccountsKeepTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newCareScope(t, db, "Träger Konten A")
 	other := newCareScope(t, db, "Träger Konten B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the accounts back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, own.organization, func(ctx context.Context) error {
@@ -105,7 +105,7 @@ func TestIssuedPositionsKeepWhereTheyBook(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	scope := newCareScope(t, db, "Träger Festschreibung")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the release back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {
@@ -177,7 +177,7 @@ func TestExportBookingPartsKeepPositionReductions(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	scope := newCareScope(t, db, "Träger Ermäßigungen")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the reduced positions back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {
@@ -226,7 +226,7 @@ func TestExportBookingPartsReadIssuedRemovalsAndFunding(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	scope := newCareScope(t, db, "Träger Exportkorrektur")
 	other := newCareScope(t, db, "Träger fremde Exportkorrektur")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the export snapshots back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {

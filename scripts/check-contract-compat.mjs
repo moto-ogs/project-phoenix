@@ -72,7 +72,9 @@ export function breakingChanges(base, head) {
     // Both envelopes require status and data; only the paginated one also
     // requires pagination. Adding it is safe because readers ignore extras.
     if (route.paginated && !next.paginated) breaking.push(`${key}.pagination: may now be absent`);
-    const defaultResponse = (entry) => entry.variants
+    // No data is an explicit response kind, not a removed response. Its
+    // decoder rejects data, so changing either way also breaks old readers.
+    const defaultResponse = (entry) => entry.no_data ? { kind: "no_data" } : entry.variants
       ? entry.variants.cases[entry.variants.default] : entry.response;
     // Compare what an existing request selects, not just equal case names.
     // No selector uses the default; a renamed selector ignores the old key.

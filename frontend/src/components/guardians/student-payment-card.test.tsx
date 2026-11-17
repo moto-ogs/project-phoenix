@@ -1,5 +1,18 @@
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
+import {
+  act,
+  render as rtlRender,
+  screen,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { resetSWRScope } from "~/lib/swr/scope";
+import { deferred } from "~/test/helpers/form-modal-pending";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import { SWRConfig } from "~/lib/swr/testing";
 
 import type { GuardianWithRelationship } from "@/lib/guardian-helpers";
 import { StudentPaymentCard } from "./student-payment-card";
@@ -10,6 +23,32 @@ const mockFetchPayment = vi.fn();
 const mockRevealPayment = vi.fn();
 const mockUpdatePayment = vi.fn();
 const mockSetPayer = vi.fn();
+
+// Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
+vi.unmock("swr");
+
+const sessionUser = vi.hoisted(() => ({
+  id: "account-1",
+  tenantId: 1,
+  scope: "tenant",
+}));
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: sessionUser },
+    status: "authenticated",
+  }),
+}));
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    ),
+  });
+}
 
 vi.mock("~/lib/guardian-payment-api", () => ({
   fetchGuardianPayment: (id: string) => mockFetchPayment(id),
@@ -66,6 +105,8 @@ function guardian(
 
 describe("StudentPaymentCard", () => {
   beforeEach(() => {
+    sessionUser.id = "account-1";
+    resetSWRScope({ revalidate: false });
     mockFetchPayment.mockReset();
     mockRevealPayment.mockReset();
     mockUpdatePayment.mockReset();
@@ -78,6 +119,188 @@ describe("StudentPaymentCard", () => {
       ibanMasked: "•••• 3000",
       accountHolder: null,
     });
+  });
+
+  it.each(["revealed", "draft"])(
+    "removes %s bank data after a reader refusal and keeps it gone on reopening",
+    async (mode) => {
+      const masked = {
+        guardianId: "10",
+        ibanMasked: "•••• 3000",
+        accountHolder: "Bankinhaber",
+      };
+      mockFetchPayment.mockResolvedValue(masked);
+      mockRevealPayment.mockResolvedValue({
+        guardianId: "10",
+        iban: FULL_IBAN,
+        accountHolder: "Bankinhaber",
+      });
+      let reload!: () => Promise<unknown>;
+      function Probe() {
+        const invalidate = useInvalidateFamily();
+        reload = () => invalidate(tenantContactKeys.guardianPayment("10"));
+        return null;
+      }
+      const card = (
+        <StudentPaymentCard
+          studentId="7"
+          guardians={[guardian("10", "Sabine", true)]}
+        />
+      );
+      const view = render(
+        <>
+          {card}
+          <Probe />
+        </>,
+      );
+      expect(await screen.findByText(masked.ibanMasked)).toBeVisible();
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: mode === "revealed" ? /Anzeigen/ : "Bearbeiten",
+        }),
+      );
+      if (mode === "revealed")
+        expect(await screen.findByText(FULL_IBAN)).toBeVisible();
+      else
+        await waitFor(() =>
+          expect(screen.getByLabelText("IBAN")).toHaveValue(FULL_IBAN),
+        );
+      mockFetchPayment.mockRejectedValue(new ApiError("refused", 403));
+      await act(async () => {
+        await reload();
+      });
+      const refusal = catalogText("general.permission", "die Bankverbindung");
+      expect(await screen.findByText(refusal)).toBeVisible();
+      expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("IBAN")).not.toBeInTheDocument();
+      expect(screen.queryByText(masked.ibanMasked)).not.toBeInTheDocument();
+      view.rerender(<Probe />);
+      mockFetchPayment.mockRejectedValue(new ApiError("offline", 503));
+      view.rerender(
+        <>
+          {card}
+          <Probe />
+        </>,
+      );
+      expect(await screen.findByText(refusal)).toBeVisible();
+      expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
+      mockFetchPayment.mockResolvedValue(masked);
+      await act(async () => {
+        await reload();
+      });
+      expect(await screen.findByText(masked.ibanMasked)).toBeVisible();
+      expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("IBAN")).not.toBeInTheDocument();
+    },
+  );
+
+  it("does not reopen a payment draft from a late reveal after a refusal", async () => {
+    const late = deferred<{
+      guardianId: string;
+      iban: string;
+      accountHolder: null;
+    }>();
+    mockRevealPayment.mockReturnValue(late.promise);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const invalidate = useInvalidateFamily();
+      reload = () => invalidate(tenantContactKeys.guardianPayment("10"));
+      return null;
+    }
+    render(
+      <>
+        <StudentPaymentCard
+          studentId="7"
+          guardians={[guardian("10", "Sabine", true)]}
+        />
+        <Probe />
+      </>,
+    );
+    expect(await screen.findByText("•••• 3000")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await waitFor(() => expect(mockRevealPayment).toHaveBeenCalled());
+    mockFetchPayment.mockRejectedValue(new ApiError("refused", 403));
+    await act(async () => {
+      await reload();
+    });
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Bankverbindung"),
+      ),
+    ).toBeVisible();
+    await act(async () =>
+      late.resolve({ guardianId: "10", iban: FULL_IBAN, accountHolder: null }),
+    );
+    expect(screen.queryByLabelText("IBAN")).not.toBeInTheDocument();
+    expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
+  });
+
+  it("discards a late payment draft after the signed-in account changes", async () => {
+    const late = deferred<{
+      guardianId: string;
+      iban: string;
+      accountHolder: null;
+    }>();
+    mockRevealPayment.mockReturnValue(late.promise);
+    const card = () => (
+      <StudentPaymentCard
+        studentId="7"
+        guardians={[guardian("10", "Sabine", true)]}
+      />
+    );
+    const view = render(card());
+    expect(await screen.findByText("•••• 3000")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await waitFor(() => expect(mockRevealPayment).toHaveBeenCalled());
+    sessionUser.id = "account-2";
+    view.rerender(card());
+    expect(await screen.findByText("•••• 3000")).toBeVisible();
+    await act(async () =>
+      late.resolve({ guardianId: "10", iban: FULL_IBAN, accountHolder: null }),
+    );
+    expect(screen.queryByLabelText("IBAN")).not.toBeInTheDocument();
+    expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
+  });
+
+  it("withdraws the revealed IBAN when the same payer's payment details change", async () => {
+    mockRevealPayment.mockResolvedValue({
+      guardianId: "10",
+      iban: FULL_IBAN,
+      accountHolder: null,
+    });
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(
+        tenantContactKeys.guardianPayment("10"),
+        () => mockFetchPayment("10"),
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <>
+        <StudentPaymentCard
+          studentId="7"
+          guardians={[guardian("10", "Sabine", true)]}
+        />
+        <Probe />
+      </>,
+    );
+    await screen.findByText("•••• 3000");
+    fireEvent.click(screen.getByRole("button", { name: /Anzeigen/ }));
+    expect(await screen.findByText(FULL_IBAN)).toBeVisible();
+    mockFetchPayment.mockResolvedValue({
+      guardianId: "10",
+      ibanMasked: "•••• 9999",
+      accountHolder: "Neues Konto",
+    });
+    await act(async () => {
+      await reload();
+    });
+    // Anker: der neue Kontoinhaber gehört zur frisch geladenen Bankverbindung.
+    expect(await screen.findByText("Neues Konto")).toBeVisible();
+    expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
+    expect(screen.getByText("•••• 9999")).toBeVisible();
   });
 
   it("shows only the masked IBAN until Anzeigen is pressed", async () => {
@@ -236,6 +459,37 @@ describe("StudentPaymentCard", () => {
 
     await waitFor(() => expect(mockSetPayer).toHaveBeenCalledWith("7", "11"));
     expect(onChanged).toHaveBeenCalled();
+  });
+
+  it("reloads the bank overview after assigning the payer", async () => {
+    mockSetPayer.mockResolvedValue(undefined);
+    const readOverview = vi.fn(() => Promise.resolve([]));
+    function BankOverview() {
+      useSWRAuth(tenantAdminKeys.paymentOverview(), readOverview);
+      return null;
+    }
+    render(
+      <>
+        <StudentPaymentCard
+          studentId="7"
+          guardians={[
+            guardian("10", "Sabine", false),
+            guardian("11", "Klaus", false),
+          ]}
+        />
+        <BankOverview />
+      </>,
+    );
+    await waitFor(() => expect(readOverview).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.click(screen.getByRole("combobox"));
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Klaus Schneider" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(readOverview).toHaveBeenCalledTimes(2));
   });
 
   it("leaves edit mode when the payer changes outside the card", async () => {

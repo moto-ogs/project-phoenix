@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"fmt"
+	"time"
 
 	userModels "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/rows"
 	ports "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
@@ -16,15 +17,16 @@ const parentRequestEventDefaultLimit = 200
 
 type ParentRequestEventRepository struct {
 	runtime Runtime
+	now     func() time.Time // stamps created_at (ADR 0281)
 }
 
-func NewParentRequestEventRepository(runtime Runtime) ports.ParentRequestEventRecords {
-	return &ParentRequestEventRepository{runtime: requireRuntime(runtime)}
+func NewParentRequestEventRepository(runtime Runtime, now func() time.Time) ports.ParentRequestEventRecords {
+	return &ParentRequestEventRepository{runtime: requireRuntime(runtime), now: requireClock(now)}
 }
 
-// Create overrides the generic insert so created_at uses clock_timestamp():
-// several events can be written inside one transaction and their real order
-// is what the history shows.
+// Create overrides the generic insert so created_at is the owner's instant of
+// each event, also when several are written inside one transaction; the
+// history orders them by ID.
 func (r *ParentRequestEventRepository) Create(ctx context.Context, event *userModels.ParentRequestEvent) error {
 	if event == nil {
 		return fmt.Errorf("parent request event cannot be nil")
@@ -33,14 +35,15 @@ func (r *ParentRequestEventRepository) Create(ctx context.Context, event *userMo
 	if event.Payload == nil {
 		event.Payload = map[string]any{}
 	}
+	at := r.now()
 	ambientDB1, databaseErr1 := r.runtime.DB(ctx)
 	if databaseErr1 != nil {
 		return databaseErr1
 	}
 	if _, err := ambientDB1.NewInsert().Model(event).
 		ModelTableExpr(parentRequestEventTable).
-		Value("created_at", "clock_timestamp()").
-		Value("updated_at", "clock_timestamp()").
+		Value("created_at", "?", at).
+		Value("updated_at", "?", at).
 		Exec(ctx); err != nil {
 		return &ports.DatabaseError{Op: "create parent request event", Err: translateNotFound(err)}
 	}

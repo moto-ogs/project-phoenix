@@ -36,11 +36,11 @@ func (s *Store) ReadListedFamilies(ctx context.Context, organizationID, accountI
    WHERE family.organization_id = ?0 AND (family.care_contract_id IS NULL OR family.debtor_number IS NOT NULL
     OR family.family_email IN (SELECT family_key FROM documents))),
   family_reads AS (
-   INSERT INTO parent_billing.family_billing_events (organization_id, family_billing_id, care_contract_id, action, actor_account_id)
-   SELECT ?0, id, care_contract_id, 'read', ?2 FROM shown)
+   INSERT INTO parent_billing.family_billing_events (organization_id, family_billing_id, care_contract_id, action, actor_account_id, occurred_at)
+   SELECT ?0, id, care_contract_id, 'read', ?2, ?3 FROM shown)
  SELECT COALESCE((SELECT jsonb_agg(documents ORDER BY issued_at, service DESC, id) FROM documents), '[]'::jsonb) AS documents,
   COALESCE((SELECT jsonb_agg(shown ORDER BY family_email) FROM shown), '[]'::jsonb) AS families`,
-		organizationID, int64(0), accountRef(accountID)).Scan(ctx, &rows); err != nil {
+		organizationID, int64(0), accountRef(accountID), s.now()).Scan(ctx, &rows); err != nil {
 		return nil, nil, fmt.Errorf("read the families and record their reads: %w", err)
 	}
 	documents := make([]parentbilling.BillingFamilyDocument, len(rows.Documents))

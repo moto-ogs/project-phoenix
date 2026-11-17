@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RosterDeviation } from "~/lib/roster-deviation";
+import { testClockDay } from "~/test/clock";
 
 const state = vi.hoisted(() => ({
   deviations: [] as unknown[],
@@ -21,8 +22,9 @@ vi.mock("~/lib/swr", () => ({
           id: "4",
           name: "Schuljahr",
           isActive: true,
-          startDate: "2026-08-01",
-          endDate: "2027-07-31",
+          // Das Schuljahr läuft am Testtag.
+          startDate: testClockDay(-30),
+          endDate: testClockDay(300),
         },
       ],
     };

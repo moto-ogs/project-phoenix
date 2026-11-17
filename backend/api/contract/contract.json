@@ -1,6 +1,82 @@
 {
   "routes": [
     {
+      "method": "DELETE",
+      "pattern": "/api/notifications/preferences/",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/notifications/push/subscriptions",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "endpoint",
+          "kind": "string"
+        }
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/school/notifications/preferences/",
+      "portals": [
+        "school"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/school/notifications/push/subscriptions",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "endpoint",
+          "kind": "string"
+        }
+      ],
+      "no_data": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/notifications/email-subscriptions/{type}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "emailSubscriptionResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/notifications/feed/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "limit",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedPageResponse"
+      }
+    },
+    {
       "method": "GET",
       "pattern": "/api/notifications/feed/unread-count",
       "portals": [
@@ -9,6 +85,28 @@
       "response": {
         "kind": "ref",
         "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/notifications/preferences/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PreferenceOverview"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/notifications/push/public-key",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "pushPublicKeyResponse"
       }
     },
     {
@@ -217,6 +315,60 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/notifications/feed/",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "limit",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedPageResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/notifications/feed/unread-count",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/notifications/preferences/",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PreferenceOverview"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/notifications/push/public-key",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "pushPublicKeyResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/school/staff-messages/unread-count",
       "portals": [
         "school"
@@ -239,6 +391,48 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/notifications/feed/read-all",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/notifications/feed/{id}/read",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/notifications/push/subscriptions",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "pushSubscriptionRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/notifications/test",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/students/",
       "portals": [
         "tenant"
@@ -251,6 +445,72 @@
         "kind": "ref",
         "ref": "StudentResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/notifications/feed/read-all",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/notifications/feed/{id}/read",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "feedCountResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/notifications/push/subscriptions",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "pushSubscriptionRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/notifications/test",
+      "portals": [
+        "school"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/notifications/email-subscriptions/{type}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "preferenceRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/notifications/preferences/{type}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "preferenceRequest"
+      },
+      "no_data": true
     },
     {
       "method": "PUT",
@@ -281,6 +541,18 @@
         "kind": "ref",
         "ref": "billingKeyDayResponse"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/school/notifications/preferences/{type}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "preferenceRequest"
+      },
+      "no_data": true
     }
   ],
   "enums": [
@@ -837,6 +1109,71 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PreferenceOverview",
+      "go_type": "notifications.PreferenceOverview",
+      "fields": [
+        {
+          "name": "tenant_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "types",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PreferenceState"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PreferenceState",
+      "go_type": "notifications.PreferenceState",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "available",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -2730,6 +3067,18 @@
       ]
     },
     {
+      "name": "emailSubscriptionResponse",
+      "go_type": "notifications.emailSubscriptionResponse",
+      "fields": [
+        {
+          "name": "enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "feedCountResponse",
       "go_type": "notifications.feedCountResponse",
       "fields": [
@@ -2737,6 +3086,161 @@
           "name": "unread_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "feedEntryResponse",
+      "go_type": "notifications.feedEntryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "deep_link",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "read_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "feedPageResponse",
+      "go_type": "notifications.feedPageResponse",
+      "fields": [
+        {
+          "name": "entries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "feedEntryResponse"
+            }
+          }
+        },
+        {
+          "name": "next_cursor",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "unread_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "preferenceRequest",
+      "go_type": "notifications.preferenceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "pushPublicKeyResponse",
+      "go_type": "notifications.pushPublicKeyResponse",
+      "fields": [
+        {
+          "name": "public_key",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pushSubscriptionKeys",
+      "go_type": "notifications.pushSubscriptionKeys",
+      "request": true,
+      "fields": [
+        {
+          "name": "p256dh",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "auth",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pushSubscriptionRequest",
+      "go_type": "notifications.pushSubscriptionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "endpoint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "keys",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "pushSubscriptionKeys"
           }
         }
       ]

@@ -65,10 +65,6 @@ vi.mock("~/lib/parent-group-threads-api", async (importOriginal) => ({
   ...(await importOriginal()),
   ...api,
 }));
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: () => false,
-}));
-
 import GroupMessagePage from "./page";
 
 function detail(closed: boolean) {

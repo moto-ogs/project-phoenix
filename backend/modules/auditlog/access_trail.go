@@ -33,7 +33,7 @@ const (
 	AccessTrailStudentDeletion      = "student_deletion"
 )
 
-// ErrAccessTrailSchoolsRequired reports a trail query without a school set.
+// ErrAccessTrailSchoolsRequired reports an actor query without a school set.
 var ErrAccessTrailSchoolsRequired = errors.New("audit access trail: the school set is required")
 
 // AccessTrailFilter selects trail entries of the school set Schools. From and
@@ -45,6 +45,7 @@ type AccessTrailFilter struct {
 	Schools   []int64
 	From      time.Time
 	To        time.Time
+	AsOf      time.Time
 	SchoolID  int64
 	AccountID int64
 	StaffIDs  []int64
@@ -84,7 +85,11 @@ type AccessTrailActor struct {
 // caller's transaction.
 type AccessTrailQuery interface {
 	// ListAccessTrail lists the entries of the filter, newest first.
-	ListAccessTrail(ctx context.Context, filter AccessTrailFilter) ([]AccessTrailEntry, error)
+	// It also returns the instant the entries end at: filter.AsOf, or the
+	// database time of the read, which stamps every ledger of the trail
+	// (ADR 0281, Nachtrag). An empty school set lists nothing but still
+	// returns that instant.
+	ListAccessTrail(ctx context.Context, filter AccessTrailFilter) ([]AccessTrailEntry, time.Time, error)
 	// ListAccessTrailActors lists the accounts with an entry at a school of
 	// the set between from (inclusive) and to (exclusive).
 	ListAccessTrailActors(ctx context.Context, schools []int64, from, to time.Time) ([]AccessTrailActor, error)

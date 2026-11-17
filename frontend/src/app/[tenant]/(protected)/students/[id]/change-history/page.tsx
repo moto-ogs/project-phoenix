@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useCallback, useEffect, useState } from "react";
+import React, { Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -10,22 +10,20 @@ import {
   resolveStudentReferrer,
   studentHistoryBack,
 } from "../student-referrer";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import {
-  fetchStudent,
   fetchStudentChangeHistory,
   type StudentFieldChange,
 } from "~/lib/student-api";
-import type { Student } from "~/lib/student-helpers";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
+import { studentKeys } from "~/lib/swr/portal-keys";
+import { useStudentData } from "~/lib/hooks/use-student-data";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useStudentHistoryBreadcrumb } from "~/lib/breadcrumb-context";
 import { useScrollToTop } from "~/lib/hooks/use-scroll-to-top";
-import { createLogger } from "~/lib/logger";
 import { formatDate, formatTime } from "~/lib/date-helpers";
 import { ChangeHistorySkeleton } from "./page-skeleton";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
-
-const logger = createLogger({ component: "StudentChangeHistoryPage" });
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -136,73 +134,37 @@ function StudentChangeHistoryPageContent() {
   const studentId = params.id as string;
   const referrer = resolveStudentReferrer(searchParams.get("from"));
 
-  const [student, setStudent] = useState<Student | null>(null);
-  const [entries, setEntries] = useState<StudentFieldChange[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Dieselbe Kindakte wie die Akte selbst (studentKeys.detail): die
+  // Unterseite fragt das Kind nicht noch einmal ab. Der Name schmückt nur den
+  // Kopf; ohne ihn zeigt die Seite den Verlauf unter dem allgemeinen Titel.
+  const { student, loading: studentLoading } = useStudentData(studentId);
+  const {
+    data: entries,
+    failure: historyError,
+    mutate,
+  } = useConfirmedSWR(studentKeys.changeHistory(studentId), () =>
+    fetchStudentChangeHistory(studentId),
+  );
   // A 404 is its own state, not an error to retry.
-  const [notFound, setNotFound] = useState(false);
-  const historyLoad = useApiLoadError();
-  const showHistoryError = historyLoad.show;
-  const clearHistoryError = historyLoad.clear;
-  // Bumped by „Wiederholen“ to load the page again.
-  const [attempt, setAttempt] = useState(0);
+  const notFound =
+    historyError instanceof ApiError && historyError.status === 404;
+  const historyLoad = useSwrResourceLoadError(
+    [
+      {
+        data: entries ?? undefined,
+        error: notFound ? undefined : historyError,
+      },
+    ],
+    "die Liste der Änderungen",
+    () => mutate(),
+  );
+  const loading =
+    (!entries && !historyError) ||
+    studentLoading ||
+    (historyLoad.failure !== undefined && historyLoad.error === null);
 
   useStudentHistoryBreadcrumb({ studentName: student?.name, referrer });
   useScrollToTop(studentId);
-
-  const loadStudent = useCallback(async (): Promise<Student | null> => {
-    try {
-      return await fetchStudent(studentId);
-    } catch (err) {
-      // The name only decorates the header; without it the page still shows
-      // the history under its generic title.
-      logger.error("student_fetch_failed", {
-        student_id: studentId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return null;
-    }
-  }, [studentId]);
-
-  const fetchHistory = useCallback(async (): Promise<void> => {
-    try {
-      setEntries(await fetchStudentChangeHistory(studentId));
-      setNotFound(false);
-      clearHistoryError();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        setNotFound(true);
-        setEntries(null);
-        clearHistoryError();
-        return;
-      }
-      logger.error("change_history_fetch_failed", {
-        student_id: studentId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setEntries(null);
-      await showHistoryError(err, {
-        object: "die Liste der Änderungen",
-        retry: () => setAttempt((current) => current + 1),
-      });
-    }
-  }, [clearHistoryError, showHistoryError, studentId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-
-    void (async () => {
-      const [s] = await Promise.all([loadStudent(), fetchHistory()]);
-      if (cancelled) return;
-      setStudent(s);
-      setLoading(false);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [loadStudent, fetchHistory, attempt]);
 
   const displayName = student
     ? (student.name ?? `${student.first_name} ${student.second_name}`)
@@ -220,7 +182,7 @@ function StudentChangeHistoryPageContent() {
         .filter(Boolean)
         .join(" · ")
     : "";
-  const failed = notFound || historyLoad.error !== null;
+  const failed = notFound || historyLoad.failure !== undefined;
   const back = studentHistoryBack(studentId, referrer, failed);
 
   return (

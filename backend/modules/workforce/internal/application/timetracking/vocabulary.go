@@ -27,8 +27,8 @@ var (
 // Model is the identity and timestamps every time record carries.
 type Model struct {
 	ID        int64     `bun:"id,pk,autoincrement" json:"id"`
-	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 }
 
 func (m *Model) GetID() any              { return m.ID }

@@ -93,7 +93,6 @@ func (s *NotificationConsentStore) RecordConsent(ctx context.Context, accountID 
 		ExcludeColumn("id").
 		On("CONFLICT (tenant_id, account_id, notification_type) DO UPDATE").
 		Set("enabled = EXCLUDED.enabled").
-		Set("updated_at = NOW()").
 		Exec(ctx); err != nil {
 		return fmt.Errorf("upsert notification preference: %w", err)
 	}
@@ -286,7 +285,6 @@ func (s *NotificationConsentStore) DisableConsent(ctx context.Context, accountID
 		Model((*notificationPreferenceRow)(nil)).
 		ModelTableExpr(notificationPreferenceTable).
 		Set("enabled = FALSE").
-		Set("updated_at = NOW()").
 		Where("account_id = ?", accountID).
 		Where("notification_type IN (?)", bun.List(notificationTypes)).
 		Where("enabled")

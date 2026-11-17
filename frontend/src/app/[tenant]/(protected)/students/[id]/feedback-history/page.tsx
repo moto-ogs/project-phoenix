@@ -2,7 +2,7 @@
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useParams, useSearchParams } from "next/navigation";
 import { SegmentedControl } from "~/components/ui/segmented-control";
@@ -25,20 +25,18 @@ import {
   resolveStudentReferrer,
   studentHistoryBack,
 } from "../student-referrer";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { FeedbackHistorySkeleton } from "./page-skeleton";
-import { createLogger } from "~/lib/logger";
-import { fetchStudent } from "~/lib/student-api";
-import type { Student } from "~/lib/student-helpers";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { useStudentData } from "~/lib/hooks/use-student-data";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { fetchStudentFeedback, type FeedbackEntry } from "~/lib/feedback-api";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { feedbackConcept } from "~/lib/concepts/feedback";
 import { PlanLegend } from "~/components/ui/planning/plan-legend";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
-
-const logger = createLogger({ component: "StudentFeedbackHistoryPage" });
 
 const FEATURE_DISABLED_DESCRIPTION =
   "Die Feedbackhistorie ist für Ihre Schule ausgeschaltet. Sie lässt sich in den Einstellungen unter Datenschutz einschalten.";
@@ -98,23 +96,50 @@ function StudentFeedbackHistoryPageContent() {
   const referrer = resolveStudentReferrer(searchParams.get("from"));
   useSession();
 
-  const [student, setStudent] = useState<Student | null>(null);
+  // Dieselbe Kindakte wie die Akte selbst (studentKeys.detail).
+  const {
+    student,
+    loading: studentLoading,
+    error: studentError,
+    refreshData,
+  } = useStudentData(studentId);
+  const {
+    data: feedbackData,
+    failure: feedbackError,
+    mutate: mutateFeedback,
+  } = useConfirmedSWR(tenantStudentKeys.feedback(studentId), () =>
+    fetchStudentFeedback(studentId),
+  );
   // `null` while the history never loaded: no "0 Einträge" next to a load
   // error (#2517).
-  const [feedbackHistory, setFeedbackHistory] = useState<
-    FeedbackEntry[] | null
-  >(null);
-  const [loading, setLoading] = useState(true);
+  const featureDisabled = student?.feedback_enabled === false;
+  const feedbackHistory = featureDisabled ? null : feedbackData;
+  const loading =
+    !featureDisabled && (studentLoading || (!feedbackData && !feedbackError));
+  const studentFailure: unknown = student ? null : (studentError ?? null);
+  const feedbackFailure: unknown = feedbackData
+    ? null
+    : (feedbackError ?? null);
+  const failure = studentFailure ?? feedbackFailure;
+  // A switched-off feature is a state, not an error. It is read from the
+  // switch in the child's record, never from the text of the 403.
+  const notFound =
+    !featureDisabled && failure instanceof ApiError && failure.status === 404;
+  const quiet = featureDisabled || notFound;
+  const pageLoad = useSwrResourceLoadError(
+    [
+      { data: student ?? undefined, error: quiet ? undefined : studentError },
+      {
+        data: feedbackData ?? undefined,
+        error: quiet ? undefined : feedbackError,
+      },
+    ],
+    "die Feedbackhistorie",
+    () => Promise.all([refreshData(), mutateFeedback()]),
+  );
   // Set at once when a load fails, so no „Kind nicht gefunden“ flashes
   // while the catalog text is on its way.
-  const [failed, setFailed] = useState(false);
-  const [notFound, setNotFound] = useState(false);
-  const [featureDisabled, setFeatureDisabled] = useState(false);
-  const pageLoad = useApiLoadError();
-  const showPageError = pageLoad.show;
-  const clearPageError = pageLoad.clear;
-  // Bumped by „Wiederholen“ to load the page again.
-  const [attempt, setAttempt] = useState(0);
+  const failed = pageLoad.failure !== undefined;
   const [timeRange, setTimeRange] =
     useState<(typeof timeRangeOptions)[number]["value"]>("7days");
   const [showDetails, setShowDetails] = useState(false);
@@ -123,62 +148,6 @@ function StudentFeedbackHistoryPageContent() {
 
   // Start at the top instead of inheriting the previous page's scroll position
   useScrollToTop(studentId);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setFailed(false);
-    setNotFound(false);
-    setFeatureDisabled(false);
-    clearPageError();
-
-    async function loadData() {
-      const [studentResult, feedbackResult] = await Promise.allSettled([
-        fetchStudent(studentId),
-        fetchStudentFeedback(studentId),
-      ]);
-      if (cancelled) return;
-      const studentData =
-        studentResult.status === "fulfilled" ? studentResult.value : null;
-      setStudent(studentData);
-      setFeedbackHistory(
-        feedbackResult.status === "fulfilled" ? feedbackResult.value : null,
-      );
-      const failure =
-        studentResult.status === "rejected"
-          ? (studentResult.reason as unknown)
-          : feedbackResult.status === "rejected"
-            ? (feedbackResult.reason as unknown)
-            : null;
-      if (failure !== null) {
-        logger.error("failed_to_fetch_feedback_history", {
-          error: failure instanceof Error ? failure.message : String(failure),
-        });
-        // A switched-off feature is a state, not an error. It is read from the
-        // switch in the child's record, never from the text of the 403.
-        const switchedOff =
-          (studentData as { feedback_enabled?: boolean } | null)
-            ?.feedback_enabled === false;
-        if (switchedOff) {
-          setFeatureDisabled(true);
-        } else if (failure instanceof ApiError && failure.status === 404) {
-          setNotFound(true);
-        } else {
-          setFailed(true);
-          void showPageError(failure, {
-            object: "die Feedbackhistorie",
-            retry: () => setAttempt((current) => current + 1),
-          });
-        }
-      }
-      setLoading(false);
-    }
-
-    void loadData();
-    return () => {
-      cancelled = true;
-    };
-  }, [attempt, clearPageError, showPageError, studentId]);
 
   const today = useBerlinToday();
   const filteredFeedbackHistory = useMemo(() => {

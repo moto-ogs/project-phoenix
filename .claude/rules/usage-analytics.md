@@ -133,7 +133,12 @@ Every POST, PUT, PATCH, or DELETE route of the portal routers (`/api`,
    `backend/api/testdata/routes/` list it: `event("…")` when a successful write is a core action worth counting,
    otherwise `notCaptured`. A login-like route whose response mints the
    session takes `session("…")`; a public route without a session names its
-   surface (`public("…")`).
+   surface (`public("…")`). A caterer session names no school, so a caterer
+   write counts for the school in its route (`catererEvent("…")`, route with
+   `{schoolId}`). An idempotent write whose response reports whether it
+   changed something counts only a real change (`createdEvent`,
+   `endedEvent`); one that does not report it (an order confirmation)
+   counts every 2xx, so its dashboards count days, not events.
 2. Name a new event in snake_case after what succeeded (`group_created`).
    Properties are fixed: `school_id`, `surface`, `role`, `deployment`,
    `$session_id`, and `export_type` for exports. Never a path ID or a body

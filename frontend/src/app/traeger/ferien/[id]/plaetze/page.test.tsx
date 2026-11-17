@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { HolidayWeekPlaces } from "~/lib/traeger-holiday-registrations-api";
 import { HOLIDAY_PERIOD } from "~/test/fixtures/holiday-registrations";
 
+vi.unmock("swr");
 const { fetchPlaces } = vi.hoisted(() => ({ fetchPlaces: vi.fn() }));
 vi.mock("next/navigation", () => ({ useParams: () => ({ id: "5" }) }));
 vi.mock("~/components/traeger/use-traeger-resources", () => ({
@@ -62,9 +63,9 @@ describe("holiday places summary", () => {
     }));
     fetchPlaces.mockResolvedValue(weeks);
     render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <HolidayPlacesPage />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     expect(
       await screen.findByText("1 Kind wartet auf einen Platz"),

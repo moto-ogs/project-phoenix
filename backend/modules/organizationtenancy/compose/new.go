@@ -24,6 +24,6 @@ func New(dependencies Dependencies) (organizationtenancy.Capability, error) {
 	if dependencies.DB == nil || dependencies.Observe == nil {
 		return nil, errors.New("organization tenancy compose: all dependencies are required")
 	}
-	store := postgres.New(postgres.NewDatabase())
+	store := postgres.New(postgres.NewDatabase(), calendar.InstantClock(dependencies.Now))
 	return application.New(store, postgres.Transaction{}, dependencies.Observe, calendar.CalendarDateClock(dependencies.Now)), nil
 }

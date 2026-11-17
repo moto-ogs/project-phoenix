@@ -60,13 +60,11 @@ function CalendarPeriodsPageContent() {
       <SchoolVacationHints
         enabled
         showClosingDaysLink={false}
-        onAppointmentsCancelled={() => void state.reload({ silent: true })}
+        onAppointmentsCancelled={() => void state.reload()}
       />
       <CalendarPeriodsEditor state={state} />
       {/* Abgesagte Termine ändern die Spalte „Verwendung“ (#3594). */}
-      <ClosingDaysEditor
-        onAppointmentsCancelled={() => void state.reload({ silent: true })}
-      />
+      <ClosingDaysEditor onAppointmentsCancelled={() => void state.reload()} />
       {/* Feiertage berechnet moto aus dem Bundesland der Schule (#4775). */}
       <SchoolHolidaysList
         periods={state.periods}

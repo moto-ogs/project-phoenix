@@ -14,8 +14,8 @@ import (
 type studentRow struct {
 	bun.BaseModel `bun:"table:student_profiles,alias:student"`
 	ID            int64          `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time      `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time      `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time      `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time      `bun:"updated_at,nullzero,notnull"`
 	TenantID      int64          `bun:"tenant_id,notnull"`
 	PersonID      int64          `bun:"person_id,notnull"`
 	SchoolClass   string         `bun:"school_class,notnull"`
@@ -33,7 +33,8 @@ type studentRow struct {
 // StudentStore binds profile writes and Directory reads; it shares the database
 // runtime with the person store.
 type StudentStore struct {
-	database       Database
+	database Database
+	clock
 	reads          *studentDirectoryReads
 	classGate      func(context.Context, bool) error
 	classGateQuery func(context.Context) (*bun.SelectQuery, error)

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 
 const { mockFetchCandidates, mockStart } = vi.hoisted(() => ({
@@ -10,8 +11,14 @@ const { mockFetchCandidates, mockStart } = vi.hoisted(() => ({
   mockStart: vi.fn(),
 }));
 
+vi.unmock("swr");
+
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ update: vi.fn() }),
+  useSession: () => ({
+    data: { user: { id: "1", scope: "tenant" }, expires: "2099-01-01" },
+    status: "authenticated",
+    update: vi.fn(),
+  }),
 }));
 
 vi.mock("~/components/ui/modal", () => ({
@@ -52,7 +59,11 @@ describe("StaffPreviewModal", () => {
         new ApiError("candidates kaputt", 500, { code: "general.server" }),
       )
       .mockResolvedValueOnce([]);
-    render(<StaffPreviewModal isOpen onClose={vi.fn()} />);
+    render(
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <StaffPreviewModal isOpen onClose={vi.fn()} />
+      </SWRConfig>,
+    );
 
     expect(
       await screen.findByText(

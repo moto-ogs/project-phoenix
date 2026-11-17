@@ -7,6 +7,7 @@ import {
   syncTokenFromPayload,
 } from "./jwt-claims";
 import type { PortalDescriptor } from "./portals";
+import { sentryUserPseudonym } from "./sentry-pseudonym";
 import { isServerSessionMutation } from "./session-mutation";
 import {
   ACCESS_TOKEN_REFRESH_BUFFER_MS,
@@ -201,6 +202,7 @@ export function serverSessionFromJwt(
   token: JWT,
   session: Session,
 ): ServerSession {
+  const sentryUserId = sentryUserPseudonym(token.id);
   if (
     token.error === "RefreshTokenExpired" ||
     token.error === "RefreshTokenError" ||
@@ -211,6 +213,7 @@ export function serverSessionFromJwt(
       user: {
         ...session.user,
         id: token.id ?? "",
+        sentryUserId,
         email: token.email ?? "",
         token: "",
         refreshToken: "",
@@ -230,6 +233,7 @@ export function serverSessionFromJwt(
     user: {
       ...session.user,
       id: token.id ?? "",
+      sentryUserId,
       email: token.email ?? "",
       token: token.token,
       refreshToken: token.refreshToken,

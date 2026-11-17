@@ -267,6 +267,9 @@ func (s *requestStore) CreateExcusedAbsenceRequest(ctx context.Context, value ca
 	}
 	row := excusedRequestFromPublic(value)
 	row.TenantID = tenantID
+	if row.CreatedAt.IsZero() {
+		row.CreatedAt = s.currentTime() // the parent request feed orders on the owner's clock
+	}
 	started := time.Now()
 	err = db.NewInsert().Model(row).ModelTableExpr("active.excused_absence_requests").Returning("*").Scan(ctx)
 	stats := requestStats(time.Since(started), 1)
@@ -461,6 +464,9 @@ func (s *requestStore) CreateCareScheduleRequest(ctx context.Context, value care
 	}
 	row := careScheduleRequestFromPublic(value)
 	row.TenantID = tenantID
+	if row.CreatedAt.IsZero() {
+		row.CreatedAt = s.currentTime() // the parent request feed orders on the owner's clock
+	}
 	started := time.Now()
 	err = db.NewInsert().Model(row).ModelTableExpr("schedule.care_schedule_change_requests").Returning("*").Scan(ctx)
 	stats := requestStats(time.Since(started), 1)
@@ -654,6 +660,9 @@ func (s *requestStore) CreateStudentDataRequest(ctx context.Context, value carep
 	}
 	row := studentDataRequestFromPublic(value)
 	row.TenantID = tenantID
+	if row.CreatedAt.IsZero() {
+		row.CreatedAt = s.currentTime() // the parent request feed orders on the owner's clock
+	}
 	started := time.Now()
 	err = db.NewInsert().Model(row).ModelTableExpr("users.student_data_change_requests").Returning("*").Scan(ctx)
 	stats := requestStats(time.Since(started), 1)

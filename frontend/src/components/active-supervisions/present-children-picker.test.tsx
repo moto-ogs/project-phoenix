@@ -8,7 +8,11 @@ import {
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setTestClock } from "~/test/clock";
+import { SWRConfig } from "~/lib/swr/testing";
 import { PresentChildrenPicker } from "./present-children-picker";
+
+vi.unmock("swr");
 
 // The sidebar memory and the offering choice belong to the signed-in account
 // (#5000), so the hooks read the session.
@@ -55,7 +59,7 @@ vi.mock("~/components/ui/form-modal", () => ({
     ) : null,
 }));
 
-// The shared test clock stands at 12:00 Berlin.
+// The tests run at 12:00 Berlin (see beforeEach).
 const presentStudents = [
   {
     id: 1,
@@ -93,22 +97,26 @@ function renderPicker(
   const onAdd = overrides.onAdd ?? vi.fn().mockResolvedValue(true);
   const onClose = overrides.onClose ?? vi.fn();
   render(
-    <PresentChildrenPicker
-      isOpen
-      instanceId="70"
-      inBlockStudentIds={new Set(["4"])}
-      isAdding={false}
-      error={null}
-      {...overrides}
-      onAdd={onAdd}
-      onClose={onClose}
-    />,
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <PresentChildrenPicker
+        isOpen
+        instanceId="70"
+        inBlockStudentIds={new Set(["4"])}
+        isAdding={false}
+        error={null}
+        {...overrides}
+        onAdd={onAdd}
+        onClose={onClose}
+      />
+    </SWRConfig>,
   );
   return { onAdd, onClose };
 }
 
 describe("PresentChildrenPicker", () => {
   beforeEach(() => {
+    // Whether a Gehzeit has passed depends on the time of day: noon.
+    setTestClock("2026-09-09T12:00:00+02:00");
     globalThis.localStorage.clear();
     // The offering choice belongs to the signed-in account (#5000).
     globalThis.localStorage.setItem("moto:personal-storage-owner", "1:7");

@@ -2,11 +2,15 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
-  renderHook,
+  render as renderUi,
+  renderHook as renderHookUi,
   screen,
   within,
+  type RenderHookOptions,
+  type RenderOptions,
 } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { waitFor } from "~/test/wait-for-state";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -24,7 +28,7 @@ import type {
 import * as parentApi from "~/lib/parent-api";
 import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
-import { releaseFakeTimers } from "~/test/clock";
+import { releaseFakeTimers, TEST_CLOCK_TODAY } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import {
   berlinTodayISO,
@@ -32,6 +36,22 @@ import {
   todayISO,
   toISODate,
 } from "~/lib/date-helpers";
+
+vi.unmock("swr");
+
+// Real SWR with a parent session, a fresh cache per render.
+function render(ui: ReactElement, options?: RenderOptions) {
+  return renderUi(ui, { wrapper: ParentResourceTestProvider, ...options });
+}
+function renderHook<Result, Props>(
+  hook: (props: Props) => Result,
+  options?: RenderHookOptions<Props>,
+) {
+  return renderHookUi(hook, {
+    wrapper: ParentResourceTestProvider,
+    ...options,
+  });
+}
 
 // The factory is hoisted above the imports, so the mock helper has to be
 // pulled in inside it rather than at the top of the file.
@@ -47,6 +67,10 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
 beforeEach(() => {
   // These reads also run in nested controls. Keep them local unless a test
   // supplies its own recipients, contacts or request history.
+  vi.spyOn(parentApi, "listMyChildren").mockResolvedValue([
+    { student_id: "1", tenant_id: "1" } as parentApi.Child,
+    { student_id: "2", tenant_id: "1" } as parentApi.Child,
+  ]);
   vi.spyOn(parentApi, "listChildGuardians").mockResolvedValue([]);
   vi.spyOn(parentApi, "getRequestSharingOptions").mockResolvedValue({
     family_protected: false,
@@ -1414,7 +1438,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
         onClose={vi.fn()}
         onSubmit={onSubmit}
         sickRequiresApproval={false}
-        careExceptions={[schoolPartial("2026-09-09", "11:30")]}
+        careExceptions={[schoolPartial(TEST_CLOCK_TODAY, "11:30")]}
       />,
     );
 
@@ -1428,7 +1452,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
     send();
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith(
-        ["2026-09-09"],
+        [TEST_CLOCK_TODAY],
         "Fieber",
         "sick",
         [],
