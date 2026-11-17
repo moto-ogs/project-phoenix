@@ -62,29 +62,26 @@ describe("the cost center of the holiday care of a school", () => {
     expect(effectiveHolidayCostCenter(centers, "11", "2026-11-04")).toEqual({
       code: "5469",
       source: "own",
-      since: "2026-11-04",
     });
     expect(
       effectiveHolidayCostCenter(centers, "11", "2026-11-03"),
       "before its first day",
-    ).toEqual({ code: "5467", source: "school", since: "" });
+    ).toEqual({ code: "5467", source: "school" });
     expect(
       effectiveHolidayCostCenter(centers, "11", "2027-08-01"),
       "ended again",
-    ).toEqual({ code: "5467", source: "school", since: "" });
+    ).toEqual({ code: "5467", source: "school" });
     expect(effectiveHolidayCostCenter(centers, "12", "2026-11-04")).toEqual({
       code: "5567",
       source: "school",
-      since: "",
     });
     expect(effectiveHolidayCostCenter(centers, "13", "2026-11-04")).toEqual({
       code: "FER",
       source: "fallback",
-      since: "",
     });
     expect(
       effectiveHolidayCostCenter(centers.slice(0, 4), "13", "2026-11-04"),
-    ).toEqual({ code: "", source: "missing", since: "" });
+    ).toEqual({ code: "", source: "missing" });
   });
 });
 

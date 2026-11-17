@@ -176,6 +176,52 @@ func TestHolidayPositionsBookOnTheHolidayKost1OfTheirHostSchool(t *testing.T) {
 	}
 }
 
+// The DATEV file and the Sollstellung write the holiday KOST1 the release
+// froze: one invoice with a week on 5469 and one on 5569 books each on its
+// own, the monthly 5467 and 5567 appear in neither (#7357).
+func TestExportFilesBookTheHolidayKost1OfTheHostSchool(t *testing.T) {
+	t.Parallel()
+	school, schoolHoliday := parentbilling.BookingScopeSchool, parentbilling.BookingScopeSchoolHoliday
+	january := onDay(2026, time.January, 1)
+	resolver := newBookingResolver(parentbilling.BookingAssignments{CostCenters: []parentbilling.CostCenter{
+		{Scope: school, ScopeID: ispringen, ValidFrom: january, Code: "5467"},
+		{Scope: schoolHoliday, ScopeID: ispringen, ValidFrom: january, Code: "5469"},
+		{Scope: school, ScopeID: birkenfeld, ValidFrom: january, Code: "5567"},
+		{Scope: schoolHoliday, ScopeID: birkenfeld, ValidFrom: january, Code: "5569"},
+	}}, "4400")
+	part := func(host int64, day calendar.Date, cents int64) parentbilling.ExportBookingPart {
+		accounts, fallback := resolver.holidayWeek(host, day)
+		return holidayPart(accounts.CostCenter, fallback, cents, day)
+	}
+	content := parentbilling.ExportRunContent{Run: parentbilling.ExportRun{Label: "Herbstferien 2026"}, Invoices: []parentbilling.ExportInvoice{
+		{DocumentID: 1, Number: "FE-2026-0001", Kind: "invoice", IssuedOn: onDay(2026, time.October, 1), TotalCents: 8000, DebtorNumber: "10001",
+			ServiceFrom: onDay(2026, time.October, 5), Parts: []parentbilling.ExportBookingPart{
+				part(ispringen, onDay(2026, time.October, 5), 5000), part(birkenfeld, onDay(2026, time.October, 12), 3000)}}}}
+
+	store := &datevRunStore{content: content}
+	file, err := newFinanceExportsWithDatev(store, runPost{}, datevReadySettings()).
+		DatevFile(context.Background(), sjrReviewer, parentbilling.DebitRunHoliday, 5, parentbilling.DatevFileOptions{})
+	require.NoError(t, err)
+	var datev [][2]string
+	for _, line := range datevLines(t, file.Data)[2:] {
+		datev = append(datev, [2]string{line[0], line[36]})
+	}
+	assert.Equal(t, [][2]string{{"50,00", `"5469"`}, {"30,00", `"5569"`}}, datev)
+	require.Len(t, store.records, 1)
+	assert.Empty(t, store.records[0].CostCenterFallbacks, "no position on the fallback")
+
+	mapping := parentbilling.SollstellungMapping{Columns: []parentbilling.SollstellungColumn{
+		{Field: parentbilling.SollFieldInvoiceNumber, Header: "Nr"}, {Field: parentbilling.SollFieldAmount, Header: "Betrag"},
+		{Field: parentbilling.SollFieldCostCenter, Header: "KOST1"}},
+		Delimiter: ";", DecimalSeparator: ",", DateFormat: parentbilling.SollDateGerman, Encoding: parentbilling.SollEncodingUTF8,
+		HeaderRow: true, FileNamePattern: "soll-{NR}.csv"}
+	rows, _, missing := sollRows(mapping, content.Invoices, resolver)
+	require.Empty(t, missing)
+	data, err := renderSollRows(mapping, rows, 3)
+	require.NoError(t, err)
+	assert.Equal(t, "Nr;Betrag;KOST1\r\nFE-2026-0001;50,00;5469\r\nFE-2026-0001;30,00;5569\r\n", string(data))
+}
+
 // A Storno copies every position with where it booked; a credit books
 // where the child's first position booked.
 func TestHolidayStornoAndCreditKeepTheKost1OfTheirInvoice(t *testing.T) {

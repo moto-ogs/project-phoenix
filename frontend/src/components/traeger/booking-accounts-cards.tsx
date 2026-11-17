@@ -564,6 +564,11 @@ type CostCenterScopeRow = {
   readonly inherited?: InheritedCostCenter;
 };
 
+/** Whose cost center the holiday care of a school books on without its own. */
+const INHERITED_LABEL: Partial<
+  Record<ReturnType<typeof effectiveHolidayCostCenter>["source"], string>
+> = { school: "wie Monatsbeiträge", fallback: "Ersatz-Kostenstelle" };
+
 /** Rows under one name; without a name the rows stand alone. */
 type CostCenterGroup = {
   readonly key: string;
@@ -603,12 +608,9 @@ function kost1Groups(page: BookingAccounts, today: string): CostCenterGroup[] {
             object: `die Ferienbetreuung an ${school.name}`,
             scope: "school_holiday" as const,
             scopeId: school.id,
-            inherited:
-              holiday.source === "school"
-                ? { code: holiday.code, label: "wie Monatsbeiträge" }
-                : holiday.source === "fallback"
-                  ? { code: holiday.code, label: "Ersatz-Kostenstelle" }
-                  : undefined,
+            inherited: INHERITED_LABEL[holiday.source]
+              ? { code: holiday.code, label: INHERITED_LABEL[holiday.source]! }
+              : undefined,
           },
         ],
       };

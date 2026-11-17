@@ -126,8 +126,6 @@ type HolidayCostCenterSource = "own" | "school" | "fallback" | "missing";
 export interface EffectiveHolidayCostCenter {
   readonly code: string;
   readonly source: HolidayCostCenterSource;
-  /** "YYYY-MM-DD", the first day of the own cost center; "" otherwise. */
-  readonly since: string;
 }
 
 /**
@@ -143,15 +141,13 @@ export function effectiveHolidayCostCenter(
 ): EffectiveHolidayCostCenter {
   const on = (scope: CostCenterScope, scopeId: string) =>
     costCenterOn(costCenterTimeline(centers, scope, scopeId), day);
-  const own = on("school_holiday", schoolId);
-  if (own?.code) {
-    return { code: own.code, source: "own", since: own.validFrom };
-  }
+  const own = on("school_holiday", schoolId)?.code;
+  if (own) return { code: own, source: "own" };
   const school = on("school", schoolId)?.code;
-  if (school) return { code: school, source: "school", since: "" };
+  if (school) return { code: school, source: "school" };
   const fallback = on("holiday", "0")?.code;
-  if (fallback) return { code: fallback, source: "fallback", since: "" };
-  return { code: "", source: "missing", since: "" };
+  if (fallback) return { code: fallback, source: "fallback" };
+  return { code: "", source: "missing" };
 }
 
 const REVENUE_ACCOUNT = /^0*[1-9][0-9]*$/;
