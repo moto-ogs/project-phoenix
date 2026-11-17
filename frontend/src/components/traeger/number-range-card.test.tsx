@@ -98,9 +98,7 @@ describe("NumberRangeCard: the next number (#7358)", () => {
   it("shows the next and the last issued number of a running range", () => {
     renderCard(RUNNING);
 
-    expect(
-      screen.getByText("Nächste Nummer in diesem Jahr"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Nächste Nummer 2026")).toBeInTheDocument();
     expect(screen.getByText("FE-2026-0242")).toBeInTheDocument();
     expect(screen.getByText("FE-2026-0241")).toBeInTheDocument();
   });
@@ -186,6 +184,8 @@ describe("NumberRangeCard: the next number (#7358)", () => {
       ),
     ).toBeInTheDocument();
     expect(field).toHaveAttribute("aria-invalid", "true");
+    // The preview promises no number that will not be given.
+    expect(screen.getByText("–")).toBeInTheDocument();
     expect(api.saveHolidayNumberRangeStart).not.toHaveBeenCalled();
   });
 

@@ -113,8 +113,8 @@ export function NumberRangeCard({
 
   const set = Boolean(numberRange.pattern);
   const { starts, lastNumber, year } = numberRange;
-  // A pattern with a year starts again each year; the label says so.
-  const nextLabel = `${lastNumber > 0 ? "Nächste Nummer" : "Erste Nummer"}${year > 0 ? " in diesem Jahr" : ""}`;
+  // A pattern with a year starts again each year; the label names the year.
+  const nextLabel = `${lastNumber > 0 ? "Nächste Nummer" : "Erste Nummer"}${year > 0 ? ` ${year}` : ""}`;
   return (
     <SectionCard
       title={copy.title}

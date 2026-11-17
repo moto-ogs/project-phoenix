@@ -57,8 +57,13 @@ export function NumberRangeStartModal({
   }, [open, nextNumber, clearErrors]);
 
   const number = parseStart(value);
+  const fieldError = formErrors.fieldError("next_number") ?? undefined;
   const lastIssued =
     lastNumber > 0 ? formatInvoiceNumber(pattern, year, lastNumber) : null;
+
+  const hint = lastIssued
+    ? `Die letzte vergebene Nummer ist ${lastIssued}. Die neue Nummer muss größer sein.`
+    : "Noch keine Rechnung ausgestellt. Sie können jede Zahl ab 1 nehmen.";
 
   const submit = async () => {
     formErrors.clear();
@@ -128,12 +133,9 @@ export function NumberRangeStartModal({
           autoComplete="off"
           maxLength={8}
           value={value}
-          hint={
-            lastIssued
-              ? `Die letzte vergebene Nummer ist ${lastIssued}. Die neue Nummer muss größer sein.`
-              : "Noch keine Rechnung ausgestellt. Sie können jede Zahl ab 1 nehmen."
-          }
-          error={formErrors.fieldError("next_number") ?? undefined}
+          // The error names the last number itself; not twice.
+          hint={fieldError ? undefined : hint}
+          error={fieldError}
           onChange={(event) => setValue(event.target.value)}
         />
         <InsetPanel padding="md" aria-live="polite">
@@ -141,7 +143,10 @@ export function NumberRangeStartModal({
             Die nächste Rechnung bekommt die Nummer
           </p>
           <p className="mt-1 font-mono text-lg font-semibold break-all text-gray-900">
-            {number === null ? "–" : formatInvoiceNumber(pattern, year, number)}
+            {/* A number at or below the last issued one is never given. */}
+            {number === null || number <= lastNumber
+              ? "–"
+              : formatInvoiceNumber(pattern, year, number)}
           </p>
         </InsetPanel>
         <ul className="list-disc space-y-1 pl-5 text-sm text-gray-600">
