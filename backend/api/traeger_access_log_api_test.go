@@ -517,18 +517,17 @@ func TestTraegerAccessLogNamesTheDeletedAccountOfAHolidayEntryUnknown(t *testing
 	assert.Nil(t, page.Entries[0].AccountID)
 }
 
-// The access log lists up to the instant of the root clock, the clock that
-// stamps the school ledgers it reads (ADR 0281). With the root clock years
-// ahead of the database, a read and a guardian change recorded a minute
-// before are listed. Before, the list ended at the real clock's instant and
-// the database dated the guardian change, so neither was listed.
-func TestTraegerAccessLogListsUpToTheRootClock(t *testing.T) {
+// The access log lists up to the database time, the clock that stamps every
+// ledger it reads (ADR 0281, Nachtrag). With the root clock years ahead of
+// the database, a read and a guardian change recorded through the root's
+// compositions are listed, and the list reads up to the database's instant,
+// not the root clock's.
+func TestTraegerAccessLogListsUpToTheDatabaseTime(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	unit := testpkg.TenantRuntime(t, db)
-	day := calendar.NewDate(2031, time.March, 30)
-	current := day.BerlinMidnight().Add(9 * time.Hour)
-	clock := func() time.Time { return current }
+	rootNow := time.Date(2031, time.March, 30, 9, 0, 0, 0, calendar.Berlin)
+	clock := func() time.Time { return rootNow }
 	router := traegerPortalWithDaysOn(t, db, unit, owners.HolidayTestSchoolCalendar{}, calendar.TodayDate, clock)
 	f := traegerAccessLogFixtureOn(t, db, router, identityaccess.TraegerRoleAdministration)
 	student := testpkg.CreateTestStudentForTenant(t, db, f.first, "Mia", "Muster", "1a")
@@ -537,19 +536,21 @@ func TestTraegerAccessLogListsUpToTheRootClock(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, testpkg.WithinTenantContext(t, context.Background(), db, f.first, func(ctx context.Context) error {
 		require.NoError(t, audits.DataAccessLog.Create(ctx, &auditModels.DataAccessLog{
-			ActorAccountID: f.staff, ActorRole: "staff", ResourceType: "attendance_history", RangeStart: current, RangeEnd: current,
+			ActorAccountID: f.staff, ActorRole: "staff", ResourceType: "attendance_history", RangeStart: rootNow, RangeEnd: rootNow,
 		}))
-		return owners.ParentGuardianChanges(clock).RecordGuardianChanges(ctx, []auditlog.GuardianChange{{
+		return owners.ParentGuardianChanges().RecordGuardianChanges(ctx, []auditlog.GuardianChange{{
 			StudentID: student.ID, GuardianProfileID: guardian.ID, ActorAccountID: &f.staff,
 			ChangeType: auditlog.GuardianChangeTypeContact, FieldName: auditlog.GuardianFieldPhones,
 		}})
 	}))
-	current = current.Add(time.Minute)
+	var databaseNow time.Time
+	require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(context.Background(), &databaseNow))
+	day := calendar.DateFromTime(databaseNow)
 
 	rec := accessLogRequest(t, f.router, f.token, "/traeger/access-log/", url.Values{"from": {day.String()}, "to": {day.String()}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	page := decodeSchoolPortalData[accessLogPage](t, rec.Body.Bytes())
-	assert.True(t, page.AsOf.Equal(current), "the list reads up to the root clock's instant")
+	assert.WithinDuration(t, databaseNow, page.AsOf, time.Minute, "the list reads up to the database time")
 	data := make([]string, 0, len(page.Entries))
 	for _, entry := range page.Entries {
 		data = append(data, entry.Data)

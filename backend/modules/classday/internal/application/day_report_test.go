@@ -89,7 +89,7 @@ func (failingCompanions) ListLinksForStudents(context.Context, []int64) (map[int
 }
 
 // fakeClassDayAccessLog captures access rows per record method and answers
-// ClassDayViewSeenSince from the captured class day views, mirroring the real
+// ClassDayViewSeenToday from the captured class day views, mirroring the real
 // dedupe semantics (actor + school_class + date metadata).
 type fakeClassDayAccessLog struct {
 	views       []AccessRecord
@@ -98,7 +98,7 @@ type fakeClassDayAccessLog struct {
 	sharedNotes []AccessRecord
 }
 
-func (f *fakeClassDayAccessLog) SchoolDayViewSeenSince(_ context.Context, actorAccountID int64, date string, _ time.Time) (bool, error) {
+func (f *fakeClassDayAccessLog) SchoolDayViewSeenToday(_ context.Context, actorAccountID int64, date string) (bool, error) {
 	for _, entry := range f.schoolViews {
 		if entry.ActorAccountID == actorAccountID && fmt.Sprint(entry.Metadata["date"]) == date {
 			return true, nil
@@ -112,7 +112,7 @@ func (f *fakeClassDayAccessLog) RecordSchoolDayView(_ context.Context, entry Acc
 	return nil
 }
 
-func (f *fakeClassDayAccessLog) ClassDayViewSeenSince(_ context.Context, actorAccountID int64, schoolClass, date string, _ time.Time) (bool, error) {
+func (f *fakeClassDayAccessLog) ClassDayViewSeenToday(_ context.Context, actorAccountID int64, schoolClass, date string) (bool, error) {
 	for _, entry := range f.views {
 		if entry.ActorAccountID != actorAccountID {
 			continue

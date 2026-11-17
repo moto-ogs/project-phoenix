@@ -9,6 +9,13 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 )
 
+// databaseClock is this package's one read of the database clock. The
+// column defaults stamp the ledgers whose retention functions guard their
+// window on that clock and the change ledgers the access trail orders
+// against them, so their cutoffs, the access-log deduplication and the
+// trail's AsOf take their time from it (ADR 0281, Nachtrag).
+const databaseClock = `statement_timestamp()`
+
 // AccessTrail reads the access trail of a school set (#4655) in the caller's
 // transaction. Every branch of every statement filters on the school set,
 // bound as the first argument `?0`.
@@ -57,16 +64,22 @@ const accessTrailEntries = `SELECT log.id, log.tenant_id, log.accessed_at AS occ
 
 // accessTrailQuery lists the entries of a filter, newest first; the
 // optional filters are off at 0 or the empty kind. A person filter matches
-// the account and the staff IDs of that account (?8).
-const accessTrailQuery = `SELECT trail.id, trail.tenant_id, trail.occurred_at, trail.actor_account_id, trail.actor_staff_id,
-		trail.actor_name, trail.kind, trail.data
-	FROM (` + accessTrailEntries + `) AS trail
-	WHERE trail.occurred_at >= ?1 AND trail.occurred_at < ?2
-		AND (?3 = 0 OR trail.tenant_id = ?3)
-		AND (?4 = 0 OR trail.actor_account_id = ?4 OR trail.actor_staff_id = ANY(?8))
-		AND (?5 = '' OR trail.kind = ?5)
-	ORDER BY trail.occurred_at DESC, trail.tenant_id, trail.kind, trail.data, trail.id DESC
-	LIMIT ?6 OFFSET ?7`
+// the account and the staff IDs of that account (?8). The entries end at
+// the instant ?9, or at the database time when ?9 is NULL: the database
+// stamps every ledger of the trail (ADR 0281, Nachtrag). The one bound row
+// carries that instant, also when the page is empty.
+const accessTrailQuery = `SELECT bound.as_of, page.id, page.tenant_id, page.occurred_at, page.actor_account_id, page.actor_staff_id,
+		page.actor_name, page.kind, page.data
+	FROM (SELECT COALESCE(?9::timestamptz, ` + databaseClock + `) AS as_of) AS bound
+	LEFT JOIN LATERAL (SELECT trail.*
+		FROM (` + accessTrailEntries + `) AS trail
+		WHERE trail.occurred_at >= ?1 AND trail.occurred_at < LEAST(?2, bound.as_of)
+			AND (?3 = 0 OR trail.tenant_id = ?3)
+			AND (?4 = 0 OR trail.actor_account_id = ?4 OR trail.actor_staff_id = ANY(?8))
+			AND (?5 = '' OR trail.kind = ?5)
+		ORDER BY trail.occurred_at DESC, trail.tenant_id, trail.kind, trail.data, trail.id DESC
+		LIMIT ?6 OFFSET ?7) AS page ON true
+	ORDER BY page.occurred_at DESC, page.tenant_id, page.kind, page.data, page.id DESC`
 
 // accessTrailActorsQuery lists each account or staff member with an entry
 // at a school of the set in the window, with the newest name a ledger
@@ -82,7 +95,8 @@ const accessTrailActorsQuery = `SELECT trail.tenant_id, COALESCE(trail.actor_acc
 	ORDER BY trail.tenant_id, actor_account_id, actor_staff_id`
 
 type accessTrailRow struct {
-	ID             int64     `bun:"id"`
+	AsOf           time.Time `bun:"as_of"`
+	ID             *int64    `bun:"id"`
 	TenantID       int64     `bun:"tenant_id"`
 	OccurredAt     time.Time `bun:"occurred_at"`
 	ActorAccountID *int64    `bun:"actor_account_id"`
@@ -92,31 +106,41 @@ type accessTrailRow struct {
 	Data           string    `bun:"data"`
 }
 
-// ListAccessTrail lists the entries of the filter, newest first.
-func (s *AccessTrail) ListAccessTrail(ctx context.Context, filter auditlog.AccessTrailFilter) ([]auditlog.AccessTrailEntry, error) {
+// ListAccessTrail lists the entries of the filter, newest first, and the
+// instant they end at.
+func (s *AccessTrail) ListAccessTrail(ctx context.Context, filter auditlog.AccessTrailFilter) ([]auditlog.AccessTrailEntry, time.Time, error) {
 	if len(filter.Schools) == 0 {
-		return nil, auditlog.ErrAccessTrailSchoolsRequired
+		return nil, time.Time{}, auditlog.ErrAccessTrailSchoolsRequired
 	}
 	result := []auditlog.AccessTrailEntry{}
 	if filter.Limit <= 0 {
-		return result, nil
+		return result, filter.AsOf, nil
 	}
 	db, err := runtimeDB(ctx, s.runtime)
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
+	}
+	var asOf *time.Time
+	if !filter.AsOf.IsZero() {
+		asOf = &filter.AsOf
 	}
 	var rows []accessTrailRow
 	if err := db.NewRaw(accessTrailQuery, pgdialect.Array(filter.Schools), filter.From, filter.To, filter.SchoolID,
-		filter.AccountID, filter.Kind, filter.Limit, max(filter.Offset, 0), pgdialect.Array(nonNilIDs(filter.StaffIDs))).Scan(ctx, &rows); err != nil {
-		return nil, fmt.Errorf("audit access trail: list entries: %w", err)
+		filter.AccountID, filter.Kind, filter.Limit, max(filter.Offset, 0), pgdialect.Array(nonNilIDs(filter.StaffIDs)), asOf).Scan(ctx, &rows); err != nil {
+		return nil, time.Time{}, fmt.Errorf("audit access trail: list entries: %w", err)
 	}
+	listedAt := filter.AsOf
 	for _, row := range rows {
+		listedAt = row.AsOf
+		if row.ID == nil {
+			continue
+		}
 		result = append(result, auditlog.AccessTrailEntry{
-			ID: row.ID, SchoolID: row.TenantID, OccurredAt: row.OccurredAt, AccountID: row.ActorAccountID, StaffID: row.ActorStaffID,
+			ID: *row.ID, SchoolID: row.TenantID, OccurredAt: row.OccurredAt, AccountID: row.ActorAccountID, StaffID: row.ActorStaffID,
 			ActorNameSnapshot: row.ActorName, Kind: row.Kind, Data: row.Data,
 		})
 	}
-	return result, nil
+	return result, listedAt, nil
 }
 
 // ListAccessTrailActors lists the accounts with an entry in the window.

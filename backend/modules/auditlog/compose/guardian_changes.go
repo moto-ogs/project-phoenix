@@ -1,8 +1,6 @@
 package compose
 
 import (
-	"time"
-
 	"github.com/moto-ogs/project-phoenix/modules/auditlog"
 	"github.com/moto-ogs/project-phoenix/modules/auditlog/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -10,9 +8,9 @@ import (
 
 // NewGuardianChangeLog composes the guardian-change append command. It holds
 // no database handle: every append runs in the caller's ambient tenant
-// transaction and is refused without one; now, the Audit clock, stamps it.
-func NewGuardianChangeLog(now func() time.Time) auditlog.GuardianChangeLog {
-	return postgres.NewGuardianChanges(postgres.NewGuardianTransaction(tenant.TenantFromContext, tenant.TransactionFromContext), now)
+// transaction and is refused without one; the column default stamps it.
+func NewGuardianChangeLog() auditlog.GuardianChangeLog {
+	return postgres.NewGuardianChanges(postgres.NewGuardianTransaction(tenant.TenantFromContext, tenant.TransactionFromContext))
 }
 
 // NewSignatureLedger composes the signature ledger (#4785) in the same way,

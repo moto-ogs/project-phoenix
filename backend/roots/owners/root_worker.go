@@ -62,7 +62,8 @@ import (
 
 // workerRetentionOf builds the nightly cleanup's retention: the student and
 // staff deletions and every owner's retention step; now is the root clock
-// Enrollment's uploads expire on (ADR 0265) and the staff erasure is marked with.
+// Enrollment's uploads expire on (ADR 0265), the staff erasure is marked
+// with and the school content steps cut off on.
 func workerRetentionOf(
 	db transactionruntime.Database, logger *slog.Logger, settings settingsCompose.BatchSettingsService, audit auditCommand,
 	fleet devicefleet.Capability, carePlan carePlanModule.Owner, parentMessages communication.ParentMessageCleanup,
@@ -99,7 +100,7 @@ func workerRetentionOf(
 		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(now),
 		carePlanCompose.NewCleanupRetention(now), enrollmentCompose.NewClocked(now),
 	)...)
-	contentSteps, err := newSchoolContentRetentionSteps(db, settings, announcementRetention, homework)
+	contentSteps, err := newSchoolContentRetentionSteps(db, settings, announcementRetention, homework, now)
 	if err != nil {
 		return workerRetention{}, err
 	}

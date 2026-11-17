@@ -52,7 +52,9 @@ func TestStudentConsentChangeRepository_CreateAll(t *testing.T) {
 		assert.Equal(t, audit.StudentConsentWithdrawn, stored[0].Action)
 		assert.Equal(t, audit.StudentConsentPhoto, stored[0].ConsentKey)
 		assert.Equal(t, testpkg.Tenant(t), stored[0].TenantID)
-		assert.True(t, changedAt.Equal(stored[0].CreatedAt), "the entry keeps the instant of the switch")
+		var databaseNow time.Time
+		require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &databaseNow))
+		assert.WithinDuration(t, databaseNow, stored[0].CreatedAt, time.Minute, "the column default stamps the entry (ADR 0281, Nachtrag)")
 	}
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repo.CreateAll, nil), "an empty batch writes nothing")
 }

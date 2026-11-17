@@ -80,7 +80,7 @@ func newRelAcctRouter(t *testing.T, db *bun.DB, inviteMode string, canRemove boo
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
 		InvitationAccounts:  owners.NewParentInvitationAccountLock(testpkg.NewDatabase(t, db)),
-		GuardianChanges:     owners.ParentGuardianChanges(time.Now),
+		GuardianChanges:     owners.ParentGuardianChanges(),
 		DeparturePolicy:     owners.ParentDeparturePolicy(),
 		GuardianPolicy:      owners.NewParentGuardianPolicy(),
 		Fingerprints:        owners.SecurityFingerprints{},
@@ -236,7 +236,7 @@ func newRelAcctRouterWithInvites(t *testing.T, db *bun.DB, invites parentService
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
 		InvitationAccounts:  owners.NewParentInvitationAccountLock(testpkg.NewDatabase(t, db)),
-		GuardianChanges:     owners.ParentGuardianChanges(time.Now),
+		GuardianChanges:     owners.ParentGuardianChanges(),
 		DeparturePolicy:     owners.ParentDeparturePolicy(),
 		GuardianPolicy:      owners.NewParentGuardianPolicy(),
 		Fingerprints:        owners.SecurityFingerprints{},

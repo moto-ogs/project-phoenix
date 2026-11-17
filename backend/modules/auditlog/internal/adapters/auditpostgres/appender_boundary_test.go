@@ -20,20 +20,22 @@ var auditTestNow = time.Date(2026, time.November, 2, 9, 30, 0, 0, time.UTC)
 
 func auditTestClock() time.Time { return auditTestNow }
 
-// TestAuditAppenderStampsEventsWithoutTheirTime pins the recording time of
-// the ledgers a cutoff of the Audit clock reads: the Appender gives an
-// event without its time the instant of the Audit clock, keeps a time the
-// producer set, and refuses to stamp without a clock.
-func TestAuditAppenderStampsEventsWithoutTheirTime(t *testing.T) {
+// TestAuditAppenderLeavesTheDatabaseStampsToTheColumnDefault pins the
+// recording time of the ledgers (ADR 0281, Nachtrag): the Appender clears a
+// time the producer set on every ledger the database stamps, so the column
+// default stamps it, and gives a work session edit without its time the
+// instant of the Audit clock, keeps one the producer set, and refuses to
+// stamp it without a clock.
+func TestAuditAppenderLeavesTheDatabaseStampsToTheColumnDefault(t *testing.T) {
 	t.Parallel()
 
 	appender := NewAppender(func(context.Context) (bun.IDB, int64) { return nil, 1 }, auditTestClock)
 	auth := audit.NewAuthEvent(1, audit.EventTypeLogin, true, "192.0.2.1")
 	deletion := audit.NewDataDeletion(1, audit.DeletionTypeManual, 1, "admin")
-	field, session := &audit.StudentFieldEdit{}, &audit.WorkSessionEdit{}
+	field := &audit.StudentFieldEdit{}
 	access, student := &audit.DataAccessLog{}, &audit.StudentDeletion{}
 	enrollment, restoration := &audit.EnrollmentDeletion{}, &audit.EnrollmentRestoration{}
-	stamps := map[any]*time.Time{auth: &auth.CreatedAt, deletion: &deletion.DeletedAt, field: &field.CreatedAt, session: &session.CreatedAt,
+	stamps := map[any]*time.Time{auth: &auth.CreatedAt, deletion: &deletion.DeletedAt, field: &field.CreatedAt,
 		access: &access.AccessedAt, student: &student.DeletedAt, enrollment: &enrollment.DeletedAt, restoration: &restoration.RestoredAt}
 	file, substitution := &audit.FileEvent{}, &audit.SubstitutionChange{}
 	classRow, classEvent := &audit.ClassListEntryChange{}, &classlist.ClassListEntryChange{}
@@ -46,19 +48,22 @@ func TestAuditAppenderStampsEventsWithoutTheirTime(t *testing.T) {
 		stamps[event] = stamp
 	}
 	for event, stamp := range stamps {
-		require.True(t, stamp.IsZero(), "%T is built without its time", event)
+		*stamp = auditTestNow
 		require.NoError(t, appender.stampRecordedAt(event))
-		assert.True(t, auditTestNow.Equal(*stamp), "%T is stamped from the Audit clock", event)
+		assert.True(t, stamp.IsZero(), "%T is left to the column default", event)
 	}
 
+	session := &audit.WorkSessionEdit{}
+	require.NoError(t, appender.stampRecordedAt(session))
+	assert.True(t, auditTestNow.Equal(session.CreatedAt), "a work session edit is stamped from the Audit clock")
 	recorded := auditTestNow.Add(-time.Hour)
-	set := audit.NewAuthEvent(1, audit.EventTypeLogin, true, "192.0.2.1")
-	set.CreatedAt = recorded
+	set := &audit.WorkSessionEdit{CreatedAt: recorded}
 	require.NoError(t, appender.stampRecordedAt(set))
 	assert.True(t, recorded.Equal(set.CreatedAt), "a time the producer set stays")
 
 	unclocked := NewAppender(func(context.Context) (bun.IDB, int64) { return nil, 1 }, nil)
-	require.ErrorContains(t, unclocked.stampRecordedAt(audit.NewAuthEvent(1, audit.EventTypeLogin, true, "192.0.2.1")), "clock is required")
+	require.ErrorContains(t, unclocked.stampRecordedAt(&audit.WorkSessionEdit{}), "clock is required")
+	require.NoError(t, unclocked.stampRecordedAt(audit.NewAuthEvent(1, audit.EventTypeLogin, true, "192.0.2.1")), "a ledger the database stamps needs no clock")
 	require.NoError(t, unclocked.stampRecordedAt(&audit.DeviationEvent{}), "a ledger without a recorded-at stamp needs no clock")
 }
 
@@ -88,7 +93,9 @@ func TestAuditAppenderAttributesTenantAndDatabaseEnforcesAppendOnlyRLS(t *testin
 	assert.Equal(t, ownTenant, event.TenantID)
 	assert.Positive(t, event.ID)
 	assert.Equal(t, account.ID, event.AccountID)
-	assert.True(t, auditTestNow.Equal(event.CreatedAt), "an event without its time is stamped from the Audit clock")
+	var databaseNow time.Time
+	require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(context.Background(), &databaseNow))
+	assert.WithinDuration(t, databaseNow, event.CreatedAt, time.Minute, "the column default stamps the event (ADR 0281, Nachtrag)")
 
 	var mismatchErr error
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), db, ownTenant, func(txCtx context.Context, tx bun.Tx) error {

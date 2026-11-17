@@ -219,7 +219,7 @@ func (s *dayReports) recordSchoolDayViewAudit(ctx context.Context, report *class
 	}
 	const errPrefix = "school day view audit"
 	date := calendar.Date(report.Date)
-	seen, err := s.accessLog.SchoolDayViewSeenSince(ctx, actor.AccountID, date.String(), calendar.DateFromTime(s.now()).BerlinMidnight())
+	seen, err := s.accessLog.SchoolDayViewSeenToday(ctx, actor.AccountID, date.String())
 	if err != nil {
 		return fmt.Errorf("%s dedupe: %w", errPrefix, err)
 	}

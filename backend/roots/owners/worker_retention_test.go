@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -31,18 +33,34 @@ type retentionSuite struct {
 	admin     retentionDB
 	serve     *bun.DB
 	retention workerRetention
+	// now is the one root clock the suite composes every owner with
+	// (#7295): retentionSuiteClock, years away from the database clock.
+	// Fixtures date a column the owner stamps from it (rootNow) and age a
+	// column the database stamps relative to CURRENT_TIMESTAMP; the
+	// retentions a database function guards decide wholly on the database
+	// clock (ADR 0281, Nachtrag).
+	now time.Time
 }
+
+// retentionSuiteClock is the root clock of the suite, years after the
+// database clock, so a step that cut off on the root clock against a
+// database-stamped column or a database guard would fail.
+var retentionSuiteClock = time.Date(2031, time.June, 18, 10, 30, 0, 0, calendar.Berlin)
 
 func newRetentionSuite(t *testing.T) retentionSuite {
 	t.Helper()
 	return newRetentionSuiteAt(t, nil)
 }
 
-// newRetentionSuiteAt composes the staff retention of the suite on the root
-// clock now (nil: the real one) and its other steps on the real clock.
-func newRetentionSuiteAt(t *testing.T, now func() time.Time) retentionSuite {
+// newRetentionSuiteAt composes the suite on retentionSuiteClock; staffClock,
+// if set, is the root clock of the staff deletion alone.
+func newRetentionSuiteAt(t *testing.T, staffClock func() time.Time) retentionSuite {
 	t.Helper()
-	return composeRetentionSuite(t, time.Now, now)
+	now := func() time.Time { return retentionSuiteClock }
+	if staffClock == nil {
+		staffClock = now
+	}
+	return composeRetentionSuite(t, now, staffClock)
 }
 
 // newRetentionSuiteOn composes every step of the suite on the root clock now.
@@ -51,18 +69,18 @@ func newRetentionSuiteOn(t *testing.T, now func() time.Time) retentionSuite {
 	return composeRetentionSuite(t, now, now)
 }
 
-func composeRetentionSuite(t *testing.T, stepsNow, now func() time.Time) retentionSuite {
+func composeRetentionSuite(t *testing.T, now, staffClock func() time.Time) retentionSuite {
 	t.Helper()
 	admin := testpkg.SetupTestDB(t)
 	serve := testpkg.SetupServeTestDB(t)
 	t.Cleanup(func() { require.NoError(t, serve.Close()) })
 	db, err := transactionruntime.NewDatabase(admin)
 	require.NoError(t, err)
-	audit, settings, steps, err := NewRetentionTestOwnersAt(db, testpkg.TenantRuntime(t, admin), stepsNow)
+	audit, settings, steps, err := NewRetentionTestOwnersAt(db, testpkg.TenantRuntime(t, admin), now)
 	require.NoError(t, err)
-	students, err := NewStudentTestRetention(db, audit, settings)
+	students, err := NewStudentTestRetention(db, audit, settings, now)
 	require.NoError(t, err)
-	staff, err := newStaffRetention(db, audit, settings, now, nil)
+	staff, err := newStaffRetention(db, audit, settings, staffClock, nil)
 	require.NoError(t, err)
 	attendance, err := presenceCompose.New(presenceCompose.Dependencies{DB: admin, Observe: func(presenceCompose.Observation) {}})
 	require.NoError(t, err)
@@ -70,7 +88,7 @@ func composeRetentionSuite(t *testing.T, stepsNow, now func() time.Time) retenti
 	require.NoError(t, err)
 	retention, err := newWorkerRetention(audit, settings, students, staff, steps, attendance, newGuardianRetention(db, invitations))
 	require.NoError(t, err)
-	return retentionSuite{admin: admin, serve: serve, retention: retention}
+	return retentionSuite{admin: admin, serve: serve, retention: retention, now: now()}
 }
 
 func (s retentionSuite) run(t *testing.T, tenantID int64) {
@@ -80,10 +98,37 @@ func (s retentionSuite) run(t *testing.T, tenantID int64) {
 	}))
 }
 
+// rootNow is the token a fixture writes for the suite clock: a column the
+// owner stamps and cuts off on is dated from it, a column the database
+// stamps from CURRENT_TIMESTAMP. wallNow is the wall clock, for the two
+// steps the Worker still composes on it (newGuardianRetention, the
+// attendance retention in workerRetentionOf).
+const (
+	rootNow = "ROOT_NOW"
+	wallNow = "WALL_NOW"
+)
+
+// onRootClock replaces rootNow in query with the suite clock and wallNow
+// with the wall clock.
+func (s retentionSuite) onRootClock(query string) string {
+	return strings.ReplaceAll(onClock(s.now, query), wallNow, sqlInstant(time.Now()))
+}
+
+// onClock replaces rootNow in query with the instant now.
+func onClock(now time.Time, query string) string {
+	return strings.ReplaceAll(query, rootNow, sqlInstant(now))
+}
+
+func sqlInstant(at time.Time) string {
+	return "'" + at.UTC().Format(time.RFC3339Nano) + "'::timestamptz"
+}
+
+// insertID runs the insert, dated on the suite clock where it names rootNow,
+// and returns the ID.
 func (s retentionSuite) insertID(t *testing.T, query string, args ...any) int64 {
 	t.Helper()
 	var id int64
-	require.NoError(t, s.admin.NewRaw(query, args...).Scan(context.Background(), &id))
+	require.NoError(t, s.admin.NewRaw(s.onRootClock(query), args...).Scan(context.Background(), &id))
 	return id
 }
 
@@ -147,6 +192,8 @@ func TestNightlyRetentionDeletesUnregisteredTagScansAfterNinetyDays(t *testing.T
 	school := testpkg.Tenant(t)
 	otherSchool, _ := testpkg.CreateTestTenant(t, suite.admin)
 
+	// The column default stamps the scans and the retention cuts off on the
+	// database clock (ADR 0281, Nachtrag).
 	const insertScan = `INSERT INTO audit.unregistered_tag_scans (tenant_id, tag_uid, scanned_at)
 		VALUES (?, ?, CURRENT_TIMESTAMP - make_interval(days => ?)) RETURNING id`
 	expired := suite.insertID(t, insertScan, school, "retention-expired", 91)
@@ -166,7 +213,7 @@ func TestNightlyRetentionDeletesUnregisteredTagScansAfterNinetyDays(t *testing.T
 func (s retentionSuite) insertStatusDay(t *testing.T, tenantID, studentID int64, status string, daysAgo int) int64 {
 	t.Helper()
 	return s.insertID(t, `INSERT INTO active.student_status_days (tenant_id, student_id, date, status, reported_at)
-		VALUES (?, ?, (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin')::date - ?, ?, CURRENT_TIMESTAMP - make_interval(days => ?))
+		VALUES (?, ?, (ROOT_NOW AT TIME ZONE 'Europe/Berlin')::date - ?, ?, ROOT_NOW - make_interval(days => ?))
 		RETURNING id`, tenantID, studentID, daysAgo, status, daysAgo)
 }
 
@@ -225,12 +272,13 @@ func TestNightlyRetentionFollowsTheSchoolsRecordedStatusDayWindow(t *testing.T) 
 }
 
 // insertAttendance stores a closed attendance daysAgo Berlin calendar days
-// back, checked in on the device.
+// back, checked in on the device. The Worker composes Student Presence on
+// the wall clock, so the attendance is dated there.
 func (s retentionSuite) insertAttendance(t *testing.T, tenantID, studentID, deviceID int64, daysAgo int) int64 {
 	t.Helper()
 	return s.insertID(t, `INSERT INTO active.attendance (tenant_id, student_id, date, check_in_time, check_out_time, device_id)
-		VALUES (?, ?, (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin')::date - ?,
-			CURRENT_TIMESTAMP - make_interval(days => ?, hours => 2), CURRENT_TIMESTAMP - make_interval(days => ?), ?)
+		VALUES (?, ?, (WALL_NOW AT TIME ZONE 'Europe/Berlin')::date - ?,
+			WALL_NOW - make_interval(days => ?, hours => 2), WALL_NOW - make_interval(days => ?), ?)
 		RETURNING id`, tenantID, studentID, daysAgo, daysAgo, daysAgo, deviceID)
 }
 
@@ -282,11 +330,11 @@ func TestNightlyRetentionFollowsTheSchoolsRecordedAttendanceWindow(t *testing.T)
 }
 
 // insertMorningAttendance stores a morning mark daysAgo Berlin calendar days
-// back (#4790).
+// back (#4790), on the wall clock like the attendance.
 func (s retentionSuite) insertMorningAttendance(t *testing.T, tenantID, studentID int64, daysAgo int) int64 {
 	t.Helper()
 	return s.insertID(t, `INSERT INTO active.morning_attendance (tenant_id, student_id, date, status)
-		VALUES (?, ?, (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin')::date - ?, 'present')
+		VALUES (?, ?, (WALL_NOW AT TIME ZONE 'Europe/Berlin')::date - ?, 'present')
 		RETURNING id`, tenantID, studentID, daysAgo)
 }
 
@@ -319,10 +367,10 @@ func TestNightlyRetentionDeletesMorningAttendanceAfterItsWindow(t *testing.T) {
 func (s retentionSuite) insertHomework(t *testing.T, tenantID, studentID int64, daysAgo int) (int64, int64) {
 	t.Helper()
 	entry := s.insertID(t, `INSERT INTO education.class_homework (tenant_id, school_class, date, description)
-		VALUES (?, '3a', (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin')::date - ?, 'Lesen')
+		VALUES (?, '3a', (ROOT_NOW AT TIME ZONE 'Europe/Berlin')::date - ?, 'Lesen')
 		RETURNING id`, tenantID, daysAgo)
 	feedback := s.insertID(t, `INSERT INTO education.homework_feedback (tenant_id, student_id, date, status)
-		VALUES (?, ?, (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin')::date - ?, 'done')
+		VALUES (?, ?, (ROOT_NOW AT TIME ZONE 'Europe/Berlin')::date - ?, 'done')
 		RETURNING id`, tenantID, studentID, daysAgo)
 	return entry, feedback
 }
@@ -366,6 +414,8 @@ type parentThreadFixture struct {
 
 // parentThread stores a conversation opened daysAgo days back between a
 // fresh guardian account and the child.
+// The messages are dated on the database clock, which stamps and cuts them
+// off (ADR 0277).
 func (s retentionSuite) parentThread(t *testing.T, tenantID, studentID int64, daysAgo int) parentThreadFixture {
 	t.Helper()
 	guardian := testpkg.CreateTestAccount(t, s.admin, "retention-guardian@example.com").ID
@@ -468,11 +518,16 @@ func TestNightlyRetentionDeletesParentMessagesAfterTheirWindow(t *testing.T) {
 
 // threeYearsBackUTC is the boundary of a three-year protocol window as the
 // Audit Platform and the database guards of 1.15.606 compute it: the same
-// UTC clock time three years back (auditModels.RetentionYearsCutoff). In a
-// Berlin session three years back from 1 March 00:30 is 1 March, a day after
-// the UTC boundary of 29 February 23:30, so a Berlin "3 years 1 day" row would
-// sit on the boundary itself.
+// UTC clock time three years back (auditModels.RetentionYearsCutoff) of the
+// database clock, which stamps the ledgers and guards their windows (ADR
+// 0281, Nachtrag). In a Berlin session three years back from 1 March 00:30
+// is 1 March, a day after the UTC boundary of 29 February 23:30, so a
+// Berlin "3 years 1 day" row would sit on the boundary itself.
 const threeYearsBackUTC = `((CURRENT_TIMESTAMP AT TIME ZONE 'UTC' - INTERVAL '3 years') AT TIME ZONE 'UTC')`
+
+// lastYearStart is the start of last year in Berlin on the database clock,
+// the boundary of the access log and the following-year protocols.
+const lastYearStart = `((date_trunc('year', CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin') - INTERVAL '1 year') AT TIME ZONE 'Europe/Berlin')`
 
 func TestNightlyRetentionDeletesExpiredAuditLedgerRows(t *testing.T) {
 	t.Parallel()
@@ -487,7 +542,6 @@ func TestNightlyRetentionDeletesExpiredAuditLedgerRows(t *testing.T) {
 	keptLogin := suite.insertID(t, insertAuthEvent, school, account, 89)
 	otherLogin := suite.insertID(t, insertAuthEvent, otherSchool, account, 91)
 
-	const lastYearStart = `((date_trunc('year', CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin') - INTERVAL '1 year') AT TIME ZONE 'Europe/Berlin')`
 	const insertAccess = `INSERT INTO audit.data_access_log (tenant_id, actor_account_id, actor_role, resource_type, range_start, range_end, accessed_at)
 		SELECT ?, ?, 'staff', 'attendance', at, at, at FROM (SELECT ` + lastYearStart + ` + make_interval(days => ?) AS at) AS access RETURNING id`
 	expiredAccess := suite.insertID(t, insertAccess, school, account, -1)
@@ -532,8 +586,8 @@ func (f deliveryFixture) email(t *testing.T, kind, status string, daysAgo int) i
 		       CASE WHEN ?::text = 'dead_letter' THEN ended END,
 		       CASE WHEN ?::text = 'cancelled' THEN ended END,
 		       CASE WHEN ?::text = 'claimed' THEN 'lease' END,
-		       CASE WHEN ?::text = 'claimed' THEN CURRENT_TIMESTAMP + INTERVAL '5 minutes' END
-		FROM (SELECT CURRENT_TIMESTAMP - make_interval(days => ?) AS ended) AS intent
+		       CASE WHEN ?::text = 'claimed' THEN ROOT_NOW + INTERVAL '5 minutes' END
+		FROM (SELECT ROOT_NOW - make_interval(days => ?) AS ended) AS intent
 		RETURNING id`, f.tenantID, kind, status, status, status, status, status, status, daysAgo)
 }
 
@@ -545,7 +599,7 @@ func (f deliveryFixture) push(t *testing.T, status string, daysAgo int) int64 {
 		       ended - INTERVAL '1 day', ended,
 		       CASE WHEN ?::text = 'sent' THEN ended END,
 		       CASE WHEN ?::text = 'dead_letter' THEN ended END
-		FROM (SELECT CURRENT_TIMESTAMP - make_interval(days => ?) AS ended) AS intent
+		FROM (SELECT ROOT_NOW - make_interval(days => ?) AS ended) AS intent
 		RETURNING id`, f.tenantID, status, status, status, daysAgo)
 }
 
@@ -563,7 +617,7 @@ func (f deliveryFixture) deliveryLog(t *testing.T, outboxID int64, reachability 
 	}
 	return f.suite.insertID(t, `INSERT INTO platform.email_delivery
 		(tenant_id, related_entity_type, related_entity_id, outbox_id, recipient_email, reachability, created_at)
-		VALUES (?, 'parent_announcement', ?, ?, ?, ?, CURRENT_TIMESTAMP - make_interval(days => ?)) RETURNING id`,
+		VALUES (?, 'parent_announcement', ?, ?, ?, ?, ROOT_NOW - make_interval(days => ?)) RETURNING id`,
 		f.tenantID, f.tenantID, outbox, email, reachability, daysAgo)
 }
 
@@ -628,6 +682,8 @@ func TestNightlyRetentionDeletesDeliveriesThirtyDaysAfterTheirEnd(t *testing.T) 
 
 // cleanupIntent stores a cleanup intent of a stored file in table, finished
 // finishedDaysAgo days back; a negative value leaves it waiting for its bytes.
+// The intents are dated on the database clock: their deletion functions cut
+// off and guard on it (1.15.606, ADR 0281).
 func (s retentionSuite) cleanupIntent(t *testing.T, table string, tenantID int64, finishedDaysAgo int) int64 {
 	t.Helper()
 	owner := "owner_id"
@@ -700,9 +756,9 @@ func TestCleanupIntentRetentionRefusesAYoungCutoff(t *testing.T) {
 
 func (s retentionSuite) offboardingJob(t *testing.T, tenantID, staffID int64, completedDaysAgo int) {
 	t.Helper()
-	_, err := s.admin.NewRaw(`INSERT INTO users.staff_offboarding_cleanup (tenant_id, staff_id, completed_at, created_at)
+	_, err := s.admin.NewRaw(s.onRootClock(`INSERT INTO users.staff_offboarding_cleanup (tenant_id, staff_id, completed_at, created_at)
 		SELECT ?, ?, CASE WHEN ? >= 0 THEN at END, at - INTERVAL '1 day'
-		FROM (SELECT CURRENT_TIMESTAMP - make_interval(days => abs(?)) AS at) AS job`,
+		FROM (SELECT ROOT_NOW - make_interval(days => abs(?)) AS at) AS job`),
 		tenantID, staffID, completedDaysAgo, completedDaysAgo).Exec(context.Background())
 	require.NoError(t, err)
 }
@@ -747,7 +803,7 @@ func (s retentionSuite) withdrawalCompletion(t *testing.T, tenantID, studentID i
 		       CASE ?::text WHEN 'resolved' THEN 'deleted' END,
 		       CASE ?::text WHEN 'obsolete' THEN 'rebooked_without_gap' END,
 		       CASE WHEN ?::text <> 'pending' THEN at END
-		FROM (SELECT CURRENT_TIMESTAMP - make_interval(days => ?) AS at) AS completion
+		FROM (SELECT ROOT_NOW - make_interval(days => ?) AS at) AS completion
 		RETURNING id`, tenantID, student, state, state, state, state, finishedDaysAgo)
 }
 
@@ -785,7 +841,7 @@ func TestNightlyRetentionDeletesSubmissionRateLimitsAfterTheirWindow(t *testing.
 	school := testpkg.Tenant(t)
 	otherSchool, _ := testpkg.CreateTestTenant(t, suite.admin)
 	const insertBucket = `INSERT INTO enrollment.submission_rate_limits (tenant_id, key_type, key_value, attempts, window_start)
-		VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP - make_interval(hours => ?)) RETURNING id`
+		VALUES (?, ?, ?, 1, ROOT_NOW - make_interval(hours => ?)) RETURNING id`
 	expiredMail := suite.insertID(t, insertBucket, school, "email", "eltern@example.com", 25)
 	expiredIP := suite.insertID(t, insertBucket, school, "ip", "203.0.113.7", 25)
 	runningMail := suite.insertID(t, insertBucket, school, "email", "noch@example.com", 23)
@@ -849,10 +905,11 @@ func TestNightlyRetentionDeletesExpiredProtocolRows(t *testing.T) {
 	otherSchool, _ := testpkg.CreateTestTenant(t, suite.admin)
 	account := testpkg.CreateTestAccount(t, suite.admin, "retention-protocol@example.com").ID
 
-	const lastYearStart = `((date_trunc('year', CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin') - INTERVAL '1 year') AT TIME ZONE 'Europe/Berlin')`
 	type seeded struct{ expired, kept, other int64 }
 	rows := map[string]seeded{}
 	for _, protocol := range retentionProtocols {
+		// Every protocol is stamped by its column default and cut off on
+		// the database clock (ADR 0281, Nachtrag).
 		threeYearsBack := threeYearsBackUTC
 		if protocol.berlinYears {
 			threeYearsBack = "(CURRENT_TIMESTAMP - INTERVAL '3 years')"

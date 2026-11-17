@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"testing"
-	"time"
 
 	parentportal "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 
@@ -43,7 +42,7 @@ func TestChildFeaturesReasonRequiredFollowsPolicy(t *testing.T) {
 			Memberships:         parentMemberships(t, db),
 			StudentGuardianRepo: guardStudentGuardians(t, db),
 			GuardianProfileRepo: guardProfiles(t, db),
-			GuardianChanges:     owners.ParentGuardianChanges(time.Now),
+			GuardianChanges:     owners.ParentGuardianChanges(),
 			DeparturePolicy:     owners.ParentDeparturePolicy(),
 			GuardianPolicy:      owners.NewParentGuardianPolicy(),
 			Fingerprints:        owners.SecurityFingerprints{},

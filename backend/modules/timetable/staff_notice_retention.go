@@ -23,10 +23,12 @@ type StaffNoticeRetention interface {
 var ErrStaffNoticeRetentionWindow = errors.New("staff notice retention window must be positive")
 
 // StaffNoticeRetentionStore deletes the staff notices of the school in
-// context that ended before cutoff; the owner's staff notice repository is
-// one.
+// context that ended before cutoff, the first day a window of retentionDays
+// keeps; the owner's staff notice repository is one. A notice switched off
+// counts from its trigger-stamped last change, against the window on the
+// database's day (ADR 0281 point 3).
 type StaffNoticeRetentionStore interface {
-	DeleteEndedBefore(ctx context.Context, cutoff calendar.Date) (int, error)
+	DeleteEndedBefore(ctx context.Context, cutoff calendar.Date, retentionDays int) (int, error)
 }
 
 type staffNoticeRetention struct {
@@ -49,5 +51,5 @@ func (r staffNoticeRetention) DeleteExpiredStaffNotices(ctx context.Context, ret
 	if retentionDays <= 0 {
 		return 0, fmt.Errorf("%w, got %d", ErrStaffNoticeRetentionWindow, retentionDays)
 	}
-	return r.store.DeleteEndedBefore(ctx, r.today().AddDays(-retentionDays))
+	return r.store.DeleteEndedBefore(ctx, r.today().AddDays(-retentionDays), retentionDays)
 }

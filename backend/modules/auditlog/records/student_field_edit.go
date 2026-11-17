@@ -138,4 +138,8 @@ type StudentFieldEditRepository interface {
 	// DeleteOlderThan removes all edit rows created strictly before cutoff and
 	// returns the number deleted through the tenant-bound retention capability.
 	DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error)
+
+	// DatabaseTime reads the clock that stamps the edits and guards their
+	// retention window (ADR 0281, Nachtrag).
+	DatabaseTime(ctx context.Context) (time.Time, error)
 }

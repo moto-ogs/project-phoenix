@@ -526,7 +526,7 @@ func schoolContentRetentionSteps(
 	settings settingsModule.StatisticsRetentionSource, announcements communicationModule.ParentAnnouncementRetention,
 	staffNotices timetable.StaffNoticeRetention, appointments appointmentRetention,
 	transitions schoolstructure.GradeTransitionRetention, removedFiles fileStorageModule.CleanupRetention,
-	homework homeworkRetention, weekProtocols weekProtocolRetention,
+	homework homeworkRetention, weekProtocols weekProtocolRetention, now func() time.Time,
 ) []schedulerPorts.RetentionStep {
 	var steps []schedulerPorts.RetentionStep
 	if announcements != nil {
@@ -555,7 +555,7 @@ func schoolContentRetentionSteps(
 				settingsModule.AppointmentRetentionWindow(settings), appointmentsModule.ErrAppointmentRetentionWindow,
 				appointments.DeleteExpiredAppointments),
 			ownerRetentionStep(auditModels.DeletionTypeAppointmentTombstoneRetention, func(ctx context.Context) (int, int, error) {
-				deleted, err := appointments.DeleteFeedTombstonesBefore(ctx, time.Now().AddDate(0, 0, -appointmentsModule.TombstoneRetentionDays))
+				deleted, err := appointments.DeleteFeedTombstonesBefore(ctx, now().AddDate(0, 0, -appointmentsModule.TombstoneRetentionDays))
 				return deleted, appointmentsModule.TombstoneRetentionDays, err
 			}),
 		)
@@ -651,23 +651,25 @@ func ownerRetentionStep(kind string, deleteExpired func(context.Context) (int, i
 }
 
 // newSchoolContentRetentionSteps builds the owners of the content a school
-// creates itself (#4045) over db and returns their retention steps.
-func newSchoolContentRetentionSteps(db transactionruntime.Database, settings retentionSettings, announcements communicationModule.ParentAnnouncementRetention, homework timetableContentRetention) ([]schedulerPorts.RetentionStep, error) {
-	appointments, err := BuildServeAppointments(db, time.Now)
+// creates itself (#4045) over db and returns their retention steps, every
+// one on the root clock now.
+func newSchoolContentRetentionSteps(db transactionruntime.Database, settings retentionSettings, announcements communicationModule.ParentAnnouncementRetention, homework timetableContentRetention, now func() time.Time) ([]schedulerPorts.RetentionStep, error) {
+	appointments, err := BuildServeAppointments(db, now)
 	if err != nil {
 		return nil, fmt.Errorf("compose worker appointment retention: %w", err)
 	}
-	transitions, err := schoolStructureCompose.New(schoolStructureCompose.Dependencies{DB: db.Pool(), Observe: func(schoolStructureCompose.Observation) {}})
+	transitions, err := schoolStructureCompose.New(schoolStructureCompose.Dependencies{DB: db.Pool(), Observe: func(schoolStructureCompose.Observation) {}, Now: now})
 	if err != nil {
 		return nil, fmt.Errorf("compose worker grade transition retention: %w", err)
 	}
+	today := func() calendar.Date { return calendar.DateFromTime(now()) }
 	steps := schoolContentRetentionSteps(
-		settings, announcements, timetable.NewStaffNoticeRetention(timetableCompose.NewStaffNoticeRepository(db.Pool(), time.Now), calendar.TodayDate),
+		settings, announcements, timetable.NewStaffNoticeRetention(timetableCompose.NewStaffNoticeRepository(db.Pool(), now), today),
 		appointments, transitions, fileStorageCompose.NewCleanupRetention(), homework,
-		homework,
+		homework, now,
 	)
 	if conferences := BuildServeParentConferences(db); conferences != nil {
-		steps = append(steps, parentConferenceRetentionSteps(conferences, appointments, calendar.TodayDate)...)
+		steps = append(steps, parentConferenceRetentionSteps(conferences, appointments, today)...)
 	}
 	return steps, nil
 }

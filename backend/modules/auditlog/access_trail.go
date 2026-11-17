@@ -45,6 +45,7 @@ type AccessTrailFilter struct {
 	Schools   []int64
 	From      time.Time
 	To        time.Time
+	AsOf      time.Time
 	SchoolID  int64
 	AccountID int64
 	StaffIDs  []int64
@@ -84,7 +85,10 @@ type AccessTrailActor struct {
 // caller's transaction.
 type AccessTrailQuery interface {
 	// ListAccessTrail lists the entries of the filter, newest first.
-	ListAccessTrail(ctx context.Context, filter AccessTrailFilter) ([]AccessTrailEntry, error)
+	// It also returns the instant the entries end at: filter.AsOf, or the
+	// database time of the read, which stamps every ledger of the trail
+	// (ADR 0281, Nachtrag).
+	ListAccessTrail(ctx context.Context, filter AccessTrailFilter) ([]AccessTrailEntry, time.Time, error)
 	// ListAccessTrailActors lists the accounts with an entry at a school of
 	// the set between from (inclusive) and to (exclusive).
 	ListAccessTrailActors(ctx context.Context, schools []int64, from, to time.Time) ([]AccessTrailActor, error)

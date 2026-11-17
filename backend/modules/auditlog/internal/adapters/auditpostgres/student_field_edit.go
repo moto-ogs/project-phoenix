@@ -113,3 +113,9 @@ func (r *StudentFieldEditRepository) DeleteOlderThan(ctx context.Context, cutoff
 	}
 	return deleted, nil
 }
+
+// DatabaseTime reads the clock the column default stamps the edits with and
+// audit.delete_expired_student_field_edits guards its window on.
+func (r *StudentFieldEditRepository) DatabaseTime(ctx context.Context) (time.Time, error) {
+	return readDatabaseTime(ctx, r.runtime)
+}

@@ -9,10 +9,11 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// guardianChangeRow omits id so the table's BIGSERIAL fills it. changed_at
-// is the instant of the Audit clock, like every row of the retained
-// repository: the Träger access log lists the change up to an instant of the
-// root clock (ADR 0281).
+// guardianChangeRow omits id so the table's BIGSERIAL fills it, and
+// changed_at so the column default stamps it, like every row of the retained
+// repository: the Träger access log orders the change against the ledgers
+// the database stamps and lists them up to the database time (ADR 0281,
+// Nachtrag).
 type guardianChangeRow struct {
 	bun.BaseModel      `bun:"table:audit.guardian_changes"`
 	TenantID           int64     `bun:"tenant_id"`
@@ -25,21 +26,17 @@ type guardianChangeRow struct {
 	FieldName          string    `bun:"field_name"`
 	OldValue           *string   `bun:"old_value"`
 	NewValue           *string   `bun:"new_value"`
-	ChangedAt          time.Time `bun:"changed_at"`
+	ChangedAt          time.Time `bun:"changed_at,nullzero"`
 }
 
 type GuardianChanges struct {
 	database Database
-	now      func() time.Time
 }
 
 // NewGuardianChanges binds the guardian-change append to the caller's
-// transaction; now is the Audit clock and is required.
-func NewGuardianChanges(database Database, now func() time.Time) *GuardianChanges {
-	if now == nil {
-		panic("audit guardian changes: clock is required")
-	}
-	return &GuardianChanges{database: database, now: now}
+// transaction.
+func NewGuardianChanges(database Database) *GuardianChanges {
+	return &GuardianChanges{database: database}
 }
 
 func (s *GuardianChanges) RecordGuardianChanges(ctx context.Context, changes []auditlog.GuardianChange) error {
@@ -51,13 +48,11 @@ func (s *GuardianChanges) RecordGuardianChanges(ctx context.Context, changes []a
 		return err
 	}
 	rows := make([]guardianChangeRow, 0, len(changes))
-	changedAt := s.now()
 	for _, change := range changes {
 		rows = append(rows, guardianChangeRow{
 			TenantID: tenantID, StudentID: change.StudentID, GuardianProfileID: change.GuardianProfileID,
 			ActorAccountID: change.ActorAccountID, ActorNameSnapshot: change.ActorNameSnapshot, ActorEmailSnapshot: change.ActorEmailSnapshot,
 			ChangeType: change.ChangeType, FieldName: change.FieldName, OldValue: change.OldValue, NewValue: change.NewValue,
-			ChangedAt: changedAt,
 		})
 	}
 	if _, err := db.NewInsert().Model(&rows).Exec(ctx); err != nil {

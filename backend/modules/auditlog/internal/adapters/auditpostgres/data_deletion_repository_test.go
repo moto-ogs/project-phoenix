@@ -161,7 +161,9 @@ func TestDataDeletionRepository_FindByDateRange(t *testing.T) {
 	student := testpkg.CreateTestStudent(t, db, "Range", "Student", "4a")
 
 	t.Run("finds deletions in date range", func(t *testing.T) {
-		now := auditTestNow
+		// The column default stamps deleted_at (ADR 0281, Nachtrag).
+		var now time.Time
+		require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &now))
 		weekAgo := now.AddDate(0, 0, -7)
 
 		deletion := audit.NewDataDeletion(student.ID, audit.DeletionTypeVisitRetention, 5, "system")

@@ -110,9 +110,10 @@ type StaffNoticeRecords interface {
 	FindByID(ctx context.Context, id int64) (*schedulerecords.StaffNotice, error)
 	Delete(ctx context.Context, id int64) error
 	// DeleteEndedBefore löscht die Hinweise, deren letzter gültiger Tag vor
-	// cutoff liegt oder die vor dessen Berliner Mitternacht ausgeschaltet
-	// wurden (#4045), und gibt ihre Zahl zurück.
-	DeleteEndedBefore(ctx context.Context, cutoff calendar.Date) (int, error)
+	// cutoff liegt oder die vor der Frist von retentionDays Tagen, gezählt
+	// vom Tag der Datenbankuhr, ausgeschaltet wurden (#4045, ADR 0281
+	// Punkt 3), und gibt ihre Zahl zurück.
+	DeleteEndedBefore(ctx context.Context, cutoff calendar.Date, retentionDays int) (int, error)
 	// List gibt die Hinweise des Mandanten zurück, neueste zuerst.
 	// includeInactive steuert, ob abgeschaltete Zeilen erscheinen.
 	List(ctx context.Context, includeInactive bool) ([]*schedulerecords.StaffNotice, error)
