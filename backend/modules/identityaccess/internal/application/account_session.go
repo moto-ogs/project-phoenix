@@ -138,6 +138,34 @@ func (s *Service) ListInactiveAccountIDsWithLiveSessions(ctx context.Context) ([
 	return result, nil
 }
 
+// livePushSubscriptionLinks decides on the owner's session clock which push
+// subscription links a live session still backs. The answer names every
+// link or the call fails, so a caller never mistakes a missing answer for a
+// dead session. It opens no unit of its own: the orphan push cleanup asks
+// inside its administrative unit.
+func (s *Service) livePushSubscriptionLinks(ctx context.Context, links []domain.PushSubscriptionLink) (map[int64]bool, error) {
+	var result map[int64]bool
+	inCaller := func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
+	err := s.run(ctx, inCaller, "live_push_subscription_links", func(txCtx context.Context, stats *domain.OperationStats) error {
+		live, queryStats, liveErr := s.sessions.LivePushSubscriptionLinks(txCtx, links, s.now())
+		stats.Add(queryStats)
+		if liveErr != nil {
+			return liveErr
+		}
+		for _, link := range links {
+			if _, answered := live[link.SubscriptionID]; !answered {
+				return fmt.Errorf("no liveness answer for push subscription %d", link.SubscriptionID)
+			}
+		}
+		result = live
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("identity access: live push subscription links: %w", MapError(err))
+	}
+	return result, nil
+}
+
 func (s *Service) HasLiveAccountSessionsCreatedAfter(ctx context.Context, accountID int64, since time.Time) (bool, error) {
 	var result bool
 	err := s.run(ctx, s.tx.RunPlatform, "has_live_account_sessions_created_after", func(txCtx context.Context, stats *domain.OperationStats) error {

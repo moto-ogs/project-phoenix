@@ -3341,9 +3341,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (p PushSubscriptionCleanup) DeleteOrphaned(ctx context.Context) error {\n\tif p.Subscriptions == nil {\n\t\treturn nil\n\t}\n\treturn p.Subscriptions.DeleteOrphanedSubscriptions(ctx)\n}",
-      "form": "guard-debt",
-      "id": "roots/owners/PushSubscriptionCleanup.DeleteOrphaned",
+      "evidence": "func (p PushSubscriptionCleanup) DeleteLinks(ctx context.Context, links []identityaccess.PushSubscriptionLink) error {\n\tif p.Subscriptions == nil {\n\t\treturn nil\n\t}\n\trows := make([]deliveryModels.SessionLink, len(links))\n\tfor i, link := range links {\n\t\trows[i] = deliveryModels.SessionLink(link)\n\t}\n\treturn p.Subscriptions.DeleteSessionLinks(ctx, rows)\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/PushSubscriptionCleanup.DeleteLinks",
       "owner": "roots"
     },
     {
@@ -3372,6 +3372,13 @@
       "evidence": "func (p PushSubscriptionCleanup) DeleteUnboundByAccount(ctx context.Context, accountID, tenantID int64, portal string) error {\n\tif p.Subscriptions == nil {\n\t\treturn nil\n\t}\n\treturn p.Subscriptions.DeleteUnboundByAccountForPortal(ctx, accountID, tenantID, portal)\n}",
       "form": "guard-debt",
       "id": "roots/owners/PushSubscriptionCleanup.DeleteUnboundByAccount",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (p PushSubscriptionCleanup) ListLinks(ctx context.Context) ([]identityaccess.PushSubscriptionLink, error) {\n\tif p.Subscriptions == nil {\n\t\treturn nil, nil\n\t}\n\tlinks, err := p.Subscriptions.ListSessionLinks(ctx)\n\tresult := make([]identityaccess.PushSubscriptionLink, len(links))\n\tfor i, link := range links {\n\t\tresult[i] = identityaccess.PushSubscriptionLink(link)\n\t}\n\treturn result, err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/PushSubscriptionCleanup.ListLinks",
       "owner": "roots"
     },
     {

@@ -2387,8 +2387,8 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/PushSubscriptionCleanup.DeleteOrphaned",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
+      "id": "roots/owners/PushSubscriptionCleanup.DeleteLinks",
+      "reason": "Root translation of Identity \u0026 Access's push cleanup port onto Delivery's DeleteSessionLinks (#7295): maps Identity \u0026 Access's link values onto Delivery's; Delivery deletes only the links Identity \u0026 Access named dead on its session clock. No forwarding without translation."
     },
     {
       "decision": "0090",
@@ -2409,6 +2409,11 @@
       "decision": "0090",
       "id": "roots/owners/PushSubscriptionCleanup.DeleteUnboundByAccount",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
+    },
+    {
+      "decision": "0090",
+      "id": "roots/owners/PushSubscriptionCleanup.ListLinks",
+      "reason": "Root translation of Delivery's ListSessionLinks onto Identity \u0026 Access's push cleanup port (#7295): maps Delivery's link values onto Identity \u0026 Access's, which decides session liveness on its own clock instead of a Delivery view on the database clock. No forwarding without translation."
     },
     {
       "decision": "0090",
