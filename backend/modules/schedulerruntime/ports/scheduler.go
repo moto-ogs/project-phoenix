@@ -224,13 +224,15 @@ type TimetableBridgeCompleter interface {
 
 // DayInstance is one timetable block of a day as the overdue tick reads it.
 // Planned reports the block's composed status: planned until a session starts
-// it. StartTime carries the block's wall clock.
+// it. StartTime carries the block's wall clock. Duty marks a duty block
+// (#3822): never started, so never overdue, and RoomID may be 0.
 type DayInstance struct {
 	ID        int64
 	Date      calendar.Date
 	StartTime time.Time
 	RoomID    int64
 	Planned   bool
+	Duty      bool
 }
 
 // DayInstanceReader returns the timetable blocks of the school in ctx on day.
