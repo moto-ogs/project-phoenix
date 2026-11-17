@@ -76,7 +76,7 @@ func NewRetentionTestOwnersAt(db transactionruntime.Database, unit tenant.UnitOf
 	steps := dataRetentionSteps(
 		settings.Settings, fleet, statusDays,
 		communicationCompose.NewParentMessageRetention(db.Pool(), settingsModule.NewParentMessageRetentionValues(settings.Settings)),
-		enrollments, workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings.Settings}, now),
+		enrollments, workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings.Settings}),
 		command, deliveryCompose.NewRetention(now),
 	)
 	steps = append(steps, protocolRetentionSteps(command, settingsCompose.NewAuditRetention(), exportTransferCompose.NewJournalRetention())...)

@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"testing"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 
@@ -86,6 +87,51 @@ func TestNightlyRetentionDeletesSickNotesAfterTheirWindow(t *testing.T) {
 	suite.run(t, school)
 
 	assert.Equal(t, []int{2}, suite.loggedDeletions(t, school, auditModels.DeletionTypeStaffSickNoteRetention), "a second run deletes and logs nothing")
+}
+
+// runStep runs the one step of the kind from the suite's composition inside
+// the school's tenant transaction.
+func (s retentionSuite) runStep(t *testing.T, tenantID int64, kind string) {
+	t.Helper()
+	for _, step := range s.retention.steps {
+		if step.Kind != kind {
+			continue
+		}
+		require.NoError(t, testpkg.WithinTenantContext(t, context.Background(), s.serve, tenantID, func(ctx context.Context) error {
+			_, err := step.Run(ctx)
+			return err
+		}))
+		return
+	}
+	t.Fatalf("the nightly retention composes no %s step", kind)
+}
+
+// The sick note retention decides on the database clock (ADR 0281 point 3,
+// #7295): the column default stamps the upload, and
+// users.delete_expired_staff_sick_notes guards the cutoff on that clock. A
+// root clock weeks behind the database neither keeps a sick note older than
+// the window, nor does one ahead delete a younger one. Only this step runs:
+// other owners decide on the root clock.
+func TestNightlyRetentionDecidesSickNotesOnTheDatabaseClock(t *testing.T) {
+	t.Parallel()
+	for name, offsetDays := range map[string]int{"root clock behind": -63, "root clock ahead": 63} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var pinned time.Time
+			suite := newRetentionSuiteOn(t, func() time.Time { return pinned })
+			require.NoError(t, suite.admin.NewRaw(`SELECT clock_timestamp()`).Scan(context.Background(), &pinned))
+			pinned = pinned.AddDate(0, 0, offsetDays)
+			school, _ := testpkg.CreateTestTenant(t, suite.admin)
+			staff, uploader := testpkg.CreateTestStaffWithAccountForTenant(t, suite.admin, school, "Zwei", "Uhren")
+			expired, _ := suite.staffDocument(t, school, staff.ID, uploader.ID, "au_bescheinigung", 400)
+			kept, _ := suite.staffDocument(t, school, staff.ID, uploader.ID, "au_bescheinigung", 330)
+
+			suite.runStep(t, school, auditModels.DeletionTypeStaffSickNoteRetention)
+
+			assert.False(t, suite.exists(t, "users.staff_documents", expired), "a sick note older than 365 days on the database clock is deleted")
+			assert.True(t, suite.exists(t, "users.staff_documents", kept), "a younger sick note stays")
+		})
+	}
 }
 
 func TestNightlyRetentionFollowsTheSchoolsRecordedSickNoteWindow(t *testing.T) {
