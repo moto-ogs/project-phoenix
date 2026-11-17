@@ -93,11 +93,7 @@ func BuildDeliveryNotifications(
 		clock = time.Now
 	}
 	notifier := deliveryCompose.NewNotifier(settings, logger.With("service", "notifications"), deliveryCompose.NotificationDeliveryObserver(env.Observe.Delivery), delivery.Runtime.Store, clock, sse, push)
-	feed, guardianFeed, err := deliveryFeeds(notifier)
-	if err != nil {
-		return DeliveryNotifications{}, err
-	}
-	traegerNotices, traegerFeed, err := deliveryTraegerFeed(notifier)
+	feeds, err := deliveryFeeds(notifier)
 	if err != nil {
 		return DeliveryNotifications{}, err
 	}
@@ -129,11 +125,11 @@ func BuildDeliveryNotifications(
 			messaging.ParentMessageThread, BindParentMessageLeadership(people.Staff, identity), db.Pool(), logger.With("producer", "staff_parent_message_notifications")),
 		AbsenceNotifier:  absences,
 		ResponsibleStaff: responsible,
-		Feed:             feed,
-		GuardianFeed:     guardianFeed,
+		Feed:             feeds.staff,
+		GuardianFeed:     feeds.guardian,
 		SchoolAudience:   schoolAudience,
-		TraegerNotices:   traegerNotices,
-		TraegerFeed:      traegerFeed,
+		TraegerNotices:   feeds.traegerNotices,
+		TraegerFeed:      feeds.traeger,
 	}, nil
 }
 
@@ -238,29 +234,31 @@ func deliveryCapabilities(absences, recipients any, notifier deliveryCompose.Not
 	return unreported, responsible, audience, nil
 }
 
-// deliveryTraegerFeed is the write and the read side of the bell of the
-// Träger-Portal (#7146).
-func deliveryTraegerFeed(notifier deliveryCompose.Notifier) (deliveryContract.TraegerFeedNotifier, deliveryContract.TraegerNotificationFeed, error) {
-	notices, ok := notifier.(deliveryContract.TraegerFeedNotifier)
-	served, reads := notifier.(interface {
-		TraegerFeed() deliveryContract.TraegerNotificationFeed
-	})
-	if !ok || !reads || served.TraegerFeed() == nil {
-		return nil, nil, fmt.Errorf("notification router does not serve the Träger bell")
-	}
-	return notices, served.TraegerFeed(), nil
+// deliveryFeedSides are the sides of the router's notification feed: the
+// feed of a staff account in its school (#7148), the feed of a guardian
+// across the family's schools (#7140), and the write and read side of the
+// bell of the Träger-Portal (#7146).
+type deliveryFeedSides struct {
+	staff          deliveryContract.NotificationFeed
+	guardian       deliveryContract.GuardianNotificationFeed
+	traegerNotices deliveryContract.TraegerFeedNotifier
+	traeger        deliveryContract.TraegerNotificationFeed
 }
 
-// deliveryFeeds are the two read sides of the router's notification feed:
-// the feed of a staff account in its school (#7148) and the feed of a
-// guardian across the family's schools (#7140).
-func deliveryFeeds(notifier deliveryCompose.Notifier) (deliveryContract.NotificationFeed, deliveryContract.GuardianNotificationFeed, error) {
+func deliveryFeeds(notifier deliveryCompose.Notifier) (deliveryFeedSides, error) {
 	feed, ok := notifier.(deliveryContract.NotificationFeed)
 	guardians, served := notifier.(interface {
 		GuardianFeed() deliveryContract.GuardianNotificationFeed
 	})
 	if !ok || !served || guardians.GuardianFeed() == nil {
-		return nil, nil, fmt.Errorf("notification router does not serve the notification feeds")
+		return deliveryFeedSides{}, fmt.Errorf("notification router does not serve the notification feeds")
 	}
-	return feed, guardians.GuardianFeed(), nil
+	notices, writes := notifier.(deliveryContract.TraegerFeedNotifier)
+	traeger, reads := notifier.(interface {
+		TraegerFeed() deliveryContract.TraegerNotificationFeed
+	})
+	if !writes || !reads || traeger.TraegerFeed() == nil {
+		return deliveryFeedSides{}, fmt.Errorf("notification router does not serve the Träger bell")
+	}
+	return deliveryFeedSides{staff: feed, guardian: guardians.GuardianFeed(), traegerNotices: notices, traeger: traeger.TraegerFeed()}, nil
 }

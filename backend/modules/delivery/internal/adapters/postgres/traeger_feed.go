@@ -13,13 +13,13 @@ import (
 // traegerFeedReaderJoin admits an entry of the Träger bell (#7146) only in a
 // school of the session's Träger and only while the account is an active
 // member of that Träger with an active account. It runs on an administrative
-// transaction across the Träger's schools; the view carries the school's
+// transaction across the Träger's schools; the reader function carries the school's
 // name for the entry. A revoked membership hides the entries; nothing is
 // deleted.
 //
 // ?0 Träger, ?1 account, ?2 the Träger types.
-const traegerFeedReaderJoin = `INNER JOIN platform.delivery_traeger_feed_readers AS reader
-		ON reader.organization_id = ?0 AND reader.tenant_id = entry.tenant_id AND reader.account_id = entry.account_id
+const traegerFeedReaderJoin = `INNER JOIN platform.delivery_traeger_feed_readers(?0) AS reader
+		ON reader.tenant_id = entry.tenant_id AND reader.account_id = entry.account_id
 	WHERE entry.account_id = ?1 AND entry.type = ANY(?2::text[])`
 
 // The pages of the bell, newest update first: ?3 is the page size, ?4 and
