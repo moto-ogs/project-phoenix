@@ -460,7 +460,7 @@ describe("TraegerVertraegePage", () => {
     ).toHaveLength(1);
     // Consent that does not match the current terms names what is known and the next step.
     expect(
-      screen.getByText("Zustimmung passt nicht zu den aktuellen Bedingungen"),
+      screen.getByText("Zustimmung passt nicht zum Vertrag"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
