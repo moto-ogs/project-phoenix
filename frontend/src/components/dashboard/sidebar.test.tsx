@@ -4220,7 +4220,7 @@ describe("Sidebar", () => {
       const header = screen.getByRole("button", { name: /^Eltern/ });
       expect(header).toHaveAttribute("aria-expanded", "false");
       expect(header).toHaveAccessibleName(
-        "Eltern 5 neu: 2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
+        "Eltern 5 insgesamt: 2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
       );
     });
 
@@ -4247,7 +4247,7 @@ describe("Sidebar", () => {
 
       const header = screen.getByRole("button", { name: /^Eltern/ });
       expect(header).toHaveAccessibleName(
-        "Eltern 2 neu: 1 ungelesene Nachricht und 1 ungelesene Anmeldung",
+        "Eltern 2 insgesamt: 1 ungelesene Nachricht und 1 ungelesene Anmeldung",
       );
     });
 

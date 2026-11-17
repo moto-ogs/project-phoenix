@@ -64,7 +64,7 @@ export function combineSidebarRowBadges(
     // The visible sum leads what is read, then each part (WCAG 2.5.3, #7112).
     ariaLabel:
       labels.length > 0
-        ? `${count} neu: ${labels.join(", ")} und ${last}`
+        ? `${count} insgesamt: ${labels.join(", ")} und ${last}`
         : last!,
   };
 }

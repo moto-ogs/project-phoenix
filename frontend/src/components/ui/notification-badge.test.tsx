@@ -42,14 +42,10 @@ describe("NotificationBadge", () => {
     );
 
     expect(badge(container)).toHaveClass("bg-moto-blue-strong", "text-white");
-    // The capped number stays part of the text (WCAG 2.5.3); the full
-    // count follows hidden.
-    expect(badge(container)).toHaveTextContent(
-      /^99\+ 120 ungelesene Nachrichten$/,
-    );
-    expect(screen.getByText("120 ungelesene Nachrichten")).toHaveClass(
-      "sr-only",
-    );
+    // The capped number stays part of the text (WCAG 2.5.3), including in
+    // the accessible name.
+    expect(badge(container)).toHaveTextContent(/^99\+ ungelesene Nachrichten$/);
+    expect(screen.getByText("ungelesene Nachrichten")).toHaveClass("sr-only");
   });
 
   it("caps at a lower maximum when the caller sets one", () => {

@@ -176,7 +176,7 @@ describe("Sidebar-Zähler (#6566)", () => {
           count: 5,
           tone: "blue",
           ariaLabel:
-            "5 neu: 2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
+            "5 insgesamt: 2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
         }}
         {...railProps("rail")}
       >
@@ -186,7 +186,7 @@ describe("Sidebar-Zähler (#6566)", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Eltern 5 neu: 2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
+        name: "Eltern 5 insgesamt: 2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
       }),
     ).toBeInTheDocument();
   });
@@ -237,7 +237,7 @@ describe("combineSidebarRowBadges (#6566)", () => {
       count: 6,
       tone: "blue",
       ariaLabel:
-        "6 neu: 2 ungelesene Nachrichten, 3 ungelesene Anmeldungen und 1 offene Anfrage",
+        "6 insgesamt: 2 ungelesene Nachrichten, 3 ungelesene Anmeldungen und 1 offene Anfrage",
     });
   });
 

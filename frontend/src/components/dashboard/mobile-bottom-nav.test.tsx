@@ -551,9 +551,9 @@ describe("MobileBottomNav", () => {
       try {
         render(<MobileBottomNav />);
         // Ohne „Neu für Sie“ zählt „Mehr“ nur die Hinweise, ab 10 als „9+“.
-        expect(getBadge("9+ 12 neu für Sie")).toHaveTextContent("9+");
+        expect(getBadge("9+ neu für Sie")).toHaveTextContent("9+");
         const more = screen.getByRole("button", {
-          name: "Mehr 9+ 12 neu für Sie",
+          name: "Mehr 9+ neu für Sie",
         });
         // The sheet loads through next/dynamic: wait for it, no fixed sleep.
         expect(
@@ -562,7 +562,7 @@ describe("MobileBottomNav", () => {
         fireEvent.click(more);
 
         const row = screen.getByRole("button", { name: /Benachrichtigungen/ });
-        expect(getBadge("9+ 12 neue Hinweise", row)).toHaveTextContent("9+");
+        expect(getBadge("9+ neue Hinweise", row)).toHaveTextContent("9+");
         fireEvent.click(row);
         expect(mockOpenNotificationsSheet).toHaveBeenCalledTimes(1);
         expect(screen.getByTestId("drawer")).toHaveAttribute(
