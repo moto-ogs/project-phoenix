@@ -318,3 +318,25 @@ func TestStudentNamesByClassBoundChildrenWithoutCarePlace(t *testing.T) {
 	})
 	require.NoError(t, err)
 }
+
+// TestEnrolledStudentsLeaveOutChildrenWithoutCarePlace keeps a child
+// without an OGS place (#4803 review) out of the enrolled list every OGS
+// consumer reads: AG target rules and cohorts, pickup slot lists, the day
+// log's absence count.
+func TestEnrolledStudentsLeaveOutChildrenWithoutCarePlace(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module := buildStudentOwnersModule(t, db)
+	withPlace := testpkg.CreateTestStudent(t, db, "Mit", "Platz", "3e")
+	withoutPlace := testpkg.CreateTestStudent(t, db, "Ohne", "Platz", "3e")
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, withoutPlace.ID)
+
+	enrolled, err := module.ListEnrolledStudents(testpkg.Ctx(t))
+	require.NoError(t, err)
+	ids := make([]int64, 0, len(enrolled))
+	for _, student := range enrolled {
+		ids = append(ids, student.ID)
+	}
+	assert.Contains(t, ids, withPlace.ID)
+	assert.NotContains(t, ids, withoutPlace.ID)
+}

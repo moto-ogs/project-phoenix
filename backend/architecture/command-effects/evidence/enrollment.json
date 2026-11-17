@@ -6082,7 +6082,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "11273068642e24240b773d0c983b444a",
+      "binding_digest": "cef4e5a396f4d40e560ab379d3421179",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.ListClassRoster",

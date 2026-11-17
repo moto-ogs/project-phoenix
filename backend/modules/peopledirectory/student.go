@@ -65,7 +65,8 @@ type StudentName struct {
 	// SchoolMemberOnly is set by the class read for a child without an OGS
 	// place (#4803): a child of the class from SchoolMemberFrom to
 	// SchoolMemberUntil (nil: no end), whatever the care participation says.
-	// A graduate counts only with a dated end. Not on the wire.
+	// A child that left the school counts only with a dated end. Not on the
+	// wire.
 	SchoolMemberOnly  bool           `json:"-"`
 	SchoolMemberFrom  *calendar.Date `json:"-"`
 	SchoolMemberUntil *calendar.Date `json:"-"`

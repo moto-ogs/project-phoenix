@@ -226,8 +226,8 @@ func (s *Reports) classRosterStudents(ctx context.Context, filters enrollmentNat
 
 // splitWithoutCarePlace separates the children without an OGS place
 // (#4803) from the care candidates. Of those it keeps the ones in the class
-// on day: from their start to their enrollment end; a graduate only with a
-// dated end.
+// on day: from their start to their enrollment end; a child that left the
+// school (graduate or inactive) only with a dated end.
 func splitWithoutCarePlace(students []*RosterStudent, day calendar.Date) ([]*RosterStudent, []*RosterStudent) {
 	care := make([]*RosterStudent, 0, len(students))
 	var withoutPlace []*RosterStudent
@@ -245,7 +245,7 @@ func splitWithoutCarePlace(students []*RosterStudent, day calendar.Date) ([]*Ros
 // inClassOn reports whether a child without an OGS place belongs to its
 // class on day.
 func (s *RosterStudent) inClassOn(day calendar.Date) bool {
-	if s.Alumnus && s.MemberUntil == nil {
+	if s.Departed && s.MemberUntil == nil {
 		return false
 	}
 	if !s.MemberFrom.IsZero() && day.Before(s.MemberFrom) {

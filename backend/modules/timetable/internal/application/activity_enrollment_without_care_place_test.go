@@ -23,3 +23,13 @@ func TestEnrollmentRefusesChildrenWithoutCarePlace(t *testing.T) {
 	require.NoError(t, rejectAlumniFrom(locked, []int64{1}, today))
 	assert.ErrorIs(t, rejectAlumniFrom(locked, []int64{1, 2}, today), activityContract.ErrStudentWithoutCarePlace)
 }
+
+// TestNoOGSCareForChildrenWithoutCarePlace answers every timetable gate that
+// asks for running care (instance rosters, available groups, roster reads)
+// with "no care" for a child without an OGS place (#4803 review).
+func TestNoOGSCareForChildrenWithoutCarePlace(t *testing.T) {
+	t.Parallel()
+	day := calendar.Date("2026-09-09")
+	assert.True(t, (&timetable.LifecycleStudent{WithoutCarePlace: true}).CareEndedOn(day))
+	assert.False(t, (&timetable.LifecycleStudent{}).CareEndedOn(day))
+}

@@ -224,13 +224,13 @@ func rejectAlumniFrom(locked map[int64]*timetable.OperationStudent, studentIDs [
 		if student.IsAlumnus() {
 			return activityContract.ErrStudentIsAlumnus
 		}
+		if student.WithoutCarePlace {
+			return activityContract.ErrStudentWithoutCarePlace
+		}
 		// A child whose care has ended cannot be booked into an AG or care
 		// offering any more (#2487).
 		if student.CareEndedOn(today) {
 			return activityContract.ErrStudentCareEnded
-		}
-		if student.WithoutCarePlace {
-			return activityContract.ErrStudentWithoutCarePlace
 		}
 	}
 	return nil

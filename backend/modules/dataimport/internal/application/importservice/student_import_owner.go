@@ -451,7 +451,8 @@ func (c *StudentImportConfig) updatePersonFromRow(ctx context.Context, person po
 func renewalFromRow(record ports.EnrollmentRecord, row importModels.StudentImportRow, today timezone.Date) ports.EnrollmentStudent {
 	renewal := ports.EnrollmentStudent{
 		PersonID: record.PersonID, SchoolClass: record.SchoolClass, Status: record.Status,
-		EnrolledFrom: record.EnrolledFrom, EnrolledUntil: record.EnrolledUntil,
+		PreserveCarePlaceStatus: true,
+		EnrolledFrom:            record.EnrolledFrom, EnrolledUntil: record.EnrolledUntil,
 	}
 	if class := strings.TrimSpace(row.SchoolClass); class != "" {
 		renewal.SchoolClass = class

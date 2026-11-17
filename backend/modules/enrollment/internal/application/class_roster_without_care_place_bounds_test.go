@@ -17,8 +17,8 @@ func TestSplitWithoutCarePlaceKeepsChildrenInTheirClassPeriod(t *testing.T) {
 		{ID: 1},
 		{ID: 2, WithoutCarePlace: true, MemberFrom: "2026-09-09"},
 		{ID: 3, WithoutCarePlace: true, MemberFrom: "2026-08-01", MemberUntil: &until},
-		{ID: 4, WithoutCarePlace: true, Alumnus: true, MemberFrom: "2026-08-01"},
-		{ID: 5, WithoutCarePlace: true, Alumnus: true, MemberFrom: "2026-08-01", MemberUntil: &until},
+		{ID: 4, WithoutCarePlace: true, Departed: true, MemberFrom: "2026-08-01"},
+		{ID: 5, WithoutCarePlace: true, Departed: true, MemberFrom: "2026-08-01", MemberUntil: &until},
 	}
 	ids := func(day calendar.Date) []int64 {
 		care, withoutPlace := splitWithoutCarePlace(append([]*RosterStudent(nil), students...), day)
