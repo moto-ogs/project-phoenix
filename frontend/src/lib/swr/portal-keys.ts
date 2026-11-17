@@ -7,6 +7,8 @@ import { previewRow, previewText, type ListPreview } from "./list-preview";
 import { resourceKey } from "./resource-key";
 import { groupKeys } from "./groups-keys";
 
+import { shellResourceKeys } from "./shell-keys";
+
 export { announcementKeys, dashboardKeys } from "./shell-keys";
 export { parentKeys } from "./parent-keys";
 
@@ -278,9 +280,10 @@ export const schoolPortalKeys = {
   calendar: (from: string, to: string) => `school-calendar-${from}-${to}`,
   sharedNotes: (schoolClass: string, studentId: string) =>
     `school-shared-notes-${schoolClass}-${studentId}`,
-  // Die heutigen Hinweise: Seite und Karte der Klassenansicht teilen den
-  // Eintrag, damit eine Kenntnisnahme beide sofort nachzieht.
-  noticesToday: () => "school-staff-notices-today",
+  // Die heutigen Hinweise: Seite, Karte der Klassenansicht und das Badge
+  // der Hülle teilen den Eintrag, damit eine Kenntnisnahme alle sofort
+  // nachzieht.
+  noticesToday: shellResourceKeys.schoolNoticesToday,
   supervisions: (today: string) => `school-supervisions-${today}`,
   supervisionRoster: (id: string) => `school-supervision-roster-${id}`,
   /** The info sheet of one child in a supervision the teacher holds. */
