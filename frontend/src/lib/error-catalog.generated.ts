@@ -36,6 +36,8 @@ export const ERROR_CATALOG = {
         "Der Stichtag muss zwischen dem 1. und dem 28. des Monats liegen. Bitte wählen Sie einen dieser Tage.",
       "calendar.federal_state_missing":
         "Für die Schule ist noch kein Bundesland eingetragen. Deshalb fehlen die Feiertage. Die Leitung trägt es in den Einstellungen ein.",
+      "calendar.no_staff_profile":
+        "Dafür brauchen Sie in dieser Schule ein eigenes Personalprofil. Bitte fragen Sie die Leitung.",
       "calendar.occurrence_unavailable":
         "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte laden Sie den Kalender neu.",
       "care_contract.application_not_found":
@@ -1914,6 +1916,8 @@ export const ERROR_CATALOG = {
       "workforce.no_active_session":
         "Gerade läuft keine Arbeitszeit. Bitte laden Sie die Seite neu.",
       "workforce.no_session_for_today": "Kein Eintrag für heute vorhanden.",
+      "workforce.no_staff_profile":
+        "Dafür brauchen Sie in dieser Schule ein eigenes Personalprofil. Bitte fragen Sie die Leitung.",
       "workforce.opening_balance_already_exists":
         "Für diese Person gibt es schon einen Eröffnungssaldo. Bitte löschen Sie zuerst den alten.",
       "workforce.payroll_config_incomplete":

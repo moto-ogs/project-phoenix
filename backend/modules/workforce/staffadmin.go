@@ -156,9 +156,16 @@ type StaffRead uint8
 
 const StaffMembershipOnly StaffRead = 1
 
+// ErrNoStaffProfile marks an account without a person or staff profile in
+// this school, such as a Träger person or a school admin (#7306).
+// PersonByAccountID and StaffByPersonID wrap it around their missing-row
+// failure; database faults never carry it.
+var ErrNoStaffProfile = errors.New("workforce: no staff profile in this school")
+
 // StaffLookups resolves staff members and the person behind an account. The
 // lookups return the retained not-found failure unchanged so the HTTP layer
-// classifies it the way it always did.
+// classifies it the way it always did; the two account lookups additionally
+// mark a missing row with ErrNoStaffProfile.
 type StaffLookups interface {
 	PersonByAccountID(ctx context.Context, accountID int64) (*Person, error)
 	StaffByPersonID(ctx context.Context, personID int64) (*StaffProfile, error)
