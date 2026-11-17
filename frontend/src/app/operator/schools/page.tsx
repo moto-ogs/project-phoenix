@@ -21,7 +21,11 @@ import {
   revalidateTenantCache,
 } from "~/lib/operator/provisioning-api";
 import type { SchoolSummary } from "~/lib/operator/provisioning-helpers";
-import { buildSchoolColumns } from "~/components/operator/school-table-columns";
+import {
+  buildSchoolColumns,
+  lacksRequiredDetails,
+} from "~/components/operator/school-table-columns";
+import type { FilterConfig } from "~/components/ui/page-header/types";
 import { Button } from "~/components/ui/button";
 import { DataTable } from "~/components/ui/data-table";
 import { ProvisioningEmptyState } from "../provisioning/provisioning-shared";
@@ -43,6 +47,9 @@ export default function OperatorSchoolsPage() {
   const router = useRouter();
 
   const [createSchoolOpen, setCreateSchoolOpen] = useState(false);
+  const [requiredFilter, setRequiredFilter] = useState<"all" | "missing">(
+    "all",
+  );
 
   const {
     data: cachedOrganizations,
@@ -89,6 +96,33 @@ export default function OperatorSchoolsPage() {
     () => void mutateSummaries(),
     schoolSummaries?.length ? STALE_DATA_SUFFIX : undefined,
   );
+  // What each school still lacks (#7174): a reply address that answers
+  // parents.
+  const {
+    data: requiredDetailsList,
+    error: requiredDetailsError,
+    mutate: mutateRequiredDetails,
+  } = useSWRAuth(
+    isAuthenticated ? operatorProvisioningKeys.schoolRequiredDetails() : null,
+    () => operatorProvisioningService.listSchoolRequiredDetails(),
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    },
+  );
+  const requiredDetailsLoadError = useSwrLoadError(
+    requiredDetailsError,
+    "die fehlenden Pflichtangaben",
+    () => void mutateRequiredDetails(),
+  );
+  const requiredDetails = useMemo(
+    () =>
+      requiredDetailsList
+        ? new Map(requiredDetailsList.map((item) => [item.schoolId, item]))
+        : undefined,
+    [requiredDetailsList],
+  );
   // The create form and the trash need the providers.
   const organizationsLoadError = useSwrLoadError(
     organizationsError,
@@ -97,8 +131,8 @@ export default function OperatorSchoolsPage() {
   );
 
   const refreshAll = useCallback(async () => {
-    await mutateSummaries();
-  }, [mutateSummaries]);
+    await Promise.all([mutateSummaries(), mutateRequiredDetails()]);
+  }, [mutateSummaries, mutateRequiredDetails]);
   // The new school's list entry and its portal cache load after the write; a
   // failure stands above the list, also after the dialog closed (#6652).
   const createdAfterWrite = useRefreshAfterWrite(
@@ -118,6 +152,40 @@ export default function OperatorSchoolsPage() {
     () => schoolSummaries?.filter((s) => s.deletedAt == null) ?? [],
     [schoolSummaries],
   );
+
+  const incompleteCount = useMemo(
+    () =>
+      requiredDetails
+        ? activeSummaries.filter((s) =>
+            lacksRequiredDetails(requiredDetails.get(s.id)),
+          ).length
+        : undefined,
+    [activeSummaries, requiredDetails],
+  );
+
+  const visibleSummaries = useMemo(
+    () =>
+      requiredFilter === "missing" && requiredDetails
+        ? activeSummaries.filter((s) =>
+            lacksRequiredDetails(requiredDetails.get(s.id)),
+          )
+        : activeSummaries,
+    [activeSummaries, requiredDetails, requiredFilter],
+  );
+
+  const filterConfigs: FilterConfig[] = [
+    {
+      id: "pflichtangaben",
+      label: "Pflichtangaben",
+      type: "dropdown",
+      value: requiredFilter,
+      onChange: (value) => setRequiredFilter(value as "all" | "missing"),
+      options: [
+        { value: "all", label: "Alle Schulen" },
+        { value: "missing", label: "Angaben fehlen" },
+      ],
+    },
+  ];
 
   const deletedSummaries = useMemo(
     () => schoolSummaries?.filter((s) => s.deletedAt != null) ?? [],
@@ -198,8 +266,8 @@ export default function OperatorSchoolsPage() {
   );
 
   const columns = useMemo(
-    () => buildSchoolColumns({ showOrgColumn: true }),
-    [],
+    () => buildSchoolColumns({ showOrgColumn: true, requiredDetails }),
+    [requiredDetails],
   );
 
   const {
@@ -225,11 +293,15 @@ export default function OperatorSchoolsPage() {
           <TenantPageStats
             items={[
               { value: count, label: count === 1 ? "Schule" : "Schulen" },
+              ...(incompleteCount
+                ? [{ value: incompleteCount, label: "mit fehlenden Angaben" }]
+                : []),
             ]}
           />
         )
       }
       actions={schoolSummariesAccessRefused ? undefined : actionButton}
+      filters={schoolDelete.showTrash ? undefined : filterConfigs}
       overlays={
         <>
           <CreateSchoolModal
@@ -246,6 +318,7 @@ export default function OperatorSchoolsPage() {
         <LoadErrorAlert error={schoolDelete.reloadError} />
         <LoadErrorAlert error={createdAfterWrite.error} />
         <LoadErrorAlert error={organizationsLoadError} />
+        <LoadErrorAlert error={requiredDetailsLoadError} />
         {deletedSummaries.length > 0 && (
           <div className="mb-4 flex justify-end">
             <TrashToggleButton
@@ -296,7 +369,12 @@ export default function OperatorSchoolsPage() {
           (summariesError && !schoolSummaries?.length) ? null : (
           <DataTable
             columns={columns}
-            rows={activeSummaries}
+            rows={visibleSummaries}
+            emptyState={
+              <p className="text-center text-sm text-gray-500">
+                Keine Schule mit fehlenden Pflichtangaben.
+              </p>
+            }
             getRowKey={(row) => row.id}
             onRowClick={handleRowClick}
             defaultSortKey="name"

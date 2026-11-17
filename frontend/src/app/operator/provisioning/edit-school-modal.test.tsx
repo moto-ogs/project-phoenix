@@ -284,6 +284,51 @@ describe("EditSchoolModal", () => {
     },
   );
 
+  it("warns at the email field while the reply address is missing (#7174)", () => {
+    render(
+      <EditSchoolModal
+        isOpen={true}
+        onClose={onClose}
+        school={{ ...mockSchool, email: "" }}
+        organizations={[mockOrg]}
+        onUpdated={onUpdated}
+        requiredDetails={{ schoolId: "10", replyAddressMissing: true }}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Adresse fehlt. Antworten von Eltern kommen bei der Schule nicht an.",
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/E-Mail/), {
+      target: { value: "info@schule.example" },
+    });
+    expect(
+      screen.getByText("Antworten von Eltern gehen an diese Adresse."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Adresse fehlt/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the plain hint for a school whose replies arrive", () => {
+    render(
+      <EditSchoolModal
+        isOpen={true}
+        onClose={onClose}
+        school={mockSchool}
+        organizations={[mockOrg]}
+        onUpdated={onUpdated}
+        requiredDetails={{ schoolId: "10", replyAddressMissing: false }}
+      />,
+    );
+
+    expect(
+      screen.getByText("Antworten von Eltern gehen an diese Adresse."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Adresse fehlt/)).not.toBeInTheDocument();
+  });
+
   it("sends hidden=false when school is visible", async () => {
     mockUpdateSchool.mockResolvedValue(mockSchool);
 

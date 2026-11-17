@@ -1433,19 +1433,27 @@
       "target_owner": "settings-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningSettings.DeviceOnlineWindowMinutes",
-      "binding_digest": "30ce2708a0a766309b28f163b25e8766",
-      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningSettings.DeviceOnlineWindowMinutes",
-      "source_owner": "organization-tenancy",
-      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveIntForTenant",
-      "target_owner": "settings-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningSettings.RecordFederalState",
       "binding_digest": "cfb643fc2df932371c6ec7e21c8d562f",
       "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningSettings.RecordFederalState",
       "source_owner": "organization-tenancy",
       "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.SchoolCreationSettings.RecordFederalState",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningSettings.ReplyToAddresses",
+      "binding_digest": "5e92df30a2430899c31c9b97482dbbb5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningSettings.ReplyToAddresses",
+      "source_owner": "organization-tenancy",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.String",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningSettings.ReplyToAddresses",
+      "binding_digest": "3be645b4d94baf505f925232837ba1d1",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningSettings.ReplyToAddresses",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
       "target_owner": "settings-platform"
     }
   ]

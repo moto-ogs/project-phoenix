@@ -118,6 +118,25 @@ vi.mock("~/components/ui/modal", () => ({
     ) : null,
 }));
 
+// The filter row as plain selects, like the announcements test.
+vi.mock("~/components/ui/tenant-page-search-row", () => ({
+  TenantPageSearchRow: ({ filters }: any) =>
+    filters?.map((f: any) => (
+      <select
+        key={f.id}
+        data-testid={`filter-${f.id}`}
+        value={f.value}
+        onChange={(e) => f.onChange(e.target.value)}
+      >
+        {f.options.map((opt: any) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    )),
+}));
+
 vi.mock("~/components/ui/skeleton", () => ({
   Skeleton: ({ className }: any) => (
     <div data-testid="skeleton" className={className} />
@@ -221,6 +240,54 @@ describe("OperatorSchoolsPage", () => {
     // Anker: die Schulzeile, an der das Abzeichen hängt, ist gerendert.
     expect(screen.getByText("Test School")).toBeInTheDocument();
     expect(screen.queryByText("Verborgen")).not.toBeInTheDocument();
+  });
+
+  // --- Pflichtangaben (#7174) ---
+
+  it("marks schools without a reply address and filters them", async () => {
+    const complete = {
+      ...mockSchool,
+      id: "2",
+      name: "Complete School",
+      slug: "complete-school",
+      subdomain: "complete-school",
+    };
+    withDefaultSWR({
+      schools: [mockSchool, complete],
+      requiredDetails: [
+        { schoolId: "10", replyAddressMissing: true },
+        { schoolId: "2", replyAddressMissing: false },
+      ],
+    });
+
+    render(<OperatorSchoolsPage />);
+
+    expect(screen.getByText("Antwortadresse fehlt")).toBeInTheDocument();
+    expect(screen.getByText("Vollständig")).toBeInTheDocument();
+    expect(screen.getByText("mit fehlenden Angaben")).toBeInTheDocument();
+    expect(screen.getByText("Complete School")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId("filter-pflichtangaben"), {
+      target: { value: "missing" },
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByText("Complete School")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Test School")).toBeInTheDocument();
+  });
+
+  it("shows a failed load of the required details above the list", async () => {
+    withDefaultSWR({ requiredDetailsError: new ApiError("down", 503) });
+
+    render(<OperatorSchoolsPage />);
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die fehlenden Pflichtangaben"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Test School")).toBeInTheDocument();
   });
 
   // --- Create ---

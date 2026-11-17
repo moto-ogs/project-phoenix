@@ -218,6 +218,18 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
 
   useSetBreadcrumb({ pageTitle: school?.name ?? "Schule" });
 
+  // What the school still lacks (#7174); the edit dialog completes it. A
+  // failed read leaves the dialog without the hint, never with a wrong one.
+  const { data: requiredDetails, mutate: mutateRequiredDetails } = useSWRAuth(
+    isAuthenticated ? operatorProvisioningKeys.schoolRequiredDetails() : null,
+    () => operatorProvisioningService.listSchoolRequiredDetails(),
+    { revalidateOnFocus: false, dedupingInterval: 5000 },
+  );
+  const schoolRequiredDetails = useMemo(
+    () => requiredDetails?.find((item) => item.schoolId === school?.id),
+    [requiredDetails, school?.id],
+  );
+
   const refreshSchoolDetail = useCallback(async () => {
     await Promise.all([
       mutateOrganizations(),
@@ -375,6 +387,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       const [refreshedOrganizations] = await Promise.all([
         mutateOrganizations(),
         mutateSchools(),
+        mutateRequiredDetails(),
       ]);
       const refreshedSchools =
         await operatorProvisioningService.listSchoolSummaries();
@@ -870,6 +883,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
             isOpen={editSchoolOpen}
             onClose={() => setEditSchoolOpen(false)}
             school={summaryToSchool(school)}
+            requiredDetails={schoolRequiredDetails}
             organizations={activeOrganizations}
             onUpdated={editAfterWrite.refresh}
           />

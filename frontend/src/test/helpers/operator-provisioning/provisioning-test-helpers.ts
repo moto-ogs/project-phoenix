@@ -76,6 +76,9 @@ export interface SetupSWROptions {
   devicesLoading?: boolean;
   schoolPersons?: unknown[];
   personsLoading?: boolean;
+  /** What each school still lacks (#7174); undefined while not loaded. */
+  requiredDetails?: unknown[];
+  requiredDetailsError?: unknown;
 }
 
 /**
@@ -109,6 +112,8 @@ export function setupSWR(opts: SetupSWROptions): void {
     devicesLoading = false,
     schoolPersons,
     personsLoading = false,
+    requiredDetails,
+    requiredDetailsError,
   } = opts;
 
   useSWRMock.mockImplementation((key: unknown) => {
@@ -124,6 +129,14 @@ export function setupSWR(opts: SetupSWROptions): void {
         error: orgsError,
         isLoading: orgsLoading,
         mutate: mutateOrgs,
+      };
+    }
+    if (key === "operator-school-required-details") {
+      return {
+        data: requiredDetailsError ? undefined : requiredDetails,
+        error: requiredDetailsError,
+        isLoading: false,
+        mutate: () => Promise.resolve(requiredDetails),
       };
     }
     if (key === "operator-provisioning-stats") {

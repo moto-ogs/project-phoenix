@@ -1125,6 +1125,26 @@ describe("OperatorProvisioningService", () => {
     });
   });
 
+  describe("listSchoolRequiredDetails", () => {
+    it("maps the missing details of every school (#7174)", async () => {
+      mockOperatorFetch.mockResolvedValue([
+        { school_id: 7, reply_address_missing: true },
+        { school_id: 8, reply_address_missing: false },
+      ]);
+
+      const details =
+        await operatorProvisioningService.listSchoolRequiredDetails();
+
+      expect(mockOperatorFetch).toHaveBeenCalledWith(
+        "/api/operator/provisioning/schools/required-details",
+      );
+      expect(details).toEqual([
+        { schoolId: "7", replyAddressMissing: true },
+        { schoolId: "8", replyAddressMissing: false },
+      ]);
+    });
+  });
+
   describe("listOrganizationSchools", () => {
     it("calls the org-scoped schools endpoint with the encoded id", async () => {
       mockOperatorFetch.mockResolvedValue([]);
