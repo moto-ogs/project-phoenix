@@ -60,3 +60,31 @@ func TestDevicePINKeepsFormerDefault(t *testing.T) {
 	assert.Equal(t, noPIN, audited[0].TenantID)
 	assert.Equal(t, "[REDACTED]", audited[0].NewValue, "the audit never carries the PIN")
 }
+
+// An explicit 1234 may have been a school's choice before this migration.
+// Rolling back cannot safely distinguish it from the compatibility value the
+// migration created, and the previous registry default accepts both.
+func TestDevicePINKeepsFormerDefaultDownPreservesPINOverrides(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := context.Background()
+	formerDefault, _ := testpkg.CreateTestTenant(t, db)
+	migrated, _ := testpkg.CreateTestTenant(t, db)
+
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO config.setting_values (tenant_id, setting_key, value)
+		VALUES (?, 'security.ogs_device_pin', '"1234"'::jsonb)`, formerDefault)
+	require.NoError(t, err)
+
+	require.NoError(t, devicePINKeepsFormerDefaultUp(ctx, db))
+	require.NoError(t, devicePINKeepsFormerDefaultDown(ctx, db))
+
+	for _, tenantID := range []int64{formerDefault, migrated} {
+		var value string
+		require.NoError(t, db.NewRaw(`
+			SELECT value #>> '{}' FROM config.setting_values
+			WHERE tenant_id = ? AND setting_key = 'security.ogs_device_pin'`, tenantID).
+			Scan(ctx, &value))
+		assert.Equal(t, "1234", value)
+	}
+}

@@ -68,15 +68,9 @@ func devicePINKeepsFormerDefaultUp(ctx context.Context, db *bun.DB) error {
 	return tx.Commit()
 }
 
-// devicePINKeepsFormerDefaultDown removes the explicit 1234 values. The
-// previous code resolves a missing value to its registry default 1234, so
-// every school reads the same PIN again.
-func devicePINKeepsFormerDefaultDown(ctx context.Context, db *bun.DB) error {
-	if _, err := db.ExecContext(ctx, `
-		DELETE FROM config.setting_values
-		WHERE setting_key = 'security.ogs_device_pin' AND value = '"1234"'::jsonb;
-	`); err != nil {
-		return fmt.Errorf("remove the kept device PIN default: %w", err)
-	}
+// devicePINKeepsFormerDefaultDown keeps the explicit values. The previous
+// code accepts them just like its registry default 1234, and the migration
+// cannot distinguish an inserted value from a school's pre-existing choice.
+func devicePINKeepsFormerDefaultDown(context.Context, *bun.DB) error {
 	return nil
 }
