@@ -164,6 +164,9 @@ func (s *Rollovers) CreatePhaseFromSource(ctx context.Context, req enrollment.Cr
 	if err := validateCreateRequest(req); err != nil {
 		return nil, err
 	}
+	if err := validateRolloverServicePeriodBounds(req, calendar.DateFromTime(s.deps.Now())); err != nil {
+		return nil, err
+	}
 	tenantID := s.deps.Runtime.TenantID(ctx)
 	if tenantID == 0 {
 		return nil, fmt.Errorf("rollover: tenant not in context")
@@ -369,6 +372,15 @@ func rolloverPhaseFromSource(req enrollment.CreatePhaseFromSourceRequest, source
 		RolloverDeadline:          &deadline,
 		RolloverBumpsGrade:        req.RolloverBumpsGrade,
 	}
+}
+
+// validateRolloverServicePeriodBounds applies the upper bounds of a service
+// period to the new phase; today is the school's calendar day (#5658).
+func validateRolloverServicePeriodBounds(req enrollment.CreatePhaseFromSourceRequest, today calendar.Date) error {
+	if err := enrollment.ValidateServicePeriodBounds(enrollment.Date(req.ServiceStartDate), enrollment.Date(req.ServiceEndDate), today); err != nil {
+		return fmt.Errorf("%w: %w", enrollment.ErrRolloverInvalidRequest, err)
+	}
+	return nil
 }
 
 func validateCreateRequest(req enrollment.CreatePhaseFromSourceRequest) error {

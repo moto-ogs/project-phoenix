@@ -227,11 +227,23 @@ func (s *Phases) validatePhaseWrite(ctx context.Context, phase *enrollment.Phase
 	return s.validateFormSchemaLink(ctx, phase)
 }
 
+// validateServicePeriodBounds checks the upper bounds of the service period
+// against the school's today (#5658).
+func (s *Phases) validateServicePeriodBounds(phase *enrollment.Phase) error {
+	if err := enrollment.ValidateServicePeriodBounds(phase.ServiceStartDate, phase.ServiceEndDate, s.todayDate()); err != nil {
+		return fmt.Errorf("%w: %w", enrollment.ErrInvalidPhase, err)
+	}
+	return nil
+}
+
 func (s *Phases) create(ctx context.Context, phase *enrollment.Phase) (*enrollment.Phase, error) {
 	if phase == nil {
 		return nil, fmt.Errorf("%w: phase is required", enrollment.ErrInvalidPhase)
 	}
 	if err := s.validatePhaseWrite(ctx, phase); err != nil {
+		return nil, err
+	}
+	if err := s.validateServicePeriodBounds(phase); err != nil {
 		return nil, err
 	}
 	if err := s.deps.Records.InsertPhase(ctx, phase); err != nil {
@@ -315,8 +327,13 @@ func (s *Phases) validateCareOfferingPhaseUpdate(ctx context.Context, phase *enr
 		}
 		return nil, false, fmt.Errorf("load phase for care-offering validation: %w", err)
 	}
-	if existing.ServiceStartDate == phase.ServiceStartDate && existing.ServiceEndDate == phase.ServiceEndDate {
+	if !enrollment.ServicePeriodChanged(existing.ServiceStartDate, existing.ServiceEndDate, phase.ServiceStartDate, phase.ServiceEndDate) {
 		return existing, false, nil
+	}
+	// The upper bounds apply to a moved period only: a stored phase beyond
+	// them stays editable while its period stays as it is (#5658).
+	if err := s.validateServicePeriodBounds(phase); err != nil {
+		return nil, false, err
 	}
 	if s.deps.ValidateCareOfferingPhaseChange != nil {
 		if err := s.deps.ValidateCareOfferingPhaseChange(ctx, phase.ID, phase); err != nil {

@@ -140,7 +140,9 @@ const CodeEnrollmentPhaseNotEligible = "enrollment.phase_not_eligible"
 const CodeEnrollmentPhaseNotFound = "enrollment.phase_not_found"
 const CodeEnrollmentPhasePendingChildWindowConflict = "enrollment.phase_pending_child_window_conflict"
 const CodeEnrollmentPhaseSchoolClassesInvalid = "enrollment.phase_school_classes_invalid"
+const CodeEnrollmentPhaseServiceEndTooFar = "enrollment.phase_service_end_too_far"
 const CodeEnrollmentPhaseServicePeriodInvalid = "enrollment.phase_service_period_invalid"
+const CodeEnrollmentPhaseServicePeriodTooLong = "enrollment.phase_service_period_too_long"
 const CodeEnrollmentPhaseWindowInvalid = "enrollment.phase_window_invalid"
 const CodeEnrollmentPickupTimeNotAllowed = "enrollment.pickup_time_not_allowed"
 const CodeEnrollmentRenewalTermsChanged = "enrollment.renewal_terms_changed"
@@ -322,7 +324,9 @@ var errorCodeClassesEnrollment = []errorCodeClass{
 	{CodeEnrollmentPhaseNotFound, "business_rejection"},
 	{CodeEnrollmentPhasePendingChildWindowConflict, "business_rejection"},
 	{CodeEnrollmentPhaseSchoolClassesInvalid, "input"},
+	{CodeEnrollmentPhaseServiceEndTooFar, "input"},
 	{CodeEnrollmentPhaseServicePeriodInvalid, "input"},
+	{CodeEnrollmentPhaseServicePeriodTooLong, "input"},
 	{CodeEnrollmentPhaseWindowInvalid, "input"},
 	{CodeEnrollmentPickupTimeNotAllowed, "input"},
 	{CodeEnrollmentRenewalTermsChanged, "business_rejection"},

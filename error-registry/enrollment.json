@@ -852,6 +852,18 @@
       "legacy": "enrollment.phase_service_period_invalid"
     },
     {
+      "code": "enrollment.phase_service_end_too_far",
+      "class": "input",
+      "parameters": [],
+      "legacy": "enrollment.phase_service_end_too_far"
+    },
+    {
+      "code": "enrollment.phase_service_period_too_long",
+      "class": "input",
+      "parameters": [],
+      "legacy": "enrollment.phase_service_period_too_long"
+    },
+    {
       "code": "enrollment.phase_window_invalid",
       "class": "input",
       "parameters": [],
