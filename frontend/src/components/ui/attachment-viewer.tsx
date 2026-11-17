@@ -320,6 +320,7 @@ function PdfBody({ item, downloadHref, loadFile, labels }: BodyProps) {
   const loadedUrl = useObjectUrl(blob);
   const canShow = viewer && (local || loadFile !== undefined);
 
+  // oxlint-disable-next-line swr/no-effect-load -- kit viewer (ui-kit/no-kit-domain-import): bytes come through the caller's loadFile prop and become an object URL for the PDF frame
   useEffect(() => {
     if (!canShow || local || !loadFile) return;
     let current = true;

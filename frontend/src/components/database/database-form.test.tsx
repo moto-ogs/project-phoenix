@@ -8,8 +8,30 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import type { ComponentProps } from "react";
+import {
+  render as renderPlain,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
+import type { ComponentProps, ReactElement, ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// Loaded select options read through the shared cache; each render gets its
+// own.
+vi.unmock("swr");
+
+function Providers({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderPlain(ui, { wrapper: Providers });
+}
 import {
   getDefaultValueForField,
   isEmptyValue,

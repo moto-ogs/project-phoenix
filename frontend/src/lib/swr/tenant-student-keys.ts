@@ -2,7 +2,21 @@
  * OGS-Portal, Kinder: Akten-Unterseiten, Listen, Importe, Gruppen- und Raumseiten.
  * Keys describe the response, not its screen; a family prefix ends in `-`.
  */
+import { resourceKey } from "./resource-key";
+
 export const tenantStudentKeys = {
+  /**
+   * One page of the school's children for these filters (`fetchStudents`),
+   * e.g. a picker's name search or a choice list's page. Filtering out
+   * children a screen already shows stays outside the cache.
+   */
+  studentPage: (filters: object) => resourceKey("student-page-", filters),
+  /**
+   * Every child of the school as a sorted choice list (all pages), per
+   * opening scope (a supervision block): a block switch reads it anew.
+   */
+  studentChoices: (scope: string) =>
+    `student-choices-${encodeURIComponent(scope)}`,
   /** The open care withdrawal of one child (`fetchStudentCareWithdrawal`). */
   careWithdrawal: (studentId: string) =>
     `student-care-withdrawal-${encodeURIComponent(studentId)}`,

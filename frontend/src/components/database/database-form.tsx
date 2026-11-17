@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import {
+  useCallback,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { SectionCard } from "~/components/ui/section-card";
 import type { FormErrorInput } from "~/components/ui/form-error";
@@ -15,6 +21,8 @@ import { RemovableChip } from "~/components/ui/removable-chip";
 import { createLogger } from "~/lib/logger";
 import { getDefaultMaxLength } from "~/lib/constants/input-limits";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { useSWRAuth } from "~/lib/swr";
+import { databaseKeys } from "~/lib/swr/portal-keys";
 
 const logger = createLogger({ component: "DatabaseForm" });
 
@@ -154,6 +162,12 @@ export interface FormField {
   options?:
     | Array<{ value: string; label: string }>
     | (() => Promise<Array<{ value: string; label: string }>>);
+  /**
+   * Names the response a loaded `options` function reads („rooms“,
+   * „activity-categories“): its key in the shared cache, so every form that
+   * offers the same choice shares the answer. Defaults to the field name.
+   */
+  optionsResource?: string;
   validation?: (value: unknown) => string | null;
   component?: React.ComponentType<{
     value: unknown;
@@ -258,6 +272,60 @@ interface DatabaseFormProps<T = Record<string, unknown>> {
   readonly errorObject?: string;
 }
 
+type FieldOption = { value: string; label: string };
+
+/**
+ * Reads the options of one select field through the shared cache and hands
+ * them to the form. Without options the select would look empty: a failed
+ * read names the choice in the form's error path with the catalog text and
+ * a retry.
+ */
+function FieldOptionsReader({
+  field,
+  load,
+  errorPathRef,
+  onOptions,
+}: Readonly<{
+  field: FormField;
+  load: () => Promise<FieldOption[]>;
+  errorPathRef: { readonly current: DatabaseFormErrorPath };
+  onOptions: (
+    fieldName: string,
+    options: FieldOption[] | undefined,
+    loading: boolean,
+  ) => void;
+}>) {
+  const read = useSWRAuth(
+    databaseKeys.formFieldOptions(field.optionsResource ?? field.name),
+    load,
+    { keepPreviousData: false },
+  );
+  const { data, isLoading, error: failure, mutate: retry } = read;
+  const fieldName = field.name;
+  const fieldLabel = field.label;
+
+  useEffect(() => {
+    onOptions(fieldName, data, isLoading);
+  }, [data, fieldName, isLoading, onOptions]);
+
+  useEffect(() => {
+    if (failure === undefined) return;
+    logger.warn("failed to load field options", {
+      field: fieldName,
+      error: failure instanceof Error ? failure.message : String(failure),
+    });
+    void errorPathRef.current.show(failure, {
+      object: `die Auswahl „${fieldLabel}“`,
+      retry: () => {
+        errorPathRef.current.clear();
+        void retry();
+      },
+    });
+  }, [errorPathRef, failure, fieldLabel, fieldName, retry]);
+
+  return null;
+}
+
 export function DatabaseForm<T = Record<string, unknown>>({
   sections,
   onSubmit,
@@ -281,17 +349,38 @@ export function DatabaseForm<T = Record<string, unknown>>({
     latestSubmitRef.current = () => formRef.current?.requestSubmit();
     errorPathRef.current = errorPath;
   });
-  // Bumped by „Wiederholen“ after a failed option load.
-  const [optionsReload, setOptionsReload] = useState(0);
   // Local submitting state to prevent double-clicks (set synchronously before async onSubmit)
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // What each field's FieldOptionsReader read through the shared cache.
   const [asyncOptions, setAsyncOptions] = useState<
     Record<string, Array<{ value: string; label: string }>>
   >({});
   const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>(
     {},
   );
-  const loadedFieldsRef = useRef<Set<string>>(new Set());
+  const reportOptions = useCallback(
+    (
+      fieldName: string,
+      options: Array<{ value: string; label: string }> | undefined,
+      loading: boolean,
+    ) => {
+      setLoadingOptions((prev) =>
+        prev[fieldName] === loading ? prev : { ...prev, [fieldName]: loading },
+      );
+      if (options === undefined) return;
+      setAsyncOptions((prev) =>
+        prev[fieldName] === options ? prev : { ...prev, [fieldName]: options },
+      );
+    },
+    [],
+  );
+  const asyncOptionFields = sections.flatMap((section) =>
+    section.fields.filter(
+      (field) =>
+        (field.type === "select" || field.type === "multiselect") &&
+        typeof field.options === "function",
+    ),
+  );
   const hasInitializedFormRef = useRef(false);
   const renderedFieldNamesRef = useRef<Set<string>>(new Set());
   // Track mount state to avoid setState on unmounted component
@@ -349,54 +438,6 @@ export function DatabaseForm<T = Record<string, unknown>>({
       sections.flatMap((section) => section.fields.map((field) => field.name)),
     );
   }, [initialData, preserveDraftOnSectionsChange, sections]);
-
-  // Load async options for select fields
-  useEffect(() => {
-    const loadAsyncOptions = async () => {
-      for (const section of sections) {
-        for (const field of section.fields) {
-          if (
-            (field.type === "select" || field.type === "multiselect") &&
-            typeof field.options === "function"
-          ) {
-            // Skip if already loaded
-            if (loadedFieldsRef.current.has(field.name)) {
-              continue;
-            }
-
-            loadedFieldsRef.current.add(field.name);
-            setLoadingOptions((prev) => ({ ...prev, [field.name]: true }));
-            try {
-              const options = await field.options();
-              setAsyncOptions((prev) => ({ ...prev, [field.name]: options }));
-            } catch (error) {
-              logger.warn("failed to load field options", {
-                field: field.name,
-                error: error instanceof Error ? error.message : String(error),
-              });
-              // Without options the select would look empty: the form names
-              // the failed choice with the catalog text and offers a retry.
-              const fieldName = field.name;
-              if (isMountedRef.current) {
-                void errorPathRef.current.show(error, {
-                  object: `die Auswahl „${field.label}“`,
-                  retry: () => {
-                    errorPathRef.current.clear();
-                    loadedFieldsRef.current.delete(fieldName);
-                    setOptionsReload((value) => value + 1);
-                  },
-                });
-              }
-            } finally {
-              setLoadingOptions((prev) => ({ ...prev, [field.name]: false }));
-            }
-          }
-        }
-      }
-    };
-
-    void loadAsyncOptions();
-  }, [sections, optionsReload]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -734,6 +775,17 @@ export function DatabaseForm<T = Record<string, unknown>>({
 
   return (
     <>
+      {asyncOptionFields.map((field) =>
+        typeof field.options === "function" ? (
+          <FieldOptionsReader
+            key={field.name}
+            field={field}
+            load={field.options}
+            errorPathRef={errorPathRef}
+            onOptions={reportOptions}
+          />
+        ) : null,
+      )}
       <FormErrorAlert message={errorPath.error} className="mb-4 md:mb-6" />
 
       <form

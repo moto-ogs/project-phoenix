@@ -19,6 +19,8 @@ export const tenantListKeys = {
   enrollmentAnswerFilters: () => "enrollment-answer-filters",
   /** Der kleine Hilfe-Index der Suche (Titel, Frage, Zusammenfassung; #6954). */
   helpSearchIndex: () => "help-search-index",
+  /** Die Treffer der Schulsuche (Cmd/Ctrl+K) zu einem Suchtext. */
+  schoolSearch: (term: string) => `school-search-${encodeURIComponent(term)}`,
   /** Pausen der eigenen offenen Arbeitszeit. */
   sessionBreaks: (sessionId: string) =>
     `time-tracking-session-breaks-${encodeURIComponent(sessionId)}`,

@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import StudentDetailPage from "./page";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
-import { SWRConfig } from "swr";
+import { SWRConfig } from "~/lib/swr/testing";
 import { useSession } from "next-auth/react";
 import { getDayData as getArrivalDayData } from "~/lib/arrival-schedule-helpers";
 import { getDayData as getPickupDayData } from "~/lib/pickup-schedule-helpers";
@@ -39,7 +39,7 @@ const { mockSWRMutate, mockScopedMutate, MockStudentStatusDayConflictError } =
     },
   }));
 vi.mock("swr", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("swr")>();
+  const actual = await importOriginal<typeof import("~/lib/swr/testing")>();
   return {
     ...actual,
     mutate: mockScopedMutate,

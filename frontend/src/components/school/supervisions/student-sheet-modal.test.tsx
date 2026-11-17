@@ -1,5 +1,29 @@
-import { render, screen } from "@testing-library/react";
+import { render as renderPlain, screen } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+
+import { SWRConfig } from "~/lib/swr/testing";
+
+// The sheet reads through the shared cache of the school portal.
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "teacher", tenantId: 7, scope: "school" } },
+    status: "authenticated",
+  }),
+}));
+
+function Providers({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderPlain(ui, { wrapper: Providers });
+}
 
 import type { SupervisionStudentSheet } from "~/lib/school-supervisions-api";
 import { StudentSheetModal } from "./student-sheet-modal";

@@ -8,9 +8,11 @@
 // jeder Aufruf schreibt serverseitig eine Zugriffszeile. Das Backend gibt
 // das Blatt nur für Kinder der eigenen Aufsicht heraus.
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
+import { useSWRAuth } from "~/lib/swr";
+import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InfoSection } from "~/components/ui/info-section";
 import { Modal } from "~/components/ui/modal";
@@ -113,39 +115,36 @@ export function StudentSheetModal({
   studentName,
   onClose,
 }: StudentSheetModalProps) {
-  const [sheet, setSheet] = useState<SupervisionStudentSheet | null>(null);
   const {
     error: loadError,
     show: showLoadError,
     clear: clearLoadError,
   } = useApiLoadError();
-  // Erhöht von „Wiederholen“: lädt das Infoblatt erneut.
-  const [attempt, setAttempt] = useState(0);
+  const sheetRead = useSWRAuth(
+    studentId
+      ? schoolPortalKeys.supervisionStudentSheet(instanceId, studentId)
+      : null,
+    () => schoolSupervisionsApi.studentSheet(instanceId, studentId ?? ""),
+    { keepPreviousData: false },
+  );
+  const sheet: SupervisionStudentSheet | null = sheetRead.data ?? null;
+  const failure = sheetRead.error;
+  const retry = sheetRead.mutate;
 
   useEffect(() => {
-    if (!studentId) return;
-    let cancelled = false;
-    setSheet(null);
-    clearLoadError();
-    schoolSupervisionsApi
-      .studentSheet(instanceId, studentId)
-      .then((result) => {
-        if (!cancelled) setSheet(result);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("student_sheet_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: "das Infoblatt des Kindes",
-          retry: () => setAttempt((value) => value + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [instanceId, studentId, attempt, showLoadError, clearLoadError]);
+    if (failure === undefined) {
+      clearLoadError();
+      return;
+    }
+    logger.error("student_sheet_failed", {
+      error: failure instanceof Error ? failure.message : String(failure),
+    });
+    // „Wiederholen“ lädt das Infoblatt erneut.
+    void showLoadError(failure, {
+      object: "das Infoblatt des Kindes",
+      retry: () => void retry(),
+    });
+  }, [failure, retry, showLoadError, clearLoadError]);
 
   const title = sheet
     ? `${sheet.firstName} ${sheet.lastName}`.trim()
