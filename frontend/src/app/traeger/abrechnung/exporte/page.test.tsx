@@ -171,14 +171,13 @@ const PROTOCOL_ENTRY = {
 };
 
 it("offers older files of the protocol", async () => {
-  const entry = PROTOCOL_ENTRY;
   api.fetchExportProtocol.mockImplementation(async (offset = 0) =>
     offset === 0
-      ? { items: [entry], total: 2, nextOffset: 1 }
+      ? { items: [PROTOCOL_ENTRY], total: 2, nextOffset: 1 }
       : {
           items: [
             {
-              ...entry,
+              ...PROTOCOL_ENTRY,
               id: "8",
               fileNumber: 8,
               fileName: "sollstellung-8.csv",

@@ -1100,16 +1100,15 @@ function TenantPageTabs({
   };
 
   return (
-    // Die Randaufhebung gehoert dem Reiterband: seine Grundlinie laeuft ueber
-    // die volle Kartenbreite, auf jedem Geraet.
+    // Die Randaufhebung gehoert dem Reiterband: es laeuft ueber die volle
+    // Kartenbreite, auf jedem Geraet.
     <div className="group/tabs compact:-mx-4 compact:mt-3 -mx-5 mt-4 max-sm:-mx-4 max-sm:mt-3">
       {/* EIN Band auf allen Breiten. Unter sm scrollt es waagerecht und zeigt
           jeden Reiter; ab sm wird gemessen und der Ueberhang steht unter
           „Mehr". Vorher stand unter sm eine Auswahlliste -- sie zeigte nur den
           aktiven Wert („Status", „Betrieb") und las sich als Filter, nicht als
-          Seitenbereich. Ein sichtbares Band mit derselben Grundlinie wie auf
-          dem Desktop sagt auf den ersten Blick: hier wechselt man den
-          Bereich, und so viele gibt es.
+          Seitenbereich. Ein sichtbares Band sagt auf den ersten Blick: hier
+          wechselt man den Bereich, und so viele gibt es.
 
           Die Grundlinie gehört dem BAND, nicht dem einzelnen Reiter: eine
           Haarlinie über die volle Kartenbreite, der aktive Reiter färbt nur
