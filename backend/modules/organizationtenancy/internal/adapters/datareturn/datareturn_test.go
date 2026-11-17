@@ -97,7 +97,7 @@ func newFixtureOn(t *testing.T, db *bun.DB) *fixture {
 	store := t.TempDir()
 	conn := roleSession(t, db, "phoenix_auth")
 	f := &fixture{db: db, store: store, operator: operator.ID, release: NewRelease(db, testCrypto(), store, time.Now),
-		retrieval: NewRetrieval(conn, testCrypto(), store, time.Now, nil)}
+		retrieval: NewRetrieval(conn, testCrypto(), store, nil)}
 	t.Cleanup(func() {
 		_, err := db.ExecContext(context.Background(), `DELETE FROM platform.data_return_grants WHERE issued_by = ?`, f.operator)
 		require.NoError(t, err)
@@ -207,7 +207,7 @@ func TestDownloadBudgetHoldsUnderConcurrentDownloads(t *testing.T) {
 	f := newFixture(t)
 	issued := f.releaseSchool(t, f.school(t), "Synthetic", 2)
 	// The pool, not the single phoenix_auth session: downloads run in parallel.
-	pool := NewRetrieval(f.db, testCrypto(), f.store, time.Now, nil)
+	pool := NewRetrieval(f.db, testCrypto(), f.store, nil)
 	var wg sync.WaitGroup
 	results := make(chan error, 6)
 	for range 6 {
@@ -703,4 +703,55 @@ func TestRevocationRecordsItsOrigin(t *testing.T) {
 		}
 	}
 	t.Fatal("revoked grant not listed")
+}
+
+// The release functions bound a grant against PostgreSQL's now() (ADR 0274),
+// so release, grant and retrieval decide on that clock too: with the host
+// clock a month away, a 24-hour token is issued for 24 hours of database
+// time, and it stops opening once that database time has passed.
+func TestReleaseAndRetrievalDecideOnTheDatabaseClock(t *testing.T) {
+	t.Parallel()
+	const skew = 31 * 24 * time.Hour
+	for name, offset := range map[string]time.Duration{"host clock behind": -skew, "host clock ahead": skew} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			f := newFixture(t)
+			release := NewRelease(f.db, testCrypto(), f.store, func() time.Time { return time.Now().Add(offset) })
+			dayToken := organizationtenancy.DataReturnRecipient{Recipient: organizationtenancy.DataReturnCustomer, Name: "Schule am Berg",
+				ValidFor: 24 * time.Hour, MaxDownloads: 2}
+			school := f.school(t)
+			issuedAt := testpkg.DatabaseNow(t, f.db)
+			issued, err := release.Release(t.Context(), organizationtenancy.DataReturnReleaseRequest{Package: writePackage(t, school, "x", nil),
+				SchoolID: school, OperatorID: f.operator, KeepUntil: issuedAt.Add(40 * 24 * time.Hour), DataReturnRecipient: dayToken})
+			require.NoError(t, err)
+			require.WithinDuration(t, issuedAt.Add(24*time.Hour), issued.ExpiresAt, time.Minute)
+			granted, err := release.Grant(t.Context(), organizationtenancy.DataReturnGrantRequest{ArchiveName: issued.ArchiveName,
+				ArchiveKey: issued.ArchiveKey, OperatorID: f.operator, DataReturnRecipient: dayToken})
+			require.NoError(t, err)
+			require.WithinDuration(t, issuedAt.Add(24*time.Hour), granted.ExpiresAt, time.Minute)
+
+			_, err = f.retrieval.Package(t.Context(), issued.Token)
+			require.NoError(t, err)
+			// The database time passes the expiry of both tokens.
+			_, err = f.db.ExecContext(t.Context(), `UPDATE platform.data_return_grants SET expires_at = now() - interval '1 minute' WHERE id IN (?, ?)`,
+				issued.GrantID, granted.GrantID)
+			require.NoError(t, err)
+			_, err = f.retrieval.Package(t.Context(), issued.Token)
+			require.ErrorIs(t, err, organizationtenancy.ErrDataReturnDenied)
+			_, _, err = download(f.retrieval, granted.Token)
+			require.ErrorIs(t, err, organizationtenancy.ErrDataReturnDenied)
+		})
+	}
+}
+
+// The download itself spends the budget only while the grant is unexpired
+// on the database clock, also when the check before it has passed.
+func TestDownloadCountsOnlyAnUnexpiredGrant(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	issued := f.releaseSchool(t, f.school(t), "Synthetic", 2)
+	_, err := f.db.ExecContext(t.Context(), `UPDATE platform.data_return_grants SET expires_at = now() - interval '1 minute' WHERE id = ?`, issued.GrantID)
+	require.NoError(t, err)
+	_, _, err = f.retrieval.store.countDownload(t.Context(), issued.GrantID)
+	require.ErrorIs(t, err, organizationtenancy.ErrDataReturnDenied)
 }

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	organizationCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
@@ -63,10 +64,8 @@ func TestTenantReturnCLIKeepsSecretsOffStdout(t *testing.T) {
 		require.NoError(t, err)
 	})
 	store := t.TempDir()
-	// The release decides on the database clock (ADR 0274).
-	clock := testpkg.DatabaseClock(t, db)
 	open := func(context.Context) (organizationtenancy.DataReturnRelease, func(), error) {
-		release, err := organizationCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store, clock)
+		release, err := organizationCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store, time.Now)
 		return release, func() {}, err
 	}
 	run := func(args ...string) (string, error) {
@@ -85,7 +84,8 @@ func TestTenantReturnCLIKeepsSecretsOffStdout(t *testing.T) {
 	})
 	secrets := t.TempDir()
 	require.NoError(t, os.Chmod(secrets, 0o700))
-	keepUntil := clock().AddDate(0, 0, 40).Format("2006-01-02")
+	// The database clock bounds the retrieval period (ADR 0274).
+	keepUntil := testpkg.DatabaseNow(t, db).AddDate(0, 0, 40).Format("2006-01-02")
 	releaseArgs := func(out string) []string {
 		return []string{"release", "--package", returnPackage(t, school), "--school", strconv.FormatInt(school, 10),
 			"--operator", strconv.FormatInt(operator.ID, 10), "--keep-until", keepUntil, "--recipient", "customer",
@@ -117,7 +117,7 @@ func TestTenantReturnCLIKeepsSecretsOffStdout(t *testing.T) {
 	_, err = run(releaseArgs(filepath.Join(secrets, "release.json"))...)
 	require.ErrorContains(t, err, "exists")
 
-	retrieval, err := organizationCompose.NewDataReturn(db, owners.NewDataReturnCrypto(), store, clock, nil)
+	retrieval, err := organizationCompose.NewDataReturn(db, owners.NewDataReturnCrypto(), store, nil)
 	require.NoError(t, err)
 	opens := func(token string) bool {
 		_, err := retrieval.Package(t.Context(), token)

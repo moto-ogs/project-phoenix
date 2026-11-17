@@ -459,12 +459,10 @@ func TestErasureCLIRefusesWhileAReturnPackageIsReleased(t *testing.T) {
 	seedCLIErasure(t, db, school)
 	operator := testpkg.CreateTestOperator(t, db)
 	store := t.TempDir()
-	// The release decides on the database clock (ADR 0274).
-	clock := testpkg.DatabaseClock(t, db)
-	release, err := tenancyCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store, clock)
+	release, err := tenancyCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store, time.Now)
 	require.NoError(t, err)
 	issued, err := release.Release(t.Context(), organizationtenancy.DataReturnReleaseRequest{Package: returnPackage(t, school), SchoolID: school,
-		OperatorID: operator.ID, KeepUntil: clock().AddDate(0, 0, 40), DataReturnRecipient: organizationtenancy.DataReturnRecipient{
+		OperatorID: operator.ID, KeepUntil: testpkg.DatabaseNow(t, db).AddDate(0, 0, 40), DataReturnRecipient: organizationtenancy.DataReturnRecipient{
 			Recipient: organizationtenancy.DataReturnCustomer, Name: "Schule", ValidFor: 24 * time.Hour, MaxDownloads: 1}})
 	require.NoError(t, err)
 	t.Cleanup(func() {
@@ -508,12 +506,10 @@ func TestErasureCLIErasesASchoolWhileItsTraegerPackageIsReleased(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT organization_id FROM platform.schools WHERE id = ?`, school).Scan(t.Context(), &organization))
 	seedCLIErasure(t, db, school)
 	operator := testpkg.CreateTestOperator(t, db)
-	// The release decides on the database clock (ADR 0274).
-	clock := testpkg.DatabaseClock(t, db)
-	release, err := tenancyCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), t.TempDir(), clock)
+	release, err := tenancyCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), t.TempDir(), time.Now)
 	require.NoError(t, err)
 	issued, err := release.Release(t.Context(), organizationtenancy.DataReturnReleaseRequest{Package: organizationReturnPackage(t, organization),
-		OrganizationID: organization, OperatorID: operator.ID, KeepUntil: clock().AddDate(0, 0, 40), DataReturnRecipient: organizationtenancy.DataReturnRecipient{
+		OrganizationID: organization, OperatorID: operator.ID, KeepUntil: testpkg.DatabaseNow(t, db).AddDate(0, 0, 40), DataReturnRecipient: organizationtenancy.DataReturnRecipient{
 			Recipient: organizationtenancy.DataReturnCustomer, Name: "Träger", ValidFor: 24 * time.Hour, MaxDownloads: 1}})
 	require.NoError(t, err)
 	t.Cleanup(func() {

@@ -54,7 +54,7 @@ var calendarFixtureShiftedLiveDateDebt = map[string]int{
 	// would let the role choose its own "now" and void both bounds. The
 	// tests therefore place keep_until relative to the real day the
 	// database decides on. The root and composition tests read that day
-	// through testpkg.DatabaseClock (#7295) and left this register.
+	// through testpkg.DatabaseNow (#7295) and left this register.
 	"modules/organizationtenancy/internal/adapters/datareturn/datareturn_test.go": 3,
 }
 

@@ -7,18 +7,15 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// DatabaseClock returns a clock that reads PostgreSQL's clock_timestamp().
-// A composition whose decisions run on the database clock (the data return,
-// ADR 0274; database-stamped columns, ADR 0281) gets it in tests, so its
-// instants stay on that clock when the Go clock is moved to another day.
-// A failed read marks the test failed; the clock may run in a server goroutine.
-func DatabaseClock(t testing.TB, db bun.IDB) func() time.Time {
+// DatabaseNow reads PostgreSQL's clock once. A test places or asserts a
+// value that the database bounds or stamps with it (the retrieval period of
+// the data return, ADR 0274; database-stamped columns, ADR 0281); the code
+// under test keeps the clock production gives it.
+func DatabaseNow(t testing.TB, db bun.IDB) time.Time {
 	t.Helper()
-	return func() time.Time {
-		var now time.Time
-		if err := db.NewRaw(`SELECT clock_timestamp()`).Scan(t.Context(), &now); err != nil {
-			t.Errorf("read the database clock: %v", err)
-		}
-		return now
+	var now time.Time
+	if err := db.NewRaw(`SELECT now()`).Scan(t.Context(), &now); err != nil {
+		t.Fatalf("read the database clock: %v", err)
 	}
+	return now
 }
