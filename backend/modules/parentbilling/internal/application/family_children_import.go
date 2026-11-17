@@ -137,9 +137,7 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	}
 	current := func(family string) *parentbilling.FamilyChildCount {
 		if found, ok := numbers[family]; ok {
-			if count, differing := found.count(); !differing && count != nil && count.ConfirmedChildren != nil {
-				return count
-			}
+			return found.confirmed()
 		}
 		return nil
 	}
@@ -152,9 +150,8 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
-		candidate := &candidates[owner[i]]
-		candidate.decided = append(candidate.decided, row)
-		if count := current(row.family); count != nil && row.confirmed != nil && !seen[count.ID] {
+		candidates[owner[i]].decided = append(candidates[owner[i]].decided, row)
+		if count := current(row.family); count != nil && !seen[count.ID] {
 			seen[count.ID] = true
 			shown = append(shown, parentbilling.FamilyChildTarget{ContractID: count.ContractID, CountID: &count.ID})
 		}

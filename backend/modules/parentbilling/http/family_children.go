@@ -27,14 +27,12 @@ type FamilyChildrenResource struct {
 }
 
 // NewFamilyChildrenResource builds the resource.
-func NewFamilyChildrenResource(office interface {
-	capability.FamilyChildrenOffice
-	capability.FamilyChildrenImports
-}, requireBilling common.Middleware, lists common.ListRenderer) *FamilyChildrenResource {
-	if office == nil || requireBilling == nil || lists == nil {
-		panic("parent billing http: the family children, the right check and the list export are required")
+func NewFamilyChildrenResource(office capability.FamilyChildrenOffice, imports capability.FamilyChildrenImports,
+	requireBilling common.Middleware, lists common.ListRenderer) *FamilyChildrenResource {
+	if office == nil || imports == nil || requireBilling == nil || lists == nil {
+		panic("parent billing http: the family children, their import, the right check and the list export are required")
 	}
-	return &FamilyChildrenResource{office: office, imports: office, requireBilling: requireBilling, lists: lists}
+	return &FamilyChildrenResource{office: office, imports: imports, requireBilling: requireBilling, lists: lists}
 }
 
 // Router returns the routes mounted at /traeger/family-children.

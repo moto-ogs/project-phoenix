@@ -59,6 +59,23 @@ func numbersByFamily(counts []parentbilling.FamilyChildCount, recipients map[int
 	return byFamily, order
 }
 
+// contractID is a contract the family's numbers hang on.
+func (n *familyNumbers) contractID() int64 {
+	if n.own != nil {
+		return n.own.ContractID
+	}
+	return n.brought[0].ContractID
+}
+
+// confirmed is the number the Abrechnung confirmed for the family, nil
+// without one or while its contracts brought different numbers.
+func (n *familyNumbers) confirmed() *parentbilling.FamilyChildCount {
+	if count, differing := n.count(); !differing && count != nil && count.ConfirmedChildren != nil {
+		return count
+	}
+	return nil
+}
+
 // decided tells whether the family's own number settles the question: the
 // office confirmed one under the family's key.
 func (n *familyNumbers) decided() bool {

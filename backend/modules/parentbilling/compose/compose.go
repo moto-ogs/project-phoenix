@@ -89,6 +89,11 @@ func NewSEPAMandates(contracts parentbilling.CareContracts, cipher parentbilling
 	return application.NewSEPAMandates(postgres.NewStore(now), contracts, cipher, formats, today)
 }
 
+// NewFamilyChildrenImports builds the numbers of the families from a file (#7356, ADR 0288) over the contracts and schools the root binds.
+func NewFamilyChildrenImports(contracts parentbilling.CareContracts, schools parentbilling.CareSchools, today func() calendar.Date, now func() time.Time) parentbilling.FamilyChildrenImports {
+	return application.NewCareReductions(postgres.NewStore(now), contracts, schools, today)
+}
+
 // NewContractImportNumbers builds the debtor numbers of an import of care contracts (#4723) over the format of the Träger's numbers the root binds.
 func NewContractImportNumbers(formats parentbilling.DebtorNumberFormats, today func() calendar.Date, now func() time.Time) parentbilling.ContractImportNumbers {
 	return application.NewContractImportNumbers(postgres.NewStore(now), formats, today)

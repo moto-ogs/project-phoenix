@@ -348,7 +348,10 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0276: the time import of the sick note retention clock in
 // modules/workforce/compose (+1) and the clock field of the staff offboarding
 // with its time import in workflows/staffoffboarding/compose (+2).
-const moduleComposeBudgetTotal = 13645
+
+// ADR 0288: the constructor of the numbers of the families from a file of
+// modules/parentbilling/compose (+5).
+const moduleComposeBudgetTotal = 13650
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -493,7 +496,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0218: the handovers of the finance exports (+5).
 	// ADR 0232: the debtor numbers of an import of care contracts (+5).
 	// ADR 0275: the time import of the root clock (+2).
-	"modules/parentbilling/compose":               136,
+	// ADR 0288: the numbers of the families from a file (+5).
+	"modules/parentbilling/compose":               141,
 	"modules/parentrequestfeedprojection/compose": 11,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0188: the guardian bank backfill/rekey constructor (+6).
