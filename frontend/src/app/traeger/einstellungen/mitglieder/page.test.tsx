@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useSWRAuth } from "~/lib/swr";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
@@ -144,6 +145,72 @@ describe("TraegerAccountsPage", () => {
     api.fetchTraegerBuero.mockResolvedValue(BUERO);
     api.fetchTraegerAccountHistory.mockResolvedValue(HISTORY);
   });
+
+  it.each([
+    "Mitglieder und Einladungen herunterladen",
+    "Verlauf herunterladen",
+  ])(
+    "withdraws office and history caches after a refused %s",
+    async (downloadLabel) => {
+      vi.mocked(downloadTraegerList).mockRejectedValue(
+        new ApiError("refused", 403),
+      );
+      let office!: ReturnType<typeof useSWRAuth>;
+      let history!: ReturnType<typeof useSWRAuth>;
+      function Probe() {
+        office = useSWRAuth(traegerKeys.buero(), api.fetchTraegerBuero);
+        history = useSWRAuth(
+          traegerKeys.accountHistory(),
+          api.fetchTraegerAccountHistory,
+        );
+        return null;
+      }
+      function View({ open }: { open: boolean }) {
+        return (
+          <>
+            {open && <TraegerAccountsPage />}
+            <Probe />
+          </>
+        );
+      }
+      function Providers({ children }: { children: React.ReactNode }) {
+        return (
+          <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+            <ToastProvider>{children}</ToastProvider>
+          </SWRConfig>
+        );
+      }
+      const view = render(<View open />, { wrapper: Providers });
+      expect(await screen.findByText("Lea Leitung")).toBeVisible();
+      expect((await screen.findAllByText("Rollen geändert"))[0]).toBeVisible();
+      fireEvent.click(screen.getByRole("button", { name: downloadLabel }));
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Excel" }));
+      expect(
+        (
+          await screen.findAllByText(
+            catalogText("general.permission", "die Liste der Personen"),
+          )
+        )[0],
+      ).toBeVisible();
+      expect(office.readCurrent?.().data).toBeUndefined();
+      expect(history.readCurrent?.().data).toBeUndefined();
+      view.rerender(<View open={false} />);
+      api.fetchTraegerBuero.mockRejectedValue(new ApiError("offline", 503));
+      api.fetchTraegerAccountHistory.mockRejectedValue(
+        new ApiError("offline", 503),
+      );
+      view.rerender(<View open />);
+      expect(
+        (
+          await screen.findAllByText(
+            catalogText("general.permission", "die Liste der Personen"),
+          )
+        )[0],
+      ).toBeVisible();
+      expect(screen.queryByText("Lea Leitung")).not.toBeInTheDocument();
+      expect(screen.queryByText("Verlauf")).not.toBeInTheDocument();
+    },
+  );
 
   it.each([
     "Rollen ändern",

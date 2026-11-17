@@ -15,6 +15,7 @@ import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 vi.unmock("swr");
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { catalogText } from "~/test/error-catalog-text";
 import type {
   SepaMandateText,
@@ -135,6 +136,35 @@ async function fillAccount() {
 
 describe("ParentSepaMandateView", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("reads the mandate again on every opening to record access", async () => {
+    mocks.fetch.mockResolvedValueOnce(granted);
+    const next = deferred<SepaMandateView>();
+    mocks.fetch.mockReturnValueOnce(next.promise);
+    const view = renderView();
+    expect(await screen.findByText(granted.mandate!.ibanMasked)).toBeVisible();
+    const reopen = (
+      <ParentResourceTestProvider>
+        <ToastProvider>
+          <ParentSepaMandateView organizationId="4" contractId="75" />
+        </ToastProvider>
+      </ParentResourceTestProvider>
+    );
+    view.rerender(
+      <ParentResourceTestProvider>
+        <ToastProvider>{null}</ToastProvider>
+      </ParentResourceTestProvider>,
+    );
+    view.rerender(reopen);
+    await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(2));
+    expect(
+      screen.queryByText(granted.mandate!.ibanMasked),
+    ).not.toBeInTheDocument();
+    await act(async () => {
+      next.resolve(granted);
+    });
+    expect(await screen.findByText(granted.mandate!.ibanMasked)).toBeVisible();
+  });
 
   it("never restores a refused mandate after a later server failure", async () => {
     mocks.fetch.mockResolvedValue(granted);

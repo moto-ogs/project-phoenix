@@ -25,15 +25,11 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate, formatTime } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
-import { useInvalidateFamily } from "~/lib/swr";
+import { useInvalidateFamily, useInvalidateMatching } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchTraegerBuero,
@@ -68,10 +64,8 @@ export default function TraegerAccountsPage() {
     "die Liste der Personen",
   );
   const { mutate } = reader;
-  // A refused download ends the access too: the page drops what it shows.
-  const [exportRefused, setExportRefused] = useState(false);
-  const exportLoad = useApiLoadError();
-  const refused = reader.refused || exportRefused;
+  const [exportRefusal, setExportRefusal] = useState<unknown>();
+  const refused = reader.refused || exportRefusal !== undefined;
   const buero: TraegerBuero = (refused ? null : reader.data) ?? NO_BUERO;
   const loaded = !refused && reader.data !== null;
   const [inviting, setInviting] = useState(false);
@@ -91,14 +85,21 @@ export default function TraegerAccountsPage() {
     setPending(null);
   }, [refused]);
 
+  const invalidateMatching = useInvalidateMatching();
+  const readCallbacks = reader.readCallbacks;
+  useEffect(() => {
+    if (exportRefusal === undefined) return;
+    readCallbacks.onError(exportRefusal);
+    void invalidateMatching(
+      (key) =>
+        key === traegerKeys.buero() ||
+        key.startsWith(traegerKeys.accountHistoryFamily),
+      { clear: true },
+    );
+    setExportRefusal(undefined);
+  }, [exportRefusal, readCallbacks, invalidateMatching]);
   const onExportError = (error: unknown) => {
-    if (!isRefusal(error)) return;
-    setExportRefused(true);
-    setInviting(false);
-    setEditing(null);
-    setNaming(null);
-    setPending(null);
-    void exportLoad.show(error, { object: "die Liste der Personen" });
+    if (isRefusal(error)) setExportRefusal(error);
   };
 
   // A write's reload runs after the write; its failure stands above the list
@@ -306,7 +307,7 @@ export default function TraegerAccountsPage() {
     },
   ];
 
-  const pageError = exportLoad.error ?? reader.error;
+  const pageError = reader.error;
   const memberCount = buero.members.length;
   const invitationCount = buero.invitations.length;
 

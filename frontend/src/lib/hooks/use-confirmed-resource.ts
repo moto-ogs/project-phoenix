@@ -15,6 +15,7 @@ import {
   useSWRCacheKey,
   useSWRAuth,
   type SWRResponse,
+  type ReaderOptions,
 } from "~/lib/swr";
 
 /**
@@ -146,11 +147,20 @@ function useRefusalSafeData<T>(
 export function useConfirmedSWR<T>(
   key: string | null,
   fetcher: () => Promise<T>,
+  options?: ReaderOptions<T>,
 ) {
   const guard = useRefusalGuard(key);
   const response = useSWRAuth(key, fetcher, {
+    ...options,
     keepPreviousData: false,
-    ...guard.callbacks,
+    onSuccess: (data) => {
+      guard.callbacks.onSuccess();
+      options?.onSuccess?.(data);
+    },
+    onError: (error) => {
+      guard.callbacks.onError(error);
+      options?.onError?.(error);
+    },
   });
   const resource = useRefusalSafeData(response, guard);
   return {

@@ -34,10 +34,9 @@ import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { billingConcept } from "~/lib/concepts/billing";
 import { formatDate } from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
-import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useFreshSWR } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { createLogger } from "~/lib/logger";
 import {
@@ -90,11 +89,10 @@ export function ParentSepaMandateView({
   const cacheKey = parentInboxKeys.sepaMandate(organizationId, contractId);
   const guard = useRefusalGuard(cacheKey);
   const beginRead = useSWRRequestGuard();
-  const resource = useSWRAuth(
+  const resource = useFreshSWR(
     cacheKey,
     () => fetchSepaMandate(organizationId, contractId),
     {
-      ...PARENT_RESOURCE_OPTIONS,
       onSuccess: guard.callbacks.onSuccess,
       onError: (error) => {
         if (isMandateRefusal(error)) guard.callbacks.onError(error);

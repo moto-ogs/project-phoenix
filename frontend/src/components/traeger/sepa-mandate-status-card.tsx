@@ -12,7 +12,7 @@ import { ApiError } from "~/lib/api-error";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import { fetchSepaMandates } from "~/lib/traeger-sepa-api";
 import { traegerPath } from "~/lib/traeger-url";
-import { useTraegerResource } from "./use-traeger-resource";
+import { useFreshTraegerResource } from "./use-traeger-resource";
 
 /** The address of the mandate page of a contract's family. */
 function sepaMandatePath(contractId: string): string {
@@ -25,7 +25,7 @@ export function SepaMandateStatusCard({
   contractId,
 }: Readonly<{ contractId: string }>) {
   // The page around it still works; the card says it could not load.
-  const { data: mandates, failure } = useTraegerResource(
+  const { data: mandates, failure } = useFreshTraegerResource(
     traegerBillingRunKeys.sepaMandates(contractId),
     () => fetchSepaMandates(contractId),
     "das Mandat",

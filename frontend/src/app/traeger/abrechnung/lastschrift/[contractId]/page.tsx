@@ -8,7 +8,7 @@
 import { useParams } from "next/navigation";
 import { SepaCollectionsCard } from "~/components/traeger/sepa-collections-card";
 import { SepaMandatesCard } from "~/components/traeger/sepa-mandates-card";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import { fetchSepaMandates } from "~/lib/traeger-sepa-api";
@@ -21,7 +21,7 @@ export default function TraegerSepaMandatePage() {
     data: mandates,
     loading,
     error,
-  } = useTraegerResource(
+  } = useFreshTraegerResource(
     traegerBillingRunKeys.sepaMandates(contractId),
     () => fetchSepaMandates(contractId),
     "das Mandat",

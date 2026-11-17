@@ -40,7 +40,8 @@ import {
   useParentFeatures,
 } from "~/lib/hooks/use-parent-resources";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
+import { useInvalidateFamily } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import {
@@ -79,7 +80,7 @@ function childName(child: GroupThreadChild): string {
 export function ParentGroupThreadView({
   groupThreadId,
 }: Readonly<{ groupThreadId: string }>) {
-  const threadResource = useSWRAuth(
+  const threadResource = useConfirmedSWR(
     parentInboxKeys.groupThread(groupThreadId),
     () => getGroupThread(groupThreadId),
     // Opening the thread marks it read: the sidebar badge refetches. Every
@@ -127,7 +128,7 @@ export function ParentGroupThreadView({
   const [sending, setSending] = useState(false);
   const [sentFor, setSentFor] = useState<string | null>(null);
   const { error: loadError } = useSwrResourceLoadError(
-    [threadResource],
+    [{ data: threadResource.data ?? undefined, error: threadResource.failure }],
     t("errorObjectThread"),
     () => threadResource.mutate(),
   );
@@ -216,7 +217,8 @@ export function ParentGroupThreadView({
     sendRef.current = handleSend;
   });
 
-  if (!thread && !threadResource.error) return <ParentPageSkeleton rows={2} />;
+  if (!thread && !threadResource.failure)
+    return <ParentPageSkeleton rows={2} />;
 
   if (!thread) {
     return (

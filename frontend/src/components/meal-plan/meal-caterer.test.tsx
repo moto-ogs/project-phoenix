@@ -40,6 +40,8 @@ function ToastProvider({ children }: { readonly children: ReactNode }) {
   );
 }
 import { ApiError } from "~/lib/api-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { MealCaterer } from "./meal-caterer";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { deferred } from "~/test/helpers/form-modal-pending";
@@ -66,6 +68,52 @@ describe("MealCaterer", () => {
     mocks.revokeMealCatererInvitation.mockResolvedValue(undefined);
     mocks.endMealCatererSupply.mockResolvedValue(undefined);
   });
+
+  it.each([401, 403])(
+    "withdraws cached invitations and dialogs after a background %s",
+    async (status) => {
+      mocks.getMealCaterer.mockResolvedValue({
+        supply: null,
+        invitations: [invitation],
+      });
+      let read!: ReturnType<typeof useSWRAuth>;
+      function Probe() {
+        read = useSWRAuth(
+          tenantContactKeys.mealCaterer(),
+          mocks.getMealCaterer,
+        );
+        return null;
+      }
+      function View({ open }: { open: boolean }) {
+        return (
+          <>
+            {open && <MealCaterer canManageSupply />}
+            <Probe />
+          </>
+        );
+      }
+      const view = render(<View open />, { wrapper: ToastProvider });
+      expect(await screen.findByText(invitation.email)).toBeVisible();
+      fireEvent.click(screen.getByRole("button", { name: "Caterer einladen" }));
+      expect(await screen.findByRole("dialog")).toBeVisible();
+      mocks.getMealCaterer.mockRejectedValue(new ApiError("refused", status));
+      await act(async () => {
+        await read.mutate();
+      });
+      // Anker: die Ablehnung ersetzt die geladenen Einladungen und das Formular.
+      if (status === 403)
+        expect(await screen.findByRole("alert")).toBeVisible();
+      expect(screen.queryByText(invitation.email)).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(read.readCurrent?.().data).toBeUndefined();
+      view.rerender(<View open={false} />);
+      mocks.getMealCaterer.mockRejectedValue(new ApiError("offline", 503));
+      view.rerender(<View open />);
+      if (status === 403)
+        expect(await screen.findByRole("alert")).toBeVisible();
+      expect(screen.queryByText(invitation.email)).not.toBeInTheDocument();
+    },
+  );
 
   // Bauart 2 Regel 4: Nachtragen ist eine Kopf-Aktion mit FormModal, kein
   // Formular im Kartenkörper.

@@ -21,6 +21,7 @@ import {
   useParentResourceEvents,
 } from "~/lib/hooks/use-parent-resources";
 import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { catalogText } from "~/test/error-catalog-text";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
@@ -103,6 +104,49 @@ beforeEach(() => {
 });
 
 describe("ParentGroupThreadView (#4784)", () => {
+  it("withdraws a deleted cached thread and its composer after a 404", async () => {
+    mockedThread.mockResolvedValue(sommerfest);
+    let read!: ReturnType<
+      typeof useSWRAuth<Awaited<ReturnType<typeof getGroupThread>>>
+    >;
+    function Probe() {
+      read = useSWRAuth(parentInboxKeys.groupThread("9"), () =>
+        getGroupThread("9"),
+      );
+      return null;
+    }
+    render(
+      <ParentResourceTestProvider>
+        <NextIntlClientProvider locale="de" messages={deMessages}>
+          <ParentGroupThreadView groupThreadId="9" />
+          <Probe />
+        </NextIntlClientProvider>
+      </ParentResourceTestProvider>,
+    );
+    expect(
+      await screen.findByText("Wer kann einen Kuchen mitbringen?"),
+    ).toBeVisible();
+    mockedThread.mockRejectedValue(new ApiError("gone", 404));
+    await act(async () => {
+      await read.mutate();
+    });
+    // Anker: nach dem geladenen Thread erscheint die Fehlermeldung.
+    expect(await screen.findByRole("alert")).toBeVisible();
+    expect(
+      screen.queryByText("Wer kann einen Kuchen mitbringen?"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(read.readCurrent?.().data).toBeUndefined();
+    mockedThread.mockRejectedValue(new ApiError("offline", 503));
+    await act(async () => {
+      await read.mutate();
+    });
+    expect(screen.getByRole("alert")).toBeVisible();
+    expect(
+      screen.queryByText("Wer kann einen Kuchen mitbringen?"),
+    ).not.toBeInTheDocument();
+  });
+
   it("zeigt die Nachrichten der OGS und sagt, wer die Antwort sieht", async () => {
     mockedThread.mockResolvedValue(sommerfest);
 

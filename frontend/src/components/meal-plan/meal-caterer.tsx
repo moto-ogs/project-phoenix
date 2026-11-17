@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
@@ -28,7 +28,8 @@ import {
 import { isAccessRefusal } from "~/lib/access-refusal";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
+import { useSWRRequestGuard } from "~/lib/swr/hooks";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import {
   endMealCatererSupply,
@@ -60,21 +61,21 @@ interface MealCatererProps {
 }
 
 export function MealCaterer({ canManageSupply }: MealCatererProps) {
-  const { data, error, mutate } = useSWRAuth(
-    tenantContactKeys.mealCaterer(),
-    getMealCaterer,
-  );
+  const {
+    data,
+    failure: error,
+    mutate,
+    refused: accessRefused,
+    readCallbacks,
+  } = useConfirmedSWR(tenantContactKeys.mealCaterer(), getMealCaterer);
   const state: MealCatererState | null = data ?? null;
-  const loading = data === undefined && !error;
+  const loading = data === null && !error;
+  const [refusedAfterWrite, setRefusedAfterWrite] = useState(false);
   const loadErrors = useSwrResourceLoadError(
-    [{ data, error }],
+    [{ data: data ?? undefined, error: refusedAfterWrite ? undefined : error }],
     "der Caterer",
     () => mutate(),
   );
-  // A refused reload after a write hides the caterer and its dialogs.
-  const [refusedAfterWrite, setRefusedAfterWrite] = useState(false);
-  const accessRefused =
-    refusedAfterWrite || (data === undefined && isAccessRefusal(error));
   const [form, setForm] = useState(EMPTY_FORM);
   const [inviteOpen, setInviteOpen] = useState(false);
   const save = useFormModalPending(inviteOpen);
@@ -92,21 +93,32 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
   // Rejects on failure: after a write the caller shows it as a reload of a
   // saved change and keeps the shown caterer (#6652). A mutation drops an
   // answer to a request that started before it.
+  useEffect(() => {
+    if (!accessRefused) return;
+    setForm(EMPTY_FORM);
+    setInviteOpen(false);
+    setRevokeTarget(null);
+    setEndOpen(false);
+  }, [accessRefused]);
+  const beginRead = useSWRRequestGuard();
   const readCaterer = useCallback(async () => {
+    const complete = beginRead(tenantContactKeys.mealCaterer());
     try {
-      await mutate(getMealCaterer(), { revalidate: false });
-      setRefusedAfterWrite(false);
+      const next = await mutate(getMealCaterer(), { revalidate: false });
+      if (next !== undefined)
+        complete(() => {
+          readCallbacks.onSuccess();
+          setRefusedAfterWrite(false);
+        });
     } catch (cause) {
-      if (isAccessRefusal(cause)) {
-        setRefusedAfterWrite(true);
-        setForm(EMPTY_FORM);
-        setInviteOpen(false);
-        setRevokeTarget(null);
-        setEndOpen(false);
-      }
+      if (isAccessRefusal(cause))
+        complete(() => {
+          setRefusedAfterWrite(true);
+          readCallbacks.onError(cause);
+        });
       throw cause;
     }
-  }, [mutate]);
+  }, [beginRead, mutate, readCallbacks]);
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige des Caterers",
     readCaterer,

@@ -51,7 +51,10 @@ import {
   mandateState,
   nextDebitLabel,
 } from "./sepa-format";
-import { useTraegerResource } from "./use-traeger-resource";
+import {
+  useFreshTraegerResource,
+  useTraegerResource,
+} from "./use-traeger-resource";
 
 const logger = createLogger({ component: "SepaMandatesCard" });
 
@@ -60,7 +63,7 @@ const logger = createLogger({ component: "SepaMandatesCard" });
  * „Abrechnung“ gets 403: then `forbidden` is set and nothing is shown.
  */
 export function useSepaMandates(enabled: boolean, contractId?: string) {
-  const { data, error, failure, reload } = useTraegerResource(
+  const { data, error, failure, reload } = useFreshTraegerResource(
     enabled ? traegerBillingRunKeys.sepaMandates(contractId) : null,
     () => fetchSepaMandates(contractId),
     "die Liste der Mandate",
@@ -148,7 +151,7 @@ function HistoryModal({
   mandate,
   onClose,
 }: Readonly<{ mandate: SepaMandate | null; onClose: () => void }>) {
-  const { data: events, error } = useTraegerResource(
+  const { data: events, error } = useFreshTraegerResource(
     mandate ? traegerBillingRunKeys.sepaMandateHistory(mandate.id) : null,
     () => fetchSepaMandateHistory(mandate?.id ?? ""),
     "die Liste der Änderungen",
