@@ -25,37 +25,29 @@ func EnsureTestTenant(tb testing.TB, db *bun.DB, tenantID int64) {
 // ensureTestTenant is the error-returning core of EnsureTestTenant, shared
 // with the process-once clone bootstrap in db_clone.go.
 func ensureTestTenant(ctx context.Context, db *bun.DB, tenantID int64) error {
-	// Keep the complete, idempotent tenant setup in one statement. The fixture
-	// is deliberately called concurrently, and additional round trips consume
-	// its five-second deadline. The CTEs preserve the organization → school →
-	// setting dependency while accepting rows already present.
+	// Each upsert needs its own statement snapshot. A concurrent organization
+	// insert that is not visible when a CTE begins is invisible after ON
+	// CONFLICT DO NOTHING too, so the dependent school and setting inserts would
+	// otherwise silently receive no input rows.
 	if _, err := db.ExecContext(ctx, `
-		WITH inserted_organization AS (
-			INSERT INTO platform.organizations (id, name, slug, active)
-			VALUES (?, ?, ?, true)
-			ON CONFLICT DO NOTHING
-			RETURNING id
-		), organization_ids AS (
-			SELECT id FROM inserted_organization
-			UNION ALL
-			SELECT id FROM platform.organizations WHERE id = ?
-		), inserted_school AS (
-			INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
-			SELECT ?, id, ?, ?, ?, true FROM organization_ids
-			ON CONFLICT DO NOTHING
-			RETURNING id
-		), school_ids AS (
-			SELECT id FROM inserted_school
-			UNION ALL
-			SELECT id FROM platform.schools WHERE id = ?
-		)
+		INSERT INTO platform.organizations (id, name, slug, active)
+		VALUES (?, ?, ?, true)
+		ON CONFLICT (id) DO NOTHING`,
+		tenantID, fmt.Sprintf("Test Org %d", tenantID), fmt.Sprintf("test-org-%d", tenantID)); err != nil {
+		return fmt.Errorf("ensure test organization: %w", err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
+		VALUES (?, ?, ?, ?, ?, true)
+		ON CONFLICT (id) DO NOTHING`,
+		tenantID, tenantID, fmt.Sprintf("Test School %d", tenantID), fmt.Sprintf("test-school-%d", tenantID), fmt.Sprintf("t%d", tenantID)); err != nil {
+		return fmt.Errorf("ensure test school: %w", err)
+	}
+	if _, err := db.ExecContext(ctx, `
 		INSERT INTO config.setting_values (tenant_id, setting_key, value)
-		SELECT id, 'operations.federal_state', to_jsonb(?::text) FROM school_ids
-		ON CONFLICT (tenant_id, setting_key) DO NOTHING`,
-		tenantID, fmt.Sprintf("Test Org %d", tenantID), fmt.Sprintf("test-org-%d", tenantID), tenantID,
-		tenantID, fmt.Sprintf("Test School %d", tenantID), fmt.Sprintf("test-school-%d", tenantID), fmt.Sprintf("t%d", tenantID), tenantID,
-		TestSchoolFederalState); err != nil {
-		return fmt.Errorf("ensure test tenant: %w", err)
+		VALUES (?, 'operations.federal_state', to_jsonb(?::text))
+		ON CONFLICT (tenant_id, setting_key) DO NOTHING`, tenantID, TestSchoolFederalState); err != nil {
+		return fmt.Errorf("ensure test tenant federal state: %w", err)
 	}
 
 	return nil
