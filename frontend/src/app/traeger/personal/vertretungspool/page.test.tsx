@@ -99,11 +99,13 @@ describe("TraegerStaffPoolPage", () => {
       filename: "vertretungspool-2026-09-07.csv",
     });
     renderPage();
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "Blockungen der Woche herunterladen",
-      }),
-    );
+    // The trigger stays disabled until the week is loaded; a click before
+    // that opens nothing.
+    const trigger = await screen.findByRole("button", {
+      name: "Blockungen der Woche herunterladen",
+    });
+    await vi.waitFor(() => expect(trigger).toBeEnabled());
+    fireEvent.click(trigger);
     fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
     await vi.waitFor(() =>
       expect(download).toHaveBeenCalledWith(
