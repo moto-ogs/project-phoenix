@@ -5,10 +5,11 @@ import {
   fireEvent,
   render as renderRaw,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { SessionProvider } from "next-auth/react";
 import type { ReactElement, ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
 import { SWRConfig } from "~/lib/swr/testing";
@@ -99,13 +100,19 @@ async function renderAndDisable() {
     />
   );
   const view = render(modal(true));
-  fireEvent.click(
-    await screen.findByRole("button", { name: "Betreuung deaktivieren" }),
-  );
+  const disableButton = await screen.findByRole("button", {
+    name: "Betreuung deaktivieren",
+  });
+  await waitFor(() => expect(disableButton).toBeEnabled());
+  fireEvent.click(disableButton);
   return { ...view, modal, answer, onClose, onUpdated };
 }
 
 describe("CaregiverCapabilityModal pending lock (#6533)", () => {
+  beforeAll(async () => {
+    await import("~/lib/error-presentation");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -130,9 +137,11 @@ describe("CaregiverCapabilityModal pending lock (#6533)", () => {
     rerender(modal(false));
     rerender(modal(true));
     // Anker: der neu geöffnete Dialog hat seinen Stand frisch geladen.
-    expect(
-      await screen.findByRole("button", { name: "Betreuung deaktivieren" }),
-    ).toBeEnabled();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Betreuung deaktivieren" }),
+      ).toBeEnabled(),
+    );
 
     await act(async () => {
       answer.resolve(state(false));
