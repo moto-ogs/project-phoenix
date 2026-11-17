@@ -46,6 +46,7 @@ import {
   parentReadersLine,
 } from "~/lib/messaging-status";
 import { parentPath } from "~/lib/parent-url";
+import { useParentChildren } from "~/lib/hooks/use-parent-resources";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { useParentCareTerms } from "~/lib/parent-care-term";
 
@@ -75,6 +76,7 @@ export function ParentGroupThreadView({
   // Eine Gruppennachricht kommt von einer Schule: ihre Texte nennen die
   // Betreuung so, wie diese Schule sie nennt (#6082).
   const { termOfSchool } = useParentCareTerms();
+  const linkedChildren = useParentChildren().data;
   const threadTerm = termOfSchool(thread?.school_name);
   const t = useCareTermTranslations("parentGroupThreads", threadTerm);
   const tm = useCareTermTranslations("parentMessages", threadTerm);
@@ -252,7 +254,18 @@ export function ParentGroupThreadView({
   const readersLine = thread.readers
     ? parentReadersLine(thread.readers, tm)
     : null;
-  const chatChild = sentFor ?? selected ?? thread.children[0]?.student_id;
+  // A child without an OGS place (#4803) has no chat with the OGS, so the
+  // link leads to the conversation of a child that has one, or is left out.
+  const withoutPlace = new Set(
+    (linkedChildren ?? [])
+      .filter((child) => child.without_care_place === true)
+      .map((child) => child.student_id),
+  );
+  const chatChild = [
+    sentFor,
+    selected,
+    ...thread.children.map((child) => child.student_id),
+  ].find((id): id is string => !!id && !withoutPlace.has(id));
   // Any of the guardian's children the thread reached opens its files.
   const firstChild = thread.children[0]?.student_id;
   const chatLink = chatChild ? (

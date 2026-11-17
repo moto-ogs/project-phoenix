@@ -131,12 +131,14 @@ func (s *Service) attachmentWriteChild(ctx context.Context, accountID, studentID
 
 // OpenChildMessageAttachment locates a file of the guardian's conversations
 // about the child. Reading follows the conversation: parent_portal.access is
-// enough, as for the messages themselves.
+// enough, as for the messages themselves. A child without an OGS place
+// (#4803) has no chat of its own, but its family reads the OGS group
+// messages that reach its class, files included; so no OGS-place gate here.
 func (s *Service) OpenChildMessageAttachment(ctx context.Context, accountID, studentID, attachmentID int64) (*StoredMessageAttachment, error) {
 	if s.MessageAttachments == nil {
 		return nil, errors.New("parent: message attachments are not configured")
 	}
-	child, err := s.resolveChatChild(ctx, accountID, studentID)
+	child, err := s.resolveOwnedChild(ctx, accountID, studentID)
 	if err != nil {
 		return nil, err
 	}

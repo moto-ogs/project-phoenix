@@ -320,7 +320,10 @@ func (p *Projection) ListThreadsForGuardianTenants(ctx context.Context, accountI
 		Where("t.guardian_account_id = ?", accountID).
 		Where("t.tenant_id IN (?)", bun.List(tenantIDs)).
 		Where(threadHasMessages).
-		Where(guardianStillLinked, p.guardianLinks(db))
+		Where(guardianStillLinked, p.guardianLinks(db)).
+		// A child without an OGS place has no chat with the OGS (#4803): the
+		// list matches the badge and the conversation, which refuse it.
+		Where("NOT sm.without_care_place")
 	if err := query.Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("list guardian threads cross-tenant: %w", err)
 	}

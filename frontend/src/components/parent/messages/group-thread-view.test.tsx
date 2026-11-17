@@ -1,3 +1,4 @@
+import { useParentChildren } from "~/lib/hooks/use-parent-resources";
 import {
   act,
   fireEvent,
@@ -33,6 +34,13 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
   getGroupThread: vi.fn(),
   getChildFeatures: vi.fn(),
   postChildMessage: vi.fn(),
+}));
+
+vi.mock("~/lib/hooks/use-parent-resources", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/lib/hooks/use-parent-resources")
+  >()),
+  useParentChildren: vi.fn(() => ({ data: undefined })),
 }));
 
 const mockedThread = vi.mocked(getGroupThread);
@@ -159,6 +167,39 @@ describe("ParentGroupThreadView (#4784)", () => {
       screen.getByRole("link", { name: "Zum Chat mit der OGS" }),
     ).toHaveAttribute("href", "/parents/messages/42");
     expect(screen.queryByLabelText("Antwort")).not.toBeInTheDocument();
+  });
+
+  // #4803: ein Kind ohne OGS-Platz hat keinen Chat mit der OGS.
+  it("führt nur zum Chat eines Kindes mit OGS-Platz", async () => {
+    vi.mocked(useParentChildren).mockReturnValue({
+      data: [{ student_id: "42", without_care_place: true }],
+    } as unknown as ReturnType<typeof useParentChildren>);
+    mockedThread.mockResolvedValue({
+      ...sommerfest,
+      closed: true,
+      children: [felix, mia],
+    });
+
+    const { unmount } = renderView();
+
+    expect(
+      await screen.findByRole("link", { name: "Zum Chat mit der OGS" }),
+    ).toHaveAttribute("href", "/parents/messages/43");
+    unmount();
+
+    mockedThread.mockResolvedValue({ ...sommerfest, closed: true });
+    renderView();
+    expect(
+      await screen.findByText(
+        "Diese Gruppennachricht ist geschlossen. Sie können der OGS weiter im Chat zu Ihrem Kind schreiben.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Zum Chat mit der OGS" }),
+    ).not.toBeInTheDocument();
+    vi.mocked(useParentChildren).mockReturnValue({
+      data: undefined,
+    } as unknown as ReturnType<typeof useParentChildren>);
   });
 
   it("zeigt ohne Schreibrecht keinen Antwortweg", async () => {

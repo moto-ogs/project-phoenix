@@ -166,6 +166,15 @@ func TestParentPortal_ChildWithoutCarePlace(t *testing.T) {
 		_, err = svc.CreateCareScheduleRequest(ctx, without.AccountID, without.StudentID,
 			map[string]any{"note": "Montag früher"})
 		require.ErrorIs(t, err, parentService.ErrChildWithoutCarePlace)
+
+		// A pickup note alone asks for OGS pickup too.
+		note := "holt dienstags ab"
+		_, err = svc.CreateGuardianContact(ctx, without.AccountID, without.StudentID, parentService.CreateGuardianContactInput{
+			Contact:          parentService.GuardianContactInput{FirstName: "Oma", LastName: "Platz"},
+			RelationshipType: "other",
+			PickupNotes:      &note,
+		})
+		require.ErrorIs(t, err, parentService.ErrChildWithoutCarePlace)
 	})
 
 	t.Run("OGS reads are refused with their own error", func(t *testing.T) {
