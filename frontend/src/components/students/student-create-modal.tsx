@@ -685,7 +685,7 @@ export function StudentCreateModal({
                           Für Kinder der Klasse ohne Platz in der OGS. Sie
                           stehen in der Kinderliste und in der Klassenansicht (
                           <span className="font-medium">Keine Betreuung</span>
-                          ). Ihre Eltern können Sie danach in die Eltern-App
+                          ). Danach können Sie die Eltern in die Eltern-App
                           einladen. Gruppe, Abholung und Betreuungszeiten gibt
                           es für diese Kinder nicht.
                         </>

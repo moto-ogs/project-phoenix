@@ -583,6 +583,12 @@ func (rs *Resource) updateStudent(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	// A child without an OGS place (#4803) has no way home of the OGS. The
+	// forms resubmit the whole plan on every save, so it is dropped, not
+	// refused.
+	if student.WithoutCarePlace {
+		req.dropDeparturePlan()
+	}
 
 	// Get existing person
 	person, ok := rs.getPersonForStudent(w, r, student)

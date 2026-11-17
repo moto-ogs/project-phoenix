@@ -219,6 +219,21 @@ describe("PersonalInfoEditPanel", () => {
       expect(input.value).toBe("4b");
     });
 
+    // #4803: ein Kind ohne OGS-Platz hat keine Gruppe und keinen Heimweg.
+    it("offers no group and no way home for a child without an OGS place", () => {
+      render(
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={createMockStudent({ without_care_place: true })}
+          onSave={mockOnSave}
+        />,
+      );
+
+      expect(screen.getByLabelText("Klasse")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Gruppe")).not.toBeInTheDocument();
+      expect(screen.queryByText("Erlaubte Heimwege")).not.toBeInTheDocument();
+    });
+
     it("displays birthday in date input", () => {
       render(
         <PersonalInfoEditPanel

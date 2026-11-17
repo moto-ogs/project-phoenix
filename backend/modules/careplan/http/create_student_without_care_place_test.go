@@ -74,8 +74,25 @@ func TestCreateStudentWithoutCarePlace(t *testing.T) {
 
 	// Every later write of the child (an edit, a sick note) rewrites its
 	// membership; it keeps the mark and gives the child no OGS place.
-	update := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", created.Data.ID), map[string]any{"extra_info": "Brille"})
+	update := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", created.Data.ID), map[string]any{
+		"extra_info": "Brille", "bus_days": map[string]bool{"mon": true},
+	})
 	rr = authExec(t, tc, update, testutil.AdminTestClaims(1), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	assert.True(t, withoutPlace(), "an edit keeps the child without an OGS place")
+	read := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/%d", created.Data.ID), nil), testutil.AdminTestClaims(1), []string{"admin:*"})
+	require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+	var stored struct {
+		Data struct {
+			BusDays map[string]bool `json:"bus_days"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(read.Body.Bytes(), &stored))
+	assert.False(t, stored.Data.BusDays["mon"], "an edit stores no OGS way home")
+
+	// No OGS arrival or pickup times for it either.
+	times := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", created.Data.ID), map[string]any{"schedules": []any{}})
+	rr = authExec(t, tc, times, testutil.AdminTestClaims(1), []string{"admin:*"})
+	assert.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), "students.without_care_place_group")
 }
