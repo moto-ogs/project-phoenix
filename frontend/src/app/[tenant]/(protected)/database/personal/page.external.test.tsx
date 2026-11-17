@@ -143,9 +143,11 @@ function signInWith(permissions: string[]) {
 
 // „+ Personal“ klappt für die Leitung auf (#4573): einladen oder extern.
 // jsdom rendert Desktop-Knopf und schwebenden Knopf; [0] ist der Desktop-Knopf.
+// Der Desktop-Knopf heißt nach seinem Text „+ Personal“, das Ziel folgt
+// versteckt (#7112).
 function chooseCreate(entry: "Personal einladen" | "Externe Person anlegen") {
   fireEvent.click(
-    screen.getAllByRole("button", { name: "Personal hinzufügen" })[0]!,
+    screen.getAllByRole("button", { name: /Personal hinzufügen$/ })[0]!,
   );
   fireEvent.click(screen.getByRole("menuitem", { name: entry }));
 }
@@ -364,7 +366,7 @@ describe("Personalverwaltung: externe Personen", () => {
 
     // [1] ist der schwebende Knopf unten rechts.
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Personal hinzufügen" })[1]!,
+      screen.getAllByRole("button", { name: /Personal hinzufügen$/ })[1]!,
     );
     // Die Einrichtungs-Tour zeigt auf diesen Eintrag (setup-tours.ts).
     expect(

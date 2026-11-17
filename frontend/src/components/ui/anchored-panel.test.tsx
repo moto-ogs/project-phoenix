@@ -112,7 +112,9 @@ const CASES: readonly PanelCase[] = [
     name: "ListboxDropdown",
     render: () => <Select />,
     open: async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Gruppe" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /^(Sterne|Monde) ?, Gruppe$/ }),
+      );
       return screen.findByRole("option", { name: "Sterne" });
     },
     isOpen: () => screen.queryByRole("listbox") !== null,
@@ -121,9 +123,9 @@ const CASES: readonly PanelCase[] = [
       fireEvent.pointerDown(option);
       fireEvent.mouseDown(option);
       fireEvent.click(option);
-      expect(screen.getByRole("button", { name: "Gruppe" })).toHaveTextContent(
-        "Monde",
-      );
+      expect(
+        screen.getByRole("button", { name: /^(Sterne|Monde) ?, Gruppe$/ }),
+      ).toHaveTextContent("Monde");
     },
     closesOnUse: true,
     ignoresPageEscape: true,
@@ -235,7 +237,9 @@ describe("outside presses on a phone", () => {
         <Select />
       </>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Gruppe" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /^(Sterne|Monde) ?, Gruppe$/ }),
+    );
     await screen.findByRole("listbox");
 
     fireEvent.pointerDown(screen.getByText("Seite"));

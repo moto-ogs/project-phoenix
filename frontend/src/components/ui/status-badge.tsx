@@ -108,7 +108,7 @@ interface StatusPillCommonProps extends StatusPillDataAttributes {
    * Native tooltip on the badge itself. Use when the short label needs the
    * full context on hover (e.g. "Feiertag" → the holiday's name). Set it here
    * rather than on a wrapper so the tooltip belongs to the element that
-   * carries the text.
+   * carries the text. Screen readers read it after the label.
    */
   readonly title?: string;
   /**
@@ -174,6 +174,11 @@ export function StatusPillBase({
         <span className="sr-only">{accessibleLabel}</span>
       ) : null}
       {truncate ? <span className="truncate">{label}</span> : label}
+      {/* A title reaches neither keyboard nor screen reader; the extra text
+          follows the label as hidden text (#7112). */}
+      {title && title !== label ? (
+        <span className="sr-only">{`, ${title}`}</span>
+      ) : null}
     </span>
   );
 }

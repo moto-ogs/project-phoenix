@@ -92,9 +92,10 @@ describe("Nachrichten: Kachel einer Unterhaltung", () => {
     render(<MessagesPage />);
     const tile = (await screen.findByText("Felix Schneider")).closest("li")!;
     expect(within(tile).getByText(/Elternteil von/)).toBeInTheDocument();
-    expect(
-      within(tile).getByLabelText("2 ungelesene Nachrichten"),
-    ).toBeInTheDocument();
+    // The counter shows the number, the rest is hidden text (#7112).
+    expect(within(tile).getByText("2")).toHaveTextContent(
+      /^2 ungelesene Nachrichten$/,
+    );
     expect(
       within(tile).getByText("Felix wird heute abgeholt."),
     ).toBeInTheDocument();

@@ -95,7 +95,7 @@ describe("PushNotificationSection", () => {
     renderWithToast(<PushNotificationSection />);
     expect(
       await screen.findByRole("button", {
-        name: "Benachrichtigungen einschalten",
+        name: "Aktivieren",
       }),
     ).toBeInTheDocument();
     expect(
@@ -115,7 +115,7 @@ describe("PushNotificationSection", () => {
     expect(pushApi.verifyPushConfiguration).toHaveBeenCalledWith("tenant");
     expect(
       screen.queryByRole("button", {
-        name: "Benachrichtigungen einschalten",
+        name: "Aktivieren",
       }),
     ).not.toBeInTheDocument();
   });
@@ -148,7 +148,7 @@ describe("PushNotificationSection", () => {
     );
     expect(
       await screen.findByRole("button", {
-        name: "Benachrichtigungen einschalten",
+        name: "Aktivieren",
       }),
     ).toBeInTheDocument();
   });
@@ -162,7 +162,7 @@ describe("PushNotificationSection", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: "Benachrichtigungen einschalten",
+        name: "Aktivieren",
       }),
     ).toBeInTheDocument();
     expect(
@@ -207,7 +207,7 @@ describe("PushNotificationSection", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", {
-        name: "Benachrichtigungen einschalten",
+        name: "Aktivieren",
       }),
     ).not.toBeInTheDocument();
     unmount();
@@ -223,7 +223,7 @@ describe("PushNotificationSection", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: "Benachrichtigungen einschalten",
+        name: "Aktivieren",
       }),
     ).toBeInTheDocument();
   });
@@ -295,7 +295,7 @@ describe("PushNotificationSection", () => {
     renderWithToast(<PushNotificationSection portal="tenant" />);
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Benachrichtigungen einschalten",
+        name: "Aktivieren",
       }),
     );
 
@@ -309,7 +309,7 @@ describe("PushNotificationSection", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: "Benachrichtigungen ausschalten",
+        name: "Deaktivieren",
       }),
     ).toBeInTheDocument();
   });
@@ -317,7 +317,7 @@ describe("PushNotificationSection", () => {
   it("passes the parent portal through to the push API", async () => {
     renderWithToast(<PushNotificationSection portal="parent" />);
     const enableButton = await screen.findByRole("button", {
-      name: "Benachrichtigungen einschalten",
+      name: "Aktivieren",
     });
     expect(enableButton).toHaveTextContent("Aktivieren");
     expect(enableButton).toHaveClass("rounded-lg", "px-4", "py-2", "text-sm");
@@ -336,7 +336,7 @@ describe("PushNotificationSection", () => {
     renderWithToast(<PushNotificationSection />);
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Benachrichtigungen einschalten",
+        name: "Aktivieren",
       }),
     );
     expect(
@@ -358,7 +358,7 @@ describe("PushNotificationSection", () => {
     renderWithToast(<PushNotificationSection />);
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Benachrichtigungen ausschalten",
+        name: "Deaktivieren",
       }),
     );
 
@@ -367,7 +367,7 @@ describe("PushNotificationSection", () => {
     );
     expect(
       await screen.findByRole("button", {
-        name: "Benachrichtigungen einschalten",
+        name: "Aktivieren",
       }),
     ).toBeInTheDocument();
   });
@@ -385,7 +385,7 @@ describe("PushNotificationSection", () => {
     renderWithToast(<PushNotificationSection portal="parent" />);
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Benachrichtigungen ausschalten",
+        name: "Deaktivieren",
       }),
     );
 
@@ -482,7 +482,7 @@ describe("PushNotificationSection", () => {
     expect(await screen.findByText("Wird gesendet …")).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: "Benachrichtigungen ausschalten",
+        name: "Deaktivieren",
       }),
     ).toBeDisabled();
     await openSecondaryMenu();
@@ -621,7 +621,7 @@ describe("PushNotificationSection", () => {
     renderWithToast(<PushNotificationSection portal="tenant" />);
 
     const disableButton = await screen.findByRole("button", {
-      name: "Benachrichtigungen ausschalten",
+      name: "Deaktivieren",
     });
     const menuTrigger = screen.getByRole("button", {
       name: "Weitere Aktionen",

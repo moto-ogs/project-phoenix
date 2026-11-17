@@ -270,6 +270,8 @@ describe("OpenRoomSections (#3281)", () => {
     expect(
       within(overbooked).getByText(
         /Mehr Kinder als erlaubt \(höchstens 45\)\. Am Tablet kann sich jetzt kein Kind anmelden/,
+        // The visible explanation; the pill repeats it as hidden text (#7112).
+        { selector: "p" },
       ),
     ).toBeInTheDocument();
 

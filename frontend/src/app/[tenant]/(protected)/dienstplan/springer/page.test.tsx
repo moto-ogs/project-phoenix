@@ -119,11 +119,11 @@ describe("StaffPoolPage", () => {
     // Another school's block names only the school and is no button.
     expect(screen.getAllByText("OGS Süd").length).toBeGreaterThan(0);
     expect(
-      screen.queryByRole("button", { name: /geblockt von OGS Süd/ }),
+      screen.queryByRole("button", { name: /OGS Süd/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: /08:00–13:00, von Ihrer Schule geblockt/,
+        name: /^08:00–13:00 Ihre Schule ?, von Ihrer Schule geblockt\. Blockung aufheben$/,
       }),
     ).toBeVisible();
   });
@@ -183,7 +183,7 @@ describe("StaffPoolPage", () => {
     renderPage();
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /08:00–13:00, von Ihrer Schule geblockt/,
+        name: /^08:00–13:00 Ihre Schule ?, von Ihrer Schule geblockt\. Blockung aufheben$/,
       }),
     );
     const dialog = await screen.findByRole("dialog", {

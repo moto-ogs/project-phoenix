@@ -708,8 +708,11 @@ describe("AggregatedRequestList", () => {
       />,
     );
 
+    // A grouped row is named by its cells; the child follows as hidden
+    // text (#7112).
     const task = await screen.findByRole("button", {
-      name: /Anfrage für Mia Muster/,
+      name: /, Mia Muster$/,
+      expanded: false,
     });
     expect(mockListWithdrawals).toHaveBeenCalledWith({
       search: "",
@@ -845,7 +848,10 @@ describe("AggregatedRequestList", () => {
       />,
     );
     expect(
-      await screen.findByRole("button", { name: /Anfrage für Neues Kind/ }),
+      await screen.findByRole("button", {
+        name: /, Neues Kind$/,
+        expanded: false,
+      }),
     ).toBeVisible();
 
     await act(async () => {
@@ -858,9 +864,7 @@ describe("AggregatedRequestList", () => {
       await oldPage;
     });
 
-    expect(
-      screen.queryByRole("button", { name: /Anfrage für Altes Kind/ }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /Altes Kind/ })).toBeNull();
     expect(mockListWithdrawals).toHaveBeenLastCalledWith(
       expect.objectContaining({ studentId: "20", page: 1 }),
     );
@@ -892,7 +896,10 @@ describe("AggregatedRequestList", () => {
     );
 
     fireEvent.click(
-      await screen.findByRole("button", { name: /Anfrage für Mia Muster/ }),
+      await screen.findByRole("button", {
+        name: /, Mia Muster$/,
+        expanded: false,
+      }),
     );
     fireEvent.click(
       screen.getByRole("button", { name: "Kind sofort löschen" }),
@@ -1060,7 +1067,7 @@ describe("AggregatedRequestList", () => {
     expect(mockListOpen).toHaveBeenCalled();
     expect(mockListWithdrawals).not.toHaveBeenCalled();
     expect(
-      screen.queryByRole("button", { name: /Anfrage für Mia Muster/ }),
+      screen.queryByRole("button", { name: /, Mia Muster$/ }),
     ).not.toBeInTheDocument();
   });
 

@@ -106,7 +106,7 @@ describe("ConflictWarningsBanner", () => {
     renderBanner({ openConflicts: [studentConflict] });
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Konfliktdetails anzeigen" }),
+      screen.getByRole("button", { name: "Details zu den Konflikten" }),
     );
 
     expect(screen.getByText("Emma Beispiel")).toBeInTheDocument();
@@ -123,7 +123,7 @@ describe("ConflictWarningsBanner", () => {
     const { props } = renderBanner({ openConflicts: [studentConflict] });
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Konfliktdetails anzeigen" }),
+      screen.getByRole("button", { name: "Details zu den Konflikten" }),
     );
     fireEvent.click(
       screen.getByRole("button", {
@@ -140,7 +140,7 @@ describe("ConflictWarningsBanner", () => {
     });
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Konfliktdetails anzeigen" }),
+      screen.getByRole("button", { name: "Details zu den Konflikten" }),
     );
     expect(
       screen.queryByRole("button", { name: "Alle Konflikte ausblenden" }),
@@ -187,7 +187,7 @@ describe("ConflictWarningsBanner", () => {
     });
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Konfliktdetails anzeigen" }),
+      screen.getByRole("button", { name: "Details zu den Konflikten" }),
     );
     fireEvent.click(
       screen.getByRole("button", {
@@ -207,7 +207,7 @@ describe("ConflictWarningsBanner", () => {
     const { props } = renderBanner({ openConflicts: [studentConflict] });
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Konfliktdetails anzeigen" }),
+      screen.getByRole("button", { name: "Details zu den Konflikten" }),
     );
     fireEvent.click(
       screen.getByRole("button", { name: "Termin „Lernzeit“ öffnen" }),
@@ -223,7 +223,7 @@ describe("ConflictWarningsBanner", () => {
     });
 
     const toggle = screen.getByRole("button", {
-      name: "Konfliktdetails anzeigen",
+      name: "Details zu den Konflikten",
     });
     toggle.focus();
     expect(toggle).toHaveFocus();
