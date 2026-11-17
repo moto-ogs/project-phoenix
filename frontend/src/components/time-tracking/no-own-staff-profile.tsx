@@ -19,7 +19,7 @@ const NO_OWN_STAFF_PROFILE_CODES: readonly ErrorCode[] = [
 ];
 
 /** Ist `error` die Ablehnung ohne eigenes Personalprofil? */
-export function isNoOwnStaffProfile(error: unknown): boolean {
+function isNoOwnStaffProfile(error: unknown): boolean {
   return (
     error instanceof ApiError &&
     error.status === 403 &&

@@ -7821,21 +7821,21 @@
     },
     {
       "build": "production",
-      "evidence": "func (c staffDirectoryCapability) PersonByAccountID(ctx context.Context, accountID int64) (*workforceModule.Person, error) {\n\tperson, err := c.people.FindByAccountID(ctx, accountID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn publicPerson(person), nil\n}",
+      "evidence": "func (c staffDirectoryCapability) PersonByAccountID(ctx context.Context, accountID int64) (*workforceModule.Person, error) {\n\tperson, err := c.people.FindByAccountID(ctx, accountID)\n\tif err != nil {\n\t\treturn nil, markNoStaffProfile(err)\n\t}\n\treturn publicPerson(person), nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/staffDirectoryCapability.PersonByAccountID",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (c staffDirectoryCapability) ResolveStaffIDByAccountID(ctx context.Context, accountID int64) (int64, error) {\n\treturn c.people.ResolveStaffIDByAccountID(ctx, accountID)\n}",
-      "form": "forward-debt",
+      "evidence": "func (c staffDirectoryCapability) ResolveStaffIDByAccountID(ctx context.Context, accountID int64) (int64, error) {\n\tstaffID, err := c.people.ResolveStaffIDByAccountID(ctx, accountID)\n\treturn staffID, markNoStaffProfile(err)\n}",
+      "form": "unclassified-evidence",
       "id": "roots/owners/staffDirectoryCapability.ResolveStaffIDByAccountID",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (c staffDirectoryCapability) StaffByPersonID(ctx context.Context, personID int64) (*workforceModule.StaffProfile, error) {\n\tstaff, err := c.people.StaffRows().FindMembershipByPersonID(ctx, personID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn publicStaffProfile(staff), nil\n}",
+      "evidence": "func (c staffDirectoryCapability) StaffByPersonID(ctx context.Context, personID int64) (*workforceModule.StaffProfile, error) {\n\tstaff, err := c.people.StaffRows().FindMembershipByPersonID(ctx, personID)\n\tif err != nil {\n\t\treturn nil, markNoStaffProfile(err)\n\t}\n\treturn publicStaffProfile(staff), nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/staffDirectoryCapability.StaffByPersonID",
       "owner": "roots"
