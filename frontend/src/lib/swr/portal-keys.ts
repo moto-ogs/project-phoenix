@@ -258,6 +258,18 @@ export const timetableKeys = {
   /** The offering matching the children a Regeltermin plans (#5104). */
   offeringSuggestion: (query: object) =>
     resourceKey("timetable-offering-suggestion-", query),
+  /** Doppelte Einplanungen eines Termins an einem Tag (Hinweis im Formular). */
+  conflictCheck: (query: object) =>
+    resourceKey("timetable-conflict-check-", query),
+  /** Dienstplan-Lücken der geplanten Tage eines Termins (Hinweis im Formular). */
+  shiftCoverageCheck: (probes: readonly object[]) =>
+    resourceKey("timetable-shift-coverage-check-", { probes }),
+  /** Die Kinder mehrerer Angebote ohne Doppelte, als Quelle eines Regeltermins. */
+  combinedOfferingCounts: (offeringIds: readonly string[], periodId: string) =>
+    resourceKey("timetable-combined-offering-counts-", {
+      offeringIds,
+      periodId,
+    }),
 } as const;
 
 // School portal (Lehrkräfte).
