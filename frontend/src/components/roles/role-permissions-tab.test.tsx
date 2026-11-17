@@ -428,6 +428,26 @@ describe("RolePermissionsTab", () => {
     expect(screen.getByLabelText("rooms:read")).toBeChecked();
   });
 
+  it("shows the load error instead of checkboxes when the read for editing fails", async () => {
+    const props = { role, onSaved, onCancelEdit };
+    const { rerender } = render(
+      <RolePermissionsTab {...props} editing={false} />,
+    );
+    await screen.findByText("1 Berechtigung zugewiesen.");
+
+    mockGetRolePermissions.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    rerender(<RolePermissionsTab {...props} editing />);
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Liste der Berechtigungen"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("rooms:read")).not.toBeInTheDocument();
+  });
+
   it("starts the draft at the saved state again after cancelling", async () => {
     const { rerender } = render(
       <RolePermissionsTab

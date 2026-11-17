@@ -494,6 +494,40 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     );
   });
 
+  it("drops discarded edits when the person returns after the next week failed to load", async () => {
+    getMealPlanWeek
+      .mockRejectedValueOnce(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValue([stored]);
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Nächste Woche" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Verwerfen & wechseln",
+      }),
+    );
+    // Anker: die nächste Woche ist mit ihrem Ladefehler auf dem Bildschirm.
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Woche im Speiseplan"),
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Diese Woche" }));
+    expect(
+      await screen.findByDisplayValue("Fischstäbchen"),
+    ).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Nudeln")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the load error instead of the cached week when the read fails", async () => {
     getMealPlanWeek.mockRejectedValueOnce(
       new ApiError("down", 503, { code: "general.unavailable" }),

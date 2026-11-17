@@ -129,7 +129,13 @@ export function RolePermissionsTab({
   // Ladezustand.
   const { error: loadError, failure } = useSwrResourceLoadError(
     [
-      { data: assigned, error: assignedRead.error },
+      {
+        data: assigned,
+        error: assignedRead.error,
+        // Im Bearbeiten zählt nur der Stand dieses Abrufs: Schlägt er fehl,
+        // zeigt der Reiter den Ladefehler statt Kästchen auf älterem Stand.
+        ...(editing ? { hasConfirmedData: false } : {}),
+      },
       ...(editing
         ? [{ data: catalogRead.data, error: catalogRead.error }]
         : []),

@@ -136,11 +136,9 @@ const generationLockMiddleware: Middleware =
       // of it here, since the revalidation itself never rejects (#6801).
       const shown = (current as { cache?: Cache }).cache?.get(errorKey)?.data;
       if (isAccessRefusal(error) && shown !== undefined) noteShownDataRefusal();
-      if (isReadRefusal(error)) {
-        // Every reader of the key stops showing its data (useScopedSWR)
-        // until a read succeeds; SWR alone would keep it next to the error.
-        markRefused(errorKey, error);
-      }
+      // Every reader of the key stops showing its data (useScopedSWR)
+      // until a read succeeds; SWR alone would keep it next to the error.
+      if (isReadRefusal(error)) markRefused(errorKey, error);
       config.onError?.(error, errorKey, current);
     };
     const onErrorRetry: OnErrorRetry = (
@@ -521,8 +519,17 @@ function useScopedSWR<T, E>(
   // later render can show it; the refusal stays in its own store.
   const withdraw = refused && raw !== undefined;
   useEffect(() => {
-    if (withdraw) void mutate(undefined, { revalidate: false });
-  }, [withdraw, mutate]);
+    if (!withdraw) return;
+    // Counted here too: this effect can run before SWR calls onError, and
+    // then the cache no longer holds the data that callback looks for.
+    if (isAccessRefusal(ownError ?? refusal)) noteShownDataRefusal();
+    // SWR calls onError only for the hook that started the request and still
+    // reads its key. A refusal known from the cache alone is recorded here,
+    // before the removal clears that error.
+    if (fullKey !== null && isReadRefusal(ownError))
+      markRefused(fullKey, ownError);
+    void mutate(undefined, { revalidate: false });
+  }, [withdraw, mutate, fullKey, ownError, refusal]);
   return {
     data: refused ? undefined : data,
     error,

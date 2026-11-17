@@ -127,7 +127,14 @@ export function CaregiverCapabilityModal({
   );
   // Scheitert das Laden, zeigt der Dialog den Fehler, keinen älteren Stand.
   const state = stateError ? undefined : freshState;
-  const loading = capabilityKey !== null && !state && !stateError;
+  // Für welches Konto die Namensfelder schon aus dem geladenen Stand
+  // gefüllt sind. Bis dahin bleibt der Dialog im Ladezustand: Ein Klick
+  // dazwischen sendete leere Namen.
+  const [seededFor, setSeededFor] = useState<string | null>(null);
+  const loading =
+    capabilityKey !== null &&
+    !stateError &&
+    (!state || seededFor !== capabilityKey);
   // Ladefehler im Dialog, Speicherfehler oben im Dialog, beide mit
   // Wiederholen (#2517).
   const { error: stateLoadError } = useSwrResourceLoadError(
@@ -154,11 +161,10 @@ export function CaregiverCapabilityModal({
   }, [missingSchool, showMissingSchool, clearMissingSchool]);
   const loadError = missingSchool ? missingSchoolError : stateLoadError;
 
-  const seededFor = useRef<string | null>(null);
   useEffect(() => {
     if (!isOpen) {
       setBlockerConfirmationOpen(false);
-      seededFor.current = null;
+      setSeededFor(null);
       return;
     }
     setStep("overview");
@@ -169,13 +175,13 @@ export function CaregiverCapabilityModal({
   // Zuordnungen, überschreibt die Eingaben nicht; ein anderes Konto beginnt
   // mit leerer pädagogischer Rolle.
   useEffect(() => {
-    if (!capabilityKey || !state || seededFor.current === capabilityKey) return;
-    seededFor.current = capabilityKey;
+    if (!capabilityKey || !state || seededFor === capabilityKey) return;
+    setSeededFor(capabilityKey);
     clearFormErrors();
     setPosition("");
     setFirstName(state.firstName);
     setLastName(state.lastName);
-  }, [capabilityKey, state, clearFormErrors]);
+  }, [capabilityKey, state, seededFor, clearFormErrors]);
 
   const canDisable = Boolean(state?.isActiveCaregiver);
   const needsNames = state != null && !state.hasPerson;

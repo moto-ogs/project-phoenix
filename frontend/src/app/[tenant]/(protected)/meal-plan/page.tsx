@@ -426,6 +426,11 @@ export default function MealPlanPage() {
   };
 
   const confirmWeekChange = () => {
+    // The discarded edits must not come back when the person returns to this
+    // week: the next read of it applies as a new week.
+    appliedWeek.current = null;
+    setDrafts({});
+    setOriginals({});
     if (pendingOffset !== null) setWeekOffset(pendingOffset);
     setPendingOffset(null);
   };
