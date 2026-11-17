@@ -24,6 +24,7 @@ import {
 import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
+import { homeKeys } from "~/lib/swr/portal-keys";
 import { birthdaysConcept } from "~/lib/concepts/birthdays";
 
 /**
@@ -61,7 +62,7 @@ export function BirthdaysBlock({
   const [allOpen, setAllOpen] = useState(false);
 
   const other = useSWRAuth<BirthdayOverview>(
-    weekStart ? `birthday-overview:${weekStart}` : null,
+    weekStart ? homeKeys.birthdayOverview(weekStart) : null,
     () => fetchBirthdayOverviewClient(weekStart),
   );
 

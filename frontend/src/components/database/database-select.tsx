@@ -1,20 +1,18 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { FieldLabel } from "~/components/ui/field-label";
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { apiErrorFromResponse, unavailableApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { databaseKeys } from "~/lib/swr/portal-keys";
 
 const logger = createLogger({ component: "DatabaseSelect" });
+
+const NO_OPTIONS: ReadonlyArray<SelectOption> = [];
 
 interface SelectOption {
   readonly value: string;
@@ -23,27 +21,14 @@ interface SelectOption {
 }
 
 /**
- * Static options, or options loaded on mount. A failed load goes to the
- * owner's shared load path (`useApiLoadError`, #2517): the kit may not import
- * contexts, so the owner receives the error with a retry through
- * `onLoadError` and hands the catalog text back as `loadError`. While it is
- * set the select gives way to that text, never to an empty list. The owner's
- * retry clears `loadError` and then calls the handed-in retry, which loads
- * again.
+ * The options to choose from. A failed load of them goes to the owner's
+ * shared load path (`useApiLoadError`, #2517) and comes back as `loadError`:
+ * while it is set the select gives way to that text, never to an empty list.
  */
-type DatabaseSelectOptionsSource =
-  | {
-      readonly options?: ReadonlyArray<SelectOption>;
-      readonly loadOptions?: undefined;
-      readonly loadError?: undefined;
-      readonly onLoadError?: undefined;
-    }
-  | {
-      readonly options?: undefined;
-      readonly loadOptions: () => Promise<ReadonlyArray<SelectOption>>;
-      readonly loadError: FormErrorInput;
-      readonly onLoadError: (error: unknown, retry: () => void) => void;
-    };
+type DatabaseSelectOptionsSource = {
+  readonly options?: ReadonlyArray<SelectOption>;
+  readonly loadError?: FormErrorInput;
+};
 
 type DatabaseSelectProps = DatabaseSelectOptionsSource & {
   // Core props
@@ -71,68 +56,19 @@ export function DatabaseSelect({
   label,
   value,
   onChange,
-  options: staticOptions,
-  loadOptions,
+  options = NO_OPTIONS,
   loadError = null,
-  onLoadError,
   placeholder = "Bitte wählen",
   emptyOptionLabel,
   required = false,
   disabled = false,
-  loading: externalLoading = false,
+  loading = false,
   error: externalError,
   helperText,
   className = "",
   includeEmpty = true,
 }: DatabaseSelectProps) {
-  const [options, setOptions] = useState<readonly SelectOption[]>(
-    staticOptions ?? [],
-  );
-  const [loading, setLoading] = useState(false);
-  // Bumped by the owner's „Wiederholen“ after a failed load.
-  const [reload, setReload] = useState(0);
-  // The loader runs in an effect; it reports to the owner's current handler.
-  const onLoadErrorRef = useRef(onLoadError);
-  useLayoutEffect(() => {
-    onLoadErrorRef.current = onLoadError;
-  });
-
-  // Load async options if loadOptions is provided
-  useEffect(() => {
-    if (!loadOptions || staticOptions) return;
-
-    let cancelled = false;
-    const fetchOptions = async () => {
-      try {
-        setLoading(true);
-        const loadedOptions = await loadOptions();
-        if (!cancelled) setOptions(loadedOptions);
-      } catch (err) {
-        logger.warn("failed to load options", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!cancelled) {
-          onLoadErrorRef.current?.(err, () => setReload((n) => n + 1));
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    void fetchOptions();
-    return () => {
-      cancelled = true;
-    };
-  }, [loadOptions, staticOptions, reload]);
-
-  // Update options if staticOptions change
-  useEffect(() => {
-    if (staticOptions) {
-      setOptions(staticOptions);
-    }
-  }, [staticOptions]);
-
-  const isLoading = loading || externalLoading;
+  const isLoading = loading;
   const displayError = externalError;
 
   const selectOptions = [
@@ -201,69 +137,103 @@ export function DatabaseSelect({
  * Specialized select components using DatabaseSelect as base
  */
 
-// Example: EntitySelect for loading entities from API
-type EntitySelectProps = Omit<
-  DatabaseSelectProps,
-  "loadOptions" | "options" | "loadError" | "onLoadError"
-> & {
+// EntitySelect: the options of one API list, read through the shared cache.
+type EntitySelectProps = Omit<DatabaseSelectProps, "options" | "loadError"> & {
   readonly entityType: "groups" | "rooms" | "teachers" | "activities";
   readonly filters?: Record<string, unknown>;
-  /** The owner's load path, see `DatabaseSelectOptionsSource`. */
+  /**
+   * The owner's load path (`useApiLoadError`, #2517): a failed load goes to
+   * `onLoadError` with a retry, its catalog text comes back as `loadError`.
+   * The owner's retry clears `loadError` and then calls the handed-in retry.
+   */
   readonly loadError: FormErrorInput;
   readonly onLoadError: (error: unknown, retry: () => void) => void;
 };
 
-function EntitySelect({ entityType, filters, ...props }: EntitySelectProps) {
-  const loadOptions = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
-          // Convert value to string safely
-          let stringValue: string;
-          if (typeof value === "string") {
-            stringValue = value;
-          } else if (typeof value === "number" || typeof value === "boolean") {
-            stringValue = String(value);
-          } else {
-            // For objects and other types, use JSON.stringify
-            stringValue = JSON.stringify(value);
-          }
-          params.append(key, stringValue);
-        }
-      });
+function entityQuery(filters: Record<string, unknown> | undefined): string {
+  const params = new URLSearchParams();
+  Object.entries(filters ?? {}).forEach(([key, value]) => {
+    if (value === null || value === undefined) return;
+    // Convert value to string safely
+    let stringValue: string;
+    if (typeof value === "string") {
+      stringValue = value;
+    } else if (typeof value === "number" || typeof value === "boolean") {
+      stringValue = String(value);
+    } else {
+      // For objects and other types, use JSON.stringify
+      stringValue = JSON.stringify(value);
     }
+    params.append(key, stringValue);
+  });
+  return params.toString();
+}
 
-    const queryString = params.toString();
-    const url = queryString
-      ? `/api/${entityType}?${queryString}`
-      : `/api/${entityType}`;
-    // A request that never reached the API becomes general.unavailable.
-    const response = await fetch(url).catch((error: unknown) => {
-      throw unavailableApiError(error);
+async function fetchEntityOptions(
+  entityType: EntitySelectProps["entityType"],
+  queryString: string,
+): Promise<ReadonlyArray<SelectOption>> {
+  const url = queryString
+    ? `/api/${entityType}?${queryString}`
+    : `/api/${entityType}`;
+  // A request that never reached the API becomes general.unavailable.
+  const response = await fetch(url).catch((error: unknown) => {
+    throw unavailableApiError(error);
+  });
+
+  if (!response.ok) {
+    throw await apiErrorFromResponse(response, `Failed to load ${entityType}`);
+  }
+
+  const data = (await response.json()) as
+    | Array<{ id: string | number; name: string }>
+    | { data: Array<{ id: string | number; name: string }> };
+
+  // Handle different response formats
+  const items = Array.isArray(data) ? data : data.data;
+
+  return items.map((item) => ({
+    value: String(item.id),
+    label: item.name,
+  }));
+}
+
+function EntitySelect({
+  entityType,
+  filters,
+  loadError,
+  onLoadError,
+  ...props
+}: EntitySelectProps) {
+  const queryString = entityQuery(filters);
+  const read = useSWRAuth(
+    databaseKeys.entityOptions(entityType, queryString),
+    () => fetchEntityOptions(entityType, queryString),
+    { keepPreviousData: false },
+  );
+  const failure = read.error;
+  const retry = read.mutate;
+  // The owner's handler of the current render reports the failure.
+  const onLoadErrorRef = useRef(onLoadError);
+  useLayoutEffect(() => {
+    onLoadErrorRef.current = onLoadError;
+  });
+  useEffect(() => {
+    if (failure === undefined) return;
+    logger.warn("failed to load options", {
+      error: failure instanceof Error ? failure.message : String(failure),
     });
+    onLoadErrorRef.current(failure, () => void retry());
+  }, [failure, retry]);
 
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to load ${entityType}`,
-      );
-    }
-
-    const data = (await response.json()) as
-      | Array<{ id: string | number; name: string }>
-      | { data: Array<{ id: string | number; name: string }> };
-
-    // Handle different response formats
-    const items = Array.isArray(data) ? data : data.data;
-
-    return items.map((item) => ({
-      value: String(item.id),
-      label: item.name,
-    }));
-  }, [entityType, filters]);
-
-  return <DatabaseSelect {...props} loadOptions={loadOptions} />;
+  return (
+    <DatabaseSelect
+      {...props}
+      options={read.data}
+      loading={props.loading === true || read.isLoading}
+      loadError={loadError}
+    />
+  );
 }
 
 /**

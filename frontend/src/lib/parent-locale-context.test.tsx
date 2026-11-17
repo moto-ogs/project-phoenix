@@ -5,7 +5,7 @@ import { waitFor } from "~/test/wait-for-state";
 // The provider now shares the real SWR cache with the parent shell.
 vi.unmock("swr");
 
-import { SWRConfig } from "swr";
+import { SWRConfig } from "~/lib/swr/testing";
 
 import { ParentLocaleProvider, useParentLocale } from "./parent-locale-context";
 import { fetchParentProfile, updateParentPortalLocale } from "./parent-api";

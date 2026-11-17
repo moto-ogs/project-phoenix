@@ -50,6 +50,7 @@ export function useQrLogo(
     readonly result: QrLogoState;
   } | null>(null);
 
+  // oxlint-disable-next-line swr/no-effect-load -- decodes the logo picture in an <img>/canvas for the QR code; image work, no API read
   useEffect(() => {
     if (source === null) return;
     let cancelled = false;

@@ -20,7 +20,7 @@ import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import { employmentTypeLabels } from "~/lib/staff-helpers";
-import { staffQualificationKeys } from "~/lib/swr/staff-keys";
+import { staffQualificationKeys, staffKeys } from "~/lib/swr/staff-keys";
 import { useSWRAuth } from "~/lib/swr";
 import { staffQualificationService } from "~/lib/staff-qualification-api";
 import {
@@ -136,7 +136,7 @@ export function StammdatenTab({
     isLoading: payrollLoading,
     mutate: mutatePayroll,
   } = useSWRAuth(
-    canManagePayroll ? `staff-payroll-number-${staffId}` : null,
+    canManagePayroll ? staffKeys.payrollNumber(staffId) : null,
     () => staffPayrollNumberService.get(staffId),
   );
 
@@ -144,7 +144,7 @@ export function StammdatenTab({
     data: stammdaten,
     error: stammdatenError,
     mutate: mutateStammdaten,
-  } = useSWRAuth(canViewSections ? `staff-stammdaten-${staffId}` : null, () =>
+  } = useSWRAuth(canViewSections ? staffKeys.stammdaten(staffId) : null, () =>
     staffStammdatenService.get(staffId),
   );
 
@@ -183,7 +183,7 @@ export function StammdatenTab({
     error: financialError,
     mutate: mutateFinancial,
   } = useSWRAuth(
-    canViewFinancial ? `staff-stammdaten-financial-${staffId}` : null,
+    canViewFinancial ? staffKeys.stammdatenFinancial(staffId) : null,
     () => staffStammdatenService.getFinancial(staffId),
   );
 

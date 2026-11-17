@@ -4,11 +4,17 @@
 import {
   act,
   fireEvent,
-  render,
+  render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
-import { useState, type ComponentProps } from "react";
+import { SessionProvider } from "next-auth/react";
+import {
+  useState,
+  type ComponentProps,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
@@ -29,7 +35,58 @@ vi.mock("~/components/ui/date-picker", async (importOriginal) => ({
   ...(await import("~/test/mocks/date-picker")).isoDatePickerMock(),
 }));
 
-import { PlannedStatusDaysModal } from "./planned-status-days-modal";
+import { PlannedStatusDaysModal as Panel } from "./planned-status-days-modal";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Das Panel liest über den geteilten Cache; die Prüfung beantwortet der
+// Loader, den der Test dem Wrapper unten gibt.
+const reads = vi.hoisted(() => ({ statusDays: vi.fn() }));
+vi.mock("~/lib/student-status-days-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchStudentStatusDays: reads.statusDays,
+}));
+vi.mock("~/lib/student-partial-absences-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchStudentPartialAbsences: () => Promise.resolve([]),
+}));
+
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: Providers });
+}
+
+/** Das Panel für Kind 42; seine Prüfung beantwortet `loadExistingDays`. */
+function PlannedStatusDaysModal({
+  loadExistingDays,
+  ...props
+}: Omit<ComponentProps<typeof Panel>, "studentId"> & {
+  readonly loadExistingDays: (
+    from: string,
+    to: string,
+  ) => Promise<StudentStatusDay[]>;
+}) {
+  reads.statusDays.mockImplementation((_id: string, from: string, to: string) =>
+    loadExistingDays(from, to),
+  );
+  return <Panel studentId="42" {...props} />;
+}
 
 const TITLE = "Krankmeldung planen";
 const CLOSE = "Fenster schließen";

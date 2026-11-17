@@ -12,11 +12,7 @@ import {
   useFormModalPending,
   type FormModalOperation,
 } from "~/components/ui/use-form-modal-pending";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import type { ActivityCategory } from "~/lib/activity-helpers";
 import {
   findPeriodForDate,
@@ -38,6 +34,10 @@ import {
   parseISODate,
   toISODate,
 } from "~/lib/date-helpers";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import {
   fetchPlannerActivityCategories,
@@ -48,9 +48,14 @@ import {
   planningTrackService,
   type PlanningTrack,
 } from "~/lib/planning-track-api";
-import { staffService, type Staff } from "~/lib/staff-api";
+import type { Staff } from "~/lib/staff-api";
 import { schoolClassesLabel, schoolClassLabel } from "~/lib/school-class-label";
 import { getSchoolYear } from "~/lib/student-helpers";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { timetableKeys } from "~/lib/swr/portal-keys";
+import { staff as staffResource } from "~/lib/swr/staff";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { useTenant } from "~/lib/tenant-context";
 import { timetableService } from "~/lib/timetable-api";
 import {
@@ -64,6 +69,7 @@ import {
   weekdayDatesInRange,
 } from "~/lib/timetable-helpers";
 import { useDebounce } from "~/lib/use-debounce";
+import { useProbeView } from "./use-probe-view";
 import {
   changePerWeekdayRosterMode,
   changeRosterWeekdays,
@@ -104,6 +110,7 @@ import type {
   WeekdayRosterState,
 } from "./form-model";
 import type {
+  ConflictCheckParams,
   ConflictWarningItem,
   CreateInstanceBody,
   CreateTemplateBody,
@@ -191,61 +198,84 @@ function checkShiftCoverageWithSignal(
 }
 
 /**
- * Rooms, categories, groups and planning tracks, each sorted for its picker.
- * A failed list comes back empty; `error` carries the first failure so the
- * form can say which lists are missing instead of showing empty pickers
- * without a reason.
+ * Asks the Dienstplan about every probe of one payload, all under one
+ * timeout. Warnings and counts are summed across the probes.
  */
-async function fetchReferenceLists(): Promise<{
-  rooms: RoomOption[];
-  categories: ActivityCategory[];
-  groups: GroupOption[];
-  planningTracks: PlanningTrack[];
-  error: unknown;
-}> {
-  let firstError: unknown = undefined;
-  const failed = <T>(event: string, fallback: T) => {
-    return (err: unknown): T => {
-      logger.error(event, {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      firstError ??= err;
-      return fallback;
+async function checkShiftCoverageProbes(
+  probes: readonly ShiftCoverageCheckParams[],
+): Promise<CoverageProbeView> {
+  const controller = new AbortController();
+  const timeoutID = window.setTimeout(
+    () => controller.abort(),
+    COVERAGE_CHECK_TIMEOUT_MS,
+  );
+  try {
+    const results = await Promise.all(
+      probes.map((probe) =>
+        checkShiftCoverageWithSignal(probe, controller.signal),
+      ),
+    );
+    return {
+      warnings: results.flatMap((item) => item.coverageWarnings),
+      count: results.reduce(
+        (total, item) =>
+          total + (item.coverageWarningCount ?? item.coverageWarnings.length),
+        0,
+      ),
+      failed: false,
     };
-  };
-  const [rooms, categories, groups, planningTracks] = await Promise.all([
-    fetchPlannerRooms()
-      .then((items) =>
-        items.map((room): RoomOption => ({
-          id: Number(room.id),
-          name: room.name ?? room.room_name ?? `Raum ${room.id}`,
-          building: room.building ?? undefined,
-        })),
-      )
-      .catch(failed<RoomOption[]>("rooms_fetch_failed", [])),
-    fetchPlannerActivityCategories().catch(
-      failed<ActivityCategory[]>("categories_fetch_failed", []),
-    ),
-    fetchPlannerGroups()
-      .then((items) =>
-        items.map((group): GroupOption => ({
-          id: String(group.id),
-          name: group.name,
-        })),
-      )
-      .catch(failed<GroupOption[]>("groups_fetch_failed", [])),
-    planningTrackService
-      .list()
-      .catch(failed<PlanningTrack[]>("planning_tracks_fetch_failed", [])),
-  ]);
-  const byName = (a: { name: string }, b: { name: string }) =>
-    a.name.localeCompare(b.name, "de");
-  return {
-    rooms: [...rooms].sort(byName),
-    categories: [...categories].sort(byName),
-    groups: [...groups].sort(byName),
-    planningTracks,
-    error: firstError,
+  } finally {
+    window.clearTimeout(timeoutID);
+  }
+}
+
+/** What the double-booking hint shows. */
+interface ConflictProbeView {
+  readonly warnings: ConflictWarningItem[];
+  readonly failed: boolean;
+}
+const NO_CONFLICTS: ConflictProbeView = { warnings: [], failed: false };
+const CONFLICT_CHECK_FAILED: ConflictProbeView = { warnings: [], failed: true };
+
+/** What the Dienstplan hint shows. */
+interface CoverageProbeView {
+  readonly warnings: ShiftCoverageWarningItem[];
+  readonly count: number;
+  readonly failed: boolean;
+}
+const NO_COVERAGE_WARNINGS: CoverageProbeView = {
+  warnings: [],
+  count: 0,
+  failed: false,
+};
+const COVERAGE_CHECK_FAILED: CoverageProbeView = {
+  warnings: [],
+  count: 0,
+  failed: true,
+};
+
+const NO_PLANNING_TRACKS: PlanningTrack[] = [];
+
+const byName = (a: { name: string }, b: { name: string }) =>
+  a.name.localeCompare(b.name, "de");
+
+/**
+ * A fresh read shows nothing of an earlier opening. A closing panel still
+ * shows the list of its own opening, so its pickers do not empty while it
+ * animates out.
+ */
+function useHeldWhileClosed<T>(isOpen: boolean, data: T | undefined) {
+  const [held, setHeld] = useState<T | undefined>(undefined);
+  if (data !== undefined && data !== held) setHeld(data);
+  return isOpen ? data : (data ?? held);
+}
+
+/** A failed picker list is logged; the form shows it through its alert. */
+function logLoadFailure(event: string) {
+  return (err: unknown) => {
+    logger.error(event, {
+      error: err instanceof Error ? err.message : String(err),
+    });
   };
 }
 
@@ -401,13 +431,101 @@ export function useEventForm({
     useState(() =>
       initialPrimaryStaffID(initialInstance, initialSeries, convertInstance),
     );
-  const [rooms, setRooms] = useState<RoomOption[]>([]);
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [planningTracks, setPlanningTracks] = useState<PlanningTrack[]>([]);
-  const [groups, setGroups] = useState<GroupOption[]>([]);
-  const [students, setStudents] = useState<PersonOption[]>([]);
+  // Picker lookups read through the shared cache: the plan's room and group
+  // filters, the planning-track catalog and the staff directory answer from
+  // the same entries. They revalidate at every opening and keep their last
+  // list while the panel is closed, so a closing panel does not empty its
+  // pickers.
+  const lookupOptions = {
+    keepPreviousData: true,
+    revalidateOnFocus: false,
+  } as const;
+  const roomRead = useSWRAuth(
+    isOpen ? tenantDailyKeys.plannerRooms() : null,
+    () => fetchPlannerRooms(),
+    { ...lookupOptions, onError: logLoadFailure("rooms_fetch_failed") },
+  );
+  const groupRead = useSWRAuth(
+    isOpen ? tenantDailyKeys.plannerGroups() : null,
+    () => fetchPlannerGroups(),
+    { ...lookupOptions, onError: logLoadFailure("groups_fetch_failed") },
+  );
+  const planningTrackRead = useSWRAuth(
+    isOpen ? tenantAdminKeys.planningTracks() : null,
+    () => planningTrackService.list(),
+    {
+      ...lookupOptions,
+      onError: logLoadFailure("planning_tracks_fetch_failed"),
+    },
+  );
+  // The category list seeds the draft (the first category of a new Termin),
+  // so each opening reads it anew and never starts from an earlier answer.
+  const categoryRead = useFreshSWR(
+    isOpen ? tenantDailyKeys.plannerCategories() : null,
+    () => fetchPlannerActivityCategories(),
+    { onError: logLoadFailure("categories_fetch_failed") },
+  );
+  // The rosters decide what a save writes: until this opening's own list
+  // answered, the stored assignment is kept. So each opening reads them anew
+  // and an answer of an earlier opening never unlocks the roster.
+  // The student catalog has a stricter permission boundary than the shared
+  // planner references. Keep it on an independent read so users without
+  // users:read can still use rooms, categories and groups immediately.
+  const studentRead = useFreshSWR(
+    isOpen ? tenantDailyKeys.plannerStudentOptions() : null,
+    () => fetchAllStudentOptions(),
+    { onError: logLoadFailure("students_fetch_failed") },
+  );
+  // Staff carries the same users:read boundary as students. Keep it
+  // independent from rooms/categories/groups so a 403 cannot masquerade as
+  // an empty editable roster or delay the planner references.
+  const staffRead = useFreshSWR(
+    isOpen ? staffResource.key() : null,
+    () => staffResource.fetcher(),
+    { onError: logLoadFailure("staff_fetch_failed") },
+  );
+
+  const rooms = useMemo(
+    () =>
+      (roomRead.data ?? [])
+        .map((room): RoomOption => ({
+          id: Number(room.id),
+          name: room.name ?? room.room_name ?? `Raum ${room.id}`,
+          building: room.building ?? undefined,
+        }))
+        .sort(byName),
+    [roomRead.data],
+  );
+  const groups = useMemo(
+    () =>
+      (groupRead.data ?? [])
+        .map((group): GroupOption => ({
+          id: String(group.id),
+          name: group.name,
+        }))
+        .sort(byName),
+    [groupRead.data],
+  );
+  const planningTracks = planningTrackRead.data ?? NO_PLANNING_TRACKS;
+  const categoryData = useHeldWhileClosed(isOpen, categoryRead.data);
+  const sortedCategories = useMemo(
+    () => [...(categoryData ?? [])].sort(byName),
+    [categoryData],
+  );
+  const studentData = useHeldWhileClosed(isOpen, studentRead.data);
+  const staffData = useHeldWhileClosed(isOpen, staffRead.data);
+  const students = useMemo(() => sortPeople(studentData ?? []), [studentData]);
+  // Just recorded or invited external persons of this opening; the directory
+  // read brings them once it revalidates.
+  const [addedStaff, setAddedStaff] = useState<Staff[]>([]);
   // The whole staff list, externals with any access included (ADR 0091).
-  const [staffDirectory, setStaffDirectory] = useState<Staff[]>([]);
+  const staffDirectory = useMemo(() => {
+    const added = new Set(addedStaff.map((person) => person.id));
+    return [
+      ...(staffData ?? []).filter((person) => !added.has(person.id)),
+      ...addedStaff,
+    ];
+  }, [addedStaff, staffData]);
   const staff = useMemo(
     () => staffRosterOptions(staffDirectory),
     [staffDirectory],
@@ -415,24 +533,46 @@ export function useEventForm({
 
   /** Puts a just recorded or invited external person into the lists. */
   const addStaffOption = useCallback((person: Staff) => {
-    setStaffDirectory((prev) => [
+    setAddedStaff((prev) => [
       ...prev.filter((item) => item.id !== person.id),
       person,
     ]);
   }, []);
-  const [loadingRefs, setLoadingRefs] = useState(false);
-  const [referenceLoadFailed, setReferenceLoadFailed] = useState(false);
-  const [loadingStudents, setLoadingStudents] = useState(false);
+  const pendingRead = (read: { data?: unknown; error?: unknown }) =>
+    isOpen && read.data === undefined && read.error === undefined;
+  const referenceReads = [roomRead, categoryRead, groupRead, planningTrackRead];
+  const loadingRefs = referenceReads.some(pendingRead);
+  // Rooms, categories, groups and planning tracks share one alert; the lists
+  // that did load stay usable, the alert names the gap instead of leaving an
+  // empty picker unexplained. „Wiederholen“ reads every list again.
+  const referenceLoad = useSwrResourceLoadError(
+    referenceReads,
+    "die Liste der Räume, Kategorien und Gruppen",
+    () =>
+      Promise.all([
+        roomRead.mutate(),
+        categoryRead.mutate(),
+        groupRead.mutate(),
+        planningTrackRead.mutate(),
+      ]),
+  );
+  const referenceLoadFailed = referenceLoad.failure !== undefined;
   // Whether the roster lists failed: the roster stays read-only and keeps its
   // stored assignment. The text comes from the shared load error path.
-  const [studentLoadFailed, setStudentLoadFailed] = useState(false);
-  const [loadingStaff, setLoadingStaff] = useState(false);
-  const [staffLoadFailed, setStaffLoadFailed] = useState(false);
-  const studentLoad = useApiLoadError();
-  const staffLoad = useApiLoadError();
-  // Rooms, categories, groups and planning tracks load together; one alert
-  // names them, the first failure decides its text.
-  const referenceLoad = useApiLoadError();
+  const studentLoad = useSwrResourceLoadError(
+    [studentRead],
+    "die Kinderliste",
+    () => studentRead.mutate(),
+  );
+  const loadingStudents = pendingRead(studentRead);
+  const studentLoadFailed = studentLoad.failure !== undefined;
+  const staffLoad = useSwrResourceLoadError(
+    [staffRead],
+    "die Personalliste",
+    () => staffRead.mutate(),
+  );
+  const loadingStaff = pendingRead(staffRead);
+  const staffLoadFailed = staffLoad.failure !== undefined;
   // Every write path runs through the panel's pending contract (#6593): while
   // it runs, the panel cannot be closed, and an answer that arrives after the
   // panel closed neither closes nor switches a dialog. `pendingKind` names
@@ -512,34 +652,14 @@ export function useEventForm({
     result: EditedInWindowResult;
     onConfirm: (op: FormModalOperation) => Promise<void>;
   } | null>(null);
-  const [conflictWarnings, setConflictWarnings] = useState<
-    ConflictWarningItem[]
-  >([]);
-  const [coverageWarnings, setCoverageWarnings] = useState<
-    ShiftCoverageWarningItem[]
-  >([]);
-  const [coverageWarningCount, setCoverageWarningCount] = useState(0);
-  const [coverageCheckFailed, setCoverageCheckFailed] = useState(false);
-  const [conflictCheckFailed, setConflictCheckFailed] = useState(false);
-  // Reference data can outlive a close/reopen or a changed edit target. Keep
-  // the shared, student, and staff load generations separate so a retry may
-  // replace only its own roster while stale completions cannot overwrite a
-  // newer modal state.
-  const referenceLoadSeq = useRef(0);
-  const categoryLoadSeq = useRef(0);
-  const planningTrackLoadSeq = useRef(0);
-  const studentLoadSeq = useRef(0);
-  const staffLoadSeq = useRef(0);
-  const invalidateReferenceLoads = useCallback(() => {
-    referenceLoadSeq.current++;
-    categoryLoadSeq.current++;
-    planningTrackLoadSeq.current++;
-    studentLoadSeq.current++;
-    staffLoadSeq.current++;
-  }, []);
-  // Monotonically increasing probe id so stale responses are dropped.
-  const probeSeq = useRef(0);
-  const coverageProbeSeq = useRef(0);
+  // A new form waits for this opening's category list to pick its default
+  // category; `formResets` re-arms that pick when the form starts over.
+  const categoryDefaultPending = useRef(false);
+  const [formResets, setFormResets] = useState(0);
+  // Whether the open panel's form was set up for this opening. Before that
+  // the form still holds the previous (or the initial empty) draft, which
+  // the advisory probes must not ask about.
+  const [draftReady, setDraftReady] = useState(false);
   // A materialized occurrence only exposes its own staffing pin, not the
   // template override it may inherit. Remember user intent separately so an
   // unrelated all/following edit can preserve the freshly fetched template.
@@ -576,6 +696,19 @@ export function useEventForm({
   const lastValidationErrors = useRef<Record<string, string>>({});
 
   const effectiveSeries = initialSeries ?? scopedSeries;
+  // A stored, meanwhile archived category of an edited series stays
+  // selectable (marked as no longer offered).
+  const categories = useMemo((): CategoryOption[] => {
+    if (categoryData === undefined || effectiveSeries === null) {
+      return sortedCategories;
+    }
+    return withUnavailableCurrentCategory(
+      sortedCategories,
+      effectiveSeries.categoryId,
+      [],
+      effectiveSeries.categoryName,
+    );
+  }, [categoryData, effectiveSeries, sortedCategories]);
   const isEditingInstance = initialInstance !== null;
   const isEditingSeries = effectiveSeries !== null;
   const isConverting = convertInstance !== null;
@@ -696,146 +829,9 @@ export function useEventForm({
     ? form.primaryStaffId
     : initialPrimaryStaffIDSnapshot;
 
-  const showStudentLoadError = studentLoad.show;
-  const clearStudentLoadError = studentLoad.clear;
-  const showStaffLoadError = staffLoad.show;
-  const clearStaffLoadError = staffLoad.clear;
-  const showReferenceLoadError = referenceLoad.show;
-  const clearReferenceLoadError = referenceLoad.clear;
-  // „Wiederholen“ der Ladefehler startet den Ladevorgang mit dem Stand von
-  // jetzt, nicht mit dem des fehlgeschlagenen Versuchs.
-  const retryReferenceLoadRef = useRef<() => void>(() => undefined);
-  const retryStudentLoadRef = useRef<() => void>(() => undefined);
-  const retryStaffLoadRef = useRef<() => void>(() => undefined);
-
-  /**
-   * Loads rooms, categories, groups and planning tracks and applies them.
-   * `currentCategoryId` and `seriesCategoryName` keep a stored, meanwhile
-   * archived category of an edited series selectable.
-   */
-  const loadReferenceLists = useCallback(
-    (currentCategoryId: string, seriesCategoryName: string | undefined) => {
-      const referenceSeq = ++referenceLoadSeq.current;
-      const categorySeq = ++categoryLoadSeq.current;
-      const planningTrackSeq = ++planningTrackLoadSeq.current;
-      const isCurrentReferenceLoad = () =>
-        referenceLoadSeq.current === referenceSeq;
-      setLoadingRefs(true);
-      setReferenceLoadFailed(false);
-      clearReferenceLoadError();
-      void fetchReferenceLists().then(
-        ({
-          rooms: roomData,
-          categories: categoryData,
-          groups: groupData,
-          planningTracks: planningTrackData,
-          error,
-        }) => {
-          if (!isCurrentReferenceLoad()) return;
-          setRooms(roomData);
-          setGroups(groupData);
-          if (planningTrackLoadSeq.current === planningTrackSeq) {
-            setPlanningTracks(planningTrackData);
-          }
-          if (categoryLoadSeq.current === categorySeq) {
-            setCategories(
-              seriesCategoryName !== undefined
-                ? withUnavailableCurrentCategory(
-                    categoryData,
-                    currentCategoryId,
-                    [],
-                    seriesCategoryName,
-                  )
-                : categoryData,
-            );
-            setForm((prev) =>
-              prev.categoryId || categoryData.length === 0
-                ? prev
-                : { ...prev, categoryId: categoryData[0]?.id ?? "" },
-            );
-          }
-          if (error !== undefined) {
-            // The lists that did load stay usable; the alert names the gap
-            // instead of leaving an empty picker unexplained.
-            setReferenceLoadFailed(true);
-            void showReferenceLoadError(error, {
-              object: "die Liste der Räume, Kategorien und Gruppen",
-              retry: () => retryReferenceLoadRef.current(),
-            });
-          }
-          setLoadingRefs(false);
-        },
-      );
-    },
-    [clearReferenceLoadError, showReferenceLoadError],
-  );
-
-  const loadStudentList = useCallback(() => {
-    const studentSeq = ++studentLoadSeq.current;
-    const isCurrentStudentLoad = () => studentLoadSeq.current === studentSeq;
-    setLoadingStudents(true);
-    setStudentLoadFailed(false);
-    clearStudentLoadError();
-    // The student catalog has a stricter permission boundary than the shared
-    // planner references. Keep it on an independent lifecycle so users without
-    // users:read can still use rooms, categories and groups immediately.
-    return fetchAllStudentOptions()
-      .then((studentData) => {
-        if (!isCurrentStudentLoad()) return;
-        setStudents(sortPeople(studentData));
-      })
-      .catch((err: unknown) => {
-        logger.error("students_fetch_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!isCurrentStudentLoad()) return;
-        setStudents([]);
-        setStudentLoadFailed(true);
-        void showStudentLoadError(err, {
-          object: "die Kinderliste",
-          retry: () => retryStudentLoadRef.current(),
-        });
-      })
-      .finally(() => {
-        if (isCurrentStudentLoad()) setLoadingStudents(false);
-      });
-  }, [clearStudentLoadError, showStudentLoadError]);
-
-  const loadStaffList = useCallback(() => {
-    const staffSeq = ++staffLoadSeq.current;
-    const isCurrentStaffLoad = () => staffLoadSeq.current === staffSeq;
-    setLoadingStaff(true);
-    setStaffLoadFailed(false);
-    clearStaffLoadError();
-    // Staff carries the same users:read boundary as students. Keep it
-    // independent from rooms/categories/groups so a 403 cannot masquerade as
-    // an empty editable roster or delay the planner references.
-    return staffService
-      .getAllStaff()
-      .then((items) => {
-        if (!isCurrentStaffLoad()) return;
-        setStaffDirectory(items);
-      })
-      .catch((err: unknown) => {
-        logger.error("staff_fetch_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!isCurrentStaffLoad()) return;
-        setStaffDirectory([]);
-        setStaffLoadFailed(true);
-        void showStaffLoadError(err, {
-          object: "die Personalliste",
-          retry: () => retryStaffLoadRef.current(),
-        });
-      })
-      .finally(() => {
-        if (isCurrentStaffLoad()) setLoadingStaff(false);
-      });
-  }, [clearStaffLoadError, showStaffLoadError]);
-
   useEffect(() => {
     if (!isOpen) {
-      invalidateReferenceLoads();
+      setDraftReady(false);
       return;
     }
 
@@ -879,19 +875,11 @@ export function useEventForm({
     setScopeClosingDayWarning(null);
     closingDayChoice.current = null;
     setLostEdits(null);
-    setConflictWarnings([]);
-    setConflictCheckFailed(false);
-    setCoverageWarnings([]);
-    setCoverageWarningCount(0);
-    setCoverageCheckFailed(false);
-    setStudents([]);
-    setStaffDirectory([]);
-
-    loadReferenceLists(nextForm.categoryId, initialSeries?.categoryName);
-    void loadStudentList();
-    void loadStaffList();
-
-    return invalidateReferenceLoads;
+    setAddedStaff([]);
+    categoryDefaultPending.current = true;
+    // Also starts the advisory probes over (useProbeView).
+    setFormResets((count) => count + 1);
+    setDraftReady(true);
   }, [
     clearDeleteError,
     clearFormError,
@@ -904,13 +892,22 @@ export function useEventForm({
     defaultStartTime,
     initialInstance,
     initialSeries,
-    invalidateReferenceLoads,
     isOpen,
-    loadReferenceLists,
-    loadStaffList,
-    loadStudentList,
     variant,
   ]);
+
+  // A new Termin starts with the first category of this opening's list,
+  // unless the person already picked one.
+  useEffect(() => {
+    if (!isOpen || !categoryDefaultPending.current) return;
+    if (categoryRead.data === undefined) return;
+    categoryDefaultPending.current = false;
+    const first = sortedCategories[0];
+    if (first === undefined) return;
+    setForm((prev) =>
+      prev.categoryId ? prev : { ...prev, categoryId: first.id },
+    );
+  }, [categoryRead.data, formResets, isOpen, sortedCategories]);
 
   // Advisory room/staff/student conflicts and Dienstplan coverage are
   // separate reads. Exact shift gaps have the stricter time-tracking
@@ -1022,15 +1019,11 @@ export function useEventForm({
   const coverageProbeKey = JSON.stringify(coverageProbes);
   const debouncedCoverageProbeKey = useDebounce(coverageProbeKey, 500);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    // While the debounced key lags behind the live form (typing, or a
-    // reopen that reset the form), probing would use outdated values —
-    // skip and invalidate any in-flight probe for the outdated key.
-    if (debouncedProbeKey !== probeKey) {
-      probeSeq.current++;
-      return;
-    }
+  // While the debounced key lags behind the live form (typing, or a reopen
+  // that reset the form), probing would use outdated values: no read then,
+  // and the last answer stays on screen.
+  const conflictQuery = useMemo((): ConflictCheckParams | "none" | null => {
+    if (!isOpen || !draftReady || debouncedProbeKey !== probeKey) return null;
     const probe = JSON.parse(debouncedProbeKey) as {
       date: string;
       startTime: string;
@@ -1044,113 +1037,137 @@ export function useEventForm({
       probe.staffIds.length > 0 ||
       probe.studentIds.length > 0;
     if (!probe.date || !probe.startTime || !probe.endTime || !hasResource) {
-      setConflictWarnings([]);
-      setConflictCheckFailed(false);
-      return;
+      return "none";
     }
-    const seq = ++probeSeq.current;
-    timetableService
-      .checkConflicts({
-        date: probe.date,
-        startTime: probe.startTime,
-        endTime: probe.endTime,
-        roomId: probe.roomId || undefined,
-        staffIds: probe.staffIds.length > 0 ? probe.staffIds : undefined,
-        studentIds: probe.studentIds.length > 0 ? probe.studentIds : undefined,
-        excludeInstanceId,
-        excludeActivityGroupId,
-      })
-      .then((result) => {
-        if (probeSeq.current !== seq) return; // out-of-order response
-        setConflictWarnings(result.warnings);
-        setConflictCheckFailed(false);
-      })
-      .catch((err: unknown) => {
-        logger.warn("conflict_probe_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (probeSeq.current === seq) {
-          // No warnings is not the same as "no double bookings": say that
-          // the check did not run, saving stays possible.
-          setConflictWarnings([]);
-          setConflictCheckFailed(true);
-        }
-      });
+    return {
+      date: probe.date,
+      startTime: probe.startTime,
+      endTime: probe.endTime,
+      roomId: probe.roomId || undefined,
+      staffIds: probe.staffIds.length > 0 ? probe.staffIds : undefined,
+      studentIds: probe.studentIds.length > 0 ? probe.studentIds : undefined,
+      excludeInstanceId,
+      excludeActivityGroupId,
+    };
   }, [
     debouncedProbeKey,
+    draftReady,
     excludeActivityGroupId,
     excludeInstanceId,
     isOpen,
     probeKey,
   ]);
+  const conflictRead = useSWRAuth(
+    conflictQuery !== null && conflictQuery !== "none"
+      ? timetableKeys.conflictCheck(conflictQuery)
+      : null,
+    () =>
+      conflictQuery !== null && conflictQuery !== "none"
+        ? timetableService.checkConflicts(conflictQuery)
+        : Promise.resolve(null),
+    {
+      // Advisory only: no automatic retry, the hint says the check did not
+      // run and saving stays possible.
+      shouldRetryOnError: false,
+      revalidateOnFocus: false,
+      onError: (err: unknown) => {
+        logger.warn("conflict_probe_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      },
+    },
+  );
+  let conflictMarker: unknown = undefined;
+  let conflictNext: ConflictProbeView | undefined = undefined;
+  if (conflictQuery === "none") {
+    conflictMarker = NO_CONFLICTS;
+    conflictNext = NO_CONFLICTS;
+  } else if (conflictQuery !== null && conflictRead.error !== undefined) {
+    // No warnings is not the same as "no double bookings": say that the
+    // check did not run, saving stays possible.
+    conflictMarker = conflictRead.error;
+    conflictNext = CONFLICT_CHECK_FAILED;
+  } else if (conflictQuery !== null && conflictRead.data) {
+    conflictMarker = conflictRead.data;
+    conflictNext = { warnings: conflictRead.data.warnings, failed: false };
+  }
+  const conflictProbe = useProbeView(
+    NO_CONFLICTS,
+    formResets,
+    conflictMarker,
+    conflictNext,
+  );
+  const conflictWarnings = conflictProbe.view.warnings;
+  const conflictCheckFailed = conflictProbe.view.failed;
 
-  useEffect(() => {
-    if (!isOpen) return;
-    if (!canCheckShiftCoverage) {
-      setCoverageWarnings([]);
-      setCoverageWarningCount(0);
-      setCoverageCheckFailed(false);
-      return;
-    }
-    if (debouncedCoverageProbeKey !== coverageProbeKey) {
-      coverageProbeSeq.current++;
-      return;
-    }
+  // Dienstplan coverage of the debounced probes. The check right before
+  // saving (checkCoverageBeforeSave) stays an explicit call on the live
+  // payload and writes its answer into the same view.
+  const coverageQuery = useMemo(():
+    ShiftCoverageCheckParams[] | "none" | null => {
+    if (!isOpen || !draftReady) return null;
+    if (!canCheckShiftCoverage) return "none";
+    if (debouncedCoverageProbeKey !== coverageProbeKey) return null;
     const probes = JSON.parse(
       debouncedCoverageProbeKey,
     ) as ShiftCoverageCheckParams[];
-    if (probes.length === 0) {
-      setCoverageWarnings([]);
-      setCoverageWarningCount(0);
-      setCoverageCheckFailed(false);
-      return;
-    }
-
-    const seq = ++coverageProbeSeq.current;
-    const controller = new AbortController();
-    const timeoutID = window.setTimeout(
-      () => controller.abort(),
-      COVERAGE_CHECK_TIMEOUT_MS,
-    );
-    setCoverageCheckFailed(false);
-    Promise.all(
-      probes.map((probe) =>
-        checkShiftCoverageWithSignal(probe, controller.signal),
-      ),
-    )
-      .then((results) => {
-        if (coverageProbeSeq.current !== seq) return;
-        setCoverageWarnings(results.flatMap((r) => r.coverageWarnings));
-        setCoverageWarningCount(
-          results.reduce(
-            (total, r) =>
-              total + (r.coverageWarningCount ?? r.coverageWarnings.length),
-            0,
-          ),
-        );
-        setCoverageCheckFailed(false);
-      })
-      .catch((err: unknown) => {
-        logger.warn("shift_coverage_probe_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (coverageProbeSeq.current === seq) {
-          setCoverageWarnings([]);
-          setCoverageWarningCount(0);
-          setCoverageCheckFailed(true);
-        }
-      })
-      .finally(() => window.clearTimeout(timeoutID));
-    return () => {
-      window.clearTimeout(timeoutID);
-      controller.abort();
-    };
+    return probes.length === 0 ? "none" : probes;
   }, [
     canCheckShiftCoverage,
     coverageProbeKey,
     debouncedCoverageProbeKey,
+    draftReady,
     isOpen,
   ]);
+  const coverageKey =
+    coverageQuery !== null && coverageQuery !== "none"
+      ? timetableKeys.shiftCoverageCheck(coverageQuery)
+      : null;
+  const coverageRead = useSWRAuth(
+    coverageKey,
+    () =>
+      coverageQuery !== null && coverageQuery !== "none"
+        ? checkShiftCoverageProbes(coverageQuery)
+        : Promise.resolve(null),
+    {
+      shouldRetryOnError: false,
+      revalidateOnFocus: false,
+      onError: (err: unknown) => {
+        logger.warn("shift_coverage_probe_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      },
+    },
+  );
+  const coveragePending =
+    coverageKey !== null &&
+    coverageRead.error === undefined &&
+    !coverageRead.data;
+  let coverageMarker: unknown = undefined;
+  let coverageNext: CoverageProbeView | undefined = undefined;
+  if (coverageQuery === "none") {
+    coverageMarker = NO_COVERAGE_WARNINGS;
+    coverageNext = NO_COVERAGE_WARNINGS;
+  } else if (coverageKey !== null && coverageRead.error !== undefined) {
+    coverageMarker = coverageRead.error;
+    coverageNext = COVERAGE_CHECK_FAILED;
+  } else if (coverageKey !== null && coverageRead.data) {
+    coverageMarker = coverageRead.data;
+    coverageNext = coverageRead.data;
+  }
+  const coverageProbe = useProbeView(
+    NO_COVERAGE_WARNINGS,
+    formResets,
+    coverageMarker,
+    coverageNext,
+  );
+  const coverageWarnings = coverageProbe.view.warnings;
+  const coverageWarningCount = coverageProbe.view.count;
+  // A new probe runs: its earlier failure no longer applies, the last
+  // warnings stay until it answers.
+  const coverageCheckFailed = coveragePending
+    ? false
+    : coverageProbe.view.failed;
 
   // Recheck the exact live payload before every write. The debounced probe
   // gives early feedback while editing, while this awaited probe closes the
@@ -1165,34 +1182,14 @@ export function useEventForm({
       Boolean(probe && probe.dates.length > 0),
     );
     if (!canCheckShiftCoverage || probes.length === 0) return;
-    const controller = new AbortController();
-    const timeoutID = window.setTimeout(
-      () => controller.abort(),
-      COVERAGE_CHECK_TIMEOUT_MS,
-    );
     try {
-      const results = await Promise.all(
-        probes.map((probe) =>
-          checkShiftCoverageWithSignal(probe, controller.signal),
-        ),
-      );
-      const result = {
-        coverageWarnings: results.flatMap((item) => item.coverageWarnings),
-        coverageWarningCount: results.reduce(
-          (total, item) =>
-            total + (item.coverageWarningCount ?? item.coverageWarnings.length),
-          0,
-        ),
-      };
-      const warningCount =
-        result.coverageWarningCount ?? result.coverageWarnings.length;
-      setCoverageWarnings(result.coverageWarnings);
-      setCoverageWarningCount(warningCount);
-      setCoverageCheckFailed(false);
+      const result = await checkShiftCoverageProbes(probes);
+      const warningCount = result.count;
+      coverageProbe.override(result);
       // Hinweise, keine Fehler: gespeichert wird trotzdem, und das Panel
       // schließt danach. Der Text kommt aus den Feldern, nicht aus dem Satz
       // des Servers.
-      for (const warning of result.coverageWarnings.slice(0, 3)) {
+      for (const warning of result.warnings.slice(0, 3)) {
         toastWarning(shiftCoverageWarningText(warning), { duration: 10_000 });
       }
       if (warningCount > 3) {
@@ -1208,12 +1205,8 @@ export function useEventForm({
             ? coverageError.message
             : String(coverageError),
       });
-      setCoverageWarnings([]);
-      setCoverageWarningCount(0);
-      setCoverageCheckFailed(true);
+      coverageProbe.override(COVERAGE_CHECK_FAILED);
       toastWarning(COVERAGE_CHECK_FAILED_HINT, { duration: 10_000 });
-    } finally {
-      window.clearTimeout(timeoutID);
     }
   };
 
@@ -3450,13 +3443,6 @@ export function useEventForm({
   // per-Jahrgang counts drive the live filter preview and the overlap
   // Hinweis against other Termine sourcing the same offering.
   // -------------------------------------------------------------------
-  const [offeringSources, setOfferingSources] = useState<
-    OfferingSourceOption[] | null
-  >(null);
-  const offeringSourcesLoad = useApiLoadError();
-  const showOfferingSourcesError = offeringSourcesLoad.show;
-  const clearOfferingSourcesError = offeringSourcesLoad.clear;
-  const [offeringSourcesReload, setOfferingSourcesReload] = useState(0);
   // The manual shared roster as it was before a source was selected in this
   // session — restored when the source is cleared again (#2147 review).
   const preSourceStudentIdsRef = useRef<string[]>([]);
@@ -3468,39 +3454,32 @@ export function useEventForm({
   const [preSourceStudentIds, setPreSourceStudentIds] = useState<string[]>([]);
   const wantsOfferingSources =
     expanded && isSeriesFlow && form.targetGroupType === "angebot";
-  useEffect(() => {
-    if (!wantsOfferingSources) return;
-    let cancelled = false;
-    clearOfferingSourcesError();
-    timetableService
-      .getOfferingSources(form.calendarPeriodId || undefined)
-      .then((options) => {
-        if (!cancelled) setOfferingSources(options);
-      })
-      .catch((err: unknown) => {
-        logger.error("offering_sources_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!cancelled) {
-          // An empty list keeps stored sources removable (they render as
-          // "nicht mehr verfügbar"); the alert says why the list is empty.
-          setOfferingSources([]);
-          void showOfferingSourcesError(err, {
-            object: "die Liste der Betreuungsangebote",
-            retry: () => setOfferingSourcesReload((count) => count + 1),
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    wantsOfferingSources,
-    form.calendarPeriodId,
-    offeringSourcesReload,
-    clearOfferingSourcesError,
-    showOfferingSourcesError,
-  ]);
+  const offeringSourcesRead = useSWRAuth(
+    wantsOfferingSources
+      ? tenantDailyKeys.offeringSources(form.calendarPeriodId)
+      : null,
+    () =>
+      timetableService.getOfferingSources(form.calendarPeriodId || undefined),
+    {
+      // Another period keeps the last list until its own answers.
+      keepPreviousData: true,
+      onError: logLoadFailure("offering_sources_load_failed"),
+    },
+  );
+  // An empty list keeps stored sources removable (they render as "nicht mehr
+  // verfügbar"); the alert says why the list is empty.
+  const offeringSources = useMemo(
+    (): OfferingSourceOption[] | null =>
+      offeringSourcesRead.error !== undefined
+        ? []
+        : (offeringSourcesRead.data ?? null),
+    [offeringSourcesRead.data, offeringSourcesRead.error],
+  );
+  const offeringSourcesError = useSwrLoadError(
+    offeringSourcesRead.error,
+    "die Liste der Betreuungsangebote",
+    () => offeringSourcesRead.mutate(),
+  );
 
   // The selected offerings in stored order — the order matters: it is the
   // union's subtraction order on the backend.
@@ -3522,63 +3501,41 @@ export function useEventForm({
 
   // Exact deduplicated counts across the selection: a child enrolled in two
   // selected offerings counts once. Loaded from the combined-counts endpoint;
-  // until it answers, the per-offering sums serve as an optimistic preview.
-  const [combinedSourceCounts, setCombinedSourceCounts] =
-    useState<CombinedOfferingCounts | null>(null);
+  // until it answers, the per-offering sums serve as an optimistic preview:
+  // after adding or removing an offering the previous exact counts describe
+  // the old selection.
+  const combinedCountsKey = form.sourceCareOfferingIds.join(",");
+  const combinedSourceCountsRead = useSWRAuth(
+    wantsOfferingSources && combinedCountsKey !== ""
+      ? timetableKeys.combinedOfferingCounts(
+          form.sourceCareOfferingIds,
+          form.calendarPeriodId,
+        )
+      : null,
+    () =>
+      timetableService.getCombinedOfferingCounts(
+        combinedCountsKey.split(","),
+        form.calendarPeriodId || undefined,
+      ),
+    {
+      keepPreviousData: false,
+      onError: logLoadFailure("combined_offering_counts_failed"),
+    },
+  );
+  const combinedSourceCounts: CombinedOfferingCounts | null =
+    combinedSourceCountsRead.error !== undefined
+      ? null
+      : (combinedSourceCountsRead.data ?? null);
   // Without this the Klassen-Auswahl would sit in "wird ermittelt ..."
   // forever after a failed request — a dead end with nothing the admin can
   // act on (.claude/rules/verstaendlichkeit.md).
-  const [combinedSourceCountsFailed, setCombinedSourceCountsFailed] =
-    useState(false);
-  const combinedSourceCountsLoad = useApiLoadError();
-  const showCombinedSourceCountsError = combinedSourceCountsLoad.show;
-  const clearCombinedSourceCountsError = combinedSourceCountsLoad.clear;
-  const [combinedSourceCountsReload, setCombinedSourceCountsReload] =
-    useState(0);
-  const combinedCountsKey = form.sourceCareOfferingIds.join(",");
-  useEffect(() => {
-    // Reset FIRST: after adding or removing an offering the previous exact
-    // counts describe the old selection — until the new answer lands, the
-    // per-offering sums must serve as the preview again.
-    setCombinedSourceCounts(null);
-    setCombinedSourceCountsFailed(false);
-    clearCombinedSourceCountsError();
-    if (!wantsOfferingSources || combinedCountsKey === "") {
-      return;
-    }
-    let cancelled = false;
-    timetableService
-      .getCombinedOfferingCounts(
-        combinedCountsKey.split(","),
-        form.calendarPeriodId || undefined,
-      )
-      .then((counts) => {
-        if (!cancelled) setCombinedSourceCounts(counts);
-      })
-      .catch((err: unknown) => {
-        logger.error("combined_offering_counts_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!cancelled) {
-          setCombinedSourceCounts(null);
-          setCombinedSourceCountsFailed(true);
-          void showCombinedSourceCountsError(err, {
-            object: "die Kinderzahl der gewählten Angebote",
-            retry: () => setCombinedSourceCountsReload((count) => count + 1),
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    wantsOfferingSources,
-    combinedCountsKey,
-    form.calendarPeriodId,
-    combinedSourceCountsReload,
-    clearCombinedSourceCountsError,
-    showCombinedSourceCountsError,
-  ]);
+  const combinedSourceCountsFailed =
+    combinedSourceCountsRead.error !== undefined;
+  const combinedSourceCountsError = useSwrLoadError(
+    combinedSourceCountsRead.error,
+    "die Kinderzahl der gewählten Angebote",
+    () => combinedSourceCountsRead.mutate(),
+  );
 
   // Per-Jahrgang counts shown next to the filter checkboxes: exact when the
   // combined endpoint answered, per-offering sums (upper bound) before that.
@@ -3935,15 +3892,13 @@ export function useEventForm({
     }));
   };
 
-  const retryStudentLoad = loadStudentList;
-  const retryStaffLoad = loadStaffList;
-
-  useLayoutEffect(() => {
-    retryStudentLoadRef.current = () => void loadStudentList();
-    retryStaffLoadRef.current = () => void loadStaffList();
-    retryReferenceLoadRef.current = () =>
-      loadReferenceLists(form.categoryId, effectiveSeries?.categoryName);
-  });
+  const mutateStudents = studentRead.mutate;
+  const retryStudentLoad = useCallback(
+    () => mutateStudents(),
+    [mutateStudents],
+  );
+  const mutateStaff = staffRead.mutate;
+  const retryStaffLoad = useCallback(() => mutateStaff(), [mutateStaff]);
 
   // Datum and Tagesnotiz only apply to the single-instance scope — series-wide
   // scopes write the template, which carries the Wochennotiz instead of the
@@ -3966,28 +3921,16 @@ export function useEventForm({
    * something (#2131). When a category was just created, it is selected right
    * away — the user opened the dialog because the one they needed was missing.
    */
+  const mutateCategories = categoryRead.mutate;
   const refreshCategories = useCallback(
     async (selectId?: string) => {
-      const categorySeq = ++categoryLoadSeq.current;
       if (selectId) {
         setForm((prev) => ({ ...prev, categoryId: selectId }));
       }
       try {
-        const data = await fetchPlannerActivityCategories();
-        const sorted = [...data].sort((a, b) =>
-          a.name.localeCompare(b.name, "de"),
-        );
-        if (categoryLoadSeq.current !== categorySeq) return;
-        setCategories(
-          effectiveSeries && !selectId
-            ? withUnavailableCurrentCategory(
-                sorted,
-                form.categoryId,
-                categories,
-                effectiveSeries.categoryName,
-              )
-            : sorted,
-        );
+        const data = await mutateCategories();
+        if (data === undefined) return;
+        const sorted = [...data].sort(byName);
         setForm((prev) => {
           const categoryId = reconcileCategoryId(
             prev.categoryId,
@@ -4008,27 +3951,28 @@ export function useEventForm({
         });
       }
     },
-    [categories, effectiveSeries, form.categoryId],
+    [effectiveSeries, mutateCategories],
   );
 
-  const refreshPlanningTracks = useCallback(async (selectId?: string) => {
-    const planningTrackSeq = ++planningTrackLoadSeq.current;
-    if (selectId) {
-      setForm((prev) => ({ ...prev, planningTrackId: selectId }));
-    }
-    try {
-      const planningTracks = await planningTrackService.list();
-      if (planningTrackLoadSeq.current === planningTrackSeq) {
-        setPlanningTracks(planningTracks);
+  const mutatePlanningTracks = planningTrackRead.mutate;
+  const refreshPlanningTracks = useCallback(
+    async (selectId?: string) => {
+      if (selectId) {
+        setForm((prev) => ({ ...prev, planningTrackId: selectId }));
       }
-    } catch (err: unknown) {
-      // Bewusst still: wie beim Kategorien-Abgleich oben bleibt die bisherige
-      // Liste gültig; der Abgleich läuft ohne Zutun im Hintergrund.
-      logger.error("planning_tracks_refresh_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }, []);
+      try {
+        await mutatePlanningTracks();
+      } catch (err: unknown) {
+        // Bewusst still: wie beim Kategorien-Abgleich oben bleibt die
+        // bisherige Liste gültig; der Abgleich läuft ohne Zutun im
+        // Hintergrund.
+        logger.error("planning_tracks_refresh_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+    [mutatePlanningTracks],
+  );
 
   // Local hints win; a server field error marks the same control when the
   // local check had nothing to say. Without one the local map is passed as
@@ -4118,7 +4062,7 @@ export function useEventForm({
     studentBulkOptions,
     targetClassOptions,
     offeringSources,
-    offeringSourcesError: offeringSourcesLoad.error,
+    offeringSourcesError,
     selectedOfferingSources,
     sourcePhaseLockId,
     sourceGradeOptions,
@@ -4128,7 +4072,7 @@ export function useEventForm({
     sourceFilteredCount,
     sourceCountsPending,
     sourceCountsFailed: combinedSourceCountsFailed,
-    sourceCountsError: combinedSourceCountsLoad.error,
+    sourceCountsError: combinedSourceCountsError,
     sourceRosterDiff,
     sourcePreviewTemplateId,
     sourcePreviewFrom,

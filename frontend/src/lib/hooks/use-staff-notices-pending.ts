@@ -6,10 +6,10 @@ import { useShellAuth } from "~/lib/shell-auth-context";
 import {
   countPendingAcknowledgements,
   fetchTodaysNotices,
-  staffNoticesTodayKey,
   type StaffNotice,
 } from "~/lib/staff-notices-api";
 import { useSWRAuth } from "~/lib/swr";
+import { staffNoticeKeys } from "~/lib/swr/staff-keys";
 
 /**
  * Badge der Tagesinformationen (#2180): heutige Hinweise, deren Kenntnisnahme
@@ -32,7 +32,7 @@ export function useStaffNoticesPending() {
     mode === "teacher" &&
     hasPermission(session, "users:read");
   const { data, isLoading, mutate } = useSWRAuth<StaffNotice[]>(
-    enabled ? staffNoticesTodayKey(accountId) : null,
+    enabled ? staffNoticeKeys.today(accountId) : null,
     fetchTodaysNotices,
     {
       revalidateOnFocus: true,

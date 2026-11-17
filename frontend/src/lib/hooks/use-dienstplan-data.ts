@@ -5,6 +5,7 @@ import { timetableKeys } from "~/lib/swr/portal-keys";
 import { useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import type { KeyedMutator } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 import { hasPermission } from "~/lib/auth-utils";
 import { staffShiftService } from "~/lib/shift-api";
@@ -149,7 +150,7 @@ export function useDienstplanData(
     mutate: mutateOverview,
   } = useSWRAuth<StaffScheduleOverview>(
     canUseAssignmentOverview
-      ? `dienstplan-overview-${weekFrom}-${weekTo}`
+      ? tenantDailyKeys.dienstplanOverview(weekFrom, weekTo)
       : null,
     () => staffShiftService.getOverview(weekFrom, weekTo),
   );
@@ -171,7 +172,9 @@ export function useDienstplanData(
     isLoading: legacyShiftsLoading,
     mutate: mutateLegacyShifts,
   } = useSWRAuth<StaffShift[]>(
-    canUseAssignmentOverview ? null : `dienstplan-shifts-${weekFrom}-${weekTo}`,
+    canUseAssignmentOverview
+      ? null
+      : tenantDailyKeys.dienstplanShifts(weekFrom, weekTo),
     () => staffShiftService.getShifts(weekFrom, weekTo),
   );
 
@@ -180,7 +183,7 @@ export function useDienstplanData(
     error: shiftTypesError,
     isLoading: shiftTypesLoading,
     mutate: mutateShiftTypes,
-  } = useSWRAuth<ShiftType[]>("dienstplan-shift-types", () =>
+  } = useSWRAuth<ShiftType[]>(tenantDailyKeys.shiftTypes(), () =>
     // Auch entfernte Dienstarten: geplante Dienste tragen sie weiter (#6845).
     shiftTypeService.getShiftTypes({ includeArchived: true }),
   );

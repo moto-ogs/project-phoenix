@@ -61,6 +61,7 @@ export default function EnrollPhasePickerPage() {
   } = useApiLoadError();
   const [loadAttempt, setLoadAttempt] = useState(0);
 
+  // oxlint-disable-next-line swr/no-effect-load -- public enrollment for families without a session; useSWRAuth fetches only with a session and ~/lib/swr has no public reader
   useEffect(() => {
     let cancelled = false;
     async function load() {

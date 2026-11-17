@@ -96,6 +96,7 @@ export function HomeBoard({ editing, ...props }: HomeBoardProps) {
   const { error: loadError, show, clear } = useApiLoadError();
   const Editor = (loadedEditor ?? editor)?.default;
 
+  // oxlint-disable-next-line swr/no-effect-load -- loads the editor's code chunk (dynamic import) when editing starts, no data read
   useEffect(() => {
     clear();
     if (!editing || Editor) return;

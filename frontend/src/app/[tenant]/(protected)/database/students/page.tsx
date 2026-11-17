@@ -39,6 +39,7 @@ import { studentsConfig } from "@/components/database/configs/students.config";
 import type { Student } from "~/lib/student-helpers";
 import type { StudentGuardianPayload } from "@/lib/guardian-helpers";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { createLogger } from "~/lib/logger";
 import { hasPermission } from "~/lib/auth-utils";
 import { createClassListEntry } from "~/lib/class-list-entries-api";
@@ -152,7 +153,7 @@ function StudentsPageContent() {
     data: studentsData,
     isLoading: loading,
     error: studentsError,
-  } = useSWRAuth("database-students-list", async () => {
+  } = useSWRAuth(tenantAdminKeys.students(), async () => {
     const data = await service.getList({
       page: 1,
       pageSize: 1000,
@@ -165,7 +166,7 @@ function StudentsPageContent() {
   // Kinderkontingent der Schule (#3569). Ein Fehler blendet die Zeile nur
   // aus; die Liste bleibt davon unberührt.
   const { data: childQuota } = useSWRAuth(
-    "database-students-child-quota",
+    tenantAdminKeys.studentChildQuota(),
     fetchChildQuota,
   );
 
@@ -223,7 +224,7 @@ function StudentsPageContent() {
 
   const { data: allGroups = [] } = useSWRAuth<
     Array<{ value: string; label: string }>
-  >("database-groups-dropdown", async () => {
+  >(tenantAdminKeys.groupOptions(), async () => {
     const response = await fetch("/api/groups");
     if (!response.ok) {
       logger.error("failed to fetch groups", { status: response.status });
@@ -392,8 +393,8 @@ function StudentsPageContent() {
       }
       // Das Panel schließt sich selbst, nur im Vorgang, der angelegt hat.
       await Promise.all([
-        tenantMutate("database-students-list"),
-        tenantMutate("database-students-child-quota"),
+        tenantMutate(tenantAdminKeys.students()),
+        tenantMutate(tenantAdminKeys.studentChildQuota()),
       ]);
     },
     [service, tenantMutate, toastSuccess, toastWarning, router, objectHref],
@@ -401,7 +402,7 @@ function StudentsPageContent() {
 
   const handleArrivalChanged = useCallback(() => {
     setArrivalRevision((prev) => prev + 1);
-    void tenantMutate("database-students-list");
+    void tenantMutate(tenantAdminKeys.students());
   }, [tenantMutate]);
 
   const studentsWithArrival = useMemo(
@@ -484,8 +485,8 @@ function StudentsPageContent() {
                 setCareExitIds(null);
                 finishSelection();
                 await Promise.all([
-                  tenantMutate("database-students-list"),
-                  tenantMutate("database-students-child-quota"),
+                  tenantMutate(tenantAdminKeys.students()),
+                  tenantMutate(tenantAdminKeys.studentChildQuota()),
                 ]);
               }}
             />

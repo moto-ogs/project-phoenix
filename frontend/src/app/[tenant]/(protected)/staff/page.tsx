@@ -4,7 +4,7 @@ import { ListRowLink } from "~/components/ui/list-row-link";
 import { FramedList } from "~/components/ui/framed-list";
 import { COUNTER_TONE } from "~/lib/counter-tones";
 import { staff as staffKeys } from "~/lib/swr/staff";
-import { traegerMonthStaffKeys } from "~/lib/swr/staff-keys";
+import { staffRecordKeys, traegerMonthStaffKeys } from "~/lib/swr/staff-keys";
 import { Suspense, useState, useMemo, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useSearchParams } from "next/navigation";
@@ -316,7 +316,7 @@ function StaffPageContent() {
     error: formerError,
     mutate: mutateFormer,
   } = useSWRAuth<FormerStaff[]>(
-    canListStaff && showFormer ? "staff-former-list" : null,
+    canListStaff && showFormer ? staffRecordKeys.former() : null,
     async () =>
       (await staffService.getFormerStaff()).sort(
         (a, b) =>
@@ -342,7 +342,7 @@ function StaffPageContent() {
     isLoading: isDocumentDirectoryLoading,
     mutate: mutateDocumentDirectory,
   } = useSWRAuth<StaffDocumentDirectoryEntry[]>(
-    showDocumentDirectory ? "staff-document-directory" : null,
+    showDocumentDirectory ? staffRecordKeys.documentDirectory() : null,
     () => staffService.getDocumentDirectory(),
     { revalidateOnFocus: false },
   );
@@ -375,9 +375,15 @@ function StaffPageContent() {
     canManageTimeTracking && view === "audit" && !canListStaff;
   const accountsKey =
     canManageTimeTracking && view === "accounts"
-      ? `staff-time-accounts-${monthAnchor.year}-${monthAnchor.month}-${employmentFilter}-${saldoMin ?? ""}-${saldoMax ?? ""}`
+      ? staffRecordKeys.timeAccounts(
+          monthAnchor.year,
+          monthAnchor.month,
+          employmentFilter,
+          saldoMin,
+          saldoMax,
+        )
       : needsAuditStaffOptions
-        ? `staff-audit-options-${monthAnchor.year}-${monthAnchor.month}`
+        ? staffRecordKeys.auditOptions(monthAnchor.year, monthAnchor.month)
         : null;
   const {
     data: accounts,
@@ -410,7 +416,7 @@ function StaffPageContent() {
   // Abschluss-Status des angezeigten Monats (#1417). Leeres Array = offen.
   const monthCloseKey =
     canManageTimeTracking && view === "accounts"
-      ? `staff-month-close-${monthAnchor.year}-${monthAnchor.month}`
+      ? staffRecordKeys.monthClose(monthAnchor.year, monthAnchor.month)
       : null;
   const {
     data: monthCloseSnapshots,

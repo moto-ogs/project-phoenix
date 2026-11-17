@@ -8,6 +8,15 @@ import type {
   TimetableRosterRow,
 } from "~/lib/timetable-operations-types";
 
+// The add dialog's child list reads through the shared cache, which needs the
+// session; the global SWR stub keeps it loading.
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "1" }, expires: "2099-01-01" },
+    status: "authenticated",
+  }),
+}));
+
 const VIEW_ONLY_HINT = "Sie sind für diese Aktivität nicht eingeplant.";
 
 // The arrows that fold a list (#4353) only change the view; every other
