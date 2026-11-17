@@ -32,6 +32,7 @@ import { ownShiftService } from "~/lib/shift-api";
 import type { OwnAssignment } from "~/lib/shift-helpers";
 import { useOptionalSupervision } from "~/lib/supervision-context";
 import { useSWRAuth } from "~/lib/swr";
+import { homeKeys, timeTrackingKeys } from "~/lib/swr/portal-keys";
 import { dashboardKeys } from "~/lib/swr/shell-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
@@ -96,12 +97,12 @@ export function NowStrip({
   const wantsAnalytics = access.has("groups:read");
 
   const own = useSWRAuth<OwnAssignment[]>(
-    wantsOwn ? `time-tracking-own-assignments-today-${today}` : null,
+    wantsOwn ? timeTrackingKeys.ownAssignmentsToday(today) : null,
     () => ownShiftService.getOwnAssignments(today, today),
     { revalidateOnFocus: false, errorRetryCount: 1 },
   );
   const day = useSWRAuth<PlannedTimetableInstance[]>(
-    wantsDay ? "home-day-flow" : null,
+    wantsDay ? homeKeys.dayFlow() : null,
     () =>
       timetableOperationsApi.plannedNow({ scope: "day", includeRoster: false }),
     { refreshInterval: 5 * 60 * 1000 },

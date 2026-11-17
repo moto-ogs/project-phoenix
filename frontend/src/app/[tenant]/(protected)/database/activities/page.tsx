@@ -96,7 +96,7 @@ function ActivitiesPageContent() {
     isLoading: swrLoading,
     error: activitiesError,
     mutate: mutateActivities,
-  } = useSWRAuth("database-activities-list", async () => {
+  } = useSWRAuth(tenantAdminKeys.activities(), async () => {
     const data = await service.getList({ page: 1, pageSize: 500 });
     return Array.isArray(data.data) ? data.data : [];
   });
@@ -234,7 +234,7 @@ function ActivitiesPageContent() {
       const created = await service.create(payload);
       toastSuccess(`Die Aktivität „${created.name}“ ist angelegt.`);
       setShowCreateModal(false);
-      await tenantMutate("database-activities-list");
+      await tenantMutate(tenantAdminKeys.activities());
     },
     [service, tenantMutate, toastSuccess],
   );
@@ -254,7 +254,7 @@ function ActivitiesPageContent() {
       // gehört nicht ins Formular.
       void reloadDetail();
       setFormResetCounter((current) => current + 1);
-      await tenantMutate("database-activities-list");
+      await tenantMutate(tenantAdminKeys.activities());
     },
     [selectedActivity, service, tenantMutate, toastSuccess, reloadDetail],
   );
@@ -270,7 +270,7 @@ function ActivitiesPageContent() {
       handleDeleteCancel();
       setFormResetCounter(0);
       handleSelectActivity(null);
-      await tenantMutate("database-activities-list");
+      await tenantMutate(tenantAdminKeys.activities());
     } catch (err) {
       logger.warn("activity_delete_failed", {
         activity_id: selectedActivity.id,

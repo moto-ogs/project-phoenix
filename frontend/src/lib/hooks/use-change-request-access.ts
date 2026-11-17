@@ -11,8 +11,7 @@ import { fetchChangeRequestAccess } from "~/lib/change-requests-api";
 import { hasEffectiveAdminScope } from "~/lib/auth-utils";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { useSWRAuth } from "~/lib/swr";
-
-export const CHANGE_REQUEST_ACCESS_SWR_KEY = "change-request-access";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
 
 /**
  * Verbindet die langlebigen JWT-Rechte mit dem aktuellen serverseitigen
@@ -33,7 +32,7 @@ export function useChangeRequestAccess() {
   const { data, error, isLoading, mutate } =
     useSWRAuth<ParentRequestReviewAccess>(
       needsParentReviewAccess && accountId
-        ? `${CHANGE_REQUEST_ACCESS_SWR_KEY}:${accountId}`
+        ? shellResourceKeys.changeRequestAccess(accountId)
         : null,
       fetchChangeRequestAccess,
       {

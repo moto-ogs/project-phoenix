@@ -4,6 +4,8 @@ import { useCallback } from "react";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { staffMonthSummaryService } from "~/lib/staff-api";
 import { useLiveRefreshInterval, useSWRAuth } from "~/lib/swr";
+import { timeTrackingKeys } from "~/lib/swr/portal-keys";
+import { staffMonthSummaryKeys } from "~/lib/swr/staff-keys";
 import { timeTrackingService } from "~/lib/time-tracking-api";
 import {
   OPEN_MONTH_REFRESH_MS,
@@ -67,7 +69,9 @@ export function useAccountBalance(staffId?: string): AccountBalance {
     isLoading: configLoading,
     error: configError,
     mutate: mutateConfig,
-  } = useSWRAuth("time-tracking-config", () => timeTrackingService.getConfig());
+  } = useSWRAuth(timeTrackingKeys.config(), () =>
+    timeTrackingService.getConfig(),
+  );
 
   // ISO "YYYY-MM-DD" compares lexicographically. An empty setting means "no
   // anchor configured" — the backend then starts the chain on January 1st.
@@ -88,8 +92,8 @@ export function useAccountBalance(staffId?: string): AccountBalance {
     !canResolveAccount
       ? null
       : staffId
-        ? `staff-month-summary-${staffId}-${year}-${month}`
-        : `time-tracking-month-summary-${year}-${month}`,
+        ? staffMonthSummaryKeys.month(staffId, year, month)
+        : timeTrackingKeys.monthSummary(year, month),
     () =>
       staffId
         ? staffMonthSummaryService.getMonthSummary(staffId, year, month)

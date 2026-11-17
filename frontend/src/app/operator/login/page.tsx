@@ -47,6 +47,7 @@ export default function OperatorLoginPage() {
     if (status !== "loading") setSessionKnown(true);
   }, [status]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- session guard: signs a stale session out before the login form shows; no read
   useEffect(() => {
     const cleanup = signOutStaleSession({
       status,

@@ -31,6 +31,8 @@ interface FieldConfig {
     | Array<{ value: string; label: string }>
     | (() => Promise<Array<{ value: string; label: string }>>);
   loadOptions?: () => Promise<Array<{ value: string; label: string }>>;
+  /** Cache name of the response an `options` function reads (DatabaseForm). */
+  optionsResource?: string;
   // For custom fields
   component?: React.ComponentType<{
     value: unknown;
@@ -318,6 +320,7 @@ export function configToFormSection(section: SectionConfig): FormSection {
       required: field.required,
       placeholder: field.placeholder,
       options: field.options,
+      optionsResource: field.optionsResource,
       validation: field.validation,
       component: field.component,
       componentProps: field.componentProps,

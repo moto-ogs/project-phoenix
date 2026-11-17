@@ -21,6 +21,7 @@
 
 import { apiErrorFromResponse } from "~/lib/api-error";
 import { useImmutableSWR } from "~/lib/swr";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
 import type { UserContextResponse } from "~/lib/user-context-types";
 
 interface ApiResponse<T> {
@@ -59,11 +60,11 @@ interface UseUserContextReturn {
  * - React Strict Mode safe (no double-fetch)
  * - Pre-computed derived data (group IDs, room names)
  */
-export const USER_CONTEXT_SWR_KEY = "user-context";
+export const USER_CONTEXT_SWR_KEY = shellResourceKeys.userContext();
 
 export function useUserContext(enabled = true): UseUserContextReturn {
   const { data, isLoading, error } = useImmutableSWR<UserContextResponse>(
-    enabled ? USER_CONTEXT_SWR_KEY : null,
+    enabled ? shellResourceKeys.userContext() : null,
     async () => {
       const response = await fetch("/api/user-context", {
         credentials: "include",

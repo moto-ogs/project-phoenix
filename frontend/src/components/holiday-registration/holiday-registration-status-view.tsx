@@ -67,6 +67,7 @@ export function HolidayRegistrationStatusView({
     }
   }, [clear, show, t, token]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- status-link token page, open without a session; ~/lib/swr has no public reader
   useEffect(() => {
     void load();
   }, [load]);

@@ -28,10 +28,11 @@ import {
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useTimetableEnabled } from "~/lib/tenant-context";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 
-const CACHE_KEY = "database-planning-tracks";
+const CACHE_KEY = tenantAdminKeys.planningTracks();
 const DEFAULT_COLOR: string = LOCATION_COLORS.OTHER_ROOM;
 
 function sections(): SectionConfig[] {

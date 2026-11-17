@@ -6,7 +6,6 @@ const { state, useUnreadCount } = vi.hoisted(() => ({
   state: {
     elternAppBooked: true,
     messagingEnabled: true,
-    messagesUnread: 4,
   },
   useUnreadCount: vi.fn(() => ({
     unreadCount: 0,
@@ -29,15 +28,11 @@ vi.mock("~/lib/parent-messages-api", () => ({
 vi.mock("~/lib/shell-auth-context", () => ({
   useShellAuth: () => ({ mode: "teacher" }),
 }));
-vi.mock("~/lib/shell-seed", () => ({
-  useShellSeed: () => ({ counts: { messagesUnread: state.messagesUnread } }),
-}));
 vi.mock("~/lib/tenant-context", () => ({
   useModuleBooked: () => state.elternAppBooked,
   useTenantSafe: () => ({
     tenant: { messagingEnabled: state.messagingEnabled },
   }),
-  useTenantSlugSafe: () => "testschule",
 }));
 vi.mock("./use-unread-count", () => ({ useUnreadCount }));
 
@@ -45,35 +40,39 @@ describe("useMessagesUnread", () => {
   beforeEach(() => {
     state.elternAppBooked = true;
     state.messagingEnabled = true;
-    state.messagesUnread = 4;
     useUnreadCount.mockClear();
   });
 
-  it("uses the server seed when parent messaging is available", () => {
+  // The tenant layout seeds this key from the server (shellOwnedEntries);
+  // only an enabled reader shows the seed.
+  it("reads the server-seeded key when parent messaging is available", () => {
     renderHook(() => useMessagesUnread());
 
     expect(useUnreadCount).toHaveBeenCalledWith(
-      expect.objectContaining({ initialCount: 4 }),
+      "badge-messages-unread:account-1",
+      expect.objectContaining({ enabled: true }),
     );
   });
 
-  it("does not use the server seed without the Eltern-App module", () => {
+  it("does not read the seed without the Eltern-App module", () => {
     state.elternAppBooked = false;
 
     renderHook(() => useMessagesUnread());
 
     expect(useUnreadCount).toHaveBeenCalledWith(
-      expect.objectContaining({ initialCount: undefined }),
+      expect.anything(),
+      expect.objectContaining({ enabled: false }),
     );
   });
 
-  it("does not use the server seed while parent messaging is disabled", () => {
+  it("does not read the seed while parent messaging is disabled", () => {
     state.messagingEnabled = false;
 
     renderHook(() => useMessagesUnread());
 
     expect(useUnreadCount).toHaveBeenCalledWith(
-      expect.objectContaining({ initialCount: undefined }),
+      expect.anything(),
+      expect.objectContaining({ enabled: false }),
     );
   });
 });

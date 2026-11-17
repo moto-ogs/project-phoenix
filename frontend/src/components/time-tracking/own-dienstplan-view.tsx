@@ -157,7 +157,7 @@ function OwnDienstplanContent() {
     mutate: mutateProjection,
   } = useSWRAuth(
     zeiterfassungBooked
-      ? `time-tracking-schedule-targets-${weekFrom}-${weekTo}`
+      ? timeTrackingKeys.scheduleTargets(weekFrom, weekTo)
       : null,
     () => timeTrackingService.getDailyProjection(weekFrom, weekTo),
     { revalidateOnFocus: false },

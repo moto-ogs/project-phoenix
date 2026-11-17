@@ -604,6 +604,7 @@ export function StudentNotizenTab({
     [teamNotices.notices, studentId],
   );
   const notesShown = data !== undefined;
+  // oxlint-disable-next-line swr/no-effect-load -- one-shot write: marks the team notices of this child read after refreshing the shared notes key (revalidateNotes writes through mutate); no read of its own
   useEffect(() => {
     if (!active || !notesShown || unreadHere.length === 0) return;
     let cancelled = false;

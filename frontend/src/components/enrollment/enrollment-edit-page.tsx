@@ -88,6 +88,7 @@ function EnrollmentEditPageContent({ params, adjustOnly = false }: Props) {
     `/anmeldung/status/${encodeURIComponent(token)}/${adjustOnly ? "adjust" : "edit"}`,
   );
 
+  // oxlint-disable-next-line swr/no-effect-load -- status-link token page, open without a session; the draft must start from this token's fresh bootstrap
   useEffect(() => {
     let cancelled = false;
     async function load() {

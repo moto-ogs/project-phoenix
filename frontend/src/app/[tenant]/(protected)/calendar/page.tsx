@@ -97,6 +97,7 @@ import {
   type SchoolHolidays,
 } from "~/lib/school-holidays-api";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { useCalDAVEnabled } from "~/lib/tenant-context";
 import { calendarPeriodsConcept } from "~/lib/concepts/calendarPeriods";
 import { ChoiceTile } from "~/components/ui/choice-tile";
@@ -523,7 +524,11 @@ function StaffCalendarPageInner() {
   // (#7306): dann fragt die Seite sie gar nicht erst ab.
   const hasOwnStaff = useHasOwnStaff();
   const calendarKey = hasOwnStaff
-    ? `staff-calendar-${viewMode}-${toISODate(range.from)}-${toISODate(range.to)}`
+    ? tenantDailyKeys.staffCalendar(
+        viewMode,
+        toISODate(range.from),
+        toISODate(range.to),
+      )
     : null;
   const {
     data,
@@ -548,8 +553,9 @@ function StaffCalendarPageInner() {
     data: holidayData,
     error: holidayError,
     mutate: mutateHolidays,
-  } = useSWRAuth<SchoolHolidays>(`school-holidays-${fromISO}-${toISO}`, () =>
-    getSchoolHolidays(fromISO, toISO),
+  } = useSWRAuth<SchoolHolidays>(
+    tenantDailyKeys.schoolHolidays(fromISO, toISO),
+    () => getSchoolHolidays(fromISO, toISO),
   );
   const holidayLoadError = useSwrLoadError(holidayError, "die Feiertage", () =>
     mutateHolidays(),
@@ -558,7 +564,7 @@ function StaffCalendarPageInner() {
   const { data: recipientOptions = emptyRecipientOptions } =
     useSWRAuth<CalendarRecipientOptions>(
       formOpen && canManageCalendar
-        ? `calendar-recipient-options-${targetSearch}`
+        ? tenantDailyKeys.calendarRecipientOptions(targetSearch)
         : null,
       () => getCalendarRecipientOptions(targetSearch),
     );

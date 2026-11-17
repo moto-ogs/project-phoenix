@@ -1,14 +1,13 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { personalStorageOwner } from "~/lib/personal-storage";
 import { ABSENCES_REFRESH_EVENT } from "~/lib/absence-helpers";
 import { hasPermission, isAdmin } from "~/lib/auth-utils";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { staffAbsenceService } from "~/lib/staff-api";
-import { useModuleBooked, useTenantSlugSafe } from "~/lib/tenant-context";
-import { useShellSeed } from "~/lib/shell-seed";
-import { useUnreadCount } from "./use-unread-count";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
+import { useModuleBooked } from "~/lib/tenant-context";
+import { useUnreadCount, type UseUnreadCountResult } from "./use-unread-count";
 
 async function fetchPendingAbsenceCount(): Promise<number> {
   try {
@@ -30,27 +29,27 @@ async function fetchPendingAbsenceCount(): Promise<number> {
  * Refreshes on staff-absences-refresh (dispatched by the inbox, the staff
  * detail Abwesenheiten tab, and the MA resubmit form) plus on focus.
  */
-export function useStaffAbsencesPending() {
+export function useStaffAbsencesPending(): UseUnreadCountResult {
   const { data: session, status } = useSession();
   const { mode } = useShellAuth();
   const canReview =
     isAdmin(session) || hasPermission(session, "vacation:approve");
-  const tenantSlug = useTenantSlugSafe();
-  const accountId = session?.user?.id ?? "";
+  const accountId = session?.user?.id;
   const zeiterfassungBooked = useModuleBooked("zeiterfassung");
-  return useUnreadCount({
-    // Urlaub und Abwesenheiten des Teams gehören zur Zeiterfassung (#4894).
-    enabled:
-      status === "authenticated" &&
-      mode === "teacher" &&
-      zeiterfassungBooked &&
-      canReview,
-    fetcher: fetchPendingAbsenceCount,
-    cacheKey: `staff_absences_pending_count:${tenantSlug ?? ""}:${accountId}`,
-    cacheOwner: personalStorageOwner(session?.user),
-    eventNames: [ABSENCES_REFRESH_EVENT],
-    eventDebounceMs: 500,
-    refetchOnFocus: true,
-    initialCount: useShellSeed()?.counts.staffAbsencesPending,
-  });
+  return useUnreadCount(
+    accountId ? shellResourceKeys.staffAbsencesPending(accountId) : null,
+    {
+      // Urlaub und Abwesenheiten des Teams gehören zur Zeiterfassung (#4894).
+      enabled:
+        status === "authenticated" &&
+        mode === "teacher" &&
+        zeiterfassungBooked &&
+        !!accountId &&
+        canReview,
+      fetcher: fetchPendingAbsenceCount,
+      eventNames: [ABSENCES_REFRESH_EVENT],
+      eventDebounceMs: 500,
+      refetchOnFocus: true,
+    },
+  );
 }

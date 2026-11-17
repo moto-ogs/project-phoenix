@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
@@ -46,7 +47,7 @@ func (s *Store) CreatePickupExceptions(ctx context.Context, values []careplan.Pi
 	rows := make([]pickupExceptionRow, len(values))
 	for i, value := range values {
 		rows[i] = pickupExceptionFromPublic(value)
-		rows[i].TenantID = tid
+		rows[i].TenantID, rows[i].UpdatedAt = tid, time.Time{} // column default, see UpdatePickupException
 	}
 	return execAny(ctx, db.NewInsert().Model(&rows).ModelTableExpr(`schedule.student_pickup_exceptions`).Returning("NULL"), "create pickup exceptions")
 }

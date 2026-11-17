@@ -34,7 +34,6 @@ import {
   fetchStaffNotice,
   fetchStaffNotices,
   fetchTodaysNotices,
-  staffNoticesTodayKey,
   updateStaffNotice,
 } from "~/lib/staff-notices-api";
 import type { StaffNotice, StaffNoticeInput } from "~/lib/staff-notices-api";
@@ -66,7 +65,7 @@ function TagesinformationenContent() {
     isLoading: todayLoading,
     mutate: mutateToday,
   } = useSWRAuth<StaffNotice[]>(
-    staffNoticesTodayKey(accountId),
+    staffNoticeKeys.today(accountId),
     fetchTodaysNotices,
     {
       revalidateOnFocus: false,
@@ -79,7 +78,7 @@ function TagesinformationenContent() {
     isLoading,
     mutate,
   } = useSWRAuth<StaffNotice[]>(
-    isAdmin ? `staff-notices:${accountId}` : null,
+    isAdmin ? staffNoticeKeys.all(accountId) : null,
     fetchStaffNotices,
     { revalidateOnFocus: false },
   );
