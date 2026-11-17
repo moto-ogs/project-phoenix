@@ -11,7 +11,7 @@ import {
   within,
 } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { releaseFakeTimers, setTestClock } from "~/test/clock";
 
 // ─── Mocks (must come before component imports) ─────────────────────────────
@@ -85,6 +85,7 @@ vi.mock("~/lib/swr", async (importOriginal) => {
 // The own staff ID comes from the preloaded user context (#4992); the hook's
 // own tests cover the context and its `/api/me/staff` fallback.
 vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => mockOwnStaff.inSchool,
   useUserContext: () => ({
     userContext: { currentStaff: { id: mockOwnStaff.id, personId: "1" } },
     isLoading: false,
@@ -649,7 +650,7 @@ const mockVacationAbsence: StaffAbsence = {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const mockMutate = vi.fn();
-const mockOwnStaff = { id: "10" };
+const mockOwnStaff = { id: "10", inSchool: true };
 const mockOwnSchedule = {
   mode: "custom",
   model: null,
@@ -922,6 +923,48 @@ describe("TimeTrackingPage", () => {
   });
 
   // ── Loading / Auth ──────────────────────────────────────────────────────
+
+  // Ohne Personalprofil in dieser Schule, etwa über den Träger (#7306).
+  describe("without a staff profile", () => {
+    afterEach(() => {
+      mockOwnStaff.inSchool = true;
+    });
+
+    it("shows the hint and loads nothing when the context names no profile", () => {
+      setupDefaultMocks();
+      mockOwnStaff.inSchool = false;
+
+      render(<TimeTrackingPage />);
+
+      expect(
+        screen.getByText(/Kein eigenes Personalprofil/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "Zur Startseite" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Stempeluhr")).not.toBeInTheDocument();
+    });
+
+    it("shows the hint instead of an error or a redirect when the server refuses", async () => {
+      const assign = vi
+        .spyOn(window.location, "assign")
+        .mockImplementation(() => undefined);
+      setupDefaultMocks({
+        currentSessionError: new ApiError("no staff profile", 403, {
+          code: "workforce.no_staff_profile",
+        }),
+      });
+
+      render(<TimeTrackingPage />);
+
+      expect(
+        await screen.findByText(/Kein eigenes Personalprofil/),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(assign).not.toHaveBeenCalled();
+      assign.mockRestore();
+    });
+  });
 
   describe("authentication and loading", () => {
     it("shows loading when auth status is loading", () => {

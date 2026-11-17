@@ -97,3 +97,19 @@ export function useUserContext(enabled = true): UseUserContextReturn {
     isReady: data !== undefined || error !== undefined,
   };
 }
+
+/**
+ * Hat die Person in dieser Schule ein Personalprofil? `false` nur, wenn der
+ * Kontext vollständig geladen ist und kein Profil nennt, etwa für eine Person
+ * des Trägers oder eine Schul-Admin ohne Profil (#7306). Solange er lädt,
+ * fehlt oder unvollständig ist, gilt `true`: dann entscheidet wie bisher die
+ * Seite.
+ */
+export function useHasOwnStaff(): boolean {
+  const { userContext, isIncomplete } = useUserContext();
+  return !(
+    userContext !== undefined &&
+    !isIncomplete &&
+    userContext.currentStaff === null
+  );
+}

@@ -26,6 +26,7 @@ import {
   type HomeNowState,
 } from "~/lib/home-now";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import { createLogger } from "~/lib/logger";
 import { ownShiftService } from "~/lib/shift-api";
 import type { OwnAssignment } from "~/lib/shift-helpers";
@@ -70,8 +71,12 @@ export function NowStrip({
 
   // Der eigene Tag: für alle, die selbst betreuen. Ein reines Adminkonto hat
   // keine Einsätze; die Abfrage liefe ins Leere.
+  // Ohne Personalprofil in dieser Schule (etwa über den Träger) gibt es
+  // keine eigenen Einsätze; die Abfrage würde nur abgelehnt (#7306).
+  const hasOwnStaff = useHasOwnStaff();
   const wantsOwn =
     context.timetableEnabled &&
+    hasOwnStaff &&
     access.has("time_tracking:own") &&
     (access.caresForGroups || !access.isAdminScope);
   // Die Schule: für den Adminzuschnitt, wenn es überhaupt Blöcke gibt.

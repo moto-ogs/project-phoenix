@@ -50,6 +50,8 @@ export function dutyRosterTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Fehlt eine Person im Plan? Dann ist sie noch nicht als Personal angelegt.",
+      // #7306: die eigenen Seiten brauchen ein Personalprofil der Schule.
+      "Fehlen Ihnen selbst `Mein Dienstplan`, `Mein Kalender` und `Zeiterfassung`? Diese Seiten zeigen Ihre eigenen Zeiten und Termine. Dafür brauchen Sie in dieser Schule ein Personalprofil. Über den Träger haben Sie meist keines.",
     ],
     related: [
       HELP_TOPICS.leadWorkTimeReview,

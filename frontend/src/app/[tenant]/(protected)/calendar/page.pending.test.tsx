@@ -30,6 +30,12 @@ const {
 }));
 
 vi.mock("~/lib/swr", () => ({ useSWRAuth: mockUseSWRAuth }));
+
+// Personalprofil in dieser Schule laut Nutzerkontext (#7306).
+const ownStaff = vi.hoisted(() => ({ present: true }));
+vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => ownStaff.present,
+}));
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({

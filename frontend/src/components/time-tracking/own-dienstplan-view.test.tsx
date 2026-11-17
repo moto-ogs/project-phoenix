@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
   aheadError: undefined as Error | undefined,
   projection: undefined as ReadonlyMap<string, DayProjection> | undefined,
   projectionError: undefined as Error | undefined,
+  hasOwnStaff: true,
   permissionReady: true,
   // Ohne time_tracking:own erklärt die Seite den Zustand (#7148).
   permissionDenied: false,
@@ -74,6 +75,10 @@ vi.mock("~/lib/swr", () => ({
       mutate: state.mutate,
     };
   },
+}));
+// Personalprofil in dieser Schule laut Nutzerkontext (#7306).
+vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => state.hasOwnStaff,
 }));
 vi.mock("~/lib/hooks/use-berlin-today", () => ({
   useBerlinToday: () => "2026-09-09",
@@ -164,6 +169,7 @@ describe("OwnDienstplanView", () => {
     state.aheadError = undefined;
     state.projection = undefined;
     state.projectionError = undefined;
+    state.hasOwnStaff = true;
     state.permissionReady = true;
     state.permissionDenied = false;
     state.zeiterfassungBooked = true;
@@ -451,34 +457,63 @@ describe("OwnDienstplanView", () => {
     expect(state.keys).toEqual([]);
   });
 
-  it("offers a retry when the shifts fail to load", () => {
-    state.shiftsError = new Error("boom");
+  // Ladefehler laufen über den gemeinsamen Fehlerpfad (Regel 3 in
+  // error-path.md): Katalogtext des Codes und „Wiederholen“ (#7306).
+  it("offers a retry when the shifts fail to load", async () => {
+    state.shiftsError = new ApiError("unavailable", 503);
 
     render(<OwnDienstplanView />);
 
     expect(
-      screen.getByText(/Ihr Dienstplan konnte nicht geladen werden/),
+      await screen.findByText(
+        "Die Liste Ihrer Schichten ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText("geplant")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Erneut laden" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(state.mutate).toHaveBeenCalled();
   });
 
-  it("keeps the shifts visible and offers a retry when the Soll fails to load", () => {
+  it("keeps the shifts visible and offers a retry when the Soll fails to load", async () => {
     state.shifts = [shift()];
-    state.projectionError = new Error("boom");
+    state.projectionError = new ApiError("unavailable", 503);
 
     render(<OwnDienstplanView />);
 
     expect(
-      screen.getByText(/Ihr Soll für diese Woche konnte nicht geladen werden/),
+      await screen.findByText(
+        "Das Soll dieser Woche ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+      ),
     ).toBeInTheDocument();
     expect(screen.getByTestId("own-week-hours-card")).toHaveTextContent(
       "Gesamt4 h",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Erneut laden" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(state.mutateProjection).toHaveBeenCalled();
     expect(state.mutate).not.toHaveBeenCalled();
+  });
+
+  it("explains a missing staff profile before loading anything (#7306)", () => {
+    state.hasOwnStaff = false;
+
+    render(<OwnDienstplanView />);
+
+    expect(screen.getByText(/Kein eigenes Personalprofil/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Zur Startseite" }),
+    ).toHaveAttribute("href", "/home");
+    expect(state.keys).toEqual([]);
+  });
+
+  it("shows the staff profile hint instead of an error when the server refuses (#7306)", () => {
+    state.shiftsError = new ApiError("no staff profile", 403, {
+      code: "workforce.no_staff_profile",
+    });
+
+    render(<OwnDienstplanView />);
+
+    expect(screen.getByText(/Kein eigenes Personalprofil/)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("navigates by week through the d parameter", () => {
