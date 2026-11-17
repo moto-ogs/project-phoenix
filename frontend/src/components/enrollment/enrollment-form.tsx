@@ -506,6 +506,7 @@ export function EnrollmentForm({
   // Preview: no phase, so only the legal texts load; the offerings come from
   // the staff page (#6044) or stay empty. A real load failure stops the form
   // instead of collecting consent without the texts.
+  // oxlint-disable-next-line swr/no-effect-load -- template preview only: seeds the draft state of a form that sessionless public pages share; a shared-cache read belongs in the preview page, which would hand the legal texts in
   useEffect(() => {
     if (prefetchedData !== undefined) return;
     let cancelled = false;

@@ -144,6 +144,7 @@ export function HolidayRegistrationContribution({
     }
   }, [token, children, benefitsDeclared, ageRanks]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- computes the contribution of an unsent registration form by token, without a session; ~/lib/swr has no public reader
   useEffect(() => {
     void load();
   }, [load]);

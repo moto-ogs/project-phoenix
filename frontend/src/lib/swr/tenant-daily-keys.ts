@@ -110,4 +110,10 @@ export const tenantDailyKeys = {
   /** Wen eine Nachricht zur Absage eines Termins erreicht (#2601). */
   guardianNoticeReach: (instanceId: string) =>
     `timetable-guardian-notice-reach-${encodeURIComponent(instanceId)}`,
+  /** Angebote und Abholzeiten eines Tages für die Tageslisten (`fetchSlotListOptions`). */
+  slotListOptions: (date: string) =>
+    `timetable-slot-list-options-${encodeURIComponent(date)}`,
+  /** Vorschau einer Tagesliste für genau diese Anfrage (`fetchSlotListPreview`). */
+  slotListPreview: (request: object) =>
+    resourceKey("timetable-slot-list-preview-", request),
 } as const;

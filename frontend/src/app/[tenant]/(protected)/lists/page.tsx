@@ -41,11 +41,7 @@ import { SegmentedControl } from "~/components/ui/segmented-control";
 import { DesktopFilters } from "~/components/ui/page-header/DesktopFilters";
 import { ActiveFilterChips } from "~/components/ui/page-header/ActiveFilterChips";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import type {
   ActiveFilter,
   FilterConfig,
@@ -60,7 +56,10 @@ import {
   toISODate,
 } from "~/lib/date-helpers";
 import { LOCATION_COLORS } from "~/lib/location-helper";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import {
   exportSlotList,
   fetchSlotListOptions,
@@ -454,54 +453,6 @@ function sameStringSet(a: string[], b: string[]): boolean {
   return b.every((value) => set.has(value));
 }
 
-// A stable content signature of an options payload, order-independent. A
-// background revalidation only swaps in fresh options (and thus re-fires the
-// preview) when this signature changes, so tabbing back to an unchanged page
-// costs one silent fetch and no redundant preview/BuildList churn (#1565 review
-// pass 2 — stale one-time /options snapshot).
-function optionsSignature(options: SlotListOptionsResult): string {
-  // Encode each slot as a JSON tuple, not a `:`-joined string: a slot's
-  // title/time_range are free text (a time_range like "14:30 - 15:15" already
-  // contains the delimiter), so plain concatenation could let two genuinely
-  // different payloads collapse to the same signature and miss a rename/
-  // reschedule. title and time_range MUST be part of the signature — when a
-  // slot is renamed or moved in another tab its ID and status are unchanged,
-  // and without these fields the fresh payload is discarded on focus while a
-  // later export silently renders the updated label (#1565 review pass 3).
-  // list_kind and room_name matter for the same reason (#1565 review pass 4):
-  // a list_kind reassignment moves a slot in/out of a classified list and a
-  // room change reshapes a room-grouped export, both without touching the
-  // active instance-ID set — omit them and the drift slips past the guard.
-  const slots = options.slots
-    .map((slot) =>
-      JSON.stringify([
-        slot.instance_id,
-        slot.status,
-        slot.title,
-        slot.time_range,
-        slot.list_kind ?? "",
-        slot.room_name ?? "",
-      ]),
-    )
-    .sort((a, b) => a.localeCompare(b))
-    .join(",");
-  const cohorts = options.pickup_cohorts
-    .map(
-      (cohort) =>
-        `${cohort.cohort}:${cohort.available ? 1 : 0}:${cohort.row_count}`,
-    )
-    .sort((a, b) => a.localeCompare(b))
-    .join(",");
-  const kinds = options.list_kinds
-    .map(
-      (kind) =>
-        `${kind.kind}:${kind.available ? 1 : 0}:${kind.slot_count}:${kind.row_count}`,
-    )
-    .sort((a, b) => a.localeCompare(b))
-    .join(",");
-  return `${slots}|${cohorts}|${kinds}`;
-}
-
 // The active (non-cancelled) instance IDs of an options payload — the same
 // derivation activeInstanceIds performs on listOptions, extracted so the
 // pre-export guard can recompute it against a freshly fetched payload.
@@ -511,33 +462,10 @@ function activeInstanceIdsOf(options: SlotListOptionsResult): string[] {
     .map((slot) => slot.instance_id);
 }
 
-// A stable, order-independent signature of the pickup-cohort metadata — cohort
-// key, label (which embeds the tenant's cutoff, e.g. "Ganztag bis 14:30"),
-// availability and row count. A pickup list carries no instance_ids or slot
-// metadata, so the slot-oriented guard skips it; this lets the pre-export guard
-// still catch a cutoff change made after the preview rendered. Moving a cutoff
-// re-buckets which children fall into short/long day AND rewrites the cohort's
-// header, so exporting against the stale snapshot would hand out a different
-// cohort and label than the reviewed preview (#1565 review pass 4). JSON tuples
-// keep the free-text label delimiter-safe, mirroring the slot signature.
-function pickupCohortsSignature(options: SlotListOptionsResult): string {
-  return options.pickup_cohorts
-    .map((cohort) =>
-      JSON.stringify([
-        cohort.cohort,
-        cohort.label,
-        cohort.available ? 1 : 0,
-        cohort.row_count,
-      ]),
-    )
-    .sort((a, b) => a.localeCompare(b))
-    .join(",");
-}
-
 // Metadata signature of ONLY the slots that appear in the requested slot-list
-// document — never the whole day. optionsSignature covers every slot, pickup
-// cohort and list-kind aggregate for the date, so as a pre-export drift guard it
-// trips on changes to unrelated slots/cohorts/kinds and refuses an otherwise
+// document — never the whole day. A signature over every slot, pickup cohort
+// and list-kind aggregate for the date would, as a pre-export drift guard, trip
+// on changes to unrelated slots/cohorts/kinds and refuses an otherwise
 // identical export (#1565 review pass 5). Scope the comparison to the effective
 // set:
 //   - Classified list (listKind set): the active slots whose list_kind is the
@@ -549,8 +477,7 @@ function pickupCohortsSignature(options: SlotListOptionsResult): string {
 //     every active slot when the selection is "all active" (selectedIds null).
 // A rename, reschedule or room change of an in-scope slot changes its tuple and
 // registers as drift; the same change on an out-of-scope slot does not. JSON
-// tuples keep the free-text title/time_range/room_name delimiter-safe, mirroring
-// optionsSignature.
+// tuples keep the free-text title/time_range/room_name delimiter-safe.
 function slotDocumentSignature(
   options: SlotListOptionsResult,
   listKind: SlotListKind | "",
@@ -577,7 +504,7 @@ function slotDocumentSignature(
 
 // A stable signature of a SINGLE pickup cohort — the one being exported. The
 // export re-buckets and re-labels only the requested cohort, so comparing the
-// whole pickup_cohorts array (pickupCohortsSignature) as a pre-export drift
+// whole pickup_cohorts array as a pre-export drift
 // guard would refuse the export when an unrelated cohort's cutoff or roster
 // changed (#1565 review pass 5). An absent cohort collapses to "" — a real
 // signature is a JSON array string, so this sentinel never collides with one.
@@ -763,45 +690,68 @@ export default function SlotListsPage() {
   const [filterLinkInvalid, setFilterLinkInvalid] = useState<boolean>(
     initialState.filterLinkInvalid,
   );
-  const [listOptions, setListOptions] = useState<SlotListOptionsResult | null>(
-    null,
-  );
-  const [result, setResult] = useState<SlotListResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  // True once /options rejects. Without it a failed options request leaves
-  // listOptions null forever, so activeInstanceIds stays null and
-  // awaitingActiveSlots never clears — the preview gate below would then hold
-  // isLoading true indefinitely (permanent spinner, exports disabled) even
-  // though /preview itself could succeed (#1565 review pass 1). The message
-  // itself goes through optionsLoad (#2516).
-  const [optionsFailed, setOptionsFailed] = useState(false);
-  // Bumped by the retry of a failed /options load to rerun the load effect.
-  const [optionsReload, setOptionsReload] = useState(0);
-  // True once /preview rejects; the message goes through previewLoad.
-  const [previewFailed, setPreviewFailed] = useState(false);
-  // Ladefehler stehen dort, wo die Daten fehlen (#2516): Katalogtext mit
-  // Wiederholen und Vorgangskennung, nie als Toast oder leere Liste.
-  const optionsLoad = useApiLoadError();
-  const previewLoad = useApiLoadError();
-  const { show: showOptionsLoadError, clear: clearOptionsLoadError } =
-    optionsLoad;
-  const { show: showPreviewLoadError, clear: clearPreviewLoadError } =
-    previewLoad;
+
   // Export ist eine Aktion ohne Formular: Fehler und Hinweise als Toast.
   const { show: showExportError, showMessage: showExportMessage } =
     useApiErrorDisplay();
   const toast = useToast();
-  // Bumped on focus/visibility to force the preview effect to refetch. The
-  // /options revalidation alone cannot catch attendance drift: its payload holds
-  // only slot, pickup-cohort and planned-roster metadata, so a check-in/out or a
-  // per-slot status change leaves listOptions' signature unchanged and the
-  // preview — keyed on request/listOptions — would otherwise keep rendering stale
-  // present/missing rows and counters until an unrelated filter changes (#1565
-  // review pass 2).
-  const [previewNonce, setPreviewNonce] = useState(0);
 
+  // The day's slots and pickup cohorts through the shared cache. A date change
+  // drops the previous date's options at once (no previous data): they would
+  // stay selectable and a toggled stale slot would write its ID into the new
+  // date's URL/request. Focus refreshes run below, coalesced with the preview.
+  const listsReadable = authStatus === "authenticated" && !timetableDisabled;
+  const optionsKey = listsReadable
+    ? tenantDailyKeys.slotListOptions(dateISO)
+    : null;
+  const listOptionsRef = useRef<SlotListOptionsResult | null>(null);
+  const optionsRead = useSWRAuth(
+    optionsKey,
+    () => fetchSlotListOptions(dateISO),
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+      // A failure shows at once with its retry, not after silent retries.
+      shouldRetryOnError: false,
+      onError: (err) => {
+        // A failed background refresh keeps the last options: before every
+        // export handleExport reads them again and reports failures there.
+        if (listOptionsRef.current) {
+          logger.warn("slot_list_options_revalidate_failed", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+          return;
+        }
+        logger.error("slot_list_options_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      },
+    },
+  );
+  const listOptions = optionsRead.data ?? null;
+  const mutateOptions = optionsRead.mutate;
+  useLayoutEffect(() => {
+    listOptionsRef.current = listOptions;
+  }, [listOptions]);
+  // True once /options rejected without options to show. Without it a failed
+  // options request leaves listOptions null forever, so activeInstanceIds stays
+  // null and awaitingActiveSlots never clears — the preview gate below would
+  // then hold isLoading true indefinitely (permanent spinner, exports disabled)
+  // even though /preview itself could succeed (#1565 review pass 1). The
+  // message itself goes through optionsLoadError (#2516).
+  const optionsFailed =
+    optionsRead.error !== undefined &&
+    listOptions === null &&
+    !optionsRead.isValidating;
+  const isOptionsLoading = listOptions === null && optionsRead.isValidating;
+  // Ladefehler stehen dort, wo die Daten fehlen (#2516): Katalogtext mit
+  // Wiederholen und Vorgangskennung, nie als Toast oder leere Liste.
+  const optionsLoadError = useSwrLoadError(
+    optionsFailed ? optionsRead.error : undefined,
+    "die Liste der Angebote",
+    () => mutateOptions(),
+  );
   const isPickupBased = target === "pickup_cohort";
   const isManualSlotSelection = target === "slots" && listKind === "";
 
@@ -918,6 +868,61 @@ export default function SlotListsPage() {
   // so a manual subset must wait too rather than fire a preview off unvalidated
   // IDs (#1565 review pass 1). Pickup lists do not use instance_ids at all.
   const awaitingActiveSlots = target === "slots" && activeInstanceIds === null;
+
+  // A corrupted id filter in the URL must not run a silently-widened query:
+  // no preview (which also disables the export buttons); the Vorschau card
+  // shows the invalid-link notice instead of previewing/exporting every group
+  // or slot (#1565 review pass 3). awaitingActiveSlots holds the preview (and,
+  // via the missing result, print/download) until the active slot set
+  // resolves; the key follows once activeInstanceIds lands in `request`.
+  const previewKey =
+    listsReadable && !filterLinkInvalid && !awaitingActiveSlots
+      ? tenantDailyKeys.slotListPreview(request)
+      : null;
+  const previewRead = useSWRAuth(
+    previewKey,
+    () => fetchSlotListPreview(request),
+    {
+      // While another selection loads, the previous list stays visible behind
+      // the loading state; exports wait for the new one.
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+      onError: (err) => {
+        logger.error("slot_list_preview_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      },
+    },
+  );
+  const mutatePreview = previewRead.mutate;
+  // True once /preview rejected; the message goes through previewLoadError.
+  const previewFailed =
+    previewKey !== null &&
+    previewRead.error !== undefined &&
+    !previewRead.isValidating;
+  // Load error in place of the preview, never the empty state: an empty table
+  // would claim that no child is on the list (#2516). A failed refresh drops
+  // the list it no longer confirms.
+  const result: SlotListResult | null =
+    previewKey === null || previewRead.error !== undefined
+      ? null
+      : (previewRead.data ?? null);
+  const isLoading = filterLinkInvalid
+    ? false
+    : awaitingActiveSlots
+      ? // The authoritative active slot set never arrived because /options
+        // failed. Don't hold the gate — stop loading so the user isn't stuck
+        // on a permanent spinner; the Vorschau card shows the options load
+        // error with its retry instead (#1565 review pass 1, #2516).
+        !optionsFailed
+      : previewRead.isValidating ||
+        (previewRead.data === undefined && previewRead.error === undefined);
+  const previewLoadError = useSwrLoadError(
+    previewFailed ? previewRead.error : undefined,
+    "die Vorschau",
+    () => mutatePreview(),
+  );
 
   const replaceListUrl = useCallback(
     (next: Partial<InitialListState>) => {
@@ -1108,65 +1113,6 @@ export default function SlotListsPage() {
     [replaceListUrl, selectedSlotIds, selectableSlotIds],
   );
 
-  useEffect(() => {
-    if (authStatus !== "authenticated" || timetableDisabled) return;
-    let cancelled = false;
-    const generation = ++optionsRequestGenerationRef.current;
-    // Drop the previous date's options immediately. They stay rendered and
-    // selectable until this request resolves otherwise, and on a slow response
-    // toggling a stale slot would write its (globally unique) ID into the new
-    // date's URL/request — producing an empty preview with no checkbox selected
-    // once the new options arrive. selectableSlotIds empties with them, so the
-    // slot controls disable until the correct set loads.
-    setListOptions(null);
-    setOptionsFailed(false);
-    clearOptionsLoadError();
-    setIsOptionsLoading(true);
-    fetchSlotListOptions(dateISO)
-      .then((options) => {
-        if (cancelled) return;
-        // A background revalidation may have started after this initial load and
-        // already installed a newer schedule snapshot while listOptions was
-        // still null; drop this now-stale result rather than clobbering it
-        // (#1565 review pass 2).
-        if (generation <= optionsCommittedGenerationRef.current) return;
-        optionsCommittedGenerationRef.current = generation;
-        setListOptions(options);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("slot_list_options_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        // A newer request already succeeded — do not overwrite good options with
-        // this superseded load's error. (A failure never advances the marker, so
-        // it cannot block a later revalidation from recovering the page.)
-        if (generation <= optionsCommittedGenerationRef.current) return;
-        setListOptions(null);
-        // Record the failure so the preview gate releases instead of spinning
-        // forever, and show the catalog text with a retry where the options
-        // are missing (#2516).
-        setOptionsFailed(true);
-        void showOptionsLoadError(err, {
-          object: "die Liste der Angebote",
-          retry: () => setOptionsReload((n) => n + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setIsOptionsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    authStatus,
-    dateISO,
-    timetableDisabled,
-    optionsReload,
-    showOptionsLoadError,
-    clearOptionsLoadError,
-  ]);
-
   // The current date, mirrored into a ref so a background /options revalidation
   // that resolves after the user has moved to another day can detect the switch
   // and drop its now-irrelevant result instead of overwriting the new date's
@@ -1176,98 +1122,19 @@ export default function SlotListsPage() {
     dateISORef.current = dateISO;
   }, [dateISO]);
 
-  // A monotonic id stamped on EVERY /options request — the initial date-load
-  // fetch AND each background revalidation increment the SAME counter. Focus and
-  // visibilitychange can both fire on one return-to-tab, and a revalidation can
-  // start while the initial load is still in flight; a date-only guard would then
-  // let whichever RESOLVES last win, so an earlier request that read the pre-edit
-  // schedule could clobber a newer one and roll the preview back to stale
-  // slots/cutoffs — or the initial load could overwrite a newer revalidation that
-  // resolved first while listOptions was still null (#1565 review pass 2). Each
-  // request captures its id at START; on resolve it commits only when its id is
-  // newer than optionsCommittedGenerationRef, then advances that marker, so a
-  // later-resolving-but-older request is dropped regardless of resolution order.
-  // A FAILED request commits nothing and does NOT advance the marker, so it never
-  // permanently blocks a still-valid sibling (a retry / a focus revalidation) from
-  // installing — which is what recovers a page whose initial load failed.
-  const optionsRequestGenerationRef = useRef(0);
-  const optionsCommittedGenerationRef = useRef(0);
-
-  // The /options snapshot is otherwise fetched only when the date changes, so a
-  // page left open across the day would keep sending a stale active-slot set to
-  // every preview and export — omitting a slot added since load and retaining a
-  // slot cancelled since load (#1565 review pass 2). Revalidate quietly whenever
-  // the tab/window regains focus (the realistic "edited the plan elsewhere, came
-  // back here" path). This is a BACKGROUND refresh: it never nulls listOptions
-  // (which would flash the spinner and disable the slot controls) and only swaps
-  // in the fresh payload when its content signature actually changed — feeding
-  // activeInstanceIds, which re-fires the preview and prunes now-cancelled manual
-  // selections. A failed refresh is non-fatal: the last-known options stay, and
-  // the pre-export guard still revalidates before any list leaves the building.
-  const revalidateOptions = useCallback(() => {
-    if (authStatus !== "authenticated" || timetableDisabled) return;
-    const requestedDate = dateISO;
-    const generation = ++optionsRequestGenerationRef.current;
-    fetchSlotListOptions(requestedDate)
-      .then((fresh) => {
-        if (requestedDate !== dateISORef.current) return; // date moved on
-        // Superseded by a newer /options request — the initial load, a later
-        // revalidation, or a date change — that already committed its result.
-        // Drop this one no matter which network round-trip finished first.
-        if (generation <= optionsCommittedGenerationRef.current) return;
-        optionsCommittedGenerationRef.current = generation;
-        setOptionsFailed(false);
-        clearOptionsLoadError();
-        setListOptions((prev) => {
-          // Newest request and nothing installed yet: the initial load is still
-          // in flight or FAILED. Install the fresh payload outright — the shared
-          // generation marker guarantees the pending initial load, if it resolves
-          // later, will not overwrite this newer snapshot, and recovers a page
-          // whose initial load failed (#1565 review pass 2 / pass 4).
-          if (!prev) return fresh;
-          // Reinstall on ANY change a downstream reader renders, INCLUDING a
-          // pickup cutoff moved without re-bucketing any child. optionsSignature
-          // keys cohorts on availability + row_count only, so a label-only cutoff
-          // change ("Ganztag bis 14:30" -> "bis 14:00", same row_count) slips past
-          // it — listOptions is not reinstalled, the pickup preview never re-fires,
-          // and its cohort header stays on the old cutoff until an export attempt
-          // trips the export drift guard. Fold the cohort-label signature in here
-          // so focus revalidation reinstalls on a label-only change too, re-firing
-          // the preview so the visible cohort matches what an export would produce
-          // (#1565 review pass 1). This whole-payload comparison is intentional
-          // here — it only decides whether to re-render the preview, never blocks
-          // anything — whereas the export drift guard scopes its check to the
-          // requested list (slotDocumentSignature / pickupCohortSignature) so an
-          // unrelated change can never spuriously refuse an export.
-          const unchanged =
-            optionsSignature(prev) === optionsSignature(fresh) &&
-            pickupCohortsSignature(prev) === pickupCohortsSignature(fresh);
-          return unchanged ? prev : fresh;
-        });
-      })
-      .catch((err: unknown) => {
-        // Bewusst still: eine Hintergrund-Aktualisierung ohne Nutzeraktion.
-        // Der letzte Stand bleibt stehen, und vor jedem Export prüft
-        // handleExport die Angebote ohnehin neu und meldet dort Fehler.
-        logger.warn("slot_list_options_revalidate_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-  }, [authStatus, dateISO, timetableDisabled, clearOptionsLoadError]);
-
   useEffect(() => {
     if (authStatus !== "authenticated" || timetableDisabled) return;
     // Refresh BOTH the options snapshot (slot/cohort structure) and the preview
-    // (live attendance / roster). revalidateOptions only re-fires the preview
-    // when the options signature changes; a pure attendance change does not touch
-    // it, so bump previewNonce to force a preview refetch on every focus/return
+    // (live attendance / roster). A new options snapshot only re-keys the
+    // preview when the active slot set changes; a pure attendance change does
+    // not touch it, so the preview revalidates on every focus/return as well
     // (#1565 review pass 2).
     //
     // Restoring a background tab commonly fires BOTH visibilitychange→visible AND
     // focus, so without coalescing each handler would run refresh() and issue a
     // duplicate /options + /preview pair — redundant slot/roster scans that also
-    // contend on the cutoff lock. The generation counter downstream only discards
-    // the stale client commit; it does not cancel the duplicated backend work.
+    // contend on the cutoff lock. The cache's request deduplication does not
+    // cover an explicit revalidation, so it would not cancel that work either.
     // Collapse any burst of events into a single trailing refresh so the pair
     // becomes one request set (#1565 review).
     let coalesce: ReturnType<typeof setTimeout> | null = null;
@@ -1275,8 +1142,8 @@ export default function SlotListsPage() {
       if (coalesce !== null) return;
       coalesce = setTimeout(() => {
         coalesce = null;
-        revalidateOptions();
-        setPreviewNonce((n) => n + 1);
+        void mutateOptions();
+        void mutatePreview();
       }, 100);
     };
     const onFocus = () => refresh();
@@ -1290,81 +1157,7 @@ export default function SlotListsPage() {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [authStatus, timetableDisabled, revalidateOptions]);
-
-  useEffect(() => {
-    if (authStatus !== "authenticated" || timetableDisabled) return;
-    // A corrupted id filter in the URL must not run a silently-widened query.
-    // Clear the result (which also disables the export buttons); the Vorschau
-    // card shows the invalid-link notice instead of previewing/exporting every
-    // group or slot (#1565 review pass 3). Checked before the
-    // awaitingActiveSlots gate below.
-    if (filterLinkInvalid) {
-      setResult(null);
-      setPreviewFailed(false);
-      clearPreviewLoadError();
-      setIsLoading(false);
-      return;
-    }
-    // Hold the preview (and, via the cleared result, print/download) until the
-    // active slot set resolves — see awaitingActiveSlots. The effect re-fires
-    // when activeInstanceIds lands, because it feeds `request`. Clearing the
-    // result also drops the previous date's rows, which would otherwise stay
-    // exportable during the options-loading window after a date change.
-    if (awaitingActiveSlots) {
-      setResult(null);
-      setPreviewFailed(false);
-      clearPreviewLoadError();
-      // The authoritative active slot set never arrived because /options
-      // failed. Don't hold the gate — stop loading so the user isn't stuck on
-      // a permanent spinner; the Vorschau card shows the options load error
-      // with its retry instead (#1565 review pass 1, #2516).
-      setIsLoading(!optionsFailed);
-      return;
-    }
-    let cancelled = false;
-    setIsLoading(true);
-    setPreviewFailed(false);
-    clearPreviewLoadError();
-    fetchSlotListPreview(request)
-      .then((preview) => {
-        if (cancelled) return;
-        setResult(preview);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("slot_list_preview_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setResult(null);
-        // Load error in place of the preview, never the empty state: an empty
-        // table would claim that no child is on the list (#2516).
-        setPreviewFailed(true);
-        void showPreviewLoadError(err, {
-          object: "die Vorschau",
-          retry: () => setPreviewNonce((n) => n + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    authStatus,
-    request,
-    timetableDisabled,
-    awaitingActiveSlots,
-    optionsFailed,
-    filterLinkInvalid,
-    showPreviewLoadError,
-    clearPreviewLoadError,
-    // A focus/visibility refresh (or the retry of a failed preview) bumps this
-    // to force a preview refetch even when request and listOptions are
-    // unchanged but attendance may have drifted.
-    previewNonce,
-  ]);
+  }, [authStatus, timetableDisabled, mutateOptions, mutatePreview]);
 
   // We deliberately do NOT reconcile stale group/class URL filters against the
   // preview. result.groups / result.classes are derived from the preview rows,
@@ -1482,56 +1275,29 @@ export default function SlotListsPage() {
       // controls and pruning now-cancelled selections) and ask the user to
       // re-check and export again, rather than hand out a stale or
       // differently-labeled list.
-      // Stamp this preflight /options read with the SHARED options generation so
-      // it participates in the same last-started-wins ordering as the initial
-      // load and revalidateOptions. Captured at fetch START (not at commit) so a
-      // focus/visibility revalidation already in flight is ordered by when it
-      // started, not when it resolves. Without this, the setListOptions(fresh)
-      // install in the drift branch below bypasses optionsCommittedGenerationRef
-      // entirely: an older revalidation resolving afterwards would still pass its
-      // own `generation <= committed` check and overwrite the export-fresh
-      // snapshot, rolling active slot IDs or cutoff metadata back and re-firing a
-      // stale preview / repeated export refusal (#1565 review pass 1 P2).
-      const exportOptionsGeneration = ++optionsRequestGenerationRef.current;
-      // The no-drift path below commits this preflight's options generation but,
-      // because its drift check is scoped to the list being exported, cannot
-      // install `fresh` inline: doing so would churn activeInstanceIds -> request
-      // and trip the identity gates further down, refusing an otherwise-valid
-      // export for a change OUTSIDE this document. So it STAGES the fresh whole-day
-      // snapshot here and commitRefreshedOptions installs it once the attempt has
-      // run and can no longer be disrupted by the resulting request change. Without
-      // this, advancing the committed marker without storing `fresh` would strand
-      // listOptions on the stale snapshot — a Lernzeit slot cancelled while Mensa is
-      // exported leaves drift false, yet an older focus refresh is then dropped
-      // (generation <= committed), so switching to the affected list before the next
-      // refresh re-derives activeInstanceIds from stale data and sends the wrong
-      // active IDs (#1565 review pass 2 P2 follow-up).
+      // The options this attempt validates against. An install of the preflight
+      // read below happens only while they are still the shown ones: a focus
+      // refresh that committed newer options in the meantime keeps them, so an
+      // older snapshot never rolls a newer one back (#1565 review pass 1 P2).
+      // A refresh still in flight when the preflight's options are installed is
+      // dropped by the cache, which discards answers older than a mutation.
+      const optionsAtStart = listOptions;
+      const stillShowsOptionsAtStart = () =>
+        dateISORef.current === dateISO &&
+        listOptionsRef.current === optionsAtStart;
+      // The no-drift path below cannot install `fresh` inline: its drift check
+      // is scoped to the list being exported, and installing would churn
+      // activeInstanceIds -> request and trip the identity gates further down,
+      // refusing an otherwise-valid export for a change OUTSIDE this document. So
+      // it STAGES the fresh whole-day snapshot and commitRefreshedOptions installs
+      // it once the attempt has run, so switching to an affected list afterwards
+      // does not re-derive activeInstanceIds from stale data (#1565 review pass 2
+      // P2 follow-up). Guarding on the date rather than the full request identity
+      // lets a mid-export list switch still receive the fresh active-slot set.
       let refreshedOptions: SlotListOptionsResult | null = null;
       const commitRefreshedOptions = () => {
-        // `fresh` is the whole-day /options snapshot for the captured date; install
-        // it as long as the user is still on THAT date (a list-kind / source /
-        // filter / slot change keeps it valid — only a date change invalidates it,
-        // and that already has its own fresh load). Guarding on the date rather than
-        // the full request identity lets a mid-export list switch still receive the
-        // fresh active-slot set instead of the stale one.
-        //
-        // Also require that this preflight's generation is STILL the newest
-        // committed one. The no-drift path below advances the shared marker to
-        // exportOptionsGeneration when it stages `fresh`; but if a focus/visibility
-        // revalidation STARTED after this preflight, it carries a higher generation
-        // and can commit a newer /options payload while the preview or export awaits
-        // — advancing the marker past exportOptionsGeneration. Installing the older
-        // staged snapshot then, purely because the date still matches, would roll
-        // that newer payload back (e.g. a cancellation the newer refresh committed
-        // reappears) and leave the page on stale active IDs until yet another
-        // refresh. When a newer request has won, keep its snapshot and skip the
-        // stale install (#1565 review pass 2 P2 follow-up 2).
-        if (
-          refreshedOptions &&
-          dateISORef.current === dateISO &&
-          optionsCommittedGenerationRef.current === exportOptionsGeneration
-        ) {
-          setListOptions(refreshedOptions);
+        if (refreshedOptions && stillShowsOptionsAtStart()) {
+          void mutateOptions(refreshedOptions, { revalidate: false });
         }
         refreshedOptions = null;
       };
@@ -1553,7 +1319,7 @@ export default function SlotListsPage() {
       // If the user changed the date, source, list type, slot selection, or a
       // filter while this /options round-trip was in flight, `fresh` describes the
       // OLD document. Everything below — the drift comparison, the
-      // setListOptions(fresh) install, the preview refetch and the export —
+      // install of `fresh`, the preview refetch and the export —
       // operates on the captured (now stale) request, so installing `fresh` here
       // would overwrite the new date's already-committed options with the old
       // date's snapshot and query the wrong slots. Gate BEFORE any of that state
@@ -1617,57 +1383,36 @@ export default function SlotListsPage() {
       if (drift) {
         printTarget?.close();
         setIsExporting(false);
-        setOptionsFailed(false);
-        clearOptionsLoadError();
         // Ask the user to re-check the refreshed list and export again. A
         // toast survives the preview refetch the install below triggers, so
         // the notice needs no stash that the effect re-applies (#2516).
         //
-        // Commit under the shared generation: install `fresh` only when no newer
-        // /options request has committed since this preflight started, then
-        // advance the marker so an older revalidation resolving later is dropped
-        // rather than overwriting this snapshot. If a newer request already won,
-        // keep its options and refetch the preview instead (#1565 review pass 1
-        // P2).
+        // Install `fresh` only when no newer options were shown since this
+        // preflight started; otherwise keep them and refetch the preview instead
+        // (#1565 review pass 1 P2).
         toast.warning(
           target === "slots"
             ? SLOTS_CHANGED_MESSAGE
             : PICKUP_TIMES_CHANGED_MESSAGE,
           { duration: DRIFT_NOTICE_DURATION_MS },
         );
-        if (exportOptionsGeneration > optionsCommittedGenerationRef.current) {
-          optionsCommittedGenerationRef.current = exportOptionsGeneration;
-          setListOptions(fresh);
+        if (stillShowsOptionsAtStart()) {
+          void mutateOptions(fresh, { revalidate: false });
         } else {
-          // A newer /options refresh already committed a higher generation, so
-          // installing `fresh` here would roll listOptions back and is correctly
-          // skipped. But then NO preview dependency changes, so the preview
-          // effect would not rerun. Force a preview refetch so the user re-checks
-          // the current content the notice above points at (#1565 review pass 1
-          // P2 follow-up).
-          setPreviewNonce((n) => n + 1);
+          // Newer options are already shown, so installing `fresh` would roll
+          // them back. But then NO preview key changes; refetch the preview so
+          // the user re-checks the current content the notice above points at
+          // (#1565 review pass 1 P2 follow-up).
+          void mutatePreview();
         }
         return;
       }
 
       // No drift IN THIS DOCUMENT, but `fresh` may still differ from the installed
       // options OUTSIDE it (the drift check above is scoped to the exported list).
-      // Commit this preflight's generation (guarded against a newer request that
-      // already won) — the drift branch above only advances the marker when it
-      // installs. Without committing here, this preflight's /options read (the
-      // newest started) leaves the shared marker behind an older focus/visibility
-      // revalidation that started earlier but resolves later; that stale sibling
-      // would then pass its own `generation <= committed` check and overwrite the
-      // snapshot, rolling active slot IDs or cutoff metadata back and re-firing a
-      // stale preview / repeated export refusal until the next refresh (#1565 review
-      // pass 2 P2). STAGE `fresh` alongside the commit so listOptions is brought up
-      // to the newest snapshot after this attempt runs — advancing the marker while
-      // dropping `fresh` would strand listOptions stale for out-of-document changes
+      // Stage it so listOptions reaches the newest snapshot after this attempt
       // (#1565 review pass 2 P2 follow-up).
-      if (exportOptionsGeneration > optionsCommittedGenerationRef.current) {
-        optionsCommittedGenerationRef.current = exportOptionsGeneration;
-        refreshedOptions = fresh;
-      }
+      refreshedOptions = fresh;
 
       // The options guard above only sees slot/cohort METADATA. Roster membership
       // and attendance can drift without touching it — a child swaps groups or
@@ -1683,11 +1428,10 @@ export default function SlotListsPage() {
       } catch (err: unknown) {
         printTarget?.close();
         setIsExporting(false);
-        // The no-drift path already advanced the committed marker to this
-        // preflight's generation and staged `fresh`; install it before bailing so
-        // listOptions is not stranded on the previous snapshot while the advanced
-        // marker drops older in-flight refreshes (its own guard skips the install
-        // if a newer refresh has since won) (#1565 review pass 2 P2).
+        // The no-drift path staged `fresh`; install it before bailing so
+        // listOptions is not stranded on the previous snapshot (its own guard
+        // skips the install if a newer refresh has since won) (#1565 review
+        // pass 2 P2).
         commitRefreshedOptions();
         logger.error("slot_list_preview_revalidate_failed", {
           error: err instanceof Error ? err.message : String(err),
@@ -1700,7 +1444,7 @@ export default function SlotListsPage() {
       }
       // Same mid-flight guard as after the options read: if the selection moved on
       // while this preview round-trip was in flight, `freshPreview` describes the
-      // OLD document. The setResult(freshPreview) install below would overwrite the
+      // OLD document. The freshPreview install below would overwrite the
       // current selection's already-committed preview with named children outside
       // the filters shown in the controls. Gate BEFORE comparing or installing it,
       // not just before the export (#1565 review pass 7 / pass 10).
@@ -1710,7 +1454,7 @@ export default function SlotListsPage() {
         // The user navigated mid-export. If they only switched list_kind / source /
         // filter (the date is unchanged, so the staged snapshot is still valid),
         // install it now: the request already moved on, so this cannot disrupt the
-        // abandoned export, and it keeps the generation-committed listOptions from
+        // abandoned export, and it keeps listOptions from
         // stranding stale on the list the user just switched to (#1565 review pass 2
         // P2 follow-up). A date change is skipped by commitRefreshedOptions' guard.
         commitRefreshedOptions();
@@ -1733,11 +1477,9 @@ export default function SlotListsPage() {
       ) {
         printTarget?.close();
         setIsExporting(false);
-        setResult(freshPreview);
+        void mutatePreview(freshPreview, { revalidate: false });
         // Same stranding guard as the other early-exit paths: the no-drift path
-        // advanced the committed marker and staged `fresh`, so install it here too
-        // rather than leaving listOptions behind the advanced marker (#1565 review
-        // pass 2 P2). The toast survives the preview refetch this may trigger.
+        // staged `fresh`, so install it here too (#1565 review pass 2 P2). The toast survives the preview refetch this may trigger.
         commitRefreshedOptions();
         toast.warning(LIST_CHANGED_MESSAGE, {
           duration: DRIFT_NOTICE_DURATION_MS,
@@ -1803,15 +1545,15 @@ export default function SlotListsPage() {
           });
           // The 409 means schedule metadata or a pickup cutoff drifted after the
           // preflight /options read but before the backend's export rebuild.
-          // Bumping only previewNonce refreshes the preview while request and the
+          // Refreshing only the preview leaves request and the
           // controls keep deriving from the stale listOptions snapshot: a
           // since-cancelled slot stays selected and its explicit ID is re-sent to
           // the refreshed preview, leaving the UI inconsistent and forcing another
           // failed export before options finally update. Revalidate the options
           // snapshot alongside so activeInstanceIds is re-derived and the stale
           // selection is pruned (#1565 review pass 9).
-          revalidateOptions();
-          setPreviewNonce((n) => n + 1);
+          void mutateOptions();
+          void mutatePreview();
           return;
         }
         logger.error("slot_list_export_failed", {
@@ -1826,11 +1568,9 @@ export default function SlotListsPage() {
         // Install the options snapshot the no-drift preflight staged, on EVERY
         // terminal outcome of the export round-trip — a clean success, a
         // superseded/aborted handoff (SlotListExportSupersededError), a 409 drift
-        // refusal, or a generic failure. The no-drift path advanced the shared
-        // committed-generation marker to exportOptionsGeneration when it staged
-        // `fresh`; returning here without installing would strand listOptions on the
-        // previous snapshot while that advanced marker drops older in-flight
-        // refreshes, so a slot cancelled in a DIFFERENT list_kind (which the
+        // refusal, or a generic failure. Returning here without installing the
+        // staged `fresh` would strand listOptions on the previous snapshot, so a
+        // slot cancelled in a DIFFERENT list_kind (which the
         // document-scoped drift check correctly ignored) would stay selectable and
         // re-send its stale active IDs until the next focus refresh.
         // commitRefreshedOptions is a no-op once the snapshot is installed or was
@@ -1851,8 +1591,8 @@ export default function SlotListsPage() {
       pickupCohort,
       listOptions,
       result,
-      revalidateOptions,
-      clearOptionsLoadError,
+      mutateOptions,
+      mutatePreview,
       showExportError,
       showExportMessage,
       toast,
@@ -2103,9 +1843,9 @@ export default function SlotListsPage() {
   // state instead of an empty list.
   const optionsBlockPreview = awaitingActiveSlots && optionsFailed;
   const previewError = previewFailed
-    ? previewLoad.error
+    ? previewLoadError
     : optionsBlockPreview
-      ? optionsLoad.error
+      ? optionsLoadError
       : null;
   const previewErrorPending =
     (previewFailed || optionsBlockPreview) && previewError === null;
@@ -2410,9 +2150,7 @@ export default function SlotListsPage() {
 
       {/* Pickup lists do not wait for /options, so its load error stands
           here; for slot lists it replaces the preview below. */}
-      {optionsBlockPreview ? null : (
-        <LoadErrorAlert error={optionsLoad.error} />
-      )}
+      {optionsBlockPreview ? null : <LoadErrorAlert error={optionsLoadError} />}
 
       {/* Vorschau. Drucken und Exportieren liegen im Kebab der Kopfkarte,
           wie auf jeder anderen Werkzeugfläche. */}
