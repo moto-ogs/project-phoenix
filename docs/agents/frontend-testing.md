@@ -141,6 +141,13 @@ breaks on such a day fails there although no test sets that day; a red run
 opens the issue „Zeitabhängige Frontend-Tests: Frühwarn-Lauf mit verstellter
 Uhr ist rot“.
 
+A pull request does not wait for Sunday: `scripts/test-frontend-changed.mjs`
+(CI's frontend test jobs and `check-changed.mjs`) runs every Vitest test file
+the change adds or edits a second time with the clock on Saturday 2 January
+2027, 00:30 in Berlin (`MOVED_CLOCK` there, #7337): another year, a weekend,
+winter time, a Berlin day ahead of the UTC day. Reproduce from `frontend/`:
+`TEST_CLOCK_INSTANT=2027-01-01T23:30:00.000Z pnpm vitest run <file>`.
+
 - A test must pass on any default day. Take today from `TEST_CLOCK_TODAY`
   and other days from `testClockDay(n)`; compute an expected weekday or week
   with plain arithmetic in the test, not with the helper under test.

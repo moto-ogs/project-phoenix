@@ -525,6 +525,9 @@ for input in backend/auth/authorize/permissions/catalog.json \
     if [[ "$input" = frontend/* ]]; then
       if [[ "$input" = *.md && "$change" != rename ]]; then
         assert_calls "$frontend_calls"
+      elif [[ "$input" = *.test.ts && ( "$change" = create || "$change" = modify ) ]]; then
+        # A changed Vitest test runs again on the moved clock (#7337).
+        assert_calls $'pnpm:install --frozen-lockfile\npnpm:exec vitest run\npnpm:exec vitest run --passWithNoTests '"${input#frontend/}"
       else
         assert_calls $'pnpm:install --frozen-lockfile\npnpm:exec vitest run'
       fi
