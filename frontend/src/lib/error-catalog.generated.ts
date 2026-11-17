@@ -1501,6 +1501,8 @@ export const ERROR_CATALOG = {
         "An einigen Tagen gibt es schon einen Eintrag. Diese Tage wurden nicht geändert.",
       "students.status_day_occupied":
         "Für heute ist eine Klassenfahrt eingetragen. Heben Sie zuerst die Klassenfahrt auf.",
+      "students.without_care_place_care_data":
+        "Ein Kind ohne OGS-Platz hat keine Ankunfts- und Abholzeiten und keinen Heimweg der OGS.",
       "students.without_care_place_group":
         "Ein Kind ohne OGS-Platz ist in keiner Gruppe. Bitte lassen Sie die Gruppe leer.",
       "students.without_care_place_off":
@@ -2798,6 +2800,8 @@ export const ERROR_CATALOG = {
         "Some days already have an entry. These days were not changed.",
       "students.status_day_occupied":
         "A class trip is entered for today. Remove the class trip first.",
+      "students.without_care_place_care_data":
+        "A child without an OGS place has no arrival or pickup times and no way home set by the OGS.",
       "substitutions.last_supervisor":
         "You are the only supervisor. Hand the supervision over to someone or end the activity.",
       "timetable.closing_day_notice_changed":
@@ -3474,6 +3478,8 @@ export const ERROR_CATALOG = {
         "На некоторые дни уже есть запись. Эти дни не изменены.",
       "students.status_day_occupied":
         "На сегодня внесена классная поездка. Сначала отмените классную поездку.",
+      "students.without_care_place_care_data":
+        "У ребёнка без места в OGS нет времени прихода и забора и нет пути домой, установленного OGS.",
       "substitutions.last_supervisor":
         "Вы единственный, кто ведёт присмотр. Передайте присмотр другому человеку или завершите занятие.",
       "timetable.closing_day_notice_not_found":
@@ -4109,6 +4115,8 @@ export const ERROR_CATALOG = {
         "Disa ditë kanë tashmë një regjistrim. Këto ditë nuk u ndryshuan.",
       "students.status_day_occupied":
         "Për sot është regjistruar një ekskursion klase. Hiqni fillimisht ekskursionin e klasës.",
+      "students.without_care_place_care_data":
+        "Një fëmijë pa vend në OGS nuk ka orare ardhjeje dhe marrjeje dhe as rrugë për në shtëpi nga OGS.",
       "substitutions.last_supervisor":
         "Jeni i vetmi mbikëqyrës. Ia dorëzoni mbikëqyrjen dikujt tjetër ose përfundoni aktivitetin.",
       "timetable.closing_day_notice_not_found":
@@ -4731,6 +4739,8 @@ export const ERROR_CATALOG = {
         "Niektóre dni mają już wpis. Tych dni nie zmieniono.",
       "students.status_day_occupied":
         "Na dziś wpisana jest wycieczka klasowa. Najpierw usuń wycieczkę klasową.",
+      "students.without_care_place_care_data":
+        "Dziecko bez miejsca w OGS nie ma godzin przyjścia i odbioru ani drogi do domu ustalanej przez OGS.",
       "substitutions.last_supervisor":
         "Jesteś jedyną osobą sprawującą opiekę. Przekaż opiekę innej osobie lub zakończ zajęcia.",
       "timetable.closing_day_notice_not_found":
@@ -5359,6 +5369,8 @@ export const ERROR_CATALOG = {
         "Bazı günlerde zaten bir kayıt var. Bu günler değiştirilmedi.",
       "students.status_day_occupied":
         "Bugün için bir sınıf gezisi girilmiş. Önce sınıf gezisini kaldırın.",
+      "students.without_care_place_care_data":
+        "OGS yeri olmayan bir çocuğun OGS tarafından belirlenen geliş ve alınma saatleri ile eve dönüş şekli yoktur.",
       "substitutions.last_supervisor":
         "Gözetimi yapan tek kişi sizsiniz. Gözetimi başka birine devredin veya etkinliği bitirin.",
       "timetable.closing_day_notice_not_found":
@@ -5979,6 +5991,8 @@ export const ERROR_CATALOG = {
         "На деякі дні вже є запис. Ці дні не змінено.",
       "students.status_day_occupied":
         "На сьогодні внесено класну поїздку. Спочатку скасуйте класну поїздку.",
+      "students.without_care_place_care_data":
+        "Дитина без місця в OGS не має часу приходу й забору та шляху додому, встановленого OGS.",
       "substitutions.last_supervisor":
         "Ви єдина особа, що здійснює нагляд. Передайте нагляд іншій особі або завершіть заняття.",
       "timetable.closing_day_notice_not_found":

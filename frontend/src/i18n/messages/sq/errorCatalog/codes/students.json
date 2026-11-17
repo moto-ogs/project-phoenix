@@ -96,5 +96,6 @@
   "person_has_active_profile": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "without_care_place_off": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "without_care_place_group": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
-  "class_list_entries_replaced": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
+  "class_list_entries_replaced": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "without_care_place_care_data": "Një fëmijë pa vend në OGS nuk ka orare ardhjeje dhe marrjeje dhe as rrugë për në shtëpi nga OGS."
 }

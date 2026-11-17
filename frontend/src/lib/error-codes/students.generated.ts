@@ -96,6 +96,7 @@ export const codes = [
   "students.staff_value_unsupported",
   "students.status_day_conflict",
   "students.status_day_occupied",
+  "students.without_care_place_care_data",
   "students.without_care_place_group",
   "students.without_care_place_off",
 ] as const;
@@ -197,6 +198,7 @@ export const classes = {
   "students.staff_value_unsupported": "input",
   "students.status_day_conflict": "business_rejection",
   "students.status_day_occupied": "business_rejection",
+  "students.without_care_place_care_data": "business_rejection",
   "students.without_care_place_group": "input",
   "students.without_care_place_off": "business_rejection",
 } as const;
@@ -302,6 +304,7 @@ export const parameters = {
   "students.staff_value_unsupported": [],
   "students.status_day_conflict": [],
   "students.status_day_occupied": [],
+  "students.without_care_place_care_data": [],
   "students.without_care_place_group": [],
   "students.without_care_place_off": [],
 } as const;
