@@ -540,6 +540,9 @@ func keysOf(values map[string]any) []string {
 // keeps those of a later period.
 func TestHolidayRegistrationsGoThreeMonthsAfterTheirPeriod(t *testing.T) {
 	t.Parallel()
+	// The retention deletes the ended registrations of every Träger, those of
+	// the other retention tests too: it runs on its own database.
+	testpkg.SetupIsolatedTestDB(t)
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, "Träger Löschfrist", identityaccess.TraegerRoleAdministration)
 	tokens := map[int64]string{}
