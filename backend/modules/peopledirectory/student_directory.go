@@ -59,6 +59,11 @@ type StudentRecord struct {
 	// (School Membership, #4803): a normal student record that never takes
 	// part in OGS care.
 	WithoutCarePlace bool `json:"without_care_place,omitempty"`
+	// ClassMemberFrom and ClassMemberClass are the class time School
+	// Membership keeps from before the child's OGS care (#4803), empty when
+	// there is none. Not on the wire.
+	ClassMemberFrom  string `json:"-"`
+	ClassMemberClass string `json:"-"`
 
 	AddressStreet     *string `json:"address_street,omitempty"`
 	AddressCity       *string `json:"address_city,omitempty"`

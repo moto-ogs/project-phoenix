@@ -37580,6 +37580,12 @@
           "type": "date",
           "udt": "date",
           "nullable": true
+        },
+        {
+          "name": "class_member_class",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [

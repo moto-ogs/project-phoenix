@@ -87,6 +87,8 @@ func (s *Store) RenewStudentEnrollment(ctx context.Context, input schoolmembersh
 		Set(`class_member_from = CASE WHEN student.without_care_place AND NOT ?::boolean
             THEN COALESCE(student.class_member_from, student.enrolled_from, (student.created_at AT TIME ZONE 'Europe/Berlin')::date)
             ELSE student.class_member_from END`, input.WithoutCarePlace).
+		Set(`class_member_class = CASE WHEN student.without_care_place AND NOT ?::boolean
+            THEN student.school_class ELSE student.class_member_class END`, input.WithoutCarePlace).
 		Set("group_id = ?", input.GroupID).Set("without_care_place = ?", input.WithoutCarePlace).
 		Where("student.tenant_id = ?", scope.TenantID).Where("student.student_profile_id = ?", input.StudentID).
 		Where("student.deleted_at IS NULL").

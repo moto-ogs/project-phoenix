@@ -356,4 +356,26 @@ func TestClassListConversionKeepsTheClassTimeOfAChildWhoseCareStartsLater(t *tes
 	require.NotNil(t, names[0].SchoolMemberUntil)
 	assert.Equal(t, "2026-09-01", names[0].SchoolMemberFrom.String())
 	assert.Equal(t, "2099-01-31", names[0].SchoolMemberUntil.String())
+
+	// The Klassentag roster reads the same class time.
+	suite := NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
+	roster, err := testpkg.TenantQuery1(t, ctx, db, suite.Student.ListClassRoster, "1c")
+	require.NoError(t, err)
+	require.Len(t, roster, 1)
+	from, until, ok := roster[0].ClassTimeBeforeCare()
+	require.True(t, ok, "the roster read carries the class time")
+	assert.Equal(t, "2026-09-01", from.String())
+	assert.Equal(t, "2099-01-31", until.String())
+
+	// A class change ends it, whatever writes the class.
+	_, err = db.ExecContext(ctx, `UPDATE users.student_school_memberships SET school_class = '2c'
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, tenantID, waiting.ID)
+	require.NoError(t, err)
+	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, tenantID, func(txCtx context.Context) error {
+		var err error
+		names, err = people.ListStudentNamesByClass(txCtx, "2c")
+		return err
+	}))
+	require.Len(t, names, 1)
+	assert.False(t, names[0].SchoolMemberOnly, "the class time stays with 1c")
 }
