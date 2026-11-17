@@ -364,6 +364,9 @@ function ChildSections({
         canRemove={care.features.related_accounts_remove_enabled}
         canAddContact={care.features.guardian_contact_manage_allowed}
         canManagePickup={care.features.pickup_manage_allowed === true}
+        canManageEmergencyContact={
+          care.features.emergency_contact_manage_allowed === true
+        }
         careEnded={careEnded}
         withoutCarePlace={withoutCarePlace}
         sickDays={care.sickDays}
@@ -427,6 +430,7 @@ function ChildAreaTabs({
   canRemove,
   canAddContact,
   canManagePickup,
+  canManageEmergencyContact,
   careEnded,
   withoutCarePlace,
   sickDays,
@@ -441,6 +445,7 @@ function ChildAreaTabs({
   canRemove: boolean;
   canAddContact: boolean;
   canManagePickup: boolean;
+  canManageEmergencyContact: boolean;
   careEnded: boolean;
   withoutCarePlace: boolean;
   sickDays: import("~/lib/parent-api").StatusDay[];
@@ -646,6 +651,7 @@ function ChildAreaTabs({
               canRemove={canRemove}
               canAddContact={canAddContact}
               canManagePickup={canManagePickup}
+              canManageEmergencyContact={canManageEmergencyContact}
               withoutCarePlace={withoutCarePlace}
             />
           )}

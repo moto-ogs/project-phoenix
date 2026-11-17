@@ -12,6 +12,7 @@ interface BackendChildFeatures {
   pickup_change_enabled: boolean;
   pickup_change_mode_enabled?: boolean;
   pickup_manage_allowed: boolean;
+  emergency_contact_manage_allowed: boolean;
   guardian_contact_manage_allowed: boolean;
   absence_request_edit_enabled?: boolean;
   related_accounts_invite_enabled: boolean;

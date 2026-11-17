@@ -77,6 +77,11 @@ func (s *Service) checkNewContactFlags(child *Child, input CreateGuardianContact
 	if (input.CanPickup || input.IsEmergencyContact) && !child.HasPermission(GuardianPermissionPickupManage) {
 		return nil, ErrGuardianPermissionDenied
 	}
+	if input.CanPickup {
+		if err := child.RequireCarePlace(); err != nil {
+			return nil, err
+		}
+	}
 	pickupWeekdays, err := carerequests.NormalizeWeekdays(input.PickupWeekdays)
 	if err != nil {
 		return nil, ErrInvalidCareRequestPayload

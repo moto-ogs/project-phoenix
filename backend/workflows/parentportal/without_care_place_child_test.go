@@ -116,6 +116,7 @@ func TestParentPortal_ChildWithoutCarePlace(t *testing.T) {
 		assert.False(t, flags.PickupChangeEnabled)
 		assert.False(t, flags.PickupChangeModeEnabled)
 		assert.False(t, flags.PickupManageAllowed)
+		assert.True(t, flags.EmergencyContactManageAllowed)
 		assert.False(t, flags.MealPlanEnabled)
 		assert.False(t, flags.MealRegistrationEnabled)
 

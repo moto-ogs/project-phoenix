@@ -296,6 +296,87 @@ describe("GuardiansPanel", () => {
     expect(mocks.inviteRelatedAccount).not.toHaveBeenCalled();
   });
 
+  it("creates emergency contacts without offering pickup for a child without a care place", async () => {
+    render(
+      <GuardiansPanel
+        studentId="42"
+        canInvite={false}
+        canRemove={false}
+        canAddContact
+        canManageEmergencyContact
+        withoutCarePlace
+      />,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /Kontakt oder Abholperson hinzufügen/,
+      }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Kontakt hinzufügen" });
+    expect(
+      within(dialog).queryByRole("checkbox", { name: /Darf abholen/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByLabelText("Hinweis zur Abholung"),
+    ).not.toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText("Vorname"), {
+      target: { value: "Erika" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Nachname"), {
+      target: { value: "Klein" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("checkbox", { name: /Notfallkontakt/ }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Kontakt hinzufügen" }),
+    );
+    await waitFor(() =>
+      expect(mocks.createGuardianContact).toHaveBeenCalledWith(
+        "42",
+        expect.objectContaining({
+          can_pickup: false,
+          is_emergency_contact: true,
+          pickup_notes: null,
+        }),
+      ),
+    );
+    expect(mocks.getPickupSignatureStatement).not.toHaveBeenCalled();
+    expect(mocks.listPickupPermissionRequests).not.toHaveBeenCalled();
+  });
+
+  it("edits only the emergency flag of existing contacts without a care place", async () => {
+    render(
+      <GuardiansPanel
+        studentId="42"
+        canInvite={false}
+        canRemove={false}
+        withoutCarePlace
+      />,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Notfallkontakt" }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Notfallkontakt" });
+    expect(
+      within(dialog).queryByRole("checkbox", { name: /Darf abholen/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByLabelText("Hinweis zur Abholung"),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      within(dialog).getByRole("checkbox", { name: /Notfallkontakt/ }),
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.updateGuardianRelationship).toHaveBeenCalledWith("42", "7", {
+        is_emergency_contact: false,
+      }),
+    );
+    expect(mocks.getPickupSignatureStatement).not.toHaveBeenCalled();
+    expect(mocks.submitPickupPermissionRequest).not.toHaveBeenCalled();
+  });
+
   it("lists only active or invited accounts in connected accounts", async () => {
     const relatedAccounts: RelatedAccount[] = [
       {
