@@ -47,7 +47,7 @@ func NewPickupAdjustments(deps PickupAdjustmentDependencies) (*PickupAdjustments
 		return nil, errors.New("pickup adjustments: pickup and arrival schedules, records, baselines, offerings, settings, audit, students, unit of work and fingerprint are required")
 	}
 	if deps.Today == nil {
-		deps.Today = calendar.TodayDate
+		return nil, errors.New("pickup adjustments: the composition's day clock is required")
 	}
 	return &PickupAdjustments{deps: deps}, nil
 }

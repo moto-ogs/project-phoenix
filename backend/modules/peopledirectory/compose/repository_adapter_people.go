@@ -43,11 +43,10 @@ func NewPersonRepository(db *bun.DB, accounts AccountLookup) peoplePorts.PersonR
 
 // NewGuardianProfileRepository joins the schools in which an account holds an
 // active guardian membership and those it can log in to (#2720, #2721); a new
-// profile counts as childless from now, time.Now when nil.
+// profile counts as childless from now, which is required.
 func NewGuardianProfileRepository(db *bun.DB, students usersRepo.StudentDirectoryRows, links usersRepo.GuardianLinkRows, portal, loginReady func(context.Context, []int64) (map[int64][]int64, error), now func() time.Time) peoplePorts.GuardianProfileRepository {
-	return application.NewGuardianProfileCommands(usersRepo.NewGuardianProfileRepository(NewLegacyRepositoryRuntime(db), students, links,
-		usersRepo.WithPortalMemberships(portal),
-		usersRepo.WithPortalLoginMemberships(loginReady), usersRepo.WithClock(now),
+	return application.NewGuardianProfileCommands(usersRepo.NewGuardianProfileRepository(NewLegacyRepositoryRuntime(db), students, links, now,
+		usersRepo.WithPortalMemberships(portal), usersRepo.WithPortalLoginMemberships(loginReady),
 	), NewLegacyRepositoryRuntime(db))
 }
 

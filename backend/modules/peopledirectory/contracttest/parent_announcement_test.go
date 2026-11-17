@@ -512,9 +512,10 @@ func TestParentAnnouncementAudience_WeekdayScopedEnrollmentMatchesToday(t *testi
 	db := testpkg.SetupTestDB(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	repo := api.NewPeopleRepositorySuiteAnnouncements(testpkg.NewDatabase(t, db), func() time.Time {
-		return calendar.NewDate(2026, 8, 24).BerlinMidnight()
-	})
+	// The announcement is published on the projection's clock, which also
+	// judges whether it is live (#7295).
+	clock := func() time.Time { return calendar.NewDate(2026, 8, 24).BerlinMidnight() }
+	repo := api.NewPeopleRepositorySuiteAnnouncements(testpkg.NewDatabase(t, db), clock)
 	ctx := tenantCtx(t)
 	group := testpkg.CreateTestActivityGroupForTenant(t, db, chain.TenantID, "AG-Wochentag")
 	today := calendar.NewDate(2026, 8, 24)
@@ -536,9 +537,7 @@ func TestParentAnnouncementAudience_WeekdayScopedEnrollmentMatchesToday(t *testi
 		Exec(context.Background())
 	require.NoError(t, err)
 
-	announcement := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
-	}, repo, chain.AccountID, chain.TenantID,
+	announcement := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, clock, repo, chain.AccountID, chain.TenantID,
 		"AG-Wochentag", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetActivityGroup, TargetRefID: &group.ID},
 		}))

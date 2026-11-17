@@ -18,13 +18,13 @@ type ClassArrivalExceptions struct {
 }
 
 // A missing store preserves the optional endpoint's explicit not-configured
-// error. A nil today is the real Berlin day.
+// error. today is the composition's day clock and required.
 func NewClassArrivalExceptions(store ports.ClassArrivalExceptionStore, students ports.ClassArrivalStudents, today func() calendar.Date) *ClassArrivalExceptions {
 	if store != nil && students == nil {
 		panic("care plan: class arrival student directory is required")
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("care plan: the composition's day clock is required for class arrival exceptions")
 	}
 	return &ClassArrivalExceptions{store: store, students: students, today: today}
 }

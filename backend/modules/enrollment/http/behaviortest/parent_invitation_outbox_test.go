@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
@@ -63,6 +64,7 @@ func TestParentInvitationOutboxIsAtomicWithApproval(t *testing.T) {
 			decision := enrollmentAPI.NewDecisionService(enrollmentCompose.PublicDecisions(decisions))
 			intakeMails := &recordingOutbox{}
 			requests := newFixtureRequestRoot(owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
+				Now:      time.Now,
 				Requests: repos.Enrollment(), Children: repos.Enrollment(), Guardians: repos.Enrollment(),
 				CareOfferingRepo: enrollmentCompose.NewCareOfferingRecords(careRows.CarePlan), Catalog: repos.Enrollment(),
 				SchoolRepo: capabilitySchools{schools: schoolRows.School}, RateLimitRepo: repos.Enrollment(),
@@ -70,7 +72,7 @@ func TestParentInvitationOutboxIsAtomicWithApproval(t *testing.T) {
 				ManualDecider: decisions, FrontendURL: "http://localhost:3000", ParentsURL: "http://parents.localhost:3000", Logger: slog.Default(),
 			}))
 			resource := enrollmentAPI.NewResource(nil, nil, requests, nil, nil, decision, nil, nil, nil, nil,
-				nil, nil, nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation})
+				nil, nil, nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, time.Now)
 			router := testpkg.TenantRuntimeMiddleware(t, db)(resource.Router(api.TenantSessionChain))
 			path, payload, wantStatus := fmt.Sprintf("/admin/requests/%d/children/%d/decide", request.ID, child.ID), []byte(`{"status":"approved"}`), http.StatusOK
 			if manual {
@@ -120,6 +122,7 @@ func TestParentInvitationOutboxIsAtomicWithApproval(t *testing.T) {
 
 func newParentInvitationDecisions(repos api.EnrollmentTestRepositories, reposCare owners.TimetableCarePlanRows, reposTimetable owners.TimetableTestRepositories, guardianAccess TestDecisionGuardianAccess, invitations identityaccess.GuardianInvitations, studentEnrollment owners.EnrollmentDecisionPeople, bookings TestDecisionBookings) *TestDecisions {
 	return owners.NewEnrollmentDecisions(enrollmentCompose.DecisionDependencies{
+		Now:            time.Now,
 		Requests:       repos.Enrollment(),
 		Children:       repos.Enrollment(),
 		Guardians:      repos.Enrollment(),

@@ -113,15 +113,27 @@ func (p *Portal) PreviewInvitation(ctx context.Context, schoolID int64, token st
 
 // AcceptInvitation spends the invitation in the school's transaction under
 // the supply lock; Identity & Access starts the supply with it, so the
-// caterer never exists without its school.
+// caterer never exists without its school. A wrong password of an existing
+// caterer commits the school's transaction before it is answered: Identity
+// & Access counted it towards the account's lock there (#4496) and wrote
+// nothing else.
 func (p *Portal) AcceptInvitation(ctx context.Context, schoolID int64, token string, registration identityaccess.CatererRegistration) error {
-	return p.deps.WithinSchool(ctx, schoolID, func(txCtx context.Context) error {
+	var refused error
+	err := p.deps.WithinSchool(ctx, schoolID, func(txCtx context.Context) error {
 		if err := p.deps.Lock(txCtx, supplyLock(schoolID)); err != nil {
 			return err
 		}
 		_, err := p.deps.Caterers.AcceptCatererInvitation(txCtx, token, registration)
+		if errors.Is(err, identityaccess.ErrInvalidCredentials) {
+			refused = err
+			return nil
+		}
 		return err
 	})
+	if err != nil {
+		return err
+	}
+	return refused
 }
 
 // Schools names the caterer and the schools it supplies now.

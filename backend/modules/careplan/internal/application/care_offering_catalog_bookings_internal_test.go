@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
@@ -33,6 +35,7 @@ func bookingDependencies() BookingMaterializationDependencies {
 		Enrollment: bookingEnrollmentStub{}, Students: bookingStudentsStub{}, Settings: bookingSettingsStub{},
 		Bookings: bookingCommandsStub{}, Audit: adjustmentAuditStub{}, Pickup: bookingPickupStub{},
 		RunInTx: func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) },
+		Today:   func() calendar.Date { return bookingStatsTestToday },
 	}
 }
 

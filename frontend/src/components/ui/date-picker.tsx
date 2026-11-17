@@ -1,6 +1,11 @@
 "use client";
 
-import { CONTROL_HEIGHT_CLASS, type ControlSize } from "./control-geometry";
+import {
+  CONTROL_HEIGHT_CLASS,
+  CONTROL_PART,
+  type ControlSize,
+} from "./control-geometry";
+import { selectTriggerClassName } from "./select-trigger-styles";
 import { FieldHint, FieldShell, useFieldIds } from "./field-shell";
 import { Z_LAYER } from "./overlay-styles";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -176,6 +181,12 @@ type DatePickerProps =
       // parent-facing surfaces.
       readonly labels?: DatePickerLabels;
       readonly iconOnly?: boolean;
+      /**
+       * Between the arrows of a framed group (`PlanningContextBar
+       * navigationInGroup`): frame and radius come from the group, the
+       * trigger fills its height.
+       */
+      readonly embedded?: boolean;
     }
   | {
       readonly mode: "multiple";
@@ -221,6 +232,7 @@ export function DatePicker({
   const prefersBelow = calendarLayout === "popover-below";
   const isMultiple = props.mode === "multiple";
   const isDisabled = !isMultiple && props.disabled === true;
+  const embedded = !isMultiple && props.embedded === true;
   // Known only after the trigger is measured; until then assume the roomy
   // variant, which is what every field wider than a filter chip gets.
   const isCompactPanel =
@@ -381,7 +393,10 @@ export function DatePicker({
           value={props.value ? toISODate(props.value) : ""}
         />
       ) : null}
-      <div className="flex items-center gap-1" data-date-picker-controls>
+      <div
+        className={cn("flex items-center gap-1", embedded && "h-full")}
+        data-date-picker-controls
+      >
         <button
           ref={triggerRef}
           type="button"
@@ -406,25 +421,40 @@ export function DatePicker({
           // wait for it.
           onPointerEnter={preloadDayPicker}
           onFocus={preloadDayPicker}
-          className={cn(
-            "flex items-center rounded-lg border transition",
-            iconOnly
-              ? `${CONTROL_HEIGHT_CLASS.compact} w-10 shrink-0 justify-center pointer-coarse:size-11`
-              : `min-w-0 flex-1 justify-between ${
-                  TRIGGER_SIZE_CLASS[
-                    (isMultiple ? undefined : props.controlSize) ?? "natural"
-                  ]
-                }`,
-            !isMultiple && props.invalid
-              ? "border-moto-red"
-              : "border-gray-200",
-            isDisabled
-              ? "cursor-not-allowed bg-gray-50 text-gray-500"
-              : isOpen
-                ? "border-gray-300 bg-gray-50"
-                : "bg-white hover:bg-gray-50",
-            !isMultiple ? props.triggerClassName : undefined,
-          )}
+          {...(embedded && CONTROL_PART)}
+          className={
+            embedded
+              ? cn(
+                  selectTriggerClassName({
+                    embedded: true,
+                    invalid: !isMultiple && props.invalid,
+                    disabled: isDisabled,
+                    className: "min-w-0 flex-1",
+                  }),
+                  isOpen && "bg-gray-50",
+                  !isMultiple ? props.triggerClassName : undefined,
+                )
+              : cn(
+                  "flex items-center rounded-lg border transition",
+                  iconOnly
+                    ? `${CONTROL_HEIGHT_CLASS.compact} w-10 shrink-0 justify-center pointer-coarse:size-11`
+                    : `min-w-0 flex-1 justify-between ${
+                        TRIGGER_SIZE_CLASS[
+                          (isMultiple ? undefined : props.controlSize) ??
+                            "natural"
+                        ]
+                      }`,
+                  !isMultiple && props.invalid
+                    ? "border-moto-red"
+                    : "border-gray-200",
+                  isDisabled
+                    ? "cursor-not-allowed bg-gray-50 text-gray-500"
+                    : isOpen
+                      ? "border-gray-300 bg-gray-50"
+                      : "bg-white hover:bg-gray-50",
+                  !isMultiple ? props.triggerClassName : undefined,
+                )
+          }
         >
           {!iconOnly && (
             <span className={displayValue ? "text-gray-900" : "text-gray-500"}>
@@ -682,6 +712,8 @@ export function ISODatePicker({
   readonly controlSize?: DatePickerSize;
   readonly locale?: Locale;
   readonly labels?: DatePickerLabels;
+  /** See `DatePicker` `embedded`. */
+  readonly embedded?: boolean;
 }) {
   // Hint and error belong to the field hull here rather than to DatePicker,
   // so the hint reads before the error as in the kit `Input`.

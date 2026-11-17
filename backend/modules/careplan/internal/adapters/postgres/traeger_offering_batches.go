@@ -24,7 +24,7 @@ func (s *Store) SaveTraegerOfferingRows(ctx context.Context, writes []careplan.T
 	if err != nil {
 		return nil, stats, err
 	}
-	saved, err := saveTraegerOfferingRows(ctx, db, school, inserts, updates, &stats)
+	saved, err := saveTraegerOfferingRows(ctx, db, school, inserts, updates, s.currentTime(), &stats)
 	if err != nil {
 		return nil, stats, err
 	}
@@ -73,10 +73,14 @@ func prepareTraegerOfferingRows(writes []careplan.TraegerOfferingWrite, school i
 	return inserts, updates, byID, bySource, nil
 }
 
-func saveTraegerOfferingRows(ctx context.Context, db bun.IDB, school int64, inserts, updates []careOfferingRow, stats *domain.OperationStats) ([]careOfferingRow, error) {
+// saveTraegerOfferingRows stamps the inserted and updated rows with now.
+func saveTraegerOfferingRows(ctx context.Context, db bun.IDB, school int64, inserts, updates []careOfferingRow, now time.Time, stats *domain.OperationStats) ([]careOfferingRow, error) {
 	var err error
 	saved := []careOfferingRow{}
 	if len(inserts) > 0 {
+		for index := range inserts {
+			inserts[index].CreatedAt, inserts[index].UpdatedAt = now, now
+		}
 		stats.Queries++
 		if err = db.NewInsert().Model(&inserts).ModelTableExpr(`enrollment.care_offerings`).Returning("*").Scan(ctx); err != nil {
 			return nil, fmt.Errorf("insert träger offering copies: %w", err)
@@ -98,9 +102,9 @@ func saveTraegerOfferingRows(ctx context.Context, db bun.IDB, school int64, inse
    availability_rule=batch.availability_rule,sort_order=batch.sort_order,selection_group=batch.selection_group,
    selection_rule=batch.selection_rule,pickup_times=batch.pickup_times,translations=COALESCE(batch.translations,'null'::jsonb),
    traeger_source_id=batch.traeger_source_id,traeger_source_version=batch.traeger_source_version,
-   traeger_values=batch.traeger_values,updated_at=NOW()
+   traeger_values=batch.traeger_values,updated_at=?
    FROM jsonb_populate_recordset(NULL::enrollment.care_offerings,?::jsonb) AS batch
-   WHERE target.tenant_id = ? AND batch.tenant_id = ? AND target.id=batch.id RETURNING target.*`, string(encoded), school, school).Scan(ctx, &rows)
+   WHERE target.tenant_id = ? AND batch.tenant_id = ? AND target.id=batch.id RETURNING target.*`, now, string(encoded), school, school).Scan(ctx, &rows)
 		if err != nil {
 			return nil, fmt.Errorf("update träger offering copies: %w", err)
 		}

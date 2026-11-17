@@ -42,8 +42,8 @@ func NewCleanupTimetable(db transactionruntime.Database) (timetableModule.Capabi
 	return NewUnobservedTimetable(db, students, rooms, time.Now)
 }
 
-// newTimetable composes the Timetable owner over now; nil is the real clock
-// and decides on the Berlin calendar day.
+// newTimetable composes the Timetable owner over now, the root's clock; it
+// decides on the Berlin calendar day.
 func newTimetable(db transactionruntime.Database, students peopleModule.StudentQuery, rooms facilitiesModule.Query, membership schoolMembershipModule.Capability, observe func(timetableCompose.Observation), now func() time.Time) (timetableModule.Owner, error) {
 	return timetableCompose.New(timetableCompose.Dependencies{
 		LockStaffAssignments: func(ctx context.Context, staffIDs []int64) error {

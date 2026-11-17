@@ -45,15 +45,13 @@ type Resumption struct {
 	logger   *slog.Logger
 }
 
-// NewResumption binds the workflow's required owner commands and outer unit.
+// NewResumption binds the workflow's required owner commands, outer unit and
+// day clock.
 func NewResumption(students ResumptionStudents, records ResumptionRecords, trail ResumptionTrail,
 	unit func(context.Context, func(context.Context) error) error, today func() calendar.Date, logger *slog.Logger,
 ) *Resumption {
-	if students == nil || records == nil || trail == nil || unit == nil {
-		panic("care resumption: students, records, trail and unit of work are required")
-	}
-	if today == nil {
-		today = calendar.TodayDate
+	if students == nil || records == nil || trail == nil || unit == nil || today == nil {
+		panic("care resumption: students, records, trail, unit of work and day clock are required")
 	}
 	if logger == nil {
 		logger = slog.Default()

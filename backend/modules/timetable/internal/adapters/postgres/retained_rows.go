@@ -79,7 +79,6 @@ func (s *Store) classArrivalExceptionUpsertQuery(ctx context.Context, row *sched
 		Set("school_class = EXCLUDED.school_class").
 		Set("created_by = EXCLUDED.created_by").
 		Set("origin = EXCLUDED.origin").
-		Set("updated_at = NOW()").
 		Returning("*"), nil
 }
 
@@ -116,8 +115,8 @@ func (s *Store) classArrivalExceptionDeleteQuery(ctx context.Context, class stri
 type StaffNotice struct {
 	bun.BaseModel           `bun:"table:staff_notices,alias:staff_notice"`
 	ID                      int64          `bun:"id,pk,autoincrement"`
-	CreatedAt               time.Time      `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt               time.Time      `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt               time.Time      `bun:"created_at,nullzero,notnull"`
+	UpdatedAt               time.Time      `bun:"updated_at,nullzero,notnull"`
 	TenantID                int64          `bun:"tenant_id,notnull"`
 	Title                   string         `bun:"title,notnull"`
 	Body                    string         `bun:"body,notnull"`
@@ -138,7 +137,7 @@ type StaffNoticeAck struct {
 	TenantID       int64     `bun:"tenant_id,notnull"`
 	NoticeID       int64     `bun:"notice_id,pk"`
 	AccountID      int64     `bun:"account_id,pk"`
-	AcknowledgedAt time.Time `bun:"acknowledged_at,nullzero,notnull,default:current_timestamp"`
+	AcknowledgedAt time.Time `bun:"acknowledged_at,nullzero,notnull"`
 }
 
 // StaffNoticeCount is the acknowledgement count of one notice.

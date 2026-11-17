@@ -15,8 +15,8 @@ type timeframeRow struct {
 	bun.BaseModel `bun:"table:timeframes,alias:timeframe"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	StartTime     string    `bun:"start_time,notnull"`
 	EndTime       *string   `bun:"end_time"`
 	IsActive      bool      `bun:"is_active,notnull,default:false"`

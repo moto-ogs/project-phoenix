@@ -18,6 +18,7 @@ import (
 // test needs; tests swap single dependencies on the returned reports.
 func classRosterTestService(students []*RosterStudent, persons map[int64]*RosterPerson, requests *fakeClassRosterRequestRepo, children *fakeClassRosterChildRepo) *Reports {
 	return NewReports(ReportDependencies{
+		Now:               enrollmentTestClock,
 		Requests:          requests,
 		Children:          children,
 		Guardians:         &fakeClassRosterRequestGuardianRepo{},

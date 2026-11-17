@@ -24,11 +24,18 @@ import (
 // selection tables raises for a school outside the Träger.
 const traegerCatalogSchoolConstraint = "chk_traeger_catalog_school"
 
-// TraegerPhaseStore persists Träger phases in the Träger transaction.
-type TraegerPhaseStore struct{}
+// TraegerPhaseStore persists Träger phases in the Träger transaction; now
+// stamps a withdrawal and the outcomes of the schools (ADR 0281).
+type TraegerPhaseStore struct{ now func() time.Time }
 
-// NewTraegerPhaseStore builds the store.
-func NewTraegerPhaseStore() *TraegerPhaseStore { return &TraegerPhaseStore{} }
+// NewTraegerPhaseStore builds the store on the clock now; a nil clock is a
+// wiring error.
+func NewTraegerPhaseStore(now func() time.Time) *TraegerPhaseStore {
+	if now == nil {
+		panic("enrollment träger phases: the clock is required")
+	}
+	return &TraegerPhaseStore{now: now}
+}
 
 type traegerPhaseRow struct {
 	ID              int64           `bun:"id"`
@@ -247,8 +254,8 @@ func (s *TraegerPhaseStore) WithdrawTraegerPhase(ctx context.Context, organizati
 	if err != nil {
 		return false, err
 	}
-	result, err := db.NewRaw(`UPDATE enrollment.traeger_phases SET withdrawn_at = COALESCE(withdrawn_at, now())
-		WHERE organization_id = ? AND id = ?`, organizationID, id).Exec(ctx)
+	result, err := db.NewRaw(`UPDATE enrollment.traeger_phases SET withdrawn_at = COALESCE(withdrawn_at, ?)
+		WHERE organization_id = ? AND id = ?`, s.now(), organizationID, id).Exec(ctx)
 	if err != nil {
 		return false, fmt.Errorf("enrollment postgres: withdraw träger phase: %w", err)
 	}
@@ -287,13 +294,13 @@ func (s *TraegerPhaseStore) RecordTraegerPhaseOutcomes(ctx context.Context, orga
 	if len(outcomes) == 0 {
 		return nil
 	}
-	return markTraegerSchoolError(recordTraegerOutcomes(ctx, db, organizationID, id, outcomes), "record träger phase outcomes")
+	return markTraegerSchoolError(recordTraegerOutcomes(ctx, db, organizationID, id, outcomes, s.now()), "record träger phase outcomes")
 }
 
 // recordTraegerOutcomes upserts the outcomes of one Träger phase in one
 // statement. A row a rollout adds through all_schools counts as selected; a
 // rejected or stale outcome keeps the version applied before.
-func recordTraegerOutcomes(ctx context.Context, db bun.IDB, organizationID, id int64, outcomes []enrollment.TraegerCopyOutcome) error {
+func recordTraegerOutcomes(ctx context.Context, db bun.IDB, organizationID, id int64, outcomes []enrollment.TraegerCopyOutcome, now time.Time) error {
 	type outcomeRow struct {
 		SchoolID       int64   `json:"school_id"`
 		AppliedVersion *int    `json:"applied_version"`
@@ -314,12 +321,12 @@ func recordTraegerOutcomes(ctx context.Context, db bun.IDB, organizationID, id i
 		return err
 	}
 	_, err = db.NewRaw(`INSERT INTO enrollment.traeger_phase_schools AS target (organization_id, traeger_phase_id, school_id, applied_version, outcome, error_code, recorded_at)
-		SELECT ?, ?, outcome.school_id, outcome.applied_version, outcome.outcome, outcome.error_code, now()
+		SELECT ?, ?, outcome.school_id, outcome.applied_version, outcome.outcome, outcome.error_code, ?::timestamptz
 		FROM jsonb_to_recordset(?::jsonb) AS outcome(school_id bigint, applied_version int, outcome text, error_code text)
 		ON CONFLICT (organization_id, traeger_phase_id, school_id) DO UPDATE SET
 			applied_version = CASE WHEN EXCLUDED.outcome IN ('applied', 'withdrawn') THEN EXCLUDED.applied_version ELSE target.applied_version END,
 			outcome = EXCLUDED.outcome, error_code = EXCLUDED.error_code, recorded_at = EXCLUDED.recorded_at`,
-		organizationID, id, string(encoded)).Exec(ctx)
+		organizationID, id, now, string(encoded)).Exec(ctx)
 	return err
 }
 

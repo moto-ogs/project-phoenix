@@ -147,7 +147,7 @@ func TestDatevPreflight_UsesTheRuleSetOfTheRequestedRows(t *testing.T) {
 			svc := &staffTimeExportService{
 				overview:      datevOverviewStub{rows: test.rows},
 				payrollStatus: payrollConfigurationStub{configuration: test.configuration},
-				payrollRules:  payrollRuleSetStub{},
+				payrollRules:  payrollRuleSetStub{}, nowFunc: testNow,
 			}
 
 			_, _, _, err := svc.buildDatev(context.Background(), TimeExportRequest{

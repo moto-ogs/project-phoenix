@@ -104,9 +104,9 @@ func ObserveSchoolCalendar(observation schoolCalendarCompose.Observation) {
 // BuildSchoolCalendarRecords composes the School Calendar every owner reads,
 // over the tenant's federal state; the period administration is composed
 // once its guards exist.
-func BuildSchoolCalendarRecords(db transactionruntime.Database, observe func(schoolCalendarCompose.Observation), settings settingsCompose.SettingsService) (schoolcalendar.Days, error) {
+func BuildSchoolCalendarRecords(db transactionruntime.Database, observe func(schoolCalendarCompose.Observation), settings settingsCompose.SettingsService, now func() time.Time) (schoolcalendar.Days, error) {
 	return schoolCalendarCompose.NewRecords(schoolCalendarCompose.RecordsDependencies{ClosingDayReads: NewSchoolClosingDayReads(),
-		DB: db.Pool(), Observe: observe,
+		DB: db.Pool(), Observe: observe, Now: now,
 		FederalState: func(ctx context.Context) (string, error) {
 			region, err := settings.ResolveString(ctx, configModels.KeyFederalState)
 			if err != nil {
@@ -270,8 +270,7 @@ func BuildServeFeedback(db transactionruntime.Database, settings *feedbackCompos
 }
 
 // BuildServeTimetable composes the observed Timetable owner over the People
-// Directory, the room catalog and School Membership; now is its clock, nil
-// the real one.
+// Directory, the room catalog and School Membership; now is its clock.
 func BuildServeTimetable(db transactionruntime.Database, persons peopledirectory.StudentQuery, rooms facilitiesModule.Query, membership schoolmembership.Capability, now func() time.Time) (timetable.Owner, error) {
 	return newTimetable(db, persons, rooms, membership, func(observation timetableCompose.Observation) {
 		observability.ObserveTimetableActivitiesOperation(

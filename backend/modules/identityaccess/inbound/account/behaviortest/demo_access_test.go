@@ -66,7 +66,7 @@ func mountDemoEnv(t *testing.T, db *bun.DB, slug string, options ...api.AuthTest
 	mails := testpkg.NewCapturingMailer()
 	options = append(options, api.WithAuthTestMailer(mails.InDemoEnvironment()))
 	svc := setupAuthModuleOn(t, db, options...)
-	resource, err := authAPI.NewDemoResource(svc.DemoAccess, demoOrigins, nil)
+	resource, err := authAPI.NewDemoResource(svc.DemoAccess, demoOrigins, time.Now)
 	require.NoError(t, err)
 	auth := authAPI.NewResource(svc.Auth, svc.Invitation, testSchoolDirectory{schools: api.NewOrganizationTestRows(testpkg.NewDatabase(t, db)).School, db: db, runtime: testpkg.TenantRuntime(t, db)}, svc.AccountAuthentication, identityaccessCompose.TenantUnitOfWork{}, transactionFailures.IsConstraintViolation, &settingsDouble{})
 	auth.RoleGrants = api.AccountRoleGrantPolicy()
@@ -331,7 +331,7 @@ func TestDemoRoutesExistOnlyInTheDemoEnvironment(t *testing.T) {
 	}
 	for _, appEnv := range []string{"", "development", "test", "staging", "production"} {
 		router := chi.NewRouter()
-		require.NoError(t, authAPI.MountDemoRoutes(router, api.IsDemoEnvironment(appEnv), compose, demoOrigins, nil))
+		require.NoError(t, authAPI.MountDemoRoutes(router, api.IsDemoEnvironment(appEnv), compose, demoOrigins, time.Now))
 		assert.Zero(t, composed, "nothing is composed under APP_ENV=%q", appEnv)
 		for _, route := range routes {
 			rr := httptest.NewRecorder()
@@ -341,7 +341,7 @@ func TestDemoRoutesExistOnlyInTheDemoEnvironment(t *testing.T) {
 	}
 
 	router := chi.NewRouter()
-	require.NoError(t, authAPI.MountDemoRoutes(router, api.IsDemoEnvironment("demo"), compose, demoOrigins, nil))
+	require.NoError(t, authAPI.MountDemoRoutes(router, api.IsDemoEnvironment("demo"), compose, demoOrigins, time.Now))
 	for _, route := range routes {
 		assert.True(t, router.Match(chi.NewRouteContext(), route.method, route.path), "%s %s", route.method, route.path)
 	}

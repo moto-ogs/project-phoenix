@@ -56,8 +56,8 @@ func calendarDateString(value *calendarDate) string {
 type calendarPeriodRow struct {
 	bun.BaseModel   `bun:"table:calendar_periods,alias:calendar_period"`
 	ID              int64         `bun:"id,pk,autoincrement"`
-	CreatedAt       time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time     `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time     `bun:"updated_at,nullzero,notnull"`
 	TenantID        int64         `bun:"tenant_id,notnull"`
 	Name            string        `bun:"name,notnull"`
 	PeriodType      string        `bun:"period_type,notnull"`
@@ -71,8 +71,8 @@ type calendarPeriodRow struct {
 type closingDayRow struct {
 	bun.BaseModel `bun:"table:closing_days,alias:closing_day"`
 	ID            int64        `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull"`
 	TenantID      int64        `bun:"tenant_id,notnull"`
 	StartDate     calendarDate `bun:"start_date,notnull,type:date"`
 	EndDate       calendarDate `bun:"end_date,notnull,type:date"`
@@ -323,7 +323,6 @@ func (s *Store) UpdateClosingDay(ctx context.Context, id int64, fields schoolcal
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`schedule.closing_days AS "closing_day"`).
 		Column("start_date", "end_date", "reason").
-		Set(`updated_at = NOW()`).
 		Where(`"closing_day".id = ?`, id), "closing_day", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -355,8 +354,8 @@ func (s *Store) DeleteClosingDay(ctx context.Context, id int64) (domain.Operatio
 type dateframeRow struct {
 	bun.BaseModel `bun:"table:dateframes,alias:dateframe"`
 	ID            int64     `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
 	StartDate     time.Time `bun:"start_date,notnull"`
 	EndDate       time.Time `bun:"end_date,notnull"`
@@ -436,7 +435,6 @@ func (s *Store) UpdateDateframe(ctx context.Context, id int64, fields schoolcale
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`schedule.dateframes AS "dateframe"`).
 		Column("start_date", "end_date", "name", "description").
-		Set(`updated_at = NOW()`).
 		Where(`"dateframe".id = ?`, id), "dateframe", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()

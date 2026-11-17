@@ -35,7 +35,7 @@ func TestGuardianPhoneCreateFactRequiresFreshTransactionalProfile(t *testing.T) 
 			t.Parallel()
 			reads := 0
 			var added []ports.GuardianPhoneInput
-			config := NewStudentImportConfig(ports.StudentImportDeps{
+			config := NewStudentImportConfig(ports.StudentImportDeps{Now: studentImportTestClock,
 				Transactions: guardianPhoneFactTransactions{active: tc.active, tenantID: tc.tenantID},
 				Guardians: GuardianDirectoryFuncs{
 					ListGuardianPhonesFunc: func(_ context.Context, id int64) ([]ports.GuardianPhone, error) {
@@ -82,7 +82,7 @@ func TestGuardianPhoneImportPreservesLookupAndWriteFailures(t *testing.T) {
 			t.Parallel()
 			failure := errors.New("directory unavailable")
 			writes := 0
-			config := NewStudentImportConfig(ports.StudentImportDeps{
+			config := NewStudentImportConfig(ports.StudentImportDeps{Now: studentImportTestClock,
 				Transactions: guardianPhoneFactTransactions{active: true, tenantID: 23},
 				Guardians: GuardianDirectoryFuncs{
 					ListGuardianPhonesFunc: func(context.Context, int64) ([]ports.GuardianPhone, error) { return nil, failure },

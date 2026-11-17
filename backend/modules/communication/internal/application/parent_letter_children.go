@@ -15,7 +15,7 @@ import (
 // parent letter. All source reads share the caller's tenant transaction.
 func NewParentLetterChildren(sources ports.ParentLetterSources, now func() time.Time) ParentLetterChildren {
 	if now == nil {
-		now = time.Now
+		panic("parent letters: the composition's clock is required")
 	}
 	return parentLetterChildren{students: sources.Students, groups: sources.Groups, pickups: sources.Pickups, arrivals: sources.Arrivals, now: now}
 }

@@ -530,6 +530,7 @@ function TraegerZeitvergleichContent() {
           navigationInGroup
           navigationSlot={
             <CustomSelect
+              embedded
               ariaLabel="Monat"
               value={month}
               onChange={setMonth}

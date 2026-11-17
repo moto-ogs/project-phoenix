@@ -3,10 +3,9 @@ package compose
 import (
 	"context"
 
-	"github.com/moto-ogs/project-phoenix/modules/communication/internal/application"
-
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres"
+	"github.com/moto-ogs/project-phoenix/modules/communication/internal/application"
 	parentMessages "github.com/moto-ogs/project-phoenix/modules/communication/internal/parentmessages"
 	"github.com/uptrace/bun"
 )

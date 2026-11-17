@@ -5,6 +5,8 @@ package api
 import (
 	"log/slog"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
@@ -50,6 +52,8 @@ func NewEnrollmentFlowPickupExcusal(db transactionruntime.Database, records care
 	adapter := owners.NewPickupExcusalTimetable(tt, owners.NewPartialAbsencePreview(db))
 	deps := careplanCompose.PickupExcusalDependencies{
 		DB: db.Pool(), Records: records, Baselines: baselines, Blocks: owners.NewLoggedStudentPresence(db, slog.Default()), Preview: adapter,
+		// The enrollment flow suites resync from the real day, as the root does.
+		Today: calendar.TodayDate,
 	}
 	if extensions {
 		deps.Extensions = adapter

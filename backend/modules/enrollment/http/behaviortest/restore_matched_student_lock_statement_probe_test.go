@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	api "github.com/moto-ogs/project-phoenix/api"
 
@@ -93,6 +94,7 @@ func TestRestoreMatchedStudentLockStatementProbe(t *testing.T) {
 			// Real student matching and per-child guardian authorization are wired;
 			// settings/outbox remain the existing explicit suite collaborators.
 			requestSvc := newTestRequestService(owners.EnrollmentIntakeSources{
+				Now:      time.Now,
 				Bookings: requestTestBookingCommands(), Requests: env.repos.Enrollment(), Children: env.repos.Enrollment(),
 				Guardians: env.repos.Enrollment(), CareOfferingRepo: enrollmentCompose.NewCareOfferingRecords(env.reposCare.CarePlan),
 				Catalog: env.repos.Enrollment(), StudentRepo: env.repos.Student, GuardianHold: testGuardianHold(env.db, env.repos),

@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsearchview"
@@ -50,12 +51,18 @@ func (n *noteSearch) SearchNotes(_ context.Context, request schoolsearchview.Not
 type activityEnrollments struct {
 	groups map[int64][]int64
 	asked  [][]int64
+	days   []calendar.Date
 }
 
-func (a *activityEnrollments) ActivityGroupIDs(_ context.Context, ids []int64, _ calendar.Date) (map[int64][]int64, error) {
+func (a *activityEnrollments) ActivityGroupIDs(_ context.Context, ids []int64, day calendar.Date) (map[int64][]int64, error) {
 	a.asked = append(a.asked, ids)
+	a.days = append(a.days, day)
 	return a.groups, nil
 }
+
+// searchDay is the root's day the searches run on, years from the real one,
+// so the activities asked for it prove the search reads the root's clock.
+var searchDay = calendar.NewDate(2031, time.June, 2)
 
 var fullScope = schoolsearchview.Scope{Children: true, ChildDetails: true, Contacts: true, Staff: true, Rooms: true, Groups: true}
 
@@ -83,7 +90,7 @@ func searchWith(t *testing.T, db *bun.DB, tenantID int64, ports owners, text str
 	if ports.activities == nil {
 		ports.activities = &activityEnrollments{}
 	}
-	searcher, err := compose.New(ports.answers, ports.notes, ports.activities)
+	searcher, err := compose.New(ports.answers, ports.notes, ports.activities, func() calendar.Date { return searchDay })
 	require.NoError(t, err)
 	var result schoolsearchview.Result
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), db, tenantID, func(ctx context.Context, _ bun.Tx) error {
@@ -558,6 +565,7 @@ func TestCareTeamNotesReachOnlyTheCareTeam(t *testing.T) {
 	}, matches, "the stranger's note stays hidden; the answer stays a reason")
 	require.Equal(t, answered.ID, result.Children[2].ID, "a note that fell back to its answer sorts with the answers")
 	require.Len(t, ports.activities.asked, 1, "one activity read for all care team notes")
+	require.Equal(t, []calendar.Date{searchDay}, ports.activities.days, "the activities of the root's day")
 	require.ElementsMatch(t, []int64{mine.ID, byActivity.ID, stranger.ID, answered.ID}, ports.activities.asked[0])
 	require.Len(t, asked, 4)
 	require.Contains(t, asked, schoolsearchview.NoteChild{GroupID: &group.ID, SchoolClass: "1a"}, "group and class travel with the child")

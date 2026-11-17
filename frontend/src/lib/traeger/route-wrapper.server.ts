@@ -1,4 +1,9 @@
 import { traegerPortal } from "~/server/auth/traeger";
+import {
+  makeCatalogProxy,
+  type CatalogMethod,
+  type CatalogRoute,
+} from "../contract/catalog-proxy.server";
 import { makePortalHandlers } from "../portal-handlers.server";
 
 /**
@@ -21,3 +26,12 @@ export const proxyFile: typeof traeger.proxyFile = (endpoint, options) =>
     maxBodyBytes: 64 * 1024,
     ...options,
   });
+
+/**
+ * The Träger portal's proxy: forwards `/api/traeger/…` to the backend's `/traeger/…`
+ * for the routes the contract registers for this portal.
+ */
+export const catalogProxy = (
+  routes: readonly CatalogRoute[],
+  method: CatalogMethod,
+) => makeCatalogProxy(traeger, "/traeger", routes, method);

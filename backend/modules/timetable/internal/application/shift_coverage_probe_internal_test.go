@@ -344,7 +344,7 @@ func TestDetectShiftCoverage_BoundsReturnedWarningDetails(t *testing.T) {
 	staff.ID = 1
 	result, err := detectShiftCoverage(context.Background(), ports.ConflictDetectionDependencies{
 		Shifts: &fakeShiftReader{rows: shiftsMarkingWeeks(weeks)},
-		Staff:  &fakeStaffReader{byID: map[int64]*timetable.StaffMember{1: staff}},
+		Staff:  &fakeStaffReader{byID: map[int64]*timetable.StaffMember{1: staff}}, Now: internalTestNow,
 	}, timetable.ShiftCoverageProbe{
 		Dates: dates, StartTime: testClock(t, "12:00"), EndTime: testClock(t, "13:00"), StaffIDs: []int64{1},
 	})
@@ -369,7 +369,7 @@ func TestDetectShiftCoverageWarnings_EffectiveRosterAndContainingWeek(t *testing
 	staff := &fakeStaffReader{byID: map[int64]*timetable.StaffMember{2: fakeStaff(2, "Ersatz", "Person")}}
 	excludeID := int64(42)
 	warnings, err := detectShiftCoverageWarnings(context.Background(), ports.ConflictDetectionDependencies{
-		Shifts: shiftReader, InstanceStaff: instanceStaff, Staff: staff, CalendarPeriods: &fakeCalendarPeriodReader{},
+		Shifts: shiftReader, InstanceStaff: instanceStaff, Staff: staff, CalendarPeriods: &fakeCalendarPeriodReader{}, Now: internalTestNow,
 	}, timetable.ShiftCoverageProbe{
 		Dates: []calendar.Date{date}, StartTime: testClock(t, "09:00"), EndTime: testClock(t, "11:00"),
 		StaffIDs: []int64{1, 2, 3}, ExcludeInstanceID: &excludeID,
@@ -400,7 +400,7 @@ func TestDetectShiftCoverageWarnings_ChangedRosterDropsPriorAbsence(t *testing.T
 	}}
 	excludeID := int64(42)
 	warnings, err := detectShiftCoverageWarnings(context.Background(), ports.ConflictDetectionDependencies{
-		Shifts: shiftReader, InstanceStaff: instanceStaff, Staff: staff, CalendarPeriods: &fakeCalendarPeriodReader{},
+		Shifts: shiftReader, InstanceStaff: instanceStaff, Staff: staff, CalendarPeriods: &fakeCalendarPeriodReader{}, Now: internalTestNow,
 	}, timetable.ShiftCoverageProbe{
 		Dates: []calendar.Date{date}, StartTime: testClock(t, "09:00"), EndTime: testClock(t, "10:00"),
 		StaffIDs: []int64{1, 4}, ExcludeInstanceID: &excludeID,
@@ -443,7 +443,7 @@ func TestDetectShiftCoverageWarnings_ConvertedInstanceSurvivesRecurrenceFilterin
 
 	warnings, err := detectShiftCoverageWarnings(context.Background(), ports.ConflictDetectionDependencies{
 		Shifts: shifts, InstanceStaff: instanceStaff, Staff: staff,
-		CalendarPeriods: &fakeCalendarPeriodReader{period: period},
+		CalendarPeriods: &fakeCalendarPeriodReader{period: period}, Now: internalTestNow,
 	}, timetable.ShiftCoverageProbe{
 		Dates:     []calendar.Date{weekA, concreteWeekB},
 		StartTime: testClock(t, "09:00"), EndTime: testClock(t, "10:00"), StaffIDs: []int64{1, 2},
@@ -468,7 +468,7 @@ func TestDetectShiftCoverage_SkipsExternalCaregivers(t *testing.T) {
 	staff := &fakeStaffReader{byID: map[int64]*timetable.StaffMember{1: fakeStaff(1, "Max", "Mustermann"), 2: external}}
 	deps := ports.ConflictDetectionDependencies{
 		Shifts:        &fakeShiftReader{rows: []*scheduleModel.StaffShift{testShift(t, 9, date, "07:00", "08:00")}},
-		InstanceStaff: &fakeInstanceStaffReader{}, Staff: staff, CalendarPeriods: &fakeCalendarPeriodReader{},
+		InstanceStaff: &fakeInstanceStaffReader{}, Staff: staff, CalendarPeriods: &fakeCalendarPeriodReader{}, Now: internalTestNow,
 	}
 
 	result, err := detectShiftCoverage(context.Background(), deps, timetable.ShiftCoverageProbe{
@@ -499,7 +499,7 @@ func TestDetectShiftCoverageWarnings_GapAndTenantUnusedCases(t *testing.T) {
 			Shifts: &fakeShiftReader{rows: []*scheduleModel.StaffShift{
 				testShift(t, 1, date, "08:00", "09:00"), testShift(t, 1, date, "10:00", "12:00"),
 			}},
-			InstanceStaff: &fakeInstanceStaffReader{}, Staff: staff, CalendarPeriods: &fakeCalendarPeriodReader{},
+			InstanceStaff: &fakeInstanceStaffReader{}, Staff: staff, CalendarPeriods: &fakeCalendarPeriodReader{}, Now: internalTestNow,
 		}, timetable.ShiftCoverageProbe{Dates: []calendar.Date{date}, StartTime: testClock(t, "08:00"), EndTime: testClock(t, "12:00"), StaffIDs: []int64{1}})
 		require.NoError(t, err)
 		require.Len(t, warnings, 1)
@@ -513,7 +513,7 @@ func TestDetectShiftCoverageWarnings_GapAndTenantUnusedCases(t *testing.T) {
 	t.Run("tenant does not use Dienstplan", func(t *testing.T) {
 		nameReader := &fakeStaffReader{byID: staff.byID}
 		warnings, err := detectShiftCoverageWarnings(context.Background(), ports.ConflictDetectionDependencies{
-			Shifts: &fakeShiftReader{}, InstanceStaff: &fakeInstanceStaffReader{}, Staff: nameReader, CalendarPeriods: &fakeCalendarPeriodReader{},
+			Shifts: &fakeShiftReader{}, InstanceStaff: &fakeInstanceStaffReader{}, Staff: nameReader, CalendarPeriods: &fakeCalendarPeriodReader{}, Now: internalTestNow,
 		}, timetable.ShiftCoverageProbe{Dates: []calendar.Date{date}, StartTime: testClock(t, "08:00"), EndTime: testClock(t, "12:00"), StaffIDs: []int64{1}})
 		require.NoError(t, err)
 		assert.Empty(t, warnings)
@@ -546,7 +546,7 @@ func TestDetectShiftCoverageWarnings_RecurringDatesReusePeriodAndABEngineWithFix
 	periodID := period.ID
 
 	warnings, err := detectShiftCoverageWarnings(context.Background(), ports.ConflictDetectionDependencies{
-		Shifts: shiftReader, InstanceStaff: instanceStaff, Staff: staff, CalendarPeriods: periodReader,
+		Shifts: shiftReader, InstanceStaff: instanceStaff, Staff: staff, CalendarPeriods: periodReader, Now: internalTestNow,
 	}, timetable.ShiftCoverageProbe{
 		Dates: []calendar.Date{
 			nextWeekA, weekA, weekA.AddDays(2), weekA,
@@ -611,7 +611,7 @@ func TestDetectShiftCoverageWarnings_SeriesReplanUsesEffectiveExceptionsAndDevia
 		Shifts: shifts, Instances: legacyInstanceReads{fake: instances}, Exceptions: exceptions,
 		Schedules:     &fakeActivityScheduleReader{rows: []*activityContract.Schedule{{ActivityGroupID: groupID}}},
 		InstanceStaff: instanceStaff, Staff: staff,
-		CalendarPeriods: &fakeCalendarPeriodReader{period: period},
+		CalendarPeriods: &fakeCalendarPeriodReader{period: period}, Now: internalTestNow,
 	}, timetable.ShiftCoverageProbe{
 		Dates:     []calendar.Date{monday, wednesday, friday},
 		StartTime: testClock(t, "09:00"), EndTime: testClock(t, "11:00"), StaffIDs: []int64{1},
@@ -661,7 +661,7 @@ func TestDetectShiftCoverageWarnings_UsesCanonicalSeriesBoundsAndActivePeriod(t 
 		Shifts: shifts, Instances: legacyInstanceReads{fake: &fakeInstanceReader{}}, Exceptions: &fakeActivityExceptionReader{},
 		Schedules: schedules, InstanceStaff: &fakeInstanceStaffReader{},
 		Staff:           &fakeStaffReader{byID: map[int64]*timetable.StaffMember{1: fakeStaff(1, "Grenze", "Serie")}},
-		CalendarPeriods: &fakeCalendarPeriodReader{period: period},
+		CalendarPeriods: &fakeCalendarPeriodReader{period: period}, Now: internalTestNow,
 	}, timetable.ShiftCoverageProbe{
 		Dates:     []calendar.Date{monday, wednesday, nextMonday},
 		StartTime: testClock(t, "09:00"), EndTime: testClock(t, "10:00"), StaffIDs: []int64{1},
@@ -679,7 +679,7 @@ func TestDetectShiftCoverageWarnings_UsesCanonicalSeriesBoundsAndActivePeriod(t 
 	warnings, err = detectShiftCoverageWarnings(context.Background(), ports.ConflictDetectionDependencies{
 		Shifts: shiftReader, Instances: legacyInstanceReads{fake: &fakeInstanceReader{}}, Exceptions: &fakeActivityExceptionReader{},
 		Schedules: schedules, InstanceStaff: &fakeInstanceStaffReader{}, Staff: &fakeStaffReader{},
-		CalendarPeriods: &fakeCalendarPeriodReader{period: &inactive},
+		CalendarPeriods: &fakeCalendarPeriodReader{period: &inactive}, Now: internalTestNow,
 	}, timetable.ShiftCoverageProbe{
 		Dates:     []calendar.Date{wednesday},
 		StartTime: testClock(t, "09:00"), EndTime: testClock(t, "10:00"), StaffIDs: []int64{1},
@@ -701,7 +701,7 @@ func TestDetectShiftCoverageWarnings_IncludesWeekendShifts(t *testing.T) {
 	warnings, err := detectShiftCoverageWarnings(context.Background(), ports.ConflictDetectionDependencies{
 		Shifts: shiftReader, InstanceStaff: &fakeInstanceStaffReader{},
 		Staff:           &fakeStaffReader{byID: map[int64]*timetable.StaffMember{1: fakeStaff(1, "Samstag", "Dienst")}},
-		CalendarPeriods: &fakeCalendarPeriodReader{},
+		CalendarPeriods: &fakeCalendarPeriodReader{}, Now: internalTestNow,
 	}, timetable.ShiftCoverageProbe{
 		Dates: []calendar.Date{saturday}, StartTime: testClock(t, "09:00"), EndTime: testClock(t, "10:00"), StaffIDs: []int64{1},
 	})
@@ -811,7 +811,7 @@ func TestDetectShiftCoverageWarnings_MissingTenantPeriodIsValidationError(t *tes
 	periodID, weekPattern := int64(999), 1
 	periodReader := &fakeCalendarPeriodReader{err: sql.ErrNoRows}
 	warnings, err := detectShiftCoverageWarnings(context.Background(), ports.ConflictDetectionDependencies{
-		Shifts: &fakeShiftReader{}, InstanceStaff: &fakeInstanceStaffReader{}, Staff: &fakeStaffReader{}, CalendarPeriods: periodReader,
+		Shifts: &fakeShiftReader{}, InstanceStaff: &fakeInstanceStaffReader{}, Staff: &fakeStaffReader{}, CalendarPeriods: periodReader, Now: internalTestNow,
 	}, timetable.ShiftCoverageProbe{
 		Dates: []calendar.Date{date}, StartTime: testClock(t, "09:00"), EndTime: testClock(t, "10:00"), StaffIDs: []int64{1},
 		CalendarPeriodID: &periodID, WeekPattern: &weekPattern,

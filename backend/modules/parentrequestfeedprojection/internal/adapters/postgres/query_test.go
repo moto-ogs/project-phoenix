@@ -171,6 +171,10 @@ func TestMain(m *testing.M) {
 	testpkg.Run(m)
 }
 
+// feedSince lies before every row these tests insert: PostgreSQL stamps
+// created_at at the insert, so the feed lists them on every day.
+var feedSince = time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+
 // The feed lists the five queues in one statement, inside the caller's
 // transaction (#2940).
 func TestListNewParentRequestsQueryBudget(t *testing.T) {
@@ -183,7 +187,7 @@ func TestListNewParentRequestsQueryBudget(t *testing.T) {
 	// A package pool is shared even when the callers have different tenants.
 	read := func(ctx context.Context) error {
 		return testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(ctx context.Context, tx bun.Tx) error {
-			_, listErr := NewReader(func(context.Context) (bun.IDB, error) { return tx, nil }).ListNewParentRequests(ctx, testpkg.Tenant(t), time.Now().Add(-30*24*time.Hour), true, true)
+			_, listErr := NewReader(func(context.Context) (bun.IDB, error) { return tx, nil }).ListNewParentRequests(ctx, testpkg.Tenant(t), feedSince, true, true)
 			return listErr
 		})
 	}

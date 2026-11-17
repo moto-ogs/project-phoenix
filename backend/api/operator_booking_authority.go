@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 	carePlanModule "github.com/moto-ogs/project-phoenix/modules/careplan"
 	carePlanHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
@@ -13,11 +15,13 @@ import (
 
 // newBookingAuthorityImpact serves Care Plan's review before a school
 // switches to booking-led care in the operator surface's wire format,
-// inside the tenant transaction of the school in the path (#4072).
-func newBookingAuthorityImpact(authority carePlanModule.BookingAuthority) http.Handler {
+// inside the tenant transaction of the school in the path (#4072), on the
+// root's day clock.
+func newBookingAuthorityImpact(authority carePlanModule.BookingAuthority, today func() calendar.Date) http.Handler {
 	return carePlanHTTP.NewBookingAuthorityImpact(carePlanHTTP.BookingAuthorityImpactConfig{
 		Authority:    authority,
 		WithinSchool: withinSchool,
+		Today:        today,
 		Surface: carePlanHTTP.Surface{
 			InvalidRequest: apiCommon.ErrorInvalidRequest,
 			Internal:       apiCommon.ErrorInternalServerWrap,

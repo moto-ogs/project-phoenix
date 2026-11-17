@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,7 @@ func TestDocumentKindFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newCareScope(t, db, "Träger Dokumentart A")
 	other := newCareScope(t, db, "Träger Dokumentart B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the document kinds back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))

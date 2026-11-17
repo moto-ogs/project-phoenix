@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -203,6 +204,7 @@ func newRestoreDecisionServiceForRequestEnv(t *testing.T, env *requestTestEnv) e
 	t.Helper()
 	repoFactory, repoFactoryCare, repoFactoryAudit, _, _, _ := flowRepositories(t, env.db)
 	return newTestDecisionService(enrollmentCompose.DecisionDependencies{
+		Now:          time.Now,
 		Requests:     repoFactory.Enrollment(),
 		Children:     repoFactory.Enrollment(),
 		Phases:       repoFactory.Enrollment(),

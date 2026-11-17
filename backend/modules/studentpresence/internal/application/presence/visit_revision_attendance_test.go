@@ -34,7 +34,7 @@ func (r *stayRepository) ReviseAttendance(_ context.Context, row studentpresence
 func reviseStays(t *testing.T, rows []studentpresence.Attendance, previous, updated studentpresence.Visit) *studentpresence.Attendance {
 	t.Helper()
 	repo := &stayRepository{rows: rows}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: repo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: repo}}
 	require.NoError(t, svc.syncAttendanceForVisitRevision(context.Background(), &previous, &updated))
 	return repo.revised
 }
@@ -126,7 +126,7 @@ func TestUpdateVisitRejectsInvalidResultingStay(t *testing.T) {
 				},
 				rows: []studentpresence.Attendance{{ID: 1, StudentID: 200, CheckInTime: at(tt.checkIn), CheckOutTime: ptr(at(tt.checkOut))}},
 			}
-			svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: repo}}
+			svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: repo}}
 			updated := previous
 			updated.EntryTime, updated.ExitTime = at(tt.entry), ptr(at(tt.exit))
 
@@ -171,7 +171,7 @@ func TestUpdateVisitRefusesOverlapBeforeAnyWrite(t *testing.T) {
 					return []studentpresence.Visit{*a, b}, nil
 				},
 			}
-			svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: repo, GroupRepo: &mockGroupRepository{}}}
+			svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: repo, GroupRepo: &mockGroupRepository{}}}
 			updated := *a
 			updated.ExitTime = tt.exit
 

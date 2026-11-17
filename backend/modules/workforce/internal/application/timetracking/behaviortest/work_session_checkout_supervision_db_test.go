@@ -78,6 +78,6 @@ func newWorkSessionTestService(t *testing.T, db *testpkg.DB, workTime workforceC
 		supervisions, reposPresence.ActiveGroup, owners.WorkSessionStaff(reposPeople.Staff, api.MustNewStaffEmployment(testpkg.MustDatabase(db)), reposMembership.Membership), owners.NewWorkSessionSchedules(owners.NewStaffWorkScheduleRepository(workTime)), owners.NewWorkSessionTimeModels(owners.NewWorkTimeModelRepository(workTime)),
 		snapshotSessionSettings{}, nil, db, owners.RenderTimeTrackingPDF,
 		owners.RenderTimeTrackingWorkbook,
-		timetracking.WithWorkSessionShifts(workforceCompose.NewTimeTrackingShifts(workTime)),
+		timetracking.WithWorkSessionShifts(workforceCompose.NewTimeTrackingShifts(workTime)), timetracking.WithSessionClock(testNow),
 	)
 }

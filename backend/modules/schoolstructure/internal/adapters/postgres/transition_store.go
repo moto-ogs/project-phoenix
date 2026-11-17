@@ -25,8 +25,8 @@ type transitionRow struct {
 	bun.BaseModel            `bun:"table:grade_transitions,alias:transition"`
 	ID                       int64      `bun:"id,pk,autoincrement"`
 	TenantID                 int64      `bun:"tenant_id,notnull"`
-	CreatedAt                time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt                time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt                time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt                time.Time  `bun:"updated_at,nullzero,notnull"`
 	AcademicYear             string     `bun:"academic_year,notnull"`
 	Status                   string     `bun:"status,notnull"`
 	AppliedAt                *time.Time `bun:"applied_at"`
@@ -51,7 +51,7 @@ type historyRow struct {
 	bun.BaseModel `bun:"table:grade_transition_history,alias:history"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
 	TransitionID  int64     `bun:"transition_id,notnull"`
 	StudentID     int64     `bun:"student_id,notnull"`
 	PersonName    string    `bun:"person_name,notnull"`
@@ -66,7 +66,7 @@ type classTeacherLedgerRow struct {
 	bun.BaseModel `bun:"table:grade_transition_class_teachers,alias:ledger"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
 	TransitionID  int64     `bun:"transition_id,notnull"`
 	StaffID       int64     `bun:"staff_id,notnull"`
 	SchoolClass   string    `bun:"school_class,notnull"`
@@ -77,7 +77,7 @@ type classListLedgerRow struct {
 	bun.BaseModel `bun:"table:grade_transition_class_list_entries,alias:ledger"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
 	TransitionID  int64     `bun:"transition_id,notnull"`
 	EntryID       *int64    `bun:"entry_id"`
 	FirstName     string    `bun:"first_name,notnull"`

@@ -92,6 +92,7 @@ func TestCareBeyondShortenedEnd_ListsTheChildrenTheEditCutOff(t *testing.T) {
 		{StudentID: 608, PhaseID: otherPhaseID, ServiceEndDate: "2028-07-15"},
 	}
 	s := newPhases(PhaseDependencies{
+		Now:          enrollmentTestClock,
 		Records:      beyondEndOwner{children: children, periods: periods},
 		CareStudents: students,
 		Today:        func() calendar.Date { return today },

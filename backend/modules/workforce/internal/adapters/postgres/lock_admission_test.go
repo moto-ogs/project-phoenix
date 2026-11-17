@@ -122,11 +122,11 @@ func holdAdvisory(key string) func(context.Context, bun.Tx) error {
 func TestWorkforceRowLocksAreAdmittedBeforeTheyWait(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	store := New(DatabaseRuntime(db))
-	school := testpkg.Tenant(t)
 	// A fixed future school day: the paths take their locks whatever the
 	// wall clock says.
 	today := calendar.NewDate(2099, 6, 1)
+	store := New(DatabaseRuntime(db)).WithClock(func() time.Time { return today.BerlinMidnight() })
+	school := testpkg.Tenant(t)
 	from := calendar.NewDate(2026, 1, 1)
 	ctx := testpkg.Ctx(t)
 

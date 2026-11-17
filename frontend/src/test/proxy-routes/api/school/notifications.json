@@ -8,9 +8,6 @@
   "api/school/notifications/feed/read-all": [
     "POST school /school/notifications/feed/read-all"
   ],
-  "api/school/notifications/feed/unread-count": [
-    "GET school /school/notifications/feed/unread-count"
-  ],
   "api/school/notifications/preferences": [
     "DELETE school /school/notifications/preferences/",
     "GET school /school/notifications/preferences/"

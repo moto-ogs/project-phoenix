@@ -51,13 +51,13 @@ func TestDataReturnOverHTTP(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "COMPLETE"), []byte(testpkg.ContentFingerprint(manifest)+"\n"), 0o600))
 
 	store := t.TempDir()
-	release, err := organizationCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store)
+	release, err := organizationCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store, time.Now)
 	require.NoError(t, err)
 	issued, err := release.Release(t.Context(), organizationtenancy.DataReturnReleaseRequest{Package: dir, SchoolID: school, OperatorID: operator.ID,
 		KeepUntil: time.Now().AddDate(0, 0, 40), DataReturnRecipient: organizationtenancy.DataReturnRecipient{
 			Recipient: organizationtenancy.DataReturnTargetProvider, Name: "Neuer Anbieter GmbH", ValidFor: 24 * time.Hour, MaxDownloads: 2}})
 	require.NoError(t, err)
-	packages, err := organizationCompose.NewDataReturn(db, owners.NewDataReturnCrypto(), store, nil)
+	packages, err := organizationCompose.NewDataReturn(db, owners.NewDataReturnCrypto(), store, time.Now, nil)
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	mountDataReturn(router, packages, nil)

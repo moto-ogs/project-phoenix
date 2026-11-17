@@ -20,7 +20,7 @@ func (r *Store) SetRequestWithdrawal(ctx context.Context, id int64, at *time.Tim
 		return err
 	}
 	_, err = db.NewUpdate().TableExpr("enrollment.requests").
-		Set("withdrawn_at = ?", at).Set("updated_at = NOW()").
+		Set("withdrawn_at = ?", at).Set("updated_at = ?", r.currentTime()).
 		Where("tenant_id = ? AND id = ?", tenantID, id).Exec(ctx)
 	if err != nil {
 		if at == nil {
@@ -147,7 +147,7 @@ func (r *Store) SetRequestFamilyChildren(ctx context.Context, id int64, children
 		return err
 	}
 	result, err := db.NewUpdate().TableExpr("enrollment.requests").
-		Set("family_children = ?", children).Set("family_children_stated_at = clock_timestamp()").Set("updated_at = NOW()").
+		Set("family_children = ?", children).Set("family_children_stated_at = clock_timestamp()").Set("updated_at = ?", r.currentTime()).
 		Where("tenant_id = ? AND id = ?", tenantID, id).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to store the family children of the request: %w", err)

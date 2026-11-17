@@ -84,7 +84,7 @@ func TestNativeWeeklyApprovalMergesAndRollsBackOnAuditFailure(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	student := testpkg.CreateTestStudent(t, db, "Weekly", "Approval", "1a")
 	staff, account := testpkg.CreateTestStaffWithAccount(t, db, "Weekly", "Reviewer")
 	clock := time.Date(1, 1, 1, 15, 0, 0, 0, time.UTC)

@@ -57,7 +57,7 @@ func TestStaffMonthCloseService_UsesOneTimestampForSchoolWideClose(t *testing.T)
 		timestampMonthCloseMonthService{},
 		timestampMonthCloseStaffLister{},
 		&wtmMockSettings{accountStart: "2025-01-01"},
-		nil,
+		nil, WithMonthCloseClock(testNow),
 	)
 
 	result, err := service.CloseMonth(context.Background(), 77, 2025, 8, "Lohnlauf")
@@ -79,7 +79,7 @@ func TestStaffMonthCloseService_StaffQueryFailureDoesNotWrite(t *testing.T) {
 	t.Parallel()
 	failure := errors.New("staff query unavailable")
 	repo := &timestampMonthCloseSnapshotRepo{}
-	service := NewStaffMonthCloseService(repo, timestampMonthCloseMonthService{}, failedMonthCloseStaffQuery{err: failure}, &wtmMockSettings{accountStart: "2025-01-01"}, nil)
+	service := NewStaffMonthCloseService(repo, timestampMonthCloseMonthService{}, failedMonthCloseStaffQuery{err: failure}, &wtmMockSettings{accountStart: "2025-01-01"}, nil, WithMonthCloseClock(testNow))
 	result, err := service.CloseMonth(context.Background(), 77, 2025, 8, "Lohnlauf")
 	require.Nil(t, result)
 	require.ErrorIs(t, err, failure)

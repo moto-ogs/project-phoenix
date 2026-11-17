@@ -359,7 +359,7 @@ func runCleanupPreview(cmd *cobra.Command, _ []string) error {
 			return nil, fmt.Errorf("failed to get cleanup preview: %w", err)
 		}
 		return func() {
-			printPreviewHeader(output, preview)
+			printPreviewHeader(output, preview, time.Now())
 			if verbose {
 				printStudentBreakdownWithTotal(output, "Visits to Delete", preview.StudentVisitCounts)
 			}
@@ -367,13 +367,13 @@ func runCleanupPreview(cmd *cobra.Command, _ []string) error {
 	})
 }
 
-func printPreviewHeader(output io.Writer, preview *studentpresence.CleanupPreview) {
+func printPreviewHeader(output io.Writer, preview *studentpresence.CleanupPreview, now time.Time) {
 	mustFprintln(output, "Data Retention Cleanup Preview")
 	mustFprintln(output, "==============================")
 	mustFprintf(output, "Total visits to delete: %d\n", preview.TotalVisits)
 
 	if preview.OldestVisit != nil {
-		daysAgo := time.Since(*preview.OldestVisit).Hours() / 24
+		daysAgo := now.Sub(*preview.OldestVisit).Hours() / 24
 		mustFprintf(output, "Oldest visit: %s (%.0f days ago)\n",
 			preview.OldestVisit.Format(dateFormat), daysAgo)
 	}
@@ -395,7 +395,7 @@ func runCleanupStats(cmd *cobra.Command, _ []string) error {
 			return nil, fmt.Errorf("failed to get retention statistics: %w", err)
 		}
 		return func() {
-			printRetentionStats(output, stats)
+			printRetentionStats(output, stats, time.Now())
 			if verbose {
 				printMonthlyBreakdownWithTotal(output, "Expired visits by month", stats.ExpiredVisitsByMonth)
 			}
@@ -410,14 +410,14 @@ func runCleanupStats(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func printRetentionStats(output io.Writer, stats *studentpresence.RetentionStats) {
+func printRetentionStats(output io.Writer, stats *studentpresence.RetentionStats, now time.Time) {
 	mustFprintln(output, "Data Retention Statistics")
 	mustFprintln(output, "========================")
 	mustFprintf(output, "Total expired visits: %d\n", stats.TotalExpiredVisits)
 	mustFprintf(output, fmtStudentsAffected, stats.StudentsAffected)
 
 	if stats.OldestExpiredVisit != nil {
-		daysAgo := time.Since(*stats.OldestExpiredVisit).Hours() / 24
+		daysAgo := now.Sub(*stats.OldestExpiredVisit).Hours() / 24
 		mustFprintf(output, "Oldest expired visit: %s (%.0f days ago)\n",
 			stats.OldestExpiredVisit.Format(dateFormat), daysAgo)
 	}
@@ -543,7 +543,7 @@ func runAttendanceDryRun(db transactionruntime.Database, schools organizationten
 			return nil, fmt.Errorf("failed to preview attendance cleanup: %w", err)
 		}
 		return func() {
-			printAttendancePreviewHeader(output, preview)
+			printAttendancePreviewHeader(output, preview, timezone.TodayDate())
 			if verbose {
 				printStudentBreakdown(output, "Per-student breakdown", "Stale Records", preview.StudentRecords)
 				printDateBreakdown(output, preview.RecordsByDate)
@@ -552,12 +552,12 @@ func runAttendanceDryRun(db transactionruntime.Database, schools organizationten
 	})
 }
 
-func printAttendancePreviewHeader(output io.Writer, preview *studentpresence.AttendanceCleanupPreview) {
+func printAttendancePreviewHeader(output io.Writer, preview *studentpresence.AttendanceCleanupPreview, today timezone.Date) {
 	mustFprintln(output, "\nAttendance Cleanup Preview:")
 	mustFprintf(output, "Total stale records: %d\n", preview.TotalRecords)
 
 	if preview.OldestRecord != nil {
-		daysAgo := preview.OldestRecord.DaysUntil(timezone.TodayDate())
+		daysAgo := preview.OldestRecord.DaysUntil(today)
 		mustFprintf(output, "Oldest record: %s (%d days ago)\n",
 			preview.OldestRecord.Format(dateFormat), daysAgo)
 	}
@@ -711,7 +711,7 @@ func runSupervisorsDryRun(db transactionruntime.Database, schools organizationte
 			return nil, fmt.Errorf("failed to preview supervisor cleanup: %w", err)
 		}
 		return func() {
-			printSupervisorPreviewHeader(output, preview)
+			printSupervisorPreviewHeader(output, preview, timezone.TodayDate())
 			if verbose {
 				printStaffBreakdown(output, "Per-staff breakdown", "Stale Records", preview.StaffRecords)
 				printDateBreakdown(output, preview.RecordsByDate)
@@ -720,12 +720,12 @@ func runSupervisorsDryRun(db transactionruntime.Database, schools organizationte
 	})
 }
 
-func printSupervisorPreviewHeader(output io.Writer, preview *studentpresence.SupervisorCleanupPreview) {
+func printSupervisorPreviewHeader(output io.Writer, preview *studentpresence.SupervisorCleanupPreview, today timezone.Date) {
 	mustFprintln(output, "\nSupervisor Cleanup Preview:")
 	mustFprintf(output, "Total stale records: %d\n", preview.TotalRecords)
 
 	if preview.OldestRecord != nil {
-		daysAgo := preview.OldestRecord.DaysUntil(timezone.TodayDate())
+		daysAgo := preview.OldestRecord.DaysUntil(today)
 		mustFprintf(output, "Oldest record: %s (%d days ago)\n",
 			preview.OldestRecord.Format(dateFormat), daysAgo)
 	}

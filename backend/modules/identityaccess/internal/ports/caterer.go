@@ -13,6 +13,9 @@ import (
 type CatererInvitationDelivery interface {
 	EnqueueCatererInvitation(ctx context.Context, invitationID, schoolID int64, email, catererName, token string, expiresAt time.Time) error
 	CatererInvitationMailStates(ctx context.Context, tenantID int64, invitationIDs []int64) (map[int64]identityaccess.InvitationMailState, error)
+	// CancelCatererInvitation stops the invitation's mail that is not sent
+	// yet, in the school's transaction (#4496).
+	CancelCatererInvitation(ctx context.Context, invitationID int64) error
 }
 
 // CatererStore holds the caterer, its accounts, the schools' supplies and

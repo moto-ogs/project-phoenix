@@ -44,7 +44,7 @@ func setupCareOfferingRepoTest(t *testing.T) (
 		return phaseRepo.InsertPhase(ctx, phase)
 	}))
 
-	carePlan := carePlanTest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	carePlan := carePlanTest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	return db, careOfferingRepoUnderTest{
 		careOfferingFixtureRecords: newCareOfferingFixtureRecords(carePlan),
 		CareOfferingRecords:        enrollmentTest.NewCareOfferingRecords(carePlan),

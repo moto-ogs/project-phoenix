@@ -15,4 +15,8 @@ type CatererInvitationDelivery interface {
 	// CatererInvitationMailStates reports, in one read, what became of the
 	// mail of each invitation (#5960); an invitation without a mail has no key.
 	CatererInvitationMailStates(ctx context.Context, tenantID int64, invitationIDs []int64) (map[int64]identityaccess.InvitationMailState, error)
+	// CancelCatererInvitation stops the mail of a revoked invitation that
+	// is not sent yet, in the school's transaction (#4496); a mail already
+	// handed to the provider stays sent.
+	CancelCatererInvitation(ctx context.Context, invitationID int64) error
 }

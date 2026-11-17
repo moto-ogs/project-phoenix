@@ -95,7 +95,7 @@ func NewPayrollDispatch(deps PayrollDispatchDependencies) (*PayrollDispatch, err
 		return nil, errors.New("payroll dispatch: the transaction runtime is required")
 	}
 	if deps.Now == nil {
-		deps.Now = time.Now
+		return nil, errors.New("payroll dispatch: the clock is required")
 	}
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()

@@ -618,6 +618,7 @@ function TraegerReportsContent() {
             navigationInGroup
             navigationSlot={
               <ISODatePicker
+                embedded
                 id="report-key-date"
                 ariaLabel="Stichtag"
                 value={shownKeyDate}

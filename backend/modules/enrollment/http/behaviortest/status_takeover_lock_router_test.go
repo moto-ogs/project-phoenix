@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
@@ -165,11 +166,12 @@ func setupTakeoverLockTest(t *testing.T, redeemableInvitation ...bool) *takeover
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repos.Enrollment().InsertPhase, phase))
 
 	requestSvc := newFixtureRequestRoot(owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
+		Now:              time.Now,
 		Requests:         repos.Enrollment(),
 		Children:         repos.Enrollment(),
 		Guardians:        repos.Enrollment(),
 		CareOfferingRepo: enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan),
-		Capacity:         owners.NewEnrollmentOfferingCapacity(enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan), repos.Enrollment(), settings, nil),
+		Capacity:         owners.NewEnrollmentOfferingCapacity(enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan), repos.Enrollment(), settings, calendar.TodayDate),
 		Catalog:          repos.Enrollment(),
 		SchoolRepo:       capabilitySchools{schools: reposSchools.School},
 		Notifications:    NewTestNotifications(repos.Enrollment(), notifyModeSettings{settings: settings}, discardingOutbox{}, capabilitySchools{schools: reposSchools.School}),
@@ -181,12 +183,13 @@ func setupTakeoverLockTest(t *testing.T, redeemableInvitation ...bool) *takeover
 		Logger:           slog.Default(),
 	}))
 	changeRequestSvc := enrollmentAPI.NewChangeRequestService(owners.NewEnrollmentChangeRequests(owners.EnrollmentChangeRequestSources{
+		Now:                 time.Now,
 		Requests:            repos.Enrollment(),
 		Children:            repos.Enrollment(),
 		Guardians:           repos.Enrollment(),
 		LateInviteRepo:      repos.Enrollment(),
 		CareOfferingRepo:    enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan),
-		Capacity:            owners.NewEnrollmentOfferingCapacity(enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan), repos.Enrollment(), settings, nil),
+		Capacity:            owners.NewEnrollmentOfferingCapacity(enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan), repos.Enrollment(), settings, calendar.TodayDate),
 		Catalog:             repos.Enrollment(),
 		Notifications:       NewTestNotifications(repos.Enrollment(), notifyModeSettings{settings: settings}, discardingOutbox{}, capabilitySchools{schools: reposSchools.School}),
 		GuardianProfileRepo: repos.GuardianProfile,
@@ -204,7 +207,7 @@ func setupTakeoverLockTest(t *testing.T, redeemableInvitation ...bool) *takeover
 	resource := enrollmentAPI.NewResource(
 		nil, nil, requestSvc, nil, nil, nil, nil, nil, changeRequestSvc,
 		nil, nil, nil,
-		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation})
+		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, time.Now)
 
 	submitted, err := requestSvc.Submit(ctx, enrollmentAPI.SubmitRequest{
 		TenantID:          tenantID,

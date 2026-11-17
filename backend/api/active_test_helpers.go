@@ -224,7 +224,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	}
 	pickup, err := careplanCompose.NewPickupBaselines(carePlan, approvedOfferings, func(ctx context.Context) (bool, error) {
 		return settings.Settings.ResolveBool(ctx, configModels.KeyEnrollmentBookingsAuthoritative)
-	})
+	}, calendar.CalendarDateClock(clocks...))
 	if err != nil {
 		return fail(err)
 	}
@@ -275,12 +275,12 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		ActivityGroupRepo: owners.NewSessionActivities(rt.GroupReads()), ActivityCatRepo: arrivalTimetable.NewCategoryCount(rt.ActivityCategory), EducationGroupRepo: owners.NewAttendanceEducationGroups(owners.NewSchoolStructureSuiteRepositories(db).Group, members.Student), DeviceRepo: owners.NewSessionDeviceDirectory(devices, settings.Settings, logger),
 		StaffNames: owners.NewAttendanceStaffNames(members.Staff), DB: db.Pool(), Broadcaster: owners.NewPresenceEvents(hub, logger), WorkSessionService: owners.PresenceAutoCheckIn{CheckIn: work.AutoCheckIn},
 		AttendanceSyncer:         attendanceMirror,
-		TimetableBridgeCompleter: bridge, Logger: logger, Now: OptionalClock(clocks),
+		TimetableBridgeCompleter: bridge, Logger: logger, Now: clockOrNow(clocks),
 	}
 	presence := presenceservice.NewPresence(presenceDeps, presenceservice.WithPresenceSettings(settingsCompose.PresenceSettings(settings.Settings)))
 	yard := facilitiesCompose.NewSchulhofService(dataFacilities, FacilitiesActivityCatalog(dataActivityService), facilitiesCompose.NewOpenGroupCatalog(FacilitiesGroupSupervisions(owners.NewLoggedStudentPresence(db, logger)), FacilitiesRoomSessions(owners.NewLoggedStudentPresence(db, logger)), FacilitiesGroupVisits(owners.NewLoggedStudentPresence(db, logger))), logger)
 	autoExcusal, err := careplanCompose.NewPickupAutoExcusal(careplanCompose.PickupExcusalDependencies{
-		DB: db.Pool(), Records: carePlan, Baselines: pickup, Blocks: owners.NewLoggedStudentPresence(db, logger), Preview: owners.NewPickupExcusalTimetable(rt.Timetable, owners.NewPartialAbsencePreview(db)),
+		DB: db.Pool(), Records: carePlan, Baselines: pickup, Blocks: owners.NewLoggedStudentPresence(db, logger), Preview: owners.NewPickupExcusalTimetable(rt.Timetable, owners.NewPartialAbsencePreview(db)), Today: calendar.CalendarDateClock(clocks...),
 	})
 	if err != nil {
 		return fail(err)
@@ -315,7 +315,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		Session: TimetableRequestSession{}, CallerStaff: groupCaller.Caller(), Lifecycle: arrivalTimetable.NewOperationLifecycle(tt.Instance), Sessions: r.ActiveGroup,
 		Supervisions: r.GroupSupervisor, Visits: owners.NewLoggedStudentPresence(db, logger),
 		People:         owners.TimetableOperationPeople{OperationPeople: owners.NewTimetableOperationPeople(dataUsers), Membership: membership},
-		PlanningTracks: rt.Timetable, Homework: rt.Timetable, Logger: logger, Now: OptionalClock(clocks),
+		PlanningTracks: rt.Timetable, Homework: rt.Timetable, Logger: logger, Now: clockOrNow(clocks),
 		BlockMetadata: NewTimetableBlockDisplayForTests(db),
 	}, operationRows, presence, settings.Settings, careDay, arrivals, pickups, hub, WithAttendanceStaff)
 	if err != nil {
@@ -330,7 +330,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		Sessions: newSupervisionSessions(presence, owners.OpenRoomSessionPresence{Presence: owners.NewLoggedStudentPresence(db, logger), Activities: timetableOwner}, caller),
 		Rooms:    OpenRoomDirectory{Rooms: rooms}, Groups: newSupervisionGroups(groups.Education, caller),
 		Yard: newSupervisionYard(yard), Schedule: newSupervisionSchedule(operations), Presence: newSupervisionPresence(presence, presence),
-		Planning: newSupervisionPlanning(pickups, arrivals), Settings: newSupervisionSettings(settings.Settings), Staff: NewTimetablePeople(dataUsers), Calendar: supervisionCalendar{}, Now: OptionalClock(clocks)})
+		Planning: newSupervisionPlanning(pickups, arrivals), Settings: newSupervisionSettings(settings.Settings), Staff: NewTimetablePeople(dataUsers), Calendar: supervisionCalendar{}, Now: clockOrNow(clocks)})
 	if err != nil {
 		return fail(fmt.Errorf("compose supervision dashboard projection: %w", err))
 	}

@@ -23,8 +23,8 @@ type workerFileCleanup func(context.Context) (int, error)
 
 func newFileStoreCleaner(db transactionruntime.Database, files fileStorage.Capability, logger *slog.Logger, now func() time.Time) workerFileCleanup {
 	remover := peopledirectory.NewPhotoUnlinker(logger, "public", nativeUploads.UploadFiles{})
-	photos := fileStorageCompose.NewUploadCleanup(db.Pool(), fileStorage.CleanupStudentPhotos, time.Now)
-	legal := fileStorageCompose.NewUploadCleanup(db.Pool(), fileStorage.CleanupEnrollmentLegalDocuments, time.Now)
+	photos := fileStorageCompose.NewUploadCleanup(db.Pool(), fileStorage.CleanupStudentPhotos, now)
+	legal := fileStorageCompose.NewUploadCleanup(db.Pool(), fileStorage.CleanupEnrollmentLegalDocuments, now)
 	filesBackend := nativeUploads.UploadFiles{}
 	removeLegal := func(ctx context.Context, url string) error {
 		path, err := filesBackend.StoredPath("public", url, "/uploads/enrollment-legal-documents/")

@@ -33,7 +33,7 @@ func TestNotifySynchronouslyObservesTransportOutcomeWithoutRecipientLabels(t *te
 		nil,
 		func(transport, template, caller string, duration time.Duration, err error) {
 			observed <- observation{transport, template, caller, duration, err}
-		},
+		}, time.Now,
 		channel,
 	)
 

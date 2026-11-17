@@ -22,7 +22,8 @@ func (busyCompanionGraph) VerifyCompanionStrandingBatch(context.Context) error {
 var errStudentCompanionLockBusy = errors.New("companion lock busy")
 
 func companionLockChangeRequests(graph CompanionGraphCoordinator) *ChangeRequests {
-	return NewChangeRequests(ChangeRequestDependencies{Settings: intakeSettingsFake{},
+	return NewChangeRequests(ChangeRequestDependencies{
+		Now: enrollmentTestClock, Settings: intakeSettingsFake{},
 		Companions:        graph,
 		CompanionLockBusy: errStudentCompanionLockBusy,
 		ParentsURL:        "https://parents.example.test",
@@ -72,7 +73,8 @@ func (h *skippingGuardianHold) HoldGuardianEmailStudentsPermission(_ context.Con
 func TestApprovalKeepsCompanionGraphAfterAnIdentitySkipsTheLocks(t *testing.T) {
 	t.Parallel()
 	hold := &skippingGuardianHold{}
-	svc := NewChangeRequests(ChangeRequestDependencies{Settings: intakeSettingsFake{},
+	svc := NewChangeRequests(ChangeRequestDependencies{
+		Now: enrollmentTestClock, Settings: intakeSettingsFake{},
 		GuardianHold: hold, Companions: busyCompanionGraph{}, ParentsURL: "http://localhost",
 	})
 	run := &approval{req: &enrollment.Request{}, reads: &approvalAuthorityReads{holds: map[approvalAuthorityKey]renewalHolds{}}}

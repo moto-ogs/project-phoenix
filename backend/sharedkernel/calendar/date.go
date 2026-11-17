@@ -53,6 +53,14 @@ func CalendarDateClock(clocks ...func() time.Time) func() Date {
 	return func() Date { return DateFromTime(clocks[0]()) }
 }
 
+// InstantClock returns the optional instant clock, or Berlin's current time.
+func InstantClock(clocks ...func() time.Time) func() time.Time {
+	if len(clocks) == 0 || clocks[0] == nil {
+		return Now
+	}
+	return clocks[0]
+}
+
 // ParseDate parses a strict "YYYY-MM-DD" string.
 func ParseDate(s string) (Date, error) {
 	t, err := time.Parse(dateLayout, s)

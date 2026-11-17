@@ -99,14 +99,32 @@ func mountServeMiddleware(
 		return nil, err
 	}
 	router.Use(moduleRoutesMiddleware(booking, guardianSchools))
-	// Sentry events name the session they affect (#3643).
-	router.Use(SentrySessionContext)
+	if err := mountSessionObservers(router, logger, tracker, settings, policy, consent, sessionAuth); err != nil {
+		return nil, err
+	}
+	return sessionAuth, nil
+}
+
+// mountSessionObservers mounts what observes the verified session: the
+// Sentry session context and the usage analytics. Both run after the
+// verifier, which names the session.
+func mountSessionObservers(
+	router chi.Router, logger *slog.Logger, tracker analytics.Tracker, settings settingsCompose.SettingsService,
+	policy analytics.CollectionPolicy, consent identityaccess.AccountAnalyticsConsent, sessionAuth *sessiontoken.TokenAuth,
+) error {
+	// Sentry events name the session they affect (#3643), the account only
+	// by its pseudonym (#3843).
+	sentryUser, err := newSentryUserPseudonym()
+	if err != nil {
+		return err
+	}
+	router.Use(SentrySessionContext(sentryUser))
 	// Core actions of the portals reach the usage analytics once their
-	// response is 2xx (#3602). After the verifier, which names the session.
+	// response is 2xx (#3602).
 	router.Use(coreActionAnalytics(tracker, sessionAuth, settingsCompose.NewAnalyseFreigabe(settings, logger), analyticsConsent(consent), policy))
 	router.Get("/analytics-policy", analytics.PolicyHandler(policy, analyticsRequestActor))
 	mountAnalyticsConsent(router, consent)
-	return sessionAuth, nil
+	return nil
 }
 
 // RequireLiveAccessSession constructs the production access-family gate.

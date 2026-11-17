@@ -435,7 +435,7 @@ func TestResyncUpdatedTemplateOfferingRoster(t *testing.T) {
 	})
 
 	t.Run("a missing hook fails loudly instead of saving a dead rule", func(t *testing.T) {
-		svc := NewTemplateService(TemplateServiceDependencies{})
+		svc := NewTemplateService(TemplateServiceDependencies{Today: templateTestToday})
 		in := baseInput()
 		in.Fields.SourceCareOfferingIDs = []int64{12}
 
@@ -477,7 +477,7 @@ func TestValidateOfferingSourceReference(t *testing.T) {
 				called = true
 				return nil
 			},
-		}})
+		}, Today: templateTestToday})
 
 		require.NoError(t, svc.validateOfferingSourceReference(t.Context(), nil, nil, &periodID, "create template: validate offering source"))
 		assert.False(t, called, "a template without a source must not resolve an offering")
@@ -491,7 +491,7 @@ func TestValidateOfferingSourceReference(t *testing.T) {
 				gotOfferings, gotPeriod = ids, period
 				return nil
 			},
-		}})
+		}, Today: templateTestToday})
 
 		require.NoError(t, svc.validateOfferingSourceReference(t.Context(), []int64{12, 13}, nil, &periodID, "create template: validate offering source"))
 		assert.Equal(t, []int64{12, 13}, gotOfferings)
@@ -503,7 +503,7 @@ func TestValidateOfferingSourceReference(t *testing.T) {
 			ValidateOfferingSource: func(context.Context, []int64, []int64, *int64) error {
 				return fmt.Errorf("%w: care offering %d not found", timetable.ErrOfferingSourceInvalid, int64(12))
 			},
-		}})
+		}, Today: templateTestToday})
 
 		err := svc.validateOfferingSourceReference(t.Context(), []int64{12}, nil, nil, "update template: validate offering source")
 
@@ -513,7 +513,7 @@ func TestValidateOfferingSourceReference(t *testing.T) {
 	})
 
 	t.Run("an unwired hook leaves the resync as the only guard", func(t *testing.T) {
-		svc := NewTemplateService(TemplateServiceDependencies{})
+		svc := NewTemplateService(TemplateServiceDependencies{Today: templateTestToday})
 
 		require.NoError(t, svc.validateOfferingSourceReference(t.Context(), []int64{12}, nil, &periodID, "create template: validate offering source"))
 	})

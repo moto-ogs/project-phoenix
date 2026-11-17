@@ -57,6 +57,13 @@ func (c *CatererAccess) changePassword(ctx context.Context, accountID int64, cur
 	return nil
 }
 
+// checkPassword checks a caterer's password like a login under the
+// account's lock: a wrong one counts towards the lock, and a locked account
+// is refused. The caller commits the count.
+func (c *CatererAccess) checkPassword(ctx context.Context, account domain.LoginAccount, password string) (bool, error) {
+	return checkPasswordLogin(ctx, c.auth.store, c.verifier, c.auth.passwordPolicy, account.ID, account.PasswordHash, password, false, c.auth.sessions.now)
+}
+
 // catererPasswordRefusal is a refused current password and the school the
 // caterer's audit event is filed at; a caterer without a school has none.
 type catererPasswordRefusal struct{ schoolID int64 }
@@ -79,7 +86,7 @@ func (c *CatererAccess) changePasswordInTx(ctx context.Context, accountID int64,
 	if !isCaterer {
 		return nil, domain.ErrAccountNotCaterer
 	}
-	accepted, err := checkPasswordLogin(ctx, c.auth.store, c.verifier, c.auth.passwordPolicy, account.ID, account.PasswordHash, currentPassword, false, c.auth.sessions.now)
+	accepted, err := c.checkPassword(ctx, account, currentPassword)
 	if err != nil {
 		return nil, err
 	}

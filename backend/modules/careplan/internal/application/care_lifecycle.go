@@ -96,7 +96,7 @@ func NewCareLifecycle(deps CareLifecycleDependencies) (*CareLifecycle, error) {
 	}
 	now := deps.Now
 	if now == nil {
-		now = time.Now
+		return nil, errors.New("care lifecycle: the composition's clock is required")
 	}
 	if deps.Today == nil {
 		deps.Today = calendar.CalendarDateClock(deps.Now)

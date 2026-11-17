@@ -92,7 +92,7 @@ func (rs *Resource) getSchoolCaterer(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, schoolCatererResponse(caterer, time.Now()), "Caterer retrieved")
+	common.Respond(w, r, http.StatusOK, schoolCatererResponse(caterer, rs.runtime.Now()), "Caterer retrieved")
 }
 
 // inviteCaterer mails the school's invitation to its caterer.
@@ -110,7 +110,7 @@ func (rs *Resource) inviteCaterer(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusCreated, invitationResponse(invitation, time.Now()), "Caterer invited")
+	common.Respond(w, r, http.StatusCreated, invitationResponse(invitation, rs.runtime.Now()), "Caterer invited")
 }
 
 // revokeInvitation takes an open invitation back.
@@ -128,10 +128,17 @@ func (rs *Resource) revokeInvitation(w http.ResponseWriter, r *http.Request) {
 }
 
 // endSupply ends the school's supply; the caterer loses the school at once.
+// Ending is idempotent: ended tells whether this request ended a running
+// supply, so a repeated end is not counted as another one (endedEvent).
 func (rs *Resource) endSupply(w http.ResponseWriter, r *http.Request) {
-	if _, err := rs.portal.EndSupply(r.Context(), rs.currentAccountID(r.Context())); err != nil {
+	ended, err := rs.portal.EndSupply(r.Context(), rs.currentAccountID(r.Context()))
+	if err != nil {
 		renderFailure(w, r, err)
 		return
 	}
-	common.RespondNoContent(w, r)
+	message := "Supply ended"
+	if !ended {
+		message = "No running supply"
+	}
+	common.Respond(w, r, http.StatusOK, map[string]bool{"ended": ended}, message)
 }

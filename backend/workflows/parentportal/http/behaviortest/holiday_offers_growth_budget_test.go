@@ -70,7 +70,7 @@ func TestParentHolidayRegistrationOffers(t *testing.T) {
 		HolidayAnnouncements: owners.NewParentHolidayAnnouncements(),
 		Now:                  func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) },
 	})
-	router := testpkg.TenantRuntimeMiddleware(t, db)(parentHTTP.NewResource(parentHTTP.ResourceConfig{Parent: portal}).Router(api.ParentSessionChain))
+	router := testpkg.TenantRuntimeMiddleware(t, db)(parentHTTP.NewResource(parentHTTP.ResourceConfig{Now: time.Now, Parent: portal}).Router(api.ParentSessionChain))
 
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	pickupOnly := testpkg.CreateTestStudent(t, db, "Mia", "Schneider", "2b")

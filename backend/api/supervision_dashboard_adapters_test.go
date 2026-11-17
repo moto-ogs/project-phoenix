@@ -165,6 +165,7 @@ func supervisionFullDependencies() supervisiondashboard.Dependencies {
 		Planning: newSupervisionPlanning(&supervisionMockPickups{}, &supervisionMockArrivals{}),
 		Staff:    supervisionRootPorts{},
 		Calendar: supervisionCalendar{},
+		Now:      time.Now,
 	}
 }
 

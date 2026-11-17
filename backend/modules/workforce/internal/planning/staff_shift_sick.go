@@ -21,7 +21,7 @@ func WithStaffShiftSickReports(reader SickReportReader) StaffShiftOption {
 }
 
 // WithStaffShiftToday overrides the calendar-day clock the sick-state guard
-// compares against. A nil clock keeps the default.
+// compares against; the service requires it.
 func WithStaffShiftToday(today func() calendar.Date) StaffShiftOption {
 	return func(s *staffShiftService) {
 		if today != nil {

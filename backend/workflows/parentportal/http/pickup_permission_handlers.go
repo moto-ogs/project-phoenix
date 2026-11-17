@@ -246,7 +246,7 @@ func (rs *Resource) pickupRequestProof(w http.ResponseWriter, r *http.Request) {
 		rs.writePickupProofPDF(w, r, proof)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, toPickupProofResponse(proof, time.Now()), "Pickup permission proof retrieved")
+	common.Respond(w, r, http.StatusOK, toPickupProofResponse(proof, rs.Now()), "Pickup permission proof retrieved")
 }
 
 func toPickupProofResponse(proof *parentService.PickupProof, now time.Time) pickupProofResponse {
@@ -324,7 +324,7 @@ func (rs *Resource) writePickupProofPDF(w http.ResponseWriter, r *http.Request, 
 		common.RenderError(w, r, common.ErrorInternalServer(errProofRendererUnbound))
 		return
 	}
-	file, err := rs.Reports.RenderReport(pickupProofReport(proof, time.Now()), "nachweis-abholerlaubnis")
+	file, err := rs.Reports.RenderReport(pickupProofReport(proof, rs.Now()), "nachweis-abholerlaubnis")
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("render pickup permission proof", err))
 		return

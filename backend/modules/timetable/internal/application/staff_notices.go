@@ -72,13 +72,12 @@ func newStaffNotices(repo ports.StaffNoticeRecords, deps StaffNoticeDependencies
 	if logger == nil {
 		logger = slog.Default()
 	}
-	currentDate := deps.CurrentDate
-	if currentDate == nil {
-		currentDate = calendar.TodayDate
+	if deps.CurrentDate == nil {
+		panic("timetable staff notices: the school day clock is required")
 	}
 	return &staffNoticeService{
 		repo: repo, periods: deps.Periods, names: deps.Names, publications: deps.Publications,
-		logger: logger, currentDate: currentDate,
+		logger: logger, currentDate: deps.CurrentDate,
 	}
 }
 

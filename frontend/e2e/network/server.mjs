@@ -75,7 +75,20 @@ const portalReads = new Set([
   "/parent/me/calendar",
   "/school/supervisions/",
   "/operator/organizations",
-  "/caterer/schools",
+]);
+// Reads that reach the API through a portal's catalog proxy (#2352), not a
+// route file: the proxy checks each answer against the route's contract.
+const catalogReads = new Map([
+  ["/caterer/schools", { caterer_name: "Fixture-Küche", schools: [] }],
+  ["/school/staff-messages/unread-count", { unread_count: 2, internal: 1 }],
+  [
+    "/operator/billing/key-day",
+    {
+      key_day: 15,
+      next_key_date: "2026-12-15",
+      updated_at: "2026-11-01T08:00:00Z",
+    },
+  ],
 ]);
 const refuse = (res, body) => {
   res.writeHead(401, { "Content-Type": "application/problem+json" });
@@ -123,6 +136,26 @@ const api = createServer(async (req, res) => {
     });
   } else if (sharedTenantCookie && portalReads.has(path)) {
     data = envelope([]);
+  } else if (sharedTenantCookie && catalogReads.has(path)) {
+    data = envelope(catalogReads.get(path));
+  } else if (sharedTenantCookie && path === "/parent/me/enrollable-schools") {
+    // Reached through the guardians' catalog proxy, not a route file.
+    data = envelope([
+      {
+        school_id: "9007199254740993",
+        school_name: "Fixture-Schule",
+        school_slug: "school-a",
+        school_subdomain: "school-a",
+        phase_id: "12",
+        phase_name: "Schuljahr",
+        phase_kind: "school_year",
+        service_start_date: "2026-08-01",
+        service_end_date: "2027-07-31",
+        already_linked: false,
+        audience: "open",
+        internal_note: "not in the contract",
+      },
+    ]);
   } else if (sharedTenantCookie && path === "/operator/auth/logout") {
     logoutRequests++;
     liveFamilies.delete(bearerClaims(req)?.family_id);

@@ -49,7 +49,7 @@ func (s *Store) WriteOperatorCredential(ctx context.Context, operatorID int64, w
 	}
 	started := time.Now()
 	result, err := db.NewRaw(`UPDATE platform.operators AS operator
-	SET password_hash = ?, credential_generation = operator.credential_generation + 1, updated_at = NOW()
+	SET password_hash = ?, credential_generation = operator.credential_generation + 1
 	WHERE operator.id = ?
 		AND (?::text IS NULL OR operator.password_hash = ?::text)
 		AND (?::bigint IS NULL OR operator.credential_generation = ?::bigint)`,

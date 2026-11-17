@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,8 +57,15 @@ type staffCompositionContext struct {
 
 func setupStaffCompositionRoute(t *testing.T) *staffCompositionContext {
 	t.Helper()
+	return setupStaffCompositionRouteAt(t, time.Now)
+}
+
+// setupStaffCompositionRouteAt composes the router with the staff
+// offboarding and its planned exits on the clock now.
+func setupStaffCompositionRouteAt(t *testing.T, now func() time.Time) *staffCompositionContext {
+	t.Helper()
 	db := testpkg.SetupTestDB(t)
-	svc, work, err := NewStaffTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
+	svc, work, err := NewStaffTestModuleWithClock(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db), now)
 	require.NoError(t, err)
 	membership, err := owners.NewSchoolMembership(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
@@ -360,4 +368,30 @@ func TestPlannedExitRoutesFollowTheDeletionPermission(t *testing.T) {
 	rr = testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodDelete, path, nil, lead))
 	assert.Equal(t, http.StatusNotFound, rr.Code, rr.Body.String())
 	assert.Contains(t, rr.Body.String(), `"staff.exit_not_planned"`)
+}
+
+// A planned exit is checked against the root's day, not the real one
+// (#7104): with the clock years ahead, a day the real calendar has not
+// reached yet is already past.
+func TestPlannedExitRefusesADayBeforeTheRootsDay(t *testing.T) {
+	t.Parallel()
+
+	pinned := time.Date(2040, time.March, 14, 12, 0, 0, 0, calendar.Berlin)
+	ctx := setupStaffCompositionRouteAt(t, func() time.Time { return pinned })
+	subjectID, _ := ctx.createStaff("Gehende", "Kollegin")
+	_, leadAccountID := ctx.createStaffWithAccount("Planende", "Leitung")
+	claims := testutil.DefaultTestClaims()
+	claims.ID = int(leadAccountID)
+	claims.Permissions = []string{"users:delete", "users:read"}
+	lead := testutil.WithJWTBearer(testutil.MintTestJWT(t, claims))
+	path := fmt.Sprintf("/staff/%d/planned-exit", subjectID)
+
+	rr := testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodPut, path,
+		map[string]any{"last_working_day": "2039-12-01"}, lead))
+	assert.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), `"staff.exit_day_in_past"`)
+
+	rr = testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodPut, path,
+		map[string]any{"last_working_day": "2040-04-01"}, lead))
+	assert.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 }

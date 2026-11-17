@@ -13,7 +13,7 @@ import (
 
 // mountDemoAccess adds the public demo routes (#3462); they exist under
 // APP_ENV=demo only, and only there the entry origins must resolve. now is
-// the root's clock (nil: the real one).
+// the root's clock.
 func mountDemoAccess(router chi.Router, accesses authAPI.DemoAccesses, appEnv, frontendURL, tenantDomain string, now func() time.Time) error {
 	origins, err := demoOrigins(frontendURL, tenantDomain)
 	if err != nil {

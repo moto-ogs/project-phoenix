@@ -4,6 +4,7 @@ package owners
 
 import (
 	"context"
+	"time"
 
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
@@ -23,7 +24,7 @@ type SettingsTestRepositories struct {
 // NewSettingsTestRepositories composes the settings stores over the caller's
 // settings runtime.
 func NewSettingsTestRepositories(runtime settingsCompose.PersistenceRuntime) SettingsTestRepositories {
-	phases := enrollmentCompose.NewClocked(nil)
+	phases := enrollmentCompose.NewClocked(time.Now)
 	return SettingsTestRepositories{
 		Values: settingsCompose.NewSettingValueRepository(runtime), Audit: settingsCompose.NewSettingAuditRepository(runtime),
 		ClassRestriction: phases.HasActiveClassRestrictedPhase,

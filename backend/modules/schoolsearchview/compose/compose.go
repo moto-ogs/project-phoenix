@@ -10,13 +10,14 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolsearchview"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsearchview/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsearchview/internal/application"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
 
-// New builds the search over the answer, note and activity ports the root binds.
-func New(answers schoolsearchview.StudentAnswerSearch, notes schoolsearchview.StudentNoteSearch, activities schoolsearchview.ActivityEnrollments) (schoolsearchview.Search, error) {
-	return application.New(postgres.New(schoolTransaction), answers, notes, activities)
+// New builds the search over the answer, note and activity ports and the day clock the root binds.
+func New(answers schoolsearchview.StudentAnswerSearch, notes schoolsearchview.StudentNoteSearch, activities schoolsearchview.ActivityEnrollments, today func() calendar.Date) (schoolsearchview.Search, error) {
+	return application.New(postgres.New(schoolTransaction), answers, notes, activities, today)
 }
 
 // schoolTransaction resolves the tenant transaction of the request and its

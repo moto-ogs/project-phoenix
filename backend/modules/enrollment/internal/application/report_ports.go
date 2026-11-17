@@ -178,7 +178,7 @@ var _ enrollmentNative.Reports = (*Reports)(nil)
 // NewReports creates the reports.
 func NewReports(deps ReportDependencies) *Reports {
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("enrollment reports: the clock is required")
 	}
 	return &Reports{deps: deps}
 }

@@ -8,6 +8,7 @@ import (
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -22,7 +23,7 @@ func TestSessionActivitiesPreserveTimetableWireProjection(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	directory := owners.NewSessionActivities(reposTimetable.GroupReads())
 	// The activities service serves the retained activity group rows.
-	activities, err := timetableCompose.NewService(reposTimetable.Timetable, nil, reposTimetable.Directories, nil, nil, nil, nil)
+	activities, err := timetableCompose.NewService(reposTimetable.Timetable, nil, reposTimetable.Directories, nil, nil, nil, calendar.TodayDate)
 	require.NoError(t, err)
 	want, err := activities.GetGroup(ctx, fixture.ID)
 	require.NoError(t, err)

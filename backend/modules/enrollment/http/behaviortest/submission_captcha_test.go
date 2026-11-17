@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
@@ -57,7 +58,7 @@ func TestPublicSubmissionRejectsProviderCaptchaBeforeIntake(t *testing.T) {
 		enrollmentTest.NewCaptcha(requiredCaptchaSettings{}, provider.URL),
 		nil, nil, nil, nil, nil, nil, nil,
 		captchaSchoolLookup{school: school},
-		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation})
+		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, time.Now)
 	router := resource.Router(rootAPI.TenantSessionChain)
 	req := httptest.NewRequest(http.MethodPost, "/school/submit", strings.NewReader(`{"captcha_token":"rejected-token"}`))
 	req.Header.Set("Content-Type", "application/json")

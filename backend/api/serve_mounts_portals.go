@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/spf13/viper"
 
@@ -166,7 +168,7 @@ func newOperatorRouter(
 				Schools:    operatorSettingsSchools{schools: organizations},
 				OperatorID: operatorIDFromSession,
 			}),
-			bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle),
+			bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.CalendarDateClock(now)),
 			traegerValues:          traegerSettings,
 		},
 		communication,
@@ -175,6 +177,7 @@ func newOperatorRouter(
 		mergeRoutes,
 		newSampleChildrenRoute(provisioning, students),
 		newDemoPresenceHistoryRoute(db, viper.GetString("app_env")),
+		now,
 	), nil
 }
 
@@ -188,6 +191,7 @@ func newParentResource(
 	healthData enrollmentOwner.HolidayHealthCipher, traegerSettings TraegerBrandingSettings, now func() time.Time,
 ) *parentAPI.Resource {
 	return parentAPI.NewResource(parentAPI.ResourceConfig{
+		Now:         now,
 		Auth:        parentPortalLogin(identity),
 		Resets:      portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeParent),
 		Parent:      parent,
@@ -200,7 +204,7 @@ func newParentResource(
 		),
 		GuardianProfileLoader: newParentGuardianProfiles(guardianProfiles),
 		Schools:               parentSchoolDirectory{schools: organizations},
-		HolidayLinks:          newParentHolidayRegistrationLinks(organizations, delivery, healthData, traegerSettings, logger),
+		HolidayLinks:          newParentHolidayRegistrationLinks(organizations, delivery, healthData, traegerSettings, logger, now),
 		Push:                  bindParentPushSubscriptions(devices.PushSubscriptions),
 		Preferences:           bindParentPreferences(notifications.Preferences),
 		Feed:                  bindParentNotificationFeed(notifications.GuardianFeed),
@@ -242,6 +246,12 @@ func newSessionTokenAuth() (*sessiontoken.TokenAuth, error) {
 		viper.GetDuration("auth_jwt_expiry"),
 		viper.GetDuration("auth_jwt_refresh_expiry"),
 	)
+}
+
+// newSentryUserPseudonym keys the Sentry pseudonym of an account with the
+// session secret the verifier above reads (#3843).
+func newSentryUserPseudonym() (SentryUserPseudonym, error) {
+	return NewSentryUserPseudonym(viper.GetString("auth_jwt_secret"))
 }
 
 // newProvisioningConfig binds the operator provisioning routes to the

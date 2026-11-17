@@ -38,7 +38,7 @@ func BuildIdentityAccess(
 	db transactionruntime.Database, unit rootUnitOfWork, env RootEnvironment, tokens TokenAdapter,
 	organizations organizationtenancy.Capability, persons peopledirectory.Capability, membership schoolmembership.Capability,
 	settings settingsCompose.BatchSettingsService, audit AuditOwner, operatorAuditLog OperatorAuditEntries,
-	mailSender email.Mailer, mailDispatcher email.Dispatcher, mailFrom email.Email, deliveryRuntime *deliveryCompose.Runtime, mailIdentity email.ReplyToResolver, outbox MailResultOutbox,
+	mailSender email.Mailer, mailDispatcher email.Dispatcher, mailFrom email.Email, deliveryRuntime *deliveryCompose.Runtime, mailIdentity email.ReplyToResolver, outbox IdentityMailOutbox,
 	people PeopleRows, guardianEnrollments guardianEnrollmentClaims,
 	groups EducationGroupRows, staffGroups schoolstructure.StaffGroupQuery, activityGroups timetablePorts.CallerActivityGroups,
 	sessions presenceCompose.SessionRecords, presence studentpresence.Owner,

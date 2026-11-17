@@ -89,7 +89,7 @@ func NewExcusedRequests(deps ExcusedRequestDependencies) (*ExcusedRequests, erro
 		deps.Logger = slog.Default()
 	}
 	if deps.Now == nil {
-		deps.Now = time.Now
+		return nil, errors.New("care plan excused requests: the composition's clock is required")
 	}
 	return &ExcusedRequests{
 		carePlan: deps.CarePlan, students: deps.Students, scope: deps.Scope, hooks: deps.Hooks,

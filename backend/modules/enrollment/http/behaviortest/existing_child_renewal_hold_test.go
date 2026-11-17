@@ -124,6 +124,7 @@ func setupRenewalRigFor(t *testing.T, audience string) *renewalRig {
 	rig := &renewalRig{existingChildEnv: env, checked: newRenewalGate(), writing: newRenewalGate(), dedup: newRenewalGate()}
 	t.Cleanup(func() { rig.checked.open(); rig.writing.open(); rig.dedup.open() })
 	rig.svc = newTestRequestService(owners.EnrollmentIntakeSources{
+		Now:      time.Now,
 		Bookings: requestTestBookingCommands(), Requests: waitingRenewalRequests{IntakeRequests: env.repos.Enrollment(), gate: rig.dedup},
 		Children:  writingChildren{IntakeChildren: env.repos.Enrollment(), gate: rig.writing},
 		Guardians: env.repos.Enrollment(), CareOfferingRepo: enrollmentCompose.NewCareOfferingRecords(env.reposCare.CarePlan),

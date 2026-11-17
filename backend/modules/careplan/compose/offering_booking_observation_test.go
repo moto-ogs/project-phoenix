@@ -2,6 +2,7 @@ package compose
 
 import (
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -14,7 +15,7 @@ func TestOfferingBookingObservationsIncludeValidationErrorsAndActualQueryRows(t 
 	phaseID, _, childID := testpkg.CreateAuditAdjustmentChain(t, db)
 	offering := testpkg.CreateTestCareOffering(t, db, phaseID, "Observed booking")
 	var events []careplan.OfferingBookingObservation
-	module := newOfferingBookings(func(event careplan.OfferingBookingObservation) { events = append(events, event) })
+	module := newOfferingBookings(func(event careplan.OfferingBookingObservation) { events = append(events, event) }, time.Now)
 	ctx := testpkg.Ctx(t)
 	bookings := []careplan.CareOfferingBooking{{CareOfferingID: offering.ID, ManualSelectedDays: []string{"mon"}}}
 	require.NoError(t, module.RecordCareOfferingBookings(ctx, childID, bookings))

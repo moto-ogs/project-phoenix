@@ -69,13 +69,13 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 	steps := dataRetentionSteps(
 		settings.Settings, fleet, statusDays,
 		communicationCompose.NewParentMessageRetention(db.Pool(), settingsModule.NewParentMessageRetentionValues(settings.Settings)),
-		enrollments, workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings.Settings}),
+		enrollments, workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings.Settings}, time.Now),
 		command, deliveryCompose.NewRetention(time.Now),
 	)
 	steps = append(steps, protocolRetentionSteps(command, settingsCompose.NewAuditRetention(), exportTransferCompose.NewJournalRetention())...)
 	steps = append(steps, cleanupJobRetentionSteps(
-		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(),
-		carePlanCompose.NewCleanupRetention(), enrollmentCompose.NewClocked(nil),
+		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(time.Now),
+		carePlanCompose.NewCleanupRetention(time.Now), enrollmentCompose.NewClocked(time.Now),
 	)...)
 	announcements, err := newRetentionTestAnnouncements(db, settings.Settings)
 	if err != nil {
@@ -96,14 +96,14 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 // so the object store is never reached.
 func newRetentionTestAnnouncements(db transactionruntime.Database, settings settingsCompose.BatchSettingsService) (communication.ParentAnnouncementRetention, error) {
 	purger, err := filestorageCompose.NewAttachmentPurger(filestorageCompose.AttachmentPurgerDependencies{
-		DB: db.Pool(), Objects: unreachableObjects{}, Observe: func(filestorageCompose.Observation) {},
+		DB: db.Pool(), Objects: unreachableObjects{}, Observe: func(filestorageCompose.Observation) {}, Now: time.Now,
 	})
 	if err != nil {
 		return nil, err
 	}
 	announcements, err := communicationCompose.NewParentAnnouncementsWithAttachments(communicationCompose.ParentAnnouncementConfig{
-		Repo:     parentStore.NewParentAnnouncementRepository(db.Pool(), NewParentAnnouncementAudience(db, ParentAnnouncementApplicants(enrollmentCompose.NewClocked(nil))), nil),
-		Settings: settingsModule.NewParentAnnouncementValues(settings), Logger: slog.Default(), Fingerprints: SecurityFingerprints{},
+		Repo:     parentStore.NewParentAnnouncementRepository(db.Pool(), NewParentAnnouncementAudience(db, ParentAnnouncementApplicants(enrollmentCompose.NewClocked(time.Now))), time.Now),
+		Settings: settingsModule.NewParentAnnouncementValues(settings), Logger: slog.Default(), Fingerprints: SecurityFingerprints{}, Now: time.Now,
 	}, purger, CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	if err != nil {
 		return nil, err
@@ -159,6 +159,7 @@ func newSettledEnrollmentTestRetention(db transactionruntime.Database, settings 
 		return nil, err
 	}
 	return NewEnrollmentDeletionModule(EnrollmentDeletionSources{
+		Now:   time.Now,
 		Owner: repos.Enrollment(), Guardians: enrollmentGuardianDirectory{guardians: people},
 		CountAuditAdjustments: reposAudit.EnrollmentOfferingAdjustment.CountForDeletion,
 		CountBookings:         reposCare.CarePlan.CountCareOfferingBookings,
@@ -183,7 +184,7 @@ func NewStudentTestRetention(db transactionruntime.Database, audit *auditCompose
 	if err != nil {
 		return nil, err
 	}
-	owners, err := NewStudentDeletionOwners(db, nil)
+	owners, err := NewStudentDeletionOwners(db, time.Now)
 	if err != nil {
 		return nil, err
 	}

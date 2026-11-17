@@ -174,6 +174,6 @@ type EnrollmentReportSources struct {
 		ResolveBool(ctx context.Context, key string) (bool, error)
 	}
 	// Now is the clock of the reports' day and export audits (ADR 0239);
-	// nil is the real clock.
+	// required.
 	Now func() time.Time
 }

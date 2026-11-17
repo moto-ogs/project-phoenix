@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,7 +67,7 @@ func TestBillingTermsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newTermsScope(t, db, "Träger A")
 	other := newTermsScope(t, db, "Träger B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	ownDue, otherDue := calendar.NewDate(2029, 11, 4), calendar.NewDate(2029, 11, 2)
 	rollback := errors.New("roll the terms back")
 

@@ -25,7 +25,7 @@ type pickupChangeTeamNoticeRow struct {
 	RequestID          int64        `bun:"request_id,pk"`
 	RecipientAccountID int64        `bun:"recipient_account_id,pk"`
 	PickupDate         calendarDate `bun:"pickup_date,notnull,type:date"`
-	InformedAt         time.Time    `bun:"informed_at,nullzero,notnull,default:current_timestamp"`
+	InformedAt         time.Time    `bun:"informed_at,nullzero,notnull"`
 	ReadAt             *time.Time   `bun:"read_at"`
 }
 
@@ -90,10 +90,11 @@ func (s *PickupChangeTeamStore) UpsertPickupChangeNotices(ctx context.Context, r
 	if tenantID <= 0 {
 		return domain.OperationStats{}, fmt.Errorf("care plan postgres: upsert pickup change notices: tenant is required")
 	}
+	now := s.currentTime()
 	rows := make([]pickupChangeTeamNoticeRow, 0, len(recipientAccountIDs))
 	for _, accountID := range recipientAccountIDs {
 		rows = append(rows, pickupChangeTeamNoticeRow{
-			TenantID: tenantID, RequestID: requestID, RecipientAccountID: accountID, PickupDate: calendarDate(date),
+			TenantID: tenantID, RequestID: requestID, RecipientAccountID: accountID, PickupDate: calendarDate(date), InformedAt: now,
 		})
 	}
 	stats := domain.OperationStats{Queries: 1}
@@ -101,9 +102,9 @@ func (s *PickupChangeTeamStore) UpsertPickupChangeNotices(ctx context.Context, r
 	result, err := db.NewInsert().
 		Model(&rows).
 		ModelTableExpr(tableExprPickupChangeTeamNotices).
-		ExcludeColumn("informed_at", "read_at").
+		ExcludeColumn("read_at").
 		On("CONFLICT (request_id, recipient_account_id) DO UPDATE").
-		Set("informed_at = NOW()").
+		Set("informed_at = EXCLUDED.informed_at").
 		Set("read_at = NULL").
 		Exec(ctx)
 	stats.StatementDuration = time.Since(started)
@@ -187,7 +188,7 @@ func (s *PickupChangeTeamStore) MarkPickupChangeNoticesRead(ctx context.Context,
 	}
 	result, err := db.NewRaw(`
 		UPDATE schedule.pickup_change_team_notices AS pickup_notice
-		SET read_at = NOW()
+		SET read_at = ?
 		FROM schedule.care_schedule_change_requests AS request,
 			unnest(?::bigint[], ?::timestamptz[]) AS observed(request_id, informed_at)
 		WHERE pickup_notice.tenant_id = ?
@@ -198,7 +199,7 @@ func (s *PickupChangeTeamStore) MarkPickupChangeNoticesRead(ctx context.Context,
 			AND request.id = pickup_notice.request_id
 			AND request.tenant_id = pickup_notice.tenant_id
 			AND request.student_id = ?`,
-		pgdialect.Array(requestIDs), pgdialect.Array(informedAt), tenantID, readerAccountID, studentID).Exec(ctx)
+		s.currentTime(), pgdialect.Array(requestIDs), pgdialect.Array(informedAt), tenantID, readerAccountID, studentID).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return stats, fmt.Errorf("care plan postgres: mark pickup change notices read: %w", err)

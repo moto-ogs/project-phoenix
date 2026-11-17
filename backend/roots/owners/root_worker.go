@@ -83,7 +83,7 @@ func workerRetentionOf(
 	}
 	steps := dataRetentionSteps(
 		settings, fleet, carePlan, parentMessages, rejected,
-		workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings}),
+		workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings}, now),
 		audit, deliveryCompose.NewRetention(now),
 	)
 	photoCareEnd, err := StudentPhotoCareEndOf(people)
@@ -96,8 +96,8 @@ func workerRetentionOf(
 		audit, settingsCompose.NewAuditRetention(), exportTransferCompose.NewJournalRetention(),
 	)...)
 	steps = append(steps, cleanupJobRetentionSteps(
-		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(),
-		carePlanCompose.NewCleanupRetention(), enrollmentCompose.NewClocked(now),
+		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(now),
+		carePlanCompose.NewCleanupRetention(now), enrollmentCompose.NewClocked(now),
 	)...)
 	contentSteps, err := newSchoolContentRetentionSteps(db, settings, announcementRetention, homework)
 	if err != nil {
@@ -317,7 +317,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			calendar, err = BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings.Service)
+			calendar, err = BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings.Service, env.Now)
 			return
 		},
 		func() (err error) { workTime, err = BuildServeWorkforce(db, env, membership, calendar); return },
@@ -354,7 +354,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		func() (err error) { feedback, err = BuildServeFeedback(db, feedbackSettings); return },
 		func() (err error) {
 			structure = BuildStructureRows(db, persons, people, peopleIdentity, rooms, membership, workTime)
-			presencePeople = BuildPresencePeopleReads(db, env.Logger, persons, groups, organizations, people)
+			presencePeople = BuildPresencePeopleReads(db, env.Logger, persons, groups, organizations, people, env.Now)
 			careRows = BuildTimetableCareRows(carePlan)
 			devices, err = NewDeviceFleet(db, env.Now)
 			return StepError("compose device fleet", err)
@@ -394,7 +394,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			messaging = NewParentMessagingRepositories(db, groups, membership, peopleIdentity, enrollmentCompose.NewClocked(env.Now), nil, organizations)
+			messaging = NewParentMessagingRepositories(db, groups, membership, peopleIdentity, enrollmentCompose.NewClocked(env.Now), env.Now, organizations)
 			consent, err = communicationCompose.NewNotificationConsent(communicationCompose.NotificationConsentConfig{
 				DB: db.Pool(), Observe: env.Observe.Communication,
 			})

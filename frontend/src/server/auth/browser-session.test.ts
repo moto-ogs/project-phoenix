@@ -12,6 +12,9 @@ vi.mock("./token-validation", async (importOriginal) => ({
 import { toBrowserSession, withBrowserSession } from "./browser-session";
 import type { ServerSession } from "./session-types";
 
+// A Sentry user pseudonym as the session callback derives it (#3843).
+const PSEUDONYM = "0123456789abcdef0123456789abcdef";
+
 beforeEach(() => {
   familyState.mockReset();
   familyState.mockResolvedValue("unknown");
@@ -21,6 +24,7 @@ const serverSession = (): ServerSession => ({
   expires: "2099-01-01T00:00:00.000Z",
   user: {
     id: "7",
+    sentryUserId: PSEUDONYM,
     email: "erika@example.com",
     token: "access-token",
     refreshToken: "refresh-token",
@@ -38,6 +42,7 @@ describe("toBrowserSession (#5005)", () => {
       expires: "2099-01-01T00:00:00.000Z",
       user: {
         id: "7",
+        sentryUserId: PSEUDONYM,
         email: "erika@example.com",
         roles: ["admin"],
         tenantId: 3,

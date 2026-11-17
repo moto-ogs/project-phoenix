@@ -4,6 +4,7 @@ package owners
 
 import (
 	"fmt"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -31,7 +32,7 @@ type EnrollmentFlowTestRepositories struct {
 
 // Enrollment is the Enrollment booking projection the flows read and write.
 func (r *EnrollmentFlowTestRepositories) Enrollment() EnrollmentBookingProjection {
-	return NewEnrollmentBookingProjection(ComposeEnrollmentBookings(enrollmentCompose.NewClocked(nil)), UngatedEnrollmentPhaseBounds())
+	return NewEnrollmentBookingProjection(ComposeEnrollmentBookings(enrollmentCompose.NewClocked(time.Now), time.Now), UngatedEnrollmentPhaseBounds(), time.Now)
 }
 
 // NewEnrollmentFlowTestRepositoriesWithMembers composes the enrollment flow

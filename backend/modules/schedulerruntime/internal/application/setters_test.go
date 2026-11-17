@@ -759,7 +759,7 @@ func TestRunInstanceOverdueTaskPolling_TickerFires(t *testing.T) {
 func TestForEachTenant_NoTenantConfig_RejectsWork(t *testing.T) {
 	t.Parallel()
 
-	s := &Scheduler{logger: slog.Default()}
+	s := &Scheduler{now: time.Now, logger: slog.Default()}
 	var called int
 	err := s.forEachTenant(context.Background(), "test-op", func(_ context.Context) error {
 		called++
@@ -773,7 +773,7 @@ func TestForEachTenant_NoTenantConfig_RejectsWork(t *testing.T) {
 func TestForEachTenant_NoTenantConfig_DoesNotInvokeFailingWork(t *testing.T) {
 	t.Parallel()
 
-	s := &Scheduler{logger: slog.Default()}
+	s := &Scheduler{now: time.Now, logger: slog.Default()}
 	fnErr := errors.New("boom")
 	err := s.forEachTenant(context.Background(), "test-op", func(_ context.Context) error {
 		return fnErr
@@ -785,7 +785,7 @@ func TestForEachTenant_NoTenantConfig_DoesNotInvokeFailingWork(t *testing.T) {
 func TestForEachTenantSettings_NoTenantConfig_RejectsWork(t *testing.T) {
 	t.Parallel()
 
-	s := &Scheduler{logger: slog.Default()}
+	s := &Scheduler{now: time.Now, logger: slog.Default()}
 	var called int
 	var gotTenantID int64
 	s.forEachTenantSettings(context.Background(), "test-op", func(_ context.Context, tid int64) error {

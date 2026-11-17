@@ -286,7 +286,9 @@ func (s *Store) SEPADebitsOfMandate(ctx context.Context, organizationID, mandate
 	return scanSEPADebits(ctx, db.NewRaw(sepaDebitsOfMandateSQL, organizationID, mandateID))
 }
 
-// submitSEPADebitsSQL marks pending debits of the Träger submitted.
+// submitSEPADebitsSQL marks pending debits of the Träger submitted. The
+// database dates the submission: the history of an invoice orders it
+// against the release and the stamps of column defaults (ADR 0281).
 const submitSEPADebitsSQL = `UPDATE parent_billing.sepa_debits AS debit SET status = 'submitted', message_id = ?1,
 	submitted_at = CURRENT_TIMESTAMP, submitted_by_account_id = ?2,
 	submitted_amount_cents = submitted.amount_cents, collect_on = submitted.collect_on
@@ -294,12 +296,13 @@ FROM unnest(?3::bigint[], ?4::bigint[], ?5::date[]) AS submitted(id, amount_cent
 WHERE debit.organization_id = ?0 AND debit.id = submitted.id AND debit.status = 'pending'`
 
 // collectSEPAMandatesSQL sets the last collection of each mandate of the
-// debits (?2: mandate IDs, ?3: their collection days) and turns a recurring
+// debits (?2: mandate IDs, ?3: their collection days, ?4: the instant of the
+// owner's clock) and turns a recurring
 // mandate's next sequence to RCUR; a revoked mandate never changes.
 const collectSEPAMandatesSQL = `UPDATE parent_billing.sepa_mandates AS mandate
 SET sequence = CASE WHEN mandate.kind = 'recurring' THEN 'recurring' ELSE mandate.sequence END,
 	last_collected_on = GREATEST(COALESCE(mandate.last_collected_on, collected.collected_on), collected.collected_on),
-	updated_at = CURRENT_TIMESTAMP, updated_by_account_id = ?1
+	updated_at = ?4, updated_by_account_id = ?1
 FROM unnest(?2::bigint[], ?3::date[]) AS collected(mandate_id, collected_on)
 WHERE mandate.organization_id = ?0 AND mandate.id = collected.mandate_id AND mandate.revoked_on IS NULL`
 
@@ -335,7 +338,7 @@ func (s *Store) SubmitSEPADebits(ctx context.Context, organizationID, accountID 
 		days = append(days, day.String())
 	}
 	if _, err := db.NewRaw(collectSEPAMandatesSQL, organizationID, accountRef(accountID), pgdialect.Array(mandates),
-		pgdialect.Array(days)).Exec(ctx); err != nil {
+		pgdialect.Array(days), s.now()).Exec(ctx); err != nil {
 		return fmt.Errorf("collect SEPA mandates: %w", err)
 	}
 	if _, err := db.NewRaw(recurPendingDebitsSQL, organizationID, pgdialect.Array(mandates)).Exec(ctx); err != nil {
@@ -478,7 +481,8 @@ func derefDate(v *calendar.Date) calendar.Date {
 }
 
 // insertSubmittedNoticeRatesSQL writes the installments of a confirmed
-// file as submitted debits with the account of the mandate now, the mandate
+// file as submitted debits, dated like submitSEPADebitsSQL, with the account
+// of the mandate now, the mandate
 // locked; ?4.. are parallel arrays of the installments.
 const insertSubmittedNoticeRatesSQL = `INSERT INTO parent_billing.sepa_debits (organization_id, mandate_id, care_contract_id,
 	run_kind, run_id, care_notice_id, notice_month, invoice_number, amount_cents, due_on, sequence_type, creditor_id,

@@ -39,7 +39,7 @@ type careMealTariffRow struct {
 	Mode               string        `bun:"mode"`
 	AmountCents        int64         `bun:"amount_cents"`
 	CreatedByAccountID *int64        `bun:"created_by_account_id"`
-	CreatedAt          time.Time     `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt          time.Time     `bun:"created_at,nullzero"`
 }
 
 type careMealPositionRow struct {

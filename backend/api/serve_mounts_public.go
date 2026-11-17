@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 
@@ -22,14 +23,14 @@ import (
 // landing/health probes, the public image/legal-document servers, and the
 // bearer-protected metrics endpoint.
 // mountPublic mounts everything that needs no session.
-func mountPublic(root chi.Router, metricsToken string, db transactionruntime.Database, emailWebhooks emailWebhooksHTTP.Ingest, rateLimitEnabled bool) {
+func mountPublic(root chi.Router, metricsToken string, db transactionruntime.Database, emailWebhooks emailWebhooksHTTP.Ingest, rateLimitEnabled bool, now func() time.Time) {
 	mountPublicRoutes(root, metricsToken, db.Pool().PingContext)
 	mountEmailWebhooks(root, emailWebhooks, rateLimitEnabled)
 	// The register and the retrieval of the return package (Data Act,
 	// ADR 0201, ADR 0203): register and OpenAPI without a session, the
 	// released package only to the bearer of its token, behind its own rate limit.
 	// Its wiring is complete by construction; a failure is a programming error.
-	packages, err := organizationCompose.NewDataReturn(db.Pool(), owners.NewDataReturnCrypto(), organizationtenancy.DataReturnStoreDir, slog.Default().With("handler", "data-return"))
+	packages, err := organizationCompose.NewDataReturn(db.Pool(), owners.NewDataReturnCrypto(), organizationtenancy.DataReturnStoreDir, now, slog.Default().With("handler", "data-return"))
 	if err != nil {
 		panic(err)
 	}

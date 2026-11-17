@@ -46,6 +46,14 @@ func TestHolidayClosureReaderIsNarrow(t *testing.T) {
 	}
 }
 
+// holidayFixtureDay is a day of the fixture's booked week as SQL: the Monday
+// of the week a year after the database's day, plus offset days. The
+// carry-over decides on the database clock, so its fixture follows that
+// clock instead of naming a year that passes (#7104).
+func holidayFixtureDay(offset int) string {
+	return fmt.Sprintf("(date_trunc('week', CURRENT_DATE + 371)::date + (%d))", offset)
+}
+
 // holidayClosureFixture is a Träger with a school, a booked holiday week
 // and a closing day of the school in it nobody told yet.
 type holidayClosureFixture struct {
@@ -61,10 +69,10 @@ func newHolidayClosureFixture(t *testing.T, db *bun.DB, name string) holidayClos
 	f.school = testpkg.CreateTestSchoolInOrganization(t, db, f.organization, name+" OGS")
 	var period, model, child int64
 	require.NoError(t, db.NewRaw(`INSERT INTO enrollment.holiday_periods (organization_id, name, registration_opens_on,
-			registration_closes_on, status, published_at) VALUES (?, 'Sommerferien', '2030-01-01', '2030-06-01', 'published', NOW())
+			registration_closes_on, status, published_at) VALUES (?, 'Sommerferien', `+holidayFixtureDay(-180)+`, `+holidayFixtureDay(-30)+`, 'published', NOW())
 		RETURNING id`, f.organization).Scan(ctx, &period))
 	require.NoError(t, db.NewRaw(`INSERT INTO enrollment.holiday_period_weeks (organization_id, holiday_period_id, starts_on, ends_on, host_school_id)
-		VALUES (?, ?, '2030-07-08', '2030-07-12', ?) RETURNING id`, f.organization, period, f.school).Scan(ctx, &f.week))
+		VALUES (?, ?, `+holidayFixtureDay(0)+`, `+holidayFixtureDay(4)+`, ?) RETURNING id`, f.organization, period, f.school).Scan(ctx, &f.week))
 	require.NoError(t, db.NewRaw(`INSERT INTO enrollment.holiday_week_time_models (organization_id, holiday_period_week_id, name, starts_at, ends_at, price_cents)
 		VALUES (?, ?, 'Ganztag', '08:00', '16:00', 4500) RETURNING id`, f.organization, f.week).Scan(ctx, &model))
 	require.NoError(t, db.NewRaw(`INSERT INTO enrollment.holiday_registrations (organization_id, holiday_period_id, guardian_first_name,
@@ -78,7 +86,7 @@ func newHolidayClosureFixture(t *testing.T, db *bun.DB, name string) holidayClos
 		f.organization, period, child, f.week, model)
 	require.NoError(t, err)
 	require.NoError(t, db.NewRaw(`INSERT INTO schedule.closing_days (tenant_id, start_date, end_date, reason)
-		VALUES (?, '2030-07-09', '2030-07-10', 'Pädagogische Tage') RETURNING id`, f.school).Scan(ctx, &f.closingDay))
+		VALUES (?, `+holidayFixtureDay(1)+`, `+holidayFixtureDay(2)+`, 'Pädagogische Tage') RETURNING id`, f.school).Scan(ctx, &f.closingDay))
 	return f
 }
 
@@ -92,7 +100,7 @@ func TestHolidayClosureCarryOverProposesWithoutMail(t *testing.T) {
 	open := newHolidayClosureFixture(t, db, "Umstieg offen")
 	told := newHolidayClosureFixture(t, db, "Umstieg erledigt")
 	_, err := db.ExecContext(ctx, `INSERT INTO enrollment.holiday_closure_notices (organization_id, holiday_registration_id, holiday_period_week_id, closed_on)
-		VALUES (?, ?, ?, '2030-07-09'), (?, ?, ?, '2030-07-10')`,
+		VALUES (?, ?, ?, `+holidayFixtureDay(1)+`), (?, ?, ?, `+holidayFixtureDay(2)+`)`,
 		told.organization, told.registration, told.week, told.organization, told.registration, told.week)
 	require.NoError(t, err)
 
@@ -132,7 +140,7 @@ func TestHolidayClosureEventFieldGuard(t *testing.T) {
 	var proposal, event int64
 	require.NoError(t, db.NewRaw(`INSERT INTO calendar.holiday_closure_proposals (tenant_id, organization_id, source_kind, source_id,
 			operation_id, reason, current_start, current_end, span_from, span_to, revision)
-		VALUES (?, 0, 'school_closing_day', ?, gen_random_uuid(), 'Pädagogische Tage', '2030-07-09', '2030-07-10', '2030-07-09', '2030-07-10', 1)
+		VALUES (?, 0, 'school_closing_day', ?, gen_random_uuid(), 'Pädagogische Tage', `+holidayFixtureDay(1)+`, `+holidayFixtureDay(2)+`, `+holidayFixtureDay(1)+`, `+holidayFixtureDay(2)+`, 1)
 		RETURNING id`, f.school, f.closingDay).Scan(ctx, &proposal))
 	require.NoError(t, db.NewRaw(`INSERT INTO calendar.holiday_closure_events (tenant_id, organization_id, proposal_id, operation_id,
 			source_kind, source_id, revision, span_from, span_to, confirmed_channel, state)
@@ -154,7 +162,7 @@ func TestHolidayClosureEventFieldGuard(t *testing.T) {
 		"a school cannot withdraw a prepared command")
 	require.ErrorContains(t, scoped("app.current_tenant_id", school, `UPDATE calendar.holiday_closure_events SET state = 'pending' WHERE id = ?`),
 		"only takes up a failed", "a prepared command is not the school's to restart")
-	require.ErrorContains(t, scoped("app.current_tenant_id", school, `UPDATE calendar.holiday_closure_events SET span_to = '2030-07-12' WHERE id = ?`),
+	require.ErrorContains(t, scoped("app.current_tenant_id", school, `UPDATE calendar.holiday_closure_events SET span_to = `+holidayFixtureDay(4)+` WHERE id = ?`),
 		"never change", "the command fields are fixed")
 	require.ErrorContains(t, scoped("app.current_org_id", traeger, `UPDATE calendar.holiday_closure_events SET requested_channel = 'traeger' WHERE id = ?`),
 		"does not request", "the Träger unit processes, it does not request")

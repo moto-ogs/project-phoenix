@@ -54,14 +54,14 @@ type DemoOrigins struct {
 	School  func(schoolSlug string) string
 }
 
-// NewDemoResource builds the demo routes; now is the root's clock, nil the
-// real one, as RootEnvironment.Now is.
+// NewDemoResource builds the demo routes; now is the root's clock
+// (RootEnvironment.Now) and required.
 func NewDemoResource(accesses DemoAccesses, origins DemoOrigins, now func() time.Time) (*DemoResource, error) {
 	if accesses == nil || origins.Waiting == "" || origins.School == nil {
 		return nil, errors.New("demo routes require the capability and the entry origins")
 	}
 	if now == nil {
-		now = time.Now
+		return nil, errors.New("demo routes require the root's clock")
 	}
 	origins.Waiting = strings.TrimRight(origins.Waiting, "/")
 	return &DemoResource{accesses: accesses, origins: origins, now: now}, nil

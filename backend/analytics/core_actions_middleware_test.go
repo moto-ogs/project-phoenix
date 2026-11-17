@@ -104,6 +104,17 @@ func newCoreActionRouter(tracker Tracker, requestActor *Actor) http.Handler {
 		r.Mount("/groups", groups)
 		r.Post("/rooms/export", answer(`%PDF`))
 		r.Post("/enrollment/{tenantSlug}/submit", answer(`{}`))
+		r.Delete("/meal-caterer/supply", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			switch ended := r.URL.Query().Get("ended"); ended {
+			case "missing":
+				_, _ = w.Write([]byte(`{"status":"success","data":{"created":true}}`))
+			case "top":
+				_, _ = w.Write([]byte(`{"ended":true}`))
+			default:
+				_, _ = w.Write([]byte(`{"status":"success","data":{"ended":` + ended + `}}`))
+			}
+		})
 	})
 	root.Route("/auth", func(r chi.Router) {
 		r.Post("/login", func(w http.ResponseWriter, r *http.Request) {
@@ -192,6 +203,23 @@ func TestCoreActionMiddlewareCountsOnlyNewDeclarationSubmissions(t *testing.T) {
 	events := tracker.captured()
 	require.Len(t, events, 1)
 	assert.Equal(t, "parent_declaration_submitted", events[0].event)
+}
+
+func TestCoreActionMiddlewareCountsOnlyAnEndThatEndedSomething(t *testing.T) {
+	t.Parallel()
+
+	tracker := &recordingTracker{}
+	router := newCoreActionRouter(tracker, &staffActor)
+
+	serve(router, http.MethodDelete, "/api/meal-caterer/supply?ended=true", ``, nil)
+	serve(router, http.MethodDelete, "/api/meal-caterer/supply?ended=false", ``, nil)
+	serve(router, http.MethodDelete, "/api/meal-caterer/supply?ended=missing", ``, nil)
+	serve(router, http.MethodDelete, "/api/meal-caterer/supply?ended=top", ``, nil)
+
+	events := tracker.captured()
+	require.Len(t, events, 2, "a repeated end and a response without ended count nothing; a flat ended counts")
+	assert.Equal(t, "caterer_supply_ended", events[0].event)
+	assert.Equal(t, "caterer_supply_ended", events[1].event)
 }
 
 // chi reports a mounted collection root as /api/groups/ whether or not the

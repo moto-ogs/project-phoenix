@@ -29,8 +29,8 @@ type staffMessageRow struct {
 	SendReplayed    bool   `bun:"send_replayed,scanonly"`
 	bun.BaseModel   `bun:"table:users.staff_messages,alias:staff_message"`
 	ID              int64           `bun:"id,pk,autoincrement"`
-	CreatedAt       time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time       `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time       `bun:"updated_at,nullzero,notnull"`
 	TenantID        int64           `bun:"tenant_id,notnull"`
 	ThreadID        int64           `bun:"thread_id,notnull"`
 	SenderAccountID int64           `bun:"sender_account_id,notnull"`
@@ -128,9 +128,11 @@ func (s *MessageStore) ListStaffMessages(ctx context.Context, threadID int64) ([
 	return messages, nil
 }
 
-// DeleteOlderThan removes messages created before the cutoff across the whole
-// tenant (retention housekeeping) and reports how many rows went.
-func (s *MessageStore) DeleteStaffMessagesBefore(ctx context.Context, cutoff time.Time) (int64, error) {
+// DeleteStaffMessagesBefore removes the messages older than retentionDays
+// across the whole tenant (retention housekeeping) and reports how many rows
+// went. The window is counted on the database clock, which stamps the
+// messages (ADR 0277).
+func (s *MessageStore) DeleteStaffMessagesBefore(ctx context.Context, retentionDays int) (int64, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
 		return 0, err
@@ -138,7 +140,7 @@ func (s *MessageStore) DeleteStaffMessagesBefore(ctx context.Context, cutoff tim
 	query := db.NewDelete().
 		Model((*staffMessageRow)(nil)).
 		ModelTableExpr(tableExprStaffMessagesAsMessage).
-		Where(`"staff_message".created_at < ?`, cutoff)
+		Where(`"staff_message".created_at < now() - make_interval(days => ?)`, retentionDays)
 	query = withTenant(query, "staff_message", tenantID)
 
 	res, err := query.Exec(ctx)
@@ -163,7 +165,7 @@ func (s *MessageStore) DeleteStaffMessagesBefore(ctx context.Context, cutoff tim
 					LIMIT 1
 				) AS latest ON TRUE
 				WHERE thread.tenant_id = ?
-					AND (thread.last_message_at < ? OR NOT EXISTS (
+					AND (thread.last_message_at < now() - make_interval(days => ?) OR NOT EXISTS (
 						SELECT 1 FROM users.staff_messages current
 						WHERE current.id = thread.last_message_id AND current.tenant_id = thread.tenant_id
 					))
@@ -175,7 +177,7 @@ func (s *MessageStore) DeleteStaffMessagesBefore(ctx context.Context, cutoff tim
 				last_sender_account_id = previews.last_sender_account_id
 			FROM previews
 			WHERE thread.id = previews.id AND thread.tenant_id = ?
-		`, tenantID, cutoff, tenantID); err != nil {
+		`, tenantID, retentionDays, tenantID); err != nil {
 			return 0, fmt.Errorf("refresh staff message previews after retention: %w", err)
 		}
 	}

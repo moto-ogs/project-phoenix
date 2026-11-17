@@ -163,11 +163,11 @@ func (s *Store) EnsureActiveTenantMapping(ctx context.Context, accountID, tenant
 	// without an invitation, matching the legacy model that never set it on
 	// this path, and the column default would stamp NOW().
 	mappingStats, err := s.bindAccountToSchool(ctx, "ensure active tenant mapping", func(db bun.IDB) *bun.RawQuery {
-		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at, invited_at, created_at, updated_at)
-			SELECT ?, ?, 'active', NOW(), NULL::timestamptz, NOW(), NOW() FROM caterer WHERE NOT caterer.refused
+		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at, invited_at)
+			SELECT ?, ?, 'active', ?::timestamptz, NULL::timestamptz FROM caterer WHERE NOT caterer.refused
 			ON CONFLICT (account_id, tenant_id) DO UPDATE
-			SET status = EXCLUDED.status, activated_at = EXCLUDED.activated_at, deactivated_at = NULL, updated_at = NOW()
-			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID)
+			SET status = EXCLUDED.status, activated_at = EXCLUDED.activated_at, deactivated_at = NULL
+			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID, s.now())
 	})
 	stats.Add(mappingStats)
 	return stats, err

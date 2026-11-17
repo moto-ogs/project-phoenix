@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api"
@@ -52,7 +53,7 @@ func newGuardianFeedFixture(t *testing.T) *guardianFeedFixture {
 	testpkg.SetTestTenantSetting(t, db, testpkg.Tenant(t), "notifications.active_window_start", `"06:00"`)
 	testpkg.SetTestTenantSetting(t, db, testpkg.Tenant(t), "notifications.active_window_end", `"06:00"`)
 	reposMessages := api.NewParentMessagingSuiteRepositories(database)
-	svc := announcement.NewService(announcement.ServiceConfig{
+	svc := announcement.NewService(announcement.ServiceConfig{Now: time.Now,
 		Repo:        records.NewRepository(reposMessages.ParentAnnouncement),
 		Settings:    configModel.NewParentAnnouncementValues(noticeSettings()),
 		Notifier:    noticeNotificationCallback(owners.BindCommunicationNotificationSender(notifier)),

@@ -2,6 +2,7 @@ package users
 
 import (
 	context "context"
+	"time"
 
 	directory "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	models "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/rows"
@@ -10,8 +11,12 @@ import (
 
 type nativeGuardianProfileRepository struct{ rawGuardianProfileRepository }
 
-func NewGuardianProfileRepository(runtime Runtime, students StudentDirectoryRows, links GuardianLinkRows, options ...GuardianProfileOption) ports.GuardianProfileRepository {
-	return nativeGuardianProfileRepository{rawGuardianProfileRepository: newRawGuardianProfileRepository(runtime, students, links, options...)}
+// NewGuardianProfileRepository builds the repository; now is required.
+func NewGuardianProfileRepository(runtime Runtime, students StudentDirectoryRows, links GuardianLinkRows, now func() time.Time, options ...GuardianProfileOption) ports.GuardianProfileRepository {
+	if now == nil {
+		panic("people directory guardian profiles: clock is required")
+	}
+	return nativeGuardianProfileRepository{rawGuardianProfileRepository: newRawGuardianProfileRepository(runtime, students, links, now, options...)}
 }
 
 func (r nativeGuardianProfileRepository) Create(ctx context.Context, profile *directory.GuardianProfileSnapshot) error {

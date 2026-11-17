@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -438,6 +439,7 @@ func TestDecisionService_ApplyDueWeeklyPlans_BroadcastsAfterSuccessfulApply(t *t
 	repos, care, _, schedules, _, _ := testRepositories(t, r.env.db)
 	studentEnrollment := testStudentEnrollment(r.env.db)
 	owner := newTestDecisions(enrollmentCompose.DecisionDependencies{
+		Now:      time.Now,
 		Requests: repos.Enrollment(), Children: repos.Enrollment(), Schemas: repos.Enrollment(),
 		People: owners.EnrollmentDecisionPeopleDirectory(
 			repos.Person, repos.Staff, repos.Student, repos.StudentGuardian, repos.GuardianProfile, repos.GuardianPhoneNumber, studentEnrollment,

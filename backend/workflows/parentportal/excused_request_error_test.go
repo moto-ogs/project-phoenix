@@ -81,6 +81,7 @@ func buildParentServiceWithExcused(t *testing.T, excused careplan.ExcusedAbsence
 		StudentUpdates:      owners.BindParentStudentUpdates(bc),
 		ExcusedRequests:     owners.NewParentExcusedAbsenceRequests(excused),
 		Logger:              slog.Default(),
+		Now:                 careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
@@ -94,7 +95,7 @@ func buildParentServiceWithExcused(t *testing.T, excused careplan.ExcusedAbsence
 func TestSubmitExcusedRequest_MapsServiceErrors(t *testing.T) {
 	t.Parallel()
 
-	day := calendar.TodayDate().AddDays(3)
+	day := careFixtureToday().AddDays(3)
 	cases := []struct {
 		name string
 		in   error
@@ -128,7 +129,7 @@ func TestSubmitExcusedRequest_MapsServiceErrors(t *testing.T) {
 func TestEditExcusedRequest_MapsServiceErrors(t *testing.T) {
 	t.Parallel()
 
-	day := calendar.TodayDate().AddDays(3)
+	day := careFixtureToday().AddDays(3)
 	cases := []struct {
 		name string
 		in   error
@@ -161,7 +162,7 @@ func TestSubmitExcused_NoServiceConfigured(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	_, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
-		[]calendar.Date{calendar.TodayDate().AddDays(3)}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
+		[]calendar.Date{careFixtureToday().AddDays(3)}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "not configured")
 }

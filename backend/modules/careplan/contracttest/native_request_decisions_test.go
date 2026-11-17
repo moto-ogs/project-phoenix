@@ -74,7 +74,7 @@ func (d *decisionBoundary) RecordDecision(context.Context, *carerequests.Request
 func TestNativeRequestDecisionRollsBackAppliedPlanAndSnapshot(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 	student := testpkg.CreateTestStudent(t, db, "Decision", "Transaction", "1a")
 	account := testpkg.CreateTestAccount(t, db, "parent")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -18,7 +19,7 @@ import (
 func TestChangeRequestTablesAreRowLevelSecured(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := enrollmentCompose.NewClocked(nil)
+	owner := enrollmentCompose.NewClocked(time.Now)
 	var tenants, changeIDs, messageIDs []int64
 	for _, name := range []string{"first", "second"} {
 		t.Run(name, func(t *testing.T) {
@@ -85,7 +86,7 @@ func TestChangeRequestTablesAreRowLevelSecured(t *testing.T) {
 func TestChangeRequestReadsPreserveStoreFailures(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := enrollmentCompose.NewClocked(nil)
+	owner := enrollmentCompose.NewClocked(time.Now)
 	ctx := testpkg.Ctx(t)
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)
 	request := &enrollment.Request{PhaseID: phase.ID, GuardianFirstName: "First", GuardianLastName: "Last", GuardianEmail: "guardian@example.test", StatusToken: "failure-" + t.Name()}

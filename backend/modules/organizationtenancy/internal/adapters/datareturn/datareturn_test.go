@@ -96,8 +96,8 @@ func newFixtureOn(t *testing.T, db *bun.DB) *fixture {
 	operator := testpkg.CreateTestOperator(t, db)
 	store := t.TempDir()
 	conn := roleSession(t, db, "phoenix_auth")
-	f := &fixture{db: db, store: store, operator: operator.ID, release: NewRelease(db, testCrypto(), store),
-		retrieval: NewRetrieval(conn, testCrypto(), store, nil)}
+	f := &fixture{db: db, store: store, operator: operator.ID, release: NewRelease(db, testCrypto(), store, time.Now),
+		retrieval: NewRetrieval(conn, testCrypto(), store, time.Now, nil)}
 	t.Cleanup(func() {
 		_, err := db.ExecContext(context.Background(), `DELETE FROM platform.data_return_grants WHERE issued_by = ?`, f.operator)
 		require.NoError(t, err)
@@ -207,7 +207,7 @@ func TestDownloadBudgetHoldsUnderConcurrentDownloads(t *testing.T) {
 	f := newFixture(t)
 	issued := f.releaseSchool(t, f.school(t), "Synthetic", 2)
 	// The pool, not the single phoenix_auth session: downloads run in parallel.
-	pool := NewRetrieval(f.db, testCrypto(), f.store, nil)
+	pool := NewRetrieval(f.db, testCrypto(), f.store, time.Now, nil)
 	var wg sync.WaitGroup
 	results := make(chan error, 6)
 	for range 6 {

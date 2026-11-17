@@ -78,7 +78,7 @@ func BuildCarePlanRows(
 		return CarePlanRows{}, err
 	}
 	lifecycleOwners := NewCareLifecycleOwners(people.Students, people.Persons, membership, persons, timetableOwner, calendar,
-		NewUnloggedStudentPresence(db), NewPresenceProjectionReads(db), NewEnrollmentBookingProjection(NewEnrollmentBookings(now), phaseBounds),
+		NewUnloggedStudentPresence(db, now), NewPresenceProjectionReads(db), NewEnrollmentBookingProjection(NewEnrollmentBookings(now), phaseBounds, now),
 		NewCareEndRecorder(studentAudit))
 	return CarePlanRows{
 		StatusDays:             NewStudentStatusDayRepository(carePlan),
@@ -154,7 +154,7 @@ func BuildCarePlanSchedules(
 	if err != nil {
 		return CarePlanSchedules{}, fmt.Errorf("compose care lifecycle: %w", err)
 	}
-	pickupBaselines, err := carePlanCompose.NewPickupBaselines(carePlan, approved, authoritative)
+	pickupBaselines, err := carePlanCompose.NewPickupBaselines(carePlan, approved, authoritative, timezone.CalendarDateClock(rows.Now))
 	if err != nil {
 		return CarePlanSchedules{}, err
 	}

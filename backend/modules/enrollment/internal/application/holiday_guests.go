@@ -93,7 +93,7 @@ func NewHolidayGuests(store HolidayGuestStore, people enrollment.HolidayGuestPeo
 		panic(errHolidayHealthCipherRequired)
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("enrollment: the holiday guests need the day clock")
 	}
 	return &HolidayGuests{store: store, people: people, schools: schools, care: care, children: children, ownCare: NewHolidayOwnChildCareDays(ownPlans), health: health, log: log, today: today,
 		logger: slog.Default().With("service", "holiday-guests"), HolidayGuestBadgeList: NewHolidayGuestBadgeList(store, today)}
@@ -657,7 +657,7 @@ func NewHolidayGuestBadgeList(store HolidayGuestCurrentGuests, today func() cale
 		panic("enrollment: the holiday guest store is required")
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("enrollment: the guest hints need the day clock")
 	}
 	return HolidayGuestBadgeList{store: store, today: today}
 }

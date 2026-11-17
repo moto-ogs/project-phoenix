@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	"github.com/moto-ogs/project-phoenix/modules/planexport"
@@ -22,7 +23,7 @@ func (o *emptyOverview) StaffScheduleOverview(_ context.Context, from, to planex
 func TestPublicDocumentContractRendersAnActualWeeklyWorkbook(t *testing.T) {
 	t.Parallel()
 	overview := &emptyOverview{}
-	service := planexport.NewService(planexport.Dependencies{Overview: overview, Renderer: lists.NewRenderer()}, nil)
+	service := planexport.NewService(planexport.Dependencies{Now: func() time.Time { return time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC) }, Overview: overview, Renderer: lists.NewRenderer()}, nil)
 	params := planexport.Params{From: "2026-08-26", To: "2026-08-27", Template: planexport.TemplateByPerson, Variant: planexport.VariantNotice, Format: planexport.FormatXLSX}
 	file, err := service.ExportDienstplan(context.Background(), params)
 	require.NoError(t, err)

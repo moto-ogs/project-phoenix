@@ -162,8 +162,10 @@ func NewStaffTimeExportService(
 	payrollStatus PayrollConfigurationReader,
 	logger *slog.Logger,
 	renderWorkbook TimeTrackingWorkbookRenderer,
+	now func() time.Time,
 ) *staffTimeExportService {
 	return &staffTimeExportService{
+		nowFunc:        requireClock(now),
 		overview:       overview,
 		sessions:       sessions,
 		staffRepo:      staffRepo,
@@ -175,11 +177,11 @@ func NewStaffTimeExportService(
 }
 
 func (s *staffTimeExportService) today() calendar.Date {
-	return dayOrWall(s.todayFunc, s.nowFunc)()
+	return dayOf(s.todayFunc, s.nowFunc)()
 }
 
 func (s *staffTimeExportService) now() time.Time {
-	return clockOrWall(s.nowFunc)().In(calendar.Berlin)
+	return requireClock(s.nowFunc)().In(calendar.Berlin)
 }
 
 // validate normalizes defaults and rejects everything the writers would

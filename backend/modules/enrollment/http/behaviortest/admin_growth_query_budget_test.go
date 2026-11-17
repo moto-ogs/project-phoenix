@@ -25,10 +25,11 @@ func TestEnrollmentAdminRouteGrowthQueryBudget(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	_, _, audit, _, _, _ := flowRepositories(t, env.db)
 	f.resource.DecisionService = newTestDecisionService(compose.DecisionDependencies{
+		Now:      time.Now,
 		Requests: env.repos.Enrollment(), Children: env.repos.Enrollment(), Guardians: env.repos.Enrollment(), Phases: env.repos.Enrollment(), Schemas: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan), Adjustments: owners.EnrollmentDecisionAdjustments(audit.EnrollmentOfferingAdjustment),
 	}, f.settings.Settings)
-	f.resource.ReportService = owners.NewEnrollmentReports(owners.EnrollmentReportSources{Owner: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan), Settings: f.settings.Settings})
-	f.resource.UploadList = owners.NewEnrollmentRequestUploads(env.repos.Enrollment(), nil, f.settings.Settings, nil, nil)
+	f.resource.ReportService = owners.NewEnrollmentReports(owners.EnrollmentReportSources{Now: time.Now, Owner: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan), Settings: f.settings.Settings})
+	f.resource.UploadList = owners.NewEnrollmentRequestUploads(env.repos.Enrollment(), nil, f.settings.Settings, nil, time.Now)
 	router := f.router(t)
 	counter := testpkg.CaptureQueries(t, env.db)
 	// The detail and report grow sibling children in one real submitted request.

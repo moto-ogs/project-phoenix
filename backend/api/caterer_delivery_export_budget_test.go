@@ -66,7 +66,7 @@ func checkCatererDeliveryExportQueryBudget(t *testing.T, api *goldenRuntime) {
 	}
 
 	// A week far ahead: every day is open and lies after the supply started.
-	monday := calendar.NewDate(2030, 3, 4)
+	monday := calendar.NewDate(2080, 3, 4)
 	week := fmt.Sprintf("/caterer/orders/export?from=%s&to=%s&format=csv", monday, monday.AddDays(4))
 	counter := testpkg.CaptureQueriesForContext(t, api.db.Pool())
 	countedHandler := api.queryBudgetHandler(counter)

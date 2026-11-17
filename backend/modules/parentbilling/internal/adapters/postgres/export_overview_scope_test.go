@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -70,7 +71,7 @@ func TestExportOverviewCountsTheDocumentsASollstellungWrites(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	scope := newMandateScope(t, db, "Träger Übersicht")
 	school := testpkg.CreateTestSchoolInOrganization(t, db, scope.organization, "OGS Übersicht")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the overview back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {
@@ -138,7 +139,7 @@ func TestExportListsPageThroughEveryRowOfTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newMandateScope(t, db, "Träger Seiten A")
 	other := newMandateScope(t, db, "Träger Seiten B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the pages back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, own.organization, func(ctx context.Context) error {

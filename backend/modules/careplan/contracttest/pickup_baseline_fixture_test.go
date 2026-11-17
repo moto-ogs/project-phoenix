@@ -65,7 +65,7 @@ func newPickupBaselineService(
 	records carePlanPorts.PickupBaselineRecords,
 	links careplan.ApprovedBookingReader,
 ) careplan.PickupBaselineReader {
-	baselines, err := compose.NewPickupBaselines(records, links, func(context.Context) (bool, error) { return false, nil })
+	baselines, err := compose.NewPickupBaselines(records, links, func(context.Context) (bool, error) { return false, nil }, decisionTestDay)
 	if err != nil {
 		panic(err)
 	}

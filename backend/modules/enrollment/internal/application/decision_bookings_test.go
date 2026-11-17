@@ -25,6 +25,7 @@ func TestAfterDecisionReconcilesFutureApprovedBooking(t *testing.T) {
 
 	bookings := &decisionBookingsRecorder{}
 	decisions := NewDecisions(DecisionDependencies{
+		Now:      enrollmentTestClock,
 		Settings: unusedDecisionSettings{},
 		Bookings: bookings,
 		Today:    func() calendar.Date { return calendar.NewDate(2026, 11, 2) },

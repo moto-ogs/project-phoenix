@@ -27,7 +27,7 @@ type rosterRemovalRow struct {
 	NotScheduled       bool       `bun:"not_scheduled,notnull"`
 	ManualStatusAt     *time.Time `bun:"manual_status_at"`
 	StudentStatusDayID *int64     `bun:"student_status_day_id"`
-	CreatedAt          time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt          time.Time  `bun:"created_at,nullzero,notnull"`
 }
 
 // ArchivePlannedInstanceStudents deletes the given participants and parks

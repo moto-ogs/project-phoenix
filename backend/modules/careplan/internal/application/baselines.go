@@ -108,13 +108,19 @@ func (q *ArrivalBaselineQueries) careDays(ctx context.Context, ids []int64, from
 	return domain.ProjectCareDayIndex(links, offerings, from, to), nil
 }
 
-type PickupBaselineQueries struct{ source ports.PickupBaselineSource }
+// PickupBaselineQueries projects the pickup baselines; today is the
+// composition's school day from which a booked offering still manages a
+// weekday.
+type PickupBaselineQueries struct {
+	source ports.PickupBaselineSource
+	today  func() calendar.Date
+}
 
-func NewPickupBaselineQueries(source ports.PickupBaselineSource) *PickupBaselineQueries {
-	if source == nil {
-		panic("care plan: pickup baseline source is required")
+func NewPickupBaselineQueries(source ports.PickupBaselineSource, today func() calendar.Date) *PickupBaselineQueries {
+	if source == nil || today == nil {
+		panic("care plan: pickup baseline source and the composition's day clock are required")
 	}
-	return &PickupBaselineQueries{source: source}
+	return &PickupBaselineQueries{source: source, today: today}
 }
 func (q *PickupBaselineQueries) Project(ctx context.Context, ids []int64, from, to calendar.Date) (*careplan.PickupBaselineProjection, error) {
 	out := &careplan.PickupBaselineProjection{WeeklyByStudentDate: make(careplan.PickupPlansByStudent, len(ids)), OfferingByStudentDate: make(careplan.PickupPlansByStudent, len(ids))}
@@ -174,7 +180,7 @@ func (q *PickupBaselineQueries) HasBookedOfferingPickupForWeekday(ctx context.Co
 	if weekday < 1 || weekday > 5 {
 		return false, nil
 	}
-	links, err := q.source.ListApprovedByStudentIDsInRange(ctx, []int64{id}, calendar.TodayDate(), calendar.NewDate(9999, time.December, 31))
+	links, err := q.source.ListApprovedByStudentIDsInRange(ctx, []int64{id}, q.today(), calendar.NewDate(9999, time.December, 31))
 	if err != nil {
 		return false, fmt.Errorf("find booked offering pickup: %w", err)
 	}

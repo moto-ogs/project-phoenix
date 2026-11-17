@@ -286,3 +286,85 @@ func TestTypeScriptWritesTypesBeforeTheirUse(t *testing.T) {
 		assert.Contains(t, source, line)
 	}
 }
+
+func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
+	t.Parallel()
+	staff := get("/api/rows/{id}", inner{})
+	staff.Query = []QueryParam{{Name: "view", Kind: "string"}, {Name: "page", Kind: "int"}}
+	shared := get("/parent/me/rows", body{})
+	shared.Portals = []string{"tenant", "parent"}
+	doc, err := Build([]Registration{staff, shared}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	assert.Contains(t, files["rows.generated.ts"], `    query: ["page", "view"],`)
+	table := files["portals.generated.ts"]
+	for _, line := range []string{
+		`import { routes as parentMe } from "./parent-me.generated";`,
+		"  parent: [\n    parentMe[\"GET /parent/me/rows\"],\n  ],",
+		"  tenant: [\n    parentMe[\"GET /parent/me/rows\"],\n    rows[\"GET /api/rows/{id}\"],\n  ],",
+	} {
+		assert.Contains(t, table, line)
+	}
+
+	for _, pattern := range []string{"/api/portals/", "/api/shared/"} {
+		doc, err = Build([]Registration{get(pattern, inner{})}, Options{Identifiers: identifiers})
+		require.NoError(t, err)
+		_, err = TypeScript(doc)
+		assert.ErrorContains(t, err, "taken by a generated table")
+	}
+}
+
+// Two portals mount the same handlers, so two resources answer with one Go
+// type. It is written once and both files import it.
+func TestTypeScriptWritesATypeOfTwoResourcesOnce(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{rowRoute(), get("/school/rows/{id}", row{}), get("/api/others/", inner{})}, rowOptions)
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	shared := files["shared.generated.ts"]
+	assert.Contains(t, shared, "  type OpenEnum,\n} from \"./runtime\";")
+	assert.Contains(t, shared, "  mode: OpenEnum<mode>;")
+	assert.Contains(t, shared, `export const MODE_VALUES = ["a", "b"] as const;`)
+	assert.Contains(t, shared, "export const rowSchema: z.ZodType<row, unknown> = z.object({")
+	assert.NotContains(t, shared, "export const routes")
+	for _, name := range []string{"rows.generated.ts", "school-rows.generated.ts"} {
+		assert.Contains(t, files[name], "import {\n  rowSchema,\n} from \"./shared.generated\";", name)
+		assert.NotContains(t, files[name], "export interface row ", name)
+		assert.NotContains(t, files[name], "type OpenEnum", name)
+		assert.NotContains(t, files[name], `from "zod"`, name)
+		assert.Contains(t, files[name], "    response: success(rowSchema),", name)
+	}
+	// A type of one resource stays in its file.
+	assert.Contains(t, files["others.generated.ts"], "export interface inner {")
+	assert.NotContains(t, shared, "interface inner ")
+}
+
+func TestTypeScriptImportsOpenEnumForASharedRequest(t *testing.T) {
+	t.Parallel()
+	type enumBody struct {
+		Modes map[string][]mode `json:"modes"`
+	}
+	first := post(enumBody{})
+	first.Response = ""
+	first.Enums = []EnumSpec{{Type: mode(""), Values: []string{"a", "b"}}}
+	second := first
+	second.Pattern = "/school/rows/"
+	doc, err := Build([]Registration{first, second}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	shared := files["shared.generated.ts"]
+	assert.Contains(t, shared, "import {\n  type OpenEnum,\n} from \"./runtime\";")
+	assert.Contains(t, shared, "  modes?: Record<string, OpenEnum<mode>[] | null> | null;")
+	assert.NotContains(t, shared, `from "zod"`, "a request has no decoder")
+	for _, name := range []string{"rows.generated.ts", "school-rows.generated.ts"} {
+		assert.Contains(t, files[name], "type enumBody,", name)
+		assert.Contains(t, files[name], "    request: requestBody<enumBody>(),", name)
+		assert.NotContains(t, files[name], "type OpenEnum", name)
+	}
+}

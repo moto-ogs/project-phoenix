@@ -2,6 +2,7 @@ package compose
 
 import (
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -13,7 +14,7 @@ func TestCareOfferingBookingsRestoreHistoricalWeekdays(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	phaseID, _, childID := testpkg.CreateAuditAdjustmentChain(t, db)
 	offering := testpkg.CreateTestCareOffering(t, db, phaseID, "Historical restore")
-	module := NewOfferingBookings()
+	module := NewOfferingBookings(time.Now)
 	ctx := testpkg.Ctx(t)
 	split := careplan.Date("2030-09-01")
 	until := careplan.Date("2030-08-15")

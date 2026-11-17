@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
@@ -28,7 +29,9 @@ func TestClosingDaysRouteGrowthQueryBudget(t *testing.T) {
 	require.True(t, ok)
 	settings, err := owners.NewSettingsTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
-	resource := timetableAPI.NewResource(timetableAPI.Dependencies{ClosingDays: closing, SettingsService: settings.Settings})
+	// The closing days start in January 2027, after the pinned day.
+	resource := timetableAPI.NewResource(timetableAPI.Dependencies{ClosingDays: closing, SettingsService: settings.Settings,
+		Now: func() time.Time { return time.Date(2026, time.December, 1, 10, 0, 0, 0, calendar.Berlin) }})
 	router := chi.NewRouter()
 	router.Mount("/timetable", resource.Router(rootAPI.ProtectedTenantRoutes))
 	account := testpkg.CreateTestAccount(t, db, "closing-growth")

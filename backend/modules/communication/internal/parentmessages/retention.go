@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 )
 
 // ErrRetentionUnresolved means the school's parent-message retention window
@@ -12,10 +11,12 @@ import (
 // deleting on a guess.
 var ErrRetentionUnresolved = errors.New("messaging: parent message retention window could not be resolved")
 
-// RetentionStore deletes the expired parent messages of the school in
-// context and the conversations they leave empty.
+// RetentionStore deletes the parent messages of the school in context that
+// are older than retentionDays and the conversations they leave empty. It
+// counts the window on the database clock, which stamps the messages and
+// orders them (ADR 0277).
 type RetentionStore interface {
-	DeleteMessagesBefore(ctx context.Context, cutoff time.Time) (messages, threads int64, err error)
+	DeleteMessagesBefore(ctx context.Context, retentionDays int) (messages, threads int64, err error)
 }
 
 // RetentionSettings resolves the school's retention window.
@@ -37,7 +38,6 @@ type RetentionResult struct {
 type Retention struct {
 	Store    RetentionStore
 	Settings RetentionSettings
-	Now      func() time.Time
 }
 
 // CleanupExpiredMessages deletes the messages older than the window and the
@@ -53,11 +53,7 @@ func (r Retention) CleanupExpiredMessages(ctx context.Context) (RetentionResult,
 	if days <= 0 {
 		return RetentionResult{}, fmt.Errorf("%w: window must be positive, got %d", ErrRetentionUnresolved, days)
 	}
-	now := time.Now
-	if r.Now != nil {
-		now = r.Now
-	}
-	messages, threads, err := r.Store.DeleteMessagesBefore(ctx, now().AddDate(0, 0, -days))
+	messages, threads, err := r.Store.DeleteMessagesBefore(ctx, days)
 	if err != nil {
 		return RetentionResult{RetentionDays: days}, err
 	}

@@ -123,7 +123,7 @@ func NewHolidayRegistrationReview(store HolidayReviewStore, periods HolidayPerio
 		panic(errHolidayHealthCipherRequired)
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("enrollment: the holiday review needs the day clock")
 	}
 	review := &HolidayRegistrationReview{
 		store: store, periods: periods, forms: forms, health: health, today: today,

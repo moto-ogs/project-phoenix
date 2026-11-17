@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -47,6 +48,7 @@ func newCompanionSyncApplier(
 	bookings := testBookings(t, env.rolloverTestEnv, nil)
 	studentEnrollment := testStudentEnrollment(env.db)
 	decisions := newTestDecisions(enrollmentCompose.DecisionDependencies{
+		Now:            time.Now,
 		Requests:       repoFactory.Enrollment(),
 		Children:       repoFactory.Enrollment(),
 		Guardians:      repoFactory.Enrollment(),
