@@ -8,23 +8,30 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 )
 
-// The versions below fingerprint an exception a pickup approval wrote, as the
+// The versions below fingerprint a row a pickup approval wrote, as the
 // approval's transaction left it. The decision ledger stores them, and a
 // correction takes a row back only while its fingerprint is still equal: any
 // later write, whatever its transaction's start time, counts as a change after
-// the decision (ADR 0281, point 4). Exceptions include updated_at, which
-// every writer advances (column default, trigger), plus every field a staff
-// edit can change.
+// the decision (ADR 0281, point 4). Each version holds updated_at to the
+// microsecond plus every field a staff edit can change, so a writer that
+// leaves updated_at alone is still caught by the content.
 
 func pickupExceptionVersion(row careplan.PickupException) string {
-	return rowVersion(stamp(row.UpdatedAt), clockText(row.PickupTime), optionalText(row.Reason),
+	return rowVersion(stamp(row.UpdatedAt), row.ExceptionDate.String(), clockText(row.PickupTime), optionalText(row.Reason),
 		clockText(row.ExcusedFrom), optionalText(row.ExcusedReason), optionalID(row.ExcusedCreatedBy),
 		strconv.FormatBool(row.ExcusedOwnsPickupTime), strconv.FormatBool(row.ExcusedAuto),
 		row.Source, strconv.FormatInt(row.CreatedBy, 10), optionalID(row.CreatedByGuardian))
 }
 
 func departureExceptionVersion(row careplan.DepartureException) string {
-	return rowVersion(stamp(row.UpdatedAt), row.DepartureMode, optionalText(row.Reason), optionalID(row.CreatedBy))
+	return rowVersion(stamp(row.UpdatedAt), row.ExceptionDate.String(), row.DepartureMode, optionalText(row.Reason), optionalID(row.CreatedBy))
+}
+
+// pickupNoteVersion covers what the note editor (PUT
+// /students/{id}/pickup-notes/{noteId}) writes: date or weekday and text.
+func pickupNoteVersion(row careplan.PickupNote) string {
+	return rowVersion(stamp(row.UpdatedAt), row.NoteDate.String(), strconv.Itoa(row.Weekday), row.Content,
+		strconv.FormatInt(row.StudentID, 10), strconv.FormatInt(row.CreatedBy, 10))
 }
 
 // rowVersion joins the fields to one canonical text. It stays readable in the

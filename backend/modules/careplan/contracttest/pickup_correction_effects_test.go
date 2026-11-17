@@ -360,3 +360,83 @@ func TestPickupCorrectionRefusesEditFromOverlappingTransaction(t *testing.T) {
 		})
 	}
 }
+
+// The approval wrote the day's collector note; staff then replaced its text
+// through the note editor (PUT /students/{id}/pickup-notes/{noteId}). The
+// correction must refuse instead of deleting the team's note.
+func TestPickupCorrectionRefusesStaffEditedCollectorNote(t *testing.T) {
+	t.Parallel()
+	f, date, slotID := pickupCorrectionFixture(t)
+	ctx := correctionContext(t, f)
+	row := correctionRequest(t, f, date, true)
+	notes, err := f.reposCare.CarePlan().ListPickupNotes(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{f.chain.StudentID}, Date: careplan.Date(date)})
+	require.NoError(t, err)
+	require.Len(t, notes, 1)
+	// The handler's model: the request body plus the preserved identity.
+	edited := &careplan.PickupNote{ID: notes[0].ID, TenantID: notes[0].TenantID, StudentID: f.chain.StudentID,
+		NoteDate: careplan.Date(date), Content: "Abholung durch Oma Erika", CreatedBy: notes[0].CreatedBy, CreatedAt: notes[0].CreatedAt}
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, f.db, f.schedules.Pickups.UpdateStudentPickupNote, edited))
+
+	err = correctPickup(ctx, t, f, currentCorrectionRequest(t, f, row.ID), false)
+	require.ErrorContains(t, err, "die Abholnotiz am 26.08.2026 wurde nach der Entscheidung geändert")
+	assertCorrectionEffects(t, f, date, slotID, true)
+	notes, err = f.reposCare.CarePlan().ListPickupNotes(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{f.chain.StudentID}, Date: careplan.Date(date)})
+	require.NoError(t, err)
+	require.Len(t, notes, 1)
+	assert.Equal(t, "Abholung durch Oma Erika", notes[0].Content)
+}
+
+// Ledger entries written before row versions existed keep the guard they were
+// written under: a row counts as changed only when its updated_at lies after
+// the request's reviewed_at. The old approval stamped an updated exception on
+// the owner clock after its transaction began, so an untouched row can lie
+// between the request's trigger stamp (updated_at) and reviewed_at.
+func TestPickupCorrectionLegacyLedgerKeepsReviewedAtGuard(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name    string
+		offset  string
+		refused bool
+	}{
+		{"untouched row stamped inside the decision", "1 second", false},
+		{"row edited after the decision", "3 seconds", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			testpkg.OwnTenant(t)
+			db := testpkg.SetupIsolatedTestDB(t)
+			f, date, slotID := pickupCorrectionFixture(t)
+			ctx := correctionContext(t, f)
+			row := correctionRequest(t, f, date, true)
+			require.NoError(t, db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+				if _, err := tx.ExecContext(ctx, `SET LOCAL session_replication_role = replica`); err != nil {
+					return err
+				}
+				if _, err := tx.ExecContext(ctx, `UPDATE users.parent_request_events
+					SET payload = payload - 'pickup_exception_version' - 'departure_exception_version' - 'pickup_note_version'
+					WHERE request_type = 'pickup_change' AND request_id = ?`, row.ID); err != nil {
+					return err
+				}
+				if _, err := tx.ExecContext(ctx, `UPDATE schedule.care_schedule_change_requests
+					SET updated_at = now() - interval '1 hour', reviewed_at = now() - interval '1 hour' + interval '2 seconds'
+					WHERE id = ?`, row.ID); err != nil {
+					return err
+				}
+				for _, table := range []string{"schedule.student_pickup_exceptions", "schedule.student_departure_exceptions"} {
+					if _, err := tx.ExecContext(ctx, fmt.Sprintf(`UPDATE %s SET updated_at = now() - interval '1 hour' + interval '%s'
+						WHERE student_id = ? AND exception_date = ?`, table, tc.offset), f.chain.StudentID, date.String()); err != nil {
+						return err
+					}
+				}
+				return nil
+			}))
+			err := correctPickup(ctx, t, f, currentCorrectionRequest(t, f, row.ID), false)
+			if tc.refused {
+				require.ErrorContains(t, err, "nach der Entscheidung geändert")
+				assertCorrectionEffects(t, f, date, slotID, true)
+				return
+			}
+			require.NoError(t, err)
+			assertCorrectionEffects(t, f, date, slotID, false)
+		})
+	}
+}

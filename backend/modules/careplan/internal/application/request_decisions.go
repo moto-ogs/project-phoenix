@@ -134,6 +134,7 @@ func appliedLedgerPayload(payload map[string]any, applied carerequests.PickupApp
 	}
 	if applied.PickupNoteID > 0 {
 		payload["pickup_note_id"] = applied.PickupNoteID
+		payload["pickup_note_version"] = applied.PickupNoteVersion
 	}
 }
 

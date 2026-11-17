@@ -120,10 +120,29 @@ func (s *RequestCorrections) revertPickup(ctx context.Context, request *carerequ
 		}
 	}
 	if applied.PickupNoteID > 0 {
-		// The day's collector note the approval wrote (#4780).
-		return s.Records.DeletePickupNote(ctx, applied.PickupNoteID)
+		return s.revertPickupNote(ctx, applied)
 	}
 	return nil
+}
+
+// revertPickupNote deletes the day's collector note the approval wrote
+// (#4780). Ledger entries without a version keep the unconditional delete
+// they were written under.
+func (s *RequestCorrections) revertPickupNote(ctx context.Context, applied carerequests.PickupApplied) error {
+	if applied.PickupNoteVersion == "" {
+		return s.Records.DeletePickupNote(ctx, applied.PickupNoteID)
+	}
+	note, err := s.Records.FindPickupNote(ctx, applied.PickupNoteID)
+	if err != nil {
+		return err
+	}
+	if note == nil {
+		return nil
+	}
+	if pickupNoteVersion(*note) != applied.PickupNoteVersion {
+		return fmt.Errorf("%w: die Abholnotiz am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, note.NoteDate.Format("02.01.2006"))
+	}
+	return s.Records.DeletePickupNote(ctx, note.ID)
 }
 
 func (s *RequestCorrections) revertPickupException(ctx context.Context, request *carerequests.Request, applied carerequests.PickupApplied) error {
@@ -163,14 +182,16 @@ func (s *RequestCorrections) revertDepartureException(ctx context.Context, reque
 // recorded for it. Equality is the only test: transaction start times do not
 // follow commit order, so a staff edit whose transaction began before the
 // approval carries an older stamp than the decision (ADR 0281, point 4).
-// Ledger entries written before versions existed fall back to the stamp
-// comparison against the request's trigger-stamped updated_at, which misses
-// exactly that overlap.
+// Ledger entries written before versions existed keep the guard they were
+// written under: the row's updated_at after the request's reviewed_at. Those
+// approvals stamped the rows they updated on the owner clock, after their
+// transaction began, so only reviewed_at lies after an untouched row; the
+// guard keeps its known limits (overlapping edits, clocks apart).
 func changedAfterDecision(request *carerequests.Request, recorded, current string, rowUpdatedAt time.Time) bool {
 	if recorded != "" {
 		return current != recorded
 	}
-	return request.ReviewedAt != nil && rowUpdatedAt.After(request.UpdatedAt)
+	return request.ReviewedAt != nil && rowUpdatedAt.After(*request.ReviewedAt)
 }
 
 // latestPickupRows reads the generation written by the latest decision or
@@ -189,7 +210,7 @@ func latestPickupRows(events []ports.RequestCorrectionEvent) (carerequests.Picku
 		applied = carerequests.PickupApplied{
 			PickupExceptionID: pickupID, PickupExceptionVersion: correctionRowVersion(event.Payload["pickup_exception_version"]),
 			DepartureExceptionID: departureID, DepartureExceptionVersion: correctionRowVersion(event.Payload["departure_exception_version"]),
-			PickupNoteID: noteID,
+			PickupNoteID: noteID, PickupNoteVersion: correctionRowVersion(event.Payload["pickup_note_version"]),
 		}
 		found = pickupOK || departureOK || noteOK
 	}

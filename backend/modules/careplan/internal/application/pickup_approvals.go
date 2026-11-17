@@ -70,8 +70,8 @@ func (s *PickupApprovals) lockApprovalDay(ctx context.Context, input carerequest
 }
 
 // applyLegs writes the requested Gehzeit and Abholart (#3945) of the day in
-// the name of the deciding staff member. The time and mode legs return the
-// version of their row as this transaction leaves it, for the decision ledger.
+// the name of the deciding staff member. Each leg returns the version of its
+// row as this transaction leaves it, for the decision ledger.
 func (s *PickupApprovals) applyLegs(ctx context.Context, input carerequests.PickupApproval, change carerequests.PickupChange) (carerequests.PickupApplied, error) {
 	var applied carerequests.PickupApplied
 	staffID, err := actingStaffID(ctx, s.People, pickupRequestStaff)
@@ -89,7 +89,7 @@ func (s *PickupApprovals) applyLegs(ctx context.Context, input carerequests.Pick
 		}
 	}
 	if change.PickupPerson != nil {
-		if applied.PickupNoteID, err = s.applyPickupPerson(ctx, input, change, staffID); err != nil {
+		if applied.PickupNoteID, applied.PickupNoteVersion, err = s.applyPickupPerson(ctx, input, change, staffID); err != nil {
 			return applied, err
 		}
 	}
@@ -129,18 +129,20 @@ func (s *PickupApprovals) applyDepartureMode(ctx context.Context, input carerequ
 	return id, departureExceptionVersion(*row), nil
 }
 
-func (s *PickupApprovals) applyPickupPerson(ctx context.Context, input carerequests.PickupApproval, change carerequests.PickupChange, staffID int64) (int64, error) {
+// applyPickupPerson writes the approval's last row. The insert returns the
+// note as stored, which is how this transaction leaves it.
+func (s *PickupApprovals) applyPickupPerson(ctx context.Context, input carerequests.PickupApproval, change carerequests.PickupChange, staffID int64) (int64, string, error) {
 	if err := s.People.ValidatePickupPerson(ctx, input.StudentID, change.PickupPerson.GuardianProfileID); err != nil {
-		return 0, err
+		return 0, "", err
 	}
-	id, err := s.Exceptions.CreateNote(ctx, careplan.PickupNote{
+	note, err := s.Exceptions.CreateNote(ctx, careplan.PickupNote{
 		TenantID: input.TenantID, StudentID: input.StudentID, NoteDate: careplan.Date(change.Date),
 		Content: DayCollectorNote(change.PickupPerson.Name), CreatedBy: staffID,
 	})
 	if err != nil {
-		return 0, fmt.Errorf("schedule: save approved day collector: %w", err)
+		return 0, "", fmt.Errorf("schedule: save approved day collector: %w", err)
 	}
-	return id, nil
+	return note.ID, pickupNoteVersion(note), nil
 }
 
 // DayCollectorNote is the dated pickup note of an approved one-day collector

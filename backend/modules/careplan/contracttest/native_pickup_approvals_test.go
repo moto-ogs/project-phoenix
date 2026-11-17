@@ -100,8 +100,8 @@ func (f *pickupApprovalFixture) SaveDeparture(_ context.Context, row careplan.De
 	return f.departureID, f.step("save-departure")
 }
 
-func (f *pickupApprovalFixture) CreateNote(context.Context, careplan.PickupNote) (int64, error) {
-	return 0, f.step("save-note")
+func (f *pickupApprovalFixture) CreateNote(_ context.Context, row careplan.PickupNote) (careplan.PickupNote, error) {
+	return row, f.step("save-note")
 }
 
 func newPickupApprovalFixture(t *testing.T) *pickupApprovalFixture {

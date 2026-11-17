@@ -167,16 +167,24 @@ ohne `reviewed_at` (Entscheidungen ohne entscheidende Person vor dieser
 auf `updated_at` würde zwei Uhren vergleichen.
 
 Die Korrektur einer Abholänderung ordnet keine Zeitstempel. Die Entscheidung
-liest Abholzeit und Abholart, die sie geschrieben hat, in ihrer Transaktion
-zurück und legt im Entscheidungsprotokoll neben der ID eine Version ab:
-`updated_at` auf Mikrosekunden und alle Felder, die das Team ändern kann.
-Jeder Schreiber beider Tabellen rückt `updated_at` vor (Spaltenvorgabe,
-Trigger). Die Korrektur nimmt eine Zeile nur zurück, solange die Version
-gleich ist. Der Start einer Transaktion folgt nicht der Reihenfolge der
-Commits: Eine Änderung des Teams, deren Transaktion vor der Genehmigung
-begann und nach ihr schrieb, trägt den älteren Stempel und wird trotzdem
-erkannt. Einträge ohne Version, geschrieben vor dieser Änderung, vergleichen
-wie zuvor `updated_at` der Zeile mit `updated_at` der Anfrage; nur für sie
-bleiben diese Überlappung und das Vorrücken durch
-`reviewed_by … ON DELETE SET NULL` unerkannt. Die Abholnotiz der Tagesperson
-löscht die Korrektur weiterhin ohne Prüfung.
+liest Abholzeit, Abholart und die Abholnotiz der Tagesperson, die sie
+geschrieben hat, in ihrer Transaktion zurück und legt im
+Entscheidungsprotokoll neben der ID eine Version ab: `updated_at` auf
+Mikrosekunden und alle Felder, die das Team ändern kann (bei Abholzeit und
+Abholart samt Datum, bei der Notiz Datum oder Wochentag und Text). Die
+Korrektur nimmt eine Zeile nur zurück, solange die Version gleich ist. Der
+Start einer Transaktion folgt nicht der Reihenfolge der Commits: Eine
+Änderung des Teams, deren Transaktion vor der Genehmigung begann und nach ihr
+schrieb, trägt den älteren Stempel und wird trotzdem erkannt; die
+Inhaltsfelder fangen auch einen Schreiber, der `updated_at` nicht vorrückt.
+
+Einträge ohne Version, geschrieben vor dieser Änderung, behalten genau die
+Prüfung, unter der sie entstanden: Abholzeit und Abholart gelten als
+geändert, wenn `updated_at` der Zeile nach `reviewed_at` der Anfrage liegt
+(ohne `reviewed_at` keine Prüfung); die Notiz löscht die Korrektur ohne
+Prüfung. Ein Vergleich mit `updated_at` der Anfrage wäre für sie falsch: Die
+alte Genehmigung stempelte eine aktualisierte Abholzeit mit der Owner-Uhr
+nach dem Start ihrer Transaktion, der Trigger der Anfrage mit dem Start
+selbst. Eine unberührte Zeile liegt dann zwischen beiden Stempeln. Die
+bekannten Grenzen dieser alten Prüfung bleiben für diese Einträge:
+überlappende Transaktionen, Uhren auseinander, die ungeprüfte Notiz.

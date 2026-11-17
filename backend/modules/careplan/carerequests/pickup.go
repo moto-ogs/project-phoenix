@@ -31,7 +31,7 @@ type PickupApproval struct {
 
 // PickupApplied names the rows an approval wrote, so a later correction can
 // take back exactly those. A zero ID means that leg was not requested. Each
-// version fingerprints its exception row as the approval's transaction left
+// version fingerprints its row as the approval's transaction left
 // it; a correction takes a row back only while it still matches.
 type PickupApplied struct {
 	PickupExceptionID         int64
@@ -39,8 +39,9 @@ type PickupApplied struct {
 	DepartureExceptionID      int64
 	DepartureExceptionVersion string
 	// PickupNoteID is the dated pickup note that names the day's collector
-	// (#4780).
-	PickupNoteID int64
+	// (#4780); PickupNoteVersion fingerprints it like the exceptions.
+	PickupNoteID      int64
+	PickupNoteVersion string
 }
 
 // PickupApprovals applies the pickup leg of an already authorized request

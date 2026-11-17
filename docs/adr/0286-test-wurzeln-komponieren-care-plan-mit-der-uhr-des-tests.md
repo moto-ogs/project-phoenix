@@ -32,6 +32,16 @@ blieb auch mit den alten, auf der Owner-Uhr stempelnden Schreibern grün.
    durch diese Uhr geändert hat, sind mit dieser ADR neu bestätigt, die 14
    Ausnahmen darunter per `approval_adr`. Effekt und Einstufung bleiben
    gleich.
+4. Die Korrektur einer Abholänderung prüft auch die Abholnotiz der
+   Tagesperson gegen ihre Version (ADR 0281, Nachtrag). Dafür bekommt der
+   Records-Vertrag der Korrektur (`ports.RequestCorrectionRecords`) die
+   Methode `ListPickupNotes`; der Adapter liest damit die eine Notiz mit
+   Zeilensperre. Die Pass-through-Methode
+   `pickupApprovalExceptions.CreateNote` gibt die gespeicherte Notiz statt
+   nur ihrer ID zurück, damit die Genehmigung sie versionieren kann; ihre
+   Evidenz ist mit dieser ADR neu bestätigt. Beides ändert keinen Effekt
+   und keine Effekt-Bindung: Lesen und Löschen derselben Notiz liefen schon
+   vorher über denselben Owner.
 
 ## Folgen
 
