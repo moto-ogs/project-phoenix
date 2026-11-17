@@ -117,13 +117,13 @@ function RecipientsStep({
     errors.clear();
     setSaving(true);
     try {
-      // Switch on first: when the server refuses (the notice went missing
-      // meanwhile), no recipient change is left behind half saved.
-      await onSave(ENROLLMENT_ENABLED_KEY, true);
+      // Save recipients before publishing the form. A failed recipient write
+      // must never leave enrollment enabled without the requested recipients.
       const next = recipients.trim();
       if (next !== currentRecipients.trim()) {
         await onSave(ENROLLMENT_NOTIFICATION_EMAILS_KEY, next);
       }
+      await onSave(ENROLLMENT_ENABLED_KEY, true);
       toastSuccess("Die Online-Anmeldung ist eingeschaltet.");
       onClose();
     } catch (error) {

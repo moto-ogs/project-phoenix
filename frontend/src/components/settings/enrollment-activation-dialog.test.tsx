@@ -107,8 +107,8 @@ describe("EnrollmentActivationDialog (#7176)", () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(onSave.mock.calls).toEqual([
-      ["enrollment.enabled", true],
       ["enrollment.notification_emails", "kontakt@schule.example"],
+      ["enrollment.enabled", true],
     ]);
   });
 
@@ -125,8 +125,36 @@ describe("EnrollmentActivationDialog (#7176)", () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(onSave.mock.calls).toEqual([
-      ["enrollment.enabled", true],
       ["enrollment.notification_emails", ""],
+      ["enrollment.enabled", true],
+    ]);
+  });
+
+  it("does not switch on when saving recipients fails", async () => {
+    const onSave = vi.fn(async (key: string) => {
+      if (key === "enrollment.notification_emails") {
+        throw new ApiError("invalid recipients", 400, {
+          code: "general.input",
+        });
+      }
+    });
+    const { onClose } = renderDialog({ onSave });
+
+    const field = screen.getByLabelText("Empfänger für neue Anmeldungen");
+    await waitFor(() => expect(field).toHaveValue("kontakt@schule.example"));
+    fireEvent.click(screen.getByRole("button", { name: "Einschalten" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.input", "die Online-Anmeldung"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Online-Anmeldung einschalten" }),
+    ).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onSave.mock.calls).toEqual([
+      ["enrollment.notification_emails", "kontakt@schule.example"],
     ]);
   });
 
