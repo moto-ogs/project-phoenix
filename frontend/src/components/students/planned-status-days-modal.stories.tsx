@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
+import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
 import { PlannedStatusDaysModal } from "./planned-status-days-modal";
 import type { StudentStatusDay } from "~/lib/student-status-days-api";
 
@@ -24,6 +25,14 @@ const meta = {
   parameters: {
     layout: "fullscreen",
   },
+  // The panel checks the chosen days against the API: none are taken.
+  beforeEach: () =>
+    installStorybookFetch(({ url, method }) =>
+      method === "GET" &&
+      /\/api\/students\/1\/(status-days|partial-absences)\?/.test(url)
+        ? jsonResponse({ data: [] })
+        : undefined,
+    ),
   args: {
     isOpen: true,
     status: "sick",
@@ -32,7 +41,7 @@ const meta = {
     onClose: () => {
       // no-op for story
     },
-    loadExistingDays: async () => [],
+    studentId: "1",
     onSubmit: async () => {
       // no-op for story
     },

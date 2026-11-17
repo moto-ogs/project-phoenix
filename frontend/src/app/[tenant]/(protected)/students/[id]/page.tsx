@@ -121,7 +121,6 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useModuleBooked, useWeekendFollowsFriday } from "~/lib/tenant-context";
 import { careWithdrawalNotice } from "~/lib/care-withdrawal-notice";
 import { fetchStudentCareWithdrawal } from "~/lib/care-exit-api";
-import { fetchStudentCarePlanDay } from "~/lib/student-care-plan-api";
 import {
   deleteStudentPartialAbsence,
   fetchStudentPartialAbsences,
@@ -826,22 +825,6 @@ function StudentDetailPageContent() {
   const ensureStatusDayRange = useCallback((from: string, to: string) => {
     setStatusDayRange((current) => extendStatusDayRange(current, [from, to]));
   }, []);
-  const loadPlannedStatusExistingDays = useCallback(
-    (from: string, to: string) => {
-      ensureStatusDayRange(from, to);
-      return fetchStudentStatusDays(studentId, from, to);
-    },
-    [ensureStatusDayRange, studentId],
-  );
-  const loadPlannedPartialAbsences = useCallback(
-    (from: string, to: string) =>
-      fetchStudentPartialAbsences(studentId, from, to),
-    [studentId],
-  );
-  const loadPlannedCarePlanDay = useCallback(
-    (date: string) => fetchStudentCarePlanDay(studentId, date),
-    [studentId],
-  );
   // Reason attached to today's sick day (set by staff or by a parent via the
   // portal), shown next to the absence badge in the header.
   const currentSickReason = useMemo(() => {
@@ -1744,6 +1727,7 @@ function StudentDetailPageContent() {
                 : hasSickExcusedWriteAccess)
             }
             status={plannedStatusModal ?? "sick"}
+            studentId={studentId}
             studentName={student.name}
             isSubmitting={plannedStatusLoading}
             existingDays={statusDays}
@@ -1751,9 +1735,7 @@ function StudentDetailPageContent() {
             canPlanPartialExcusal={canPlanPartialExcusal}
             deletingStatusDayId={deletingPlannedStatusDayId}
             onClose={() => setPlannedStatusModal(null)}
-            loadExistingDays={loadPlannedStatusExistingDays}
-            loadPartialAbsences={loadPlannedPartialAbsences}
-            loadCarePlanDay={loadPlannedCarePlanDay}
+            onCheckRange={ensureStatusDayRange}
             onSubmit={handleCreatePlannedStatus}
             onDeleteStatusDay={handleDeletePlannedStatus}
             canDeleteStatusDay={canDeleteStatusDay}
