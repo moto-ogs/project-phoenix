@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +49,6 @@ func TestAcceptInvitationPassesTheCallerForTheAudit(t *testing.T) {
 				CurrentAccountID: func(context.Context) int64 { return 0 },
 				RenderList:       func(mealplan.ListExport, string) (ExportFile, error) { return ExportFile{}, nil },
 				Auth:             noAuthRoutes{},
-				Now:              func() time.Time { return time.Date(2026, time.November, 16, 12, 0, 0, 0, time.UTC) },
 			}).CatererRouter(nil, func(chi.Router) {})
 			request := httptest.NewRequest(http.MethodPost, "/invitations/11/link-token/accept", strings.NewReader(`{"password":"geheim"}`))
 			request.RemoteAddr = "192.0.2.44:5123"

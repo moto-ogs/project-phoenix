@@ -32,32 +32,33 @@ func (noAuthRoutes) MountSignIn(chi.Router)           {}
 func (noAuthRoutes) MountSession(chi.Router)          {}
 func (noAuthRoutes) MountCredentialChecks(chi.Router) {}
 
-// An invitation's status is read against the clock the root binds, the one
-// Identity & Access stamped its expiry with, not the machine's (#7104).
-func TestSchoolCatererReadsInvitationExpiryOnTheBoundClock(t *testing.T) {
+// An invitation's status shows the expiry Identity & Access judged on the
+// database clock that stamps it (ADR 0285), not the machine's clock; an
+// accepted or revoked invitation keeps that status after its expiry.
+func TestSchoolCatererShowsTheExpiryIdentityJudged(t *testing.T) {
 	t.Parallel()
 	expiresAt := time.Date(2031, time.June, 2, 12, 0, 0, 0, time.UTC)
-	portal := schoolCatererPortal{caterer: catererportal.SchoolCaterer{Invitations: []identityaccess.CatererInvitation{{
-		ID: 7, Email: "kueche@example.org", CatererName: "Küche", ExpiresAt: expiresAt,
-		CreatedAt: expiresAt.Add(-72 * time.Hour),
-	}}}}
-
+	acceptedAt := expiresAt.Add(-time.Hour)
 	for _, tc := range []struct {
-		name   string
-		now    time.Time
-		status string
+		name       string
+		expired    bool
+		acceptedAt *time.Time
+		status     string
 	}{
-		{name: "before expiry", now: expiresAt.Add(-time.Hour), status: "open"},
-		{name: "at expiry", now: expiresAt, status: "expired"},
-		{name: "after expiry", now: expiresAt.Add(time.Hour), status: "expired"},
+		{name: "open", status: "open"},
+		{name: "expired", expired: true, status: "expired"},
+		{name: "accepted before expiry", expired: true, acceptedAt: &acceptedAt, status: "accepted"},
 	} {
+		portal := schoolCatererPortal{caterer: catererportal.SchoolCaterer{Invitations: []identityaccess.CatererInvitation{{
+			ID: 7, Email: "kueche@example.org", CatererName: "Küche", ExpiresAt: expiresAt,
+			CreatedAt: expiresAt.Add(-72 * time.Hour), AcceptedAt: tc.acceptedAt, Expired: tc.expired,
+		}}}}
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			resource := NewResource(portal, Runtime{
 				CurrentAccountID: func(context.Context) int64 { return 1 },
 				RenderList:       func(mealplan.ListExport, string) (ExportFile, error) { return ExportFile{}, nil },
 				Auth:             noAuthRoutes{},
-				Now:              func() time.Time { return tc.now },
 			})
 			recorder := httptest.NewRecorder()
 			resource.getSchoolCaterer(recorder, httptest.NewRequest(http.MethodGet, "/", nil))

@@ -299,7 +299,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 	if err != nil {
 		return AuthTestModule{}, err
 	}
-	catererMail, err := owners.CatererInvitationDelivery(organizations, owners.OutboxEnqueuer{Outbox: deliveryModule.EmailOutbox}, deliveryModule.Runtime.EmailOutcomes, catererURL, nil)
+	catererMail, err := owners.CatererInvitationDelivery(organizations, owners.OutboxEnqueuer{Outbox: deliveryModule.EmailOutbox}, deliveryModule.Runtime.EmailOutcomes, catererURL, settingsOverrides.identityClock)
 	if err != nil {
 		return AuthTestModule{}, err
 	}

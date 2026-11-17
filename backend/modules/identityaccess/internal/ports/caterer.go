@@ -11,6 +11,9 @@ import (
 // CatererInvitationDelivery mails the invitation; the link exists only in
 // the mail. It also reads what became of those mails in one read.
 type CatererInvitationDelivery interface {
+	// EnqueueCatererInvitation states the days until expiresAt, an instant
+	// on the composition's clock: the invitation's database expiry moved by
+	// that clock's distance to the database (ADR 0285).
 	EnqueueCatererInvitation(ctx context.Context, invitationID, schoolID int64, email, catererName, token string, expiresAt time.Time) error
 	CatererInvitationMailStates(ctx context.Context, tenantID int64, invitationIDs []int64) (map[int64]identityaccess.InvitationMailState, error)
 	// CancelCatererInvitation stops the invitation's mail that is not sent
@@ -23,19 +26,28 @@ type CatererInvitationDelivery interface {
 // transaction; a caterer's schools are read through the global identity
 // read, filtered on that caterer.
 type CatererStore interface {
+	// DatabaseTime reads the database clock once, in the caller's
+	// transaction: the invitation decides on it (ADR 0285).
+	DatabaseTime(ctx context.Context) (time.Time, domain.OperationStats, error)
 	FindCatererOfAccount(ctx context.Context, accountID int64) (domain.Caterer, bool, domain.OperationStats, error)
 	// CreateInvitedCaterer creates the caterer of an open invitation of the
-	// school in scope, for the account of the invited address.
+	// school in scope, for the account of the invited address. An invitation
+	// expired at the database time of the call answers ErrInvitationExpired.
 	CreateInvitedCaterer(ctx context.Context, invitationID, accountID int64) (int64, domain.OperationStats, error)
 	InsertCatererInvitation(ctx context.Context, invitation domain.CatererInvitation) (domain.CatererInvitation, domain.OperationStats, error)
-	// ListCatererInvitations lists the school's invitations, newest first.
+	// ListCatererInvitations lists the school's invitations, newest first,
+	// each with the database time of the read (ReadAt).
 	ListCatererInvitations(ctx context.Context) ([]domain.CatererInvitation, domain.OperationStats, error)
 	// RevokeCatererInvitation takes back an open invitation of the school.
 	RevokeCatererInvitation(ctx context.Context, invitationID int64, at time.Time) (bool, domain.OperationStats, error)
 	// FindCatererInvitationByTokenHash locks the school's invitation for its
-	// acceptance.
+	// acceptance. It carries no ReadAt: the statement starts before the lock
+	// wait, so the caller reads DatabaseTime once it holds the lock.
 	FindCatererInvitationByTokenHash(ctx context.Context, tokenHash string) (domain.CatererInvitation, bool, domain.OperationStats, error)
-	AcceptCatererInvitation(ctx context.Context, invitationID, accountID int64, at time.Time) (bool, domain.OperationStats, error)
+	// AcceptCatererInvitation spends the invitation while it is open at the
+	// database time of the write, which stamps accepted_at; false when it is
+	// not.
+	AcceptCatererInvitation(ctx context.Context, invitationID, accountID int64) (bool, domain.OperationStats, error)
 	// InsertCatererSchool starts the school's supply by the caterer;
 	// EndCatererSchool ends the school's running supply.
 	InsertCatererSchool(ctx context.Context, catererID int64, deliveryAddress string, startedBy int64, at time.Time) (domain.OperationStats, error)
