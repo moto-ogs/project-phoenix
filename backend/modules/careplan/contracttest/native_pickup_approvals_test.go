@@ -65,7 +65,17 @@ func (f *pickupApprovalFixture) Preview(context.Context, int64, calendar.Date, t
 	return nil, f.step("preview")
 }
 func (f *pickupApprovalFixture) Sync(context.Context, int64) error { return f.step("sync") }
+
+// FindForDate serves the day's row; after a write it is the approval's read
+// back of the row it wrote, for the decision ledger's version.
 func (f *pickupApprovalFixture) FindForDate(context.Context, int64, calendar.Date) (*careplan.PickupException, error) {
+	if f.written != nil {
+		row := *f.written
+		if row.ID == 0 {
+			row.ID = f.exceptionID
+		}
+		return &row, f.step("exception-read-back")
+	}
 	return f.existing, f.step("exception")
 }
 func (f *pickupApprovalFixture) Create(_ context.Context, row careplan.PickupException) (int64, error) {
@@ -78,6 +88,11 @@ func (f *pickupApprovalFixture) Update(_ context.Context, row careplan.PickupExc
 }
 func (*pickupApprovalFixture) IsUniqueViolation(error) bool { return false }
 func (f *pickupApprovalFixture) FindDepartureForDate(context.Context, int64, calendar.Date) (*careplan.DepartureException, error) {
+	if f.writtenDeparture != nil {
+		row := *f.writtenDeparture
+		row.ID = f.departureID
+		return &row, f.step("departure-read-back")
+	}
 	return f.existingDeparture, f.step("departure")
 }
 func (f *pickupApprovalFixture) SaveDeparture(_ context.Context, row careplan.DepartureException) (int64, error) {
@@ -85,8 +100,8 @@ func (f *pickupApprovalFixture) SaveDeparture(_ context.Context, row careplan.De
 	return f.departureID, f.step("save-departure")
 }
 
-func (f *pickupApprovalFixture) CreateNote(context.Context, careplan.PickupNote) (int64, error) {
-	return 0, f.step("save-note")
+func (f *pickupApprovalFixture) CreateNote(_ context.Context, row careplan.PickupNote) (careplan.PickupNote, error) {
+	return row, f.step("save-note")
 }
 
 func newPickupApprovalFixture(t *testing.T) *pickupApprovalFixture {
@@ -121,7 +136,7 @@ func TestNativePickupApprovalLocksBeforeWritingAndSyncing(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, f.exceptionID, applied.PickupExceptionID)
 	require.Zero(t, applied.DepartureExceptionID)
-	require.Equal(t, []string{"enrollment", "student-day-lock", "preview", "attendance-lock", "attendance", "staff", "exception", "create", "sync"}, f.calls)
+	require.Equal(t, []string{"enrollment", "student-day-lock", "preview", "attendance-lock", "attendance", "staff", "exception", "create", "sync", "exception-read-back"}, f.calls)
 	require.Equal(t, f.input.TenantID, f.written.TenantID)
 	require.Equal(t, f.input.StudentID, f.written.StudentID)
 	require.Equal(t, f.staffID, f.written.CreatedBy)
@@ -218,7 +233,7 @@ func TestNativePickupApprovalReclaimsGuardianExceptionWithoutLosingAutoExcusal(t
 	require.Equal(t, calendar.NormalizeWallClock(clock), *f.written.ExcusedFrom)
 	require.Contains(t, f.calls, "update")
 	require.NotContains(t, f.calls, "create")
-	require.Equal(t, "sync", f.calls[len(f.calls)-1])
+	require.Equal(t, []string{"sync", "exception-read-back"}, f.calls[len(f.calls)-2:], "sync stays the last write")
 }
 
 // #3945: a request that changes only the Abholart writes the day value under
@@ -231,8 +246,10 @@ func TestNativePickupApprovalWritesOnlyTheDayDeparture(t *testing.T) {
 	f.input.Payload = json.RawMessage(`{"date":"2026-09-21","departure_mode":"bus","reason":"Ausflug"}`)
 	applied, err := approvalService(t, f).ApplyPickupApproval(context.Background(), f.input)
 	require.NoError(t, err)
+	require.NotEmpty(t, applied.DepartureExceptionVersion, "the ledger keeps the written row's version")
+	applied.DepartureExceptionVersion = ""
 	require.Equal(t, carerequests.PickupApplied{DepartureExceptionID: 91}, applied)
-	require.Equal(t, []string{"enrollment", "student-day-lock", "attendance-lock", "attendance", "staff", "departure", "save-departure"}, f.calls)
+	require.Equal(t, []string{"enrollment", "student-day-lock", "attendance-lock", "attendance", "staff", "departure", "save-departure", "departure-read-back"}, f.calls)
 	require.Nil(t, f.written)
 	require.Equal(t, "bus", f.writtenDeparture.DepartureMode)
 	require.Equal(t, careplan.Date("2026-09-21"), f.writtenDeparture.ExceptionDate)
@@ -259,8 +276,11 @@ func TestNativePickupApprovalWritesTimeAndDayDeparture(t *testing.T) {
 	f.input.Payload = json.RawMessage(`{"date":"2026-09-21","pickup_time":"14:30","departure_mode":"pickup","reason":"Termin"}`)
 	applied, err := approvalService(t, f).ApplyPickupApproval(context.Background(), f.input)
 	require.NoError(t, err)
+	require.NotEmpty(t, applied.PickupExceptionVersion, "the ledger keeps the written row's version")
+	require.NotEmpty(t, applied.DepartureExceptionVersion, "the ledger keeps the written row's version")
+	applied.PickupExceptionVersion, applied.DepartureExceptionVersion = "", ""
 	require.Equal(t, carerequests.PickupApplied{PickupExceptionID: f.exceptionID, DepartureExceptionID: 92}, applied)
-	require.Equal(t, []string{"enrollment", "student-day-lock", "preview", "attendance-lock", "attendance", "staff", "exception", "create", "sync", "departure", "save-departure"}, f.calls)
+	require.Equal(t, []string{"enrollment", "student-day-lock", "preview", "attendance-lock", "attendance", "staff", "exception", "create", "sync", "exception-read-back", "departure", "save-departure", "departure-read-back"}, f.calls)
 }
 
 // A day Abholart the OGS already set wins over the parent's request, like a

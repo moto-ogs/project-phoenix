@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -189,6 +190,61 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 	for _, item := range openTypes {
 		assert.NotEqual(t, "direct_correction", item.RequestType)
 	}
+}
+
+// The change history merges decided requests and direct corrections newest
+// first. A care-schedule decision is stamped by its table's trigger on the
+// database clock, so every other source of the history is stamped there too
+// (ADR 0281, point 4). The services run on a clock months behind the
+// database: a correction made after a care-schedule decision, and an offering
+// decision made after that correction, keep their order (#7295).
+func TestAggregatedChangeRequests_HistoryOrdersSourcesOnOneClock(t *testing.T) {
+	t.Parallel()
+
+	tc := setupStudentsRoute(t, fixedCalendarClock)
+	teacher, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Agg", "ClockReviewer")
+	group := testpkg.CreateTestEducationGroup(t, tc.db, "AggClockGroup")
+	student := testpkg.CreateTestStudent(t, tc.db, "Zuhrzeit", "Kindlein", "AL4")
+	testpkg.AssignStudentToGroup(t, tc.db, student.ID, group.ID)
+	testpkg.CreateTestGroupTeacher(t, tc.db, group.ID, teacher.ID)
+	fixture := setupCorrectionFixture(t, tc, student.ID, student.TenantID, "Kindlein")
+	claims := testutil.AdminTestClaims(int(account.ID))
+	perms := []string{"users:read", "users:update"}
+	decide := func(path, body string) {
+		t.Helper()
+		rr := authExec(t, tc, testutil.NewRequest("POST", path, strings.NewReader(body)), claims, perms)
+		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	}
+
+	care, err := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, tc.db)).CarePlan().CreateCareScheduleRequest(testpkg.Ctx(t), carerequests.Request{
+		StudentID: student.ID, SubmittedBy: account.ID, RequestKind: "weekly_schedule", Status: "pending",
+		Payload: json.RawMessage(`{"weekdays":[{"weekday":1,"pickup":"14:00"}]}`),
+	})
+	require.NoError(t, err)
+	decide(fmt.Sprintf("/care-schedule-change-requests/%d/decide", care.ID), `{"approve":false,"reason":"Passt nicht"}`)
+
+	require.NoError(t, testpkg.WithTenantTx(t, t.Context(), tc.db, student.TenantID, func(ctx context.Context, _ bun.Tx) error {
+		_, updateErr := tc.enrollmentDecision.UpdateChildOfferings(ctx, capability.UpdateChildOfferingsInput{
+			RequestID: fixture.child.RequestID, ChildID: fixture.child.ID,
+			Offerings: []capability.OfferingAdjustmentSelection{{OfferingID: fixture.ganztag.ID}},
+			Reason:    "Telefonisch gemeldet", ActorAccountID: account.ID, ActorRole: "admin",
+		})
+		return updateErr
+	}))
+
+	offering := insertPendingOfferingChangeRequest(t, tc, fixture, student.ID, account.ID)
+	decide(fmt.Sprintf("/offering-change-requests/%d/decide", offering.ID),
+		fmt.Sprintf(`{"approve":true,"reason":"Passt","effective_from":%q}`, offering.EffectiveFrom))
+
+	rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?view=history&search=Zuhrzeit", nil), claims, perms)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var history aggListEnvelope
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &history))
+	types := make([]string, 0, len(history.Data.Items))
+	for _, item := range history.Data.Items {
+		types = append(types, item.RequestType)
+	}
+	assert.Equal(t, []string{"offering", "direct_correction", "care_schedule"}, types)
 }
 
 func TestOfferingWithdrawalApprovalRequiresUpdateButNotDeletePermission(t *testing.T) {

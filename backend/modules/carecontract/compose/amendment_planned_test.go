@@ -40,8 +40,8 @@ func plannedContract(t *testing.T, ctx context.Context, organization int64, scho
 	db := testpkg.SetupTestDB(t)
 	var contract int64
 	require.NoError(t, db.NewRaw(`INSERT INTO care_contract.contracts (organization_id, school_id, request_child_id,
-			status, sent_at, concluded_at, conclusion_method) VALUES (?, ?, ?, 'aktiv', NOW(), NOW(), 'mit_anmeldung') RETURNING id`,
-		organization, school.school.ID, school.child).Scan(ctx, &contract))
+			status, sent_at, concluded_at, conclusion_method) VALUES (?, ?, ?, 'aktiv', ?, ?, 'mit_anmeldung') RETURNING id`,
+		organization, school.school.ID, school.child, time.Now(), time.Now()).Scan(ctx, &contract))
 	insert := func(number int, status, from, source string, days ...string) {
 		var version int64
 		require.NoError(t, db.NewRaw(`INSERT INTO care_contract.contract_versions (organization_id, contract_id, version_number,

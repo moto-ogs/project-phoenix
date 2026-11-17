@@ -92,8 +92,8 @@ func newChangeFixture(t *testing.T, status string) changeFixture {
 	f := changeFixture{db: db, organization: newTraeger("Träger Änderungswunsch"), foreign: newTraeger("Träger Änderungswunsch Fremd"),
 		school: carecontract.School{ID: testpkg.UniqueTestTenantID(t), Name: "OGS Am Lindenhof"}, student: testpkg.UniqueTestTenantID(t), request: testpkg.UniqueTestTenantID(t), child: testpkg.UniqueTestTenantID(t)}
 	require.NoError(t, db.NewRaw(`INSERT INTO care_contract.contracts (organization_id, school_id, request_child_id, student_id,
-			status, sent_at, concluded_at, conclusion_method) VALUES (?, ?, ?, ?, ?, NOW(), NOW(), 'mit_anmeldung') RETURNING id`,
-		f.organization, f.school.ID, f.child, f.student, status).Scan(ctx, &f.contract))
+			status, sent_at, concluded_at, conclusion_method) VALUES (?, ?, ?, ?, ?, ?, ?, 'mit_anmeldung') RETURNING id`,
+		f.organization, f.school.ID, f.child, f.student, status, time.Now(), time.Now()).Scan(ctx, &f.contract))
 	return f
 }
 

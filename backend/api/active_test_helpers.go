@@ -218,7 +218,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return fail(err)
 	}
-	carePlan, err := owners.NewCarePlan(db, students, rt.InstanceStudent)
+	carePlan, err := owners.NewCarePlan(db, students, rt.InstanceStudent, clocks...)
 	if err != nil {
 		return fail(err)
 	}

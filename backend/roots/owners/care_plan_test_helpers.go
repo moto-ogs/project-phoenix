@@ -18,7 +18,16 @@ import (
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 )
 
-func NewCarePlan(db transactionruntime.Database, students peopledirectory.Capability, slots timetablePorts.ParticipantRows) (careplan.Capability, error) {
+// NewCarePlan stamps the owner's writes with the real clock, or with the one
+// clock a test graph passes.
+func NewCarePlan(db transactionruntime.Database, students peopledirectory.Capability, slots timetablePorts.ParticipantRows, clocks ...func() time.Time) (careplan.Capability, error) {
+	now := time.Now
+	if len(clocks) > 1 {
+		return nil, errors.New("compose Care Plan: a test graph accepts at most one clock")
+	}
+	if len(clocks) == 1 && clocks[0] != nil {
+		now = clocks[0]
+	}
 	if students == nil || slots.Presence == nil {
 		return nil, errors.New("compose Care Plan: People Directory and instance-student repository are required")
 	}
@@ -32,8 +41,7 @@ func NewCarePlan(db transactionruntime.Database, students peopledirectory.Capabi
 	}
 	studentLock, studentNotFound := peopleCompose.CareStudentLock(students)
 	capability, err := carePlanCompose.New(carePlanCompose.Dependencies{
-		// The suites built over this graph stamp on the real clock, as before.
-		StudentDirectory: StudentDirectoryReader(), Now: time.Now,
+		StudentDirectory: StudentDirectoryReader(), Now: now,
 		DB: db.Pool(), Observe: func(carePlanCompose.Observation) {}, AmbientDB: carePlanCompose.TenantAmbientDatabase(db.Pool()),
 		StatusStudents: statusStudents,
 		StatusSlots:    CarePlanStatusSlots(slots),
@@ -60,7 +68,7 @@ func NewCarePlan(db transactionruntime.Database, students peopledirectory.Capabi
 // students, reading the participant slots through the Timetable participant rows over
 // the Timetable capability and an unobserved Student Presence owner, as the
 // test graphs need it.
-func NewUnobservedCarePlan(db transactionruntime.Database, capability timetable.Capability, students peopledirectory.Capability) (careplan.Capability, error) {
+func NewUnobservedCarePlan(db transactionruntime.Database, capability timetable.Capability, students peopledirectory.Capability, clocks ...func() time.Time) (careplan.Capability, error) {
 	slots := timetablePorts.ParticipantRows{Plans: capability, Presence: NewUnloggedStudentPresence(db), Reads: MustPresenceReads(db)}
-	return NewCarePlan(db, students, slots)
+	return NewCarePlan(db, students, slots, clocks...)
 }
