@@ -116,6 +116,10 @@ case "$*" in
       echo "go test: expected GOGC=$PHX_FIXTURE_EXPECT_GOGC, got ${GOGC-unset}" >&2
       exit 1
     fi
+    if [ "${GOMAXPROCS-unset}" != 1 ]; then
+      echo "go test: expected GOMAXPROCS=1, got ${GOMAXPROCS-unset}" >&2
+      exit 1
+    fi
     if [ "${PHX_TEST_TEMPLATE:-}" != phoenix_test_template_regression ]; then
       echo 'go test did not receive the bootstrapped template' >&2
       exit 1
