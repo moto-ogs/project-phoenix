@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
@@ -31,7 +32,7 @@ func TestBookingValidationSerializesWithClosurePreparation(t *testing.T) {
 		return err
 	}))
 	require.NoError(t, testpkg.WithinTraeger(base, w.organization, func(ctx context.Context) error {
-		_, found, err := postgres.NewHolidayPeriodStore().FindHolidayPeriod(ctx, w.organization, w.period, true)
+		_, found, err := postgres.NewHolidayPeriodStore().WithClock(time.Now).FindHolidayPeriod(ctx, w.organization, w.period, true)
 		require.NoError(t, err)
 		require.True(t, found)
 		err = testpkg.WithinTraeger(base, w.organization, func(other context.Context) error {

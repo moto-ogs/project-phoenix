@@ -28,7 +28,7 @@ const (
 	holidayLimitKeyEmail          = "email"
 	holidayRegistrationCountSQL   = `SELECT COUNT(*) FROM enrollment.holiday_registrations WHERE organization_id = ?`
 	holidayLimitBucketCountSQL    = `SELECT COALESCE(SUM(attempts), 0) FROM enrollment.holiday_registration_rate_limits WHERE organization_id = ? AND key_type = ? AND key_hash = encode(sha256(convert_to(?, 'UTF8')), 'hex')`
-	holidayLimitBucketInsertSQL   = `INSERT INTO enrollment.holiday_registration_rate_limits (organization_id, key_type, key_hash, attempts, window_start) VALUES (?, ?, encode(sha256(convert_to(?, 'UTF8')), 'hex'), ?, statement_timestamp())`
+	holidayLimitBucketInsertSQL   = `INSERT INTO enrollment.holiday_registration_rate_limits (organization_id, key_type, key_hash, attempts, window_start) VALUES (?, ?, encode(sha256(convert_to(?, 'UTF8')), 'hex'), ?, ?)`
 	holidayEmailLimitCode         = "enrollment.submission_email_rate_limited"
 	holidayAddressLimitCode       = "enrollment.submission_rate_limited"
 	holidayEmailLimitRetryAfter   = "86400"
@@ -37,7 +37,7 @@ const (
 
 func fillHolidayBucket(t *testing.T, f holidayRegistrationFixture, organizationID int64, keyType, value string, count int) {
 	t.Helper()
-	_, err := f.db.ExecContext(context.Background(), holidayLimitBucketInsertSQL, organizationID, keyType, value, count)
+	_, err := f.db.ExecContext(context.Background(), holidayLimitBucketInsertSQL, organizationID, keyType, value, count, holidayFixtureNow())
 	require.NoError(t, err)
 }
 

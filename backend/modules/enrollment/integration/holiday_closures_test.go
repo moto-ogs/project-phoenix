@@ -149,7 +149,7 @@ func newClosures(mail *capturedMails, days closureCalendar) enrollment.HolidayCl
 	if mail.outcomes == nil {
 		mail.outcomes = map[string]string{}
 	}
-	return compose.NewHolidayClosures(days, days, closureTraeger{}, mail, closureKeyBytes, closureKeyed, func() calendar.Date { return closureToday })
+	return compose.NewHolidayClosures(days, days, closureTraeger{}, mail, closureKeyBytes, closureKeyed, func() time.Time { return closureToday.BerlinMidnight().Add(10 * time.Hour) })
 }
 
 func hostSchoolOf(t *testing.T, db *bun.DB, week int64) int64 {
@@ -394,7 +394,7 @@ func TestHolidayClosuresKeepTheirTraegerBeneathRLS(t *testing.T) {
 	_, err := db.ExecContext(ctx, `INSERT INTO enrollment.holiday_closure_notices (organization_id, holiday_registration_id, holiday_period_week_id, closed_on)
 		VALUES (?, ?, ?, '2027-07-07')`, foreign.organization, foreign.waiting, foreign.week)
 	require.NoError(t, err)
-	store := postgres.NewHolidayRegistrationStore()
+	store := postgres.NewHolidayRegistrationStore().WithClock(time.Now)
 	withinTraeger(t, db, own.organization, func(ctx context.Context) {
 		require.NoError(t, testpkg.WithoutRequestRole(ctx))
 		all, err := store.HolidayClosureBookings(ctx, own.organization, nil, calendar.NewDate(2027, 7, 5), calendar.NewDate(2027, 7, 9))
@@ -478,7 +478,7 @@ func TestHolidayClosureSerializesOverlappingNotices(t *testing.T) {
 		{Date: calendar.NewDate(2027, 7, 7), Kind: enrollment.HolidayNoCareClosingDay},
 		{Date: calendar.NewDate(2027, 7, 8), Kind: enrollment.HolidayNoCareClosingDay},
 	}
-	closures := compose.NewHolidayClosures(days, days, closureTraeger{}, mail, closureKeyBytes, closureKeyed, func() calendar.Date { return closureToday })
+	closures := compose.NewHolidayClosures(days, days, closureTraeger{}, mail, closureKeyBytes, closureKeyed, func() time.Time { return closureToday.BerlinMidnight().Add(10 * time.Hour) })
 	closure := enrollment.HolidayClosure{SchoolIDs: []int64{hostSchoolOf(t, db, w.week)}, StartsOn: calendar.NewDate(2027, 7, 6), EndsOn: calendar.NewDate(2027, 7, 7)}
 	ctx, cancel := context.WithTimeout(testpkg.ContextWithTenantRuntime(t.Context(), testpkg.TenantRuntime(t, db)), 10*time.Second)
 	defer cancel()
@@ -665,7 +665,7 @@ func TestConfirmedHolidayClosureKeepsElapsedDates(t *testing.T) {
 	days := closureCalendar{{Date: calendar.NewDate(2027, 7, 5), Kind: enrollment.HolidayNoCareClosingDay}}
 	mail := &capturedMails{}
 	closures := compose.NewHolidayClosures(days, days, closureTraeger{}, mail, closureKeyBytes, closureKeyed,
-		func() calendar.Date { return calendar.NewDate(2027, 7, 12) })
+		func() time.Time { return calendar.NewDate(2027, 7, 12).BerlinMidnight().Add(10 * time.Hour) })
 	operation := closureOperation(hostSchoolOf(t, db, w.week))
 	withinTraeger(t, db, w.organization, func(ctx context.Context) {
 		preview, err := planOne(ctx, closures, w.organization, operation)
@@ -722,7 +722,7 @@ func TestTraegerMoveExcludesIndependentSchoolClosures(t *testing.T) {
 			school := hostSchoolOf(t, db, w.week)
 			mail := &capturedMails{outcomes: map[string]string{}}
 			directory := closureTraeger{schools: []enrollment.HolidaySchool{{ID: school}}}
-			closures := compose.NewHolidayClosures(closureCalendar(nil), closureCalendar(nil), directory, mail, closureKeyBytes, closureKeyed, func() calendar.Date { return closureToday })
+			closures := compose.NewHolidayClosures(closureCalendar(nil), closureCalendar(nil), directory, mail, closureKeyBytes, closureKeyed, func() time.Time { return closureToday.BerlinMidnight().Add(10 * time.Hour) })
 			monday, friday := calendar.NewDate(2027, 7, 5), calendar.NewDate(2027, 7, 9)
 			closure := enrollment.HolidayClosure{SchoolIDs: []int64{school}, StartsOn: monday, EndsOn: monday, Reason: "Träger-Schließtag"}
 			withinTraeger(t, db, w.organization, func(ctx context.Context) {
@@ -736,7 +736,7 @@ func TestTraegerMoveExcludesIndependentSchoolClosures(t *testing.T) {
 				unrelated = friday
 			}
 			days := closureCalendar{{Date: unrelated, Kind: enrollment.HolidayNoCareClosingDay, Name: "Unbestätigter Schul-Schließtag"}}
-			closures = compose.NewHolidayClosures(days, days, directory, mail, closureKeyBytes, closureKeyed, func() calendar.Date { return closureToday })
+			closures = compose.NewHolidayClosures(days, days, directory, mail, closureKeyBytes, closureKeyed, func() time.Time { return closureToday.BerlinMidnight().Add(10 * time.Hour) })
 			closure.Previous = &enrollment.HolidayClosureSpan{SchoolIDs: []int64{school}, StartsOn: monday, EndsOn: monday}
 			closure.StartsOn, closure.EndsOn = friday, friday
 			if movedSchool {

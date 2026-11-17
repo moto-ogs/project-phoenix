@@ -55,11 +55,12 @@ var moduleSQLClockBudget = map[string]int{
 	"modules/communication": 20,
 	// Named exceptions on the database clock (ADR 0281): the read state of
 	// requests (3), where read_at and parent_changed_at are stamped there and
-	// only compared with each other; and family_children_stated_at (1), which
+	// only compared with each other; family_children_stated_at (1), which
 	// parentbilling orders against its own clock_timestamp() stamps of the
-	// family children. The holiday registrations (31) follow in their own
-	// slice of #7295.
-	"modules/enrollment":     35,
+	// family children; and promoted_at of a holiday booking (1), whose Berlin
+	// day the host's booked days compare with the day of the rebooking in
+	// the holiday audit, which the column default stamps there.
+	"modules/enrollment":     5,
 	"modules/exporttransfer": 10,
 	"modules/facilities":     1,
 	"modules/filestorage":    3,

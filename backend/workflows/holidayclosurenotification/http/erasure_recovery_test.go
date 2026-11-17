@@ -3,6 +3,7 @@ package http_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,7 +62,7 @@ func TestHolidayClosureMailExpiresWithAnyIncludedRegistration(t *testing.T) {
 	require.NoError(t, err)
 	retain := func(day calendar.Date) {
 		require.NoError(t, tenant.WithAdminTx(w.ctx, w.db, func(ctx context.Context, _ bun.Tx) error {
-			_, err := owners.NewHolidayRegistrationRetention(func() calendar.Date { return day }).DeleteExpiredHolidayRegistrations(ctx)
+			_, err := owners.NewHolidayRegistrationRetention(func() time.Time { return day.BerlinMidnight().Add(10 * time.Hour) }).DeleteExpiredHolidayRegistrations(ctx)
 			return err
 		}))
 	}
@@ -159,7 +160,7 @@ func TestHolidayMailErasureFailureRollsBackRegistrationRetention(t *testing.T) {
 		require.NoError(t, err)
 	})
 	err = tenant.WithAdminTx(w.ctx, w.db, func(ctx context.Context, _ bun.Tx) error {
-		_, err := owners.NewHolidayRegistrationRetention(func() calendar.Date { return calendar.NewDate(2031, 7, 14) }).DeleteExpiredHolidayRegistrations(ctx)
+		_, err := owners.NewHolidayRegistrationRetention(func() time.Time { return calendar.NewDate(2031, 7, 14).BerlinMidnight().Add(10 * time.Hour) }).DeleteExpiredHolidayRegistrations(ctx)
 		return err
 	})
 	require.ErrorContains(t, err, "erasure refused")

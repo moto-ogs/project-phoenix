@@ -275,7 +275,7 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 	retain := func(today calendar.Date) {
 		t.Helper()
 		admin(func(adminCtx context.Context) error {
-			_, err := owners.NewHolidayRegistrationRetention(func() calendar.Date { return today }).DeleteExpiredHolidayRegistrations(adminCtx)
+			_, err := owners.NewHolidayRegistrationRetention(func() time.Time { return today.BerlinMidnight().Add(10 * time.Hour) }).DeleteExpiredHolidayRegistrations(adminCtx)
 			return err
 		})
 		admin(func(adminCtx context.Context) error {
