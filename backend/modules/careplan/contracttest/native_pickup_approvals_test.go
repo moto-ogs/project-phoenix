@@ -65,6 +65,7 @@ func (f *pickupApprovalFixture) Preview(context.Context, int64, calendar.Date, t
 	return nil, f.step("preview")
 }
 func (f *pickupApprovalFixture) Sync(context.Context, int64) error { return f.step("sync") }
+
 // FindForDate serves the day's row; after a write it is the approval's read
 // back of the row it wrote, for the decision ledger's version.
 func (f *pickupApprovalFixture) FindForDate(context.Context, int64, calendar.Date) (*careplan.PickupException, error) {
