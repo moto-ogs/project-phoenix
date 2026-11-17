@@ -80,8 +80,10 @@ var moduleSQLClockBudget = map[string]int{
 	// The intent sets the fence (2), the Träger's recipient list and journal
 	// read it as expired (2), and the recovery settles expired attempts of
 	// both journals with their updated_at (4). parentbilling judges its export
-	// handovers against these fences.
-	"modules/exporttransfer": 8,
+	// handovers against these fences. And the cutoff of the journal retention
+	// (1): the database stamps the journal and its deletion function guards
+	// the window with clock_timestamp().
+	"modules/exporttransfer": 9,
 	"modules/facilities":     1,
 	"modules/filestorage":    3,
 	// The Springer access windows (ADR 0251): the security-definer function
