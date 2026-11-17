@@ -63,7 +63,10 @@ func withClassDayAbsenceList(
 			}
 			children := make([]classday.AbsenceListChild, 0, len(rows))
 			for _, row := range rows {
-				children = append(children, classday.AbsenceListChild{StudentID: row.StudentID, FirstName: row.FirstName, LastName: row.LastName})
+				children = append(children, classday.AbsenceListChild{
+					StudentID: row.StudentID, FirstName: row.FirstName, LastName: row.LastName, SchoolMemberOnly: row.SchoolMemberOnly,
+					SchoolMemberFrom: row.SchoolMemberFrom, SchoolMemberUntil: row.SchoolMemberUntil,
+				})
 			}
 			return children, nil
 		}

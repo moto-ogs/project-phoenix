@@ -23,7 +23,7 @@ type Transport struct {
 	Tenants      IntentTransactions
 	Logger       *slog.Logger
 	// Now dates the throttle window against the intent's creation, which
-	// the outbox stamps with the worker's clock; nil is the real one.
+	// the outbox stamps with the worker's clock; required.
 	Now func() time.Time
 }
 
@@ -46,11 +46,7 @@ func (p Transport) Send(ctx context.Context, intent *Intent, renderer Renderer, 
 		message.UseFallback = intent.UseFallback
 	}
 	receipt, sendErr := sendRenderedEmail(ctx, p.Mailer, recipient, message)
-	now := p.Now
-	if now == nil {
-		now = time.Now
-	}
-	if errors.Is(sendErr, email.ErrThrottled) && now().Sub(intent.CreatedAt) < ThrottleWindow {
+	if errors.Is(sendErr, email.ErrThrottled) && p.Now().Sub(intent.CreatedAt) < ThrottleWindow {
 		sendErr = fmt.Errorf("%w: %w", ErrSendThrottled, sendErr)
 	}
 	if reporter, ok := renderer.(interface {

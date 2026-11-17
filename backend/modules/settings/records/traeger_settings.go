@@ -14,8 +14,8 @@ type TraegerSettingValue struct {
 	SettingKey     string          `bun:"setting_key,notnull" json:"setting_key"`
 	Value          json.RawMessage `bun:"value,type:jsonb,notnull" json:"value"`
 	UpdatedBy      *int64          `bun:"updated_by" json:"updated_by,omitempty"`
-	CreatedAt      time.Time       `bun:"created_at,notnull,default:now()" json:"created_at"`
-	UpdatedAt      time.Time       `bun:"updated_at,notnull,default:now()" json:"updated_at"`
+	CreatedAt      time.Time       `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt      time.Time       `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 }
 
 // TraegerSettingAuditEntry records one change of a Träger value. Append-only.
@@ -30,7 +30,7 @@ type TraegerSettingAuditEntry struct {
 	// ChangedByOperator names the operator of a change from the operator
 	// dashboard (#5748); ChangedBy is then nil.
 	ChangedByOperator *int64    `bun:"changed_by_operator" json:"changed_by_operator,omitempty"`
-	ChangedAt         time.Time `bun:"changed_at,notnull,default:current_timestamp" json:"changed_at"`
+	ChangedAt         time.Time `bun:"changed_at,nullzero,notnull" json:"changed_at"`
 }
 
 // TraegerSettingRepository is the Settings Platform's store of the Träger

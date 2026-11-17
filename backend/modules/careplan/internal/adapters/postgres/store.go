@@ -22,7 +22,8 @@ type Database func(context.Context) (bun.IDB, int64, error)
 type Store struct {
 	database Database
 	// now stamps the rows the store writes (updated_at, decided_at,
-	// cleanup times); nil is the real clock.
+	// cleanup times). Only the composition's writing store carries it
+	// (WithClock); the read stores never stamp.
 	now func() time.Time
 }
 
@@ -33,20 +34,24 @@ func New(database Database) *Store {
 	return &Store{database: database}
 }
 
-// WithClock returns the store stamping its writes with now (ADR 0239).
+// WithClock returns the store stamping its writes with now (ADR 0239); now
+// is required.
 func (s *Store) WithClock(now func() time.Time) *Store {
+	if now == nil {
+		panic("care plan postgres: the composition's clock is required")
+	}
 	clocked := *s
 	clocked.now = now
 	return &clocked
 }
 
-// currentTime is the instant the store stamps a write with.
+// currentTime is the instant the store stamps a write with. A store built
+// without WithClock serves reads only; stamping on it is a wiring error.
 func (s *Store) currentTime() time.Time {
-	now := s.now
-	if now == nil {
-		now = time.Now
+	if s.now == nil {
+		panic("care plan postgres: a store without the composition's clock stamps a write")
 	}
-	return now()
+	return s.now()
 }
 
 // LockExceptionDay takes the transaction-scoped advisory lock shared by all
@@ -69,8 +74,8 @@ type careOfferingRow struct {
 	bun.BaseModel       `bun:"table:care_offerings,alias:care_offering"`
 	ID                  int64             `bun:"id,pk,autoincrement" json:"id"`
 	TenantID            int64             `bun:"tenant_id,notnull" json:"tenant_id"`
-	CreatedAt           time.Time         `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt           time.Time         `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+	CreatedAt           time.Time         `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt           time.Time         `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 	PhaseID             int64             `bun:"phase_id,notnull" json:"phase_id"`
 	ActivityGroupID     *int64            `bun:"activity_group_id" json:"activity_group_id"`
 	Name                string            `bun:"name,notnull" json:"name"`
@@ -114,8 +119,8 @@ type offeringChangeRow struct {
 	bun.BaseModel               `bun:"table:enrollment.offering_change_requests,alias:offering_change_request"`
 	ID                          int64           `bun:"id,pk,autoincrement"`
 	TenantID                    int64           `bun:"tenant_id,notnull"`
-	CreatedAt                   time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt                   time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt                   time.Time       `bun:"created_at,nullzero,notnull"`
+	UpdatedAt                   time.Time       `bun:"updated_at,nullzero,notnull"`
 	StudentID                   int64           `bun:"student_id,notnull"`
 	RequestChildID              int64           `bun:"request_child_id,notnull"`
 	SubmittedBy                 int64           `bun:"submitted_by,notnull"`
@@ -252,7 +257,8 @@ func (s *Store) CreateCareOffering(ctx context.Context, fields careplan.CareOffe
 	if err != nil {
 		return careplan.CareOffering{}, domain.OperationStats{}, err
 	}
-	row := careOfferingRow{TenantID: tenantID}
+	now := s.currentTime()
+	row := careOfferingRow{TenantID: tenantID, CreatedAt: now, UpdatedAt: now}
 	applyCareOfferingFields(&row, fields)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -277,7 +283,7 @@ func (s *Store) UpdateCareOffering(ctx context.Context, id int64, fields carepla
 		Column("phase_id", "activity_group_id", "name", "description", "days_of_week_mode", "available_days",
 			"includes_holiday_care", "includes_lunch", "capacity", "price_cents", "is_active", "is_required",
 			"counts_as_care", "auto_add_grade_levels", "availability_rule", "sort_order", "selection_group", "selection_rule", "pickup_times", "translations").
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.currentTime()).
 		Where(`"care_offering".id = ?`, id), "care_offering", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -502,7 +508,12 @@ func (s *Store) CreateOfferingChange(ctx context.Context, value careplan.Offerin
 		return careplan.OfferingChangeRequest{}, domain.OperationStats{}, err
 	}
 	row := offeringChangeFromDomain(value)
-	row.TenantID = tenantID
+	// The parent request feed filters and orders created_at with the
+	// requests of other kinds on the owner's clock (ADR 0281).
+	row.TenantID, row.UpdatedAt = tenantID, s.currentTime()
+	if row.CreatedAt.IsZero() {
+		row.CreatedAt = row.UpdatedAt
+	}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = db.NewInsert().Model(&row).ModelTableExpr(`enrollment.offering_change_requests`).Returning("*").Scan(ctx)
@@ -542,7 +553,7 @@ func (s *Store) updatePending(ctx context.Context, id int64, operation string, c
 	}
 	query := db.NewUpdate().Model((*offeringChangeRow)(nil)).
 		ModelTableExpr(`enrollment.offering_change_requests AS "offering_change_request"`).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.currentTime()).
 		Where(`"offering_change_request".id = ?`, id).
 		Where(`"offering_change_request".status = 'pending'`)
 	query = change(query)
@@ -581,7 +592,7 @@ func (s *Store) UpdateOfferingChangeSnapshot(ctx context.Context, id int64, snap
 	query := withTenant(db.NewUpdate().Model((*offeringChangeRow)(nil)).
 		ModelTableExpr(`enrollment.offering_change_requests AS "offering_change_request"`).
 		Set("decision_snapshot = ?", snapshot).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.currentTime()).
 		Where(`"offering_change_request".id = ?`, id), "offering_change_request", tenantID)
 	return execAny(ctx, query, "update offering change decision snapshot")
 }

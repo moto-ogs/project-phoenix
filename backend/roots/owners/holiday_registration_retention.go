@@ -2,18 +2,19 @@ package owners
 
 import (
 	"context"
+	"time"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	delivery "github.com/moto-ogs/project-phoenix/modules/delivery/runtime"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // NewHolidayRegistrationRetention binds mail erasure to the registration's
-// existing administrative command. Failure rolls back both owners' changes.
-func NewHolidayRegistrationRetention(today func() calendar.Date) enrollment.HolidayRegistrationRetention {
-	return enrollmentCompose.NewHolidayRegistrationRetention(holidayRegistrationMailErasure{deliveryCompose.NewHolidayRegistrationMailErasure()}, today)
+// existing administrative command on the root's clock now. Failure rolls
+// back both owners' changes.
+func NewHolidayRegistrationRetention(now func() time.Time) enrollment.HolidayRegistrationRetention {
+	return enrollmentCompose.NewHolidayRegistrationRetention(holidayRegistrationMailErasure{deliveryCompose.NewHolidayRegistrationMailErasure()}, now)
 }
 
 type holidayRegistrationMailErasure struct {

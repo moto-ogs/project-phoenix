@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
@@ -43,7 +44,7 @@ func TestHolidayTimeEditsKeepForeignOrganizationUntouchedBeneathRLS(t *testing.T
 		if err := testpkg.WithoutRequestRole(ctx); err != nil {
 			return err
 		}
-		return postgres.NewHolidayPeriodStore().UpdateHolidayPeriod(ctx, org, ids.Period, input, monday.AddDays(2))
+		return postgres.NewHolidayPeriodStore().WithClock(time.Now).UpdateHolidayPeriod(ctx, org, ids.Period, input, monday.AddDays(2))
 	}))
 	var actual struct {
 		Name    string

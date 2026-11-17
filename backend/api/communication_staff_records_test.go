@@ -84,10 +84,14 @@ func TestNativeStaffFailedInsertDoesNotExposeTentativeTenantMetadata(t *testing.
 	ctx := testpkg.WithTenantRuntime(t, testpkg.Ctx(t), db)
 	var row communication.StaffMessageRecord
 	var original communication.StaffMessageRecord
-	err := tenant.WithTenantTx(ctx, db, testpkg.Tenant(t), func(tx context.Context, _ bun.Tx) error {
+	err := tenant.WithTenantTx(ctx, db, testpkg.Tenant(t), func(tx context.Context, sqlTx bun.Tx) error {
 		thread, err := threads.GetOrCreateStaffThread(tx, first.ID, second.ID)
 		require.NoError(t, err)
-		deleted, err := threads.DeleteEmptyStaffThreads(tx, time.Now().Add(time.Hour))
+		// The sweep counts its window on the database clock; age the empty
+		// thread past one day there.
+		_, err = sqlTx.ExecContext(tx, `UPDATE users.staff_message_threads SET created_at = NOW() - INTERVAL '2 days' WHERE id = ?`, thread.ID)
+		require.NoError(t, err)
+		deleted, err := threads.DeleteEmptyStaffThreads(tx, 1)
 		require.NoError(t, err)
 		require.EqualValues(t, 1, deleted)
 		row = communication.StaffMessageRecord{ThreadID: thread.ID, SenderAccountID: first.ID, SenderName: "Anna Berg", Body: "failed insert"}

@@ -30,7 +30,11 @@ func (s *stubAccessLogRepo) Create(_ context.Context, entry *api.EnrollmentFlowD
 	return nil
 }
 
-func (s *stubAccessLogRepo) ExistsSince(context.Context, int64, string, map[string]string, time.Time) (bool, error) {
+func (s *stubAccessLogRepo) ExistsToday(context.Context, int64, string, map[string]string) (bool, error) {
+	return false, nil
+}
+
+func (s *stubAccessLogRepo) ExistsWithin(context.Context, int64, string, map[string]string, time.Duration) (bool, error) {
 	return false, nil
 }
 
@@ -48,6 +52,7 @@ func samplePhaseForAudit() *enrollmentModels.Phase {
 
 func newAuditDecisionService(repo api.EnrollmentFlowDataAccessLogs) enrollmentAPI.DecisionService {
 	return enrollmentAPI.NewDecisionService(enrollmentCompose.PublicDecisions(newTestDecisions(enrollmentCompose.DecisionDependencies{
+		Now:       time.Now,
 		AccessLog: owners.EnrollmentDecisionAccessLog(repo),
 	}, nil)))
 }

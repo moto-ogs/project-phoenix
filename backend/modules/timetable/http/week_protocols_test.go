@@ -110,7 +110,7 @@ func setupWeekProtocolRoutes(t *testing.T) *weekProtocolRoutes {
 	owner, ctx := repos.Timetable, testpkg.Ctx(t)
 	friday := calendar.NewDate(2027, 9, 10)
 	_, err = owner.RunWeekProtocolEvening(ctx, friday.BerlinMidnight().Add(21*time.Hour), timetable.WeekProtocolSources{
-		Notices: compose.NewStaffNotices(compose.StaffNoticeDependencies{DB: db}), Calendar: noNonWorkingDays{},
+		Notices: compose.NewStaffNotices(compose.StaffNoticeDependencies{DB: db, Now: func() time.Time { return friday.BerlinMidnight().Add(21 * time.Hour) }}), Calendar: noNonWorkingDays{},
 		Attendance: weekProtocolDayLog{groupID: weekProtocolTestGroup},
 		Groups: func(context.Context) ([]timetable.WeekProtocolGroup, error) {
 			return []timetable.WeekProtocolGroup{{ID: weekProtocolTestGroup, Name: "Bären"}}, nil
@@ -129,6 +129,8 @@ func setupWeekProtocolRoutes(t *testing.T) *weekProtocolRoutes {
 			Names: func(_ context.Context, ids []int64) (map[int64]string, error) {
 				return map[int64]string{ids[0]: "Lea Leitung"}, nil
 			},
+			// The access log entries are dated the Monday after the protocol week.
+			Now: func() time.Time { return friday.AddDays(3).BerlinMidnight().Add(9 * time.Hour) },
 		}).Router(api.ProtectedTenantRoutes)
 	}
 	return routes

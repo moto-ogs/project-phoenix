@@ -45,15 +45,42 @@ type catererInvitationRow struct {
 	AcceptedAt        *time.Time `bun:"accepted_at"`
 	AcceptedAccountID *int64     `bun:"accepted_account_id"`
 	RevokedAt         *time.Time `bun:"revoked_at"`
-	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull"`
+	ReadAt            time.Time  `bun:"read_at,scanonly"`
 }
 
 func (r catererInvitationRow) toDomain() domain.CatererInvitation {
 	return domain.CatererInvitation{
 		ID: r.ID, TenantID: r.TenantID, TokenHash: r.TokenHash, Email: r.Email, CatererName: r.CatererName,
 		DeliveryAddress: r.DeliveryAddress, CreatedBy: r.CreatedBy, ExpiresAt: r.ExpiresAt, AcceptedAt: r.AcceptedAt,
-		AcceptedAccountID: r.AcceptedAccountID, RevokedAt: r.RevokedAt, CreatedAt: r.CreatedAt,
+		AcceptedAccountID: r.AcceptedAccountID, RevokedAt: r.RevokedAt, CreatedAt: r.CreatedAt, ReadAt: r.ReadAt,
 	}
+}
+
+// databaseClock is the package's one read of the database clock (ADR
+// 0285): auth.create_invited_caterer, auth.account_is_unused and
+// auth.delete_unused_caterers judge a caterer invitation's expires_at
+// against statement_timestamp(), so the invitation is stamped and judged
+// on that clock in every writer and reader.
+const databaseClock = `statement_timestamp()`
+
+// catererInvitationRead selects the school's list with the database time of
+// the same statement, which its expiry is judged against. The locking read
+// of one invitation does not: its statement starts before a lock wait, so
+// the acceptance reads DatabaseTime after it holds the lock.
+const catererInvitationRead = `"caterer_invitation".*, ` + databaseClock + ` AS read_at`
+
+// DatabaseTime reads the database clock once, in the transaction of ctx.
+func (s *Store) DatabaseTime(ctx context.Context) (time.Time, domain.OperationStats, error) {
+	db, err := s.database(ctx)
+	if err != nil {
+		return time.Time{}, domain.OperationStats{}, err
+	}
+	var now time.Time
+	started := time.Now()
+	err = db.NewRaw(`SELECT `+databaseClock).Scan(ctx, &now)
+	_, stats, err := scanOne("read database time", time.Since(started), err)
+	return now, stats, err
 }
 
 func catererInvitationTenantFilter[Q tenantFilterable[Q]](scope TenantScope, query Q) Q {
@@ -78,17 +105,32 @@ func (s *Store) FindCatererOfAccount(ctx context.Context, accountID int64) (doma
 // CreateInvitedCaterer creates the caterer and its account link through
 // auth.create_invited_caterer: the school's role holds no INSERT on these
 // global tables, and the function writes only for an open invitation of the
-// school in scope and the account of its address.
+// school in scope and the account of its address. The statement calls the
+// function only while the invitation has not expired at its own
+// statement_timestamp(), the instant the function's guard reads, and answers
+// ErrInvitationExpired otherwise; a refusal of the function's other guards
+// stays its SQLSTATE 42501.
 func (s *Store) CreateInvitedCaterer(ctx context.Context, invitationID, accountID int64) (int64, domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return 0, domain.OperationStats{}, err
 	}
-	var catererID int64
+	var catererID *int64
 	started := time.Now()
-	err = db.NewRaw(`SELECT auth.create_invited_caterer(?, ?)`, invitationID, accountID).Scan(ctx, &catererID)
-	_, stats, err := scanOne("create invited caterer", time.Since(started), err)
-	return catererID, stats, err
+	err = catererInvitationTenantFilter(s.scope(ctx), db.NewSelect().Model((*catererInvitationRow)(nil)).
+		ColumnExpr(`CASE WHEN "caterer_invitation".expires_at > `+databaseClock+` THEN auth.create_invited_caterer(?, ?) END`, invitationID, accountID).
+		Where(`"caterer_invitation".id = ?`, invitationID)).
+		Scan(ctx, &catererID)
+	found, stats, err := scanOne("create invited caterer", time.Since(started), err)
+	switch {
+	case err != nil:
+		return 0, stats, err
+	case !found:
+		return 0, stats, domain.ErrInvitationNotFound
+	case catererID == nil:
+		return 0, stats, domain.ErrInvitationExpired
+	}
+	return *catererID, stats, nil
 }
 
 func (s *Store) InsertCatererInvitation(ctx context.Context, invitation domain.CatererInvitation) (domain.CatererInvitation, domain.OperationStats, error) {
@@ -109,7 +151,7 @@ func (s *Store) ListCatererInvitations(ctx context.Context) ([]domain.CatererInv
 	}
 	var rows []catererInvitationRow
 	started := time.Now()
-	err = catererInvitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&rows)).
+	err = catererInvitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&rows).ColumnExpr(catererInvitationRead)).
 		OrderExpr(`"caterer_invitation".created_at DESC, "caterer_invitation".id DESC`).
 		Scan(ctx)
 	_, stats, err := scanOne("list caterer invitations", time.Since(started), err)
@@ -147,14 +189,19 @@ func (s *Store) FindCatererInvitationByTokenHash(ctx context.Context, tokenHash 
 	return row.toDomain(), found, stats, err
 }
 
-func (s *Store) AcceptCatererInvitation(ctx context.Context, invitationID, accountID int64, at time.Time) (bool, domain.OperationStats, error) {
+// AcceptCatererInvitation spends the open invitation. It stamps
+// accepted_at and checks the expiry at the database time of the write
+// itself (ADR 0285), so an invitation that expired after it was read is
+// not spent.
+func (s *Store) AcceptCatererInvitation(ctx context.Context, invitationID, accountID int64) (bool, domain.OperationStats, error) {
 	rows, stats, err := s.exec(ctx, "accept caterer invitation", func(db bun.IDB) executor {
 		return db.NewUpdate().Model((*catererInvitationRow)(nil)).
-			Set("accepted_at = ?", at).
+			Set("accepted_at = "+databaseClock).
 			Set("accepted_account_id = ?", accountID).
 			Where(`"caterer_invitation".id = ?`, invitationID).
 			Where(`"caterer_invitation".accepted_at IS NULL`).
-			Where(`"caterer_invitation".revoked_at IS NULL`)
+			Where(`"caterer_invitation".revoked_at IS NULL`).
+			Where(`"caterer_invitation".expires_at > ` + databaseClock)
 	})
 	return rows > 0, stats, err
 }

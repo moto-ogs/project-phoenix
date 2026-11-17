@@ -23,6 +23,10 @@ func (d phaseResponseRoster) ListRunningStudents(ctx context.Context, today time
 	}
 	result := make([]enrollmentOwner.PhaseResponseStudent, 0, len(entries))
 	for _, entry := range entries {
+		// A child without an OGS place (#4803) is no OGS family to ask.
+		if entry.Record.WithoutCarePlace {
+			continue
+		}
 		result = append(result, enrollmentOwner.PhaseResponseStudent{
 			ID: entry.Record.ID, FirstName: entry.FirstName, LastName: entry.LastName,
 			SchoolClass: entry.Record.SchoolClass, NotActive: entry.Record.Status != peopledirectory.StudentStatusActive,

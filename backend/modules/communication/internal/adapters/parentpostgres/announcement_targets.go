@@ -176,15 +176,17 @@ func optionValues(rows []parentOptionRow) []*domain.ParentAnnouncementOption {
 // liveVersionGuardCTE yields a single row IFF the announcement is still live
 // (active, published, publish time reached, not expired) AND its published_at
 // still equals the version the client loaded, so a concurrent correction
-// cannot slip a stale read/ack onto the corrected wording. Bind args:
-// announcementID, tenantID, expectedPublishedAt.
+// cannot slip a stale read/ack onto the corrected wording. Publication is
+// stamped from the store's clock, so one instant of that clock judges it, not
+// the database's. Bind args: announcementID, tenantID, expectedPublishedAt,
+// now, now.
 const liveVersionGuardCTE = `WITH guard AS (
 		SELECT 1 FROM users.parent_announcements a
 		WHERE a.id = ? AND a.tenant_id = ?
 			AND a.active
 			AND a.published_at = ?
-			AND a.published_at <= clock_timestamp()
-			AND (a.expires_at IS NULL OR a.expires_at > clock_timestamp())
+			AND a.published_at <= ?
+			AND (a.expires_at IS NULL OR a.expires_at > ?)
 	)`
 
 const markReadSQL = liveVersionGuardCTE + `,
@@ -205,10 +207,11 @@ func (s *AnnouncementStore) MarkRead(ctx context.Context, tenantID, announcement
 	if err != nil {
 		return false, err
 	}
+	now := s.now()
 	var live bool
 	if err := db.NewRaw(markReadSQL,
-		announcementID, tenantID, expectedPublishedAt,
-		tenantID, announcementID, accountID, s.now(),
+		announcementID, tenantID, expectedPublishedAt, now, now,
+		tenantID, announcementID, accountID, now,
 	).Scan(ctx, &live); err != nil {
 		return false, fmt.Errorf("mark parent announcement read: %w", err)
 	}
@@ -217,7 +220,7 @@ func (s *AnnouncementStore) MarkRead(ctx context.Context, tenantID, announcement
 
 // acknowledgeExistingSQL stamps acknowledged_at on an existing read row
 // (keeping an earlier acknowledgement) while the version guard matches.
-// Bind args: guard (3), acknowledgedAt, announcementID, accountID, tenantID.
+// Bind args: guard (5), acknowledgedAt, announcementID, accountID, tenantID.
 const acknowledgeExistingSQL = liveVersionGuardCTE + `,
 		upd AS (
 			UPDATE users.parent_announcement_reads
@@ -230,7 +233,7 @@ const acknowledgeExistingSQL = liveVersionGuardCTE + `,
 
 // acknowledgeInsertSQL creates the read row already acknowledged while the
 // version guard matches; a concurrent first read wins the conflict and leaves
-// the row to acknowledgeExistingSQL. Bind args: guard (3), tenantID,
+// the row to acknowledgeExistingSQL. Bind args: guard (5), tenantID,
 // announcementID, accountID, readAt, acknowledgedAt.
 const acknowledgeInsertSQL = liveVersionGuardCTE + `,
 		ins AS (
@@ -261,7 +264,7 @@ func (s *AnnouncementStore) MarkAcknowledged(ctx context.Context, tenantID, anno
 	update := func() (guardedWriteRow, error) {
 		var row guardedWriteRow
 		if err := db.NewRaw(acknowledgeExistingSQL,
-			announcementID, tenantID, expectedPublishedAt,
+			announcementID, tenantID, expectedPublishedAt, now, now,
 			now, announcementID, accountID, tenantID,
 		).Scan(ctx, &row); err != nil {
 			return row, fmt.Errorf("mark parent announcement acknowledged: %w", err)
@@ -274,7 +277,7 @@ func (s *AnnouncementStore) MarkAcknowledged(ctx context.Context, tenantID, anno
 	}
 	var inserted guardedWriteRow
 	if err := db.NewRaw(acknowledgeInsertSQL,
-		announcementID, tenantID, expectedPublishedAt,
+		announcementID, tenantID, expectedPublishedAt, now, now,
 		tenantID, announcementID, accountID, now, now,
 	).Scan(ctx, &inserted); err != nil {
 		return false, fmt.Errorf("mark parent announcement acknowledged: %w", err)
@@ -307,16 +310,17 @@ func responseLockKey(announcementID, studentID int64) string {
 // responseGuardCTE yields one row IFF the poll is still live at the expected
 // version and still accepts answers. The audience and relationship half of
 // the guard belongs to People Directory and is checked through the audience
-// projection before each write. Bind args: announcementID, tenantID,
-// expectedPublishedAt.
+// projection before each write. Like liveVersionGuardCTE it reads one
+// instant of the store's clock. Bind args: announcementID, tenantID,
+// expectedPublishedAt, now, now, now.
 const responseGuardCTE = `WITH guard AS (
 		SELECT a.response_type
 		FROM users.parent_announcements a
 		WHERE a.id = ? AND a.tenant_id = ?
-			AND a.active AND a.published_at = ? AND a.published_at <= clock_timestamp()
-			AND (a.expires_at IS NULL OR a.expires_at > clock_timestamp())
+			AND a.active AND a.published_at = ? AND a.published_at <= ?
+			AND (a.expires_at IS NULL OR a.expires_at > ?)
 			AND a.response_type <> 'none'
-			AND (a.response_deadline IS NULL OR a.response_deadline > clock_timestamp())
+			AND (a.response_deadline IS NULL OR a.response_deadline > ?)
 	)`
 
 // responseSelectionCTE validates the requested option set against the poll:
@@ -362,9 +366,10 @@ func (s *AnnouncementStore) DeleteResponse(ctx context.Context, tenantID, announ
 	if err != nil {
 		return false, err
 	}
+	now := s.now()
 	var live bool
 	if err := db.NewRaw(deleteResponseSQL,
-		announcementID, tenantID, expectedPublishedAt,
+		announcementID, tenantID, expectedPublishedAt, now, now, now,
 		pgdialect.Array(optionIDs), announcementID, tenantID,
 		announcementID, studentID, tenantID,
 	).Scan(ctx, &live); err != nil {
@@ -380,11 +385,12 @@ func (s *AnnouncementStore) InsertResponse(ctx context.Context, tenantID, announ
 	if err != nil {
 		return false, err
 	}
+	now := s.now()
 	var live bool
 	if err := db.NewRaw(insertResponseSQL,
-		announcementID, tenantID, expectedPublishedAt,
+		announcementID, tenantID, expectedPublishedAt, now, now, now,
 		pgdialect.Array(optionIDs), announcementID, tenantID,
-		tenantID, announcementID, studentID, accountID, s.now(), announcementID, tenantID, bun.List(optionIDs),
+		tenantID, announcementID, studentID, accountID, now, announcementID, tenantID, bun.List(optionIDs),
 	).Scan(ctx, &live); err != nil {
 		return false, fmt.Errorf("insert parent announcement response: %w", err)
 	}

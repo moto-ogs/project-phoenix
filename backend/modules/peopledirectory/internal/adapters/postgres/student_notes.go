@@ -31,8 +31,8 @@ type studentNoteRow struct {
 	SharedWithSchool   bool           `bun:"shared_with_school,notnull"`
 	DeletedAt          *time.Time     `bun:"deleted_at"`
 	DeletedByAccountID *int64         `bun:"deleted_by_account_id"`
-	CreatedAt          time.Time      `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt          time.Time      `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt          time.Time      `bun:"created_at,nullzero,notnull"`
+	UpdatedAt          time.Time      `bun:"updated_at,nullzero,notnull"`
 }
 
 const studentNotesTable = "users.student_notes"
@@ -42,6 +42,7 @@ const studentNotesTable = "users.student_notes"
 type StudentNoteStore struct {
 	database Database
 	students StudentDirectory
+	clock
 }
 
 func NewStudentNoteStore(database Database, students StudentDirectory) *StudentNoteStore {
@@ -252,7 +253,7 @@ func (s *StudentNoteStore) SoftDelete(ctx context.Context, deletion domain.Delet
 	result, err := db.NewUpdate().
 		Model((*studentNoteRow)(nil)).
 		ModelTableExpr(studentNotesTable+" AS note").
-		Set("deleted_at = clock_timestamp()").
+		Set("deleted_at = ?", s.stamp()).
 		Set("deleted_by_account_id = ?", deletion.ActorAccountID).
 		Where(`"note".tenant_id = ?`, scope.TenantID).
 		Where(`"note".id = ?`, deletion.ID).
@@ -478,7 +479,7 @@ func (s *StudentNoteStore) RetireSchoolDayHints(
 	query := db.NewUpdate().
 		Model((*studentNoteRow)(nil)).
 		ModelTableExpr(studentNotesTable+" AS note").
-		Set("deleted_at = clock_timestamp()").
+		Set("deleted_at = ?", s.stamp()).
 		Set("deleted_by_account_id = ?", target.AuthorAccountID).
 		Where(`"note".tenant_id = ?`, scope.TenantID).
 		Where(`"note".origin = ?`, domain.StudentNoteOriginSchool).

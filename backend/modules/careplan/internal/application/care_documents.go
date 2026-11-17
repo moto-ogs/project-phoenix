@@ -63,7 +63,7 @@ func NewStudentDocuments(deps StudentDocumentDependencies) (*StudentDocuments, e
 		return nil, errors.New("care plan documents: every category permission is required")
 	}
 	if deps.Now == nil {
-		deps.Now = time.Now
+		return nil, errors.New("care plan documents: the composition's clock is required")
 	}
 	return &StudentDocuments{
 		records: deps.Records, access: deps.Access, permissions: deps.Permissions,

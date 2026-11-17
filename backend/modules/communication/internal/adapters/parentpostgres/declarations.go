@@ -131,7 +131,7 @@ type declarationSubmissionRow struct {
 	RecordHash        string    `bun:"record_hash,notnull"`
 	SubmittedAt       time.Time `bun:"submitted_at,notnull"`
 	SignatureID       *int64    `bun:"signature_id"`
-	CreatedAt         time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time `bun:"created_at,nullzero,notnull"`
 }
 
 func (r *declarationSubmissionRow) value() *domain.DeclarationSubmission {
@@ -483,6 +483,9 @@ func (s *AnnouncementStore) ReadOpenDeclarations(ctx context.Context, accountID 
 	if err != nil {
 		return nil, err
 	}
+	// One instant of the store's clock for all three bounds: publication is
+	// stamped from that clock, so the database's NOW() may not judge it.
+	now := s.now()
 	var rows []readDeclarationRow
 	if err := db.NewSelect().
 		TableExpr(parentAnnouncementTableExpr).
@@ -493,9 +496,9 @@ func (s *AnnouncementStore) ReadOpenDeclarations(ctx context.Context, accountID 
 		Where(`"parent_announcement".tenant_id IN (?)`, bun.List(tenantIDs)).
 		Where(`"parent_announcement".delivery_mode = 'declaration'`).
 		Where(`"parent_announcement".active`).
-		Where(`"parent_announcement".published_at IS NOT NULL AND "parent_announcement".published_at <= NOW()`).
-		Where(`("parent_announcement".expires_at IS NULL OR "parent_announcement".expires_at > NOW())`).
-		Where(`("parent_announcement".response_deadline IS NULL OR "parent_announcement".response_deadline > NOW())`).
+		Where(`"parent_announcement".published_at IS NOT NULL AND "parent_announcement".published_at <= ?`, now).
+		Where(`("parent_announcement".expires_at IS NULL OR "parent_announcement".expires_at > ?)`, now).
+		Where(`("parent_announcement".response_deadline IS NULL OR "parent_announcement".response_deadline > ?)`, now).
 		Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("list read open declarations: %w", err)
 	}
@@ -503,4 +506,29 @@ func (s *AnnouncementStore) ReadOpenDeclarations(ctx context.Context, accountID 
 		out[row.ID] = row.Deadline
 	}
 	return out, nil
+}
+
+// ListDeclarationSubmissionsForStudent returns one child's declaration
+// history in the ambient school across every declaration, newest first
+// (#4814). It needs a school: without one it refuses rather than read
+// across schools.
+func (s *AnnouncementStore) ListDeclarationSubmissionsForStudent(ctx context.Context, studentID int64) ([]*domain.DeclarationSubmission, int64, error) {
+	db, ambient, err := s.database(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	if ambient.TenantID <= 0 {
+		return nil, 0, errors.New("list declaration submissions for student: no school in the transaction")
+	}
+	var rows []declarationSubmissionRow
+	query := db.NewSelect().Model(&rows).ModelTableExpr(declarationSubmissionTableExpr).
+		ColumnExpr(declarationSubmissionColumns).
+		Join(declarationSubmissionVersionJoin).
+		Where(`"pds".student_id = ?`, studentID).
+		OrderExpr(`"pds".submitted_at DESC, "pds".id DESC`)
+	query = withTenant(query, declarationSubmissionAlias, TenantScope{TenantID: ambient.TenantID})
+	if err := query.Scan(ctx); err != nil {
+		return nil, 0, fmt.Errorf("list declaration submissions for student: %w", err)
+	}
+	return submissionValues(rows), ambient.TenantID, nil
 }

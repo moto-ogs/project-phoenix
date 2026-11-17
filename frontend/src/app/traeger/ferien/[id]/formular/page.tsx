@@ -6,7 +6,6 @@
 // behält ihre Version.
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import {
   HolidayPeriodStatusLine,
   holidayPeriodTabs,
@@ -20,17 +19,12 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { billingConcept } from "~/lib/concepts/billing";
 import { ButtonLink } from "~/components/ui/button";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { formatBerlinDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
-import {
-  fetchHolidayForm,
-  type HolidayForm,
-} from "~/lib/traeger-holiday-form-api";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { fetchHolidayForm } from "~/lib/traeger-holiday-form-api";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerHolidayFormPage" });
 
 export default function TraegerHolidayFormPage() {
   const params = useParams<{ id: string }>();
@@ -41,31 +35,16 @@ export default function TraegerHolidayFormPage() {
     loadError: periodError,
   } = useTraegerHolidayPeriod(id);
   const billingHref = useHolidayPeriodBillingHref(period);
-  const [form, setForm] = useState<HolidayForm | null>(null);
-  const formLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = formLoad;
-
-  const load = useCallback(async () => {
-    try {
-      const loadedForm = await fetchHolidayForm(id);
-      setForm(loadedForm);
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_holiday_form_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "das Anmeldeformular",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, id, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const loadError = formLoad.error ?? periodError;
+  const {
+    data: form,
+    error: formError,
+    mutate,
+  } = useTraegerResource(
+    id ? traegerKeys.holidayForm(id) : null,
+    () => fetchHolidayForm(id),
+    "das Anmeldeformular",
+  );
+  const loadError = formError ?? periodError;
 
   return (
     <TenantPage
@@ -123,7 +102,7 @@ export default function TraegerHolidayFormPage() {
           key={form.version}
           periodId={id}
           form={form}
-          onSaved={setForm}
+          onSaved={(saved) => void mutate(saved, { revalidate: false })}
         />
       ) : null}
     </TenantPage>

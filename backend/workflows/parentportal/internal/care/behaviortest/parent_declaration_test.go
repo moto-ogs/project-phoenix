@@ -50,7 +50,7 @@ func newDeclarationSetupWith(
 ) *declarationSetup {
 	t.Helper()
 	testpkg.OwnTenant(t)
-	svc, db, repos := buildAnnouncementServiceWithAccess(t, testpkg.SetupIsolatedTestDB(t), true, nil, wrap)
+	svc, db, repos := buildAnnouncementServiceWithAccess(t, testpkg.SetupIsolatedTestDB(t), true, nil, wrap, time.Now)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	setup := &declarationSetup{
 		svc: svc, db: db, repo: api.NewParentAnnouncementFixtures(repos.ParentAnnouncement), chain: chain,
@@ -70,6 +70,16 @@ func seedDeclaration(
 	targets []*api.ParentAnnouncementTargetFixture, settings communication.ParentDeclarationSettings, deadline *time.Time,
 ) (*api.ParentAnnouncementFixture, *parentportal.DeclarationVersion) {
 	t.Helper()
+	return seedDeclarationPublishedAt(t, ctx, repo, createdBy, tenantID, targets, settings, deadline, time.Now().Add(-time.Minute))
+}
+
+// seedDeclarationPublishedAt publishes the declaration at published.
+func seedDeclarationPublishedAt(
+	t *testing.T, ctx context.Context, repo api.ParentAnnouncementFixtures, createdBy, tenantID int64,
+	targets []*api.ParentAnnouncementTargetFixture, settings communication.ParentDeclarationSettings, deadline *time.Time,
+	published time.Time,
+) (*api.ParentAnnouncementFixture, *parentportal.DeclarationVersion) {
+	t.Helper()
 	a := &api.ParentAnnouncementFixture{
 		Title:            "Ausflug in den Zoo",
 		Body:             "Wir fahren am Freitag mit dem Bus in den Zoo.",
@@ -84,8 +94,7 @@ func seedDeclaration(
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, testpkg.SetupTestDB(t), repo.Create, a))
 	require.NoError(t, testpkg.TenantCommand3(t, ctx, testpkg.SetupTestDB(t), repo.ReplaceTargets, tenantID, a.ID, targets))
 	version := freezeTestVersion(t, ctx, repo, a, 1)
-	now := time.Now().Add(-time.Minute)
-	require.NoError(t, testpkg.TenantCommand2(t, ctx, testpkg.SetupTestDB(t), repo.SetPublished, a.ID, &now))
+	require.NoError(t, testpkg.TenantCommand2(t, ctx, testpkg.SetupTestDB(t), repo.SetPublished, a.ID, &published))
 	return a, version
 }
 
@@ -326,7 +335,10 @@ func TestDeclaration_ExpiredAllowsOnlyRevocation(t *testing.T) {
 func TestDeclaration_EndedActivityEnrollmentKeepsHistoryAndRevocation(t *testing.T) {
 	t.Parallel()
 	testpkg.OwnTenant(t)
-	svc, db, repos := buildAnnouncementServiceOn(t, testpkg.SetupIsolatedTestDB(t), true)
+	// The enrollment ends on the fixed day; the portal and Communication's
+	// audience read that day.
+	day := calendar.NewDate(2026, 8, 24)
+	svc, db, repos := buildAnnouncementServiceAt(t, testpkg.SetupIsolatedTestDB(t), true, fixedPortalNow)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	seedCtx := tenant.WithTenantID(testpkg.WithTestTenantRuntime(t, context.Background()), chain.TenantID)
 	ctx := testpkg.WithTestTenantRuntime(t, context.Background())
@@ -334,7 +346,7 @@ func TestDeclaration_EndedActivityEnrollmentKeepsHistoryAndRevocation(t *testing
 	enrollment := &testpkg.StudentEnrollment{
 		StudentID:       chain.StudentID,
 		ActivityGroupID: group.ID,
-		ValidFrom:       testpkg.ActivityDate(calendar.TodayDate().AddDays(-1)),
+		ValidFrom:       testpkg.ActivityDate(day.AddDays(-1)),
 	}
 	enrollment.TenantID = chain.TenantID
 	_, err := db.NewInsert().
@@ -343,9 +355,9 @@ func TestDeclaration_EndedActivityEnrollmentKeepsHistoryAndRevocation(t *testing
 		Exec(context.Background())
 	require.NoError(t, err)
 
-	announcement, version := seedDeclaration(t, seedCtx, api.NewParentAnnouncementFixtures(repos.ParentAnnouncement), chain.AccountID, chain.TenantID,
+	announcement, version := seedDeclarationPublishedAt(t, seedCtx, api.NewParentAnnouncementFixtures(repos.ParentAnnouncement), chain.AccountID, chain.TenantID,
 		[]*api.ParentAnnouncementTargetFixture{{TargetType: "activity_group", TargetRefID: &group.ID}},
-		consent(communication.DeclarationSignersAny, false), nil)
+		consent(communication.DeclarationSignersAny, false), nil, fixedPortalNow().Add(-time.Minute))
 	_, created, err := svc.SubmitDeclaration(ctx, chain.AccountID, announcement.ID, parentportal.DeclarationInput{
 		StudentID: chain.StudentID, VersionID: version.ID, Action: parentportal.DeclarationActionAgreed,
 	}, nil)
@@ -355,7 +367,7 @@ func TestDeclaration_EndedActivityEnrollmentKeepsHistoryAndRevocation(t *testing
 	_, err = db.NewUpdate().
 		Model((*testpkg.StudentEnrollment)(nil)).
 		ModelTableExpr("activities.student_enrollments").
-		Set("valid_until = ?", testpkg.ActivityDate(calendar.TodayDate())).
+		Set("valid_until = ?", testpkg.ActivityDate(day)).
 		Where("id = ?", enrollment.ID).
 		Exec(context.Background())
 	require.NoError(t, err)

@@ -15,10 +15,13 @@ import (
 // membership in status active whose enrollment has not ended before the
 // capture day (#2791). A start after the capture day does not exclude it:
 // immediate activation enrolls an active child before its formal start, as in
-// the current-care rule of the student directory. Its one parameter is the
-// capture day.
+// the current-care rule of the student directory. A child without an OGS
+// place (#4803) is a child of the class, not of the OGS: it never counts,
+// neither for the Stichtagszahl nor, through childQuotaPredicate, for the
+// Kinderkontingent. Its one parameter is the capture day.
 const activelyManagedPredicate = `deleted_at IS NULL
   AND status = 'active'
+  AND NOT without_care_place
   AND (enrolled_until IS NULL OR enrolled_until >= ?::date)`
 
 // countActiveStudentsByTenantSQL is the Stichtagszahl of every school.
@@ -34,6 +37,7 @@ GROUP BY tenant_id`
 const childQuotaPredicate = `((` + activelyManagedPredicate + `)
     OR (deleted_at IS NULL
       AND status = 'pending'
+      AND NOT without_care_place
       AND (enrolled_until IS NULL OR enrolled_until >= ?::date)
       AND enrolled_from > ?::date))`
 

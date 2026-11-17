@@ -3,6 +3,7 @@ package postgres_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
@@ -29,21 +30,21 @@ func setupRequestChildRepoTest(t *testing.T) (
 	tenantID := testpkg.Tenant(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
 
-	phaseRepo := ownerCompose.NewClocked(nil)
+	phaseRepo := ownerCompose.NewClocked(time.Now)
 	phaseName := uniquePhaseName("child-test")
 	phase := makeOwnerEligibilityPhase(phaseName)
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		return phaseRepo.InsertPhase(ctx, phase)
 	}))
 
-	requestRepo := ownerCompose.NewClocked(nil)
+	requestRepo := ownerCompose.NewClocked(time.Now)
 	token := uniqueToken("child-test")
 	req := makeOwnerRequest(phase.ID, token, "anna@example.test")
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		return requestRepo.InsertRequest(ctx, req)
 	}))
 
-	return db, ownerCompose.NewClocked(nil), tenantID, phase.ID, req.ID
+	return db, ownerCompose.NewClocked(time.Now), tenantID, phase.ID, req.ID
 }
 
 func makeChild(requestID int64, firstName, lastName string) *capability.RequestChild {
@@ -74,7 +75,7 @@ func TestRequestChildRepository_ListByRequestIDs_BatchesAcrossRequests(t *testin
 	}
 
 	// A second request in the same phase, with one child.
-	reqRepo := ownerCompose.NewClocked(nil)
+	reqRepo := ownerCompose.NewClocked(time.Now)
 	token2 := uniqueToken("child-test-2")
 	req2 := makeOwnerRequest(phaseID, token2, "bea@example.test")
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
@@ -87,7 +88,7 @@ func TestRequestChildRepository_ListByRequestIDs_BatchesAcrossRequests(t *testin
 	var list []*capability.RequestChild
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.NewClocked(nil).ChildrenForRequests(ctx, []int64{requestID, req2.ID})
+		list, lErr = ownerCompose.NewClocked(time.Now).ChildrenForRequests(ctx, []int64{requestID, req2.ID})
 		return lErr
 	}))
 
@@ -108,7 +109,7 @@ func TestRequestChildRepository_ListByRequestIDs_EmptyInputShortCircuits(t *test
 	var list []*capability.RequestChild
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.NewClocked(nil).ChildrenForRequests(ctx, nil)
+		list, lErr = ownerCompose.NewClocked(time.Now).ChildrenForRequests(ctx, nil)
 		return lErr
 	})
 	require.NoError(t, err)
@@ -144,7 +145,7 @@ func TestRequestChildRepository_FindByID_HappyPath(t *testing.T) {
 	var got *capability.RequestChild
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var fbErr error
-		got, fbErr = ownerCompose.NewClocked(nil).ChildByID(ctx, child.ID)
+		got, fbErr = ownerCompose.NewClocked(time.Now).ChildByID(ctx, child.ID)
 		return fbErr
 	})
 	require.NoError(t, err)
@@ -177,7 +178,7 @@ func TestRequestChildRepository_ListByRequestID_OrdersBySortOrder(t *testing.T) 
 	var list []*capability.RequestChild
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.NewClocked(nil).ChildrenForRequest(ctx, requestID, false)
+		list, lErr = ownerCompose.NewClocked(time.Now).ChildrenForRequest(ctx, requestID, false)
 		return lErr
 	}))
 	require.Len(t, list, 3)
@@ -194,7 +195,7 @@ func TestRequestChildRepository_ListByRequestID_EmptyResultNoError(t *testing.T)
 	var list []*capability.RequestChild
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.NewClocked(nil).ChildrenForRequest(ctx, 9_999_999, false)
+		list, lErr = ownerCompose.NewClocked(time.Now).ChildrenForRequest(ctx, 9_999_999, false)
 		return lErr
 	})
 	require.NoError(t, err)
@@ -218,13 +219,13 @@ func TestRequestChildRepository_UpdateStatus_StampsReviewerAndReason(t *testing.
 
 	reason := "Kapazität überschritten"
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).UpdateChildStatus(ctx, child.ID, capability.ChildStatusWaitlisted, &reason, account.ID)
+		return ownerCompose.NewClocked(time.Now).UpdateChildStatus(ctx, child.ID, capability.ChildStatusWaitlisted, &reason, account.ID)
 	}))
 
 	var got *capability.RequestChild
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var fbErr error
-		got, fbErr = ownerCompose.NewClocked(nil).ChildByID(ctx, child.ID)
+		got, fbErr = ownerCompose.NewClocked(time.Now).ChildByID(ctx, child.ID)
 		return fbErr
 	}))
 	assert.Equal(t, capability.ChildStatusWaitlisted, got.Status)
@@ -248,13 +249,13 @@ func TestRequestChildRepository_UpdateStatus_ParentInitiatedNullsReviewer(t *tes
 	}))
 
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).UpdateChildStatus(ctx, child.ID, capability.ChildStatusWithdrawn, nil, 0)
+		return ownerCompose.NewClocked(time.Now).UpdateChildStatus(ctx, child.ID, capability.ChildStatusWithdrawn, nil, 0)
 	}))
 
 	var got *capability.RequestChild
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var fbErr error
-		got, fbErr = ownerCompose.NewClocked(nil).ChildByID(ctx, child.ID)
+		got, fbErr = ownerCompose.NewClocked(time.Now).ChildByID(ctx, child.ID)
 		return fbErr
 	}))
 	assert.Equal(t, capability.ChildStatusWithdrawn, got.Status)
@@ -267,7 +268,7 @@ func TestRequestChildRepository_UpdateStatus_MissingIDErrors(t *testing.T) {
 
 	db, _, tenantID, _, _ := setupRequestChildRepoTest(t)
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).UpdateChildStatus(ctx, 9_999_999, capability.ChildStatusApproved, nil, 0)
+		return ownerCompose.NewClocked(time.Now).UpdateChildStatus(ctx, 9_999_999, capability.ChildStatusApproved, nil, 0)
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
@@ -289,13 +290,13 @@ func TestRequestChildRepository_LinkCreatedStudent_StampsBackLink(t *testing.T) 
 	}))
 
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).LinkCreatedStudent(ctx, child.ID, student.ID)
+		return ownerCompose.NewClocked(time.Now).LinkCreatedStudent(ctx, child.ID, student.ID)
 	}))
 
 	var got *capability.RequestChild
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var fbErr error
-		got, fbErr = ownerCompose.NewClocked(nil).ChildByID(ctx, child.ID)
+		got, fbErr = ownerCompose.NewClocked(time.Now).ChildByID(ctx, child.ID)
 		return fbErr
 	}))
 	require.NotNil(t, got.CreatedStudentID)
@@ -307,7 +308,7 @@ func TestRequestChildRepository_LinkCreatedStudent_MissingChildErrors(t *testing
 
 	db, _, tenantID, _, _ := setupRequestChildRepoTest(t)
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).LinkCreatedStudent(ctx, 9_999_999, 12345)
+		return ownerCompose.NewClocked(time.Now).LinkCreatedStudent(ctx, 9_999_999, 12345)
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
@@ -324,13 +325,13 @@ func TestRequestChildRepository_UpdateActivationPlan_StampsImmediate(t *testing.
 	}))
 
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).UpdateChildActivationPlan(ctx, child.ID, capability.ChildActivationImmediate, nil)
+		return ownerCompose.NewClocked(time.Now).UpdateChildActivationPlan(ctx, child.ID, capability.ChildActivationImmediate, nil)
 	}))
 
 	var got *capability.RequestChild
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var findErr error
-		got, findErr = ownerCompose.NewClocked(nil).ChildByID(ctx, child.ID)
+		got, findErr = ownerCompose.NewClocked(time.Now).ChildByID(ctx, child.ID)
 		return findErr
 	}))
 	assert.Equal(t, capability.ChildActivationImmediate, got.ActivationMode)
@@ -349,13 +350,13 @@ func TestRequestChildRepository_UpdateActivationPlan_StampsScheduledDate(t *test
 
 	activateOn := capability.Date("2027-09-01")
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).UpdateChildActivationPlan(ctx, child.ID, capability.ChildActivationScheduled, &activateOn)
+		return ownerCompose.NewClocked(time.Now).UpdateChildActivationPlan(ctx, child.ID, capability.ChildActivationScheduled, &activateOn)
 	}))
 
 	var got *capability.RequestChild
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var findErr error
-		got, findErr = ownerCompose.NewClocked(nil).ChildByID(ctx, child.ID)
+		got, findErr = ownerCompose.NewClocked(time.Now).ChildByID(ctx, child.ID)
 		return findErr
 	}))
 	assert.Equal(t, capability.ChildActivationScheduled, got.ActivationMode)
@@ -368,7 +369,7 @@ func TestRequestChildRepository_UpdateActivationPlan_MissingChildErrors(t *testi
 
 	db, _, tenantID, _, _ := setupRequestChildRepoTest(t)
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).UpdateChildActivationPlan(ctx, 9_999_999, capability.ChildActivationImmediate, nil)
+		return ownerCompose.NewClocked(time.Now).UpdateChildActivationPlan(ctx, 9_999_999, capability.ChildActivationImmediate, nil)
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
@@ -397,7 +398,7 @@ func TestRequestChildRepository_ListByPhaseAndStatuses_Filters(t *testing.T) {
 	var list []*capability.RequestChild
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.NewClocked(nil).ChildrenByPhaseStatuses(ctx, phaseID,
+		list, lErr = ownerCompose.NewClocked(time.Now).ChildrenByPhaseStatuses(ctx, phaseID,
 			[]string{capability.ChildStatusPendingAdminReview})
 		return lErr
 	}))
@@ -414,7 +415,7 @@ func TestRequestChildRepository_ListByPhaseAndStatuses_EmptyStatusesShortCircuit
 	var list []*capability.RequestChild
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.NewClocked(nil).ChildrenByPhaseStatuses(ctx, phaseID, nil)
+		list, lErr = ownerCompose.NewClocked(time.Now).ChildrenByPhaseStatuses(ctx, phaseID, nil)
 		return lErr
 	})
 	require.NoError(t, err)
@@ -426,7 +427,7 @@ func TestRequestChildRepository_ListByPhaseAndStatuses_RejectsZeroPhase(t *testi
 
 	db, _, tenantID, _, _ := setupRequestChildRepoTest(t)
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		_, lErr := ownerCompose.NewClocked(nil).ChildrenByPhaseStatuses(ctx, 0,
+		_, lErr := ownerCompose.NewClocked(time.Now).ChildrenByPhaseStatuses(ctx, 0,
 			[]string{capability.ChildStatusApproved})
 		return lErr
 	})
@@ -457,7 +458,7 @@ func TestRequestChildRepository_BulkUpdateStatusByPhaseAndStatus_TransitionsAll(
 	var n int
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var bErr error
-		n, bErr = ownerCompose.NewClocked(nil).TransitionPhaseChildren(ctx, phaseID,
+		n, bErr = ownerCompose.NewClocked(time.Now).TransitionPhaseChildren(ctx, phaseID,
 			capability.ChildStatusPendingRenewal,
 			capability.ChildStatusWithdrawn)
 		return bErr
@@ -468,7 +469,7 @@ func TestRequestChildRepository_BulkUpdateStatusByPhaseAndStatus_TransitionsAll(
 	var list []*capability.RequestChild
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.NewClocked(nil).ChildrenByPhaseStatuses(ctx, phaseID,
+		list, lErr = ownerCompose.NewClocked(time.Now).ChildrenByPhaseStatuses(ctx, phaseID,
 			[]string{capability.ChildStatusAutoRenewed})
 		return lErr
 	}))
@@ -480,7 +481,7 @@ func TestRequestChildRepository_BulkUpdateStatusByPhaseAndStatus_RejectsZeroPhas
 
 	db, _, tenantID, _, _ := setupRequestChildRepoTest(t)
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		_, bErr := ownerCompose.NewClocked(nil).TransitionPhaseChildren(ctx, 0,
+		_, bErr := ownerCompose.NewClocked(time.Now).TransitionPhaseChildren(ctx, 0,
 			capability.ChildStatusPendingRenewal,
 			capability.ChildStatusWithdrawn)
 		return bErr
@@ -493,12 +494,12 @@ func TestRequestChildRepository_BulkUpdateStatusByPhaseAndStatus_RejectsBlankSta
 
 	db, _, tenantID, phaseID, _ := setupRequestChildRepoTest(t)
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		_, bErr := ownerCompose.NewClocked(nil).TransitionPhaseChildren(ctx, phaseID, "", "withdrawn")
+		_, bErr := ownerCompose.NewClocked(time.Now).TransitionPhaseChildren(ctx, phaseID, "", "withdrawn")
 		return bErr
 	})
 	require.Error(t, err)
 	err = runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		_, bErr := ownerCompose.NewClocked(nil).TransitionPhaseChildren(ctx, phaseID, "pending_renewal", "")
+		_, bErr := ownerCompose.NewClocked(time.Now).TransitionPhaseChildren(ctx, phaseID, "pending_renewal", "")
 		return bErr
 	})
 	require.Error(t, err)
@@ -511,7 +512,7 @@ func TestRequestChildRepository_BulkUpdateStatusByPhaseAndStatus_ZeroAffectedNoE
 	var n int
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var bErr error
-		n, bErr = ownerCompose.NewClocked(nil).TransitionPhaseChildren(ctx, phaseID,
+		n, bErr = ownerCompose.NewClocked(time.Now).TransitionPhaseChildren(ctx, phaseID,
 			capability.ChildStatusPendingRenewal,
 			capability.ChildStatusWithdrawn)
 		return bErr
@@ -541,13 +542,13 @@ func TestRequestChildRepository_UpdateRolloverReview_HappyPath(t *testing.T) {
 	// "Behalten" with a grade override.
 	newGrade := int16(2)
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).ReviewRolloverChild(ctx, c.ID, capability.ChildStatusSubmitted, nil, &newGrade, account.ID)
+		return ownerCompose.NewClocked(time.Now).ReviewRolloverChild(ctx, c.ID, capability.ChildStatusSubmitted, nil, &newGrade, account.ID)
 	}))
 
 	var got *capability.RequestChild
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var fbErr error
-		got, fbErr = ownerCompose.NewClocked(nil).ChildByID(ctx, c.ID)
+		got, fbErr = ownerCompose.NewClocked(time.Now).ChildByID(ctx, c.ID)
 		return fbErr
 	}))
 	assert.Equal(t, capability.ChildStatusSubmitted, got.Status)
@@ -574,13 +575,13 @@ func TestRequestChildRepository_UpdateRolloverReview_NilGradePreservesExisting(t
 
 	// Decide without overriding grade.
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).ReviewRolloverChild(ctx, c.ID, capability.ChildStatusSubmitted, nil, nil, 0)
+		return ownerCompose.NewClocked(time.Now).ReviewRolloverChild(ctx, c.ID, capability.ChildStatusSubmitted, nil, nil, 0)
 	}))
 
 	var got *capability.RequestChild
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var fbErr error
-		got, fbErr = ownerCompose.NewClocked(nil).ChildByID(ctx, c.ID)
+		got, fbErr = ownerCompose.NewClocked(time.Now).ChildByID(ctx, c.ID)
 		return fbErr
 	}))
 	require.NotNil(t, got.TargetGradeLevel)
@@ -604,7 +605,7 @@ func TestRequestChildRepository_HoldAutoRenewedChild(t *testing.T) {
 		var got *capability.RequestChild
 		require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 			var err error
-			got, err = ownerCompose.NewClocked(nil).ChildByID(ctx, c.ID)
+			got, err = ownerCompose.NewClocked(time.Now).ChildByID(ctx, c.ID)
 			return err
 		}))
 		return got
@@ -613,7 +614,7 @@ func TestRequestChildRepository_HoldAutoRenewedChild(t *testing.T) {
 		var held bool
 		require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 			var err error
-			held, err = ownerCompose.NewClocked(nil).HoldAutoRenewedChild(ctx, c.ID, capability.ReviewReasonChildQuotaReached)
+			held, err = ownerCompose.NewClocked(time.Now).HoldAutoRenewedChild(ctx, c.ID, capability.ReviewReasonChildQuotaReached)
 			return err
 		}))
 		return held
@@ -628,14 +629,14 @@ func TestRequestChildRepository_HoldAutoRenewedChild(t *testing.T) {
 	assert.False(t, hold(), "a child that is no longer auto_renewed is left alone")
 
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).UpdateChildStatus(ctx, c.ID, capability.ChildStatusUnderReview, nil, 0)
+		return ownerCompose.NewClocked(time.Now).UpdateChildStatus(ctx, c.ID, capability.ChildStatusUnderReview, nil, 0)
 	}))
 	got = read()
 	require.NotNil(t, got.ReviewReason, "an enrollment that stays open keeps its review reason")
 	assert.Equal(t, capability.ReviewReasonChildQuotaReached, *got.ReviewReason)
 
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).UpdateChildStatus(ctx, c.ID, capability.ChildStatusWaitlisted, nil, 0)
+		return ownerCompose.NewClocked(time.Now).UpdateChildStatus(ctx, c.ID, capability.ChildStatusWaitlisted, nil, 0)
 	}))
 	got = read()
 	assert.Equal(t, capability.ChildStatusWaitlisted, got.Status)
@@ -647,7 +648,7 @@ func TestRequestChildRepository_UpdateRolloverReview_MissingIDErrors(t *testing.
 
 	db, _, tenantID, _, _ := setupRequestChildRepoTest(t)
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.NewClocked(nil).ReviewRolloverChild(ctx, 9_999_999,
+		return ownerCompose.NewClocked(time.Now).ReviewRolloverChild(ctx, 9_999_999,
 			capability.ChildStatusSubmitted, nil, nil, 0)
 	})
 	require.Error(t, err)

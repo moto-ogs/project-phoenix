@@ -154,7 +154,7 @@ func (e offeringReviewTestEnrollment) Phases(ctx context.Context, ids []int64) (
 }
 
 func (e offeringReviewTestEnrollment) Selections(ctx context.Context, dates map[int64]careplan.Date) ([]careplanCompose.OfferingReviewBooking, error) {
-	rows, err := careplanCompose.NewOfferingBookings().CareOfferingBookingsAtDates(ctx, dates)
+	rows, err := careplanCompose.NewOfferingBookings(time.Now).CareOfferingBookingsAtDates(ctx, dates)
 	if err != nil {
 		return nil, err
 	}

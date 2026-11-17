@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
 import { newQuestionDraft, type SurveyEditorDraft } from "~/lib/survey-editor";
 import type { Survey } from "~/lib/surveys-api";
+import { testClockDay } from "~/test/clock";
 
 import {
   SURVEY_FORM_CHECK_MESSAGE,
@@ -25,6 +26,11 @@ vi.mock("~/components/announcements/parent-target-picker", () => ({
   }),
 }));
 
+// Die Frist liegt drei Wochen nach dem Testtag, also immer in der Zukunft.
+const [closesYear = 0, closesMonth = 1, closesDate = 1] = testClockDay(21)
+  .split("-")
+  .map(Number);
+
 function validDraft(title: string): SurveyEditorDraft {
   return {
     title,
@@ -32,7 +38,7 @@ function validDraft(title: string): SurveyEditorDraft {
     audience: "staff",
     anonymous: true,
     sendEmail: false,
-    closesDay: new Date(2026, 8, 30),
+    closesDay: new Date(closesYear, closesMonth - 1, closesDate),
     closesTime: "18:00",
     targets: [],
     questions: [{ ...newQuestionDraft("scale"), prompt: "Wie geht es?" }],

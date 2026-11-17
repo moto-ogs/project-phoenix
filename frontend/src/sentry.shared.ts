@@ -1,6 +1,7 @@
 import type { BrowserOptions, ErrorEvent, Event } from "@sentry/nextjs";
 
 import { SIGNING_TOKEN_PATH_PATTERN } from "~/lib/log-redaction";
+import { isSentryUserPseudonym } from "~/lib/sentry-user-pseudonym";
 
 const routerStateParseMessage =
   "The router state header was sent but could not be parsed.";
@@ -151,10 +152,12 @@ function scrubRequestAndUser(event: Event): void {
     event.request.cookies = {};
   }
 
-  // The internal account ID is the only user field Sentry may keep: no name,
-  // e-mail, username or IP address.
+  // The account's pseudonym is the only user field Sentry may keep (#3843):
+  // no account ID, name, e-mail, username or IP address.
   if (event.user) {
-    event.user = event.user.id === undefined ? {} : { id: event.user.id };
+    event.user = isSentryUserPseudonym(event.user.id)
+      ? { id: event.user.id }
+      : {};
   }
 
   scrubUrls(event);
@@ -171,7 +174,8 @@ const querySpanAttributeKeys = [
 ];
 
 // Personal fields the SDK copies onto spans from the scope user and the
-// request. As on error events, only the account ID (`user.id`) stays.
+// request. As on error events, only the account's pseudonym (`user.id`)
+// stays.
 const personalSpanAttributeKeys = [
   "user.email",
   "user.name",
@@ -190,7 +194,7 @@ const credentialHeaderAttributes = new Set([
 /**
  * beforeSendSpan: removes query strings, fragments and feed tokens from a
  * span's name and attributes (url.full, the referrer list of a page view,
- * browser.web_vital.lcp.url, …) and every personal field but the account ID,
+ * browser.web_vital.lcp.url, …) and every personal field but the pseudonym,
  * the same data boundary as for error events. Paths with IDs stay.
  */
 export function scrubSpan(span: SpanJSON): SpanJSON {
@@ -198,6 +202,9 @@ export function scrubSpan(span: SpanJSON): SpanJSON {
   const attributes = span.attributes;
   for (const key of [...querySpanAttributeKeys, ...personalSpanAttributeKeys]) {
     delete attributes[key];
+  }
+  if (!isSentryUserPseudonym(attributes["user.id"])) {
+    delete attributes["user.id"];
   }
   for (const key of Object.keys(attributes)) {
     if (credentialHeaderAttributes.has(key.toLowerCase())) {

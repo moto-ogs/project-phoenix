@@ -73,7 +73,7 @@ func NewRequestUploads(deps RequestUploadDependencies) *RequestUploads {
 		deps.Logger = slog.Default()
 	}
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("enrollment request uploads: the clock is required")
 	}
 	return &RequestUploads{deps: deps}
 }

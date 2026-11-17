@@ -469,36 +469,6 @@ func applyNullableFieldFilter(filter *ports.QueryFilter, column string, value in
 	}
 }
 
-// AnonymizeAndSoftDelete overwrites the person's PII with placeholder values
-// and stamps deleted_at. Custom method (backend-conventions Rule 2): GDPR
-// person-deletion step combining anonymization and soft delete in one
-// statement; used by operator SoftDeletePerson. Cross-tenant by design when
-// the context carries no tenant (operator admin transactions).
-func (r *personRepository) AnonymizeAndSoftDelete(ctx context.Context, personID int64) error {
-	ambientDB11, databaseErr11 := r.runtime.DB(ctx)
-	if databaseErr11 != nil {
-		return databaseErr11
-	}
-	query := ambientDB11.NewUpdate().
-		Model((*users.Person)(nil)).
-		ModelTableExpr(`users.persons AS "person"`).
-		Set(`first_name = ?`, "Gelöscht").
-		Set(`last_name = ?`, "Benutzer").
-		Set(`birthday = NULL`).
-		Set(`deleted_at = NOW()`).
-		Where(`"person".id = ?`, personID)
-
-	query = withTenantFilter(ctx, r.runtime, query, "person")
-
-	if _, err := query.Exec(ctx); err != nil {
-		return &ports.DatabaseError{
-			Op:  "anonymize and soft delete person",
-			Err: translateNotFound(err),
-		}
-	}
-	return nil
-}
-
 // Create inserts a new person, stamping the context's tenant when the row has
 // none yet.
 func (r *personRepository) Create(ctx context.Context, person *users.Person) error {

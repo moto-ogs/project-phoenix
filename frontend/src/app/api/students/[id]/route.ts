@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { apiDelete, apiPut, handleApiError } from "~/lib/api-helpers.server";
-import { contractGet, decodeContract } from "~/lib/contract/client.server";
+import { apiDelete, handleApiError } from "~/lib/api-helpers.server";
+import { contractGet, contractWrite } from "~/lib/contract/client.server";
 import { routes } from "~/lib/contract/students.generated";
 import { problemBody, type ProblemBody } from "~/lib/api-error";
 import {
@@ -19,7 +19,6 @@ import {
   mapStudentDetailResponse,
   mapStudentResponse,
   prepareStudentForBackend,
-  studentWriteResponse,
   writeMayChangeCompanions,
 } from "~/lib/student-wire";
 import {
@@ -35,6 +34,7 @@ import { PRIVACY_CONSENT_SAVED_DETAIL } from "~/lib/student-update-errors";
 
 const logger = createLogger({ component: "StudentDetailRoute" });
 const DETAIL = routes["GET /api/students/{id}"];
+const UPDATE = routes["PUT /api/students/{id}"];
 
 /**
  * Re-shapes a failed student PUT into the SAME wire error plus the
@@ -155,9 +155,10 @@ export const PUT = createPutHandler<Student | Response, StudentUpdateBody>(
         }
       }
 
-      let answer: unknown;
+      let updated;
       try {
-        answer = await apiPut<unknown>(
+        updated = await contractWrite(
+          UPDATE,
           `/api/students/${id}`,
           token,
           prepareStudentForBackend(body),
@@ -167,11 +168,6 @@ export const PUT = createPutHandler<Student | Response, StudentUpdateBody>(
           return await markPrivacyConsentSaved(studentError, request);
         throw studentError;
       }
-      const updated = decodeContract(
-        "PUT /api/students/{id}",
-        studentWriteResponse,
-        answer,
-      );
       if (!updated.ok) {
         if (consent)
           return await markPrivacyConsentSaved(updated.error.cause, request);

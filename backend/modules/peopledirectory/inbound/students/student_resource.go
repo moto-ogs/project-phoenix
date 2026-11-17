@@ -36,7 +36,7 @@ type ResourceConfig struct {
 	Uploads            common.UploadStorage
 	UserContextService CallerContext
 	// Now is the root's clock; a note's day and the activities a note may
-	// refer to are judged against its Berlin day. Nil uses the real one.
+	// refer to are judged against its Berlin day. Required.
 	Now func() time.Time
 }
 
@@ -44,7 +44,7 @@ type Resource struct{ ResourceConfig }
 
 func NewResource(cfg ResourceConfig) *Resource {
 	if cfg.Now == nil {
-		cfg.Now = time.Now
+		panic("people directory students: clock is required")
 	}
 	return &Resource{ResourceConfig: cfg}
 }

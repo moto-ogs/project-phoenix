@@ -24,7 +24,7 @@ import { DatabaseFormModal } from "~/components/database/database-form-modal";
 import { RoomsList } from "@/components/rooms/rooms-list";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useIsMobile } from "~/components/ui/hooks/useIsMobile";
+import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { useTenantAwarePath } from "~/lib/tenant-path";
@@ -75,7 +75,7 @@ function RoomsPageContent() {
   const [categoryFilter, setCategoryFilter] = useState<string>(
     () => searchParams.get("category") ?? "all",
   );
-  const isMobile = useIsMobile();
+  const isMobile = useMediaQuery(BELOW_MD);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
 

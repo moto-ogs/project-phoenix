@@ -128,7 +128,7 @@ func NewChangeRequests(deps ChangeRequestDependencies) *ChangeRequests {
 		deps.Logger = slog.Default()
 	}
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("enrollment change requests: the clock is required")
 	}
 	deps.ParentsURL = strings.TrimRight(strings.TrimSpace(deps.ParentsURL), "/")
 	if deps.ParentsURL == "" {

@@ -1,9 +1,21 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render as baseRender,
+  screen,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
+
+// The detail view reads its attachments through the shared parent cache.
+const render: typeof baseRender = ((ui: React.ReactElement) =>
+  baseRender(ui, { wrapper: ParentResourceTestProvider })) as typeof baseRender;
 
 import type { ParentAnnouncement } from "~/lib/parent-api";
 import * as parentApi from "~/lib/parent-api";
 import type { SurveyForm } from "~/lib/survey-form";
+import { testClockDay } from "~/test/clock";
 import {
   NewsCard,
   NewsDetailModal,
@@ -13,6 +25,17 @@ import {
 // Umfrage mit Fragebogen im Elternportal (#4781): die Karte zeigt, ob die
 // Umfrage anonym ist und ob dieses Elternkonto teilgenommen hat; der Dialog
 // sagt das vor der ersten Frage und schickt die Antworten einmal ab.
+
+// Die Umfrage läuft noch drei Wochen.
+const CLOSES_AT = `${testClockDay(21)}T16:00:00Z`;
+const CLOSES_LABEL = new Intl.DateTimeFormat("de-DE", {
+  timeZone: "Europe/Berlin",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+}).format(new Date(CLOSES_AT));
 
 function surveyItem(
   survey: Partial<NonNullable<ParentAnnouncement["survey"]>> = {},
@@ -32,7 +55,7 @@ function surveyItem(
     survey: {
       survey_id: "7",
       anonymous: true,
-      closes_at: "2026-09-30T16:00:00Z",
+      closes_at: CLOSES_AT,
       participated: false,
       ...survey,
     },
@@ -47,7 +70,7 @@ const form: SurveyForm = {
     title: "Wie zufrieden sind Sie mit der OGS?",
     intro: "Ihre Meinung hilft uns.",
     anonymous: true,
-    closes_at: "2026-09-30T16:00:00Z",
+    closes_at: CLOSES_AT,
     questions: [
       {
         id: "q1",
@@ -77,7 +100,7 @@ describe("Umfrage im Elternportal", () => {
     expect(screen.getByText("Antwort nötig")).toBeInTheDocument();
     expect(screen.getByText("Anonym")).toBeInTheDocument();
     expect(
-      screen.getByText("Teilnahme bis 30.09.2026, 18:00 Uhr"),
+      screen.getByText(`Teilnahme bis ${CLOSES_LABEL} Uhr`),
     ).toBeInTheDocument();
     expect(isOutstandingAnnouncement(surveyItem())).toBe(true);
   });

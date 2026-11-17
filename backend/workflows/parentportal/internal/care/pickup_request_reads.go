@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -20,7 +19,7 @@ func (s *Service) ListPickupChangeRequests(ctx context.Context, accountID, stude
 		return nil
 	}, func(txCtx context.Context, _ *Child) error {
 		var listErr error
-		rows, listErr = s.CareRequests.ListPickupChangeRequests(txCtx, studentID, time.Now().AddDate(0, -2, 0))
+		rows, listErr = s.CareRequests.ListPickupChangeRequests(txCtx, studentID, s.now().AddDate(0, -2, 0))
 		if listErr != nil {
 			return fmt.Errorf("parent: list pickup change requests: %w", listErr)
 		}

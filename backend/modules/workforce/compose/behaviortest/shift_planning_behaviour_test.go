@@ -98,7 +98,7 @@ func planningDependencies(t *testing.T, ctx context.Context, db *bun.DB, capabil
 		Workforce: capability, Staff: planningStaffDirectory{Staff: staff},
 		CalendarPeriods: calendarOwner, Instances: planningTimetable{},
 		InstanceStaff: planningInstanceStaff{}, Rooms: owners.NewTimetableRoomNames(ownersRooms), ActivityGroups: planningGroups{},
-		DB: db,
+		DB: db, Today: calendar.TodayDate,
 	}
 }
 
@@ -119,6 +119,7 @@ func TestNewShiftPlanningRequiresTheOwnersItComposesOver(t *testing.T) {
 		"rooms":            func(d *compose.ShiftPlanningDependencies) { d.Rooms = nil },
 		"activity groups":  func(d *compose.ShiftPlanningDependencies) { d.ActivityGroups = nil },
 		"database":         func(d *compose.ShiftPlanningDependencies) { d.DB = nil },
+		"school day clock": func(d *compose.ShiftPlanningDependencies) { d.Today = nil },
 	} {
 		t.Run(name, func(t *testing.T) {
 			deps := complete

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { BillingPeriod, BillingRun } from "~/lib/traeger-billing-api";
 
 const { api, mockPush, mockReplace, route } = vi.hoisted(() => ({
@@ -18,9 +18,17 @@ vi.mock("~/lib/traeger-billing-api", () => api);
 const { session } = vi.hoisted(() => ({
   session: { permissions: [] as string[] },
 }));
-vi.mock("next-auth/react", () => ({
+vi.mock("next-auth/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-auth/react")>()),
   useSession: () => ({
-    data: { user: { permissions: session.permissions } },
+    data: {
+      user: {
+        id: "traeger-test",
+        scope: "org",
+        orgId: 7,
+        permissions: session.permissions,
+      },
+    },
     status: "authenticated",
   }),
 }));
@@ -34,6 +42,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 import TraegerAbrechnungPage from "./page";
+
+vi.unmock("swr");
 
 const PERIOD: BillingPeriod = {
   id: "5",
@@ -58,9 +68,9 @@ const RELEASED: BillingRun = {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerAbrechnungPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

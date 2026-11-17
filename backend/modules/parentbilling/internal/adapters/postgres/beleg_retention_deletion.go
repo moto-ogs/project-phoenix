@@ -94,7 +94,9 @@ func (s *Store) LogContractDeletions(ctx context.Context, organizationID int64, 
 }
 
 // DeleteExpiredBelegDeletions deletes the entries of the deletion log older
-// than years, like the deletion log of a school.
+// than years, like the deletion log of a school. The database dates the
+// entries (column default, also in parent_billing.log_removed_belege), so
+// its clock dates their age too (ADR 0281).
 func (s *Store) DeleteExpiredBelegDeletions(ctx context.Context, years int) (int, error) {
 	db, err := adminDB(ctx)
 	if err != nil {

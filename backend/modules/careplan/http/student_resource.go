@@ -76,7 +76,7 @@ type Resource struct{ ResourceConfig }
 
 func NewResource(cfg ResourceConfig) *Resource {
 	if cfg.Now == nil {
-		cfg.Now = time.Now
+		panic("care plan student resource: the root's clock is required")
 	}
 	return &Resource{ResourceConfig: cfg}
 }

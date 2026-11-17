@@ -25,7 +25,7 @@ import {
 import type { DateRange } from "react-day-picker";
 import { Alert } from "~/components/ui/alert";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   buildDefaultPresets,
   DateRangePicker,
@@ -57,6 +57,7 @@ import {
   parseISODate,
   toISODate,
 } from "~/lib/date-helpers";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import {
   fetchStatisticsReport,
@@ -70,7 +71,6 @@ import {
   type StatisticsExportSection,
   type StatisticsFilter,
   type StatisticsGroupRow,
-  type StatisticsOccupancy,
   type StatisticsReport,
   type StatisticsReportSection,
   type StatisticsRoomRow,
@@ -102,6 +102,8 @@ const MAIN_SECTIONS: readonly StatisticsReportSection[] = [
   "rooms",
   "courses",
 ];
+const CATALOG_SECTIONS: readonly StatisticsReportSection[] = ["attendance"];
+const OCCUPANCY_SECTIONS: readonly StatisticsReportSection[] = ["occupancy"];
 
 // Der Kursbereich hat zwei Sichten auf dieselben Zahlen. Sie stehen als
 // eigener Umschalter unter dem Bereichswechsel, damit oben vier Bereiche
@@ -156,12 +158,6 @@ export default function StatisticsPage() {
   const [availableClasses, setAvailableClasses] = useState<readonly string[]>(
     [],
   );
-  const [occupancy, setOccupancy] = useState<StatisticsOccupancy | null>(null);
-  const [occupancyLoading, setOccupancyLoading] = useState(false);
-  const occupancyLoad = useApiLoadError();
-  const { show: showOccupancyError, clear: clearOccupancyError } =
-    occupancyLoad;
-  const [occupancyReloadKey, setOccupancyReloadKey] = useState(0);
   const [view, setView] = useState<StatisticsView>("groups");
   const [courseView, setCourseView] = useState<CourseView>("by-course");
   // Ladefehler im Gerüst mit Wiederholen, Exportfehler als Toast (#2517).
@@ -172,7 +168,9 @@ export default function StatisticsPage() {
   const retryExportRef = useRef<() => void>(() => undefined);
   // Der ungefilterte Katalog gehört immer zu genau einem Zeitraum. So löst
   // eine Auswahländerung keine zweite, identische Katalogabfrage aus.
-  const filterCatalogRangeRef = useRef<string | null>(null);
+  const [filterCatalogRange, setFilterCatalogRange] = useState<string | null>(
+    null,
+  );
 
   const updateFilterCatalog = useCallback(
     (report: StatisticsReport, rangeKey: string) => {
@@ -188,7 +186,7 @@ export default function StatisticsPage() {
       );
       const availableClasses = new Set(classes);
 
-      filterCatalogRangeRef.current = rangeKey;
+      setFilterCatalogRange(rangeKey);
       setAvailableGroups(report.groups);
       setAvailableClasses(classes);
       setGroupIds((selected) =>
@@ -278,77 +276,61 @@ export default function StatisticsPage() {
   // Nach einem Zeitraumwechsel braucht die Auswahl deshalb ihren eigenen,
   // ungefilterten Bericht. Der Abschnitt attendance liefert Gruppen und
   // Klassen, ohne Räume, Kurse oder die aufwendige Belegung zu berechnen.
-  useEffect(() => {
-    if (!fromISO || !toISO) return;
-    if (groupIds.length === 0 && schoolClasses.length === 0) return;
-
-    const rangeKey = `${fromISO}-${toISO}`;
-    if (filterCatalogRangeRef.current === rangeKey) return;
-
-    let cancelled = false;
-    fetchStatisticsReport(fromISO, toISO, {}, ["attendance"])
-      .then((report) => {
-        if (!cancelled) updateFilterCatalog(report, rangeKey);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        // Der sichtbare Bericht bleibt nutzbar; die nächste Zeitraumänderung
-        // versucht den Katalog erneut.
-        logger.error("statistics_filter_catalog_fetch_failed", {
+  // Scheitert er, bleibt der sichtbare Bericht nutzbar.
+  const rangeKey = fromISO && toISO ? `${fromISO}-${toISO}` : null;
+  const { data: filterCatalog } = useSWRAuth<StatisticsReport>(
+    fromISO &&
+      toISO &&
+      (groupIds.length > 0 || schoolClasses.length > 0) &&
+      filterCatalogRange !== rangeKey
+      ? studentKeys.statisticsReport({
           from: fromISO,
           to: toISO,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    fromISO,
-    toISO,
-    groupIds.length,
-    schoolClasses.length,
-    updateFilterCatalog,
-  ]);
-
-  // Belegung nach Uhrzeit: eigene Anfrage, nur bei offenem Reiter.
+          groupIds: [],
+          schoolClasses: [],
+          sections: CATALOG_SECTIONS,
+        })
+      : null,
+    () => fetchStatisticsReport(fromISO!, toISO!, {}, CATALOG_SECTIONS),
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    },
+  );
   useEffect(() => {
-    if (view !== "occupancy" || !fromISO || !toISO) return;
-    let cancelled = false;
-    // Alte Zahlen gelten nicht für den neuen Filter: sofort weg damit.
-    setOccupancy(null);
-    setOccupancyLoading(true);
-    clearOccupancyError();
-    fetchStatisticsReport(fromISO, toISO, filter, ["occupancy"])
-      .then((report) => {
-        if (!cancelled) setOccupancy(report.occupancy ?? null);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        setOccupancy(null);
-        logger.error("statistics_occupancy_fetch_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        void showOccupancyError(error, {
-          object: "die Zahlen nach Uhrzeit",
-          retry: () => setOccupancyReloadKey((key) => key + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setOccupancyLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    view,
-    fromISO,
-    toISO,
-    filter,
-    occupancyReloadKey,
-    showOccupancyError,
-    clearOccupancyError,
-  ]);
+    if (filterCatalog && rangeKey) updateFilterCatalog(filterCatalog, rangeKey);
+  }, [filterCatalog, rangeKey, updateFilterCatalog]);
+
+  // Belegung nach Uhrzeit: eigene Anfrage, nur bei offenem Reiter. Alte
+  // Zahlen gelten nicht für einen neuen Filter.
+  const {
+    data: occupancyReport,
+    error: occupancyError,
+    mutate: reloadOccupancy,
+  } = useSWRAuth<StatisticsReport>(
+    view === "occupancy" && fromISO && toISO
+      ? studentKeys.statisticsReport({
+          from: fromISO,
+          to: toISO,
+          ...filter,
+          sections: OCCUPANCY_SECTIONS,
+        })
+      : null,
+    () => fetchStatisticsReport(fromISO!, toISO!, filter, OCCUPANCY_SECTIONS),
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    },
+  );
+  const occupancy = occupancyReport?.occupancy ?? null;
+  const occupancyLoad = useSwrResourceLoadError(
+    [{ data: occupancyReport, error: occupancyError }],
+    "die Zahlen nach Uhrzeit",
+    () => reloadOccupancy(),
+  );
+  const occupancyLoading = !occupancyReport && !occupancyError;
 
   const downloadExport = useCallback(
     async (

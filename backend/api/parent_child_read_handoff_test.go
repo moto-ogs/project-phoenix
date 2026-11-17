@@ -45,6 +45,8 @@ type childReadRig struct {
 	childCheckDelay *atomic.Int64
 	// settings writes the school's settings, e.g. child photos on or off.
 	settings childReadSettings
+	// now is the portal's clock, the one its decisions read.
+	now func() time.Time
 }
 
 func newChildReadRig(t *testing.T) childReadRig {
@@ -56,11 +58,14 @@ func newChildReadRig(t *testing.T) childReadRig {
 // with adjusts the portal's dependencies before they are composed.
 func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dependencies)) childReadRig {
 	t.Helper()
-	now := func() time.Time { return childReadToday.BerlinMidnight().Add(10 * time.Hour) }
+	// The rig's clock starts at 10:00 on the fixed school day and runs on,
+	// so a slow step still moves the instant a later decision reads.
+	started := time.Now()
+	now := func() time.Time { return childReadToday.BerlinMidnight().Add(10*time.Hour + time.Since(started)) }
 	database := testpkg.NewDatabase(t, db)
 	people := NewPeopleRepositorySuiteFactory(database)
 	members := owners.MustNewMembershipTestRepositories(database)
-	repos, err := NewParentRouteTestRepositories(database, members)
+	repos, err := NewParentRouteTestRepositories(database, members, now)
 	require.NoError(t, err)
 	settings, err := owners.NewSettingsTestModule(database, testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
@@ -73,11 +78,11 @@ func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dep
 	module, _, _, _, _, _, err := NewStudentTestModule(database, testpkg.TenantRuntime(t, db), feedback.Feedback, now)
 	require.NoError(t, err)
 	directory := owners.MustNewPeopleDirectory(database)
-	enrollment := owners.BuildEnrollmentRows(owners.NewEnrollmentBookings(nil), repos.CareExceptions, directory)
+	enrollment := owners.BuildEnrollmentRows(owners.NewEnrollmentBookings(time.Now), repos.CareExceptions, directory)
 	catalog := enrollmentCompose.NewCareOfferingRecords(repos.CareExceptions)
 	mealSettings, err := owners.BuildMealPlanSettings(settings.Settings)
 	require.NoError(t, err)
-	schoolCalendar, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings)
+	schoolCalendar, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings, nil)
 	require.NoError(t, err)
 	meals, err := owners.BuildServeMealPlan(database, mealSettings, owners.NewStudentRootReads(people.Student), directory, schoolCalendar)
 	require.NoError(t, err)
@@ -101,8 +106,8 @@ func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dep
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
 	router.Use(RequestSettingsCacheMiddleware, RequestIdentityCacheMiddleware)
-	router.Mount("/parent", parentHTTP.NewResource(parentHTTP.ResourceConfig{Parent: portal, MessageAttachmentFiles: NewMemoryMessageAttachmentStorageForTests()}).Router(ParentSessionChain))
-	return childReadRig{db: db, router: router, bookConference: owners.ParentConferenceBooking(portal), childCheckDelay: childCheckDelay, settings: settings.Settings}
+	router.Mount("/parent", parentHTTP.NewResource(parentHTTP.ResourceConfig{Now: deps.Now, Parent: portal, MessageAttachmentFiles: NewMemoryMessageAttachmentStorageForTests()}).Router(ParentSessionChain))
+	return childReadRig{db: db, router: router, bookConference: owners.ParentConferenceBooking(portal), childCheckDelay: childCheckDelay, settings: settings.Settings, now: deps.Now}
 }
 
 type childReadSettings interface {
@@ -531,7 +536,8 @@ func TestParentChildReadsFailAFailedStartOnce(t *testing.T) {
 // window of decided requests starts when the child check is done, as before
 // the handoff. With a slow child check, a request decided just inside the
 // window at the time of the request is outside it once the check is done.
-// The production code reads the system clock, so the test uses it too.
+// The window is read on the portal's clock, which runs on from the rig's
+// fixed day, so the test reads that clock too.
 func TestParentExcusedRequestsStartTheirWindowAfterTheChildCheck(t *testing.T) {
 	t.Parallel()
 	rig := newChildReadRig(t)
@@ -546,7 +552,7 @@ func TestParentExcusedRequestsStartTheirWindowAfterTheChildCheck(t *testing.T) {
 	// calendar weeks back in the local zone, so a daylight saving change
 	// inside the window moves both alike.
 	const margin, slow = 2 * time.Second, 4 * time.Second
-	windowStart := func() time.Time { return time.Now().AddDate(0, 0, -14) }
+	windowStart := func() time.Time { return rig.now().AddDate(0, 0, -14) }
 
 	inside := decide(windowStart().Add(margin))
 	rec, _ := rig.get(t, path, family.token)

@@ -19,9 +19,12 @@ import {
   STAFF_NAV_ITEMS_BY_HREF,
   staffNavBorrowedActiveHref,
   staffNavItemPermitted,
+  staffNavPageState,
   staffNavPathActive,
   staffNavSettingOn,
   type StaffNavItem,
+  type StaffNavPageInputs,
+  type StaffNavPageRules,
 } from "./staff-nav-items";
 
 // Seitenleiste und mobile Leiste lesen ihre Seiten aus einer Liste (#6580).
@@ -181,5 +184,118 @@ describe("staff navigation items (#6580)", () => {
     expect(
       staffNavBorrowedActiveHref("/rooms/unterwegs", "/rooms", false),
     ).toBeNull();
+  });
+});
+
+describe("staffNavPageState: one rule for sidebar and mobile navigation", () => {
+  const SIDEBAR: StaffNavPageRules = {
+    tagesplanRouteRightForAdmins: false,
+    staffNoticesOpenForAdminRole: false,
+    loadSchoolSwitches: true,
+  };
+  const MOBILE: StaffNavPageRules = {
+    tagesplanRouteRightForAdmins: true,
+    staffNoticesOpenForAdminRole: true,
+    loadSchoolSwitches: true,
+  };
+
+  function inputs(
+    overrides: Partial<StaffNavPageInputs> = {},
+  ): StaffNavPageInputs {
+    return {
+      viewer: { session: session([]), ...STAFF },
+      modulePage: () => "open",
+      isBinaryMode: false,
+      settings: { timetable: true, display: true, attendanceLog: true },
+      canOpenRequestsPage: false,
+      staffMessagingEnabled: true,
+      parentNewsEnabled: true,
+      mealPlanEnabled: true,
+      ...overrides,
+    };
+  }
+
+  it("shows a page of an unbooked module locked, whatever the right", () => {
+    const state = staffNavPageState(
+      "/meal-plan",
+      inputs({ modulePage: () => "locked", mealPlanEnabled: false }),
+      SIDEBAR,
+    );
+    expect(state).toBe("locked");
+    expect(
+      staffNavPageState(
+        "/meal-plan",
+        inputs({ modulePage: () => "hidden" }),
+        SIDEBAR,
+      ),
+    ).toBeNull();
+  });
+
+  it("needs right and school switch for an open catalog page", () => {
+    const canAnnounce = { session: session(["admin:*"]), ...STAFF };
+    expect(
+      staffNavPageState(
+        "/parent-announcements",
+        inputs({ viewer: canAnnounce }),
+        SIDEBAR,
+      ),
+    ).toBe("open");
+    expect(
+      staffNavPageState(
+        "/parent-announcements",
+        inputs({ viewer: canAnnounce, parentNewsEnabled: false }),
+        SIDEBAR,
+      ),
+    ).toBeNull();
+    expect(
+      staffNavPageState("/parent-announcements", inputs(), SIDEBAR),
+    ).toBeNull();
+    expect(
+      staffNavPageState(
+        "/team-chat",
+        inputs({ staffMessagingEnabled: false }),
+        SIDEBAR,
+      ),
+    ).toBeNull();
+  });
+
+  it("drops binary-hidden pages without a lock and unknown addresses", () => {
+    expect(
+      staffNavPageState(
+        "/activities",
+        inputs({ isBinaryMode: true, modulePage: () => "locked" }),
+        SIDEBAR,
+      ),
+    ).toBeNull();
+    expect(staffNavPageState("/nirgends", inputs(), SIDEBAR)).toBeNull();
+  });
+
+  it("keeps the two surfaces' differing rules for the admin role (#6708)", () => {
+    const admin = {
+      session: session([]),
+      isAdmin: true,
+      isCaregiver: true,
+      openCareGroupMode: false,
+    };
+    expect(
+      staffNavPageState("/tagesplan", inputs({ viewer: admin }), SIDEBAR),
+    ).toBe("open");
+    expect(
+      staffNavPageState("/tagesplan", inputs({ viewer: admin }), MOBILE),
+    ).toBeNull();
+    expect(
+      staffNavPageState(
+        "/tagesinformationen",
+        inputs({ viewer: admin }),
+        SIDEBAR,
+      ),
+    ).toBeNull();
+    expect(
+      staffNavPageState(
+        "/tagesinformationen",
+        inputs({ viewer: admin }),
+        MOBILE,
+      ),
+    ).toBe("open");
   });
 });

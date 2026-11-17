@@ -8,9 +8,8 @@
 // Excel oder CSV (#4718).
 // Nur Zahlen, keine Kinder.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { useSession } from "next-auth/react";
 import type { DateRange } from "react-day-picker";
 import { School } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
@@ -48,14 +47,16 @@ import {
   windowLength,
 } from "~/components/traeger/utilization-model";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
-import { useApiLoadError } from "~/contexts/ToastContext";
+import { FreshPerTraeger } from "~/components/traeger/fresh-per-traeger";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { childrenConcept } from "~/lib/concepts/children";
 import { presentConcept } from "~/lib/concepts/present";
 import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { createLogger } from "~/lib/logger";
+import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
 import {
   COMPARISON_METRICS,
   type ComparisonMetric,
@@ -65,9 +66,6 @@ import {
 } from "~/lib/traeger-comparison-api";
 import type { UtilizationWindow } from "~/lib/traeger-utilization-api";
 import { traegerPath } from "~/lib/traeger-url";
-import { fetchTraegerSchools, type TraegerSchool } from "~/lib/traeger-api";
-
-const logger = createLogger({ component: "TraegerComparisonPage" });
 
 const ComparisonChart = dynamic(
   () =>
@@ -270,8 +268,14 @@ function Figures({
 }
 
 export default function TraegerComparisonPage() {
-  const { data: session, status } = useSession();
-  const orgId = session?.user?.orgId;
+  return (
+    <FreshPerTraeger>
+      <TraegerComparisonContent />
+    </FreshPerTraeger>
+  );
+}
+
+function TraegerComparisonContent() {
   const today = useBerlinToday();
   const presets = useMemo(() => utilizationPresets(today), [today]);
   const defaultWindow = presets[DEFAULT_PRESET]?.window ?? {
@@ -285,11 +289,6 @@ export default function TraegerComparisonPage() {
   const [rankBy, setRankBy] = useState<ComparisonMetric>(
     DEFAULT_RANKING_METRIC,
   );
-  const [allSchools, setAllSchools] = useState<readonly TraegerSchool[]>([]);
-  const [comparison, setComparison] = useState<TraegerComparison | null>(null);
-  const request = useRef(0);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
 
   const changeWindow = useCallback((next: UtilizationWindow) => {
     let { from } = next;
@@ -299,63 +298,20 @@ export default function TraegerComparisonPage() {
     setPeriod({ from, to: next.to });
   }, []);
 
-  const load = useCallback(async () => {
-    if (orgId === undefined) return;
-    const current = ++request.current;
-    setComparison(null);
-    try {
-      const result = await fetchTraegerComparison({ ...period, schoolIds });
-      if (current !== request.current) return;
-      setComparison(result);
-      clearLoadError();
-    } catch (err) {
-      if (current !== request.current) return;
-      logger.error("traeger_comparison_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "den Standortvergleich",
-        retry: () => void load(),
-      });
-    }
-  }, [period, schoolIds, orgId, clearLoadError, showLoadError]);
-
+  const {
+    data: comparison,
+    loading,
+    error: loadError,
+  } = useTraegerResource(
+    traegerReportKeys.comparison(period.from, period.to, schoolIds),
+    () => fetchTraegerComparison({ ...period, schoolIds }),
+    "den Standortvergleich",
+  );
   // The school choice offers every school of the Träger, also those not
-  // chosen at the moment.
-  useEffect(() => {
-    if (orgId === undefined) return;
-    let active = true;
-    fetchTraegerSchools()
-      .then((schools) => {
-        if (active) setAllSchools(schools);
-      })
-      .catch((err: unknown) => {
-        // The comparison itself still loads and shows its own error; without
-        // the list the school choice only stays empty.
-        logger.warn("traeger_comparison_schools_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      active = false;
-    };
-  }, [orgId]);
-
-  // A switch of the Träger drops what the previous one showed.
-  const shownOrgId = useRef(orgId);
-  useEffect(() => {
-    if (shownOrgId.current === orgId) return;
-    shownOrgId.current = orgId;
-    request.current++;
-    setComparison(null);
-    setSchoolIds([]);
-    setAllSchools([]);
-  }, [orgId]);
-
-  useEffect(() => {
-    if (status === "loading") return;
-    void load();
-  }, [load, status]);
+  // chosen at the moment. Without the list the choice only stays empty; the
+  // comparison shows its own error.
+  const { schools: traegerSchools } = useTraegerSchools();
+  const allSchools = traegerSchools ?? [];
 
   const schools = useMemo(() => comparison?.schools ?? [], [comparison]);
   const rows = useMemo(
@@ -370,7 +326,6 @@ export default function TraegerComparisonPage() {
     [metrics, comparison],
   );
   const ranked = useMemo(() => ranking(schools, rankBy), [schools, rankBy]);
-  const loading = comparison === null && !pageLoad.error;
   const rankInfo = metricInfo(rankBy);
   const averageForRank = comparison?.average[rankBy];
   const missingForRank = schools.length - ranked.length;
@@ -446,7 +401,7 @@ export default function TraegerComparisonPage() {
         ) : null
       }
       statsLoading={loading}
-      error={pageLoad.error}
+      error={loadError}
       empty={
         noSchools
           ? {

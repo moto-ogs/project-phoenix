@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -17,7 +19,7 @@ import (
 type unreachableStore struct{ ExceptionStore }
 
 func newUnreachableService() *Service {
-	return NewService(Dependencies{Store: unreachableStore{}, Observe: func(ports.Observation) {}})
+	return NewService(Dependencies{Store: unreachableStore{}, Observe: func(ports.Observation) {}, Today: func() calendar.Date { return calendar.Date(fakeToday) }})
 }
 
 func TestFacadeRejectsInvalidInputBeforePersistence(t *testing.T) {

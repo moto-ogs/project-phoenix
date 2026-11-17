@@ -53,7 +53,7 @@ func TestTraegerTimeDaysLeaveOutExternalCaregivers(t *testing.T) {
 	t.Parallel()
 	overview := &staffOverviewService{staffRepo: overviewStaffQueryFunc(func(context.Context) ([]OverviewStaff, error) {
 		return []OverviewStaff{{ID: 10}, {ID: 11, ExternalCaregiver: true}}, nil
-	})}
+	}), nowFunc: testNow}
 	days := &timeDaysRecorder{}
 	school := TraegerExportSchool{staff: overview, days: days}
 	got, err := school.TraegerTimeDays(context.Background(), workforce.TraegerTimeRequest{

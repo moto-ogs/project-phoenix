@@ -11,6 +11,8 @@ vi.mock("react-day-picker", () => ({
   ),
 }));
 
+import { TEST_CLOCK_TODAY } from "~/test/clock";
+
 import { AnchoredPopover } from "./anchored-popover";
 import { DatePicker } from "./date-picker";
 import { DateRangePicker } from "./date-range-picker";
@@ -85,6 +87,12 @@ function monthShown(): string | null {
   return screen.getAllByTestId("day-grid")[0]!.getAttribute("data-month");
 }
 
+/** The month after today, as the grid mock writes it ("2026-10", "2027-1"). */
+function monthAfterToday(): string {
+  const [year = 0, month = 1] = TEST_CLOCK_TODAY.split("-").map(Number);
+  return month === 12 ? `${year + 1}-1` : `${year}-${month + 1}`;
+}
+
 const CASES: readonly PanelCase[] = [
   {
     name: "AnchoredPopover",
@@ -149,7 +157,8 @@ const CASES: readonly PanelCase[] = [
       fireEvent.pointerDown(next);
       fireEvent.mouseDown(next);
       fireEvent.click(next);
-      expect(monthShown()).toBe("2026-10");
+      // Without a value the range picker opens on today's month.
+      expect(monthShown()).toBe(monthAfterToday());
     },
   },
 ];

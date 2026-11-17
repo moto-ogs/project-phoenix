@@ -20,7 +20,7 @@ import {
   carryoverRuleLabel,
   formatDayCount,
 } from "~/lib/absence-helpers";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import type { SectionConfig } from "~/lib/database/types";
 import { formatCount } from "~/lib/format-utils";

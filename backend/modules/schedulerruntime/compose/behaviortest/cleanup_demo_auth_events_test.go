@@ -7,7 +7,6 @@ import (
 
 	cleanuprunner "github.com/moto-ogs/project-phoenix/modules/schedulerruntime/compose/behaviortest"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,7 +41,9 @@ func TestNightlyCleanupDeletesSignInEventsOfARetiredDemoSchoolAfterNinetyDays(t 
 	// independent of a clock change, so a window of 89 or 91 days fails it.
 	const windowHours = 90 * 24
 	const insertSignIn = `INSERT INTO audit.auth_events (tenant_id, account_id, event_type, success, ip_address, user_agent, created_at)
-		VALUES (?, ?, 'login', true, '192.0.2.10', 'Demo-Browser', CURRENT_TIMESTAMP - make_interval(hours => ?)) RETURNING id`
+		VALUES (?, ?, 'login', true, '192.0.2.10', 'Demo-Browser', clock_timestamp() - make_interval(hours => ?)) RETURNING id`
+	// The column default stamps an event and the retention counts its window
+	// back from the database clock (ADR 0281, Nachtrag), not the run's clock.
 	signInEvent := func(school, account int64, hoursAgo int) int64 {
 		var id int64
 		require.NoError(t, admin.NewRaw(insertSignIn, school, account, hoursAgo).Scan(ctx, &id))
@@ -69,7 +70,7 @@ func TestNightlyCleanupDeletesSignInEventsOfARetiredDemoSchoolAfterNinetyDays(t 
 
 	serve := testpkg.SetupServeTestDB(t)
 	t.Cleanup(func() { require.NoError(t, serve.Close()) })
-	now := func() time.Time { return time.Date(2026, time.October, 14, 2, 0, 0, 0, calendar.Berlin) }
+	now := func() time.Time { return nightlyRunAt }
 	deps, err := owners.NewSchedulerFileRetentionTestDependencies(testpkg.NewDatabase(t, serve), testpkg.TenantRuntime(t, serve), now, t.TempDir())
 	require.NoError(t, err)
 	var workerErr error

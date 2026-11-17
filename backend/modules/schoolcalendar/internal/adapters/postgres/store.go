@@ -24,13 +24,26 @@ type Database func(context.Context) (bun.IDB, int64, error)
 type Store struct {
 	database        Database
 	closingDayReads schoolcalendar.ClosingDayReads
+	now             func() time.Time
 }
 
-func New(database Database, closingDayReads schoolcalendar.ClosingDayReads) *Store {
+// New builds the store. now is the composition's clock (ADR 0281): it
+// stamps the calendar periods and the closing day revision. Only the
+// writing store of compose.NewRecords carries one; nil builds a read store.
+func New(database Database, closingDayReads schoolcalendar.ClosingDayReads, now func() time.Time) *Store {
 	if database == nil {
 		panic("school calendar postgres: database runtime is required")
 	}
-	return &Store{database: database, closingDayReads: closingDayReads}
+	return &Store{database: database, closingDayReads: closingDayReads, now: now}
+}
+
+// stamp is the instant of the composition's clock. A store without one is
+// a read store; a write through it is a wiring error.
+func (s *Store) stamp() (time.Time, error) {
+	if s.now == nil {
+		return time.Time{}, errors.New("school calendar postgres: a write needs the store's clock")
+	}
+	return s.now(), nil
 }
 
 // calendarDate maps the module's YYYY-MM-DD strings onto PostgreSQL DATE
@@ -56,8 +69,8 @@ func calendarDateString(value *calendarDate) string {
 type calendarPeriodRow struct {
 	bun.BaseModel   `bun:"table:calendar_periods,alias:calendar_period"`
 	ID              int64         `bun:"id,pk,autoincrement"`
-	CreatedAt       time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time     `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time     `bun:"updated_at,nullzero,notnull"`
 	TenantID        int64         `bun:"tenant_id,notnull"`
 	Name            string        `bun:"name,notnull"`
 	PeriodType      string        `bun:"period_type,notnull"`
@@ -71,8 +84,8 @@ type calendarPeriodRow struct {
 type closingDayRow struct {
 	bun.BaseModel `bun:"table:closing_days,alias:closing_day"`
 	ID            int64        `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull"`
 	TenantID      int64        `bun:"tenant_id,notnull"`
 	StartDate     calendarDate `bun:"start_date,notnull,type:date"`
 	EndDate       calendarDate `bun:"end_date,notnull,type:date"`
@@ -160,7 +173,11 @@ func (s *Store) CreateCalendarPeriod(ctx context.Context, fields schoolcalendar.
 	if tenantID <= 0 {
 		return schoolcalendar.CalendarPeriod{}, false, domain.OperationStats{}, errors.New("school calendar postgres: tenant is required to create a calendar period")
 	}
-	row := calendarPeriodRow{TenantID: tenantID}
+	at, err := s.stamp()
+	if err != nil {
+		return schoolcalendar.CalendarPeriod{}, false, domain.OperationStats{}, err
+	}
+	row := calendarPeriodRow{TenantID: tenantID, CreatedAt: at, UpdatedAt: at}
 	applyCalendarPeriodFields(&row, fields)
 	query := db.NewInsert().Model(&row).ModelTableExpr(`schedule.calendar_periods`)
 	if ifAbsent {
@@ -185,12 +202,15 @@ func (s *Store) UpdateCalendarPeriod(ctx context.Context, id int64, fields schoo
 	if err != nil {
 		return schoolcalendar.CalendarPeriod{}, domain.OperationStats{}, err
 	}
-	row := calendarPeriodRow{ID: id}
+	at, err := s.stamp()
+	if err != nil {
+		return schoolcalendar.CalendarPeriod{}, domain.OperationStats{}, err
+	}
+	row := calendarPeriodRow{ID: id, UpdatedAt: at}
 	applyCalendarPeriodFields(&row, fields)
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`schedule.calendar_periods AS "calendar_period"`).
-		Column("name", "period_type", "start_date", "end_date", "week_cycle_length", "week_cycle_anchor", "is_active").
-		Set(`updated_at = NOW()`).
+		Column("name", "period_type", "start_date", "end_date", "week_cycle_length", "week_cycle_anchor", "is_active", "updated_at").
 		Where(`"calendar_period".id = ?`, id), "calendar_period", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -323,7 +343,6 @@ func (s *Store) UpdateClosingDay(ctx context.Context, id int64, fields schoolcal
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`schedule.closing_days AS "closing_day"`).
 		Column("start_date", "end_date", "reason").
-		Set(`updated_at = NOW()`).
 		Where(`"closing_day".id = ?`, id), "closing_day", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -355,8 +374,8 @@ func (s *Store) DeleteClosingDay(ctx context.Context, id int64) (domain.Operatio
 type dateframeRow struct {
 	bun.BaseModel `bun:"table:dateframes,alias:dateframe"`
 	ID            int64     `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
 	StartDate     time.Time `bun:"start_date,notnull"`
 	EndDate       time.Time `bun:"end_date,notnull"`
@@ -436,7 +455,6 @@ func (s *Store) UpdateDateframe(ctx context.Context, id int64, fields schoolcale
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`schedule.dateframes AS "dateframe"`).
 		Column("start_date", "end_date", "name", "description").
-		Set(`updated_at = NOW()`).
 		Where(`"dateframe".id = ?`, id), "dateframe", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()

@@ -12,9 +12,11 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 // Only allowlisted source paths use changed-file selection. Except Markdown
 // documentation (guards only), other frontend inputs fail closed to full.
 // Usage: node scripts/test-frontend-changed.mjs BASE [Vitest project/options]
+//        node scripts/test-frontend-changed.mjs --moved-clock BASE [options]
 const modeFiles = process.argv[2] === "--mode-files";
+const movedOnly = process.argv[2] === "--moved-clock";
 const modeOnly = modeFiles || process.argv[2] === "--mode";
-const [base, ...options] = process.argv.slice(modeOnly ? 3 : 2);
+const [base, ...options] = process.argv.slice(modeOnly || movedOnly ? 3 : 2);
 if (!base && !modeFiles) throw new Error("base ref required");
 const cwd = fileURLToPath(new URL("../frontend/", import.meta.url));
 
@@ -26,18 +28,54 @@ function git(args) {
   if (result.status !== 0) throw new Error(result.stderr);
   return result.stdout;
 }
+function changedPaths() {
+  const mergeBase = git(["merge-base", "HEAD", base]).trim();
+  return new Set([
+    ...git(["diff", "--no-renames", "--name-only", "-z", mergeBase]).split("\0"),
+    ...git(["ls-files", "--others", "--exclude-standard", "-z"]).split("\0"),
+  ]);
+}
+
+// A test that takes the default day (TEST_CLOCK_INSTANT, 9 September 2026) as
+// a literal passes every pull request run and fails only in the weekly
+// clock-early-warning run. So the Vitest tests a change touches run a second
+// time on this instant (#7337): Saturday 2 January 2027, 00:30 in Berlin, so
+// another year, a weekend, winter time and a Berlin day ahead of the UTC day.
+// Only the changed test files, not their dependents: the weekly run covers
+// product changes. docs/agents/frontend-testing.md, "Moved clock".
+const MOVED_CLOCK = "2027-01-01T23:30:00.000Z";
+function movedClockRun() {
+  const tests = [...changedPaths()]
+    .filter(file => /^frontend\/(?!e2e\/).+\.(test|spec)\.[cm]?[jt]sx?$/.test(file) && existsSync(resolve(cwd, "..", file)))
+    .map(file => file.slice("frontend/".length)).sort();
+  if (!tests.length) return;
+  console.log(`==> vitest moved clock (${MOVED_CLOCK}): ${tests.length} changed test file(s)`);
+  // A project or shard option of the caller may leave none of them.
+  const result = spawnSync("pnpm", ["exec", "vitest", "run", "--passWithNoTests", ...options, ...tests], {
+    cwd, stdio: "inherit", env: { ...process.env, TEST_CLOCK_INSTANT: MOVED_CLOCK },
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    console.error(`
+These tests passed on the default day and fail on the moved clock: they
+assume the default day. Take today from TEST_CLOCK_TODAY and other days from
+testClockDay(n), or set the day the test is about with setTestClock(...);
+docs/agents/frontend-testing.md, "Moved clock". Reproduce from frontend/:
+  TEST_CLOCK_INSTANT=${MOVED_CLOCK} pnpm vitest run ${tests.join(" ")}`);
+    process.exit(result.status ?? 1);
+  }
+}
+if (movedOnly) {
+  movedClockRun();
+  process.exit(0);
+}
+
 function selectionMode(files) {
   let changed;
   if (files !== undefined) {
     assert.ok(Array.isArray(files) && files.every(file => typeof file === "string"), "changed paths must be a JSON string array");
     changed = new Set(files);
-  } else {
-    const mergeBase = git(["merge-base", "HEAD", base]).trim();
-    changed = new Set([
-      ...git(["diff", "--no-renames", "--name-only", "-z", mergeBase]).split("\0"),
-      ...git(["ls-files", "--others", "--exclude-standard", "-z"]).split("\0"),
-    ]);
-  }
+  } else changed = changedPaths();
   // Tests in these source areas use Vitest's changed graph too. Declaration
   // files have no runtime emission; source-scanning guards still run with them.
   // Markdown skips lint/build, but tests may read it. Keep its guard-only
@@ -68,6 +106,7 @@ if (mode === "none") process.exit(0);
 if (mode === "full") {
   console.log("==> vitest full (input outside source-path allowlist)");
   vitest(["run", ...options]);
+  movedClockRun();
   process.exit(0);
 }
 
@@ -90,6 +129,8 @@ const guards = [
   "src/app/api/proxy-routes.test.ts",
   "src/app/api/route-cache-policy.test.ts",
   "src/app/api/route-session-coverage.test.ts",
+  "src/app/api/traeger/catalog-routing.test.ts",
+  "src/app/api/catalog-route-selection.test.ts",
   "src/app/api/credential-route-coverage.test.ts",
   "src/app/api/auth/session-cookie-inventory.test.ts",
   "src/lib/app-route-invariants.test.ts",
@@ -284,3 +325,4 @@ const files = new Set([
 vitest(["run", ...options, ...files]);
 // vitest() exits on failure. Inputs edited during the run must not be recorded.
 if (cacheGuards && guardsKey() === key) writeFileSync(guardsRecord, key);
+if (mode === "incremental") movedClockRun();

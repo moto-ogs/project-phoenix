@@ -8,14 +8,7 @@
 
 import { EmptyState } from "~/components/ui/empty-state";
 import { StatusBadge } from "~/components/ui/status-badge";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -26,12 +19,16 @@ import {
   FIELD_LABELS,
   formatEditValue,
 } from "~/components/time-tracking/edit-history-accordion";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { staffTimeKeys } from "~/lib/swr/staff-keys";
 import {
   auditLogSourceLabels,
   staffAuditLogService,
   type AuditLogEvent,
+  type AuditLogPage,
   type AuditLogSource,
 } from "~/lib/staff-audit-log-api";
 import {
@@ -243,22 +240,6 @@ export function StaffAuditLog({ staffOptions }: StaffAuditLogProps) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
-  const [events, setEvents] = useState<AuditLogEvent[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [retentionCutoff, setRetentionCutoff] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  // Ein Ladefehler steht an der Stelle der Tabelle, nie als „Keine Einträge
-  // gefunden“; „Weitere Einträge laden“ ist eine Aktion und meldet als Toast
-  // (#2514).
-  const load = useApiLoadError();
-  const showLoadError = load.show;
-  const clearLoadError = load.clear;
-  const { show: showMoreError } = useApiErrorDisplay();
-  const [reload, setReload] = useState(0);
-  const requestVersionRef = useRef(0);
-  // „Wiederholen“ lädt ab dem aktuellen Stand weiter.
-  const loadMoreRef = useRef<() => void>(() => undefined);
-
   const query = useMemo(
     () => ({
       from: from || undefined,
@@ -270,57 +251,57 @@ export function StaffAuditLog({ staffOptions }: StaffAuditLogProps) {
     }),
     [from, to, staffId, actorId, source],
   );
-
-  useEffect(() => {
-    const requestVersion = requestVersionRef.current + 1;
-    requestVersionRef.current = requestVersion;
-    setEvents([]);
-    setNextCursor(null);
-    setIsLoading(true);
-    clearLoadError();
-    staffAuditLogService
-      .getAuditLog(query)
-      .then((page) => {
-        if (requestVersionRef.current !== requestVersion) return;
-        setEvents(page.events);
-        setNextCursor(page.nextCursor);
-        setRetentionCutoff(page.retentionCutoff);
-      })
-      .catch((err: unknown) => {
-        if (requestVersionRef.current !== requestVersion) return;
-        log.error("failed to load audit log", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        // Die Tabelle lädt weiter, bis der Fehler steht: kein kurzes „Keine
-        // Einträge gefunden“ dazwischen.
-        return showLoadError(err, {
-          object: "das Änderungsprotokoll",
-          retry: () => setReload((count) => count + 1),
-        });
-      })
-      .finally(() => {
-        if (requestVersionRef.current === requestVersion) setIsLoading(false);
-      });
-    return () => {
-      if (requestVersionRef.current === requestVersion) {
-        requestVersionRef.current++;
-      }
-    };
-  }, [query, reload, showLoadError, clearLoadError]);
+  const firstPage = useSWRAuth(
+    staffTimeKeys.auditLog(query),
+    () => staffAuditLogService.getAuditLog(query),
+    { keepPreviousData: false },
+  );
+  // Ein Ladefehler steht an der Stelle der Tabelle, nie als „Keine Einträge
+  // gefunden“; „Weitere Einträge laden“ ist eine Aktion und meldet als Toast
+  // (#2514).
+  const { error: loadError } = useSwrResourceLoadError(
+    [firstPage],
+    "das Änderungsprotokoll",
+    () => firstPage.mutate(),
+  );
+  const { show: showMoreError } = useApiErrorDisplay();
+  // Nachgeladene Seiten gehören zu genau einer ersten Seite: ein Filterwechsel
+  // oder ein neuer Stand der ersten Seite verwirft sie.
+  const [more, setMore] = useState<{
+    base: AuditLogPage;
+    events: AuditLogEvent[];
+    nextCursor: string | null;
+  } | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const base = firstPage.data;
+  const appended = more && more.base === base ? more : null;
+  const events = useMemo(
+    () => [...(base?.events ?? []), ...(appended?.events ?? [])],
+    [base, appended],
+  );
+  const nextCursor = appended
+    ? appended.nextCursor
+    : (base?.nextCursor ?? null);
+  const retentionCutoff = base?.retentionCutoff ?? "";
+  // „Wiederholen“ lädt ab dem aktuellen Stand weiter.
+  const loadMoreRef = useRef<() => void>(() => undefined);
 
   const loadMore = useCallback(() => {
-    if (!nextCursor) return;
-    const requestVersion = requestVersionRef.current;
-    setIsLoading(true);
+    if (!base || !nextCursor) return;
+    setLoadingMore(true);
     staffAuditLogService
       .getAuditLog({ ...query, cursor: nextCursor })
       .then((page) => {
-        if (requestVersionRef.current !== requestVersion) return;
-        setEvents((prev) => [...prev, ...page.events]);
-        setNextCursor(page.nextCursor);
+        setMore((prev) => ({
+          base,
+          events: [
+            ...(prev && prev.base === base ? prev.events : []),
+            ...page.events,
+          ],
+          nextCursor: page.nextCursor,
+        }));
       })
       .catch((err: unknown) => {
-        if (requestVersionRef.current !== requestVersion) return;
         log.error("failed to load more audit log entries", {
           error: err instanceof Error ? err.message : String(err),
         });
@@ -329,13 +310,12 @@ export function StaffAuditLog({ staffOptions }: StaffAuditLogProps) {
           retry: () => loadMoreRef.current(),
         });
       })
-      .finally(() => {
-        if (requestVersionRef.current === requestVersion) setIsLoading(false);
-      });
-  }, [nextCursor, query, showMoreError]);
+      .finally(() => setLoadingMore(false));
+  }, [base, nextCursor, query, showMoreError]);
   useLayoutEffect(() => {
     loadMoreRef.current = loadMore;
   });
+  const isLoading = (!base && !loadError) || loadingMore;
 
   const columns: DataTableColumn<AuditLogEvent>[] = useMemo(
     () => [
@@ -459,8 +439,8 @@ export function StaffAuditLog({ staffOptions }: StaffAuditLogProps) {
         />
       )}
 
-      {load.error ? (
-        <LoadErrorAlert error={load.error} />
+      {loadError ? (
+        <LoadErrorAlert error={loadError} />
       ) : (
         <DataTable
           columns={columns}

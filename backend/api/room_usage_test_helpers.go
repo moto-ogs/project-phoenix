@@ -10,6 +10,7 @@ import (
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // NewRoomReferencesForTest binds the Facilities room reference count over
@@ -23,5 +24,5 @@ func NewRoomReferencesForTest(db transactionruntime.Database) (func(context.Cont
 	if err != nil {
 		return nil, err
 	}
-	return owners.NewRoomReferences(db, owners.NewLoggedStudentPresence(db, slog.Default()), groups, devices, nil)
+	return owners.NewRoomReferences(db, owners.NewLoggedStudentPresence(db, slog.Default(), time.Now), groups, devices, calendar.TodayDate)
 }

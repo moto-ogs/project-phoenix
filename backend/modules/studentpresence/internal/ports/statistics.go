@@ -27,7 +27,9 @@ type StatisticsAccessEvent struct {
 // StatisticsAccessLog is the GDPR data-access log the report writes to.
 type StatisticsAccessLog interface {
 	RecordStatisticsAccess(context.Context, StatisticsAccessEvent) error
-	SeenStatisticsAccessSince(context.Context, int64, map[string]string, time.Time) (bool, error)
+	// SeenStatisticsAccessWithin reports an access of the actor with the
+	// metadata within the window, on the clock of the access log.
+	SeenStatisticsAccessWithin(context.Context, int64, map[string]string, time.Duration) (bool, error)
 }
 
 // StatisticsRoom is the room metadata needed to price utilization.

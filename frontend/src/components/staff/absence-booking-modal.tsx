@@ -32,7 +32,7 @@ import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { ISODatePicker } from "~/components/ui/date-picker";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   FormErrorAlert,
   LoadErrorAlert,
@@ -54,13 +54,14 @@ import {
 import {
   absenceTypeService,
   type AbsenceType,
-  type AbsenceTypeAllowancePreview,
   type AbsenceTypeAllowanceSummary,
 } from "~/lib/absence-type-api";
 import { formatDate, berlinTodayISO, toISODate } from "~/lib/date-helpers";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { staffAbsenceService } from "~/lib/staff-api";
+import { useSWRAuth } from "~/lib/swr";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "AbsenceBookingModal" });
@@ -206,43 +207,32 @@ function useAllowancePreview(args: {
   halfDay: boolean;
 }) {
   const { typeId, staffId, dateStart, dateEnd, halfDay } = args;
-  const [preview, setPreview] = useState<AbsenceTypeAllowancePreview | null>(
-    null,
-  );
-  const [error, setError] = useState<unknown>(null);
-  const [attempt, setAttempt] = useState(0);
-  const reload = useCallback(() => setAttempt((value) => value + 1), []);
   const valid = Boolean(typeId && dateStart && dateEnd && dateEnd >= dateStart);
-
-  useEffect(() => {
-    setPreview(null);
-    setError(null);
-    if (!valid || !typeId) return;
-    let stale = false;
-    absenceTypeService
-      .previewAllowance(typeId, staffId, { dateStart, dateEnd, halfDay })
-      .then((result) => {
-        if (!stale) setPreview(result);
-      })
-      .catch((err: unknown) => {
-        if (stale) return;
-        logger.error("allowance_preview_failed", {
-          staff_id: staffId,
-          absence_type_id: typeId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setError(err);
-      });
-    return () => {
-      stale = true;
-    };
-  }, [valid, typeId, staffId, dateStart, dateEnd, halfDay, attempt]);
-
+  const { data, error, mutate } = useSWRAuth(
+    valid && typeId
+      ? staffAbsenceKeys.allowancePreview(
+          typeId,
+          staffId,
+          dateStart,
+          dateEnd,
+          halfDay,
+        )
+      : null,
+    () =>
+      absenceTypeService.previewAllowance(typeId ?? "", staffId, {
+        dateStart,
+        dateEnd,
+        halfDay,
+      }),
+    { keepPreviousData: false },
+  );
+  const reload = useCallback(() => void mutate(), [mutate]);
+  const failure = data === undefined ? error : undefined;
   return {
-    preview,
-    loading: valid && preview === null && !error,
-    failed: Boolean(error),
-    error,
+    preview: data ?? null,
+    loading: valid && data === undefined && !failure,
+    failed: Boolean(failure),
+    error: failure ?? null,
     reload,
   };
 }
@@ -276,56 +266,47 @@ export function yearsBetween(dateStart: string, dateEnd: string): number[] {
   return Array.from({ length: last - first + 1 }, (_, index) => first + index);
 }
 
+const NO_ACCOUNTS: ReadonlyMap<number, YearAccount> = new Map();
+
 export function useYearAccounts(
   staffId: string,
   types: readonly AbsenceType[],
   years: readonly number[],
 ) {
-  const [accounts, setAccounts] = useState<ReadonlyMap<number, YearAccount>>(
-    new Map(),
-  );
-  const [error, setError] = useState<unknown>(null);
-  const [attempt, setAttempt] = useState(0);
-  const reload = useCallback(() => setAttempt((value) => value + 1), []);
   const quotaTypes = useMemo(
     () => types.filter((type) => type.isActive && type.allowanceEnabled),
     [types],
   );
-  const missing = years.filter((year) => !accounts.has(year));
-  const missingKey = missing.join(",");
-
-  useEffect(() => {
-    if (!missingKey) return;
-    let stale = false;
-    setError(null);
-    Promise.all(
-      missingKey.split(",").map(async (year) => {
-        const value = Number(year);
-        return [value, await loadYear(staffId, value, quotaTypes)] as const;
-      }),
-    )
-      .then((loaded) => {
-        if (stale) return;
-        setAccounts((current) => new Map([...current, ...loaded]));
-      })
-      .catch((err: unknown) => {
-        if (stale) return;
-        logger.error("booking_accounts_load_failed", {
-          staff_id: staffId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setError(err);
-      });
-    return () => {
-      stale = true;
-    };
-  }, [missingKey, quotaTypes, staffId, attempt]);
-
+  const { data, error, mutate } = useSWRAuth(
+    years.length > 0
+      ? staffAbsenceKeys.yearAccounts(
+          staffId,
+          years,
+          quotaTypes.map((type) => type.id),
+        )
+      : null,
+    async () =>
+      new Map(
+        await Promise.all(
+          years.map(
+            async (year) =>
+              [year, await loadYear(staffId, year, quotaTypes)] as const,
+          ),
+        ),
+      ) as ReadonlyMap<number, YearAccount>,
+    // Die Jahre einer früheren Auswahl bleiben stehen, bis die neue Antwort da
+    // ist: die Hinweise zeigen solange „…“ nur für fehlende Jahre.
+    { keepPreviousData: true },
+  );
+  const reload = useCallback(() => void mutate(), [mutate]);
+  const accounts = data ?? NO_ACCOUNTS;
+  const missing = years.some((year) => !accounts.has(year));
+  const failure = missing ? error : undefined;
   return {
     accounts,
-    loading: missing.length > 0 && !error,
-    failed: Boolean(error),
-    error,
+    loading: missing && !failure,
+    failed: Boolean(failure),
+    error: failure ?? null,
     reload,
   };
 }

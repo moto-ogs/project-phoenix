@@ -86,7 +86,7 @@ func newOverviewFixture(t *testing.T, count int) *overviewFixture {
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(workTime)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(workTime)), workforceCompose.NewTimeTrackingShifts(workTime),
 		settings, nil,
 		timetracking.WithMonthAdjustments(workTime),
-		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(workTime)),
+		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(workTime)), timetracking.WithMonthTestClock(testNow),
 	)
 
 	f.svc = f.newOverviewService(settings)
@@ -98,7 +98,7 @@ func (f *overviewFixture) newOverviewService(settings wtmIntSettings, options ..
 		owners.OverviewStaff(f.repos.Staff), f.workforce, f.workforce, f.reposAbsences.StaffAbsence,
 		f.workforce, f.workforce, timetracking.MonthSnapshotCapability(f.workforce),
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(f.workforce)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(f.workforce)), workforceCompose.NewTimeTrackingShifts(f.workforce),
-		settings, nil, options...,
+		settings, nil, append(options, timetracking.WithOverviewClock(testNow))...,
 	)
 }
 
@@ -267,7 +267,7 @@ func TestTimeTrackingOverview_AccountStartAfterRequestedMonthMatchesDetail(t *te
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(f.workforce)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(f.workforce)), workforceCompose.NewTimeTrackingShifts(f.workforce),
 		settings, nil,
 		timetracking.WithMonthAdjustments(f.workforce),
-		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(f.workforce)),
+		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(f.workforce)), timetracking.WithMonthTestClock(testNow),
 	)
 
 	overview, err := testpkg.TenantQuery1(t, f.ctx, testpkg.SetupTestDB(t), svc.GetTimeTrackingOverview, timetracking.OverviewFilters{
@@ -303,7 +303,7 @@ func TestTimeTrackingOverview_VacationMatchesQuotaEndpoint(t *testing.T) {
 		f.reposAbsences.StaffAbsence, f.workforce, f.workforce,
 		f.workforce, wtmIntSettings{}, f.monthSvc, timetracking.WithAbsenceUnitOfWork(testpkg.
 			RunInTenantTransaction,
-		),
+		), timetracking.WithAbsenceClock(testNow),
 	)
 
 	overview, err := testpkg.TenantQuery1(t, f.ctx, f.db, f.svc.GetTimeTrackingOverview, timetracking.OverviewFilters{})
@@ -414,7 +414,7 @@ func TestDashboardSummary_AbsenceKPIsUseBerlinToday(t *testing.T) {
 		owners.OverviewStaff(f.repos.Staff), f.workforce, f.workforce, absenceRepo,
 		f.workforce, f.workforce, timetracking.MonthSnapshotCapability(f.workforce),
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(f.workforce)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(f.workforce)), workforceCompose.NewTimeTrackingShifts(f.workforce),
-		settings, nil,
+		settings, nil, timetracking.WithOverviewClock(testNow),
 	)
 
 	_, err := testpkg.TenantQuery1(t, f.ctx, testpkg.SetupTestDB(t), svc.GetDashboardSummary, timetracking.OverviewPeriodMonth)
@@ -691,9 +691,9 @@ func TestTimeTrackingOverview_RespectsFrozenMonths(t *testing.T) {
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(f.workforce)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(f.workforce)), workforceCompose.NewTimeTrackingShifts(f.workforce),
 		settings, nil,
 		timetracking.WithMonthAdjustments(f.workforce),
-		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(f.workforce)),
+		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(f.workforce)), timetracking.WithMonthTestClock(testNow),
 	)
-	closeSvc := timetracking.NewStaffMonthCloseService(timetracking.MonthSnapshotCapability(f.workforce), monthSvc, owners.MonthCloseStaff(f.repos.Staff), settings, nil, timetracking.WithMonthCloseUnitOfWork(testpkg.RunInTenantTransaction))
+	closeSvc := timetracking.NewStaffMonthCloseService(timetracking.MonthSnapshotCapability(f.workforce), monthSvc, owners.MonthCloseStaff(f.repos.Staff), settings, nil, timetracking.WithMonthCloseUnitOfWork(testpkg.RunInTenantTransaction), timetracking.WithMonthCloseClock(testNow))
 	svc := f.newOverviewService(settings)
 
 	_, err := closeSvc.CloseMonth(f.ctx, staffID, prevMonth.Year(), int(prevMonth.Month()), "Abschluss")
@@ -724,9 +724,9 @@ func TestTimeTrackingOverview_ClosedMonthUsesFrozenBalance(t *testing.T) {
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(f.workforce)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(f.workforce)), workforceCompose.NewTimeTrackingShifts(f.workforce),
 		settings, nil,
 		timetracking.WithMonthAdjustments(f.workforce),
-		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(f.workforce)),
+		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(f.workforce)), timetracking.WithMonthTestClock(testNow),
 	)
-	closeSvc := timetracking.NewStaffMonthCloseService(timetracking.MonthSnapshotCapability(f.workforce), monthSvc, owners.MonthCloseStaff(f.repos.Staff), settings, nil, timetracking.WithMonthCloseUnitOfWork(testpkg.RunInTenantTransaction))
+	closeSvc := timetracking.NewStaffMonthCloseService(timetracking.MonthSnapshotCapability(f.workforce), monthSvc, owners.MonthCloseStaff(f.repos.Staff), settings, nil, timetracking.WithMonthCloseUnitOfWork(testpkg.RunInTenantTransaction), timetracking.WithMonthCloseClock(testNow))
 	svc := f.newOverviewService(settings)
 
 	closeResult, err := closeSvc.CloseMonth(f.ctx, staffID, closedMonth.Year(), int(closedMonth.Month()), "Abschluss")

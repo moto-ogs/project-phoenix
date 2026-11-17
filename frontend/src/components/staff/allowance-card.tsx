@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Pencil } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { formatDayCount } from "~/lib/absence-helpers";
 import type { AbsenceTypeAllowanceSummary } from "~/lib/absence-type-api";

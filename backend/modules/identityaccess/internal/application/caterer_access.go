@@ -99,7 +99,13 @@ func (c *CatererAccess) CreateCatererInvitation(ctx context.Context, input ident
 	ctx = c.attach(ctx)
 	invitation, token, err := c.createInvitation(ctx, domain.CatererInvitationRequest(input))
 	if err == nil {
-		err = c.delivery.EnqueueCatererInvitation(ctx, invitation.ID, invitation.TenantID, invitation.Email, invitation.CatererName, token, invitation.ExpiresAt)
+		// The delivery counts the mail's days on the composition's clock,
+		// which the root binds for Identity & Access as well; the expiry
+		// moves onto that clock with the lifetime counted on the database
+		// clock (ADR 0285), so the mail states the days the invitation was
+		// issued for, however far the clocks are apart.
+		mailExpiry := c.now().Add(invitation.ExpiresAt.Sub(invitation.ReadAt))
+		err = c.delivery.EnqueueCatererInvitation(ctx, invitation.ID, invitation.TenantID, invitation.Email, invitation.CatererName, token, mailExpiry)
 	}
 	if err != nil {
 		return identityaccess.CatererInvitation{}, catererError(failed("create caterer invitation", err))
@@ -127,32 +133,55 @@ func (c *CatererAccess) createInvitation(ctx context.Context, request domain.Cat
 	} else if active {
 		return domain.CatererInvitation{}, "", domain.ErrCatererAlreadySupplies
 	}
-	if err := c.revokeOpen(ctx); err != nil {
+	// The expiry counts from the database clock the acceptance's
+	// auth.create_invited_caterer checks it against (ADR 0285).
+	now, _, err := c.store.DatabaseTime(ctx)
+	if err != nil {
+		return domain.CatererInvitation{}, "", err
+	}
+	if err := c.revokeOpen(ctx, now); err != nil {
 		return domain.CatererInvitation{}, "", err
 	}
 	createdBy := request.CreatedBy
 	invitation, _, err := c.store.InsertCatererInvitation(ctx, domain.CatererInvitation{
 		TenantID: c.runtime.TenantID(ctx), TokenHash: domain.HashInvitationToken(token), Email: request.Email,
 		CatererName: request.CatererName, DeliveryAddress: request.DeliveryAddress, CreatedBy: &createdBy,
-		ExpiresAt: c.now().Add(domain.CatererInvitationLifetime),
+		ExpiresAt: now.Add(domain.CatererInvitationLifetime),
 	})
+	invitation.ReadAt = now
 	return invitation, token, err
 }
 
-// revokeOpen takes back the school's invitations still open.
-func (c *CatererAccess) revokeOpen(ctx context.Context) error {
+// revokeOpen takes back the school's invitations still open at the
+// database time now.
+func (c *CatererAccess) revokeOpen(ctx context.Context, now time.Time) error {
 	invitations, _, err := c.store.ListCatererInvitations(ctx)
 	if err != nil {
 		return err
 	}
 	for _, invitation := range invitations {
-		if invitation.Open(c.now()) {
-			if _, _, err := c.store.RevokeCatererInvitation(ctx, invitation.ID, c.now()); err != nil {
+		if invitation.Open(now) {
+			if _, err := c.revoke(ctx, invitation.ID, now); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+// revoke takes back the school's open invitation and stops its mail if the
+// outbox has not sent it yet (#4496): a link that no longer works is not
+// mailed. Both commit in the school's transaction. revoked_at is stamped
+// with the database time now, like the invitation's other instants.
+func (c *CatererAccess) revoke(ctx context.Context, invitationID int64, now time.Time) (bool, error) {
+	revoked, _, err := c.store.RevokeCatererInvitation(ctx, invitationID, now)
+	if err != nil || !revoked {
+		return revoked, err
+	}
+	if err := c.delivery.CancelCatererInvitation(ctx, invitationID); err != nil {
+		return false, fmt.Errorf("stop caterer invitation mail: %w", err)
+	}
+	return true, nil
 }
 
 // ListCatererInvitations lists the school's invitations, newest first.
@@ -196,7 +225,11 @@ func (c *CatererAccess) RevokeCatererInvitation(ctx context.Context, invitationI
 	if !c.inSchool(ctx) {
 		return catererError(failed("revoke caterer invitation", errSchoolTransactionRequired))
 	}
-	revoked, _, err := c.store.RevokeCatererInvitation(ctx, invitationID, c.now())
+	now, _, err := c.store.DatabaseTime(ctx)
+	revoked := false
+	if err == nil {
+		revoked, err = c.revoke(ctx, invitationID, now)
+	}
 	if err == nil && !revoked {
 		err = domain.ErrInvitationNotFound
 	}
@@ -282,7 +315,10 @@ func (c *CatererAccess) preview(ctx context.Context, token string) (domain.Cater
 // the caller opened. A new address gets an account and a caterer of the
 // invited name; the account of an existing caterer confirms with its
 // password and adds the school. An address of another kind of account is
-// refused. The school's supply by the caterer starts with it, so the
+// refused. A wrong password answers ErrInvalidCredentials after it was
+// counted towards the account's lock in the caller's transaction, which has
+// written nothing else: the caller commits it before it answers, as the
+// login does. The school's supply by the caterer starts with it, so the
 // caterer never exists without its school.
 func (c *CatererAccess) AcceptCatererInvitation(ctx context.Context, token string, registration identityaccess.CatererRegistration) (identityaccess.CatererAcceptance, error) {
 	ctx = c.attach(ctx)
@@ -317,12 +353,15 @@ func (c *CatererAccess) accept(ctx context.Context, token string, registration d
 	if err != nil {
 		return domain.CatererAcceptance{}, err
 	}
-	accepted, _, err := c.store.AcceptCatererInvitation(ctx, invitation.ID, accountID, c.now())
+	// The write checks the expiry again at its own database time. The row
+	// lock held since redeemable keeps acceptance and revocation out, so a
+	// write that spends nothing found the invitation expired.
+	accepted, _, err := c.store.AcceptCatererInvitation(ctx, invitation.ID, accountID)
 	switch {
 	case err != nil:
 		return domain.CatererAcceptance{}, err
 	case !accepted:
-		return domain.CatererAcceptance{}, domain.ErrInvitationUsed
+		return domain.CatererAcceptance{}, domain.ErrInvitationExpired
 	}
 	// The supply starts with the acceptance; a school has one running
 	// supply (uq_caterer_school_active).
@@ -340,17 +379,7 @@ func (c *CatererAccess) catererAccount(ctx context.Context, invitation domain.Ca
 		return 0, 0, err
 	}
 	if found {
-		caterer, isCaterer, _, err := c.store.FindCatererOfAccount(ctx, account.ID)
-		switch {
-		case err != nil:
-			return 0, 0, err
-		case !isCaterer:
-			return 0, 0, domain.ErrCatererAddressTaken
-		}
-		if valid, verifyErr := c.verifier.VerifyPassword(registration.Password, account.PasswordHash); verifyErr != nil || !valid {
-			return 0, 0, identityaccess.ErrInvalidCredentials
-		}
-		return account.ID, caterer.ID, nil
+		return c.existingCaterer(ctx, account, registration)
 	}
 	if registration.Password != registration.ConfirmPassword {
 		return 0, 0, domain.ErrPasswordMismatch
@@ -373,8 +402,57 @@ func (c *CatererAccess) catererAccount(ctx context.Context, invitation domain.Ca
 	return created.ID, catererID, nil
 }
 
-// redeemable resolves the school's invitation by its token and says why it
-// cannot be accepted otherwise.
+// existingCaterer proves the existing account of the invited address with
+// its password, checked like a login (#4496; see AcceptCatererInvitation),
+// and names its caterer. An address of another kind of account is refused.
+func (c *CatererAccess) existingCaterer(ctx context.Context, account domain.LoginAccount, registration domain.CatererRegistration) (int64, int64, error) {
+	caterer, isCaterer, _, err := c.store.FindCatererOfAccount(ctx, account.ID)
+	switch {
+	case err != nil:
+		return 0, 0, err
+	case !isCaterer:
+		return 0, 0, domain.ErrCatererAddressTaken
+	}
+	accepted, err := c.checkPassword(ctx, account, registration.Password)
+	if err != nil {
+		return 0, 0, err
+	}
+	if !accepted {
+		if err := c.auditRefusedAcceptance(ctx, account.ID, registration); err != nil {
+			return 0, 0, err
+		}
+		return 0, 0, identityaccess.ErrInvalidCredentials
+	}
+	if !account.Active {
+		return 0, 0, identityaccess.ErrAccountInactive
+	}
+	return account.ID, caterer.ID, nil
+}
+
+// auditRefusedAcceptance files a refused acceptance password like a refused
+// login, in a savepoint of the school's transaction: a failed audit write
+// is logged and cannot abort the transaction that keeps the count. Only a
+// savepoint that could not be controlled is returned.
+func (c *CatererAccess) auditRefusedAcceptance(ctx context.Context, accountID int64, registration domain.CatererRegistration) error {
+	if registration.IPAddress == "" {
+		return nil
+	}
+	err := runInSavepoint(ctx, func(savepointCtx context.Context) error {
+		return c.auth.logAuthEvent(savepointCtx, accountID, domain.AuthEventLogin, false, registration.IPAddress, registration.UserAgent, "Caterer invitation acceptance refused")
+	})
+	if errors.Is(err, domain.ErrTransactionUnusable) {
+		return err
+	}
+	if err != nil {
+		c.logger.Error("failed to audit refused caterer acceptance", slog.Any("error", err))
+	}
+	return nil
+}
+
+// redeemable locks the school's invitation by its token and says why it
+// cannot be accepted otherwise, judged at the database time read once the
+// lock is held (ADR 0285): the locking statement's own time lies before a
+// wait for another preview or acceptance.
 func (c *CatererAccess) redeemable(ctx context.Context, token string) (domain.CatererInvitation, error) {
 	if strings.TrimSpace(token) == "" {
 		return domain.CatererInvitation{}, domain.ErrInvitationNotFound
@@ -386,7 +464,10 @@ func (c *CatererAccess) redeemable(ctx context.Context, token string) (domain.Ca
 	case !found:
 		return domain.CatererInvitation{}, domain.ErrInvitationNotFound
 	}
-	return invitation, invitation.Redeemable(c.now())
+	if invitation.ReadAt, _, err = c.store.DatabaseTime(ctx); err != nil {
+		return domain.CatererInvitation{}, err
+	}
+	return invitation, invitation.Redeemable(invitation.ReadAt)
 }
 
 // CatererSchools names the caterer of an account and the schools it
@@ -431,10 +512,13 @@ func newInvitationToken() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(raw), nil
 }
 
+// publicCatererInvitation judges the expiry at the database time the
+// invitation was read or written at (ADR 0285).
 func publicCatererInvitation(invitation domain.CatererInvitation) identityaccess.CatererInvitation {
 	return identityaccess.CatererInvitation{
 		ID: invitation.ID, Email: invitation.Email, CatererName: invitation.CatererName, DeliveryAddress: invitation.DeliveryAddress,
 		ExpiresAt: invitation.ExpiresAt, AcceptedAt: invitation.AcceptedAt, RevokedAt: invitation.RevokedAt, CreatedAt: invitation.CreatedAt,
+		Expired: !invitation.ReadAt.Before(invitation.ExpiresAt),
 	}
 }
 

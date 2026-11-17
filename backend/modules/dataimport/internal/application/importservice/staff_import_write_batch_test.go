@@ -27,7 +27,7 @@ func TestStaffBatchEmailResolutionPreservesMatchesMissesAndAmbiguity(t *testing.
 	t.Parallel()
 	accountID := int64(11)
 	batchCalls := 0
-	config := &StaffImportConfig{StaffImportDeps: ports.StaffImportDeps{
+	config := &StaffImportConfig{StaffImportDeps: ports.StaffImportDeps{Now: studentImportTestClock,
 		Membership: staffEmailMembership{members: []ports.Staff{{ID: 21, PersonID: 31}, {ID: 22, PersonID: 32}, {ID: 23, PersonID: 33}}},
 		Persons: PersonDirectoryFuncs{ListPersonsByAccountFunc: func(_ context.Context, ids []int64) ([]ports.Person, error) {
 			require.ElementsMatch(t, []int64{11, 12}, ids)
@@ -75,7 +75,7 @@ func TestStaffBatchEmailMissChangesOnlyAfterSuccessfulInvitation(t *testing.T) {
 	t.Parallel()
 	invitationFailure := errors.New("invitation failed")
 	invitationErr := invitationFailure
-	config := &StaffImportConfig{StaffImportDeps: ports.StaffImportDeps{
+	config := &StaffImportConfig{StaffImportDeps: ports.StaffImportDeps{Now: studentImportTestClock,
 		Membership: staffEmailMembership{}, Persons: newFakePersons(),
 		Transactions: guardianPhoneFactTransactions{Transactions: writeMatchTransactions{}, tenantID: 42},
 		Invitations:  &staffInvitationMock{InviteStaffFn: func(context.Context, importModels.StaffInvitation) error { return invitationErr }},

@@ -4,7 +4,6 @@ import {
   type ReactNode,
   type RefObject,
   useCallback,
-  useEffect,
   useId,
   useLayoutEffect,
   useMemo,
@@ -55,7 +54,6 @@ import {
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
 import {
@@ -65,6 +63,10 @@ import {
   toISODate,
 } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import { BELOW_LG, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import {
@@ -75,6 +77,7 @@ import {
   getParentCalendar,
   respondParentCalendar,
   type CalendarEvent,
+  type CalendarResponse,
 } from "~/lib/personal-calendar-api";
 import {
   answerDiffersFromSeries,
@@ -90,6 +93,7 @@ import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { useParentCareTerms } from "~/lib/parent-care-term";
 
 const logger = createLogger({ component: "ParentCalendarPage" });
+const NO_EVENTS: CalendarEvent[] = [];
 const MAX_CALENDAR_WINDOW_OFFSET = 91;
 const MAX_VISIBLE_EVENTS = 2;
 
@@ -231,6 +235,25 @@ function eventTime(event: CalendarEvent, allDayLabel: string): string {
   return `${event.start_time} - ${event.end_time}`;
 }
 
+/** The loaded window; the start page reads a shorter one under its own key. */
+function useCalendarWindow(today: string, rangeEnd: string) {
+  return useSWRAuth(
+    parentKeys.calendar(today, MAX_CALENDAR_WINDOW_OFFSET),
+    () => getParentCalendar(parseISODate(today), parseISODate(rangeEnd)),
+    PARENT_RESOURCE_OPTIONS,
+  );
+}
+
+/** The loaded window with one answer applied (#6987). */
+function withAnswer(
+  response: CalendarResponse | undefined,
+  answer: Parameters<typeof applyAnswer>[1],
+): CalendarResponse | undefined {
+  return (
+    response && { ...response, events: applyAnswer(response.events, answer) }
+  );
+}
+
 export function ParentCalendarPage() {
   const t = useCareTermTranslations("parentCalendar");
   const locale = useLocale();
@@ -258,51 +281,19 @@ export function ParentCalendarPage() {
   const [referenceDate, setReferenceDate] = useState(() =>
     monthReference(initialDate),
   );
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const calendar = useCalendarWindow(today, rangeEnd);
+  const { mutate: mutateCalendar } = calendar;
+  const events = calendar.data?.events ?? NO_EVENTS;
   // A failed load replaces list and month grid with retry (#2518), so it
   // never reads as "no appointments".
-  const {
-    error,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+  const { error } = useSwrResourceLoadError(
+    [calendar],
+    t("errorObjectList"),
+    () => mutateCalendar(),
+  );
+  const loading = !calendar.data && !calendar.error;
+  const invalidate = useInvalidateMatching();
   const [respondingId, setRespondingId] = useState<string | null>(null);
-  const seqRef = useRef(0);
-
-  const load = useCallback(async () => {
-    const seq = ++seqRef.current;
-    setLoading(true);
-    try {
-      const response = await getParentCalendar(
-        parseISODate(today),
-        parseISODate(rangeEnd),
-      );
-      if (seq !== seqRef.current) return;
-      setEvents(response.events);
-      clearLoadError();
-    } catch (err) {
-      if (seq !== seqRef.current) return;
-      logger.warn("parent_calendar_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showLoadError(err, {
-        object: t("errorObjectList"),
-        retry: () => void loadRef.current(),
-      });
-    } finally {
-      if (seq === seqRef.current) setLoading(false);
-    }
-  }, [clearLoadError, rangeEnd, showLoadError, t, today]);
-  // The retry runs the latest load, not the one of the failed attempt.
-  const loadRef = useRef(load);
-  useLayoutEffect(() => {
-    loadRef.current = load;
-  });
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   // Throws on failure: the surface the person pressed shows the error (the
   // row as a toast, the open details in place).
@@ -318,8 +309,17 @@ export function ParentCalendarPage() {
       // An answer for the series covers every date of the invitation; an
       // answer for one date changes that date only (#6987).
       const recipientId = event.recipient_id;
-      setEvents((current) =>
-        applyAnswer(current, { recipientId, occurrenceDate, status }),
+      void mutateCalendar(
+        (current) =>
+          withAnswer(current, { recipientId, occurrenceDate, status }),
+        { revalidate: false },
+      );
+      // The start page's list and the response counts include this answer.
+      void invalidate(
+        (key) =>
+          key.startsWith(parentKeys.appointmentOverviewFamily) ||
+          (key.startsWith(parentKeys.calendarFamily) &&
+            key !== parentKeys.calendar(today, MAX_CALENDAR_WINDOW_OFFSET)),
       );
       if (occurrenceDate) {
         const date = formatShortDay(occurrenceDate, locale);

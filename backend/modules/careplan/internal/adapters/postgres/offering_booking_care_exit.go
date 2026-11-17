@@ -48,7 +48,7 @@ func (s *Store) EndCareOfferingBookings(ctx context.Context, childIDs []int64, u
 		return 0, err
 	}
 	capped, err := db.NewUpdate().Model((*careOfferingBookingRow)(nil)).
-		Set("valid_until = ?", date).Set("updated_at = NOW()").
+		Set("valid_until = ?", date).Set("updated_at = ?", s.currentTime()).
 		Where("tenant_id = ? AND request_child_id IN (?)", tenantID, bun.List(childIDs)).
 		Where("(valid_from IS NULL OR valid_from < ?) AND (valid_until IS NULL OR valid_until > ?)", date, date).Exec(ctx)
 	if err != nil {
@@ -78,7 +78,7 @@ func (s *Store) RestoreCareOfferingBookings(ctx context.Context, restores []care
 		}
 		if !restore.WasDeleted {
 			_, err := db.NewUpdate().Model((*careOfferingBookingRow)(nil)).
-				Set("valid_until = ?", bookingDateToStorage(booking.ValidUntil)).Set("updated_at = NOW()").
+				Set("valid_until = ?", bookingDateToStorage(booking.ValidUntil)).Set("updated_at = ?", s.currentTime()).
 				Where("tenant_id = ? AND id = ? AND request_child_id = ? AND care_offering_id = ?", tenantID, booking.ID, booking.RequestChildID, booking.CareOfferingID).Exec(ctx)
 			if err != nil {
 				return 0, err
@@ -113,7 +113,7 @@ func (s *Store) MoveCareOfferingBookingBounds(ctx context.Context, changes []car
 		result, err := db.NewUpdate().Model((*careOfferingBookingRow)(nil)).
 			Set("valid_from = ?", bookingDateToStorage(change.ValidFrom)).
 			Set("valid_until = ?", bookingDateToStorage(change.ValidUntil)).
-			Set("updated_at = NOW()").
+			Set("updated_at = ?", s.currentTime()).
 			Where("tenant_id = ? AND id = ? AND request_child_id = ?", tenantID, change.ID, change.RequestChildID).
 			Where("(valid_from = ?::date OR (valid_from IS NULL AND ?::date IS NULL))", bookingDateToStorage(change.ValidFromWas), bookingDateToStorage(change.ValidFromWas)).
 			Where("(valid_until = ?::date OR (valid_until IS NULL AND ?::date IS NULL))", bookingDateToStorage(change.ValidUntilWas), bookingDateToStorage(change.ValidUntilWas)).Exec(ctx)

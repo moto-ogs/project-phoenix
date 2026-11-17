@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 
+vi.unmock("swr");
 const api = vi.hoisted(() => ({
   fetchTraegerProfile: vi.fn(),
   changeTraegerProfileName: vi.fn(),
@@ -26,9 +27,9 @@ const PROFILE = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerAccountPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

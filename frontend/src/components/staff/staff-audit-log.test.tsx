@@ -6,19 +6,36 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { AuditLogEvent, AuditLogPage } from "~/lib/staff-audit-log-api";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import { StaffAuditLog } from "./staff-audit-log";
 
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1" }, expires: "2099-01-01" },
+  }),
+}));
+
 // „Weitere Einträge laden“ meldet einen Fehler als Toast (#2514); die App
 // hängt den Provider global ein.
+function Providers({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
+
 function render(ui: ReactElement) {
-  return renderUi(ui, { wrapper: ToastProvider });
+  return renderUi(ui, { wrapper: Providers });
 }
 
 // The Von/Bis filters are kit date pickers, not native inputs. These tests are

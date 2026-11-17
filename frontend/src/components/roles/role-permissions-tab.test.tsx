@@ -2,17 +2,38 @@ import "@testing-library/jest-dom/vitest";
 import {
   act,
   fireEvent,
-  render,
+  render as renderRaw,
   screen,
   waitFor,
 } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { ApiError } from "~/lib/api-error";
 import type { Permission, Role } from "~/lib/auth-helpers";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { RolePermissionsTab } from "./role-permissions-tab";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in session per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+const render = (ui: ReactElement) => renderRaw(ui, { wrapper: Providers });
 
 const {
   mockToastSuccess,
@@ -96,6 +117,61 @@ describe("RolePermissionsTab", () => {
     mockGetPermissions.mockResolvedValue(allPermissions);
     mockGetRolePermissions.mockResolvedValue([allPermissions[0]!]);
   });
+
+  it.each([true, false])(
+    "waits for fresh permissions when entering editing (remount=%s)",
+    async (remount) => {
+      const view = (show: boolean, editing = true) =>
+        show ? (
+          <RolePermissionsTab
+            role={role}
+            editing={editing}
+            onSaved={onSaved}
+            onCancelEdit={onCancelEdit}
+          />
+        ) : (
+          <></>
+        );
+      const { rerender } = render(view(true, remount));
+      if (remount) {
+        expect(
+          await screen.findByRole("checkbox", { name: /students:read/ }),
+        ).toBeChecked();
+        rerender(view(false));
+      } else {
+        expect(
+          await screen.findByText("1 Berechtigung zugewiesen."),
+        ).toBeVisible();
+      }
+      const fresh = deferred<Permission[]>();
+      mockGetRolePermissions.mockReturnValueOnce(fresh.promise);
+      rerender(view(true));
+      // Anker: dieses Öffnen wartet auf seinen eigenen Abruf.
+      expect(
+        screen.getByText("Berechtigungen werden geladen..."),
+      ).toBeVisible();
+      expect(
+        screen.queryByRole("checkbox", { name: /students:read/ }),
+      ).not.toBeInTheDocument();
+      await act(async () =>
+        fresh.resolve([allPermissions[0]!, allPermissions[2]!]),
+      );
+      expect(
+        await screen.findByRole("checkbox", { name: /rooms:read/ }),
+      ).toBeChecked();
+      fireEvent.click(
+        screen.getByRole("checkbox", { name: /students:update/ }),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() =>
+        expect(mockReplaceRolePermissions).toHaveBeenCalledWith("1", [
+          "p1",
+          "p2",
+          "p3",
+        ]),
+      );
+    },
+  );
 
   it("lists the assigned permissions by resource in the view state", async () => {
     render(
@@ -325,6 +401,51 @@ describe("RolePermissionsTab", () => {
     expect(
       screen.getByText("Keine Berechtigungen gefunden."),
     ).toBeInTheDocument();
+  });
+
+  it("offers no checkbox while the read for editing is still on its way", async () => {
+    const props = { role, onSaved, onCancelEdit };
+    const { rerender } = render(
+      <RolePermissionsTab {...props} editing={false} />,
+    );
+    await screen.findByText("1 Berechtigung zugewiesen.");
+
+    // Eine Kollegin hat inzwischen eine Berechtigung ergänzt.
+    const editRead = deferred<Permission[]>();
+    mockGetRolePermissions.mockReturnValue(editRead.promise);
+    rerender(<RolePermissionsTab {...props} editing />);
+    await waitFor(() => expect(mockGetPermissions).toHaveBeenCalled());
+    await act(async () => undefined);
+    // Kein Kästchen, auf dem ein Entwurf mit dem älteren Stand beginnen kann.
+    expect(screen.queryByLabelText("rooms:read")).not.toBeInTheDocument();
+
+    await act(async () =>
+      editRead.resolve([allPermissions[0]!, allPermissions[2]!]),
+    );
+    expect(
+      await screen.findByText("2 von 3 Berechtigungen ausgewählt."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("rooms:read")).toBeChecked();
+  });
+
+  it("shows the load error instead of checkboxes when the read for editing fails", async () => {
+    const props = { role, onSaved, onCancelEdit };
+    const { rerender } = render(
+      <RolePermissionsTab {...props} editing={false} />,
+    );
+    await screen.findByText("1 Berechtigung zugewiesen.");
+
+    mockGetRolePermissions.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    rerender(<RolePermissionsTab {...props} editing />);
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Liste der Berechtigungen"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("rooms:read")).not.toBeInTheDocument();
   });
 
   it("starts the draft at the saved state again after cancelling", async () => {

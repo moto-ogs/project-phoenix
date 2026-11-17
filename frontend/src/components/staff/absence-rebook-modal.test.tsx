@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -6,11 +7,18 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SessionProvider } from "next-auth/react";
+import { useInvalidateFamily } from "~/lib/swr";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 import type { AbsenceType } from "~/lib/absence-type-api";
 import { ApiError } from "~/lib/api-error";
 import type { AbsenceRebooking, StaffAbsenceRow } from "~/lib/staff-api";
 import { catalogText } from "~/test/error-catalog-text";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { suppressConsole } from "~/test/helpers/console";
 
 vi.mock("~/components/ui/modal", () => ({
@@ -109,7 +117,7 @@ function renderModal(
   onSaved = vi.fn().mockResolvedValue(undefined),
   absences = fridays,
 ) {
-  render(
+  renderWithCache(
     <AbsenceRebookModal
       staff={staff}
       types={[sickLeave]}
@@ -162,7 +170,7 @@ describe("AbsenceRebookModal", () => {
   });
 
   it("hides every type already used by a mixed selection", () => {
-    render(
+    renderWithCache(
       <AbsenceRebookModal
         staff={staff}
         types={[sickLeave]}
@@ -311,4 +319,78 @@ describe("AbsenceRebookModal", () => {
       screen.queryByText(catalogText("general.server", "die Änderung der Art")),
     ).not.toBeInTheDocument();
   });
+});
+
+// Echter SWR-Cache je Render und eine Sitzung mit Konto, sonst liest
+// useSWRAuth nichts.
+function TenantSWR({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-test", tenantId: 1 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const renderWithCache = (ui: React.ReactElement) =>
+  render(ui, { wrapper: TenantSWR });
+
+it("withdraws a cached rebooking preview when a later dry run is rejected", async () => {
+  mocks.rebookAbsences.mockReset().mockResolvedValue(rebooking());
+  let reload!: () => Promise<unknown>;
+  function Probe() {
+    const invalidate = useInvalidateFamily();
+    reload = () =>
+      invalidate(
+        staffAbsenceKeys.rebookingPreview(staff.id, [71, 72], "custom:12"),
+      );
+    return null;
+  }
+  renderWithCache(
+    <>
+      <AbsenceRebookModal
+        staff={staff}
+        types={[sickLeave]}
+        absences={fridays}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+      <Probe />
+    </>,
+  );
+  fireEvent.click(screen.getByRole("radio", { name: /Krank-Urlaubstag/ }));
+  expect(await screen.findByText("+16h")).toBeVisible();
+  const pending = deferred<AbsenceRebooking>();
+  mocks.rebookAbsences.mockReturnValueOnce(pending.promise);
+  let refresh!: Promise<unknown>;
+  act(() => {
+    refresh = reload();
+  });
+  // Anker: der offene Dialog darf während der Neuberechnung nicht speichern.
+  expect(submitButton()).toHaveAttribute("aria-disabled", "true");
+  expect(screen.queryByText("+16h")).not.toBeInTheDocument();
+  await act(async () => {
+    pending.reject(
+      new ApiError("blocked", 409, {
+        code: "workforce.rebooking_into_sick_report",
+      }),
+    );
+    await refresh;
+  });
+  expect(
+    await screen.findByText(
+      catalogText(
+        "workforce.rebooking_into_sick_report",
+        "die Änderung der Art",
+      ),
+    ),
+  ).toBeVisible();
+  expect(screen.queryByText("+16h")).not.toBeInTheDocument();
+  expect(submitButton()).toHaveAttribute("aria-disabled", "true");
 });

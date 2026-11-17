@@ -56,6 +56,8 @@ func (r *Store) InsertPhase(ctx context.Context, phase *enrollment.Phase) error 
 	}
 
 	row := phaseRecord(phase)
+	row.CreatedAt = r.currentTime()
+	row.UpdatedAt = row.CreatedAt
 	_, err = db.NewInsert().
 		Model(row).
 		ModelTableExpr(phaseTableExpr).
@@ -132,6 +134,7 @@ func (r *Store) UpdatePhase(ctx context.Context, phase *enrollment.Phase) error 
 	if phase.ID == 0 {
 		return errors.New("phase ID is required for update")
 	}
+	now := r.currentTime()
 	if err := r.checkPhaseSchema(ctx, phase.FormSchemaID); err != nil {
 		return err
 	}
@@ -158,7 +161,7 @@ func (r *Store) UpdatePhase(ctx context.Context, phase *enrollment.Phase) error 
 		Set("eligible_school_classes = ?", phase.EligibleSchoolClasses).
 		Set("eligible_grade_levels = ?", phase.EligibleGradeLevels).
 		Set("translations = ?", storedTranslations(phase.Translations)).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", now).
 		Where(`"phase".id = ?`, phase.ID).
 		Exec(ctx)
 	if err != nil {
@@ -171,7 +174,7 @@ func (r *Store) UpdatePhase(ctx context.Context, phase *enrollment.Phase) error 
 	if rows == 0 {
 		return fmt.Errorf("phase %d not found: %w", phase.ID, sql.ErrNoRows)
 	}
-	return reschedulePhasePlans(ctx, db, tenantID, phase)
+	return reschedulePhasePlans(ctx, db, tenantID, phase, now)
 }
 
 // reschedulePhasePlans moves the pending weekly plans and class switches of
@@ -179,12 +182,12 @@ func (r *Store) UpdatePhase(ctx context.Context, phase *enrollment.Phase) error 
 // #6505): both were planned for the start, so they keep following it. Applied
 // plans stay cleared; the author, the replacement mode and the planned
 // classes stay intact.
-func reschedulePhasePlans(ctx context.Context, db bun.IDB, tenantID int64, phase *enrollment.Phase) error {
+func reschedulePhasePlans(ctx context.Context, db bun.IDB, tenantID int64, phase *enrollment.Phase, now time.Time) error {
 	start := phase.ServiceStartDate
 	_, err := db.NewUpdate().TableExpr("enrollment.request_children").
 		Set("weekly_plan_on = CASE WHEN weekly_plan_on IS NULL THEN NULL ELSE ?::date END", start).
 		Set("class_switch_on = CASE WHEN class_switch_on IS NULL THEN NULL ELSE ?::date END", start).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", now).
 		Where("tenant_id = ?", tenantID).
 		WhereGroup(" AND ", func(q *bun.UpdateQuery) *bun.UpdateQuery {
 			return q.Where("weekly_plan_on IS NOT NULL AND weekly_plan_on <> ?", start).

@@ -42,6 +42,7 @@ import type {
   SubstitutionOverview,
 } from "~/lib/substitution-helpers";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import { useOpenCareGroupMode } from "~/lib/tenant-context";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useTenantRouter } from "~/lib/tenant-router";
@@ -640,7 +641,7 @@ function useOverviewData(session: Parameters<typeof hasPermission>[0]) {
     error,
     mutate,
   } = useSWRAuth<SubstitutionOverview>(
-    "substitution-overview",
+    tenantListKeys.substitutionOverview(),
     () => substitutionService.fetchOverview(),
     { keepPreviousData: true },
   );

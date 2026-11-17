@@ -42,11 +42,25 @@ func NewTraegerDatabase(current func(context.Context) (any, bool), traeger func(
 }
 
 // TraegerStore persists the recipients, their formats and the journal of a
-// Träger.
-type TraegerStore struct{ database TraegerDatabase }
+// Träger. now is the owner's clock: it stamps updated_at of the recipients
+// and their formats (ADR 0281); the fences of the journal stay on the
+// database clock of the transport.
+type TraegerStore struct {
+	database TraegerDatabase
+	now      func() time.Time
+}
 
-func NewTraegerStore(database TraegerDatabase) *TraegerStore {
-	return &TraegerStore{database: database}
+func NewTraegerStore(database TraegerDatabase, now func() time.Time) *TraegerStore {
+	return &TraegerStore{database: database, now: now}
+}
+
+// stamp is the owner's instant for an updated_at; a store without a clock
+// writes nothing.
+func (s *TraegerStore) stamp() (time.Time, error) {
+	if s.now == nil {
+		return time.Time{}, errors.New("export transfer postgres: the store needs the owner's clock to write")
+	}
+	return s.now(), nil
 }
 
 // recipientRow mirrors config.traeger_export_recipients with the formats
@@ -220,13 +234,17 @@ func (s *TraegerStore) InsertRecipient(ctx context.Context, recipient domain.Sto
 	if err != nil {
 		return 0, err
 	}
+	at, err := s.stamp()
+	if err != nil {
+		return 0, err
+	}
 	var id int64
 	err = db.NewRaw(`INSERT INTO config.traeger_export_recipients
-		(organization_id, name, enabled, host, port, username, password_sealed, remote_directory, host_key_fingerprint, updated_by_account_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		(organization_id, name, enabled, host, port, username, password_sealed, remote_directory, host_key_fingerprint, updated_by_account_id, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (organization_id, lower(name COLLATE "und-x-icu")) DO NOTHING RETURNING id`,
 		recipient.OrganizationID, recipient.Name, recipient.Enabled, recipient.Host, recipient.Port, recipient.Username,
-		recipient.SealedPassword, recipient.RemoteDirectory, recipient.HostKeyFingerprint, actorOf(actorAccountID)).Scan(ctx, &id)
+		recipient.SealedPassword, recipient.RemoteDirectory, recipient.HostKeyFingerprint, actorOf(actorAccountID), at).Scan(ctx, &id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, domain.ErrNameTaken
 	}
@@ -244,6 +262,10 @@ func (s *TraegerStore) UpdateRecipient(ctx context.Context, recipient domain.Sto
 	if err != nil {
 		return false, err
 	}
+	at, err := s.stamp()
+	if err != nil {
+		return false, err
+	}
 	var outcome struct {
 		Found bool `bun:"found"`
 		Taken bool `bun:"taken"`
@@ -255,12 +277,12 @@ func (s *TraegerStore) UpdateRecipient(ctx context.Context, recipient domain.Sto
 		updated AS (
 			UPDATE config.traeger_export_recipients SET name = ?2, enabled = ?3, host = ?4, port = ?5, username = ?6,
 				password_sealed = ?7, remote_directory = ?8, host_key_fingerprint = ?9, updated_by_account_id = ?10,
-				updated_at = clock_timestamp()
+				updated_at = ?11
 			WHERE organization_id = ?0 AND id = ?1 AND NOT EXISTS (SELECT 1 FROM taken) RETURNING id)
 		SELECT EXISTS (SELECT 1 FROM config.traeger_export_recipients WHERE organization_id = ?0 AND id = ?1) AS found,
 			EXISTS (SELECT 1 FROM taken) AS taken`,
 		recipient.OrganizationID, recipient.ID, recipient.Name, recipient.Enabled, recipient.Host, recipient.Port, recipient.Username,
-		recipient.SealedPassword, recipient.RemoteDirectory, recipient.HostKeyFingerprint, actorOf(actorAccountID)).Scan(ctx, &outcome); err != nil {
+		recipient.SealedPassword, recipient.RemoteDirectory, recipient.HostKeyFingerprint, actorOf(actorAccountID), at).Scan(ctx, &outcome); err != nil {
 		return false, fmt.Errorf("export transfer postgres: save the recipient: %w", err)
 	}
 	if outcome.Found && outcome.Taken {
@@ -330,12 +352,16 @@ func (s *TraegerStore) AssignFormat(ctx context.Context, organizationID int64, f
 		}
 		return true, nil
 	}
-	result, err := db.NewRaw(`INSERT INTO config.traeger_export_recipient_formats (organization_id, export_format, recipient_id, updated_by_account_id)
-		SELECT recipient.organization_id, ?, recipient.id, ? FROM config.traeger_export_recipients AS recipient
+	at, err := s.stamp()
+	if err != nil {
+		return false, err
+	}
+	result, err := db.NewRaw(`INSERT INTO config.traeger_export_recipient_formats (organization_id, export_format, recipient_id, updated_by_account_id, updated_at)
+		SELECT recipient.organization_id, ?, recipient.id, ?, ? FROM config.traeger_export_recipients AS recipient
 		WHERE recipient.organization_id = ? AND recipient.id = ?
 		ON CONFLICT (organization_id, export_format) DO UPDATE SET recipient_id = EXCLUDED.recipient_id,
-			updated_by_account_id = EXCLUDED.updated_by_account_id, updated_at = clock_timestamp()`,
-		format, actorOf(actorAccountID), organizationID, recipientID).Exec(ctx)
+			updated_by_account_id = EXCLUDED.updated_by_account_id, updated_at = EXCLUDED.updated_at`,
+		format, actorOf(actorAccountID), at, organizationID, recipientID).Exec(ctx)
 	if err != nil {
 		return false, fmt.Errorf("export transfer postgres: assign the format: %w", err)
 	}

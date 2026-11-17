@@ -5,6 +5,7 @@ package api
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -38,13 +39,13 @@ func NewSettingsBudgetRouterForTest(ctx context.Context, db transactionruntime.D
 		return nil, "", err
 	}
 	home := settings.Service.(settingsHTTP.HomeLayoutOperations)
-	schools, err := owners.BuildServeOrganizations(db, nil)
+	schools, err := owners.BuildServeOrganizations(db, time.Now)
 	if err != nil {
 		return nil, "", err
 	}
 	r := chi.NewRouter()
 	r.Use(auth.Verifier())
-	r.Mount("/api/settings", newSettingsResource(db, writes.Tenant, home, owners.NewEnrollmentBookings(nil).SchemaReferencesLegalDocument, schools).SettingsRouter())
+	r.Mount("/api/settings", newSettingsResource(db, writes.Tenant, home, owners.NewEnrollmentBookings(time.Now).SchemaReferencesLegalDocument, time.Now, schools).SettingsRouter())
 	traeger := settingsHTTP.NewTraegerSettingsResource(settings.Traeger, identityaccess.TraegerRightOverviewRead,
 		identityaccess.TraegerRightSettingsManage, identityaccess.TraegerRightStaffManage, identityaccess.TraegerRightBillingManage)
 	r.Mount("/traeger/settings", traeger.TraegerRouter(ProtectedTraegerRoutes))

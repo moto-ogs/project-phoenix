@@ -2,11 +2,16 @@ package application
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
+// A change of a school closing day also tells the school and its families
+// in their notification feed (#7144); see noticeClosingDayChange.
+//
 // A change of a school closing day proposes a notice to the parents of the
 // booked holiday weeks it touches (#6442, #6457, ADR 0196): in the same
 // school transaction and under the school's revision lock, so concurrent
@@ -30,5 +35,54 @@ func (s *Service) recordHolidayClosureChange(ctx context.Context, stats *domain.
 	}
 	recordStats, err := s.store.RecordHolidayClosureChange(ctx, change)
 	stats.Add(recordStats)
-	return err
+	if err != nil {
+		return err
+	}
+	return s.noticeClosingDayChange(ctx, closingDayID, reason, previous, current, change.Today)
+}
+
+// closingDayNoticePushDays is how far ahead a changed closing day may lie and
+// still ring a phone (#7144), the relevance window of the notification feed
+// (#7127): a later one reaches the feed only.
+const closingDayNoticePushDays = 14
+
+// noticeClosingDayChange tells the school about a planned, changed or
+// cancelled closing day (#7144) in the transaction that wrote it. A change
+// whose days all lie before today tells nobody, and so does a change that
+// keeps the days: only the days decide whether the school is open.
+func (s *Service) noticeClosingDayChange(ctx context.Context, closingDayID int64, reason string, previous, current *domain.HolidayClosureRange, today calendar.Date) error {
+	notices := s.administration.ClosingDayNotices
+	if notices == nil || sameClosingDays(previous, current) {
+		return nil
+	}
+	reaches, push := false, false
+	for _, r := range []*domain.HolidayClosureRange{previous, current} {
+		if r == nil || r.EndsOn.Before(today) {
+			continue
+		}
+		reaches = true
+		push = push || !r.StartsOn.After(today.AddDays(closingDayNoticePushDays))
+	}
+	if !reaches {
+		return nil
+	}
+	notice := schoolcalendar.ClosingDayNotice{
+		ClosingDayID: closingDayID, Reason: reason,
+		Previous: closingDayRange(previous), Current: closingDayRange(current), Push: push,
+	}
+	if err := notices.NotifyClosingDayChanged(ctx, notice); err != nil {
+		return fmt.Errorf("school calendar: notify closing day change: %w", err)
+	}
+	return nil
+}
+
+func sameClosingDays(previous, current *domain.HolidayClosureRange) bool {
+	return previous != nil && current != nil && *previous == *current
+}
+
+func closingDayRange(r *domain.HolidayClosureRange) *schoolcalendar.ClosingDayRange {
+	if r == nil {
+		return nil
+	}
+	return &schoolcalendar.ClosingDayRange{StartsOn: r.StartsOn, EndsOn: r.EndsOn}
 }

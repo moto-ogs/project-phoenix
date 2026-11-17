@@ -72,10 +72,6 @@ type PersonRepository interface {
 
 	// FindWithAccount retrieves a person with their associated account
 	FindWithAccount(ctx context.Context, id int64) (*peopledirectory.DirectoryPersonSnapshot, error)
-
-	// AnonymizeAndSoftDelete overwrites the person's PII with placeholder
-	// values and stamps deleted_at (GDPR person deletion).
-	AnonymizeAndSoftDelete(ctx context.Context, personID int64) error
 }
 
 // StudentRepository defines operations for managing students

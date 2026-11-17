@@ -23,8 +23,8 @@ type accountPasskeyRow struct {
 	Name           string          `bun:"name,notnull"`
 	LastUsedAt     *time.Time      `bun:"last_used_at"`
 	RevokedAt      *time.Time      `bun:"revoked_at"`
-	CreatedAt      time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time       `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time       `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r accountPasskeyRow) toDomain() domain.AccountPasskeyCredential {
@@ -46,8 +46,8 @@ type accountPasskeySessionRow struct {
 	SessionJSON    json.RawMessage `bun:"session_json,type:jsonb,notnull"`
 	ExpiresAt      time.Time       `bun:"expires_at,notnull"`
 	ConsumedAt     *time.Time      `bun:"consumed_at"`
-	CreatedAt      time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time       `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time       `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r accountPasskeySessionRow) toDomain() domain.AccountPasskeySession {

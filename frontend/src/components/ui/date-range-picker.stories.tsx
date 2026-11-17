@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { storyNow } from "~storybook/clock";
 import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { DateRange } from "react-day-picker";
@@ -18,7 +19,7 @@ type Story = StoryObj<typeof DateRangePicker>;
 
 function DateRangePickerDemo() {
   const [value, setValue] = useState<DateRange | undefined>(undefined);
-  const today = new Date();
+  const today = storyNow();
   return (
     <div className="p-10">
       <DateRangePicker
@@ -34,7 +35,7 @@ function DateRangePickerDemo() {
 }
 
 function DateRangePickerSelectedDemo() {
-  const today = new Date();
+  const today = storyNow();
   const [value, setValue] = useState<DateRange | undefined>({
     from: today,
     to: today,

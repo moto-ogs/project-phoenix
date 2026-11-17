@@ -59,7 +59,7 @@ func NewGradeTransitionTestModule(db transactionruntime.Database, resync Offerin
 	if err != nil {
 		return GradeTransitionTestModule{}, err
 	}
-	structure, presence, err := NewGradeTransitionOwners(db)
+	structure, presence, err := NewGradeTransitionOwners(db, clock)
 	if err != nil {
 		return GradeTransitionTestModule{}, err
 	}

@@ -5,7 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getRequestSharingOptions } from "~/lib/parent-api";
 import { catalogText } from "~/test/error-catalog-text";
 import { RequestSharingSelector } from "./request-sharing-control";
-import { SharingOptionsProvider } from "./sharing-options-context";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
+
+function renderParent(ui: Parameters<typeof render>[0]) {
+  return render(ui, { wrapper: ParentResourceTestProvider });
+}
 
 vi.mock("~/lib/parent-api", () => ({
   getRequestSharingOptions: vi.fn(),
@@ -15,7 +21,7 @@ vi.mock("~/lib/parent-api", () => ({
 
 const getOptions = vi.mocked(getRequestSharingOptions);
 
-describe("SharingOptionsProvider", () => {
+describe("useSharingOptions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getOptions.mockResolvedValue({
@@ -34,8 +40,8 @@ describe("SharingOptionsProvider", () => {
   // Zwei Auswahlfelder auf einer Seite dürfen die Empfängerliste nur einmal
   // holen (#2267).
   it("loads the recipients once for two selectors on the same child", async () => {
-    render(
-      <SharingOptionsProvider>
+    renderParent(
+      <>
         <RequestSharingSelector
           studentId="42"
           selected={[]}
@@ -46,7 +52,7 @@ describe("SharingOptionsProvider", () => {
           selected={[]}
           onChange={vi.fn()}
         />
-      </SharingOptionsProvider>,
+      </>,
     );
 
     await waitFor(() =>
@@ -58,8 +64,8 @@ describe("SharingOptionsProvider", () => {
   });
 
   it("loads once per child", async () => {
-    render(
-      <SharingOptionsProvider>
+    renderParent(
+      <>
         <RequestSharingSelector
           studentId="42"
           selected={[]}
@@ -70,7 +76,7 @@ describe("SharingOptionsProvider", () => {
           selected={[]}
           onChange={vi.fn()}
         />
-      </SharingOptionsProvider>,
+      </>,
     );
 
     await waitFor(() => expect(getOptions).toHaveBeenCalledTimes(2));
@@ -80,7 +86,7 @@ describe("SharingOptionsProvider", () => {
 
   // Ohne Provider bleibt das Auswahlfeld allein lauffähig.
   it("falls back to a direct fetch without a provider", async () => {
-    render(
+    renderParent(
       <RequestSharingSelector
         studentId="42"
         selected={[]}
@@ -100,14 +106,14 @@ describe("SharingOptionsProvider", () => {
     getOptions.mockRejectedValueOnce(
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
-    render(
-      <SharingOptionsProvider>
+    renderParent(
+      <>
         <RequestSharingSelector
           studentId="42"
           selected={[]}
           onChange={vi.fn()}
         />
-      </SharingOptionsProvider>,
+      </>,
     );
 
     expect(

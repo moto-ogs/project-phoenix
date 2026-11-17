@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	directoryPorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 
@@ -23,7 +24,7 @@ func TestModuleCareExitRemovesOnlyPlansAndRestoresSnapshots(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	room := testpkg.CreateTestRoom(t, db, "Care exit snapshot room")
 	facts := &fixedSessions{}
-	module, err := New(Dependencies{
+	module, err := New(Dependencies{Now: time.Now,
 		Provenance:           testpkg.EnrollmentProvenance{},
 		LockStaffAssignments: func(context.Context, []int64) error { return nil },
 		DB:                   db,

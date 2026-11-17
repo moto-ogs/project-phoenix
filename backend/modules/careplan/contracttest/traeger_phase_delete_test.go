@@ -3,6 +3,7 @@ package contracttest_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	careplanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
@@ -17,7 +18,7 @@ func TestPhaseDeleteProtectsMovedTraegerOffering(t *testing.T) {
 	env := setupDecisionTest(t)
 	phases := boundsPhases(t, env, nil)
 	catalog := testCareOfferingCatalog(t, env.db)
-	copies, err := careplanCompose.NewTraegerOfferingCopies(catalog, func(context.Context) error { return nil })
+	copies, err := careplanCompose.NewTraegerOfferingCopies(catalog, func(context.Context) error { return nil }, time.Now)
 	require.NoError(t, err)
 	var id int64
 	require.NoError(t, fixtureEnrollmentCommand(testpkg.Ctx(t), func(ctx context.Context) error {

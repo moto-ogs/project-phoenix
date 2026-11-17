@@ -27,7 +27,7 @@ type runLettersRow struct {
 	Notes              string                                  `bun:"notes"`
 	EmergencyContacts  []parentbilling.BillingEmergencyContact `bun:"emergency_contacts,type:jsonb"`
 	CreatedByAccountID *int64                                  `bun:"created_by_account_id"`
-	CreatedAt          time.Time                               `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt          time.Time                               `bun:"created_at,nullzero"`
 	TemplateVersion    int                                     `bun:"template_version"`
 }
 
@@ -51,7 +51,7 @@ type documentLetterRow struct {
 	Filename       string    `bun:"filename"`
 	PDF            []byte    `bun:"pdf"`
 	SHA256         string    `bun:"sha256,scanonly"`
-	CreatedAt      time.Time `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt      time.Time `bun:"created_at,nullzero"`
 }
 
 // RunLetters reads the letters of a run; nil before they are created.

@@ -10,6 +10,7 @@ import (
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -92,16 +93,25 @@ var staffCancellationWeekdays = [...]string{"So.", "Mo.", "Di.", "Mi.", "Do.", "
 // name, when it was planned and what happens to it, never a child. The link
 // leads to the person's own Dienstplan on that day.
 func staffCancellationCopy(notice timetablePorts.StaffCancellationNotice, title, outcome string) (string, string, string) {
-	name := strings.TrimSpace(notice.Title)
-	when := staffCancellationWeekdays[notice.Date.Weekday()] + " " + notice.Date.Format("02.01.")
-	var body string
-	if notice.StartTime.IsZero() {
-		body = fmt.Sprintf("„%s“ am %s %s.", name, when, outcome)
-	} else {
-		body = fmt.Sprintf("„%s“ am %s um %s Uhr %s.", name, when, notice.StartTime.Format("15:04"), outcome)
-	}
-	if name == "" {
-		body = strings.Replace(body, "„“", "Ein Termin", 1)
-	}
+	body := fmt.Sprintf("%s am %s %s.", blockNoticeSubject(notice.Title), blockNoticeWhen(notice.Date, notice.StartTime), outcome)
 	return title, body, "/mein-dienstplan?d=" + notice.Date.String()
+}
+
+// blockNoticeSubject names a block in a notice: its quoted title, or
+// "Ein Termin" without one.
+func blockNoticeSubject(title string) string {
+	if name := strings.TrimSpace(title); name != "" {
+		return "„" + name + "“"
+	}
+	return "Ein Termin"
+}
+
+// blockNoticeWhen is the day of a block in a notice, with its start time
+// when it has one: "Di. 17.11. um 15:00 Uhr".
+func blockNoticeWhen(date calendar.Date, start time.Time) string {
+	when := staffCancellationWeekdays[date.Weekday()] + " " + date.Format("02.01.")
+	if !start.IsZero() {
+		when += " um " + start.Format("15:04") + " Uhr"
+	}
+	return when
 }

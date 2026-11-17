@@ -23,7 +23,7 @@ func TestHolidayPositionsKeepTheirKost1AndFallback(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	scope := newCareScope(t, db, "Träger Gastgeber-KOST1")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the release back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {

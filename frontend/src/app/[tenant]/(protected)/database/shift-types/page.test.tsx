@@ -39,10 +39,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   }),
 }));
 
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: () => false,
-}));
-
 const shiftTypeService = vi.hoisted(() => ({
   getShiftTypes: vi.fn(),
   createShiftType: vi.fn(),

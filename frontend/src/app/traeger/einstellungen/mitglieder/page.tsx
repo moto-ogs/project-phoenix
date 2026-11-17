@@ -5,7 +5,7 @@
 // (#5474).
 // Nur mit dem Recht „Konten verwalten“ (Rolle Leitung, #5471).
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { Pencil, Trash2, Undo2, UserPen, UserPlus, Users } from "lucide-react";
 import {
@@ -14,6 +14,7 @@ import {
   InviteTraegerAccountModal,
 } from "~/components/traeger/traeger-account-modals";
 import { isRefusal } from "~/components/traeger/use-traeger-confirmed-resource";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TraegerAccountHistory } from "~/components/traeger/traeger-account-history";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { Button } from "~/components/ui/button";
@@ -24,17 +25,12 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate, formatTime } from "~/lib/date-helpers";
-import {
-  STALE_DATA_SUFFIX,
-  useRefreshAfterWrite,
-} from "~/lib/hooks/use-refresh-after-write";
+import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily, useInvalidateMatching } from "~/lib/swr";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchTraegerBuero,
   removeTraegerMember,
@@ -49,6 +45,8 @@ import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerAccountsPage" });
 
+const NO_BUERO: TraegerBuero = { members: [], invitations: [] };
+
 function roleNames(roles: readonly TraegerRole[]): string {
   return roles.map((role) => TRAEGER_ROLE_LABELS[role]).join(", ") || "–";
 }
@@ -60,94 +58,58 @@ type Pending =
 export default function TraegerAccountsPage() {
   const { data: session } = useSession();
   const ownEmail = session?.user?.email ?? "";
-  const [buero, setBuero] = useState<TraegerBuero>({
-    members: [],
-    invitations: [],
-  });
-  const [loading, setLoading] = useState(true);
-  // Confirmed data stays visible when a later load fails (#6652).
-  const [loaded, setLoaded] = useState(false);
-  const loadedRef = useRef(false);
-  const latestRead = useRef(0);
-  const [accessRefused, setAccessRefused] = useState(false);
+  const reader = useTraegerResource(
+    traegerKeys.buero(),
+    fetchTraegerBuero,
+    "die Liste der Personen",
+  );
+  const { mutate } = reader;
+  const [exportRefusal, setExportRefusal] = useState<unknown>();
+  const refused = reader.refused || exportRefusal !== undefined;
+  const buero: TraegerBuero = (refused ? null : reader.data) ?? NO_BUERO;
+  const loaded = !refused && reader.data !== null;
   const [inviting, setInviting] = useState(false);
   const [editing, setEditing] = useState<TraegerMember | null>(null);
   const [naming, setNaming] = useState<TraegerMember | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
   const [confirming, setConfirming] = useState(false);
-  // Every change on the page reads the history again.
-  const [historyVersion, setHistoryVersion] = useState(0);
-  const bueroLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = bueroLoad;
+  const invalidateFamily = useInvalidateFamily();
   const confirmErrors = useApiFormError();
   const { success } = useToast();
 
-  // A refusal ends the access: the page drops what it loaded, also after a
-  // refused download.
-  const dropOnRefusal = useCallback((error: unknown) => {
-    if (!isRefusal(error)) return;
-    setBuero({ members: [], invitations: [] });
-    setLoaded(false);
-    loadedRef.current = false;
-    setAccessRefused(true);
+  useEffect(() => {
+    if (!refused) return;
     setInviting(false);
     setEditing(null);
     setNaming(null);
     setPending(null);
-  }, []);
+  }, [refused]);
 
+  const invalidateMatching = useInvalidateMatching();
+  const readCallbacks = reader.readCallbacks;
+  useEffect(() => {
+    if (exportRefusal === undefined) return;
+    readCallbacks.onError(exportRefusal);
+    void invalidateMatching(
+      (key) =>
+        key === traegerKeys.buero() ||
+        key.startsWith(traegerKeys.accountHistoryFamily),
+      { clear: true },
+    );
+    setExportRefusal(undefined);
+  }, [exportRefusal, readCallbacks, invalidateMatching]);
   const onExportError = (error: unknown) => {
-    if (!isRefusal(error)) return;
-    dropOnRefusal(error);
-    void showLoadError(error, { object: "die Liste der Personen" });
+    if (isRefusal(error)) setExportRefusal(error);
   };
 
-  const fetchBuero = useCallback(async () => {
-    const request = ++latestRead.current;
-    try {
-      const next = await fetchTraegerBuero();
-      if (request !== latestRead.current) return;
-      setBuero(next);
-      setLoaded(true);
-      loadedRef.current = true;
-      setAccessRefused(false);
-      clearLoadError();
-    } catch (error) {
-      if (request !== latestRead.current) return;
-      dropOnRefusal(error);
-      throw error;
-    }
-  }, [clearLoadError, dropOnRefusal]);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      await fetchBuero();
-    } catch (err) {
-      logger.error("traeger_accounts_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Liste der Personen",
-        messageSuffix: loadedRef.current ? STALE_DATA_SUFFIX : undefined,
-        retry: () => void load(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchBuero, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   // A write's reload runs after the write; its failure stands above the list
-  // as a load error, never as an error of the closed dialog (#6652).
+  // as a load error, never as an error of the closed dialog (#6652). Every
+  // change on the page reads the history again.
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige des Träger-Büros",
     async () => {
-      setHistoryVersion((version) => version + 1);
-      await fetchBuero();
+      void invalidateFamily(traegerKeys.accountHistoryFamily);
+      await mutate(fetchTraegerBuero(), { revalidate: false });
     },
   );
 
@@ -199,13 +161,20 @@ export default function TraegerAccountsPage() {
   const isLastLeader = (member: TraegerMember) =>
     leaders === 1 && member.roles.includes("leadership");
   // The saved name shows at once, also when the reload after it fails.
-  const showSavedMember = (saved: TraegerMember) =>
-    setBuero((current) => ({
-      ...current,
-      members: current.members.map((member) =>
-        member.accountId === saved.accountId ? saved : member,
-      ),
-    }));
+  const showSavedMember = (saved: TraegerMember) => {
+    void mutate(
+      (current) =>
+        current && {
+          ...current,
+          members: current.members.map((member) =>
+            member.accountId === saved.accountId ? saved : member,
+          ),
+        },
+      { revalidate: false },
+    );
+    // The header shows the own name (#6870).
+    if (saved.email === ownEmail) void invalidateFamily(traegerKeys.profile());
+  };
 
   const memberColumns: DataTableColumn<TraegerMember>[] = [
     {
@@ -338,6 +307,7 @@ export default function TraegerAccountsPage() {
     },
   ];
 
+  const pageError = reader.error;
   const memberCount = buero.members.length;
   const invitationCount = buero.invitations.length;
 
@@ -368,10 +338,10 @@ export default function TraegerAccountsPage() {
           />
         ) : null
       }
-      statsLoading={loading}
-      loading={accessRefused && !bueroLoad.error && !afterWrite.error}
+      statsLoading={reader.loading}
+      loading={refused && !pageError && !afterWrite.error}
       actions={
-        accessRefused ? undefined : (
+        refused ? undefined : (
           <>
             <TraegerListExportMenu
               download={(format) =>
@@ -397,28 +367,28 @@ export default function TraegerAccountsPage() {
           </>
         )
       }
-      error={loaded ? null : (afterWrite.error ?? bueroLoad.error)}
+      error={loaded ? null : (afterWrite.error ?? pageError)}
       overlays={
         <>
           <InviteTraegerAccountModal
-            isOpen={inviting}
+            isOpen={!refused && inviting}
             onClose={() => setInviting(false)}
             onInvited={afterWrite.refresh}
           />
           <ChangeTraegerRolesModal
-            member={editing}
+            member={refused ? null : editing}
             members={buero.members}
             onClose={() => setEditing(null)}
             onChanged={afterWrite.refresh}
           />
           <ChangeTraegerMemberNameModal
-            member={naming}
+            member={refused ? null : naming}
             onClose={() => setNaming(null)}
             onSaved={showSavedMember}
             onChanged={afterWrite.refresh}
           />
           <ConfirmDeleteModal
-            isOpen={pending !== null}
+            isOpen={!refused && pending !== null}
             onClose={closeConfirm}
             onConfirm={() => void confirm()}
             title={
@@ -466,14 +436,14 @@ export default function TraegerAccountsPage() {
         </>
       }
     >
-      {loaded ? <LoadErrorAlert error={bueroLoad.error} /> : null}
+      {loaded ? <LoadErrorAlert error={reader.error} /> : null}
       <LoadErrorAlert error={afterWrite.error} />
       <DataTable
         columns={memberColumns}
         rows={[...buero.members]}
         getRowKey={(member) => member.accountId}
         rowHasInteractiveControls
-        isLoading={loading}
+        isLoading={reader.loading}
         loadingRowCount={3}
         defaultSortKey="name"
         stackedOnMobile
@@ -499,11 +469,8 @@ export default function TraegerAccountsPage() {
           />
         </SectionCard>
       ) : null}
-      {accessRefused || bueroLoad.error ? null : (
-        <TraegerAccountHistory
-          version={historyVersion}
-          onExportError={onExportError}
-        />
+      {refused || pageError ? null : (
+        <TraegerAccountHistory onExportError={onExportError} />
       )}
     </TenantPage>
   );

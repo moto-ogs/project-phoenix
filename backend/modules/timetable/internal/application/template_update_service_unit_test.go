@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
@@ -41,7 +43,7 @@ func TestDeleteRemovedLegacyWeekendInstances(t *testing.T) {
 
 	t.Run("deletes only removed legacy weekend days", func(t *testing.T) {
 		repo := &legacyWeekendCleanerTestRepo{}
-		svc := NewTemplateService(TemplateServiceDependencies{ActivityInstanceRepo: fakeInstanceRows(repo)})
+		svc := NewTemplateService(TemplateServiceDependencies{ActivityInstanceRepo: fakeInstanceRows(repo), Today: templateTestToday})
 
 		err := svc.deleteRemovedLegacyWeekendInstances(context.Background(), templateID, previous, []int{activityContract.WeekdayFriday, activityContract.WeekdaySunday})
 
@@ -57,7 +59,7 @@ func TestDeleteRemovedLegacyWeekendInstances(t *testing.T) {
 		svc := NewTemplateService(TemplateServiceDependencies{
 			ActivityInstanceRepo: fakeInstanceRows(repo),
 			Staffing:             announcer,
-			Logger:               slog.Default(),
+			Logger:               slog.Default(), Today: templateTestToday,
 		})
 		ctx := tenant.WithTenantID(context.Background(), 314)
 
@@ -68,7 +70,7 @@ func TestDeleteRemovedLegacyWeekendInstances(t *testing.T) {
 
 	t.Run("skips cleanup when all legacy days remain", func(t *testing.T) {
 		repo := &legacyWeekendCleanerTestRepo{}
-		svc := NewTemplateService(TemplateServiceDependencies{ActivityInstanceRepo: fakeInstanceRows(repo)})
+		svc := NewTemplateService(TemplateServiceDependencies{ActivityInstanceRepo: fakeInstanceRows(repo), Today: templateTestToday})
 
 		require.NoError(t, svc.deleteRemovedLegacyWeekendInstances(context.Background(), templateID, previous, []int{activityContract.WeekdayFriday, activityContract.WeekdaySaturday, activityContract.WeekdaySunday}))
 		assert.Zero(t, repo.calls)
@@ -76,7 +78,7 @@ func TestDeleteRemovedLegacyWeekendInstances(t *testing.T) {
 
 	t.Run("wraps cleanup failures", func(t *testing.T) {
 		repo := &legacyWeekendCleanerTestRepo{deleteErr: errors.New("delete failed")}
-		svc := NewTemplateService(TemplateServiceDependencies{ActivityInstanceRepo: fakeInstanceRows(repo)})
+		svc := NewTemplateService(TemplateServiceDependencies{ActivityInstanceRepo: fakeInstanceRows(repo), Today: templateTestToday})
 
 		err := svc.deleteRemovedLegacyWeekendInstances(context.Background(), templateID, previous, []int{activityContract.WeekdayFriday})
 
@@ -102,3 +104,7 @@ func TestValidateLegacyTemplateWeekdays(t *testing.T) {
 		activityContract.WeekdaySunday,
 	}), timetable.ErrTemplateWeekendWeekday)
 }
+
+// templateTestToday pins the template writes' school day to the day these
+// unit tests were last run on the wall clock (a Monday).
+func templateTestToday() calendar.Date { return calendar.NewDate(2026, 11, 16) }

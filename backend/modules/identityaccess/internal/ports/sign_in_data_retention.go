@@ -14,6 +14,9 @@ type SignInDataRetentionStore interface {
 	// DeleteExpiredGuardianInvitations removes the invitations redeemed, or
 	// else expired, before the instant.
 	DeleteExpiredGuardianInvitations(ctx context.Context, before time.Time) (int, domain.OperationStats, error)
+	// DatabaseTime reads the database clock once, in the run's
+	// transaction: the caterer invitations are stamped on it (ADR 0285).
+	DatabaseTime(ctx context.Context) (time.Time, domain.OperationStats, error)
 	// DeleteExpiredCatererInvitations removes the caterer invitations
 	// accepted, revoked or else expired before the instant.
 	DeleteExpiredCatererInvitations(ctx context.Context, before time.Time) (int, domain.OperationStats, error)

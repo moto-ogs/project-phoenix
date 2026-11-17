@@ -33,7 +33,7 @@ func newAccidentReports(t *testing.T, db *bun.DB) careplan.StudentAccidentReport
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	audit := owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil)
 	reports, err := api.NewStudentAccidentReportsTestModule(testpkg.NewDatabase(t, db), repos.CarePlan(), reposPeople.Student,
-		stubDocumentUserContext{staff: &peopleValues.Staff{}}, audit.StudentFieldEdit, audit.DataAccessLog)
+		stubDocumentUserContext{staff: &peopleValues.Staff{}}, audit.StudentFieldEdit, audit.DataAccessLog, studentDocumentsNow)
 	require.NoError(t, err)
 	return reports
 }
@@ -244,7 +244,7 @@ func TestStudentAccidentReports_StayOffThePlainDocumentPaths(t *testing.T) {
 	assert.Empty(t, s.accessLogRows(t), "nothing served, nothing logged")
 
 	future := sampleAccidentReport()
-	future.OccurredAt = time.Now().Add(time.Hour)
+	future.OccurredAt = studentDocumentsNow().Add(time.Hour)
 	_, err = reports.CreateStudentAccidentReport(s.ctx, s.studentID, future, leader)
 	require.ErrorIs(t, err, careplan.ErrAccidentReportInvalid)
 }

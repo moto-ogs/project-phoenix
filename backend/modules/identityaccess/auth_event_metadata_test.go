@@ -3,6 +3,7 @@ package identityaccess_test
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 )
@@ -50,6 +51,17 @@ func TestAuthEventMetadata(t *testing.T) {
 			want: []identityaccess.AuthEventMetadataEntry{
 				{Key: "portal_scope", Value: "parent"}, {Key: "family_fingerprint", Value: "fp"}, {Key: "reason", Value: "logout_all"},
 				{Key: "revoked_token_count", Value: 3}, {Key: "reason", Value: "password_reset"}, {Key: "pending_account_wide_wipe", Value: true},
+			},
+		},
+		{
+			name: "pending wipe with its session cutoff",
+			event: identityaccess.AuthEvent{
+				Type:        identityaccess.AuthEventTokenRevoked,
+				PendingWipe: &identityaccess.PendingWipeEvidence{Reason: "administrative_revoke", Cutoff: time.Date(2026, 12, 16, 10, 30, 0, 5, time.FixedZone("CET", 3600))},
+			},
+			want: []identityaccess.AuthEventMetadataEntry{
+				{Key: "reason", Value: "administrative_revoke"}, {Key: "pending_account_wide_wipe", Value: true},
+				{Key: identityaccess.PendingWipeCutoffMetadataKey, Value: "2026-12-16T09:30:00.000000005Z"},
 			},
 		},
 		{

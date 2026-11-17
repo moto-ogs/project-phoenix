@@ -76,7 +76,7 @@ func NewHolidayPeriods(store HolidayPeriodStore, forms HolidayFormStore, today f
 		panic("enrollment: the holiday period store and the form store are required")
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("enrollment: the holiday periods need the day clock")
 	}
 	return &HolidayPeriods{store: store, forms: forms, today: today, calendar: schoolCalendar}
 }

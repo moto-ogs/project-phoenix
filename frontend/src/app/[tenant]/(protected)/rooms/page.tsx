@@ -343,9 +343,10 @@ function RoomsPageContent() {
   }, [filteredRooms]);
 
   // „Wiederholen“ exportiert mit den aktuell gefilterten Räumen.
-  const retryExportRef = useRef<(format: RoomSnapshotExportFormat) => void>(
-    () => undefined,
-  );
+  const exportRoomIdsRef = useRef(exportRoomIds);
+  useLayoutEffect(() => {
+    exportRoomIdsRef.current = exportRoomIds;
+  });
   const handleExport = useCallback(
     async (format: RoomSnapshotExportFormat) => {
       setIsExporting(true);
@@ -353,23 +354,20 @@ function RoomsPageContent() {
         await exportRoomSnapshot({
           format,
           title: "Wer ist wo",
-          room_ids: exportRoomIds,
+          room_ids: exportRoomIdsRef.current,
           include_transit: true,
         });
       } catch (exportError) {
         void showError(exportError, {
           object: "die Liste „Wer ist wo“",
-          retry: () => retryExportRef.current(format),
+          retry: () => void handleExport(format),
         });
       } finally {
         setIsExporting(false);
       }
     },
-    [exportRoomIds, showError],
+    [showError],
   );
-  useLayoutEffect(() => {
-    retryExportRef.current = (format) => void handleExport(format);
-  });
 
   // Der Rückweg trägt die Filter mit, damit „Zurück" aus der Raumseite
   // dieselbe eingegrenzte Übersicht zeigt, die man verlassen hat.

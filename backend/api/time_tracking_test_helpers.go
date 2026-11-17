@@ -35,6 +35,10 @@ type timeTrackingTestGraph struct {
 }
 
 func newTimeTrackingTestModule(db transactionruntime.Database, repos WorkSessionTestRepositories, staffRows peoplePorts.StaffRepository, presence TimetablePresenceRows, settings settingsCompose.SettingsService, graph timeTrackingTestGraph, mail ...*workforceCompose.AbsenceEmailDeps) (*workforceCompose.TimeTracking, error) {
+	if graph.Now == nil {
+		// A test graph without its own clock runs on the real one.
+		graph.Now = time.Now
+	}
 	var absenceEmail *workforceCompose.AbsenceEmailDeps
 	if len(mail) > 0 {
 		absenceEmail = mail[0]

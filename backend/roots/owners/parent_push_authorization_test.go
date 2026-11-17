@@ -7,6 +7,9 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	contractcompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
@@ -79,7 +82,7 @@ func newBillingPushFixture(t *testing.T) (*billingPushFixture, testpkg.ParentCha
 		f.observations = append(f.observations, text)
 	}})
 	require.NoError(t, err)
-	f.worker, err = buildDeliveryWorker(testpkg.NewDatabase(t, db), RootEnvironment{Logger: slog.Default()}, nil,
+	f.worker, err = buildDeliveryWorker(testpkg.NewDatabase(t, db), RootEnvironment{Logger: slog.Default(), Now: time.Now, Today: calendar.TodayDate}, nil,
 		mail.Email{}, nil, DeliveryRuntime{Runtime: f.runtime}, nil, nil, nil, cancelledModules{}, nil, f.transport, nil)
 	require.NoError(t, err)
 	return f, chain
@@ -226,7 +229,7 @@ func TestBillingPushObjectScopeWithoutRLS(t *testing.T) {
 	school := testpkg.CreateTestSchoolInOrganization(t, f.db, f.organization, "Another push school")
 	var otherGroup int64
 	require.NoError(t, f.db.NewRaw(`INSERT INTO education.groups (tenant_id,name) VALUES (?,'Other group') RETURNING id`, chain.TenantID).Scan(f.ctx, &otherGroup))
-	contractOwner := contractcompose.NewInbox(nil, nil)
+	contractOwner := contractcompose.NewInbox(nil, time.Now)
 	releaseOwner := organizationcompose.NewSharedTraegerDocuments()
 	for _, organization := range []int64{f.organization, foreign} {
 		require.NoError(t, (ParentPortalRuntime{}).WithinTraeger(f.ctx, organization, func(ctx context.Context) error {

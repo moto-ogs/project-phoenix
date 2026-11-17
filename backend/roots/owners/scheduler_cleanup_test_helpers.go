@@ -55,7 +55,7 @@ func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit te
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
-	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, auditTestClock(now))
+	command, err := auditCompose.NewCommand(NewTestAuditStoreAt(db, auditTestClock(now)), func(auditCompose.AppendObservation) {}, auditTestClock(now))
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
@@ -83,7 +83,10 @@ func NewSchedulerFileRetentionTestDependencies(db transactionruntime.Database, u
 	if err != nil {
 		return deps, err
 	}
-	audit, _, steps, err := NewRetentionTestOwners(db, unit)
+	// The retention steps stay on the real clock: the ones these tests run
+	// decide on the database clock (ADR 0281, Nachtrag), and a pinned clock
+	// would reach the Care Plan composition of the steps.
+	audit, _, steps, err := NewRetentionTestOwnersAt(db, unit, time.Now)
 	if err != nil {
 		return deps, err
 	}

@@ -50,7 +50,7 @@ type costBearerRow struct {
 	Address        string    `bun:"address"`
 	FileReference  string    `bun:"file_reference"`
 	Active         bool      `bun:"active"`
-	UpdatedAt      time.Time `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt      time.Time `bun:"updated_at,nullzero"`
 }
 
 func (r costBearerRow) costBearer() parentbilling.CostBearer {

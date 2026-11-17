@@ -84,6 +84,7 @@ func (m *mockPhaseService) DeleteImpact(_ context.Context, id int64) (*capabilit
 
 func buildPhaseRouter(svc capability.PhaseAdministration) chi.Router {
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, PhaseService: svc}
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))

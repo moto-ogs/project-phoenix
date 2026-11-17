@@ -100,6 +100,7 @@ const sourceTestExceptions = [
     'TestModuleFacadeMethodSetRejectsUnresolvedEmbeddings',
   ]),
   ...fixtureExceptions('module_live_clock_ratchet_test.go', ['TestModuleLiveClockRatchetCountsCallsNotReferences']),
+  ...fixtureExceptions('module_sql_clock_ratchet_test.go', ['TestModuleSQLClockRatchetCountsLiteralsOnly']),
   ...fixtureExceptions('module_source_ratchet_test.go', [
     'TestModuleRootSourceRatchetsRejectNewViolations',
   ]),

@@ -5,7 +5,15 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, waitFor, act } from "@testing-library/react";
+import {
+  render as rtlRender,
+  screen,
+  cleanup,
+  waitFor,
+  act,
+} from "@testing-library/react";
+import type { ReactNode as TenantSWRNode } from "react";
+import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 
 /**
  * The Laufgemeinschaft is fetched separately from the student, so refreshing
@@ -32,6 +40,29 @@ vi.mock("~/lib/tenant-router", () => ({
 import { PersonalInfoReadOnly } from "./student-detail-components";
 import { notifyStudentCompanionsChanged } from "~/lib/student-companion-api";
 import type { Student } from "~/lib/student-helpers";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache per render; the session is mocked above.
+function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
+  return (
+    <TenantSWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </TenantSWRConfig>
+  );
+}
+
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  const Outer = options?.wrapper;
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: TenantSWRNode }>) => (
+      <TenantSWRWrapper>
+        {Outer ? <Outer>{children}</Outer> : children}
+      </TenantSWRWrapper>
+    ),
+  });
+}
 
 const student: Student = {
   id: "1",

@@ -71,6 +71,9 @@ import {
   PARENT_VISIBLE_HINTS,
 } from "~/lib/parent-visible-fields";
 import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useFreshSWR } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 const logger = createLogger({ component: "PersonalInfoEditPanel" });
 
@@ -148,11 +151,27 @@ export function PersonalInfoEditPanel({
   // Tabelle, nicht am Kind: erst nach dem Laden darf das Formular sie
   // anzeigen, sonst würde ein Speichern die echte Einwilligung mit dem
   // leeren Vorgabewert überschreiben.
-  const [privacyConsentStatus, setPrivacyConsentStatus] = useState<
-    "loading" | "ready" | "error"
-  >("loading");
+  // The draft starts from this panel's own answer, never a cached one.
+  const consentRead = useFreshSWR(
+    student.id ? tenantStudentKeys.privacyConsent(student.id) : null,
+    () => fetchStudentPrivacyConsent(student.id),
+  );
+  // A failed load fills nothing from an earlier answer.
+  const consentData = consentRead.error ? undefined : consentRead.data;
+  const consentLoad = useSwrResourceLoadError(
+    [{ data: consentData, error: consentRead.error }],
+    "die Einwilligung",
+    () => consentRead.mutate(),
+  );
+  // The child whose stored consent is in the draft; null = not yet.
+  const [consentSeededFor, setConsentSeededFor] = useState<string | null>(null);
+  const privacyConsentStatus: "loading" | "ready" | "error" =
+    consentSeededFor === student.id
+      ? "ready"
+      : consentLoad.failure !== undefined
+        ? "error"
+        : "loading";
   const [privacyConsentChanged, setPrivacyConsentChanged] = useState(false);
-  const [reloadPrivacyConsent, setReloadPrivacyConsent] = useState(0);
   // Ein Speicherfehler darf nicht nur als Kurzmeldung vorbeiziehen: er steht
   // oben im Bearbeiten-Bereich, und wo er zu einem Feld gehört, zusätzlich
   // direkt an diesem Feld. Text, Wiederholen und Vorgangskennung kommen vom
@@ -168,13 +187,6 @@ export function PersonalInfoEditPanel({
     async () => undefined,
   );
   const { success: toastSuccess } = useToast();
-  // Ladefehler stehen dort, wo die Daten fehlen.
-  const consentLoad = useApiLoadError();
-  const showConsentLoadError = consentLoad.show;
-  const clearConsentLoadError = consentLoad.clear;
-  const companionsLoad = useApiLoadError();
-  const showCompanionsLoadError = companionsLoad.show;
-  const clearCompanionsLoadError = companionsLoad.clear;
   // Set when the backend refused because a linked child's own departure plan
   // does not allow the requested days. Answering yes re-sends the identical
   // payload with the confirmation flag.
@@ -196,15 +208,44 @@ export function PersonalInfoEditPanel({
   // The submitted list REPLACES the stored one, so saving is blocked until the
   // stored links are known: an empty list from a pending or failed load would
   // silently delete the child's Laufgemeinschaft.
-  const [companionsStatus, setCompanionsStatus] = useState<
-    "loading" | "ready" | "error"
-  >("loading");
+  //
+  // The shared read (also behind the Stammdaten card) only fills the draft on
+  // this panel's own loads: the first answer read after opening, a remote
+  // refresh and a retry. A refresh the card starts never replaces the draft.
+  const companionsRead = useFreshSWR(
+    student.id ? tenantStudentKeys.companions(student.id) : null,
+    () => fetchStudentCompanions(student.id),
+  );
+  const { mutate: mutateCompanions } = companionsRead;
+  // A failed load fills nothing from an earlier answer.
+  const companionsData = companionsRead.error ? undefined : companionsRead.data;
+  const firstCompanionsLoad = useSwrResourceLoadError(
+    [{ data: companionsData, error: companionsRead.error }],
+    "die Laufgemeinschaft",
+    () => void reloadCompanionsRef.current(),
+  );
+  const companionsReloadLoad = useApiLoadError();
+  const companionsLoadError =
+    firstCompanionsLoad.error ?? companionsReloadLoad.error;
   // The list as it was loaded, so an untouched one can be left out of the save
   // instead of overwriting whatever someone else changed in the meantime.
-  const [loadedCompanions, setLoadedCompanions] = useState<StudentCompanion[]>(
-    [],
-  );
-  const [reloadCompanions, setReloadCompanions] = useState(0);
+  const [companionsSeed, setCompanionsSeed] = useState<{
+    readonly studentId: string;
+    readonly status: "first" | "reloading" | "ready" | "error";
+    readonly loaded: StudentCompanion[];
+  }>(() => ({ studentId: student.id, status: "first", loaded: [] }));
+  if (companionsSeed.studentId !== student.id) {
+    setCompanionsSeed({ studentId: student.id, status: "first", loaded: [] });
+  }
+  const loadedCompanions = companionsSeed.loaded;
+  const companionsStatus: "loading" | "ready" | "error" =
+    companionsSeed.status === "ready"
+      ? "ready"
+      : companionsSeed.status === "error" ||
+          (companionsSeed.status === "first" &&
+            firstCompanionsLoad.failure !== undefined)
+        ? "error"
+        : "loading";
 
   // Reset the draft whenever the panel is handed new student data. The
   // confirmation state resets too — a yes given in an earlier edit session
@@ -237,79 +278,82 @@ export function PersonalInfoEditPanel({
     setPendingPhotoRemoved(false);
   }, [student.id]);
 
-  // Einwilligung und Frist des Kindes in den Entwurf holen (siehe oben).
+  // Einwilligung und Frist des Kindes in den Entwurf holen (siehe oben):
+  // einmal je Kind, aus einer Antwort, die nach dem Öffnen gelesen wurde.
   useEffect(() => {
-    if (!student.id) return;
-    let cancelled = false;
-    setPrivacyConsentStatus("loading");
+    if (!student.id || consentSeededFor === student.id || !consentData) return;
+    setEditedStudent((prev) => ({
+      ...prev,
+      privacy_consent_accepted: consentData.accepted,
+      data_retention_days: consentData.dataRetentionDays,
+    }));
     setPrivacyConsentChanged(false);
-    clearConsentLoadError();
-    fetchStudentPrivacyConsent(student.id)
-      .then((consent) => {
-        if (cancelled) return;
-        setEditedStudent((prev) => ({
-          ...prev,
-          privacy_consent_accepted: consent.accepted,
-          data_retention_days: consent.dataRetentionDays,
-        }));
-        setPrivacyConsentStatus("ready");
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("failed to load privacy consent", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setPrivacyConsentStatus("error");
-        void showConsentLoadError(err, {
-          object: "die Einwilligung",
-          retry: () => setReloadPrivacyConsent((count) => count + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    student.id,
-    reloadPrivacyConsent,
-    showConsentLoadError,
-    clearConsentLoadError,
-  ]);
+    setConsentSeededFor(student.id);
+  }, [student.id, consentSeededFor, consentData]);
 
-  // The Laufgemeinschaft lives in its own table, so it is fetched when the
-  // panel opens and submitted together with the departure plan it belongs to.
+  // The Laufgemeinschaft lives in its own table, so it is read when the panel
+  // opens and submitted together with the departure plan it belongs to.
+  const seedCompanions = useCallback(
+    (studentId: string, companions: StudentCompanion[]) => {
+      setEditedStudent((prev) =>
+        prev.id === studentId ? { ...prev, companions } : prev,
+      );
+      setCompanionsSeed((prev) =>
+        prev.studentId === studentId
+          ? { studentId, status: "ready", loaded: companions }
+          : prev,
+      );
+    },
+    [],
+  );
   useEffect(() => {
-    if (!student.id) return;
-    let cancelled = false;
-    setCompanionsStatus("loading");
-    setLoadedCompanions([]);
-    clearCompanionsLoadError();
-    fetchStudentCompanions(student.id)
-      .then((companions: StudentCompanion[]) => {
-        if (cancelled) return;
-        setEditedStudent((prev) => ({ ...prev, companions }));
-        setLoadedCompanions(companions);
-        setCompanionsStatus("ready");
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setCompanionsStatus("error");
-        logger.error("failed to load companions", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showCompanionsLoadError(err, {
-          object: "die Laufgemeinschaft",
-          retry: () => setReloadCompanions((count) => count + 1),
-        });
+    if (
+      companionsSeed.status !== "first" ||
+      companionsSeed.studentId !== student.id ||
+      !companionsData
+    )
+      return;
+    seedCompanions(student.id, companionsData);
+  }, [companionsSeed, student.id, companionsData, seedCompanions]);
+
+  // A remote refresh or a retry: read again and fill the draft with exactly
+  // that answer.
+  const { show: showCompanionsReloadError, clear: clearCompanionsReloadError } =
+    companionsReloadLoad;
+  const reloadCompanions = useCallback(async () => {
+    const studentId = student.id;
+    if (!studentId) return;
+    setCompanionsSeed({ studentId, status: "reloading", loaded: [] });
+    clearCompanionsReloadError();
+    try {
+      const companions = await mutateCompanions(
+        fetchStudentCompanions(studentId),
+        { revalidate: false },
+      );
+      if (companions) seedCompanions(studentId, companions);
+    } catch (err: unknown) {
+      logger.error("failed to load companions", {
+        error: err instanceof Error ? err.message : String(err),
       });
-    return () => {
-      cancelled = true;
-    };
+      setCompanionsSeed((prev) =>
+        prev.studentId === studentId ? { ...prev, status: "error" } : prev,
+      );
+      void showCompanionsReloadError(err, {
+        object: "die Laufgemeinschaft",
+        retry: () => void reloadCompanionsRef.current(),
+      });
+    }
   }, [
     student.id,
-    reloadCompanions,
-    showCompanionsLoadError,
-    clearCompanionsLoadError,
+    mutateCompanions,
+    seedCompanions,
+    clearCompanionsReloadError,
+    showCompanionsReloadError,
   ]);
+  const reloadCompanionsRef = useRef(reloadCompanions);
+  useLayoutEffect(() => {
+    reloadCompanionsRef.current = reloadCompanions;
+  });
 
   const companionsDirty =
     companionsStatus === "ready" &&
@@ -346,7 +390,7 @@ export function PersonalInfoEditPanel({
   // writes is what keeps an edit from saving on top of a snapshot that no
   // longer exists and deleting links this modal never saw.
   const reloadCompanionsFromRemote = useCallback(
-    () => setReloadCompanions((count) => count + 1),
+    () => void reloadCompanionsRef.current(),
     [],
   );
   const { companionsStale, refreshFromRemote, withOwnWrite, markStale } =
@@ -567,6 +611,8 @@ export function PersonalInfoEditPanel({
           }),
         mayAnnounceCompanions,
       );
+      // The next edit session reads the stored consent again.
+      if (privacyConsentChanged) void consentRead.mutate();
       setPlanConflict(false);
       // One-shot: this save consumed the confirmation. The modal component
       // stays mounted across open/close, so a stale list would ride along
@@ -738,7 +784,7 @@ export function PersonalInfoEditPanel({
       ) : null}
       {companionsStatus === "error" ? (
         <div className="space-y-1">
-          <LoadErrorAlert error={companionsLoad.error} />
+          <LoadErrorAlert error={companionsLoadError} />
           <p className="text-xs text-gray-600">
             Andere Angaben können Sie trotzdem speichern. Die Laufgemeinschaft
             bleibt dabei unverändert.

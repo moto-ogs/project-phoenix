@@ -14,8 +14,9 @@ import (
 // overview's Kontingentzahl (#3568): the rule every membership write is
 // checked against, actively managed children plus pending ones whose care
 // starts after the count day. Inactive, graduated, deleted and ended children
-// and a pending child whose start has come do not count, and another school's
-// children stay in that school's entry.
+// and a pending child whose start has come do not count, nor a child without
+// an OGS place (#4803), active or pending, and another school's children
+// stay in that school's entry.
 func TestChildQuotaCountsCountTheKontingentzahlOfEverySchool(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -35,6 +36,11 @@ func TestChildQuotaCountsCountTheKontingentzahlOfEverySchool(t *testing.T) {
 	setMembership(t, db, tenantID, deleted.ID, "deleted_at = NOW()")
 	ended := testpkg.CreateTestStudent(t, db, "Frei", "Beendet", "1a")
 	setMembership(t, db, tenantID, ended.ID, "enrolled_until = '2099-06-14'")
+	withoutPlace := testpkg.CreateTestStudent(t, db, "Ohne", "Platz", "1a")
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, withoutPlace.ID)
+	pendingWithoutPlace := testpkg.CreateTestStudent(t, db, "Ohne", "Vorgemerkt", "1a")
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, pendingWithoutPlace.ID)
+	setMembership(t, db, tenantID, pendingWithoutPlace.ID, "status = 'pending', enrolled_from = '2099-08-01'")
 	testpkg.CreateTestStudentForTenant(t, db, otherTenantID, "Andere", "Schule", "1a")
 
 	counts := NewChildQuotaCountsWithClock(func() string { return "2099-06-15" })

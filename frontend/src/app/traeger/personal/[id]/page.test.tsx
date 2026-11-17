@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { setTestClock } from "~/test/clock";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { StaffRecordDetail } from "~/lib/traeger-staff-api";
+
+vi.unmock("swr");
 
 const { api, mockPush } = vi.hoisted(() => ({
   api: {
@@ -148,9 +151,9 @@ const CONTRACT = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerStaffRecordPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -295,6 +298,8 @@ describe("TraegerStaffRecordPage", () => {
   });
 
   it("shows a contract with today's Soll, its history and the holiday weeks", async () => {
+    // Vertrag, Soll-Stufen und Ferienwochen liegen fest um den 09.09.2026.
+    setTestClock("2026-09-09T12:00:00+02:00");
     api.fetchStaffRecord.mockResolvedValue({
       ...RECORD,
       contracts: [CONTRACT],

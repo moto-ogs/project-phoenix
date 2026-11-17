@@ -10,6 +10,7 @@ import {
 import type { RemindersResult } from "~/lib/reminders-api";
 import type { ShellBootstrap } from "~/lib/shell-seed";
 import { SWRConfig } from "~/lib/swr/testing";
+import { TEST_CLOCK_INSTANT } from "~/test/clock";
 import { useReminders } from "./use-reminders";
 
 // Die Glocke der Hülle hält die Erinnerungen aktuell (Server-Seed, Abfrage im
@@ -322,13 +323,16 @@ describe("useReminders on phoenix:reminders-stale", () => {
 
 describe("useReminders at next_change_at", () => {
   it("loads once at the boundary with 3 readers", async () => {
-    // Testuhr: 12:00 in Berlin. Die Grenze liegt vor dem 60-s-Takt, damit
+    // Die Grenze liegt 30 s nach der Testuhr, vor dem 60-s-Takt, damit
     // nur der Timer abfragt. Die Antwort bleibt offen, bis jeder Timer
     // gefeuert hätte.
     vi.useFakeTimers();
     const reminders = {
       ...ENABLED,
-      next_change_at: "2026-09-09T12:00:30+02:00",
+      // RFC 3339 ohne Millisekunden, wie der Server es schickt.
+      next_change_at: new Date(TEST_CLOCK_INSTANT.getTime() + 30_000)
+        .toISOString()
+        .replace(/\.\d{3}Z$/, "Z"),
     };
     const answer = deferred();
     fetchReminders.mockReturnValueOnce(answer.promise);

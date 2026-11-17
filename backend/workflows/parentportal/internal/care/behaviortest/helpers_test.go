@@ -37,7 +37,14 @@ func childResolver(db *bun.DB, repos *api.RepositoryTestFactory, reposPeople *ap
 		DeparturePolicy: owners.ParentDeparturePolicy(),
 
 		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
+		Now:            fixedPortalNow,
 	})
+}
+
+// fixedPortalNow is the fixed test day of these suites, a Monday, 14:00 in
+// Berlin; endCareFor ends the care the day before.
+func fixedPortalNow() time.Time {
+	return time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
 }
 
 // unusedRequestSharer satisfies parentportal.NewChildFlows for the child resolution these tests

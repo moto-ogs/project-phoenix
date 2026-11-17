@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
@@ -20,11 +21,11 @@ import (
 // Plan, the child of each approved enrollment with the running phases at
 // Enrollment, the check-ins and room days at Student Presence, the rooms at
 // Facilities and the children of one school by name at the Statistik report.
-func traegerUtilizationPorts(statistics studentpresence.StatisticsReports) traegerview.UtilizationPorts {
+func traegerUtilizationPorts(statistics studentpresence.StatisticsReports, now func() time.Time) traegerview.UtilizationPorts {
 	return traegerview.UtilizationPorts{
 		Bookings:   traegerBookingIntervals{bookings: carePlanCompose.NewTraegerCareBookingIntervals()},
 		Children:   enrollmentCompose.NewBookedChildren(),
-		Presence:   traegerPresenceSeries{series: studentPresenceCompose.NewPresenceSeries()},
+		Presence:   traegerPresenceSeries{series: studentPresenceCompose.NewPresenceSeries(now)},
 		Rooms:      traegerRoomNames{rooms: facilitiesCompose.NewTraegerRooms()},
 		Attendance: traegerChildAttendance{statistics: statistics},
 	}

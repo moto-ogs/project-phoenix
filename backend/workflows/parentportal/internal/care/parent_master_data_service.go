@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net/mail"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -488,7 +487,7 @@ func (s *Service) addPrimaryPhone(ctx context.Context, guardianProfileID, tenant
 
 // recordAutoApplied inserts the Track A audit row for a direct edit.
 func (s *Service) recordAutoApplied(ctx context.Context, tenantID, studentID, accountID int64, target, fieldKey string, oldRaw, newRaw json.RawMessage, targetRef *int64) error {
-	now := time.Now()
+	now := s.now()
 	row := &StudentDataChangeRequest{
 		StudentID:   studentID,
 		SubmittedBy: accountID,

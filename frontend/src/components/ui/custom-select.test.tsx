@@ -36,6 +36,51 @@ describe("CustomSelect", () => {
     );
   });
 
+  it("draws no frame of its own between the arrows of a group", () => {
+    render(
+      <CustomSelect
+        embedded
+        value="first"
+        options={options}
+        onChange={vi.fn()}
+        ariaLabel="Monat"
+      />,
+    );
+
+    const trigger = screen.getByRole("combobox", { name: "Monat" });
+    const classes = trigger.className.split(" ");
+    // Frame, radius and surface come from the group (#7300).
+    expect(classes).not.toContain("rounded-lg");
+    expect(classes).not.toContain("border");
+    expect(classes).not.toContain("moto-content-surface");
+    // It fills the group, which the head's control height leaves alone.
+    expect(classes).toEqual(
+      expect.arrayContaining(["h-full", "rounded-none", "hover:bg-gray-100"]),
+    );
+    expect(trigger).toHaveAttribute("data-control-part");
+    // The group clips with overflow-hidden: the focus outline stays inside.
+    expect(classes).toContain("focus-visible:-outline-offset-2");
+    // By finger 16-px text, like the select outside a group.
+    expect(classes).toContain("pointer-coarse:text-base");
+  });
+
+  it("keeps the field frame outside a group", () => {
+    render(
+      <CustomSelect
+        value="first"
+        options={options}
+        onChange={vi.fn()}
+        ariaLabel="Auswahl"
+      />,
+    );
+
+    const trigger = screen.getByRole("combobox", { name: "Auswahl" });
+    expect(trigger.className.split(" ")).toEqual(
+      expect.arrayContaining(["rounded-lg", "border", "moto-content-surface"]),
+    );
+    expect(trigger).not.toHaveAttribute("data-control-part");
+  });
+
   it("forwards ariaDescribedBy to the trigger", () => {
     render(
       <CustomSelect

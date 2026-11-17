@@ -5,6 +5,7 @@ package api
 import (
 	"errors"
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -55,6 +56,6 @@ func NewTestExcusedAbsenceRequests(
 	}
 	return owners.NewExcusedAbsenceRequestService(
 		options.CarePlan, people.Students, people.Persons, scope, emitter, broadcaster,
-		people.Events, nil, nil, nil, options.Logger, options.Today, nil, options.PartialAbsences,
+		people.Events, nil, nil, nil, options.Logger, options.Today, time.Now, options.PartialAbsences,
 	)
 }

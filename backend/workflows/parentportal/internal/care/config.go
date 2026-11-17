@@ -176,7 +176,8 @@ type Service struct {
 	Config
 }
 
-// New wires the child flows. Runtime, GuardianPolicy and RequestSharing are required.
+// New wires the child flows. Runtime, GuardianPolicy, RequestSharing and the
+// clock are required; the composition binds the root's clock.
 func New(cfg Config) *Service {
 	if cfg.Runtime == nil {
 		panic("care: runtime is required")
@@ -187,19 +188,17 @@ func New(cfg Config) *Service {
 	if cfg.GuardianPolicy == nil {
 		panic("care: guardian policy is required")
 	}
+	if cfg.Now == nil {
+		panic("care: clock is required")
+	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
-	}
-	if cfg.Now == nil {
-		cfg.Now = calendar.Now
 	}
 	return &Service{Config: cfg}
 }
 
+// now reads the clock of the composition (ADR 0239).
 func (s *Service) now() time.Time {
-	if s.Now == nil {
-		return calendar.Now()
-	}
 	return s.Now()
 }
 

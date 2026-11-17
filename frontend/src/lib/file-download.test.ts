@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest";
 
 import {
   downloadBlob,
@@ -158,6 +166,59 @@ describe("openBlobForPrint", () => {
     vi.runAllTimers();
 
     await expect(printing).rejects.toThrow("Drucken fehlgeschlagen");
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:export");
+  });
+
+  // Chrome on Android shows the PDF in a viewer outside the page; reading
+  // `print` from that tab throws a SecurityError. The PDF is open, so the
+  // export succeeded and the viewer's own menu prints it (Sentry, /emergency).
+  it("treats a PDF the browser shows in its own viewer as opened", async () => {
+    vi.useFakeTimers();
+    const target = {
+      focus: vi.fn(),
+      print: vi.fn(() => {
+        throw new DOMException(
+          "Blocked a frame from accessing a cross-origin frame.",
+          "SecurityError",
+        );
+      }),
+      close: vi.fn(),
+      location: { href: "" },
+    };
+
+    const printing = openBlobForPrint(
+      new Blob(["%PDF"]),
+      target as unknown as Window,
+    );
+    await vi.advanceTimersByTimeAsync(250);
+
+    await expect(printing).resolves.toBeUndefined();
+    expect(target.close).not.toHaveBeenCalled();
+    // The viewer may still read the file: the URL outlives the print attempt.
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:export");
+  });
+
+  it("leaves the PDF to the browser when it has no inline viewer", async () => {
+    vi.useFakeTimers();
+    // jsdom has no pdfViewerEnabled; vi.restoreAllMocks does not undo this.
+    Object.defineProperty(navigator, "pdfViewerEnabled", {
+      configurable: true,
+      get: () => false,
+    });
+    onTestFinished(() => {
+      Reflect.deleteProperty(navigator, "pdfViewerEnabled");
+    });
+    const target = { focus: vi.fn(), print: vi.fn(), location: { href: "" } };
+
+    await openBlobForPrint(new Blob(["%PDF"]), target as unknown as Window);
+    await vi.advanceTimersByTimeAsync(250);
+
+    // print() would only reach the empty tab, not the PDF.
+    expect(target.location.href).toBe("blob:export");
+    expect(target.print).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(60_000);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:export");
   });
 });

@@ -82,7 +82,6 @@ func (r *HomeLayoutRepository) UpsertForAccount(ctx context.Context, layout *con
 		On("CONFLICT (tenant_id, account_id) DO UPDATE").
 		Set("overrides = EXCLUDED.overrides").
 		Set("blocks = EXCLUDED.blocks").
-		Set("updated_at = NOW()").
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("upsert home layout: %w", err)
@@ -156,7 +155,6 @@ func (r *HomeLayoutRepository) UpsertPolicies(ctx context.Context, policies *con
 		On("CONFLICT (tenant_id) DO UPDATE").
 		Set("policies = EXCLUDED.policies").
 		Set("updated_by = EXCLUDED.updated_by").
-		Set("updated_at = NOW()").
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("upsert home block policies: %w", err)

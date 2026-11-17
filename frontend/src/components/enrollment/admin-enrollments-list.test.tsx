@@ -3,16 +3,43 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
+// Reads run through real SWR under a staff session, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        // The privacy-notice warning (#7176) shows only to people who may
+        // change the settings.
+        user: {
+          id: "staff-7",
+          scope: "tenant",
+          tenantId: 42,
+          permissions: ["config:update", "config:manage"],
+        },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>{children}</ToastProvider>
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
 const render = (ui: ReactElement) =>
-  renderComponent(ui, { wrapper: ToastProvider });
+  renderComponent(ui, { wrapper: Providers });
 
 const mocks = vi.hoisted(() => ({
   fetchSettingsSchema: vi.fn(),
@@ -45,19 +72,8 @@ vi.mock("~/lib/enrollment-form-schema-api", async (importOriginal) => {
 });
 
 vi.mock("~/lib/settings-api", () => ({
+  SETTINGS_SCHEMA_SWR_KEY: "settings-schema",
   fetchSettingsSchema: mocks.fetchSettingsSchema,
-}));
-
-// The privacy-notice warning (#7176) shows only to people who may change
-// the settings.
-vi.mock("next-auth/react", () => ({
-  useSession: () => ({
-    data: {
-      user: { id: "1", permissions: ["config:update", "config:manage"] },
-      expires: "2099-01-01",
-    },
-    status: "authenticated",
-  }),
 }));
 
 vi.mock("~/lib/tenant-context", () => ({

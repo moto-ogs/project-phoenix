@@ -11,7 +11,10 @@ import {
   withdrawChildCourseRequest,
   type ChildCourses,
 } from "~/lib/parent-api";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { CoursesSection } from "./courses-section";
+
+vi.unmock("swr");
 
 vi.mock("~/lib/parent-api", () => ({
   getChildCourses: vi.fn(),
@@ -49,7 +52,9 @@ function catalog(overrides: Partial<ChildCourses> = {}): ChildCourses {
 function renderSection(careEnded = false) {
   return render(
     <NextIntlClientProvider locale="de" messages={deMessages}>
-      <CoursesSection studentId="1" careEnded={careEnded} />
+      <ParentResourceTestProvider>
+        <CoursesSection studentId="1" careEnded={careEnded} />
+      </ParentResourceTestProvider>
     </NextIntlClientProvider>,
   );
 }

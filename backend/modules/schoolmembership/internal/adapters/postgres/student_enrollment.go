@@ -24,7 +24,6 @@ func (s *Store) ChangeStudentClass(ctx context.Context, ids []int64, from, to st
 	{
 		result, writeErr := db.NewUpdate().TableExpr(`users.student_school_memberships AS "membership"`).
 			Set("school_class = ?", to).
-			Set("updated_at = NOW()").
 			Where("membership.tenant_id = ?", scope.TenantID).
 			Where("membership.student_profile_id IN (?)", bun.List(ids)).
 			Where("membership.deleted_at IS NULL").

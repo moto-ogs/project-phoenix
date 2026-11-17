@@ -49,7 +49,9 @@ import {
   useSearchableSettings,
   type SearchEntry,
 } from "./school-search-catalog";
-import { helpSearchEntries } from "./school-search-help";
+import { helpEntriesOf, loadHelpIndex } from "./school-search-help";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 
 const logger = createLogger({ component: "SchoolSearch" });
 
@@ -164,10 +166,22 @@ function useSearchableHelp(enabled: boolean): readonly SearchEntry[] {
   const presenceMode = usePresenceMode();
   const openCareGroupMode = useOpenCareGroupMode();
   const role = leadsSchool(session) ? "lead" : "caregiver";
-  const [entries, setEntries] = useState<readonly SearchEntry[]>([]);
+  const { data: index } = useSWRAuth(
+    enabled ? tenantListKeys.helpSearchIndex() : null,
+    loadHelpIndex,
+    {
+      // Ohne Hilfethemen sucht die Suche trotzdem; ein Hinweis darauf würde
+      // die übrigen Treffer nur verdecken.
+      onError: (error: unknown) => {
+        logger.warn("school_search_help_load_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      },
+    },
+  );
 
-  useEffect(() => {
-    if (!enabled) return;
+  return useMemo(() => {
+    if (!index) return NO_HELP_ENTRIES;
     const context: HelpUrlContext = {
       role,
       nfcEnabled,
@@ -175,26 +189,11 @@ function useSearchableHelp(enabled: boolean): readonly SearchEntry[] {
       groupMode: openCareGroupMode ? "open_care" : "fixed_groups",
       returnTo: pathname,
     };
-    let live = true;
-    helpSearchEntries(context).then(
-      (found) => {
-        if (live) setEntries(found);
-      },
-      (error: unknown) => {
-        // Ohne Hilfethemen sucht die Suche trotzdem; ein Hinweis darauf
-        // würde die übrigen Treffer nur verdecken.
-        logger.warn("school_search_help_load_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      },
-    );
-    return () => {
-      live = false;
-    };
-  }, [enabled, role, nfcEnabled, presenceMode, openCareGroupMode, pathname]);
-
-  return entries;
+    return helpEntriesOf(index, context);
+  }, [index, role, nfcEnabled, presenceMode, openCareGroupMode, pathname]);
 }
+
+const NO_HELP_ENTRIES: readonly SearchEntry[] = [];
 
 /** Joins names as German prose: "A", "A und B", "A, B und C". */
 function listInProse(names: readonly string[]): string {

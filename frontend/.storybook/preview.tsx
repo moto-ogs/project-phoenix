@@ -10,6 +10,8 @@ import deMessages from "~/i18n/messages/de.generated";
 
 import { configure } from "storybook/test";
 
+import { findTextCollisions } from "./text-collisions";
+
 import "~/styles/globals.css";
 import "./fonts.css";
 
@@ -34,6 +36,16 @@ const storybookTenant: TenantInfo = {
 // öffnete ein Kalender im ersten Vollauf erst nach der Standardsekunde von
 // findBy*. Fünf Sekunden fangen das ab, ein echter Fehler bleibt rot.
 configure({ asyncUtilTimeout: 5000 });
+
+const PHONE_WIDTH = 360;
+const PHONE_HEIGHT = 780;
+
+/** Two frames: the layout and what ResizeObservers change after it. */
+function nextFrames(): Promise<void> {
+  return new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
+}
 
 const preview: Preview = {
   // Schriften vor jedem Render laden, wie next/font es in der App vorab tut.
@@ -62,6 +74,36 @@ const preview: Preview = {
     nextjs: {
       appDirectory: true,
     },
+  },
+  // Kein Text darf über einem Knopf oder anderem Text liegen (#7265). Eine
+  // Story mit gewollter Überdeckung schaltet die Prüfung mit
+  // `parameters: { textCollisions: "<Grund>" }` ab.
+  afterEach: async ({ canvasElement, parameters }) => {
+    if (typeof parameters.textCollisions === "string") return;
+    const body = canvasElement.ownerDocument.body;
+    const found = findTextCollisions(body);
+    // Die erste Prüfung läuft in der Breite, die addon-vitest jeder Story
+    // gibt (1200 × 900, oder ihr eigener Viewport). Im Storybook-Test
+    // zusätzlich bei Telefonbreite (`vitest.setup.ts`).
+    const setViewport = (
+      globalThis as {
+        __motoSetViewport?: (w: number, h: number) => Promise<void>;
+      }
+    ).__motoSetViewport;
+    if (setViewport) {
+      const { innerWidth, innerHeight } = globalThis;
+      await setViewport(PHONE_WIDTH, PHONE_HEIGHT);
+      await nextFrames();
+      found.push(
+        ...findTextCollisions(body).map((hit) => `${PHONE_WIDTH} px: ${hit}`),
+      );
+      await setViewport(innerWidth, innerHeight);
+    }
+    if (found.length === 0) return;
+    const message = `Text überdeckt sich:\n${found.join("\n")}`;
+    // Der Test scheitert; die Storybook-Ansicht zeigt die Story weiter.
+    if (setViewport) throw new Error(message);
+    console.warn(message);
   },
   decorators: [
     (Story) => (

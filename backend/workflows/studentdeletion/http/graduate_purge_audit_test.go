@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -17,14 +18,17 @@ import (
 func TestPurgeGraduatedStudent_CreatesDeletionAudits(t *testing.T) {
 	t.Parallel()
 
-	tc := setupStudentsRoute(t)
+	// The purge runs on a fixed school day; the retained assignment lies the
+	// day before it.
+	purgeDay := calendar.NewDate(2026, 9, 14)
+	tc := setupStudentsRoute(t, func() time.Time { return purgeDay.BerlinMidnight().Add(10 * time.Hour) })
 	repos := newStudentTestPeopleRows(testpkg.NewDatabase(t, tc.db))
 
 	student := testpkg.CreateTestStudent(t, tc.db, "Purge", "Audited", "4a")
 	actor := testpkg.CreateTestAccount(t, tc.db, "graduate-purge-audit@example.com")
-	completion := testpkg.CreateTestCareWithdrawalCompletion(t, tc.db, student.ID, actor.ID, calendar.TodayDate())
+	completion := testpkg.CreateTestCareWithdrawalCompletion(t, tc.db, student.ID, actor.ID, purgeDay)
 	room := testpkg.CreateTestRoom(t, tc.db, "graduate-purge-audit-room")
-	instance := testpkg.CreateTestActivityInstance(t, tc.db, calendar.TodayDate().AddDays(-1), room.ID, testpkg.ActivityInstanceOpts{
+	instance := testpkg.CreateTestActivityInstance(t, tc.db, purgeDay.AddDays(-1), room.ID, testpkg.ActivityInstanceOpts{
 		Title:         "Retained graduate roster assignment",
 		IsSpontaneous: true,
 	})

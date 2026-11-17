@@ -54,6 +54,23 @@ test("a deprecated route may leave and a variant may not", () => {
   assert.deepEqual(breakingChanges(variants({ full: row, slim: row }), variants({ full: row })), ["GET /api/rows/ ?view=slim: response removed"]);
 });
 
+test("no-data responses stay compatible and cannot change to or from data responses", () => {
+  const noData = model(base.types[0].fields, { response: undefined, no_data: true });
+  const variants = model(base.types[0].fields, {
+    response: undefined,
+    variants: { query_param: "view", default: "full", cases: { full: base.routes[0].response, slim: base.routes[0].response } },
+  });
+  assert.deepEqual(breakingChanges(noData, structuredClone(noData)), []);
+  for (const data of [base, variants]) {
+    assert.deepEqual(breakingChanges(noData, data), ["GET /api/rows/: no_data became array<object>"]);
+    const requests = data.routes[0].variants ? ["", " ?view=full", " ?view=slim"] : [""];
+    assert.deepEqual(breakingChanges(data, noData), requests.map((query) => `GET /api/rows/${query}: array<object> became no_data`));
+  }
+  const wrongPortal = structuredClone(noData);
+  wrongPortal.routes[0].portals = ["parent"];
+  assert.deepEqual(breakingChanges(noData, wrongPortal), ["GET /api/rows/: portal tenant removed"]);
+});
+
 test("the committed model is compatible with itself", () => {
   const committed = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", MODEL_PATH), "utf8"));
   assert.deepEqual(breakingChanges(committed, committed), []);

@@ -58,6 +58,8 @@ func setupSeriesTest(t *testing.T) *seriesTestEnv {
 	shifts := planning.NewStaffShiftService(shiftRows.Capability, owners.NewPlanStaffDirectory(repoFactoryPeople.Staff), shiftTypes, lockStaffShifts, slog.Default(),
 		planning.WithStaffShiftSeriesExceptions(exceptionRows.Capability),
 		planning.WithStaffShiftDeviationEvents(owners.NewShiftMoveAudit(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).DeviationEvent)),
+		// The shift writes decide on the series' day, not the wall clock.
+		planning.WithStaffShiftToday(today),
 	)
 	series := planning.NewStaffShiftSeriesService(
 		seriesRows.Capability, exceptionRows.Capability, shiftRows.Capability, owners.NewPlanStaffDirectory(repoFactoryPeople.Staff), planning.SchoolCalendarPeriods(calendarOwner),

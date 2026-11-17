@@ -30,7 +30,7 @@ func (r *Store) RestoreWithdrawnChildren(ctx context.Context, requestID int64, w
 			Set("status_reason = NULL").
 			Set("reviewed_at = NULL").
 			Set("reviewed_by = NULL").
-			Set("updated_at = NOW()").
+			Set("updated_at = ?", r.currentTime()).
 			Where(`"request_child".request_id = ?`, requestID).
 			Where(`"request_child".status = ?`, enrollment.ChildStatusWithdrawn).
 			Where(`"request_child".id IN (?)`, bun.List(waitlistedChildIDs)).
@@ -49,7 +49,7 @@ func (r *Store) RestoreWithdrawnChildren(ctx context.Context, requestID int64, w
 		Set("status_reason = NULL").
 		Set("reviewed_at = NULL").
 		Set("reviewed_by = NULL").
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", r.currentTime()).
 		Where(`"request_child".request_id = ?`, requestID).
 		Where(`"request_child".status = ?`, enrollment.ChildStatusWithdrawn)
 	if len(waitlistedChildIDs) > 0 {
@@ -78,12 +78,12 @@ func (r *Store) TransitionPhaseChildren(ctx context.Context, phaseID int64, curr
 
 	res, err := db.NewRaw(`
 		UPDATE enrollment.request_children AS rc
-		SET status = ?, updated_at = NOW()
+		SET status = ?, updated_at = ?
 		FROM enrollment.requests AS r
 		WHERE r.id = rc.request_id AND r.tenant_id = rc.tenant_id AND rc.tenant_id = ?
 		  AND r.phase_id = ?
 		  AND rc.status = ?
-	`, newStatus, tenantID, phaseID, currentStatus).Exec(ctx)
+	`, newStatus, r.currentTime(), tenantID, phaseID, currentStatus).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("bulk update status: %w", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,7 +28,7 @@ const (
 func fillSubmissionBucket(t *testing.T, db *bun.DB, keyType, key string, count int) {
 	t.Helper()
 	_, err := db.NewRaw(`INSERT INTO enrollment.submission_rate_limits (tenant_id, key_type, key_value, attempts, window_start)
-		VALUES (?, ?, ?, ?, NOW())`, testpkg.Tenant(t), keyType, key, count).Exec(testpkg.Ctx(t))
+		VALUES (?, ?, ?, ?, ?)`, testpkg.Tenant(t), keyType, key, count, time.Now()).Exec(testpkg.Ctx(t))
 	require.NoError(t, err)
 }
 

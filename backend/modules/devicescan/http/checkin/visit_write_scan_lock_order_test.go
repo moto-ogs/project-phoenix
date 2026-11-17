@@ -62,7 +62,7 @@ func newSessionEndScanFixture(t *testing.T) (bulkMoveScanFixture, int64) {
 	f.scanStaff, _, _ = k.staff(t, "Lifecycle", "Scan")
 	f.scanRoom, _, f.scanStay = k.roomWithSession(t, "Lifecycle Scan")
 	testpkg.LinkDeviceToActiveGroup(t, k.db, f.scanStay, device)
-	_, err := k.db.NewUpdate().Table("active.groups").Set("last_activity = NOW() - INTERVAL '2 hours'").Where("id = ?", f.scanStay).Exec(testpkg.Ctx(t))
+	_, err := k.db.NewUpdate().Table("active.groups").Set("last_activity = ?", time.Now().Add(-2*time.Hour)).Where("id = ?", f.scanStay).Exec(testpkg.Ctx(t))
 	require.NoError(t, err)
 	first := testpkg.CreateTestStudent(t, k.db, "First", "Visit", "3a")
 	held := testpkg.CreateTestVisit(t, k.db, first.ID, f.scanStay, time.Now().Add(-time.Hour), nil).ID

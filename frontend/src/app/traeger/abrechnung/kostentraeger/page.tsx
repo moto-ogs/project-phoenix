@@ -8,7 +8,7 @@
 // unter Einstellungen → Abrechnungsvorgaben.
 
 import { HandCoins, Pencil, Plus, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   COST_SHARE_KIND_LABELS,
   costShareAmountText,
@@ -21,6 +21,7 @@ import {
   billingAreaTitle,
   billingTabs,
 } from "~/components/traeger/billing-family-format";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -31,17 +32,13 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import type { FilterConfig } from "~/components/ui/page-header/types";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import {
   type CareCostShare,
   type CareCostShareContract,
-  type CareCostShareSet,
   deleteCareCostShare,
   fetchCareCostShares,
 } from "~/lib/traeger-care-cost-shares-api";
@@ -120,7 +117,16 @@ function ShareCell({ share }: Readonly<{ share: CareCostShare }>) {
 }
 
 export default function TraegerKostentraegerPage() {
-  const [data, setData] = useState<CareCostShareSet | null>(null);
+  const {
+    data,
+    loading,
+    error: loadError,
+    mutate,
+  } = useTraegerResource(
+    traegerBillingKeys.costShares(),
+    fetchCareCostShares,
+    "die Kostenträger-Anteile",
+  );
   const [search, setSearch] = useState("");
   const [show, setShow] = useState<Show>("all");
   const [target, setTarget] = useState<CostShareTarget | null>(null);
@@ -129,36 +135,17 @@ export default function TraegerKostentraegerPage() {
     share: CareCostShare;
   } | null>(null);
   const [busy, setBusy] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const deleteErrors = useApiFormError();
   const { success } = useToast();
-
-  const load = useCallback(async () => {
-    try {
-      setData(await fetchCareCostShares());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_cost_shares_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Kostenträger-Anteile",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const remove = async () => {
     if (!deleting) return;
     setBusy(true);
     deleteErrors.clear();
     try {
-      setData(await deleteCareCostShare(deleting.share.id));
+      await mutate(await deleteCareCostShare(deleting.share.id), {
+        revalidate: false,
+      });
       success("Der Anteil ist gelöscht.");
       setDeleting(null);
     } catch (err) {
@@ -313,7 +300,7 @@ export default function TraegerKostentraegerPage() {
           />
         ) : null
       }
-      statsLoading={!data && !pageLoad.error}
+      statsLoading={loading}
       actions={
         <TraegerListExportMenu
           download={(format) =>
@@ -334,8 +321,8 @@ export default function TraegerKostentraegerPage() {
       }}
       filters={filters}
       tabs={billingTabs("kostentraeger")}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !data}
+      error={loadError}
+      loading={loading}
       overlays={
         data ? (
           <>
@@ -344,7 +331,7 @@ export default function TraegerKostentraegerPage() {
               target={target}
               onClose={() => setTarget(null)}
               onSaved={(next) => {
-                setData(next);
+                void mutate(next, { revalidate: false });
                 setTarget(null);
               }}
             />

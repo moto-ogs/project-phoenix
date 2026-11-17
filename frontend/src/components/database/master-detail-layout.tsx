@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { useIsMobile } from "~/components/ui/hooks/useIsMobile";
+import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useModal } from "~/components/ui/modal-context";
 import { SectionCard } from "~/components/ui/section-card";
 import { cn } from "~/lib/utils";
@@ -49,7 +49,7 @@ export function MasterDetailLayout({
   bottomOffset = 32,
   unselectedBehavior = "placeholder",
 }: MasterDetailLayoutProps) {
-  const isMobile = useIsMobile();
+  const isMobile = useMediaQuery(BELOW_MD);
   const { isModalOpen } = useModal();
   const { ref: containerRef, height } =
     useFillHeight<HTMLDivElement>(bottomOffset);

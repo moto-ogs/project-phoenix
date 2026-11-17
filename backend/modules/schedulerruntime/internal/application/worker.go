@@ -33,6 +33,7 @@ func validateWorkerDependencies(deps ports.WorkerDependencies) error {
 		value any
 	}{
 		{name: "logger", value: deps.Logger},
+		{name: "clock", value: deps.Now},
 		{name: "tenant directory", value: deps.SchoolRepo},
 		{name: "tenant runtime", value: deps.TenantRuntime},
 		{name: "settings", value: deps.Settings},

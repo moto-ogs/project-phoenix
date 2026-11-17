@@ -458,7 +458,7 @@ func TestGuardianInvitationAcceptanceCannotOutrunInvalidation(t *testing.T) {
 		done <- err
 	}()
 	waitForLockWaiters(t, db, 1)
-	_, err = writer.ExecContext(ctx, `UPDATE auth.guardian_invitations SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = ?`, invitation.ID)
+	_, err = writer.ExecContext(ctx, `UPDATE auth.guardian_invitations SET expires_at = ? WHERE id = ?`, time.Now().Add(-time.Minute), invitation.ID)
 	require.NoError(t, err)
 	require.NoError(t, writer.Commit())
 	require.Error(t, awaitResult(t, done), "an invalidated link cannot commit an account from its earlier snapshot")

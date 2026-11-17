@@ -318,10 +318,10 @@ const reachedAccountBound = `(
 // outstanding, because a poll that quietly stops nagging is a poll nobody
 // answers. accountChildrenCTE must be in scope.
 //
-// Bind order: today, today, today.
+// Bind order: now, today, today, today.
 const openPollForAccountFeed = `(
 		a.response_type <> 'none'
-		AND (a.response_deadline IS NULL OR a.response_deadline > NOW())
+		AND (a.response_deadline IS NULL OR a.response_deadline > ?)
 		AND EXISTS (
 			SELECT 1
 			FROM users.parent_announcement_targets pt` + accountReachedChildrenFeed + `
@@ -340,12 +340,15 @@ const openPollForAccountFeed = `(
 // Bind order: news schools, notice-only schools.
 const feedScopePredicate = `((a.tenant_id IN (?) AND a.system_kind IS NULL) OR (a.tenant_id IN (?) AND a.system_kind IS NOT NULL))`
 
-// liveAnnouncementPredicate is "published, active, and not expired".
+// liveAnnouncementPredicate is "published, active, and not expired" at the
+// projection's instant, the clock that stamps the publication (#7295).
+//
+// Bind order: now, now.
 const liveAnnouncementPredicate = `
 				AND a.active
 				AND a.published_at IS NOT NULL
-				AND a.published_at <= NOW()
-				AND (a.expires_at IS NULL OR a.expires_at > NOW())`
+				AND a.published_at <= ?
+				AND (a.expires_at IS NULL OR a.expires_at > ?)`
 
 // pollAudienceStudentsBound is every portal-visible child a poll reaches.
 // Staff results must include every child the announcement reaches, even if

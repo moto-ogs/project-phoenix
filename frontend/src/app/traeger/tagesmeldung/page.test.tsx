@@ -10,6 +10,7 @@ import type {
   DailyAttendanceSummary,
   TraegerDailyAttendance,
 } from "~/lib/traeger-daily-attendance-api";
+import { testClockDay } from "~/test/clock";
 
 const { mockFetch, mockDownload, mockDownloadBlob, mockUseSession } =
   vi.hoisted(() => ({
@@ -91,6 +92,10 @@ const TUESDAY = day("2026-09-08", {
   longestMinutes: 540,
 });
 
+// The page asks for the last week up to yesterday of the test day.
+const LAST_WEEK = { from: testClockDay(-7), to: testClockDay(-1) };
+
+// The server's answer is a fixed week; the page shows what it gets.
 const REPORT: TraegerDailyAttendance = {
   from: "2026-09-02",
   to: "2026-09-08",
@@ -168,10 +173,7 @@ describe("TraegerDailyAttendancePage", () => {
 
     await screen.findByRole("heading", { name: /^Je Tag/ });
     const table = screen.getAllByRole("table")[0]!;
-    expect(mockFetch).toHaveBeenCalledWith({
-      from: "2026-09-02",
-      to: "2026-09-08",
-    });
+    expect(mockFetch).toHaveBeenCalledWith(LAST_WEEK);
     expect(screen.getByText("02.09.2026 bis 08.09.2026")).toBeInTheDocument();
     expect(
       screen.getByText("Schule in einem anderen Land, nicht enthalten"),
@@ -282,9 +284,6 @@ describe("TraegerDailyAttendancePage", () => {
         "tagesmeldung-mv-2026-09-02-bis-2026-09-08.csv",
       ),
     );
-    expect(mockDownload).toHaveBeenCalledWith(
-      { from: "2026-09-02", to: "2026-09-08" },
-      "csv",
-    );
+    expect(mockDownload).toHaveBeenCalledWith(LAST_WEEK, "csv");
   });
 });

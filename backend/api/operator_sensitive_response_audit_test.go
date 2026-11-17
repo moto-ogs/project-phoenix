@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,7 +44,7 @@ func TestOperatorAuditSensitiveResponseRoutesFailClosed(t *testing.T) {
 		values: settingsAPI.NewSettingsResource(settingsAPI.SettingsConfig{
 			Settings: module.OperatorSchoolSettings(module.SettingsSideEffects.Dispatch), OperatorID: operatorIDFromSession,
 		}),
-		bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle),
+		bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.TodayDate),
 	}, demoPresenceHistory)
 	(operatorIdentityRoutes{account: identityAPI.NewResource(identity, provisioningAPI.ProvisioningErrorRenderer)}).mountAccountTenantAccessRoutes(router, resource)
 	// The mounted scan reader/writer must never be invoked if its audit fails.

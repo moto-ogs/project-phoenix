@@ -11,7 +11,10 @@ import {
 } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { Modal } from "~/components/ui/modal";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   createRequestFeed,
   getRequestFeedStatus,
@@ -33,47 +36,30 @@ export function RequestFeedDialog({ isOpen, onClose }: RequestFeedDialogProps) {
   // Fehler und Rückmeldungen stehen im Dialog: ein Toast läge hinter seinem
   // Hintergrund und bliebe unsichtbar.
   const actionErrors = useApiFormError();
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+  const feedStatus = useSWRAuth(
+    isOpen ? tenantStudentKeys.requestFeedStatus() : null,
+    getRequestFeedStatus,
+  );
+  const { mutate: mutateFeedStatus } = feedStatus;
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [feedStatus],
+    FEED_OBJECT,
+    () => mutateFeedStatus(),
+  );
   const { copied, copy } = useClipboardCopy("RequestFeedDialog", 2000);
-  const [active, setActive] = useState(false);
+  const active = feedStatus.data?.active ?? false;
+  // The link is shown once, right after it was made; never cached.
   const [url, setURL] = useState<string | null>(null);
-  const [checking, setChecking] = useState(false);
+  const checking = isOpen && !feedStatus.data && failure === undefined;
   const [saving, setSaving] = useState(false);
   const [confirmRotate, setConfirmRotate] = useState(false);
-  // Zählt die Ladeversuche; „Wiederholen“ erhöht ihn und lädt neu.
-  const [loadAttempt, setLoadAttempt] = useState(0);
   const loadFailed = loadError !== null;
 
   useEffect(() => {
     if (!isOpen) return;
-    let cancelled = false;
-    setActive(false);
     setURL(null);
     setConfirmRotate(false);
-    clearLoadError();
-    setChecking(true);
-    void getRequestFeedStatus()
-      .then((status) => {
-        if (!cancelled) setActive(status.active);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        void showLoadError(err, {
-          object: FEED_OBJECT,
-          retry: () => setLoadAttempt((attempt) => attempt + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setChecking(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [clearLoadError, isOpen, loadAttempt, showLoadError]);
+  }, [isOpen]);
 
   const create = async () => {
     setSaving(true);
@@ -81,7 +67,7 @@ export function RequestFeedDialog({ isOpen, onClose }: RequestFeedDialogProps) {
     try {
       const result = await createRequestFeed();
       setURL(result.url);
-      setActive(true);
+      void mutateFeedStatus({ active: true }, { revalidate: false });
     } catch (err) {
       await actionErrors.show(err, {
         object: FEED_OBJECT,
@@ -98,7 +84,7 @@ export function RequestFeedDialog({ isOpen, onClose }: RequestFeedDialogProps) {
     try {
       const result = await rotateRequestFeed();
       setURL(result.url);
-      setActive(true);
+      void mutateFeedStatus({ active: true }, { revalidate: false });
       setConfirmRotate(false);
     } catch (err) {
       await actionErrors.show(err, {

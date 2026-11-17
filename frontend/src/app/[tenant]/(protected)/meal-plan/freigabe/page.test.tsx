@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import type {
   MealBillingMonth,
@@ -17,6 +18,8 @@ import type {
 } from "~/lib/meal-billing-api";
 
 import MealBillingReleasePage from "./page";
+
+vi.unmock("swr");
 
 const {
   fetchMealBillingMonths,
@@ -26,6 +29,13 @@ const {
   fetchMealBillingMonths: vi.fn(),
   fetchMealBillingMonth: vi.fn(),
   releaseMealBillingMonth: vi.fn(),
+}));
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1", token: "test-token" } },
+  }),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -94,7 +104,9 @@ const MONTHS: MealBillingSummary[] = [
 function renderPage() {
   return render(
     <ToastProvider>
-      <MealBillingReleasePage />
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <MealBillingReleasePage />
+      </SWRConfig>
     </ToastProvider>,
   );
 }

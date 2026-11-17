@@ -172,7 +172,7 @@ interface CalendarAttendee {
 }
 
 /** Answers of every recipient, also of the ones the overview does not name. */
-export interface CalendarResponseCounts {
+interface CalendarResponseCounts {
   readonly accepted: number;
   readonly declined: number;
   readonly pending: number;

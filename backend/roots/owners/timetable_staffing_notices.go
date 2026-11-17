@@ -9,6 +9,7 @@ import (
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
@@ -24,6 +25,20 @@ import (
 type TimetableStaffNotices struct {
 	Cancellations timetablePorts.StaffCancellationNotices
 	Staffing      timetablePorts.StaffingNoticeDependencies
+	// RoomChanges tells the staff of a block, and with the guardian contacts
+	// the families of its children, that it moved to another room (#7141).
+	RoomChanges timetablePorts.InstanceRoomChangeNotices
+}
+
+// WithGuardianContacts lets the room change notice reach the families too
+// (#7141): the People Directory names the guardians of the booked children
+// with their portal access and language.
+func (n TimetableStaffNotices) WithGuardianContacts(guardians peopledirectory.GuardianPortalContacts) TimetableStaffNotices {
+	if notices, ok := n.RoomChanges.(timetableRoomChangeNotices); ok && guardians != nil {
+		notices.guardians = guardians
+		n.RoomChanges = notices
+	}
+	return n
 }
 
 // NewTimetableStaffNotices binds both notices over the root's notifications.
@@ -40,6 +55,7 @@ func NewTimetableStaffNotices(notifications DeliveryNotifications, membership sc
 	return TimetableStaffNotices{
 		Cancellations: cancellations,
 		Staffing:      newTimetableStaffingNoticeDependencies(notifications.Notifier, notifications.Preferences, membership, groups, handovers),
+		RoomChanges:   newTimetableRoomChangeNotices(notifications, nil),
 	}
 }
 

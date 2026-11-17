@@ -53,6 +53,6 @@ func TestHolidayParentAccountProofOpensOnlyForItsLinkAndDay(t *testing.T) {
 	assert.Zero(t, resolve(link, accountProofNow, enrollment.HolidayRegistrationInput{ParentAccountID: 501}),
 		"an account the caller puts in is dropped")
 
-	_, err = NewHolidayParentAccountProofs(boundCipher{}, nil).HolidayParentAccountProof(7, 70, 0)
+	_, err = NewHolidayParentAccountProofs(boundCipher{}, func() time.Time { return accountProofNow }).HolidayParentAccountProof(7, 70, 0)
 	assert.Error(t, err, "a proof names an account")
 }

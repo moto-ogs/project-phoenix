@@ -27,8 +27,8 @@ type managedRoleRow struct {
 	IsSystem      bool      `bun:"is_system"`
 	BaseRole      *string   `bun:"base_role"`
 	SchoolPortal  bool      `bun:"school_portal"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 func managedRoleRecord(role domain.ManagedRole) managedRoleRow {

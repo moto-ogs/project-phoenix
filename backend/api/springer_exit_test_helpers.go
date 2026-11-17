@@ -18,14 +18,14 @@ import (
 // NewSpringerExitsForTest builds the Worker's Springer exits (#7197) as
 // PlannedStaffExitsJob does, without notices. The run takes the school's
 // tenant transaction and answers the outcome of each exit in its order; a
-// failed exit is an error.
-func NewSpringerExitsForTest(db transactionruntime.Database, unit tenant.UnitOfWork) (func(context.Context) ([]string, error), error) {
+// failed exit is an error. now is the Worker's clock.
+func NewSpringerExitsForTest(db transactionruntime.Database, unit tenant.UnitOfWork, now func() time.Time) (func(context.Context) ([]string, error), error) {
 	identity, err := lifecycleTestModule(db, unit, GuardianInvitationTestConfig{})
 	if err != nil {
 		return nil, err
 	}
 	offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()),
-		owners.MembershipStaffEmployment(MustNewStaffEmployment(db)), nil)
+		owners.MembershipStaffEmployment(MustNewStaffEmployment(db)), nil, now)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func NewSpringerExitsForTest(db transactionruntime.Database, unit tenant.UnitOfW
 		Within:         PlannedExitTransaction,
 		BoundLockWaits: BoundPlannedExitLockWaits(30 * time.Second),
 		Isolate:        isolatePlannedExit,
-		Now:            time.Now,
+		Now:            now,
 	})
 	if err != nil {
 		return nil, err

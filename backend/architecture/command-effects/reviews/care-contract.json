@@ -495,7 +495,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolHolidays.SchoolHolidayDates",
-      "reason": "Computes the statutory holidays of a federal state locally, without database or network access (#6350). The federal states are read through schoolFederalStates, which the Träger calendar and the holiday weeks share (#4702).",
+      "reason": "Computes the statutory holidays of a federal state locally, without database or network access (#6350). The federal states are read through schoolFederalStates, which the Träger calendar and the holiday weeks share (#4702). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.HolidayDates",
       "target_owner": "school-calendar"
@@ -505,7 +505,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolHolidays.SchoolHolidayDates",
-      "reason": "Checks a federal-state code against School Calendar's supported regions, a pure value check (#6350). The federal states are read through schoolFederalStates, which the Träger calendar and the holiday weeks share (#4702).",
+      "reason": "Checks a federal-state code against School Calendar's supported regions, a pure value check (#6350). The federal states are read through schoolFederalStates, which the Träger calendar and the holiday weeks share (#4702). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ValidHolidayRegion",
       "target_owner": "school-calendar"
@@ -515,7 +515,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolHolidays.SchoolHolidayDates",
-      "reason": "Computes the statutory holidays of a federal state locally, without database or network access (#6350). The federal states are read through schoolFederalStates, which the Träger calendar and the holiday weeks share (#4702).",
+      "reason": "Computes the statutory holidays of a federal state locally, without database or network access (#6350). The federal states are read through schoolFederalStates, which the Träger calendar and the holiday weeks share (#4702). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidayQuery.HolidayDates",
       "target_owner": "school-calendar"
@@ -525,7 +525,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolHolidays.SchoolHolidayDates",
-      "reason": "Checks a federal-state code against School Calendar's supported regions, a pure value check (#6350). The federal states are read through schoolFederalStates, which the Träger calendar and the holiday weeks share (#4702).",
+      "reason": "Checks a federal-state code against School Calendar's supported regions, a pure value check (#6350). The federal states are read through schoolFederalStates, which the Träger calendar and the holiday weeks share (#4702). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidayQuery.ValidHolidayRegion",
       "target_owner": "school-calendar"

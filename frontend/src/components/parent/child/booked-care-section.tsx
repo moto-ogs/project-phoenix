@@ -1,13 +1,7 @@
 "use client";
 
 import { DataField, DataGrid } from "~/components/ui/data-field";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useState } from "react";
 import { CalendarCheckIcon, CalendarXIcon } from "@phosphor-icons/react/ssr";
 import { useLocale } from "next-intl";
 import { Button } from "~/components/ui/button";
@@ -17,29 +11,28 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { OfferingChangeRequestModal } from "~/components/parent/offering-change-request-modal";
 import { RequestSharingControl } from "~/components/parent/request-sharing-control";
 import { WeeklyScheduleSection } from "~/components/parent/child/weekly-schedule-section";
-import { useChildRequests } from "~/components/parent/child-requests-context";
 import {
   ParentSection,
   ParentSubsection,
 } from "~/components/parent/shell/parent-section";
 import { ParentSectionSkeleton } from "~/components/parent/parent-page";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
-import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   getChildCareOfferings,
+  getChildCareSchedule,
   submitOfferingChangeRequest,
   type ChildCareOfferings,
-  type ChildCareSchedule,
   type OfferingChangesDisabledReason,
 } from "~/lib/parent-api";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
-
-const logger = createLogger({ component: "BookedCareSection" });
 
 const DAY_KEY_TO_WEEKDAY: Record<string, number> = {
   mon: 1,
@@ -81,86 +74,42 @@ export function BookedCareSection({
   const t = useCareTermTranslations("parentMasterData");
   const tc = useCareTermTranslations("parentChild");
   const locale = useLocale();
-  const [offerings, setOfferings] = useState<ChildCareOfferings | null>(null);
-  const [schedule, setSchedule] = useState<ChildCareSchedule | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [offeringsError, setOfferingsError] = useState(false);
-  const [scheduleError, setScheduleError] = useState(false);
+  const today = useBerlinToday();
+  const offeringsResource = useSWRAuth(
+    parentKeys.careOfferings(studentId),
+    () => getChildCareOfferings(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const scheduleResource = useSWRAuth(
+    parentKeys.careSchedule(studentId, today),
+    () => getChildCareSchedule(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const { mutate: mutateOfferings } = offeringsResource;
+  const { mutate: mutateSchedule } = scheduleResource;
+  const offerings = offeringsResource.data ?? null;
+  const schedule = scheduleResource.data ?? null;
+  const loading =
+    (!offeringsResource.data && !offeringsResource.error) ||
+    (!scheduleResource.data && !scheduleResource.error);
+  const offeringsLoad = useSwrResourceLoadError(
+    [offeringsResource],
+    t("careOfferings.errorObject"),
+    () => mutateOfferings(),
+  );
+  const scheduleLoad = useSwrResourceLoadError(
+    [scheduleResource],
+    t("careSchedule.errorObject"),
+    () => mutateSchedule(),
+  );
   const [modalOpen, setModalOpen] = useState(false);
   const [editRequest, setEditRequest] = useState<string | null>(null);
-  const offeringsLoad = useApiLoadError();
-  const scheduleLoad = useApiLoadError();
-  const { show: showOfferingsError, clear: clearOfferingsError } =
-    offeringsLoad;
-  const { show: showScheduleError, clear: clearScheduleError } = scheduleLoad;
-  const latestLoadRef = useRef<() => void>(() => undefined);
-  const childRequests = useChildRequests();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setOfferingsError(false);
-    setScheduleError(false);
-    clearOfferingsError();
-    clearScheduleError();
-    const [offeringsResult, scheduleResult] = await Promise.allSettled([
-      getChildCareOfferings(studentId),
-      childRequests.careSchedule(studentId),
-    ]);
-    if (offeringsResult.status === "fulfilled") {
-      setOfferings(offeringsResult.value);
-    } else {
-      setOfferings(null);
-      setOfferingsError(true);
-      logger.warn("booked_care_offerings_load_failed", {
-        error: String(offeringsResult.reason),
-        student_id: studentId,
-      });
-      void showOfferingsError(offeringsResult.reason, {
-        object: t("careOfferings.errorObject"),
-        retry: () => latestLoadRef.current(),
-      });
-    }
-    if (scheduleResult.status === "fulfilled") {
-      setSchedule(scheduleResult.value);
-    } else {
-      setSchedule(null);
-      setScheduleError(true);
-      logger.warn("booked_care_schedule_load_failed", {
-        error: String(scheduleResult.reason),
-        student_id: studentId,
-      });
-      void showScheduleError(scheduleResult.reason, {
-        object: t("careSchedule.errorObject"),
-        retry: () => latestLoadRef.current(),
-      });
-    }
-    setLoading(false);
-  }, [
-    clearOfferingsError,
-    clearScheduleError,
-    childRequests,
-    showOfferingsError,
-    showScheduleError,
-    studentId,
-    t,
-  ]);
-
-  useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
-  });
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const refresh = useCallback(() => void load(), [load]);
-  useMessagesActivity({
-    eventName: "parent-conversation-refresh",
-    studentId,
-    onMatch: refresh,
-    marksRead: false,
-    refetchOnFocus: true,
-  });
+  // `parent-conversation-refresh` reaches these readers through useChildCare
+  // of the same child page, which refreshes the child's whole status family.
+  const refresh = useCallback(() => {
+    void mutateOfferings();
+    void mutateSchedule();
+  }, [mutateOfferings, mutateSchedule]);
 
   const weekdayList = useCallback(
     (weekdays: number[]) =>
@@ -243,9 +192,11 @@ export function BookedCareSection({
           schedule={schedule}
           childFirstName={childFirstName}
           careEnded={careEnded}
-          onScheduleChange={setSchedule}
+          onScheduleChange={(next) =>
+            void mutateSchedule(next, { revalidate: false })
+          }
         />
-      ) : scheduleError ? (
+      ) : scheduleLoad.failure ? (
         <ParentSection
           title={tc("care.weekTitle")}
           concept={calendarConcept}
@@ -496,7 +447,7 @@ export function BookedCareSection({
             </p>
           )}
         </ParentSection>
-      ) : offeringsError ? (
+      ) : offeringsLoad.failure ? (
         <ParentSection
           title={t("careOfferings.offeringsTitle")}
           concept={carePlanConcept}
@@ -518,7 +469,7 @@ export function BookedCareSection({
               input,
               recipientIds,
             );
-            setOfferings(next);
+            void mutateOfferings(next, { revalidate: false });
             return next.pending_request?.id;
           }}
         />

@@ -74,7 +74,7 @@ type Dependencies struct {
 	Announcements Announcements
 	Observe       func(Observation)
 	Logger        *slog.Logger
-	// Now is the clock; nil means time.Now.
+	// Now is the root's clock. Required.
 	Now func() time.Time
 }
 
@@ -84,7 +84,7 @@ type AttachmentPurgerDependencies struct {
 	DB      *bun.DB
 	Objects ObjectBackend
 	Observe func(Observation)
-	// Now is the clock; nil means time.Now.
+	// Now is the root's clock. Required.
 	Now func() time.Time
 }
 
@@ -95,10 +95,10 @@ type AttachmentPurgerDependencies struct {
 // announcements at their construction and builds New over them afterwards
 // (#4080). Both are stateless over the same tables and objects.
 func NewAttachmentPurger(dependencies AttachmentPurgerDependencies) (filestorage.AttachmentPurger, error) {
-	if dependencies.DB == nil || dependencies.Objects == nil || dependencies.Observe == nil {
+	if dependencies.DB == nil || dependencies.Objects == nil || dependencies.Observe == nil || dependencies.Now == nil {
 		return nil, errors.New("file storage compose: all dependencies are required")
 	}
-	runtime, now := postgres.DatabaseRuntime(dependencies.DB), application.Clock(dependencies.Now)
+	runtime, now := postgres.DatabaseRuntime(dependencies.DB), dependencies.Now
 	return application.NewAttachmentPurger(application.AttachmentPurgerDependencies{
 		Attachments:        postgres.NewAttachmentStore(runtime, now),
 		AttachmentCleanups: postgres.NewAttachmentCleanupStore(runtime, now),
@@ -114,10 +114,10 @@ func NewAttachmentPurger(dependencies AttachmentPurgerDependencies) (filestorage
 func New(dependencies Dependencies) (filestorage.Capability, error) {
 	if dependencies.DB == nil || dependencies.Objects == nil || dependencies.Identity == nil ||
 		dependencies.People == nil || dependencies.Settings == nil || dependencies.Events == nil ||
-		dependencies.Observe == nil || dependencies.Logger == nil || dependencies.HasPermission == nil {
+		dependencies.Observe == nil || dependencies.Logger == nil || dependencies.HasPermission == nil || dependencies.Now == nil {
 		return nil, errors.New("file storage compose: all dependencies are required")
 	}
-	runtime, now := postgres.DatabaseRuntime(dependencies.DB), application.Clock(dependencies.Now)
+	runtime, now := postgres.DatabaseRuntime(dependencies.DB), dependencies.Now
 	return application.New(application.Dependencies{
 		Folders:            postgres.NewFolderStore(runtime),
 		Files:              postgres.NewFileStore(runtime, now),
@@ -152,9 +152,9 @@ func NewDocumentCoordinator(kind string, backend apiDocuments.Objects, store api
 
 // --- foreign facts -------------------------------------------------------------
 
-// NewUploadCleanup uses the existing file cleanup outbox, partitioned by kind, on the clock its root passes; nil means time.Now.
+// NewUploadCleanup uses the existing file cleanup outbox, partitioned by kind, on the clock its root passes, which is required.
 func NewUploadCleanup(db *bun.DB, kind filestorage.UploadCleanupKind, now func() time.Time) *filestorage.UploadCleanup {
-	cleanup := application.NewUploadCleanup(postgres.NewUploadCleanupStore(postgres.DatabaseRuntime(db), string(kind), application.Clock(now)), transaction{}, string(kind), application.Clock(now))
+	cleanup := application.NewUploadCleanup(postgres.NewUploadCleanupStore(postgres.DatabaseRuntime(db), string(kind), now), transaction{}, string(kind), now)
 	return filestorage.NewUploadCleanup(cleanup.Queue, cleanup.QueueAll, cleanup.Sweep)
 }
 

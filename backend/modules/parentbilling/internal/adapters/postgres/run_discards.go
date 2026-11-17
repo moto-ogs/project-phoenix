@@ -21,7 +21,7 @@ func (s *Store) MarkCareRunDiscarded(ctx context.Context, organizationID, runID 
 	}
 	row := &careRunRow{}
 	if err := db.NewUpdate().Model(row).
-		Set("status = ?", parentbilling.RunDiscarded).Set("discarded_at = CURRENT_TIMESTAMP").
+		Set("status = ?", parentbilling.RunDiscarded).Set("discarded_at = ?", s.now()).
 		Where("organization_id = ?", organizationID).Where("id = ?", runID).Where("status = ?", parentbilling.RunCalculated).
 		Returning("*").Scan(ctx); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -47,9 +47,9 @@ func (s *Store) MarkCareNoticeRunDiscarded(ctx context.Context, organizationID, 
 	}
 	row := &careNoticeRunRow{}
 	if err := db.NewRaw(`UPDATE parent_billing.care_notice_runs
-		SET status = ?, discarded_at = CURRENT_TIMESTAMP
+		SET status = ?, discarded_at = ?
 		WHERE organization_id = ? AND id = ? AND status = ?
-		RETURNING `+careNoticeRunSelectColumnsQ, parentbilling.RunDiscarded, organizationID, runID, parentbilling.RunCalculated).
+		RETURNING `+careNoticeRunSelectColumnsQ, parentbilling.RunDiscarded, s.now(), organizationID, runID, parentbilling.RunCalculated).
 		Scan(ctx, row); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return parentbilling.CareNoticeRun{}, parentbilling.ErrBillingRunReleased
@@ -70,7 +70,7 @@ func (s *Store) MarkRunDiscarded(ctx context.Context, organizationID, runID int6
 	}
 	row := &runRow{}
 	if err := db.NewUpdate().Model(row).
-		Set("status = ?", parentbilling.RunDiscarded).Set("discarded_at = CURRENT_TIMESTAMP").
+		Set("status = ?", parentbilling.RunDiscarded).Set("discarded_at = ?", s.now()).
 		Where("organization_id = ?", organizationID).Where("id = ?", runID).Where("status = ?", parentbilling.RunCalculated).
 		Returning("*").Scan(ctx); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

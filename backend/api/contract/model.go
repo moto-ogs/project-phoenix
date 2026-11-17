@@ -9,7 +9,7 @@ const (
 	KindInt      = "int"       // JSON number, safe integer
 	KindNumber   = "number"    // JSON number
 	KindID       = "id"        // identifier as a JSON string
-	KindLegacyID = "legacy_id" // identifier an existing route still sends as a JSON number
+	KindLegacyID = "legacy_id" // identifier an existing route still sends, or reads only, as a JSON number
 	KindLaxID    = "lax_id"    // common.JSONID: renders a number, reads number or string
 	KindDate     = "date"      // YYYY-MM-DD
 	KindInstant  = "instant"   // RFC 3339
@@ -77,7 +77,9 @@ type Route struct {
 	Query      []QueryParam `json:"query,omitempty"`
 	Request    *Schema      `json:"request,omitempty"`
 	Response   *Schema      `json:"response,omitempty"`
-	Variants   *Variants    `json:"variants,omitempty"`
+	// NoData says the route answers a 204 or the envelope without data.
+	NoData   bool      `json:"no_data,omitempty"`
+	Variants *Variants `json:"variants,omitempty"`
 }
 
 // Key is the route's line in the route catalog.

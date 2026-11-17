@@ -42,8 +42,8 @@ type payrollDispatchRow struct {
 	DownloadedAt      *time.Time `bun:"downloaded_at"`
 	MailOutboxID      *int64     `bun:"mail_outbox_id"`
 	FinishedAt        *time.Time `bun:"finished_at"`
-	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r payrollDispatchRow) toDomain() domain.PayrollDispatch {

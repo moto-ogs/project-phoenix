@@ -7,7 +7,7 @@
 // Arbeitsvertrag der Personalakte fest.
 
 import { LockKeyIcon, UsersThreeIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   LiftBlockModal,
@@ -20,23 +20,21 @@ import {
   planningWeekLabel,
   schoolColors,
 } from "~/components/traeger/planning/planning-format";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { EmptyState } from "~/components/ui/empty-state";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError, useToast } from "~/contexts/ToastContext";
+import { useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { createLogger } from "~/lib/logger";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   downloadTraegerPoolWeek,
   fetchTraegerPoolWeek,
   liftTraegerBlock,
-  type PoolWeek,
 } from "~/lib/staff-pool-api";
-
-const logger = createLogger({ component: "TraegerStaffPoolPage" });
 
 const NOT_RELEASED = "workforce.traeger_staff_not_released";
 
@@ -57,49 +55,22 @@ const INFO = (
 export default function TraegerStaffPoolPage() {
   const today = useBerlinToday();
   const [weekStart, setWeekStart] = useState(() => mondayOf(today));
-  const [week, setWeek] = useState<PoolWeek | null>(null);
-  const [notReleased, setNotReleased] = useState(false);
   const [lifting, setLifting] = useState<LiftBlockTarget | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const { success } = useToast();
-
-  // Die Woche, die zuletzt angefragt wurde: eine späte Antwort einer
-  // vorigen Woche überschreibt sie nicht.
-  const requested = useRef(weekStart);
-  const load = useCallback(
-    async (monday: string) => {
-      requested.current = monday;
-      try {
-        const loaded = await fetchTraegerPoolWeek(monday);
-        if (requested.current !== monday) return;
-        setWeek(loaded);
-        setNotReleased(false);
-        clearLoadError();
-      } catch (err) {
-        if (requested.current !== monday) return;
-        if (err instanceof ApiError && err.code === NOT_RELEASED) {
-          setNotReleased(true);
-          clearLoadError();
-          return;
-        }
-        logger.error("traeger_staff_pool_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        await showLoadError(err, {
-          object: "den Vertretungspool",
-          retry: () => void load(monday),
-        });
-      }
-    },
-    [clearLoadError, showLoadError],
+  const {
+    data: shown,
+    error,
+    failure,
+    reload,
+  } = useTraegerResource(
+    traegerStaffKeys.poolWeek(weekStart),
+    () => fetchTraegerPoolWeek(weekStart),
+    "den Vertretungspool",
   );
+  const notReleased =
+    failure instanceof ApiError && failure.code === NOT_RELEASED;
+  const loadError = notReleased ? null : error;
 
-  useEffect(() => {
-    void load(weekStart);
-  }, [load, weekStart]);
-
-  const shown = week?.weekStart === weekStart ? week : null;
   const days = useMemo(() => poolDays(weekStart), [weekStart]);
   // Die Schulen der Woche, in der Reihenfolge ihres Namens, je mit Farbe.
   const schools = useMemo(() => {
@@ -118,7 +89,7 @@ export default function TraegerStaffPoolPage() {
       (sum, springer) => sum + springer.blocks.length,
       0,
     ) ?? 0;
-  const loading = !notReleased && !shown && !pageLoad.error;
+  const loading = !notReleased && !shown && !loadError;
 
   return (
     <TenantPage
@@ -176,7 +147,7 @@ export default function TraegerStaffPoolPage() {
           />
         )
       }
-      error={pageLoad.error}
+      error={loadError}
       loading={loading}
       overlays={
         <LiftBlockModal
@@ -187,7 +158,7 @@ export default function TraegerStaffPoolPage() {
           onLifted={(message) => {
             setLifting(null);
             success(message);
-            void load(weekStart);
+            reload();
           }}
         />
       }

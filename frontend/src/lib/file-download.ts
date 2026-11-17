@@ -40,6 +40,23 @@ export function downloadBlob(blob: Blob, filename: string): void {
 }
 
 /**
+ * How long a PDF handed to the browser's own viewer keeps its object URL.
+ * A viewer outside the page (Chrome on Android) may read it after the print
+ * attempt; a minute covers a slow phone without keeping the blob for good.
+ */
+const HANDED_OFF_URL_LIFETIME_MS = 60_000;
+
+/**
+ * True when the tab no longer shows a document of this origin: the browser
+ * rendered the PDF in its own viewer (Chrome on Android) or handed it to the
+ * system. The page may not reach `print` there; the viewer has its own
+ * print and share menu.
+ */
+function isCrossOriginBlock(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "SecurityError";
+}
+
+/**
  * Opens a blob in a tab and triggers the print dialog. The returned promise
  * settles after the delayed print attempt, so callers can surface failures.
  *
@@ -48,6 +65,12 @@ export function downloadBlob(blob: Blob, filename: string): void {
  * strict settings) return null from `window.open`, so an export that fetches
  * first can only print into a tab opened before the fetch. Callers that do no
  * async work before printing may omit it and let this open the tab.
+ *
+ * A browser without an inline PDF viewer (`navigator.pdfViewerEnabled` is
+ * false) or one whose viewer lives outside the page (Chrome on Android)
+ * shows the PDF but leaves no `print` the page may call. The PDF is open in
+ * the tab then, and printing runs through the viewer: that is a success, not
+ * a failed export (Sentry SecurityError on /emergency, Android).
  */
 export async function openBlobForPrint(
   blob: Blob,
@@ -62,6 +85,16 @@ export async function openBlobForPrint(
   if (target) {
     target.location.href = url;
   }
+  const releaseLater = () =>
+    globalThis.setTimeout(
+      () => URL.revokeObjectURL(url),
+      HANDED_OFF_URL_LIFETIME_MS,
+    );
+  if (globalThis.navigator?.pdfViewerEnabled === false) {
+    // No viewer in the page: print() would only reach the empty tab.
+    releaseLater();
+    return;
+  }
   // PDF viewer documents fire no reliable load event across browsers, so
   // printing keeps the pragmatic delay every print export here has used.
   return new Promise((resolve, reject) => {
@@ -69,11 +102,16 @@ export async function openBlobForPrint(
       try {
         tab.focus();
         tab.print();
+        URL.revokeObjectURL(url);
         resolve();
       } catch (error) {
-        reject(error);
-      } finally {
+        if (isCrossOriginBlock(error)) {
+          releaseLater();
+          resolve();
+          return;
+        }
         URL.revokeObjectURL(url);
+        reject(error);
       }
     }, 250);
   });

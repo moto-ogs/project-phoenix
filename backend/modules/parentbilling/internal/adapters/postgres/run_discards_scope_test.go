@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,7 @@ func TestRunDiscardsKeepTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newCareScope(t, db, "Träger Verwerfen A")
 	other := newCareScope(t, db, "Träger Verwerfen B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the discard rows back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
@@ -82,7 +83,7 @@ func TestHolidayRunDiscardKeepsTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newCareScope(t, db, "Träger Ferienlauf Verwerfen A")
 	other := newCareScope(t, db, "Träger Ferienlauf Verwerfen B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the discard rows back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))

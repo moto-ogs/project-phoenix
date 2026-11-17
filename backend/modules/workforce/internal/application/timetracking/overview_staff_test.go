@@ -25,7 +25,7 @@ func TestOverviewStaffFailureStopsReports(t *testing.T) {
 	failure := errors.New("staff directory unavailable")
 	svc := &staffOverviewService{staffRepo: overviewStaffQueryFunc(func(context.Context) ([]OverviewStaff, error) {
 		return []OverviewStaff{{ID: 42}}, failure
-	})}
+	}), nowFunc: testNow}
 	svc.todayFunc = func() Date { return NewDate(2026, time.July, 15) }
 	ctx := context.Background()
 	overview, err := svc.GetTimeTrackingOverview(ctx, OverviewFilters{})
