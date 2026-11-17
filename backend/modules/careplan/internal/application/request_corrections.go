@@ -110,12 +110,12 @@ func (s *RequestCorrections) revertPickup(ctx context.Context, request *carerequ
 		return fmt.Errorf("%w: zu dieser Entscheidung ist kein Eintrag gespeichert, der zurückgenommen werden kann. Bitte ändern Sie die Abholung direkt", careplan.ErrParentRequestCorrectionUnsupported)
 	}
 	if applied.PickupExceptionID > 0 {
-		if err := s.revertPickupException(ctx, request, applied.PickupExceptionID); err != nil {
+		if err := s.revertPickupException(ctx, request, applied); err != nil {
 			return err
 		}
 	}
 	if applied.DepartureExceptionID > 0 {
-		if err := s.revertDepartureException(ctx, request, applied.DepartureExceptionID); err != nil {
+		if err := s.revertDepartureException(ctx, request, applied); err != nil {
 			return err
 		}
 	}
@@ -126,15 +126,15 @@ func (s *RequestCorrections) revertPickup(ctx context.Context, request *carerequ
 	return nil
 }
 
-func (s *RequestCorrections) revertPickupException(ctx context.Context, request *carerequests.Request, id int64) error {
-	row, err := s.Records.FindException(ctx, id)
+func (s *RequestCorrections) revertPickupException(ctx context.Context, request *carerequests.Request, applied carerequests.PickupApplied) error {
+	row, err := s.Records.FindException(ctx, applied.PickupExceptionID)
 	if err != nil {
 		return err
 	}
 	if row == nil {
 		return nil
 	}
-	if editedAfterDecision(request, row.UpdatedAt) {
+	if changedAfterDecision(request, applied.PickupExceptionVersion, pickupExceptionVersion(*row), row.UpdatedAt) {
 		return fmt.Errorf("%w: die Abholzeit am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, row.ExceptionDate.Format("02.01.2006"))
 	}
 	if row.ExcusedAuto {
@@ -145,28 +145,31 @@ func (s *RequestCorrections) revertPickupException(ctx context.Context, request 
 	return s.Records.DeleteException(ctx, row.ID)
 }
 
-func (s *RequestCorrections) revertDepartureException(ctx context.Context, request *carerequests.Request, id int64) error {
-	row, err := s.Records.FindDepartureException(ctx, id)
+func (s *RequestCorrections) revertDepartureException(ctx context.Context, request *carerequests.Request, applied carerequests.PickupApplied) error {
+	row, err := s.Records.FindDepartureException(ctx, applied.DepartureExceptionID)
 	if err != nil {
 		return err
 	}
 	if row == nil {
 		return nil
 	}
-	if editedAfterDecision(request, row.UpdatedAt) {
+	if changedAfterDecision(request, applied.DepartureExceptionVersion, departureExceptionVersion(*row), row.UpdatedAt) {
 		return fmt.Errorf("%w: die Abholart am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, row.ExceptionDate.Format("02.01.2006"))
 	}
 	return s.Records.DeleteDepartureException(ctx, row.ID)
 }
 
-// editedAfterDecision reports whether a row the decision wrote changed in a
-// later transaction. Both stamps are database transaction time: the trigger
-// stamps the departure exception and the request, the column default the
-// pickup exception. The decision writes its rows and the request in one
-// transaction, so an untouched row carries the request's stamp; reviewed_at
-// is the owner's clock and cannot be ordered against them (ADR 0281,
-// point 4).
-func editedAfterDecision(request *carerequests.Request, rowUpdatedAt time.Time) bool {
+// changedAfterDecision compares the row with the version the decision ledger
+// recorded for it. Equality is the only test: transaction start times do not
+// follow commit order, so a staff edit whose transaction began before the
+// approval carries an older stamp than the decision (ADR 0281, point 4).
+// Ledger entries written before versions existed fall back to the stamp
+// comparison against the request's trigger-stamped updated_at, which misses
+// exactly that overlap.
+func changedAfterDecision(request *carerequests.Request, recorded, current string, rowUpdatedAt time.Time) bool {
+	if recorded != "" {
+		return current != recorded
+	}
 	return request.ReviewedAt != nil && rowUpdatedAt.After(request.UpdatedAt)
 }
 
@@ -183,10 +186,19 @@ func latestPickupRows(events []ports.RequestCorrectionEvent) (carerequests.Picku
 		pickupID, pickupOK := correctionExceptionID(event.Payload["pickup_exception_id"])
 		departureID, departureOK := correctionExceptionID(event.Payload["departure_exception_id"])
 		noteID, noteOK := correctionExceptionID(event.Payload["pickup_note_id"])
-		applied = carerequests.PickupApplied{PickupExceptionID: pickupID, DepartureExceptionID: departureID, PickupNoteID: noteID}
+		applied = carerequests.PickupApplied{
+			PickupExceptionID: pickupID, PickupExceptionVersion: correctionRowVersion(event.Payload["pickup_exception_version"]),
+			DepartureExceptionID: departureID, DepartureExceptionVersion: correctionRowVersion(event.Payload["departure_exception_version"]),
+			PickupNoteID: noteID,
+		}
 		found = pickupOK || departureOK || noteOK
 	}
 	return applied, found
+}
+
+func correctionRowVersion(value any) string {
+	version, _ := value.(string)
+	return version
 }
 
 func correctionExceptionID(value any) (int64, bool) {

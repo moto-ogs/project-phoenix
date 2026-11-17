@@ -316,3 +316,47 @@ func TestPickupCorrectionDoesNotFallBackToAnOlderGeneration(t *testing.T) {
 	require.ErrorContains(t, correctPickup(ctx, t, f, row, false), "cannot be corrected")
 	assertCorrectionEffects(t, f, date, slotID, true)
 }
+
+// A staff edit whose transaction began before the approval but committed after
+// it carries an older transaction stamp than the decision. The correction must
+// still see the row as changed and refuse instead of deleting the staff value.
+func TestPickupCorrectionRefusesEditFromOverlappingTransaction(t *testing.T) {
+	t.Parallel()
+	for _, leg := range []string{"pickup", "departure"} {
+		t.Run(leg, func(t *testing.T) {
+			testpkg.OwnTenant(t)
+			testpkg.SetupIsolatedTestDB(t)
+			f, date, slotID := pickupCorrectionFixture(t)
+			ctx, cancel := context.WithTimeout(correctionContext(t, f), 15*time.Second)
+			defer cancel()
+			owner := f.reposCare.CarePlan()
+			filter := careplan.StudentScheduleFilter{StudentIDs: []int64{f.chain.StudentID}, Date: careplan.Date(date)}
+			var row carerequests.Request
+			err := testpkg.WithTenantTx(t, ctx, f.db, f.chain.TenantID, func(txCtx context.Context, tx bun.Tx) error {
+				// The staff transaction starts, and fixes its now(), first.
+				var started time.Time
+				require.NoError(t, tx.NewRaw("SELECT now()").Scan(txCtx, &started))
+				row = correctionRequest(t, f, date, true)
+				require.NoError(t, owner.LockStudentAndExceptionDay(txCtx, f.chain.StudentID, date.String()))
+				reason := "Vom Team geändert"
+				if leg == "pickup" {
+					pickups, err := owner.ListPickupExceptions(txCtx, filter)
+					require.NoError(t, err)
+					require.Len(t, pickups, 1)
+					pickups[0].Reason = &reason
+					return owner.UpdatePickupException(txCtx, pickups[0])
+				}
+				departures, err := owner.ListDepartureExceptions(txCtx, filter)
+				require.NoError(t, err)
+				require.Len(t, departures, 1)
+				departures[0].Reason = &reason
+				_, err = owner.SaveDepartureException(txCtx, departures[0])
+				return err
+			})
+			require.NoError(t, err)
+			err = correctPickup(ctx, t, f, currentCorrectionRequest(t, f, row.ID), false)
+			require.ErrorContains(t, err, "nach der Entscheidung geändert")
+			assertCorrectionEffects(t, f, date, slotID, true)
+		})
+	}
+}
