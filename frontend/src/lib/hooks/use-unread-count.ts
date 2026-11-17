@@ -63,6 +63,9 @@ export interface UnreadCountReader extends UseUnreadCountResult {
   error: unknown;
 }
 
+/** Keys whose event-driven revalidation is in flight, for all their readers. */
+const eventRevalidations = new Set<string>();
+
 /**
  * @param key - Unscoped key of a factory in ~/lib/swr (`shellResourceKeys`,
  *   `parentKeys`); null reads nothing. One key per badge resource: a page
@@ -111,7 +114,10 @@ export function useUnreadCount<T = number>(
     let timer: ReturnType<typeof setTimeout> | null = null;
     const revalidate = () => {
       timer = null;
-      void mutate();
+      // Every reader of a key hears the event; one request answers them all.
+      if (eventRevalidations.has(readKey)) return;
+      eventRevalidations.add(readKey);
+      void mutate().finally(() => eventRevalidations.delete(readKey));
     };
     const handleEvent = () => {
       if (eventDebounceMs && eventDebounceMs > 0) {

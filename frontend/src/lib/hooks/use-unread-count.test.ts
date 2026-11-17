@@ -273,6 +273,27 @@ describe("useUnreadCount — event listeners", () => {
     await waitFor(() => expect(result.current.unreadCount).toBe(9));
   });
 
+  it("answers one event with one request for all readers of a key", async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(2).mockResolvedValue(9);
+    const sidebar = render({ fetcher, eventNames: ["shared-refresh-event"] });
+    const homeBlock = render({ fetcher, eventNames: ["shared-refresh-event"] });
+    await waitFor(() => expect(sidebar.result.current.unreadCount).toBe(2));
+
+    act(() => {
+      window.dispatchEvent(new Event("shared-refresh-event"));
+    });
+
+    await waitFor(() => expect(sidebar.result.current.unreadCount).toBe(9));
+    await waitFor(() => expect(homeBlock.result.current.unreadCount).toBe(9));
+    expect(fetcher).toHaveBeenCalledTimes(2);
+
+    // The guard is released: the next event loads again.
+    act(() => {
+      window.dispatchEvent(new Event("shared-refresh-event"));
+    });
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(3));
+  });
+
   it("listens to multiple event names", async () => {
     const fetcher = vi.fn().mockResolvedValue(0);
     render({ fetcher, eventNames: ["event-a", "event-b"] });
