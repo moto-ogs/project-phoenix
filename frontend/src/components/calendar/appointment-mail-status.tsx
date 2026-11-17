@@ -7,26 +7,24 @@
  * Without any mail the section stays away.
  */
 
-import { useCallback, useEffect, useState } from "react";
-
 import { MailOutcomeBadges } from "~/components/messaging/message-mail-status";
 import { FramedList } from "~/components/ui/framed-list";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionLabel } from "~/components/ui/section-label";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import {
   CHECK_ADDRESS_AT_GUARDIAN,
   undeliveredMailsNote,
   sumMailOutcomeCounts,
   type MailOutcomeCounts,
 } from "~/lib/email-delivery-status";
-import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   getStaffAppointmentMails,
   type CalendarAppointmentMails,
 } from "~/lib/personal-calendar-api";
-
-const logger = createLogger({ component: "AppointmentMailStatus" });
+import { useSwrPollingRecovery } from "~/lib/hooks/use-swr-polling-recovery";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 /** The kinds in the order a family receives them, named like the subject. */
 const APPOINTMENT_MAIL_KINDS = [
@@ -36,37 +34,23 @@ const APPOINTMENT_MAIL_KINDS = [
   ["appointment_reminder", "Erinnerung"],
 ] as const;
 
+// SWR pauses the refresh while the tab is hidden.
 const POLL_MS = 15_000;
 
 /** The mails of the appointment, refreshed while the page is visible. */
 function useAppointmentMails(appointmentId: string) {
-  const [mails, setMails] = useState<CalendarAppointmentMails | null>(null);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
-  const refresh = useCallback(async () => {
-    try {
-      setMails(await getStaffAppointmentMails(appointmentId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("appointment_mails_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showLoadError(err, {
-        object: "der Stand der E-Mails",
-        retry: () => void refresh(),
-      });
-    }
-  }, [appointmentId, showLoadError, clearLoadError]);
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, POLL_MS);
-    return () => clearInterval(timer);
-  }, [refresh]);
-  return { mails, loadError: load.error };
+  const { data, error, mutate } = useSWRAuth(
+    tenantDailyKeys.appointmentMails(appointmentId),
+    () => getStaffAppointmentMails(appointmentId),
+    { refreshInterval: POLL_MS, keepPreviousData: false },
+  );
+  useSwrPollingRecovery(error, mutate, POLL_MS);
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data, error }],
+    "der Stand der E-Mails",
+    () => mutate(),
+  );
+  return { mails: data ?? null, loadError };
 }
 
 /**

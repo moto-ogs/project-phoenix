@@ -1,11 +1,13 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type {
   TraegerUtilization,
   UtilizationChildren,
 } from "~/lib/traeger-utilization-api";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
+
+vi.unmock("swr");
 
 const {
   mockFetchUtilization,
@@ -24,7 +26,10 @@ const {
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path,
 }));
-vi.mock("next-auth/react", () => ({ useSession: mockUseSession }));
+vi.mock("next-auth/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-auth/react")>()),
+  useSession: mockUseSession,
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/auslastung",
   useRouter: () => ({ push: vi.fn() }),
@@ -170,9 +175,9 @@ function signIn(permissions: string[]) {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerUtilizationPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

@@ -129,7 +129,7 @@ func (r *Reminders) remind(ctx context.Context, organizationID int64, letterhead
 	if err != nil {
 		return fmt.Errorf("enqueue reminder: %w", err)
 	}
-	if err := r.store.InsertReminder(ctx, organizationID, candidate.ContractID, candidate.Number, outboxID, candidate.Recipient); err != nil {
+	if err := r.store.InsertReminder(ctx, organizationID, candidate.ContractID, candidate.Number, outboxID, candidate.Recipient, r.clock.now()); err != nil {
 		return err
 	}
 	return trailContract(ctx, r.store, organizationID, 0, record, ports.ActionRemind, map[string]any{"number": candidate.Number})

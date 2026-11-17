@@ -239,48 +239,19 @@ go_test_call() {
   printf ' %s' "$@"
 }
 
-# Keep this list explicit: these are the filesystem scan contracts, not
-# import dependencies. The fake list returns one guard too: it must run only once.
-guards=(
-  src/app/api/proxy-routes.test.ts
-  src/app/api/route-cache-policy.test.ts
-  src/app/api/route-session-coverage.test.ts
-  src/app/api/credential-route-coverage.test.ts
-  src/app/api/auth/session-cookie-inventory.test.ts
-  src/lib/app-route-invariants.test.ts
-  src/lib/analytics-routes.test.ts
-  src/lib/help-topics.test.ts
-  src/lib/loading-boundaries.test.ts
-  src/lib/navigation-sync.test.ts
-  src/lib/page-titles.test.ts
-  src/lib/personal-storage.test.ts
-  src/lib/browser-token-ratchet.test.ts
-  src/components/ui/tenant-page-scaffold.test.ts
-  "src/app/[tenant]/(protected)/bauart.test.ts"
-  src/app/traeger/list-exports.test.ts
-  src/components/ui/nav-scene-icon/nav-scene-coverage.test.ts
-  src/components/ui/planning/plan-design-guards.test.ts
-  src/components/timetable/timetable-design-guards.test.ts
-  src/components/staff/dienstplan-design-guards.test.ts
-  src/components/settings/settings-filter.test.ts
-  src/components/school-setup/setup-tour-targets.test.ts
-  src/components/auth/session-end-barrier.test.tsx
-  src/lib/hooks/use-sse.test.ts
-  src/lib/service-worker.test.ts
-  src/styles/moto-token-drift.test.ts
-  src/lib/hooks/tailwind-breakpoints.test.ts
-  src/server/node-header-limit.test.ts
-  src/lib/permission-labels.test.ts
-  src/lib/modules.test.ts
-  src/lib/role-labels.test.ts
-  src/proxy.test.ts
-  src/sentry.config.test.ts
-  src/test/phosphor-imports-plugin.test.ts
-  src/test/proxy-routes.table.test.ts
-  src/test/session-cookie-writers.test.ts
-  src/lib/moto-concepts.test.ts
-  src/lib/hooks/chat-viewport-lock-consumers.test.ts
-)
+# Guard completeness is checked by --check-guards and its AST regressions.
+# These fixtures verify dispatch, so use the copied selector's current inventory
+# instead of keeping a second list that drifts when new guards are registered.
+# The fake list returns one guard too: it must run only once.
+guards=()
+while IFS= read -r guard; do
+  guards+=("$guard")
+done < <(sed -n '/^const guards = \[$/,/^\];$/p' "$fixture/scripts/test-frontend-changed.mjs" |
+  sed -n 's/^  "\(.*\)",$/\1/p')
+if [ "${#guards[@]}" -eq 0 ]; then
+  echo 'Could not read the frontend guard inventory' >&2
+  exit 1
+fi
 for guard in "${guards[@]}"; do
   if [ ! -f "$repo_root/frontend/$guard" ]; then
     echo "Guard test does not exist: frontend/$guard" >&2

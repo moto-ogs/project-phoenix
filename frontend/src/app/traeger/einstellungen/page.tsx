@@ -34,6 +34,9 @@ import {
 } from "~/lib/traeger-api";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import { useTraegerMasterData } from "~/components/traeger/use-traeger-master-data";
 import { TRAEGER_BRANDING_TAB } from "~/lib/traeger-branding";
 import { PAYROLL_SETTINGS_TAB } from "~/lib/traeger-staff-exports-api";
@@ -59,6 +62,12 @@ const AREA_PARAM = "bereich";
 /** Der Schalter der Einsatzplanung (#4708); beim Ausschalten zeigt der
  *  Dialog die Schulen mit künftigen Schichten. */
 const STAFF_PLANNING_ENABLED_KEY = "staff_planning.enabled";
+
+/** Settings other cached responses are made of: the debtor number format
+ *  and its scope (#6675, #7007), the switch for the confirmation (#5621),
+ *  and the rules of the staff planning week (#4708). */
+const DEBTOR_NUMBER_SETTING_PREFIX = "parent_billing.debtor_number_";
+const STAFF_PLANNING_SETTING_PREFIX = "staff_planning.";
 
 /** Der Bereich mit den Kontaktdaten; er liegt nicht im Einstellungs-Schema. */
 const CONTACT_TAB = "kontakt";
@@ -124,7 +133,20 @@ function TraegerSettingsContent() {
   const [selectedTab, setSelectedTab] = useState<string | null>(
     () => searchParams?.get(AREA_PARAM) ?? null,
   );
-  const refresh = useCallback(() => mutate().catch(() => undefined), [mutate]);
+  const invalidateFamily = useInvalidateFamily();
+  const refresh = useCallback(
+    (key: string) => {
+      if (key.startsWith(DEBTOR_NUMBER_SETTING_PREFIX)) {
+        void invalidateFamily(traegerKeys.debtorNumberSettings());
+        void invalidateFamily(traegerKeys.holidayConfirmationSettings());
+      }
+      if (key.startsWith(STAFF_PLANNING_SETTING_PREFIX)) {
+        void invalidateFamily(traegerStaffKeys.planningFamily);
+      }
+      return mutate().catch(() => undefined);
+    },
+    [mutate, invalidateFamily],
+  );
 
   // Save and reset throw the ApiError of a failed request; the field shows
   // it on the shared error path.
@@ -132,7 +154,7 @@ function TraegerSettingsContent() {
     async (key: string, value: unknown) => {
       await saveTraegerSettingValue(key, value);
       logger.info("traeger_setting_saved", { key });
-      void refresh();
+      void refresh(key);
     },
     [refresh],
   );
@@ -141,7 +163,7 @@ function TraegerSettingsContent() {
     async (key: string) => {
       await clearTraegerSettingValue(key);
       logger.info("traeger_setting_reset", { key });
-      void refresh();
+      void refresh(key);
     },
     [refresh],
   );
@@ -255,7 +277,7 @@ function TraegerSettingsContent() {
             category={withoutLengthRows(category)}
             onSave={handleSave}
             onReset={handleReset}
-            onSchemaRefresh={() => void refresh()}
+            onSchemaRefresh={() => void mutate().catch(() => undefined)}
             audience="traeger"
             headingLevel={2}
             autosaveNote

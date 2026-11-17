@@ -9,8 +9,8 @@ import {
 } from "~/lib/sentry-context";
 
 /**
- * Attaches the signed-in account to the browser's Sentry events (`user.id`,
- * `role`, `school_id`) and clears it at logout. Mounted once inside each
+ * Attaches the signed-in account to the browser's Sentry events (`user.id`
+ * as the account's pseudonym, `role`, `school_id`) and clears it at logout. Mounted once inside each
  * portal's SessionProvider; renders nothing. The `portal` tag comes from the
  * host in sentry.client.config.ts.
  */

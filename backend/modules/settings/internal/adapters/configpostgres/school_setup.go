@@ -23,8 +23,8 @@ type schoolSetupRow struct {
 	SkippedSteps []string   `bun:"skipped_steps,array,notnull"`
 	CompletedAt  *time.Time `bun:"completed_at"`
 	UpdatedBy    *int64     `bun:"updated_by"`
-	CreatedAt    time.Time  `bun:"created_at,notnull,default:now()"`
-	UpdatedAt    time.Time  `bun:"updated_at,notnull,default:now()"`
+	CreatedAt    time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt    time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 // schoolSetup is one school's stored wizard state.
@@ -120,7 +120,6 @@ func (r *SchoolSetupRepository[S]) StoreSetup(ctx context.Context, stored *S) er
 		Set("skipped_steps = EXCLUDED.skipped_steps").
 		Set("completed_at = EXCLUDED.completed_at").
 		Set("updated_by = EXCLUDED.updated_by").
-		Set("updated_at = NOW()").
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("upsert school setup: %w", err)

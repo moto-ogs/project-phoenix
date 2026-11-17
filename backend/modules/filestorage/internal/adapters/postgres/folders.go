@@ -19,8 +19,8 @@ type folderRow struct {
 	Name          string    `bun:"name,notnull"`
 	Visibility    string    `bun:"visibility,notnull"`
 	CreatedBy     int64     `bun:"created_by,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r folderRow) folder() domain.Folder {

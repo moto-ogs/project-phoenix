@@ -63,7 +63,7 @@ func ComposeSchoolMembership(db transactionruntime.Database, now func() time.Tim
 	if err != nil {
 		return nil, err
 	}
-	dependencies.Today = calendar.CalendarDateClock(now)
+	dependencies.Today, dependencies.Now = calendar.CalendarDateClock(now), now
 	return schoolMembershipCompose.New(dependencies)
 }
 
@@ -79,12 +79,13 @@ func ComposePendingWindows(db transactionruntime.Database) (schoolMembershipModu
 
 // ComposeStaffReinstatement composes School Membership's observed staff
 // lifecycle for its Wiederaufnahme (ADR 0021), which the identity chain uses
-// when a former staff member is invited again.
-func ComposeStaffReinstatement(db transactionruntime.Database) (*schoolMembershipModule.Offboarding, error) {
+// when a former staff member is invited again, on the root clock now.
+func ComposeStaffReinstatement(db transactionruntime.Database, now func() time.Time) (*schoolMembershipModule.Offboarding, error) {
 	dependencies, err := SchoolMembershipDependencies(db)
 	if err != nil {
 		return nil, err
 	}
+	dependencies.Now = now
 	return schoolMembershipCompose.NewOffboarding(dependencies)
 }
 

@@ -78,7 +78,7 @@ func BuildCarePlanRows(
 		return CarePlanRows{}, err
 	}
 	lifecycleOwners := NewCareLifecycleOwners(people.Students, people.Persons, membership, persons, timetableOwner, calendar,
-		NewUnloggedStudentPresence(db, now), NewPresenceProjectionReads(db), NewEnrollmentBookingProjection(NewEnrollmentBookings(now), phaseBounds),
+		NewUnloggedStudentPresence(db, now), NewPresenceProjectionReads(db), NewEnrollmentBookingProjection(NewEnrollmentBookings(now), phaseBounds, now),
 		NewCareEndRecorder(studentAudit))
 	return CarePlanRows{
 		StatusDays:             NewStudentStatusDayRepository(carePlan),

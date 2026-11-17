@@ -37,7 +37,7 @@ type runRow struct {
 	ServiceFrom     calendar.Date  `bun:"service_from,type:date"`
 	ServiceUntil    calendar.Date  `bun:"service_until,type:date"`
 	Status          string         `bun:"status"`
-	CreatedAt       time.Time      `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt       time.Time      `bun:"created_at,nullzero"`
 	ReleasedAt      *time.Time     `bun:"released_at"`
 	IssuedOn        *calendar.Date `bun:"issued_on,type:date"`
 	DocumentCount   *int           `bun:"document_count"`
@@ -69,7 +69,7 @@ type correctionRow struct {
 	Reason                     string    `bun:"reason"`
 	CarriedFromNumber          string    `bun:"carried_from_number"`
 	CreatedByAccountID         *int64    `bun:"created_by_account_id"`
-	CreatedAt                  time.Time `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt                  time.Time `bun:"created_at,nullzero"`
 }
 
 type runEventRow struct {
@@ -90,7 +90,7 @@ type numberRangeRow struct {
 	OrganizationID int64     `bun:"organization_id"`
 	Service        string    `bun:"service"`
 	Pattern        string    `bun:"pattern"`
-	UpdatedAt      time.Time `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt      time.Time `bun:"updated_at,nullzero"`
 }
 
 func (r numberRangeRow) numberRange() parentbilling.NumberRange {
@@ -482,11 +482,11 @@ func (s *Store) ReserveNumbers(ctx context.Context, organizationID int64, servic
 		return 0, err
 	}
 	var last int64
-	if err := db.NewRaw(`INSERT INTO parent_billing.number_range_counters AS counter (organization_id, service, year, last_number)
-		VALUES (?, ?, ?, ?)
+	if err := db.NewRaw(`INSERT INTO parent_billing.number_range_counters AS counter (organization_id, service, year, last_number, updated_at)
+		VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT (organization_id, service, year)
-		DO UPDATE SET last_number = counter.last_number + EXCLUDED.last_number, updated_at = CURRENT_TIMESTAMP
-		RETURNING last_number`, organizationID, service, year, count).Scan(ctx, &last); err != nil {
+		DO UPDATE SET last_number = counter.last_number + EXCLUDED.last_number, updated_at = EXCLUDED.updated_at
+		RETURNING last_number`, organizationID, service, year, count, s.now()).Scan(ctx, &last); err != nil {
 		return 0, err
 	}
 	return last - int64(count) + 1, nil
@@ -579,7 +579,9 @@ func claimedDocumentRows(ctx context.Context, db bun.IDB, organizationID int64, 
 	return rows, nil
 }
 
-// MarkRunReleased closes a calculated run with its issue date and sums.
+// MarkRunReleased closes a calculated run with its issue date and sums. The
+// database dates the release: the history of an invoice and the list of
+// export runs order it against stamps its column defaults set (ADR 0281).
 func (s *Store) MarkRunReleased(ctx context.Context, organizationID, runID int64, issuedOn calendar.Date, count int, totalCents int64) (parentbilling.BillingRun, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -37,7 +38,9 @@ func TestOperatorRecordsBelegRetentionWithAudit(t *testing.T) {
 	organizationID, _ := provisionTestSchool(t, db, service, operatorID, "traeger-belege")
 	ctx := provisioningContext(t, db)
 	operator := chi.NewRouter()
-	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), calendar.TodayDate)
+	// A fixed day after the instructions of 2026-11-09: none lies in the future (rule 14).
+	now := calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(12 * time.Hour)
+	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), func() time.Time { return now })
 	call := func(method, path string, body any) *httptest.ResponseRecorder {
 		t.Helper()
 		var payload bytes.Buffer
@@ -181,7 +184,7 @@ func TestOperatorRecordsTheReviewOfAClarificationEntry(t *testing.T) {
 	organizationID, _ := provisionTestSchool(t, db, service, operatorID, "traeger-klaerung")
 	ctx := provisioningContext(t, db)
 	operator := chi.NewRouter()
-	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), calendar.TodayDate)
+	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), time.Now)
 	call := func(method, path string, body any) *httptest.ResponseRecorder {
 		t.Helper()
 		var payload bytes.Buffer
@@ -253,7 +256,7 @@ func TestClarificationReviewEscalatesBeforeTheReviewMoves(t *testing.T) {
 	organizationID, _ := provisionTestSchool(t, db, service, operatorID, "traeger-eskalation")
 	ctx := provisioningContext(t, db)
 	operator := chi.NewRouter()
-	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), calendar.TodayDate)
+	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), time.Now)
 	call := func(body any) *httptest.ResponseRecorder {
 		t.Helper()
 		var payload bytes.Buffer

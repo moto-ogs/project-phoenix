@@ -55,6 +55,12 @@ interface CustomSelectProps {
   readonly searchPlaceholder?: string;
   /** Field height: 40 px (`compact`) by default, `dense` 36 px for dense rows. */
   readonly controlSize?: ListboxDropdownSize;
+  /**
+   * Between the arrows of a framed group (`PlanningContextBar
+   * navigationInGroup`): frame and radius come from the group, the trigger
+   * fills its height.
+   */
+  readonly embedded?: boolean;
   /** Layout classes for the trigger (width, flex). The look is the kit's. */
   readonly className?: string;
   /** Layout classes for the menu, e.g. a minimum width. */
@@ -106,6 +112,7 @@ export function CustomSelect({
   searchable = false,
   searchPlaceholder = "Suchen",
   controlSize,
+  embedded = false,
   className = "",
   menuClassName = "",
   wrapLabels = false,
@@ -178,6 +185,7 @@ export function CustomSelect({
         triggerRole="combobox"
         testId={testId}
         size={controlSize}
+        embedded={embedded}
         className={cn(
           "w-full",
           // A wrapped choice grows with its label; by finger the 44-px

@@ -365,52 +365,6 @@ export const timeTrackingKeys = {
     `time-tracking-own-shifts-week-ahead-${from}-${to}`,
 } as const;
 
-/** Träger metadata only. Registrations, people and audit logs are never cached. */
-export const traegerKeys = {
-  schools: () => "traeger-schools",
-  school: (id: string) => `traeger-school-${encodeURIComponent(id)}`,
-  schoolsAlerts: () => "traeger-schools-alerts",
-  keyDateCounts: () => "traeger-key-date-counts",
-  occupancy: () => "traeger-occupancy",
-  // Ankunft und Abholung eines Zeitraums (#4714): Durchschnitte, keine Kinder.
-  arrivalPickupTimes: (from: string, to: string) =>
-    `traeger-arrival-pickup-times-${from}-${to}`,
-  // Tagesmeldung Mecklenburg-Vorpommern eines Zeitraums (#4717): Zahlen, keine Kinder.
-  dailyAttendance: (from: string, to: string) =>
-    `traeger-daily-attendance-${from}-${to}`,
-  periodsFamily: "traeger-holiday-period-",
-  periods: () => "traeger-holiday-period-list",
-  period: (id: string) =>
-    `traeger-holiday-period-detail-${encodeURIComponent(id)}`,
-  settings: () => "traeger-settings-schema",
-  // Kriterien der Platzvergabe (#4700): Namen und Fragen, keine Antworten.
-  holidayCriteria: () => "traeger-holiday-criteria",
-  // Schließtage und Feiertage eines Jahres (#4702), keine Personendaten.
-  closingDays: (from: string, to: string) =>
-    `traeger-closing-days-${from}-${to}`,
-  // Offene Hinweise an Eltern zu Schließtagen in Ferienwochen (#6434):
-  // Wochen und Zahlen, keine Namen.
-  holidayClosures: () => "traeger-holiday-closures-pending",
-  billingRuns: () => "traeger-billing-run-list",
-  // Geteilte Dokumente (#4692): Titel, Dateiname und Freigaben, keine Inhalte.
-  documents: () => "traeger-document-list",
-  documentAudiences: () => "traeger-document-audiences",
-  // Anmeldephasen und Angebote des Trägers (#4704): Entwürfe, Versionen und
-  // das Ergebnis je Schule, keine Personendaten.
-  // Berichtsvorlagen (#4716): Name, Abschnitte, Stichtag und Sozialräume,
-  // keine Personendaten.
-  reportTemplates: () => "traeger-report-templates",
-  catalogFamily: "traeger-catalog-phase-",
-  catalogPhases: () => "traeger-catalog-phase-list",
-  catalogPhase: (id: string) =>
-    `traeger-catalog-phase-detail-${encodeURIComponent(id)}`,
-  periodPreview(data: unknown, id: string): ListPreview | undefined {
-    const row = previewRow(data, id);
-    const name = previewText(row?.name);
-    return name ? { id, name } : undefined;
-  },
-} as const;
-
 /** Exact list identity shared with intent; preserve the SSE group segment. */
 function searchKey(params: {
   groupIds: readonly string[];

@@ -462,11 +462,12 @@ func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer,
 	if err := c.enqueueDocumentNotice(ctx, reviewer.OrganizationID, contractID, party.Email); err != nil {
 		return err
 	}
-	if err := c.store.InsertMailing(ctx, reviewer.OrganizationID, reviewer.AccountID, contractID, documentID, outboxID, party.Email); err != nil {
+	now := c.clock.now()
+	if err := c.store.InsertMailing(ctx, reviewer.OrganizationID, reviewer.AccountID, contractID, documentID, outboxID, party.Email, now); err != nil {
 		return err
 	}
 	if record.Summary.Status == carecontract.StatusDraft {
-		if err := c.store.MarkSent(ctx, reviewer.OrganizationID, contractID, c.clock.now()); err != nil {
+		if err := c.store.MarkSent(ctx, reviewer.OrganizationID, contractID, now); err != nil {
 			return err
 		}
 	}

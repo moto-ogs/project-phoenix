@@ -2,12 +2,9 @@
 
 import { HolidayHealthFields } from "~/components/holiday/holiday-health-lines";
 import { StudentCareTimesSection } from "~/components/students/care-times-section";
-import {
-  DataField,
-  DataGrid,
-  InfoSection,
-  InfoText,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoSection } from "~/components/ui/info-section";
+import { InfoText } from "~/components/ui/detail-modal-components";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";

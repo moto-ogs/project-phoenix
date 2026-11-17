@@ -3,9 +3,10 @@ package application
 import (
 	"context"
 	"errors"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"log/slog"
 	"testing"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 

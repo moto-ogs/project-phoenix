@@ -100,7 +100,7 @@ func CoreActionMiddleware(cfg CoreActionConfig) func(http.Handler) http.Handler 
 			if !ok || action.Event == "" {
 				return
 			}
-			if action.CreatedOnly && !responseCreated(body.Bytes()) {
+			if !action.countsResponse(body.Bytes()) {
 				return
 			}
 			captureCoreAction(cfg, r, action, body)
@@ -113,6 +113,7 @@ func captureCoreAction(cfg CoreActionConfig, r *http.Request, action CoreAction,
 	if !ok {
 		return
 	}
+	actor = routeSchoolActor(r, action, actor)
 	actor, ok = cfg.Policy.EnrollmentActor(r, actor)
 	if !ok || !cfg.Policy.AllowsActor(r.Context(), actor) {
 		return
@@ -129,23 +130,25 @@ func lookupCoreAction(r *http.Request) (CoreAction, bool) {
 	return coreActionFor(r.Method, routeCtx.RoutePattern())
 }
 
-// responseCreated accepts the standard response envelope used by idempotent
-// write handlers. A missing, malformed or false field is deliberately not a
-// new write and therefore must not produce a core-action event.
-func responseCreated(body []byte) bool {
+// responseFlag reads a boolean result of the standard response envelope
+// used by idempotent write handlers (data.<field>, or <field> at the top
+// level). A missing, malformed or false field is deliberately not a new
+// write and therefore must not produce a core-action event.
+func responseFlag(body []byte, field string) bool {
 	var response struct {
-		Created *bool `json:"created"`
-		Data    struct {
-			Created *bool `json:"created"`
-		} `json:"data"`
+		Data map[string]json.RawMessage `json:"data"`
 	}
-	if err := json.Unmarshal(bytes.TrimSpace(body), &response); err != nil {
+	var top map[string]json.RawMessage
+	trimmed := bytes.TrimSpace(body)
+	if json.Unmarshal(trimmed, &response) != nil || json.Unmarshal(trimmed, &top) != nil {
 		return false
 	}
-	if response.Data.Created != nil {
-		return *response.Data.Created
+	raw, ok := response.Data[field]
+	if !ok {
+		raw, ok = top[field]
 	}
-	return response.Created != nil && *response.Created
+	var value bool
+	return ok && json.Unmarshal(raw, &value) == nil && value
 }
 
 // resolveActor names who acted. A session-minting route takes the minted
@@ -170,6 +173,20 @@ func resolveActor(cfg CoreActionConfig, r *http.Request, action CoreAction, body
 		return Actor{Surface: action.Surface}, true
 	}
 	return Actor{}, false
+}
+
+// routeSchoolActor gives a caterer actor the school of the route
+// (CoreAction.SchoolFromRoute), and the caterer role where no session named
+// it (the invitation is accepted before login). Any other actor stays as it is.
+func routeSchoolActor(r *http.Request, action CoreAction, actor Actor) Actor {
+	if !action.SchoolFromRoute || actor.Surface != SurfaceCaterer || actor.SchoolID > 0 {
+		return actor
+	}
+	actor.Role = RoleCaterer
+	if id, err := strconv.ParseInt(chi.URLParam(r, "schoolId"), 10, 64); err == nil && id > 0 {
+		actor.SchoolID = id
+	}
+	return actor
 }
 
 func mintedSessionActor(cfg CoreActionConfig, body *cappedBuffer) (Actor, bool) {

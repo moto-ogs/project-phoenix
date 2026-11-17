@@ -27,8 +27,8 @@ type documentColumns struct {
 	DeletedAt       *time.Time `bun:"deleted_at"`
 	DeletedBy       *int64     `bun:"deleted_by"`
 	FileDeletedAt   *time.Time `bun:"file_deleted_at"`
-	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 func (c documentColumns) document(ownerID int64) domain.Document {

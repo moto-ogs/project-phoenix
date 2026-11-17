@@ -568,7 +568,7 @@ func (s *service) recordAccessOf(ctx context.Context, filters studentpresence.St
 	}
 	now := s.cfg.Now()
 	if dedup {
-		exists, err := s.cfg.AccessLog.SeenStatisticsAccessSince(ctx, actor.AccountID, meta, now.Add(-viewDedupWindow))
+		exists, err := s.cfg.AccessLog.SeenStatisticsAccessWithin(ctx, actor.AccountID, meta, viewDedupWindow)
 		if err != nil {
 			return fmt.Errorf("%w: %v", studentpresence.ErrStatisticsAuditFailed, err)
 		}

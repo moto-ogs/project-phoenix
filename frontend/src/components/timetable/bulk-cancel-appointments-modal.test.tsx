@@ -1,7 +1,17 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { DateRange } from "react-day-picker";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { ApiError } from "~/lib/api-error";
 import type { BulkCancelResult } from "~/lib/timetable-types";
 import { catalogText } from "~/test/error-catalog-text";
@@ -18,7 +28,8 @@ vi.mock("~/lib/timetable-api", () => ({
   timetableService: { bulkCancel: mockBulkCancel },
 }));
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
   useTenantMutateMatching: () => mockRefreshPlan,
 }));
 
@@ -39,21 +50,53 @@ vi.mock("~/components/ui/date-range-picker", () => ({
   }: {
     onChange: (range: DateRange | undefined) => void;
   }) => (
-    <button
-      type="button"
-      onClick={() =>
-        onChange({
-          from: new Date(2026, 9, 12),
-          to: new Date(2026, 9, 16),
-        })
-      }
-    >
-      Mock Zeitraum 12.–16. Okt.
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          onChange({
+            from: new Date(2026, 9, 12),
+            to: new Date(2026, 9, 16),
+          })
+        }
+      >
+        Mock Zeitraum 12.–16. Okt.
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onChange({ from: new Date(2026, 9, 12), to: new Date(2026, 9, 25) })
+        }
+      >
+        Mock Ausgangszeitraum
+      </button>
+    </>
   ),
 }));
 
 import { BulkCancelAppointmentsModal } from "./bulk-cancel-appointments-modal";
+
+vi.unmock("swr");
+
+function SWRTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(
+  ui: Parameters<typeof rtlRender>[0],
+  options?: Parameters<typeof rtlRender>[1],
+) {
+  return rtlRender(ui, { wrapper: SWRTestWrapper, ...options });
+}
 
 function preview(overrides: Partial<BulkCancelResult>): BulkCancelResult {
   return {
@@ -292,4 +335,64 @@ describe("BulkCancelAppointmentsModal", () => {
       }),
     ).not.toBeInTheDocument();
   });
+});
+
+it("requires a successful fresh preview on reopening and on returning to a cached range", async () => {
+  mockBulkCancel.mockReset().mockResolvedValue(preview({ count: 23 }));
+  const props = {
+    initialFrom: "2026-10-12",
+    initialTo: "2026-10-25",
+    onClose: vi.fn(),
+  };
+  const view = render(<BulkCancelAppointmentsModal {...props} isOpen />);
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Termine absagen" }),
+    ).toBeEnabled(),
+  );
+  view.rerender(<BulkCancelAppointmentsModal {...props} isOpen={false} />);
+  const opening = deferred<BulkCancelResult>();
+  mockBulkCancel.mockReturnValue(opening.promise);
+  view.rerender(<BulkCancelAppointmentsModal {...props} isOpen />);
+  expect(
+    screen.getByRole("button", { name: "Termine absagen" }),
+  ).toBeDisabled();
+  await act(async () => opening.reject(new ApiError("offline", 503)));
+  expect(
+    await screen.findByText(
+      catalogText("general.unavailable", "das Zählen der Termine"),
+    ),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Termine absagen" }),
+  ).toBeDisabled();
+  mockBulkCancel.mockResolvedValue(preview({ count: 24 }));
+  fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Termine absagen" }),
+    ).toBeEnabled(),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Mock Zeitraum 12.–16. Okt." }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Termine absagen" }),
+    ).toBeEnabled(),
+  );
+  const returning = deferred<BulkCancelResult>();
+  mockBulkCancel.mockReturnValue(returning.promise);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Mock Ausgangszeitraum" }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Termine absagen" }),
+  ).toBeDisabled();
+  await act(async () => returning.resolve(preview({ count: 25 })));
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Termine absagen" }),
+    ).toBeEnabled(),
+  );
 });

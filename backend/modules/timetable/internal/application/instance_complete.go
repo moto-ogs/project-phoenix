@@ -99,12 +99,12 @@ func (s *InstanceLifecycleService) complete(ctx context.Context, instanceID int6
 	if err := s.deps.ActiveService.EndActivitySession(ctx, *instance.ActiveGroupID); err != nil {
 		return nil, &ports.ScheduleError{Op: "complete instance: end active.group", Err: err}
 	}
-	// completed_at is the database's transaction timestamp: Reopen orders it
-	// against the updated_at of supervisor and attendance rows, which the
-	// database stamps (ADR 0281).
+	// completed_at is the database's statement time, read after the writes
+	// above: Reopen orders it against the updated_at of supervisor,
+	// attendance and plan rows, which the database stamps (ADR 0281).
 	completedAt, err := s.deps.RecoveryRepo.CompletionTimestamp(ctx)
 	if err != nil {
-		return nil, &ports.ScheduleError{Op: "complete instance: read transaction timestamp", Err: err}
+		return nil, &ports.ScheduleError{Op: "complete instance: read completion timestamp", Err: err}
 	}
 	instance.MarkCompleted(completedAt, reopenDeadline(instance, now), timetable.LifecycleActor(ctx))
 	if err := s.updateLifecycleColumns(ctx, instance, "status", "completed_at", "completed_by", "reopen_until", "completion_snapshot"); err != nil {

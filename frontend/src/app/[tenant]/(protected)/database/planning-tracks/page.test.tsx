@@ -32,10 +32,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   }),
 }));
 
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: () => false,
-}));
-
 const planningTrackService = vi.hoisted(() => ({
   list: vi.fn(),
   create: vi.fn(),

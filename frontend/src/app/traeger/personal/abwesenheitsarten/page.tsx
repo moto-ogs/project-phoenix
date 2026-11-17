@@ -25,6 +25,7 @@ import {
   absenceTypeSummary,
   schoolDeviationBadge,
 } from "~/components/traeger/staff/absence-type-format";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Button } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -40,17 +41,17 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   createTraegerAbsenceType,
   fetchTraegerAbsenceTypes,
   updateTraegerAbsenceType,
   type TraegerAbsenceType,
-  type TraegerAbsenceTypeList,
 } from "~/lib/traeger-absence-api";
 
 const logger = createLogger({ component: "TraegerAbsenceTypesPage" });
@@ -330,47 +331,43 @@ function AbsenceTypeCard({
 }
 
 export default function TraegerAbsenceTypesPage() {
-  const [list, setList] = useState<TraegerAbsenceTypeList | null>(null);
+  const {
+    data: list,
+    loading,
+    error,
+    mutate,
+  } = useTraegerResource(
+    traegerStaffKeys.absenceTypes(),
+    fetchTraegerAbsenceTypes,
+    "die Abwesenheitsarten",
+  );
   const [creating, setCreating] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const { success } = useToast();
+  const invalidateFamily = useInvalidateFamily();
 
-  const load = useCallback(async () => {
-    try {
-      setList(await fetchTraegerAbsenceTypes());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_absence_types_load_failed", {
-        error: errorMessage(err),
-      });
-      await showLoadError(err, {
-        object: "die Abwesenheitsarten",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const replace = useCallback((saved: TraegerAbsenceType) => {
-    setList((current) =>
-      current
-        ? {
-            ...current,
-            types: current.types.some((type) => type.id === saved.id)
-              ? current.types.map((type) =>
-                  type.id === saved.id ? saved : type,
-                )
-              : [...current.types, saved].sort((a, b) =>
-                  a.name.localeCompare(b.name, "de"),
-                ),
-          }
-        : current,
-    );
-  }, []);
+  const replace = useCallback(
+    (saved: TraegerAbsenceType) => {
+      void mutate(
+        (current) =>
+          current
+            ? {
+                ...current,
+                types: current.types.some((type) => type.id === saved.id)
+                  ? current.types.map((type) =>
+                      type.id === saved.id ? saved : type,
+                    )
+                  : [...current.types, saved].sort((a, b) =>
+                      a.name.localeCompare(b.name, "de"),
+                    ),
+              }
+            : current,
+        { revalidate: false },
+      );
+      // Eine Art mit Kontingent ändert die Kontingente der Personalakten.
+      void invalidateFamily(traegerStaffKeys.absenceAccountsFamily);
+    },
+    [mutate, invalidateFamily],
+  );
 
   const withAllowance = useMemo(
     () => list?.types.filter((type) => type.allowanceEnabled).length ?? 0,
@@ -399,9 +396,9 @@ export default function TraegerAbsenceTypesPage() {
           />
         ) : null
       }
-      statsLoading={!list && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!list && !pageLoad.error}
+      statsLoading={loading}
+      error={error}
+      loading={loading}
       actions={
         released ? (
           <Button

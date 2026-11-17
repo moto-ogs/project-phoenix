@@ -39,8 +39,8 @@ type schoolInvitationRow struct {
 	EmailSentAt         *time.Time              `bun:"email_sent_at"`
 	EmailError          *string                 `bun:"email_error"`
 	EmailRetryCount     int                     `bun:"email_retry_count,notnull"`
-	CreatedAt           time.Time               `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt           time.Time               `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt           time.Time               `bun:"created_at,nullzero,notnull"`
+	UpdatedAt           time.Time               `bun:"updated_at,nullzero,notnull"`
 }
 
 func (r schoolInvitationRow) toDomain() domain.SchoolInvitation {
@@ -181,7 +181,7 @@ func (s *Store) SpendSchoolInvitation(ctx context.Context, id int64) (bool, doma
 	scope := s.scope(ctx)
 	rows, stats, err := s.exec(ctx, "redeem school invitation", func(db bun.IDB) executor {
 		return invitationTenantFilter(scope, db.NewUpdate().Model((*schoolInvitationRow)(nil)).
-			Set("used_at = NOW()").
+			Set("used_at = ?", s.now()).
 			Where(`"invitation_token".id = ?`, id).
 			Where(`"invitation_token".used_at IS NULL`))
 	})
@@ -192,7 +192,7 @@ func (s *Store) RevokeSchoolInvitationsForEmail(ctx context.Context, email strin
 	scope := s.scope(ctx)
 	rows, stats, err := s.exec(ctx, "revoke school invitations for email", func(db bun.IDB) executor {
 		return invitationTenantFilter(scope, db.NewUpdate().Model((*schoolInvitationRow)(nil)).
-			Set("used_at = NOW()").
+			Set("used_at = ?", s.now()).
 			Where(`LOWER("invitation_token".email) = LOWER(?)`, email).
 			Where(`"invitation_token".used_at IS NULL`))
 	})
@@ -202,7 +202,7 @@ func (s *Store) RevokeSchoolInvitationsForEmail(ctx context.Context, email strin
 func (s *Store) RevokeSchoolInvitationsForTenant(ctx context.Context, tenantID int64) (int, domain.OperationStats, error) {
 	rows, stats, err := s.exec(ctx, "revoke school invitations for tenant", func(db bun.IDB) executor {
 		return db.NewUpdate().Model((*schoolInvitationRow)(nil)).
-			Set("used_at = NOW()").
+			Set("used_at = ?", s.now()).
 			Where(`"invitation_token".tenant_id = ?`, tenantID).
 			Where(`"invitation_token".used_at IS NULL`)
 	})
@@ -279,10 +279,10 @@ func (s *Store) InsertAccount(ctx context.Context, email, passwordHash string) (
 // one, so accepting a re-invitation after offboarding restores access.
 func (s *Store) EnsureAccountTenant(ctx context.Context, accountID, tenantID int64) (domain.OperationStats, error) {
 	return s.bindAccountToSchool(ctx, "ensure account tenant", func(db bun.IDB) *bun.RawQuery {
-		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at, deactivated_at, created_at, updated_at)
-			SELECT ?, ?, 'active', NOW(), NULL::timestamptz, NOW(), NOW() FROM caterer WHERE NOT caterer.refused
+		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at, deactivated_at)
+			SELECT ?, ?, 'active', ?::timestamptz, NULL::timestamptz FROM caterer WHERE NOT caterer.refused
 			ON CONFLICT (account_id, tenant_id) DO UPDATE
-			SET status = 'active', activated_at = NOW(), deactivated_at = NULL, updated_at = NOW()
-			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID)
+			SET status = 'active', activated_at = EXCLUDED.activated_at, deactivated_at = NULL
+			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID, s.now())
 	})
 }

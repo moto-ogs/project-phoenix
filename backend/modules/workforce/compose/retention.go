@@ -31,11 +31,11 @@ type SickNoteRetentionWindow interface {
 }
 
 // NewSickNoteRetention composes the sick note retention of the nightly
-// cleanup (#3961) on now, the root's clock. It runs on the tenant transaction
-// of the school in context and resolves the school's window through window.
-func NewSickNoteRetention(window SickNoteRetentionWindow, now func() time.Time) workforce.SickNoteRetention {
+// cleanup (#3961) on the database clock, which stamps the upload and guards
+// the cutoff (ADR 0281), in the school's tenant transaction.
+func NewSickNoteRetention(window SickNoteRetentionWindow) workforce.SickNoteRetention {
 	if window == nil {
 		panic("workforce compose: sick note retention requires settings")
 	}
-	return application.NewSickNoteRetention(postgres.New(postgres.RetentionDatabase), window, now)
+	return application.NewSickNoteRetention(postgres.New(postgres.RetentionDatabase), window)
 }

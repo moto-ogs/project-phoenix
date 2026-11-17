@@ -102,7 +102,7 @@ type DivTileProps = CommonProps & { as: "div" } & Omit<
     keyof CommonProps
   >;
 
-export type ChoiceTileProps = LabelTileProps | ButtonTileProps | DivTileProps;
+type ChoiceTileProps = LabelTileProps | ButtonTileProps | DivTileProps;
 
 export function ChoiceTile(props: ChoiceTileProps) {
   if (props.as === "button") {

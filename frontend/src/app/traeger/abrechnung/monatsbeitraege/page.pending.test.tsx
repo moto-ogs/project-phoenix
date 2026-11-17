@@ -13,13 +13,15 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { CareRun } from "~/lib/traeger-care-billing-api";
 import {
   deferred,
   expectDialogUnlocked,
   expectSaveLocksDialog,
 } from "~/test/helpers/form-modal-pending";
+
+vi.unmock("swr");
 
 const { api, review, mockPush } = vi.hoisted(() => ({
   api: {
@@ -67,9 +69,9 @@ const RUN: CareRun = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerMonatsbeitraegePage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -128,6 +130,24 @@ describe("TraegerMonatsbeitraegePage start pending (#6593)", () => {
     );
     expect(mockPush).toHaveBeenCalledExactlyOnceWith(
       "/abrechnung/monatsbeitraege/12",
+    );
+  });
+
+  it("reads the schools' open runs again after a start", async () => {
+    const { answer } = await startRun();
+    expect(review.fetchCareRunSchools).toHaveBeenCalledOnce();
+
+    await act(async () => answer.resolve(RUN));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: TITLE })).toBeNull(),
+    );
+    review.fetchCareRunSchools.mockResolvedValue([
+      { id: "1", name: "Grundschule Birkenfeld", openRunId: "12" },
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: TITLE }));
+
+    await waitFor(() =>
+      expect(review.fetchCareRunSchools).toHaveBeenCalledTimes(2),
     );
   });
 

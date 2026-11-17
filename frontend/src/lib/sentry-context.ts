@@ -1,11 +1,13 @@
 /**
- * Who a Sentry event affects, within the data boundary of #3590: the internal
- * account ID as `user.id` and nothing else about the user, a coarse `role`
- * tag, and `school_id` only while the session is bound to exactly one school.
- * Used by the browser (per portal) and by the BFF route wrappers (per request).
+ * Who a Sentry event affects, within the data boundary of #3590: the
+ * account's pseudonym as `user.id` (#3843) and nothing else about the user,
+ * a coarse `role` tag, and `school_id` only while the session is bound to
+ * exactly one school. Used by the browser (per portal) and by the BFF route
+ * wrappers (per request).
  */
 
 import * as Sentry from "@sentry/nextjs";
+import { isSentryUserPseudonym } from "~/lib/sentry-user-pseudonym";
 
 export type SentryPortal =
   "tenant" | "parent" | "school" | "caterer" | "operator" | "traeger";
@@ -23,6 +25,7 @@ type SentryRole =
 /** The session fields the context reads; every portal's Session.user fits. */
 export interface SentrySessionUser {
   readonly id?: string;
+  readonly sentryUserId?: string;
   readonly scope?: string;
   readonly tenantId?: number;
   readonly isAdmin?: boolean;
@@ -89,8 +92,10 @@ export function sentrySessionContext(
   user: SentrySessionUser | null | undefined,
 ): SentrySessionContext {
   if (!user?.id) return SIGNED_OUT;
+  // Without a pseudonym the event names no one; it never falls back to the ID.
+  const pseudonym = user.sentryUserId;
   return {
-    user: { id: user.id },
+    user: isSentryUserPseudonym(pseudonym) ? { id: pseudonym } : null,
     role: portalRole(portal, user),
     schoolId: boundSchoolId(portal, user),
   };

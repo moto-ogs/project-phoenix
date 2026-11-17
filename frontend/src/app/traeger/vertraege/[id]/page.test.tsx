@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setTestClock } from "~/test/clock";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
@@ -27,6 +27,7 @@ const { api, mockPush } = vi.hoisted(() => ({
   mockPush: vi.fn(),
 }));
 
+vi.unmock("swr");
 vi.mock("~/lib/traeger-care-contracts-api", () => api);
 // The SEPA mandate card of the family (#4695) answers 403 without the right
 // „Abrechnung“; these tests cover the contract and keep it empty.
@@ -171,13 +172,44 @@ const DRAFT: CareContractDetail = {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerVertragPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
 describe("TraegerVertragPage", () => {
+  it("reads the audited contract and PDF again on a quick reopening", async () => {
+    const page = (open: boolean) => (
+      <TraegerResourceTestProvider>
+        {open && <TraegerVertragPage />}
+      </TraegerResourceTestProvider>
+    );
+    const view = render(page(true));
+    await waitFor(() =>
+      expect(screen.getByTestId("pdf-preview")).toHaveAttribute(
+        "data-loaded",
+        "true",
+      ),
+    );
+    expect(api.fetchCareContract).toHaveBeenCalledTimes(1);
+    expect(api.downloadCareContract).toHaveBeenCalledTimes(1);
+
+    view.rerender(page(false));
+    view.rerender(page(true));
+
+    await waitFor(() => expect(api.fetchCareContract).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(api.downloadCareContract).toHaveBeenCalledTimes(2),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("pdf-preview")).toHaveAttribute(
+        "data-loaded",
+        "true",
+      ),
+    );
+  });
+
   beforeEach(() => {
     for (const fn of Object.values(api)) fn.mockReset();
     mockPush.mockReset();
@@ -250,13 +282,13 @@ describe("TraegerVertragPage", () => {
   it("does not allow paper signing dates before 2000", async () => {
     setTestClock("2000-01-02T12:00:00+01:00");
     render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <PaperSignatureModal
           contract={DRAFT}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     fireEvent.click(screen.getByLabelText("Unterschrieben am"));
     const previousMonth = await screen.findByRole("button", {
@@ -280,13 +312,13 @@ describe("TraegerVertragPage", () => {
       }),
     );
     render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <PaperSignatureModal
           contract={DRAFT}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     fireEvent.change(screen.getByLabelText("PDF wählen"), {
       target: {
@@ -828,7 +860,7 @@ describe("TraegerVertragPage", () => {
       ),
     ).toBeInTheDocument();
   });
-  it.each([403, 503])(
+  it.each([403, 404, 503])(
     "handles a %s contract reload after sending",
     async (status) => {
       api.fetchCareContract
@@ -847,6 +879,18 @@ describe("TraegerVertragPage", () => {
           await screen.findByRole("dialog", { name: "Vertrag senden?" }),
         ).getByRole("button", { name: "Vertrag senden" }),
       );
+      if (status === 404) {
+        expect(
+          await screen.findByText(catalogText("general.input", "der Vertrag")),
+        ).toBeVisible();
+        expect(screen.queryByText("Vertragsangaben")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("pdf-preview")).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole("button", { name: "Erneut senden" }),
+        ).not.toBeInTheDocument();
+        expect(api.sendCareContracts).toHaveBeenCalledTimes(1);
+        return;
+      }
       if (status === 403) {
         // #6801: the page loads anew; its first load shows the refusal.
         await expectPageReloadedAfterRefusal();

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -280,18 +279,18 @@ type classDayAccessLog struct {
 	repo owners.AccessLogLedger
 }
 
-func (l classDayAccessLog) ClassDayViewSeenSince(ctx context.Context, actorAccountID int64, schoolClass, date string, since time.Time) (bool, error) {
-	return l.repo.ExistsSince(ctx, actorAccountID, auditModels.ResourceTypeClassDayView,
-		map[string]string{"school_class": schoolClass, "date": date}, since)
+func (l classDayAccessLog) ClassDayViewSeenToday(ctx context.Context, actorAccountID int64, schoolClass, date string) (bool, error) {
+	return l.repo.ExistsToday(ctx, actorAccountID, auditModels.ResourceTypeClassDayView,
+		map[string]string{"school_class": schoolClass, "date": date})
 }
 
 func (l classDayAccessLog) RecordClassDayView(ctx context.Context, entry classdayCompose.AccessRecord) error {
 	return l.repo.Create(ctx, classDayAccessRow(auditModels.ResourceTypeClassDayView, entry))
 }
 
-func (l classDayAccessLog) SchoolDayViewSeenSince(ctx context.Context, actorAccountID int64, date string, since time.Time) (bool, error) {
-	return l.repo.ExistsSince(ctx, actorAccountID, auditModels.ResourceTypeSchoolDayView,
-		map[string]string{"date": date}, since)
+func (l classDayAccessLog) SchoolDayViewSeenToday(ctx context.Context, actorAccountID int64, date string) (bool, error) {
+	return l.repo.ExistsToday(ctx, actorAccountID, auditModels.ResourceTypeSchoolDayView,
+		map[string]string{"date": date})
 }
 
 func (l classDayAccessLog) RecordSchoolDayView(ctx context.Context, entry classdayCompose.AccessRecord) error {

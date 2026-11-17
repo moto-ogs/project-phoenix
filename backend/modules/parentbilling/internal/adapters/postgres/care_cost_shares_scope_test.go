@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/stretchr/testify/assert"
@@ -70,7 +71,7 @@ func TestCareCostShareFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	ownBase := newCareScope(t, db, "Träger A")
 	otherBase := newCareScope(t, db, "Träger B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the rows back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))

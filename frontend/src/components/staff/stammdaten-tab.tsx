@@ -13,7 +13,7 @@ import {
   DataField,
   DataFieldSkeleton,
   DataGrid,
-} from "~/components/ui/detail-modal-components";
+} from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";

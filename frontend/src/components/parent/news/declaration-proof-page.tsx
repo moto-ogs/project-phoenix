@@ -11,7 +11,7 @@
 import { SectionCard } from "~/components/ui/section-card";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { DataField, DataGrid } from "~/components/ui/data-field";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { ApiError } from "~/lib/api-error";
 import { Download } from "lucide-react";
 import Image from "next/image";
@@ -19,7 +19,11 @@ import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Alert } from "~/components/ui/alert";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { Button } from "~/components/ui/button";
 import { AttachmentList } from "~/components/ui/attachment-list";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
@@ -48,49 +52,25 @@ export function DeclarationProofPage({
 }: Readonly<{ announcementId: string }>) {
   const t = useCareTermTranslations("parentDeclarationProof");
   const studentId = useSearchParams().get("student") ?? "";
-  const [proof, setProof] = useState<ParentDeclarationProof | null>(null);
+  const resource = useSWRAuth(
+    studentId
+      ? parentInboxKeys.declarationProof(announcementId, studentId)
+      : null,
+    () => fetchDeclarationProof(announcementId, studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const proof = resource.data ?? null;
   // A missing proof is a state, not an error: it gets its own sentence.
-  const [notFound, setNotFound] = useState(false);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+  const missing =
+    resource.error instanceof ApiError && resource.error.status === 404;
+  const notFound = !studentId || missing;
+  const { error: loadError } = useSwrResourceLoadError(
+    missing ? [] : [resource],
+    t("errorObjectProof"),
+    () => resource.mutate(),
+  );
   const { show: showDownloadError } = useApiErrorDisplay();
-  const [reload, setReload] = useState(0);
   const [downloading, setDownloading] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    setProof(null);
-    setNotFound(false);
-    clearLoadError();
-    if (!studentId) {
-      setNotFound(true);
-      return;
-    }
-    fetchDeclarationProof(announcementId, studentId)
-      .then((data) => {
-        if (active) setProof(data);
-      })
-      .catch((err: unknown) => {
-        if (!active) return;
-        logger.warn("parent_declaration_proof_load_failed", {
-          status: err instanceof ApiError ? err.status : undefined,
-        });
-        if (err instanceof ApiError && err.status === 404) {
-          setNotFound(true);
-          return;
-        }
-        void showLoadError(err, {
-          object: t("errorObjectProof"),
-          retry: () => setReload((n) => n + 1),
-        });
-      });
-    return () => {
-      active = false;
-    };
-  }, [announcementId, studentId, reload, clearLoadError, showLoadError, t]);
 
   const download = async () => {
     setDownloading(true);

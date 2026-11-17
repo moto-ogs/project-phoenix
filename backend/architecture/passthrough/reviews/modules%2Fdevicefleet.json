@@ -2,11 +2,6 @@
   "sites": [
     {
       "decision": "0090",
-      "id": "modules/devicefleet/RecordUnregisteredTagScan.Normalize",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/devicefleet/administration.DeviceOnlineWindow",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -157,11 +152,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/devicefleet/internal/application/Service.DeleteUnregisteredTagScansAfterRetention",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/devicefleet/internal/application/Service.DeviceOnlineWindow",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -183,6 +173,11 @@
     {
       "decision": "0090",
       "id": "modules/devicefleet/internal/application/Service.ListDisplays",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
+      "id": "modules/devicefleet/internal/application/Service.RecordUnregisteredTagScan",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

@@ -20634,7 +20634,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorActionLog.RecordOperatorAction",
-      "binding_digest": "0c5f0162047666e5c7c42980ef24a192",
+      "binding_digest": "84cedb3fe9d94e29203b0f677db882c3",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorActionLog.RecordOperatorAction",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.OperatorAuditLogRepository.Create",
@@ -20642,7 +20642,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorActionLog.RecordOperatorAction",
-      "binding_digest": "442e2030ddf08bc657b0c2f44c654bb0",
+      "binding_digest": "e702048e4621cb18e7bf7dead8711a37",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorActionLog.RecordOperatorAction",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",

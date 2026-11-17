@@ -1,6 +1,21 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
+import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: {
+      user: { id: "account-1", scope: "platform" },
+      expires: "2099-01-01",
+    },
+    status: "authenticated",
+  }),
+}));
 
 const { service } = vi.hoisted(() => ({
   service: { getState: vi.fn(), grant: vi.fn(), withdraw: vi.fn() },
@@ -14,9 +29,11 @@ import { TraegerStaffReleaseSection } from "./traeger-staff-release-section";
 
 function renderSection() {
   return render(
-    <ToastProvider>
-      <TraegerStaffReleaseSection organizationId="7" />
-    </ToastProvider>,
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>
+        <TraegerStaffReleaseSection organizationId="7" />
+      </ToastProvider>
+    </SWRConfig>,
   );
 }
 
@@ -88,5 +105,33 @@ describe("TraegerStaffReleaseSection", () => {
     expect(
       screen.getByText("Vereinbarung mit der Vertretung liegt vor"),
     ).toBeInTheDocument();
+  });
+
+  it("says the release is saved when the reload after it fails", async () => {
+    service.getState
+      .mockResolvedValueOnce({ release: null, records: 0 })
+      .mockRejectedValue(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      );
+    service.grant.mockResolvedValue(undefined);
+    renderSection();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Freischalten" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Personal beim Träger freischalten",
+    });
+    fireEvent.click(
+      within(dialog).getByRole("radio", { name: /Keine Vertretung/ }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Freischalten" }),
+    );
+
+    expect(
+      await screen.findByText(new RegExp(SAVED_BUT_STALE_SUFFIX)),
+    ).toBeInTheDocument();
+    expect(service.getState).toHaveBeenCalledTimes(2);
   });
 });

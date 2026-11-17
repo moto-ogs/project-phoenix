@@ -18,7 +18,7 @@ import { FieldLabel } from "./field-label";
  */
 
 /** Ids eines Feldes und die Liste für `aria-describedby`. */
-export interface FieldIds {
+interface FieldIds {
   /** Id des Bedienelements. */
   readonly id: string;
   readonly hintId: string | undefined;

@@ -10,7 +10,10 @@ import {
   grantChildPhotoConsent,
   withdrawChildPhotoConsent,
 } from "~/lib/parent-api";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { ChildConsentsSection } from "./child-consents-section";
+
+vi.unmock("swr");
 
 vi.mock("~/lib/parent-api", () => ({
   getChildConsents: vi.fn(),
@@ -55,7 +58,9 @@ const granted = [
 function renderSection() {
   return render(
     <NextIntlClientProvider locale="de" messages={deMessages}>
-      <ChildConsentsSection studentId="42" />
+      <ParentResourceTestProvider>
+        <ChildConsentsSection studentId="42" />
+      </ParentResourceTestProvider>
     </NextIntlClientProvider>,
   );
 }

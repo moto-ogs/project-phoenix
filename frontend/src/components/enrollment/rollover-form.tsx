@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useApiFormError } from "~/contexts/ToastContext";
 import { Check } from "lucide-react";
 import {
   createRollover,
@@ -9,7 +9,6 @@ import {
   type Phase,
   type RolloverInput,
   type RolloverMode,
-  type RolloverPreview,
   type RolloverResult,
 } from "~/lib/enrollment-phase-api";
 import {
@@ -20,7 +19,10 @@ import {
 } from "~/lib/date-helpers";
 import { CHILD_STATUS_LABELS } from "~/components/enrollment/child-status-badge";
 import type { ChildStatus } from "~/lib/enrollment-status";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { CheckboxCard } from "~/components/ui/checkbox-card";
 import { FieldLabel } from "~/components/ui/field-label";
@@ -121,13 +123,22 @@ export function RolloverForm({
   const save = pending ?? ownSave;
   const submitting = save.pending;
   const formErrors = useApiFormError();
-  const [preview, setPreview] = useState<RolloverPreview | null>(null);
-  const previewLoad = useApiLoadError();
-  const showPreviewError = previewLoad.show;
-  const clearPreviewError = previewLoad.clear;
-  // Bumped by „Wiederholen“ to load the preview again.
-  const [previewAttempt, setPreviewAttempt] = useState(0);
-  const [loadingPreview, setLoadingPreview] = useState(true);
+  const bumpsGrade = draft.rollover_bumps_grade ?? true;
+  const {
+    data: preview,
+    error: previewError,
+    mutate: mutatePreview,
+  } = useSWRAuth(
+    enrollmentKeys.rolloverPreview(source.id, bumpsGrade),
+    () => fetchRolloverPreview(source.id, bumpsGrade),
+    { keepPreviousData: false },
+  );
+  const previewLoad = useSwrResourceLoadError(
+    [{ data: preview, error: previewError }],
+    "die Vorschau",
+    () => mutatePreview(),
+  );
+  const loadingPreview = !preview && !previewLoad.failure;
 
   const update = <K extends keyof RolloverInput>(
     key: K,
@@ -135,40 +146,6 @@ export function RolloverForm({
   ) => {
     setDraft((d) => ({ ...d, [key]: value }));
   };
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingPreview(true);
-    fetchRolloverPreview(source.id, draft.rollover_bumps_grade ?? true)
-      .then((result) => {
-        if (cancelled) return;
-        setPreview(result);
-        clearPreviewError();
-      })
-      .catch(async (err: unknown) => {
-        if (cancelled) return;
-        logger.warn("rollover_preview_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setPreview(null);
-        await showPreviewError(err, {
-          object: "die Vorschau",
-          retry: () => setPreviewAttempt((current) => current + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingPreview(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    source.id,
-    draft.rollover_bumps_grade,
-    previewAttempt,
-    showPreviewError,
-    clearPreviewError,
-  ]);
 
   const excludedDetails = preview
     ? Object.entries(preview.excluded_by_status)

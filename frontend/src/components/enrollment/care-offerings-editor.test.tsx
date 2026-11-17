@@ -1,19 +1,38 @@
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import {
   act,
   fireEvent,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { StrictMode } from "react";
+import type { ReactElement, ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Reads run through real SWR, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 
 // useTenantMutate scopes its keys to the signed-in account (#5006).
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "1" }, expires: "2099-01-01" },
+    data: {
+      user: { id: "1", scope: "tenant", tenantId: 42 },
+      expires: "2099-01-01",
+    },
     status: "authenticated",
   }),
 }));
@@ -92,11 +111,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
     show: mocks.showActionError,
     showMessage: mocks.showActionMessage,
   }),
-}));
-
-vi.mock("~/lib/swr", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useSWRAuth: () => ({ data: [], error: undefined, isLoading: false }),
 }));
 
 vi.mock("./rollover-form", async () =>
@@ -193,7 +207,6 @@ import type { CareOffering } from "~/lib/care-offering-api";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
-import type { Phase } from "~/lib/enrollment-phase-api";
 import {
   phase,
   offering,
@@ -216,6 +229,44 @@ beforeEach(() => {
 });
 
 describe("CareOfferingsEditor", () => {
+  it("shows a blocking catalog error when a cached catalog is refused", async () => {
+    mocks.listPhases.mockResolvedValue([phase()]);
+    mocks.listCareOfferings.mockResolvedValue([offering()]);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(
+        enrollmentKeys.careOfferings(phase().id),
+        () => mocks.listCareOfferings(),
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <>
+        <CareOfferingsEditor />
+        <Probe />
+      </>,
+    );
+    expect(
+      await screen.findByRole("button", {
+        name: "Aktionen für Regelbetreuung",
+      }),
+    ).toBeVisible();
+    mocks.listCareOfferings.mockRejectedValueOnce(new ApiError("refused", 403));
+    await act(async () => {
+      await reload();
+    });
+    // Anker: der Ladefehler erklärt den entzogenenen Katalog.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Betreuungsangebote"),
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Aktionen für Regelbetreuung" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("keeps the editor open while saving through outside dismissal", async () => {
     mocks.listPhases.mockResolvedValue([phase()]);
     mocks.listCareOfferings.mockResolvedValue([offering()]);
@@ -914,6 +965,108 @@ describe("CareOfferingsEditor", () => {
     expect(freePlaces.parentElement).toHaveTextContent(
       "0 · 0 frei (aktive Angebote)",
     );
+  });
+
+  it("refreshes aggregate offering counts after saving a phase offering", async () => {
+    const item = offering({ id: "offer-1", name: "Regelbetreuung" });
+    mocks.listPhases.mockResolvedValue([phase()]);
+    mocks.listCareOfferings.mockResolvedValue([item]);
+    mocks.updateCareOffering.mockResolvedValue(item);
+    const aggregate = vi.fn().mockResolvedValue([]);
+    function Counts() {
+      const resource = useSWRAuth(
+        enrollmentKeys.allPhasesCareOfferings([phase().id]),
+        aggregate,
+      );
+      return resource.data ? <p>Alle Phasen geladen</p> : null;
+    }
+    render(
+      <>
+        <CareOfferingsEditor />
+        <Counts />
+      </>,
+    );
+    expect(await screen.findByText("Alle Phasen geladen")).toBeVisible();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Regelbetreuung",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.updateCareOffering).toHaveBeenCalledTimes(1),
+    );
+    await waitFor(() => expect(aggregate).toHaveBeenCalledTimes(2));
+  });
+
+  it("hides old occupancy after a failed post-save statistics refresh and restores fresh counts", async () => {
+    const item = offering({
+      id: "offer-1",
+      name: "Regelbetreuung",
+      capacity: 10,
+    });
+    mocks.listPhases.mockResolvedValue([phase()]);
+    mocks.listCareOfferings.mockResolvedValue([item]);
+    mocks.updateCareOffering.mockResolvedValue(item);
+    const stats = {
+      "offer-1": {
+        offering_id: "offer-1",
+        capacity: 10,
+        booked: 3,
+        grade_levels: {},
+        unknown_grade_count: 0,
+      },
+    };
+    mocks.fetchCareOfferingBookingStats.mockResolvedValue(stats);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(
+        enrollmentKeys.bookingStats(phase().id),
+        () => mocks.fetchCareOfferingBookingStats(phase().id),
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <>
+        <CareOfferingsEditor />
+        <Probe />
+      </>,
+    );
+    expect(await screen.findByText("3 von 10")).toBeVisible();
+    mocks.fetchCareOfferingBookingStats.mockRejectedValue(
+      new Error("stats down"),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Aktionen für Regelbetreuung" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.updateCareOffering).toHaveBeenCalledTimes(1),
+    );
+    await waitFor(() =>
+      expect(mocks.fetchCareOfferingBookingStats).toHaveBeenCalledTimes(2),
+    );
+    expect(await screen.findByRole("button", { name: /^Preis/ })).toBeVisible();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /^Belegt/ }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText("3 von 10")).not.toBeInTheDocument();
+    mocks.fetchCareOfferingBookingStats.mockResolvedValue({
+      "offer-1": { ...stats["offer-1"], booked: 4 },
+    });
+    await act(async () => {
+      await reload();
+    });
+    expect(await screen.findByText("4 von 10")).toBeVisible();
   });
 
   it("hides the occupancy when it fails to load and keeps the list usable", async () => {
@@ -1778,39 +1931,6 @@ describe("CareOfferingsEditor", () => {
       metadataRequest.resolve({ templates: [] });
       await metadataRequest.promise;
     });
-  });
-
-  it("ignores an out-of-order catalog load under React StrictMode", async () => {
-    const stalePhaseRequest = deferred<Phase[]>();
-    mocks.listPhases
-      .mockReturnValueOnce(stalePhaseRequest.promise)
-      .mockResolvedValueOnce([
-        phase({ id: "11", name: "Aktuelle Phase", kind: "custom" }),
-      ]);
-    mocks.listCareOfferings.mockResolvedValue([
-      offering({
-        id: "current-offer",
-        phase_id: "11",
-        name: "Aktuelles Angebot",
-      }),
-    ]);
-
-    render(
-      <StrictMode>
-        <CareOfferingsEditor />
-      </StrictMode>,
-    );
-
-    expect(await screen.findByText("Aktuelles Angebot")).toBeInTheDocument();
-
-    await act(async () => {
-      stalePhaseRequest.resolve([phase()]);
-      await stalePhaseRequest.promise;
-    });
-
-    expect(screen.getByText("Aktuelles Angebot")).toBeInTheDocument();
-    expect(mocks.listCareOfferings).toHaveBeenCalledTimes(1);
-    expect(mocks.listCareOfferings).toHaveBeenCalledWith("11");
   });
 
   it("allows an unresolved linked template period to be removed", async () => {

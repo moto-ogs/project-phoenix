@@ -1,6 +1,9 @@
+import { useInvalidateMatching } from "~/lib/swr";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 import {
+  act,
   fireEvent,
   render as rtlRender,
   screen,
@@ -16,6 +19,7 @@ import {
   onTestFinished,
   vi,
 } from "vitest";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
@@ -88,10 +92,10 @@ vi.mock("~/lib/traeger-contributions-api", () => ({
   confirmHolidayRegistration: (...args: unknown[]) => mockConfirm(...args),
   // A test sets the contribution through the override (#5629) or the
   // mock (#5628).
-  fetchHolidayContribution: () =>
+  fetchHolidayContribution: (...args: unknown[]) =>
     contributionOverride.current
       ? Promise.resolve(contributionOverride.current)
-      : mockContribution(),
+      : mockContribution(...args),
 }));
 
 const { mockSplit } = vi.hoisted(() => ({ mockSplit: vi.fn() }));
@@ -131,6 +135,44 @@ describe("TraegerHolidayRegistrationPage", () => {
     vi.mocked(useTenantSlugSafe).mockReturnValue("test-tenant");
   });
 
+  it("retries the selected exemption preview and clears its load error", async () => {
+    mockContribution
+      .mockReset()
+      .mockResolvedValue({ ...HOLIDAY_CONTRIBUTION, exemptionAvailable: true });
+    render(
+      <ToastProvider>
+        <TraegerHolidayRegistrationPage />
+      </ToastProvider>,
+    );
+    const checkbox = await screen.findByRole("radio", {
+      name: /Von der Zahlung befreien/,
+    });
+    mockContribution.mockRejectedValueOnce(new ApiError("down", 503));
+    fireEvent.click(checkbox);
+    const failure = await screen.findByText(
+      catalogText("general.unavailable", "der Ferienbeitrag"),
+    );
+    expect(failure).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await waitFor(() =>
+      expect(mockContribution).toHaveBeenLastCalledWith(
+        "5",
+        "7",
+        true,
+        undefined,
+      ),
+    );
+    // Anker: die gewählte Befreiung bleibt nach dem erfolgreichen Abruf bestehen.
+    expect(checkbox).toBeChecked();
+    await waitFor(() =>
+      expect(
+        screen.queryByText(
+          catalogText("general.unavailable", "der Ferienbeitrag"),
+        ),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
   describe("siblings from another registration (#5628)", () => {
     const SIBLINGS = [
       {
@@ -148,10 +190,11 @@ describe("TraegerHolidayRegistrationPage", () => {
       mockSplit.mockReset();
     });
 
-    function renderPage() {
+    function renderPage(extra?: React.ReactNode) {
       render(
         <ToastProvider>
           <TraegerHolidayRegistrationPage />
+          {extra}
         </ToastProvider>,
       );
     }
@@ -292,6 +335,72 @@ describe("TraegerHolidayRegistrationPage", () => {
           ).toHaveBeenCalledTimes(1);
         },
       );
+
+      it("ignores a late 404 after the registration resource was invalidated and reloaded", async () => {
+        sessionPermissions.current = [
+          "traeger_enrollment:manage",
+          "traeger_health:read",
+        ];
+        mockContribution.mockResolvedValue({
+          ...HOLIDAY_CONTRIBUTION,
+          siblings: SIBLINGS,
+        });
+        mockSplit.mockResolvedValue(undefined);
+        let invalidate!: ReturnType<typeof useInvalidateMatching>;
+        function Probe() {
+          invalidate = useInvalidateMatching();
+          return null;
+        }
+        renderPage(<Probe />);
+        expect(await screen.findByText("Erdnüsse")).toBeVisible();
+        const pending = deferred<typeof HOLIDAY_REGISTRATION>();
+        mockRegistration.mockReturnValueOnce(pending.promise);
+        await confirmSplit();
+        await waitFor(() => expect(mockRegistration).toHaveBeenCalledTimes(2));
+        await act(async () => {
+          await invalidate(
+            (key) => key === traegerKeys.holidayRegistration("5", "7"),
+          );
+        });
+        expect(screen.getByText("eva@example.org")).toBeVisible();
+        await act(async () => {
+          pending.reject(
+            new ApiError("gone", 404, {
+              code: "enrollment.holiday_registration_not_found",
+            }),
+          );
+        });
+        expect(screen.getByText("eva@example.org")).toBeVisible();
+        expect(screen.getByText("Erdnüsse")).toBeVisible();
+      });
+
+      it("withdraws deleted registration and health data after a post-write 404", async () => {
+        sessionPermissions.current = [
+          "traeger_enrollment:manage",
+          "traeger_health:read",
+        ];
+        mockContribution.mockResolvedValue({
+          ...HOLIDAY_CONTRIBUTION,
+          siblings: SIBLINGS,
+        });
+        mockSplit.mockResolvedValue(undefined);
+        renderPage();
+        expect(await screen.findByText("Erdnüsse")).toBeVisible();
+        mockRegistration.mockRejectedValueOnce(
+          new ApiError("gone", 404, {
+            code: "enrollment.holiday_registration_not_found",
+          }),
+        );
+        await confirmSplit();
+        // Anker: die gespeicherte Trennung erhält einen sichtbaren Nachladefehler.
+        expect(
+          await screen.findByText(
+            `${catalogText("enrollment.holiday_registration_not_found", "die Anzeige der Anmeldung")} ${SAVED_BUT_STALE_SUFFIX}`,
+          ),
+        ).toBeVisible();
+        expect(screen.queryByText("Erdnüsse")).not.toBeInTheDocument();
+        expect(screen.queryByText("eva@example.org")).not.toBeInTheDocument();
+      });
 
       it("keeps a split registration split when the reload fails", async () => {
         mockContribution.mockResolvedValue({
@@ -1155,6 +1264,30 @@ describe("TraegerHolidayRegistrationPage", () => {
     ).toBeGreaterThan(0);
     expect(mockHealth).not.toHaveBeenCalled();
     expect(screen.queryByText("Erdnüsse")).not.toBeInTheDocument();
+  });
+
+  it("performs a new audited health read on immediate revisits before showing health data", async () => {
+    sessionPermissions.current = [
+      "traeger_enrollment:manage",
+      "traeger_health:read",
+    ];
+    const view = rtlRender(<TraegerHolidayRegistrationPage />, {
+      wrapper: ({ children }) => (
+        <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+          <ToastProvider>{children}</ToastProvider>
+        </SWRConfig>
+      ),
+    });
+    expect(await screen.findByText("Erdnüsse")).toBeVisible();
+    expect(mockHealth).toHaveBeenCalledTimes(1);
+    view.rerender(<div>away</div>);
+    const fresh = deferred<typeof HOLIDAY_REGISTRATION_HEALTH>();
+    mockHealth.mockReturnValue(fresh.promise);
+    view.rerender(<TraegerHolidayRegistrationPage />);
+    expect(screen.queryByText("Erdnüsse")).not.toBeInTheDocument();
+    await waitFor(() => expect(mockHealth).toHaveBeenCalledTimes(2));
+    await act(async () => fresh.resolve(HOLIDAY_REGISTRATION_HEALTH));
+    expect(await screen.findByText("Erdnüsse")).toBeVisible();
   });
 
   it("shows the health information to the right (#4722)", async () => {

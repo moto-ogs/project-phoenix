@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -276,8 +277,8 @@ func TestDemoRoleParentKeepsEarlierParentSessions(t *testing.T) {
 
 	var live int
 	require.NoError(t, env.db.NewRaw(`SELECT COUNT(*) FROM auth.tokens
-		WHERE account_id = ? AND portal_scope = 'parent' AND rotated_at IS NULL AND expiry > NOW()`,
-		parent.AccountID).Scan(context.Background(), &live))
+		WHERE account_id = ? AND portal_scope = 'parent' AND rotated_at IS NULL AND expiry > ?`,
+		parent.AccountID, time.Now()).Scan(context.Background(), &live))
 	assert.Equal(t, entries, live, "no parent session of the demo is evicted by the cap")
 }
 

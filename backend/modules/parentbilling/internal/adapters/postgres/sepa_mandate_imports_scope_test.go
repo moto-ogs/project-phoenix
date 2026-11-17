@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,7 @@ func TestSEPAMandateImportLogKeepsTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newMandateScope(t, db, "Träger Import A")
 	other := newMandateScope(t, db, "Träger Import B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the imports back")
 	ownFile, otherFile := "ogs-connect-a.csv", "ogs-connect-b.csv"
 

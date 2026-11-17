@@ -37,10 +37,7 @@ import { zLayerValue, type ZLayer } from "./overlay-styles";
 type SurfaceRef = RefObject<Element | null>;
 
 /** Levels that register as overlays. */
-export type OverlayLayer = Extract<
-  ZLayer,
-  "sheet" | "modal" | "coach" | "popover"
->;
+type OverlayLayer = Extract<ZLayer, "sheet" | "modal" | "coach" | "popover">;
 
 interface OverlayEntry {
   readonly layer: OverlayLayer;

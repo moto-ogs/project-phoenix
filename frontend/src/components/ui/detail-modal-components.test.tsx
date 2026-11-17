@@ -1,12 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
-import {
-  DataField,
-  InfoSection,
-  DataGrid,
-  InfoText,
-  DetailIcons,
-} from "./detail-modal-components";
+import { DataField, DataGrid } from "./data-field";
+import { InfoSection } from "./info-section";
+import { InfoText, DetailIcons } from "./detail-modal-components";
 
 describe("DataField", () => {
   it("renders label and children", () => {
@@ -76,7 +72,7 @@ describe("InfoSection", () => {
 
   it("renders title and children", () => {
     render(
-      <InfoSection title="Personal Information" icon={DetailIcons.person}>
+      <InfoSection title="Personal Information" icon={DetailIcons.notes}>
         <p>Content here</p>
       </InfoSection>,
     );
@@ -87,7 +83,7 @@ describe("InfoSection", () => {
 
   it("applies default gray accent color", () => {
     const { container } = render(
-      <InfoSection title="Test" icon={DetailIcons.person}>
+      <InfoSection title="Test" icon={DetailIcons.notes}>
         Content
       </InfoSection>,
     );
@@ -98,7 +94,7 @@ describe("InfoSection", () => {
 
   it("stays on the neutral surface (no colored backgrounds behind icons)", () => {
     const { container } = render(
-      <InfoSection title="Test" icon={DetailIcons.person}>
+      <InfoSection title="Test" icon={DetailIcons.notes}>
         Content
       </InfoSection>,
     );
@@ -175,27 +171,6 @@ describe("InfoText", () => {
 });
 
 describe("DetailIcons", () => {
-  it("exports person icon", () => {
-    const { container } = render(<>{DetailIcons.person}</>);
-
-    const svg = container.querySelector("svg");
-    expect(svg).toBeInTheDocument();
-  });
-
-  it("exports group icon", () => {
-    const { container } = render(<>{DetailIcons.group}</>);
-
-    const svg = container.querySelector("svg");
-    expect(svg).toBeInTheDocument();
-  });
-
-  it("exports heart icon", () => {
-    const { container } = render(<>{DetailIcons.heart}</>);
-
-    const svg = container.querySelector("svg");
-    expect(svg).toBeInTheDocument();
-  });
-
   it("exports check icon", () => {
     const { container } = render(<>{DetailIcons.check}</>);
 

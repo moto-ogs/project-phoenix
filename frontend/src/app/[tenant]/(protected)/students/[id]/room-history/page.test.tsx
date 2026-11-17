@@ -3,11 +3,41 @@ import { setTestClock } from "~/test/clock";
 import { schoolDateCases, setSchoolDateClock } from "~/test/school-date-cases";
 import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render as rtlRender,
+  screen,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useSession } from "next-auth/react";
 import { catalogText } from "~/test/error-catalog-text";
 import StudentRoomHistoryPage from "./page";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache per render.
+function SWRTestCache({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: SWRTestCache });
+}
+
+// The child's detail also reads the account's own groups; none here.
+vi.mock("~/lib/usercontext-api", () => ({
+  userContextService: {
+    getMyEducationalGroups: () => Promise.resolve([]),
+    getMySupervisedGroups: () => Promise.resolve([]),
+  },
+}));
 
 const mockPush = vi.fn();
 const routeParams = vi.hoisted(() => ({ id: "42" }));
@@ -38,6 +68,7 @@ vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
     data: {
       user: {
+        id: "1",
         token: "test-token",
       },
     },
@@ -864,7 +895,7 @@ describe("StudentRoomHistoryPage", () => {
     // beforeEach löscht nur die Aufrufe, nicht die Implementierung — ohne das
     // Zurücksetzen hier würde die letzte Überschreibung in andere Tests lecken.
     const defaultSession = {
-      data: { user: { token: "test-token" } },
+      data: { user: { id: "1", token: "test-token" } },
     } as unknown as ReturnType<typeof useSession>;
 
     afterEach(() => {
@@ -956,7 +987,7 @@ describe("StudentRoomHistoryPage", () => {
       };
 
       vi.mocked(useSession).mockReturnValue({
-        data: { user: { token: "test-token", permissions: [] } },
+        data: { user: { id: "1", token: "test-token", permissions: [] } },
       } as unknown as ReturnType<typeof useSession>);
       setupFetch(mockAttendanceHistoryResponse([slotDay]));
       const withoutPermission = render(<StudentRoomHistoryPage />);
@@ -974,7 +1005,11 @@ describe("StudentRoomHistoryPage", () => {
 
       vi.mocked(useSession).mockReturnValue({
         data: {
-          user: { token: "test-token", permissions: ["schedules:manage"] },
+          user: {
+            id: "1",
+            token: "test-token",
+            permissions: ["schedules:manage"],
+          },
         },
       } as unknown as ReturnType<typeof useSession>);
       setupFetch(mockAttendanceHistoryResponse([slotDay]));
@@ -1006,7 +1041,11 @@ describe("StudentRoomHistoryPage", () => {
       };
       vi.mocked(useSession).mockReturnValue({
         data: {
-          user: { token: "test-token", permissions: ["schedules:manage"] },
+          user: {
+            id: "1",
+            token: "test-token",
+            permissions: ["schedules:manage"],
+          },
         },
       } as unknown as ReturnType<typeof useSession>);
       setupFetch(mockAttendanceHistoryResponse([slotDay]));
@@ -1043,7 +1082,11 @@ describe("StudentRoomHistoryPage", () => {
 
       vi.mocked(useSession).mockReturnValue({
         data: {
-          user: { token: "test-token", permissions: ["schedules:manage"] },
+          user: {
+            id: "1",
+            token: "test-token",
+            permissions: ["schedules:manage"],
+          },
         },
       } as unknown as ReturnType<typeof useSession>);
       setupFetch(mockAttendanceHistoryResponse([slotDay]));
@@ -1131,7 +1174,11 @@ describe("StudentRoomHistoryPage", () => {
     beforeEach(() => {
       vi.mocked(useSession).mockReturnValue({
         data: {
-          user: { token: "test-token", permissions: ["schedules:manage"] },
+          user: {
+            id: "1",
+            token: "test-token",
+            permissions: ["schedules:manage"],
+          },
         },
       } as unknown as ReturnType<typeof useSession>);
     });
@@ -1139,7 +1186,7 @@ describe("StudentRoomHistoryPage", () => {
     afterEach(() => {
       routeParams.id = "42";
       vi.mocked(useSession).mockReturnValue({
-        data: { user: { token: "test-token" } },
+        data: { user: { id: "1", token: "test-token" } },
       } as unknown as ReturnType<typeof useSession>);
     });
 

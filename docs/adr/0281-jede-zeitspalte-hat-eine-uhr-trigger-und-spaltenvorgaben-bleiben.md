@@ -56,17 +56,19 @@ Owner-Uhr folgen sollen. Der Bestand auf `development` `e93e86fb67`:
 | Zustell-Protokolle (`delivery`) | Owner | Der Store stempelt `created_at` und `updated_at` selbst. |
 | Zielgruppen der Elternmitteilungen (`parentannouncementaudience`) | Owner | Die Abfragen erhalten den Zeitpunkt als Parameter. |
 | Abgeschlossene Abmeldungen (`careplan`) | Owner | Die Grenze kommt als Parameter. Sie bleibt 365 Berliner Kalendertage, wie `TestNightlyRetentionCleanupCutoffsAcrossDST` sie vorschrieb, hängt aber nicht mehr an der Zeitzone der Sitzung. Dasselbe gilt für die Offboarding-Jobs von `workforce` (30 Tage). |
-| `CompletionTimestamp` (`timetable`) | beide, getrennt | `completed_at` bleibt der Transaktionszeitpunkt der Datenbank: Reopen ordnet ihn gegen `updated_at` der Aufsichten (Trigger) und Teilnahmen. Das Reopen-Fenster, das Ende spontaner Blöcke und der Vergleich mit dem Auschecken eines Kindes rechnen mit der Owner-Uhr; der Abschluss legt deren Zeitpunkt als `owner_completed_at` im Snapshot ab. |
+| `CompletionTimestamp` (`timetable`) | beide, getrennt | `completed_at` ist die Anweisungszeit der Datenbank (`clock_timestamp()`), gelesen nach den eigenen Schreibvorgängen des Abschlusses: Reopen ordnet ihn gegen `updated_at` der Aufsichten (Trigger), der Teilnahmen und der Planzeilen. Teilnahmen und Planzeilen stempeln ihr `updated_at` ebenfalls zur Anweisungszeit, so liegt auch eine Korrektur nach dem Abschluss, deren Transaktion früher begann oder die in derselben Transaktion folgt, danach. Aufsichten stempelt der Trigger mit dem Transaktionsbeginn; eine überlappende Änderung an ihnen bleibt unerkannt wie bisher. Das Reopen-Fenster, das Ende spontaner Blöcke und der Vergleich mit dem Auschecken eines Kindes rechnen mit der Owner-Uhr; der Abschluss legt deren Zeitpunkt als `owner_completed_at` im Snapshot ab. |
 | Umfrage-Entwürfe (`communication`) | Datenbank | `users.surveys` trägt den Trigger. Die Aufbewahrung der Entwürfe vergleicht `updated_at` mit der Datenbankuhr; veröffentlichte Umfragen bleiben über `closes_at` auf der Owner-Uhr. |
-| Nummern-Ereignisse (`parentbilling`) | Datenbank | Die Datenbank stempelt die Protokolle `family_billing_events` und `child_debtor_number_events` per Vorgabe. Ihr Alter rechnet die Abfrage mit der Datenbankuhr; die Nummern selbst gehen weiter am Tag der Owner-Uhr. |
+| Nummern-Ereignisse (`parentbilling`) | Owner | Der Store stempelt die Protokolle `family_billing_events` und `child_debtor_number_events` an jeder Schreibstelle selbst. Ihr Alter vergleicht die Löschung mit der Grenze des Löschtags, Mitternacht in Berlin, wie die Nummern selbst. |
 
-Zustell-Protokolle und Nummern-Ereignisse stempelt beide eine Vorgabe ohne
-Trigger, und sie sind verschieden entschieden. Der Store von `delivery` trägt
-die Owner-Uhr schon und hat eine Schreibstelle. `parentbilling` schreibt seine
-Protokolle an rund dreißig Stellen aus Stores ohne Uhr; dort bleibt die
-Datenbank die eine Uhr der Spalte, bis der Owner-Schnitt von #7295 dem Store
-seine Uhr gibt. Die Ausnahme gilt dem Alter der Einträge: Dass ein Eintrag
-erst mit seiner Nummer geht, entscheidet weiter der Tag der Owner-Uhr.
+Zustell-Protokolle und Nummern-Ereignisse stempelte beide eine Vorgabe ohne
+Trigger. Zuerst war nur der Store von `delivery` mit der Owner-Uhr
+entschieden; `parentbilling` blieb auf der Datenbankuhr, weil sein Store
+keine Uhr trug. Der Owner-Schnitt von #7295 gibt ihm seine Uhr, und damit
+gehen die Protokolle wie die Nummern am Tag der Owner-Uhr. Auf der
+Datenbankuhr bleiben in `parentbilling` nur Spalten, die eine
+Datenbankfunktion stempelt oder vergleicht oder die gegen Stempel von
+Spaltenvorgaben oder anderer Owner geordnet werden; sie stehen mit Grund
+über dem Budget-Eintrag.
 
 ## Folgen
 
@@ -81,3 +83,65 @@ erst mit seiner Nummer geht, entscheidet weiter der Tag der Owner-Uhr.
   Konto. Sie wechselt erst, wenn diese Owner ihre Stempel selbst binden.
 - Die bun-Tags und die reinen Schreibstempel folgen je Owner in eigenen PRs
   von #7295.
+
+## Nachtrag 2026-11-17: Von der Datenbank bewachte Aufbewahrungen liegen ganz auf der Datenbankuhr
+
+Für [#7295](https://github.com/moto-ogs/project-phoenix/issues/7295), wie
+schon das Exportjournal (#7325) und die Löschung von Mitarbeitenden (#7327).
+Prüft eine Sicherheitsfunktion der Datenbank das Fenster einer Aufbewahrung
+mit ihrer eigenen Uhr (`latest_allowed_cutoff` aus `clock_timestamp()`), liegt
+die ganze Entscheidung auf der Datenbankuhr:
+
+- Die Spaltenvorgabe stempelt die Spalte in jedem Schreiber. Ein Zeitpunkt,
+  den ein Erzeuger setzt, wird verworfen.
+- Der Adapter liest die Datenbankzeit einmal je Aufbewahrungslauf in dessen
+  Transaktion. Die Regel für Tag oder Jahr bleibt in Go und rechnet von
+  dieser Zeit.
+- Jedes Paket liest die Datenbankuhr über eine gemeinsame Konstante. Der
+  Grund steht über seinem Eintrag in `moduleSQLClockBudget`.
+
+Das gilt für `audit.auth_events`, `audit.data_access_log`,
+`audit.data_deletions`, `audit.student_field_edits` (Änderungsprotokoll der
+Kinder), die zehn Protokolle von `audit.delete_expired_protocol`,
+`audit.unregistered_tag_scans` (`devicefleet`) und die Krankmeldungen in
+`users.staff_documents` (`workforce`). Verworfen wird nur, was der Erzeuger
+mit seiner eigenen Uhr als „jetzt“ setzt; kein Erzeuger dieser Protokolle
+setzt einen früheren Zeitpunkt. Nach Punkt 4 stempelt die Datenbank auch
+`audit.guardian_changes` und `audit.attendance_corrections`: Die
+Zugriffsliste des Trägers ordnet sie gegen die übrigen Protokolle. Sie endet
+an der Datenbankzeit ihrer Leseabfrage, auch für einen Träger ohne Schulen,
+dessen Liste nur Ferienanmeldungen zeigt; die Dedup-Abfragen des
+Zugriffsprotokolls und das 30-Tage-Fenster der Löschstatistik zählen
+ebenfalls auf der Datenbankuhr. Die Änderungen an Einwilligungen
+(`audit.student_consent_changes`) behalten den Zeitpunkt des Erzeugers: Eine
+Erteilung nennt den Tag, an dem die Einwilligung gegeben wurde, beim Import
+den Tag aus der Datei. Nach einem Widerruf ist dieser Eintrag der einzige
+Beleg dafür. Ohne Zeitpunkt stempelt die Spaltenvorgabe. Auf der Audit-Uhr
+bleiben die Änderungen an Arbeitszeiten (`audit.work_session_edits`), die
+mit ihrer Sitzung gelöscht werden.
+
+Grenze: Die Sicht `audit.time_tracking_audit_log` mischt drei Uhren und
+ordnet nach `occurred_at`. Die Datenbank stempelt die Löschungen
+(`audit.time_tracking_deletions`) und die Personalnummern
+(`audit.personnel_number_changes`), die Audit-Uhr die Änderungen an
+Arbeitszeiten, die Uhr von `workforce` die übrigen Zweige: Abwesenheiten
+(`changed_at`), Saldo-Korrekturen und Urlaubseröffnungen (`decided_at`),
+Monatsabschluss und Wiedereröffnung (`closed_at`, `reopened_at`),
+Urlaubsanspruch und Kontingente (`created_at`). Diese Zweige ziehen erst mit
+einem eigenen Schnitt von `workforce` um. Im Betrieb gehen die Uhren gleich;
+nur bei auseinanderlaufenden Uhren kann ein Eintrag vor einem früheren
+stehen.
+
+Vergleicht eine Aufbewahrung ein `updated_at`, das der Trigger stempelt,
+rechnet dieser Zweig vom Tag der Datenbank (Punkt 3): ausgeschaltete Hinweise
+fürs Team (`timetable`) und Entwürfe von Notenübergängen (`schoolstructure`).
+Gültigkeitstage und die vom Owner gestempelten Zeitpunkte behalten die
+Grenze der Owner-Uhr.
+
+Ohne Wache der Datenbank bleibt es bei Punkt 2: Der Owner stempelt und
+schneidet mit seiner Uhr ab.
+
+Noch offen: `audit.delete_expired_deviation_events` bewacht den Kalendertag
+der Abweichungen mit dem Tag der Datenbank, die Grenze kommt aber aus der
+Stundenplan-Aufbewahrung, die mit derselben Grenze die Stundenplanzeilen
+löscht. Sie folgt in einem eigenen Schnitt.

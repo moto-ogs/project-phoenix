@@ -1381,7 +1381,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r staffNoticeRepository) DeleteEndedBefore(ctx context.Context, cutoff calendar.Date) (int, error) {\n\tdeleted, err := r.store.DeleteStaffNoticesEndedBefore(ctx, cutoff)\n\tif err != nil {\n\t\treturn 0, \u0026domain.StoreError{Op: \"delete ended staff notices\", Err: err}\n\t}\n\treturn deleted, nil\n}",
+      "evidence": "func (r staffNoticeRepository) DeleteEndedBefore(ctx context.Context, cutoff calendar.Date, retentionDays int) (int, error) {\n\tdeleted, err := r.store.DeleteStaffNoticesEndedBefore(ctx, cutoff, retentionDays)\n\tif err != nil {\n\t\treturn 0, \u0026domain.StoreError{Op: \"delete ended staff notices\", Err: err}\n\t}\n\treturn deleted, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/adapters/postgres/staffNoticeRepository.DeleteEndedBefore",
       "owner": "modules/timetable"
@@ -2872,7 +2872,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r staffNoticeRetention) DeleteExpiredStaffNotices(ctx context.Context, retentionDays int) (int, error) {\n\tif retentionDays \u003c= 0 {\n\t\treturn 0, fmt.Errorf(\"%w, got %d\", ErrStaffNoticeRetentionWindow, retentionDays)\n\t}\n\treturn r.store.DeleteEndedBefore(ctx, r.today().AddDays(-retentionDays))\n}",
+      "evidence": "func (r staffNoticeRetention) DeleteExpiredStaffNotices(ctx context.Context, retentionDays int) (int, error) {\n\tif retentionDays \u003c= 0 {\n\t\treturn 0, fmt.Errorf(\"%w, got %d\", ErrStaffNoticeRetentionWindow, retentionDays)\n\t}\n\treturn r.store.DeleteEndedBefore(ctx, r.today().AddDays(-retentionDays), retentionDays)\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/staffNoticeRetention.DeleteExpiredStaffNotices",
       "owner": "modules/timetable"

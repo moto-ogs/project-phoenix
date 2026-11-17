@@ -20,8 +20,8 @@ type groupRow struct {
 	bun.BaseModel    `bun:"table:activities.groups,alias:group"`
 	ID               int64      `bun:"id,pk,autoincrement"`
 	TenantID         int64      `bun:"tenant_id,notnull"`
-	CreatedAt        time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt        time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt        time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time  `bun:"updated_at,nullzero,notnull"`
 	Name             string     `bun:"name"`
 	MaxParticipants  int        `bun:"max_participants,nullzero"`
 	RequiredStaff    *int       `bun:"required_staff"`
@@ -63,8 +63,8 @@ type groupRow struct {
 type groupTargetRow struct {
 	ID                 int64     `bun:"id,pk,autoincrement"`
 	TenantID           int64     `bun:"tenant_id"`
-	CreatedAt          time.Time `bun:"created_at,nullzero,default:current_timestamp"`
-	UpdatedAt          time.Time `bun:"updated_at,nullzero,default:current_timestamp"`
+	CreatedAt          time.Time `bun:"created_at,nullzero"`
+	UpdatedAt          time.Time `bun:"updated_at,nullzero"`
 	ActivityGroupID    int64     `bun:"activity_group_id"`
 	TargetGroupType    string    `bun:"target_group_type"`
 	TargetGradeLevel   *int16    `bun:"target_grade_level"`

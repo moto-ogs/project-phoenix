@@ -12,7 +12,6 @@ import {
   Mail,
   ReceiptText,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
 import {
   FINANCE_FILE_KINDS,
   byLabel,
@@ -23,16 +22,13 @@ import { IconTile } from "~/components/ui/icon-tile";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import {
-  type InvoiceHistory,
   type InvoiceHistoryKind,
   type InvoiceStep,
   fetchInvoiceHistory,
 } from "~/lib/traeger-finance-exports-api";
-
-const logger = createLogger({ component: "InvoiceExportHistoryCard" });
+import { useTraegerResource } from "./use-traeger-resource";
 
 function stepIcon(step: InvoiceStep) {
   switch (step.kind) {
@@ -97,28 +93,11 @@ export function InvoiceExportHistoryCard({
    */
   embedded?: boolean;
 }>) {
-  const [history, setHistory] = useState<InvoiceHistory | null>(null);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
-
-  const read = useCallback(async () => {
-    try {
-      setHistory(await fetchInvoiceHistory(kind, invoiceId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_invoice_history_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "den Weg der Rechnung",
-        retry: () => void read(),
-      });
-    }
-  }, [kind, invoiceId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void read();
-  }, [read]);
+  const { data: history, error } = useTraegerResource(
+    traegerBillingRunKeys.invoiceHistory(kind, invoiceId),
+    () => fetchInvoiceHistory(kind, invoiceId),
+    "den Weg der Rechnung",
+  );
 
   const exports =
     history?.steps.filter((step) => step.kind === "exported").length ?? 0;
@@ -136,10 +115,10 @@ export function InvoiceExportHistoryCard({
             ? "Was mit der Rechnung geschah. Sie war noch in keiner Datei für Kämmerei, Steuerbüro oder Bank."
             : `Was mit der Rechnung geschah. Sie war in ${exports === 1 ? "einer Datei" : `${exports} Dateien`} für Kämmerei, Steuerbüro oder Bank.`
       }
-      loading={!history && !load.error}
+      loading={!history && !error}
     >
-      {load.error ? (
-        <LoadErrorAlert error={load.error} actionLayout="responsive" />
+      {error ? (
+        <LoadErrorAlert error={error} actionLayout="responsive" />
       ) : null}
       {history ? (
         <ol className="space-y-2">

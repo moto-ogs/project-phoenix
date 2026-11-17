@@ -9,7 +9,7 @@ import {
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import {
   contractChangeReview,
   type ContractChangeRequest,
@@ -17,7 +17,7 @@ import {
 } from "~/lib/care-contract-changes";
 
 function render(ui: React.ReactElement) {
-  return renderPlain(ui, { wrapper: ToastProvider });
+  return renderPlain(ui, { wrapper: TraegerResourceTestProvider });
 }
 
 const mocks = vi.hoisted(() => ({
@@ -25,9 +25,13 @@ const mocks = vi.hoisted(() => ({
   decideContractChange: vi.fn(),
 }));
 
+vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
+  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
   useSession: () => ({
-    data: { user: { permissions: ["admin:*"] } },
+    data: {
+      user: { id: "A", scope: "org", orgId: 7, permissions: ["admin:*"] },
+    },
     status: "authenticated",
   }),
 }));
@@ -58,6 +62,9 @@ vi.mock("~/components/ui/date-picker", () => ({
   ),
 }));
 
+import { deferred } from "~/test/helpers/form-modal-pending";
+import { catalogText } from "~/test/error-catalog-text";
+import { DecideChangeModal } from "./care-contract-change-modal";
 import { CareContractChangeCard } from "./care-contract-change-card";
 
 const pending: ContractChanges = {
@@ -466,4 +473,64 @@ describe("CareContractChangeCard (#5979)", () => {
       screen.queryByText(/Ab Oktober arbeite ich dienstags länger/),
     ).not.toBeInTheDocument();
   });
+});
+
+it("requires this opening's fresh booking comparison before approving an unchanged request version", async () => {
+  mocks.fetchContractChanges.mockReset().mockResolvedValue(pending);
+  mocks.decideContractChange
+    .mockReset()
+    .mockResolvedValue({ ...pending, pending: [] });
+  const props = {
+    contractId: "25",
+    request: pending.pending[0]!,
+    approve: true,
+    reasonRequired: false,
+    onClose: vi.fn(),
+    onDecided: vi.fn(),
+    onConflict: vi.fn(),
+  };
+  const view = render(<DecideChangeModal {...props} isOpen />);
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Freigeben" })).toBeEnabled(),
+  );
+  view.rerender(<DecideChangeModal {...props} isOpen={false} />);
+  const fresh = deferred<ContractChanges>();
+  mocks.fetchContractChanges.mockReturnValue(fresh.promise);
+  view.rerender(<DecideChangeModal {...props} isOpen />);
+  expect(screen.getByRole("button", { name: "Freigeben" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
+  expect(mocks.decideContractChange).not.toHaveBeenCalled();
+  await act(async () => fresh.reject(new ApiError("offline", 503)));
+  expect(
+    await screen.findByText(catalogText("general.unavailable", "die Vorschau")),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "Freigeben" })).toBeDisabled();
+  mocks.fetchContractChanges.mockResolvedValue({
+    ...pending,
+    pending: [
+      {
+        ...pending.pending[0]!,
+        lines: [
+          {
+            ...pending.pending[0]!.lines[0]!,
+            beforeDays: ["thu"],
+            afterDays: ["fri"],
+          },
+        ],
+      },
+    ],
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+  expect(await screen.findByText("Fr")).toBeVisible();
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Freigeben" })).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
+  await waitFor(() =>
+    expect(mocks.decideContractChange).toHaveBeenCalledWith(
+      "25",
+      "41",
+      expect.objectContaining({ expectedVersion: "v-41" }),
+    ),
+  );
 });

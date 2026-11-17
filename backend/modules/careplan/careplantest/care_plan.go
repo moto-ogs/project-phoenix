@@ -62,9 +62,10 @@ func NewCareDays(records careplan.Capability, baselines careplan.PickupBaselineR
 	return careDays
 }
 
-// NewOfferingBookings composes the effective-booking owner for workflow tests.
-func NewOfferingBookings() *careplan.OfferingBookings {
-	return carePlanCompose.NewOfferingBookings()
+// NewOfferingBookings composes the effective-booking owner for workflow
+// tests; now stamps the booking rows.
+func NewOfferingBookings(now func() time.Time) *careplan.OfferingBookings {
+	return carePlanCompose.NewOfferingBookings(now)
 }
 
 // NewCarePlan composes the owner capability for integration tests. The

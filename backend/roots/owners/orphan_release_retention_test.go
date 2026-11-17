@@ -91,16 +91,18 @@ func TestOrphanReleaseAccountPushStartsRetentionWhenWorkerMarksSent(t *testing.T
 	}
 	assert.Zero(t, transport.calls, "an orphan has no device recipient")
 
-	// Old enqueue/update timestamps must not start this retention before sent_at.
-	_, err = db.ExecContext(ctx, `UPDATE platform.push_outbox SET created_at = NOW() - INTERVAL '31 days',
-		updated_at = NOW() - INTERVAL '31 days' WHERE organization_id = ?`, org)
+	// Old enqueue/update timestamps must not start this retention before
+	// sent_at. The worker's clock stamps sent_at and cuts off; the entries
+	// are aged from that stamp, not from the database clock (#7295).
+	_, err = db.ExecContext(ctx, `UPDATE platform.push_outbox SET created_at = sent_at - INTERVAL '31 days',
+		updated_at = sent_at - INTERVAL '31 days' WHERE organization_id = ?`, org)
 	require.NoError(t, err)
 	_, err = worker.RunOnce(ctx, 25, 6)
 	require.NoError(t, err)
 	var count int
 	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM platform.push_outbox WHERE organization_id = ?`, org).Scan(ctx, &count))
 	require.Equal(t, 2, count, "fresh sent_at keeps both entries")
-	_, err = db.ExecContext(ctx, `UPDATE platform.push_outbox SET sent_at = NOW() - INTERVAL '31 days'
+	_, err = db.ExecContext(ctx, `UPDATE platform.push_outbox SET sent_at = sent_at - INTERVAL '31 days'
 		WHERE organization_id = ?`, org)
 	require.NoError(t, err)
 	_, err = worker.RunOnce(ctx, 25, 6)

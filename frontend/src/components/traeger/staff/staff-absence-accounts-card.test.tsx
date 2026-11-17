@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { TraegerAbsenceAccount } from "~/lib/traeger-absence-api";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchTraegerAbsenceAccounts: vi.fn(),
@@ -50,9 +52,9 @@ const ACCOUNT: TraegerAbsenceAccount = {
 
 function renderCard() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <StaffAbsenceAccountsCard recordId="5" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -119,4 +121,20 @@ describe("StaffAbsenceAccountsCard", () => {
       screen.getByRole("link", { name: "Zu den Abwesenheitsarten" }),
     ).toHaveAttribute("href", "/personal/abwesenheitsarten");
   });
+});
+
+it("performs a new audited read on immediate reopening", async () => {
+  api.fetchTraegerAbsenceAccounts.mockReset().mockResolvedValue([ACCOUNT]);
+  const view = render(<StaffAbsenceAccountsCard recordId="5" />, {
+    wrapper: TraegerResourceTestProvider,
+  });
+  expect(
+    await screen.findByRole("region", { name: "Regenerationstag 2026" }),
+  ).toBeVisible();
+  expect(api.fetchTraegerAbsenceAccounts).toHaveBeenCalledTimes(1);
+  view.rerender(<div>away</div>);
+  view.rerender(<StaffAbsenceAccountsCard recordId="5" />);
+  await vi.waitFor(() =>
+    expect(api.fetchTraegerAbsenceAccounts).toHaveBeenCalledTimes(2),
+  );
 });

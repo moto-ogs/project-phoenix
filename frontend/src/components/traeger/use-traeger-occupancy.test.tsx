@@ -5,7 +5,7 @@ import { resetSWRScope } from "~/lib/swr/scope";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { SWRConfig, useSWRConfig } from "~/lib/swr/testing";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
 import { useTraegerOccupancy } from "./use-traeger-occupancy";
 import { setTestClock } from "~/test/clock";

@@ -5482,7 +5482,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Capability.TransitionParticipants; modules/studentpresence.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Capability.TransitionParticipants; modules/studentpresence.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
       "target_owner": "student-presence"
@@ -5493,7 +5493,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "target_owner": "student-presence"
@@ -5504,7 +5504,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "target_owner": "student-presence"
@@ -8441,7 +8441,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence/internal/application.Service.TransitionParticipants; modules/studentpresence/internal/application/session_attendance.go:140.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence/internal/application.Service.TransitionParticipants; modules/studentpresence/internal/application/session_attendance.go:140.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.TransitionParticipants",
       "target_owner": "student-presence"
@@ -8452,7 +8452,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "target_owner": "student-presence"
@@ -41575,7 +41575,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ParticipantPresence.TransitionParticipants",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method). ",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Owner.TransitionParticipants; modules/studentpresence.Owner (supplied contract method). Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "target_owner": "student-presence"
@@ -41586,7 +41586,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ParticipantPresence.TransitionParticipants",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: timetable-activities reaches modules/studentpresence.Owner.TransitionParticipants (student-presence) through modules/timetable/internal/application.legacyParticipantPresence.TransitionParticipants. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
+      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: timetable-activities reaches modules/studentpresence.Owner.TransitionParticipants (student-presence) through modules/timetable/internal/application.legacyParticipantPresence.TransitionParticipants. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098). Re-reviewed for #7295: the transition no longer takes an instant and stamps updated_at with the database's statement time (ADR 0281); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.TransitionParticipants",
       "target_owner": "student-presence"

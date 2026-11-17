@@ -115,13 +115,15 @@ func TestBackfillSessionFamiliesLongChain(t *testing.T) {
 	tenantID := testpkg.UniqueTestTenantID(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
 	const length = 200
+	// Identity & Access stamps expiry and rotated_at on the host clock.
+	now := time.Now()
 	_, err := db.ExecContext(ctx, `
 		INSERT INTO auth.tokens (account_id, tenant_id, token, expiry, generation, rotated_at, replacement_token, portal_scope)
-		SELECT ?, ?, encode(sha256(convert_to('long-' || g, 'UTF8')), 'hex'), NOW() + INTERVAL '1 hour', g,
-			CASE WHEN g < ? THEN NOW() END,
+		SELECT ?, ?, encode(sha256(convert_to('long-' || g, 'UTF8')), 'hex'), ?::timestamptz, g,
+			CASE WHEN g < ? THEN ?::timestamptz END,
 			CASE WHEN g < ? THEN encode(sha256(convert_to('long-' || (g + 1), 'UTF8')), 'hex') END,
 			'tenant'
-		FROM generate_series(0, ?) AS g`, account.ID, tenantID, length-1, length-1, length-1)
+		FROM generate_series(0, ?) AS g`, account.ID, tenantID, now.Add(time.Hour), length-1, now, length-1, length-1)
 	require.NoError(t, err)
 
 	families := func() (distinct, missing int) {

@@ -42,12 +42,13 @@ type UnregisteredTagScan struct {
 	DeviceName           *string
 }
 
-// RecordUnregisteredTagScan appends one scan for the caller's tenant. A zero
-// ScannedAt is stamped by the owner's clock.
+// RecordUnregisteredTagScan appends one scan for the caller's tenant. The
+// column default stamps scanned_at: the retention function guards its window
+// on the database clock, so the scan and its deletion live there (ADR 0281,
+// Nachtrag).
 type RecordUnregisteredTagScan struct {
-	TagUID    string
-	DeviceID  *int64
-	ScannedAt time.Time
+	TagUID   string
+	DeviceID *int64
 }
 
 // ResolveUnregisteredTagScan marks one open scan as handled by an operator.
@@ -92,14 +93,6 @@ var (
 	ErrTagScanIDRequired         = errors.New("scan ID is required")
 	ErrTagScanOperatorIDRequired = errors.New("operator ID is required")
 )
-
-// Normalize trims the tag UID and stamps a missing scan time.
-func (r *RecordUnregisteredTagScan) Normalize(now time.Time) {
-	r.TagUID = strings.TrimSpace(r.TagUID)
-	if r.ScannedAt.IsZero() {
-		r.ScannedAt = now
-	}
-}
 
 // Validate checks whether the scan can be stored.
 func (r RecordUnregisteredTagScan) Validate() error {

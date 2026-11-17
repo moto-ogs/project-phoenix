@@ -13,8 +13,8 @@ type careExitRow struct {
 	bun.BaseModel          `bun:"table:users.student_care_exits,alias:care_exit"`
 	ID                     int64         `bun:"id,pk,autoincrement"`
 	TenantID               int64         `bun:"tenant_id,notnull"`
-	CreatedAt              time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt              time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt              time.Time     `bun:"created_at,nullzero,notnull"`
+	UpdatedAt              time.Time     `bun:"updated_at,nullzero,notnull"`
 	StudentID              int64         `bun:"student_id,notnull"`
 	PreviousEnrolledUntil  *calendarDate `bun:"previous_enrolled_until,type:date"`
 	Reason                 string        `bun:"reason,notnull"`
@@ -53,7 +53,8 @@ func (s *Store) UpsertCareExit(ctx context.Context, value domain.CareExit) (doma
 		return domain.OperationStats{}, err
 	}
 	row := careExitFromDomain(value)
-	row.TenantID = tenantID
+	now := s.currentTime()
+	row.TenantID, row.CreatedAt, row.UpdatedAt = tenantID, now, now
 	return execAny(ctx, db.NewInsert().Model(&row).
 		ModelTableExpr(`users.student_care_exits AS "care_exit"`).
 		On("CONFLICT (tenant_id, student_id) DO UPDATE").
@@ -61,7 +62,7 @@ func (s *Store) UpsertCareExit(ctx context.Context, value domain.CareExit) (doma
 		Set("reason_note = EXCLUDED.reason_note").
 		Set("recorded_by = EXCLUDED.recorded_by").
 		Set("withdrawal_completion_id = EXCLUDED.withdrawal_completion_id").
-		Set("updated_at = NOW()"), "upsert care exit")
+		Set("updated_at = EXCLUDED.updated_at"), "upsert care exit")
 }
 
 func (s *Store) DeleteCareExits(ctx context.Context, studentIDs []int64) (domain.OperationStats, error) {

@@ -43,7 +43,7 @@ func careContractConclusionRun(t *testing.T, f careContractFixture) carecontract
 	require.NoError(t, err)
 	audit, err := auditCompose.NewTenantPersistence(f.db, time.Now)
 	require.NoError(t, err)
-	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil, time.Now)
+	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)
 	delivery, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
 		DB: f.db, People: owners.EnrollmentFlowGuardianDirectory{}, Observe: func(deliveryContract.Observation) {},

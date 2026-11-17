@@ -36,7 +36,7 @@ type careExitRemovalRow struct {
 	SelectedWeekdays         []int         `bun:"selected_weekdays,type:jsonb"`
 	AttendanceStatus         *string       `bun:"attendance_status"`
 	Weekday                  *int          `bun:"weekday"`
-	CreatedAt                time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt                time.Time     `bun:"created_at,nullzero,notnull"`
 }
 
 type careExitSourceRemovalRow struct {
@@ -48,7 +48,7 @@ type careExitSourceRemovalRow struct {
 	SourceRowID   int64           `bun:"source_row_id,notnull"`
 	WasDeleted    bool            `bun:"was_deleted,notnull"`
 	Snapshot      json.RawMessage `bun:"snapshot,type:jsonb,notnull"`
-	CreatedAt     time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time       `bun:"created_at,nullzero,notnull"`
 }
 
 func (s *Store) ListCareExitRemovals(ctx context.Context, studentIDs []int64) ([]domain.CareExitRemoval, domain.OperationStats, error) {

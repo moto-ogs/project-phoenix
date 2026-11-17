@@ -12,7 +12,7 @@
 
 import { EmptyState } from "~/components/ui/empty-state";
 import { FramedList } from "~/components/ui/framed-list";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -27,11 +27,10 @@ import {
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ListSkeleton, SkeletonRegion } from "~/components/ui/page-skeletons";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { createLogger } from "~/lib/logger";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import {
@@ -82,7 +81,6 @@ export function GraduatesModal({
   canDelete,
 }: GraduatesModalProps) {
   const toast = useToast();
-  const [entries, setEntries] = useState<TransitionHistoryEntry[] | null>(null);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   // Mounted only while open. The session spans the hidden panel while the
@@ -90,41 +88,32 @@ export function GraduatesModal({
   // shows the result, so the same children cannot be deleted twice (#6593).
   const save = useFormModalPending();
   const isPurging = save.pending;
+  const {
+    data: history,
+    error: historyError,
+    mutate,
+  } = useSWRAuth(
+    tenantAdminKeys.gradeTransitionHistory(transition.id),
+    () => fetchTransitionHistory(transition.id),
+    { keepPreviousData: false },
+  );
   // Ladefehler im Dialog mit Wiederholen, Löschfehler als Toast nach dem
   // Schließen der Rückfrage (#2517).
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const [loadFailed, setLoadFailed] = useState(false);
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [{ data: history, error: historyError }],
+    "die Liste der Abgänge",
+    () => mutate(),
+  );
+  const loadFailed = Boolean(failure);
   const { show: showPurgeError } = useApiErrorDisplay();
 
-  const load = useCallback(async () => {
-    setLoadFailed(false);
-    clearLoadError();
-    try {
-      const history = await fetchTransitionHistory(transition.id);
-      // Only Abgänge: a promoted child was never hidden and is edited in the
-      // Kindersuche like any other.
-      setEntries(history.filter((e) => e.action === "graduated"));
-      setSelected(new Set());
-    } catch (err) {
-      logger.error("graduates_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setEntries([]);
-      setLoadFailed(true);
-      void showLoadError(err, {
-        object: "die Liste der Abgänge",
-        retry: () => void load(),
-      });
-    }
-  }, [transition.id, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Only Abgänge: a promoted child was never hidden and is edited in the
+  // Kindersuche like any other.
+  const entries: TransitionHistoryEntry[] | null = history
+    ? history.filter((e) => e.action === "graduated")
+    : loadFailed
+      ? []
+      : null;
 
   const deletable = (entries ?? []).filter((e) => e.studentState === "alumnus");
   const selectedIds = [...selected].filter((id) =>
@@ -197,7 +186,10 @@ export function GraduatesModal({
               : `das Löschen von ${failures.length} Kindern`,
         });
       }
-      if (op.isCurrent()) await load();
+      if (op.isCurrent()) {
+        await mutate();
+        setSelected(new Set());
+      }
     });
 
   return (

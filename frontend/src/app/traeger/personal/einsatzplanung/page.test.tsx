@@ -1,11 +1,13 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type {
   TraegerPlanningPerson,
   TraegerPlanningWeek,
 } from "~/lib/traeger-planning-api";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchTraegerPlanningWeek: vi.fn(),
@@ -98,9 +100,9 @@ const WEEK: TraegerPlanningWeek = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerStaffPlanningPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

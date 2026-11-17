@@ -7,7 +7,7 @@
 // Liste und jeder Export steht im Zugriffsprotokoll der Einsatzorte.
 
 import { CertificateIcon, PlusIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   StaffProofTypeModal,
   type StaffProofTypeTarget,
@@ -29,16 +29,14 @@ import {
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { formatDate } from "~/lib/date-helpers";
 import { formatCount } from "~/lib/format-utils";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { createLogger } from "~/lib/logger";
+import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
 import { foldForSearch } from "~/lib/search-fold";
 import { staffName } from "~/lib/traeger-staff-api";
 import {
@@ -532,38 +530,32 @@ function SchoolKinds({
 
 export default function TraegerStaffProofsPage() {
   const [tab, setTab] = useState<Tab>("ablaufliste");
-  const [list, setList] = useState<StaffProofList | null>(null);
-  const [schools, setSchools] = useState<SchoolProofKinds[] | null>(null);
   const [editing, setEditing] = useState<StaffProofTypeTarget>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      const [nextList, nextSchools] = await Promise.all([
-        fetchStaffProofList(),
-        fetchSchoolProofKinds(),
-      ]);
-      setList(nextList);
-      setSchools(nextSchools);
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_staff_proofs_load_failed", {
-        error: errorMessage(err),
-      });
-      await showLoadError(err, {
-        object: "die Personalnachweise",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const {
+    data: list,
+    loading: listLoading,
+    error: listError,
+    reload: reloadList,
+  } = useTraegerResource(
+    traegerReportKeys.staffProofList(),
+    fetchStaffProofList,
+    "die Personalnachweise",
+  );
+  const {
+    data: schools,
+    loading: schoolsLoading,
+    error: schoolsError,
+    mutate: mutateSchools,
+    reload: reloadSchools,
+  } = useTraegerResource(
+    traegerReportKeys.schoolProofKinds(),
+    fetchSchoolProofKinds,
+    "die Personalnachweise",
+  );
+  const loadError = listError ?? schoolsError;
 
   const listView = useProofListView(list);
-  const loading = !list && !pageLoad.error;
+  const loading = (listLoading || schoolsLoading) && !loadError;
   const open = list
     ? list.counts.expired + list.counts.missing + list.counts.expiringSoon
     : 0;
@@ -583,7 +575,7 @@ export default function TraegerStaffProofsPage() {
       }
       statsLoading={loading}
       loading={loading}
-      error={pageLoad.error}
+      error={loadError}
       tabs={{
         value: tab,
         onChange: (value) => setTab(value as Tab),
@@ -609,7 +601,8 @@ export default function TraegerStaffProofsPage() {
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            void load();
+            reloadList();
+            reloadSchools();
           }}
         />
       }
@@ -626,7 +619,9 @@ export default function TraegerStaffProofsPage() {
                 key={school.schoolId}
                 school={school}
                 types={list.types}
-                onSaved={setSchools}
+                onSaved={(next) =>
+                  void mutateSchools(next, { revalidate: false })
+                }
               />
             ))}
           </div>

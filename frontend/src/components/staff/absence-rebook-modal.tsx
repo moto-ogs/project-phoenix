@@ -6,14 +6,7 @@
 // Dialog, was sich am Stundenkonto und an den Kontingenten ändert; was nicht
 // reicht oder gesperrt ist, lässt sich nicht speichern.
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   AccountsLoadError,
@@ -27,8 +20,11 @@ import {
 import type { SickReportStaff } from "~/components/staff/sick-report-modal";
 import { formatSignedDuration } from "~/components/staff/staff-time-views";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { Modal } from "~/components/ui/modal";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
@@ -44,11 +40,10 @@ import type { AbsenceType } from "~/lib/absence-type-api";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
-import {
-  staffAbsenceService,
-  type AbsenceRebooking,
-  type StaffAbsenceRow,
-} from "~/lib/staff-api";
+import { staffAbsenceService, type StaffAbsenceRow } from "~/lib/staff-api";
+import { useFreshSWR } from "~/lib/swr";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "AbsenceRebookModal" });
@@ -64,46 +59,34 @@ function useRebookingPreview(args: {
   value: string;
 }) {
   const { staffId, absenceIds, value } = args;
-  const [preview, setPreview] = useState<AbsenceRebooking | null>(null);
-  const [error, setError] = useState<unknown>(null);
-  const [attempt, setAttempt] = useState(0);
-  const reload = useCallback(() => setAttempt((value) => value + 1), []);
-  const idsKey = absenceIds.join(",");
-
-  useEffect(() => {
-    setPreview(null);
-    setError(null);
-    if (!value || !idsKey) return;
-    let stale = false;
-    const request = absenceRequestFor(value);
-    staffAbsenceService
-      .rebookAbsences(staffId, {
-        absenceIds: idsKey.split(","),
+  // Eine gesperrte Umbuchung (workforce.rebooking_*) ist kein Defekt; sie
+  // steht wie jeder andere Fehler der Vorschau im Dialog.
+  const { data, error, mutate, isValidating } = useFreshSWR(
+    value && absenceIds.length > 0
+      ? staffAbsenceKeys.rebookingPreview(staffId, absenceIds, value)
+      : null,
+    () => {
+      const request = absenceRequestFor(value);
+      return staffAbsenceService.rebookAbsences(staffId, {
+        absenceIds: absenceIds.map(String),
         absenceType: request.absence_type,
         absenceTypeId: request.absence_type_id,
         reason: "",
         dryRun: true,
-      })
-      .then((result) => {
-        if (!stale) setPreview(result);
-      })
-      .catch((err: unknown) => {
-        if (stale) return;
-        // Eine gesperrte Umbuchung (workforce.rebooking_*) ist kein Defekt;
-        // sie steht wie jeder andere Fehler der Vorschau im Dialog.
-        logger.warn("rebooking_preview_failed", {
-          staff_id: staffId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setError(err);
       });
-    return () => {
-      stale = true;
-    };
-  }, [staffId, idsKey, value, attempt]);
-
-  const loading = Boolean(value) && !preview && !error;
-  return { preview, error, loading, reload };
+    },
+    { keepPreviousData: false },
+  );
+  // A dry run is a save prerequisite, not merely a read-only display.
+  const preview = isValidating || error ? undefined : data;
+  const load = useSwrResourceLoadError(
+    [{ data: preview, error: isValidating ? undefined : error }],
+    "die Änderung der Art",
+    () => mutate(),
+  );
+  const loading =
+    Boolean(value) && preview === undefined && load.error === null;
+  return { preview: preview ?? null, error: load.error, loading };
 }
 
 function BalanceLine({ minutes }: { readonly minutes: number }) {
@@ -162,7 +145,6 @@ export function AbsenceRebookModal({
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const formErrors = useApiFormError();
-  const showFormError = formErrors.show;
   const clearFormErrors = formErrors.clear;
   // „Wiederholen“ sendet den aktuellen Grund, nicht den vom Fehlerzeitpunkt.
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
@@ -215,25 +197,16 @@ export function AbsenceRebookModal({
     preview,
     error: previewError,
     loading,
-    reload: reloadPreview,
   } = useRebookingPreview({
     staffId: staff.id,
     absenceIds,
     value,
   });
 
-  // Eine andere Art verwirft alte Meldungen; scheitert die Vorschau, steht
-  // ihr Grund im Dialog, und „Art ändern“ bleibt gesperrt.
+  // A new target discards the previous edit's validation or save error.
   useEffect(() => {
-    if (previewError) {
-      void showFormError(previewError, {
-        object: "die Änderung der Art",
-        retry: reloadPreview,
-      });
-    } else {
-      clearFormErrors();
-    }
-  }, [value, previewError, reloadPreview, showFormError, clearFormErrors]);
+    clearFormErrors();
+  }, [value, clearFormErrors]);
 
   const allowanceProjections: Projection[] = (preview?.allowances ?? [])
     .filter((item) => item.bookingDays > 0)
@@ -259,7 +232,12 @@ export function AbsenceRebookModal({
     (preview?.vacationExceeded ?? false);
 
   const disabled =
-    saving || !selected || loading || Boolean(previewError) || exceeded;
+    saving ||
+    !selected ||
+    !preview ||
+    loading ||
+    Boolean(previewError) ||
+    exceeded;
   // Der Grund am gesperrten Knopf; beim Speichern bleibt er nativ gesperrt.
   const blockedReason = saving
     ? undefined
@@ -364,6 +342,7 @@ export function AbsenceRebookModal({
       }
     >
       <div className="space-y-4">
+        <LoadErrorAlert error={previewError} />
         <FormErrorAlert message={allowanceBlocker ?? formErrors.error} />
         <p className="text-sm text-gray-600">
           Die Einträge bleiben stehen. Nur ihre Art ändert sich.

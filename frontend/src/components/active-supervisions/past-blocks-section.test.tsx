@@ -2,8 +2,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
-import { PastBlocksSection } from "./past-blocks-section";
+import { PastBlocksSection as Section } from "./past-blocks-section";
 import type {
   PlannedTimetableInstance,
   TimetableRoster,
@@ -13,6 +14,22 @@ const { plannedNowMock, rosterMock } = vi.hoisted(() => ({
   plannedNowMock: vi.fn(),
   rosterMock: vi.fn(),
 }));
+
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1" }, expires: "2099-01-01" },
+  }),
+}));
+
+function PastBlocksSection(props: Parameters<typeof Section>[0]) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <Section {...props} />
+    </SWRConfig>
+  );
+}
 
 vi.mock("~/lib/timetable-operations-api", () => ({
   timetableOperationsApi: {

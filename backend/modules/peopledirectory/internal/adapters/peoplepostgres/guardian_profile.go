@@ -498,8 +498,8 @@ func (r *guardianProfileRepository) SetEmailsStopped(ctx context.Context, id int
 		return err
 	}
 	result, err := db.ExecContext(ctx, `UPDATE users.guardian_profiles
-		SET emails_stopped_at = CASE WHEN ?0 THEN COALESCE(emails_stopped_at, NOW()) ELSE NULL END, updated_at = NOW()
-		WHERE id = ?1`, stopped, id)
+		SET emails_stopped_at = CASE WHEN ?0 THEN COALESCE(emails_stopped_at, ?2::timestamptz) ELSE NULL END
+		WHERE id = ?1`, stopped, id, r.now())
 	if err != nil {
 		return fmt.Errorf("failed to change the guardian's mail stop: %w", err)
 	}

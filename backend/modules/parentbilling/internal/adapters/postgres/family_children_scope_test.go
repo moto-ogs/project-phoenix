@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ func TestFamilyChildrenFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newCareScope(t, db, "Träger Familie A")
 	other := newCareScope(t, db, "Träger Familie B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the rows back")
 	const family = "eva.familie@example.org"
 
@@ -114,7 +115,7 @@ func TestFamilyChildrenStatementAfterConfirmationIsNewer(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	own := newCareScope(t, db, "Träger Familie Zeit")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the rows back")
 	const family = "eva.zeit@example.org"
 

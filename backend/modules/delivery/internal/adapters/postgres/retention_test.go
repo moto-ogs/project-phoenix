@@ -40,8 +40,9 @@ func TestRetentionKeepsTheWelcomeKeyWithoutItsContent(t *testing.T) {
 		first, err = store.Enqueue(txCtx, welcome())
 		return err
 	}))
+	// Delivery stamps and ages its mails on its own clock, here time.Now (ADR 0281).
 	_, err := db.ExecContext(context.Background(), `UPDATE platform.email_outbox
-		SET status = 'sent', sent_at = CURRENT_TIMESTAMP - INTERVAL '31 days' WHERE id = ?`, first.ID)
+		SET status = 'sent', sent_at = ? WHERE id = ?`, time.Now().Add(-31*24*time.Hour), first.ID)
 	require.NoError(t, err)
 
 	var deleted, cleared int

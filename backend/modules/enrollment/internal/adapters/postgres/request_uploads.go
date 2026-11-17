@@ -22,7 +22,7 @@ type requestUploadRow struct {
 	FilenameStored  string     `bun:"filename_stored,notnull"`
 	SizeBytes       int64      `bun:"size_bytes,notnull"`
 	ContentType     string     `bun:"content_type,notnull"`
-	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull"`
 	ClaimedAt       *time.Time `bun:"claimed_at"`
 }
 

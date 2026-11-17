@@ -15,14 +15,18 @@ import (
 // operator billing report (#2791) in platform.billing_settings and
 // platform.billing_key_date_counts. Every statement is a compile-time
 // constant so the architecture evaluator can read which tables it touches.
-type BillingStore struct{ database Database }
+// now is the report's clock; it stamps updated_at of the key day.
+type BillingStore struct {
+	database Database
+	now      func() time.Time
+}
 
 // NewBillingStore builds the store over the ambient transaction runtime.
-func NewBillingStore(database Database) *BillingStore {
-	if database == nil {
-		panic("organization tenancy postgres: database runtime is required")
+func NewBillingStore(database Database, now func() time.Time) *BillingStore {
+	if database == nil || now == nil {
+		panic("organization tenancy postgres: database runtime and clock are required")
 	}
-	return &BillingStore{database: database}
+	return &BillingStore{database: database, now: now}
 }
 
 const setRepeatableReadSnapshotSQL = `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ`
@@ -33,7 +37,7 @@ const selectBillingSettingsSQL = `SELECT key_day, updated_at, updated_by_operato
 FROM platform.billing_settings WHERE id = 1`
 
 const updateBillingKeyDaySQL = `UPDATE platform.billing_settings
-SET key_day = ?, updated_at = CURRENT_TIMESTAMP, updated_by_operator_id = ?
+SET key_day = ?, updated_at = ?, updated_by_operator_id = ?
 WHERE id = 1
 RETURNING key_day, updated_at, updated_by_operator_id`
 
@@ -128,7 +132,7 @@ func (s *BillingStore) UpdateBillingKeyDay(ctx context.Context, keyDay int, oper
 		return domain.BillingSettings{}, err
 	}
 	var row billingSettingsRow
-	if err := db.NewRaw(updateBillingKeyDaySQL, keyDay, operatorID).Scan(ctx, &row); err != nil {
+	if err := db.NewRaw(updateBillingKeyDaySQL, keyDay, s.now(), operatorID).Scan(ctx, &row); err != nil {
 		return domain.BillingSettings{}, fmt.Errorf("organization tenancy postgres: update billing key day: %w", err)
 	}
 	return row.toDomain(), nil

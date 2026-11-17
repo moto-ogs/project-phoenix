@@ -241,7 +241,8 @@ func TestForgedNotificationSignalsShowNothing(t *testing.T) {
 	}
 
 	// A recorded signal replayed after the notification expired shows nothing.
-	_, err = db.ExecContext(context.Background(), `UPDATE platform.realtime_notifications SET created_at = NOW() - INTERVAL '1 hour' WHERE tenant_id = ?`, schoolID)
+	// Delivery stamps and reads notifications on its own clock, here time.Now (ADR 0281).
+	_, err = db.ExecContext(context.Background(), `UPDATE platform.realtime_notifications SET created_at = ? WHERE tenant_id = ?`, time.Now().Add(-time.Hour), schoolID)
 	require.NoError(t, err)
 	_ = api.ReceiveSignal(payloads[1])
 	for _, client := range clients {

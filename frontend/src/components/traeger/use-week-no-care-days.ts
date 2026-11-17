@@ -14,7 +14,7 @@ import { useSession } from "next-auth/react";
 import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useSWRAuth } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import type { HolidayNoCareDay, HolidayPeriod } from "~/lib/traeger-api";
 import {
   fetchTraegerCalendar,

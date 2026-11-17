@@ -30,9 +30,10 @@ import {
   useTenantMutate,
   useTenantMutateMatching,
 } from "~/lib/swr";
+import { closingDayKeys } from "~/lib/swr/staff-keys";
 
 /** Shared SWR key of the full closure list — deduped across both plans. */
-const CLOSING_DAYS_SWR_KEY = "planning-closing-days";
+const CLOSING_DAYS_SWR_KEY = closingDayKeys.list();
 
 // Schließtage ändern sich ein paar Mal im Schuljahr. Die globale Voreinstellung
 // (5 s) würde bei jedem Wechsel zwischen Betreuungs- und Dienstplan neu laden;
@@ -132,7 +133,7 @@ export function useClosingDaysState(
 
   const { data: windowMap, isLoading: windowLoading } = useSWRAuth(
     windowValid && !canReadSchedules && canReadTimeTracking
-      ? `${CLOSING_DAYS_SWR_KEY}-${fromISO}-${toISO}`
+      ? closingDayKeys.window(fromISO, toISO)
       : null,
     () => getTimeTrackingClosingDays(fromISO, toISO),
     CLOSING_DAYS_SWR_OPTIONS,

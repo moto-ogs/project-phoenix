@@ -1,19 +1,12 @@
 "use client";
 
 import { FramedList } from "~/components/ui/framed-list";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { BellRing, CheckCircle2 } from "lucide-react";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { ExportMenu, type ExportMenuOption } from "~/components/ui/export-menu";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -26,15 +19,14 @@ import {
   DECLARATION_ACTION_LABEL,
   DECLARATION_STATE_META,
 } from "~/components/announcements/declaration-state";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { formatChatDateTime } from "~/lib/date-helpers";
 import { formatBytes } from "~/lib/file-format";
 import { createLogger } from "~/lib/logger";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import {
   downloadDeclarationExport,
   fetchDeclarationStatus,
@@ -44,7 +36,6 @@ import {
 import type {
   DeclarationChild,
   DeclarationChildState,
-  DeclarationStatus,
   DeclarationSubmission,
   DeclarationVersion,
 } from "~/lib/parent-announcements-api";
@@ -127,75 +118,42 @@ export function DeclarationStatusPanel({
   /** Reminders are only offered while the Einverständnis is live. */
   readonly canAct: boolean;
 }) {
-  const [status, setStatus] = useState<DeclarationStatus | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const latestRequest = useRef(0);
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
+  const { data, error, mutate } = useSWRAuth(
+    tenantContactKeys.declarationStatus(announcementId, apiBase),
+    () => withApiBase(fetchDeclarationStatus, announcementId, apiBase),
+    { keepPreviousData: false },
+  );
+  const status = data ?? null;
+  const loadError = useSwrResourceLoadError(
+    [{ data, error }],
+    "die Übersicht der Antworten",
+    () => mutate(),
+  );
+  const loadFailed = loadError.failure !== undefined;
   const { show: showError } = useApiErrorDisplay();
   const { success: toastSuccess } = useToast();
   const [busy, setBusy] = useState<"remind" | "pdf" | "csv" | null>(null);
   const [childFilter, setChildFilter] = useState<ChildFilter>("all");
-  // „Wiederholen“ ruft Laden bzw. die Aktion mit dem dann aktuellen Stand auf.
-  const latestLoadRef = useRef<() => void>(() => undefined);
+  // „Wiederholen“ ruft die Aktion mit dem dann aktuellen Stand auf.
   const latestRemindRef = useRef<() => void>(() => undefined);
   const latestDownloadRef = useRef<(format: "pdf" | "csv") => void>(
     () => undefined,
   );
 
-  // Rejects on failure: after a reminder the caller shows it as a reload of
-  // a saved change (#6652).
-  const readStatus = useCallback(async () => {
-    const request = ++latestRequest.current;
-    try {
-      const next = await withApiBase(
-        fetchDeclarationStatus,
-        announcementId,
-        apiBase,
-      );
-      if (request !== latestRequest.current) return;
-      setStatus(next);
-      setLoadFailed(false);
-      clearLoadError();
-    } catch (error) {
-      if (request !== latestRequest.current) return;
-      throw error;
-    }
-  }, [announcementId, apiBase, clearLoadError]);
-  // Never rejects: a failed load shows its error in place.
-  const load = useCallback(async () => {
-    const request = latestRequest.current + 1;
-    try {
-      await readStatus();
-    } catch (error) {
-      if (request !== latestRequest.current) return;
-      logger.error("declaration_status_load_failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      setLoadFailed(true);
-      void showLoadError(error, {
-        object: "die Übersicht der Antworten",
-        retry: () => latestLoadRef.current(),
-      });
-    }
-  }, [readStatus, showLoadError]);
+  // Rejects on failure: after an action the caller shows it as a reload of a
+  // saved change (#6652). A mutation drops an answer to a request that
+  // started before it.
+  const readStatus = useCallback(
+    () =>
+      mutate(withApiBase(fetchDeclarationStatus, announcementId, apiBase), {
+        revalidate: false,
+      }),
+    [announcementId, apiBase, mutate],
+  );
   const afterRemind = useRefreshAfterWrite(
     "die Anzeige der Antworten",
     readStatus,
   );
-  useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
-  });
-
-  const invalidateRequest = useCallback(() => {
-    latestRequest.current++;
-  }, []);
-  useEffect(() => {
-    void load();
-    return invalidateRequest;
-  }, [load, invalidateRequest]);
-
   const children = useMemo(() => {
     const all = sortDeclarationChildren(status?.children ?? []);
     // "Nur offene" means what the reminder reaches: open or partly done.
@@ -378,7 +336,6 @@ export function DeclarationStatusPanel({
       {/* Ein Neuladen ist gescheitert: der alte Stand bleibt sichtbar, der
           Fehler steht darüber. Nach einer Erinnerung sagt er, dass sie
           gesendet ist (#6652). */}
-      <LoadErrorAlert error={loadFailed ? loadError.error : null} />
       <LoadErrorAlert error={afterRemind.error} className="mb-4" />
 
       <section>

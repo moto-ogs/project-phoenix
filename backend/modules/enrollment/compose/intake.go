@@ -44,7 +44,7 @@ type Intake = application.Intake
 
 // NewIntake composes the intake in the tenant runtime.
 func NewIntake(deps IntakeDependencies) *Intake {
-	deps.Runtime, deps.FamilyChildren = tenantRuntime(), newStore()
+	deps.Runtime, deps.FamilyChildren = tenantRuntime(), newStore().WithClock(deps.Now)
 	return application.NewIntake(deps)
 }
 

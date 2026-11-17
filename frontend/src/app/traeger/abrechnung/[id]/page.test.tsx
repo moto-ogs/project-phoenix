@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { BillingRunDetail } from "~/lib/traeger-billing-api";
 import { catalogText } from "~/test/error-catalog-text";
@@ -36,9 +36,17 @@ const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 const { session } = vi.hoisted(() => ({
   session: { permissions: [] as string[] },
 }));
-vi.mock("next-auth/react", () => ({
+vi.mock("next-auth/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-auth/react")>()),
   useSession: () => ({
-    data: { user: { permissions: session.permissions } },
+    data: {
+      user: {
+        id: "traeger-test",
+        scope: "org",
+        orgId: 7,
+        permissions: session.permissions,
+      },
+    },
     status: "authenticated",
   }),
 }));
@@ -82,6 +90,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 import TraegerBillingRunPage from "./page";
+
+vi.unmock("swr");
 
 const PREVIEW: BillingRunDetail = {
   id: "9",
@@ -216,9 +226,9 @@ const CORRECTED: BillingRunDetail = {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerBillingRunPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

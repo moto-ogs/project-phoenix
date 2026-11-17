@@ -6,13 +6,15 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { SettingsSchema } from "~/lib/settings-api";
 import type {
   PayrollReport,
   TimeReport,
 } from "~/lib/traeger-staff-exports-api";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchPayrollReport: vi.fn(),
@@ -129,9 +131,9 @@ function payrollSchema(values: Record<string, string>): SettingsSchema {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerPayrollExportPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -242,7 +244,11 @@ describe("TraegerPayrollExportPage", () => {
       await screen.findByRole("button", { name: "Vorheriger Monat" }),
     );
     await waitFor(() =>
-      expect(api.fetchPayrollReport).toHaveBeenLastCalledWith(2026, 7, "datev_lodas"),
+      expect(api.fetchPayrollReport).toHaveBeenLastCalledWith(
+        2026,
+        7,
+        "datev_lodas",
+      ),
     );
     await waitFor(() => expect(screen.getByText("7")).toBeInTheDocument());
     answerAugust({ ...NOT_READY, contracts: 3 });
@@ -270,9 +276,7 @@ describe("TraegerPayrollExportPage", () => {
     await waitFor(() => expect(api.downloadPayrollFile).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: "Vorheriger Monat" }));
     await waitFor(() => expect(screen.getByText("7")).toBeInTheDocument());
-    failDownload(
-      new ApiError("down", 503, { code: "general.unavailable" }),
-    );
+    failDownload(new ApiError("down", 503, { code: "general.unavailable" }));
     await waitFor(() =>
       expect(api.fetchPayrollReport).toHaveBeenCalledTimes(3),
     );
@@ -335,9 +339,7 @@ describe("TraegerPayrollExportPage", () => {
     fireEvent.click(retry);
     await waitFor(() => expect(api.fetchTimeReport).toHaveBeenCalledTimes(2));
     await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: "Wiederholen" }),
-      ).toBeNull(),
+      expect(screen.queryByRole("button", { name: "Wiederholen" })).toBeNull(),
     );
     expect(
       await screen.findByRole("button", { name: /CSV herunterladen/ }),

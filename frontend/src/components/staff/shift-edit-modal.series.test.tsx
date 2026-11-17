@@ -1,5 +1,14 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as renderUi,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { ApiError } from "~/lib/api-error";
 import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
@@ -7,6 +16,28 @@ import { catalogText } from "~/test/error-catalog-text";
 import { ShiftEditModal } from "./shift-edit-modal";
 import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
 import type { StaffShift } from "~/lib/shift-helpers";
+
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1" }, expires: "2099-01-01" },
+  }),
+}));
+
+// Real SWR with a fresh cache per render: the modal reads calendar periods
+// and the series rule through the shared cache.
+function FreshCache({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderUi(ui, { wrapper: FreshCache });
+}
 
 const createSeries = vi.fn();
 const splitSeries = vi.fn();
@@ -903,4 +934,50 @@ describe("ShiftEditModal error display", () => {
     );
     expect(splitSeries).not.toHaveBeenCalled();
   });
+});
+
+it("waits for a fresh series rule on reopening and saves its shortened end", async () => {
+  setTestClock("2026-09-01T10:00:00Z");
+  getSeries.mockResolvedValue({ ...seriesRule, validUntil: "2027-01-01" });
+  splitSeries.mockResolvedValue({
+    seriesId: "6",
+    created: 1,
+    skippedDates: [],
+  });
+  const props = {
+    mode: "edit" as const,
+    staffId: "7",
+    staffName: "Ada Lovelace",
+    date: "2026-09-07",
+    shift: seriesShift,
+    shiftTypes: [],
+    onClose: vi.fn(),
+    onSaved: vi.fn(),
+  };
+  const view = render(<ShiftEditModal {...props} isOpen />);
+  await openSeriesEditor();
+  view.rerender(<ShiftEditModal {...props} isOpen={false} />);
+  const fresh = deferred<typeof seriesRule>();
+  getSeries.mockReturnValue(fresh.promise);
+  view.rerender(<ShiftEditModal {...props} isOpen />);
+  expect(
+    screen.getByRole("button", { name: "Serie bearbeiten" }),
+  ).toBeDisabled();
+  await act(async () => fresh.reject(new ApiError("offline", 503)));
+  expect(
+    await screen.findByText(catalogText("general.unavailable", "die Serie")),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Serie bearbeiten" }),
+  ).toBeDisabled();
+  getSeries.mockResolvedValue({ ...seriesRule, validUntil: "2026-09-15" });
+  fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+  await openSeriesEditor();
+  fireEvent.click(screen.getByRole("button", { name: "Serie speichern" }));
+  await waitFor(() =>
+    expect(splitSeries).toHaveBeenCalledWith(
+      "5",
+      expect.objectContaining({ validUntil: "2026-09-15" }),
+    ),
+  );
 });

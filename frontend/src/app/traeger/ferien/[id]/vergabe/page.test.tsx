@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 import {
@@ -17,6 +17,7 @@ import {
 } from "~/test/fixtures/holiday-allocation";
 import { HOLIDAY_PERIOD } from "~/test/fixtures/holiday-registrations";
 
+vi.unmock("swr");
 const { fetchBoard, decide, period } = vi.hoisted(() => ({
   fetchBoard: vi.fn(),
   decide: vi.fn(),
@@ -72,9 +73,9 @@ const CRITERIA_PERIOD: HolidayPeriod = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <AllocationPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

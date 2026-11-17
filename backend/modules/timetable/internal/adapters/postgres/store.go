@@ -52,16 +52,28 @@ func (s *Store) currentTime() time.Time {
 	return s.now()
 }
 
-// CompletionTimestamp returns PostgreSQL's stable timestamp for the current
-// transaction, which is also the clock used by update triggers. It only
-// orders a completion against rows the database stamps (ADR 0281).
+// statementClock is the database's statement time. It stamps completed_at
+// and the plan rows Reopen orders against it (ADR 0281).
+const statementClock = "clock_timestamp()"
+
+// databaseDayCutoff is Berlin midnight of the database's day minus the bound
+// number of days, the cutoff of a window over a trigger-stamped column.
+const databaseDayCutoff = `(((` + statementClock + ` AT TIME ZONE 'Europe/Berlin')::date - ?::int)::timestamp AT TIME ZONE 'Europe/Berlin')`
+
+// CompletionTimestamp returns the database's clock at this statement, not at
+// the start of the transaction. The completion reads it after its own
+// writes, so those, and rows a trigger stamps with the transaction start,
+// stay before it, while an attendance correction that waited for the
+// completion's locks or follows in the same transaction stamps a later
+// clock_timestamp(). It only orders a completion against rows the database
+// stamps (ADR 0281).
 func (s *Store) CompletionTimestamp(ctx context.Context) (time.Time, error) {
 	db, _, err := s.database(ctx)
 	if err != nil {
 		return time.Time{}, err
 	}
 	var timestamp time.Time
-	err = db.NewRaw("SELECT transaction_timestamp()").Scan(ctx, &timestamp)
+	err = db.NewRaw("SELECT "+statementClock).Scan(ctx, &timestamp)
 	return timestamp, err
 }
 
@@ -69,8 +81,8 @@ type categoryRow struct {
 	bun.BaseModel `bun:"table:categories,alias:category"`
 	ID            int64      `bun:"id,pk,autoincrement"`
 	TenantID      int64      `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull"`
 	Name          string     `bun:"name,notnull"`
 	Description   string     `bun:"description"`
 	Color         string     `bun:"color"`
@@ -362,7 +374,7 @@ func listCappedEnrollments(ctx context.Context, db bun.IDB, tenantID int64, stud
 func capStudentEnrollments(ctx context.Context, db bun.IDB, tenantID int64, studentIDs []int64, validUntil string, stats *domain.OperationStats) error {
 	started := time.Now()
 	result, err := db.ExecContext(ctx, `UPDATE activities.student_enrollments AS enrollment
-		SET valid_until = ?::date, updated_at = NOW()
+		SET valid_until = ?::date
 		WHERE `+cappedEnrollmentPredicate, validUntil, tenantID, bun.List(studentIDs), validUntil, validUntil)
 	stats.Queries++
 	stats.StatementDuration += time.Since(started)
@@ -410,7 +422,7 @@ func (s *ProvenanceStore) RestoreStudentEnrollmentsForCareExit(ctx context.Conte
 func restoreCappedEnrollments(ctx context.Context, db bun.IDB, tenantID int64, studentIDs []int64, payload []byte, stats *domain.OperationStats) (int64, error) {
 	started := time.Now()
 	result, err := db.ExecContext(ctx, `UPDATE activities.student_enrollments AS enrollment
-		SET valid_until = NULLIF(removal.previous_valid_until, '')::date, updated_at = NOW()
+		SET valid_until = NULLIF(removal.previous_valid_until, '')::date
 		FROM jsonb_to_recordset(?::jsonb) AS removal(
 			tenant_id bigint, student_id bigint, enrollment_id bigint, was_deleted boolean,
 			previous_valid_until text, activity_group_id bigint, valid_from text,

@@ -51,7 +51,7 @@ import type { FormError } from "~/components/ui/form-error";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { ParentFamilyChildrenCard } from "~/components/parent/parent-family-children-card";
 import { SectionCard } from "~/components/ui/section-card";

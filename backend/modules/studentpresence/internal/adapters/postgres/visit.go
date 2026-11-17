@@ -118,6 +118,10 @@ func (s *Store) RecordVisit(ctx context.Context, row *studentpresence.Visit) (po
 	}
 	row.TenantID = tenantID
 	stored := visitRowFromRecord(row)
+	if stored.CreatedAt.IsZero() {
+		// The visit retention ages created_at on the owner's clock (ADR 0281).
+		stored.CreatedAt = s.now()
+	}
 	started := time.Now()
 	result, err := db.NewInsert().Model(stored).ModelTableExpr("active.visits").Exec(ctx)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}

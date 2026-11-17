@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { metadataLoadError } from "./metadata-load-error";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth, useSWRSeedFrom } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchHolidayPeriod,
   fetchHolidayPeriods,

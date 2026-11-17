@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/uptrace/bun"
@@ -20,7 +19,6 @@ type Retrieval struct {
 	store  retrievalStore
 	crypto organizationtenancy.DataReturnCrypto
 	root   string
-	now    func() time.Time
 	logger *slog.Logger
 	// recheckBytes is how much of the archive goes out between two checks
 	// that the grant is still neither revoked nor purged.
@@ -31,13 +29,14 @@ type Retrieval struct {
 // 8 MiB is cheap against the transfer itself.
 const recheckEvery = 8 << 20
 
-// NewRetrieval binds the retrieval to the application database, the store
-// and the clock that decides whether a grant is still usable.
-func NewRetrieval(db bun.IDB, crypto organizationtenancy.DataReturnCrypto, root string, now func() time.Time, logger *slog.Logger) *Retrieval {
+// NewRetrieval binds the retrieval to the application database and the
+// store. Whether a grant is still usable is decided on the database clock,
+// which bounded its expiry at issue (ADR 0274).
+func NewRetrieval(db bun.IDB, crypto organizationtenancy.DataReturnCrypto, root string, logger *slog.Logger) *Retrieval {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Retrieval{store: retrievalStore{db: db}, crypto: crypto, root: root, now: now, logger: logger, recheckBytes: recheckEvery}
+	return &Retrieval{store: retrievalStore{db: db}, crypto: crypto, root: root, logger: logger, recheckBytes: recheckEvery}
 }
 
 // Package answers what the token's package is, without spending a download.
@@ -57,7 +56,11 @@ func (s *Retrieval) usableGrant(ctx context.Context, token string) (grantRow, er
 	if err != nil {
 		return row, err
 	}
-	if !row.usable(s.now()) {
+	now, err := databaseNow(ctx, s.store.db)
+	if err != nil {
+		return row, err
+	}
+	if !row.usable(now) {
 		return row, organizationtenancy.ErrDataReturnDenied
 	}
 	return row, nil
@@ -83,7 +86,7 @@ func (s *Retrieval) Download(ctx context.Context, token string, start func(organ
 		return organizationtenancy.ErrDataReturnArchiveMissing
 	}
 	defer func() { _ = file.Close() }()
-	download, downloads, err := s.store.countDownload(ctx, row.ID, s.now())
+	download, downloads, err := s.store.countDownload(ctx, row.ID)
 	if err != nil {
 		return err
 	}
@@ -91,7 +94,7 @@ func (s *Retrieval) Download(ctx context.Context, token string, start func(organ
 	guard := &openGrant{ctx: ctx, store: s.store, id: row.ID, every: s.recheckBytes}
 	err = s.crypto.Decrypt(key, io.MultiWriter(guard, start(row.toPackage())), file)
 	completed := err == nil && guard.written == row.ArchiveBytes
-	if finishErr := s.store.finishDownload(context.WithoutCancel(ctx), download, s.now(), completed, guard.written); finishErr != nil {
+	if finishErr := s.store.finishDownload(context.WithoutCancel(ctx), download, completed, guard.written); finishErr != nil {
 		s.logger.ErrorContext(ctx, "data return download not recorded",
 			"grant_id", row.ID,
 			"error", finishErr,

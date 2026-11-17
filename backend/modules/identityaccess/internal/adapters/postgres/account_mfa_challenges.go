@@ -20,20 +20,20 @@ func (r *AccountMFARecords) CreateChallenge(ctx context.Context, challenge domai
 	if err != nil {
 		return domain.AccountMFAChallenge{}, err
 	}
-	var createdAt, updatedAt *time.Time
-	if !challenge.CreatedAt.IsZero() {
-		createdAt = &challenge.CreatedAt
-	}
-	if !challenge.UpdatedAt.IsZero() {
-		updatedAt = &challenge.UpdatedAt
+	// created_at is on the owner's clock: the send rate limit compares it
+	// with that clock. updated_at is the update trigger's, so the column
+	// default stamps it (ADR 0281).
+	createdAt := challenge.CreatedAt
+	if createdAt.IsZero() {
+		createdAt = r.store.now()
 	}
 	var row domain.AccountMFAChallenge
 	err = db.NewRaw(`INSERT INTO auth.mfa_email_challenges
- (account_id, scope, tenant_id, code_hash, expires_at, consumed_at, ip_address, created_at, updated_at, mfa_reset_generation)
- VALUES (?, ?, NULLIF(?, 0), ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), COALESCE(?, CURRENT_TIMESTAMP), (SELECT mfa_reset_generation FROM auth.accounts WHERE id = ?))
+ (account_id, scope, tenant_id, code_hash, expires_at, consumed_at, ip_address, created_at, mfa_reset_generation)
+ VALUES (?, ?, NULLIF(?, 0), ?, ?, ?, ?, ?, (SELECT mfa_reset_generation FROM auth.accounts WHERE id = ?))
  RETURNING `+accountMFAChallengeColumns,
 		challenge.AccountID, challenge.Scope, challenge.TenantID, challenge.CodeHash, challenge.ExpiresAt,
-		challenge.ConsumedAt, nullableMFAIPAddress(challenge.IPAddress), createdAt, updatedAt, challenge.AccountID).Scan(ctx, &row)
+		challenge.ConsumedAt, nullableMFAIPAddress(challenge.IPAddress), createdAt, challenge.AccountID).Scan(ctx, &row)
 	return row, err
 }
 

@@ -25,7 +25,7 @@ func TestLetterChildStatuses_DerivesFulfilmentFromAcknowledgement(t *testing.T) 
 	ctx := tenantCtx(t)
 
 	letter := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Elternbrief", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetSchoolAll},
@@ -76,7 +76,7 @@ func TestLetterChildStatuses_TenantIsolation(t *testing.T) {
 	ctx := tenantCtx(t)
 
 	letter := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Elternbrief", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetSchoolAll},
@@ -108,7 +108,7 @@ func TestResolveDeliveryRecipients_IncludesGuardiansWithoutPortalAccess(t *testi
 	ctx := tenantCtx(t)
 
 	letter := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Elternbrief", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetSchoolAll},
@@ -159,7 +159,7 @@ func TestLetterChildStatuses_KeepsChildrenNobodyCanConfirmFor(t *testing.T) {
 	ctx := tenantCtx(t)
 
 	letter := api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		"Elternbrief", api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetSchoolAll},

@@ -75,7 +75,7 @@ func BuildEnrollmentPhases(
 		Records: enrollment.Bookings, Offerings: enrollmentPhaseOfferings{carePlan: carePlan}, Calendar: calendar,
 		LockTemplateRecurrence: owner.RecurrenceLock.LockRecurrenceWrites, ValidateCareOfferingPhaseChange: careOfferingPhaseGuard(offerings.Catalog),
 		Resyncer: offerings.Bookings, Students: NewEnrollmentPhaseStudents(pendingWindows),
-		Bookings: NewEnrollmentPhaseBookings(carePlanCompose.NewOfferingBookings()), Settings: EnrollmentCollectionSettings{Settings: settings},
+		Bookings: NewEnrollmentPhaseBookings(carePlanCompose.NewOfferingBookings(env.Now)), Settings: EnrollmentCollectionSettings{Settings: settings},
 		CareStudents: NewEnrollmentPhaseCareStudents(persons),
 		Roster:       phaseResponseRoster{query: persons}, CareExits: phaseResponseCareExits{query: carePlan},
 		PortalAccounts: persons, Logger: env.Logger.With("service", "enrollment-phase"), Now: env.Now,

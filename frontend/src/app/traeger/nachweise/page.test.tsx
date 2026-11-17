@@ -1,11 +1,12 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   SchoolProofKinds,
   StaffProofList,
 } from "~/lib/traeger-staff-proofs-api";
 
+vi.unmock("swr");
 const { api, download } = vi.hoisted(() => ({
   api: {
     fetchStaffProofList: vi.fn(),
@@ -104,9 +105,9 @@ const SCHOOLS: SchoolProofKinds[] = [
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerStaffProofsPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
