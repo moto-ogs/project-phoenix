@@ -99,19 +99,29 @@ describe("StudentRow", () => {
     expect(screen.queryByText("Andere Abholzeit")).not.toBeInTheDocument();
   });
 
-  it("zeigt ein Kind ohne OGS-Platz als Keine Betreuung, eine Krankmeldung aber als Status (#4803)", () => {
-    const { unmount } = renderRow({
-      without_care_place: true,
-      stays_today: false,
-      pickup_changed: true,
-    });
-    expect(screen.getByText("Keine Betreuung")).toBeInTheDocument();
-    expect(screen.queryByText("Andere Abholzeit")).not.toBeInTheDocument();
-    unmount();
+  it("zeigt ohne Betreuungsplatz weiterhin Tagesstatus und Vormittagsanwesenheit", () => {
+    render(
+      <ul>
+        <StudentRow
+          row={row({
+            without_care_place: true,
+            registered: false,
+            stays_today: false,
+            offerings: [],
+            status: "sick",
+            morning_attendance: { status: "absent", source: "report" },
+          })}
+          enrollmentKnown
+          now={NOW}
+          morning={{ draft: {} }}
+        />
+      </ul>,
+    );
 
-    renderRow({ without_care_place: true, stays_today: false, status: "sick" });
+    expect(screen.getByText("Keine Betreuung")).toBeInTheDocument();
     expect(screen.getByText("Krank")).toBeInTheDocument();
-    expect(screen.queryByText("Keine Betreuung")).not.toBeInTheDocument();
+    expect(screen.getByText("Vormittag: Fehlt")).toBeInTheDocument();
+    expect(screen.queryByText("keine OGS-Anmeldung")).not.toBeInTheDocument();
   });
 
   it("bleibt reine Anzeige ohne Bedienelemente", () => {

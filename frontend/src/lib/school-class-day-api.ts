@@ -86,7 +86,6 @@ export interface SchoolDayChild {
   student_id?: string;
   list_entry?: boolean;
   list_entry_id?: string;
-  /** Kind ohne OGS-Platz (#4803), mit student_id. */
   without_care_place?: boolean;
   first_name: string;
   last_name: string;
