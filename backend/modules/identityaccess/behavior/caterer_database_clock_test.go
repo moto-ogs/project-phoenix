@@ -49,6 +49,11 @@ func assertCatererInvitationOnTheDatabaseClock(t *testing.T, offset time.Duratio
 	require.NoError(t, db.NewRaw(`SELECT expires_at FROM auth.caterer_invitations WHERE tenant_id = ? AND lower(email) = lower(?)`, school, email).
 		Scan(context.Background(), &expiresAt))
 	assert.WithinDuration(t, databaseNow.Add(14*24*time.Hour), expiresAt, time.Minute, "the lifetime counts from the database clock")
+	var expiryDays int
+	require.NoError(t, db.NewRaw(`SELECT (payload->>'expiry_days')::int FROM platform.email_outbox
+		WHERE tenant_id = ? AND kind = 'caterer_invitation' AND payload->>'recipient_email' = ?`, school, email).
+		Scan(context.Background(), &expiryDays))
+	assert.Equal(t, 14, expiryDays, "the mail states the lifetime counted on the database clock")
 
 	require.NoError(t, inSchool(t, db, school, func(ctx context.Context) error {
 		invitations, err := caterers.ListCatererInvitations(ctx)

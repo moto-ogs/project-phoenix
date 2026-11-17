@@ -15,7 +15,12 @@ import (
 type previewCatererStore struct {
 	ports.CatererStore
 	invitation   domain.CatererInvitation
+	databaseNow  time.Time
 	accountReads int
+}
+
+func (s *previewCatererStore) DatabaseTime(context.Context) (time.Time, domain.OperationStats, error) {
+	return s.databaseNow, domain.OperationStats{}, nil
 }
 
 func (s *previewCatererStore) FindCatererInvitationByTokenHash(context.Context, string) (domain.CatererInvitation, bool, domain.OperationStats, error) {
@@ -33,7 +38,7 @@ func TestCatererPreviewPropagatesSchoolLookupFailure(t *testing.T) {
 	lookupErr := errors.New("school directory unavailable")
 	f.schools.findErr = lookupErr
 	now := time.Now()
-	store := &previewCatererStore{invitation: domain.CatererInvitation{TenantID: 10, Email: "kitchen@example.com", ExpiresAt: now.Add(time.Hour), ReadAt: now}}
+	store := &previewCatererStore{invitation: domain.CatererInvitation{TenantID: 10, Email: "kitchen@example.com", ExpiresAt: now.Add(time.Hour)}, databaseNow: now}
 	caterers := &CatererAccess{store: store, schools: f.schools, runtime: f.runtime, now: func() time.Time { return now }}
 	err := f.runtime.WithTenantTx(context.Background(), 10, func(ctx context.Context) error {
 		preview, err := caterers.preview(ctx, "token")

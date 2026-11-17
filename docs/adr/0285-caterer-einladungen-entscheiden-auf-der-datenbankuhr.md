@@ -38,10 +38,24 @@ Einladung länger offen, als Go sie zeigte.
    - Einladen und Zurücknehmen lesen sie mit `DatabaseTime`. Aus ihr
      entstehen `expires_at` (14 Tage), die Prüfung der offenen Einladungen
      und `revoked_at`.
-   - Liste und Einladungslink lesen sie in derselben Abfrage wie die
-     Einladung (`read_at`). Daran messen Vorschau und Annahme den Ablauf; die
-     Annahme stempelt `accepted_at` mit diesem Zeitpunkt. So bleibt die Liste
-     bei einer Abfrage.
+   - Die Liste liest sie in derselben Abfrage wie die Einladungen
+     (`read_at`). So bleibt sie bei einer Abfrage.
+   - Vorschau und Annahme sperren die Einladung mit `FOR UPDATE` und lesen
+     die Zeit danach mit `DatabaseTime`. Die Zeit der sperrenden Abfrage
+     selbst läge vor dem Warten auf eine andere Vorschau oder Annahme; eine
+     Einladung, die währenddessen abläuft, gälte sonst noch als offen.
+   - Die Schreibvorgänge der Annahme prüfen den Ablauf noch einmal zu ihrer
+     eigenen Zeit: Das `UPDATE`, das `accepted_at` stempelt, trägt
+     `expires_at > statement_timestamp()`, und `auth.create_invited_caterer`
+     wird nur für eine bis dahin nicht abgelaufene Einladung aufgerufen, zur
+     selben Zeit, die die Funktion prüft. Beides antwortet
+     `ErrInvitationExpired`; die übrigen Wächter der Funktion antworten
+     weiter mit SQLSTATE 42501.
+   - Die Mail nennt die Gültigkeit in Tagen, wie sie auf der Datenbankuhr
+     ausgestellt wurde: Identity & Access übergibt der Zustellung den Ablauf
+     auf der Uhr der Komposition (ihre Zeit plus die Laufzeit ab der
+     Datenbankzeit der Einladung), und die Zustellung zählt auf derselben
+     Uhr. Der Port der Zustellung bleibt unverändert.
    - Die Aufbewahrung liest sie einmal je Lauf und zählt die 30 Tage davon
      zurück.
 3. Die öffentliche `CatererInvitation` trägt `Expired`, auf der
@@ -56,11 +70,15 @@ Einladung länger offen, als Go sie zeigte.
 ## Folgen
 
 - `moduleSQLClockBudget["modules/identityaccess"]` steigt von 4 auf 5: die
-  Konstante `databaseClock`. Ihre Verwendungen in `read_at` und
-  `DatabaseTime` zählen nicht noch einmal.
+  Konstante `databaseClock`. Ihre Verwendungen in `read_at`, `DatabaseTime`
+  und den Wächtern der Annahme zählen nicht noch einmal.
 - `TestCatererInvitationDecidesOnTheDatabaseClockWithGoAhead` und
   `…WithGoBehind` halten Einladung, Liste, Vorschau und Annahme mit einer
-  Go-Uhr einen Monat vor und zurück.
+  Go-Uhr einen Monat vor und zurück, samt der Gültigkeit in der Mail.
+  `TestCatererInvitationExpiredDuringTheLockWaitIsRefused` lässt eine
+  Einladung ablaufen, während eine andere Transaktion sie sperrt;
+  `TestCatererInvitationWritesRefuseAnInvitationExpiredAtTheirOwnTime` hält
+  die Wächter der Schreibvorgänge.
 - Noch offen: `auth.account_is_unused` prüft auch Einladungen für
   Mitarbeitende (`auth.invitation_tokens`) und Eltern
   (`auth.guardian_invitations`) gegen `statement_timestamp()`, deren Ablauf

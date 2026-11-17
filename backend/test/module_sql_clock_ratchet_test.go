@@ -111,7 +111,8 @@ var moduleSQLClockBudget = map[string]int{
 	// auth.create_invited_caterer accepts only while expires_at >
 	// statement_timestamp(), so expiry, the open checks, preview,
 	// acceptance, accepted_at, revoked_at and their retention read that clock
-	// once per operation.
+	// once per operation, the locked link after its lock wait, and the
+	// acceptance's writes check the expiry again at their own time.
 	"modules/identityaccess": 5,
 	// Named exceptions on the database clock (ADR 0281): deleted_at of
 	// platform.schools (4), which the demo retirement functions stamp with

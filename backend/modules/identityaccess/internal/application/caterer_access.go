@@ -99,7 +99,13 @@ func (c *CatererAccess) CreateCatererInvitation(ctx context.Context, input ident
 	ctx = c.attach(ctx)
 	invitation, token, err := c.createInvitation(ctx, domain.CatererInvitationRequest(input))
 	if err == nil {
-		err = c.delivery.EnqueueCatererInvitation(ctx, invitation.ID, invitation.TenantID, invitation.Email, invitation.CatererName, token, invitation.ExpiresAt)
+		// The delivery counts the mail's days on the composition's clock,
+		// which the root binds for Identity & Access as well; the expiry
+		// moves onto that clock with the lifetime counted on the database
+		// clock (ADR 0285), so the mail states the days the invitation was
+		// issued for, however far the clocks are apart.
+		mailExpiry := c.now().Add(invitation.ExpiresAt.Sub(invitation.ReadAt))
+		err = c.delivery.EnqueueCatererInvitation(ctx, invitation.ID, invitation.TenantID, invitation.Email, invitation.CatererName, token, mailExpiry)
 	}
 	if err != nil {
 		return identityaccess.CatererInvitation{}, catererError(failed("create caterer invitation", err))
@@ -347,12 +353,15 @@ func (c *CatererAccess) accept(ctx context.Context, token string, registration d
 	if err != nil {
 		return domain.CatererAcceptance{}, err
 	}
-	accepted, _, err := c.store.AcceptCatererInvitation(ctx, invitation.ID, accountID, invitation.ReadAt)
+	// The write checks the expiry again at its own database time. The row
+	// lock held since redeemable keeps acceptance and revocation out, so a
+	// write that spends nothing found the invitation expired.
+	accepted, _, err := c.store.AcceptCatererInvitation(ctx, invitation.ID, accountID)
 	switch {
 	case err != nil:
 		return domain.CatererAcceptance{}, err
 	case !accepted:
-		return domain.CatererAcceptance{}, domain.ErrInvitationUsed
+		return domain.CatererAcceptance{}, domain.ErrInvitationExpired
 	}
 	// The supply starts with the acceptance; a school has one running
 	// supply (uq_caterer_school_active).
@@ -440,9 +449,10 @@ func (c *CatererAccess) auditRefusedAcceptance(ctx context.Context, accountID in
 	return nil
 }
 
-// redeemable resolves the school's invitation by its token and says why it
-// cannot be accepted otherwise, judged at the database time of the read
-// (ADR 0285).
+// redeemable locks the school's invitation by its token and says why it
+// cannot be accepted otherwise, judged at the database time read once the
+// lock is held (ADR 0285): the locking statement's own time lies before a
+// wait for another preview or acceptance.
 func (c *CatererAccess) redeemable(ctx context.Context, token string) (domain.CatererInvitation, error) {
 	if strings.TrimSpace(token) == "" {
 		return domain.CatererInvitation{}, domain.ErrInvitationNotFound
@@ -453,6 +463,9 @@ func (c *CatererAccess) redeemable(ctx context.Context, token string) (domain.Ca
 		return domain.CatererInvitation{}, err
 	case !found:
 		return domain.CatererInvitation{}, domain.ErrInvitationNotFound
+	}
+	if invitation.ReadAt, _, err = c.store.DatabaseTime(ctx); err != nil {
+		return domain.CatererInvitation{}, err
 	}
 	return invitation, invitation.Redeemable(invitation.ReadAt)
 }
