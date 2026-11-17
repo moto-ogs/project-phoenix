@@ -28,11 +28,23 @@ import (
 // years of the master data log.
 const traegerDocumentReadRetention = "3 years"
 
-// TraegerDocumentStore persists the shared documents.
-type TraegerDocumentStore struct{}
+// TraegerDocumentStore persists the shared documents. now is the owner's
+// clock for the revocation and deletion stamps (ADR 0281); the reads keep
+// the database clock of the school functions that record and prune them.
+type TraegerDocumentStore struct{ now func() time.Time }
 
-// NewTraegerDocumentStore builds the store.
-func NewTraegerDocumentStore() *TraegerDocumentStore { return &TraegerDocumentStore{} }
+// NewTraegerDocumentStore builds the store; a store without a clock revokes
+// and deletes nothing.
+func NewTraegerDocumentStore(now func() time.Time) *TraegerDocumentStore {
+	return &TraegerDocumentStore{now: now}
+}
+
+func (s *TraegerDocumentStore) stamp() (time.Time, error) {
+	if s.now == nil {
+		return time.Time{}, errors.New("organization tenancy postgres: the Träger document store needs the owner's clock to write")
+	}
+	return s.now(), nil
+}
 
 // schoolDB returns the tenant transaction of schoolID. Any other
 // transaction is refused.
@@ -248,10 +260,14 @@ func (s *TraegerDocumentStore) RevokeRelease(ctx context.Context, organizationID
 	if err != nil {
 		return false, err
 	}
+	at, err := s.stamp()
+	if err != nil {
+		return false, err
+	}
 	result, err := db.ExecContext(ctx, `
-		UPDATE platform.traeger_document_releases SET revoked_at = CURRENT_TIMESTAMP, revoked_by = ?
+		UPDATE platform.traeger_document_releases SET revoked_at = ?, revoked_by = ?
 		WHERE organization_id = ? AND document_id = ? AND id = ? AND revoked_at IS NULL`,
-		traegerActor(accountID), organizationID, documentID, releaseID)
+		at, traegerActor(accountID), organizationID, documentID, releaseID)
 	if err != nil {
 		return false, fmt.Errorf("organization tenancy postgres: revoke Träger document release: %w", err)
 	}
@@ -272,6 +288,10 @@ func (s *TraegerDocumentStore) DeleteDocument(ctx context.Context, organizationI
 	if err != nil {
 		return false, err
 	}
+	at, err := s.stamp()
+	if err != nil {
+		return false, err
+	}
 	var locked []int64
 	if err := db.NewRaw(`SELECT id FROM platform.traeger_documents
 		WHERE organization_id = ? AND id = ? AND deleted_at IS NULL FOR UPDATE`,
@@ -283,15 +303,15 @@ func (s *TraegerDocumentStore) DeleteDocument(ctx context.Context, organizationI
 	}
 	actor := traegerActor(accountID)
 	if _, err := db.ExecContext(ctx, `
-		UPDATE platform.traeger_document_releases SET revoked_at = CURRENT_TIMESTAMP, revoked_by = ?
+		UPDATE platform.traeger_document_releases SET revoked_at = ?, revoked_by = ?
 		WHERE organization_id = ? AND document_id = ? AND revoked_at IS NULL`,
-		actor, organizationID, documentID); err != nil {
+		at, actor, organizationID, documentID); err != nil {
 		return false, fmt.Errorf("organization tenancy postgres: revoke releases of a deleted Träger document: %w", err)
 	}
 	if _, err := db.ExecContext(ctx, `
-		UPDATE platform.traeger_documents SET content = NULL, deleted_at = CURRENT_TIMESTAMP, deleted_by = ?
+		UPDATE platform.traeger_documents SET content = NULL, deleted_at = ?, deleted_by = ?
 		WHERE organization_id = ? AND id = ? AND deleted_at IS NULL`,
-		actor, organizationID, documentID); err != nil {
+		at, actor, organizationID, documentID); err != nil {
 		return false, fmt.Errorf("organization tenancy postgres: delete Träger document: %w", err)
 	}
 	return true, nil

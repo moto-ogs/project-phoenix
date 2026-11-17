@@ -99,7 +99,7 @@ func mountParentBillingRoutes(root, publicLink chi.Router, organizations Holiday
 	root.Mount("/traeger/sepa-debits", newSEPADebitResource(debits).Router(ProtectedTraegerRoutes))
 	root.Mount("/traeger/datev-export", datev.Router(ProtectedTraegerRoutes))
 	root.Mount("/traeger/finance-exports", NewFinanceExportHTTP(financeExports, bookingAccounts).Router(ProtectedTraegerRoutes))
-	transfers := NewTraegerExportTransfers(bankData, logger)
+	transfers := NewTraegerExportTransfers(bankData, now, logger)
 	root.Mount("/traeger/finance-handovers", NewExportHandoverHTTP(financeExports, debits, transfers).Router(ProtectedTraegerRoutes))
 	root.Mount("/traeger/export-recipient", NewExportRecipientHTTP(transfers).Router(ProtectedTraegerRoutes))
 }

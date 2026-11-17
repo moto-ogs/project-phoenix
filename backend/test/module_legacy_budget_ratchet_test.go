@@ -348,7 +348,7 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0276: the time import of the sick note retention clock in
 // modules/workforce/compose (+1) and the clock field of the staff offboarding
 // with its time import in workflows/staffoffboarding/compose (+2).
-const moduleComposeBudgetTotal = 13656
+const moduleComposeBudgetTotal = 13652
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -434,7 +434,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0265: +7, the clock fields of the owner, its phases and deletions.
 	"modules/enrollment/compose": 646,
 	// ADR 0218: the Träger scope and the recipient rekey (+33).
-	"modules/exporttransfer/compose": 182,
+	"modules/exporttransfer/compose": 180,
 	// ADR 0241: the rooms of the utilization (+13).
 	"modules/facilities/compose":                   197,
 	"modules/facilities/compose/repositoryadapter": 11,
@@ -461,7 +461,7 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0203: the data return retrieval and release constructors (+18).
 	// ADR 0246: the report templates and their projection read (+5).
 	// ADR 0268: the clock fields and their imports (+10).
-	"modules/organizationtenancy/compose": 389,
+	"modules/organizationtenancy/compose": 387,
 	// Added by ADR 0115: the Elternabrechnung's construction only.
 	// Raised by ADR 0119: the billing run constructor (+7).
 	// Raised by ADR 0121: the confirmation letter constructor (+8).

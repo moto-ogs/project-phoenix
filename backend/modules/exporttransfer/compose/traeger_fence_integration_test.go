@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,7 +42,7 @@ func (f traegerFixture) intent(t *testing.T) int64 {
 	var id int64
 	require.NoError(t, tenant.WithinTraeger(f.ctx, f.org, func(ctx context.Context) error {
 		var err error
-		id, err = traegerStore().Begin(ctx, domain.TraegerJournalEntry{OrganizationID: f.org, RecipientID: recipientID, RecipientName: recipient.Name,
+		id, err = traegerStore(nil).Begin(ctx, domain.TraegerJournalEntry{OrganizationID: f.org, RecipientID: recipientID, RecipientName: recipient.Name,
 			Kind:   exporttransfer.KindParentBillingFinance,
 			Format: "sollstellung", Filename: "zaun.csv", TargetHost: "kaemmerei.example.org", TargetPort: 22, TargetDirectory: "/eingang",
 			Reason: domain.ReasonInternal})
@@ -54,7 +55,7 @@ func (f traegerFixture) claim(org, id int64) (string, error) {
 	var token string
 	err := tenant.WithinTraeger(f.ctx, org, func(ctx context.Context) error {
 		var err error
-		token, err = traegerStore().Claim(ctx, org, id)
+		token, err = traegerStore(nil).Claim(ctx, org, id)
 		return err
 	})
 	return token, err
@@ -62,7 +63,7 @@ func (f traegerFixture) claim(org, id int64) (string, error) {
 
 func (f traegerFixture) complete(org, id int64, token string) error {
 	return tenant.WithinTraeger(f.ctx, org, func(ctx context.Context) error {
-		return traegerStore().Complete(ctx, org, id, token, true, "")
+		return traegerStore(nil).Complete(ctx, org, id, token, true, "")
 	})
 }
 
@@ -196,7 +197,7 @@ func TestTraegerHandoverLogsNoPasswordAnEchoingCounterpartReturns(t *testing.T) 
 	f := newTraegerFixture(t, nil)
 	f.server = sftptest.StartEchoing(t)
 	var logs bytes.Buffer
-	transfers, err := NewTraegerTransfers(contextCipher{}, slog.New(slog.NewTextHandler(&logs, nil)),
+	transfers, err := NewTraegerTransfers(contextCipher{}, time.Now, slog.New(slog.NewTextHandler(&logs, nil)),
 		sftp.WithAddressPolicy(sftptest.AllowLoopbackPolicy{}))
 	require.NoError(t, err)
 	recipient, err := transfers.CreateRecipient(f.ctx, f.org, 0, f.readyInput())
