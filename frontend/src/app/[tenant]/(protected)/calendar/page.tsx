@@ -1060,7 +1060,7 @@ function StaffCalendarPageInner() {
         ) : undefined
       }
       searchSlot={
-        onCalendarTab ? (
+        onCalendarTab && !noOwnStaff ? (
           <PersonalCalendarChrome
             events={calendarEvents}
             referenceDate={referenceDate}

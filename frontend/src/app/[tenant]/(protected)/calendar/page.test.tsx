@@ -396,6 +396,10 @@ describe("StaffCalendarPage", () => {
       expect(
         screen.queryByRole("button", { name: /Neuer Termin/ }),
       ).not.toBeInTheDocument();
+      // Ohne eigene Termine gibt es keinen Zeitraum zum Blättern.
+      expect(
+        screen.queryByRole("button", { name: "Woche" }),
+      ).not.toBeInTheDocument();
     });
 
     it("shows the hint instead of a permission error when the server refuses", () => {
