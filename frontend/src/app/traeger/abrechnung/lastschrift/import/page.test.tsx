@@ -132,10 +132,12 @@ async function choose(result = preview, beside: ReactNode = null) {
       files: [new File(["Referenz;IBAN"], "mandate.csv", { type: "text/csv" })],
     },
   });
-  await screen.findByRole("heading", {
+  const heading = await screen.findByRole("heading", {
     name:
       result.unmapped.length > 0 ? "Spalten zuordnen" : "Prüfen und übernehmen",
   });
+  // Finish the new step's focus handover before interacting with its fields.
+  await waitFor(() => expect(heading).toHaveFocus());
 }
 
 function importButton() {

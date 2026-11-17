@@ -1,4 +1,12 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { startTransition, Suspense, useState } from "react";
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The contract on the real SWR: what a second opening shows.
@@ -33,6 +41,45 @@ beforeEach(() => {
 });
 
 describe("useFreshSWR", () => {
+  it("keeps the committed reader usable when another opening suspends", async () => {
+    const blocked = deferred<void>();
+    const fetcher = vi.fn(async () => "confirmed");
+    function Reader({ resourceKey }: Readonly<{ resourceKey: string }>) {
+      const read = useFreshSWR(resourceKey, fetcher);
+      if (resourceKey === "fresh-suspended-b") throw blocked.promise;
+      return (
+        <>
+          <p>{read.data ?? "Loading"}</p>
+          <button onClick={() => void read.mutate()}>Reload</button>
+        </>
+      );
+    }
+    function Surface() {
+      const [resourceKey, setResourceKey] = useState("fresh-suspended-a");
+      return (
+        <>
+          <button
+            onClick={() =>
+              startTransition(() => setResourceKey("fresh-suspended-b"))
+            }
+          >
+            Open next
+          </button>
+          <Suspense fallback={<p>Opening next</p>}>
+            <Reader resourceKey={resourceKey} />
+          </Suspense>
+        </>
+      );
+    }
+    render(<Surface />);
+    await screen.findByText("confirmed");
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Open next" }));
+    expect(screen.getByText("confirmed")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reload" }));
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+  });
+
   it("hides the answer of an earlier opening until this one has its own", async () => {
     const answers = [deferred<string>(), deferred<string>()];
     const fetcher = vi.fn(

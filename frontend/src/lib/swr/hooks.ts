@@ -572,9 +572,13 @@ export function useFreshSWR<T, E = Error>(
   if (!sameOpening) {
     setOpeningKey(opening);
     setFlightKey(null);
+  }
+  // Reset only committed openings, before SWR's own layout effects can read.
+  // An abandoned render must not pause the still-visible opening's requests.
+  useLayoutEffect(() => {
     requestReady.current = false;
     requestOwner.current = null;
-  }
+  }, [opening]);
   const read = useScopedSWR<T, E>(
     key,
     fetcher,

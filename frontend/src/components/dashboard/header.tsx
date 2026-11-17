@@ -5,6 +5,7 @@
 import { AT_LEAST_LG } from "~/lib/hooks/use-media-query";
 import { useState, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -12,7 +13,6 @@ import { LogoutModal } from "~/components/auth/logout-modal";
 import { AnchoredPopover } from "~/components/ui/anchored-popover";
 import { useSidebarCollapsed } from "~/lib/hooks/use-sidebar-collapsed";
 import { BrandTenantSwitcher } from "~/components/tenant/tenant-switcher";
-import { StaffPreviewModal } from "~/components/staff-preview/staff-preview-modal";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { useBreadcrumb } from "~/lib/breadcrumb-context";
 import { type SidebarMemory, useSidebarMemory } from "~/lib/sidebar-memory";
@@ -71,6 +71,13 @@ import {
   getPageTypeInfo,
   getSectionBreadcrumb,
 } from "./header/breadcrumb-utils";
+
+// Only a staff member who opens the preview needs its form and API client.
+const StaffPreviewModal = dynamic(() =>
+  import("~/components/staff-preview/staff-preview-modal").then(
+    (module) => module.StaffPreviewModal,
+  ),
+);
 
 // Nur oberhalb von lg existiert die Desktop-Seitenleiste; darunter zeigt
 // die App die mobile Bottom-Nav und der Shortcut hätte nichts zu schalten.
@@ -606,7 +613,7 @@ export function Header({ notificationBell }: HeaderProps = {}) {
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
       />
-      {mode === "teacher" && canStartStaffPreview && (
+      {mode === "teacher" && canStartStaffPreview && isPreviewModalOpen && (
         <StaffPreviewModal
           isOpen={isPreviewModalOpen}
           onClose={() => setIsPreviewModalOpen(false)}
