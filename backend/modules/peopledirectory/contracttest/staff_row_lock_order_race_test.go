@@ -96,9 +96,11 @@ func TestPlannedExitRunAndImmediateOffboardingDoNotDeadlock(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	actor := testpkg.CreateTestStaff(t, db, "Race", "Planner")
 	subject, account := testpkg.CreateTestStaffWithAccount(t, db, "Race", "Leaver")
-	_, err := db.NewRaw(`UPDATE users.staff_school_memberships SET planned_exit_day = '2026-11-01', planned_exit_by_account_id = ?,
-		planned_exit_by_staff_id = ?, planned_exit_by_name = 'Leitung', planned_exit_at = NOW() WHERE tenant_id = ? AND id = ?`,
-		account.ID, actor.ID, testpkg.Tenant(t), subject.ID).Exec(ctx)
+	// A day long past: the exit is due on every run, whatever the clock.
+	// School Membership stamps planned_exit_at on its clock, the real one here.
+	_, err := db.NewRaw(`UPDATE users.staff_school_memberships SET planned_exit_day = '2000-01-03', planned_exit_by_account_id = ?,
+		planned_exit_by_staff_id = ?, planned_exit_by_name = 'Leitung', planned_exit_at = ? WHERE tenant_id = ? AND id = ?`,
+		account.ID, actor.ID, time.Now(), testpkg.Tenant(t), subject.ID).Exec(ctx)
 	require.NoError(t, err)
 	offboarding, err := api.NewStaffOffboardingWorkflow(sc.deps)
 	require.NoError(t, err)

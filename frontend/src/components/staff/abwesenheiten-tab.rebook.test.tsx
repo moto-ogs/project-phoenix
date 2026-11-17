@@ -12,6 +12,7 @@ import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
 vi.mock("~/components/ui/modal", () => ({
@@ -152,6 +153,9 @@ function history(): HTMLElement {
 describe("AbwesenheitenTab Art ändern (#3258)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Fixed fixture world of the year 2026: the entries and the allowance
+    // belong to the history of the current year.
+    setTestClock("2026-09-09T12:00:00+02:00");
     mocks.getAbsences.mockResolvedValue([
       row(71, "2026-08-07", "comp_time"),
       row(72, "2026-08-14", "comp_time"),

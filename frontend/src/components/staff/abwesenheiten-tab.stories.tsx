@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { storyNow } from "~storybook/clock";
 import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
 import { AbwesenheitenTab } from "./abwesenheiten-tab";
 import type {
@@ -8,7 +9,7 @@ import type {
 
 const quota: StaffVacationQuotaSummary = {
   staff_id: 1,
-  year: new Date().getFullYear(),
+  year: storyNow().getFullYear(),
   entitled_days: 30,
   carryover_days: 2,
   taken_before_days: 0,

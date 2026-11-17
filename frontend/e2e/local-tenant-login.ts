@@ -11,6 +11,8 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
+import { realClock } from "./real-clock.mjs";
+
 interface Credentials {
   readonly email: string;
   readonly password: string;
@@ -135,12 +137,12 @@ export async function loginToLocalMfaPortal(
   await page.goto(`${origin}/login`, { waitUntil: "domcontentloaded" });
   await page.fill("#email", credentials.email);
   await page.fill("#password", credentials.password);
-  let notBefore = Date.now();
+  let notBefore = realClock("Mailpit stempelt Mails mit der Wanduhr");
   await page.click('button[type="submit"]');
   // Welcher Schritt der Anmeldung als Nächstes kommt; höchstens 30 s.
   const nextStep = async () => {
-    const deadline = Date.now() + 30_000;
-    while (Date.now() < deadline) {
+    const deadline = performance.now() + 30_000;
+    while (performance.now() < deadline) {
       if (leftLogin(new URL(page.url()))) return "fertig";
       if (await choice.isVisible()) return "traeger";
       if (await code.isVisible()) return "code";
@@ -151,13 +153,13 @@ export async function loginToLocalMfaPortal(
   };
   let step = await nextStep();
   if (step === "traeger") {
-    notBefore = Date.now();
+    notBefore = realClock("Mailpit stempelt Mails mit der Wanduhr");
     await page.click('button[type="submit"]');
     step = await nextStep();
   }
   if (step === "fertig") return;
   if (step === "einrichtung") {
-    notBefore = Date.now();
+    notBefore = realClock("Mailpit stempelt Mails mit der Wanduhr");
     await sendCode.click();
   }
   await code.waitFor({ timeout: 30_000 });
@@ -236,7 +238,9 @@ async function withLoginLock(
     }
     let age: number;
     try {
-      age = Date.now() - statSync(lock).mtimeMs;
+      age =
+        realClock("die Dateizeit der Sperre ist Wanduhrzeit") -
+        statSync(lock).mtimeMs;
     } catch {
       continue;
     }
@@ -260,7 +264,7 @@ async function loginThroughUI(
   await page.waitForSelector('input[type="email"]', { timeout: 30_000 });
   await page.fill('input[type="email"]', credentials.email);
   await page.fill('input[type="password"]', credentials.password);
-  const notBefore = Date.now();
+  const notBefore = realClock("Mailpit stempelt Mails mit der Wanduhr");
   const pending = page.waitForResponse(
     (response) =>
       new URL(response.url()).origin === origin &&

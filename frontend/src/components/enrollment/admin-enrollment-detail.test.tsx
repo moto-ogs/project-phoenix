@@ -16,7 +16,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { deferred } from "~/test/helpers/form-modal-pending";
-import { releaseFakeTimers, setTestClock } from "~/test/clock";
+import { releaseFakeTimers, setTestClock, testClockDay } from "~/test/clock";
 
 import { SWRConfig } from "~/lib/swr/testing";
 
@@ -1351,17 +1351,20 @@ describe("AdminEnrollmentDetail future renewal (#6043)", () => {
   };
 
   it("names the day the approved weekly plan applies", async () => {
+    // A start day still ahead of the test day.
+    const startsOn = testClockDay(30);
+    const startsOnLabel = startsOn.split("-").reverse().join(".");
     vi.mocked(useCareOfferingsEnabled).mockReturnValue(false);
     mocks.getAdminRequest.mockResolvedValue({
       ...request,
-      children: [{ ...approvedChild, weekly_plan_on: "2027-02-03" }],
+      children: [{ ...approvedChild, weekly_plan_on: startsOn }],
     });
 
     render(<AdminEnrollmentDetail requestId="request-1" />);
 
     expect(
       await screen.findByText(
-        "Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung gelten ab 03.02.2027. Bis dahin bleiben die bisherigen.",
+        `Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung gelten ab ${startsOnLabel}. Bis dahin bleiben die bisherigen.`,
       ),
     ).toBeVisible();
   });

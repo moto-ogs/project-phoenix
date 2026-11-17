@@ -73,14 +73,16 @@ type EndedActiveGroup struct {
 }
 
 // EndTestActiveGroup ends the group and supervisor rows outside any measured
-// or tenant-scoped context so recovery tests can restore them.
+// or tenant-scoped context so recovery tests can restore them. Student
+// Presence stamps end_time and end_date on its own clock, the real clock of
+// the suites that compose it without one, like the start fixtures.
 func EndTestActiveGroup(tb testing.TB, db *bun.DB, ended EndedActiveGroup) {
 	tb.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, err := db.NewUpdate().Table("active.groups").Set("end_time = now()").Where("id = ?", ended.GroupID).Exec(ctx)
+	_, err := db.NewUpdate().Table("active.groups").Set("end_time = ?", time.Now()).Where("id = ?", ended.GroupID).Exec(ctx)
 	require.NoError(tb, err, "Failed to end test active group")
-	_, err = db.NewUpdate().Table("active.group_supervisors").Set("end_date = CURRENT_DATE").Where("id = ?", ended.SupervisorID).Exec(ctx)
+	_, err = db.NewUpdate().Table("active.group_supervisors").Set("end_date = ?", calendar.TodayDate()).Where("id = ?", ended.SupervisorID).Exec(ctx)
 	require.NoError(tb, err, "Failed to end test group supervisor")
 }
 

@@ -32,7 +32,13 @@ type EnrollmentFlowTestRepositories struct {
 
 // Enrollment is the Enrollment booking projection the flows read and write.
 func (r *EnrollmentFlowTestRepositories) Enrollment() EnrollmentBookingProjection {
-	return NewEnrollmentBookingProjection(ComposeEnrollmentBookings(enrollmentCompose.NewClocked(time.Now), time.Now), UngatedEnrollmentPhaseBounds(), time.Now)
+	return r.EnrollmentOn(time.Now)
+}
+
+// EnrollmentOn is the Enrollment booking projection on the given clock, for a
+// suite that runs Enrollment on the clock of its other owners.
+func (r *EnrollmentFlowTestRepositories) EnrollmentOn(now func() time.Time) EnrollmentBookingProjection {
+	return NewEnrollmentBookingProjection(ComposeEnrollmentBookings(enrollmentCompose.NewClocked(now), now), UngatedEnrollmentPhaseBounds(), now)
 }
 
 // NewEnrollmentFlowTestRepositoriesWithMembers composes the enrollment flow

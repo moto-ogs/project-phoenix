@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { setTestClock } from "~/test/clock";
 import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import { PastBlocksSection as Section } from "./past-blocks-section";
@@ -171,6 +172,8 @@ describe("PastBlocksSection", () => {
   });
 
   it("offers to reopen a block ended by mistake until its deadline (#5676)", async () => {
+    // Die Fristen stehen fest auf 2026-09-09; die Uhr steht davor um 12:00 Berlin.
+    setTestClock("2026-09-09T12:00:00+02:00");
     plannedNowMock.mockResolvedValue([
       pastBlock({
         canReopen: true,
@@ -206,6 +209,8 @@ describe("PastBlocksSection", () => {
   });
 
   it("reloads the list after a reopen so the block leaves it (#5676)", async () => {
+    // Die Fristen stehen fest auf 2026-09-09; die Uhr steht davor um 12:00 Berlin.
+    setTestClock("2026-09-09T12:00:00+02:00");
     plannedNowMock
       .mockResolvedValueOnce([
         pastBlock({ canReopen: true, reopenUntil: "2026-09-09T12:30:00Z" }),
@@ -230,6 +235,8 @@ describe("PastBlocksSection", () => {
   });
 
   it("hides the reopen action once its deadline has passed (#5676)", async () => {
+    // Die Fristen stehen fest auf 2026-09-09; die Uhr steht davor um 12:00 Berlin.
+    setTestClock("2026-09-09T12:00:00+02:00");
     plannedNowMock.mockResolvedValue([
       // Testuhr 12:00 Berlin; die Frist lief um 11:59 ab.
       pastBlock({ canReopen: true, reopenUntil: "2026-09-09T09:59:00Z" }),

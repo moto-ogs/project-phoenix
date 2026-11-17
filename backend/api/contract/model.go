@@ -77,7 +77,9 @@ type Route struct {
 	Query      []QueryParam `json:"query,omitempty"`
 	Request    *Schema      `json:"request,omitempty"`
 	Response   *Schema      `json:"response,omitempty"`
-	Variants   *Variants    `json:"variants,omitempty"`
+	// NoData says the route answers a 204 or the envelope without data.
+	NoData   bool      `json:"no_data,omitempty"`
+	Variants *Variants `json:"variants,omitempty"`
 }
 
 // Key is the route's line in the route catalog.

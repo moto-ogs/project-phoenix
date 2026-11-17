@@ -13,6 +13,7 @@ import type {
   ReportFigures,
   ReportTemplate,
 } from "~/lib/traeger-reports-api";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 
 vi.unmock("swr");
 const {
@@ -132,6 +133,15 @@ const TOTAL = figures({
   waitlisted: 3,
   demand: 86,
 });
+
+// The last key date (MM-DD) on or before the test day.
+function lastKeyDate(monthDay: string): string {
+  const year = Number(TEST_CLOCK_TODAY.slice(0, 4));
+  const thisYear = `${year}-${monthDay}`;
+  return thisYear <= TEST_CLOCK_TODAY ? thisYear : `${year - 1}-${monthDay}`;
+}
+const LAST_15_OCTOBER = lastKeyDate("10-15");
+const LAST_1_MARCH = lastKeyDate("03-01");
 
 const STANDARD_REPORT: KeyDateReport = {
   keyDate: "2025-10-15",
@@ -254,8 +264,7 @@ describe("TraegerReportsPage", () => {
     renderPage();
 
     expect(await screen.findByText("Kinder am Stichtag")).toBeInTheDocument();
-    // The test clock stands on 9.9.2026: the last 15.10. was in 2025.
-    expect(mockFetchReport).toHaveBeenCalledWith("2025-10-15", null);
+    expect(mockFetchReport).toHaveBeenCalledWith(LAST_15_OCTOBER, null);
     expect(screen.getByText("davon 2 ohne Betreuungsform")).toBeInTheDocument();
     // 73 of 85 places, the demand of 86 lacks one place.
     expect(screen.getByText("73 von 85 Plätzen")).toBeInTheDocument();
@@ -303,7 +312,7 @@ describe("TraegerReportsPage", () => {
     expect(
       await screen.findByRole("heading", { name: "Belegung und Nachfrage" }),
     ).toBeInTheDocument();
-    expect(mockFetchReport).toHaveBeenCalledWith("2026-03-01", "12");
+    expect(mockFetchReport).toHaveBeenCalledWith(LAST_1_MARCH, "12");
     // Only the demand section of the template.
     expect(screen.queryByText("Kinder am Stichtag")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Personal" })).toBeNull();
@@ -336,7 +345,7 @@ describe("TraegerReportsPage", () => {
         "bericht-stichtag-2025-10-15.pdf",
       ),
     );
-    expect(mockDownload).toHaveBeenCalledWith("2025-10-15", null, "pdf");
+    expect(mockDownload).toHaveBeenCalledWith(LAST_15_OCTOBER, null, "pdf");
   });
 
   it("names the load error", async () => {
@@ -386,7 +395,7 @@ describe("TraegerReportsPage", () => {
     expect(
       await screen.findByRole("heading", { name: "Belegung und Nachfrage" }),
     ).toBeInTheDocument();
-    expect(mockFetchReport).toHaveBeenCalledWith("2026-03-01", "12");
+    expect(mockFetchReport).toHaveBeenCalledWith(LAST_1_MARCH, "12");
   });
 
   it("lists templates read-only without the settings right", async () => {

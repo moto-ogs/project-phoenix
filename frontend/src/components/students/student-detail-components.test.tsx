@@ -601,6 +601,8 @@ describe("Kopf der Kindakte", () => {
     // Ort vor Status (#6407): Eingecheckt trotz Krankmeldung gilt die
     // geplante Abholung weiter, überfällig markiert wie bei jedem Kind.
     it("keeps the overdue planned pickup of a sick child who is checked in", () => {
+      // Mittags ist die Abholung um 11:00 überfällig.
+      setTestClock("2026-09-09T12:00:00+02:00");
       renderHeaderWithTimes({
         student: {
           ...mockStudent,

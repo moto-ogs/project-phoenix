@@ -29,8 +29,8 @@ func ContractDocument() (contract.Document, error) {
 		// (studentHTTPResources binds it), so its type is named here.
 		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
 		{"/parent", parentAPI.MeRouteContracts()},
-		{"/api/notifications", notificationFeedRouteContracts(common.PortalTenant)},
-		{"/school/notifications", notificationFeedRouteContracts(common.PortalSchool)},
+		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},
+		{"/school/notifications", notificationRouteContracts(common.PortalSchool)},
 		{"/school/staff-messages", staffMessagingAPI.SchoolRouteContracts()},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
@@ -68,24 +68,42 @@ func ContractDocument() (contract.Document, error) {
 	return contract.Build(registrations, options)
 }
 
-// notificationFeedRouteContracts registers the notification feed, with
-// patterns relative to the /notifications mount of the portal. The staff
-// portal and moto schule mount the same routes. Delivery's http role may not
-// import the contract types, so it hands over the response type only.
-func notificationFeedRouteContracts(portal common.PortalScope) []common.RouteContract {
-	return []common.RouteContract{
-		{
-			Method: "GET", Pattern: "/feed/unread-count",
-			Portals:  []common.PortalScope{portal},
-			Response: notificationsHTTP.FeedUnreadCountContract(),
-		},
+// notificationRouteContracts registers the notification routes, with patterns
+// relative to the /notifications mount of the portal. The staff portal and
+// moto schule mount the same routes; only the staff portal has opt-in e-mails.
+// Delivery's http role may not import the contract types, so it hands over
+// the body types only.
+func notificationRouteContracts(portal common.PortalScope) []common.RouteContract {
+	types := notificationsHTTP.RouteContractTypes()
+	portals := []common.PortalScope{portal}
+	page := []common.QueryParam{{Name: "limit", Kind: common.QueryInt}, {Name: "cursor", Kind: common.QueryString}}
+	endpoint := []common.QueryParam{{Name: "endpoint", Kind: common.QueryString}}
+	routes := []common.RouteContract{
+		{Method: "GET", Pattern: "/feed/", Portals: portals, Query: page, Response: types.FeedPage},
+		{Method: "GET", Pattern: "/feed/unread-count", Portals: portals, Response: types.FeedCount},
+		{Method: "POST", Pattern: "/feed/read-all", Portals: portals, Response: types.FeedCount},
+		{Method: "POST", Pattern: "/feed/{id}/read", Portals: portals, Response: types.FeedCount},
+		{Method: "GET", Pattern: "/preferences/", Portals: portals, Response: types.Preferences},
+		{Method: "DELETE", Pattern: "/preferences/", Portals: portals, NoData: true},
+		{Method: "PUT", Pattern: "/preferences/{type}", Portals: portals, Request: types.PreferenceRequest, NoData: true},
+		{Method: "GET", Pattern: "/push/public-key", Portals: portals, Response: types.PushPublicKey},
+		{Method: "POST", Pattern: "/push/subscriptions", Portals: portals, Request: types.PushSubscription, NoData: true},
+		{Method: "DELETE", Pattern: "/push/subscriptions", Portals: portals, Query: endpoint, NoData: true},
+		{Method: "POST", Pattern: "/test", Portals: portals, NoData: true},
 	}
+	if portal != common.PortalTenant {
+		return routes
+	}
+	return append(routes,
+		common.RouteContract{Method: "GET", Pattern: "/email-subscriptions/{type}", Portals: portals, Response: types.EmailSubscription},
+		common.RouteContract{Method: "PUT", Pattern: "/email-subscriptions/{type}", Portals: portals, Request: types.PreferenceRequest, NoData: true},
+	)
 }
 
 func contractRegistration(prefix string, route common.RouteContract) contract.Registration {
 	registration := contract.Registration{
 		Method: route.Method, Pattern: prefix + route.Pattern,
-		Request: route.Request, Response: route.Response, Paginated: route.Paginated,
+		Request: route.Request, Response: route.Response, Paginated: route.Paginated, NoData: route.NoData,
 		Deprecated: route.Deprecated, DeprecatedFields: route.DeprecatedFields,
 	}
 	for _, portal := range route.Portals {

@@ -600,7 +600,12 @@ jobs:
             node ../scripts/test-frontend-changed.mjs "origin/$BASE_REF" --disableConsoleIntercept "${test_args[@]}"
           else
             # Full suites already include every guard, with normal sharding.
+            # Changed tests then run again on the moved clock, as the
+            # selection runner does itself (MOVED_CLOCK there, #7337).
             pnpm vitest run --disableConsoleIntercept "${test_args[@]}"
+            if [ -n "$BASE_REF" ]; then
+              node ../scripts/test-frontend-changed.mjs --moved-clock "origin/$BASE_REF" --disableConsoleIntercept "${test_args[@]}"
+            fi
           fi
 
   # The seeder is the widest end-to-end path in this repo: roughly a hundred

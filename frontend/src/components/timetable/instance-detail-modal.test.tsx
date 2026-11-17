@@ -7,7 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { releaseFakeTimers } from "~/test/clock";
+import { releaseFakeTimers, testClockDay } from "~/test/clock";
 import { useSWRAuth } from "~/lib/swr";
 import { useSWRConfig } from "~/lib/swr/testing";
 
@@ -1510,11 +1510,12 @@ describe("InstanceDetailModal", () => {
   // #7151: eine Absage lässt sich bis zum Ende des Termins zurücknehmen.
   it("takes back a cancellation after asking, until the block has ended", async () => {
     const onLifecycleAction = vi.fn().mockResolvedValue(undefined);
+    // Morgen: der Termin ist an jedem Testtag noch nicht vorbei.
     const { rerender } = render(
       <InstanceDetailModal
         instance={instance({
           status: "cancelled",
-          date: "2026-09-09",
+          date: testClockDay(1),
           startTime: "14:00",
           endTime: "15:00",
         })}

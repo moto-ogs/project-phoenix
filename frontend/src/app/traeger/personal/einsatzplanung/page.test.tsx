@@ -6,6 +6,7 @@ import type {
   TraegerPlanningPerson,
   TraegerPlanningWeek,
 } from "~/lib/traeger-planning-api";
+import { setTestClock } from "~/test/clock";
 
 vi.unmock("swr");
 
@@ -26,7 +27,8 @@ vi.mock("next/navigation", () => ({
 
 import TraegerStaffPlanningPage from "./page";
 
-// The test clock stands on Wednesday 2026-09-09; its week starts 2026-09-07.
+// The fixture week starts Monday 2026-09-07; every test pins the clock to
+// Wednesday 2026-09-09 so the page opens on that week.
 const MIRA: TraegerPlanningPerson = {
   recordId: "11",
   firstName: "Mira",
@@ -108,6 +110,7 @@ function renderPage() {
 
 describe("TraegerStaffPlanningPage", () => {
   beforeEach(() => {
+    setTestClock("2026-09-09T12:00:00+02:00");
     vi.clearAllMocks();
     api.fetchTraegerPlanningWeek.mockResolvedValue(WEEK);
   });

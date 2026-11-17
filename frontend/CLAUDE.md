@@ -18,11 +18,11 @@ leaner first: [ci-test-performance](../.claude/rules/ci-test-performance.md).
 ## Test clock (MANDATORY)
 
 Every Vitest test runs on a frozen `Date` (`TEST_CLOCK_INSTANT`, Wednesday
-2026-09-09 12:00 Berlin) installed by `src/test/setup-common.ts`; timers stay
-real. Move time with `setTestClock()` from `~/test/clock`, hand fake timers
-back with `releaseFakeTimers()`, never `vi.useRealTimers()` inside a test body
-(oxlint `test-clock/no-real-clock`). Scope, helpers, and the reviewed
-real-clock exception: [frontend test clock](../docs/agents/frontend-testing.md).
+2026-09-09 12:00 Berlin; CI moves it, so use `testClockDay(n)`, no
+day literals); timers stay real. Move time with `setTestClock()`, never
+`vi.useRealTimers()` in a test body. Specs and stories read no clock
+(`e2e/clock.ts`, `.storybook/clock.ts`). oxlint `test-clock/no-real-clock`;
+details: [frontend test clock](../docs/agents/frontend-testing.md).
 
 ## Server and API boundaries
 

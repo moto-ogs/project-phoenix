@@ -222,6 +222,7 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
 }));
 
 import { PhasesEditor } from "./phases-editor";
+import { setTestClock, testClockDay } from "~/test/clock";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
@@ -341,6 +342,8 @@ describe("PhasesEditor", () => {
   ])(
     "names every child and explains the proposed end %s",
     async (phaseEnd, explanation) => {
+      // Die Phase 2026/27 läuft am 09.09.2026, ihr altes Ende liegt danach.
+      setTestClock("2026-09-09T12:00:00+02:00");
       careExit.permissions = ["users:delete"];
       mocks.listPhases.mockResolvedValue([phase()]);
       mocks.listSchemas.mockResolvedValue([schema()]);
@@ -423,6 +426,8 @@ describe("PhasesEditor", () => {
   ])(
     "can exclude blocked children: %s",
     async (_scenario, allBlocked, changedAfterPreview) => {
+      // Die Phase 2026/27 läuft am 09.09.2026, ihr altes Ende liegt danach.
+      setTestClock("2026-09-09T12:00:00+02:00");
       careExit.permissions = ["users:delete"];
       const children = ["7", "8"].map((studentId) => ({
         studentId,
@@ -558,6 +563,8 @@ describe("PhasesEditor", () => {
   );
 
   it("confirms at most 500 children at a time and keeps the rest", async () => {
+    // Die Phase 2026/27 läuft am 09.09.2026, ihr altes Ende liegt danach.
+    setTestClock("2026-09-09T12:00:00+02:00");
     careExit.permissions = ["users:delete"];
     const children = Array.from({ length: 501 }, (_, index) => ({
       studentId: String(index + 1),
@@ -846,10 +853,11 @@ describe("PhasesEditor", () => {
   });
 
   it("keeps the follow-up hint off a phase that has not started", async () => {
+    // Die Phase beginnt morgen.
     mocks.listPhases.mockResolvedValue([
       phase({
-        service_start_date: "2026-10-01",
-        service_end_date: "2027-07-31",
+        service_start_date: testClockDay(1),
+        service_end_date: testClockDay(300),
       }),
     ]);
     mocks.listSchemas.mockResolvedValue([schema()]);
@@ -863,9 +871,9 @@ describe("PhasesEditor", () => {
       await screen.findByRole("menuitem", { name: "Bearbeiten" }),
     );
     const endInput = await waitForInputByName("service_end_date");
-    fireEvent.change(endInput, { target: { value: "2027-08-31" } });
+    fireEvent.change(endInput, { target: { value: testClockDay(330) } });
     // Anker: das Feld hat den neuen Wert übernommen.
-    await waitFor(() => expect(endInput).toHaveValue("2027-08-31"));
+    await waitFor(() => expect(endInput).toHaveValue(testClockDay(330)));
     expect(
       screen.queryByText(/bleibt das Betreuungsende, wie es ist/),
     ).not.toBeInTheDocument();

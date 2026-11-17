@@ -17,6 +17,7 @@ import {
 } from "~/lib/parent-announcements-api";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
+import { TEST_CLOCK_INSTANT } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import ParentAnnouncementsPage from "./page";
 
@@ -358,19 +359,32 @@ describe("ParentAnnouncementsPage: scheduled reminder (#3162)", () => {
   });
 
   it("shows the reminder state in the list", async () => {
+    const day = 24 * 60 * 60 * 1000;
+    // Veröffentlicht vor einer Woche, Erinnerung in 15 Tagen.
+    const reminder = new Date(TEST_CLOCK_INSTANT.getTime() + 15 * day);
     listState.data = [
       {
         ...base,
         status: "published",
-        published_at: "2026-09-02T10:00:00Z",
-        reminder_at: "2026-09-24T06:00:00Z",
+        published_at: new Date(
+          TEST_CLOCK_INSTANT.getTime() - 7 * day,
+        ).toISOString(),
+        reminder_at: reminder.toISOString(),
       },
     ];
     render(<ParentAnnouncementsPage />);
 
+    const when = new Intl.DateTimeFormat("de-DE", {
+      timeZone: "Europe/Berlin",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(reminder);
     expect(
-      (await screen.findAllByText("Erinnerung am 24.09.2026, 08:00 Uhr"))
-        .length,
+      (await screen.findAllByText(`Erinnerung am ${when} Uhr`)).length,
     ).toBeGreaterThan(0);
   });
 

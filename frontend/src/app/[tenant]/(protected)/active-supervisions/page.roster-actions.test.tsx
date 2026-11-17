@@ -3,6 +3,7 @@
  * auto-move notice #2386, unplanned add). Kept apart from page.test.tsx because
  * it replaces the student search and timetable operations APIs entirely.
  */
+import { TEST_CLOCK_INSTANT } from "~/test/clock";
 import { setViewportWidth } from "~/test/helpers/viewport";
 import {
   render as rtlRender,
@@ -820,12 +821,18 @@ describe("MeinRaumPage roster actions", () => {
       status: "active",
     });
 
+    // Frist aus dem Speicher: Testuhr plus eine Minute, Berliner Uhrzeit (#5676).
+    const until = new Intl.DateTimeFormat("de-DE", {
+      timeZone: "Europe/Berlin",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(TEST_CLOCK_INSTANT.getTime() + 60_000);
+
     try {
       render(<MeinRaumPage />);
       expect(
         await screen.findByText(
-          // Frist aus dem Speicher: Testuhr 12:00 plus eine Minute (#5676).
-          "„Sport AG“ wurde beendet. Sie können das bis 12:01 Uhr rückgängig machen.",
+          `„Sport AG“ wurde beendet. Sie können das bis ${until} Uhr rückgängig machen.`,
         ),
       ).toBeInTheDocument();
 

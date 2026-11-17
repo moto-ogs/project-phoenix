@@ -18,6 +18,7 @@ import type {
   CostBearer,
 } from "~/lib/traeger-contributions-api";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
 const { billingApi, termsApi, masterApi, session, api } = vi.hoisted(() => ({
@@ -236,7 +237,8 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
         siblingFromChild: 3,
         discountBasisPoints: 3350,
         discountCents: null,
-        validFrom: "2026-09-09",
+        // Eine neue Regel gilt ab heute.
+        validFrom: TEST_CLOCK_TODAY,
         validUntil: null,
       }),
     );

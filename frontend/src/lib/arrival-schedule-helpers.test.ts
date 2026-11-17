@@ -113,7 +113,8 @@ describe("arrival schedule getWeekDays", () => {
   });
 
   it("keeps Mo–Fr on a weekday although the weekend follows Friday", () => {
-    // Test clock: Wednesday 2026-09-09.
+    // The test is about a weekday: Wednesday 2026-09-09.
+    setTestClock("2026-09-09T12:00:00+02:00");
     const days = getWeekDays(0, true);
 
     expect(days.map((day) => day.getDay())).toEqual([1, 2, 3, 4, 5]);

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { StudentNotizenTab } from "./student-notizen-tab";
 import { ApiError } from "~/lib/api-error";
 import type { StudentNote, StudentNoteDraft } from "~/lib/student-notes-api";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 
 // The tab renders the authority the backend sent and nothing else: an entry
 // the reader may not correct carries no Bearbeiten, one they may not remove
@@ -263,7 +264,10 @@ describe("StudentNotizenTab", () => {
       expect(updateMock).toHaveBeenCalledWith(
         "7",
         "1",
-        expect.objectContaining({ kind: "journal", subjectDate: "2026-09-09" }),
+        expect.objectContaining({
+          kind: "journal",
+          subjectDate: TEST_CLOCK_TODAY,
+        }),
       );
     });
   });
@@ -574,7 +578,7 @@ describe("StudentNotizenTab", () => {
         kind: "journal",
         visibility: "group_leads",
         activityGroupId: "12",
-        subjectDate: "2026-09-09",
+        subjectDate: TEST_CLOCK_TODAY,
       });
       expect(draft.educationGroupId).toBeUndefined();
     });

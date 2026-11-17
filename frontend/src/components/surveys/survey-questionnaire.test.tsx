@@ -9,10 +9,11 @@ import type { ReactNode } from "react";
 import { SessionProvider } from "next-auth/react";
 import { SWRConfig } from "~/lib/swr/testing";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
 import type { SurveyForm } from "~/lib/survey-form";
+import { setTestClock } from "~/test/clock";
 import { SurveyAnswerPanel } from "./survey-questionnaire";
 
 vi.unmock("swr");
@@ -49,7 +50,7 @@ function form(
       title: "Zufriedenheit",
       intro: "Ihre Meinung hilft uns.",
       anonymous: true,
-      // Nach der Testuhr (09.09.2026), also noch offen.
+      // Nach der festen Uhr (09.09.2026), also noch offen.
       closes_at: "2026-09-30T16:00:00Z",
       questions: [
         {
@@ -75,6 +76,9 @@ function form(
 }
 
 describe("SurveyAnswerPanel", () => {
+  // Die Umfrage endet am 30.09.2026; die Tests brauchen einen Tag davor.
+  beforeEach(() => setTestClock("2026-09-09T12:00:00+02:00"));
+
   it("states before the first question that the survey is anonymous", async () => {
     render(
       <SurveyAnswerPanel

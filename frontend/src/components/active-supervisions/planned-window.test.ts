@@ -1,14 +1,14 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
-import { TEST_CLOCK_INSTANT, TEST_CLOCK_TODAY } from "~/test/clock";
+import { setTestClock } from "~/test/clock";
 import {
   PLANNED_WINDOW_SLACK_MS,
   nextPlannedWindowBoundary,
   usePlannedWindowRefresh,
 } from "./planned-window";
 
-// The frozen clock is 12:00 Berlin. The block starts at 12:30 and can be
+// The clock is pinned to 12:00 Berlin. The block starts at 12:30 and can be
 // started 15 minutes before, so it enters „Als Nächstes“ at 12:15 (#5017).
 function block(
   overrides: Partial<PlannedTimetableInstance> = {},
@@ -16,7 +16,7 @@ function block(
   return {
     id: "1",
     title: "Hausaufgaben",
-    date: TEST_CLOCK_TODAY,
+    date: "2026-09-09",
     startTime: "12:30:00",
     endTime: "13:30:00",
     roomId: "4",
@@ -39,7 +39,8 @@ function block(
 }
 
 const at = (iso: string) => Date.parse(iso);
-const now = () => TEST_CLOCK_INSTANT.getTime();
+const NOON = "2026-09-09T12:00:00+02:00";
+const now = () => at(NOON);
 
 function setVisibility(state: DocumentVisibilityState) {
   Object.defineProperty(document, "visibilityState", {
@@ -48,6 +49,8 @@ function setVisibility(state: DocumentVisibilityState) {
   });
 }
 
+// The block times only make sense around noon of the block's day.
+beforeEach(() => setTestClock(NOON));
 afterEach(() => setVisibility("visible"));
 
 describe("nextPlannedWindowBoundary", () => {

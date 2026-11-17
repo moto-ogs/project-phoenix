@@ -61,6 +61,7 @@ import {
   type SlotListOptionsResult,
   type SlotListResult,
 } from "~/lib/slot-lists-api";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
 import SlotListsPage from "./page";
@@ -77,8 +78,9 @@ function render(ui: ReactElement) {
   return rtlRender(ui, { wrapper: Providers });
 }
 
+// Ohne Datum im Link zeigt die Seite den Testtag.
 const options: SlotListOptionsResult = {
-  date: "2026-09-09",
+  date: TEST_CLOCK_TODAY,
   slots: [
     {
       instance_id: "11",
@@ -93,7 +95,7 @@ const options: SlotListOptionsResult = {
 };
 
 const preview: SlotListResult = {
-  date: "2026-09-09",
+  date: TEST_CLOCK_TODAY,
   target: "slots",
   list_label: "Angebote",
   source: "planned",
@@ -237,7 +239,7 @@ describe("SlotListsPage error paths (#2516)", () => {
 
     await waitFor(() => expect(mocks.exportSlotList).toHaveBeenCalledTimes(2));
     expect(mocks.exportSlotList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ date: "2026-09-09" }),
+      expect.objectContaining({ date: TEST_CLOCK_TODAY }),
       "pdf",
       "download",
       null,

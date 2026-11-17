@@ -56,6 +56,9 @@ type PendingAccountWideWipe struct {
 	AccountID int64     `bun:"account_id"`
 	Reason    string    `bun:"reason"`
 	CreatedAt time.Time `bun:"created_at"`
+	// Cutoff is the producer's metadata "session_cutoff", nil when the
+	// event carries none.
+	Cutoff *time.Time `bun:"cutoff"`
 }
 
 // DataAccessLogRepository is an insert-only repository for audit.data_access_log.

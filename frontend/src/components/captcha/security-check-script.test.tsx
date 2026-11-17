@@ -19,6 +19,15 @@ it("retries a failed script request and solves the replacement widget", async ()
     hint: "Prüfung lädt nicht?",
     restart: "Prüfung neu starten",
     restartTooltip: "Prüfung erneut laden",
+    failedTitle: "Prüfung lädt nicht",
+    failedText: "Oft blockiert ein Werbeblocker die Prüfung.",
+    failedStepBlocker: "Werbeblocker ausschalten.",
+    failedStepRestart: "Prüfung neu starten.",
+    failedStepBrowser: "Anderen Browser nehmen.",
+    copyLink: "Link kopieren",
+    copyLinkTooltip: "Kopiert die Adresse.",
+    linkCopied: "Link kopiert",
+    copyFailed: "Das ist der Link:",
   };
   function Form() {
     const [token, setToken] = useState("");
@@ -40,6 +49,8 @@ it("retries a failed script request and solves the replacement widget", async ()
   );
   expect(failedScript).not.toBeNull();
   fireEvent.error(failedScript!);
+  // The real library reports the blocked script: the form says what to do.
+  expect(await screen.findByText(copy.failedTitle)).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: copy.restart }));
   const replacement = document.querySelector<HTMLScriptElement>(
     'script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]',

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { createAppWorkspace } from "./app-workspace.mjs";
 import { networkPorts } from "./ports.mjs";
+import { realClock } from "../real-clock.mjs";
 
 const sharedTenantCookie = process.env.TENANT_SWITCH_EVIDENCE === "1";
 const ports = networkPorts(sharedTenantCookie ? "tenantSwitch" : "network");
@@ -37,7 +38,10 @@ const claims = (scope = "") => ({
     scope === "school" ? "lehrkraft" : scope === "parent" ? "guardian" : "user",
   ],
   permissions: [],
-  exp: Math.floor(Date.now() / 1000) + 3600,
+  exp:
+    Math.floor(
+      realClock("der Next-Server prüft exp gegen seine Wanduhr") / 1000,
+    ) + 3600,
 });
 // Shared-cookie mode models the server-side session family (#5194): login
 // opens a family, logout revokes it, and session routes refuse a token whose
@@ -136,6 +140,33 @@ const api = createServer(async (req, res) => {
     });
   } else if (sharedTenantCookie && portalReads.has(path)) {
     data = envelope([]);
+  } else if (sharedTenantCookie && path === "/school/notifications/feed") {
+    // Through the catalog proxy: the cursor names the query that arrived.
+    data = envelope({
+      entries: [
+        {
+          id: 7,
+          type: "test",
+          title: "Hinweis",
+          body: "Text",
+          deep_link: "/school",
+          created_at: "2026-11-01T08:00:00Z",
+          updated_at: "2026-11-01T08:00:00Z",
+          read_at: null,
+        },
+      ],
+      next_cursor: url.search,
+      unread_count: 1,
+    });
+  } else if (
+    sharedTenantCookie &&
+    req.method === "PUT" &&
+    path === "/school/notifications/preferences/absence"
+  ) {
+    // Like the backend: a recorded decision answers 204.
+    res.writeHead(204);
+    res.end();
+    return;
   } else if (sharedTenantCookie && catalogReads.has(path)) {
     data = envelope(catalogReads.get(path));
   } else if (sharedTenantCookie && path === "/parent/me/enrollable-schools") {

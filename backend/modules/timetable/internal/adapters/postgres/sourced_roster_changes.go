@@ -31,8 +31,9 @@ func (s *Store) SaveSourcedRosterChanges(ctx context.Context, changes timetable.
 	}
 	if len(changes.Create) > 0 {
 		rows := make([]studentEnrollmentRow, 0, len(changes.Create))
+		createdAt := s.currentTime()
 		for _, input := range changes.Create {
-			row := studentEnrollmentRow{TenantID: tenantID}
+			row := studentEnrollmentRow{TenantID: tenantID, CreatedAt: createdAt}
 			applyStudentEnrollmentFields(&row, input)
 			rows = append(rows, row)
 		}

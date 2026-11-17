@@ -13,6 +13,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import type {
   TraegerAccessLogEntry,
   TraegerAccessLogFilter,
@@ -66,6 +67,27 @@ vi.mock("~/components/ui/date-range-picker", async (importOriginal) => {
 import TraegerAccessLogPage from "./page";
 
 const AS_OF = "2026-09-09T10:00:00Z";
+
+// Das Fenster der letzten 30 Tage endet am Testtag.
+const WINDOW_FROM = testClockDay(-29);
+
+// Der Auslöser des Zeitraums nennt den Monat des Testtags (date-fns, de).
+const TODAY_MONTH = new RegExp(
+  [
+    "Jan\\.",
+    "Feb\\.",
+    "März",
+    "Apr\\.",
+    "Mai",
+    "Juni",
+    "Juli",
+    "Aug\\.",
+    "Sep\\.",
+    "Okt\\.",
+    "Nov\\.",
+    "Dez\\.",
+  ][Number(TEST_CLOCK_TODAY.slice(5, 7)) - 1]!,
+);
 
 const READ: TraegerAccessLogEntry = {
   id: "read-attendance_history-7",
@@ -127,11 +149,10 @@ describe("TraegerAccessLogPage", () => {
       within(table).getByText("Anwesenheit eines Kindes"),
     ).toBeInTheDocument();
     expect(within(table).getByText("Geändert")).toBeInTheDocument();
-    // The test clock stands on 2026-09-09.
     expect(mockFetchLog).toHaveBeenCalledWith(
       {
-        from: "2026-08-11",
-        to: "2026-09-09",
+        from: WINDOW_FROM,
+        to: TEST_CLOCK_TODAY,
         schoolId: "",
         accountId: "",
         kind: "",
@@ -139,7 +160,7 @@ describe("TraegerAccessLogPage", () => {
       1,
       undefined,
     );
-    expect(mockFetchPeople).toHaveBeenCalledWith("2026-08-11", "2026-09-09");
+    expect(mockFetchPeople).toHaveBeenCalledWith(WINDOW_FROM, TEST_CLOCK_TODAY);
     // Anker: die Zeilen sind geladen; sie sind reine Anzeige.
     expect(within(table).getByText("Lena Leitung")).toBeInTheDocument();
     expect(within(table).queryAllByRole("button", { name: /Leitung/ })).toEqual(
@@ -218,7 +239,7 @@ describe("TraegerAccessLogPage", () => {
       ),
     );
     expect(mockDownload).toHaveBeenCalledWith(
-      expect.objectContaining({ from: "2026-08-11", to: "2026-09-09" }),
+      expect.objectContaining({ from: WINDOW_FROM, to: TEST_CLOCK_TODAY }),
     );
   });
 
@@ -295,12 +316,12 @@ describe("TraegerAccessLogPage", () => {
       ),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Sep\./ }));
+    fireEvent.click(screen.getByRole("button", { name: TODAY_MONTH }));
     fireEvent.click(await screen.findByRole("button", { name: "Heute" }));
 
     await waitFor(() =>
       expect(mockFetchLog).toHaveBeenLastCalledWith(
-        expect.objectContaining({ from: "2026-09-09", accountId: "" }),
+        expect.objectContaining({ from: TEST_CLOCK_TODAY, accountId: "" }),
         1,
         undefined,
       ),

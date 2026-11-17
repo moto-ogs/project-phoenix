@@ -7,7 +7,7 @@ import {
   type CatalogMethod,
   type CatalogRoute,
 } from "./catalog-proxy.server";
-import { success } from "./runtime";
+import { noData, success } from "./runtime";
 
 const api = vi.fn();
 let sessionReads = 0;
@@ -54,6 +54,7 @@ const routes: CatalogRoute[] = [
   },
   { method: "POST", pattern: "/parent/rows/", response: row },
   { method: "DELETE", pattern: "/parent/rows/{id}", response: row },
+  { method: "PUT", pattern: "/parent/rows/{id}/seen", response: noData },
   // A legacy route with response variants has no single decoder.
   { method: "GET", pattern: "/parent/variants/", response: { full: row } },
   { method: "GET", pattern: "/parent/files/*", response: row },
@@ -175,6 +176,23 @@ describe("makeCatalogProxy", () => {
     api.mockResolvedValueOnce(undefined);
     expect(await data(await call("DELETE", ["rows", "1"]))).toBeNull();
     expect(sessionReads).toBe(1);
+  });
+
+  it.each([
+    ["a 204", undefined],
+    ["the envelope without data", { status: "success", message: "done" }],
+  ])("answers a write without data for %s", async (_name, answer) => {
+    api.mockResolvedValueOnce(answer);
+    const response = await call("PUT", ["rows", "1", "seen"], "", { on: true });
+    expect(await data(response)).toBeNull();
+    expect(api.mock.calls[0]?.[3]).toEqual({ on: true });
+  });
+
+  it("refuses data on a route registered without data with 502", async () => {
+    api.mockResolvedValueOnce({ status: "success", data: { name: "Ada" } });
+    await expect(
+      call("PUT", ["rows", "1", "seen"], "", { on: true }),
+    ).rejects.toMatchObject({ status: 502 });
   });
 
   it("refuses an answer outside the contract with 502", async () => {
