@@ -71,5 +71,14 @@ describe("holiday places summary", () => {
       await screen.findByText("1 Kind wartet auf einen Platz"),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /Tom Platz/ })).toHaveLength(3);
+
+    // #7304: the week cards sit in one grid, so the last one keeps its height.
+    const cards = screen
+      .getAllByRole("heading", { level: 2 })
+      .map((heading) => heading.closest("section"));
+    expect(cards).toHaveLength(3);
+    const grid = cards[0]?.parentElement;
+    expect(grid).toHaveClass("grid");
+    for (const card of cards) expect(card?.parentElement).toBe(grid);
   });
 });
