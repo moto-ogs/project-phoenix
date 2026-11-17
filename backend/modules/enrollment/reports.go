@@ -225,13 +225,17 @@ type ClassRosterRow struct {
 	// string because JavaScript clients round numbers beyond 2^53. The row
 	// exists only so the Klassenverband is complete — it can never carry
 	// offerings, times or guardians.
-	ListEntry      bool                   `json:"list_entry,omitempty"`
-	ListEntryID    int64                  `json:"list_entry_id,string,omitempty"`
-	Offerings      []CareUsageRowOffering `json:"offerings"`
-	OfferingsByDay map[string][]string    `json:"offerings_by_day"`
-	CareDays       []string               `json:"care_days"`
-	ArrivalByDay   map[string]string      `json:"arrival_by_day"`
-	PickupByDay    map[string]string      `json:"pickup_by_day"`
+	ListEntry   bool  `json:"list_entry,omitempty"`
+	ListEntryID int64 `json:"list_entry_id,string,omitempty"`
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803): a student record (StudentID is set) that, like a list
+	// entry, carries no offerings, times or guardians on the roster.
+	WithoutCarePlace bool                   `json:"without_care_place,omitempty"`
+	Offerings        []CareUsageRowOffering `json:"offerings"`
+	OfferingsByDay   map[string][]string    `json:"offerings_by_day"`
+	CareDays         []string               `json:"care_days"`
+	ArrivalByDay     map[string]string      `json:"arrival_by_day"`
+	PickupByDay      map[string]string      `json:"pickup_by_day"`
 	// SchedulePickupByDay is the maintained Kind-Gehzeit from
 	// schedule.student_pickup_schedules (manual rows and rolled-out
 	// Angebots-Gehzeiten). It outranks the enrollment-form answer in the

@@ -253,7 +253,7 @@ describe("SchoolCheckinFab", () => {
         />,
       );
 
-      expect(screen.getByLabelText(/2 Aktionen laufen/i)).toBeInTheDocument();
+      expect(screen.getByText(/, 2 Aktionen laufen$/)).toHaveClass("sr-only");
     });
 
     it("hides the pending spinner when pendingCount is 0", () => {
@@ -269,7 +269,7 @@ describe("SchoolCheckinFab", () => {
 
       // Anker: der aktive Knopf mit dem Erfolgszähler ist gerendert.
       expect(screen.getByText("· 1")).toBeInTheDocument();
-      expect(screen.queryByLabelText(/Aktionen laufen/i)).toBeNull();
+      expect(screen.queryByText(/Aktionen laufen/i)).toBeNull();
     });
   });
 });

@@ -143,7 +143,7 @@ func TestAbsenceListCountsTheDecidedRules(t *testing.T) {
 		{StudentID: 1, Date: "2026-09-10", Status: classday.MorningAttendanceAbsent},
 		// Ben: absent with the school's afterwards report (excused).
 		{StudentID: 2, Date: "2026-09-07", Status: classday.MorningAttendanceAbsent},
-		// The class-list entry stays out of the list (#4803).
+		// The class-list entry carries no report and stays out of the list.
 		{ListEntryID: 9, Date: "2026-09-07", Status: classday.MorningAttendanceAbsent},
 	}
 	statuses := []DatedStatusDay{
@@ -419,4 +419,126 @@ func TestAbsenceListUsesGermanNameOrder(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, report.Children, 3)
 	assert.Equal(t, []int64{1, 2, 3}, []int64{report.Children[0].StudentID, report.Children[1].StudentID, report.Children[2].StudentID})
+}
+
+// TestAbsenceListCountsChildrenWithoutCarePlace lists a child without an OGS
+// place (#4803) and counts its school mornings, although the care
+// participation never keeps it; a child that took part in OGS care on none
+// of the days stays out as before.
+func TestAbsenceListCountsChildrenWithoutCarePlace(t *testing.T) {
+	t.Parallel()
+	a := absenceList{
+		today: func() calendar.Date { return "2026-09-16" },
+		deps: AbsenceListDependencies{
+			Marks: &fakeAbsenceMarks{marks: []MorningMark{
+				{StudentID: 5, Date: "2026-09-08", Status: classday.MorningAttendanceAbsent},
+			}},
+			StatusDays:    fakeAbsenceStatusDays{days: []DatedStatusDay{{StudentID: 5, Date: "2026-09-08", Status: statusDaySick}}},
+			Calendar:      fakeAbsenceCalendar{},
+			AvailableFrom: func(context.Context, calendar.Date) (calendar.Date, error) { return "2025-09-16", nil },
+			// Nobody takes part in OGS care on these days.
+			Participation: fakeAbsenceParticipation{end: "2026-09-01"},
+			Children: func(context.Context, string) ([]classday.AbsenceListChild, error) {
+				return []classday.AbsenceListChild{
+					{StudentID: 5, FirstName: "Ohne", LastName: "Platz", SchoolMemberOnly: true},
+					{StudentID: 6, FirstName: "Schon", LastName: "Gegangen"},
+				}, nil
+			},
+		},
+	}
+	report, err := a.AbsenceListReport(context.Background(), absenceQuery("2026-09-07", "2026-09-09"))
+	require.NoError(t, err)
+	require.Len(t, report.Children, 1)
+	assert.Equal(t, "Ohne", report.Children[0].FirstName)
+	assert.Equal(t, 1, report.Children[0].AbsentDays)
+	assert.Equal(t, 1, report.Children[0].ExcusedDays)
+}
+
+// TestAbsenceListBoundsChildrenWithoutCarePlaceByMembership counts a child
+// without an OGS place only while it belongs to the class (#4803 review): a
+// converted class list entry from the day it was created, plus the earlier
+// days its moved marks cover, and a child that left the class up to its
+// enrollment end, graduated or not.
+func TestAbsenceListBoundsChildrenWithoutCarePlaceByMembership(t *testing.T) {
+	t.Parallel()
+	created, left := calendar.Date("2026-09-09"), calendar.Date("2026-09-08")
+	a := absenceList{
+		today: func() calendar.Date { return "2026-09-16" },
+		deps: AbsenceListDependencies{
+			Marks: &fakeAbsenceMarks{marks: []MorningMark{
+				// Moved from the class list entry before the conversion.
+				{StudentID: 5, Date: "2026-09-07", Status: classday.MorningAttendanceAbsent},
+				{StudentID: 5, Date: "2026-09-10", Status: classday.MorningAttendancePresent},
+				{StudentID: 7, Date: "2026-09-07", Status: classday.MorningAttendancePresent},
+			}},
+			StatusDays:    fakeAbsenceStatusDays{},
+			Calendar:      fakeAbsenceCalendar{},
+			AvailableFrom: func(context.Context, calendar.Date) (calendar.Date, error) { return "2025-09-16", nil },
+			Participation: fakeAbsenceParticipation{end: "2026-09-01"},
+			Children: func(context.Context, string) ([]classday.AbsenceListChild, error) {
+				return []classday.AbsenceListChild{
+					{StudentID: 5, FirstName: "Neu", LastName: "Angelegt", SchoolMemberOnly: true, SchoolMemberFrom: &created},
+					{StudentID: 7, FirstName: "Schon", LastName: "Gegangen", SchoolMemberOnly: true, SchoolMemberUntil: &left},
+				}, nil
+			},
+		},
+	}
+	report, err := a.AbsenceListReport(context.Background(), absenceQuery("2026-09-07", "2026-09-11"))
+	require.NoError(t, err)
+	require.Len(t, report.Children, 2)
+	byID := map[int64]classday.AbsenceListChild{}
+	for _, child := range report.Children {
+		byID[child.StudentID] = child
+	}
+	assert.Equal(t, 1, byID[5].AbsentDays, "the moved mark of 7 September counts")
+	assert.Equal(t, 2, byID[5].NotRecordedDays, "9 and 11 September, not 8 September before the child existed")
+	assert.Equal(t, 0, byID[7].AbsentDays)
+	assert.Equal(t, 1, byID[7].NotRecordedDays, "only 8 September, the last day in the class")
+}
+
+func TestAbsenceListKeepsTransferredAbsencesBeforeMembership(t *testing.T) {
+	t.Parallel()
+	const convertedStudentID int64 = 5
+	created, left := calendar.Date("2026-09-09"), calendar.Date("2026-09-06")
+	for _, cutoff := range []calendar.Date{"2025-09-16", "2026-09-08"} {
+		t.Run(cutoff.String(), func(t *testing.T) {
+			a := absenceList{
+				today: func() calendar.Date { return "2026-09-16" },
+				deps: AbsenceListDependencies{
+					Marks: &fakeAbsenceMarks{marks: []MorningMark{
+						{StudentID: convertedStudentID, Date: "2026-09-07", Status: classday.MorningAttendanceAbsent},
+						{StudentID: 7, Date: "2026-09-09", Status: classday.MorningAttendanceAbsent},
+						{StudentID: 8, Date: "2026-09-07", Status: classday.MorningAttendanceAbsent},
+						{StudentID: 9, Date: "2026-09-07", Status: classday.MorningAttendanceAbsent},
+					}},
+					StatusDays:    fakeAbsenceStatusDays{},
+					Calendar:      fakeAbsenceCalendar{},
+					AvailableFrom: func(context.Context, calendar.Date) (calendar.Date, error) { return cutoff, nil },
+					Participation: fakeAbsenceParticipation{end: "2026-09-01"},
+					Children: func(context.Context, string) ([]classday.AbsenceListChild, error) {
+						return []classday.AbsenceListChild{
+							{StudentID: convertedStudentID, SchoolMemberOnly: true, SchoolMemberFrom: &created},
+							{StudentID: 6, SchoolMemberOnly: true, SchoolMemberFrom: &created},
+							{StudentID: 7, SchoolMemberOnly: true, SchoolMemberFrom: &created},
+							{StudentID: 8},
+							{StudentID: 9, SchoolMemberOnly: true, SchoolMemberFrom: &created, SchoolMemberUntil: &left},
+						}, nil
+					},
+				},
+			}
+			report, err := a.AbsenceListReport(context.Background(), absenceQuery("2026-09-07", "2026-09-08"))
+			require.NoError(t, err)
+			if cutoff == "2026-09-08" {
+				assert.Empty(t, report.Children, "expired marks must not retain a child")
+				assert.Zero(t, report.Totals.AbsentDays)
+				return
+			}
+			require.Len(t, report.Children, 1)
+			assert.Equal(t, convertedStudentID, report.Children[0].StudentID)
+			assert.Equal(t, 1, report.Children[0].AbsentDays)
+			assert.Equal(t, 1, report.Children[0].UnexcusedDays)
+			assert.Zero(t, report.Children[0].NotRecordedDays, "unmarked days before membership do not count")
+			assert.Equal(t, report.Children[0].AbsenceListCounts, report.Totals)
+		})
+	}
 }

@@ -2586,7 +2586,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.phaseResponseRoster.ListRunningStudents",
-      "binding_digest": "4794746c66a9f6cbfb94d70660a022e8",
+      "binding_digest": "0324656f8a5ba4e6249b8985a8cb94ce",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.PhaseResponseRoster.ListRunningStudents",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRoster",
@@ -2594,7 +2594,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.phaseResponseRoster.ListRunningStudents",
-      "binding_digest": "a0da1121768268abc0eb3defc3bc84c1",
+      "binding_digest": "e4dd3080bdcedebd9d41867cc643c2eb",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.PhaseResponseRoster.ListRunningStudents",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRoster",
@@ -2602,7 +2602,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.phaseResponseRoster.ListRunningStudents",
-      "binding_digest": "67364ffbc0469e982e514d8e3540aca6",
+      "binding_digest": "5bfac438ebfe35299428709134318ee4",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.PhaseResponseRoster.ListRunningStudents",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRosterQuery.ListStudentRoster",
@@ -6082,7 +6082,23 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "7a3e44b9fecab13e96b036ae253fb495",
+      "binding_digest": "321228fb38c28aa34658b57213d16bdb",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
+      "source_owner": "enrollment",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassMemberFrom",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
+      "binding_digest": "f53019b377c48067a2ee297a3fdda06e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
+      "source_owner": "enrollment",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.LeftSchool",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
+      "binding_digest": "ab6c557e058e6fab6c7be402202cd14e",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.ListClassRoster",

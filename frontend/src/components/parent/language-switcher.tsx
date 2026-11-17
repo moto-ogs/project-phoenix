@@ -63,9 +63,7 @@ export function LanguageSwitcher({
             className="h-4 w-4 shrink-0 text-gray-500"
             aria-hidden="true"
           />
-          <span className={compact ? "sr-only" : "text-gray-600"}>
-            {t("label")}
-          </span>
+          {compact ? null : <span className="text-gray-600">{t("label")}</span>}
           <span
             className={`min-w-0 truncate text-sm font-semibold text-gray-900 ${
               compact ? "hidden md:inline" : ""
@@ -73,6 +71,11 @@ export function LanguageSwitcher({
           >
             {selectedLabel}
           </span>
+          {/* Compact: the visible language leads the name, the word „Sprache“
+              follows hidden (WCAG 2.5.3, #7112). */}
+          {compact ? (
+            <span className="sr-only">{`, ${t("label")}`}</span>
+          ) : null}
           <ListboxChevron open={open} />
         </>
       )}

@@ -226,7 +226,7 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
     expect(fetchSchoolDay).toHaveBeenCalledWith("2026-09-09");
     expect(fetchClassDay).not.toHaveBeenCalled();
     expect(
-      screen.getByRole("link", { name: "Krank: 1, Liste öffnen" }),
+      screen.getByRole("link", { name: /^Krank 1 ?, Liste öffnen$/ }),
     ).toHaveAttribute("href", "/school?tag=2026-09-09&liste=krank");
     // Die Klassenzeilen kommen aus derselben Antwort.
     expect(screen.getByText("Alle Klassen")).toBeVisible();
@@ -257,6 +257,32 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
       "/school/klasse?klasse=2b&tag=2026-09-09&liste=gehen-heim",
     );
     expect(screen.queryByText("Busch, Ben")).not.toBeInTheDocument();
+  });
+
+  it("labels a child without a care place in the school roster", async () => {
+    navigation.search = "tag=2026-09-09&liste=kinder";
+    const data = schoolDay("2026-09-09");
+    data.classes[1]!.children = [
+      {
+        student_id: "3",
+        first_name: "Carl",
+        last_name: "Claus",
+        without_care_place: true,
+      },
+    ];
+    data.classes[1]!.totals = { ...schoolTotals, students: 1, list_entries: 1 };
+    data.totals = { ...data.totals, leaving: 0, list_entries: 1 };
+    render(
+      <ClassDayOverview
+        fetchClasses={classes}
+        fetchClassDay={(_, date) => Promise.resolve(report(date))}
+        fetchSchoolDay={() => Promise.resolve(data)}
+      />,
+    );
+
+    const child = await screen.findByText("Claus, Carl");
+    expect(child).toBeVisible();
+    expect(child.closest("li")).toHaveTextContent("keine Betreuung");
   });
 
   it("keeps the opened list when the day changes", async () => {
@@ -385,7 +411,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     expect(screen.getByText(/Es gibt keine Krankmeldung/)).toBeVisible();
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Meldung für Dana Dorn eintragen",
+        name: /^Meldung eintragen ?, Meldung für Dana Dorn eintragen$/,
       }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: "Krank" }));
@@ -434,7 +460,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     expect(await screen.findByText("Fehlen ohne Meldung: 1")).toBeVisible();
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Meldung für Dana Dorn eintragen",
+        name: /^Meldung eintragen ?, Meldung für Dana Dorn eintragen$/,
       }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: "Krank" }));
@@ -466,7 +492,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     );
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Meldung für Dana Dorn eintragen",
+        name: /^Meldung eintragen ?, Meldung für Dana Dorn eintragen$/,
       }),
     );
     fireEvent.click(await screen.findByRole("menuitem", { name: "Krank" }));
@@ -568,7 +594,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     expect(await screen.findByText("Dorn, Dana")).toBeVisible();
     expect(
       screen.queryByRole("button", {
-        name: "Meldung für Dana Dorn eintragen",
+        name: /^Meldung eintragen ?, Meldung für Dana Dorn eintragen$/,
       }),
     ).not.toBeInTheDocument();
   });

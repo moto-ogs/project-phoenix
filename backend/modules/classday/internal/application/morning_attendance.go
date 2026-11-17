@@ -297,8 +297,8 @@ func morningChild(row classday.DayRow) studentpresence.MorningAttendanceChild {
 // unreportedAbsence reports a child the Lehrkraft marked absent that nobody
 // reported sick, excused or on a class trip ("fehlt ohne Meldung", #4791).
 // The derived "cancelled" (OGS care called off) explains no school morning.
-// A class-list-only entry has no status day to report through yet; it joins
-// with #4803.
+// A class-list-only entry has no status day to report through; a child
+// without an OGS place (#4803) is a student and has one, so it counts.
 func unreportedAbsence(row classday.DayRow) bool {
 	return !row.ListEntry && row.StudentID > 0 &&
 		row.MorningAttendance != nil &&

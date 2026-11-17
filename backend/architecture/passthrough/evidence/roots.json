@@ -7030,13 +7030,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (d phaseResponseRoster) ListRunningStudents(ctx context.Context, today timezone.Date) ([]enrollmentOwner.PhaseResponseStudent, error) {\n\tentries, err := d.query.ListStudentRoster(ctx, today.String())\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]enrollmentOwner.PhaseResponseStudent, 0, len(entries))\n\tfor _, entry := range entries {\n\t\tresult = append(result, enrollmentOwner.PhaseResponseStudent{ID: entry.Record.ID, FirstName: entry.FirstName, LastName: entry.LastName, SchoolClass: entry.Record.SchoolClass, NotActive: entry.Record.Status != peopledirectory.StudentStatusActive})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/phaseResponseRoster.ListRunningStudents",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (s pickupAdjustmentStudents) LockStudent(ctx context.Context, id int64) (*careplan.ScheduleStudent, error) {\n\tstudent, err := s.students.FindByIDForUpdate(ctx, id)\n\tif err != nil || student == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026careplan.ScheduleStudent{ID: student.ID, TenantID: student.TenantID}, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/pickupAdjustmentStudents.LockStudent",

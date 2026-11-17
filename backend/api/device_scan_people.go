@@ -179,7 +179,8 @@ func (p DeviceScanPeople) GetStudentByPersonID(ctx context.Context, personID int
 }
 
 // Students lists the kiosk roster: every child, or those of the teachers'
-// groups, with name, class, group and card.
+// groups, with name, class, group and card. A child without an OGS place
+// (#4803) never checks in at the OGS, so it is not on the kiosk.
 func (p DeviceScanPeople) Students(ctx context.Context, teacherIDs []int64) ([]devicescan.DirectoryStudent, error) {
 	var students []peopledirectory.StudentRosterEntry
 	var err error
@@ -193,7 +194,7 @@ func (p DeviceScanPeople) Students(ctx context.Context, teacherIDs []int64) ([]d
 	}
 	result := make([]devicescan.DirectoryStudent, 0, len(students))
 	for _, row := range students {
-		if row.Record == nil || row.Record.Person == nil {
+		if row.Record == nil || row.Record.Person == nil || row.Record.WithoutCarePlace {
 			continue
 		}
 		student := row.Record

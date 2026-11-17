@@ -49,16 +49,18 @@ describe("LanguageSwitcher", () => {
 
     expect(container.querySelector("select")).not.toBeInTheDocument();
     expect(container.firstElementChild).toHaveClass("inline-block");
-    expect(screen.getByRole("button", { name: "Language" })).toHaveTextContent(
-      "Deutsch",
-    );
-    expect(screen.getByRole("button", { name: "Language" })).toHaveClass("h-9");
+    expect(
+      screen.getByRole("button", { name: "Language Deutsch" }),
+    ).toHaveTextContent("Deutsch");
+    expect(
+      screen.getByRole("button", { name: "Language Deutsch" }),
+    ).toHaveClass("h-9");
   });
 
   it("opens the locale menu and changes anonymous locale", () => {
     render(<LanguageSwitcher />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Language" }));
+    fireEvent.click(screen.getByRole("button", { name: "Language Deutsch" }));
     fireEvent.click(screen.getByRole("option", { name: "English" }));
 
     expect(mockedWriteLocaleCookie).toHaveBeenCalledWith("en");
@@ -68,7 +70,7 @@ describe("LanguageSwitcher", () => {
   it("offers all seven languages and switches to a new one", () => {
     render(<LanguageSwitcher />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Language" }));
+    fireEvent.click(screen.getByRole("button", { name: "Language Deutsch" }));
     expect(
       screen.getAllByRole("option").map((option) => option.textContent),
     ).toEqual([
@@ -95,9 +97,11 @@ describe("LanguageSwitcher", () => {
 
     render(<LanguageSwitcher compact />);
 
-    const trigger = screen.getByRole("button", { name: "Language" });
+    const trigger = screen.getByRole("button", {
+      name: /^Русский ?, Language$/,
+    });
     expect(trigger).toHaveTextContent("Русский");
-    expect(screen.getByText("Language")).toHaveClass("sr-only");
+    expect(screen.getByText(", Language")).toHaveClass("sr-only");
 
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole("option", { name: "Shqip" }));

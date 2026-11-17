@@ -164,7 +164,8 @@ describe("ParentBottomNav", () => {
       container.querySelector('[data-parent-nav-item="more"]'),
     ).toHaveTextContent("3");
 
-    fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+    // The count is part of the name, after the visible label (#7112).
+    fireEvent.click(screen.getByRole("button", { name: "Mehr 3 Hinweise" }));
     const notices = screen.getByRole("button", { name: /Hinweise/ });
     expect(notices).toHaveTextContent("3");
     expect(isNotificationsSheetOpen()).toBe(false);

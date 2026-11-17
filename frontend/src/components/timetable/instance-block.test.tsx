@@ -65,6 +65,16 @@ function renderBlock(
   );
 }
 
+/**
+ * Text the block shows. What it does not show follows its visible content as
+ * hidden text for screen readers (#7112) and does not count here.
+ */
+function visibleText(text: RegExp): HTMLElement[] {
+  return screen
+    .queryAllByText(text)
+    .filter((element) => !element.closest(".sr-only"));
+}
+
 describe("InstanceBlock -> PlanBlock mapping", () => {
   it("renders the neutral edge when no planning track is assigned", () => {
     renderBlock(makeInstance());
@@ -241,7 +251,8 @@ describe("InstanceBlock -> PlanBlock mapping", () => {
     it("zeigt in einem sehr kurzen Block nur Zeit und Titel", () => {
       renderBlock(staffed(), { staffNames: names }, 28);
 
-      expect(screen.queryByText(/Raum 104/)).not.toBeInTheDocument();
+      // Der Raum steht nur noch im versteckten Teil des Namens (#7112).
+      expect(visibleText(/Raum 104/)).toHaveLength(0);
       expect(screen.getByRole("button")).toHaveAttribute(
         "title",
         expect.stringContaining("Raum: Raum 104"),
@@ -326,7 +337,8 @@ describe("InstanceBlock -> PlanBlock mapping", () => {
           ].join("\n"),
         );
         expect(button).toHaveAccessibleName(
-          /^Hausaufgaben, 12:00 bis 13:00, .*Raum: Raum 104, Gruppe: Sonne, Fachkräfte: Anna Kowalski \(abwesend\), Ben Müller \(Ersatz\)$/,
+          // Named by what it shows, then the hidden details (#7112).
+          /^12:00 Hausaufgaben .*, Raum: Raum 104, Gruppe: Sonne, Fachkräfte: Anna Kowalski \(abwesend\), Ben Müller \(Ersatz\)$/,
         );
       });
 
@@ -366,8 +378,8 @@ describe("InstanceBlock -> PlanBlock mapping", () => {
 
       // Anker: der abgesagte Block zeigt seinen Titel.
       expect(screen.getByText("Hausaufgaben")).toBeInTheDocument();
-      expect(screen.queryByText(/Raum 104/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Ben M\./)).not.toBeInTheDocument();
+      expect(visibleText(/Raum 104/)).toHaveLength(0);
+      expect(visibleText(/Ben M\./)).toHaveLength(0);
     });
   });
 

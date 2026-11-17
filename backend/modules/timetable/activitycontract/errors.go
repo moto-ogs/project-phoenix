@@ -44,6 +44,10 @@ var (
 	// a departed child is not a graduate, and the two lead to different places
 	// in the UI (Abgänge vs "Beendete Betreuungen").
 	ErrStudentCareEnded = errors.New("student care has ended and cannot be enrolled")
+	// ErrStudentWithoutCarePlace is returned when an enrollment write targets
+	// a child of the class without an OGS place (#4803): it takes part in no
+	// AG or care offering of the OGS.
+	ErrStudentWithoutCarePlace = errors.New("student has no OGS place and cannot be enrolled")
 
 	// errStudentRepoMissing marks the internal "cannot check graduation status"
 	// condition: the service was built without a student repository. An

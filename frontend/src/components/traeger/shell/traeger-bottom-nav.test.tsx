@@ -59,7 +59,7 @@ describe("TraegerBottomNav", () => {
     expect(
       bar()
         .getAllByRole("link")
-        .map((link) => link.getAttribute("aria-label")),
+        .map((link) => link.textContent),
     ).toEqual([
       "Schulen",
       "Ferienbetreuung",
@@ -88,7 +88,7 @@ describe("TraegerBottomNav", () => {
     expect(
       bar()
         .getAllByRole("link")
-        .map((link) => link.getAttribute("aria-label")),
+        .map((link) => link.textContent),
     ).toEqual(["Dashboard", "Schulen", "Stichtagszahlen", "Belegung"]);
     expect(bar().getByRole("link", { name: "Dashboard" })).toHaveAttribute(
       "href",
@@ -122,7 +122,7 @@ describe("TraegerBottomNav", () => {
     expect(
       bar()
         .getAllByRole("link")
-        .map((link) => link.getAttribute("aria-label")),
+        .map((link) => link.textContent),
     ).toEqual([
       "Zurück zur App",
       "Allgemein",
@@ -137,7 +137,9 @@ describe("TraegerBottomNav", () => {
     // that page by its short name, so the bar says where the person is; the
     // accessible name starts with the visible words (WCAG 2.5.3).
     const more = bar().getByRole("button", {
-      name: "Vorgaben, Mehr: Abrechnungsvorgaben",
+      // The hidden rest of the name follows the visible word (#7112); the
+      // name computation may put a space before its comma.
+      name: /^Vorgaben ?, Mehr: Abrechnungsvorgaben$/,
     });
     expect(more).toHaveAttribute("data-active", "true");
     expect(more).toHaveTextContent("Vorgaben");

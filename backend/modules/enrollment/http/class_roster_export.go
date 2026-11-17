@@ -27,12 +27,13 @@ func buildClassRosterExportFile(svc lists.DocumentRenderer, report *capability.C
 func buildClassRosterTableDocument(report *capability.ClassRosterReport) lists.Document {
 	children := make([]lists.ClassRosterChild, 0, len(report.Rows))
 	for _, row := range report.Rows {
-		// A class-list-only entry (#2382) has no OGS record at all: the
-		// shared table marks its name and leaves every weekday "—".
+		// A class-list-only entry (#2382) and a child without an OGS place
+		// (#4803) have no OGS care: the shared table marks the name and
+		// leaves every weekday "—".
 		child := lists.ClassRosterChild{
 			Name:        row.FirstName + " " + row.LastName,
 			SchoolClass: row.SchoolClass,
-			NoCare:      row.ListEntry,
+			NoCare:      row.ListEntry || row.WithoutCarePlace,
 			Extra: map[lists.ColumnID]string{
 				lists.ColumnGuardianContacts: classRosterGuardianContactsLabel(row.Guardians),
 			},

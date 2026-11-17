@@ -84,8 +84,6 @@ export const Empty: Story = {
 };
 
 export const WithTemplates: Story = {
-  // axe meldet hier noch definition-list; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     templates,
   },

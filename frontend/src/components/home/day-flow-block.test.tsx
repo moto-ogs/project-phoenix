@@ -94,10 +94,10 @@ describe("DayFlowBlock (#2180)", () => {
     render(<DayFlowBlock />);
 
     const own = screen.getByRole("link", {
-      name: "Basteln (Mein Block): unter Heute öffnen",
+      name: /Basteln.*, Mein Block ?, unter Heute öffnen\b/,
     });
     const other = screen.getByRole("link", {
-      name: "Fußball-AG: unter Heute öffnen",
+      name: /Fußball-AG(?!.*Mein Block).* ?, unter Heute öffnen\b/,
     });
     expect(own).toHaveStyle({ backgroundColor: "#5080D81A" });
     expect(own).not.toHaveClass("border-l-4");
@@ -117,7 +117,7 @@ describe("DayFlowBlock (#2180)", () => {
     render(<DayFlowBlock />);
 
     const own = screen.getByRole("link", {
-      name: "Basteln: unter Heute öffnen",
+      name: /Basteln(?!.*Mein Block).* ?, unter Heute öffnen\b/,
     });
     expect(own.style.backgroundColor).toBe("");
   });
@@ -243,7 +243,7 @@ describe("DayFlowBlock (#2180)", () => {
     render(<DayFlowBlock />);
 
     expect(
-      screen.getByRole("link", { name: "Lernzeit: unter Heute öffnen" }),
+      screen.getByRole("link", { name: /Lernzeit.* ?, unter Heute öffnen\b/ }),
     ).toHaveAttribute("href", "/test-tenant/tagesplan");
   });
 
