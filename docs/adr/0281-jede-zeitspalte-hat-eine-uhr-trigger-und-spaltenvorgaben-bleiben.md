@@ -145,3 +145,25 @@ Noch offen: `audit.delete_expired_deviation_events` bewacht den Kalendertag
 der Abweichungen mit dem Tag der Datenbank, die Grenze kommt aber aus der
 Stundenplan-Aufbewahrung, die mit derselben Grenze die Stundenplanzeilen
 löscht. Sie folgt in einem eigenen Schnitt.
+
+## Nachtrag 2026-11-17: Der Änderungsverlauf der Elternanfragen liegt auf der Datenbankuhr
+
+Der Verlauf unter „Änderungsanfragen“ ordnet fünf Quellen nach einem
+Zeitpunkt und blättert mit ihm: Betreuungszeiten und Entschuldigungen nach
+`updated_at`, das der Trigger stempelt, Stammdaten und Angebote nach
+`updated_at` ohne Trigger, direkte Korrekturen der Buchung nach
+`audit.enrollment_offering_adjustments.changed_at`. Nach Punkt 4 tragen alle
+die Uhr der Trigger, denn diese Seite zieht nur mit einer Migration um. Jeder
+Schreiber setzt `updated_at = DEFAULT` oder lässt die Spalte aus;
+`changed_at` stempelt die Spaltenvorgabe. `reviewed_at` bleibt auf der Uhr
+des Owners und wird nur angezeigt.
+
+Dasselbe gilt für die Korrektur einer Abholänderung: Ob ein Tageswert nach
+der Entscheidung geändert wurde, vergleicht sie mit `updated_at` der Anfrage,
+nicht mit `reviewed_at`. Die Entscheidung schreibt Tageswert und Anfrage in
+einer Transaktion. Abholzeiten (`schedule.student_pickup_exceptions`)
+stempelt dafür in jedem Schreiber die Spaltenvorgabe, Abholarten der Trigger.
+Grenze: Löscht jemand das Konto der entscheidenden Person, setzt die
+Datenbank `reviewed_by` auf `NULL`, und der Trigger rückt `updated_at` vor.
+Eine Änderung am Tageswert zwischen Entscheidung und Löschung bleibt dann
+unerkannt.
