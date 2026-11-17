@@ -42,6 +42,7 @@ export function downloadBlob(blob: Blob, filename: string): void {
 /**
  * Opens a blob in a tab and triggers the print dialog. The returned promise
  * settles after the delayed print attempt, so callers can surface failures.
+ * Browser-owned PDF viewers may require the user to print manually.
  *
  * `target` is a tab the caller already opened synchronously inside the
  * click handler. That matters: after an `await`, popup blockers (Safari,
@@ -66,14 +67,31 @@ export async function openBlobForPrint(
   // printing keeps the pragmatic delay every print export here has used.
   return new Promise((resolve, reject) => {
     globalThis.setTimeout(() => {
+      let browserOwnsPdf = false;
       try {
         tab.focus();
         tab.print();
         resolve();
       } catch (error) {
-        reject(error);
+        // Built-in PDF viewers can deny scripted printing across origins.
+        // Keep the tab and URL available for the viewer's own print controls.
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "name" in error &&
+          error.name === "SecurityError"
+        ) {
+          browserOwnsPdf = true;
+          resolve();
+        } else {
+          reject(error);
+        }
       } finally {
-        URL.revokeObjectURL(url);
+        if (browserOwnsPdf) {
+          globalThis.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        } else {
+          URL.revokeObjectURL(url);
+        }
       }
     }, 250);
   });

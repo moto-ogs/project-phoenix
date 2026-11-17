@@ -84,6 +84,39 @@ describe("exportEmergencySnapshot", () => {
     );
   });
 
+  it("keeps the PDF open for manual printing when the browser owns the viewer", async () => {
+    vi.useFakeTimers();
+    const tab = {
+      focus: vi.fn(),
+      print: vi.fn(() => {
+        throw new DOMException("PDF viewer owns printing", "SecurityError");
+      }),
+      close: vi.fn(),
+      location: { href: "" },
+      opener: null,
+    };
+    window.open = vi.fn(() => tab as unknown as Window);
+    globalThis.fetch = vi.fn(async () => new Response(new Blob(["pdf"])));
+
+    const printing = exportEmergencySnapshot("print");
+    const result = printing.then(
+      () => null,
+      (error: unknown) => error,
+    );
+    await vi.advanceTimersByTimeAsync(250);
+    expect(await result).toBeNull();
+
+    expect(tab.print).toHaveBeenCalledOnce();
+    expect(tab.location.href).toBe("blob:emergency-export-url");
+    expect(tab.close).not.toHaveBeenCalled();
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(URL.revokeObjectURL).toHaveBeenCalledExactlyOnceWith(
+      "blob:emergency-export-url",
+    );
+  });
+
   it("closes the print tab again when the export fails", async () => {
     const close = vi.fn();
     window.open = vi.fn(
