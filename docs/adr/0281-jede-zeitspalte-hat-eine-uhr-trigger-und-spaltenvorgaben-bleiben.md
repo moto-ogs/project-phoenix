@@ -155,15 +155,28 @@ Zeitpunkt und blättert mit ihm: Betreuungszeiten und Entschuldigungen nach
 `audit.enrollment_offering_adjustments.changed_at`. Nach Punkt 4 tragen alle
 die Uhr der Trigger, denn diese Seite zieht nur mit einer Migration um. Jeder
 Schreiber setzt `updated_at = DEFAULT` oder lässt die Spalte aus;
-`changed_at` stempelt die Spaltenvorgabe. `reviewed_at` bleibt auf der Uhr
-des Owners und wird nur angezeigt.
+`changed_at` stempelt die Spaltenvorgabe.
 
-Dasselbe gilt für die Korrektur einer Abholänderung: Ob ein Tageswert nach
-der Entscheidung geändert wurde, vergleicht sie mit `updated_at` der Anfrage,
-nicht mit `reviewed_at`. Die Entscheidung schreibt Tageswert und Anfrage in
-einer Transaktion. Abholzeiten (`schedule.student_pickup_exceptions`)
-stempelt dafür in jedem Schreiber die Spaltenvorgabe, Abholarten der Trigger.
-Grenze: Löscht jemand das Konto der entscheidenden Person, setzt die
-Datenbank `reviewed_by` auf `NULL`, und der Trigger rückt `updated_at` vor.
-Eine Änderung am Tageswert zwischen Entscheidung und Löschung bleibt dann
-unerkannt.
+`reviewed_at` bleibt auf der Uhr des Owners. Die Elternansicht „kürzlich
+entschieden“ filtert entschiedene Betreuungs- und Entschuldigungsanfragen
+danach, mit einer Grenze derselben Uhr; offene Anfragen zeigt sie unabhängig
+davon. Jeder Endzustand stempelt `reviewed_at`: Entscheidung mit und ohne
+entscheidende Person, Korrektur, „erledigt“ und `care_ended`. Ältere Zeilen
+ohne `reviewed_at` (Entscheidungen ohne entscheidende Person vor dieser
+Änderung) fallen aus dem höchstens zwei Monate langen Fenster; ein Rückfall
+auf `updated_at` würde zwei Uhren vergleichen.
+
+Die Korrektur einer Abholänderung ordnet keine Zeitstempel. Die Entscheidung
+liest Abholzeit und Abholart, die sie geschrieben hat, in ihrer Transaktion
+zurück und legt im Entscheidungsprotokoll neben der ID eine Version ab:
+`updated_at` auf Mikrosekunden und alle Felder, die das Team ändern kann.
+Jeder Schreiber beider Tabellen rückt `updated_at` vor (Spaltenvorgabe,
+Trigger). Die Korrektur nimmt eine Zeile nur zurück, solange die Version
+gleich ist. Der Start einer Transaktion folgt nicht der Reihenfolge der
+Commits: Eine Änderung des Teams, deren Transaktion vor der Genehmigung
+begann und nach ihr schrieb, trägt den älteren Stempel und wird trotzdem
+erkannt. Einträge ohne Version, geschrieben vor dieser Änderung, vergleichen
+wie zuvor `updated_at` der Zeile mit `updated_at` der Anfrage; nur für sie
+bleiben diese Überlappung und das Vorrücken durch
+`reviewed_by … ON DELETE SET NULL` unerkannt. Die Abholnotiz der Tagesperson
+löscht die Korrektur weiterhin ohne Prüfung.
