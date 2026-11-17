@@ -104,14 +104,33 @@ Das gilt für `audit.auth_events`, `audit.data_access_log`,
 `audit.data_deletions`, `audit.student_field_edits` (Änderungsprotokoll der
 Kinder), die zehn Protokolle von `audit.delete_expired_protocol`,
 `audit.unregistered_tag_scans` (`devicefleet`) und die Krankmeldungen in
-`users.staff_documents` (`workforce`). Nach Punkt 4 stempelt die Datenbank
-auch `audit.guardian_changes`, `audit.student_consent_changes` und
-`audit.attendance_corrections`: Die Zugriffsliste des Trägers ordnet sie gegen
-die übrigen Protokolle. Sie endet an der Datenbankzeit ihrer Leseabfrage, und
-die Dedup-Abfragen des Zugriffsprotokolls zählen Tag und Fenster ebenfalls auf
-der Datenbankuhr. Auf der Audit-Uhr bleiben nur die Änderungen an
-Arbeitszeiten (`audit.work_session_edits`), die mit ihrer Sitzung gelöscht
-werden.
+`users.staff_documents` (`workforce`). Verworfen wird nur, was der Erzeuger
+mit seiner eigenen Uhr als „jetzt“ setzt; kein Erzeuger dieser Protokolle
+setzt einen früheren Zeitpunkt. Nach Punkt 4 stempelt die Datenbank auch
+`audit.guardian_changes` und `audit.attendance_corrections`: Die
+Zugriffsliste des Trägers ordnet sie gegen die übrigen Protokolle. Sie endet
+an der Datenbankzeit ihrer Leseabfrage, auch für einen Träger ohne Schulen,
+dessen Liste nur Ferienanmeldungen zeigt; die Dedup-Abfragen des
+Zugriffsprotokolls und das 30-Tage-Fenster der Löschstatistik zählen
+ebenfalls auf der Datenbankuhr. Die Änderungen an Einwilligungen
+(`audit.student_consent_changes`) behalten den Zeitpunkt des Erzeugers: Eine
+Erteilung nennt den Tag, an dem die Einwilligung gegeben wurde, beim Import
+den Tag aus der Datei. Nach einem Widerruf ist dieser Eintrag der einzige
+Beleg dafür. Ohne Zeitpunkt stempelt die Spaltenvorgabe. Auf der Audit-Uhr
+bleiben die Änderungen an Arbeitszeiten (`audit.work_session_edits`), die
+mit ihrer Sitzung gelöscht werden.
+
+Grenze: Die Sicht `audit.time_tracking_audit_log` mischt drei Uhren und
+ordnet nach `occurred_at`. Die Datenbank stempelt die Löschungen
+(`audit.time_tracking_deletions`) und die Personalnummern
+(`audit.personnel_number_changes`), die Audit-Uhr die Änderungen an
+Arbeitszeiten, die Uhr von `workforce` die übrigen Zweige: Abwesenheiten
+(`changed_at`), Saldo-Korrekturen und Urlaubseröffnungen (`decided_at`),
+Monatsabschluss und Wiedereröffnung (`closed_at`, `reopened_at`),
+Urlaubsanspruch und Kontingente (`created_at`). Diese Zweige ziehen erst mit
+einem eigenen Schnitt von `workforce` um. Im Betrieb gehen die Uhren gleich;
+nur bei auseinanderlaufenden Uhren kann ein Eintrag vor einem früheren
+stehen.
 
 Vergleicht eine Aufbewahrung ein `updated_at`, das der Trigger stempelt,
 rechnet dieser Zweig vom Tag der Datenbank (Punkt 3): ausgeschaltete Hinweise

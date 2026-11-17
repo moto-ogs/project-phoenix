@@ -48,14 +48,15 @@ var moduleSQLClockBudget = map[string]int{
 	// student change log and the ten protocols on the database clock, so the
 	// column defaults stamp these ledgers, and the change ledgers the access
 	// trail orders against them, in every writer; their cutoffs count back
-	// from DatabaseTime, read once per retention step. The access-log
-	// deduplication and the end of the Träger access trail read the same
-	// clock. The column defaults also stamp the ledgers without a school
+	// from DatabaseTime, read once per retention step, and so does the
+	// window of the cleanup statistics. The access-log deduplication and the
+	// end of the Träger access trail read the same clock. The consent changes
+	// keep the time their producer sets, the date of the grant. The column defaults also stamp the ledgers without a school
 	// (operator ledger, Träger account ledger, Träger document downloads),
 	// whose cutoff the database computes.
 	"modules/auditlog": 1,
-	// Only the finished student document cleanups: their database function
-	// guards the cutoff with the database clock (1.15.606).
+	// Only the finished student document cleanups (1): their database
+	// function guards the cutoff with the database clock (1.15.606).
 	"modules/careplan": 1,
 	// Named exceptions on the database clock: the message retention of ADR
 	// 0277 (7), since PostgreSQL stamps and orders the messages and threads;
@@ -72,6 +73,11 @@ var moduleSQLClockBudget = map[string]int{
 	// (1), which staffannouncementaudience orders against database-stamped
 	// created_at of schools, memberships and accounts (ADR 0281).
 	"modules/communication": 18,
+	// The unregistered tag scans (1, ADR 0281, Nachtrag): the column default
+	// stamps scanned_at and audit.delete_expired_unregistered_tag_scans guards
+	// the 90-day window on the database clock, so the cutoff counts back from
+	// DatabaseTime.
+	"modules/devicefleet": 1,
 	// Named exceptions on the database clock (ADR 0281): the read state of
 	// requests (3), where read_at and parent_changed_at are stamped there and
 	// only compared with each other; family_children_stated_at (1), which
@@ -79,12 +85,7 @@ var moduleSQLClockBudget = map[string]int{
 	// family children; and promoted_at of a holiday booking (1), whose Berlin
 	// day the host's booked days compare with the day of the rebooking in
 	// the holiday audit, which the column default stamps there.
-	// The unregistered tag scans (1, ADR 0281, Nachtrag): the column default
-	// stamps scanned_at and audit.delete_expired_unregistered_tag_scans guards
-	// the 90-day window on the database clock, so the cutoff counts back from
-	// DatabaseTime.
-	"modules/devicefleet": 1,
-	"modules/enrollment":  5,
+	"modules/enrollment": 5,
 	// Named exceptions on the database clock: the two-minute fences of the
 	// school and Träger handover journals, which the claim and completion
 	// functions of the migrations stamp and compare with clock_timestamp().
@@ -100,11 +101,12 @@ var moduleSQLClockBudget = map[string]int{
 	// the cutoff with the database clock (1.15.606), so the cutoff is taken
 	// from statement_timestamp().
 	"modules/filestorage": 1,
-	// The Springer access windows (ADR 0251): the security-definer function
-	// auth.account_tenant_admitted admits a window on the database clock, so
-	// the prune of ended windows reads that clock too. And the deletion of
-	// deactivated operators: a trigger stamps platform.operators.deactivated_at
-	// with now(), so its cutoff compares on the database clock (ADR 0281).
+	// The Springer access windows (3, ADR 0251): the security-definer
+	// function auth.account_tenant_admitted admits a window on the database
+	// clock, so the prune of ended windows reads that clock too. And the
+	// deletion of deactivated operators (1): a trigger stamps
+	// platform.operators.deactivated_at with now(), so its cutoff compares on
+	// the database clock (ADR 0281).
 	"modules/identityaccess": 4,
 	// Named exceptions on the database clock (ADR 0281): deleted_at of
 	// platform.schools (4), which the demo retirement functions stamp with
