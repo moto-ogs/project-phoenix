@@ -687,6 +687,8 @@ export const ERROR_CATALOG = {
         "Die Anmeldefrist ist vorbei oder hat noch nicht begonnen. Bitte wenden Sie sich an die Schule.",
       "enrollment.withdraw_not_allowed":
         "Diese Anmeldung kann nicht mehr zurückgezogen werden. Bitte wenden Sie sich an die Schule.",
+      "enrollment.without_care_place_school_year_only":
+        "Ein Kind ohne OGS-Platz bekommt seinen Platz über eine Anmeldung für das Schuljahr.",
       "feedback.disabled": "Rückmeldungen sind an dieser Schule ausgeschaltet.",
       "files.announcement_published":
         "Die Mitteilung ist schon veröffentlicht. Ihre Anhänge lassen sich nicht mehr ändern.",
@@ -2576,6 +2578,8 @@ export const ERROR_CATALOG = {
         "The enrollment period has ended or has not started yet. Please contact the school.",
       "enrollment.withdraw_not_allowed":
         "This enrollment can no longer be withdrawn. Please contact the school.",
+      "enrollment.without_care_place_school_year_only":
+        "A child without an OGS place gets its place through an enrollment for the school year.",
       "files.file_name_invalid":
         "This file name is not allowed. Please choose the file again.",
       "general.request_too_large":
@@ -3277,6 +3281,8 @@ export const ERROR_CATALOG = {
         "Срок записи истёк или ещё не начался. Обратитесь в школу.",
       "enrollment.withdraw_not_allowed":
         "Эту запись больше нельзя отозвать. Обратитесь в школу.",
+      "enrollment.without_care_place_school_year_only":
+        "Ребёнок без места в OGS получает место через запись на учебный год.",
       "files.file_name_invalid":
         "Имя файла недопустимо. Выберите файл ещё раз.",
       "general.request_too_large":
@@ -3912,6 +3918,8 @@ export const ERROR_CATALOG = {
         "Afati i regjistrimit ka mbaruar ose nuk ka filluar ende. Ju lutemi kontaktoni shkollën.",
       "enrollment.withdraw_not_allowed":
         "Ky regjistrim nuk mund të tërhiqet më. Ju lutemi kontaktoni shkollën.",
+      "enrollment.without_care_place_school_year_only":
+        "Një fëmijë pa vend në OGS e merr vendin me një regjistrim për vitin shkollor.",
       "files.file_name_invalid":
         "Emri i skedarit nuk lejohet. Ju lutemi zgjidhni skedarin përsëri.",
       "general.request_too_large":
@@ -4537,6 +4545,8 @@ export const ERROR_CATALOG = {
         "Termin zapisów minął lub jeszcze się nie zaczął. Skontaktuj się ze szkołą.",
       "enrollment.withdraw_not_allowed":
         "Tego zapisu nie można już wycofać. Skontaktuj się ze szkołą.",
+      "enrollment.without_care_place_school_year_only":
+        "Dziecko bez miejsca w OGS otrzymuje miejsce poprzez zapis na rok szkolny.",
       "files.file_name_invalid":
         "Nazwa pliku jest niedozwolona. Wybierz plik ponownie.",
       "general.request_too_large":
@@ -5167,6 +5177,8 @@ export const ERROR_CATALOG = {
         "Kayıt süresi bitti veya henüz başlamadı. Lütfen okulla iletişime geçin.",
       "enrollment.withdraw_not_allowed":
         "Bu kayıt artık geri çekilemez. Lütfen okulla iletişime geçin.",
+      "enrollment.without_care_place_school_year_only":
+        "OGS yeri olmayan bir çocuk, yerini okul yılı kaydıyla alır.",
       "files.file_name_invalid":
         "Dosya adı kabul edilmiyor. Lütfen dosyayı yeniden seçin.",
       "general.request_too_large":
@@ -5790,6 +5802,8 @@ export const ERROR_CATALOG = {
         "Термін запису минув або ще не почався. Зверніться до школи.",
       "enrollment.withdraw_not_allowed":
         "Цей запис більше не можна відкликати. Зверніться до школи.",
+      "enrollment.without_care_place_school_year_only":
+        "Дитина без місця в OGS отримує місце через запис на навчальний рік.",
       "files.file_name_invalid":
         "Назва файлу не дозволена. Виберіть файл ще раз.",
       "general.request_too_large":

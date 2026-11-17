@@ -505,6 +505,11 @@ func (c *StudentImportConfig) AddsToChildQuota(ctx context.Context, row importMo
 	}
 	today := c.todayDate()
 	day := today.String()
+	// A child without an OGS place (#4803) never counts, and an import keeps
+	// it without one.
+	if existingID == nil && row.WithoutCarePlace {
+		return false, nil
+	}
 	if existingID == nil {
 		enrolledFrom := parseOptionalImportCalendarDate(row.EnrolledFrom)
 		return c.CountsTowardChildQuota(newEnrollmentStatus(enrolledFrom, today),
@@ -513,6 +518,9 @@ func (c *StudentImportConfig) AddsToChildQuota(ctx context.Context, row importMo
 	record, err := c.Students.ReadEnrollmentStudent(ctx, *existingID, "")
 	if err != nil {
 		return false, fmt.Errorf("read student for child quota: %w", err)
+	}
+	if record.WithoutCarePlace {
+		return false, nil
 	}
 	after := renewalFromRow(record, row, today)
 	return !c.CountsTowardChildQuota(record.Status, record.EnrolledFrom, record.EnrolledUntil, day) &&

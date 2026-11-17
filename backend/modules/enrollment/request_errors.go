@@ -38,6 +38,12 @@ var (
 	// because it protects a live student record, not just parent convenience
 	// (#1663). Mapped to 409 Conflict.
 	ErrExistingStudentAlreadyRequested = errors.New("another active enrollment request already targets this student in this phase")
+	// ErrWithoutCarePlaceNeedsSchoolYear refuses to approve a holiday or
+	// custom phase for a child without an OGS place (#4803): such a child
+	// gets its place through an enrollment for the school year. A holiday
+	// approval would give it the place and end its care with the holidays,
+	// and the child would leave its class views. Mapped to 409 Conflict.
+	ErrWithoutCarePlaceNeedsSchoolYear = errors.New("a child without an OGS place gets its place through an enrollment for the school year")
 	// ErrPhaseNotEligible is the audience gate (#1663): a linked_parents
 	// phase rejects anonymous submissions (the parent handler additionally
 	// verifies the guardian link before stamping GuardianAccountID).

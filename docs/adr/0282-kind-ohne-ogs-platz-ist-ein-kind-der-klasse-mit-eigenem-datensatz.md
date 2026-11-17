@@ -75,8 +75,12 @@ Deshalb erreichen sie Familien ohne OGS-Platz nicht. Ein zweiter Weg für Eltern
   Krankmeldung, Elternbriefe, Umfragen, Elternsprechtag, Kalender und
   Stammdaten bleiben.
 - **Aufnahme in die OGS.** Ein Kind ohne OGS-Platz bekommt einen Platz über
-  eine angenommene Anmeldung für das bestehende Kind. Erst dann zählt es für
-  Stichtag und Kontingent.
+  eine angenommene Anmeldung für das Schuljahr für das bestehende Kind. Erst
+  dann zählt es für Stichtag und Kontingent. Eine Ferien- oder eigene Phase
+  nimmt die Schule für ein solches Kind nicht an
+  (`enrollment.without_care_place_school_year_only`): Sie gäbe ihm den Platz
+  und beendete seine Betreuung mit den Ferien, und das Kind fiele danach aus
+  den Klassenansichten.
 
 ## Folgen
 
