@@ -107,11 +107,9 @@ type accessTrailRow struct {
 }
 
 // ListAccessTrail lists the entries of the filter, newest first, and the
-// instant they end at.
+// instant they end at. An empty school set lists nothing and still returns
+// that instant, which ends a list of the Träger's own entries.
 func (s *AccessTrail) ListAccessTrail(ctx context.Context, filter auditlog.AccessTrailFilter) ([]auditlog.AccessTrailEntry, time.Time, error) {
-	if len(filter.Schools) == 0 {
-		return nil, time.Time{}, auditlog.ErrAccessTrailSchoolsRequired
-	}
 	result := []auditlog.AccessTrailEntry{}
 	if filter.Limit <= 0 {
 		return result, filter.AsOf, nil
@@ -125,7 +123,7 @@ func (s *AccessTrail) ListAccessTrail(ctx context.Context, filter auditlog.Acces
 		asOf = &filter.AsOf
 	}
 	var rows []accessTrailRow
-	if err := db.NewRaw(accessTrailQuery, pgdialect.Array(filter.Schools), filter.From, filter.To, filter.SchoolID,
+	if err := db.NewRaw(accessTrailQuery, pgdialect.Array(nonNilIDs(filter.Schools)), filter.From, filter.To, filter.SchoolID,
 		filter.AccountID, filter.Kind, filter.Limit, max(filter.Offset, 0), pgdialect.Array(nonNilIDs(filter.StaffIDs)), asOf).Scan(ctx, &rows); err != nil {
 		return nil, time.Time{}, fmt.Errorf("audit access trail: list entries: %w", err)
 	}

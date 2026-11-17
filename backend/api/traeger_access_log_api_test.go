@@ -557,3 +557,50 @@ func TestTraegerAccessLogListsUpToTheDatabaseTime(t *testing.T) {
 	}
 	assert.ElementsMatch(t, []string{"attendance_history", "guardian_record"}, data)
 }
+
+// A Träger without schools still has its holiday trail. Its first page ends
+// at the database time, which stamps that trail, and the next page reads up
+// to that instant: an entry recorded after the first page neither shifts an
+// entry onto the second page twice nor appears there.
+func TestTraegerAccessLogWithoutSchoolsEndsAtTheDatabaseTime(t *testing.T) {
+	t.Parallel()
+	db, router := newHolidayPeriodPortal(t)
+	office := newTraegerOffice(t, db, router, "Träger Ohne Schulen", identityaccess.TraegerRoleAdministration)
+	period := createHolidayPeriod(t, router, office, januaryHolidays(office))
+	successor := traegerOrganization(t, db, "Träger Nachfolge", true)
+	_, err := db.ExecContext(context.Background(), `UPDATE platform.schools SET organization_id = ? WHERE id IN (?, ?)`,
+		successor, office.schools[0], office.schools[1])
+	require.NoError(t, err)
+	member, _ := traegerOfficeAccount(t, db, office.organization)
+	var databaseNow time.Time
+	require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(context.Background(), &databaseNow))
+	for i := 1; i <= 51; i++ {
+		recordHolidayAccess(t, db, office.organization, period.ID, nil, "list", member, databaseNow.Add(-time.Duration(i)*time.Second))
+	}
+	day := calendar.DateFromTime(databaseNow)
+	window := url.Values{"from": {day.AddDays(-1).String()}, "to": {day.String()}}
+
+	rec := accessLogRequest(t, router, office.token, "/traeger/access-log/", window)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	first := decodeSchoolPortalData[accessLogPage](t, rec.Body.Bytes())
+	require.Len(t, first.Entries, 50)
+	assert.True(t, first.HasMore)
+	require.False(t, first.AsOf.IsZero(), "the list answers the instant it reads up to")
+	assert.WithinDuration(t, databaseNow, first.AsOf, time.Minute, "the list reads up to the database time")
+
+	_, err = db.ExecContext(context.Background(), `INSERT INTO enrollment.holiday_registration_audit
+		(organization_id, holiday_period_id, action, actor_account_id) VALUES (?, ?, 'export', ?)`, office.organization, period.ID, member)
+	require.NoError(t, err)
+	window.Set("as_of", first.AsOf.Format(time.RFC3339Nano))
+	window.Set("page", "2")
+	rec = accessLogRequest(t, router, office.token, "/traeger/access-log/", window)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	second := decodeSchoolPortalData[accessLogPage](t, rec.Body.Bytes())
+	seen := map[string]bool{}
+	for _, entry := range append(first.Entries, second.Entries...) {
+		assert.False(t, seen[entry.ID], "entry %s is listed twice", entry.ID)
+		assert.NotEqual(t, "holiday_registration_export", entry.Data, "nothing after as_of is listed")
+		seen[entry.ID] = true
+	}
+	assert.GreaterOrEqual(t, len(seen), 51, "every entry before as_of is listed once")
+}

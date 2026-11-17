@@ -29,7 +29,8 @@ const (
 
 // window is the instant range of a filter: the Berlin day From from
 // midnight to the midnight after To. asOf, when set, ends the list at that
-// instant; zero ends it at the database time of the school trail's read.
+// instant; zero ends it at the database time of the school trail's read,
+// also when no school is read.
 type window struct {
 	from, to, asOf time.Time
 }
@@ -256,9 +257,15 @@ func (o *Overview) entries(adminCtx context.Context, viewer traegerview.Viewer, 
 // schoolTrail reads the trail of the filter at the Träger's schools. A
 // school outside the Träger reads nothing. To be merged with the holiday
 // trail, it reads the newest offset+limit entries instead of the page.
+// Without a school to read, the first page still ends at the database time,
+// which also stamps the holiday trail: the trail reads it over no school.
 func (o *Overview) schoolTrail(adminCtx context.Context, schools []int64, filter traegerview.AccessLogFilter, span window, limit, offset int, merged bool) ([]traegerview.AccessTrailEntry, time.Time, error) {
 	if len(schools) == 0 || (filter.SchoolID != 0 && !slices.Contains(schools, filter.SchoolID)) {
-		return nil, span.asOf, nil
+		if !span.asOf.IsZero() {
+			return nil, span.asOf, nil
+		}
+		_, asOf, err := o.trail.ListAccessTrail(adminCtx, traegerview.AccessTrailQuery{Schools: []int64{}, From: span.from, To: span.to, Limit: 1})
+		return nil, asOf, err
 	}
 	var staffIDs []int64
 	if filter.AccountID != 0 {

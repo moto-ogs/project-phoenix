@@ -406,7 +406,8 @@ type AccessLogPerson struct {
 // The Audit Platform serves it; it joins the projection's administrative
 // transaction and filters on the given schools. ListAccessTrail also returns
 // the instant the entries end at: the query's AsOf, or the database time,
-// which stamps every ledger of the trail.
+// which stamps every ledger of the trail; an empty school set lists nothing
+// but still returns that instant.
 type AccessTrail interface {
 	ListAccessTrail(ctx context.Context, query AccessTrailQuery) ([]AccessTrailEntry, time.Time, error)
 	ListAccessTrailActors(ctx context.Context, schools []int64, from, to time.Time) ([]AccessTrailActor, error)
