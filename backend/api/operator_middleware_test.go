@@ -151,6 +151,26 @@ func TestRequiresActiveOperator_RefusalsAndFailures(t *testing.T) {
 	}
 }
 
+// A lookup that ended because the client closed the request is no server
+// fault: 499, not 503 (Sentry BACKEND-1B).
+func TestRequiresActiveOperator_ClientCanceledLookup(t *testing.T) {
+	t.Parallel()
+
+	req := requestWithOperatorClaims(42)
+	ctx, cancel := context.WithCancel(req.Context())
+	handler := identityoperator.RequiresActiveOperator(operatorLiveness(func(lookupCtx context.Context, _ int64, _ string) error {
+		cancel()
+		return lookupCtx.Err()
+	}))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("a canceled lookup must not reach protected handlers")
+	}))
+
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req.WithContext(ctx))
+
+	assert.Equal(t, 499, rr.Code)
+}
+
 func TestRequiresActiveOperator_MissingLookupFailsClosed(t *testing.T) {
 	t.Parallel()
 
