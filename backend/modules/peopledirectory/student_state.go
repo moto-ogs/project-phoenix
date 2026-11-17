@@ -115,6 +115,23 @@ func (s *StudentState) HealthInfoOn(day calendar.Date) *string {
 // without one (#4803) belongs to its class only. A nil row has none.
 func (s *StudentState) HasCarePlace() bool { return s != nil && !s.WithoutCarePlace }
 
+// ClassMemberFrom is the first day a child without an OGS place belongs to
+// its class: its enrollment start, else the Berlin day its record was
+// created. The class-name read (ListNamesByClass) states the same rule in SQL.
+func (s *StudentState) ClassMemberFrom() calendar.Date {
+	if s.EnrolledFrom != nil {
+		return *s.EnrolledFrom
+	}
+	return calendar.DateFromTime(s.CreatedAt)
+}
+
+// LeftSchool reports a child that is neither active nor waiting for its
+// start (graduate or inactive); it belongs to its class only up to a dated
+// enrollment end.
+func (s *StudentState) LeftSchool() bool {
+	return s.Status != StudentStatusActive && s.Status != StudentStatusPending
+}
+
 // CareLifecycle is a child's graduation, end-of-care and OGS-place facts, as
 // every student view of the People Directory reports them.
 type CareLifecycle interface {

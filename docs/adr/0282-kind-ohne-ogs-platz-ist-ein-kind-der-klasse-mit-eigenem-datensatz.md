@@ -55,7 +55,8 @@ Deshalb erreichen sie Familien ohne OGS-Platz nicht. Ein zweiter Weg für Eltern
   wie für jedes andere. Abholung, Übergabe an die OGS, Tageshinweise,
   Rückmeldungen zu Hausaufgaben und die Meldung von Ausflug oder Klassenfahrt
   an die OGS gibt es für das Kind nicht.
-  Die Fehlzeitenliste zählt das Kind an jedem Tag des Zeitraums.
+  Die Fehlzeitenliste zählt das Kind an jedem Tag, an dem es zur Klasse
+  gehört (siehe Folgen).
   Elternsprechtag, Kalender und Elternbriefe lesen den Schul-Roster und
   erreichen die Familie ohne Änderung.
 - **Eigener Schalter.** Die Schule bekommt die Funktion nur über eine eigene
