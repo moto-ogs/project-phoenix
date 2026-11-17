@@ -50,6 +50,10 @@ const (
 	// its payer in the finance system of the Träger (#7007); optional, the
 	// Elternabrechnung keeps it.
 	ContractImportFieldDebtorNumber = "debtor_number"
+	// ContractImportFieldFamilyChildren is how many children the family
+	// has, siblings without a contract included (#7356); optional, the
+	// Elternabrechnung keeps it for its sibling rule.
+	ContractImportFieldFamilyChildren = "family_children"
 )
 
 // What the import does with a row.
@@ -136,6 +140,23 @@ const (
 	ContractDebtorNumberInvalid = "invalid"
 )
 
+// What the import does with the number of the family's children of a row;
+// the Elternabrechnung decides it (#7356). A value that is no whole number
+// from 1 to 20 is a problem of the row instead: the row takes over nothing.
+const (
+	// ContractFamilyChildrenNew is taken over as confirmed by the office,
+	// from the first day of the contract.
+	ContractFamilyChildrenNew = "new"
+	// ContractFamilyChildrenSame is the number the family has confirmed.
+	ContractFamilyChildrenSame = "same"
+	// ContractFamilyChildrenDiffers is another number than the confirmed
+	// one: the import never overwrites it.
+	ContractFamilyChildrenDiffers = "differs"
+	// ContractFamilyChildrenRowsDiffer are rows of one family with different
+	// numbers: the import takes over none of them.
+	ContractFamilyChildrenRowsDiffer = "rows_differ"
+)
+
 // Whom a debtor number of the Träger names (#7007).
 const (
 	// ContractDebtorNumberPerPayer is one number per recipient of the
@@ -161,6 +182,11 @@ var (
 	// MaxContractImportFileBytes or with more than MaxContractImportRows
 	// rows.
 	ErrContractImportFileTooLarge = errors.New("the import file is too large")
+	// ErrContractImportFamilyChildrenRight reports a mapping that names the
+	// column of the family's children by an account without the right
+	// "Abrechnung": a number from the file counts as confirmed by the
+	// Abrechnung (#7356).
+	ErrContractImportFamilyChildrenRight = errors.New("the number of the family's children needs the right to bill")
 	// ErrContractImportChanged reports an import whose rows no longer are
 	// what the office confirmed in the preview: the contracts, the modules
 	// or their conditions changed since. The office loads the preview again.
@@ -183,6 +209,7 @@ type ContractImportColumns struct {
 	PartyLastName  string `json:"party_last_name"`
 	PartyEmail     string `json:"party_email"`
 	DebtorNumber   string `json:"debtor_number"`
+	FamilyChildren string `json:"family_children"`
 }
 
 // ContractImportMapping is how the rows of a file become contracts. A file
@@ -217,6 +244,11 @@ type ContractImportRequest struct {
 	// Apply refuses with ErrContractImportChanged when the rows differ from
 	// it.
 	Fingerprint string
+	// KeepsFamilyChildren tells that the account holds the right
+	// "Abrechnung": only then a file may name the number of the family's
+	// children. Without it the suggestion leaves the column out and a
+	// mapping that names it is ErrContractImportFamilyChildrenRight.
+	KeepsFamilyChildren bool
 }
 
 // ContractImportProblem is one problem of a row: the field and the code.
@@ -252,6 +284,11 @@ type ContractImportRow struct {
 	// what the import does with it; empty without the column.
 	DebtorNumber       string `json:"debtor_number,omitempty"`
 	DebtorNumberStatus string `json:"debtor_number_status,omitempty"`
+	// FamilyChildren is the number of the family's children the row names
+	// and FamilyChildrenStatus what the import does with it (#7356); nil and
+	// empty without the column or for an empty cell.
+	FamilyChildren       *int   `json:"family_children,omitempty"`
+	FamilyChildrenStatus string `json:"family_children_status,omitempty"`
 }
 
 // ContractImportCounts counts the rows per status.
@@ -266,6 +303,11 @@ type ContractImportCounts struct {
 	// over; DebtorConflicts the rows whose number it leaves.
 	DebtorNumbers   int `json:"debtor_numbers"`
 	DebtorConflicts int `json:"debtor_conflicts"`
+	// FamilyChildren counts the families whose number of children the
+	// import takes over (#7356); FamilyChildrenConflicts the rows whose
+	// number it leaves.
+	FamilyChildren          int `json:"family_children"`
+	FamilyChildrenConflicts int `json:"family_children_conflicts"`
 }
 
 // ContractImportModule is a module of a school the file can name.
@@ -301,6 +343,9 @@ type ContractImport struct {
 	// DebtorNumberScope tells whom a debtor number of the Träger names:
 	// ContractDebtorNumberPerPayer or ContractDebtorNumberPerChild.
 	DebtorNumberScope string `json:"debtor_number_scope"`
+	// FamilyChildrenAllowed tells that the account may map the column of
+	// the family's children: it holds the right "Abrechnung" (#7356).
+	FamilyChildrenAllowed bool `json:"family_children_allowed"`
 	// Fingerprint names the rows and what the import does with each; the
 	// import takes over only the preview it was given.
 	Fingerprint string               `json:"fingerprint,omitempty"`
@@ -367,4 +412,36 @@ type ContractDebtorNumbers interface {
 	// with it, and with save takes the new ones over for the families of
 	// the contracts just stored, recording each in its trail.
 	DecideImportedDebtorNumbers(ctx context.Context, reviewer Reviewer, numbers []ImportedDebtorNumber, save bool) ([]ImportedDebtorNumberDecision, error)
+}
+
+// ImportedFamilyChildren is the number of the family's children a row of an
+// import file names (#7356): for the family of the row's contract, counted
+// from ValidFrom, the first day of that contract. FamilyEmail is the mail
+// address of the contract's party, empty without one; ContractID the
+// contract the import stored, 0 in a preview.
+type ImportedFamilyChildren struct {
+	Line        int
+	FamilyEmail string
+	ContractID  int64
+	Children    int
+	ValidFrom   calendar.Date
+}
+
+// ImportedFamilyChildrenDecision is what the Elternabrechnung does with the
+// number of one row: one of the ContractFamilyChildren statuses, or Invalid
+// for a number outside 1 to 20.
+type ImportedFamilyChildrenDecision struct {
+	Line    int
+	Status  string
+	Invalid bool
+}
+
+// ContractFamilyChildren is the root-bound port to the numbers of the
+// families the Elternabrechnung keeps for its sibling rule (#7356). It runs
+// in the caller's Träger transaction.
+type ContractFamilyChildren interface {
+	// DecideImportedFamilyChildren answers per number what an import does
+	// with it, and with save takes the new ones over as confirmed for the
+	// families of the contracts just stored, recording each in its trail.
+	DecideImportedFamilyChildren(ctx context.Context, reviewer Reviewer, numbers []ImportedFamilyChildren, save bool) ([]ImportedFamilyChildrenDecision, error)
 }

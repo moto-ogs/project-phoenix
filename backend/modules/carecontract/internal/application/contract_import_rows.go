@@ -2,6 +2,7 @@ package application
 
 import (
 	"net/mail"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -153,6 +154,21 @@ func (r rowReader) date(field string, required bool) *calendar.Date {
 	return &date
 }
 
+// familyChildren reads how many children the family has (#7356): a whole
+// number, nil for an empty cell. The Elternabrechnung checks its range.
+func (r rowReader) familyChildren() *int {
+	value := strings.TrimSpace(r.check.index.cell(r.cells, carecontract.ContractImportFieldFamilyChildren))
+	if value == "" {
+		return nil
+	}
+	number, err := strconv.Atoi(value)
+	if err != nil {
+		r.problem(carecontract.ContractImportFieldFamilyChildren, carecontract.ContractImportProblemInvalid)
+		return nil
+	}
+	return &number
+}
+
 // firstDay is the first day of the contract: the day the row names, or the
 // day the office chose for a file without that column.
 func (r rowReader) firstDay() *calendar.Date {
@@ -185,6 +201,7 @@ func (c *contractImportCheck) candidate(cells []string, line int) importCandidat
 		reader.problem(carecontract.ContractImportFieldConcludedOn, carecontract.ContractImportProblemFuture)
 	}
 	row.DebtorNumber = strings.TrimSpace(c.index.cell(cells, carecontract.ContractImportFieldDebtorNumber))
+	row.FamilyChildren = reader.familyChildren()
 
 	school, hasSchool := reader.school()
 	var booking importBooking

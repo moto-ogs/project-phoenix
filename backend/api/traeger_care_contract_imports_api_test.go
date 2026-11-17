@@ -373,3 +373,103 @@ func TestCareContractImportTakesTheOGSConnectMasterDataBeforeItsMandates(t *test
 		f.office.organization).Scan(ctx, &family))
 	assert.Equal(t, fmt.Sprintf("contract:%d", lia), family)
 }
+
+// A file of existing contracts can name how many children each family has
+// (#7356). The number counts as confirmed by the Abrechnung from the first
+// day of the contract, so only an account with the right "Abrechnung" may
+// map the column; a contract without a mail address keeps the number for
+// itself, siblings with one address share it, and a value that is no number
+// from 1 to 20 takes the row over not at all.
+func TestCareContractImportKeepsTheChildrenOfTheFamily(t *testing.T) {
+	t.Parallel()
+	f := newCareContractFixture(t, "Träger Vertragsimport Kinderzahl")
+	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	school := contractImportSchoolName(t, f)
+	lines := []string{"Vorname Kind;Nachname Kind;Schule;Modul;Vertragsbeginn;Zahler;E-Mail;Kinder in der Familie",
+		"Mia;Beispiel;{school};Offene Ganztagsschule;01.08.2027;Eva Beispiel;eva.beispiel@example.org;3",
+		"Ben;Beispiel;{school};Offene Ganztagsschule;01.09.2027;Eva Beispiel;eva.beispiel@example.org;3",
+		"Ole;Anders;{school};Offene Ganztagsschule;01.08.2027;;;2",
+		"Lea;Null;{school};Offene Ganztagsschule;01.08.2027;;;0",
+		"Tim;Ohne;{school};Offene Ganztagsschule;01.08.2027;;;"}
+	file := []byte(strings.ReplaceAll(strings.Join(lines, "\n")+"\n", "{school}", school))
+	type body struct {
+		Allowed bool `json:"family_children_allowed"`
+		Mapping struct {
+			Columns struct {
+				FamilyChildren string `json:"family_children"`
+			} `json:"columns"`
+		} `json:"mapping"`
+		Fingerprint string `json:"fingerprint"`
+		Counts      struct {
+			Ready, Invalid, Imported int
+			FamilyChildren           int `json:"family_children"`
+		} `json:"counts"`
+		Rows []struct {
+			Status               string `json:"status"`
+			ContractID           int64  `json:"contract_id"`
+			FamilyChildren       *int   `json:"family_children"`
+			FamilyChildrenStatus string `json:"family_children_status"`
+			Problems             []struct {
+				Field string `json:"field"`
+				Code  string `json:"code"`
+			} `json:"problems"`
+		} `json:"rows"`
+	}
+
+	// Verwaltung manages contracts but does not bill: moto leaves the column
+	// out and refuses a mapping that names it.
+	rec := importForm(t, f.traeger, f.office.token, contractImportPreviewPath, "kinder.csv", file, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	without := decodeSchoolPortalData[body](t, rec.Body.Bytes())
+	assert.False(t, without.Allowed)
+	assert.Empty(t, without.Mapping.Columns.FamilyChildren)
+	assert.Equal(t, 5, without.Counts.Ready, "without the column no number holds a row back")
+	assert.Nil(t, without.Rows[0].FamilyChildren)
+	mapping := `{"columns":{"child_first_name":"Vorname Kind","child_last_name":"Nachname Kind","school":"Schule","module":"Modul",
+		"effective_from":"Vertragsbeginn","party_last_name":"Zahler","party_email":"E-Mail","family_children":"Kinder in der Familie"}}`
+	rec = importForm(t, f.traeger, f.office.token, contractImportPreviewPath, "kinder.csv", file, map[string]string{"mapping": mapping})
+	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+
+	password := testpkg.NewTestPassword()
+	account := traegerAccount(t, f.db, password)
+	testpkg.CreateTestTraegerMember(t, f.db, f.office.organization, account.ID, identityaccess.TraegerRoleAdministration, identityaccess.TraegerRoleBilling)
+	code, answer := traegerSignIn(t, f.traeger, account.Email, password, 0)
+	require.Equal(t, http.StatusOK, code)
+	token := answer.AccessToken
+
+	rec = importForm(t, f.traeger, token, contractImportPreviewPath, "kinder.csv", file, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	preview := decodeSchoolPortalData[body](t, rec.Body.Bytes())
+	assert.True(t, preview.Allowed)
+	assert.Equal(t, "Kinder in der Familie", preview.Mapping.Columns.FamilyChildren, "moto maps the column by itself")
+	require.Len(t, preview.Rows, 5)
+	assert.Equal(t, 4, preview.Counts.Ready)
+	assert.Equal(t, 1, preview.Counts.Invalid)
+	assert.Equal(t, 2, preview.Counts.FamilyChildren, "siblings with one address are one family")
+	assert.Equal(t, []string{"new", "new", "new", "", ""}, []string{preview.Rows[0].FamilyChildrenStatus, preview.Rows[1].FamilyChildrenStatus,
+		preview.Rows[2].FamilyChildrenStatus, preview.Rows[3].FamilyChildrenStatus, preview.Rows[4].FamilyChildrenStatus})
+	assert.Equal(t, "invalid", preview.Rows[3].Status)
+	require.Len(t, preview.Rows[3].Problems, 1)
+	assert.Equal(t, "family_children", preview.Rows[3].Problems[0].Field)
+	assert.Equal(t, "invalid", preview.Rows[3].Problems[0].Code)
+	assert.Equal(t, "ready", preview.Rows[4].Status, "the number is optional")
+
+	rec = importForm(t, f.traeger, token, contractImportPath, "kinder.csv", file, map[string]string{"fingerprint": preview.Fingerprint})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	applied := decodeSchoolPortalData[body](t, rec.Body.Bytes())
+	assert.Equal(t, 4, applied.Counts.Imported)
+	ole := applied.Rows[2].ContractID
+	require.Positive(t, ole)
+
+	ctx := context.Background()
+	var stored []string
+	require.NoError(t, f.db.NewRaw(`SELECT family_email || '=' || confirmed_children || ' ab ' || valid_from::text ||
+			CASE WHEN valid_until IS NULL AND confirmed_by_account_id = ? THEN '' ELSE ' anders' END
+		FROM parent_billing.family_child_counts WHERE organization_id = ? ORDER BY family_email`, account.ID, f.office.organization).Scan(ctx, &stored))
+	assert.Equal(t, []string{fmt.Sprintf("contract:%d=2 ab 2027-08-01", ole), "eva.beispiel@example.org=3 ab 2027-08-01"}, stored,
+		"each number is confirmed by the importing account from the family's first contract day, without an end")
+	var trail int
+	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM parent_billing.family_child_count_events
+		WHERE organization_id = ? AND action = 'confirm' AND actor = 'office' AND actor_account_id = ?`, f.office.organization, account.ID).Scan(ctx, &trail))
+	assert.Equal(t, 2, trail, "each number stands in the trail of its contract")
+}

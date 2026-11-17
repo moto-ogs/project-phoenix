@@ -290,4 +290,6 @@ type ContractFamilyChildren interface {
 	// that applies to the school and has not ended by day counts the
 	// family's children, so a registration there asks for them.
 	CountsFamilyChildrenAt(ctx context.Context, organizationID, schoolID int64, day calendar.Date) (bool, error)
+	// The numbers an import of contracts names (#7356).
+	ContractImportFamilyChildren
 }

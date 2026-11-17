@@ -48,6 +48,8 @@ type ImportPorts struct {
 	Runtime      carecontract.Runtime
 	// Numbers keeps the debtor numbers of the rows (#7007).
 	Numbers carecontract.ContractDebtorNumbers
+	// Families keeps the numbers of the families' children (#7356).
+	Families carecontract.ContractFamilyChildren
 	// Fingerprint names content by its checksum, for the confirmation of a
 	// preview.
 	Fingerprint func([]byte) string
@@ -64,8 +66,8 @@ var _ carecontract.ContractImports = (*ContractImports)(nil)
 
 func NewContractImports(store ImportStore, ports ImportPorts, today func() calendar.Date) *ContractImports {
 	if store == nil || ports.Schools == nil || ports.Applications == nil || ports.Bookings == nil || ports.Access == nil ||
-		ports.Runtime == nil || ports.Numbers == nil || ports.Fingerprint == nil || today == nil {
-		panic("care contract: the store, the schools, the applications, the bookings, the access log, the runtime, the debtor numbers, the fingerprint and the clock are required")
+		ports.Runtime == nil || ports.Numbers == nil || ports.Families == nil || ports.Fingerprint == nil || today == nil {
+		panic("care contract: the store, the schools, the applications, the bookings, the access log, the runtime, the debtor numbers, the numbers of the families, the fingerprint and the clock are required")
 	}
 	return &ContractImports{store: store, ports: ports, today: today}
 }
@@ -102,10 +104,18 @@ func (i *ContractImports) ImportContracts(ctx context.Context, reviewer carecont
 		return carecontract.ContractImport{}, err
 	}
 	result := carecontract.ContractImport{Encoding: table.Encoding, Delimiter: table.Delimiter, Headers: table.Headers,
-		Rows: []carecontract.ContractImportRow{}, Unmapped: []string{}}
+		Rows: []carecontract.ContractImportRow{}, Unmapped: []string{}, FamilyChildrenAllowed: request.KeepsFamilyChildren}
 	result.Mapping = suggestContractImportMapping(table.Headers)
+	if !request.KeepsFamilyChildren {
+		// A number from the file counts as confirmed by the Abrechnung
+		// (#7356): without its right the column stays out.
+		result.Mapping.Columns.FamilyChildren = ""
+	}
 	if request.Mapping != nil {
 		result.Mapping = *request.Mapping
+	}
+	if result.Mapping.Columns.FamilyChildren != "" && !request.KeepsFamilyChildren {
+		return carecontract.ContractImport{}, carecontract.ErrContractImportFamilyChildrenRight
 	}
 	result.Mapping = settleContractImportMapping(result.Mapping, schools)
 	index, unmapped, err := resolveContractImportMapping(table.Headers, result.Mapping, schools)
@@ -166,6 +176,9 @@ func (i *ContractImports) evaluate(ctx context.Context, reviewer carecontract.Re
 	for n, cells := range table.Rows {
 		candidates[n] = check.candidate(cells, table.Lines[n])
 	}
+	if err := i.decideFamilies(ctx, reviewer, index, candidates, false); err != nil {
+		return nil, err
+	}
 	if err := i.decideNumbers(ctx, reviewer, index, candidates, false); err != nil {
 		return nil, err
 	}
@@ -189,7 +202,7 @@ func (i *ContractImports) evaluate(ctx context.Context, reviewer carecontract.Re
 // running contracts of duplicates.
 func summarizeContractImport(result *carecontract.ContractImport, candidates []importCandidate) map[int64][]int64 {
 	shown := map[int64][]int64{}
-	numbers := map[string]bool{}
+	numbers, families := map[string]bool{}, map[string]bool{}
 	for _, candidate := range candidates {
 		row := candidate.row
 		result.Rows = append(result.Rows, row)
@@ -197,11 +210,14 @@ func summarizeContractImport(result *carecontract.ContractImport, candidates []i
 		if row.DebtorNumberStatus == carecontract.ContractDebtorNumberNew {
 			numbers[debtorNumberTarget(result.DebtorNumberScope, row)] = true
 		}
+		if row.FamilyChildrenStatus == carecontract.ContractFamilyChildrenNew {
+			families[debtorNumberTarget(carecontract.ContractDebtorNumberPerPayer, row)] = true
+		}
 		if row.ContractID > 0 {
 			shown[row.SchoolID] = append(shown[row.SchoolID], row.ContractID)
 		}
 	}
-	result.Counts.DebtorNumbers = len(numbers)
+	result.Counts.DebtorNumbers, result.Counts.FamilyChildren = len(numbers), len(families)
 	return shown
 }
 
@@ -233,6 +249,9 @@ func (i *ContractImports) apply(ctx context.Context, reviewer carecontract.Revie
 	}
 	if err := i.store.InsertEvents(ctx, reviewer.OrganizationID, events); err != nil {
 		return fmt.Errorf("care contract: record the import: %w", err)
+	}
+	if err := i.decideFamilies(ctx, reviewer, index, candidates, true); err != nil {
+		return err
 	}
 	return i.decideNumbers(ctx, reviewer, index, candidates, true)
 }
@@ -286,6 +305,54 @@ func (i *ContractImports) decideNumbers(ctx context.Context, reviewer carecontra
 	return nil
 }
 
+// decideFamilies asks the Elternabrechnung what it does with the number of
+// the family's children of each row that takes a contract over (#7356), and
+// with save lets it store them for the contracts just stored. A number
+// outside its range is a problem of the row: the row takes over nothing.
+func (i *ContractImports) decideFamilies(ctx context.Context, reviewer carecontract.Reviewer, index contractImportIndex,
+	candidates []importCandidate, save bool) error {
+	if !index.has(carecontract.ContractImportFieldFamilyChildren) {
+		return nil
+	}
+	wanted := carecontract.ContractImportReady
+	if save {
+		wanted = carecontract.ContractImportImported
+	}
+	var numbers []carecontract.ImportedFamilyChildren
+	at := map[int]int{}
+	for n, candidate := range candidates {
+		row := candidate.row
+		if row.Status != wanted || row.FamilyChildren == nil {
+			continue
+		}
+		at[row.Line] = n
+		numbers = append(numbers, carecontract.ImportedFamilyChildren{Line: row.Line, FamilyEmail: row.PartyEmail,
+			ContractID: row.ContractID, Children: *row.FamilyChildren, ValidFrom: *row.EffectiveFrom})
+	}
+	if len(numbers) == 0 {
+		return nil
+	}
+	decisions, err := i.ports.Families.DecideImportedFamilyChildren(ctx, reviewer, numbers, save)
+	if err != nil {
+		return fmt.Errorf("care contract: numbers of the families of the import: %w", err)
+	}
+	for _, decision := range decisions {
+		n, ok := at[decision.Line]
+		if !ok {
+			continue
+		}
+		row := &candidates[n].row
+		if decision.Invalid {
+			row.Status = carecontract.ContractImportInvalid
+			row.Problems = append(row.Problems, carecontract.ContractImportProblem{
+				Field: carecontract.ContractImportFieldFamilyChildren, Code: carecontract.ContractImportProblemInvalid})
+			continue
+		}
+		row.FamilyChildrenStatus = decision.Status
+	}
+	return nil
+}
+
 func countContractImportRow(counts *carecontract.ContractImportCounts, row carecontract.ContractImportRow) {
 	switch row.Status {
 	case carecontract.ContractImportReady:
@@ -303,6 +370,11 @@ func countContractImportRow(counts *carecontract.ContractImportCounts, row carec
 	case "", carecontract.ContractDebtorNumberNew, carecontract.ContractDebtorNumberSame:
 	default:
 		counts.DebtorConflicts++
+	}
+	switch row.FamilyChildrenStatus {
+	case "", carecontract.ContractFamilyChildrenNew, carecontract.ContractFamilyChildrenSame:
+	default:
+		counts.FamilyChildrenConflicts++
 	}
 }
 
