@@ -73,8 +73,15 @@ var moduleSQLClockBudget = map[string]int{
 	// family children; and promoted_at of a holiday booking (1), whose Berlin
 	// day the host's booked days compare with the day of the rebooking in
 	// the holiday audit, which the column default stamps there.
-	"modules/enrollment":     5,
-	"modules/exporttransfer": 10,
+	"modules/enrollment": 5,
+	// Named exceptions on the database clock: the two-minute fences of the
+	// school and Träger handover journals, which the claim and completion
+	// functions of the migrations stamp and compare with clock_timestamp().
+	// The intent sets the fence (2), the Träger's recipient list and journal
+	// read it as expired (2), and the recovery settles expired attempts of
+	// both journals with their updated_at (4). parentbilling judges its export
+	// handovers against these fences.
+	"modules/exporttransfer": 8,
 	"modules/facilities":     1,
 	"modules/filestorage":    3,
 	// The Springer access windows (ADR 0251): the security-definer function
@@ -83,9 +90,22 @@ var moduleSQLClockBudget = map[string]int{
 	// deactivated operators: a trigger stamps platform.operators.deactivated_at
 	// with now(), so its cutoff compares on the database clock (ADR 0281).
 	"modules/identityaccess": 4,
-	// Includes the data return of ADR 0274: the database clock is the security
-	// boundary of the release functions.
-	"modules/organizationtenancy": 20,
+	// Named exceptions on the database clock (ADR 0281): deleted_at of
+	// platform.schools (4), which the demo retirement functions stamp with
+	// now() and the demo database erasure ages with clock_timestamp(), so the
+	// operator's soft delete, the retire and failure of a demo order and the
+	// hour before the demo file erasure use the same clock; the reads of the
+	// Träger documents (2), stamped by column default and pruned after three
+	// years like the school functions of migration 1.15.795 prune them; the
+	// erasure orders (3), whose started_at and completed_at
+	// platform.erase_organization stamps and whose retention compares
+	// withdrawn_at with clock_timestamp(), so withdrawal and the evidence of the
+	// records hint stay on that ledger's clock; logo_updated_at (1), set in
+	// the statement whose trigger stamps updated_at of the same profile; and
+	// the export manifest (1), which names the instant of its REPEATABLE READ
+	// snapshot. The data return of ADR 0274 reads no clock in Go: its release
+	// functions guard it on the database clock in the migrations.
+	"modules/organizationtenancy": 11,
 	// Named exceptions on the database clock (ADR 0281): the family children
 	// statement and confirmation (5), ordered against the statement time
 	// enrollment stamps with clock_timestamp(); the download of a PAIN.008
@@ -96,8 +116,12 @@ var moduleSQLClockBudget = map[string]int{
 	// handover (2), judged against the transport's fences that lease on the
 	// database clock; and the age of the Beleg deletion log (1), whose entries
 	// parent_billing.log_removed_belege stamps by column default.
-	"modules/parentbilling":    13,
-	"modules/peopledirectory":  18,
+	"modules/parentbilling":   13,
+	"modules/peopledirectory": 18,
+	// The worker leases of platform.worker_leases (11): several API and worker
+	// processes coordinate through one database, so its clock is the lease
+	// clock; acquire, renew and release stamp and compare lease_until and
+	// updated_at there.
 	"modules/schedulerruntime": 11,
 	// The holiday closure commands of ADR 0273 (20): lease, due time and
 	// watchdog read one clock, PostgreSQL's. On it the commands also stamp
