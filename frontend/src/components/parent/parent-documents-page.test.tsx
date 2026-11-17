@@ -12,9 +12,16 @@ import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
 import type { ParentDocument } from "~/lib/parent-api";
 import { catalogText } from "~/test/error-catalog-text";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
 
 function render(ui: React.ReactElement) {
-  return renderPlain(ui, { wrapper: ToastProvider });
+  return renderPlain(
+    <ParentResourceTestProvider>
+      <ToastProvider>{ui}</ToastProvider>
+    </ParentResourceTestProvider>,
+  );
 }
 
 const mocks = vi.hoisted(() => ({

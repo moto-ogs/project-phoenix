@@ -22,15 +22,21 @@ describe("SessionEndBarrier", () => {
     const { readFileSync } = await import("node:fs");
     for (const file of [
       "src/app/[tenant]/(protected)/layout.tsx",
+      "src/components/auth/portal-providers.tsx",
+    ]) {
+      expect(readFileSync(file, "utf8"), file).toContain(
+        "<SessionEndBarrier />",
+      );
+    }
+    // The portals on their own host mount it through PortalProviders.
+    for (const file of [
       "src/app/parents/providers.tsx",
       "src/app/school/providers.tsx",
       "src/app/operator/providers.tsx",
       "src/app/caterer/providers.tsx",
       "src/app/traeger/providers.tsx",
     ]) {
-      expect(readFileSync(file, "utf8"), file).toContain(
-        "<SessionEndBarrier />",
-      );
+      expect(readFileSync(file, "utf8"), file).toContain("<PortalProviders");
     }
   });
 });

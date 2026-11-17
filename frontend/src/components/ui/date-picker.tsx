@@ -1,6 +1,11 @@
 "use client";
 
-import { CONTROL_HEIGHT_CLASS, type ControlSize } from "./control-geometry";
+import {
+  CONTROL_HEIGHT_CLASS,
+  CONTROL_PART,
+  type ControlSize,
+} from "./control-geometry";
+import { selectTriggerClassName } from "./select-trigger-styles";
 import { FieldHint, FieldShell, useFieldIds } from "./field-shell";
 import { Z_LAYER } from "./overlay-styles";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -125,12 +130,6 @@ type DatePickerProps =
       readonly className?: string;
       /** Optional visual treatment for compact filter toolbars. */
       readonly triggerClassName?: string;
-      /**
-       * @deprecated No longer read. The panel measures the viewport and flips
-       * up or down on its own; callers cannot know which side fits. Kept so the
-       * existing call sites keep compiling.
-       */
-      readonly dropdownPlacement?: "up" | "down";
       readonly calendarLayout?: CalendarLayout;
       // Earliest selectable day (inclusive). Days before it are disabled — used
       // to forbid past-date selection while keeping today choosable.
@@ -182,6 +181,12 @@ type DatePickerProps =
       // parent-facing surfaces.
       readonly labels?: DatePickerLabels;
       readonly iconOnly?: boolean;
+      /**
+       * Between the arrows of a framed group (`PlanningContextBar
+       * navigationInGroup`): frame and radius come from the group, the
+       * trigger fills its height.
+       */
+      readonly embedded?: boolean;
     }
   | {
       readonly mode: "multiple";
@@ -189,8 +194,6 @@ type DatePickerProps =
       readonly onChangeDates: (dates: Date[]) => void;
       readonly placeholder?: string;
       readonly className?: string;
-      /** @deprecated No longer read — see the single-mode prop. */
-      readonly dropdownPlacement?: "up" | "down";
       readonly calendarLayout?: CalendarLayout;
       readonly disabledDates?: Date[];
     };
@@ -229,6 +232,7 @@ export function DatePicker({
   const prefersBelow = calendarLayout === "popover-below";
   const isMultiple = props.mode === "multiple";
   const isDisabled = !isMultiple && props.disabled === true;
+  const embedded = !isMultiple && props.embedded === true;
   // Known only after the trigger is measured; until then assume the roomy
   // variant, which is what every field wider than a filter chip gets.
   const isCompactPanel =
@@ -389,7 +393,10 @@ export function DatePicker({
           value={props.value ? toISODate(props.value) : ""}
         />
       ) : null}
-      <div className="flex items-center gap-1" data-date-picker-controls>
+      <div
+        className={cn("flex items-center gap-1", embedded && "h-full")}
+        data-date-picker-controls
+      >
         <button
           ref={triggerRef}
           type="button"
@@ -414,25 +421,40 @@ export function DatePicker({
           // wait for it.
           onPointerEnter={preloadDayPicker}
           onFocus={preloadDayPicker}
-          className={cn(
-            "flex items-center rounded-lg border transition",
-            iconOnly
-              ? `${CONTROL_HEIGHT_CLASS.compact} w-10 shrink-0 justify-center pointer-coarse:size-11`
-              : `min-w-0 flex-1 justify-between ${
-                  TRIGGER_SIZE_CLASS[
-                    (isMultiple ? undefined : props.controlSize) ?? "natural"
-                  ]
-                }`,
-            !isMultiple && props.invalid
-              ? "border-moto-red"
-              : "border-gray-200",
-            isDisabled
-              ? "cursor-not-allowed bg-gray-50 text-gray-500"
-              : isOpen
-                ? "border-gray-300 bg-gray-50"
-                : "bg-white hover:bg-gray-50",
-            !isMultiple ? props.triggerClassName : undefined,
-          )}
+          {...(embedded && CONTROL_PART)}
+          className={
+            embedded
+              ? cn(
+                  selectTriggerClassName({
+                    embedded: true,
+                    invalid: !isMultiple && props.invalid,
+                    disabled: isDisabled,
+                    className: "min-w-0 flex-1",
+                  }),
+                  isOpen && "bg-gray-50",
+                  !isMultiple ? props.triggerClassName : undefined,
+                )
+              : cn(
+                  "flex items-center rounded-lg border transition",
+                  iconOnly
+                    ? `${CONTROL_HEIGHT_CLASS.compact} w-10 shrink-0 justify-center pointer-coarse:size-11`
+                    : `min-w-0 flex-1 justify-between ${
+                        TRIGGER_SIZE_CLASS[
+                          (isMultiple ? undefined : props.controlSize) ??
+                            "natural"
+                        ]
+                      }`,
+                  !isMultiple && props.invalid
+                    ? "border-moto-red"
+                    : "border-gray-200",
+                  isDisabled
+                    ? "cursor-not-allowed bg-gray-50 text-gray-500"
+                    : isOpen
+                      ? "border-gray-300 bg-gray-50"
+                      : "bg-white hover:bg-gray-50",
+                  !isMultiple ? props.triggerClassName : undefined,
+                )
+          }
         >
           {!iconOnly && (
             <span className={displayValue ? "text-gray-900" : "text-gray-500"}>
@@ -675,7 +697,6 @@ export function ISODatePicker({
   readonly placeholder?: string;
   readonly className?: string;
   readonly triggerClassName?: string;
-  readonly dropdownPlacement?: "up" | "down";
   readonly calendarLayout?: CalendarLayout;
   readonly monthYearNavigation?: boolean;
   readonly hideClearButton?: boolean;
@@ -691,6 +712,8 @@ export function ISODatePicker({
   readonly controlSize?: DatePickerSize;
   readonly locale?: Locale;
   readonly labels?: DatePickerLabels;
+  /** See `DatePicker` `embedded`. */
+  readonly embedded?: boolean;
 }) {
   // Hint and error belong to the field hull here rather than to DatePicker,
   // so the hint reads before the error as in the kit `Input`.
@@ -740,6 +763,9 @@ export function ISODatePicker({
   );
 }
 
+const INVALID_DATE_ERROR =
+  "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.";
+
 interface ISODateInputProps {
   readonly id: string;
   readonly label: string;
@@ -748,7 +774,6 @@ interface ISODateInputProps {
   readonly onValidityChange?: (valid: boolean) => void;
   readonly min?: string;
   readonly max?: string;
-  readonly invalidDateError?: string;
   readonly minDateError?: string;
   readonly maxDateError?: string;
   readonly disabled?: boolean;
@@ -775,7 +800,6 @@ export function ISODateInput({
   onValidityChange,
   min,
   max,
-  invalidDateError = "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.",
   minDateError = "Das Datum liegt vor dem zulässigen Zeitraum.",
   maxDateError = "Das Datum liegt nach dem zulässigen Zeitraum.",
   disabled,
@@ -787,14 +811,7 @@ export function ISODateInput({
     formatISODateInputValue(value),
   );
   const [inputError, setInputError] = useState<string | null>(() =>
-    validateStoredISODate(
-      value,
-      min,
-      max,
-      invalidDateError,
-      minDateError,
-      maxDateError,
-    ),
+    validateStoredISODate(value, min, max, minDateError, maxDateError),
   );
   const shownError = inputError ?? error ?? null;
   const ids = useFieldIds({ id, error: shownError });
@@ -805,21 +822,12 @@ export function ISODateInput({
       value,
       min,
       max,
-      invalidDateError,
       minDateError,
       maxDateError,
     );
     setInputError(nextError);
     onValidityChange?.(nextError === null);
-  }, [
-    value,
-    min,
-    max,
-    invalidDateError,
-    minDateError,
-    maxDateError,
-    onValidityChange,
-  ]);
+  }, [value, min, max, minDateError, maxDateError, onValidityChange]);
 
   const validate = (nextValue: string, showIncompleteError: boolean) => {
     const trimmed = nextValue.trim();
@@ -834,7 +842,7 @@ export function ISODateInput({
     let nextError: string | null = null;
     if (!isoDate) {
       if (showIncompleteError || trimmed.length >= 10) {
-        nextError = invalidDateError;
+        nextError = INVALID_DATE_ERROR;
       }
     } else if (min && isoDate < min) {
       nextError = minDateError;
@@ -913,13 +921,12 @@ function validateStoredISODate(
   value: string,
   min: string | undefined,
   max: string | undefined,
-  invalidDateError: string,
   minDateError: string,
   maxDateError: string,
 ): string | null {
   if (value === "") return null;
   const isoDate = value.slice(0, 10);
-  if (!isValidISODate(isoDate)) return invalidDateError;
+  if (!isValidISODate(isoDate)) return INVALID_DATE_ERROR;
   if (min && isoDate < min) return minDateError;
   if (max && isoDate > max) return maxDateError;
   return null;

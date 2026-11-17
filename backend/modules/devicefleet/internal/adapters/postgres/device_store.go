@@ -40,14 +40,22 @@ type deviceRow struct {
 }
 
 // DeviceStore reads and writes iot.devices for the Device Fleet owner.
-type DeviceStore struct{ database Database }
+type DeviceStore struct {
+	database Database
+	// now is the owner's clock Create stamps created_at with: ListOffline
+	// compares it with a cutoff on the same clock (ADR 0281 point 2).
+	now func() time.Time
+}
 
 // NewDeviceStore builds the device adapter over the supplied runtime.
-func NewDeviceStore(database Database) *DeviceStore {
+func NewDeviceStore(database Database, now func() time.Time) *DeviceStore {
 	if database == nil {
 		panic("devicefleet postgres: database runtime is required")
 	}
-	return &DeviceStore{database: database}
+	if now == nil {
+		panic("devicefleet postgres: the clock is required")
+	}
+	return &DeviceStore{database: database, now: now}
 }
 
 func (s *DeviceStore) selectDevices(db bun.IDB, scope TenantScope, model any) *bun.SelectQuery {
@@ -69,7 +77,7 @@ func (s *DeviceStore) Create(ctx context.Context, input devicefleet.CreateDevice
 		return devicefleet.Device{}, domain.OperationStats{}, err
 	}
 	row := deviceRow{
-		TenantID: scope.TenantID, DeviceID: input.DeviceID, DeviceType: input.DeviceType, Name: input.Name,
+		TenantID: scope.TenantID, CreatedAt: s.now(), DeviceID: input.DeviceID, DeviceType: input.DeviceType, Name: input.Name,
 		Status: string(input.Status), APIKeyHash: input.APIKeyHash, MaskedAPIKey: input.MaskedAPIKey, LastSeen: input.LastSeen,
 		RegisteredByID: input.RegisteredByID, RoomID: input.RoomID,
 	}

@@ -14,6 +14,11 @@ import { setTestClock } from "~/test/clock";
 // them settable via fireEvent.change and forwards min/max so the bound
 // assertions below still pin what the component computes. Imported inside the
 // factory because vi.mock is hoisted above the imports.
+// The weekday preview of a sourced series reads through the session-scoped
+// SWR hooks; without a session it reads nothing, as under the SWR mock.
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ data: null, status: "unauthenticated" }),
+}));
 vi.mock("~/components/ui/date-picker", async () =>
   (await import("~/test/mocks/date-picker")).datePickerModuleMock(),
 );

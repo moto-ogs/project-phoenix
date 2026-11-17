@@ -46,7 +46,10 @@ func TestOperatorDeactivationLocksTheAccountAndCanBeUndone(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, deactivated.Active)
 	require.NotNil(t, deactivated.DeactivatedAt)
-	assert.WithinDuration(t, time.Now(), *deactivated.DeactivatedAt, time.Minute)
+	// A trigger stamps deactivated_at on the database clock.
+	var databaseNow time.Time
+	require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &databaseNow))
+	assert.WithinDuration(t, databaseNow, *deactivated.DeactivatedAt, time.Minute)
 	assert.Zero(t, countRows(t, db, `SELECT count(*) FROM platform.operator_refresh_tokens WHERE operator_id = ?`, target.ID),
 		"the sessions of a deactivated operator end at once")
 	assert.Equal(t, 1, countRows(t, db, `SELECT count(*) FROM platform.operator_audit_log

@@ -90,7 +90,7 @@ func newHolidayGuestFixture(t *testing.T, name string) holidayGuestFixture {
 	f := newHolidayHostFixture(t, name)
 	persons := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, f.db))
 	accessLog := owners.NewTestAuditPersistence(testpkg.NewDatabase(t, f.db), nil).DataAccessLog
-	clock := func() calendar.Date { return f.today.Load().(calendar.Date) }
+	clock := func() time.Time { return f.today.Load().(calendar.Date).BerlinMidnight().Add(10 * time.Hour) }
 	carePlan, err := owners.NewUnobservedCarePlan(testpkg.NewDatabase(t, f.db), owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, f.db)), persons)
 	require.NoError(t, err)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, f.db))
@@ -104,7 +104,7 @@ func newHolidayGuestFixture(t *testing.T, name string) holidayGuestFixture {
 			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), unit)))
 		})
 	})
-	router.Mount("/api/holiday-weeks", NewHolidayHostGuestHTTP(NewHolidayHostHTTP(organizations, persons, accessLog, testHealthCipher(), owners.HolidayTestSchoolCalendar(nil), func() time.Time { return clock().BerlinMidnight().Add(10 * time.Hour) }), guests).Router(ProtectedTenantRoutes))
+	router.Mount("/api/holiday-weeks", NewHolidayHostGuestHTTP(NewHolidayHostHTTP(organizations, persons, accessLog, testHealthCipher(), owners.HolidayTestSchoolCalendar(nil), clock), guests).Router(ProtectedTenantRoutes))
 	router.Mount("/api/holiday-guests", NewHolidayGuestHTTP(guests).Router(ProtectedTenantRoutes))
 	nord := f.office.schools[0]
 	group := testpkg.CreateTestEducationGroupForTenant(t, f.db, nord, "Feriengruppe").ID

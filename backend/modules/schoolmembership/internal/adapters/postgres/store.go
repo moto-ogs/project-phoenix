@@ -34,16 +34,20 @@ type Store struct {
 	// today is the composition's day clock: an external caregiver record
 	// counts for a staff member on the days of its window.
 	today func() calendar.Date
+	// now is the composition's clock: it stamps the time columns no
+	// decision compares, the retired caregiver profile, the planned exit and
+	// the erasure mark. The staff retirement stays on the database clock.
+	now func() time.Time
 }
 
-func New(database Database, today func() calendar.Date) *Store {
+func New(database Database, today func() calendar.Date, now func() time.Time) *Store {
 	if database == nil {
 		panic("school membership postgres: database runtime is required")
 	}
-	if today == nil {
-		panic("school membership postgres: the day clock is required")
+	if today == nil || now == nil {
+		panic("school membership postgres: the day clock and the clock are required")
 	}
-	return &Store{database: database, today: today}
+	return &Store{database: database, today: today, now: now}
 }
 
 // staffRow is a staff membership (#2753). The employment half of a staff
@@ -255,7 +259,9 @@ func (s *Store) SoftDeleteStaff(ctx context.Context, id int64) (domain.Operation
 	}
 	// A planned exit belongs to the live membership only (#4809): the
 	// retirement clears it, whether the scheduler or an immediate deletion
-	// retires the member.
+	// retires the member. The database stamps the retirement: the erasure
+	// function of 1.15.459 compares it with a cutoff it guards on its own
+	// clock (ADR 0281 point 3).
 	query := withTenant(clearPlannedExit(db.NewUpdate().Model((*staffRow)(nil)).
 		ModelTableExpr(`users.staff_school_memberships AS "staff"`)).
 		Set(`deleted_at = NOW()`).
@@ -415,7 +421,7 @@ func (s *Store) SoftDeleteTeacher(ctx context.Context, id int64) (domain.Operati
 	}
 	query := withTenant(db.NewUpdate().Model((*teacherRow)(nil)).
 		ModelTableExpr(`users.teachers AS "teacher"`).
-		Set(`deleted_at = NOW()`).
+		Set(`deleted_at = ?`, s.now()).
 		Where(`"teacher".id = ?`, id).
 		Where(`"teacher".deleted_at IS NULL`), "teacher", scope)
 	return execOne(ctx, query, "soft delete teacher", schoolmembership.ErrTeacherNotFound)

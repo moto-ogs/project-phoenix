@@ -9,10 +9,17 @@ import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
 import type { ContractNoticeOptions } from "~/lib/care-contract-notices";
 
 function render(ui: React.ReactElement) {
-  return renderPlain(ui, { wrapper: ToastProvider });
+  return renderPlain(
+    <ParentResourceTestProvider>
+      <ToastProvider>{ui}</ToastProvider>
+    </ParentResourceTestProvider>,
+  );
 }
 
 const mocks = vi.hoisted(() => ({

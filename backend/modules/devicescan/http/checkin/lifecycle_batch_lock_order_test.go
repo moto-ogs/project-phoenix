@@ -88,11 +88,11 @@ func TestTimeoutCohortAndScanDoNotDeadlock(t *testing.T) {
 			testpkg.OwnTenant(t)
 			f, _ := newSessionEndScanFixture(t)
 			ctx := testpkg.Ctx(t)
-			_, err := f.k.db.NewUpdate().Table("active.visits").Set("exit_time = NOW() - INTERVAL '30 minutes'").
+			_, err := f.k.db.NewUpdate().Table("active.visits").Set("exit_time = ?", time.Now().Add(-30*time.Minute)).
 				Where("active_group_id = ? AND exit_time IS NULL", f.scanStay).Exec(ctx)
 			require.NoError(t, err)
 			_, _, source := f.k.roomWithSession(t, "Timeout Cohort B")
-			_, err = f.k.db.NewUpdate().Table("active.groups").Set("last_activity = NOW() - INTERVAL '2 hours'").Where("id = ?", source).Exec(ctx)
+			_, err = f.k.db.NewUpdate().Table("active.groups").Set("last_activity = ?", time.Now().Add(-2*time.Hour)).Where("id = ?", source).Exec(ctx)
 			require.NoError(t, err)
 			testpkg.LinkDeviceToActiveGroup(t, f.k.db, source, testpkg.CreateTestDevice(t, f.k.db, "cohort-b-device").ID)
 			require.Less(t, f.scanStay, source, "the sweep locks A before B")

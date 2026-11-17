@@ -14,10 +14,14 @@ import (
 )
 
 // The content a school creates itself (#4045): each data kind goes after its
-// window in the nightly run of its school and is logged once per run.
+// window in the nightly run of its school and is logged once per run. Its
+// owners cut off on the root clock, so the fixtures date it on the suite
+// clock; the removed files are cut off and guarded on the database clock
+// (1.15.606) and dated there.
 
-// berlinDaysAgo is the Berlin calendar day daysAgo days back.
-const berlinDaysAgo = `(CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin')::date - ?::integer`
+// berlinDaysAgo is the Berlin calendar day daysAgo days back on the suite
+// clock.
+const berlinDaysAgo = `(ROOT_NOW AT TIME ZONE 'Europe/Berlin')::date - ?::integer`
 
 func (s retentionSuite) setWindow(t *testing.T, tenantID int64, key string, days int) {
 	t.Helper()
@@ -42,8 +46,8 @@ func (s retentionSuite) insertAnnouncement(t *testing.T, tenantID, accountID int
 	return s.insertID(t, `INSERT INTO users.parent_announcements
 		(tenant_id, title, body, created_by, created_at, updated_at, published_at, expires_at)
 		VALUES (?, 'Elternbrief', 'Text', ?,
-			CURRENT_TIMESTAMP - make_interval(days => ?), CURRENT_TIMESTAMP - make_interval(days => ?),
-			CURRENT_TIMESTAMP - make_interval(days => ?::integer), CURRENT_TIMESTAMP - make_interval(days => ?::integer))
+			ROOT_NOW - make_interval(days => ?), ROOT_NOW - make_interval(days => ?),
+			ROOT_NOW - make_interval(days => ?::integer), ROOT_NOW - make_interval(days => ?::integer))
 		RETURNING id`, tenantID, accountID, f.createdDaysAgo, f.updatedDaysAgo, f.publishedDaysAgo, f.expiresDaysAgo)
 }
 
@@ -97,8 +101,8 @@ func TestNightlyRetentionKeepsADeclarationWithSubmissions(t *testing.T) {
 	declaration := func(withSubmission bool) int64 {
 		id := suite.insertID(t, `INSERT INTO users.parent_announcements
 			(tenant_id, title, body, created_by, created_at, updated_at, published_at, delivery_mode, declaration_kind, declaration_signers)
-			VALUES (?, 'Einverständnis', 'Text', ?, CURRENT_TIMESTAMP - INTERVAL '500 days', CURRENT_TIMESTAMP - INTERVAL '500 days',
-				CURRENT_TIMESTAMP - INTERVAL '500 days', 'declaration', 'consent', 'any')
+			VALUES (?, 'Einverständnis', 'Text', ?, ROOT_NOW - INTERVAL '500 days', ROOT_NOW - INTERVAL '500 days',
+				ROOT_NOW - INTERVAL '500 days', 'declaration', 'consent', 'any')
 			RETURNING id`, school, author.ID)
 		version := suite.insertID(t, `INSERT INTO users.parent_announcement_declaration_versions
 			(tenant_id, announcement_id, version_no, title, body, declaration_kind, content_hash)
@@ -106,7 +110,7 @@ func TestNightlyRetentionKeepsADeclarationWithSubmissions(t *testing.T) {
 		if withSubmission {
 			suite.insertID(t, `INSERT INTO users.parent_announcement_declaration_submissions
 				(tenant_id, announcement_id, version_id, student_id, account_id, signer_name, guardian_role, action, content_hash, record_hash, submitted_at)
-				VALUES (?, ?, ?, ?, ?, 'Elternteil', 'primary_guardian', 'agreed', ?, ?, CURRENT_TIMESTAMP - INTERVAL '499 days')
+				VALUES (?, ?, ?, ?, ?, 'Elternteil', 'primary_guardian', 'agreed', ?, ?, ROOT_NOW - INTERVAL '499 days')
 				RETURNING id`, school, id, version, child.ID, author.ID, hash, hash)
 		}
 		return id
@@ -125,6 +129,8 @@ func TestNightlyRetentionKeepsADeclarationWithSubmissions(t *testing.T) {
 
 func (s retentionSuite) insertStaffNotice(t *testing.T, tenantID, accountID int64, validUntilDaysAgo *int, active bool, updatedDaysAgo int) int64 {
 	t.Helper()
+	// valid_until is the school's day on the suite clock; the trigger stamps
+	// updated_at, so the last change is dated on the database clock.
 	return s.insertID(t, `INSERT INTO users.staff_notices (tenant_id, title, valid_from, valid_until, active, created_by, created_at, updated_at)
 		VALUES (?, 'Hinweis', `+berlinDaysAgo+`, `+berlinDaysAgo+`, ?, ?,
 			CURRENT_TIMESTAMP - INTERVAL '900 days', CURRENT_TIMESTAMP - make_interval(days => ?))
@@ -265,14 +271,14 @@ func TestNightlyRetentionDeletesCancelledAppointmentsAfterTheFeedWindow(t *testi
 	suite.insertWeeklyRule(t, school, deleted, days(-200), nil)
 	cancelledRecently := suite.insertAppointment(t, school, organizer.ID, -30, -30)
 	oldDeletedRecently := suite.insertAppointment(t, school, organizer.ID, 500, 500)
-	_, err := suite.admin.ExecContext(context.Background(), `UPDATE calendar.appointments SET
-		cancelled_at = CASE WHEN id = ? THEN CURRENT_TIMESTAMP - INTERVAL '91 days'
-			WHEN id = ? THEN CURRENT_TIMESTAMP - INTERVAL '89 days' END,
-		deleted_at = CASE WHEN id = ? THEN CURRENT_TIMESTAMP - INTERVAL '91 days' END
-		WHERE id IN (?, ?, ?)`, cancelled, cancelledRecently, deleted, cancelled, deleted, cancelledRecently)
+	_, err := suite.admin.ExecContext(context.Background(), suite.onRootClock(`UPDATE calendar.appointments SET
+		cancelled_at = CASE WHEN id = ? THEN ROOT_NOW - INTERVAL '91 days'
+			WHEN id = ? THEN ROOT_NOW - INTERVAL '89 days' END,
+		deleted_at = CASE WHEN id = ? THEN ROOT_NOW - INTERVAL '91 days' END
+		WHERE id IN (?, ?, ?)`), cancelled, cancelledRecently, deleted, cancelled, deleted, cancelledRecently)
 	require.NoError(t, err)
-	_, err = suite.admin.ExecContext(context.Background(), `UPDATE calendar.appointments
-		SET deleted_at = CURRENT_TIMESTAMP - INTERVAL '1 day' WHERE id = ?`, oldDeletedRecently)
+	_, err = suite.admin.ExecContext(context.Background(), suite.onRootClock(`UPDATE calendar.appointments
+		SET deleted_at = ROOT_NOW - INTERVAL '1 day' WHERE id = ?`), oldDeletedRecently)
 	require.NoError(t, err)
 
 	suite.run(t, school)
@@ -292,10 +298,12 @@ func TestNightlyRetentionDeletesCancelledAppointmentsAfterTheFeedWindow(t *testi
 
 func (s retentionSuite) insertTransition(t *testing.T, tenantID, accountID int64, year, status string, endedDaysAgo int) int64 {
 	t.Helper()
-	ended := `CURRENT_TIMESTAMP - make_interval(days => ?)`
+	// The owner stamps applied_at and reverted_at on the suite clock; the
+	// trigger stamps updated_at, a draft's last change, on the database clock.
+	ended := `ROOT_NOW - make_interval(days => ?)`
 	return s.insertID(t, `INSERT INTO education.grade_transitions
 		(tenant_id, academic_year, status, created_by, created_at, updated_at, applied_at, applied_by, reverted_at, reverted_by)
-		VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP - INTERVAL '900 days', `+ended+`,
+		VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP - INTERVAL '900 days', CURRENT_TIMESTAMP - make_interval(days => ?),
 			CASE WHEN ? <> 'draft' THEN `+ended+` END, CASE WHEN ? <> 'draft' THEN ?::bigint END,
 			CASE WHEN ? = 'reverted' THEN `+ended+` END, CASE WHEN ? = 'reverted' THEN ?::bigint END)
 		RETURNING id`, tenantID, year, status, accountID, endedDaysAgo,
@@ -314,6 +322,7 @@ func TestNightlyRetentionDeletesGradeTransitionsAfterTheStudentWindow(t *testing
 	revertedLongAgo := suite.insertTransition(t, school, account.ID, "2022-2023", "reverted", 400)
 	revertedRecently := suite.insertTransition(t, school, account.ID, "2023-2024", "reverted", 300)
 	staleDraft := suite.insertTransition(t, school, account.ID, "2024-2025", "draft", 400)
+	recentDraft := suite.insertTransition(t, school, account.ID, "2025-2026", "draft", 300)
 	otherApplied := suite.insertTransition(t, otherSchool, account.ID, "2020-2021", "applied", 400)
 	graduate := testpkg.CreateTestStudent(t, suite.admin, "Abgang", "Frist", "4a")
 	suite.insertID(t, `INSERT INTO education.grade_transition_history
@@ -327,6 +336,7 @@ func TestNightlyRetentionDeletesGradeTransitionsAfterTheStudentWindow(t *testing
 	assert.False(t, suite.exists(t, "education.grade_transitions", revertedLongAgo), "a reverted transition counts from its reversal")
 	assert.True(t, suite.exists(t, "education.grade_transitions", revertedRecently))
 	assert.False(t, suite.exists(t, "education.grade_transitions", staleDraft), "a draft counts from its last change")
+	assert.True(t, suite.exists(t, "education.grade_transitions", recentDraft), "a draft changed inside the window stays")
 	assert.True(t, suite.exists(t, "education.grade_transitions", otherApplied), "the run of one school never touches another")
 	assert.Zero(t, suite.count(t, `SELECT COUNT(*) FROM education.grade_transition_history WHERE transition_id = ?`, appliedLongAgo),
 		"the history with the children's names goes with its transition")

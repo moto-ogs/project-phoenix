@@ -6,15 +6,13 @@
 // Daten der Schule, nur ihren Namen. Jeder Abgleich steht im Protokoll, die
 // Seite fragt deshalb nur, was sie zeigt.
 
-import { useEffect, useState } from "react";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
-import { createLogger } from "~/lib/logger";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchHolidayKnownChildren,
   type HolidayRegistrationChild,
 } from "~/lib/traeger-holiday-registrations-api";
-
-const logger = createLogger({ component: "HolidayKnownChild" });
 
 const NO_KNOWN_CHILDREN: ReadonlyMap<string, string> = new Map();
 
@@ -93,38 +91,15 @@ export function useHolidayKnownChildren(
   registrationId?: string,
   children?: string,
 ): ReadonlyMap<string, string> {
-  const [known, setKnown] = useState<{
-    periodId: string;
-    registrationId: string | undefined;
-    children: string | undefined;
-    matches: ReadonlyMap<string, string>;
-  } | null>(null);
-  useEffect(() => {
-    if (!periodId || children === "") return;
-    let current = true;
-    const load = async () => {
-      let next = NO_KNOWN_CHILDREN;
-      try {
-        next = await fetchHolidayKnownChildren(periodId, registrationId);
-      } catch (err) {
-        // Silent on purpose: the hint only adds to the review, which works
-        // without it, and the page shows its own load errors.
-        logger.warn("holiday_known_children_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-      if (current) {
-        setKnown({ periodId, registrationId, children, matches: next });
-      }
-    };
-    void load();
-    return () => {
-      current = false;
-    };
-  }, [periodId, registrationId, children]);
-  return known?.periodId === periodId &&
-    known.registrationId === registrationId &&
-    known.children === children
-    ? known.matches
-    : NO_KNOWN_CHILDREN;
+  // Silent on purpose: without the comparison the screen shows no hint.
+  // The comparison reads the schools' children and stands in their access
+  // logs: one read per opening, none on reconnect.
+  const known = useFreshTraegerResource(
+    periodId && children !== ""
+      ? traegerKeys.holidayKnownChildren(periodId, registrationId, children)
+      : null,
+    () => fetchHolidayKnownChildren(periodId, registrationId),
+    "den Abgleich mit den Schulen",
+  ).data;
+  return known ?? NO_KNOWN_CHILDREN;
 }

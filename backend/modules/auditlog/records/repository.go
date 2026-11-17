@@ -62,12 +62,15 @@ type PendingAccountWideWipe struct {
 // Access-log rows are append-only and are never updated or deleted by the application.
 type DataAccessLogRepository interface {
 	Create(ctx context.Context, entry *DataAccessLog) error
-	// ExistsSince reports whether the actor already has a row of resourceType,
-	// accessed at or after since, whose metadata matches every given
-	// key/value (text comparison). Lets polling readers collapse identical
-	// re-reads into one evidential row instead of flooding the append-only
-	// log with duplicates.
-	ExistsSince(ctx context.Context, actorAccountID int64, resourceType string, metadata map[string]string, since time.Time) (bool, error)
+	// ExistsToday reports whether the actor already has a row of
+	// resourceType, accessed since the start of today in Berlin, whose
+	// metadata matches every given key/value (text comparison). ExistsWithin
+	// asks the same for the last window. Both read the day and the instant on
+	// the database clock, which stamps accessed_at (ADR 0281, Nachtrag).
+	// They let polling readers collapse identical re-reads into one
+	// evidential row instead of flooding the append-only log with duplicates.
+	ExistsToday(ctx context.Context, actorAccountID int64, resourceType string, metadata map[string]string) (bool, error)
+	ExistsWithin(ctx context.Context, actorAccountID int64, resourceType string, metadata map[string]string, window time.Duration) (bool, error)
 }
 
 type UnregisteredTagScanRepository interface {

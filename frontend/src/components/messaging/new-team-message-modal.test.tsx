@@ -3,10 +3,22 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { StaffMessagesApi } from "~/lib/staff-messages-api";
 import { catalogText } from "~/test/error-catalog-text";
 
 import { NewTeamMessageModal } from "./new-team-message-modal";
+
+// Echtes SWR statt des globalen Stubs: Fehler und Wiederholen laufen über den
+// echten Abruf.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
 
 vi.mock("~/components/ui/modal", () => ({
   Modal: ({ isOpen, children }: { isOpen: boolean; children: ReactNode }) =>
@@ -51,6 +63,13 @@ describe("NewTeamMessageModal", () => {
         onClose={vi.fn()}
         onOpened={onOpened}
       />,
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+            {children}
+          </SWRConfig>
+        ),
+      },
     );
     return { onOpened };
   }

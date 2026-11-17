@@ -66,7 +66,8 @@ export function ParentSurveySection({
         load={load}
         submit={submit}
         respondent="parent"
-        reloadKey={`${announcementId}:${item.published_at ?? ""}`}
+        formId={announcementId}
+        formVersion={item.published_at ?? ""}
         showIntro={false}
         onBusyChange={onBusyChange}
         onSubmitted={handleSubmitted}

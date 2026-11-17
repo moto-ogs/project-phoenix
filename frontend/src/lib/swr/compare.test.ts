@@ -48,3 +48,13 @@ describe("swrDataEqual", () => {
     expect(swrDataEqual([], {})).toBe(false);
   });
 });
+
+it("compares PDF blobs by identity, including nested response data", () => {
+  const first = new Blob(["old PDF"], { type: "application/pdf" });
+  const changed = new Blob(["new PDF"], { type: "application/pdf" });
+  const copy = new Blob(["old PDF"], { type: "application/pdf" });
+  expect(swrDataEqual(first, first)).toBe(true);
+  expect(swrDataEqual(first, changed)).toBe(false);
+  expect(swrDataEqual(first, copy)).toBe(false);
+  expect(swrConfig.compare?.({ pdf: first }, { pdf: changed })).toBe(false);
+});

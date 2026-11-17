@@ -52,16 +52,28 @@ func (s *Store) currentTime() time.Time {
 	return s.now()
 }
 
-// CompletionTimestamp returns PostgreSQL's stable timestamp for the current
-// transaction, which is also the clock used by update triggers. It only
-// orders a completion against rows the database stamps (ADR 0281).
+// statementClock is the database's statement time. It stamps completed_at
+// and the plan rows Reopen orders against it (ADR 0281).
+const statementClock = "clock_timestamp()"
+
+// databaseDayCutoff is Berlin midnight of the database's day minus the bound
+// number of days, the cutoff of a window over a trigger-stamped column.
+const databaseDayCutoff = `(((` + statementClock + ` AT TIME ZONE 'Europe/Berlin')::date - ?::int)::timestamp AT TIME ZONE 'Europe/Berlin')`
+
+// CompletionTimestamp returns the database's clock at this statement, not at
+// the start of the transaction. The completion reads it after its own
+// writes, so those, and rows a trigger stamps with the transaction start,
+// stay before it, while an attendance correction that waited for the
+// completion's locks or follows in the same transaction stamps a later
+// clock_timestamp(). It only orders a completion against rows the database
+// stamps (ADR 0281).
 func (s *Store) CompletionTimestamp(ctx context.Context) (time.Time, error) {
 	db, _, err := s.database(ctx)
 	if err != nil {
 		return time.Time{}, err
 	}
 	var timestamp time.Time
-	err = db.NewRaw("SELECT transaction_timestamp()").Scan(ctx, &timestamp)
+	err = db.NewRaw("SELECT "+statementClock).Scan(ctx, &timestamp)
 	return timestamp, err
 }
 

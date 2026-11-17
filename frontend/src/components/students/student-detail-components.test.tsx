@@ -1,19 +1,34 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import {
-  render,
+  render as rtlRender,
   screen,
   fireEvent,
   cleanup,
   within,
 } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode as TenantSWRNode } from "react";
+import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 
 const { mockUseSWR } = vi.hoisted(() => ({
   mockUseSWR: vi.fn(),
 }));
 
-vi.mock("~/lib/swr", () => ({
-  useSWRAuth: mockUseSWR,
-}));
+// The Laufgemeinschaft reads through the real hook (its fetch is mocked
+// below); every other read gets the per-test fake.
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  return {
+    useSWRAuth: (key: string | null, ...rest: unknown[]) => {
+      const companions = key?.startsWith("student-companions-") ?? false;
+      const real = actual.useSWRAuth(
+        companions ? key : null,
+        ...(rest as [() => Promise<unknown>]),
+      );
+      return companions ? real : mockUseSWR(key, ...rest);
+    },
+  };
+});
 
 vi.mock("~/lib/tenant-router", () => ({
   useTenantRouter: () => ({ push: vi.fn() }),
@@ -45,6 +60,36 @@ import { getPillTone } from "~/lib/kit-palette";
 import { setTestClock } from "~/test/clock";
 import type { SupervisorContact } from "~/lib/student-helpers";
 import type { AttendanceActor } from "~/lib/attendance-actor";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in OGS session per render.
+function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <TenantSWRConfig
+        value={{ provider: () => new Map(), errorRetryCount: 0 }}
+      >
+        {children}
+      </TenantSWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  const Outer = options?.wrapper;
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: TenantSWRNode }>) => (
+      <TenantSWRWrapper>
+        {Outer ? <Outer>{children}</Outer> : children}
+      </TenantSWRWrapper>
+    ),
+  });
+}
 
 beforeEach(() => {
   mockUseSWR.mockReturnValue({

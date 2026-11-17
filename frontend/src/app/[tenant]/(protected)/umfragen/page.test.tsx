@@ -7,8 +7,8 @@ import { testClockDay } from "~/test/clock";
 
 import SurveysPage from "./page";
 
-// The open surveys close three weeks after the test day. The mock factory
-// below reads it only when the page loads the form.
+// The open surveys close three weeks after the test day; beforeEach puts
+// the same day into the hoisted form.
 const CLOSES_AT = `${testClockDay(21)}T16:00:00Z`;
 
 const state = vi.hoisted(() => ({
@@ -20,6 +20,27 @@ const state = vi.hoisted(() => ({
   // there is neither data nor a running request.
   sessionPending: false,
   push: vi.fn(),
+  form: {
+    school_name: "OGS am Park",
+    participated: false,
+    survey: {
+      id: "11",
+      title: "Teamklima",
+      intro: "Wie geht es Ihnen im Team?",
+      anonymous: true,
+      closes_at: "2026-09-30T16:00:00Z",
+      questions: [
+        {
+          id: "q1",
+          position: 1,
+          kind: "scale",
+          prompt: "Ich fühle mich im Team wohl.",
+          required: true,
+          options: [],
+        },
+      ],
+    },
+  },
 }));
 
 vi.mock("next/navigation", () => ({
@@ -51,7 +72,10 @@ vi.mock("~/lib/swr", () => ({
         ? state.toAnswer
         : key === "surveys-list"
           ? state.surveys
-          : undefined,
+          : // Der Fragebogen der Umfrage „Teamklima“ im Dialog.
+            key === "staff-survey-form-11-"
+            ? state.form
+            : undefined,
     error: undefined,
     isLoading: false,
     mutate: vi.fn(() => Promise.resolve(undefined)),
@@ -60,29 +84,7 @@ vi.mock("~/lib/swr", () => ({
 
 vi.mock("~/lib/surveys-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/surveys-api")>()),
-  fetchSurveyForm: vi.fn(() =>
-    Promise.resolve({
-      school_name: "OGS am Park",
-      participated: false,
-      survey: {
-        id: "11",
-        title: "Teamklima",
-        intro: "Wie geht es Ihnen im Team?",
-        anonymous: true,
-        closes_at: CLOSES_AT,
-        questions: [
-          {
-            id: "q1",
-            position: 1,
-            kind: "scale",
-            prompt: "Ich fühle mich im Team wohl.",
-            required: true,
-            options: [],
-          },
-        ],
-      },
-    }),
-  ),
+  fetchSurveyForm: vi.fn(() => Promise.resolve(state.form)),
 }));
 
 const openSurvey: SurveyToAnswer = {
@@ -126,6 +128,7 @@ describe("Umfragen (#4781)", () => {
     state.toAnswer = [openSurvey];
     state.surveys = [managed];
     state.sessionPending = false;
+    state.form.survey.closes_at = CLOSES_AT;
     state.push.mockReset();
   });
 

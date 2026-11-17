@@ -16,15 +16,16 @@ import (
 const openCare = -1 << 31
 
 // endedCare stages a child of the school whose last care day lies daysAgo
-// days back on the Berlin calendar (negative: ahead), in the given lifecycle
+// days back on the Berlin calendar of the suite clock, the school's day the
+// student window counts from (negative: ahead), in the given lifecycle
 // status. openCare leaves the last care day empty.
 func (s retentionSuite) endedCare(t *testing.T, tenantID int64, name, status string, daysAgo int) int64 {
 	t.Helper()
 	student := testpkg.CreateTestStudentForTenant(t, s.admin, tenantID, name, "Austritt", "3a")
-	_, err := s.admin.ExecContext(context.Background(), `UPDATE users.student_school_memberships
+	_, err := s.admin.ExecContext(context.Background(), s.onRootClock(`UPDATE users.student_school_memberships
 		SET status = ?, enrolled_from = NULL,
-			enrolled_until = CASE WHEN ? THEN NULL ELSE (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin')::date - ? END
-		WHERE student_profile_id = ? AND deleted_at IS NULL`, status, daysAgo == openCare, daysAgo, student.ID)
+			enrolled_until = CASE WHEN ? THEN NULL ELSE (ROOT_NOW AT TIME ZONE 'Europe/Berlin')::date - ? END
+		WHERE student_profile_id = ? AND deleted_at IS NULL`), status, daysAgo == openCare, daysAgo, student.ID)
 	require.NoError(t, err)
 	return student.ID
 }

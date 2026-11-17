@@ -32,7 +32,7 @@ type EnrollmentFlowTestRepositories struct {
 
 // Enrollment is the Enrollment booking projection the flows read and write.
 func (r *EnrollmentFlowTestRepositories) Enrollment() EnrollmentBookingProjection {
-	return NewEnrollmentBookingProjection(ComposeEnrollmentBookings(enrollmentCompose.NewClocked(time.Now)), UngatedEnrollmentPhaseBounds())
+	return NewEnrollmentBookingProjection(ComposeEnrollmentBookings(enrollmentCompose.NewClocked(time.Now), time.Now), UngatedEnrollmentPhaseBounds(), time.Now)
 }
 
 // NewEnrollmentFlowTestRepositoriesWithMembers composes the enrollment flow

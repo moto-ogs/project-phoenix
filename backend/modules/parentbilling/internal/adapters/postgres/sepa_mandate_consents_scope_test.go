@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func TestSEPAMandateConsentFilterKeepsTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newMandateScope(t, db, "Träger Nachweis A")
 	other := newMandateScope(t, db, "Träger Nachweis B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the proofs back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))

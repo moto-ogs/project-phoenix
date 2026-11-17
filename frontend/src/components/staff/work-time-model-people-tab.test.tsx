@@ -24,10 +24,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => toast,
 }));
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: () => false,
-}));
-
 const workTimeModelService = vi.hoisted(() => ({
   assign: vi.fn(),
   staffFacts: vi.fn(),

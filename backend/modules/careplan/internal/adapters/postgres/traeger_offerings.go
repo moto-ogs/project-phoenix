@@ -24,11 +24,17 @@ import (
 // offering in a phase of its own Träger.
 const traegerOfferingPhaseConstraint = "fk_traeger_care_offerings_phase"
 
-// TraegerOfferingStore persists the Träger care offerings.
-type TraegerOfferingStore struct{}
+// TraegerOfferingStore persists the Träger care offerings. now stamps the
+// withdrawal and the recorded outcomes (ADR 0239).
+type TraegerOfferingStore struct{ now func() time.Time }
 
-// NewTraegerOfferingStore builds the store.
-func NewTraegerOfferingStore() *TraegerOfferingStore { return &TraegerOfferingStore{} }
+// NewTraegerOfferingStore builds the store over the composition's clock.
+func NewTraegerOfferingStore(now func() time.Time) *TraegerOfferingStore {
+	if now == nil {
+		panic("care plan träger offerings: the composition's clock is required")
+	}
+	return &TraegerOfferingStore{now: now}
+}
 
 // traegerDB returns the Träger transaction of organizationID. A school,
 // administrative or foreign Träger transaction is refused.
@@ -245,8 +251,8 @@ func (s *TraegerOfferingStore) WithdrawTraegerOffering(ctx context.Context, orga
 	if err != nil {
 		return false, err
 	}
-	result, err := db.NewRaw(`UPDATE enrollment.traeger_care_offerings SET withdrawn_at = COALESCE(withdrawn_at, now())
-		WHERE organization_id = ? AND id = ?`, organizationID, id).Exec(ctx)
+	result, err := db.NewRaw(`UPDATE enrollment.traeger_care_offerings SET withdrawn_at = COALESCE(withdrawn_at, ?)
+		WHERE organization_id = ? AND id = ?`, s.now(), organizationID, id).Exec(ctx)
 	if err != nil {
 		return false, fmt.Errorf("care plan postgres: withdraw träger care offering: %w", err)
 	}
@@ -325,14 +331,14 @@ func (s *TraegerOfferingStore) RecordTraegerOfferingOutcomes(ctx context.Context
 	}
 	if _, err := db.NewRaw(`INSERT INTO enrollment.traeger_care_offering_schools AS target
 			(organization_id, traeger_care_offering_id, school_id, applied_version, applied_copy_id, outcome, error_code, recorded_at)
-		SELECT ?, outcome.offering_id, outcome.school_id, outcome.applied_version, outcome.applied_copy_id, outcome.outcome, outcome.error_code, now()
+		SELECT ?, outcome.offering_id, outcome.school_id, outcome.applied_version, outcome.applied_copy_id, outcome.outcome, outcome.error_code, ?::timestamptz
 		FROM jsonb_to_recordset(?::jsonb) AS outcome(offering_id bigint, school_id bigint, applied_version int, applied_copy_id bigint, outcome text, error_code text)
 		ORDER BY outcome.offering_id, outcome.school_id
 		ON CONFLICT (organization_id, traeger_care_offering_id, school_id) DO UPDATE SET
 			applied_version = CASE WHEN EXCLUDED.outcome IN ('applied', 'withdrawn') THEN EXCLUDED.applied_version ELSE target.applied_version END,
 			applied_copy_id = CASE WHEN EXCLUDED.outcome IN ('applied', 'withdrawn') THEN EXCLUDED.applied_copy_id ELSE target.applied_copy_id END,
 			outcome = EXCLUDED.outcome, error_code = EXCLUDED.error_code, recorded_at = EXCLUDED.recorded_at`,
-		organizationID, string(encoded)).Exec(ctx); err != nil {
+		organizationID, s.now(), string(encoded)).Exec(ctx); err != nil {
 		return fmt.Errorf("care plan postgres: record träger care offering outcomes: %w", err)
 	}
 	return nil
@@ -418,8 +424,8 @@ func (s *Store) LinkTraegerOfferingCopy(ctx context.Context, copyID, sourceID in
 		return fmt.Errorf("care plan postgres: encode träger offering values: %w", err)
 	}
 	if _, err := db.NewRaw(`UPDATE enrollment.care_offerings SET traeger_source_id = ?, traeger_source_version = ?,
-		traeger_values = ?::jsonb, updated_at = NOW() WHERE tenant_id = ? AND id = ?`,
-		sourceID, version, string(encoded), tenantID, copyID).Exec(ctx); err != nil {
+		traeger_values = ?::jsonb, updated_at = ? WHERE tenant_id = ? AND id = ?`,
+		sourceID, version, string(encoded), s.currentTime(), tenantID, copyID).Exec(ctx); err != nil {
 		return fmt.Errorf("care plan postgres: link träger offering copy: %w", err)
 	}
 	return nil
@@ -432,8 +438,8 @@ func (s *Store) UnlinkTraegerOfferingCopy(ctx context.Context, copyID int64) err
 	if err != nil {
 		return err
 	}
-	if _, err := db.NewRaw(`UPDATE enrollment.care_offerings SET traeger_source_id = NULL, updated_at = NOW()
-		WHERE tenant_id = ? AND id = ?`, tenantID, copyID).Exec(ctx); err != nil {
+	if _, err := db.NewRaw(`UPDATE enrollment.care_offerings SET traeger_source_id = NULL, updated_at = ?
+		WHERE tenant_id = ? AND id = ?`, s.currentTime(), tenantID, copyID).Exec(ctx); err != nil {
 		return fmt.Errorf("care plan postgres: unlink träger offering copy: %w", err)
 	}
 	return nil

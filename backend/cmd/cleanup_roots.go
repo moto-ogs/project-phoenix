@@ -78,22 +78,22 @@ func newCleanupSettingsService(db transactionruntime.Database, schools organizat
 		owners.NewSchoolSettingsStore(schools),
 		settingsRuntime,
 		logger,
-		time.Now,
 	)
 }
 
 // listRecentAuditRetentionSummaries reads the Audit-owned cleanup query
 // without widening the producer-facing deletion repository. The summaries
 // read the root database outside any transaction, scoped by the Audit tenant
-// handoff.
-func listRecentAuditRetentionSummaries(ctx context.Context, db transactionruntime.Database, since time.Time, limit int) ([]auditModels.RecentDeletionSummary, error) {
+// handoff. The window counts back days from the database time, the clock
+// that stamps the deletion ledger.
+func listRecentAuditRetentionSummaries(ctx context.Context, db transactionruntime.Database, days, limit int) ([]auditModels.RecentDeletionSummary, error) {
 	audits, err := auditCompose.NewPersistence(auditCompose.PersistenceDependencies{
 		Reads: auditCompose.NewFixedRuntime(db.Pool(), auditModels.TenantIDFromContext),
 	})
 	if err != nil {
 		return nil, err
 	}
-	return audits.RetentionSummaries.ListRecentRetentionSummaries(ctx, since, limit)
+	return audits.RetentionSummaries.ListRecentRetentionSummaries(ctx, days, limit)
 }
 
 // newCleanupAudits composes the Audit repositories a command root reads

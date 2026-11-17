@@ -4,6 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import type { Announcement } from "~/lib/parent-announcements-api";
 import { AnnouncementDetail } from "./announcement-detail";
 
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
+
 vi.mock("./declaration-status-panel", () => ({
   DeclarationStatusPanel: () => <div data-testid="declaration-status" />,
 }));

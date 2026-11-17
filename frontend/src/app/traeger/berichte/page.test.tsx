@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type {
   KeyDateReport,
@@ -15,6 +15,7 @@ import type {
 } from "~/lib/traeger-reports-api";
 import { TEST_CLOCK_TODAY } from "~/test/clock";
 
+vi.unmock("swr");
 const {
   mockFetchReport,
   mockDownload,
@@ -36,7 +37,10 @@ const {
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path,
 }));
-vi.mock("next-auth/react", () => ({ useSession: mockUseSession }));
+vi.mock("next-auth/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-auth/react")>()),
+  useSession: mockUseSession,
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/berichte",
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -212,9 +216,9 @@ function signIn(permissions: string[]) {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerReportsPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -384,9 +388,9 @@ describe("TraegerReportsPage", () => {
       mutate: retry,
     });
     view.rerender(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <TraegerReportsPage />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     expect(
       await screen.findByRole("heading", { name: "Belegung und Nachfrage" }),

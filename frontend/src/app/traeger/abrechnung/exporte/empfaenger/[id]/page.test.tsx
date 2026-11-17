@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { ExportRecipient } from "~/lib/traeger-export-handovers-api";
 import TraegerExportRecipientPage from "./page";
+
+vi.unmock("swr");
 
 // One recipient of the finance exports (#6824, ADR 0218; #6911, ADR 0222):
 // the password is never shown and only sent when typed, it never follows a
@@ -71,9 +73,9 @@ beforeEach(() => {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerExportRecipientPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

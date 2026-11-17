@@ -257,7 +257,8 @@ func (s *Store) CreateCareOffering(ctx context.Context, fields careplan.CareOffe
 	if err != nil {
 		return careplan.CareOffering{}, domain.OperationStats{}, err
 	}
-	row := careOfferingRow{TenantID: tenantID}
+	now := s.currentTime()
+	row := careOfferingRow{TenantID: tenantID, CreatedAt: now, UpdatedAt: now}
 	applyCareOfferingFields(&row, fields)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -282,7 +283,7 @@ func (s *Store) UpdateCareOffering(ctx context.Context, id int64, fields carepla
 		Column("phase_id", "activity_group_id", "name", "description", "days_of_week_mode", "available_days",
 			"includes_holiday_care", "includes_lunch", "capacity", "price_cents", "is_active", "is_required",
 			"counts_as_care", "auto_add_grade_levels", "availability_rule", "sort_order", "selection_group", "selection_rule", "pickup_times", "translations").
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.currentTime()).
 		Where(`"care_offering".id = ?`, id), "care_offering", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -507,7 +508,12 @@ func (s *Store) CreateOfferingChange(ctx context.Context, value careplan.Offerin
 		return careplan.OfferingChangeRequest{}, domain.OperationStats{}, err
 	}
 	row := offeringChangeFromDomain(value)
-	row.TenantID = tenantID
+	// The parent request feed filters and orders created_at with the
+	// requests of other kinds on the owner's clock (ADR 0281).
+	row.TenantID, row.UpdatedAt = tenantID, s.currentTime()
+	if row.CreatedAt.IsZero() {
+		row.CreatedAt = row.UpdatedAt
+	}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = db.NewInsert().Model(&row).ModelTableExpr(`enrollment.offering_change_requests`).Returning("*").Scan(ctx)
@@ -547,7 +553,7 @@ func (s *Store) updatePending(ctx context.Context, id int64, operation string, c
 	}
 	query := db.NewUpdate().Model((*offeringChangeRow)(nil)).
 		ModelTableExpr(`enrollment.offering_change_requests AS "offering_change_request"`).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.currentTime()).
 		Where(`"offering_change_request".id = ?`, id).
 		Where(`"offering_change_request".status = 'pending'`)
 	query = change(query)
@@ -586,7 +592,7 @@ func (s *Store) UpdateOfferingChangeSnapshot(ctx context.Context, id int64, snap
 	query := withTenant(db.NewUpdate().Model((*offeringChangeRow)(nil)).
 		ModelTableExpr(`enrollment.offering_change_requests AS "offering_change_request"`).
 		Set("decision_snapshot = ?", snapshot).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.currentTime()).
 		Where(`"offering_change_request".id = ?`, id), "offering_change_request", tenantID)
 	return execAny(ctx, query, "update offering change decision snapshot")
 }

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"time"
 
 	config "github.com/moto-ogs/project-phoenix/modules/settings/records"
 )
@@ -29,7 +28,6 @@ type TraegerSettingsDependencies struct {
 	Notify   config.SettingsChangedNotifier
 	Rights   map[config.TraegerRight]string
 	Logger   *slog.Logger
-	Now      func() time.Time
 	Registry *config.Registry
 }
 
@@ -43,7 +41,7 @@ type TraegerSettings struct {
 // NewTraegerSettings builds the Träger level. A missing collaborator or an
 // unmapped Träger right is a construction error.
 func NewTraegerSettings(deps TraegerSettingsDependencies) (*TraegerSettings, error) {
-	if deps.Values == nil || deps.Runtime == nil || deps.Schools == nil || deps.Notify == nil || deps.Logger == nil || deps.Now == nil {
+	if deps.Values == nil || deps.Runtime == nil || deps.Schools == nil || deps.Notify == nil || deps.Logger == nil {
 		return nil, errors.New("traeger settings: all dependencies are required")
 	}
 	for _, right := range []config.TraegerRight{config.TraegerRightSettings, config.TraegerRightStaff, config.TraegerRightBilling} {
@@ -360,10 +358,9 @@ func (t *TraegerSettings) writeChange(txCtx context.Context, organizationID int6
 	if existing != nil {
 		old = existing.Value
 	}
-	now := t.deps.Now()
 	entry := &config.TraegerSettingAuditEntry{
 		OrganizationID: organizationID, SettingKey: key, OldValue: old, NewValue: value,
-		Action: action, ChangedBy: actor.account, ChangedByOperator: actor.operator, ChangedAt: now,
+		Action: action, ChangedBy: actor.account, ChangedByOperator: actor.operator,
 	}
 	// Retention: changes are kept as long as the school's setting
 	// changes (three years); each change of the Träger drops older ones.

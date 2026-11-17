@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
 import type { TraegerMasterData } from "~/lib/traeger-api";
 import { deferred } from "~/test/helpers/form-modal-pending";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { useTraegerMasterData } from "./use-traeger-master-data";
 
+vi.unmock("swr");
 const { fetchMasterData } = vi.hoisted(() => ({ fetchMasterData: vi.fn() }));
 vi.mock("~/lib/traeger-api", () => ({
   fetchTraegerMasterData: fetchMasterData,
@@ -22,8 +24,9 @@ describe("useTraegerMasterData", () => {
     "ignores an older contact response (failure: %s)",
     async (fails) => {
       fetchMasterData.mockReset().mockResolvedValueOnce(initial);
-      const { result } = renderHook(() =>
-        useTraegerMasterData("die Kontaktdaten"),
+      const { result } = renderHook(
+        () => useTraegerMasterData("die Kontaktdaten"),
+        { wrapper: TraegerResourceTestProvider },
       );
       await waitFor(() => expect(result.current.loaded).toBe(true));
       const older = deferred<TraegerMasterData>();

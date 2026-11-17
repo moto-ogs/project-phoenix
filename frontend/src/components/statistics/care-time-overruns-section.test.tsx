@@ -5,14 +5,31 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CareTimeOverrunsSection } from "./care-time-overruns-section";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { CareTimeOverruns } from "~/lib/care-times";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>{children}</ToastProvider>
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
 
 function render(ui: ReactElement) {
-  return rtlRender(ui, { wrapper: ToastProvider });
+  return rtlRender(ui, { wrapper: Providers });
 }
 
 vi.mock("next/navigation", () => ({

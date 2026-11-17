@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	config "github.com/moto-ogs/project-phoenix/modules/settings/records"
 )
@@ -24,18 +23,16 @@ type SchoolCreationSettings struct {
 	values      config.SettingValueRepository
 	audit       config.SettingAuditRepository
 	inAdminUnit func(context.Context) bool
-	now         func() time.Time
 }
 
 // NewSchoolCreationSettings binds the registry, the value and audit
 // repositories over the ambient transaction, and the check for the
-// administrative unit and the clock that stamps the audit entry. Every
-// dependency is required.
-func NewSchoolCreationSettings(registry *config.Registry, values config.SettingValueRepository, audit config.SettingAuditRepository, inAdminUnit func(context.Context) bool, now func() time.Time) (*SchoolCreationSettings, error) {
-	if registry == nil || values == nil || audit == nil || inAdminUnit == nil || now == nil {
+// administrative unit. Every dependency is required.
+func NewSchoolCreationSettings(registry *config.Registry, values config.SettingValueRepository, audit config.SettingAuditRepository, inAdminUnit func(context.Context) bool) (*SchoolCreationSettings, error) {
+	if registry == nil || values == nil || audit == nil || inAdminUnit == nil {
 		return nil, errors.New("school creation settings: all dependencies are required")
 	}
-	return &SchoolCreationSettings{registry: registry, values: values, audit: audit, inAdminUnit: inAdminUnit, now: now}, nil
+	return &SchoolCreationSettings{registry: registry, values: values, audit: audit, inAdminUnit: inAdminUnit}, nil
 }
 
 // RecordFederalState stores the new school's federal state with its audit
@@ -78,7 +75,7 @@ func (s *SchoolCreationSettings) storeFederalState(ctx context.Context, schoolID
 	if err := s.values.Upsert(ctx, row); err != nil {
 		return fmt.Errorf("school creation settings: store federal state: %w", err)
 	}
-	if err := s.audit.Create(ctx, config.NewAuditEntry(schoolID, config.KeyFederalState, "set", old, value, nil, s.now())); err != nil {
+	if err := s.audit.Create(ctx, config.NewAuditEntry(schoolID, config.KeyFederalState, "set", old, value, nil)); err != nil {
 		return fmt.Errorf("school creation settings: record federal state change: %w", err)
 	}
 	return nil

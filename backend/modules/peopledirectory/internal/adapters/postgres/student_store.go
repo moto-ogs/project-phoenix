@@ -33,7 +33,8 @@ type studentRow struct {
 // StudentStore binds profile writes and Directory reads; it shares the database
 // runtime with the person store.
 type StudentStore struct {
-	database       Database
+	database Database
+	clock
 	reads          *studentDirectoryReads
 	classGate      func(context.Context, bool) error
 	classGateQuery func(context.Context) (*bun.SelectQuery, error)

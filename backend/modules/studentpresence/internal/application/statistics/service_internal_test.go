@@ -41,7 +41,7 @@ func (a *reportAudit) RecordStatisticsAccess(_ context.Context, event ports.Stat
 	return a.recordErr
 }
 
-func (a *reportAudit) SeenStatisticsAccessSince(context.Context, int64, map[string]string, time.Time) (bool, error) {
+func (a *reportAudit) SeenStatisticsAccessWithin(context.Context, int64, map[string]string, time.Duration) (bool, error) {
 	return false, a.lookupErr
 }
 
@@ -107,7 +107,7 @@ func (s *accessLogSpy) RecordStatisticsAccess(context.Context, ports.StatisticsA
 	return nil
 }
 
-func (s *accessLogSpy) SeenStatisticsAccessSince(_ context.Context, _ int64, metadata map[string]string, _ time.Time) (bool, error) {
+func (s *accessLogSpy) SeenStatisticsAccessWithin(_ context.Context, _ int64, metadata map[string]string, _ time.Duration) (bool, error) {
 	s.metadata = append(s.metadata, metadata)
 	return false, nil
 }

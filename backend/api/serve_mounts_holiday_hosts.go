@@ -28,8 +28,7 @@ type HolidayHostSchools = owners.HolidayHostSchools
 // now is the root clock (ADR 0265): the lists' day and the participant
 // export's generation time.
 func mountHolidayHostRoutes(tenant chi.Router, schools HolidayHostSchools, people owners.HolidayGuestDirectory, students owners.HolidayOwnChildStudents, care owners.HolidayGuestCarePlan, accessLog owners.DataAccessAppender, healthData enrollmentOwner.HolidayHealthCipher, noCare enrollmentOwner.HolidayHostCalendar, now func() time.Time) {
-	today := calendar.CalendarDateClock(now)
-	guests := owners.NewHolidayGuests(people, students, schools, care, accessLog, healthData, today)
+	guests := owners.NewHolidayGuests(people, students, schools, care, accessLog, healthData, now)
 	participants := NewHolidayHostHTTP(schools, people, accessLog, healthData, noCare, now)
 	tenant.Mount("/holiday-weeks", NewHolidayHostGuestHTTP(participants, guests).Router(ProtectedTenantRoutes))
 	tenant.Mount("/holiday-guests", NewHolidayGuestHTTP(guests).Router(ProtectedTenantRoutes))

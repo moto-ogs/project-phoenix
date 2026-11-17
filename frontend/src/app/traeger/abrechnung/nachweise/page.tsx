@@ -6,7 +6,7 @@
 // Lesen steht im Zugriffsprotokoll des Vertrags.
 
 import { FileCheck2, Pencil, Plus, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   billingAreaTitle,
   billingTabs,
@@ -25,13 +25,11 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import {
@@ -98,7 +96,16 @@ function EvidenceCell({
 
 export default function TraegerNachweisePage() {
   const today = berlinTodayISO();
-  const [data, setData] = useState<CareEvidenceSet | null>(null);
+  const {
+    data,
+    loading,
+    error: loadError,
+    mutate,
+  } = useTraegerResource(
+    traegerBillingKeys.careEvidences(),
+    fetchCareEvidences,
+    "die Liste der Nachweise",
+  );
   const [search, setSearch] = useState("");
   const [target, setTarget] = useState<EvidenceTarget | null>(null);
   const [deleting, setDeleting] = useState<{
@@ -106,36 +113,17 @@ export default function TraegerNachweisePage() {
     evidence: CareEvidence;
   } | null>(null);
   const [busy, setBusy] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const deleteErrors = useApiFormError();
   const { success } = useToast();
-
-  const load = useCallback(async () => {
-    try {
-      setData(await fetchCareEvidences());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_evidences_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Liste der Nachweise",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const remove = async () => {
     if (!deleting) return;
     setBusy(true);
     deleteErrors.clear();
     try {
-      setData(await deleteCareEvidence(deleting.evidence.id));
+      await mutate(await deleteCareEvidence(deleting.evidence.id), {
+        revalidate: false,
+      });
       success("Der Nachweis ist gelöscht.");
       setDeleting(null);
     } catch (err) {
@@ -283,7 +271,7 @@ export default function TraegerNachweisePage() {
           />
         ) : null
       }
-      statsLoading={!data && !pageLoad.error}
+      statsLoading={loading}
       actions={
         <TraegerListExportMenu
           download={(format) =>
@@ -303,8 +291,8 @@ export default function TraegerNachweisePage() {
         placeholder: "Kind oder Schule",
       }}
       tabs={billingTabs("nachweise")}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !data}
+      error={loadError}
+      loading={loading}
       overlays={
         data ? (
           <>
@@ -313,7 +301,7 @@ export default function TraegerNachweisePage() {
               target={target}
               onClose={() => setTarget(null)}
               onSaved={(next) => {
-                setData(next);
+                void mutate(next, { revalidate: false });
                 setTarget(null);
               }}
             />

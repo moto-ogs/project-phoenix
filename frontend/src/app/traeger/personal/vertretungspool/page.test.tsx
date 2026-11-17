@@ -7,10 +7,12 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { PoolWeek } from "~/lib/staff-pool-api";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
+
+vi.unmock("swr");
 
 const { api, download } = vi.hoisted(() => ({
   api: {
@@ -72,9 +74,9 @@ const WEEK: PoolWeek = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerStaffPoolPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

@@ -183,6 +183,23 @@ describe("TraegerAccessLogPage", () => {
     );
   });
 
+  it("reads the log again for every filter chosen, also one shown before", async () => {
+    // Each read of the log stands in the log of every school it shows.
+    renderPage();
+    await screen.findByRole("table");
+    expect(mockFetchLog).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Geändert" }));
+    await waitFor(() => expect(mockFetchLog).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByRole("button", { name: "Alles" }));
+    await waitFor(() => expect(mockFetchLog).toHaveBeenCalledTimes(3));
+    expect(mockFetchLog).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: "" }),
+      1,
+      undefined,
+    );
+  });
+
   it("loads the next page below the list", async () => {
     mockFetchLog
       .mockResolvedValueOnce({ entries: [READ], hasMore: true, asOf: AS_OF })

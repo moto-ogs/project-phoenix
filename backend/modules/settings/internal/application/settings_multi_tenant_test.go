@@ -44,7 +44,7 @@ func TestResolveManyForTenantsUsesOneCrossTenantQuery(t *testing.T) {
 	})
 
 	selectCount := testpkg.CaptureSettingValueSelects(t, db)
-	service := NewSettingsService(repository, nil, nil, testpkg.SettingsRuntime(t, db), slog.Default(), settingsTestClock, registry)
+	service := NewSettingsService(repository, nil, nil, testpkg.SettingsRuntime(t, db), slog.Default(), registry)
 	batch, ok := service.(config.BatchSettingsService)
 	require.True(t, ok)
 
@@ -86,7 +86,7 @@ func TestEnrollmentEnabledForTenantsPreservesOverrideAndDefault(t *testing.T) {
 	store(cancelled, config.KeyEnrollmentEnabled, `true`)
 	store(cancelled, config.KeyModuleOnlineAnmeldung, `false`)
 
-	service := NewSettingsService(repository, nil, nil, testSettingsRuntime{}, slog.Default(), settingsTestClock, registry)
+	service := NewSettingsService(repository, nil, nil, testSettingsRuntime{}, slog.Default(), registry)
 	values, err := service.EnrollmentEnabledForTenants(context.Background(), []int64{tenantA, tenantB, cancelled})
 	require.NoError(t, err)
 	assert.Equal(t, map[int64]bool{tenantA: true, tenantB: false, cancelled: false}, values)
@@ -97,7 +97,7 @@ func TestEnrollmentEnabledForTenantsFailsWhenDefinitionIsMissing(t *testing.T) {
 	registry := config.NewRegistry()
 	registerTestSetting(registry, config.KeyModuleOnlineAnmeldung, config.FieldBoolean, true)
 
-	service := NewSettingsService(newInMemoryValueRepo(), nil, nil, testSettingsRuntime{}, slog.Default(), settingsTestClock, registry)
+	service := NewSettingsService(newInMemoryValueRepo(), nil, nil, testSettingsRuntime{}, slog.Default(), registry)
 
 	_, err := service.EnrollmentEnabledForTenants(context.Background(), []int64{41})
 	var missing *config.DefinitionNotFoundError

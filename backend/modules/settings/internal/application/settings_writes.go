@@ -200,7 +200,7 @@ func (s *settingsService) recordSettingAudit(ctx context.Context, tenantID int64
 			newValue = json.RawMessage(`"[REDACTED]"`)
 		}
 	}
-	audit := config.NewAuditEntry(tenantID, key, action, oldValue, newValue, changedBy, s.now())
+	audit := config.NewAuditEntry(tenantID, key, action, oldValue, newValue, changedBy)
 	if err := s.auditRepo.Create(ctx, audit); err != nil {
 		return fmt.Errorf("record setting change: %w", err)
 	}

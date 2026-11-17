@@ -38,12 +38,14 @@ func TestDataReturnReleasesARealExport(t *testing.T) {
 	require.NoError(t, exporter.Export(context.Background(), organizationtenancy.TenantExportOptions{SchoolID: school, OperatorID: 42, Output: out, Uploads: t.TempDir()}))
 
 	store := t.TempDir()
+	// The release and the retrieval decide on the database clock (ADR 0274),
+	// which also bounds the retrieval period.
 	release, err := compose.NewDataReturnRelease(db, dataReturnCrypto(), store, time.Now)
 	require.NoError(t, err)
-	retrieval, err := compose.NewDataReturn(db, dataReturnCrypto(), store, time.Now, nil)
+	retrieval, err := compose.NewDataReturn(db, dataReturnCrypto(), store, nil)
 	require.NoError(t, err)
 	issued, err := release.Release(t.Context(), organizationtenancy.DataReturnReleaseRequest{Package: out, SchoolID: school, OperatorID: operator.ID,
-		KeepUntil: time.Now().Add(40 * 24 * time.Hour), DataReturnRecipient: organizationtenancy.DataReturnRecipient{
+		KeepUntil: testpkg.DatabaseNow(t, db).Add(40 * 24 * time.Hour), DataReturnRecipient: organizationtenancy.DataReturnRecipient{
 			Recipient: organizationtenancy.DataReturnCustomer, Name: "Schule", ValidFor: 24 * time.Hour, MaxDownloads: 1}})
 	require.NoError(t, err)
 	t.Cleanup(func() {

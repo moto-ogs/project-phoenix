@@ -16,7 +16,10 @@ import (
 
 type Database func(context.Context) (bun.IDB, int64, error)
 
-type Store struct{ database Database }
+type Store struct {
+	database Database
+	now      func() time.Time
+}
 
 type roomRow struct {
 	bun.BaseModel `bun:"table:rooms,alias:room"`
@@ -35,11 +38,13 @@ type roomRow struct {
 	ArchivedAt    *time.Time `bun:"archived_at"`
 }
 
-func New(database Database) *Store {
-	if database == nil {
-		panic("facilities postgres: database runtime is required")
+// New builds the store on the owner's clock (ADR 0239), which stamps
+// archived_at.
+func New(database Database, now func() time.Time) *Store {
+	if database == nil || now == nil {
+		panic("facilities postgres: database runtime and clock are required")
 	}
-	return &Store{database: database}
+	return &Store{database: database, now: now}
 }
 
 func (s *Store) Create(ctx context.Context, input facilities.CreateRoom) (facilities.Room, domain.OperationStats, error) {
@@ -163,7 +168,7 @@ func (s *Store) Archive(ctx context.Context, id int64) (facilities.Room, domain.
 	started := time.Now()
 	err = db.NewUpdate().Model(&row).
 		ModelTableExpr(`facilities.rooms AS "room"`).
-		Set(`archived_at = COALESCE("room".archived_at, now())`).
+		Set(`archived_at = COALESCE("room".archived_at, ?)`, s.now()).
 		Where(`"room".id = ?`, id).
 		Where(`"room".tenant_id = ?`, tenantID).
 		Returning("*").Scan(ctx)

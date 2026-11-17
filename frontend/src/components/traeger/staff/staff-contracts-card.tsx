@@ -29,6 +29,8 @@ import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   deleteStaffContract,
   deleteStaffHolidayWeek,
@@ -354,6 +356,7 @@ export function StaffContractsCard({
   const [deleting, setDeleting] = useState(false);
   const deleteErrors = useApiFormError();
   const { success } = useToast();
+  const invalidateFamily = useInvalidateFamily();
   const activeSchools = record.employments.filter(
     (employment) => employment.active,
   ).length;
@@ -362,6 +365,11 @@ export function StaffContractsCard({
   const saved = (next: StaffRecordDetail) => {
     setDialog(null);
     onChanged(next);
+    // The contracts make the Soll of the planning and the time account and
+    // put a person into the Vertretungspool (#4709).
+    void invalidateFamily(traegerStaffKeys.poolFamily);
+    void invalidateFamily(traegerStaffKeys.planningFamily);
+    void invalidateFamily(traegerStaffKeys.timeAccountFamily);
   };
   const open = (next: Dialog) => {
     deleteErrors.clear();

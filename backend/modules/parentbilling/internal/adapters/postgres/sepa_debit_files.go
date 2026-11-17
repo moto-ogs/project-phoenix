@@ -16,7 +16,9 @@ import (
 // statement names the Träger itself, like the debits.
 
 // saveSEPADebitFileSQL keeps the last download of a message with its
-// members until its submission; a submitted row stays as it is.
+// members until its submission; a submitted row stays as it is. The
+// database dates the download: its hourly expiry
+// (delete_expired_sepa_debit_downloads) compares it with its own clock.
 const saveSEPADebitFileSQL = `INSERT INTO parent_billing.sepa_debit_files AS kept (organization_id, message_id, run_kind, run_id,
 	file_sealed, file_sha256, creditor_name, creditor_iban, creditor_bic, creditor_id, debit_ids, notice_ids, mandate_ids,
 	downloaded_at, downloaded_by_account_id)
@@ -66,7 +68,7 @@ const dropSupersededSEPADebitFilesSQL = `SELECT parent_billing.drop_superseded_s
 // a stored download keeps the creditor account of the submission.
 const submitSEPADebitFileSQL = `INSERT INTO parent_billing.sepa_debit_files AS kept (organization_id, message_id, run_kind, run_id,
 	creditor_name, creditor_iban, creditor_bic, creditor_id, debit_ids, notice_ids, mandate_ids, submitted_at, submitted_by_account_id)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, clock_timestamp(), ?)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT (organization_id, message_id) DO UPDATE SET submitted_at = EXCLUDED.submitted_at,
 		submitted_by_account_id = EXCLUDED.submitted_by_account_id
 	WHERE kept.submitted_at IS NULL`
@@ -84,7 +86,7 @@ func (s *Store) SubmitSEPADebitFile(ctx context.Context, organizationID, account
 	}
 	if _, err := db.NewRaw(submitSEPADebitFileSQL, organizationID, file.MessageID, file.RunKind, file.RunID,
 		file.CreditorName, file.CreditorIBAN, file.CreditorBIC, file.CreditorID, members(file.DebitIDs), members(file.NoticeIDs),
-		members(file.MandateIDs), accountRef(accountID)).Exec(ctx); err != nil {
+		members(file.MandateIDs), s.now(), accountRef(accountID)).Exec(ctx); err != nil {
 		return sepaDebitFileError("keep the submitted SEPA debit file", err)
 	}
 	return nil

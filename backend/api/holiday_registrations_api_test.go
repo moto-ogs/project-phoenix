@@ -69,7 +69,7 @@ func newHolidayRegistrationFixtureIn(t *testing.T, days owners.HolidayTestSchool
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	unit := testpkg.TenantRuntime(t, db)
-	traeger := traegerPortalWithDaysOn(t, db, unit, days, holidayFixtureToday)
+	traeger := traegerPortalWithDaysOn(t, db, unit, days, holidayFixtureToday, holidayFixtureNow)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
 	delivery, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
@@ -81,7 +81,7 @@ func newHolidayRegistrationFixtureIn(t *testing.T, days owners.HolidayTestSchool
 		_ = json.NewEncoder(w).Encode(map[string]any{"success": r.Form.Get("response") != failingCaptcha})
 	}))
 	t.Cleanup(turnstile.Close)
-	settings, err := owners.BuildTraegerSettings(testpkg.NewDatabase(t, db), unit, slog.Default(), organizations, nil, time.Now)
+	settings, err := owners.BuildTraegerSettings(testpkg.NewDatabase(t, db), unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)
 	resource := NewHolidayRegistrationHTTP(organizations, delivery.Module, TurnstileKeys{SiteKey: "site-key", SecretKey: "secret-key"},
 		turnstile.URL, testHealthCipher(), days, settings, owners.NewHolidayParentAccountLinks(holidayTestSetupLinks{}, "https://eltern.example.org/"), appEnv, slog.Default(), holidayFixtureNow)
@@ -565,7 +565,7 @@ func TestHolidayRegistrationsGoThreeMonthsAfterTheirPeriod(t *testing.T) {
 
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, tenant.WithinAdmin(ctx, func(adminCtx context.Context) error {
-		_, err := owners.NewHolidayRegistrationRetention(holidayFixtureToday).DeleteExpiredHolidayRegistrations(adminCtx)
+		_, err := owners.NewHolidayRegistrationRetention(holidayFixtureNow).DeleteExpiredHolidayRegistrations(adminCtx)
 		return err
 	}))
 	countRows := func(period int64) int {

@@ -1,6 +1,14 @@
 // #6533: Schließen während der Korrektur ist gesperrt, eine späte Antwort
 // schließt keinen anderen Dialog. Echter FormModal.
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as rtlRender,
+  screen,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode as TenantSWRNode } from "react";
+import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -10,6 +18,36 @@ import {
 } from "~/test/helpers/form-modal-pending";
 
 import { AttendanceCorrectionModal } from "./attendance-correction-modal";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in OGS session per render.
+function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <TenantSWRConfig
+        value={{ provider: () => new Map(), errorRetryCount: 0 }}
+      >
+        {children}
+      </TenantSWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  const Outer = options?.wrapper;
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: TenantSWRNode }>) => (
+      <TenantSWRWrapper>
+        {Outer ? <Outer>{children}</Outer> : children}
+      </TenantSWRWrapper>
+    ),
+  });
+}
 
 vi.mock("~/lib/session-cache", () => ({
   sessionFetch: (url: string, init?: RequestInit) => fetch(url, init),

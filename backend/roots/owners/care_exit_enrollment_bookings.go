@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/tenant"
 
@@ -29,11 +30,11 @@ type careExitBookingWrites interface {
 // NewEnrollmentBookingProjection adds the care exit's booking snapshot and
 // restore to the projection the root binds, on the caller's tenant
 // transaction. phases is Enrollment's phase bounds reader behind the
-// recurrence gate (#6657).
-func NewEnrollmentBookingProjection(projection *enrollment.BookingProjection, phases enrollment.PhaseBoundsReader) EnrollmentBookingProjection {
+// recurrence gate (#6657). now stamps Care Plan's booking rows.
+func NewEnrollmentBookingProjection(projection *enrollment.BookingProjection, phases enrollment.PhaseBoundsReader, now func() time.Time) EnrollmentBookingProjection {
 	return EnrollmentBookingProjection{
 		BookingProjection: projection,
-		Bookings:          careexit.NewBookings(projection, carePlanCompose.NewOfferingBookings(), phases, tenant.FromContext),
+		Bookings:          careexit.NewBookings(projection, carePlanCompose.NewOfferingBookings(now), phases, tenant.FromContext),
 	}
 }
 

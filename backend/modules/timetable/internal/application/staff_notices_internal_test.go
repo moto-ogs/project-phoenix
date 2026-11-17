@@ -45,7 +45,7 @@ func (f *fakeNoticeRepo) FindByID(_ context.Context, id int64) (*scheduleModels.
 	return nil, nil
 }
 func (f *fakeNoticeRepo) Delete(context.Context, int64) error { return nil }
-func (f *fakeNoticeRepo) DeleteEndedBefore(context.Context, calendar.Date) (int, error) {
+func (f *fakeNoticeRepo) DeleteEndedBefore(context.Context, calendar.Date, int) (int, error) {
 	return 0, nil
 }
 func (f *fakeNoticeRepo) List(context.Context, bool) ([]*scheduleModels.StaffNotice, error) {

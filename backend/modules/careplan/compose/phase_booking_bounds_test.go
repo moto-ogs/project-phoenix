@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -19,8 +20,8 @@ func TestMoveCareOfferingBookingBoundsWritesOnlyTheDecidedRow(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	phaseID, _, childID := testpkg.CreateAuditAdjustmentChain(t, db)
 	offering := testpkg.CreateTestCareOffering(t, db, phaseID, "Phase bound booking")
-	module := NewOfferingBookings()
-	store := postgres.New(postgres.NewOfferingBookingsDatabase())
+	module := NewOfferingBookings(time.Now)
+	store := postgres.New(postgres.NewOfferingBookingsDatabase()).WithClock(time.Now)
 	ctx := testpkg.Ctx(t)
 	from, until, careEnd := careplan.Date("2030-09-01"), careplan.Date("2031-08-01"), careplan.Date("2030-12-01")
 	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, module.RecordCareOfferingBookings, childID,

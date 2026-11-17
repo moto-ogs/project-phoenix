@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { EXPORT_RECIPIENT_PATH } from "~/components/traeger/export-handover-format";
 import { ExportRecipientFormCard } from "~/components/traeger/export-recipient-cards";
 import { TenantPage } from "~/components/ui/tenant-page";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import { createExportRecipient } from "~/lib/traeger-export-handovers-api";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -16,6 +18,7 @@ const INFO =
 
 export default function TraegerNewExportRecipientPage() {
   const router = useRouter();
+  const invalidateFamily = useInvalidateFamily();
   return (
     <TenantPage
       title="Neuer Empfänger"
@@ -28,6 +31,7 @@ export default function TraegerNewExportRecipientPage() {
         recipient={null}
         onSave={async (draft) => {
           await createExportRecipient(draft);
+          void invalidateFamily(traegerBillingKeys.exportRecipientsFamily);
           router.push(traegerPath(EXPORT_RECIPIENT_PATH));
         }}
       />

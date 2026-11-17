@@ -30,10 +30,13 @@ func TestNightlyRetentionCleanupCutoffsAcrossDST(t *testing.T) {
 		}
 	}
 	counter.Stop()
+	// Workforce binds its cutoff from its database time read (#7295);
+	// TestFinishedFileCleanupCutoffCountsElapsedDaysAcrossDST pins the same
+	// 30 times 24 hours for it.
+	require.Len(t, counter.Selects("users.delete_finished_staff_document_file_cleanups"), 1)
 	for _, function := range []string{
 		"documents.delete_finished_file_cleanups",
 		"documents.delete_finished_announcement_attachment_cleanups",
-		"users.delete_finished_staff_document_file_cleanups",
 		"users.delete_finished_student_document_file_cleanups",
 		"documents.delete_removed_files",
 	} {

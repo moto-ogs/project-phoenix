@@ -8,6 +8,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 
 const {
@@ -33,6 +34,8 @@ vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => null,
   useTenantRoutingModeSafe: () => "path",
 }));
+
+vi.unmock("swr");
 
 vi.mock("next-auth/react", () => ({
   useSession: mockUseSession,
@@ -149,11 +152,13 @@ async function renderPage(id = "42") {
   let result!: ReturnType<typeof render>;
   await act(async () => {
     result = render(
-      <ToastProvider>
-        <Suspense fallback={<div data-testid="suspense-fallback" />}>
-          <OperatorSchoolSettingsPage params={Promise.resolve({ id })} />
-        </Suspense>
-      </ToastProvider>,
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>
+          <Suspense fallback={<div data-testid="suspense-fallback" />}>
+            <OperatorSchoolSettingsPage params={Promise.resolve({ id })} />
+          </Suspense>
+        </ToastProvider>
+      </SWRConfig>,
     );
   });
   return result;
@@ -162,7 +167,13 @@ async function renderPage(id = "42") {
 describe("OperatorSchoolSettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseSession.mockReturnValue({ status: "authenticated" });
+    mockUseSession.mockReturnValue({
+      status: "authenticated",
+      data: {
+        user: { id: "account-1", scope: "platform" },
+        expires: "2099-01-01",
+      },
+    });
     mockListSchools.mockResolvedValue([]);
     mockSearchParams.value = new URLSearchParams();
   });

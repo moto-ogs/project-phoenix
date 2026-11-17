@@ -336,7 +336,7 @@ func TestTraegerUtilizationReadsRefuseOutsideTheAdministrativeTransaction(t *tes
 	_, foreignSession := foreignPresence.room("Fremdraum", 8)
 	foreignPresence.visit(foreignChild.ID, foreignSession, day, 13, 14)
 
-	ports := traegerUtilizationPorts(nil)
+	ports := traegerUtilizationPorts(nil, time.Now)
 	scope := []int64{school}
 	reads := func(ctx context.Context) []error {
 		_, booked := ports.Bookings.CareOfferingIntervalsByTenant(ctx, scope, day, day, nil)

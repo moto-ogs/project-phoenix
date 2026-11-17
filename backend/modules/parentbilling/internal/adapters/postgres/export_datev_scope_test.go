@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ func TestExportRunsNameTheLastDatevBatchOfTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newMandateScope(t, db, "Träger DATEV A")
 	other := newMandateScope(t, db, "Träger DATEV B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the DATEV files back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, own.organization, func(ctx context.Context) error {
@@ -66,7 +67,7 @@ func TestDatevProtocolAndHolidayHistoryRecognizeTheSameBookings(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	scope := newMandateScope(t, db, "Träger DATEV Wiederholung")
 	other := newMandateScope(t, db, "Träger DATEV Fremde Wiederholung")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the DATEV repeats back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {

@@ -109,7 +109,11 @@ func (s *Store) RecordVisits(ctx context.Context, rows []*studentpresence.Visit)
 			return ports.Stats{}, errors.New("student presence: visit belongs to another tenant")
 		}
 		row.TenantID = tenantID
-		stored = append(stored, visitRowFromRecord(row))
+		visit := visitRowFromRecord(row)
+		if visit.CreatedAt.IsZero() {
+			visit.CreatedAt = s.now()
+		}
+		stored = append(stored, visit)
 	}
 	started := time.Now()
 	result, err := db.NewInsert().Model(&stored).ModelTableExpr("active.visits").Exec(ctx)

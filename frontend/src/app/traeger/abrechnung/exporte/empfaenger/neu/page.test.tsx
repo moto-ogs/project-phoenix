@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import TraegerNewExportRecipientPage from "./page";
+
+vi.unmock("swr");
 
 // A new recipient (#6911, ADR 0222) needs a name and goes back to the
 // overview, where the Träger assigns its files.
@@ -22,9 +24,9 @@ beforeEach(() => {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerNewExportRecipientPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

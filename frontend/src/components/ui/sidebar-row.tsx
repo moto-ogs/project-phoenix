@@ -25,7 +25,7 @@ import {
  * Eine einklappbare Leiste (Tenant) reicht `collapsed`, `labelsMounted` und
  * `labelsVisible` durch, die festen Leisten der Portale lassen sie weg.
  */
-export interface SidebarRowCollapseState {
+interface SidebarRowCollapseState {
   /** Die Leiste ist der 64-px-Streifen. */
   readonly collapsed?: boolean;
   /** Bezeichnung und Beiwerk stehen im Baum (auch während der Blende). */

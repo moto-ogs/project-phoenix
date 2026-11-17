@@ -1,5 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render as baseRender,
+  screen,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
+
+// The detail view reads its attachments through the shared parent cache.
+const render: typeof baseRender = ((ui: React.ReactElement) =>
+  baseRender(ui, { wrapper: ParentResourceTestProvider })) as typeof baseRender;
 
 import type { ParentAnnouncement } from "~/lib/parent-api";
 import * as parentApi from "~/lib/parent-api";

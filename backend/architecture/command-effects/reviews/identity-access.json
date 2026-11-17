@@ -27824,7 +27824,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorActionLog.RecordOperatorAction",
-      "reason": "Platform protocol participation (mutation): identity-access reaches modules/auditlog/records.OperatorAuditLogRepository.Create (audit-platform) through roots/owners.operatorActionLog.RecordOperatorAction. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): identity-access reaches modules/auditlog/records.OperatorAuditLogRepository.Create (audit-platform) through roots/owners.operatorActionLog.RecordOperatorAction. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7295: the operator ledger entry no longer carries a Go time, the column default stamps it on the database clock its retention compares with (ADR 0281); effect and classification are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.OperatorAuditLogRepository.Create",
       "target_owner": "audit-platform"
@@ -27835,7 +27835,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorActionLog.RecordOperatorAction",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through roots/owners.operatorActionLog.RecordOperatorAction. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through roots/owners.operatorActionLog.RecordOperatorAction. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Re-reviewed for #7295: the operator ledger entry no longer carries a Go time, the column default stamps it on the database clock its retention compares with (ADR 0281); effect and classification are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
       "target_owner": "tenant-runtime"

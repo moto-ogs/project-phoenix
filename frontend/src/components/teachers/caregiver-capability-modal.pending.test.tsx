@@ -1,9 +1,35 @@
 // #6533: Schließen während des Umschaltens ist gesperrt, eine späte Antwort
 // verändert keinen neu geöffneten Dialog. Echter FormModal.
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as renderRaw,
+  screen,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in session per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+const render = (ui: ReactElement) => renderRaw(ui, { wrapper: Providers });
 import {
   deferred,
   expectDialogUnlocked,

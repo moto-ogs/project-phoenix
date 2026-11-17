@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Mail, Plus, Trash2 } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -21,13 +15,12 @@ import {
 } from "~/components/ui/form-error-alert";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { credentialError } from "~/components/auth/credential-error";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { suggestCurrentDeviceLabel } from "~/lib/device-label";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { createLogger } from "~/lib/logger";
 import {
   isPasskeyCeremonyIncompleteError,
@@ -44,6 +37,9 @@ import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "PasskeySettingsSection" });
 
+const NO_PASSKEYS: PasskeyCredentialSummary[] = [];
+const subscribeNothing = () => () => undefined;
+
 interface PasskeySettingsSectionProps {
   readonly scope?: PasskeyScope;
 }
@@ -51,12 +47,12 @@ interface PasskeySettingsSectionProps {
 export function PasskeySettingsSection({
   scope = "tenant",
 }: PasskeySettingsSectionProps) {
-  const [credentials, setCredentials] = useState<PasskeyCredentialSummary[]>(
-    [],
+  // Browser feature detection; the server render has no WebAuthn.
+  const supported = useSyncExternalStore(
+    subscribeNothing,
+    isPasskeySupported,
+    () => false,
   );
-  const [supported, setSupported] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirmingEnrollment, setConfirmingEnrollment] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
@@ -68,52 +64,34 @@ export function PasskeySettingsSection({
   const [revokeTarget, setRevokeTarget] =
     useState<PasskeyCredentialSummary | null>(null);
   const toast = useToast();
-  // Fehlerweg (#2517): Ladefehler vor Ort mit Wiederholen, Fehler beim
-  // Einrichten im Einrichtungsbereich, Fehler beim Entfernen im Dialog.
-  const { error: loadError, show: showLoadError, clear } = useApiLoadError();
   const enrollRef = useRef<HTMLDivElement>(null);
   const enrollErrors = useApiFormError(enrollRef);
   const revokeErrors = useApiFormError();
-  const latestLoadRef = useRef<() => void>(() => undefined);
   const latestStartRef = useRef<() => void>(() => undefined);
   const latestFinishRef = useRef<() => void>(() => undefined);
   const latestRevokeRef = useRef<() => void>(() => undefined);
 
-  const loadCredentials = useCallback(async () => {
-    setLoading(true);
-    setLoadFailed(false);
-    clear();
-    try {
-      setCredentials(await listPasskeys(scope));
-    } catch (err) {
-      logger.error("passkey_list_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setLoadFailed(true);
-      void showLoadError(err, {
-        object: "die Liste der Passkeys",
-        retry: () => latestLoadRef.current(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [clear, scope, showLoadError]);
+  // Fehlerweg (#2517): Ladefehler vor Ort mit Wiederholen, Fehler beim
+  // Einrichten im Einrichtungsbereich, Fehler beim Entfernen im Dialog.
+  const { data, error, mutate } = useSWRAuth(
+    tenantAdminKeys.passkeys(scope),
+    () => listPasskeys(scope),
+  );
+  const credentials = data ?? NO_PASSKEYS;
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [{ data, error }],
+    "die Liste der Passkeys",
+    () => mutate(),
+  );
 
   // Nachladen nach dem Hinzufügen oder Entfernen: ein Fehler dabei steht
   // über der Liste, die bestätigten Passkeys bleiben stehen (#6652).
   const credentialsAfterWrite = useRefreshAfterWrite(
     "die Liste der Passkeys",
     async () => {
-      setCredentials(await listPasskeys(scope));
-      setLoadFailed(false);
-      clear();
+      await mutate(await listPasskeys(scope), { revalidate: false });
     },
   );
-
-  useEffect(() => {
-    setSupported(isPasskeySupported());
-    void loadCredentials();
-  }, [loadCredentials]);
 
   const startEnrollment = async () => {
     setBusy(true);
@@ -205,7 +183,6 @@ export function PasskeySettingsSection({
   };
 
   useLayoutEffect(() => {
-    latestLoadRef.current = () => void loadCredentials();
     latestStartRef.current = () => void startEnrollment();
     latestFinishRef.current = () => void finishEnrollment();
     latestRevokeRef.current = () => void revoke();
@@ -361,9 +338,9 @@ export function PasskeySettingsSection({
       {/* Bis der Text eines Ladefehlers da ist, bleibt der Ladehinweis
           stehen; danach steht der Fehler statt einer leeren Liste. */}
       <LoadErrorAlert error={credentialsAfterWrite.error} />
-      {loading || (loadFailed && !loadError) ? (
+      {!data && (!failure || !loadError) ? (
         <Loading message="Passkeys werden geladen …" />
-      ) : loadFailed ? (
+      ) : !data ? (
         <LoadErrorAlert error={loadError} />
       ) : credentials.length === 0 ? (
         <EmptyState

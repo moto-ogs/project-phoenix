@@ -8,7 +8,7 @@
 import dynamic from "next/dynamic";
 import { type ReactNode, useState } from "react";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatBerlinDate, formatDate } from "~/lib/date-helpers";

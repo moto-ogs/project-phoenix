@@ -24,7 +24,7 @@ type EnrollmentDeletion struct {
 	Scope          string                   `bun:"scope,notnull" json:"scope"`
 	Reason         string                   `bun:"reason,notnull" json:"reason"`
 	Counts         EnrollmentDeletionCounts `bun:"counts,type:jsonb,notnull" json:"counts"`
-	DeletedAt      time.Time                `bun:"deleted_at,notnull,default:now()" json:"deleted_at"`
+	DeletedAt      time.Time                `bun:"deleted_at,nullzero,notnull" json:"deleted_at"`
 }
 
 // EnrollmentDeletionCounts is the immutable deletion evidence stored with an

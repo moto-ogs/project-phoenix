@@ -1,3 +1,5 @@
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import {
   act,
   fireEvent,
@@ -6,17 +8,39 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { releaseFakeTimers, setTestClock, testClockDay } from "~/test/clock";
 
-// Errors and success messages run through the real display path (#2515).
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Errors and success messages run through the real display path (#2515),
+// reads through real SWR under a staff session, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>{children}</ToastProvider>
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
 const render = (ui: ReactElement) =>
-  renderComponent(ui, { wrapper: ToastProvider });
+  renderComponent(ui, { wrapper: Providers });
 
 import type { AdminRequestChild } from "~/lib/enrollment-admin-api";
 import type { CareOffering } from "~/lib/care-offering-api";
@@ -90,6 +114,78 @@ beforeEach(() => {
   vi.mocked(useCareOfferingsEnabled).mockReturnValue(true);
 });
 
+function EnrollmentLists({ read }: { read: () => Promise<string> }) {
+  const overview = useSWRAuth(enrollmentKeys.adminRequests(), read);
+  const phase = useSWRAuth(enrollmentKeys.adminRequests("phase-1"), read);
+  return (
+    <>
+      <span>overview: {overview.data}</span>
+      <span>phase: {phase.data}</span>
+    </>
+  );
+}
+
+describe("AdminEnrollmentDetail cache updates", () => {
+  const detail = {
+    id: "request-1",
+    phase_id: "phase-1",
+    phase_name: "2026/27",
+    guardian_first_name: "Mara",
+    guardian_last_name: "Beispiel",
+    guardian_email: "mara@example.test",
+    submitted_at: "2026-08-05T10:00:00Z",
+    status_token: "status-token",
+    children: [adjustmentChild({ status: "submitted" })],
+  };
+
+  it("marks each opening read and refreshes both cached enrollment lists", async () => {
+    let state = "unread";
+    const read = vi.fn(async () => state);
+    mocks.getAdminRequest.mockImplementation(async () => {
+      state = "read";
+      return detail;
+    });
+    const view = (open: boolean) => (
+      <>
+        <EnrollmentLists read={read} />
+        {open ? <AdminEnrollmentDetail requestId="request-1" /> : null}
+      </>
+    );
+    const { rerender } = render(view(false));
+    expect(await screen.findByText("overview: unread")).toBeVisible();
+    expect(await screen.findByText("phase: unread")).toBeVisible();
+    rerender(view(true));
+    await screen.findByRole("button", { name: "Warteliste" });
+    expect(await screen.findByText("overview: read")).toBeVisible();
+    expect(await screen.findByText("phase: read")).toBeVisible();
+    rerender(view(false));
+    state = "unread";
+    rerender(view(true));
+    await waitFor(() => expect(mocks.getAdminRequest).toHaveBeenCalledTimes(2));
+    expect(state).toBe("read");
+  });
+
+  it("refreshes list statuses even if the detail reload after a decision fails", async () => {
+    let state = "submitted";
+    const read = vi.fn(async () => state);
+    mocks.getAdminRequest.mockResolvedValue(detail);
+    mocks.decideAdminChild.mockImplementation(async () => {
+      state = "waitlisted";
+      mocks.getAdminRequest.mockRejectedValue(new ApiError("down", 503));
+      return {};
+    });
+    render(
+      <>
+        <EnrollmentLists read={read} />
+        <AdminEnrollmentDetail requestId="request-1" />
+      </>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Warteliste" }));
+    expect(await screen.findByText("overview: waitlisted")).toBeVisible();
+    expect(await screen.findByText("phase: waitlisted")).toBeVisible();
+  });
+});
+
 describe("AdminEnrollmentDetail mail updates", () => {
   it("reloads decision mails and polls subsequent delivery outcomes", async () => {
     mocks.getAdminRequest.mockResolvedValue({
@@ -112,7 +208,8 @@ describe("AdminEnrollmentDetail mail updates", () => {
       .mockResolvedValue([
         { kind: "enrollment_waitlisted", outcome: "delivered" },
       ]);
-    const interval = vi.spyOn(globalThis, "setInterval");
+    // SWR schedules each poll as a timeout of the refresh interval.
+    const interval = vi.spyOn(globalThis, "setTimeout");
     const { unmount } = render(<AdminEnrollmentDetail requestId="request-1" />);
     fireEvent.click(await screen.findByRole("button", { name: "Warteliste" }));
     expect(await screen.findByText("Wird gesendet")).toBeVisible();
@@ -124,8 +221,13 @@ describe("AdminEnrollmentDetail mail updates", () => {
       .spyOn(document, "visibilityState", "get")
       .mockReturnValue("visible");
     await act(async () => {
+      // The poll fires at once, not 15 s later: end SWR's 5-s deduping window
+      // of the reload after the decision first.
+      for (const call of interval.mock.calls)
+        if (call[1] === 5_000 && typeof call[0] === "function") call[0]();
       if (typeof poll === "function") poll();
     });
+
     expect(await screen.findByText("Zugestellt")).toBeVisible();
     unmount();
     interval.mockRestore();
@@ -1354,6 +1456,46 @@ describe("AdminEnrollmentDetail future renewal (#6043)", () => {
     } finally {
       visibility.mockRestore();
     }
+  });
+
+  it("rechecks an initial weekly plan response that crosses Berlin midnight", async () => {
+    vi.useFakeTimers();
+    setTestClock("2027-02-03T23:59:30+01:00");
+    vi.mocked(useCareOfferingsEnabled).mockReturnValue(false);
+    const initial = deferred<unknown>();
+    const current = deferred<unknown>();
+    mocks.getAdminRequest
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(current.promise);
+    await act(async () => {
+      render(<AdminEnrollmentDetail requestId="request-1" />);
+    });
+    expect(mocks.getAdminRequest).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+    await act(async () => {
+      initial.resolve({
+        ...request,
+        children: [{ ...approvedChild, weekly_plan_on: "2027-02-03" }],
+      });
+    });
+    expect(mocks.getAdminRequest).toHaveBeenCalledTimes(2);
+    // Anker: die bestätigte Anmeldung bleibt sichtbar, während der neue Tag geprüft wird.
+    expect(screen.getAllByText("Mara Beispiel").length).toBeGreaterThan(0);
+    expect(
+      screen.queryByText(/moto konnte sie noch nicht übernehmen/),
+    ).not.toBeInTheDocument();
+    await act(async () => {
+      current.resolve({ ...request, children: [approvedChild] });
+    });
+    releaseFakeTimers();
+    expect(screen.getAllByText("Mara Beispiel").length).toBeGreaterThan(0);
+    expect(
+      screen.queryByText(
+        /Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung/,
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("checks the pending plan again before showing a warning after midnight", async () => {

@@ -48,7 +48,7 @@ type staffAbsenceRow struct {
 	CreatedBy         int64        `bun:"created_by,notnull"`
 	WorkingDays       *float64     `bun:"working_days"`
 	DecisionNote      string       `bun:"decision_note"`
-	RequestedAt       time.Time    `bun:"requested_at,notnull,default:current_timestamp"`
+	RequestedAt       time.Time    `bun:"requested_at,notnull"`
 	SubstituteStaffID *int64       `bun:"substitute_staff_id"`
 	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull"`
 	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull"`
@@ -317,6 +317,7 @@ func (s *Store) CreateStaffAbsence(ctx context.Context, value domain.StaffAbsenc
 	if row.TenantID == 0 {
 		row.TenantID = scope.TenantID
 	}
+	s.stampNew(&row.RequestedAt, &row.CreatedAt, &row.UpdatedAt)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	_, err = db.NewInsert().Model(row).ModelTableExpr(tableStaffAbsences).Returning("*").Exec(ctx)
@@ -341,7 +342,7 @@ func (s *Store) UpdateStaffAbsence(ctx context.Context, value domain.StaffAbsenc
 		Model(row).
 		ModelTableExpr(tableStaffAbsences+` AS "staff_absence"`).
 		ExcludeColumn("created_at", "updated_at").
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", s.stamp()).
 		WherePK().
 		Returning("*")
 	query = scopeQuery(scope, query, `"staff_absence".tenant_id = ?`)

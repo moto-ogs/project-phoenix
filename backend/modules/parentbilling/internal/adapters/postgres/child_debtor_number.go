@@ -80,7 +80,7 @@ func (s *Store) SaveChildDebtorNumbers(ctx context.Context, organizationID, acco
 	if err != nil {
 		return nil, err
 	}
-	rows := make([]childDebtorNumberRow, len(numbers))
+	rows, now := make([]childDebtorNumberRow, len(numbers)), s.now()
 	for i, number := range numbers {
 		usedOn := today
 		if number.LastUsedOn.After(today) {
@@ -89,7 +89,7 @@ func (s *Store) SaveChildDebtorNumbers(ctx context.Context, organizationID, acco
 		rows[i] = childDebtorNumberRow{OrganizationID: organizationID, FamilyEmail: parentbilling.FamilyKey(number.FamilyEmail),
 			ChildKey:       parentbilling.ChildKey(number.ChildFirstName, number.ChildLastName, number.ChildBirthDate),
 			ChildFirstName: number.ChildFirstName, ChildLastName: number.ChildLastName, ChildBirthDate: number.ChildBirthDate,
-			DebtorNumber: number.DebtorNumber, LastUsedOn: usedOn, UpdatedByAccountID: accountRef(accountID)}
+			DebtorNumber: number.DebtorNumber, LastUsedOn: usedOn, UpdatedByAccountID: accountRef(accountID), UpdatedAt: now}
 	}
 	query := db.NewInsert().Model(&rows)
 	if onlyNew {
@@ -97,14 +97,14 @@ func (s *Store) SaveChildDebtorNumbers(ctx context.Context, organizationID, acco
 		query = query.On("CONFLICT (organization_id, family_email, child_key) DO UPDATE").
 			Set("debtor_number = EXCLUDED.debtor_number").
 			Set("last_used_on = GREATEST(child_debtor_number_row.last_used_on, EXCLUDED.last_used_on)").
-			Set("updated_by_account_id = EXCLUDED.updated_by_account_id").Set("updated_at = CURRENT_TIMESTAMP").
+			Set("updated_by_account_id = EXCLUDED.updated_by_account_id").Set("updated_at = EXCLUDED.updated_at").
 			Where("child_debtor_number_row.debtor_number = ''")
 	} else {
 		query = query.On("CONFLICT (organization_id, family_email, child_key) DO UPDATE").
 			Set("debtor_number = EXCLUDED.debtor_number").Set("child_first_name = EXCLUDED.child_first_name").
 			Set("child_last_name = EXCLUDED.child_last_name").
 			Set("last_used_on = GREATEST(child_debtor_number_row.last_used_on, EXCLUDED.last_used_on)").
-			Set("updated_by_account_id = EXCLUDED.updated_by_account_id").Set("updated_at = CURRENT_TIMESTAMP")
+			Set("updated_by_account_id = EXCLUDED.updated_by_account_id").Set("updated_at = EXCLUDED.updated_at")
 	}
 	var saved []childDebtorNumberRow
 	if err := query.Returning("*").Scan(ctx, &saved); err != nil {
@@ -136,13 +136,13 @@ func (s *Store) DeleteChildDebtorNumbers(ctx context.Context, organizationID, ac
 	}
 	var removed []childDebtorNumberRow
 	if err := db.NewRaw(`UPDATE parent_billing.child_debtor_numbers AS child
-		SET debtor_number = '', updated_by_account_id = ?3, updated_at = CURRENT_TIMESTAMP
+		SET debtor_number = '', updated_by_account_id = ?3, updated_at = ?4
 		FROM (SELECT id, debtor_number FROM parent_billing.child_debtor_numbers
 			WHERE organization_id = ?0 AND family_email = ?1 AND child_key = ANY(?2::text[]) AND debtor_number <> '' ORDER BY id FOR UPDATE) AS before
 		WHERE child.id = before.id
 		RETURNING child.id, child.organization_id, child.family_email, child.child_key, child.child_first_name, child.child_last_name,
 			child.child_birth_date, before.debtor_number, child.last_used_on, child.updated_by_account_id, child.updated_at`,
-		organizationID, familyEmail, pgdialect.Array(childKeys), accountRef(accountID)).Scan(ctx, &removed); err != nil {
+		organizationID, familyEmail, pgdialect.Array(childKeys), accountRef(accountID), s.now()).Scan(ctx, &removed); err != nil {
 		return nil, fmt.Errorf("delete the debtor numbers of the children: %w", err)
 	}
 	return childNumbersOfRows(removed), nil
@@ -192,9 +192,10 @@ func (s *Store) InsertChildDebtorNumberEvents(ctx context.Context, organizationI
 	for i, number := range numbers {
 		ids[i] = number.ID
 	}
-	if _, err := db.NewRaw(`INSERT INTO parent_billing.child_debtor_number_events (organization_id, child_debtor_number_id, action, actor_account_id)
-		SELECT ?0, id, ?2, ?3 FROM unnest(?1::bigint[]) AS number(id)`,
-		organizationID, pgdialect.Array(ids), action, accountRef(accountID)).Exec(ctx); err != nil {
+	if _, err := db.NewRaw(`INSERT INTO parent_billing.child_debtor_number_events
+			(organization_id, child_debtor_number_id, action, actor_account_id, occurred_at)
+		SELECT ?0, id, ?2, ?3, ?4 FROM unnest(?1::bigint[]) AS number(id)`,
+		organizationID, pgdialect.Array(ids), action, accountRef(accountID), s.now()).Exec(ctx); err != nil {
 		return fmt.Errorf("record the trail of the children's debtor numbers: %w", err)
 	}
 	return nil
@@ -204,8 +205,8 @@ func (s *Store) InsertChildDebtorNumberEvents(ctx context.Context, organizationI
 // numbers of children whose period ended under the same rule as a family
 // without a contract (#6692, #7007), logs their count per Träger as
 // family_debtor_number, and then deletes the trail entries whose number is
-// gone and which are as old on the database clock that stamped them
-// (trailCutoffSQL). The caller holds the Träger.
+// gone and which the owner's clock stamped before the cutoff, Berlin
+// midnight. The caller holds the Träger.
 func deleteExpiredChildNumbers(ctx context.Context, db bun.IDB, cutoff, today calendar.Date) (int, error) {
 	var children int
 	if err := db.NewRaw(`WITH removed AS (
@@ -232,10 +233,10 @@ func deleteExpiredChildNumbers(ctx context.Context, db bun.IDB, cutoff, today ca
 		return 0, fmt.Errorf("parent billing postgres: delete expired debtor numbers of children: %w", err)
 	}
 	result, err := db.NewRaw(`DELETE FROM parent_billing.child_debtor_number_events AS event
-		WHERE event.occurred_at < `+trailCutoffSQL+`
+		WHERE event.occurred_at < ?
 			AND NOT EXISTS (SELECT 1 FROM parent_billing.child_debtor_numbers AS child
 				WHERE child.organization_id = event.organization_id AND child.id = event.child_debtor_number_id)`,
-		parentbilling.FamilyDebtorNumberRetentionYears).Exec(ctx)
+		cutoff.BerlinMidnight()).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("parent billing postgres: delete the expired trail of children's debtor numbers: %w", err)
 	}

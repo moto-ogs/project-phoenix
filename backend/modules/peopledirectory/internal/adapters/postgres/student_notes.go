@@ -42,6 +42,7 @@ const studentNotesTable = "users.student_notes"
 type StudentNoteStore struct {
 	database Database
 	students StudentDirectory
+	clock
 }
 
 func NewStudentNoteStore(database Database, students StudentDirectory) *StudentNoteStore {
@@ -252,7 +253,7 @@ func (s *StudentNoteStore) SoftDelete(ctx context.Context, deletion domain.Delet
 	result, err := db.NewUpdate().
 		Model((*studentNoteRow)(nil)).
 		ModelTableExpr(studentNotesTable+" AS note").
-		Set("deleted_at = clock_timestamp()").
+		Set("deleted_at = ?", s.stamp()).
 		Set("deleted_by_account_id = ?", deletion.ActorAccountID).
 		Where(`"note".tenant_id = ?`, scope.TenantID).
 		Where(`"note".id = ?`, deletion.ID).
@@ -478,7 +479,7 @@ func (s *StudentNoteStore) RetireSchoolDayHints(
 	query := db.NewUpdate().
 		Model((*studentNoteRow)(nil)).
 		ModelTableExpr(studentNotesTable+" AS note").
-		Set("deleted_at = clock_timestamp()").
+		Set("deleted_at = ?", s.stamp()).
 		Set("deleted_by_account_id = ?", target.AuthorAccountID).
 		Where(`"note".tenant_id = ?`, scope.TenantID).
 		Where(`"note".origin = ?`, domain.StudentNoteOriginSchool).

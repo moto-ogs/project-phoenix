@@ -1,8 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { SepaMandate } from "~/lib/traeger-sepa-api";
 import { SepaCollectionsCard } from "./sepa-collections-card";
+
+vi.unmock("swr");
 
 const fetchCollections = vi.hoisted(() => vi.fn());
 vi.mock("~/lib/traeger-sepa-debits-api", () => ({
@@ -52,17 +54,17 @@ it("reloads collections when a mandate is revoked without changing its ID", asyn
     .mockResolvedValueOnce([debit])
     .mockResolvedValueOnce([{ ...debit, left: "revoked" }]);
   const view = render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <SepaCollectionsCard mandates={[mandate]} />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   expect(await screen.findByText("Noch nicht eingereicht")).toBeInTheDocument();
   view.rerender(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <SepaCollectionsCard
         mandates={[{ ...mandate, revokedOn: "2026-11-20" }]}
       />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   expect(
     await screen.findByText("Das Mandat ist widerrufen."),

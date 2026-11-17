@@ -81,7 +81,7 @@ func (s *Store) RetireMergedStaffPerson(ctx context.Context, schoolID, donorID, 
 	if _, err = db.NewRaw(`UPDATE users.persons SET birthday = COALESCE(birthday, (SELECT birthday FROM users.persons WHERE tenant_id = ? AND id = ?)) WHERE tenant_id = ? AND id = ?`, schoolID, donorID, schoolID, keeperID).Exec(ctx); err != nil {
 		return err
 	}
-	_, err = db.NewRaw(`UPDATE users.persons SET deleted_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL`, schoolID, donorID).Exec(ctx)
+	_, err = db.NewRaw(`UPDATE users.persons SET deleted_at = ? WHERE tenant_id = ? AND id = ? AND deleted_at IS NULL`, s.stamp(), schoolID, donorID).Exec(ctx)
 	return err
 }
 

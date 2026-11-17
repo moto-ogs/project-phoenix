@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -103,7 +104,8 @@ func TestRequiresActiveOperatorRefusalsOnTheDatabase(t *testing.T) {
 	otherFamily := rig.session(t, other)
 	expired := testpkg.CreateTestOperator(t, rig.db).ID
 	expiredFamily := rig.session(t, expired)
-	_, err := rig.db.NewRaw("UPDATE platform.operator_refresh_tokens SET expiry = now() - interval '1 minute' WHERE family_id = ?", expiredFamily).Exec(ctx)
+	// Identity & Access dates operator sessions on its clock, time.Now (ADR 0281).
+	_, err := rig.db.NewRaw("UPDATE platform.operator_refresh_tokens SET expiry = ? WHERE family_id = ?", time.Now().Add(-time.Minute), expiredFamily).Exec(ctx)
 	require.NoError(t, err)
 	inactive := testpkg.CreateTestOperator(t, rig.db).ID
 	inactiveFamily := rig.session(t, inactive)

@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"

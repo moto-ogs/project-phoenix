@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   TraegerTimeAccount,
   TraegerTimeAccountSchool,
 } from "~/lib/traeger-time-account-api";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchTraegerTimeAccount: vi.fn(),
@@ -74,9 +76,9 @@ function account(
 
 function renderCard() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <StaffTimeAccountCard recordId="5" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -208,4 +210,18 @@ describe("StaffTimeAccountCard", () => {
       screen.queryByRole("button", { name: /Monat abschließen/ }),
     ).not.toBeInTheDocument();
   });
+});
+
+it("performs a new audited read on immediate reopening", async () => {
+  api.fetchTraegerTimeAccount.mockReset().mockResolvedValue(account());
+  const view = render(<StaffTimeAccountCard recordId="5" />, {
+    wrapper: TraegerResourceTestProvider,
+  });
+  expect(await screen.findByText("Saldo des Monats")).toBeVisible();
+  expect(api.fetchTraegerTimeAccount).toHaveBeenCalledTimes(1);
+  view.rerender(<div>away</div>);
+  view.rerender(<StaffTimeAccountCard recordId="5" />);
+  await vi.waitFor(() =>
+    expect(api.fetchTraegerTimeAccount).toHaveBeenCalledTimes(2),
+  );
 });

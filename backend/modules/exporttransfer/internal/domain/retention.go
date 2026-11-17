@@ -6,8 +6,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// journalClockMargin reads the year a little earlier: right after New Year a
-// database clock still in the old year would refuse the new cutoff.
+// journalClockMargin reads the year a little earlier, so a cutoff computed
+// right at New Year is never refused by the database's own later reading.
 const journalClockMargin = time.Minute
 
 // JournalRetentionCutoff is the first instant the journal keeps (#4044): an

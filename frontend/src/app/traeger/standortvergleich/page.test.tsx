@@ -1,10 +1,11 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { TraegerComparison } from "~/lib/traeger-comparison-api";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 
+vi.unmock("swr");
 const {
   mockFetchComparison,
   mockFetchSchools,
@@ -22,7 +23,10 @@ const {
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path,
 }));
-vi.mock("next-auth/react", () => ({ useSession: mockUseSession }));
+vi.mock("next-auth/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-auth/react")>()),
+  useSession: mockUseSession,
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/standortvergleich",
   useRouter: () => ({ push: vi.fn() }),
@@ -128,9 +132,9 @@ const LAST_FOUR_WEEKS = { from: testClockDay(-27), to: TEST_CLOCK_TODAY };
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerComparisonPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

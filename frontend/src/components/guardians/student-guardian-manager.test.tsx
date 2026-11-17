@@ -1,11 +1,13 @@
 import {
-  render,
+  render as rtlRender,
   screen,
   fireEvent,
   waitFor,
   act,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
 import StudentGuardianManager from "./student-guardian-manager";
 import type { GuardianWithRelationship } from "@/lib/guardian-helpers";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
@@ -84,13 +86,33 @@ vi.mock("@/lib/guardian-api", () => ({
   ) => mockInviteGuardianToStudent(studentId, email, options),
 }));
 
+// Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
+vi.unmock("swr");
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    ),
+  });
+}
+
 // Session mock — drives the admin-only "Komplett löschen" affordance. Default
 // is a non-admin session; tests needing the full-delete path push an admin
 // wildcard into mockPermissions before rendering.
 let mockPermissions: string[] = [];
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { permissions: mockPermissions } },
+    data: {
+      user: {
+        id: "account-1",
+        tenantId: 1,
+        scope: "tenant",
+        permissions: mockPermissions,
+      },
+    },
     status: "authenticated",
   }),
 }));

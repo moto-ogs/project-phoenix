@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"fmt"
+	"time"
 
 	realtime "github.com/moto-ogs/project-phoenix/realtime"
 
@@ -44,10 +45,10 @@ type CarePlanRequests struct {
 // NewRequestShareVisibility builds People Directory's sharing rules over the
 // sharing ledger and the family protection alone, so every request queue
 // receives them at construction (#2267, story 47).
-func NewRequestShareVisibility(db transactionruntime.Database) (eventContract.ShareVisibilityResolver, error) {
+func NewRequestShareVisibility(db transactionruntime.Database, now func() time.Time) (eventContract.ShareVisibilityResolver, error) {
 	return peopleCompose.NewRequestShareVisibility(
-		peopleCompose.NewParentRequestShareEventRepository(db.Pool()),
-		peopleCompose.NewFamilyProtectionEventRepository(db.Pool()),
+		peopleCompose.NewParentRequestShareEventRepository(db.Pool(), now),
+		peopleCompose.NewFamilyProtectionEventRepository(db.Pool(), now),
 	)
 }
 
@@ -61,11 +62,11 @@ func BuildCarePlanRequests(
 	reviews *ParentRequestReviewPolicy, permissions func(context.Context) []string, absences deliveryCompose.AbsenceNotifier, pickupReach careplan.PickupChangeTeamReach, documentPermissions carePlanCompose.StudentDocumentPermissions,
 	cohorts timetable.CohortRosters,
 ) (CarePlanRequests, error) {
-	shares, err := NewRequestShareVisibility(db)
+	shares, err := NewRequestShareVisibility(db, env.Now)
 	if err != nil {
 		return CarePlanRequests{}, err
 	}
-	events := peopleCompose.NewParentRequestEventRepository(db.Pool())
+	events := peopleCompose.NewParentRequestEventRepository(db.Pool(), env.Now)
 	pickupPermissions, err := carePlanCompose.NewGuardianPickupPermissions(db.Pool(), env.Observe.CarePlan)
 	if err != nil {
 		return CarePlanRequests{}, fmt.Errorf("compose care plan pickup permissions: %w", err)
@@ -112,7 +113,7 @@ func newPickupChangeTeam(reach careplan.PickupChangeTeamReach, env RootEnvironme
 	if reach == nil {
 		return nil
 	}
-	return carePlanCompose.NewPickupChangeTeam(reach, StudentDirectoryReader(), env.Observe.CarePlan, env.Today)
+	return carePlanCompose.NewPickupChangeTeam(reach, StudentDirectoryReader(), env.Observe.CarePlan, env.Today, env.Now)
 }
 
 // buildOfferingChanges binds the offering-change review over Enrollment's
@@ -125,7 +126,7 @@ func buildOfferingChanges(
 ) (careplan.OfferingChangeCapability, error) {
 	deps, err := OfferingChangeOwners(
 		carePlan, nil, enrollment.Bookings, people.Students, NewCareWithdrawalCompletionRepository(carePlan),
-		settings, reviews, permissions, emitter, peopleCompose.NewParentRequestEventRepository(db.Pool()),
+		settings, reviews, permissions, emitter, peopleCompose.NewParentRequestEventRepository(db.Pool(), env.Now),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("compose care plan offering changes: %w", err)
@@ -165,7 +166,7 @@ func buildCarePlanDecisions(
 		return CarePlanRequests{}, fmt.Errorf("compose care plan documents: %w", err)
 	}
 	requests.Documents, requests.AccidentReports = documents, documents
-	events := peopleCompose.NewParentRequestEventRepository(db.Pool())
+	events := peopleCompose.NewParentRequestEventRepository(db.Pool(), env.Now)
 	if requests.MasterData, err = NewMasterDataDecisions(
 		carePlan, persons, people.Students, people.Persons,
 		services.StudentAudit, ParentRequestWriteScope(reviews, permissions),

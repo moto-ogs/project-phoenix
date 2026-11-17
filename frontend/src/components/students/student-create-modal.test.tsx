@@ -3,17 +3,50 @@
  * Tests the rendering and functionality of the student creation modal
  */
 import {
-  render,
+  render as rtlRender,
   screen,
   waitFor,
   fireEvent,
   act,
   within,
 } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode as TenantSWRNode } from "react";
+import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { StudentCreateModal } from "./student-create-modal";
 import { validateStudentForm } from "~/lib/student-form-validation";
 import { ApiError } from "~/lib/api-error";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in OGS session per render.
+function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <TenantSWRConfig
+        value={{ provider: () => new Map(), errorRetryCount: 0 }}
+      >
+        {children}
+      </TenantSWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  const Outer = options?.wrapper;
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: TenantSWRNode }>) => (
+      <TenantSWRWrapper>
+        {Outer ? <Outer>{children}</Outer> : children}
+      </TenantSWRWrapper>
+    ),
+  });
+}
 
 const { mockFetchArrivalSettings, mockFetchPrivacyConsentDefaults } =
   vi.hoisted(() => ({
@@ -1337,6 +1370,46 @@ describe("StudentCreateModal", () => {
         expect(screen.getByLabelText("Aufbewahrungstage")).toHaveValue(14),
       );
       expect(screen.getByLabelText("Einwilligung")).not.toBeChecked();
+    });
+
+    it("uses fresh defaults on reopening and submits the fresh counterpart", async () => {
+      const modal = (isOpen: boolean) => (
+        <StudentCreateModal
+          isOpen={isOpen}
+          onClose={mockOnClose}
+          onCreate={mockOnCreate}
+        />
+      );
+      const view = render(modal(true));
+      await waitFor(() =>
+        expect(screen.getByLabelText("Aufbewahrungstage")).toHaveValue(14),
+      );
+      view.rerender(modal(false));
+      let resolveDefaults!: (value: {
+        accepted: boolean;
+        dataRetentionDays: number;
+      }) => void;
+      mockFetchPrivacyConsentDefaults.mockReturnValue(
+        new Promise((resolve) => {
+          resolveDefaults = resolve;
+        }),
+      );
+      view.rerender(modal(true));
+      await waitFor(() =>
+        expect(mockFetchPrivacyConsentDefaults).toHaveBeenCalledTimes(2),
+      );
+      await act(async () =>
+        resolveDefaults({ accepted: true, dataRetentionDays: 30 }),
+      );
+      await waitFor(() =>
+        expect(screen.getByLabelText("Aufbewahrungstage")).toHaveValue(30),
+      );
+      expect(screen.getByLabelText("Einwilligung")).toBeChecked();
+      fireEvent.click(screen.getByLabelText("Einwilligung"));
+      expect(await submit()).toMatchObject({
+        privacy_consent_accepted: false,
+        data_retention_days: 30,
+      });
     });
 
     it("leaves an untouched consent pair out of the create payload", async () => {

@@ -226,7 +226,7 @@ func (s *Store) UpdateInstanceStudent(ctx context.Context, id int64, fields time
 	started := time.Now()
 	err = db.NewUpdate().Model(&row).ModelTableExpr(`schedule.instance_students`).
 		Set("instance_id = ?", fields.InstanceID).Set("student_id = ?", fields.StudentID).Set("room_id = ?", fields.RoomID).
-		Set("updated_at = NOW()").Where("id = ?", id).Where("tenant_id = ?", tenantID).
+		Set("updated_at = "+statementClock).Where("id = ?", id).Where("tenant_id = ?", tenantID).
 		Returning(instanceStudentColumns).Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if errors.Is(err, sql.ErrNoRows) {

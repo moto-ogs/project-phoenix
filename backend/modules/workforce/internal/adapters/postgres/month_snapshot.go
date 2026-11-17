@@ -30,7 +30,7 @@ type monthSnapshotRow struct {
 	ActualMinutes         int        `bun:"actual_minutes,notnull"`
 	CreditedMinutes       int        `bun:"credited_minutes,notnull"`
 	AdjustmentMinutes     int        `bun:"adjustment_minutes,notnull"`
-	ClosedAt              time.Time  `bun:"closed_at,notnull,default:current_timestamp"`
+	ClosedAt              time.Time  `bun:"closed_at,notnull"`
 	ClosedBy              int64      `bun:"closed_by,nullzero"`
 	ClosedByAccountID     int64      `bun:"closed_by_account_id,nullzero"`
 	CloseReason           string     `bun:"close_reason,notnull,default:''"`
@@ -121,6 +121,7 @@ func (s *Store) RecordClosedMonth(ctx context.Context, value domain.StaffMonthBa
 	}
 	row := monthSnapshotFromDomain(value)
 	row.TenantID = tenantID
+	s.stampNew(&row.ClosedAt)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	_, err = db.NewInsert().Model(&row).ModelTableExpr(tableMonthSnapshots).Returning("*").Exec(ctx)

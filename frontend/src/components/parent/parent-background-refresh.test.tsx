@@ -9,16 +9,18 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
-import { useParentChildren } from "~/lib/hooks/use-parent-resources";
+import {
+  PARENT_RESOURCE_OPTIONS,
+  useParentChildren,
+} from "~/lib/hooks/use-parent-resources";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ApiError } from "~/lib/api-error";
 import * as api from "~/lib/parent-api";
 import { ChildMasterDataView } from "./child-master-data";
-import {
-  ChildRequestsProvider,
-  SharedParentFeaturesProvider,
-} from "./child-requests-context";
+import { SharedParentFeaturesProvider } from "./child-requests-context";
 import { ChildPage } from "./child/child-page";
 import { ParentMessagesPage } from "./messages/parent-messages-page";
 import { ParentRealtimeBridge } from "./parent-realtime-bridge";
@@ -27,7 +29,8 @@ vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => null,
   useTenantSafe: () => null,
 }));
-vi.mock("~/lib/hooks/use-sse", () => ({ useSSE: () => undefined }));
+const useSSE = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/hooks/use-sse", () => ({ useSSE }));
 const params = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -174,9 +177,7 @@ it("keeps an unsaved master-data field after a feature background failure", asyn
   } as unknown as api.ChildMasterData);
   mount(
     <SharedParentFeaturesProvider linkedChildren={[child]}>
-      <ChildRequestsProvider>
-        <ChildMasterDataView studentId="42" childName="Felix" />
-      </ChildRequestsProvider>
+      <ChildMasterDataView studentId="42" childName="Felix" />
     </SharedParentFeaturesProvider>,
   );
   const field = await screen.findByDisplayValue("Allergie");
@@ -207,5 +208,99 @@ describe("shared SWR load error semantics", () => {
     await failChildrenRefresh();
     expect(screen.getByText("loaded")).toBe(content);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+describe("parent child status refresh", () => {
+  function ChildState({ studentId }: Readonly<{ studentId: string }>) {
+    const offerings = useSWRAuth(
+      parentKeys.careOfferings(studentId),
+      () => api.getChildCareOfferings(studentId),
+      PARENT_RESOURCE_OPTIONS,
+    );
+    const courses = useSWRAuth(
+      parentKeys.courses(studentId),
+      () => api.getChildCourses(studentId),
+      PARENT_RESOURCE_OPTIONS,
+    );
+    return offerings.data && courses.data ? <p>{studentId} geladen</p> : null;
+  }
+  function Fixture({ open }: Readonly<{ open: boolean }>) {
+    return (
+      <>
+        <ParentRealtimeBridge />
+        {open ? (
+          <>
+            <ChildState studentId="42" />
+            <ChildState studentId="43" />
+          </>
+        ) : null}
+      </>
+    );
+  }
+
+  it("reads each mounted care status once per realtime child update", async () => {
+    mount(<ChildPage studentId="42" />);
+    expect(
+      await screen.findByRole("button", { name: /Felix abmelden/ }),
+    ).toBeVisible();
+    const reads = [
+      api.listSickDays,
+      api.listExcusedRequests,
+      api.listCareExceptions,
+      api.listPickupChangeRequests,
+      api.getChildCareSchedule,
+      api.getChildCareOfferings,
+    ];
+    for (const read of reads) expect(read).toHaveBeenCalledTimes(1);
+    const options = useSSE.mock.calls.at(-1)?.[1];
+    await act(async () => {
+      options.onMessage({
+        type: "parent_child_updated",
+        active_group_id: "",
+        data: { student_id: "42" },
+        timestamp: new Date().toISOString(),
+      });
+    });
+    expect(
+      screen.getByRole("button", { name: /Felix abmelden/ }),
+    ).toBeVisible();
+    for (const read of reads) expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it("reloads the decided child's state when its page opens again", async () => {
+    const view = render(<Fixture open />, {
+      wrapper: ParentResourceTestProvider,
+    });
+    expect(await screen.findByText("42 geladen")).toBeInTheDocument();
+    expect(await screen.findByText("43 geladen")).toBeInTheDocument();
+    view.rerender(<Fixture open={false} />);
+    // A staff decision on child 42 while its page is closed.
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent("parent-child-status-refresh", {
+          detail: { studentId: "42" },
+        }),
+      );
+    });
+    view.rerender(<Fixture open />);
+
+    await waitFor(() =>
+      expect(
+        vi
+          .mocked(api.getChildCareOfferings)
+          .mock.calls.filter(([id]) => id === "42"),
+      ).toHaveLength(2),
+    );
+    await waitFor(() =>
+      expect(
+        vi.mocked(api.getChildCourses).mock.calls.filter(([id]) => id === "42"),
+      ).toHaveLength(2),
+    );
+    expect(
+      vi
+        .mocked(api.getChildCareOfferings)
+        .mock.calls.filter(([id]) => id === "43"),
+    ).toHaveLength(1);
   });
 });

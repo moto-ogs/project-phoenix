@@ -34,7 +34,7 @@ func TestDatevBookedDocumentsOfTheTraegerBelowRLS(t *testing.T) {
 	own := newMandateScope(t, db, "Träger DATEV Delta A")
 	other := newMandateScope(t, db, "Träger DATEV Delta B")
 	school := testpkg.CreateTestSchoolInOrganization(t, db, own.organization, "OGS DATEV Delta")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the DATEV bookings back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, own.organization, func(ctx context.Context) error {
@@ -124,7 +124,7 @@ func TestDatevBookingsGoIntoOneOfTwoConcurrentFiles(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	scope := newMandateScope(t, db, "Träger DATEV Gleichzeitig")
-	store := NewStore()
+	store := NewStore(time.Now)
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	var run, document int64
 	require.NoError(t, testpkg.WithinTraeger(ctx, scope.organization, func(ctx context.Context) error {

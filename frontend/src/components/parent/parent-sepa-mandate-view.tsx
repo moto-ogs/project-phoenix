@@ -11,14 +11,13 @@ import { FileText } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-resource";
+import { useSWRRequestGuard } from "~/lib/swr/hooks";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ConsentCheckbox } from "~/components/ui/consent-checkbox";
-import {
-  DataField,
-  DataGrid,
-  InfoText,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoText } from "~/components/ui/detail-modal-components";
 import {
   FormErrorAlert,
   LoadErrorAlert,
@@ -30,16 +29,15 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import { useStepFocus } from "~/components/ui/use-step-focus";
 import { StatusBadge } from "~/components/ui/status-badge";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { billingConcept } from "~/lib/concepts/billing";
 import { formatDate } from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useInvalidateFamily, useFreshSWR } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { createLogger } from "~/lib/logger";
 import {
   fetchSepaMandate,
@@ -62,6 +60,16 @@ interface ContractKey {
   readonly contractId: string;
 }
 
+function isMandateRefusal(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.status === 401 ||
+      error.status === 403 ||
+      (error.status === 404 &&
+        error.code === "parent_billing.parent_document_not_found"))
+  );
+}
+
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
@@ -78,7 +86,28 @@ export function ParentSepaMandateView({
   contractId,
 }: Readonly<ContractKey>) {
   const t = useTranslations("parentSepaMandate");
-  const [view, setView] = useState<SepaMandateView | null>(null);
+  const cacheKey = parentInboxKeys.sepaMandate(organizationId, contractId);
+  const guard = useRefusalGuard(cacheKey);
+  const beginRead = useSWRRequestGuard();
+  const resource = useFreshSWR(
+    cacheKey,
+    () => fetchSepaMandate(organizationId, contractId),
+    {
+      onSuccess: guard.callbacks.onSuccess,
+      onError: (error) => {
+        if (isMandateRefusal(error)) guard.callbacks.onError(error);
+      },
+    },
+  );
+  const { mutate } = resource;
+  // Only an access refusal discards the shown mandate (#6652).
+  const refused =
+    guard.refusal !== undefined || isMandateRefusal(resource.error);
+  useEffect(() => {
+    if (refused && resource.data !== undefined)
+      void mutate(undefined, { revalidate: false });
+  }, [refused, resource.data, mutate]);
+  const view = refused ? null : (resource.data ?? null);
   // Granting and revoking swap the card the person acted in (#7111): the
   // heading of the new one takes the focus. Loading is no step.
   const phaseRef = useStepFocus<HTMLDivElement>(
@@ -88,54 +117,54 @@ export function ParentSepaMandateView({
         : "grant"
       : null,
   );
-  const loadError = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = loadError;
-
+  const { error: loadError } = useSwrResourceLoadError(
+    [refused ? { error: guard.refusal ?? resource.error } : resource],
+    t("errorObject"),
+    () => mutate(),
+  );
+  const invalidateFamily = useInvalidateFamily();
+  // A granted or revoked mandate changes the contract in the documents inbox.
+  const setView = useCallback(
+    (next: SepaMandateView) => {
+      void mutate(next, { revalidate: false });
+      void invalidateFamily(parentInboxKeys.documents());
+    },
+    [mutate, invalidateFamily],
+  );
   // Rejects on failure: after the revocation the card shows it as a reload
-  // of a saved change; only an access refusal discards the mandate (#6652).
+  // of a saved change; a refusal reaches the reader and discards the mandate.
   const fetchView = useCallback(async () => {
+    const complete = beginRead(cacheKey);
     try {
-      setView(await fetchSepaMandate(organizationId, contractId));
-      clearLoadError();
+      const next = await fetchSepaMandate(organizationId, contractId);
+      complete(() => guard.callbacks.onSuccess());
+      await mutate(next, {
+        revalidate: false,
+      });
+      void invalidateFamily(parentInboxKeys.documents());
     } catch (error) {
-      if (
-        error instanceof ApiError &&
-        (error.status === 401 ||
-          error.status === 403 ||
-          (error.status === 404 &&
-            error.code === "parent_billing.parent_document_not_found"))
-      ) {
-        setView(null);
-      }
+      if (isMandateRefusal(error))
+        complete(() => guard.callbacks.onError(error));
       throw error;
     }
-  }, [organizationId, contractId, clearLoadError]);
-  const load = useCallback(async () => {
-    try {
-      await fetchView();
-    } catch (err) {
-      logger.error("parent_sepa_mandate_load_failed", {
-        error: errorMessage(err),
-      });
-      await showLoadError(err, {
-        object: t("errorObject"),
-        retry: () => void load(),
-      });
-    }
-  }, [fetchView, showLoadError, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  }, [
+    organizationId,
+    contractId,
+    mutate,
+    invalidateFamily,
+    beginRead,
+    cacheKey,
+    guard.callbacks,
+  ]);
   const afterRevoke = useRefreshAfterWrite(t("reloadObject"), fetchView, {
     savedSuffix: t("savedButStale"),
   });
 
   // Bei vorübergehenden Ladefehlern bleibt das bestätigte Mandat stehen (#6652).
-  if ((loadError.error ?? afterRevoke.error) && !view) {
+  if ((loadError ?? afterRevoke.error) && !view) {
     return (
       <SectionCard concept={billingConcept} title={t("title")}>
-        <LoadErrorAlert error={loadError.error ?? afterRevoke.error} />
+        <LoadErrorAlert error={afterRevoke.error ?? loadError} />
       </SectionCard>
     );
   }
@@ -149,7 +178,7 @@ export function ParentSepaMandateView({
         title={t("offTitle")}
         description={t("intro")}
       >
-        <LoadErrorAlert error={loadError.error} />
+        <LoadErrorAlert error={loadError} />
         <LoadErrorAlert error={afterRevoke.error} />
         <Alert type="info" message={t("off")} />
       </SectionCard>
@@ -159,7 +188,7 @@ export function ParentSepaMandateView({
   if (view.mandate && !view.mandate.revokedOn) {
     return (
       <div ref={phaseRef} className="space-y-6">
-        <LoadErrorAlert error={loadError.error} />
+        <LoadErrorAlert error={loadError} />
         <LoadErrorAlert error={afterRevoke.error} />
         <MandateCard
           contract={key}
@@ -181,7 +210,7 @@ export function ParentSepaMandateView({
         title={t("title")}
         description={t("intro")}
       >
-        <LoadErrorAlert error={loadError.error} />
+        <LoadErrorAlert error={loadError} />
         <LoadErrorAlert error={afterRevoke.error} />
         {view.creditorMissing ? (
           <Alert type="warning" message={t("creditorMissing")} />
@@ -193,7 +222,7 @@ export function ParentSepaMandateView({
   }
   return (
     <div ref={phaseRef} className="space-y-5">
-      <LoadErrorAlert error={loadError.error} />
+      <LoadErrorAlert error={loadError} />
       <LoadErrorAlert error={afterRevoke.error} />
       <GrantFlow contract={key} view={view} onGranted={setView} />
     </div>

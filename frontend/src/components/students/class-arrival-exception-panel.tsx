@@ -14,14 +14,7 @@ import {
   type FormModalPending,
 } from "~/components/ui/use-form-modal-pending";
 import { FramedList } from "~/components/ui/framed-list";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -34,11 +27,7 @@ import {
 } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import {
   formatDate,
   parseISODate,
@@ -46,6 +35,9 @@ import {
   berlinTodayISO,
 } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { createLogger } from "~/lib/logger";
 import {
   type ClassArrivalException,
@@ -63,6 +55,8 @@ const logger = createLogger({ component: "ClassArrivalExceptionPanel" });
 
 /** The preset reason the "Unterricht fällt aus" button writes. */
 const CLASS_ARRIVAL_CANCELLED_REASON = "Unterricht fällt aus";
+
+const NO_EXCEPTIONS: readonly ClassArrivalException[] = [];
 
 /** Wie weit die Liste vorausschaut (Backend-Standard: 60 Tage). */
 const LIST_HORIZON_DAYS = 60;
@@ -294,11 +288,15 @@ function ClassArrivalExceptionPanelBody({
   weekendOpen = false,
   pending,
 }: ClassArrivalExceptionPanelBodyProps) {
-  const [exceptions, setExceptions] = useState<ClassArrivalException[]>([]);
-  const [canEdit, setCanEdit] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [loadAttempt, setLoadAttempt] = useState(0);
+  // One key per class; the OGS and school portal routes never share it, their
+  // sessions have different cache scopes.
+  const list = useSWRAuth(
+    tenantStudentKeys.classArrivalExceptions(schoolClass),
+    () => api.list(schoolClass),
+    { keepPreviousData: false },
+  );
+  const exceptions = list.data?.exceptions ?? NO_EXCEPTIONS;
+  const canEdit = list.data?.can_edit ?? false;
   const [date, setDate] = useState<Date | null>(() =>
     usableDefaultDate(defaultDate),
   );
@@ -318,8 +316,13 @@ function ClassArrivalExceptionPanelBody({
   const formErrors = useApiFormError(formRef);
   // „Wiederholen“ speichert die aktuelle Eingabe, nicht die vom Fehler.
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
+  const load = useSwrResourceLoadError(
+    [list],
+    "die Liste der Abweichungen",
+    () => list.mutate(),
+  );
+  const loadError = load.failure !== undefined;
+  const loading = !list.data && !loadError;
 
   const openRemoveConfirmation = (exception: ClassArrivalException) => {
     onConfirmationVisibilityChange?.(true);
@@ -333,48 +336,18 @@ function ClassArrivalExceptionPanelBody({
     removeErrors.clear();
   };
 
-  const reload = useCallback(async () => {
-    const list = await api.list(schoolClass);
-    setExceptions(list.exceptions);
-    setCanEdit(list.can_edit);
-  }, [api, schoolClass]);
+  const { mutate: mutateList } = list;
+  // A failed reload rejects, so the hook below can show it.
+  const reload = useCallback(
+    () => mutateList(api.list(schoolClass), { revalidate: false }),
+    [api, schoolClass, mutateList],
+  );
   // Nachladen nach Speichern oder Entfernen: ein Fehler dabei steht über der
   // Liste, nicht im Formular oder Dialog der Aktion (#6652).
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige der Abweichungen",
     reload,
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setLoadError(false);
-    clearLoadError();
-    api
-      .list(schoolClass)
-      .then((list) => {
-        if (cancelled) return;
-        setExceptions(list.exceptions);
-        setCanEdit(list.can_edit);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.warn("class_arrival_exceptions_fetch_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setLoadError(true);
-        void showLoadError(err, {
-          object: "die Liste der Abweichungen",
-          retry: () => setLoadAttempt((attempt) => attempt + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [api, schoolClass, loadAttempt, clearLoadError, showLoadError]);
 
   const today = startOfToday();
   const maxDate = new Date(today);

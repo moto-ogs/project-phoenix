@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useIsMobile } from "~/components/ui/hooks/useIsMobile";
+import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { SectionCard } from "~/components/ui/section-card";
 import { cn } from "~/lib/utils";
 import { useFillHeight } from "./use-fill-height";
@@ -27,7 +27,7 @@ export function DatabaseListLayout({
   className,
   bottomOffset = 32,
 }: DatabaseListLayoutProps) {
-  const isMobile = useIsMobile();
+  const isMobile = useMediaQuery(BELOW_MD);
   const { ref, height } = useFillHeight<HTMLDivElement>(bottomOffset);
 
   // Am Computer setzt `useFillHeight` die Höhe und die Liste scrollt in der

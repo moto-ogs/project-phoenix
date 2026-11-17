@@ -23,8 +23,8 @@ type schoolSetupRow struct {
 	SkippedSteps []string   `bun:"skipped_steps,array,notnull"`
 	CompletedAt  *time.Time `bun:"completed_at"`
 	UpdatedBy    *int64     `bun:"updated_by"`
-	CreatedAt    time.Time  `bun:"created_at,notnull,default:now()"`
-	UpdatedAt    time.Time  `bun:"updated_at,notnull,default:now()"`
+	CreatedAt    time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt    time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 // schoolSetup is one school's stored wizard state.

@@ -9,8 +9,10 @@ import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setTestClock } from "~/test/clock";
-
+import { SWRConfig } from "~/lib/swr/testing";
 import { PresentChildrenPicker } from "./present-children-picker";
+
+vi.unmock("swr");
 
 // The sidebar memory and the offering choice belong to the signed-in account
 // (#5000), so the hooks read the session.
@@ -95,16 +97,18 @@ function renderPicker(
   const onAdd = overrides.onAdd ?? vi.fn().mockResolvedValue(true);
   const onClose = overrides.onClose ?? vi.fn();
   render(
-    <PresentChildrenPicker
-      isOpen
-      instanceId="70"
-      inBlockStudentIds={new Set(["4"])}
-      isAdding={false}
-      error={null}
-      {...overrides}
-      onAdd={onAdd}
-      onClose={onClose}
-    />,
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <PresentChildrenPicker
+        isOpen
+        instanceId="70"
+        inBlockStudentIds={new Set(["4"])}
+        isAdding={false}
+        error={null}
+        {...overrides}
+        onAdd={onAdd}
+        onClose={onClose}
+      />
+    </SWRConfig>,
   );
   return { onAdd, onClose };
 }

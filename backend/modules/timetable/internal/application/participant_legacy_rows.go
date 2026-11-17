@@ -303,7 +303,7 @@ func bulkUpdateParticipantStatus(ctx context.Context, rows ports.ParticipantRows
 	if len(ids) == 0 {
 		return 0, nil
 	}
-	changed, err := rows.Presence.TransitionParticipants(ctx, ids, fromStatus, toStatus, time.Time{})
+	changed, err := rows.Presence.TransitionParticipants(ctx, ids, fromStatus, toStatus)
 	if err != nil {
 		return 0, WrapDatabaseError("bulk update status", err)
 	}

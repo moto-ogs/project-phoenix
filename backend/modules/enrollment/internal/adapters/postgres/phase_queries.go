@@ -42,7 +42,7 @@ func (r *Store) RepointPhaseSchemas(ctx context.Context, fromIDs []int64, toID i
 	if err != nil {
 		return 0, err
 	}
-	result, err := db.NewUpdate().TableExpr("enrollment.phases").Set("form_schema_id = ?", toID).Set("updated_at = NOW()").Where("tenant_id = ?", tenantID).Where("form_schema_id IN (?)", bun.List(fromIDs)).Exec(ctx)
+	result, err := db.NewUpdate().TableExpr("enrollment.phases").Set("form_schema_id = ?", toID).Set("updated_at = ?", r.currentTime()).Where("tenant_id = ?", tenantID).Where("form_schema_id IN (?)", bun.List(fromIDs)).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to repoint phases to schema %d: %w", toID, err)
 	}

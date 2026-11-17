@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SWRConfig } from "~/lib/swr/testing";
@@ -621,6 +622,49 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Elternbeiträge")[0]).toBeInTheDocument();
+  });
+
+  it("keeps the latest-started billing reload when an earlier save finishes reading later", async () => {
+    billingApi.fetchHolidayNumberRange.mockResolvedValue({
+      service: "holiday",
+      pattern: "OLD-{NNN}",
+      example: "OLD-001",
+    });
+    billingApi.saveHolidayNumberRange.mockResolvedValue({
+      service: "holiday",
+      pattern: "NEW-{NNN}",
+      example: "NEW-001",
+    });
+    billingApi.saveCareNumberRange.mockResolvedValue({
+      service: "care",
+      pattern: "MB-{NNNN}",
+      example: "MB-0001",
+    });
+    renderPage();
+    await screen.findByText("OLD-{NNN}");
+    const old = deferred<ContributionRule[]>();
+    api.fetchContributionRules.mockReturnValueOnce(old.promise);
+    const savePattern = async (title: string) => {
+      const heading = screen.getByRole("heading", { name: title });
+      const card = heading.closest("section")!;
+      fireEvent.click(
+        within(card).getByRole("button", { name: /Muster (ändern|festlegen)/ }),
+      );
+      fireEvent.click(await screen.findByRole("button", { name: "Speichern" }));
+    };
+    await savePattern("Rechnungsnummern der Ferien");
+    await waitFor(() =>
+      expect(billingApi.fetchHolidayNumberRange).toHaveBeenCalledTimes(2),
+    );
+    billingApi.fetchHolidayNumberRange.mockResolvedValue({
+      service: "holiday",
+      pattern: "NEW-{NNN}",
+      example: "NEW-001",
+    });
+    await savePattern("Rechnungsnummern der Monatsbeiträge");
+    expect(await screen.findByText("NEW-{NNN}")).toBeVisible();
+    await act(async () => old.resolve([SIBLING]));
+    expect(screen.getByText("NEW-{NNN}")).toBeVisible();
   });
 
   it("reports a rejected billing reload after saving a number pattern", async () => {

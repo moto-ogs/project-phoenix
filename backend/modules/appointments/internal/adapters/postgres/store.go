@@ -665,9 +665,9 @@ func (s *Store) UpdateAppointmentRecipientResponse(ctx context.Context, response
 		query = query.
 			Set(`occurrence_responses = "appointment_recipient".occurrence_responses || jsonb_build_object(?::text, ?::text)`,
 				response.OccurrenceDate.String(), response.Status).
-			Set("responded_at = NOW()")
+			Set("responded_at = ?", s.now())
 	case response.Status == appointments.ResponseStatusAccepted || response.Status == appointments.ResponseStatusDeclined:
-		query = query.Set("status = ?", response.Status).Set(`occurrence_responses = '{}'::jsonb`).Set("responded_at = NOW()")
+		query = query.Set("status = ?", response.Status).Set(`occurrence_responses = '{}'::jsonb`).Set("responded_at = ?", s.now())
 	default:
 		query = query.Set("status = ?", response.Status).Set(`occurrence_responses = '{}'::jsonb`).Set("responded_at = NULL")
 	}

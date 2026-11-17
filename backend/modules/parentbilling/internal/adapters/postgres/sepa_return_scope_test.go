@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ func TestSEPAReturnReadsOnlyTheTraegersOwnBankData(t *testing.T) {
 	otherScope := newMandateScope(t, db, "Träger Rückgabe B")
 	ownSchool := testpkg.CreateTestSchoolInOrganization(t, db, ownScope.organization, "OGS Rückgabe A")
 	otherSchool := testpkg.CreateTestSchoolInOrganization(t, db, otherScope.organization, "OGS Rückgabe B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the bank data back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))

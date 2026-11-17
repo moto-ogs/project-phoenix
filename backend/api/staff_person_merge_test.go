@@ -96,7 +96,7 @@ func newStaffMergeHarness(t *testing.T) staffMergeHarness {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	schoolID := testpkg.OwnTenant(t)
-	handler, err := newStaffPersonMergeRoutes(testpkg.NewDatabase(t, db))
+	handler, err := newStaffPersonMergeRoutes(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	router.Mount("/", handler)
@@ -281,7 +281,7 @@ func TestStaffPersonMergeRejectsNamesakeAddedBeforeRetirement(t *testing.T) {
 	audit, err := auditCompose.NewPersistence(auditCompose.PersistenceDependencies{DB: h.db})
 	require.NoError(t, err)
 	workflow, err := mergeCompose.New(
-		peopleCompose.NewStaffPersonMerge(),
+		peopleCompose.NewStaffPersonMerge(time.Now),
 		&namesakeBeforeRetirementMemberships{
 			StaffPersonMerge: membershipCompose.NewStaffPersonMerge(),
 			db:               h.db,
@@ -318,7 +318,7 @@ func TestStaffPersonMergeReturnsConflictForIneligibleMembership(t *testing.T) {
 	audit, err := auditCompose.NewPersistence(auditCompose.PersistenceDependencies{DB: h.db})
 	require.NoError(t, err)
 	workflow, err := mergeCompose.New(
-		peopleCompose.NewStaffPersonMerge(),
+		peopleCompose.NewStaffPersonMerge(time.Now),
 		ineligibleStaffMemberships{StaffPersonMerge: membershipCompose.NewStaffPersonMerge()},
 		staffPersonMergeAudit{create: audit.OperatorAuditLog.Create},
 		operatorIDFromSession,
@@ -342,7 +342,7 @@ func TestStaffPersonMergeRejectsNamesakeCommittedBeforeFinalCheck(t *testing.T) 
 	audit, err := auditCompose.NewPersistence(auditCompose.PersistenceDependencies{DB: h.db})
 	require.NoError(t, err)
 	workflow, err := mergeCompose.New(
-		uncommittedNamesakePeople{StaffPersonMerge: peopleCompose.NewStaffPersonMerge(), db: h.db, schoolID: h.schoolID, first: "Gleichzeitig", last: "Doppelsatz"},
+		uncommittedNamesakePeople{StaffPersonMerge: peopleCompose.NewStaffPersonMerge(time.Now), db: h.db, schoolID: h.schoolID, first: "Gleichzeitig", last: "Doppelsatz"},
 		membershipCompose.NewStaffPersonMerge(),
 		staffPersonMergeAudit{create: audit.OperatorAuditLog.Create},
 		operatorIDFromSession,
@@ -375,7 +375,7 @@ func TestStaffPersonMergeRollsBackWholeBatchAndAuditOnFailure(t *testing.T) {
 	audit, err := auditCompose.NewPersistence(auditCompose.PersistenceDependencies{DB: h.db})
 	require.NoError(t, err)
 	calls := 0
-	workflow, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(), membershipCompose.NewStaffPersonMerge(), staffPersonMergeAudit{create: func(ctx context.Context, entry *auditRecords.OperatorAuditEntry) error {
+	workflow, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(time.Now), membershipCompose.NewStaffPersonMerge(), staffPersonMergeAudit{create: func(ctx context.Context, entry *auditRecords.OperatorAuditEntry) error {
 		calls++
 		if calls == 2 {
 			return errors.New("audit unavailable")
@@ -542,7 +542,7 @@ func (m *heldStaffMerge) router(t *testing.T, db *bun.DB) chi.Router {
 	t.Helper()
 	audit, err := auditCompose.NewPersistence(auditCompose.PersistenceDependencies{DB: db})
 	require.NoError(t, err)
-	workflow, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(), membershipCompose.NewStaffPersonMerge(), staffPersonMergeAudit{create: func(ctx context.Context, entry *auditRecords.OperatorAuditEntry) error {
+	workflow, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(time.Now), membershipCompose.NewStaffPersonMerge(), staffPersonMergeAudit{create: func(ctx context.Context, entry *auditRecords.OperatorAuditEntry) error {
 		close(m.reachedAudit)
 		<-m.releaseAudit
 		return audit.OperatorAuditLog.Create(ctx, entry)

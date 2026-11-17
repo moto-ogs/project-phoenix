@@ -36,6 +36,8 @@ const {
   mockHostedWeeks: vi.fn(),
 }));
 
+vi.unmock("swr");
+
 vi.mock("next-auth/react", () => ({
   useSession: mockUseSession,
 }));
@@ -48,7 +50,8 @@ vi.mock("~/lib/timetable-api", () => ({
   timetableService: { bulkCancel: mockBulkCancel },
 }));
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
   useTenantMutateMatching: () => mockRefreshPlan,
 }));
 
@@ -131,7 +134,16 @@ vi.mock("~/components/planning/closing-day-modal", () => ({
     ) : null,
 }));
 
-import { ClosingDaysEditor } from "./closing-days-editor";
+import { SWRConfig } from "~/lib/swr/testing";
+import { ClosingDaysEditor as Editor } from "./closing-days-editor";
+
+function ClosingDaysEditor(props: Parameters<typeof Editor>[0]) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <Editor {...props} />
+    </SWRConfig>
+  );
+}
 
 function makeClosingDay(overrides: Partial<ClosingDay> = {}): ClosingDay {
   return {
@@ -156,7 +168,7 @@ describe("ClosingDaysEditor", () => {
     mockInvalidate.mockResolvedValue(undefined);
     mockRefreshPlan.mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
-      data: { user: { permissions: ["schedules:manage"] } },
+      data: { user: { id: "1", permissions: ["schedules:manage"] } },
       status: "authenticated",
     });
   });
@@ -405,7 +417,7 @@ describe("ClosingDaysEditor", () => {
 
   it("zeigt ohne Planungsrecht kein Absagen", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { permissions: ["schedules:read"] } },
+      data: { user: { id: "1", permissions: ["schedules:read"] } },
       status: "authenticated",
     });
     mockList.mockResolvedValue([makeClosingDay()]);

@@ -32,7 +32,7 @@ func assertTokenCountByPortal(t *testing.T, db *bun.DB, accountID int64, portalS
 		Where(`"token".account_id = ?`, accountID).
 		Where(`"token".portal_scope = ?`, portalScope).
 		Where(`"token".rotated_at IS NULL`).
-		Where(`"token".expiry > NOW()`).
+		Where(`"token".expiry > ?`, time.Now()).
 		Count(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, int64(want), count, "active %s sessions", portalScope)
@@ -212,7 +212,7 @@ func TestSessionCapAppliesAcrossSchoolsOnSwitchTenant(t *testing.T) {
 		TableExpr("auth.tokens").
 		Where("account_id = ?", account.ID).
 		Where("rotated_at IS NULL").
-		Where("expiry > NOW()").
+		Where("expiry > ?", time.Now()).
 		Count(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 5, int(count), "switch-tenant must share the staff portal cap across schools")
@@ -451,7 +451,7 @@ func TestAssignRoleFromAdminTxKeepsOtherSchoolSessions(t *testing.T) {
 		Where("account_id = ?", account.ID).
 		Where("tenant_id = ?", secondaryTenantID).
 		Where("rotated_at IS NULL").
-		Where("expiry > NOW()").
+		Where("expiry > ?", time.Now()).
 		Count(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, int(count))
@@ -787,7 +787,7 @@ func TestCleanupExpiredTokensDoesNotWipeReactivatedSessions(t *testing.T) {
 		TableExpr("auth.tokens").
 		Where("account_id = ?", account.ID).
 		Where("rotated_at IS NULL").
-		Where("expiry > NOW()").
+		Where("expiry > ?", time.Now()).
 		Count(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, int(count))
@@ -858,7 +858,7 @@ func TestCleanupExpiredTokensLeavesSessionsCreatedAfterPendingWipe(t *testing.T)
 		TableExpr("auth.tokens").
 		Where("account_id = ?", account.ID).
 		Where("rotated_at IS NULL").
-		Where("expiry > NOW()").
+		Where("expiry > ?", time.Now()).
 		Count(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, int(count))
@@ -894,7 +894,7 @@ func TestCleanupExpiredTokensRevokesRefreshedFamilyAfterPendingWipe(t *testing.T
 		TableExpr("auth.tokens").
 		Where("account_id = ?", account.ID).
 		Where("rotated_at IS NULL").
-		Where("expiry > NOW()").
+		Where("expiry > ?", time.Now()).
 		Count(context.Background())
 	require.NoError(t, err)
 	require.Zero(t, count)
@@ -930,7 +930,7 @@ func TestCleanupExpiredTokensRetriesPendingWipeOlderThanSevenDays(t *testing.T) 
 		TableExpr("auth.tokens").
 		Where("account_id = ?", account.ID).
 		Where("rotated_at IS NULL").
-		Where("expiry > NOW()").
+		Where("expiry > ?", time.Now()).
 		Count(context.Background())
 	require.NoError(t, err)
 	require.Zero(t, count)

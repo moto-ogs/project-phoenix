@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/parentfixture"
 
@@ -46,7 +47,7 @@ func TestRequestShareVisibilityAnswersLikeThePortal(t *testing.T) {
 		Runtime: owners.ParentPortalRuntime{}, CarePlanPolicy: owners.NewParentCarePlanPolicy(),
 		FamilyProtectionEvents: owners.BindParentFamilyProtectionReads(protection), ParentRequestShares: owners.BindParentRequestShareRecords(shares), Logger: slog.Default(),
 	})
-	visibility, err := owners.NewRequestShareVisibility(testpkg.NewDatabase(t, db))
+	visibility, err := owners.NewRequestShareVisibility(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
 
 	request := &parentService.StudentDataChangeRequest{
@@ -97,7 +98,7 @@ func TestRequestShareVisibilityKeepsLatestChoiceAndTenantBoundary(t *testing.T) 
 	first := testpkg.CreateTestAccount(t, db, "first-share@example.test")
 	second := testpkg.CreateTestAccount(t, db, "second-share@example.test")
 	ctx := testpkg.Ctx(t)
-	visibility, err := owners.NewRequestShareVisibility(testpkg.NewDatabase(t, db))
+	visibility, err := owners.NewRequestShareVisibility(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
 	appendChoice := func(recipients []int64) {
 		t.Helper()

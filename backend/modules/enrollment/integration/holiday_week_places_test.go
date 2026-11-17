@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,7 +65,7 @@ func TestHolidayWeekPlacesKeepTheirTraegerBeneathRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newPlacesWeek(t, db, "Träger Plätze A")
 	foreign := newPlacesWeek(t, db, "Träger Plätze B")
-	store := postgres.NewHolidayRegistrationStore()
+	store := postgres.NewHolidayRegistrationStore().WithClock(time.Now)
 	nine := 9
 	// B's week is unlimited: without its filter the placement would give
 	// B's waiting booking a place.

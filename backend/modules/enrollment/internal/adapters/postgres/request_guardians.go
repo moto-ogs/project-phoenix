@@ -48,6 +48,10 @@ func (r *Store) CreateRequestGuardian(ctx context.Context, guardian *enrollment.
 	}
 	row := &requestGuardianRow{ID: guardian.ID, TenantID: guardian.TenantID, CreatedAt: guardian.CreatedAt, UpdatedAt: guardian.UpdatedAt, RequestID: guardian.RequestID, FirstName: guardian.FirstName, LastName: guardian.LastName, Email: guardian.Email, Phone: guardian.Phone, GuardianProfileID: guardian.GuardianProfileID, SortOrder: guardian.SortOrder}
 	row.TenantID = tenantID
+	// The owner stamps both columns, as StampRequestGuardianProfile stamps
+	// updated_at and requests and children are stamped (ADR 0281).
+	row.CreatedAt = r.currentTime()
+	row.UpdatedAt = row.CreatedAt
 	_, err = db.NewInsert().Model(row).Returning("*").Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create request guardian: %w", err)

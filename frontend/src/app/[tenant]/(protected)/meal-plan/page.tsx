@@ -30,7 +30,6 @@ import { hasPermission, isAdmin } from "~/lib/auth-utils";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
 import { formatWeekLabel, parseISODate, toISODate } from "~/lib/date-helpers";
@@ -45,6 +44,9 @@ import {
 import { createLogger } from "~/lib/logger";
 import { useNavigationGuard } from "~/lib/hooks/use-navigation-guard";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useFreshSWR } from "~/lib/swr";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import {
   useMealPlanEnabled,
   useMealRegistrationEnabled,
@@ -193,26 +195,16 @@ export default function MealPlanPage() {
   // weekOffset: number of weeks from the current week (0 = this week, can go
   // negative for past weeks or beyond +1 for planning ahead).
   const [weekOffset, setWeekOffset] = useState(0);
-  const [orderRefreshVersion, setOrderRefreshVersion] = useState(0);
-  const [loading, setLoading] = useState(true);
+  // An explicit read of the shown week (after a save, „Verwerfen & neu laden“).
+  const [reloading, setReloading] = useState(false);
   // True once the first week has loaded. Subsequent week switches keep the
   // current grid on screen (dimmed) instead of flashing the skeleton.
   const [hasLoaded, setHasLoaded] = useState(false);
-  // True when the displayed week failed to load. The grid is then NOT shown:
-  // editing/saving against an unknown persisted state could overwrite real
-  // meals based on a failed load, so we surface an error + retry instead.
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const hasLoadError = Boolean(loadError);
   const [saving, setSaving] = useState(false);
   const saveErrors = useApiFormError();
   const { clear: clearSaveError } = saveErrors;
   const { show: showActionError } = useApiErrorDisplay();
   // „Wiederholen“ läuft mit dem aktuellen Stand der Seite (Woche, Entwürfe).
-  const reloadRef = useRef<() => void>(() => undefined);
   const retrySaveRef = useRef<() => void>(() => undefined);
   const retryCopyPrevRef = useRef<() => void>(() => undefined);
   const [copyingPrev, setCopyingPrev] = useState(false);
@@ -248,80 +240,67 @@ export default function MealPlanPage() {
     weekDates.flatMap((date) => drafts[date] ?? []),
   );
 
-  // Latest-wins guard: every load() captures a token; a slower earlier load
-  // (e.g. a previous week on a slow connection) bails instead of overwriting
-  // the newer week's drafts/originals after it resolves. A counter rather than
-  // a per-effect cancelled flag because load() is also called by the retry
-  // button and after save, not only from the week-switch effect.
-  const loadTokenRef = useRef(0);
-
-  // Reads the week for the load with `token`; a newer load wins, its answer
-  // and its failure count, an older one is dropped. Rejects on failure, so
-  // after a save the caller keeps the week on screen (#6652).
-  const readWeek = useCallback(
-    async (token: number) => {
-      const entries = await getMealPlanWeek(mondayISO).catch((err: unknown) => {
-        if (loadTokenRef.current === token) throw err;
-        return null;
-      });
-      if (entries === null || loadTokenRef.current !== token) return;
+  // The loaded week is an edit form: its answer is copied into the drafts
+  // once per week. A refresh of the same week replaces only a plan without
+  // unsaved edits; only an explicit read replaces those.
+  const weekKey =
+    status === "authenticated" && canReadPlan && mealPlanEnabled
+      ? tenantListKeys.mealPlanWeek(mondayISO)
+      : null;
+  // Saving compares against the plan this visit read: a cached answer of an
+  // earlier visit may miss a colleague's change and would be overwritten.
+  // So the week is shown and editable only once this visit's own read of it
+  // answered.
+  const week = useFreshSWR(weekKey, () => getMealPlanWeek(mondayISO));
+  // SWR keeps the cached answer next to a failed read; it is not this
+  // visit's plan.
+  const weekData = week.error ? undefined : week.data;
+  // True when the displayed week failed to load. The grid is then NOT shown:
+  // editing/saving against an unknown persisted state could overwrite real
+  // meals based on a failed load, so we surface an error + retry instead.
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data: weekData, error: week.error }],
+    "die Woche im Speiseplan",
+    () => week.mutate(),
+  );
+  const hasLoadError = Boolean(loadError);
+  const loading =
+    weekKey === null ||
+    reloading ||
+    (weekData === undefined && (!week.error || week.isValidating));
+  const appliedWeek = useRef<{ key: string; data: MealPlanEntry[] } | null>(
+    null,
+  );
+  const applyWeek = useCallback(
+    (key: string, entries: MealPlanEntry[]) => {
+      appliedWeek.current = { key, data: entries };
       const built = draftsFromEntries(entries, weekDates);
       setDrafts(built);
       // Originals store only the persisted (non-empty) rows for dirty checks.
       const orig: Record<string, DishDraft[]> = {};
       for (const date of weekDates) orig[date] = normalizeDay(built[date]!);
       setOriginals(orig);
+      setHasLoaded(true);
     },
-    [mondayISO, weekDates],
+    [weekDates],
   );
-
-  const load = useCallback(async () => {
-    const token = ++loadTokenRef.current;
-    setLoading(true);
-    clearLoadError();
-    try {
-      await readWeek(token);
-    } catch (err) {
-      if (loadTokenRef.current !== token) return;
-      logger.error("meal_plan_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      // Operational failure: drop any stale week so nothing editable is shown
-      // against an unknown persisted state, and surface an error instead.
-      setDrafts({});
-      setOriginals({});
-      void showLoadError(err, {
-        object: "die Woche im Speiseplan",
-        retry: () => reloadRef.current(),
-      });
-    } finally {
-      // Only the most recent load owns the shared loading/loaded flags.
-      if (loadTokenRef.current === token) {
-        setLoading(false);
-        setHasLoaded(true);
-      }
-    }
-  }, [readWeek, showLoadError, clearLoadError]);
-  useLayoutEffect(() => {
-    reloadRef.current = () => void load();
-  });
+  // Rejects on failure, so after a save the caller keeps the week on screen
+  // (#6652).
   const afterSave = useRefreshAfterWrite(
     "die Anzeige des Speiseplans",
     async () => {
-      const token = ++loadTokenRef.current;
-      setLoading(true);
+      if (!weekKey) return;
+      setReloading(true);
       try {
-        await readWeek(token);
+        const entries = await week.mutate(getMealPlanWeek(mondayISO), {
+          revalidate: false,
+        });
+        if (entries) applyWeek(weekKey, entries);
       } finally {
-        if (loadTokenRef.current === token) setLoading(false);
+        setReloading(false);
       }
     },
   );
-
-  useEffect(() => {
-    if (status !== "authenticated" || !canReadPlan || !mealPlanEnabled) return;
-    void load();
-  }, [load, status, canReadPlan, mealPlanEnabled]);
 
   const changedDays = useMemo(
     () =>
@@ -334,14 +313,24 @@ export default function MealPlanPage() {
   );
   const isDirty = changedDays.length > 0;
 
-  // Freeze all edit controls while a save, week-load, or "Vorwoche übernehmen"
-  // is in flight. handleSave() captures the pre-click draft snapshot and load()
-  // then replaces drafts/originals from the backend; an edit made after the
-  // request started would otherwise be silently overwritten when it resolves
-  // (same for an edit made while a new week is still loading). canEdit gates
+  // Freeze all edit controls while a save, a read of the week, or "Vorwoche
+  // übernehmen" is in flight. handleSave() captures the pre-click draft
+  // snapshot and the read after it replaces drafts/originals from the
+  // backend; an edit made after the request started would otherwise be
+  // silently overwritten when it resolves. Until this visit's read of the
+  // shown week answered, drafts and originals are not that week's stored
+  // plan, so a save would compare against the wrong state. canEdit gates
   // *who* may edit; editingLocked gates *when*.
   const editingLocked = saving || copyingPrev || loading;
   const canEditNow = canEdit && !editingLocked;
+
+  useEffect(() => {
+    const entries = weekData;
+    if (!weekKey || !entries || appliedWeek.current?.data === entries) return;
+    const sameWeek = appliedWeek.current?.key === weekKey;
+    if (sameWeek && (isDirty || editingLocked)) return;
+    applyWeek(weekKey, entries);
+  }, [weekKey, weekData, isDirty, editingLocked, applyWeek]);
 
   // Warn before discarding unsaved changes — both on hard unloads (tab close /
   // reload) and on in-app navigation (clicking a sidebar/header link), which
@@ -437,6 +426,11 @@ export default function MealPlanPage() {
   };
 
   const confirmWeekChange = () => {
+    // The discarded edits must not come back when the person returns to this
+    // week: the next read of it applies as a new week.
+    appliedWeek.current = null;
+    setDrafts({});
+    setOriginals({});
     if (pendingOffset !== null) setWeekOffset(pendingOffset);
     setPendingOffset(null);
   };
@@ -941,7 +935,6 @@ export default function MealPlanPage() {
         <MealOrderWeek
           mondayISO={mondayISO}
           canExportMonth={canReadParticipants}
-          refreshVersion={orderRefreshVersion}
         />
       ) : null}
 
@@ -958,9 +951,6 @@ export default function MealPlanPage() {
         <MealParticipantList
           canRegister={canRegister}
           canExport={canReadParticipants}
-          onRegistrationChanged={() =>
-            setOrderRefreshVersion((value) => value + 1)
-          }
         />
       ) : null}
 

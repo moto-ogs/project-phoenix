@@ -327,6 +327,20 @@ import {
 // (#5000); the mocked session signs in account "7" at school 1.
 const memoryKey = (entry: SidebarMemoryEntry) => sidebarMemoryKey(entry, "1:7");
 
+// The spontaneous start reads its pickers through the shared cache; the
+// per-key fakes below serve them what the stubbed fetch used to answer.
+const SPONTANEOUS_ROOMS = [
+  { id: 3, name: "Mensa" },
+  { id: 5, name: "Schulhof" },
+];
+function spontaneousReference(key: string | null, result: object) {
+  if (key === "timetable-filter-rooms")
+    return { ...result, data: SPONTANEOUS_ROOMS, error: null };
+  if (key === "activity-groups-all" || key?.startsWith("staff-directory-list-"))
+    return { ...result, data: [], error: null };
+  return null;
+}
+
 // Aktionen melden Fehler als Toast oder im Dialog (#2517); der Provider
 // zeigt den Toast echt an.
 function render(ui: Parameters<typeof rtlRender>[0]) {
@@ -3494,7 +3508,10 @@ describe("MeinRaumPage (Active Supervisions) (3/5)", () => {
       mutate: mockMutate,
       isValidating: false,
     };
-    vi.mocked(useSWRAuth).mockReturnValue(dashboardResult as never);
+    vi.mocked(useSWRAuth).mockImplementation(
+      ((key: string | null) =>
+        spontaneousReference(key, dashboardResult) ?? dashboardResult) as never,
+    );
     global.fetch = vi.fn().mockResolvedValue({
       json: async () => ({
         data: [
@@ -3582,7 +3599,7 @@ describe("MeinRaumPage (Active Supervisions) (3/5)", () => {
     vi.mocked(useSWRAuth).mockImplementation(((key: string | null) =>
       key?.startsWith("active-supervision-dashboard")
         ? dashboardResult
-        : emptyResult) as never);
+        : (spontaneousReference(key, emptyResult) ?? emptyResult)) as never);
     global.fetch = vi.fn().mockResolvedValue({
       json: async () => ({
         data: [

@@ -6,7 +6,8 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { createRef } from "react";
+import { createRef, type ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { testClockDay } from "~/test/clock";
@@ -26,6 +27,24 @@ afterAll(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
+
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1", token: "test-token" } },
+  }),
+}));
+
+/** Real SWR with a fresh cache per render (the preview reads through it). */
+function SWRTestCache({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
 
 const {
   createExternal,
@@ -121,7 +140,7 @@ function renderStep(
       {...extra}
     />
   );
-  const { rerender } = render(element());
+  const { rerender } = render(element(), { wrapper: SWRTestCache });
   return {
     update,
     changeSourceOfferings,

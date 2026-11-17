@@ -6,6 +6,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
 
 import { LetterStatusPanel } from "./letter-status-panel";
 import type { LetterStatus } from "~/lib/parent-announcements-api";
@@ -13,6 +14,17 @@ import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { catalogText } from "~/test/error-catalog-text";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
 
 const { fetchLetterStatus, remindUnanswered, showError } = vi.hoisted(() => ({
   fetchLetterStatus: vi.fn(),
@@ -67,6 +79,13 @@ const recipient = (overrides: Partial<LetterStatus["recipients"][number]>) => ({
 function renderPanel() {
   render(
     <LetterStatusPanel announcementId="1" canAct emailAudience="portal_only" />,
+    {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+          {children}
+        </SWRConfig>
+      ),
+    },
   );
 }
 

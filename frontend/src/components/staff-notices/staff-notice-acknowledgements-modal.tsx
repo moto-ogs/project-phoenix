@@ -1,22 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import { Button } from "~/components/ui/button";
 import { formErrorMessage } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Loading } from "~/components/ui/loading";
 import { Modal } from "~/components/ui/modal";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { formatChatDateTime } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { staffNoticeKeys } from "~/lib/swr/staff-keys";
 import { fetchNoticeAcknowledgements } from "~/lib/staff-notices-api";
-import type {
-  StaffNotice,
-  StaffNoticeAcknowledger,
-} from "~/lib/staff-notices-api";
-
-const logger = createLogger({ component: "StaffNoticeAcknowledgementsModal" });
+import type { StaffNotice } from "~/lib/staff-notices-api";
 
 /**
  * Die Bestätigungsliste einer Tagesinformation (#2208): wer wann zur Kenntnis
@@ -31,40 +25,22 @@ export function StaffNoticeAcknowledgementsModal({
   readonly notice: StaffNotice | null;
   readonly onClose: () => void;
 }) {
-  const [rows, setRows] = useState<StaffNoticeAcknowledger[] | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-  // Erhöht sich bei „Wiederholen“ und lädt die Liste neu.
-  const [loadAttempt, setLoadAttempt] = useState(0);
+  const {
+    data: rows,
+    error,
+    mutate,
+  } = useSWRAuth(
+    notice ? staffNoticeKeys.acknowledgements(notice.id) : null,
+    () => fetchNoticeAcknowledgements(notice!.id),
+    { keepPreviousData: false },
+  );
   // Der Ladefehler steht im Dialog, mit Wiederholen (#2517).
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
-
-  useEffect(() => {
-    if (!notice) return;
-    let cancelled = false;
-    setRows(null);
-    setLoadFailed(false);
-    clearLoadError();
-    fetchNoticeAcknowledgements(notice.id)
-      .then((data) => {
-        if (!cancelled) setRows(data);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        logger.error("staff_notice_acknowledgements_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setLoadFailed(true);
-        void showLoadError(err, {
-          object: "die Liste der Bestätigungen",
-          retry: () => setLoadAttempt((attempt) => attempt + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [notice, loadAttempt, showLoadError, clearLoadError]);
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [{ data: rows, error }],
+    "die Liste der Bestätigungen",
+    () => mutate(),
+  );
+  const loadFailed = failure !== undefined;
 
   return (
     <Modal
@@ -91,9 +67,9 @@ export function StaffNoticeAcknowledgementsModal({
             Diese Personen haben „{notice.title}“ zur Kenntnis genommen.
           </p>
 
-          {loadFailed && formErrorMessage(loadError.error) !== null ? (
-            <LoadErrorAlert error={loadError.error} />
-          ) : rows === null || loadFailed ? (
+          {loadFailed && formErrorMessage(loadError) !== null ? (
+            <LoadErrorAlert error={loadError} />
+          ) : rows === undefined || loadFailed ? (
             <Loading />
           ) : rows.length === 0 ? (
             <p className="text-sm leading-6 text-gray-600">

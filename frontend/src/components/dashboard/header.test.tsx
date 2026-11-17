@@ -27,7 +27,7 @@ const mockUseBreadcrumb = vi.fn(() => ({
 }));
 const shellAuth = vi.hoisted(() => ({
   roles: ["admin"] as string[],
-  mode: "teacher" as "teacher" | "school",
+  mode: "teacher" as "teacher" | "school" | "caterer",
 }));
 
 vi.mock("next/navigation", () => ({
@@ -398,6 +398,35 @@ describe("Header", () => {
     render(<Header />);
 
     expect(screen.getByTestId("page-title")).toHaveTextContent("Elternbriefe");
+  });
+
+  it("names a moto schule page after its navigation entry, in both path forms", () => {
+    shellAuth.mode = "school";
+    mockUsePathname.mockReturnValue("/school/fehlzeiten");
+
+    render(<Header />);
+
+    expect(screen.getByTestId("page-title")).toHaveTextContent("Fehlzeiten");
+  });
+
+  it("keeps the class view's name on a class page of moto schule", () => {
+    shellAuth.mode = "school";
+    mockUsePathname.mockReturnValue("/klasse/kind");
+
+    render(<Header />);
+
+    expect(screen.getByTestId("page-title")).toHaveTextContent(
+      "Klassenansicht",
+    );
+  });
+
+  it("names the caterer account page on the host and under /caterer", () => {
+    shellAuth.mode = "caterer";
+    mockUsePathname.mockReturnValue("/caterer/konto");
+
+    render(<Header />);
+
+    expect(screen.getByTestId("page-title")).toHaveTextContent("Konto");
   });
 
   it("names the Schulverwaltung in moto schule by its role", () => {

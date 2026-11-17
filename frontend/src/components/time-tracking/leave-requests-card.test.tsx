@@ -1,10 +1,15 @@
 import { schoolDateCases, setSchoolDateClock } from "~/test/school-date-cases";
 import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { ABSENCES_REFRESH_EVENT } from "~/lib/absence-helpers";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
@@ -137,7 +142,7 @@ describe("LeaveRequestsCard resubmitted requests", () => {
     const listener = vi.fn();
     window.addEventListener(ABSENCES_REFRESH_EVENT, listener);
 
-    render(<LeaveRequestsCard />);
+    renderWithCache(<LeaveRequestsCard />);
 
     expect(
       await screen.findByText("Vorherige Rückfrage der Leitung:"),
@@ -152,6 +157,34 @@ describe("LeaveRequestsCard resubmitted requests", () => {
       expect(listener).toHaveBeenCalledTimes(1);
     });
     window.removeEventListener(ABSENCES_REFRESH_EVENT, listener);
+  });
+
+  it("keeps confirmed requests and offers a reload-only retry after a saved cancellation", async () => {
+    renderWithCache(<LeaveRequestsCard />);
+    expect(
+      await screen.findByText("Vorherige Rückfrage der Leitung:"),
+    ).toBeVisible();
+    mocks.getVacationQuota.mockRejectedValueOnce(
+      new ApiError("offline", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Stornieren" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Stornierung bestätigen" }),
+    );
+    expect(
+      await screen.findByText(
+        `${catalogText("general.unavailable", "die Urlaubsübersicht")} ${SAVED_BUT_STALE_SUFFIX}`,
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("Vorherige Rückfrage der Leitung:")).toBeVisible();
+    expect(mocks.toastSuccess).toHaveBeenCalledWith(
+      "Der Antrag ist storniert.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await waitFor(() =>
+      expect(mocks.getVacationQuota).toHaveBeenCalledTimes(3),
+    );
+    expect(mocks.cancelAbsence).toHaveBeenCalledTimes(1);
   });
 
   it("keeps old and cross-year questions outside the eight-request limit", async () => {
@@ -188,7 +221,7 @@ describe("LeaveRequestsCard resubmitted requests", () => {
       crossYearQuestion,
     ]);
 
-    render(<LeaveRequestsCard />);
+    renderWithCache(<LeaveRequestsCard />);
 
     expect(await screen.findByText("Rückfragen")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Alte Rückfrage")).toBeInTheDocument();
@@ -221,7 +254,7 @@ describe("LeaveRequestsCard resubmitted requests", () => {
       }),
     );
 
-    render(<LeaveRequestsCard />);
+    renderWithCache(<LeaveRequestsCard />);
 
     const submit = await screen.findByRole("button", {
       name: "Antwort senden & erneut einreichen",
@@ -265,7 +298,7 @@ describe("LeaveRequestsCard resubmitted requests", () => {
       }),
     );
 
-    render(<LeaveRequestsCard />);
+    renderWithCache(<LeaveRequestsCard />);
 
     expect(
       await screen.findByText(
@@ -294,7 +327,7 @@ describe("LeaveRequestsCard resubmitted requests", () => {
       new ApiError("forbidden", 403, { code: "general.permission" }),
     );
 
-    render(<LeaveRequestsCard />);
+    renderWithCache(<LeaveRequestsCard />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Stornieren" }));
     fireEvent.click(
@@ -320,7 +353,7 @@ describe("LeaveRequestsCard resubmitted requests", () => {
       mocks.getAbsences.mockResolvedValue([
         { ...resubmittedVacation(), dateEnd: "2027-06-01", status: "approved" },
       ]);
-      render(<LeaveRequestsCard />);
+      renderWithCache(<LeaveRequestsCard />);
       await screen.findByText("20 Tage Anspruch für 2027");
       const tile = screen.getAllByText("Genehmigt")[0]!.parentElement!;
       expect(tile).toHaveTextContent("1");
@@ -377,7 +410,7 @@ describe("LeaveRequestsCard mail to the Leitung (#7058)", () => {
   });
 
   it("shows under the waiting request whether the Leitung got the mail", async () => {
-    render(<LeaveRequestsCard />);
+    renderWithCache(<LeaveRequestsCard />);
 
     expect(await screen.findByText("Mail an die Leitung")).toBeInTheDocument();
     expect(mocks.useOwnAbsenceRequestMails).toHaveBeenLastCalledWith(["17"]);
@@ -390,3 +423,23 @@ describe("LeaveRequestsCard mail to the Leitung (#7058)", () => {
     expect(screen.getAllByTestId("absence-mail-status")).toHaveLength(1);
   });
 });
+
+// Echter SWR-Cache je Render und eine Sitzung mit Konto, sonst liest
+// useSWRAuth nichts.
+function TenantSWR({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-test", tenantId: 1 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const renderWithCache = (ui: React.ReactElement) =>
+  render(ui, { wrapper: TenantSWR });

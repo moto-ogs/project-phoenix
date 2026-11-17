@@ -10,14 +10,15 @@ import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { RejectReasonModal } from "./care-contract-notice-modal";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { ContractNoticeOptions } from "~/lib/care-contract-notices";
 import { unavailableApiError } from "~/lib/api-error";
 
 function render(ui: React.ReactElement) {
-  return renderPlain(ui, { wrapper: ToastProvider });
+  return renderPlain(ui, { wrapper: TraegerResourceTestProvider });
 }
 
+vi.unmock("swr");
 const mocks = vi.hoisted(() => ({
   fetchContractNoticeOptions: vi.fn(),
   recordContractNotice: vi.fn(),

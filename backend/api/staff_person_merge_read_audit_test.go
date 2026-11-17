@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -59,7 +60,7 @@ func TestStaffPersonMergePreviewRejectsAuditFailure(t *testing.T) {
 	t.Parallel()
 	h := newStaffMergeHarness(t)
 	calls := 0
-	workflow, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(), membershipCompose.NewStaffPersonMerge(), staffPersonMergeAudit{create: func(_ context.Context, entry *auditRecords.OperatorAuditEntry) error {
+	workflow, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(time.Now), membershipCompose.NewStaffPersonMerge(), staffPersonMergeAudit{create: func(_ context.Context, entry *auditRecords.OperatorAuditEntry) error {
 		calls++
 		assert.Equal(t, "view", entry.Action)
 		assert.Equal(t, "person", entry.ResourceType)

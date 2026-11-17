@@ -23,6 +23,7 @@ import { substitutionService } from "~/lib/substitution-api";
 import type { RunningSupervision } from "~/lib/substitution-helpers";
 import {
   supervisionTargetLabel,
+  useRefreshSupervisors,
   useRunningSupervision,
   type SupervisionTarget,
 } from "~/components/active-supervisions/running-supervision";
@@ -54,6 +55,7 @@ function useSupervisionChange(
 ) {
   const [isSaving, setIsSaving] = useState(false);
   const toast = useToast();
+  const refreshSupervisors = useRefreshSupervisors();
   const formErrors = useApiFormError();
   const { clear: clearFormErrors } = formErrors;
   // „Wiederholen“ wiederholt die zuletzt gewählte Aktion.
@@ -94,6 +96,7 @@ function useSupervisionChange(
       return;
     }
     setIsSaving(false);
+    void refreshSupervisors(activeGroupId);
     toast.success(message);
     props.onClose();
     // Die Aufsicht ist geändert; ein gescheitertes Nachladen zeigt die Seite

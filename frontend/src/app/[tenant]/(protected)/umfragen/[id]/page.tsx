@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 import { useParentTargetLookups } from "~/components/announcements/parent-target-picker";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { ForbiddenPage } from "~/components/ui/forbidden-page";
 import {

@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { SettingsSchema } from "~/lib/settings-api";
 import type {
@@ -14,6 +14,8 @@ import type {
   TimeReport,
 } from "~/lib/traeger-staff-exports-api";
 import { TEST_CLOCK_TODAY } from "~/test/clock";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchPayrollReport: vi.fn(),
@@ -141,9 +143,9 @@ function payrollSchema(values: Record<string, string>): SettingsSchema {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerPayrollExportPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

@@ -4,7 +4,7 @@
 // Trägers Daten gelesen oder geändert hat. Nur zum Lesen, mit Filtern und
 // CSV-Export. Jedes Öffnen steht selbst im Protokoll der gezeigten Schulen.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { ScrollText } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -20,15 +20,17 @@ import {
   TraegerListExportMenu,
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import {
   formatBerlinDate,
   parseISODate,
   berlinTodayISO,
   toISODate,
 } from "~/lib/date-helpers";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { createLogger } from "~/lib/logger";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   downloadTraegerAccessLog,
   fetchTraegerAccessLog,
@@ -36,7 +38,7 @@ import {
   type TraegerAccessKind,
   type TraegerAccessLogEntry,
   type TraegerAccessLogFilter,
-  type TraegerAccessLogPerson,
+  type TraegerAccessLogPage,
 } from "~/lib/traeger-api";
 
 const logger = createLogger({ component: "TraegerAccessLogPage" });
@@ -169,22 +171,39 @@ export default function TraegerAccessLogPage() {
   const [kind, setKind] = useState<KindChoice>("all");
   const { schools: schoolData } = useTraegerSchools();
   const schools = schoolData ?? [];
-  const [people, setPeople] = useState<TraegerAccessLogPerson[]>([]);
-  const [entries, setEntries] = useState<TraegerAccessLogEntry[]>([]);
-  const [page, setPage] = useState(1);
-  const [asOf, setAsOf] = useState("");
-  // Each new filter starts a new list. An answer for an older list (a slow
-  // first page, a pending "Weitere Einträge laden") is dropped.
-  const listGeneration = useRef(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const logLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = logLoad;
   const { show: showActionError } = useApiErrorDisplay();
 
   const from = range?.from ? toISODate(range.from) : "";
   const to = range?.to ? toISODate(range.to) : from;
+  // Every read of the log stands in the log of each school it shows: one
+  // read per opening and filter, none on reconnect or from the dedupe window.
+  const oncePerOpening = {
+    revalidateOnMount: true,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 0,
+  };
+
+  // The person filter offers the people who acted in the window; without
+  // them (a failed read) only "Alle Personen". The list shows its own error.
+  const peopleReader = useTraegerResource(
+    from ? traegerKeys.accessLogPeople(from, to) : null,
+    () => fetchTraegerAccessLogPeople(from, to),
+    "die Personen des Zugriffsprotokolls",
+    oncePerOpening,
+  );
+  const people = peopleReader.data ?? [];
+  // A person who does not act in the new window can no longer be chosen;
+  // the filter would stay active without a visible choice.
+  if (
+    accountId &&
+    ((peopleReader.data &&
+      !peopleReader.data.some((person) => person.accountId === accountId)) ||
+      peopleReader.failure)
+  ) {
+    setAccountId("");
+  }
 
   const filter = useMemo<TraegerAccessLogFilter | null>(
     () =>
@@ -193,80 +212,44 @@ export default function TraegerAccessLogPage() {
         : null,
     [from, to, schoolId, accountId, kind],
   );
-
-  useEffect(() => {
-    if (!from) return;
-    let current = true;
-    fetchTraegerAccessLogPeople(from, to)
-      .then((loaded) => {
-        if (!current) return;
-        setPeople(loaded);
-        // A person who does not act in the new window can no longer be
-        // chosen; the filter would stay active without a visible choice.
-        setAccountId((chosen) =>
-          loaded.some((person) => person.accountId === chosen) ? chosen : "",
-        );
-      })
-      .catch((err: unknown) => {
-        // The person filter then offers only "Alle Personen"; the list
-        // itself still loads and shows its own error.
-        logger.warn("traeger_access_log_people_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!current) return;
-        setPeople([]);
-        setAccountId("");
-      });
-    return () => {
-      current = false;
-    };
-  }, [from, to]);
-
-  const load = useCallback(async () => {
-    if (!filter) return;
-    const generation = ++listGeneration.current;
-    setLoading(true);
-    setLoadingMore(false);
-    try {
-      const result = await fetchTraegerAccessLog(filter, 1);
-      if (generation !== listGeneration.current) return;
-      setEntries(result.entries);
-      setHasMore(result.hasMore);
-      setAsOf(result.asOf);
-      setPage(1);
-      clearLoadError();
-    } catch (err) {
-      if (generation !== listGeneration.current) return;
-      logger.error("traeger_access_log_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setEntries([]);
-      setHasMore(false);
-      await showLoadError(err, {
-        object: "das Zugriffsprotokoll",
-        retry: () => void load(),
-      });
-    } finally {
-      if (generation === listGeneration.current) setLoading(false);
-    }
-  }, [filter, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const {
+    data: first,
+    loading,
+    error,
+  } = useTraegerResource(
+    filter ? traegerKeys.accessLog(filter) : null,
+    () =>
+      filter ? fetchTraegerAccessLog(filter, 1) : Promise.reject(new Error()),
+    "das Zugriffsprotokoll",
+    oncePerOpening,
+  );
+  // Later pages belong to the first page they continue; a new filter or a
+  // reload starts a new list and drops them.
+  const [later, setLater] = useState<{
+    readonly after: TraegerAccessLogPage;
+    readonly page: number;
+    readonly entries: readonly TraegerAccessLogEntry[];
+    readonly hasMore: boolean;
+  } | null>(null);
+  const continued = later && later.after === first ? later : null;
+  const entries = first
+    ? [...first.entries, ...(continued?.entries ?? [])]
+    : [];
+  const hasMore = continued ? continued.hasMore : (first?.hasMore ?? false);
 
   const loadMore = async () => {
-    if (!filter) return;
-    const generation = listGeneration.current;
+    if (!filter || !first) return;
+    const page = (continued?.page ?? 1) + 1;
     setLoadingMore(true);
     try {
-      const result = await fetchTraegerAccessLog(filter, page + 1, asOf);
-      if (generation !== listGeneration.current) return;
-      setEntries((current) => [...current, ...result.entries]);
-      setHasMore(result.hasMore);
-      setPage(page + 1);
+      const result = await fetchTraegerAccessLog(filter, page, first.asOf);
+      setLater({
+        after: first,
+        page,
+        entries: [...(continued?.entries ?? []), ...result.entries],
+        hasMore: result.hasMore,
+      });
     } catch (err) {
-      if (generation !== listGeneration.current) return;
       logger.error("traeger_access_log_load_more_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
@@ -274,7 +257,7 @@ export default function TraegerAccessLogPage() {
         object: "die nächste Seite des Protokolls",
       });
     } finally {
-      if (generation === listGeneration.current) setLoadingMore(false);
+      setLoadingMore(false);
     }
   };
 
@@ -390,7 +373,7 @@ export default function TraegerAccessLogPage() {
         setAccountId("");
         setKind("all");
       }}
-      error={logLoad.error}
+      error={error}
     >
       <DataTable
         columns={COLUMNS}

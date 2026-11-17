@@ -77,7 +77,7 @@ func newHolidayClosurePortal(t *testing.T) (*bun.DB, *traegerPortalHandler) {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	today := func() calendar.Date { return calendar.NewDate(2030, time.June, 3) }
-	return db, traegerPortalWithDaysOn(t, db, testpkg.TenantRuntime(t, db), owners.HolidayTestSchoolCalendar{}, today)
+	return db, traegerPortalWithDaysOn(t, db, testpkg.TenantRuntime(t, db), owners.HolidayTestSchoolCalendar{}, today, time.Now)
 }
 
 // proposeSchoolClosingDay saves a closing day of the school in the booked

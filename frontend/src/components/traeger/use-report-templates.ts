@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { fetchReportTemplates } from "~/lib/traeger-reports-api";
 
 /** Die Berichtsvorlagen des Trägers (#4716): keine Personendaten. */

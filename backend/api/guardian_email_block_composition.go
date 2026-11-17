@@ -81,7 +81,7 @@ func recordGuardianEmailChange(r *http.Request, audit guardianEmailAudit, resour
 	now := time.Now()
 	return audit.Create(r.Context(), &auditModels.DataAccessLog{
 		ActorAccountID: int64(claims.ID), ActorRole: guardianActorRole(claims.Roles),
-		ResourceType: resourceType, RangeStart: now, RangeEnd: now, AccessedAt: now,
+		ResourceType: resourceType, RangeStart: now, RangeEnd: now,
 		Metadata: map[string]any{"guardian_profile_id": guardianID, "action": action},
 	})
 }

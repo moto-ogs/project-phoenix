@@ -79,6 +79,14 @@ Use `createLogger` from `~/lib/logger` — never bare `console.*`. Snake_case ev
 
 Only three files may use raw `console.*`: `src/lib/logger.ts`, `src/lib/client-log-ingest.server.ts`, `src/test/setup-common.ts`. The logger is globally mocked in tests (passes through to `console.*`, so tests spy on `console.error`).
 
+## Loading data (MANDATORY)
+
+Read through the shared cache: `useSWRAuth` with a key factory of `~/lib/swr`
+(Träger portal: `useTraegerResource`), never `useEffect` + `useState`. A load
+in an effect is gone at the next page switch. oxlint `swr/no-effect-load`
+fails a new one; `scripts/swr-effect-load-baseline.json` only shrinks.
+Contract and exceptions: `src/lib/swr/README.md`.
+
 ## Real-time updates
 
 Events trigger bulk refetches; they are not data payloads. Read

@@ -442,7 +442,7 @@
     },
     {
       "decision": "0090",
-      "id": "api/classDayAccessLog.ClassDayViewSeenSince",
+      "id": "api/classDayAccessLog.ClassDayViewSeenToday",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -477,7 +477,7 @@
     },
     {
       "decision": "0090",
-      "id": "api/classDayAccessLog.SchoolDayViewSeenSince",
+      "id": "api/classDayAccessLog.SchoolDayViewSeenToday",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -2577,7 +2577,7 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/StatisticsAuditLog.SeenStatisticsAccessSince",
+      "id": "roots/owners/StatisticsAuditLog.SeenStatisticsAccessWithin",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

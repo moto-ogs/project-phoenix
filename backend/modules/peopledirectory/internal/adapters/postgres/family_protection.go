@@ -58,9 +58,8 @@ type familyProtectionRow struct {
 	ActorAccountID int64  `bun:"actor_account_id,notnull"`
 }
 
-// AppendFamilyProtection writes one immutable ledger row. created_at uses
-// clock_timestamp() so a protection and a sharing event written in the same
-// transaction keep their real order.
+// AppendFamilyProtection writes one immutable ledger row. created_at is the
+// owner's instant, as for the sharing events it is ordered against (ADR 0281).
 func (s *StudentStore) AppendFamilyProtection(ctx context.Context, change domain.FamilyProtectionChange) (domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
@@ -69,6 +68,7 @@ func (s *StudentStore) AppendFamilyProtection(ctx context.Context, change domain
 	if scope.TenantID <= 0 {
 		return domain.OperationStats{}, errors.New("people directory: family protection requires a tenant")
 	}
+	at := s.stamp()
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	result, err := db.NewInsert().
@@ -77,8 +77,8 @@ func (s *StudentStore) AppendFamilyProtection(ctx context.Context, change domain
 			Reason: change.Reason, ActorAccountID: change.ActorAccountID,
 		}).
 		ModelTableExpr("users.student_family_protection_events").
-		Value("created_at", "clock_timestamp()").
-		Value("updated_at", "clock_timestamp()").
+		Value("created_at", "?", at).
+		Value("updated_at", "?", at).
 		Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {

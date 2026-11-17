@@ -29,7 +29,7 @@ func parentBillingCalendarRouter(t *testing.T, f reviewFixture, days owners.Holi
 	database, unit := testpkg.NewDatabase(t, f.db), testpkg.TenantRuntime(t, f.db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
-	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil, time.Now)
+	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)
 	delivery, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
 		DB: f.db, People: owners.EnrollmentFlowGuardianDirectory{}, Observe: func(deliveryContract.Observation) {},

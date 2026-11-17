@@ -111,7 +111,7 @@ func (s *Store) DeactivateTenantMapping(ctx context.Context, accountID, tenantID
 	result, err := db.NewUpdate().
 		TableExpr(`auth.account_tenants AS "account_tenant"`).
 		Set("status = ?", "inactive").
-		Set("deactivated_at = NOW()").
+		Set("deactivated_at = ?", s.now()).
 		Set("staff_calendar_feed_token = NULL").
 		Where(`"account_tenant".account_id = ?`, accountID).
 		Where(`"account_tenant".tenant_id = ?`, tenantID).

@@ -62,14 +62,14 @@ const (
 	// archiveHolidayCriteriaQuery archives every criterion the list leaves
 	// out; answers and decisions keep naming it.
 	archiveHolidayCriteriaQuery = `UPDATE enrollment.holiday_allocation_criteria
-		SET archived_at = statement_timestamp(), active = false, updated_at = statement_timestamp(), updated_by_account_id = NULLIF(?::bigint, 0)
+		SET archived_at = ?, active = false, updated_at = ?, updated_by_account_id = NULLIF(?::bigint, 0)
 		WHERE organization_id = ? AND archived_at IS NULL AND NOT (id = ANY(?::bigint[]))`
 	updateHolidayCriterionQuery = `UPDATE enrollment.holiday_allocation_criteria
-		SET name = ?, question = ?, scope = ?, active = ?, position = ?, updated_at = statement_timestamp(), updated_by_account_id = NULLIF(?::bigint, 0)
+		SET name = ?, question = ?, scope = ?, active = ?, position = ?, updated_at = ?, updated_by_account_id = NULLIF(?::bigint, 0)
 		WHERE organization_id = ? AND id = ? AND archived_at IS NULL`
 	insertHolidayCriterionQuery = `INSERT INTO enrollment.holiday_allocation_criteria
-			(organization_id, name, question, scope, active, position, updated_by_account_id)
-		VALUES (?, ?, ?, ?, ?, ?, NULLIF(?::bigint, 0))`
+			(organization_id, name, question, scope, active, position, updated_by_account_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, NULLIF(?::bigint, 0), ?, ?)`
 	// The catalog lock serializes replacements even before its first row
 	// exists. Row locks also coordinate with concurrent first answers.
 	lockHolidayCriteriaCatalogQuery = `SELECT pg_advisory_xact_lock(hashtextextended('enrollment.holiday_allocation_criteria:' || ?::text, 0))`
@@ -93,7 +93,7 @@ const (
 			(organization_id, holiday_period_id, holiday_registration_id, holiday_registration_child_id, criterion_id,
 			 checked, checked_by_account_id, checked_at)
 		SELECT registration.organization_id, registration.holiday_period_id, registration.id, NULLIF(?::bigint, 0), criterion.id,
-			?::boolean, NULLIF(?::bigint, 0), statement_timestamp()
+			?::boolean, NULLIF(?::bigint, 0), ?::timestamptz
 		FROM enrollment.holiday_registrations AS registration
 		JOIN enrollment.holiday_allocation_criteria AS criterion
 			ON criterion.organization_id = registration.organization_id AND criterion.id = ?
@@ -186,17 +186,18 @@ func (s *HolidayRegistrationStore) WriteHolidayCriteria(ctx context.Context, org
 			kept = append(kept, criterion.ID)
 		}
 	}
-	if _, err := db.NewRaw(archiveHolidayCriteriaQuery, actorAccountID, organizationID, pgdialect.Array(kept)).Exec(ctx); err != nil {
+	now := holidayNow(s.now)
+	if _, err := db.NewRaw(archiveHolidayCriteriaQuery, now, now, actorAccountID, organizationID, pgdialect.Array(kept)).Exec(ctx); err != nil {
 		return fmt.Errorf("enrollment postgres: archive holiday criteria: %w", err)
 	}
 	for i, criterion := range criteria {
 		var err error
 		if criterion.ID > 0 {
 			_, err = db.NewRaw(updateHolidayCriterionQuery, criterion.Name, criterion.Question, criterion.Scope, criterion.Active, i+1,
-				actorAccountID, organizationID, criterion.ID).Exec(ctx)
+				now, actorAccountID, organizationID, criterion.ID).Exec(ctx)
 		} else {
 			_, err = db.NewRaw(insertHolidayCriterionQuery, organizationID, criterion.Name, criterion.Question, criterion.Scope, criterion.Active,
-				i+1, actorAccountID).Exec(ctx)
+				i+1, actorAccountID, now, now).Exec(ctx)
 		}
 		if err != nil {
 			return fmt.Errorf("enrollment postgres: write holiday criterion: %w", err)
@@ -324,7 +325,7 @@ func (s *HolidayRegistrationStore) CheckHolidayCriterion(ctx context.Context, or
 		}
 		return true, nil
 	}
-	result, err := db.NewRaw(checkHolidayCriterionQuery, childID, *checked, actorAccountID, criterionID,
+	result, err := db.NewRaw(checkHolidayCriterionQuery, childID, *checked, actorAccountID, holidayNow(s.now), criterionID,
 		organizationID, periodID, registrationID, childID, childID).Exec(ctx)
 	if err != nil {
 		return false, fmt.Errorf("enrollment postgres: check holiday criterion: %w", err)
