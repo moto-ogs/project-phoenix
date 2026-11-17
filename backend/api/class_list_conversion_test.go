@@ -92,8 +92,9 @@ func TestRenewalGivesAChildWithoutCarePlaceItsPlace(t *testing.T) {
 		return people.RenewEnrollmentStudent(txCtx, child.ID, peopledirectory.EnrollmentStudent{SchoolClass: "3c", Status: peopledirectory.StudentStatusActive})
 	}))
 
-	var withoutPlace bool
-	require.NoError(t, db.NewRaw(`SELECT without_care_place FROM users.student_school_memberships
-		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID).Scan(ctx, &withoutPlace))
+	var withoutPlace, dated bool
+	require.NoError(t, db.NewRaw(`SELECT without_care_place, enrolled_from IS NOT NULL FROM users.student_school_memberships
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID).Scan(ctx, &withoutPlace, &dated))
 	assert.False(t, withoutPlace, "the renewal gives the child its OGS place")
+	assert.True(t, dated, "the OGS care starts with the place, so no past day turns into OGS participation")
 }
