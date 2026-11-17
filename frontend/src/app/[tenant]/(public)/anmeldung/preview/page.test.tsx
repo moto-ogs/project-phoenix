@@ -3,6 +3,12 @@ import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { TEST_CLOCK_INSTANT } from "~/test/clock";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// The preview reads through real SWR under a staff session, a fresh cache
+// per render.
+vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   search: new URLSearchParams(),
@@ -63,12 +69,29 @@ vi.mock("~/components/enrollment/public-enrollment-shell", () => ({
 
 import EnrollmentPreviewPage from "./page";
 
+function Providers({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
 async function renderPage() {
   await act(async () => {
     render(
       <Suspense fallback={null}>
         <EnrollmentPreviewPage />
       </Suspense>,
+      { wrapper: Providers },
     );
   });
 }
@@ -406,7 +429,9 @@ describe("EnrollmentPreviewPage", () => {
             eligible_grade_levels: [],
           },
         });
-        const { unmount } = render(<EnrollmentPreviewPage />);
+        const { unmount } = render(<EnrollmentPreviewPage />, {
+          wrapper: Providers,
+        });
         expect(
           await screen.findByText(
             "Die Anmeldung läuft über das Elternportal.",

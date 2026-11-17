@@ -300,6 +300,7 @@ function InviteContent() {
     }
   }, [token, clearLoadError, showLoadError]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- invitation token page before the account exists; ~/lib/swr has no public reader
   useEffect(() => {
     void load();
   }, [load]);

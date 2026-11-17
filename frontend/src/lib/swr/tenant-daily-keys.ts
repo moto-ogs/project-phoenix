@@ -224,4 +224,10 @@ export const tenantDailyKeys = {
    */
   requestReviewCoverage: (accountId: string, studentId: string) =>
     `request-review-coverage:${accountId}:${studentId}`,
+  /** Angebote und Abholzeiten eines Tages für die Tageslisten (`fetchSlotListOptions`). */
+  slotListOptions: (date: string) =>
+    `timetable-slot-list-options-${encodeURIComponent(date)}`,
+  /** Vorschau einer Tagesliste für genau diese Anfrage (`fetchSlotListPreview`). */
+  slotListPreview: (request: object) =>
+    resourceKey("timetable-slot-list-preview-", request),
 } as const;
