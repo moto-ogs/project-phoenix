@@ -117,7 +117,7 @@ func NewHolidayClosures(schoolCalendar enrollment.HolidaySchoolCalendar, operati
 	return applicationNative.NewHolidayClosures(postgres.NewHolidayRegistrationStore(), schoolCalendar, operationCalendar, traeger, mail, random, keyed, today)
 }
 
-// NewTraegerPhases builds the Träger phases (ADR 0195) in the Träger transaction the caller opens.
-func NewTraegerPhases() enrollment.TraegerPhases {
-	return applicationNative.NewTraegerPhases(postgres.NewTraegerPhaseStore())
+// NewTraegerPhases builds the Träger phases (ADR 0195) in the Träger transaction the caller opens; now stamps withdrawals and outcomes.
+func NewTraegerPhases(now func() time.Time) enrollment.TraegerPhases {
+	return applicationNative.NewTraegerPhases(postgres.NewTraegerPhaseStore(now))
 }
