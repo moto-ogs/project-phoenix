@@ -62,7 +62,7 @@ export function mapNotificationFeedEntry(
     createdAt: wire.created_at,
     updatedAt: wire.updated_at,
     readAt: wire.read_at ?? null,
-    schoolName: wire.school_name || null,
+    ...(wire.school_name ? { schoolName: wire.school_name } : {}),
   };
 }
 
