@@ -215,6 +215,14 @@ type ClassListEntryBatches interface {
 	// statement; an unknown ID fails the whole call with
 	// ErrClassListEntryNotFound. The caller appends the change trail, as the
 	// import does for created entries. It serves the conversion of the
-	// entries into children without an OGS place (#4803).
-	RemoveClassListEntries(context.Context, []int64) error
+	// entries into children without an OGS place (#4803): a child an entry
+	// joins whose care starts after the entry keeps that class time
+	// (class_member_from), so its morning marks stay in the class views.
+	RemoveClassListEntries(context.Context, []ClassListEntryJoin) error
+}
+
+// ClassListEntryJoin names the child a class-list entry becomes (#4803).
+type ClassListEntryJoin struct {
+	EntryID   int64
+	StudentID int64
 }

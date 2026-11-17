@@ -131,6 +131,7 @@ type PrivacyConsents interface {
 // School Membership contract: staff, caregiver profiles and class-list
 // entries.
 type (
+	ClassListEntryJoin   = schoolmembership.ClassListEntryJoin
 	Staff                = schoolmembership.Staff
 	StaffFilter          = schoolmembership.StaffFilter
 	StaffFields          = schoolmembership.StaffFields

@@ -314,3 +314,46 @@ func TestClassListConversionSerializesSettingActivation(t *testing.T) {
 		})
 	}
 }
+
+// TestClassListConversionKeepsTheClassTimeOfAChildWhoseCareStartsLater joins
+// an entry to a namesake whose OGS care starts later (#4803 review): the
+// child keeps the class time the entry stood for, so the Fehlzeitenliste
+// still counts the morning marks it brought.
+func TestClassListConversionKeepsTheClassTimeOfAChildWhoseCareStartsLater(t *testing.T) {
+	t.Parallel()
+	db, module, _, _ := setupImportModule(t)
+	ctx := testpkg.Ctx(t)
+	tenantID := testpkg.Tenant(t)
+
+	entry := testpkg.CreateTestClassListEntry(t, db, "Max", "Morgen", "1c")
+	_, err := db.ExecContext(ctx, `UPDATE users.class_list_entries SET created_at = '2026-09-01 08:00:00+02'
+		WHERE tenant_id = ? AND id = ?`, tenantID, entry.ID)
+	require.NoError(t, err)
+	waiting := testpkg.CreateTestStudent(t, db, "Max", "Morgen", "1c")
+	_, err = db.ExecContext(ctx, `UPDATE users.student_school_memberships
+		SET status = 'pending', enrolled_from = '2099-02-01', first_care_from = '2099-02-01'
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, tenantID, waiting.ID)
+	require.NoError(t, err)
+
+	actor := testpkg.CreateTestAccount(t, db, "konvertierung-spaeter@example.com")
+	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, tenantID, func(txCtx context.Context) error {
+		result, err := module.ClassListConversion.ConvertClassListEntries(txCtx, &actor.ID)
+		assert.Equal(t, 1, result.Joined)
+		return err
+	}))
+
+	people := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db))
+	var names []peopledirectory.StudentName
+	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, tenantID, func(txCtx context.Context) error {
+		var err error
+		names, err = people.ListStudentNamesByClass(txCtx, "1c")
+		return err
+	}))
+	require.Len(t, names, 1)
+	assert.Equal(t, waiting.ID, names[0].StudentID)
+	assert.True(t, names[0].SchoolMemberOnly, "the entry's class time stays the child's")
+	require.NotNil(t, names[0].SchoolMemberFrom)
+	require.NotNil(t, names[0].SchoolMemberUntil)
+	assert.Equal(t, "2026-09-01", names[0].SchoolMemberFrom.String())
+	assert.Equal(t, "2099-01-31", names[0].SchoolMemberUntil.String())
+}
