@@ -3,8 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { Survey, SurveyToAnswer } from "~/lib/surveys-api";
+import { testClockDay } from "~/test/clock";
 
 import SurveysPage from "./page";
+
+// The open surveys close three weeks after the test day; beforeEach puts
+// the same day into the hoisted form.
+const CLOSES_AT = `${testClockDay(21)}T16:00:00Z`;
 
 const state = vi.hoisted(() => ({
   canManage: false,
@@ -87,7 +92,7 @@ const openSurvey: SurveyToAnswer = {
   title: "Teamklima",
   intro: "Wie geht es Ihnen im Team?",
   anonymous: true,
-  closes_at: "2026-09-30T16:00:00Z",
+  closes_at: CLOSES_AT,
   participated: false,
 };
 
@@ -99,7 +104,7 @@ const managed: Survey = {
   anonymous: true,
   send_email: false,
   status: "open",
-  closes_at: "2026-09-30T16:00:00Z",
+  closes_at: CLOSES_AT,
   published_at: "2026-09-01T08:00:00Z",
   created_at: "2026-08-30T08:00:00Z",
   updated_at: "2026-09-01T08:00:00Z",
@@ -123,6 +128,7 @@ describe("Umfragen (#4781)", () => {
     state.toAnswer = [openSurvey];
     state.surveys = [managed];
     state.sessionPending = false;
+    state.form.survey.closes_at = CLOSES_AT;
     state.push.mockReset();
   });
 

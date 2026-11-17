@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { PoolWeek } from "~/lib/staff-pool-api";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 
 vi.unmock("swr");
 
@@ -38,10 +39,14 @@ vi.mock("next/navigation", () => ({
 
 import TraegerStaffPoolPage from "./page";
 
-// The test clock stands on Wednesday 2026-09-09; its week starts 2026-09-07.
+// The week of the test day starts on its Monday.
+const weekday = new Date(`${TEST_CLOCK_TODAY}T00:00:00Z`).getUTCDay();
+const MONDAY = testClockDay(-((weekday + 6) % 7));
+const THURSDAY = testClockDay(3 - ((weekday + 6) % 7));
+
 const WEEK: PoolWeek = {
-  weekStart: "2026-09-07",
-  today: "2026-09-09",
+  weekStart: MONDAY,
+  today: TEST_CLOCK_TODAY,
   available: true,
   springers: [
     {
@@ -57,7 +62,7 @@ const WEEK: PoolWeek = {
           schoolId: "2",
           schoolName: "OGS Süd",
           own: false,
-          date: "2026-09-10",
+          date: THURSDAY,
           startTime: "08:00",
           endTime: "12:00",
           lifted: false,
@@ -110,7 +115,7 @@ describe("TraegerStaffPoolPage", () => {
     );
     api.downloadTraegerPoolWeek.mockResolvedValue({
       blob: new Blob(["x"]),
-      filename: "vertretungspool-2026-09-07.csv",
+      filename: `vertretungspool-${MONDAY}.csv`,
     });
     renderPage();
     const exportButton = await screen.findByRole("button", {
@@ -124,13 +129,10 @@ describe("TraegerStaffPoolPage", () => {
     await vi.waitFor(() =>
       expect(download).toHaveBeenCalledWith(
         expect.any(Blob),
-        "vertretungspool-2026-09-07.csv",
+        `vertretungspool-${MONDAY}.csv`,
       ),
     );
-    expect(api.downloadTraegerPoolWeek).toHaveBeenCalledWith(
-      "2026-09-07",
-      "csv",
-    );
+    expect(api.downloadTraegerPoolWeek).toHaveBeenCalledWith(MONDAY, "csv");
   });
 
   it("explains a Träger without the release", async () => {

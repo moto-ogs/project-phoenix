@@ -1,6 +1,7 @@
 # Frontend tests: clock, timers, network, absence assertions, kit pixel comparison, Storybook a11y
 
-Read before writing or diagnosing a date- or time-sensitive Vitest test, a
+Read before writing or diagnosing a date- or time-sensitive Vitest test,
+Playwright spec or story, a
 test that asserts something is absent, or before proving that a kit change
 is invisible, or when a Storybook a11y test fails or a test reports a
 request that reached the network.
@@ -113,6 +114,7 @@ Helpers live in `src/test/clock.ts` (`~/test/clock`).
 | Need | Use | Never |
 |---|---|---|
 | The default instant or day | `TEST_CLOCK_INSTANT`, `TEST_CLOCK_TODAY` | a literal copied from the setup |
+| A day relative to the default day (fixture, expected argument) | `testClockDay(-7)` | a literal such as `"2026-09-02"` that only fits the default day |
 | Another point in time (Berlin midnight, week change, DST switch) | `setTestClock("2026-03-29T01:30:00+01:00")` in the test or `beforeEach` | `vi.useFakeTimers({ toFake: ["Date"] })` boilerplate; the setup already freezes `Date` |
 | Control timers (`setInterval`, debounce) | `vi.useFakeTimers()`; it starts at the frozen instant, `vi.advanceTimersByTime` moves clock and timers | assuming fake timers start at the host time |
 | Real event loop again mid-test | `releaseFakeTimers()`: timers become real, the clock stays where the fake timers left it | `vi.useRealTimers()` in a test body or `before*` hook |
@@ -128,6 +130,49 @@ Fixtures built relative to "now" (`Date.now() + 60_000`, `new Date()`) stay
 valid: fixture and product code see the same frozen instant. Fixtures that use
 `Date.now()` for uniqueness collide within one test; use a counter instead.
 
+## Moved clock
+
+The default instant is one plain Wednesday. `clock-early-warning.yml` runs the
+suite every Sunday at the coming boundary times of
+`scripts/clock-boundaries.mjs` (00:30 Berlin, weekend, ISO week, clock change,
+new year, NRW holidays, today plus 30, 90 and 365 days) with
+`TEST_CLOCK_INSTANT=<ISO instant>` moving the default (#7296). Code that
+breaks on such a day fails there although no test sets that day; a red run
+opens the issue „Zeitabhängige Frontend-Tests: Frühwarn-Lauf mit verstellter
+Uhr ist rot“.
+
+- A test must pass on any default day. Take today from `TEST_CLOCK_TODAY`
+  and other days from `testClockDay(n)`; compute an expected weekday or week
+  with plain arithmetic in the test, not with the helper under test.
+- A test about one particular day (a Monday, a holiday, the clock change, a
+  fixture world with fixed dates) sets it with `setTestClock(...)` in the test
+  or `beforeEach`. It then no longer follows the moved clock.
+- Reproduce from `frontend/`:
+  `FAKE_CLOCK_TIMES=2027-03-28T00:30 ../scripts/test-frontend-clocks.sh /tmp/out src/path/file.test.tsx`,
+  or one run with `TEST_CLOCK_INSTANT=2027-03-27T23:30:00Z pnpm vitest run <file>`.
+
+## Playwright and Storybook
+
+Outside Vitest nothing freezes the clock for the test code.
+
+- **Flows (`e2e/*.spec.ts`).** Browser, Next server, backend and database
+  read the machine's clock. `e2e.yml` moves the runner clock to the next care
+  day (a weekday that is no NRW holiday) before migrations and seed, so every
+  run has shifts and a week grid. A spec takes its day from `runToday()` and
+  sets the browser's today with `setBrowserDay(page, day)` (`e2e/clock.ts`);
+  server and backend then stay on the run's day, so such a flow writes only
+  data with an explicit date. Durations and deadlines use
+  `performance.now()`, unique names `uniqueTitle()`. A comparison with a
+  foreign wall-clock stamp (Mailpit, a file time, a token's `exp`) calls
+  `realClock("reason")` from `e2e/real-clock.mjs`.
+- **Layout and network suites** render fixed markup or a synthetic backend
+  and assert no calendar day.
+- **Stories.** The Storybook tests (`.storybook/vitest.setup.ts`) and the kit
+  pixel comparison freeze `Date` at `TEST_CLOCK_INSTANT`, timers keep running.
+  Interactive Storybook runs on the real clock, so a story takes the time from
+  `storyNow()` (`.storybook/clock.ts`) instead of a fixed date.
+  `src/components/storybook-clock.stories.tsx` is the regression test.
+
 ## Enforcement
 
 - `src/test/clock.test.tsx` is the regression test of the mechanism: a pinned
@@ -141,9 +186,12 @@ valid: fixture and product code see the same frozen instant. Fixtures that use
   It rejects `vi.useRealTimers()` outside `afterEach`/`afterAll`,
   `useRealClock()` without a non-empty literal reason, `vi.getRealSystemTime()`
   and statically identifiable replacement of the global `Date`, including
-  direct assignments and `Object.defineProperty` / `Reflect` writes. There is
-  no baseline and no allowlist; the exception is the reason inside the
-  `useRealClock` call.
+  direct assignments and `Object.defineProperty` / `Reflect` writes. In
+  `e2e/`, `.storybook/` and `*.stories.*` it rejects every read of the host
+  clock outside `e2e/clock.ts` and `.storybook/clock.ts`: `new Date()`,
+  `Date.now()`, `berlinTodayISO()` and `todayISO()`, and `realClock()` without
+  a literal reason. There is no baseline and no allowlist; the exception is the reason
+  inside the `useRealClock` or `realClock` call.
 - `.claude/rules/no-test-modifications.md` applies: a date-dependent failure is
   fixed by pinning the clock, not by loosening the assertion.
 

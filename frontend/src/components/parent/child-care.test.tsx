@@ -28,7 +28,7 @@ import type {
 import * as parentApi from "~/lib/parent-api";
 import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
-import { releaseFakeTimers } from "~/test/clock";
+import { releaseFakeTimers, TEST_CLOCK_TODAY } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import {
   berlinTodayISO,
@@ -1438,7 +1438,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
         onClose={vi.fn()}
         onSubmit={onSubmit}
         sickRequiresApproval={false}
-        careExceptions={[schoolPartial("2026-09-09", "11:30")]}
+        careExceptions={[schoolPartial(TEST_CLOCK_TODAY, "11:30")]}
       />,
     );
 
@@ -1452,7 +1452,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
     send();
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith(
-        ["2026-09-09"],
+        [TEST_CLOCK_TODAY],
         "Fieber",
         "sick",
         [],

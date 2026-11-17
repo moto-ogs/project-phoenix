@@ -3,6 +3,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { testClockDay } from "~/test/clock";
 import {
   deferred,
   expectSlideOverSaveLocked,
@@ -50,10 +51,13 @@ import SchoolParentConferencePage from "./page";
 const TITLE = "Neuer Elternsprechtag";
 const FOOTER = ["Abbrechen", "Wird gespeichert…"];
 
+// Der Sprechtag liegt in der Zukunft; die Seite nimmt keinen vergangenen Tag an.
+const CONFERENCE_DAY = testClockDay(14);
+
 const created: ParentConference = {
   id: "6",
   school_class: "2a",
-  date: "2026-11-12",
+  date: CONFERENCE_DAY,
   start_time: "14:00",
   end_time: "17:00",
   slot_minutes: 15,
@@ -79,7 +83,7 @@ async function startCreating() {
     screen.getByRole("button", { name: /Neuer Elternsprechtag/ }),
   );
   fireEvent.change(screen.getByLabelText("Tag"), {
-    target: { value: "2026-11-12" },
+    target: { value: CONFERENCE_DAY },
   });
   fireEvent.change(screen.getByLabelText("Raum (freiwillig)"), {
     target: { value: "Raum 12" },

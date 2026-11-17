@@ -28,9 +28,22 @@ export function shiftDays(iso: string, days: number): string {
   return toISODate(date);
 }
 
+/**
+ * Derselbe Tag `months` Monate später oder früher. Fehlt der Tag im
+ * Zielmonat (31.09., 30.02.), ist es dessen letzter Tag: `setMonth` allein
+ * liefe in den Folgemonat über.
+ */
 function shiftMonths(iso: string, months: number): string {
   const date = parseISODate(iso);
+  const day = date.getDate();
+  date.setDate(1);
   date.setMonth(date.getMonth() + months);
+  const lastDay = new Date(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    0,
+  ).getDate();
+  date.setDate(Math.min(day, lastDay));
   return toISODate(date);
 }
 

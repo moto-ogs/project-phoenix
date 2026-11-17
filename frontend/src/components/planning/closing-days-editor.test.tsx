@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ClosingDayDraft } from "./closing-day-modal";
 import { ApiError } from "~/lib/api-error";
 import type { ClosingDay } from "~/lib/closing-day-helpers";
+import { testClockDay } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
 const {
@@ -152,6 +153,12 @@ function makeClosingDay(overrides: Partial<ClosingDay> = {}): ClosingDay {
     reason: "Weihnachtswoche",
     ...overrides,
   };
+}
+
+/** "YYYY-MM-DD" -> "DD.MM.YYYY" */
+function germanDate(iso: string): string {
+  const [year, month, day] = iso.split("-");
+  return `${day}.${month}.${year}`;
 }
 
 describe("ClosingDaysEditor", () => {
@@ -326,10 +333,13 @@ describe("ClosingDaysEditor", () => {
   });
 
   it("sperrt das Absagen, wenn im Zeitraum nichts mehr geplant ist", async () => {
-    mockList.mockResolvedValue([makeClosingDay()]);
+    // Ein Zeitraum ganz nach heute: das Absagen beginnt nicht erst bei heute.
+    const startDate = testClockDay(14);
+    const endDate = testClockDay(21);
+    mockList.mockResolvedValue([makeClosingDay({ startDate, endDate })]);
     mockBulkCancel.mockResolvedValue({
-      from: "2026-12-24",
-      to: "2026-12-31",
+      from: startDate,
+      to: endDate,
       dryRun: true,
       count: 0,
       days: [],
@@ -344,7 +354,7 @@ describe("ClosingDaysEditor", () => {
 
     expect(
       await screen.findByText(
-        "Im Zeitraum 24.12.2026 – 31.12.2026 sind keine Termine mehr geplant.",
+        `Im Zeitraum ${germanDate(startDate)} – ${germanDate(endDate)} sind keine Termine mehr geplant.`,
       ),
     ).toBeInTheDocument();
     expect(

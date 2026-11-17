@@ -8,6 +8,7 @@ import { MODULE_KEYS } from "~/lib/modules";
 import type { PoolSpringer, PoolWeek } from "~/lib/staff-pool-api";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { useBookedModules, useTenantSafe } from "~/lib/tenant-context";
+import { setTestClock } from "~/test/clock";
 
 vi.unmock("swr");
 
@@ -35,7 +36,8 @@ vi.mock("next/navigation", () => ({
 
 import StaffPoolPage from "./page";
 
-// The test clock stands on Wednesday 2026-09-09; its week starts 2026-09-07.
+// The fixture week is fixed around Wednesday 2026-09-09 (week from 2026-09-07);
+// every test pins the clock to that day.
 const LENA: PoolSpringer = {
   recordId: "7",
   firstName: "Lena",
@@ -95,6 +97,8 @@ function renderPage() {
 
 describe("StaffPoolPage", () => {
   beforeEach(() => {
+    // Fixture week with blocks on Thursday and Friday around this Wednesday.
+    setTestClock("2026-09-09T12:00:00+02:00");
     vi.clearAllMocks();
     vi.mocked(useTenantSafe).mockReturnValue({
       tenantSlug: "demo",
