@@ -57,7 +57,7 @@ type Repositories struct {
 
 // RetentionSummaries lists the recent automated deletion runs.
 type RetentionSummaries interface {
-	ListRecentRetentionSummaries(ctx context.Context, since time.Time, limit int) ([]auditModel.RecentDeletionSummary, error)
+	ListRecentRetentionSummaries(ctx context.Context, days, limit int) ([]auditModel.RecentDeletionSummary, error)
 }
 
 // NewRepositories binds every retained Audit repository to reads and the

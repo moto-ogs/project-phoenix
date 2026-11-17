@@ -15,7 +15,6 @@ func TestAuditTenantReadsRejectMissingScopeAndEnforceRLS(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	missing := Runtime(func(context.Context) (bun.IDB, int64) { return db, 0 })
-	now := time.Now()
 	checks := []func() error{
 		func() error {
 			_, err := NewDeviationEventRepository(missing).ListByRange(context.Background(), records.Date("2030-01-01"), records.Date("2030-01-02"), nil, nil)
@@ -26,7 +25,7 @@ func TestAuditTenantReadsRejectMissingScopeAndEnforceRLS(t *testing.T) {
 			return err
 		},
 		func() error {
-			_, err := NewDataDeletionRepository(missing, auditTestClock).ListRecentRetentionSummaries(context.Background(), now.Add(-time.Hour), 10)
+			_, err := NewDataDeletionRepository(missing, auditTestClock).ListRecentRetentionSummaries(context.Background(), 1, 10)
 			return err
 		},
 		func() error {

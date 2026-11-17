@@ -339,3 +339,30 @@ func TestDataDeletionRepository_CreateAll(t *testing.T) {
 	}
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repo.CreateAll, nil), "an empty batch writes nothing")
 }
+
+// The cleanup statistics list the visit retention runs of the last 30 days,
+// counted back from the database time that stamps deleted_at: a run of today
+// is listed and one of 31 days before is not, whatever the Go clock says. A
+// window counted from an Audit clock years ahead dropped the fresh run.
+func TestRecentRetentionSummariesCountBackFromTheDatabaseTime(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), func() time.Time { return auditClockYearsAhead })
+	student := testpkg.CreateTestStudent(t, db, "Statistik", "Löschung", "1a")
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repo.Create, audit.NewDataDeletion(student.ID, audit.DeletionTypeVisitRetention, 7, "system")))
+	var agedDay, today string
+	require.NoError(t, db.NewRaw(`INSERT INTO audit.data_deletions (tenant_id, student_id, deletion_type, records_deleted, deleted_by, deleted_at)
+		VALUES (?, ?, ?, 5, 'system', clock_timestamp() - INTERVAL '31 days') RETURNING TO_CHAR(deleted_at, 'YYYY-MM-DD'), TO_CHAR(clock_timestamp(), 'YYYY-MM-DD')`,
+		testpkg.Tenant(t), student.ID, audit.DeletionTypeVisitRetention).Scan(ctx, &agedDay, &today))
+
+	summaries, err := testpkg.TenantQuery2(t, ctx, db, repo.ListRecentRetentionSummaries, 30, 10)
+	require.NoError(t, err)
+	days := map[string]int64{}
+	for _, summary := range summaries {
+		days[summary.Date] = summary.RecordsDeleted
+	}
+	assert.GreaterOrEqual(t, days[today], int64(7), "the run of today is listed")
+	assert.NotContains(t, days, agedDay, "the run of 31 days before is outside the window")
+}
