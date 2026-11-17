@@ -9,6 +9,8 @@ const mounts = vi.hoisted(() => ({
     | undefined
     | {
         onWidgetLoad?: () => void;
+        onBeforeInteractive?: () => void;
+        onSuccess: (token: string) => void;
         onError?: () => void;
         onUnsupported?: () => void;
         scriptOptions?: { onError?: () => void };
@@ -148,25 +150,63 @@ describe("SecurityCheck (#7114)", () => {
     expect(screen.getByText(copy.failedTitle)).toBeVisible();
   });
 
-  it("wartet nicht weiter, sobald die Prüfung erschienen ist", () => {
+  it("meldet ein erstelltes Widget, dessen Aufgabe nicht lädt", () => {
+    vi.useFakeTimers();
+    const { container } = render(<Check onToken={vi.fn()} />);
+
+    act(() => mounts.props?.onWidgetLoad?.());
+    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(SECURITY_CHECK_LOAD_TIMEOUT_MS));
+
+    expect(screen.getByText(copy.failedTitle)).toBeVisible();
+    expect(screen.getByRole("button", { name: copy.copyLink })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: copy.restart }));
+    expect(screen.getByText(copy.hint)).toBeVisible();
+    act(() => vi.advanceTimersByTime(SECURITY_CHECK_LOAD_TIMEOUT_MS));
+    expect(screen.getByText(copy.failedTitle)).toBeVisible();
+
+    act(() => mounts.props?.onSuccess("token-1"));
+    expect(screen.getByRole("button", { name: "Solve captcha" })).toBeVisible();
+    expect(screen.queryByText(copy.failedTitle)).not.toBeInTheDocument();
+  });
+
+  it("wartet nicht weiter, sobald die interaktive Aufgabe bereit ist", () => {
     vi.useFakeTimers();
     render(<Check onToken={vi.fn()} />);
 
-    act(() => mounts.props?.onWidgetLoad?.());
+    act(() => mounts.props?.onBeforeInteractive?.());
     act(() => vi.advanceTimersByTime(SECURITY_CHECK_LOAD_TIMEOUT_MS * 2));
 
     expect(screen.getByText(copy.hint)).toBeVisible();
     expect(screen.queryByText(copy.failedTitle)).not.toBeInTheDocument();
   });
 
-  it("hält den Platz der Prüfung frei, bis sie erscheint", () => {
+  it("hält den Platz der Prüfung frei, bis die interaktive Aufgabe bereit ist", () => {
     const { container } = render(<Check onToken={vi.fn()} />);
     expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
 
-    act(() => mounts.props?.onWidgetLoad?.());
+    act(() => mounts.props?.onBeforeInteractive?.());
 
     expect(container.querySelector(".animate-pulse")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Solve captcha" })).toBeVisible();
+  });
+
+  it("wartet nach einem Erfolg ohne interaktive Aufgabe nicht weiter", () => {
+    vi.useFakeTimers();
+    const warn = vi.spyOn(console, "warn");
+    const { container } = render(<Check onToken={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
+    act(() => vi.advanceTimersByTime(SECURITY_CHECK_LOAD_TIMEOUT_MS * 2));
+
+    expect(screen.getByRole("button", { name: "Solve captcha" })).toBeVisible();
+    expect(container.querySelector(".animate-pulse")).not.toBeInTheDocument();
+    expect(screen.queryByText(copy.failedTitle)).not.toBeInTheDocument();
+    expect(warn).not.toHaveBeenCalledWith(
+      "security_check_failed",
+      expect.anything(),
+    );
   });
 
   it("kopiert den Link dieser Seite für einen anderen Browser", async () => {

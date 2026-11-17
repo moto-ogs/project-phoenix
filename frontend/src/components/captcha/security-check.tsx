@@ -75,11 +75,11 @@ export function securityCheckCopy(
  * (#7114, WCAG 3.3.8): a line says what to do and a button loads the check
  * again. The form keeps its entries; only the check starts over.
  *
- * Until Cloudflare shows the widget, a placeholder of its size holds the
+ * Until Cloudflare readies the challenge, a placeholder of its size holds the
  * place. When the check cannot load at all, the form says so: an ad blocker
  * or a DNS filter that blocks Cloudflare left an empty space and a locked
  * send button before. The script error, a widget error, an unsupported
- * browser or a widget that has not shown after a timeout count as failed;
+ * browser or a challenge that is not ready after a timeout count as failed;
  * the notice then names the steps and copies the link for another browser.
  */
 export function SecurityCheck({
@@ -102,10 +102,10 @@ export function SecurityCheck({
   // never finished loading.
   const [attempt, setAttempt] = useState(0);
   // Both name the attempt they belong to, so a restart clears them.
-  const [shownAttempt, setShownAttempt] = useState(-1);
+  const [readyAttempt, setReadyAttempt] = useState(-1);
   const [failedAttempt, setFailedAttempt] = useState(-1);
   const failed = failedAttempt === attempt;
-  const shown = shownAttempt === attempt;
+  const ready = readyAttempt === attempt;
 
   const fail = (reason: FailureReason) => {
     onToken("");
@@ -114,15 +114,16 @@ export function SecurityCheck({
     logger.warn("security_check_failed", { reason, attempt });
   };
 
-  // No callback fires when a blocker swallows the request without an error.
+  // Widget creation does not mean its iframe loaded. Wait for an interactive
+  // challenge or success; a blocker may swallow the iframe request silently.
   useEffect(() => {
-    if (shown || failed) return;
+    if (ready || failed) return;
     const timer = window.setTimeout(() => {
       setFailedAttempt(attempt);
       logger.warn("security_check_failed", { reason: "timeout", attempt });
     }, SECURITY_CHECK_LOAD_TIMEOUT_MS);
     return () => window.clearTimeout(timer);
-  }, [attempt, shown, failed]);
+  }, [attempt, ready, failed]);
 
   const restart = (
     <Button
@@ -152,9 +153,9 @@ export function SecurityCheck({
       className={`min-w-0 flex-1 space-y-2 ${failed && !token ? "basis-full" : ""}`}
     >
       {/* Turnstile draws its 300 × 65 px widget into this box. The placeholder
-          holds the place until then, so nothing jumps when it appears. */}
-      <div className={failed && !shown ? "hidden" : "relative w-fit"}>
-        {shown ? null : (
+          holds the place until the challenge is ready. */}
+      <div className={failed && !ready ? "hidden" : "relative w-fit"}>
+        {ready ? null : (
           <Skeleton
             shape="control"
             className="absolute inset-0"
@@ -168,8 +169,9 @@ export function SecurityCheck({
             siteKey={siteKey}
             scriptOptions={{ id: SCRIPT_ID, onError: () => fail("script") }}
             options={{ theme: "light" }}
-            onWidgetLoad={() => setShownAttempt(attempt)}
+            onBeforeInteractive={() => setReadyAttempt(attempt)}
             onSuccess={(value) => {
+              setReadyAttempt(attempt);
               setFailedAttempt(-1);
               onToken(value);
             }}
