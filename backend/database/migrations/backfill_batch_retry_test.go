@@ -717,8 +717,9 @@ func checkServerRejectedCommit(t *testing.T, super *bun.DB) {
 
 // holdLockWhileWaiting holds the lock probe row of tenantID until the worker
 // that reports its backend pid on pids waits on it (pg_blocking_pids of that
-// pid), then for hold more: the wait the sampler measures.
-func holdLockWhileWaiting(t *testing.T, super *bun.DB, tenantID int64, pids <-chan int, hold time.Duration) <-chan error {
+// pid), then until the sampler issues another query, and finally for hold:
+// the wait the sampler measures.
+func holdLockWhileWaiting(t *testing.T, super *bun.DB, tenantID int64, pids <-chan int, hold time.Duration, samples func() int) <-chan error {
 	t.Helper()
 	ctx := t.Context()
 	_, err := super.ExecContext(ctx, `INSERT INTO public.lock_probe (id) VALUES (?)`, tenantID)
@@ -753,6 +754,15 @@ func holdLockWhileWaiting(t *testing.T, super *bun.DB, tenantID int64, pids <-ch
 			}
 			time.Sleep(5 * time.Millisecond)
 		}
+		sampleCount := samples()
+		deadline = time.Now().Add(5 * time.Second)
+		for samples() == sampleCount {
+			if time.Now().After(deadline) {
+				done <- fmt.Errorf("worker lock sampler did not run while waiting on the lock probe")
+				return
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
 		time.Sleep(hold) // the measured wait
 		done <- nil
 	}()
@@ -771,8 +781,13 @@ func checkUnknownCommit(t *testing.T, super *bun.DB) {
 				t.Parallel()
 				// The unknown COMMIT is driver.ErrBadConn: a pool of its own.
 				pool, faults, tenantID := newBatch(t, super, d, true)
+				counter := testpkg.CaptureQueries(t, pool)
 				pids := make(chan int, 1)
-				held := holdLockWhileWaiting(t, super, tenantID, pids, hold)
+				held := holdLockWhileWaiting(t, super, tenantID, pids, hold, func() int {
+					return len(counter.Matching(func(sql string) bool {
+						return strings.HasPrefix(strings.TrimSpace(sql), strings.ToLower(monitorSamplePrefix))
+					}))
+				})
 				codes := []string{"40P01", "40001", "55P03"}
 				result := d.run(t, pool, super, tenantID, driverSeams{copy: func(ctx context.Context, tx bun.Tx, call int) error {
 					if call == 1 {
