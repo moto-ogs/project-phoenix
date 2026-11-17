@@ -7,6 +7,8 @@ package timetablehttp_test
 // Hinweise entstehen über die Verwaltungsroute der Leitung, wie im Betrieb.
 
 import (
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"context"
 	"encoding/json"
 	"fmt"
@@ -59,6 +61,7 @@ func newStaffNoticeService(t *testing.T, db *bun.DB) timetable.StaffNotices {
 	require.NoError(t, err)
 	return compose.NewStaffNotices(compose.StaffNoticeDependencies{
 		DB:      db,
+		Now:     time.Now,
 		Periods: timetableRepos.CalendarPeriod,
 		Names: func(ctx context.Context, accountIDs []int64) (map[int64]string, error) {
 			rows, err := persons.ListPersonsByAccount(ctx, accountIDs)
@@ -114,7 +117,7 @@ func setupStaffNoticeRoutes(t *testing.T) *staffNoticeRouteFixture {
 	db := testpkg.SetupTestDB(t)
 	tenantID := testpkg.Tenant(t)
 
-	rs := timetablehttp.NewStaffNoticeResource(newStaffNoticeService(t, db), noticeAccountID)
+	rs := timetablehttp.NewStaffNoticeResource(newStaffNoticeService(t, db), noticeAccountID, calendar.TodayDate)
 
 	suffix := time.Now().UnixNano()
 	staffLast := fmt.Sprintf("Kraft-%d", suffix)

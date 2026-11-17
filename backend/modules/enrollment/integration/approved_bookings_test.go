@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -17,7 +18,7 @@ import (
 func TestApprovedBookingsTenantScopeNullStudentAndReadFailure(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(time.Now)
 	var schoolIDs, studentIDs, phaseIDs, requestIDs []int64
 	for _, school := range []string{"first", "second"} {
 		t.Run(school, func(t *testing.T) {
@@ -240,7 +241,7 @@ func TestApprovedBookingsTenantScopeNullStudentAndReadFailure(t *testing.T) {
 func TestCountStudentReferencesForDeletionSeparatesRetainedChildren(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(time.Now)
 	schoolID := testpkg.Tenant(t)
 	ctx := testpkg.ContextForTenant(testpkg.Ctx(t), schoolID)
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)

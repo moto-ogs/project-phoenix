@@ -44,6 +44,7 @@ import (
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
 	reminder "github.com/moto-ogs/project-phoenix/workflows/reminderdelivery"
 	remindersHTTP "github.com/moto-ogs/project-phoenix/workflows/reminderdelivery/http"
@@ -112,6 +113,7 @@ func renderEmailWebhookFailure(w http.ResponseWriter, r *http.Request, err error
 // mountModuleRoutes mounts the route groups modules serve themselves.
 func mountModuleRoutes(tenant chi.Router, settings settingsCompose.SettingsService, caller *owners.CallerRows, answers enrollmentOwner.StudentAnswers,
 	notes peopleOwner.StudentNoteSearch, activities activityContract.ActivityService, staffOverview schoolSetupTargetCoverage,
+	today func() calendar.Date,
 ) error {
 	schoolSetup, err := newSchoolSetupRoute(schoolSetupCompose.Dependencies{
 		Settings: SchoolSetupSettings{Settings: settings},
@@ -127,7 +129,7 @@ func mountModuleRoutes(tenant chi.Router, settings settingsCompose.SettingsServi
 	for _, module := range []moduleRoute{schoolSetup, staffOnboarding} {
 		tenant.Mount(module.pattern, module.router)
 	}
-	return mountSchoolSearch(tenant, caller, answers, notes, activities)
+	return mountSchoolSearch(tenant, caller, answers, notes, activities, today)
 }
 
 // mountPeopleRoutes serves the people directory, guardians, statistics,
@@ -138,8 +140,9 @@ func mountPeopleRoutes(
 	persons *peopleCompose.Directory, guardians peoplePorts.GuardianService, identity identityaccess.Owner, caller *owners.CallerRows,
 	feedback feedbackModule.Capability, mealPlan mealplanModule.Capability, birthdays birthdaysAPI.Service,
 	emergency emergencysnapshot.Query, settings settingsCompose.SettingsService, guardianEmail GuardianEmailDelivery, guardianEmailLog guardianEmailAudit,
+	now func() time.Time,
 ) {
-	tenant.Mount("/statistics", statisticsAPI.NewResource(reports.Statistics, statisticsHTTPRuntime(renderer), logger.With("handler", "statistics")).Router(ProtectedTenantRoutes))
+	tenant.Mount("/statistics", statisticsAPI.NewResource(reports.Statistics, statisticsHTTPRuntime(renderer, now), logger.With("handler", "statistics")).Router(ProtectedTenantRoutes))
 	tenant.Mount("/guardians", NewGuardiansResource(persons, NewGuardianDirectoryRuntime(guardians, renderer, identity, caller.HasCurrentStaff, peopleCompose.NewLegacyRepositoryRuntime(db.Pool()), guardianEmail, guardianEmailLog, logger), viper.GetString("app_env"), logger.With("handler", "guardians")).Router())
 	tenant.Mount("/feedback", newFeedbackResource(feedback).Router())
 	tenant.Mount("/meal-plan", newMealPlanResource(mealPlan, newMealPlanExportRenderer()).Router())
@@ -148,7 +151,7 @@ func mountPeopleRoutes(
 		return found, err
 	}).Router())
 	// Birthday display and staff birthday list (#1542).
-	tenant.Mount("/birthdays", birthdaysAPI.NewResource(birthdays, renderer, caller, logger.With("handler", "birthdays")).Router(ProtectedTenantRoutes))
+	tenant.Mount("/birthdays", birthdaysAPI.NewResource(birthdays, renderer, caller, logger.With("handler", "birthdays"), now).Router(ProtectedTenantRoutes))
 	tenant.Mount("/me", meAPI.NewResource(caller.Caller(), caller, TenantSessionChain, nativeUploads.UploadFiles{}, settings).Router())
 	tenant.Mount("/emergency", emergencyAPI.NewResource(emergency).Router(ProtectedTenantRoutes))
 }
@@ -166,11 +169,11 @@ func mountCommunicationRoutes(
 	// Fotos und Dateien in den Nachrichten an Eltern (#6685), hinter demselben Recht wie die Nachrichten.
 	attachments := newMessageAttachmentRoutes(chat.ParentAttachments, logger.With("handler", "message-attachments"), apiCommon.RequiresPermission(permissions.UsersRead))
 	tenant.Mount("/messages", messagingAPI.NewResource(chat.Messaging, chat.GroupThreads, chat.TeamHandling, chat.MessageMails).Router(ProtectedTenantRoutesWith(attachments.Register)))
-	announcementRoutes := announcementAPI.NewResource(announcements, newDeclarationReports())
+	announcementRoutes := announcementAPI.NewResource(announcements, newDeclarationReports(), time.Now)
 	announcementRoutes.Letters = owners.NewParentLetterPrinter()
 	tenant.Mount("/parent-announcements", announcementRoutes.Router(ProtectedTenantRoutes))
 	// Umfragen an Eltern oder Mitarbeitende (#4781).
-	tenant.Mount("/surveys", announcementAPI.NewSurveyResource(surveys, newDeclarationReports()).Router(ProtectedTenantRoutes))
+	tenant.Mount("/surveys", announcementAPI.NewSurveyResource(surveys, newDeclarationReports(), time.Now).Router(ProtectedTenantRoutes))
 	// Visual-only staff reminders (#1457).
 	tenant.Mount("/reminders", remindersHTTP.NewResource(reminders, ReminderHTTPRuntime()).Router())
 	// PWA standalone-usage reporting (#2189).

@@ -62,7 +62,7 @@ type RetentionSettings interface {
 }
 
 type usageRepository interface {
-	RecordSeen(ctx context.Context, tenantID, accountID int64, portal string) error
+	RecordSeen(ctx context.Context, tenantID, accountID int64, portal string, seenAt time.Time) error
 	DeleteLastSeenBefore(ctx context.Context, tenantID int64, cutoff time.Time) (int, error)
 }
 
@@ -93,6 +93,9 @@ type usageService struct {
 	settings       RetentionSettings
 	logger         *slog.Logger
 	tenantRuntime  *tenant.UnitOfWork
+	// now stamps last_seen_at and dates the retention cutoff: one clock for
+	// the report and the decision that reads it.
+	now func() time.Time
 
 	snapshotMu   sync.Mutex
 	snapshot     []UsageRow
@@ -107,7 +110,11 @@ func NewUsageService(
 	accountTenants GuardianSchools,
 	settings RetentionSettings,
 	logger *slog.Logger,
+	now func() time.Time,
 ) UsageService {
+	if now == nil {
+		panic("pwa usage: the composition's clock is required")
+	}
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -118,12 +125,13 @@ func NewUsageService(
 		accountTenants: accountTenants,
 		settings:       settings,
 		logger:         logger,
+		now:            now,
 	}
 }
 
 // NewTenantUsageService is NewUsageService over the root's tenant unit of
 // work (ADR 0059). A missing collaborator is a construction error; the
-// logger stays optional.
+// logger stays optional; the clock is required.
 func NewTenantUsageService(
 	runtime tenant.UnitOfWork,
 	db *bun.DB,
@@ -132,14 +140,15 @@ func NewTenantUsageService(
 	accountTenants GuardianSchools,
 	settings RetentionSettings,
 	logger *slog.Logger,
+	now func() time.Time,
 ) (UsageService, error) {
 	if runtime.IsZero() {
 		return nil, fmt.Errorf("pwa usage: %w", tenant.ErrRuntimeRequired)
 	}
-	if db == nil || repo == nil || summaries == nil || accountTenants == nil || settings == nil {
+	if db == nil || repo == nil || summaries == nil || accountTenants == nil || settings == nil || now == nil {
 		return nil, errors.New("pwa usage: all dependencies are required")
 	}
-	service := NewUsageService(db, repo, summaries, accountTenants, settings, logger).(*usageService)
+	service := NewUsageService(db, repo, summaries, accountTenants, settings, logger, now).(*usageService)
 	service.tenantRuntime = &runtime
 	return service, nil
 }
@@ -148,7 +157,7 @@ func (s *usageService) ReportStaff(ctx context.Context, accountID int64) error {
 	if err := validateUsage(accountID, deliveryModels.PushPortalStaff); err != nil {
 		return err
 	}
-	return s.repo.RecordSeen(ctx, tenant.FromContext(ctx), accountID, deliveryModels.PushPortalStaff)
+	return s.repo.RecordSeen(ctx, tenant.FromContext(ctx), accountID, deliveryModels.PushPortalStaff, s.now())
 }
 
 func (s *usageService) ReportParent(ctx context.Context, accountID int64) error {
@@ -172,6 +181,7 @@ func (s *usageService) ReportParent(ctx context.Context, accountID int64) error 
 
 	// A guardian mid-offboarding simply has nothing to report. Each remaining
 	// mapping gets its own tenant role and RLS boundary after the admin read ends.
+	seenAt := s.now()
 	for _, mapping := range mappings {
 		tenantID, err := tenant.NewTenantID(mapping)
 		if err != nil {
@@ -181,7 +191,7 @@ func (s *usageService) ReportParent(ctx context.Context, accountID int64) error 
 			if err := validateTenantWriteContext(txCtx, mapping); err != nil {
 				return err
 			}
-			return s.repo.RecordSeen(txCtx, mapping, accountID, deliveryModels.PushPortalParent)
+			return s.repo.RecordSeen(txCtx, mapping, accountID, deliveryModels.PushPortalParent, seenAt)
 		}); err != nil {
 			return fmt.Errorf("recording pwa usage for tenant %d: %w", mapping, err)
 		}
@@ -207,7 +217,7 @@ func (s *usageService) CleanupExpiredUsage(ctx context.Context) (*CleanupResult,
 		return nil, fmt.Errorf("pwa usage retention must be positive, got %d", retentionDays)
 	}
 
-	cutoff := time.Now().AddDate(0, 0, -retentionDays)
+	cutoff := s.now().AddDate(0, 0, -retentionDays)
 	deleted, err := s.repo.DeleteLastSeenBefore(ctx, tenantID, cutoff)
 	if err != nil {
 		return nil, fmt.Errorf("delete expired pwa usage rows: %w", err)

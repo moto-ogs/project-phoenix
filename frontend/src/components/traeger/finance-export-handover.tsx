@@ -15,7 +15,7 @@ import {
   Send,
   Settings2,
 } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import {
   destinationText,
   EXPORT_RECIPIENT_PATH,
@@ -24,6 +24,7 @@ import {
   HANDOVER_UNKNOWN_TEXT,
   handoverReasonText,
 } from "~/components/traeger/export-handover-format";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { ConfirmationModal } from "~/components/ui/modal";
@@ -35,6 +36,8 @@ import {
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import {
   type ExportRecipient,
   type ExportRecipientsPage,
@@ -123,34 +126,20 @@ export function useFinanceHandover(
   onHandedOver: (arrived: HandoverResult | null) => void,
   datev?: DatevHandoverNotices,
 ) {
-  const [recipients, setRecipients] = useState<ExportRecipientsPage | null>(
-    null,
+  // Without the recipients the page keeps its downloads: their failure
+  // stays silent, a 403 only hides them.
+  const { data: recipients, failure } = useTraegerResource(
+    traegerBillingKeys.exportRecipients(),
+    fetchExportRecipients,
+    "die Empfänger",
   );
-  const [recipientHidden, setRecipientHidden] = useState(false);
+  const recipientHidden = failure instanceof ApiError && failure.status === 403;
   const [running, setRunning] = useState<string | null>(null);
   const [notice, setNotice] = useState<HandoverNotice | null>(null);
   const [repeat, setRepeat] = useState<HandoverAttempt | null>(null);
   const errors = useApiErrorDisplay();
   const { success } = useToast();
-
-  useEffect(() => {
-    let current = true;
-    fetchExportRecipients()
-      .then((page) => {
-        if (current) setRecipients(page);
-      })
-      .catch((err: unknown) => {
-        if (current && err instanceof ApiError && err.status === 403)
-          setRecipientHidden(true);
-        // Without the recipient the page keeps its downloads.
-        logger.warn("traeger_export_recipient_unavailable", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      current = false;
-    };
-  }, []);
+  const invalidate = useInvalidateFamily();
 
   const start = useCallback(
     async (attempt: HandoverAttempt) => {
@@ -215,10 +204,12 @@ export function useFinanceHandover(
         }
       } finally {
         setRunning(null);
+        // The recipients carry their last handover.
+        void invalidate(traegerBillingKeys.exportRecipientsFamily);
         onHandedOver(arrived);
       }
     },
-    [datev, errors, onHandedOver, success],
+    [datev, errors, invalidate, onHandedOver, success],
   );
 
   const handOver = useCallback(

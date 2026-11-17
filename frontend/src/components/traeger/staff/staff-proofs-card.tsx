@@ -23,6 +23,8 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { documentsConcept } from "~/lib/concepts/documents";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
 import {
   deleteStaffProof,
   STAFF_PROOF_STATUS,
@@ -81,6 +83,12 @@ export function StaffProofsCard({
   const [deleting, setDeleting] = useState(false);
   const deleteErrors = useApiFormError();
   const { success } = useToast();
+  const invalidateFamily = useInvalidateFamily();
+  // The list „Personalnachweise“ shows the state of every record.
+  const changed = (next: StaffProof[]) => {
+    onChanged(next);
+    void invalidateFamily(traegerReportKeys.staffProofsFamily);
+  };
   const open = proofs.filter(
     (proof) => proof.status !== "" && proof.status !== "valid",
   ).length;
@@ -89,7 +97,7 @@ export function StaffProofsCard({
     if (!removing) return;
     setDeleting(true);
     try {
-      onChanged(await deleteStaffProof(recordId, removing.typeId));
+      changed(await deleteStaffProof(recordId, removing.typeId));
       success(`„${removing.typeName}“ von ${personName} ist entfernt.`);
       setRemoving(null);
     } catch (err) {
@@ -199,7 +207,7 @@ export function StaffProofsCard({
           onClose={() => setTarget(null)}
           onSaved={(next) => {
             setTarget(null);
-            onChanged(next);
+            changed(next);
           }}
         />
       ) : null}

@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   TraegerAbsenceType,
   TraegerAbsenceTypeList,
 } from "~/lib/traeger-absence-api";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchTraegerAbsenceTypes: vi.fn(),
@@ -62,9 +64,9 @@ const LIST: TraegerAbsenceTypeList = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerAbsenceTypesPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

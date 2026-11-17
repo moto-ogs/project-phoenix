@@ -5,7 +5,7 @@ import {
   countChildStatuses,
   isOpenChangeRequestStatus,
 } from "~/lib/enrollment-status";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   CalendarRange,
@@ -38,7 +38,10 @@ import {
 import { fetchSettingsSchema } from "~/lib/settings-api";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import type { FormErrorInput } from "~/components/ui/form-error";
-import { useApiLoadError } from "~/contexts/ToastContext";
+import { useSettingsSchema } from "~/lib/hooks/use-settings-schema";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { EmptyState } from "~/components/ui/empty-state";
 import { DataTableStatusBadge } from "~/components/ui/data-table";
 import {
@@ -56,12 +59,14 @@ import { StatCard } from "~/components/ui/stat-card";
 import { ButtonLink } from "~/components/ui/button";
 import NavigationLink from "~/components/ui/navigation-link";
 import { formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
 import { parentConversationsConcept } from "~/lib/concepts/parentConversations";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { ProgressBar } from "~/components/ui/progress-bar";
 
-const logger = createLogger({ component: "AdminEnrollmentsList" });
+const NO_PHASES: Phase[] = [];
+const NO_REQUESTS: AdminRequestSummary[] = [];
+const NO_CHANGE_REQUESTS: AdminEnrollmentChangeRequest[] = [];
+const NO_SCHEMAS: FormSchema[] = [];
 
 type SetupStepStatus = "done" | "todo" | "blocked";
 
@@ -101,124 +106,85 @@ export function AdminEnrollmentsList({
 } = {}) {
   const tenantSlug = useTenantSlugSafe();
   const tenantPath = useTenantAwarePath();
-  const [phases, setPhases] = useState<Phase[]>([]);
-  const [schemas, setSchemas] = useState<FormSchema[]>([]);
-  const [careOfferingStats, setCareOfferingStats] = useState<CareOfferingStats>(
-    { total: 0, activeInActivePhases: 0 },
+  const phasesRead = useSWRAuth(enrollmentKeys.phases(), () => listPhases());
+  const requestsRead = useSWRAuth(enrollmentKeys.adminRequests(), () =>
+    listAdminRequests(),
   );
-  const [enrollmentEnabled, setEnrollmentEnabled] = useState<boolean | null>(
-    null,
+  // Die Änderungsanfragen haben einen eigenen Kasten: scheitern sie, zeigt
+  // nur dieser den Ladefehler, der Rest der Seite bleibt nutzbar.
+  const changeRequestsRead = useSWRAuth(enrollmentKeys.changeRequests(), () =>
+    listAdminEnrollmentChangeRequests(),
   );
-  const [allRequests, setAllRequests] = useState<AdminRequestSummary[]>([]);
-  const [changeRequests, setChangeRequests] = useState<
-    AdminEnrollmentChangeRequest[]
-  >([]);
-  const [changeRequestsFailed, setChangeRequestsFailed] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [loaded, setLoaded] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
-  const changeRequestsError = useApiLoadError();
-  const showChangeRequestsError = changeRequestsError.show;
-  const clearChangeRequestsError = changeRequestsError.clear;
-  const reload = useCallback(() => setAttempt((value) => value + 1), []);
-  const latestSchemas = useMemo(() => latestSchemasByName(schemas), [schemas]);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      clearLoadError();
-      clearChangeRequestsError();
-      setChangeRequestsFailed(false);
-      try {
-        const [
-          phasesData,
-          allRequestsData,
-          changeRequestsResult,
-          schemasData,
-          settingsData,
-        ] = await Promise.all([
-          listPhases(),
-          listAdminRequests(),
-          // Die Änderungsanfragen haben einen eigenen Kasten: scheitern sie,
-          // zeigt nur dieser den Ladefehler, der Rest der Seite bleibt nutzbar.
-          listAdminEnrollmentChangeRequests()
-            .then((data) => ({ data, failed: false, error: null as unknown }))
-            .catch((err: unknown) => {
-              logger.error("admin_change_requests_load_failed", {
-                error: err instanceof Error ? err.message : "unknown",
-              });
-              return {
-                data: [] as AdminEnrollmentChangeRequest[],
-                failed: true,
-                error: err,
-              };
-            }),
-          // Formulare, Einstellungen und Angebote speisen die Einrichtungs-
-          // schritte. Ohne sie stünden dort falsche Angaben ("Ausgeschaltet",
-          // 0 Angebote), darum scheitert die ganze Seite mit ihnen.
-          listSchemas(),
-          fetchSettingsSchema(),
-        ]);
-        const offeringLists = await Promise.all(
-          phasesData.map((phase) => listCareOfferings(phase.id)),
-        );
-        if (cancelled) return;
-        setPhases(phasesData);
-        setAllRequests(allRequestsData);
-        setChangeRequests(changeRequestsResult.data);
-        setChangeRequestsFailed(changeRequestsResult.failed);
-        if (changeRequestsResult.failed) {
-          void showChangeRequestsError(changeRequestsResult.error, {
-            object: "die Liste der Änderungsanfragen",
-            retry: reload,
-          });
-        }
-        setSchemas(schemasData);
-        const activePhaseIds = new Set(
-          phasesData
-            .filter((phase) => phase.is_active)
-            .map((phase) => phase.id),
-        );
-        const careOfferings = offeringLists.flat();
-        setCareOfferingStats({
-          total: careOfferings.length,
-          activeInActivePhases: careOfferings.filter(
-            (offering) =>
-              offering.is_active && activePhaseIds.has(offering.phase_id),
-          ).length,
-        });
-        setEnrollmentEnabled(readEnrollmentEnabled(settingsData));
-        setLoaded(true);
-      } catch (err) {
-        if (cancelled) return;
-        logger.error("admin_enrollments_load_failed", {
-          error: err instanceof Error ? err.message : "unknown",
-        });
-        setLoaded(false);
-        await showLoadError(err, {
-          object: "die Übersicht der Anmeldungen",
-          retry: reload,
-        });
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void load();
-    return () => {
-      cancelled = true;
+  // Formulare, Einstellungen und Angebote speisen die Einrichtungsschritte.
+  // Ohne sie stünden dort falsche Angaben ("Ausgeschaltet", 0 Angebote),
+  // darum scheitert die ganze Seite mit ihnen.
+  const schemasRead = useSWRAuth(enrollmentKeys.formSchemas(), () =>
+    listSchemas(),
+  );
+  const settingsRead = useSettingsSchema();
+  const phaseIds = useMemo(
+    () => (phasesRead.data ?? []).map((phase) => phase.id),
+    [phasesRead.data],
+  );
+  const offeringsRead = useSWRAuth(
+    phasesRead.data ? enrollmentKeys.allPhasesCareOfferings(phaseIds) : null,
+    async () =>
+      (
+        await Promise.all(phaseIds.map((phaseId) => listCareOfferings(phaseId)))
+      ).flat(),
+    { keepPreviousData: false },
+  );
+  const phases = phasesRead.data ?? NO_PHASES;
+  const allRequests = requestsRead.data ?? NO_REQUESTS;
+  const changeRequests = changeRequestsRead.data ?? NO_CHANGE_REQUESTS;
+  const schemas = schemasRead.data ?? NO_SCHEMAS;
+  const settingsData = settingsRead.data;
+  const enrollmentEnabled =
+    settingsData === undefined ? null : readEnrollmentEnabled(settingsData);
+  const careOfferingStats = useMemo<CareOfferingStats>(() => {
+    const activePhaseIds = new Set(
+      phases.filter((phase) => phase.is_active).map((phase) => phase.id),
+    );
+    const careOfferings = offeringsRead.data ?? [];
+    return {
+      total: careOfferings.length,
+      activeInActivePhases: careOfferings.filter(
+        (offering) =>
+          offering.is_active && activePhaseIds.has(offering.phase_id),
+      ).length,
     };
-  }, [
-    attempt,
-    reload,
-    clearLoadError,
-    clearChangeRequestsError,
-    showLoadError,
-    showChangeRequestsError,
-  ]);
+  }, [phases, offeringsRead.data]);
+  const mainResources = [
+    { data: phasesRead.data, error: phasesRead.error },
+    { data: requestsRead.data, error: requestsRead.error },
+    { data: schemasRead.data, error: schemasRead.error },
+    { data: settingsData, error: settingsRead.error },
+    { data: offeringsRead.data, error: offeringsRead.error },
+  ];
+  const loadError = useSwrResourceLoadError(
+    mainResources,
+    "die Übersicht der Anmeldungen",
+    () =>
+      Promise.all([
+        phasesRead.mutate(),
+        requestsRead.mutate(),
+        changeRequestsRead.mutate(),
+        schemasRead.mutate(),
+        settingsRead.mutate(),
+        offeringsRead.mutate(),
+      ]),
+  );
+  const changeRequestsError = useSwrResourceLoadError(
+    [{ data: changeRequestsRead.data, error: changeRequestsRead.error }],
+    "die Liste der Änderungsanfragen",
+    () => changeRequestsRead.mutate(),
+  );
+  const changeRequestsFailed = changeRequestsError.failure !== undefined;
+  const loaded = mainResources.every((resource) => resource.data !== undefined);
+  const loading =
+    !loadError.failure &&
+    (!loaded || (!changeRequestsRead.data && !changeRequestsFailed));
+  const latestSchemas = useMemo(() => latestSchemasByName(schemas), [schemas]);
 
   useEffect(() => {
     if (!onSummaryChange) return;

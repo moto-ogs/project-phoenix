@@ -27,14 +27,14 @@ clamped AS (
 	SELECT ag.room_id,
 	       v.student_id,
 	       GREATEST(v.entry_time, es.start_at) AS entry_at,
-	       LEAST(COALESCE(v.exit_time, NOW()), es.end_at) AS exit_at
+	       LEAST(COALESCE(v.exit_time, ?::timestamptz), es.end_at) AS exit_at
 	FROM active.visits v
 	JOIN active.groups ag ON ag.id = v.active_group_id
 	JOIN eligible_student es ON es.student_id = v.student_id
 	JOIN retention r ON r.student_id = v.student_id
 	WHERE v.entry_time < es.end_at
 	  AND (v.exit_time IS NULL OR v.exit_time > es.start_at)
-	  AND v.created_at >= NOW() - make_interval(days => r.retention_days)
+	  AND v.created_at >= ?::timestamptz - make_interval(days => r.retention_days)
 	  AND v.tenant_id = ? AND ag.tenant_id = ?
 ),
 scoped AS (
@@ -94,8 +94,9 @@ func (s *Store) RoomUtilization(ctx context.Context, windows []studentpresence.S
 		return nil, ports.Stats{}, err
 	}
 	var rows []studentpresence.RoomUtilization
+	now := s.now()
 	started := time.Now()
-	err = db.NewRaw(roomUtilizationQuery, string(input), tenantID, tenantID, tenantID).Scan(ctx, &rows)
+	err = db.NewRaw(roomUtilizationQuery, string(input), tenantID, now, now, tenantID, tenantID).Scan(ctx, &rows)
 	stats := ports.Stats{Queries: 1, Rows: int64(len(rows)), StatementDuration: time.Since(started)}
 	if err != nil {
 		return nil, stats, fmt.Errorf("statistics room utilization: %w", err)

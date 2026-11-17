@@ -1,7 +1,7 @@
 "use client";
 
 import { EmptyState } from "~/components/ui/empty-state";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import {
   StudentChoiceList,
@@ -27,7 +27,10 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import {
   type Guardian,
   type ThreadAudience,
@@ -55,29 +58,14 @@ const NO_STUDENT_IDS: ReadonlySet<string> = new Set();
 function useReachableStudentIds(
   enabled: boolean,
 ): ReadonlySet<string> | null | undefined {
-  const [ids, setIds] = useState<ReadonlySet<string> | null | undefined>(
-    undefined,
+  // The mark is an extra: without it the list works as before and the
+  // parents step still says when a child has no parent access.
+  const { data, error } = useSWRAuth(
+    enabled ? tenantContactKeys.messageReachableStudents() : null,
+    fetchReachableStudentIds,
   );
-  useEffect(() => {
-    if (!enabled) return;
-    let active = true;
-    fetchReachableStudentIds()
-      .then((result) => {
-        if (active) setIds(result);
-      })
-      .catch((err) => {
-        // The mark is an extra: without it the list works as before and the
-        // parents step still says when a child has no parent access.
-        logger.warn("new_message_reachable_students_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (active) setIds(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, [enabled]);
-  return ids;
+  if (!enabled) return undefined;
+  return data ?? (error ? null : undefined);
 }
 
 interface PickedStudent {
@@ -151,16 +139,31 @@ export function NewMessageModal({
   // Leadership members may begin a conversation the leadership only reads
   // (#5200). The backend says per child whether that is possible.
   const [audience, setAudience] = useState<ThreadAudience>("team");
-  const [guardians, setGuardians] = useState<Guardian[]>([]);
-  const [guardiansLoading, setGuardiansLoading] = useState(false);
+  const guardiansResource = useSWRAuth(
+    student ? tenantContactKeys.messageGuardians(student.id, audience) : null,
+    () =>
+      student
+        ? // The team list is the default request; only the leadership one names it.
+          audience === "leadership"
+          ? fetchGuardians(student.id, audience)
+          : fetchGuardians(student.id)
+        : Promise.resolve([]),
+    { keepPreviousData: false },
+  );
   // A failed guardian lookup (403/500/network) is an operational error, not the
-  // domain fact "this child has no portal guardian" — keep it separate so the UI
-  // can offer a retry instead of misreporting the failure as an empty list.
-  const [guardiansFailed, setGuardiansFailed] = useState(false);
-  const [guardiansReloadKey, setGuardiansReloadKey] = useState(0);
-  const guardiansError = useApiLoadError();
-  const showGuardiansError = guardiansError.show;
-  const clearGuardiansError = guardiansError.clear;
+  // domain fact "this child has no portal guardian": the UI offers a retry
+  // instead of misreporting the failure as an empty list.
+  const guardiansLoad = useSwrResourceLoadError(
+    [guardiansResource],
+    "die Liste der Eltern",
+    () => guardiansResource.mutate(),
+  );
+  const guardians = guardiansResource.data ?? [];
+  const guardiansFailed = guardiansLoad.failure !== undefined;
+  const guardiansLoading =
+    student !== null &&
+    guardiansResource.data === undefined &&
+    !guardiansResource.error;
   // The guardian whose chat the running open is for.
   const [openingId, setOpeningId] = useState<string | null>(null);
   // Mounted only while open. Another child or audience starts a new session,
@@ -173,55 +176,6 @@ export function NewMessageModal({
   const openError = useApiFormError();
   const latestPickRef = useRef<(guardian: Guardian) => void>(() => undefined);
 
-  // Load the guardians of the picked child for the recipient step.
-  useEffect(() => {
-    if (!student) {
-      setGuardians([]);
-      setGuardiansFailed(false);
-      setAudience("team");
-      clearGuardiansError();
-      return;
-    }
-    let active = true;
-    setGuardiansLoading(true);
-    setGuardiansFailed(false);
-    clearGuardiansError();
-    // The team list is the default request; only the leadership one names it.
-    (audience === "leadership"
-      ? fetchGuardians(student.id, audience)
-      : fetchGuardians(student.id)
-    )
-      .then((list) => {
-        if (active) setGuardians(list);
-      })
-      .catch((err) => {
-        logger.warn("new_message_guardians_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          student_id: student.id,
-        });
-        if (active) {
-          setGuardians([]);
-          setGuardiansFailed(true);
-          void showGuardiansError(err, {
-            object: "die Liste der Eltern",
-            retry: () => setGuardiansReloadKey((key) => key + 1),
-          });
-        }
-      })
-      .finally(() => {
-        if (active) setGuardiansLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [
-    student,
-    audience,
-    guardiansReloadKey,
-    showGuardiansError,
-    clearGuardiansError,
-  ]);
-
   const handlePickStudent = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (target) setStudent(target);
@@ -229,6 +183,7 @@ export function NewMessageModal({
 
   const resetToStudentStep = () => {
     setStudent(null);
+    setAudience("team");
     openError.clear();
   };
 
@@ -273,7 +228,7 @@ export function NewMessageModal({
   // The catalog text loads on demand; until it is there the failed list
   // keeps its loading line, never "no guardians".
   const guardiansErrorPending =
-    guardiansFailed && formErrorMessage(guardiansError.error) === null;
+    guardiansFailed && formErrorMessage(guardiansLoad.error) === null;
 
   return (
     <SlideOver
@@ -384,7 +339,7 @@ export function NewMessageModal({
               {guardiansLoading || guardiansErrorPending ? (
                 <Loading message="Eltern werden geladen …" />
               ) : guardiansFailed ? (
-                <LoadErrorAlert error={guardiansError.error} />
+                <LoadErrorAlert error={guardiansLoad.error} />
               ) : guardians.length === 0 ? (
                 <EmptyState
                   variant="compact"

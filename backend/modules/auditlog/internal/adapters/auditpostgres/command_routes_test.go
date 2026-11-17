@@ -19,7 +19,7 @@ func TestWithRoutedWritesKeepsEveryRepository(t *testing.T) {
 	t.Parallel()
 
 	runtime := Runtime(func(context.Context) (bun.IDB, int64) { return nil, 0 })
-	routed := NewRepositories(runtime, runtime).WithRoutedWrites(discardingCommand{})
+	routed := NewRepositories(runtime, runtime, auditTestClock).WithRoutedWrites(discardingCommand{})
 	value := reflect.ValueOf(routed).Elem()
 	for index := 0; index < value.NumField(); index++ {
 		name := value.Type().Field(index).Name

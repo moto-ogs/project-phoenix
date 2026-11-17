@@ -9,6 +9,13 @@
  */
 export const DELIBERATE_LOGOUT_KEY = "deliberateLogout";
 
+/**
+ * sessionStorage marker: the last logout ended the session on this device,
+ * but the server could not revoke it (#7209). The login page reads it once
+ * and tells the person.
+ */
+export const LOGOUT_NOT_REVOKED_KEY = "logoutNotRevoked";
+
 import { getSession } from "next-auth/react";
 import { handleAuthFailure } from "./auth-failure";
 import type { ErrorCode } from "./error-codes.generated";

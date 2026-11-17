@@ -397,10 +397,22 @@
       "legacy": "payer_guardian_protected"
     },
     {
+      "code": "care.photo_consent_busy",
+      "class": "unavailable",
+      "parameters": [],
+      "legacy": "care.photo_consent_busy"
+    },
+    {
       "code": "care.photo_consent_not_withdrawn",
       "class": "business_rejection",
       "parameters": [],
       "legacy": "photo_consent_not_withdrawn"
+    },
+    {
+      "code": "care.photos_disabled",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "care.photos_disabled"
     },
     {
       "code": "care.pickup_change_care_day_ended",

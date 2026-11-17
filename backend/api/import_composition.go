@@ -1,6 +1,8 @@
 package api
 
 import (
+	"time"
+
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	"github.com/moto-ogs/project-phoenix/modules/auditlog/consents"
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
@@ -48,11 +50,11 @@ type imports struct {
 // build the same services from the constructors below, so the two cannot
 // drift.
 
-// newImportRuntime is the transaction runner, audit trail and observation
-// sink every import service of one root shares.
-func newImportRuntime(audit auditModels.Command, observe func(importModels.ImportObservation)) importPorts.ImportRuntime {
+// newImportRuntime is the transaction runner, audit trail, observation sink
+// and clock every import service of one root shares.
+func newImportRuntime(audit auditModels.Command, observe func(importModels.ImportObservation), now func() time.Time) importPorts.ImportRuntime {
 	return importPorts.ImportRuntime{
-		Transactions: dataImportCompose.NewTransactions(), Audit: audit, Observe: observe,
+		Transactions: dataImportCompose.NewTransactions(), Audit: audit, Observe: observe, Now: now,
 		Fingerprint: securityruntime.Fingerprint, BoundStatements: tenant.WithStatementTimeout,
 		ConnectionLost: transactionruntime.IsTransientDatabaseError, SavepointLost: tenant.IsSavepointControlFailure,
 	}
@@ -86,6 +88,7 @@ func newStudentImport(
 			PrivacyConsentBatches: privacyConsentBatches(presence),
 			GuardianBatches:       guardianBatches(persons),
 			EnrollmentBatches:     enrollmentBatches(persons),
+			Now:                   runtime.Now,
 			Today:                 today,
 			ConsentHistoryBatches: consentHistoryBatches(consentHistory),
 			// The owner's Kontingentzahl rule, so the preview counts what
@@ -127,6 +130,7 @@ func newStaffImport(
 			Membership:                   membership,
 			LockStaffPersonMerge:         owners.LockStaffPersonMergeShared,
 			Records:                      workforce,
+			Now:                          runtime.Now,
 		},
 	), runtime)
 }
@@ -229,11 +233,13 @@ func newOpeningBalanceImport(
 ) importModels.OpeningBalanceImportFactory {
 	deps.Transactions = runtime.Transactions
 	deps.References = owners.NewOpeningReferences(membership, persons, workforce)
-	return importModels.OpeningBalanceImportFactory(
-		func(effectiveDate timezone.Date, note string, decidedByStaffID int64) importModels.RowImporter[importModels.OpeningBalanceImportRow] {
+	return importModels.OpeningBalanceImportFactory{
+		Build: func(effectiveDate timezone.Date, note string, decidedByStaffID int64) importModels.RowImporter[importModels.OpeningBalanceImportRow] {
 			config := dataImportRetained.NewOpeningBalanceImportConfig(deps, effectiveDate, note, decidedByStaffID)
 			return dataImportRetained.NewImportService(config, runtime)
-		})
+		},
+		Today: timezone.CalendarDateClock(runtime.Now),
+	}
 }
 
 // newServeImports builds the import services the server root mounts over
@@ -242,9 +248,9 @@ func newServeImports(
 	audit owners.AuditOwner, identity identityaccess.Owner, groups schoolstructure.GroupListing, rooms facilities.Query,
 	persons peopledirectory.Capability, carePlan careplan.Capability, presence owners.PresenceOwner, organizations organizationtenancy.Capability,
 	membership schoolmembership.Capability, workTime workforceModule.Capability, workforce owners.WorkforcePlanning,
-	cohorts importCohorts,
+	cohorts importCohorts, now func() time.Time,
 ) imports {
-	runtime := newImportRuntime(audit.Command, observeDataImport)
+	runtime := newImportRuntime(audit.Command, observeDataImport, now)
 	return imports{
 		Student: newStudentImport(
 			runtime, identity, groups, rooms, persons, personBatches(persons), persons, carePlan, presence.Presence,

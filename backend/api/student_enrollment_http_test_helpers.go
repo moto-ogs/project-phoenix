@@ -4,6 +4,7 @@ package api
 
 import (
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -12,6 +13,6 @@ import (
 )
 
 func NewStudentEnrollmentHTTPTestResource(people StudentTestPeople, userContext *owners.CallerRows) *enrollmentHTTP.StudentResource {
-	directory := studentsAPI.NewResource(studentsAPI.ResourceConfig{PeopleDirectory: people.PeopleDirectory, UserContextService: userContext})
+	directory := studentsAPI.NewResource(studentsAPI.ResourceConfig{PeopleDirectory: people.PeopleDirectory, UserContextService: userContext, Now: time.Now})
 	return &enrollmentHTTP.StudentResource{StudentReadAccess: directory.StudentReadAccess, Logger: slog.Default()}
 }

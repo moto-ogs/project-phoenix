@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/internal/ptrtest"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -572,7 +573,8 @@ func TestVisitRepository_DeleteExpiredVisits(t *testing.T) {
 
 	t.Run("does not delete active visits", func(t *testing.T) {
 		data := createVisitTestData(t, db)
-		now := time.Now()
+		// A fixed instant: the deletion takes its cutoff from the caller.
+		now := calendar.NewDate(2026, 11, 2).BerlinMidnight().Add(10 * time.Hour)
 		visit := studentpresence.Visit{
 			StudentID:     data.Student1ID,
 			ActiveGroupID: data.ActiveGroup.ID,
@@ -634,8 +636,9 @@ func TestVisitRepository_TransferVisitsFromRecentSessions(t *testing.T) {
 		visit, err = repo.RecordVisit(ctx, visit)
 		require.NoError(t, err)
 
-		// End the old group within the last hour
-		testpkg.EndTestActiveGroup(t, db, testpkg.EndedActiveGroup{GroupID: oldGroup.ID})
+		// End the old group within the last hour, on the clock the transfer
+		// compares with.
+		require.NoError(t, groupRepo.EndGroup(ctx, oldGroup.ID, now.Add(-10*time.Minute)))
 
 		// Create new active group with same device
 		newGroup := studentpresence.LiveGroup{

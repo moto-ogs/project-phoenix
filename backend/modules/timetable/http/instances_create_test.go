@@ -53,8 +53,9 @@ func buildCreateSetup(t *testing.T) *createSetup {
 
 	mock := &mockInstanceService{}
 	res := newResourceForTest(Dependencies{
-		TimetableData:   testTimetableData(db).TimetableData(),
+		TimetableData:   testTimetableData(db, createSetupClock).TimetableData(),
 		InstanceService: mock,
+		Now:             createSetupClock,
 		SettingsService: &settingsDouble{
 			ResolveBoolFn: func(context.Context, string) (bool, error) { return true, nil },
 		},
@@ -88,8 +89,14 @@ func doCreate(t *testing.T, router chi.Router, body any) *httptest.ResponseRecor
 	return w
 }
 
+// createSetupToday pins the create and update routes to a school Monday.
+var createSetupToday = calendar.NewDate(2030, 8, 26)
+
+func createSetupClock() time.Time { return createSetupToday.BerlinMidnight().Add(12 * time.Hour) }
+
+// nextTimetableWorkday is the first weekday after createSetupToday.
 func nextTimetableWorkday() calendar.Date {
-	date := calendar.TodayDate().AddDays(1)
+	date := createSetupToday.AddDays(1)
 	for date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
 		date = date.AddDays(1)
 	}
@@ -322,8 +329,9 @@ func setupDuplicateInstanceRoute(
 ) chi.Router {
 	t.Helper()
 
-	_, serviceFactory := RootCompositions.Module(t)
+	_, serviceFactory := RootCompositions.Module(t, clock)
 	resource := newResourceForTest(Dependencies{
+		Now:             clock,
 		TimetableData:   testTimetableData(db, clock).TimetableData(),
 		SettingsService: &settingsDouble{ResolveIntFn: func(context.Context, string) (int, error) { return 12, nil }},
 		InstanceService: serviceFactory.Instance,
@@ -336,7 +344,7 @@ func TestCreateInstance_UnwiredResource(t *testing.T) {
 
 	s := buildCreateSetup(t)
 	defer s.cleanupFn()
-	router := createRouter(s.ctx, newResourceForTest(Dependencies{InstanceService: s.mock}))
+	router := createRouter(s.ctx, newResourceForTest(Dependencies{InstanceService: s.mock, Now: createSetupClock}))
 
 	body := map[string]any{
 		"date":       nextTimetableWorkday().String(),

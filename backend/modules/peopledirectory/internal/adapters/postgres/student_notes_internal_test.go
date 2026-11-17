@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain"
@@ -25,7 +26,7 @@ func TestStudentNoteStoreSoftDeleteReturnsAffectedRowsError(t *testing.T) {
 	db := testpkg.NewBunDB(sqlDB)
 	store := NewStudentNoteStore(func(context.Context) (bun.IDB, TenantScope, error) {
 		return db, TenantScope{TenantID: 42}, nil
-	}, testpkg.StudentDirectory{})
+	}, testpkg.StudentDirectory{}).WithClock(time.Now)
 	rowsAffectedErr := errors.New("affected rows unavailable")
 	mock.ExpectExec("UPDATE.*student_notes").
 		WillReturnResult(sqlmock.NewErrorResult(rowsAffectedErr))

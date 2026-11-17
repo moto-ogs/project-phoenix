@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
@@ -34,6 +35,8 @@ type Runtime struct {
 	EmailOutcomes delivery.EmailOutcomes
 	// TraegerMails reads back and repeats Träger mails by key (ADR 0196).
 	TraegerMails delivery.TraegerMails
+	// Now is the clock of the module: its store, worker and mail events.
+	Now func() time.Time
 }
 
 // emailOutcomeRead answers from the store and, for a block at the provider, from
@@ -44,18 +47,18 @@ type emailOutcomeRead struct {
 }
 
 // NewRuntime composes the module for this deployment's mail provider.
-func NewRuntime(module delivery.Capability, store *WorkerCommands, observe func(domain.Observation), wakeups func(context.Context) <-chan struct{}, provider mail.ProviderConfig) *Runtime {
-	webhooks, reconciliation := NewEmailEvents(provider, store, observe)
-	return &Runtime{Module: module, Store: store, Observe: observe, EmailWakeups: wakeups, EmailWebhooks: webhooks, EmailReconciliation: reconciliation, EmailOutcomes: emailOutcomeRead{WorkerCommands: store, EmailReconciliation: reconciliation}, TraegerMails: traegerMailsOf(module)}
+func NewRuntime(module delivery.Capability, store *WorkerCommands, observe func(domain.Observation), wakeups func(context.Context) <-chan struct{}, provider mail.ProviderConfig, now func() time.Time) *Runtime {
+	webhooks, reconciliation := NewEmailEvents(provider, store, observe, now)
+	return &Runtime{Module: module, Store: store, Observe: observe, EmailWakeups: wakeups, EmailWebhooks: webhooks, EmailReconciliation: reconciliation, EmailOutcomes: emailOutcomeRead{WorkerCommands: store, EmailReconciliation: reconciliation}, TraegerMails: traegerMailsOf(module), Now: now}
 }
 
 // NewWorker composes the outbox worker over the store of runtime, sending
 // through provider.
 func NewWorkerBinding(runtime *Runtime, provider Provider) (*delivery.Worker, error) {
-	if runtime == nil || runtime.Store == nil || runtime.Observe == nil || provider == nil {
+	if runtime == nil || runtime.Store == nil || runtime.Observe == nil || runtime.Now == nil || provider == nil {
 		return nil, errors.New("delivery compose: runtime and provider are required")
 	}
-	worker := NewWorker(runtime.Store, ProviderAdapter{Provider: provider}, runtime.Observe)
+	worker := NewWorker(runtime.Store, ProviderAdapter{Provider: provider}, runtime.Observe, runtime.Now)
 	return delivery.NewWorker(workerEngine{Worker: worker, workerBacklog: runtime.Store, wakeups: runtime.EmailWakeups, EmailReconciliation: runtime.EmailReconciliation}), nil
 }
 
@@ -98,7 +101,7 @@ func (r *Runtime) EmailStatus(ctx context.Context, tenantID, id int64) (delivery
 
 // NewPushDispatcher builds a targeted caller over the existing outbox store.
 func NewPushDispatcher(runtime *Runtime, provider Provider) *delivery.PushDispatcher {
-	worker := NewWorker(runtime.Store, ProviderAdapter{Provider: provider}, runtime.Observe)
+	worker := NewWorker(runtime.Store, ProviderAdapter{Provider: provider}, runtime.Observe, runtime.Now)
 	return delivery.NewPushDispatcher(func(ctx context.Context, tenantID, id int64) error {
 		err := worker.DispatchPush(ctx, tenantID, id)
 		if errors.Is(err, domain.ErrCancelled) {

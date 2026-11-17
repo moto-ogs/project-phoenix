@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"errors"
+	"time"
 
 	audit "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/uptrace/bun"
@@ -12,12 +13,13 @@ const attendanceCorrectionTableExpr = `audit.attendance_corrections AS "attendan
 
 type attendanceCorrectionRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
 // NewAttendanceCorrectionRepository builds the append-only trail repository
 // for attendance corrections (#2898).
-func NewAttendanceCorrectionRepository(runtime Runtime) audit.AttendanceCorrectionRepository {
-	return &attendanceCorrectionRepository{runtime: requireRuntime(runtime)}
+func NewAttendanceCorrectionRepository(runtime Runtime, now func() time.Time) audit.AttendanceCorrectionRepository {
+	return &attendanceCorrectionRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 // CreateBatch appends every field change of one attendance write, so the trail
@@ -27,7 +29,7 @@ func (r *attendanceCorrectionRepository) CreateBatch(ctx context.Context, correc
 	if len(corrections) == 0 {
 		return nil
 	}
-	appender := NewAppender(r.runtime)
+	appender := NewAppender(r.runtime, r.now)
 	for _, correction := range corrections {
 		if correction == nil {
 			return errors.New("attendance correction cannot be nil")

@@ -102,14 +102,14 @@ func TestIsDuplicateActiveVisitViolation(t *testing.T) {
 		activeGroup := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
 
 		// First insert: succeeds and stays open (exit_time IS NULL).
-		testpkg.CreateTestVisit(t, db, student.ID, activeGroup.ID, time.Now().Add(-1*time.Minute), nil)
+		testpkg.CreateTestVisit(t, db, student.ID, activeGroup.ID, presenceTestNow().Add(-1*time.Minute), nil)
 
 		// Second insert: same (tenant_id, student_id, exit_time IS NULL)
 		// — must be rejected by uniq_active_visits_open_per_student.
 		duplicate := studentpresence.Visit{
 			StudentID:     student.ID,
 			ActiveGroupID: activeGroup.ID,
-			EntryTime:     time.Now(),
+			EntryTime:     presenceTestNow(),
 		}
 		duplicate, err = presence.RecordVisit(ctx, duplicate)
 

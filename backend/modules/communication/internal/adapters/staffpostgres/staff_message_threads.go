@@ -31,8 +31,8 @@ func NewThreadStore(database Database) *ThreadStore {
 type staffThreadRow struct {
 	bun.BaseModel       `bun:"table:users.staff_message_threads,alias:staff_message_thread"`
 	ID                  int64      `bun:"id,pk,autoincrement"`
-	CreatedAt           time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt           time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt           time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt           time.Time  `bun:"updated_at,nullzero,notnull"`
 	TenantID            int64      `bun:"tenant_id,notnull"`
 	ParticipantKey      string     `bun:"participant_key,notnull"`
 	Kind                string     `bun:"kind,notnull"`
@@ -63,7 +63,7 @@ type staffParticipantRow struct {
 	TenantID      int64     `bun:"tenant_id,notnull"`
 	ThreadID      int64     `bun:"thread_id,pk"`
 	AccountID     int64     `bun:"account_id,pk"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
 	// HistoryFrom is when a group member joined (#4776); nil for direct chats.
 	HistoryFrom *time.Time `bun:"history_from"`
 }
@@ -220,7 +220,6 @@ func (s *ThreadStore) AdvanceStaffThreadPreview(ctx context.Context, threadID in
 		Set("last_message_id = ?", messageID).
 		Set("last_sender_account_id = ?", senderAccountID).
 		Set("last_message_body = ?", body).
-		Set("updated_at = ?", at).
 		Where(`"staff_message_thread".id = ?`, threadID).
 		Where(`("staff_message_thread".last_message_at IS NULL
 			OR "staff_message_thread".last_message_at < ?
@@ -283,12 +282,14 @@ func (s *ThreadStore) HasStaffParticipant(ctx context.Context, threadID, account
 // cleanup does not leave orphaned conversations in the inbox. Participant and
 // read-cursor rows follow via ON DELETE CASCADE.
 //
-// createdBefore is a GRACE PERIOD, not an optimization. OpenThread
+// retentionDays is also a GRACE PERIOD, not an optimization. OpenThread
 // get-or-creates the thread BEFORE the first message is sent, so a conversation
 // someone opened and has not written in yet is legitimately empty. Without the
 // bound the daily sweep would delete it under the user, and their next send
 // would fail with "Diese Unterhaltung gibt es nicht." on a chat they had open.
-func (s *ThreadStore) DeleteEmptyStaffThreads(ctx context.Context, createdBefore time.Time) (int64, error) {
+// The window is counted on the database clock, which stamps the thread
+// (ADR 0277).
+func (s *ThreadStore) DeleteEmptyStaffThreads(ctx context.Context, retentionDays int) (int64, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
 		return 0, err
@@ -296,7 +297,7 @@ func (s *ThreadStore) DeleteEmptyStaffThreads(ctx context.Context, createdBefore
 	query := db.NewDelete().
 		Model((*staffThreadRow)(nil)).
 		ModelTableExpr(tableExprStaffMessageThreadsAsThread).
-		Where(`"staff_message_thread".created_at < ?`, createdBefore).
+		Where(`"staff_message_thread".created_at < now() - make_interval(days => ?)`, retentionDays).
 		// A group outlives a quiet month: its name and members are what the
 		// school set up, not message history (#4776). It ends when its last
 		// member leaves.

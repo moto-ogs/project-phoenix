@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type pickupChangePolicy struct {
@@ -56,11 +55,7 @@ func (s *Service) pickupChangePolicyInTx(ctx context.Context, tenantID int64) (p
 	}
 	// Care Plan judges the cutoff with the injected clock itself, not with a
 	// method of this workflow (ADR 0099).
-	now := s.Now
-	if now == nil {
-		now = calendar.Now
-	}
-	cutoff, err := carerequests.NewSameDayCutoffAt(clock, now)
+	cutoff, err := carerequests.NewSameDayCutoffAt(clock, s.Now)
 	if err != nil {
 		return pickupChangePolicy{}, fmt.Errorf("parent: %w", err)
 	}

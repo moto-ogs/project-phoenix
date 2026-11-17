@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
@@ -158,7 +159,7 @@ func requestReviewDependencies(
 	return requestreviewcompose.ProjectionDependencies{
 		Queues:   requestreviewcompose.Queues{DirectCorrections: corrections, MasterData: masterQueue, CareSchedule: careQueue, Offering: offeringQueue, Excused: excusedQueue},
 		Students: reviewStudents, FamilyProtection: reviewbindings.NewFamilyProtection(persons), Access: reviewAccess,
-		Submitters: reviewbindings.NewSubmitterDirectory(persons),
+		Submitters: reviewbindings.NewSubmitterDirectory(persons), Today: func() requestreview.Date { return requestreview.Date(carePlanToday()) },
 	}, careReviews, nil
 }
 
@@ -188,7 +189,7 @@ func mountStudentRoutes(
 	statusDays studentpresence.StatusDays, absences deliveryCompose.AbsenceNotifier, deletion *studentdeletion.Workflow,
 	groupLive grouplive.Query, decisions enrollmentOwner.Decisions, active studentpresence.Presence, resumption careStudentsHTTP.CareResumption,
 	noteTeam peopledirectory.StudentNoteTeamNotices, noteTeamReach studentsAPI.StudentNoteTeamReach, cohorts timetableModule.CohortRosters,
-	answers enrollmentOwner.StudentAnswers,
+	answers enrollmentOwner.StudentAnswers, now func() time.Time,
 ) error {
 	// A direct school_class edit must resync Jahrgang-filtered offering-sourced
 	// Regeltermine like a grade transition does (#2147 review round 10); Care
@@ -211,7 +212,7 @@ func mountStudentRoutes(
 			Persons:                peopleCompose.NewStudentRoutePersons(services.Users),
 			StudentAuditService:    persons,
 			StudentDocumentService: requests.Documents,
-			StudentNotes:           persons, StudentNoteTeam: noteTeam, NoteTeamReach: noteTeamReach,
+			StudentNotes:           persons, StudentNoteTeam: noteTeam, NoteTeamReach: noteTeamReach, Now: now,
 			StudentPhotos:      persons,
 			Uploads:            nativeUploads.UploadFiles{},
 			UserContextService: caller,
@@ -219,15 +220,15 @@ func mountStudentRoutes(
 		careStudentsHTTP.ResourceConfig{
 			ArrivalScheduleService: schedules.Arrivals,
 			Broadcaster:            hub,
-			CareLifecycleService:   schedules.Lifecycle, CareResumption: resumption, CareExitRestoration: owners.NewCarePlanRestoration(schedules.Lifecycle, requests.CareOfferings, nil),
+			CareLifecycleService:   schedules.Lifecycle, CareResumption: resumption, CareExitRestoration: owners.NewCarePlanRestoration(schedules.Lifecycle, requests.CareOfferings, calendar.CalendarDateClock(now)),
 			CareRequestReviews: careReviews,
 			CareRequestService: requests.CareRequests, FollowCohortChanges: studentCohortChanges(cohorts),
-			CompanionService:             companions,
-			DocumentStorage:              NewStudentDocumentStorage(),
-			ExcusedRequestService:        requests.Excused,
-			LockTemplateRecurrence:       planning.Planning.RecurrenceLock.LockRecurrenceWrites,
-			Logger:                       logger.With("handler", "students"),
-			MasterDataReviewService:      requests.MasterData,
+			CompanionService:        companions,
+			DocumentStorage:         NewStudentDocumentStorage(),
+			ExcusedRequestService:   requests.Excused,
+			LockTemplateRecurrence:  planning.Planning.RecurrenceLock.LockRecurrenceWrites,
+			Logger:                  logger.With("handler", "students"),
+			MasterDataReviewService: requests.MasterData, Now: now,
 			OfferingChangeService:        requests.CareOfferings,
 			OfferingPickupTimes:          requests.CareOfferings,
 			OfferingSourceResyncer:       studentClassResyncer,
@@ -271,7 +272,7 @@ func mountStudentRoutes(
 			StudentConsents:         services.StudentConsents,
 			StudentHistoryService:   reports.StudentHistory,
 			StudentStatusDayService: statusDays,
-			UserContextService:      caller,
+			UserContextService:      caller, Now: now,
 		},
 		presenceStudentsHTTP.ResourceConfig{
 			AbsenceNotifier:    studentAbsenceNotifier{notifier: absences},
@@ -284,7 +285,7 @@ func mountStudentRoutes(
 			PrivacyConsents:         presence,
 			SettingsService:         settings,
 			StudentStatusDayService: statusDays,
-			UserContextService:      caller,
+			UserContextService:      caller, Now: now,
 		},
 		deleteStudentsHTTP.ResourceConfig{
 			CareLifecycleService: schedules.Lifecycle,
@@ -302,7 +303,7 @@ func mountStudentRoutes(
 	tenant.Mount("/students", students.Router(ProtectedTenantRoutesWith(
 		groupLiveHTTP.NewResource(groupLive).Register,
 		careStudents.Register, projectionStudents.Register, presenceStudents.Register, deletionStudents.Register, requestStudents.Register,
-		(&enrollmentAPI.StudentResource{EnrollmentDecision: decisions, EnrollmentFormSchema: newEnrollmentFormSchemas(settings, logger), StudentReadAccess: students.StudentReadAccess, Logger: logger.With("handler", "students")}).Register,
+		(&enrollmentAPI.StudentResource{EnrollmentDecision: decisions, EnrollmentFormSchema: newEnrollmentFormSchemas(settings, logger, time.Now), StudentReadAccess: students.StudentReadAccess, Logger: logger.With("handler", "students")}).Register,
 	)))
 	return nil
 }
@@ -315,10 +316,10 @@ func newEnrollmentResource(
 	flows owners.EnrollmentFlows, phases enrollmentOwner.PhaseAdministration, decisions enrollmentOwner.Decisions,
 	deletions enrollmentOwner.EnrollmentDeletions,
 	guardianProfiles *peopleCompose.GuardianProfileLoader, organizations organizationtenancy.Query,
-	renderer *lists.RendererService, persons peopledirectory.Capability, carePlan carePlanModule.Capability,
+	renderer *lists.RendererService, persons peopledirectory.Capability, carePlan carePlanModule.Capability, now func() time.Time,
 ) *enrollmentAPI.Resource {
 	resource := enrollmentAPI.NewResource(
-		newEnrollmentFormSchemas(settings, logger),
+		newEnrollmentFormSchemas(settings, logger, now),
 		enrollmentAPI.NewCareOfferingCatalog(NewEnrollmentCareOfferingValues(careOfferings)),
 		enrollmentAPI.NewRequestService(flows.Intake),
 		newEnrollmentCaptcha(settings, turnstile, logger),
@@ -333,13 +334,14 @@ func newEnrollmentResource(
 		nativeUploads.UploadFiles{},
 		enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation,
 			SavepointRollback: func(err error) bool { return errors.Is(err, tenant.ErrSavepointRollback) }},
-		owners.NewEnrollmentBookings(),
+		now,
+		owners.NewEnrollmentBookings(now),
 	)
 	resource.ListExportService = renderer
-	resource.Uploads = enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(), reads: flows.Uploads}
+	resource.Uploads = enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(now), reads: flows.Uploads}
 	resource.UploadList = flows.Uploads
 	resource.FamilyChildren = flows.Intake
 	resource.UploadFiles = NewEnrollmentUploadStorage(logger.With("handler", "enrollment-uploads"))
-	resource.PhaseExpiryService = newEnrollmentPhaseExpiry(persons, carePlan)
+	resource.PhaseExpiryService = newEnrollmentPhaseExpiry(persons, carePlan, now)
 	return resource
 }

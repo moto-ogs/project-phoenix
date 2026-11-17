@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -48,7 +49,7 @@ func NewOfferingChangeTestModule(db transactionruntime.Database, options Offerin
 	if options.Settings == nil || options.Bookings == nil {
 		return nil, errors.New("offering change test module: settings and bookings are required")
 	}
-	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +71,8 @@ func NewOfferingChangeTestModule(db transactionruntime.Database, options Offerin
 	}
 	deps.Planning = owners.ManualPlanningReader{Query: owners.PlanningQuery{DB: db}, CourseGroups: reposTimetable.Timetable}
 	deps.Bookings = options.Bookings
-	deps.Today = options.Today
+	// Now stamps the decisions; Today defaults to its Berlin day.
+	deps.Today, deps.Now = options.Today, time.Now
 	deps.Logger = slog.Default()
 	return owners.ComposeOfferingChanges(deps)
 }

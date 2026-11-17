@@ -66,10 +66,6 @@ vi.mock("@/lib/database/service-factory", () => ({
   })),
 }));
 
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => false),
-}));
-
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({

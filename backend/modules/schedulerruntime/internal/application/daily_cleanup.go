@@ -228,7 +228,7 @@ func (s *Scheduler) completeTimetableInstancesForEndedSessions(ctx context.Conte
 		return 0, nil
 	}
 
-	now := time.Now()
+	now := s.clock()
 
 	// The bulk visit close in EndDailySessions bypasses the per-visit
 	// attendance syncer, so mirror the checkout into slot attendance here —

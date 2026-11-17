@@ -519,8 +519,13 @@ with its family, and a switch mints nothing out of a family that is gone.
 passes cannot confirm that the family is empty; deleting rows on the last
 pass alone is not confirmation. Every portal shell revokes through its BFF logout route
 (`/api/{,parent/,school/,caterer/,traeger/,operator/}auth/logout`) before
-Auth.js clears the cookie; a failed revocation keeps the session and shows
-the error with a retry, as does the tenant relogin action. All six routes
+Auth.js clears the cookie. When the route answers with an error (the
+backend's `identity.logout_not_revoked`, or a BFF 503), the browser still
+clears the cookie and the login page says the session ends at its expiry
+(#7209); only a logout without any answer (offline, timeout) keeps the
+session and shows the error with a retry. The tenant relogin action keeps
+the session on every failure and offers a retry: it moves to another
+school's host, where no notice could follow. All six routes
 come from one factory (`frontend/src/lib/logout-route.server.ts`); the
 token kind and backend path come from the portal table. A refused token may
 still belong to a live family (another tab rotated it), so each route renews
@@ -1188,7 +1193,7 @@ not composed. The backend routes are public, take no cookies, and rely on
 |---|---|
 | `POST /demo/access-requests` | `email`, `school_name`, `first_name`, `last_name` (both required, at most 120 bytes each, whitespace runs collapsed; the demo school's caregiver and parent carry exactly these names), `contact_opt_in`, optional `phone` (callback number, free text; whitespace runs collapsed, at most 50 bytes; dropped without `contact_opt_in`; not stored, it reaches only the team's lead mail), optional `src` and `role` (a demo role, appended to the mailed link as `&role=`) → always `202 {link_sent: true}`, never the link itself; `422 demo_access_invalid`; `429 demo_access_rate_limited` with `Retry-After` (seconds); `503 demo_capacity_reached` |
 | `GET /demo/access/status` | token in `Authorization: Bearer` → `{status: preparing\|ready\|failed, school_name}` (the OGS name the prospect gave, shown while waiting, #3464), plus `school_url` (origin of the demo school) when `ready` |
-| `POST /demo/access/sessions` | `{token, role?}` → `{access_token, refresh_token, demo: {access_id, role, src, fixed_role}}` (tenant session; parents portal session for `role: parent`, #3468); `409 demo_school_preparing`; `422 demo_access_invalid` for an unknown role |
+| `POST /demo/access/sessions` | `{token, role?}` → `{access_token, refresh_token, demo: {access_id, role, src, fixed_role, traeger}}` (tenant session; parents portal session for `role: parent`, #3468; Träger-Portal session for `role: traeger`, #6193); `traeger` says whether the school has a Träger of its own; `409 demo_school_preparing`; `422 demo_access_invalid` for an unknown role or `traeger` without an own Träger |
 | `POST /demo/access/reset` | `{token}` → `202 {status: "preparing", entry_url}` (#3470): a fresh demo school is queued for the same access with the same names, the old one is soft-deleted and its sessions are revoked; `entry_url` is the waiting room with the token in the fragment, as in the mailed link. `409 demo_school_preparing` while the current school is still being seeded; `422 demo_access_invalid` for the shared standing school; `429 demo_access_rate_limited` with `Retry-After`, because a restart counts against the same per-address and per-IP windows as a request; `503 demo_capacity_reached` never for a restart, because the old school gives its place back first |
 
 The 10-minute per-address cooldown also applies to requests with a phone
@@ -1226,6 +1231,21 @@ host's `/demo`. The waiting room and the OGS entry page send the role
 its own: `parent` there answers `role: "all", fixed_role: true`, and the
 parents entry page sends the visitor on to the school.
 
+Demo role `traeger` (#6193, ADR 0271): every demo order has a Träger of its
+own (`platform.demo_school_states.traeger_id`) with two neighbour schools, and
+the visitor's caregiver is a member of its Träger-Büro. The same route with
+the same token answers a Träger-Portal pair (`scope=org`, `org_id` of that
+Träger) for the visitor's own account, minted through `mintTraegerSession`
+with the demo link as proof (`proofDemoLink`); the Träger membership check of
+every Träger session applies. The school roles stay as they are. A school
+without a Träger of its own (the shared Demo-Träger, or an order naming a
+Träger its school left) answers `422 demo_access_invalid`. The Träger host
+serves `app/traeger/demo` (public in `TraegerAuthGuard`) and admits
+`/api/demo/access/` in its proxy host rules; the session route installs the
+`traeger.session-token` cookie there. On `422` the entry page sends the
+visitor to the school's role cards. The standing school's Träger is its own
+(#6962), so its shared administrator gets `traeger` too.
+
 Unknown token: `404 demo_access_unknown`; expired: `410 demo_access_expired`.
 The token is opaque, stored as SHA-256 fingerprint in `auth.demo_accesses`
 (owner `identity-access`), reusable, every use counted. It is valid 14 days
@@ -1249,7 +1269,14 @@ through its owner. Its sessions, of every account and portal, end in the same
 unit, before the school is hidden (`auth.revoke_school_sessions`, #6305; the
 operator soft delete and the demo restart end them the same way through
 `RevokeTokensByTenantID`): every request checks only the session family, not
-the school. Every sign-in and refresh, of every portal, locks the school its
+the school. An order with a Träger of its own (ADR 0271) hides every school of
+that Träger on expiry, restart and final failure. On expiry and restart it
+ends the sessions of the Träger-Portal, the Absprünge and all its schools
+first (`auth.revoke_organization_sessions`, accounts then schools) and
+deactivates the Träger, which every Träger session needs at mint and
+validation, so a redemption racing the restart mints none; after a final
+failure `platform.retire_failed_demo_traeger` does both (a deferred seed can
+fail after visitors entered). Every sign-in and refresh, of every portal, locks the school its
 session row is kept at under a share lock after the account lock, right
 before the row is written, so none mints a session at a school whose
 sessions are ending. The standing school is never hidden. A hidden school

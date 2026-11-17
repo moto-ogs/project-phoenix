@@ -8,10 +8,26 @@ import type { Profile } from "./profile-helpers";
 import * as profileApi from "./profile-api";
 import * as nextAuthReact from "next-auth/react";
 import { mockSessionData } from "~/test/mocks/next-auth";
+import { SWRConfig } from "~/lib/swr/testing";
+import { SWRScopeBoundary } from "~/lib/swr";
 
+vi.unmock("swr");
 // Mock the API module
 vi.mock("./profile-api");
 vi.mock("next-auth/react");
+
+let cache = new Map();
+
+// The tenant shell around the provider: a fresh SWR cache and the scope
+// boundary that drops it at every session boundary, as in providers.tsx.
+function Shell({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => cache }}>
+      <SWRScopeBoundary />
+      {children}
+    </SWRConfig>
+  );
+}
 
 describe("ProfileContext", () => {
   const mockProfile: Profile = {
@@ -51,6 +67,7 @@ describe("ProfileContext", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    cache = new Map();
 
     // Default mock implementations
     vi.mocked(nextAuthReact.useSession).mockReturnValue({
@@ -59,13 +76,18 @@ describe("ProfileContext", () => {
       update: vi.fn(),
     });
 
-    vi.mocked(profileApi.fetchProfile).mockResolvedValue(mockProfile);
+    // Every answer is a new object, as from the network.
+    vi.mocked(profileApi.fetchProfile).mockImplementation(async () =>
+      structuredClone(mockProfile),
+    );
   });
 
   describe("ProfileProvider", () => {
     it("should provide initial loading state", () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -76,7 +98,9 @@ describe("ProfileContext", () => {
 
     it("should fetch profile on mount when session exists", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -91,9 +115,11 @@ describe("ProfileContext", () => {
 
     it("renders a server-preloaded profile without fetching (#2973)", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider initialProfile={mockProfile}>
-          {children}
-        </ProfileProvider>
+        <Shell>
+          <ProfileProvider initialProfile={mockProfile}>
+            {children}
+          </ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -114,7 +140,9 @@ describe("ProfileContext", () => {
       });
 
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -136,7 +164,9 @@ describe("ProfileContext", () => {
       );
 
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -158,7 +188,9 @@ describe("ProfileContext", () => {
     // prolongs the session leaves the identity and the profile untouched.
     it("keeps the profile when a session poll only prolongs the session", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -187,7 +219,9 @@ describe("ProfileContext", () => {
 
     it("should clear profile when session is removed", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { rerender, result } = renderHook(() => useProfile(), { wrapper });
@@ -215,7 +249,9 @@ describe("ProfileContext", () => {
   describe("refreshProfile", () => {
     it("should refresh profile manually", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -243,7 +279,9 @@ describe("ProfileContext", () => {
 
     it("should debounce rapid refresh calls (< 5 seconds)", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -276,7 +314,9 @@ describe("ProfileContext", () => {
 
     it("should allow refresh after 5 seconds", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -310,7 +350,9 @@ describe("ProfileContext", () => {
 
     it("should show loading state for non-silent refresh", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -339,7 +381,9 @@ describe("ProfileContext", () => {
 
     it("should not show loading state for silent refresh", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -368,7 +412,9 @@ describe("ProfileContext", () => {
 
     it("should prevent concurrent refreshes", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -418,7 +464,9 @@ describe("ProfileContext", () => {
   describe("updateProfileData", () => {
     it("should update profile data optimistically", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -449,7 +497,9 @@ describe("ProfileContext", () => {
       });
 
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -467,7 +517,9 @@ describe("ProfileContext", () => {
 
     it("should preserve unchanged fields when updating", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -491,7 +543,9 @@ describe("ProfileContext", () => {
   describe("data change detection", () => {
     it("should not trigger re-render when fetched data is identical", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -525,7 +579,9 @@ describe("ProfileContext", () => {
 
     it("should update when profile data changes", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });
@@ -567,7 +623,9 @@ describe("ProfileContext", () => {
       });
 
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result, rerender } = renderHook(() => useProfile(), { wrapper });
@@ -617,7 +675,9 @@ describe("ProfileContext", () => {
       });
 
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result, rerender } = renderHook(() => useProfile(), { wrapper });
@@ -642,10 +702,12 @@ describe("ProfileContext", () => {
 
       rerender();
 
-      // The debounce should NOT have been reset for undefined tenantId
-      // (the useEffect condition checks tenantId !== undefined)
-      // Profile state should remain stable
-      expect(result.current.profile).toEqual(mockProfile);
+      // A new session generation drops the old answer (#5006); the profile
+      // loads again for the new session instead of carrying the old one.
+      await waitFor(() => {
+        expect(result.current.profile).toEqual(mockProfile);
+      });
+      expect(profileApi.fetchProfile).toHaveBeenCalledTimes(1);
     });
 
     it("should reset debounce on re-login to same tenant after logout", async () => {
@@ -661,7 +723,9 @@ describe("ProfileContext", () => {
       });
 
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result, rerender } = renderHook(() => useProfile(), { wrapper });
@@ -725,7 +789,9 @@ describe("ProfileContext", () => {
 
     it("should return context value when used within provider", async () => {
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <ProfileProvider>{children}</ProfileProvider>
+        <Shell>
+          <ProfileProvider>{children}</ProfileProvider>
+        </Shell>
       );
 
       const { result } = renderHook(() => useProfile(), { wrapper });

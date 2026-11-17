@@ -30,8 +30,8 @@ func NewDemoAccessExpiry(db bun.IDB, now func() time.Time) (*identityaccess.Demo
 // token functions are the token adapter's opaque capability token, so only a
 // SHA-256 fingerprint is stored. Callers supply the unit of work on the
 // request context, as every public route does.
-func composeDemoAccess(db *bun.DB, sessions ports.DemoSessions, deps *identityPorts.DemoDependencies) (*identityaccess.DemoAccess, error) {
-	return application.NewDemoAccessBinding(db != nil, sessions, deps, postgres.NewStore(db), tenant.WithinAdmin)
+func composeDemoAccess(store *postgres.Store, sessions ports.DemoSessions, deps *identityPorts.DemoDependencies, hasDatabase bool, now func() time.Time) (*identityaccess.DemoAccess, error) {
+	return application.NewDemoAccessBinding(hasDatabase, sessions, deps, store, tenant.WithinAdmin, now)
 }
 
 // demoAccessExpiryEngine deletes demo accesses 14 days after their last use

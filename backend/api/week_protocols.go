@@ -25,8 +25,9 @@ import (
 // mountWeekProtocolRoutes serves the weekly protocols of the groups (#4769)
 // under /api/week-protocols: Timetable's protocols over its own tables, the
 // caller's groups from Identity & Access, the Audit Platform's data access log
-// and the People Directory names of the closing person.
-func mountWeekProtocolRoutes(tenant chi.Router, protocols timetableModule.WeekProtocols, logger *slog.Logger, caller *owners.CallerRows, accessLog owners.DataAccessAppender, persons peopledirectory.Query, appEnv string, seed schedulerPorts.WeekProtocolEvenings) {
+// and the People Directory names of the closing person. now dates the access
+// log entries.
+func mountWeekProtocolRoutes(tenant chi.Router, protocols timetableModule.WeekProtocols, logger *slog.Logger, caller *owners.CallerRows, accessLog owners.DataAccessAppender, persons peopledirectory.Query, appEnv string, seed schedulerPorts.WeekProtocolEvenings, now func() time.Time) {
 	var seedLifecycle func(context.Context) error
 	var isLocalSeed func(*http.Request) bool
 	if seed != nil {
@@ -42,6 +43,7 @@ func mountWeekProtocolRoutes(tenant chi.Router, protocols timetableModule.WeekPr
 		Logger:      logger.With("handler", "week_protocols"),
 		Seed:        seedLifecycle,
 		IsLocalSeed: isLocalSeed,
+		Now:         now,
 	})
 	tenant.Mount("/week-protocols", resource.Router(ProtectedTenantRoutes))
 }
@@ -61,37 +63,43 @@ func seedWeekProtocols(ctx context.Context, now time.Time, seed schedulerPorts.W
 }
 
 // WeekProtocolDayLog builds the weekly protocols' port onto the presence
-// projection's day log (#4769) for the Worker: the projection's resource
-// over the given sources, read without a request.
-func WeekProtocolDayLog(
-	logger *slog.Logger, persons peopledirectory.Capability, users peoplePorts.PersonDirectory,
-	history studentpresence.StudentHistory, careDays carePlanModule.CareDayQuery,
-	arrivals carePlanModule.ArrivalScheduleService, statusDays studentpresence.StatusDayReads,
-) timetableModule.WeekProtocolAttendance {
-	return weekProtocolAttendance{dayLog: projectionStudentsHTTP.NewResource(projectionStudentsHTTP.ResourceConfig{
-		Logger:                  logger,
-		PeopleDirectory:         persons,
-		Persons:                 peopleCompose.NewStudentRoutePersons(users),
-		StudentHistoryService:   history,
-		CareDayService:          careDays,
-		ArrivalScheduleService:  arrivals,
-		StudentStatusDayService: statusDays,
-	})}
+// projection's day log (#4769) for the Worker on the root's clock: the
+// projection's resource over the given sources, read without a request.
+func WeekProtocolDayLog(now func() time.Time) owners.WeekProtocolDayLogBuilder {
+	return func(
+		logger *slog.Logger, persons peopledirectory.Capability, users peoplePorts.PersonDirectory,
+		history studentpresence.StudentHistory, careDays carePlanModule.CareDayQuery,
+		arrivals carePlanModule.ArrivalScheduleService, statusDays studentpresence.StatusDayReads,
+	) timetableModule.WeekProtocolAttendance {
+		return weekProtocolAttendance{dayLog: projectionStudentsHTTP.NewResource(projectionStudentsHTTP.ResourceConfig{
+			Logger:                  logger,
+			PeopleDirectory:         persons,
+			Persons:                 peopleCompose.NewStudentRoutePersons(users),
+			StudentHistoryService:   history,
+			CareDayService:          careDays,
+			ArrivalScheduleService:  arrivals,
+			StudentStatusDayService: statusDays,
+			Now:                     now,
+		})}
+	}
 }
 
 // seedWeekProtocolDayLog supplies the current demo day's attendance to every
 // day the local seed records. The seed advances the protocol to Sunday so it
 // can demonstrate the draft and PDF states; the live projection deliberately
 // refuses that historical day because group membership is current-day only.
-// The production Worker always receives WeekProtocolDayLog instead.
-func seedWeekProtocolDayLog(
-	logger *slog.Logger, persons peopledirectory.Capability, users peoplePorts.PersonDirectory,
-	history studentpresence.StudentHistory, careDays carePlanModule.CareDayQuery,
-	arrivals carePlanModule.ArrivalScheduleService, statusDays studentpresence.StatusDayReads,
-) timetableModule.WeekProtocolAttendance {
-	return weekProtocolSeedAttendance{
-		source: WeekProtocolDayLog(logger, persons, users, history, careDays, arrivals, statusDays),
-		today:  calendar.TodayDate,
+// The production Worker always receives WeekProtocolDayLog instead. Both
+// days come from the root's clock now.
+func seedWeekProtocolDayLog(now func() time.Time) owners.WeekProtocolDayLogBuilder {
+	return func(
+		logger *slog.Logger, persons peopledirectory.Capability, users peoplePorts.PersonDirectory,
+		history studentpresence.StudentHistory, careDays carePlanModule.CareDayQuery,
+		arrivals carePlanModule.ArrivalScheduleService, statusDays studentpresence.StatusDayReads,
+	) timetableModule.WeekProtocolAttendance {
+		return weekProtocolSeedAttendance{
+			source: WeekProtocolDayLog(now)(logger, persons, users, history, careDays, arrivals, statusDays),
+			today:  calendar.CalendarDateClock(now),
+		}
 	}
 }
 

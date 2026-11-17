@@ -1,9 +1,47 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode as TenantSWRNode } from "react";
+import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
 import type { BulkInviteResult } from "~/lib/guardian-bulk-invite-api";
 import { SelectionBulkInviteModal } from "./selection-bulk-invite-modal";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in OGS session per render.
+function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <TenantSWRConfig
+        value={{ provider: () => new Map(), errorRetryCount: 0 }}
+      >
+        {children}
+      </TenantSWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  const Outer = options?.wrapper;
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: TenantSWRNode }>) => (
+      <TenantSWRWrapper>
+        {Outer ? <Outer>{children}</Outer> : children}
+      </TenantSWRWrapper>
+    ),
+  });
+}
 
 const { bulkInvite, toastSuccess } = vi.hoisted(() => ({
   bulkInvite: vi.fn(),
@@ -83,6 +121,44 @@ describe("SelectionBulkInviteModal", () => {
     ).toBeVisible();
     expect(toastSuccess).toHaveBeenCalledWith("3 Eltern sind eingeladen.");
     expect(screen.getByRole("button", { name: "Schließen" })).toBeVisible();
+  });
+
+  it("counts again on every opening before offering to send", async () => {
+    let answerSecond!: (value: BulkInviteResult) => void;
+    bulkInvite
+      .mockResolvedValueOnce(result({ invited: 3 }))
+      .mockReturnValueOnce(
+        new Promise<BulkInviteResult>((resolve) => {
+          answerSecond = resolve;
+        }),
+      );
+    const modal = (isOpen: boolean) => (
+      <SelectionBulkInviteModal
+        isOpen={isOpen}
+        onClose={vi.fn()}
+        studentIds={["4", "9"]}
+      />
+    );
+    const { rerender } = render(modal(true));
+    expect(
+      await screen.findByRole("button", { name: "3 Eltern einladen" }),
+    ).toBeEnabled();
+
+    rerender(modal(false));
+    rerender(modal(true));
+    // Meanwhile the parents were invited elsewhere.
+    expect(screen.getByRole("button", { name: "Einladen" })).toBeDisabled();
+    answerSecond(result({ skippedOpen: 3 }));
+    expect(
+      await screen.findByText(
+        "Für diese Auswahl gibt es niemanden einzuladen.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Einladen" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(bulkInvite).toHaveBeenCalledTimes(2);
   });
 
   it("allows submitting a preview containing only existing accounts", async () => {

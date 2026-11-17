@@ -26,7 +26,7 @@ type TimeTrackingDeletion struct {
 	DeletedBy  int64           `bun:"deleted_by,notnull" json:"deleted_by"`
 	Payload    json.RawMessage `bun:"payload,type:jsonb,notnull" json:"payload"`
 	Note       string          `bun:"note,notnull" json:"note"`
-	OccurredAt time.Time       `bun:"occurred_at,nullzero,notnull,default:now()" json:"occurred_at"`
+	OccurredAt time.Time       `bun:"occurred_at,nullzero,notnull" json:"occurred_at"`
 }
 
 func (d *TimeTrackingDeletion) Validate() error {

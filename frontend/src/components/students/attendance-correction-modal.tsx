@@ -7,13 +7,7 @@
 // Grund, sie sagt, dass die Änderung protokolliert wird, und sie zeigt die
 // bisherigen Korrekturen desselben Eintrags direkt darunter.
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { FormModal } from "~/components/ui/form-modal";
@@ -26,8 +20,12 @@ import {
   type AttendanceCorrection,
 } from "~/lib/student-care-plan-api";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 const logger = createLogger({ component: "AttendanceCorrectionModal" });
+
+const NO_CORRECTIONS: readonly AttendanceCorrection[] = [];
 
 const REASON_MAX_LENGTH = 500;
 const NOTE_MAX_LENGTH = 500;
@@ -98,7 +96,15 @@ export function AttendanceCorrectionModal({
   const clearErrors = errors.clear;
   // „Wiederholen“ sendet den aktuellen Entwurf, nicht den vom Fehler.
   const latestSubmitRef = useRef<() => Promise<void>>(async () => undefined);
-  const [history, setHistory] = useState<AttendanceCorrection[]>([]);
+  // The trail is context, not the purpose of this dialog: a failed load must
+  // not block the correction itself, so it shows no error.
+  const { data: history = NO_CORRECTIONS, mutate: reloadHistory } = useSWRAuth(
+    isOpen
+      ? tenantStudentKeys.attendanceCorrections(slot.instanceId, studentId)
+      : null,
+    () => fetchAttendanceCorrections(slot.instanceId, studentId),
+    { keepPreviousData: false },
+  );
 
   // Reset whenever a different slot opens the modal — otherwise the previous
   // block's values would be offered as this one's starting point.
@@ -110,22 +116,6 @@ export function AttendanceCorrectionModal({
     setReason("");
     clearErrors();
   }, [isOpen, slot, clearErrors]);
-
-  const loadHistory = useCallback(async () => {
-    try {
-      setHistory(await fetchAttendanceCorrections(slot.instanceId, studentId));
-    } catch (err) {
-      // The trail is context, not the purpose of this dialog: failing to load
-      // it must not block the correction itself.
-      logger.warn("attendance_corrections_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }, [slot.instanceId, studentId]);
-
-  useEffect(() => {
-    if (isOpen) void loadHistory();
-  }, [isOpen, loadHistory]);
 
   const trimmedReason = reason.trim();
   const nothingChanged =
@@ -164,7 +154,10 @@ export function AttendanceCorrectionModal({
         };
         await correctAttendance(slot.instanceId, studentId, correction);
         onCorrected();
-        if (op.isCurrent()) onClose();
+        if (op.isCurrent()) {
+          void reloadHistory();
+          onClose();
+        }
       } catch (err) {
         logger.error("attendance_correction_failed", {
           error: err instanceof Error ? err.message : String(err),

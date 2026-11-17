@@ -31,7 +31,7 @@ func identityChainOf(db transactionruntime.Database, members owners.MembershipTe
 }
 
 func mustStaffReinstatement(db transactionruntime.Database) *schoolmembership.Offboarding {
-	reinstatement, err := owners.ComposeStaffReinstatement(db)
+	reinstatement, err := owners.ComposeStaffReinstatement(db, nil)
 	if err != nil {
 		panic(err)
 	}

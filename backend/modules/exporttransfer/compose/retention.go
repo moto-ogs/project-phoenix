@@ -1,8 +1,6 @@
 package compose
 
 import (
-	"time"
-
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer"
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer/internal/adapters/postgres"
 )
@@ -11,5 +9,5 @@ import (
 // (#4044). It runs on the tenant transaction of the school in context and
 // needs neither the settings nor the transport.
 func NewJournalRetention() exporttransfer.JournalRetention {
-	return postgres.JournalRetention{Journal: postgres.New(retainedDatabase()), Now: time.Now}
+	return postgres.JournalRetention{Journal: postgres.New(retainedDatabase())}
 }

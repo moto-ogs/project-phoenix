@@ -1,7 +1,48 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  act,
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetSWRScope } from "~/lib/swr/scope";
+import { useInvalidateFamily } from "~/lib/swr";
+import { studentKeys } from "~/lib/swr/portal-keys";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import StudentChangeHistoryPage from "./page";
+
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1", token: "test-token" } },
+  }),
+}));
+
+// The child's detail also reads the account's own groups; none here.
+vi.mock("~/lib/usercontext-api", () => ({
+  userContextService: {
+    getMyEducationalGroups: () => Promise.resolve([]),
+    getMySupervisedGroups: () => Promise.resolve([]),
+  },
+}));
+
+// Real SWR with a fresh cache per render.
+function SWRTestCache({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: SWRTestCache });
+}
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "1" }),
@@ -52,7 +93,91 @@ function stubFetch(history: () => Response) {
 }
 
 describe("StudentChangeHistoryPage", () => {
+  beforeEach(() => resetSWRScope({ revalidate: false }));
   afterEach(() => vi.unstubAllGlobals());
+
+  it.each([401, 403])(
+    "withdraws cached history on %s until an authorized read succeeds",
+    async (refusalStatus) => {
+      let status = 200;
+      const entry = {
+        id: "1",
+        field: "health_info",
+        old_value: "vorheriger Wert",
+        new_value: "geschützter Wert",
+        edited_by: "Team",
+        changed_at: "2026-09-09T09:00:00Z",
+      };
+      stubFetch(() =>
+        status === 200
+          ? Response.json({ data: [entry] })
+          : Response.json(
+              {
+                code:
+                  status === 503 ? "general.unavailable" : "general.permission",
+              },
+              { status },
+            ),
+      );
+      let reload!: () => Promise<unknown>;
+      function Probe() {
+        const invalidate = useInvalidateFamily();
+        reload = () => invalidate(studentKeys.changeHistory("1"));
+        return null;
+      }
+      const view = render(
+        <>
+          <StudentChangeHistoryPage />
+          <Probe />
+        </>,
+      );
+      expect(await screen.findByText(entry.new_value)).toBeVisible();
+      status = 503;
+      await act(async () => {
+        await reload();
+      });
+      expect(screen.getByText(entry.new_value)).toBeVisible();
+      status = refusalStatus;
+      await act(async () => {
+        await reload();
+      });
+      if (status === 403)
+        expect(
+          await screen.findByText(
+            catalogText("general.permission", "die Liste der Änderungen"),
+          ),
+        ).toBeVisible();
+      else
+        await waitFor(() =>
+          expect(
+            document.querySelector('[aria-busy="true"]'),
+          ).toBeInTheDocument(),
+        );
+      expect(screen.queryByText(entry.new_value)).not.toBeInTheDocument();
+      expect(screen.queryByText(entry.old_value)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Noch keine Änderungen erfasst/),
+      ).not.toBeInTheDocument();
+      status = 503;
+      await act(async () => {
+        await reload();
+      });
+      expect(screen.queryByText(entry.new_value)).not.toBeInTheDocument();
+      view.rerender(<Probe />);
+      view.rerender(
+        <>
+          <StudentChangeHistoryPage />
+          <Probe />
+        </>,
+      );
+      expect(screen.queryByText(entry.new_value)).not.toBeInTheDocument();
+      status = 200;
+      await act(async () => {
+        await reload();
+      });
+      expect(await screen.findByText(entry.new_value)).toBeVisible();
+    },
+  );
 
   it("shows a failed load in place with retry and request ID", async () => {
     let calls = 0;

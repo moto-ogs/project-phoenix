@@ -35,6 +35,15 @@ type grantRow struct {
 	Downloads      int        `bun:"downloads"`
 }
 
+// databaseNow reads the database clock. The release functions bound
+// keep_until and expires_at against now() (ADR 0274), so every decision of
+// the release and the retrieval about a grant's period runs on that clock.
+func databaseNow(ctx context.Context, db bun.IDB) (time.Time, error) {
+	var now time.Time
+	err := db.NewRaw(`SELECT now()`).Scan(ctx, &now)
+	return now.UTC(), err
+}
+
 func (g grantRow) usable(now time.Time) bool {
 	return g.RevokedAt == nil && g.PurgedAt == nil && len(g.WrappedKey) > 0 && now.Before(g.ExpiresAt) && g.Downloads < g.MaxDownloads
 }
@@ -70,12 +79,14 @@ func (s retrievalStore) stillOpen(ctx context.Context, id int64) (bool, error) {
 }
 
 // countDownload spends one download of a usable grant in one statement and
-// answers the download row; no row means the grant is no longer usable.
-func (s retrievalStore) countDownload(ctx context.Context, id int64, now time.Time) (int64, int, error) {
+// answers the download row; no row means the grant is no longer usable. The
+// expiry compares on the database clock that bounded it at issue; started_at
+// is stamped by its column default on the same clock.
+func (s retrievalStore) countDownload(ctx context.Context, id int64) (int64, int, error) {
 	var downloads int
 	err := s.db.NewRaw(`UPDATE platform.data_return_grants SET downloads = downloads + 1
 		WHERE id = ? AND downloads < max_downloads AND revoked_at IS NULL AND purged_at IS NULL
-		AND wrapped_key IS NOT NULL AND expires_at > ? RETURNING downloads`, id, now).Scan(ctx, &downloads)
+		AND wrapped_key IS NOT NULL AND expires_at > now() RETURNING downloads`, id).Scan(ctx, &downloads)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, 0, organizationtenancy.ErrDataReturnDenied
 	}
@@ -83,17 +94,17 @@ func (s retrievalStore) countDownload(ctx context.Context, id int64, now time.Ti
 		return 0, 0, err
 	}
 	var download int64
-	err = s.db.NewRaw(`INSERT INTO platform.data_return_downloads (grant_id, started_at) VALUES (?, ?) RETURNING id`, id, now).Scan(ctx, &download)
+	err = s.db.NewRaw(`INSERT INTO platform.data_return_downloads (grant_id) VALUES (?) RETURNING id`, id).Scan(ctx, &download)
 	return download, downloads, err
 }
 
-func (s retrievalStore) finishDownload(ctx context.Context, id int64, now time.Time, completed bool, bytes int64) error {
+func (s retrievalStore) finishDownload(ctx context.Context, id int64, completed bool, bytes int64) error {
 	outcome := "failed"
 	if completed {
 		outcome = "completed"
 	}
-	_, err := s.db.NewRaw(`UPDATE platform.data_return_downloads SET finished_at = ?, outcome = ?, bytes = ? WHERE id = ?`,
-		now, outcome, bytes, id).Exec(ctx)
+	_, err := s.db.NewRaw(`UPDATE platform.data_return_downloads SET finished_at = now(), outcome = ?, bytes = ? WHERE id = ?`,
+		outcome, bytes, id).Exec(ctx)
 	return err
 }
 

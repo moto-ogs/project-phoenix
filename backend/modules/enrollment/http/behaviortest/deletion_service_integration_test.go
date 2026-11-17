@@ -111,6 +111,7 @@ func (f *deletionTestFixture) sources(auditRepo api.EnrollmentFlowDeletionAudits
 		requestRepo = f.repos.Enrollment()
 	}
 	return owners.EnrollmentDeletionSources{
+		Now:                   time.Now,
 		Owner:                 requestRepo,
 		Guardians:             f.guardians(),
 		CountAuditAdjustments: f.reposAudit.EnrollmentOfferingAdjustment.CountForDeletion,

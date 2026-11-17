@@ -24,7 +24,7 @@ type EnrollmentBookingFixture struct {
 }
 
 func NewEnrollmentBookingFixtureWithin(withinTenant func(context.Context, func(context.Context) error) error) EnrollmentBookingFixture {
-	return EnrollmentBookingFixture{owners.NewEnrollmentBookingProjection(owners.NewEnrollmentBookings(), owners.UngatedEnrollmentPhaseBounds()), withinTenant}
+	return EnrollmentBookingFixture{owners.NewEnrollmentBookingProjection(owners.NewEnrollmentBookings(time.Now), owners.UngatedEnrollmentPhaseBounds(), time.Now), withinTenant}
 }
 
 // These retained composition methods translate the old fixture-facing command
@@ -55,7 +55,7 @@ func (a EnrollmentBookingFixture) InsertRequestChildOffering(ctx context.Context
 				return err
 			}
 		}
-		if err := carePlanCompose.NewOfferingBookings().RecordCareOfferingBookings(ctx, selection.RequestChildID, bookings); err != nil {
+		if err := carePlanCompose.NewOfferingBookings(time.Now).RecordCareOfferingBookings(ctx, selection.RequestChildID, bookings); err != nil {
 			return err
 		}
 		return a.refreshBookingCommandRows(ctx, selection.RequestChildID, []*enrollment.RequestChildOffering{selection})
@@ -68,7 +68,7 @@ func (a EnrollmentBookingFixture) ReplaceRequestChildOfferings(ctx context.Conte
 		if err != nil {
 			return err
 		}
-		if err := carePlanCompose.NewOfferingBookings().ReplaceCareOfferingBookings(ctx, childID, bookings); err != nil {
+		if err := carePlanCompose.NewOfferingBookings(time.Now).ReplaceCareOfferingBookings(ctx, childID, bookings); err != nil {
 			return fmt.Errorf("failed to insert replacement request child offerings: %w", err)
 		}
 		return a.refreshBookingCommandRows(ctx, childID, rows)
@@ -84,7 +84,7 @@ func (a EnrollmentBookingFixture) ScheduleRequestChildOfferings(ctx context.Cont
 		if err != nil {
 			return err
 		}
-		if err := carePlanCompose.NewOfferingBookings().ScheduleCareOfferingBookings(ctx, childID, careplan.Date(from), bookings); err != nil {
+		if err := carePlanCompose.NewOfferingBookings(time.Now).ScheduleCareOfferingBookings(ctx, childID, careplan.Date(from), bookings); err != nil {
 			return err
 		}
 		return a.refreshBookingCommandRows(ctx, childID, rows)

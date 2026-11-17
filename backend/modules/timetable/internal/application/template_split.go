@@ -80,14 +80,11 @@ func NewTemplateSplitService(deps TemplateSplitDependencies) (*TemplateSplitServ
 	if deps.GroupRepo == nil || deps.CategoryRepo == nil || deps.ScheduleRepo == nil || deps.EnrollmentRepo == nil ||
 		deps.SupervisorRepo == nil || noInstanceRows(deps.InstanceRepo) || deps.InstanceStaff == nil || deps.TimeframeRepo == nil ||
 		deps.Materialization == nil || deps.Deviations == nil || deps.RecurrenceLock == nil ||
-		deps.CareOfferings.ValidateSeries == nil || deps.CareOfferings.ValidateOfferingSource == nil || deps.Transactions == nil {
+		deps.CareOfferings.ValidateSeries == nil || deps.CareOfferings.ValidateOfferingSource == nil || deps.Transactions == nil || deps.Today == nil {
 		return nil, errors.New("timetable template split: required dependency is nil")
 	}
 	if err := validateSchoolClassRules(deps.SchoolClasses); err != nil {
 		return nil, err
-	}
-	if deps.Today == nil {
-		deps.Today = calendar.TodayDate
 	}
 	return &TemplateSplitService{
 		deps: deps,

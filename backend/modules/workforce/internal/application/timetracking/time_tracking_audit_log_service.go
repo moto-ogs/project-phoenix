@@ -84,13 +84,15 @@ type timeTrackingAuditLogService struct {
 	repo       TimeTrackingAuditReader
 	staffNames StaffDisplayNameQuery
 	settings   settingsResolver
+	// today is the day the retention window ends; nil is the wall clock's.
+	today func() calendar.Date
 }
 
-func NewTimeTrackingAuditLogService(repo TimeTrackingAuditReader, staffNames StaffDisplayNameQuery, settings settingsResolver) TimeTrackingAuditLogService {
-	if settings == nil {
-		panic("time tracking audit log: settings are required")
+func NewTimeTrackingAuditLogService(repo TimeTrackingAuditReader, staffNames StaffDisplayNameQuery, settings settingsResolver, today func() calendar.Date) TimeTrackingAuditLogService {
+	if settings == nil || today == nil {
+		panic("time tracking audit log: settings and the school day clock are required")
 	}
-	return &timeTrackingAuditLogService{repo: repo, staffNames: staffNames, settings: settings}
+	return &timeTrackingAuditLogService{repo: repo, staffNames: staffNames, settings: settings, today: today}
 }
 
 type auditLogCursorPayload struct {
@@ -213,7 +215,7 @@ func (s *timeTrackingAuditLogService) retentionCutoff(ctx context.Context) (cale
 	if err != nil {
 		return "", err
 	}
-	return calendar.TodayDate().AddDays(-days), nil
+	return s.today().AddDays(-days), nil
 }
 
 func encodeAuditLogCursor(e *TimeTrackingAuditEntry) string {

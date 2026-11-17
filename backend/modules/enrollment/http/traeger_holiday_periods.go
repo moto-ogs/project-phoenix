@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -36,6 +37,9 @@ type HolidayPeriodResource struct {
 	lists         common.ListRenderer
 	requireManage common.Middleware
 	requireHealth common.Middleware
+	// Now stamps the files and exports of the registrations (ADR 0239,
+	// ADR 0275); the constructor requires it.
+	Now func() time.Time
 }
 
 // NewHolidayPeriodResource builds the resource with the review of the
@@ -50,17 +54,18 @@ type HolidayPeriodResource struct {
 // records reads the registrations for their files (#6691). known finds the
 // registered children a school of the Träger knows and knownTrail records that
 // comparison (#6683, ADR 0214). lists renders the periods, the places and
-// the allocation as PDF, Excel or CSV (#4718).
-func NewHolidayPeriodResource(periods capability.HolidayPeriods, review capability.HolidayRegistrationReview, records capability.HolidayRegistrationRecords, wishes capability.HolidayWishReview, places HolidayPlaceReads, allocation HolidayAllocationReads, decide HolidayAllocationDecision, schoolNames capability.HolidaySchoolNames, known capability.HolidayKnownChildren, knownTrail capability.HolidayKnownChildTrail, lists common.ListRenderer, requireManage, requireHealth common.Middleware) *HolidayPeriodResource {
-	if periods == nil || review == nil || records == nil || wishes == nil || places == nil || allocation == nil || decide == nil || schoolNames == nil || known == nil || knownTrail == nil || lists == nil || requireManage == nil || requireHealth == nil {
-		panic("enrollment http: the holiday periods, the registration review, the registration records, the wish review, the places, the allocation, the decision, the school names, the known children with their trail, the list renderer and the right checks are required")
+// the allocation as PDF, Excel or CSV (#4718). now stamps the files and
+// exports.
+func NewHolidayPeriodResource(periods capability.HolidayPeriods, review capability.HolidayRegistrationReview, records capability.HolidayRegistrationRecords, wishes capability.HolidayWishReview, places HolidayPlaceReads, allocation HolidayAllocationReads, decide HolidayAllocationDecision, schoolNames capability.HolidaySchoolNames, known capability.HolidayKnownChildren, knownTrail capability.HolidayKnownChildTrail, lists common.ListRenderer, requireManage, requireHealth common.Middleware, now func() time.Time) *HolidayPeriodResource {
+	if periods == nil || review == nil || records == nil || wishes == nil || places == nil || allocation == nil || decide == nil || schoolNames == nil || known == nil || knownTrail == nil || lists == nil || requireManage == nil || requireHealth == nil || now == nil {
+		panic("enrollment http: the holiday periods, the registration review, the registration records, the wish review, the places, the allocation, the decision, the school names, the known children with their trail, the list renderer, the right checks and the clock are required")
 	}
 	// The review also names the undelivered mails of the list (#6737).
 	mails, ok := review.(capability.HolidayRegistrationMailReview)
 	if !ok {
 		panic("enrollment http: the registration review does not name the undelivered mails")
 	}
-	return &HolidayPeriodResource{periods: periods, review: review, records: records, wishes: wishes, places: places, allocation: allocation, decide: decide, schoolNames: schoolNames, known: known, knownTrail: knownTrail, mails: mails, lists: lists, requireManage: requireManage, requireHealth: requireHealth}
+	return &HolidayPeriodResource{periods: periods, review: review, records: records, wishes: wishes, places: places, allocation: allocation, decide: decide, schoolNames: schoolNames, known: known, knownTrail: knownTrail, mails: mails, lists: lists, requireManage: requireManage, requireHealth: requireHealth, Now: now}
 }
 
 // HolidayAllocationReads names the Träger's criteria, shows the proposal of

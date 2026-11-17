@@ -4,6 +4,7 @@
 
 import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
 import { parentsPortalUrl } from "~/lib/parent-url";
+import { requiredPortalHostname } from "~/lib/portal-paths";
 
 /** Demo page of the website; the way back for an unknown or expired link. */
 export const DEMO_WEBSITE_URL = "https://moto-ogs.de/demo";
@@ -27,8 +28,10 @@ export { DEMO_BOOKING_URL, isDemoBuild } from "~/lib/demo-build";
  * parent (#3468) opens the parents app on its own host with the same link.
  * "all" is the administrator and no longer a choice: the standing demo
  * school's shared account has it, and older links may still carry it.
+ * The role traeger (#6193) opens the Träger-Portal of the school's own
+ * Demo-Träger on its own host, like parent does with the parents app.
  */
-export type DemoRole = "caregiver" | "lead" | "parent" | "all";
+export type DemoRole = "caregiver" | "lead" | "parent" | "traeger" | "all";
 
 const DEMO_ROLE_ALL_LABEL = "Alle Funktionen";
 
@@ -55,15 +58,41 @@ export const DEMO_ROLES: readonly {
     description:
       "Die Eltern-App für Ihr eigenes Kind an der Schule: Abholung, Krankmeldung, Nachrichten.",
   },
+  {
+    role: "traeger",
+    label: "Träger-Büro",
+    description: "Alle Schulen des Trägers: Belegung, Verträge, Abrechnung.",
+  },
 ];
 
 function isDemoRole(value: unknown): value is DemoRole {
   return value === "all" || DEMO_ROLES.some((entry) => entry.role === value);
 }
 
-/** The role parent lives in the parents app, every other role in the OGS app. */
-export function isParentDemoRole(role: DemoRole): boolean {
-  return role === "parent";
+/**
+ * The app a demo role lives in, each on its own host: the role parent in the
+ * parents app (#3468), the Träger-Büro in the Träger-Portal (#6193), every
+ * other role in the OGS app.
+ */
+export type DemoApp = "school" | "parent" | "traeger";
+
+export function demoAppOfRole(role: DemoRole): DemoApp {
+  if (role === "parent") return "parent";
+  if (role === "traeger") return "traeger";
+  return "school";
+}
+
+/**
+ * The roles the banner offers. The Träger-Büro only where the school has a
+ * Träger of its own; a school under the shared Demo-Träger has none.
+ */
+export function demoRoleChoices(
+  visit: Pick<DemoVisit, "traeger"> | null,
+): typeof DEMO_ROLES {
+  if (visit?.traeger === false) {
+    return DEMO_ROLES.filter((entry) => entry.role !== "traeger");
+  }
+  return DEMO_ROLES;
 }
 
 export function demoRoleLabel(role: DemoRole): string {
@@ -302,10 +331,26 @@ export async function restartDemo(
  * The entry page of the parents app with the link (#3468): the same token
  * signs the visitor in there as the school's parent.
  */
-export function parentsDemoEntryUrl(link: DemoLink): string {
+function parentsDemoEntryUrl(link: DemoLink): string {
   return parentsPortalUrl(
     `/demo${demoLinkFragment({ ...link, role: "parent" })}`,
   );
+}
+
+/**
+ * The entry page of the Träger-Portal with the link (#6193): the same token
+ * signs the visitor in there as a member of the school's own Demo-Träger.
+ */
+function traegerDemoEntryUrl(link: DemoLink): string {
+  const host = requiredPortalHostname("traeger");
+  return `${globalThis.location.protocol}//${host}/demo${demoLinkFragment({ ...link, role: "traeger" })}`;
+}
+
+/** The entry page of another app for a role that lives there. */
+export function otherAppDemoEntryUrl(link: DemoLink, role: DemoRole): string {
+  return demoAppOfRole(role) === "traeger"
+    ? traegerDemoEntryUrl(link)
+    : parentsDemoEntryUrl(link);
 }
 
 /**
@@ -448,6 +493,7 @@ async function postSession(body: {
       role?: string;
       src?: string;
       fixed_role?: boolean;
+      traeger?: boolean;
     };
   };
   return {
@@ -457,6 +503,7 @@ async function postSession(body: {
       role: isDemoRole(payload.demo?.role) ? payload.demo.role : body.role,
       src: payload.demo?.src,
       fixedRole: payload.demo?.fixed_role === true ? true : undefined,
+      traeger: payload.demo?.traeger === true,
     },
   };
 }
@@ -494,6 +541,8 @@ export interface DemoVisit {
   src?: string;
   /** The standing demo school: its shared role cannot be switched. */
   fixedRole?: boolean;
+  /** The school has a Träger of its own, so the Träger-Büro is a choice. */
+  traeger?: boolean;
   /**
    * The OGS name for the banner in the parents app, which knows no school
    * (#3468). It never goes to the analytics.
@@ -551,6 +600,7 @@ export function readDemoVisit(): DemoVisit | null {
       role: visit.role,
       src: typeof visit.src === "string" ? visit.src : undefined,
       fixedRole: visit.fixedRole === true ? true : undefined,
+      traeger: typeof visit.traeger === "boolean" ? visit.traeger : undefined,
       schoolName:
         typeof visit.schoolName === "string" ? visit.schoolName : undefined,
       pending: isDemoEntryEvent(visit.pending) ? visit.pending : undefined,

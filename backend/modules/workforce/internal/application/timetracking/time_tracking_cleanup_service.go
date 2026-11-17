@@ -106,6 +106,8 @@ type timeTrackingCleanupService struct {
 	auditRepo        DeletionAudit
 	settings         retentionSettingsResolver
 	logger           *slog.Logger
+	// now is the clock of the cutoff and the deletion stamps (ADR 0239).
+	now func() time.Time
 }
 
 // NewTimeTrackingCleanupService constructs the cleanup service. auditRepo
@@ -116,9 +118,10 @@ func NewTimeTrackingCleanupService(
 	auditRepo DeletionAudit,
 	settings retentionSettingsResolver,
 	logger *slog.Logger,
+	now func() time.Time,
 ) TimeTrackingCleanupService {
-	if settings == nil {
-		panic("time tracking cleanup: settings are required")
+	if settings == nil || now == nil {
+		panic("time tracking cleanup: settings and the clock are required")
 	}
 	if logger == nil {
 		logger = slog.Default()
@@ -129,6 +132,7 @@ func NewTimeTrackingCleanupService(
 		auditRepo:        auditRepo,
 		settings:         settings,
 		logger:           logger,
+		now:              now,
 	}
 }
 
@@ -148,7 +152,7 @@ func (s *timeTrackingCleanupService) CleanupExpiredTimeTrackingData(ctx context.
 	if err != nil {
 		return nil, err
 	}
-	cutoff := cutoffForDays(retentionDays)
+	cutoff := s.cutoffForDays(retentionDays)
 
 	// 1. Collect per-staff impact for the audit log. We need this before
 	//    the deletes so the audit rows can be written first.
@@ -216,7 +220,7 @@ func (s *timeTrackingCleanupService) PreviewExpiredTimeTrackingData(ctx context.
 	if err != nil {
 		return nil, err
 	}
-	cutoff := cutoffForDays(retentionDays)
+	cutoff := s.cutoffForDays(retentionDays)
 
 	sessionsToDelete, err := s.workSessionRepo.CountWorkSessions(ctx, sessionsBefore(cutoff))
 	err = rowReadError("count with options", err, nil)
@@ -273,7 +277,7 @@ func (s *timeTrackingCleanupService) GetStats(ctx context.Context) (*TimeTrackin
 	if err != nil {
 		return nil, err
 	}
-	cutoff := cutoffForDays(retentionDays)
+	cutoff := s.cutoffForDays(retentionDays)
 
 	totalSessions, err := s.workSessionRepo.CountWorkSessions(ctx, workforce.WorkSessionFilter{})
 	err = rowReadError("count with options", err, nil)
@@ -326,8 +330,8 @@ func resolveTimeTrackingRetentionDays(ctx context.Context, settings retentionSet
 
 // cutoffForDays returns the calendar-day cutoff: anything older than
 // today minus retentionDays will be deleted.
-func cutoffForDays(retentionDays int) calendar.Date {
-	return calendar.TodayDate().AddDays(-retentionDays)
+func (s *timeTrackingCleanupService) cutoffForDays(retentionDays int) calendar.Date {
+	return calendar.DateFromTime(s.now()).AddDays(-retentionDays)
 }
 
 // sessionsBefore selects the work sessions whose workSessionDateColumn is
@@ -424,7 +428,7 @@ func (s *timeTrackingCleanupService) writeStaffAuditRows(
 		deletion := &DeletionEvent{
 			TenantID: tenantID, StaffID: &staffID,
 			DeletionType: "time_tracking_retention", RecordsDeleted: n,
-			DeletedBy: "system", DeletedAt: time.Now(),
+			DeletedBy: "system", DeletedAt: s.now(),
 			DeletionReason: "automated time-tracking retention cleanup",
 			Metadata:       map[string]interface{}{"retention_days": retentionDays, "cutoff_date": cutoffStr},
 		}

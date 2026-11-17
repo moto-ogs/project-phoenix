@@ -42,6 +42,7 @@ func newDecideProbe(t *testing.T) *decideProbe {
 // classifier (roots/owners/root_enrollment_services.go).
 func (p *decideProbe) decisions() *enrollmentCompose.Decisions {
 	return enrollmentCompose.NewDecisions(enrollmentCompose.DecisionDependencies{
+		Now:                 time.Now,
 		IsTransient:         transactionFailures.IsTransientDatabaseError,
 		IsSavepointRollback: func(err error) bool { return errors.Is(err, tenant.ErrSavepointRollback) },
 		Settings:            unreadDecisionSettings{},

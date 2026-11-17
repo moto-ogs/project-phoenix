@@ -31,11 +31,11 @@ type CalendarTestModule struct{ Calendar calendarCompose.Application }
 // module's calendar wired, so the calendar end-to-end suite drives the
 // staff-to-parent flow without naming the portal adapter (#2748).
 func (m CalendarTestModule) ParentCalendarRouter() chi.Router {
-	return parentAPI.NewResource(parentAPI.ResourceConfig{Calendar: m.Calendar}).Router(ParentSessionChain)
+	return parentAPI.NewResource(parentAPI.ResourceConfig{Now: time.Now, Calendar: m.Calendar}).Router(ParentSessionChain)
 }
 
 func NewCalendarTestModule(db transactionruntime.Database, unit tenant.UnitOfWork) (CalendarTestModule, error) {
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return CalendarTestModule{}, err
 	}

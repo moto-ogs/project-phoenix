@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,6 +19,7 @@ import (
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	apiTest "github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
+	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	timetableAPI "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -28,6 +31,12 @@ type holidayRouteSetup struct {
 	db       *bun.DB
 	router   chi.Router
 	tenantID int64
+	engine   holidayEngine
+}
+
+// holidayEngine is the School Calendar's own holiday list for one state.
+type holidayEngine interface {
+	ListHolidays(ctx context.Context, region, from, to string) ([]schoolcalendar.Holiday, error)
 }
 
 // setupHolidayRoute mounts GET /timetable/holidays over the real School
@@ -43,10 +52,13 @@ func setupHolidayRoute(t *testing.T) holidayRouteSetup {
 	resource := timetableAPI.NewResource(timetableAPI.Dependencies{
 		Holidays:        holidays,
 		SettingsService: schoolSettings.Settings,
+		Now:             func() time.Time { return time.Date(2026, time.November, 16, 10, 0, 0, 0, calendar.Berlin) },
 	})
 	router := chi.NewRouter()
 	router.Mount("/timetable", resource.Router(rootAPI.ProtectedTenantRoutes))
-	return holidayRouteSetup{db: db, router: router, tenantID: tenant.FromContext(testpkg.Ctx(t))}
+	engine, ok := schoolCalendar.(holidayEngine)
+	require.True(t, ok, "the School Calendar lists the holidays of a state")
+	return holidayRouteSetup{db: db, router: router, tenantID: tenant.FromContext(testpkg.Ctx(t)), engine: engine}
 }
 
 type holidayListBody struct {
@@ -96,7 +108,7 @@ func TestHolidayRouteFollowsTheFederalStateOfEachSchool(t *testing.T) {
 	testpkg.SetTestTenantSetting(t, setup.db, bavaria, "operations.federal_state", `"DE-BY"`)
 
 	nrw := decodeHolidayList(t, getHolidays(t, setup, setup.tenantID, "?from=2027-01-01&to=2027-01-31", permissions.SchedulesRead))
-	assert.Equal(t, "DE-NW", nrw.Data.FederalState, "the registry default applies without an override")
+	assert.Equal(t, testpkg.TestSchoolFederalState, nrw.Data.FederalState, "the state the school got on creation (#7174)")
 	assert.Equal(t, "Nordrhein-Westfalen", nrw.Data.FederalStateName)
 	assert.Contains(t, holidayNames(nrw), "Neujahrstag")
 	assert.NotContains(t, holidayNames(nrw), "Heilige Drei Könige")
@@ -107,6 +119,43 @@ func TestHolidayRouteFollowsTheFederalStateOfEachSchool(t *testing.T) {
 	assert.Contains(t, holidayNames(by), "Heilige Drei Könige")
 	require.Len(t, by.Data.Holidays, 2)
 	assert.Equal(t, "2027-01-06", by.Data.Holidays[1].Date)
+}
+
+// Every federal state a school can have reaches the route through its
+// setting (#7174): the same holidays as the School Calendar's engine for that
+// state, with the state's German name. A school without a state gets an
+// error, never the holidays of another state.
+func TestHolidayRouteServesEveryFederalState(t *testing.T) {
+	t.Parallel()
+	setup := setupHolidayRoute(t)
+	school, _ := testpkg.CreateTestTenant(t, setup.db)
+	for _, region := range []string{"DE-BW", "DE-BY", "DE-BE", "DE-BB", "DE-HB", "DE-HH", "DE-HE", "DE-MV",
+		"DE-NI", "DE-NW", "DE-RP", "DE-SL", "DE-SN", "DE-ST", "DE-SH", "DE-TH"} {
+		testpkg.SetTestTenantSetting(t, setup.db, school, "operations.federal_state", fmt.Sprintf("%q", region))
+		body := decodeHolidayList(t, getHolidays(t, setup, school, "?from=2027-01-01&to=2027-12-31", permissions.SchedulesRead))
+		want, err := setup.engine.ListHolidays(context.Background(), region, "2027-01-01", "2027-12-31")
+		require.NoError(t, err)
+		assert.Equal(t, region, body.Data.FederalState)
+		assert.NotEmpty(t, body.Data.FederalStateName, region)
+		require.Len(t, body.Data.Holidays, len(want), region)
+		for i, holiday := range want {
+			assert.Equal(t, holiday.Date, body.Data.Holidays[i].Date, region)
+			assert.Equal(t, holiday.Name, body.Data.Holidays[i].Name, region)
+		}
+	}
+
+	_, err := setup.db.NewDelete().TableExpr("config.setting_values").
+		Where("tenant_id = ? AND setting_key = 'operations.federal_state'", school).Exec(context.Background())
+	require.NoError(t, err)
+	missing := getHolidays(t, setup, school, "?from=2027-01-01&to=2027-12-31", permissions.SchedulesRead)
+	// No default state (#7174): the school is told what is missing instead
+	// of getting a server error.
+	require.Equal(t, http.StatusConflict, missing.Code, "body=%s", missing.Body.String())
+	var problem struct {
+		Code string `json:"code"`
+	}
+	require.NoError(t, json.Unmarshal(missing.Body.Bytes(), &problem))
+	assert.Equal(t, schoolcalendar.CodeFederalStateMissing, problem.Code)
 }
 
 // The calendar page reads the holidays with calendar:own, the period page

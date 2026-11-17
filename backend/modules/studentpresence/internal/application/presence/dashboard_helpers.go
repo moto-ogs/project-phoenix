@@ -388,8 +388,9 @@ func buildActiveGroupRoomLookup(activeGroups []*ports.ActiveGroup, roomData *das
 	return lookup
 }
 
-// buildRecentActivity builds the recent activity list
-func buildRecentActivity(activeGroups []*ports.ActiveGroup, activityGroupsByID map[int64]*ports.SessionActivity, roomData *dashboardRoomData) []RecentActivity {
+// buildRecentActivity builds the recent activity list: the sessions started
+// in the half hour before now, the service clock that stamped their start.
+func buildRecentActivity(activeGroups []*ports.ActiveGroup, activityGroupsByID map[int64]*ports.SessionActivity, roomData *dashboardRoomData, now time.Time) []RecentActivity {
 	recentActivity := []RecentActivity{}
 
 	for _, group := range activeGroups {
@@ -397,7 +398,7 @@ func buildRecentActivity(activeGroups []*ports.ActiveGroup, activityGroupsByID m
 			break
 		}
 
-		if time.Since(group.StartTime) >= 30*time.Minute || !group.IsActive() {
+		if now.Sub(group.StartTime) >= 30*time.Minute || !group.IsActive() {
 			continue
 		}
 

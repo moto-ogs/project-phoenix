@@ -31,30 +31,37 @@ const (
 )
 
 // ledgerRetentionStore is the Audit append store's access to the
-// tenant-bound retention functions of the ledgers.
+// tenant-bound retention functions of the ledgers. Each function guards its
+// window on the database clock, and the column defaults stamp the ledgers
+// there, so every cutoff counts back from DatabaseTime, read once per
+// retention step (ADR 0281, Nachtrag); the year and day rules stay here.
 type ledgerRetentionStore interface {
+	DatabaseTime(ctx context.Context) (time.Time, error)
 	DeleteExpiredAuthEvents(ctx context.Context, cutoff time.Time) (int64, error)
 	DeleteExpiredDataAccessLog(ctx context.Context, cutoff time.Time) (int64, error)
 	DeleteExpiredDataDeletions(ctx context.Context, cutoff time.Time) (int64, error)
 	DeleteExpiredProtocol(ctx context.Context, kind string, cutoff time.Time) (int64, error)
 }
 
-func (c *Command) ledgerRetention() (ledgerRetentionStore, error) {
+// ledgerRetention returns the store and the database time the step's
+// cutoff counts back from.
+func (c *Command) ledgerRetention(ctx context.Context) (ledgerRetentionStore, time.Time, error) {
 	store, ok := c.store.(ledgerRetentionStore)
 	if !ok {
-		return nil, fmt.Errorf("audit command: ledger retention store is required")
+		return nil, time.Time{}, fmt.Errorf("audit command: ledger retention store is required")
 	}
-	return store, nil
+	now, err := store.DatabaseTime(ctx)
+	return store, now, err
 }
 
 // DeleteExpiredAuthEvents removes the school's sign-in events older than 90
 // days and reports how many went and the window it applied.
 func (c *Command) DeleteExpiredAuthEvents(ctx context.Context) (int, int, error) {
-	store, err := c.ledgerRetention()
+	store, now, err := c.ledgerRetention(ctx)
 	if err != nil {
 		return 0, 0, err
 	}
-	cutoff := auditModels.RetentionDaysCutoff(time.Now(), AuthEventRetentionDays)
+	cutoff := auditModels.RetentionDaysCutoff(now, AuthEventRetentionDays)
 	deleted, err := store.DeleteExpiredAuthEvents(ctx, cutoff)
 	return int(deleted), AuthEventRetentionDays, err
 }
@@ -63,11 +70,10 @@ func (c *Command) DeleteExpiredAuthEvents(ctx context.Context) (int, int, error)
 // year after the access has ended: everything before 1 January of last year
 // (Berlin). It reports how many rows went and the age of the cutoff in days.
 func (c *Command) DeleteExpiredDataAccessLog(ctx context.Context) (int, int, error) {
-	store, err := c.ledgerRetention()
+	store, now, err := c.ledgerRetention(ctx)
 	if err != nil {
 		return 0, 0, err
 	}
-	now := time.Now()
 	cutoff := followingYearCutoff(now)
 	deleted, err := store.DeleteExpiredDataAccessLog(ctx, cutoff)
 	return int(deleted), int(now.Sub(cutoff).Hours() / 24), err
@@ -105,11 +111,10 @@ func (c *Command) DeleteExpiredOperatorAuditLog(ctx context.Context) (int, error
 // DeleteExpiredDeletionLog removes the school's deletion-log rows older than
 // three years and reports how many went and the window in days.
 func (c *Command) DeleteExpiredDeletionLog(ctx context.Context) (int, int, error) {
-	store, err := c.ledgerRetention()
+	store, now, err := c.ledgerRetention(ctx)
 	if err != nil {
 		return 0, 0, err
 	}
-	now := time.Now()
 	cutoff := auditModels.RetentionYearsCutoff(now, DeletionLogRetentionYears)
 	deleted, err := store.DeleteExpiredDataDeletions(ctx, cutoff)
 	return int(deleted), int(now.Sub(cutoff).Hours() / 24), err
@@ -148,11 +153,10 @@ func (c *Command) DeleteExpiredProtocol(ctx context.Context, kind string) (int, 
 	if !slices.Contains(ProtocolRetentionKinds, kind) {
 		return 0, 0, fmt.Errorf("audit retention: unknown protocol %q", kind)
 	}
-	store, err := c.ledgerRetention()
+	store, now, err := c.ledgerRetention(ctx)
 	if err != nil {
 		return 0, 0, err
 	}
-	now := time.Now()
 	cutoff := auditModels.RetentionYearsCutoff(now, DeletionLogRetentionYears)
 	if followingYearProtocols[kind] {
 		cutoff = followingYearCutoff(now)

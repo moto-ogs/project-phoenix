@@ -86,12 +86,12 @@ func NewTimetableTestRepositoriesWithMembers(db transactionruntime.Database, mem
 	if err != nil {
 		return TimetableTestRepositories{}, err
 	}
-	adapters := NewTimetableRepositoriesWithPresence(db, bookings, persons, groups, rooms.Facilities, calendar, membership, workTime, NewUnloggedStudentPresence(db))
+	adapters := NewTimetableRepositoriesWithPresence(db, bookings, persons, groups, rooms.Facilities, calendar, membership, workTime, NewUnloggedStudentPresence(db), firstTimetableClock(clocks))
 	carePlan, err := NewCarePlan(db, persons, adapters.InstanceStudent)
 	if err != nil {
 		return TimetableTestRepositories{}, err
 	}
-	usage := timetableCompose.NewPlanningCalendarPeriodUsage(enrollmentCompose.New(), bookings)
+	usage := timetableCompose.NewPlanningCalendarPeriodUsage(enrollmentCompose.NewClocked(time.Now), bookings)
 	structure := NewSchoolStructureSuiteRepositories(db)
 	result := TimetableTestRepositories{
 		Repositories: adapters,
@@ -132,7 +132,7 @@ func (r TimetableTestRepositories) WithDeviationAudit(events auditModels.Deviati
 }
 
 func (r TimetableTestRepositories) Enrollment() EnrollmentBookingProjection {
-	return NewEnrollmentBookingProjection(ComposeEnrollmentBookings(enrollmentCompose.New()), UngatedEnrollmentPhaseBounds())
+	return NewEnrollmentBookingProjection(ComposeEnrollmentBookings(enrollmentCompose.NewClocked(time.Now), time.Now), UngatedEnrollmentPhaseBounds(), time.Now)
 }
 
 // CalendarPeriodUsage returns the planning owners' per-period reference
@@ -211,7 +211,7 @@ func NewTimetableTestRecurrenceLock(db transactionruntime.Database) (timetable.R
 // handle. The care lifecycle that restores through them holds the gate
 // itself; the production root binds NewEnrollmentPhaseBounds.
 func UngatedEnrollmentPhaseBounds() enrollment.PhaseBoundsReader {
-	return enrollment.NewPhaseBoundsReader(enrollmentCompose.New(), nil)
+	return enrollment.NewPhaseBoundsReader(enrollmentCompose.NewClocked(time.Now), nil)
 }
 
 // MustNewTimetableRecurrenceLock is newTimetableTestRecurrenceLock for test

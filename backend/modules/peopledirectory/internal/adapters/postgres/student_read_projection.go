@@ -296,6 +296,7 @@ func toDomainRosterEntry(row directory.StudentRosterEntry) domain.StudentRosterE
 	record.DepartureDays = row.Record.DepartureDays
 	record.AllowedDepartureModes = row.Record.AllowedDepartureModes
 	record.PickupDays, record.BusDays = row.Record.PickupDays, row.Record.BusDays
+	record.WithoutCarePlace = row.Record.WithoutCarePlace
 	return domain.StudentRosterEntry{Record: record, FirstName: row.FirstName, LastName: row.LastName, TagID: row.TagID, AccountID: row.AccountID}
 }
 

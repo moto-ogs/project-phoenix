@@ -282,7 +282,10 @@ type SurveyDraftRecords interface {
 	MarkPublished(ctx context.Context, id int64, at time.Time, announcementID *int64) (bool, error)
 	CloseSurvey(ctx context.Context, id int64, at time.Time, announcementID *int64) error
 	DeleteSurvey(ctx context.Context, id int64) error
-	ExpiredSurveys(ctx context.Context, audience string, cutoff time.Time) ([]Survey, error)
+	// ExpiredSurveys lists the surveys past the window: published ones closed
+	// before closedBefore, an instant of the owner's clock, and drafts the
+	// database last stamped more than draftRetentionDays Berlin days ago.
+	ExpiredSurveys(ctx context.Context, audience string, closedBefore time.Time, draftRetentionDays int) ([]Survey, error)
 }
 
 // SurveyAnswerRecords stores participation and answers apart and counts them.

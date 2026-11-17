@@ -49,8 +49,8 @@ func (s *Store) StartExportFileNumbers(ctx context.Context, organizationID, star
 	if err != nil {
 		return err
 	}
-	result, err := db.ExecContext(ctx, `INSERT INTO parent_billing.number_range_counters (organization_id, service, year, last_number)
-		VALUES (?, ?, 0, ?) ON CONFLICT (organization_id, service, year) DO NOTHING`, organizationID, exportFileNumberService, start-1)
+	result, err := db.ExecContext(ctx, `INSERT INTO parent_billing.number_range_counters (organization_id, service, year, last_number, updated_at)
+		VALUES (?, ?, 0, ?, ?) ON CONFLICT (organization_id, service, year) DO NOTHING`, organizationID, exportFileNumberService, start-1, s.now())
 	if err != nil {
 		return fmt.Errorf("start the export file numbers: %w", err)
 	}
@@ -74,7 +74,7 @@ type exportMappingRow struct {
 	Format             string          `bun:"format,pk"`
 	Settings           json.RawMessage `bun:"settings,type:jsonb"`
 	UpdatedByAccountID *int64          `bun:"updated_by_account_id"`
-	UpdatedAt          time.Time       `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt          time.Time       `bun:"updated_at,nullzero"`
 }
 
 // ExportMapping reads the stored mapping of a format, nil without one.
@@ -100,10 +100,11 @@ func (s *Store) SaveExportMapping(ctx context.Context, organizationID, accountID
 	if err != nil {
 		return err
 	}
-	row := &exportMappingRow{OrganizationID: organizationID, Format: format, Settings: settings, UpdatedByAccountID: accountRef(accountID)}
+	row := &exportMappingRow{OrganizationID: organizationID, Format: format, Settings: settings, UpdatedByAccountID: accountRef(accountID),
+		UpdatedAt: s.now()}
 	if _, err := db.NewInsert().Model(row).On("CONFLICT (organization_id, format) DO UPDATE").
 		Set("settings = EXCLUDED.settings").Set("updated_by_account_id = EXCLUDED.updated_by_account_id").
-		Set("updated_at = CURRENT_TIMESTAMP").Exec(ctx); err != nil {
+		Set("updated_at = EXCLUDED.updated_at").Exec(ctx); err != nil {
 		return fmt.Errorf("save the export mapping: %w", err)
 	}
 	return nil
@@ -138,7 +139,7 @@ type exportFileRow struct {
 	TotalCents           int64      `bun:"total_cents"`
 	Reference            *string    `bun:"reference"`
 	ExportedByAccountID  *int64     `bun:"exported_by_account_id"`
-	ExportedAt           time.Time  `bun:"exported_at,nullzero,default:current_timestamp"`
+	ExportedAt           time.Time  `bun:"exported_at,nullzero"`
 	SubmittedAt          *time.Time `bun:"submitted_at"`
 	SubmittedByAccountID *int64     `bun:"submitted_by_account_id"`
 	DatevAll             bool       `bun:"datev_all"`
@@ -404,9 +405,9 @@ func (s *Store) MarkExportFilesSubmitted(ctx context.Context, organizationID, ac
 		return err
 	}
 	if _, err := db.ExecContext(ctx, `UPDATE parent_billing.export_files
-		SET submitted_at = CURRENT_TIMESTAMP, submitted_by_account_id = ?
+		SET submitted_at = ?, submitted_by_account_id = ?
 		WHERE organization_id = ? AND format = ? AND run_kind = ? AND run_id = ? AND reference = ? AND submitted_at IS NULL`,
-		accountRef(accountID), organizationID, parentbilling.ExportFormatPain008, runKind, runID, messageID); err != nil {
+		s.now(), accountRef(accountID), organizationID, parentbilling.ExportFormatPain008, runKind, runID, messageID); err != nil {
 		return fmt.Errorf("mark the export files submitted: %w", err)
 	}
 	return nil

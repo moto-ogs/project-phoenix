@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -16,7 +17,7 @@ import (
 func TestPhaseSchemaRepointIsolationRollbackAndRetry(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(time.Now)
 	var schoolIDs, sourceIDs, targetIDs []int64
 	for _, school := range []string{"first", "second"} {
 		t.Run(school, func(t *testing.T) {

@@ -6,10 +6,13 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { BookingAccounts } from "~/lib/traeger-finance-exports-api";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import TraegerBookingAccountsPage from "./page";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchBookingAccounts: vi.fn(),
@@ -23,7 +26,10 @@ vi.mock("~/lib/traeger-finance-exports-api", async (importOriginal) => ({
 }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 
-// The test clock stands on 2026-09-09.
+// ISP holds today, ISP27 starts later.
+const CURRENT_FROM = testClockDay(-251);
+const NEXT_FROM = testClockDay(114);
+
 const PAGE: BookingAccounts = {
   standardAccount: "4400",
   costCenterRequired: false,
@@ -38,14 +44,14 @@ const PAGE: BookingAccounts = {
       id: "1",
       scope: "school",
       scopeId: "11",
-      validFrom: "2026-01-01",
+      validFrom: CURRENT_FROM,
       code: "ISP",
     },
     {
       id: "2",
       scope: "school",
       scopeId: "11",
-      validFrom: "2027-01-01",
+      validFrom: NEXT_FROM,
       code: "ISP27",
     },
   ],
@@ -53,9 +59,9 @@ const PAGE: BookingAccounts = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerBookingAccountsPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -78,7 +84,11 @@ it("shows where each Leistung books and which cost center holds today", async ()
     .getByText("GS Ispringen", { selector: "p.font-semibold" })
     .closest("li")!;
   expect(within(school).getByText("ISP")).toBeInTheDocument();
-  expect(within(school).getByText("seit 01.01.2026")).toBeInTheDocument();
+  expect(
+    within(school).getByText(
+      `seit ${CURRENT_FROM.split("-").reverse().join(".")}`,
+    ),
+  ).toBeInTheDocument();
   expect(within(school).getByText("ISP27")).toBeInTheDocument();
   const other = screen
     .getByText("GS Birkenfeld", { selector: "p.font-semibold" })
@@ -146,7 +156,7 @@ it("adds a cost center from a day and keeps a refused one in the form", async ()
     expect(api.addCostCenter).toHaveBeenCalledWith({
       scope: "school",
       scopeId: "12",
-      validFrom: "2026-09-09",
+      validFrom: TEST_CLOCK_TODAY,
       code: "BIR 1",
     }),
   );

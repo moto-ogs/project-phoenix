@@ -116,7 +116,7 @@ func (a *templateAdministration) LockSeriesSeed(ctx context.Context, cmd timetab
 	for _, row := range roster.Staff {
 		staffIDs = append(staffIDs, row.PersonID)
 	}
-	if in.ScheduleValidFrom != nil && !in.ScheduleValidFrom.Before(calendar.TodayDate()) {
+	if in.ScheduleValidFrom != nil && !in.ScheduleValidFrom.Before(a.split.deps.Today()) {
 		seedStaff, err := staffOfInstance(ctx, deps.InstanceStaffRepo, seedInstanceID)
 		if err != nil {
 			return &ports.ScheduleError{Op: op + " staff", Err: err}

@@ -46,7 +46,7 @@ import {
   restoreAdminRequest,
 } from "~/lib/enrollment-admin-api";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
@@ -96,6 +96,9 @@ import {
   useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth, useInvalidateFamily } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { createLogger } from "~/lib/logger";
@@ -158,24 +161,79 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
   const waitlistEnabled = useWaitlistEnabled();
   const tenantPath = useTenantAwarePath();
   const router = useTenantRouter();
-  const [data, setData] = useState<AdminRequestDetail | null>(null);
   const today = useBerlinToday();
+  // The Berlin day of the last answer this view received: a weekly plan that
+  // starts on a later day changes the shown status at midnight.
   const [weeklyPlanCheckedOn, setWeeklyPlanCheckedOn] = useState<string | null>(
     null,
   );
-  const [loading, setLoading] = useState(true);
+  const invalidateFamily = useInvalidateFamily();
+  const requestDays = useRef(new WeakMap<AdminRequestDetail, string>());
+  const fetchDetail = useCallback(async () => {
+    const checkedOn = berlinTodayISO();
+    const fresh = await getAdminRequest(requestId);
+    requestDays.current.set(fresh, checkedOn);
+    // Das Öffnen hat die Anmeldung für diese Person gelesen (#3778).
+    announceAdminRequestOpened();
+    void invalidateFamily(enrollmentKeys.adminRequestsFamily);
+    return fresh;
+  }, [invalidateFamily, requestId]);
+  const {
+    data,
+    error: detailError,
+    mutate: mutateDetail,
+  } = useSWRAuth(enrollmentKeys.adminRequest(requestId), fetchDetail, {
+    keepPreviousData: false,
+    // This GET marks the request read, including a warm reopening after „Ungelesen“.
+    revalidateOnMount: true,
+    dedupingInterval: 0,
+    onSuccess: (answer) =>
+      setWeeklyPlanCheckedOn(requestDays.current.get(answer) ?? null),
+  });
+  const detailLoad = useSwrResourceLoadError(
+    [{ data, error: detailError }],
+    "die Anmeldung",
+    () => mutateDetail(),
+  );
+  // A failed load stays loading until its error text is there, so no
+  // fallback shows in its place.
+  const loading =
+    (!data && !detailLoad.failure) ||
+    (detailLoad.failure !== undefined && detailLoad.error === null);
+  // A reload after a write that fails stands above the shown request, which
+  // stays on screen and may be old.
+  const reloadError = useApiLoadError();
+  const showReloadError = reloadError.show;
+  const clearReloadError = reloadError.clear;
+  const refreshAfterWrite = useCallback(
+    async function reload(): Promise<void> {
+      clearReloadError();
+      try {
+        await mutateDetail(fetchDetail(), { revalidate: false });
+      } catch (err) {
+        // The write holds even if the detail could not be read again.
+        void invalidateFamily(enrollmentKeys.adminRequestsFamily);
+        await showReloadError(err, {
+          object: "die Anmeldung",
+          retry: () => void reload(),
+        });
+      }
+    },
+    [
+      mutateDetail,
+      fetchDetail,
+      clearReloadError,
+      showReloadError,
+      invalidateFamily,
+    ],
+  );
   const toast = useToast();
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
   // Eine Entscheidung scheitert an genau einem Kind: der Kasten steht dort.
   const decisionErrors = useApiFormError();
   const [decisionErrorChildId, setDecisionErrorChildId] = useState<
     string | null
   >(null);
   const restoreErrors = useApiFormError();
-  // „Wiederholen“ ruft die aktuelle Fassung auf, nicht die vom Fehler.
-  const reloadRef = useRef<() => Promise<void>>(async () => undefined);
   const latestDecideRef = useRef<
     (
       childId: string,
@@ -210,77 +268,43 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
   const [existingChildChoiceChild, setExistingChildChoiceChild] =
     useState<AdminRequestChild | null>(null);
 
-  // `quiet` refreshes without the page's loading state, so a card that just
-  // saved keeps showing its result (#5102).
-  const load = useCallback(
-    async (options?: { quiet?: boolean }) => {
-      if (!options?.quiet) setLoading(true);
-      clearLoadError();
-      try {
-        const checkedOn = berlinTodayISO();
-        const fresh = await getAdminRequest(requestId);
-        setData(fresh);
-        setWeeklyPlanCheckedOn(checkedOn);
-        // Das Öffnen hat die Anmeldung für diese Person gelesen (#3778).
-        announceAdminRequestOpened();
-      } catch (err) {
-        logger.error("admin_enrollment_detail_load_failed", {
-          error: err instanceof Error ? err.message : "unknown",
-        });
-        await showLoadError(err, {
-          object: "die Anmeldung",
-          retry: () => void reloadRef.current(),
-        });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [requestId, clearLoadError, showLoadError],
-  );
-  useLayoutEffect(() => {
-    reloadRef.current = load;
-  });
-
   const handleDataCorrected = useCallback(
     (correctedChild: AdminRequestChild) => {
-      setData((current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          children: current.children.map((existingChild) =>
-            existingChild.id === correctedChild.id
-              ? { ...existingChild, ...correctedChild }
-              : existingChild,
-          ),
-        };
-      });
-      void load({ quiet: true });
+      void mutateDetail(
+        (current) =>
+          current && {
+            ...current,
+            children: current.children.map((existingChild) =>
+              existingChild.id === correctedChild.id
+                ? { ...existingChild, ...correctedChild }
+                : existingChild,
+            ),
+          },
+        { revalidate: false },
+      );
+      void refreshAfterWrite();
     },
-    [load],
+    [mutateDetail, refreshAfterWrite],
   );
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const hasPendingWeeklyPlan = data?.children.some(
     (child) => child.status === "approved" && child.weekly_plan_on,
   );
   useEffect(() => {
     if (hasPendingWeeklyPlan && weeklyPlanCheckedOn !== today) {
-      void load({ quiet: true });
+      void mutateDetail();
     }
-  }, [today, weeklyPlanCheckedOn, hasPendingWeeklyPlan, load]);
+  }, [today, weeklyPlanCheckedOn, hasPendingWeeklyPlan, mutateDetail]);
 
   useEffect(() => {
     if (!hasPendingWeeklyPlan) return;
     const refreshOnVisible = () => {
-      if (document.visibilityState === "visible") void load({ quiet: true });
+      if (document.visibilityState === "visible") void mutateDetail();
     };
     document.addEventListener("visibilitychange", refreshOnVisible);
     return () =>
       document.removeEventListener("visibilitychange", refreshOnVisible);
-  }, [hasPendingWeeklyPlan, load]);
+  }, [hasPendingWeeklyPlan, mutateDetail]);
 
   const availableActions = waitlistEnabled
     ? ACTIONS
@@ -335,15 +359,15 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
           ...refused,
           possible_existing_children: candidates,
         };
-        setData((current) =>
-          current
-            ? {
-                ...current,
-                children: current.children.map((child) =>
-                  child.id === childId ? refreshed : child,
-                ),
-              }
-            : current,
+        void mutateDetail(
+          (current) =>
+            current && {
+              ...current,
+              children: current.children.map((child) =>
+                child.id === childId ? refreshed : child,
+              ),
+            },
+          { revalidate: false },
         );
         setExistingChildChoiceChild(refreshed);
         return;
@@ -372,7 +396,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     toast.success(
       `Die Entscheidung wurde gespeichert: ${CHILD_STATUS_LABELS[status as ChildStatus]}.`,
     );
-    await Promise.all([load(), refreshRequestMails()]);
+    await Promise.all([refreshAfterWrite(), refreshRequestMails()]);
   };
   useLayoutEffect(() => {
     latestDecideRef.current = handleDecide;
@@ -401,7 +425,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     if (!result) return;
     setRestoreOpen(false);
     toast.success(buildRestoreInfoMessage(result));
-    await load();
+    await refreshAfterWrite();
   };
   useLayoutEffect(() => {
     latestRestoreRef.current = handleRestore;
@@ -426,7 +450,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
         back
         backHref="/admin/enrollments"
         backLabel="Zurück zur Anmeldungs-Übersicht"
-        error={loadError.error ?? "Die Anmeldung wurde nicht gefunden."}
+        error={detailLoad.error ?? "Die Anmeldung wurde nicht gefunden."}
       />
     );
   }
@@ -661,7 +685,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
                 return;
               }
               toast.success("Das Kind wurde aus der Anmeldung gelöscht.");
-              void load();
+              void refreshAfterWrite();
             }}
           />
         </>
@@ -672,7 +696,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
           <div className="space-y-6 p-5 max-sm:p-4">
             {/* Ein gescheitertes Neuladen nach einer Änderung: die Seite zeigt
                 weiter den letzten Stand und sagt, dass er veraltet sein kann. */}
-            <LoadErrorAlert error={loadError.error} />
+            <LoadErrorAlert error={reloadError.error} />
             {data.late_invite_email_mismatch === true &&
               data.late_invite_guardian_email && (
                 <Alert
@@ -730,7 +754,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
                       ? () => rejectDuplicate(child)
                       : undefined
                   }
-                  onOfferingsChanged={() => void load({ quiet: true })}
+                  onOfferingsChanged={() => void refreshAfterWrite()}
                   onDataCorrected={handleDataCorrected}
                   onDelete={() =>
                     setDeletionTarget({

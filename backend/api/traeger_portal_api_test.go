@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -54,12 +55,18 @@ func newTraegerPortal(t *testing.T) (*bun.DB, *traegerPortalHandler, identityacc
 // newTraegerPortalOn is newTraegerPortal whose day-bound services read today.
 func newTraegerPortalOn(t *testing.T, today func() calendar.Date) (*bun.DB, *traegerPortalHandler, identityaccess.Owner, tenant.UnitOfWork) {
 	t.Helper()
+	return newTraegerPortalAt(t, today, time.Now)
+}
+
+// newTraegerPortalAt is newTraegerPortalOn whose instant-bound services read now.
+func newTraegerPortalAt(t *testing.T, today func() calendar.Date, now func() time.Time) (*bun.DB, *traegerPortalHandler, identityaccess.Owner, tenant.UnitOfWork) {
+	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	unit := testpkg.TenantRuntime(t, db)
 	mail := testpkg.NewCapturingMailer()
 	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
 	require.NoError(t, err)
-	routes := traegerPortalRoutesOn(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, today)
+	routes := traegerPortalRoutesOn(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, today, now)
 	return db, &traegerPortalHandler{Handler: testpkg.SessionVerifier(routes), mail: mail}, auth.Auth, unit
 }
 
@@ -77,10 +84,17 @@ func traegerPortalOn(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, options .
 // on days (#6447).
 func traegerPortalWithDays(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar) *traegerPortalHandler {
 	t.Helper()
+	return traegerPortalWithDaysOn(t, db, unit, days, calendar.TodayDate, time.Now)
+}
+
+// traegerPortalWithDaysOn is traegerPortalWithDays whose day-bound services
+// read today and whose instant-bound services read now.
+func traegerPortalWithDaysOn(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date, now func() time.Time) *traegerPortalHandler {
+	t.Helper()
 	mail := testpkg.NewCapturingMailer()
 	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
 	require.NoError(t, err)
-	return &traegerPortalHandler{Handler: traegerPortalRouterWithDays(t, db, auth.Auth, unit, days), mail: mail}
+	return &traegerPortalHandler{Handler: testpkg.SessionVerifier(traegerPortalRoutesOn(t, db, auth.Auth, unit, days, today, now)), mail: mail}
 }
 
 // traegerPortalRouter builds the /traeger router over identity, with the
@@ -101,19 +115,23 @@ func traegerPortalRouterWithDays(t *testing.T, db *bun.DB, identity TraegerPorta
 // a test can mount the serving root's family check between the two.
 func traegerPortalRoutes(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar) http.Handler {
 	t.Helper()
-	return traegerPortalRoutesOn(t, db, identity, unit, days, calendar.TodayDate)
+	return traegerPortalRoutesOn(t, db, identity, unit, days, calendar.TodayDate, time.Now)
 }
 
 // traegerPortalRoutesOn is traegerPortalRoutes whose day-bound services read
-// today, the day clock the serving root binds to its real clock.
-func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date) http.Handler {
+// today, the day clock the serving root binds to its real clock, and whose
+// instant-bound services read now, the Audit persistence included, as the
+// serving root binds its clock to both. Most callers keep the real instant clock:
+// the contract and billing routes compare their stamps with PostgreSQL's
+// now(), as before #7104.
+func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date, now func() time.Time) http.Handler {
 	t.Helper()
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
-	audit, err := auditCompose.NewTenantPersistence(db)
+	audit, err := auditCompose.NewTenantPersistence(db, now)
 	require.NoError(t, err)
-	membership, err := owners.ComposeSchoolMembership(database)
+	membership, err := owners.ComposeSchoolMembership(database, time.Now)
 	require.NoError(t, err)
 	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)
@@ -127,7 +145,7 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	require.NoError(t, err)
 	portal, err := NewTraegerPortalHTTP(identity, organizations, owners.MustNewPeopleDirectory(database), membership,
 		TraegerAudit{Trail: audit.AccessTrail, Log: audit.DataAccessLog}, settings, testHealthCipher(), days,
-		holidayTraegerMail{delivery: delivery.Module}, holidayMailStates{mails: delivery.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics.Statistics, today,
+		holidayTraegerMail{delivery: delivery.Module}, holidayMailStates{mails: delivery.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics.Statistics, today, now,
 		owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings))
 	require.NoError(t, err)
 	router := chi.NewRouter()
@@ -141,13 +159,13 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	require.NoError(t, err)
 	bankCipher, err := BankDataCipher(testpkg.TestBankDataKeys, "")
 	require.NoError(t, err)
-	mountParentBillingRoutes(router, router, organizations, settings, schoolSettings.Settings, presence, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, testHealthCipher(), bankCipher, days, today, slog.Default())
+	mountParentBillingRoutes(router, router, organizations, settings, schoolSettings.Settings, presence, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, testHealthCipher(), bankCipher, days, today, now, slog.Default())
 	mountTraegerClosingDayRoutes(router, owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings), organizations,
-		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{})
+		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, now)
 	mountHolidayClosureNotificationRoutes(router, router, organizations,
-		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, slog.Default())
+		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, slog.Default(), now)
 	mountCareContractRoutes(router, organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog,
-		owners.NewCareContractNoticeAddressees(owners.MustNewPeopleDirectory(database), identity), owners.CareContractTestHolidays{}, "http://parents.localhost:3000", today)
+		owners.NewCareContractNoticeAddressees(owners.MustNewPeopleDirectory(database), identity), owners.CareContractTestHolidays{}, "http://parents.localhost:3000", today, now)
 	return router
 }
 

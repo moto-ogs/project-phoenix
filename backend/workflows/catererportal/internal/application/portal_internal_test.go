@@ -238,6 +238,29 @@ func TestPortalAcceptanceRunsInTheLinkedSchool(t *testing.T) {
 	assert.Equal(t, steps{"lock:caterer-school:11", "identity:accept"}, got)
 }
 
+// #4496: a wrong password of an existing caterer commits the school's
+// transaction, so the counted attempt stays; any other failure rolls back.
+func TestPortalAcceptanceCommitsARefusedPassword(t *testing.T) {
+	t.Parallel()
+	committed := func(acceptErr error) (bool, error) {
+		caterers := &fakeCaterers{err: fmt.Errorf("accept: %w", acceptErr)}
+		var outcome error
+		portal := newTestPortal(t, caterers, &fakeOrders{}, &schoolsOpened{})
+		portal.deps.WithinSchool = func(ctx context.Context, _ int64, fn func(context.Context) error) error {
+			outcome = fn(ctx)
+			return outcome
+		}
+		err := portal.AcceptInvitation(context.Background(), 11, "token", identityaccess.CatererRegistration{})
+		return outcome == nil, err
+	}
+	commits, err := committed(identityaccess.ErrInvalidCredentials)
+	assert.True(t, commits, "the counted wrong password commits")
+	require.ErrorIs(t, err, identityaccess.ErrInvalidCredentials, "and is still answered")
+	commits, err = committed(identityaccess.ErrInvitationUsed)
+	assert.False(t, commits, "another refusal rolls back")
+	require.ErrorIs(t, err, identityaccess.ErrInvitationUsed)
+}
+
 // ADR 0077: ending the supply records who ended it; a failure leaves the
 // caller's transaction to roll back.
 func TestPortalEndsTheSupply(t *testing.T) {

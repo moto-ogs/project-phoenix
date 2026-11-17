@@ -3,6 +3,8 @@
 package api
 
 import (
+	"time"
+
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -19,6 +21,6 @@ func NewAuthTestParentPortal(db transactionruntime.Database) (carePlanCompose.Pa
 	if err != nil {
 		return carePlanCompose.ParentPortalRepositories{}, err
 	}
-	requests := carePlanCompose.NewParentEnrollmentRequestRepository(db.Pool(), owners.ParentPortalEnrollments{Enrollment: enrollmentCompose.New()}, owners.IdentityAccountDirectory{Accounts: owners.NewPeopleIdentityAccess(db, nil)})
+	requests := carePlanCompose.NewParentEnrollmentRequestRepository(db.Pool(), owners.ParentPortalEnrollments{Enrollment: enrollmentCompose.NewClocked(time.Now)}, owners.IdentityAccountDirectory{Accounts: owners.NewPeopleIdentityAccess(db, nil)})
 	return carePlanCompose.ParentPortalRepositories{ParentEnrollmentRequest: requests}.WithSchools(owners.ParentPortalSchools{Schools: organizations}), nil
 }

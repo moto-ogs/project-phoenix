@@ -59,7 +59,7 @@ func TestNativeArrivalClassUpdateAuthorizesBeforeClassLockAndPreservesDeviations
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	first := testpkg.CreateTestStudent(t, db, "Class", "First", "1a")
 	second := testpkg.CreateTestStudent(t, db, "Class", "Second", "1a")
 	staff := testpkg.CreateTestStaff(t, db, "Class", "Staff")
@@ -72,7 +72,7 @@ func TestNativeArrivalClassUpdateAuthorizesBeforeClassLockAndPreservesDeviations
 		{ScheduleStudent: careplan.ScheduleStudent{ID: first.ID, TenantID: testpkg.Tenant(t)}, SchoolClass: " 1A "},
 	}}
 	classes := &arrivalClassPlansFixture{events: &events, row: compose.ArrivalClassPlan{SchoolClass: "1a", ArrivalTimes: map[string]string{"mon": "13:00", "tue": "12:45", "wed": "12:15"}}}
-	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, compose.ArrivalScheduleDependencies{Students: directory, Classes: classes})
+	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, compose.ArrivalScheduleDependencies{Students: directory, Classes: classes, Today: decisionTestDay})
 	require.NoError(t, err)
 	filter := careplan.ArrivalScheduleBulkFilter{SchoolClass: " 1a ", Authorize: func(_ context.Context, row careplan.ScheduleStudent) (bool, error) {
 		events = append(events, "authorize")

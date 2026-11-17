@@ -35,6 +35,8 @@ describe("DemoEveningRow", () => {
   });
 
   it("stays hidden during the school day", () => {
+    // Noon on a weekday is inside the school day.
+    setTestClock("2026-09-09T12:00:00+02:00");
     const { unmount } = render(<DemoEveningRow inParentsApp={false} />);
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
     unmount();

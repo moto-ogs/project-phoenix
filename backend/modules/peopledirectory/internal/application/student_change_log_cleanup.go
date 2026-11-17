@@ -57,9 +57,14 @@ func (s *studentChangeLogCleanupService) CleanupExpiredChangeLog(ctx context.Con
 	if err != nil {
 		return nil, err
 	}
-	// created_at is TIMESTAMPTZ, so compare against an instant. BerlinMidnight
-	// of (today - retentionDays) is the cutoff; anything older is deleted.
-	cutoff := calendar.TodayDate().AddDays(-retentionDays).BerlinMidnight()
+	// BerlinMidnight of (today - retentionDays) is the instant cutoff. Today is
+	// the database's: its column default stamps created_at and its retention
+	// function guards the cutoff (ADR 0281, Nachtrag).
+	now, err := s.store.DatabaseTime(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read the change-log clock: %w", err)
+	}
+	cutoff := calendar.DateFromTime(now).AddDays(-retentionDays).BerlinMidnight()
 
 	// 1. Per-student impact, needed before the delete so audit rows can be
 	//    written first.

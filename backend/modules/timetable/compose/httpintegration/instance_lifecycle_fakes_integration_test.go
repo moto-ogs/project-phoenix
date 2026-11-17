@@ -61,6 +61,11 @@ func newFakeLifecycle(t *testing.T, deps timetablePorts.InstanceLifecycleDepende
 	deps.ContentHash = securityruntime.Fingerprint
 	deps.Database = compose.NewTenantDatabase(testpkg.SetupTestDB(t))
 	deps.Logger = slog.New(slog.DiscardHandler)
+	if deps.Now == nil {
+		// These cases build their sessions on the wall clock; the lifecycle
+		// reads the same one.
+		deps.Now = time.Now
+	}
 	if deps.InstanceStaffRepo == nil {
 		deps.InstanceStaffRepo = fakeNoInstanceStaff{}
 	}

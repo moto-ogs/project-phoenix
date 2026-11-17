@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -91,7 +92,7 @@ func TestNotifySynchronouslyDeliversAndReportsAcceptance(t *testing.T) {
 	t.Parallel()
 
 	channel := &syncChannel{recordingChannel: recordingChannel{name: "web_push"}}
-	svc := notifications.NewService(openWindowSettings(), nil, channel)
+	svc := notifications.NewService(openWindowSettings(), nil, time.Now, channel)
 
 	require.NoError(t, svc.NotifySynchronously(context.Background(), syncEvent()))
 
@@ -106,7 +107,7 @@ func TestNotifySynchronouslyReturnsChannelFailure(t *testing.T) {
 
 	deliveryErr := errors.New("push service unavailable")
 	channel := &syncChannel{recordingChannel: recordingChannel{name: "web_push"}, syncErr: deliveryErr}
-	svc := notifications.NewService(openWindowSettings(), nil, channel)
+	svc := notifications.NewService(openWindowSettings(), nil, time.Now, channel)
 
 	err := svc.NotifySynchronously(context.Background(), syncEvent())
 
@@ -122,7 +123,7 @@ func TestNotifySynchronouslyStillDeliversAsyncChannels(t *testing.T) {
 	t.Parallel()
 
 	asyncOnly := &recordingChannel{name: "sse"}
-	svc := notifications.NewService(openWindowSettings(), nil, asyncOnly)
+	svc := notifications.NewService(openWindowSettings(), nil, time.Now, asyncOnly)
 
 	require.NoError(t, svc.NotifySynchronously(context.Background(), syncEvent()))
 	require.Len(t, asyncOnly.events, 1,
@@ -137,7 +138,7 @@ func TestNotifySynchronouslyIgnoresAsyncChannelFailure(t *testing.T) {
 
 	asyncOnly := &recordingChannel{name: "sse", err: errors.New("hub unavailable")}
 	syncCh := &syncChannel{recordingChannel: recordingChannel{name: "web_push"}}
-	svc := notifications.NewService(openWindowSettings(), nil, asyncOnly, syncCh)
+	svc := notifications.NewService(openWindowSettings(), nil, time.Now, asyncOnly, syncCh)
 
 	require.NoError(t, svc.NotifySynchronously(context.Background(), syncEvent()))
 	assert.Len(t, syncCh.syncEvents, 1)
@@ -153,7 +154,7 @@ func TestNotifySynchronouslyDeliversAsyncChannelsDespiteSyncFailure(t *testing.T
 		recordingChannel: recordingChannel{name: "web_push"},
 		syncErr:          errors.New("push service unavailable"),
 	}
-	svc := notifications.NewService(openWindowSettings(), nil, syncCh, asyncOnly)
+	svc := notifications.NewService(openWindowSettings(), nil, time.Now, syncCh, asyncOnly)
 
 	require.Error(t, svc.NotifySynchronously(context.Background(), syncEvent()))
 	assert.Len(t, asyncOnly.events, 1)
@@ -166,7 +167,7 @@ func TestNotifySynchronouslyHonorsTenantGates(t *testing.T) {
 
 	t.Run("validation rejects a malformed event before any channel sees it", func(t *testing.T) {
 		channel := &syncChannel{recordingChannel: recordingChannel{name: "web_push"}}
-		svc := notifications.NewService(openWindowSettings(), nil, channel)
+		svc := notifications.NewService(openWindowSettings(), nil, time.Now, channel)
 
 		event := syncEvent()
 		event.Title = ""
@@ -175,14 +176,14 @@ func TestNotifySynchronouslyHonorsTenantGates(t *testing.T) {
 	})
 
 	t.Run("an unwired settings service is a configuration error", func(t *testing.T) {
-		svc := notifications.NewService(nil, nil)
+		svc := notifications.NewService(nil, nil, time.Now)
 		assert.EqualError(t, svc.NotifySynchronously(ctx, syncEvent()),
 			"notifications service has no settings service configured")
 	})
 
 	t.Run("the tenant feature flag off returns ErrDisabled", func(t *testing.T) {
 		channel := &syncChannel{recordingChannel: recordingChannel{name: "web_push"}}
-		svc := notifications.NewService(windowSettings(false, "00:00", "00:00"), nil, channel)
+		svc := notifications.NewService(windowSettings(false, "00:00", "00:00"), nil, time.Now, channel)
 
 		require.ErrorIs(t, svc.NotifySynchronously(ctx, syncEvent()), notifications.ErrDisabled)
 		assert.Empty(t, channel.syncEvents)
@@ -194,7 +195,7 @@ func TestNotifySynchronouslyHonorsTenantGates(t *testing.T) {
 			ResolveBoolForTenantFn: func(context.Context, int64, string) (bool, error) {
 				return false, settingsErr
 			},
-		}, nil)
+		}, nil, time.Now)
 
 		err := svc.NotifySynchronously(ctx, syncEvent())
 		require.ErrorIs(t, err, settingsErr)
@@ -206,7 +207,7 @@ func TestNotifySynchronouslyHonorsTenantGates(t *testing.T) {
 		// A window that opens an hour from now cannot contain now, whatever the
 		// wall clock happens to be while the suite runs.
 		start, end := windowAfterNow(60, 120)
-		svc := notifications.NewService(windowSettings(true, start, end), nil, channel)
+		svc := notifications.NewService(windowSettings(true, start, end), nil, time.Now, channel)
 
 		require.ErrorIs(t, svc.NotifySynchronously(ctx, syncEvent()), notifications.ErrOutsideActiveWindow,
 			"a reminder must not wake a family outside the school's delivery window")
@@ -215,7 +216,7 @@ func TestNotifySynchronouslyHonorsTenantGates(t *testing.T) {
 
 	t.Run("a blank window bound fails closed", func(t *testing.T) {
 		channel := &syncChannel{recordingChannel: recordingChannel{name: "web_push"}}
-		svc := notifications.NewService(windowSettings(true, "", ""), nil, channel)
+		svc := notifications.NewService(windowSettings(true, "", ""), nil, time.Now, channel)
 
 		require.ErrorIs(t, svc.NotifySynchronously(ctx, syncEvent()), notifications.ErrOutsideActiveWindow)
 		assert.Empty(t, channel.syncEvents)
@@ -230,14 +231,14 @@ func TestNotifySynchronouslyHonorsTenantGates(t *testing.T) {
 			ResolveStringForTenantFn: func(context.Context, int64, string) (string, error) {
 				return "", windowErr
 			},
-		}, nil)
+		}, nil, time.Now)
 
 		require.ErrorIs(t, svc.NotifySynchronously(ctx, syncEvent()), windowErr)
 	})
 
 	t.Run("the test notification is exempt from the window", func(t *testing.T) {
 		channel := &syncChannel{recordingChannel: recordingChannel{name: "web_push"}}
-		svc := notifications.NewService(windowSettings(true, "", ""), nil, channel)
+		svc := notifications.NewService(windowSettings(true, "", ""), nil, time.Now, channel)
 
 		event := syncEvent()
 		event.Type = notifications.TypeTest

@@ -138,6 +138,10 @@ func (throttlingMailTransport) SendWithReceipt(context.Context, email.Message) (
 // #6737: a throttled send postpones the mail without an attempt while the mail
 // is younger than ThrottleWindow. After that each send counts again, so the mail
 // still ends after its attempts.
+
+// throttleTestNow is the worker's fixed clock the throttle window is dated on.
+var throttleTestNow = time.Date(2031, time.June, 2, 12, 0, 0, 0, time.UTC)
+
 func TestProviderPostponesAThrottledMailWithinTheWindow(t *testing.T) {
 	t.Parallel()
 	for name, tc := range map[string]struct {
@@ -155,10 +159,11 @@ func TestProviderPostponesAThrottledMailWithinTheWindow(t *testing.T) {
 			provider := MailPushProvider{
 				Registry: NewTemplateRegistry(map[string]Renderer{"notice": renderer}),
 				Mailer:   throttlingMailTransport{}, Tenants: contextCheckingMailTransactions{}, Logger: slog.Default(),
+				Now: func() time.Time { return throttleTestNow },
 			}
 			intent := deliveryContract.ClaimedIntent{TenantID: 42, Template: "notice", EmailPayload: json.RawMessage(`{}`)}
 			if tc.age >= 0 {
-				intent.CreatedAt = time.Now().Add(-tc.age)
+				intent.CreatedAt = throttleTestNow.Add(-tc.age)
 			}
 
 			_, err := provider.SendEmail(context.Background(), intent)
@@ -171,4 +176,23 @@ func TestProviderPostponesAThrottledMailWithinTheWindow(t *testing.T) {
 			require.Equal(t, tc.deferred, errors.Is(renderer.result, ErrSendThrottled), "the record learns whether the send counts")
 		})
 	}
+}
+
+// The throttle window counts on the worker's clock, which stamped the mail:
+// with a clock far from the real day a new mail still waits.
+func TestProviderDatesTheThrottleWindowOnTheWorkerClock(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2021, time.March, 10, 9, 30, 0, 0, time.UTC)
+	renderer := &recordingMailRenderer{}
+	provider := MailPushProvider{
+		Registry: NewTemplateRegistry(map[string]Renderer{"notice": renderer}),
+		Mailer:   throttlingMailTransport{}, Tenants: contextCheckingMailTransactions{}, Logger: slog.Default(),
+		Now: func() time.Time { return now },
+	}
+	intent := deliveryContract.ClaimedIntent{TenantID: 42, Template: "notice", EmailPayload: json.RawMessage(`{}`), CreatedAt: now.Add(-time.Minute)}
+
+	_, err := provider.SendEmail(context.Background(), intent)
+
+	require.ErrorIs(t, err, deliveryContract.ErrThrottled)
+	require.ErrorIs(t, err, deliveryContract.ErrDeferred)
 }

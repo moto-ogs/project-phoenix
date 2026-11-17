@@ -1,5 +1,9 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.unmock("swr");
 
 const {
   mockListPeriods,
@@ -33,6 +37,7 @@ vi.mock("~/lib/logger", () => ({
   createLogger: () => ({ error: vi.fn(), warn: vi.fn() }),
 }));
 
+import { SWRConfig } from "~/lib/swr/testing";
 import { useCalendarPeriods } from "./use-calendar-periods";
 import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
 import type { Phase } from "~/lib/enrollment-phase-api";
@@ -58,6 +63,19 @@ const phase = {
   is_active: true,
 } as Phase;
 
+function SWRTestProvider({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", tenantId: 1 }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
 describe("useCalendarPeriods", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,7 +87,9 @@ describe("useCalendarPeriods", () => {
     mockSetPhaseCalendarPeriod.mockRejectedValueOnce(
       new Error("Verknüpfung fehlgeschlagen"),
     );
-    const { result } = renderHook(() => useCalendarPeriods());
+    const { result } = renderHook(() => useCalendarPeriods(), {
+      wrapper: SWRTestProvider,
+    });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => result.current.beginEdit(period));
@@ -86,7 +106,9 @@ describe("useCalendarPeriods", () => {
 
   it("confirms a phase link in a full sentence", async () => {
     mockSetPhaseCalendarPeriod.mockResolvedValueOnce(phase);
-    const { result } = renderHook(() => useCalendarPeriods());
+    const { result } = renderHook(() => useCalendarPeriods(), {
+      wrapper: SWRTestProvider,
+    });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     act(() => result.current.beginEdit(period));
@@ -102,7 +124,9 @@ describe("useCalendarPeriods", () => {
 
   it("keeps the period list when only the phases fail to load", async () => {
     mockListPhases.mockRejectedValueOnce(new Error("phases down"));
-    const { result } = renderHook(() => useCalendarPeriods());
+    const { result } = renderHook(() => useCalendarPeriods(), {
+      wrapper: SWRTestProvider,
+    });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 

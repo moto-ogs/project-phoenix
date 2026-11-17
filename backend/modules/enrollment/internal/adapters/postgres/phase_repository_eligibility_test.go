@@ -21,7 +21,7 @@ func TestPhaseRepository_ListPublicOpen_HidesLinkedParentsPhases(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	tenantID := testpkg.Tenant(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
-	repo := ownerCompose.New()
+	repo := ownerCompose.NewClocked(time.Now)
 	openName := uniquePhaseName("audienceOpen")
 	newStudentsName := uniquePhaseName("audienceNew")
 	linkedName := uniquePhaseName("audienceLinked")
@@ -46,7 +46,7 @@ func TestPhaseRepository_ListPublicOpen_HidesLinkedParentsPhases(t *testing.T) {
 	var list []*capability.Phase
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.New().PublicOpenPhases(ctx, now)
+		list, lErr = ownerCompose.NewClocked(time.Now).PublicOpenPhases(ctx, now)
 		return lErr
 	}))
 
@@ -70,7 +70,7 @@ func TestPhaseRepository_ListPublicOpen_HidesExistingStudentsPhases(t *testing.T
 	db := testpkg.SetupTestDB(t)
 	tenantID := testpkg.Tenant(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
-	repo := ownerCompose.New()
+	repo := ownerCompose.NewClocked(time.Now)
 	openName := uniquePhaseName("audienceOpenB")
 	existingName := uniquePhaseName("audienceExisting")
 
@@ -91,7 +91,7 @@ func TestPhaseRepository_ListPublicOpen_HidesExistingStudentsPhases(t *testing.T
 	var list []*capability.Phase
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.New().PublicOpenPhases(ctx, now)
+		list, lErr = ownerCompose.NewClocked(time.Now).PublicOpenPhases(ctx, now)
 		return lErr
 	}))
 
@@ -112,7 +112,7 @@ func TestPhaseRepository_EligibilityColumnsRoundtrip(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	tenantID := testpkg.Tenant(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
-	repo := ownerCompose.New()
+	repo := ownerCompose.NewClocked(time.Now)
 	name := uniquePhaseName("eligibilityRoundtrip")
 
 	p := makeOwnerEligibilityPhase(name)
@@ -163,7 +163,7 @@ func TestPhaseRepository_EligibleGradeLevelsRoundtrip(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	tenantID := testpkg.Tenant(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
-	repo := ownerCompose.New()
+	repo := ownerCompose.NewClocked(time.Now)
 	name := uniquePhaseName("gradeEligibilityRoundtrip")
 
 	p := makeOwnerEligibilityPhase(name)
@@ -204,7 +204,7 @@ func TestEnrollment_HasActiveGradeRestrictedPhase(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	tenantID := testpkg.Tenant(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
-	repo := ownerCompose.New()
+	repo := ownerCompose.NewClocked(time.Now)
 	unrestrictedName := uniquePhaseName("gradeGuardUnrestricted")
 	inactiveName := uniquePhaseName("gradeGuardInactive")
 	activeName := uniquePhaseName("gradeGuardActive")
@@ -225,7 +225,7 @@ func TestEnrollment_HasActiveGradeRestrictedPhase(t *testing.T) {
 	var exists bool
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var eErr error
-		exists, eErr = ownerCompose.New().HasActiveGradeRestrictedPhase(ctx)
+		exists, eErr = ownerCompose.NewClocked(time.Now).HasActiveGradeRestrictedPhase(ctx)
 		return eErr
 	}))
 	assert.False(t, exists, "an unrestricted or inactive phase must not block the toggle")
@@ -239,7 +239,7 @@ func TestEnrollment_HasActiveGradeRestrictedPhase(t *testing.T) {
 
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var eErr error
-		exists, eErr = ownerCompose.New().HasActiveGradeRestrictedPhase(ctx)
+		exists, eErr = ownerCompose.NewClocked(time.Now).HasActiveGradeRestrictedPhase(ctx)
 		return eErr
 	}))
 	assert.True(t, exists, "an active grade-restricted phase must block the toggle")
@@ -253,7 +253,7 @@ func TestEnrollment_MaxActivePhaseGrade(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	tenantID := testpkg.Tenant(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
-	repo := ownerCompose.New()
+	repo := ownerCompose.NewClocked(time.Now)
 	unrestrictedName := uniquePhaseName("gradeCapUnrestricted")
 	inactiveName := uniquePhaseName("gradeCapInactive")
 	activeName := uniquePhaseName("gradeCapActive")
@@ -277,7 +277,7 @@ func TestEnrollment_MaxActivePhaseGrade(t *testing.T) {
 	var highest int
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var mErr error
-		highest, mErr = ownerCompose.New().MaxActivePhaseGrade(ctx)
+		highest, mErr = ownerCompose.NewClocked(time.Now).MaxActivePhaseGrade(ctx)
 		return mErr
 	}))
 	assert.Equal(t, 0, highest, "no active restriction means the cap is unconstrained")
@@ -300,7 +300,7 @@ func TestEnrollment_MaxActivePhaseGrade(t *testing.T) {
 
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var mErr error
-		highest, mErr = ownerCompose.New().MaxActivePhaseGrade(ctx)
+		highest, mErr = ownerCompose.NewClocked(time.Now).MaxActivePhaseGrade(ctx)
 		return mErr
 	}))
 	assert.Equal(t, 4, highest, "the guard needs the highest grade across every active phase")

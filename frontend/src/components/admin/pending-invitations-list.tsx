@@ -1,19 +1,11 @@
 "use client";
 
 import { EmptyState } from "~/components/ui/empty-state";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Mail, Send, Trash2 } from "lucide-react";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
 import { formErrorMessage } from "~/components/ui/form-error";
@@ -38,11 +30,16 @@ import type { PendingInvitation } from "~/lib/invitation-helpers";
 import { getRoleDisplayName } from "~/lib/auth-helpers";
 import { isValidDateString, isDateExpired } from "~/lib/utils/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { createLogger } from "~/lib/logger";
 import { Loading } from "~/components/ui/loading";
 import { SectionCard } from "~/components/ui/section-card";
 
 const logger = createLogger({ component: "PendingInvitationsList" });
+
+const NO_INVITATIONS: PendingInvitation[] = [];
 
 interface PendingInvitationsListProps {
   readonly refreshKey: number;
@@ -62,15 +59,35 @@ export function PendingInvitationsList({
   refreshKey,
   onRevoked,
 }: PendingInvitationsListProps) {
-  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // A new invitation of the parent bumps `refreshKey`: the list shows its
+  // loading state until the next answer.
+  const [refreshing, setRefreshing] = useState(false);
+  const [seenRefreshKey, setSeenRefreshKey] = useState(refreshKey);
+  if (seenRefreshKey !== refreshKey) {
+    setSeenRefreshKey(refreshKey);
+    setRefreshing(true);
+  }
+  const {
+    data,
+    error,
+    mutate: mutateInvitations,
+  } = useSWRAuth(
+    enrollmentKeys.pendingInvitations(),
+    () => listPendingInvitations(),
+    {
+      onSuccess: () => setRefreshing(false),
+      onError: () => setRefreshing(false),
+    },
+  );
   // Ladefehler stehen in der Karte, mit Wiederholen (#2517).
-  const [loadFailed, setLoadFailed] = useState(false);
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
-  const latestLoadRef = useRef<() => void>(() => undefined);
-  const latestRequest = useRef(0);
+  const loadError = useSwrResourceLoadError(
+    [{ data, error }],
+    "die Liste der offenen Einladungen",
+    () => mutateInvitations(),
+  );
+  const invitations = data ?? NO_INVITATIONS;
+  const loadFailed = loadError.failure !== undefined;
+  const isLoading = (!data && !loadFailed) || refreshing;
   const [actionLoading, setActionLoading] = useState<ReadonlySet<number>>(
     new Set(),
   );
@@ -93,51 +110,29 @@ export function PendingInvitationsList({
   const clearRevokeError = revokeErrors.clear;
   const latestRevokeRef = useRef<() => void>(() => undefined);
 
-  // Rejects on failure: after a write the caller shows it as a reload of a
-  // saved change (#6652).
-  const fetchInvitations = useCallback(async () => {
-    const request = ++latestRequest.current;
-    try {
-      const data = await listPendingInvitations();
-      if (request !== latestRequest.current) return;
-      setInvitations(data);
-      setLoadFailed(false);
-      clearLoadError();
-    } catch (error) {
-      if (request !== latestRequest.current) return;
-      throw error;
-    } finally {
-      if (request === latestRequest.current) setIsLoading(false);
-    }
-  }, [clearLoadError]);
-  // Never rejects: a failed load shows its error in the card.
-  const loadInvitations = useCallback(async () => {
-    const request = latestRequest.current + 1;
-    try {
-      setIsLoading(true);
-      await fetchInvitations();
-    } catch (err) {
-      if (request !== latestRequest.current) return;
-      logger.error("failed to load invitations", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setLoadFailed(true);
-      void showLoadError(err, {
-        object: "die Liste der offenen Einladungen",
-        retry: () => latestLoadRef.current(),
-      });
-    }
-  }, [showLoadError, fetchInvitations]);
-  useLayoutEffect(() => {
-    latestLoadRef.current = () => void loadInvitations();
-  });
-
+  const shownRefreshKey = useRef(refreshKey);
   useEffect(() => {
-    void loadInvitations();
-  }, [loadInvitations, refreshKey]);
+    if (shownRefreshKey.current === refreshKey) return;
+    shownRefreshKey.current = refreshKey;
+    void mutateInvitations();
+  }, [refreshKey, mutateInvitations]);
+  // A failed reload after a write stands above the list (#6652); a failure
+  // of a reload a newer one overtook is no longer news.
+  const latestReload = useRef(0);
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige der offenen Einladungen",
-    fetchInvitations,
+    async () => {
+      const reload = ++latestReload.current;
+      try {
+        await mutateInvitations(listPendingInvitations(), {
+          revalidate: false,
+        });
+      } catch (err) {
+        if (reload === latestReload.current) throw err;
+      } finally {
+        if (reload === latestReload.current) setRefreshing(false);
+      }
+    },
   );
 
   const handleResend = async (id: number) => {

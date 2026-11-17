@@ -87,6 +87,7 @@ func setupTimetableScenarioModule(t *testing.T, clocks ...func() time.Time) *sce
 		SettingsService:        liveSettings.Settings,
 		Staffing:               factory.Instance,
 		Logger:                 slog.Default(),
+		Now:                    scenarioClock(clocks),
 	})
 	s := &scenario{
 		t:        t,
@@ -442,4 +443,13 @@ func nextWeekday(from calendar.Date, isoWeekday, minDaysAhead int) calendar.Date
 		}
 		d = d.AddDays(1)
 	}
+}
+
+// scenarioClock is the clock a test passed, the wall clock when it passed
+// none; the timetable resource requires one.
+func scenarioClock(clocks []func() time.Time) func() time.Time {
+	if now := rootAPI.OptionalClock(clocks); now != nil {
+		return now
+	}
+	return time.Now
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -67,7 +68,7 @@ func TestEnrollmentCountsKeepOrderedReaderFailures(t *testing.T) {
 				},
 			}
 			students := countStudentReader{read: func([]int64) (map[int64]*timetable.OperationStudent, error) { return nil, wantErr }}
-			service, err := timetableCompose.NewService(countEnrollmentRows{rows: rows}, nil, directories, nil, nil, students)
+			service, err := timetableCompose.NewService(countEnrollmentRows{rows: rows}, nil, directories, nil, nil, students, calendar.TodayDate)
 			require.NoError(t, err)
 			_, scalarErr := service.GetEnrolledStudents(testpkg.Ctx(t), first.ID)
 			_, err = service.GetEnrollmentCounts(testpkg.Ctx(t), []int64{first.ID, second.ID})
@@ -94,7 +95,7 @@ func TestEnrollmentCountsDoNotDropEmptyRosterReaderFailures(t *testing.T) {
 		StudentAlumni: func(context.Context, []int64) (map[int64]bool, error) { return nil, nil },
 		StudentNames:  func(context.Context, []int64) (map[int64]ports.PersonName, error) { return nil, nil },
 	}
-	service, err := timetableCompose.NewService(countEnrollmentRows{rows: []timetable.StudentEnrollment{{ActivityGroupID: populated.ID, StudentID: child.ID}}}, nil, directories, nil, nil, students)
+	service, err := timetableCompose.NewService(countEnrollmentRows{rows: []timetable.StudentEnrollment{{ActivityGroupID: populated.ID, StudentID: child.ID}}}, nil, directories, nil, nil, students, calendar.TodayDate)
 	require.NoError(t, err)
 	_, scalarErr := service.GetEnrolledStudents(testpkg.Ctx(t), empty.ID)
 	_, err = service.GetEnrollmentCounts(testpkg.Ctx(t), []int64{empty.ID, populated.ID})

@@ -43,6 +43,10 @@ type monthPrefetch struct {
 	overrides      workforce.TargetOverrideDays
 	snapshots      map[int64][]*MonthSnapshot
 	settings       *memoSettingsResolver
+	// now and today are the overview's clock: the open sessions end now,
+	// and the month service measures against the same day (ADR 0239).
+	now   func() time.Time
+	today func() calendar.Date
 }
 
 // memoSettingsResolver resolves each settings key once per request. The
@@ -102,7 +106,7 @@ func (r prefetchedSessionReader) ListOverlappingWorkSessions(_ context.Context, 
 	result := make([]workforce.WorkSession, 0)
 	for _, staffID := range staffIDs {
 		for _, session := range r.p.sessions[staffID] {
-			end := time.Now()
+			end := requireClock(r.p.now)()
 			if session.CheckOutTime != nil {
 				end = *session.CheckOutTime
 			}
@@ -244,6 +248,7 @@ func newPrefetchedMonthService(p *monthPrefetch, logger *slog.Logger) WorkTimeMo
 		WithMonthTargetOverrides(prefetchedOverrideReader{p}),
 		WithMonthAdjustments(prefetchedAdjustmentReader{p}),
 		WithMonthSnapshots(prefetchedSnapshotReader{p}),
+		func(s *workTimeMonthService) { s.nowFunc, s.todayFunc = p.now, p.today },
 	)
 	return svc
 }

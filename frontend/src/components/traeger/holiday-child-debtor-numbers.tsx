@@ -7,7 +7,7 @@
 // Nummern hier; ausgestellte Rechnungen behalten ihre Nummer.
 
 import { useEffect, useRef, useState } from "react";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { FormFieldset } from "~/components/ui/form-fieldset";

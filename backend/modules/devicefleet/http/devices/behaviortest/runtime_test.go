@@ -3,6 +3,7 @@ package devices_test
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/render"
 
@@ -14,6 +15,7 @@ import (
 func testRuntime() devices.Runtime {
 	return devices.Runtime{
 		ParseID: testpkg.ParseHTTPIDParam,
+		Now:     time.Now,
 		Permission: func(required string) devices.Middleware {
 			return func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -1,17 +1,16 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => false),
-}));
-
-import { useIsMobile } from "~/components/ui/hooks/useIsMobile";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  DESKTOP_WIDTH,
+  PHONE_WIDTH,
+  setViewportWidth,
+} from "~/test/helpers/viewport";
 import { DatabaseListLayout } from "./database-list-layout";
 
 describe("DatabaseListLayout", () => {
-  beforeEach(() => {
-    vi.mocked(useIsMobile).mockReturnValue(false);
+  afterEach(() => {
+    setViewportWidth(DESKTOP_WIDTH);
   });
 
   it("renders the list inside one full-width card", () => {
@@ -57,7 +56,7 @@ describe("DatabaseListLayout", () => {
   });
 
   it("lets the page scroll on a phone instead of fixing the card's height", () => {
-    vi.mocked(useIsMobile).mockReturnValue(true);
+    setViewportWidth(PHONE_WIDTH);
 
     render(
       <DatabaseListLayout>

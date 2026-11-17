@@ -82,6 +82,9 @@ type LifecycleStudent struct {
 	GroupID       *int64
 	Alumnus       bool
 	EnrolledUntil *calendar.Date
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803); no AG or care offering takes it.
+	WithoutCarePlace bool
 }
 
 // OperationStudent is the part of a child the operational day names and
@@ -98,9 +101,11 @@ func (s *LifecycleStudent) IsAlumnus() bool {
 	return s != nil && s.Alumnus
 }
 
-// CareEndedOn reports whether the care ended before the given day.
+// CareEndedOn reports whether the child has no OGS care on the given day:
+// its care ended before it, or it has no OGS place at all (#4803), so no
+// AG, instance roster or offering takes it.
 func (s *LifecycleStudent) CareEndedOn(day calendar.Date) bool {
-	return s != nil && s.EnrolledUntil != nil && day.After(*s.EnrolledUntil)
+	return s != nil && (s.WithoutCarePlace || (s.EnrolledUntil != nil && day.After(*s.EnrolledUntil)))
 }
 
 // IsAuthorizationStudent identifies a loaded child for the existing access gate.

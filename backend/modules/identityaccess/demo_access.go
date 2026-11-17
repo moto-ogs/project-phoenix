@@ -83,6 +83,9 @@ type DemoSchoolEntry struct {
 	AccountID int64
 	// ParentAccountID is the parent the demo role parent signs in (#3468).
 	ParentAccountID int64
+	// TraegerID is the school's own Demo-Träger, which the demo role
+	// Träger-Büro enters (ADR 0271); zero under the shared one.
+	TraegerID int64
 }
 
 // DemoAccessMessage is what the two demo mails (#3465) say about an access.
@@ -148,6 +151,8 @@ type DemoEntry struct {
 	Role         string
 	Source       string
 	FixedRole    bool
+	// Traeger reports that the demo role Träger-Büro is open (ADR 0271).
+	Traeger bool
 }
 
 // DemoAccessProgress is what the token's holder may know about its demo

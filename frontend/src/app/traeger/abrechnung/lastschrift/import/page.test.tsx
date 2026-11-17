@@ -8,10 +8,14 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { ImportResult } from "~/lib/traeger-sepa-import-api";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import TraegerSepaImportPage from "./page";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   previewSepaImport: vi.fn(),
@@ -22,7 +26,12 @@ vi.mock("~/lib/traeger-sepa-import-api", async (original) => ({
   ...(await original<object>()),
   ...api,
 }));
-vi.mock("next-auth/react", () => ({ useSession: () => ({ data: null }) }));
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "traeger-test", scope: "org", orgId: 7 } },
+  }),
+  SessionProvider: ({ children }: { children: ReactNode }) => children,
+}));
 vi.mock("~/lib/auth-utils", () => ({ hasPermission: () => true }));
 vi.mock("~/lib/traeger-sepa-api", () => ({
   fetchSepaCreditor: () =>
@@ -107,12 +116,13 @@ function pendingPreview() {
   return { promise, resolve, reject };
 }
 
-async function choose(result = preview) {
+async function choose(result = preview, beside: ReactNode = null) {
   api.previewSepaImport.mockResolvedValueOnce(result);
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerSepaImportPage />
-    </ToastProvider>,
+      {beside}
+    </TraegerResourceTestProvider>,
   );
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Datei wählen" })).toBeEnabled(),
@@ -122,10 +132,12 @@ async function choose(result = preview) {
       files: [new File(["Referenz;IBAN"], "mandate.csv", { type: "text/csv" })],
     },
   });
-  await screen.findByRole("heading", {
+  const heading = await screen.findByRole("heading", {
     name:
       result.unmapped.length > 0 ? "Spalten zuordnen" : "Prüfen und übernehmen",
   });
+  // Finish the new step's focus handover before interacting with its fields.
+  await waitFor(() => expect(heading).toHaveFocus());
 }
 
 function importButton() {
@@ -139,6 +151,18 @@ function expectNoImport() {
     expect(button).toHaveAttribute("aria-disabled", "true");
   }
   expect(api.applySepaImport).not.toHaveBeenCalled();
+}
+
+const fetchMandates = vi.fn<() => Promise<unknown[]>>();
+
+/** The mandates of a contract, as another page holds them. */
+function Mandates() {
+  const { data } = useTraegerResource(
+    traegerBillingRunKeys.sepaMandates("7"),
+    fetchMandates,
+    "die Mandate",
+  );
+  return data ? <p>{`${data.length} Mandate`}</p> : null;
 }
 
 describe("SEPA import approval", () => {
@@ -364,6 +388,22 @@ describe("SEPA import approval", () => {
     expect(header).toHaveAttribute("aria-sort", "ascending");
     fireEvent.click(screen.getByRole("button", { name: "Alle 2" }));
     expect(header).toHaveAttribute("aria-sort", "ascending");
+  });
+
+  it("refreshes the mandates other pages hold after an import", async () => {
+    fetchMandates.mockResolvedValue([]);
+    await choose(preview, <Mandates />);
+    expect(await screen.findByText("0 Mandate")).toBeInTheDocument();
+    expect(fetchMandates).toHaveBeenCalledTimes(1);
+    api.applySepaImport.mockResolvedValue({
+      ...preview,
+      applied: true,
+      counts: { ...preview.counts, ready: 0, imported: 1 },
+    });
+    fetchMandates.mockResolvedValue([{ id: "1" }]);
+    fireEvent.click(importButton()!);
+    expect(await screen.findByText("1 Mandate")).toBeInTheDocument();
+    expect(fetchMandates).toHaveBeenCalledTimes(2);
   });
 
   it("keeps a successful import when the log fails and retries only the log", async () => {

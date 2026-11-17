@@ -24,7 +24,7 @@ type DataDeletion struct {
 	RecordsDeleted int                    `bun:"records_deleted,notnull" json:"records_deleted"`
 	DeletionReason string                 `bun:"deletion_reason" json:"deletion_reason,omitempty"`
 	DeletedBy      string                 `bun:"deleted_by,notnull" json:"deleted_by"` // 'system' or account username
-	DeletedAt      time.Time              `bun:"deleted_at,notnull,default:now()" json:"deleted_at"`
+	DeletedAt      time.Time              `bun:"deleted_at,nullzero,notnull" json:"deleted_at"`
 	Metadata       map[string]interface{} `bun:"metadata,type:jsonb" json:"metadata,omitempty"`
 }
 
@@ -240,10 +240,6 @@ func (dd *DataDeletion) Validate() error {
 		return errors.New("deleted by is required")
 	}
 
-	if dd.DeletedAt.IsZero() {
-		dd.DeletedAt = time.Now()
-	}
-
 	return nil
 }
 
@@ -271,7 +267,6 @@ func NewDataDeletion(studentID int64, deletionType string, recordsDeleted int, d
 		DeletionType:   deletionType,
 		RecordsDeleted: recordsDeleted,
 		DeletedBy:      deletedBy,
-		DeletedAt:      time.Now(),
 		Metadata:       make(map[string]interface{}),
 	}
 }
@@ -284,7 +279,6 @@ func NewStaffDataDeletion(staffID int64, deletionType string, recordsDeleted int
 		DeletionType:   deletionType,
 		RecordsDeleted: recordsDeleted,
 		DeletedBy:      deletedBy,
-		DeletedAt:      time.Now(),
 		Metadata:       make(map[string]interface{}),
 	}
 }
@@ -297,7 +291,6 @@ func NewRetentionDataDeletion(deletionType string, recordsDeleted int) *DataDele
 		RecordsDeleted: recordsDeleted,
 		DeletionReason: "automated retention cleanup",
 		DeletedBy:      "system",
-		DeletedAt:      time.Now(),
 		Metadata:       make(map[string]interface{}),
 	}
 }

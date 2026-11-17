@@ -54,8 +54,10 @@ type RejectedCleanupDependencies struct {
 	Audit       EnrollmentDeletionAudit
 	Runtime     Runtime
 	Logger      *slog.Logger
-	// Today is the school day the source phase of a lapsed renewal is still
-	// running on; nil reads the real Berlin day.
+	// Now is the clock of the retention cutoffs and the deletion audit
+	// (ADR 0239); nil is the real clock. Today is the school day the source
+	// phase of a lapsed renewal is still running on; nil is Now's Berlin day.
+	Now   func() time.Time
 	Today func() calendar.Date
 }
 
@@ -72,8 +74,11 @@ func NewRejectedCleanup(deps RejectedCleanupDependencies) *RejectedCleanup {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.Now == nil {
+		panic("enrollment rejected cleanup: the clock is required")
+	}
 	if deps.Today == nil {
-		deps.Today = calendar.TodayDate
+		deps.Today = calendar.CalendarDateClock(deps.Now)
 	}
 	return &RejectedCleanup{deps: deps}
 }
@@ -101,7 +106,7 @@ func (s *RejectedCleanup) CleanupRejectedEnrollments(ctx context.Context) (enrol
 	if days < 0 {
 		return enrollmentNative.RejectedEnrollmentCleanupResult{}, fmt.Errorf("invalid rejected enrollment retention days: %d", days)
 	}
-	cutoff := time.Now().Add(-time.Duration(days) * 24 * time.Hour)
+	cutoff := d.Now().Add(-time.Duration(days) * 24 * time.Hour)
 	result := enrollmentNative.RejectedEnrollmentCleanupResult{}
 	err = s.runInTx(ctx, func(txCtx context.Context) error {
 		requestIDs, listErr := d.Requests.FullyRejectedRequestsBefore(txCtx, cutoff)
@@ -188,7 +193,7 @@ func (s *RejectedCleanup) deleteAudited(ctx context.Context, requestID int64, im
 		Scope:     DeletionScopeRequest,
 		Reason:    "Automatische Löschung nach Ablauf der Aufbewahrungsfrist",
 		Counts:    impact.Counts,
-		DeletedAt: time.Now(),
+		DeletedAt: s.deps.Now(),
 	}); err != nil {
 		return fmt.Errorf("audit rejected enrollment cleanup: %w", err)
 	}

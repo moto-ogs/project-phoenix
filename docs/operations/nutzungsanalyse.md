@@ -216,6 +216,13 @@ Zielschule aus dem Routenparameter auf, nicht aus einer mitgesendeten Sitzung.
 gesperrt; erlaubende Bestandsschulen ersetzen die Zielschulentscheidung nicht.
 Bei erlaubter Eltern-Anmeldung trägt das Ereignis die `school_id` der
 Zielschule, nicht die einer Bestandsschule.
+Das Caterer-Portal lädt kein SDK: Caterer-Konten werden nicht nach einer
+Einwilligung gefragt. Eine Caterer-Sitzung nennt keine Schule, denn ein
+Caterer kann mehrere beliefern. `caterer_invite_accepted` und
+`meal_order_confirmed` zählen deshalb für die Schule aus dem Routenparameter
+`schoolId` (`surface=caterer`, `role=caterer`, ohne `$session_id`), erst nach
+einer 2xx-Antwort und nur bei eingeschaltetem Schulschalter (#4496). Ein
+Caterer-Login nennt keine Schule und wird außerhalb der Demo nicht erfasst.
 
 Eltern- und Schulportal lesen die Policy beim Sichtbarwerden eines Tabs und
 alle fünf Minuten bei sichtbarem Tab neu. Vor jedem Neulesen wird die Erfassung
@@ -381,11 +388,15 @@ question) lives in the dashboard descriptions.
 | OGS-App | `moto-app.de` | Most used pages per day with navigation name and time on page, actions per role, where users go from the start page, feature reach, rarely used pages, dead and rage clicks | created by the sync |
 | Eltern-App | `moto-app.de` | The same for parents; parents have no school | created by the sync |
 | Schul-App | `moto-app.de` | The same for teachers in the school portal | created by the sync |
+| Caterer-Portal | `moto-app.de` | What caterers save (invitation accepted, order confirmed) by action, with days per school and schools, days with a confirmed order per school (table with school ID), the same summed over all schools per week, invitations, acceptances and ends per week (counted per school and day, every day including weekends: caterers plan then too); no page views (capture rule in the section on the school switch above) | created by the sync |
 | Schule im Verlauf | `moto-app.de` | One school over time (`school_id` filter, do not save it) | <https://eu.posthog.com/project/140838/dashboard/1046854> |
 | Demo | `demo` | Conversion to „Termin buchen“, time in the demo, what visitors look at and try, where they stop, dead and rage clicks | created by the sync |
 
 A school counts as active through use: page views, core actions, and kiosk
-bookings (`ACTIVE_USE`), not a failed login or a dead click. Rage clicks come
+bookings (`ACTIVE_USE`), not a failed login or a dead click. Its caterer's
+actions carry the school's `school_id` but never count as the school's use:
+`ACTIVE_USE` leaves them out, and `SCHOOL_EVENT` keeps them out of every scan of
+the schools' events. They show only on the caterer dashboard. Rage clicks come
 from PostHog's heatmap data (`heatmaps` table): autocapture is off in the
 project, so there is no `$rageclick` event. Page names come from
 `frontend/src/lib/section-navigation.ts`.

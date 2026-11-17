@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { CareTariffs } from "~/lib/traeger-care-billing-api";
 import type { CareRule } from "~/lib/traeger-care-reductions-api";
 import { setTestClock } from "~/test/clock";
@@ -35,6 +35,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 import TraegerPreislistePage from "./page";
+
+vi.unmock("swr");
 
 const data: CareTariffs = {
   schools: [{ id: "11", name: "Sonnenhof" }],
@@ -84,9 +86,9 @@ const rule: CareRule = {
 function renderPage(rules: readonly CareRule[]) {
   fetchCareRules.mockResolvedValue({ rules });
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerPreislistePage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { BillingRunDetail } from "~/lib/traeger-billing-api";
 
 const { api } = vi.hoisted(() => ({
@@ -21,15 +21,20 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
   usePathname: () => "/abrechnung/9",
 }));
-vi.mock("next-auth/react", () => ({
+vi.mock("next-auth/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-auth/react")>()),
   useSession: () => ({
-    data: { user: { permissions: [] } },
+    data: {
+      user: { id: "traeger-test", scope: "org", orgId: 7, permissions: [] },
+    },
     status: "authenticated",
   }),
 }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 
 import TraegerBillingRunPage from "./page";
+
+vi.unmock("swr");
 
 // An open holiday run whose registrations were all cancelled (#6628).
 function run(overrides: Partial<BillingRunDetail> = {}): BillingRunDetail {
@@ -65,9 +70,9 @@ function run(overrides: Partial<BillingRunDetail> = {}): BillingRunDetail {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerBillingRunPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

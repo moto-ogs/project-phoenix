@@ -105,7 +105,8 @@ func sessionInstance(ctx context.Context, reads ports.LegacyInstanceReads, activ
 
 // createLegacyInstance creates the plan, opens and if asked ends the session
 // of an instance created in an execution state, and reloads the stored row.
-func createLegacyInstance(ctx context.Context, rows ports.InstanceRows, value *scheduleModels.ActivityInstance) error {
+// now dates a running row created without its instants.
+func createLegacyInstance(ctx context.Context, rows ports.InstanceRows, value *scheduleModels.ActivityInstance, now func() time.Time) error {
 	if value == nil {
 		return errors.New("activity instance cannot be nil or zero value")
 	}
@@ -116,7 +117,7 @@ func createLegacyInstance(ctx context.Context, rows ports.InstanceRows, value *s
 	if err != nil {
 		return WrapDatabaseError("create", err)
 	}
-	if err := createInstanceSession(ctx, rows.Sessions, created.ID, value); err != nil {
+	if err := createInstanceSession(ctx, rows.Sessions, created.ID, value, now); err != nil {
 		return WrapDatabaseError("create", err)
 	}
 	return reloadLegacyInstance(ctx, rows.Reads, value, created.ID, "create")
@@ -125,17 +126,20 @@ func createLegacyInstance(ctx context.Context, rows ports.InstanceRows, value *s
 // createInstanceSession opens, and if asked ends, the session of a row
 // created in an execution state: the retained services and fixtures still
 // create running blocks in one call.
-func createInstanceSession(ctx context.Context, sessions ports.InstanceSessions, instanceID int64, value *scheduleModels.ActivityInstance) error {
+func createInstanceSession(ctx context.Context, sessions ports.InstanceSessions, instanceID int64, value *scheduleModels.ActivityInstance, now func() time.Time) error {
 	if value.Status != scheduleModels.InstanceStatusActive && value.Status != scheduleModels.InstanceStatusCompleted {
 		return nil
 	}
 	if value.ActiveGroupID == nil {
 		return errors.New("an instance created in an execution state needs its active group")
 	}
+	if now == nil && (value.StartedAt == nil || value.Status == scheduleModels.InstanceStatusCompleted && value.CompletedAt == nil) {
+		return errors.New("an instance created in an execution state without its instants needs the clock of its rows")
+	}
 	startedAt := value.StartedAt
 	if startedAt == nil {
-		now := time.Now()
-		startedAt = &now
+		started := now()
+		startedAt = &started
 	}
 	if _, err := sessions.StartActivitySession(ctx, studentpresence.ActivitySessionStart{
 		InstanceID: instanceID, ActiveGroupID: *value.ActiveGroupID, StartedBy: value.StartedBy, StartedAt: *startedAt,
@@ -147,8 +151,8 @@ func createInstanceSession(ctx context.Context, sessions ports.InstanceSessions,
 	}
 	completedAt := value.CompletedAt
 	if completedAt == nil {
-		now := time.Now()
-		completedAt = &now
+		completed := now()
+		completedAt = &completed
 	}
 	_, err := sessions.CompleteActivitySession(ctx, studentpresence.ActivitySessionCompletion{
 		InstanceID: instanceID, CompletedAt: *completedAt, CompletedBy: value.CompletedBy,

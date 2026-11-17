@@ -57,6 +57,7 @@ func buildPickupChangeService(t *testing.T, pickupChangeEnabled bool) (*parentSe
 			},
 		},
 		Logger: slog.Default(),
+		Now:    careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
@@ -68,10 +69,11 @@ func buildPickupChangeService(t *testing.T, pickupChangeEnabled bool) (*parentSe
 // buildPickupChangeServiceWithRequests adds the real request service, so the
 // submit/list/withdraw round trip runs against actual rows. configure adjusts
 // the service configuration before the service is built (#3163 uses it to
-// reuse the wiring for further services).
+// reuse the wiring for further services). The portal and the request service
+// read the fixed test day.
 func buildPickupChangeServiceWithRequests(t *testing.T, configure ...func(*parentportalcompose.Dependencies)) (*parentService.Portal, *bun.DB, *api.RepositoryTestFactory) {
 	t.Helper()
-	return buildPickupChangeServiceWithRequestOptions(t, nil, configure...)
+	return buildPickupChangeServiceWithRequestOptions(t, []owners.CareRequestOption{owners.WithCareRequestToday(careFixtureToday)}, configure...)
 }
 
 // buildPickupChangeServiceWithRequestOptions is buildPickupChangeServiceWithRequests
@@ -137,6 +139,7 @@ func buildPickupChangeServiceWithRequestOptions(t *testing.T, requestOptions []o
 			},
 		},
 		Logger: slog.Default(),
+		Now:    careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
@@ -158,7 +161,7 @@ func TestPickupChangeRoundTrip(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	ctx := testpkg.Ctx(t)
-	date := calendar.TodayDate().AddDays(3)
+	date := careFixtureToday().AddDays(3)
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 14, 30, 0, 0, time.UTC))
 
 	created, err := svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, date, pickup, "", "Arzttermin", nil)
@@ -189,7 +192,7 @@ func TestPickupChangeRejectsASecondOpenRequestForTheSameDay(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
-	date := calendar.TodayDate().AddDays(4)
+	date := careFixtureToday().AddDays(4)
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 14, 0, 0, 0, time.UTC))
 
 	_, err := svc.SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, date, pickup, "", "Arzttermin", nil)
@@ -210,7 +213,7 @@ func TestSubmitPickupChangeRequestRejectsBadInput(t *testing.T) {
 	t.Parallel()
 
 	svc, db := buildPickupChangeService(t, true)
-	tomorrow := calendar.TodayDate().AddDays(1)
+	tomorrow := careFixtureToday().AddDays(1)
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 15, 0, 0, 0, time.UTC))
 
 	t.Run("ohne Uhrzeit", func(t *testing.T) {
@@ -251,7 +254,7 @@ func TestSubmitPickupChangeRequestRejectsForeignChild(t *testing.T) {
 
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 15, 0, 0, 0, time.UTC))
 	_, err := svc.SubmitPickupChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID,
-		chain.StudentID+999999, calendar.TodayDate().AddDays(1), pickup, "", "Arzttermin", nil)
+		chain.StudentID+999999, careFixtureToday().AddDays(1), pickup, "", "Arzttermin", nil)
 
 	require.Error(t, err, "ein nicht verknuepftes Kind muss abgewiesen werden")
 }
@@ -265,7 +268,7 @@ func TestSubmitPickupChangeRequestRespectsSchoolSetting(t *testing.T) {
 
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 15, 0, 0, 0, time.UTC))
 	_, err := svc.SubmitPickupChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID,
-		chain.StudentID, calendar.TodayDate().AddDays(1), pickup, "", "Arzttermin", nil)
+		chain.StudentID, careFixtureToday().AddDays(1), pickup, "", "Arzttermin", nil)
 
 	require.ErrorIs(t, err, parentService.ErrPickupChangeDisabled)
 }
@@ -279,7 +282,7 @@ func TestSubmitPickupChangeRequestBoundsTheDate(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	pickup := calendar.NormalizeWallClock(time.Date(2026, 1, 1, 15, 0, 0, 0, time.UTC))
-	today := calendar.TodayDate()
+	today := careFixtureToday()
 
 	t.Run("gestern", func(t *testing.T) {
 		_, err := svc.SubmitPickupChangeRequest(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID,

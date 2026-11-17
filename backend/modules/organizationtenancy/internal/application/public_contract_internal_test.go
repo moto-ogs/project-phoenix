@@ -26,7 +26,7 @@ func TestCommandNormalizesOrganizationAtPublicSeam(t *testing.T) {
 	t.Parallel()
 
 	engine := &recordingEngine{}
-	module := New(engine, ownerTestTransaction{}, func(ports.Observation) {})
+	module := New(engine, ownerTestTransaction{}, func(ports.Observation) {}, ownerTestToday)
 	created, err := module.CreateOrganization(context.Background(), organizationtenancy.CreateOrganization{
 		Name:   "  Stadt Köln  ",
 		Slug:   "  STADT-KOELN  ",
@@ -46,7 +46,7 @@ func TestCommandNormalizesOrganizationAtPublicSeam(t *testing.T) {
 func TestCommandRejectsReservedSlugAtPublicSeam(t *testing.T) {
 	t.Parallel()
 
-	module := New(&recordingEngine{}, ownerTestTransaction{}, func(ports.Observation) {})
+	module := New(&recordingEngine{}, ownerTestTransaction{}, func(ports.Observation) {}, ownerTestToday)
 	_, err := module.CreateOrganization(context.Background(), organizationtenancy.CreateOrganization{
 		Name: "Platform", Slug: "operator", Active: true,
 	})

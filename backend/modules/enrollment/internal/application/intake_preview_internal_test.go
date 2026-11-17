@@ -33,6 +33,7 @@ func TestLoadPhasePreviewCareOfferingsPhaseErrors(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			svc := NewIntake(IntakeDependencies{
+				Now:      enrollmentTestClock,
 				Settings: intakeSettingsFake{},
 				Catalog:  previewErrorCatalog{err: tc.err},
 				Runtime:  Runtime{NotFound: NewErrorMatcher(sql.ErrNoRows)},

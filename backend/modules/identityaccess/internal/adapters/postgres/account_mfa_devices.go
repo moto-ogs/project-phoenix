@@ -57,7 +57,7 @@ func (r *AccountMFARecords) FindActiveTrustedDevice(ctx context.Context, account
 	err = db.NewRaw("SELECT "+accountTrustedDeviceColumns+` FROM auth.mfa_trusted_devices
  WHERE account_id = ? AND `+trustedDevicePortal+` AND token_hash = ? AND revoked_at IS NULL AND expires_at > ?
  AND `+trustedDeviceCurrentCredential+` LIMIT 1`,
-		accountID, binding.TenantID, binding.OrganizationID, binding.ParentPortal, tokenHash, time.Now()).Scan(ctx, &row)
+		accountID, binding.TenantID, binding.OrganizationID, binding.ParentPortal, tokenHash, r.store.now()).Scan(ctx, &row)
 	return row, err == nil, err
 }
 
@@ -70,7 +70,7 @@ func (r *AccountMFARecords) ListActiveTrustedDevices(ctx context.Context, accoun
 	err = db.NewRaw("SELECT "+accountTrustedDeviceColumns+` FROM auth.mfa_trusted_devices
  WHERE account_id = ? AND `+trustedDevicePortal+` AND revoked_at IS NULL AND expires_at > ?
  AND `+trustedDeviceCurrentCredential+`
- ORDER BY last_used_at DESC NULLS LAST, created_at DESC`, accountID, binding.TenantID, binding.OrganizationID, binding.ParentPortal, time.Now()).Scan(ctx, &rows)
+ ORDER BY last_used_at DESC NULLS LAST, created_at DESC`, accountID, binding.TenantID, binding.OrganizationID, binding.ParentPortal, r.store.now()).Scan(ctx, &rows)
 	return rows, err
 }
 

@@ -3,8 +3,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => false),
+vi.mock("~/lib/hooks/use-media-query", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/hooks/use-media-query")>()),
+  useMediaQuery: vi.fn(() => false),
 }));
 
 vi.mock("~/components/ui/drawer", () => ({
@@ -90,7 +91,7 @@ class MockResizeObserver {
 }
 vi.stubGlobal("ResizeObserver", MockResizeObserver);
 
-import { useIsMobile } from "~/components/ui/hooks/useIsMobile";
+import { useMediaQuery } from "~/lib/hooks/use-media-query";
 import { ModalProvider, useModal } from "~/components/ui/modal-context";
 import { MasterDetailLayout } from "./master-detail-layout";
 
@@ -107,7 +108,7 @@ function ModalSwitch({ open }: { open: boolean }) {
 
 describe("MasterDetailLayout", () => {
   beforeEach(() => {
-    vi.mocked(useIsMobile).mockReturnValue(false);
+    vi.mocked(useMediaQuery).mockReturnValue(false);
   });
 
   describe("desktop", () => {
@@ -232,7 +233,7 @@ describe("MasterDetailLayout", () => {
     });
 
     it("measures the restored desktop container after switching from mobile", () => {
-      vi.mocked(useIsMobile).mockReturnValue(true);
+      vi.mocked(useMediaQuery).mockReturnValue(true);
       const { container, rerender } = render(
         <MasterDetailLayout
           list={<div>List</div>}
@@ -245,7 +246,7 @@ describe("MasterDetailLayout", () => {
         .spyOn(HTMLElement.prototype, "getBoundingClientRect")
         .mockReturnValue({ top: 120 } as DOMRect);
 
-      vi.mocked(useIsMobile).mockReturnValue(false);
+      vi.mocked(useMediaQuery).mockReturnValue(false);
       rerender(
         <MasterDetailLayout
           list={<div>List</div>}
@@ -264,7 +265,7 @@ describe("MasterDetailLayout", () => {
 
   describe("mobile", () => {
     beforeEach(() => {
-      vi.mocked(useIsMobile).mockReturnValue(true);
+      vi.mocked(useMediaQuery).mockReturnValue(true);
     });
 
     it("renders list and drawer with detail when selectedId set", () => {

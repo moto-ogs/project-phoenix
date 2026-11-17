@@ -169,7 +169,7 @@ func (s *Scheduler) runAutoEndForTenant(ctx context.Context, tenantID int64) err
 		return nil
 	}
 	graceMinutes := s.resolveIntSetting(ctx, settingTimetableAutoEndGraceMinutes, 0)
-	result, err := s.autoEnd.RunForTenant(ctx, time.Now(), time.Duration(graceMinutes)*time.Minute)
+	result, err := s.autoEnd.RunForTenant(ctx, s.clock(), time.Duration(graceMinutes)*time.Minute)
 	if err != nil {
 		return fmt.Errorf("auto-end tenant %d: %w", tenantID, err)
 	}

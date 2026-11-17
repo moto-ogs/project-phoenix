@@ -47,7 +47,7 @@ func TestAttendanceHistoryRejectsFailedVisitReadAndCanRetry(t *testing.T) {
 	staff := testpkg.CreateTestStaff(t, tc.db, "History", "Staff")
 	device := testpkg.CreateTestDevice(t, tc.db, "history-failure")
 	account := testpkg.CreateTestAccount(t, tc.db, "history-failure-reader")
-	testpkg.CreateTestAttendance(t, tc.db, student.ID, staff.ID, device.ID, calendar.Today().Add(8*time.Hour), nil)
+	testpkg.CreateTestAttendance(t, tc.db, student.ID, staff.ID, device.ID, calendar.DateOf(time.Now()).Add(8*time.Hour), nil)
 	original := tc.resource.StudentHistoryService
 	fault := &failedHistoryVisits{StudentHistory: original}
 	tc.resource.StudentHistoryService = fault
@@ -74,7 +74,7 @@ func TestAttendanceHistoryAndExportContinueWhenActorNamesAreUnavailable(t *testi
 	staff := testpkg.CreateTestStaff(t, tc.db, "History", "Staff")
 	device := testpkg.CreateTestDevice(t, tc.db, "history-actor-failure")
 	account := testpkg.CreateTestAccount(t, tc.db, "history-actor-failure-reader")
-	testpkg.CreateTestAttendance(t, tc.db, student.ID, staff.ID, device.ID, calendar.Today().Add(8*time.Hour), nil)
+	testpkg.CreateTestAttendance(t, tc.db, student.ID, staff.ID, device.ID, calendar.DateOf(time.Now()).Add(8*time.Hour), nil)
 
 	original := tc.resource.StudentHistoryService
 	fault := &failedHistoryAttendanceRecorders{StudentHistory: original}

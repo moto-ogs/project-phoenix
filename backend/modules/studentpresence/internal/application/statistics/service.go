@@ -66,7 +66,7 @@ type Config struct {
 	PlannedCareDays     ports.PlannedCareDays
 	AttendanceIntervals ports.AttendanceIntervals
 	Logger              *slog.Logger
-	// Now is injectable for tests; nil means time.Now.
+	// Now is the composition's clock and is required.
 	Now func() time.Time
 }
 
@@ -77,7 +77,7 @@ type service struct {
 // NewService creates the statistics service.
 func NewService(cfg Config) studentpresence.StatisticsReports {
 	if cfg.Now == nil {
-		cfg.Now = time.Now
+		panic("studentpresence statistics: the clock is required")
 	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
@@ -568,7 +568,7 @@ func (s *service) recordAccessOf(ctx context.Context, filters studentpresence.St
 	}
 	now := s.cfg.Now()
 	if dedup {
-		exists, err := s.cfg.AccessLog.SeenStatisticsAccessSince(ctx, actor.AccountID, meta, now.Add(-viewDedupWindow))
+		exists, err := s.cfg.AccessLog.SeenStatisticsAccessWithin(ctx, actor.AccountID, meta, viewDedupWindow)
 		if err != nil {
 			return fmt.Errorf("%w: %v", studentpresence.ErrStatisticsAuditFailed, err)
 		}

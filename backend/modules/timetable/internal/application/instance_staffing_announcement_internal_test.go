@@ -15,7 +15,7 @@ func TestAnnounceStaffingChangedSendsOneTenantEvent(t *testing.T) {
 	t.Parallel()
 
 	recorder := &lifecycleEventRecorder{}
-	lifecycle := &InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{Broadcaster: recorder}}
+	lifecycle := &InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{Broadcaster: recorder, Now: internalTestNow}}
 
 	require.NoError(t, lifecycle.AnnounceStaffingChanged(42, "deviations"))
 

@@ -149,10 +149,9 @@ type staffTimeExportService struct {
 	logger         *slog.Logger
 	renderWorkbook TimeTrackingWorkbookRenderer
 
-	// todayFunc is a test hook; production uses timezone.TodayDate.
+	// todayFunc and nowFunc are the clock of the composition (ADR 0239).
 	todayFunc func() calendar.Date
-	// nowFunc is a test hook for the audit timestamp; production uses timezone.Now.
-	nowFunc func() time.Time
+	nowFunc   func() time.Time
 }
 
 func NewStaffTimeExportService(
@@ -163,8 +162,10 @@ func NewStaffTimeExportService(
 	payrollStatus PayrollConfigurationReader,
 	logger *slog.Logger,
 	renderWorkbook TimeTrackingWorkbookRenderer,
+	now func() time.Time,
 ) *staffTimeExportService {
 	return &staffTimeExportService{
+		nowFunc:        requireClock(now),
 		overview:       overview,
 		sessions:       sessions,
 		staffRepo:      staffRepo,
@@ -176,17 +177,11 @@ func NewStaffTimeExportService(
 }
 
 func (s *staffTimeExportService) today() calendar.Date {
-	if s.todayFunc != nil {
-		return s.todayFunc()
-	}
-	return calendar.TodayDate()
+	return dayOf(s.todayFunc, s.nowFunc)()
 }
 
 func (s *staffTimeExportService) now() time.Time {
-	if s.nowFunc != nil {
-		return s.nowFunc()
-	}
-	return calendar.Now()
+	return requireClock(s.nowFunc)().In(calendar.Berlin)
 }
 
 // validate normalizes defaults and rejects everything the writers would

@@ -21,7 +21,7 @@ func (externalCaregiverMonthCloseStaff) ListMonthCloseStaff(context.Context) ([]
 func TestStaffMonthCloseService_SkipsExternalCaregivers(t *testing.T) {
 	t.Parallel()
 	repo := &timestampMonthCloseSnapshotRepo{}
-	service := NewStaffMonthCloseService(repo, timestampMonthCloseMonthService{}, externalCaregiverMonthCloseStaff{}, &wtmMockSettings{accountStart: "2025-01-01"}, nil)
+	service := NewStaffMonthCloseService(repo, timestampMonthCloseMonthService{}, externalCaregiverMonthCloseStaff{}, &wtmMockSettings{accountStart: "2025-01-01"}, nil, WithMonthCloseClock(testNow))
 	result, err := service.CloseMonth(context.Background(), 77, 2025, 8, "Lohnlauf")
 	require.NoError(t, err)
 	require.Len(t, result.Snapshots, 2)
@@ -33,7 +33,7 @@ func TestOverviewAndExportStaffSkipExternalCaregivers(t *testing.T) {
 	t.Parallel()
 	overview := &staffOverviewService{staffRepo: overviewStaffQueryFunc(func(context.Context) ([]OverviewStaff, error) {
 		return []OverviewStaff{{ID: 42}, {ID: 43, ExternalCaregiver: true}}, nil
-	})}
+	}), nowFunc: testNow}
 	members, err := overview.activeStaff(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, []OverviewStaff{{ID: 42}}, members)

@@ -23,7 +23,7 @@ func TestFamilyChildrenStatementKeepsTheNewerOne(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own := newCareScope(t, db, "Träger Familie Übernahme A")
 	other := newCareScope(t, db, "Träger Familie Übernahme B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the rows back")
 	const family = "eva.uebernahme@example.org"
 

@@ -21,13 +21,19 @@ const (
 
 type Database func(context.Context) (bun.IDB, int64, error)
 
-type Store struct{ database Database }
+// Store is the Appointments persistence; now stamps cancelled_at and
+// deleted_at (ADR 0239). updated_at is the database's: the trigger
+// update_modified_column() sets it on every UPDATE (ADR 0278).
+type Store struct {
+	database Database
+	now      func() time.Time
+}
 
-func New(database Database) *Store {
-	if database == nil {
-		panic("appointments postgres: database runtime is required")
+func New(database Database, now func() time.Time) *Store {
+	if database == nil || now == nil {
+		panic("appointments postgres: database runtime and clock are required")
 	}
-	return &Store{database: database}
+	return &Store{database: database, now: now}
 }
 
 func (s *Store) databaseForTenant(ctx context.Context, operation string) (bun.IDB, int64, error) {
@@ -446,7 +452,7 @@ func (s *Store) UpdateAppointment(ctx context.Context, id int64, fields appointm
 		Set(`all_day = ?`, fields.AllDay).Set(`delivery_mode = ?`, fields.DeliveryMode).
 		Set(`overview_visibility = ?`, fields.OverviewVisibility).Set(`notify_guardians = ?`, fields.NotifyGuardians).
 		Set(`school_event_type = ?`, fields.SchoolEventType).
-		Set(`updated_at = ?`, time.Now()).Set(`revision = revision + 1`).
+		Set(`revision = revision + 1`).
 		Where(`"appointment".id = ?`, id).Where(`"appointment".cancelled_at IS NULL`).Where(`"appointment".deleted_at IS NULL`)
 	query = withTenant(query, "appointment", tenantID)
 	stats := domain.OperationStats{Queries: 1}
@@ -477,7 +483,7 @@ func (s *Store) BumpAppointmentRevision(ctx context.Context, id int64) (domain.O
 	if err != nil {
 		return domain.OperationStats{}, err
 	}
-	query := db.NewUpdate().TableExpr(appointmentTable).Set(`revision = revision + 1`).Set(`updated_at = ?`, time.Now()).Where(`"appointment".id = ?`, id)
+	query := db.NewUpdate().TableExpr(appointmentTable).Set(`revision = revision + 1`).Where(`"appointment".id = ?`, id)
 	return execAny(ctx, withTenant(query, "appointment", tenantID), "bump appointment revision")
 }
 
@@ -486,8 +492,8 @@ func (s *Store) CancelAppointment(ctx context.Context, id int64) (bool, domain.O
 	if err != nil {
 		return false, domain.OperationStats{}, err
 	}
-	now := time.Now()
-	query := db.NewUpdate().TableExpr(appointmentTable).Set(`cancelled_at = ?`, now).Set(`revision = revision + 1`).Set(`updated_at = ?`, now).
+	now := s.now()
+	query := db.NewUpdate().TableExpr(appointmentTable).Set(`cancelled_at = ?`, now).Set(`revision = revision + 1`).
 		Where(`"appointment".id = ?`, id).Where(`"appointment".cancelled_at IS NULL`).Where(`"appointment".deleted_at IS NULL`)
 	stats, rows, err := execute(ctx, withTenant(query, "appointment", tenantID), "cancel appointment")
 	return rows > 0, stats, err
@@ -498,8 +504,8 @@ func (s *Store) SoftDeleteAppointment(ctx context.Context, id int64) (domain.Ope
 	if err != nil {
 		return domain.OperationStats{}, err
 	}
-	now := time.Now()
-	query := db.NewUpdate().TableExpr(appointmentTable).Set(`deleted_at = ?`, now).Set(`revision = revision + 1`).Set(`updated_at = ?`, now).
+	now := s.now()
+	query := db.NewUpdate().TableExpr(appointmentTable).Set(`deleted_at = ?`, now).Set(`revision = revision + 1`).
 		Where(`"appointment".id = ?`, id).Where(`"appointment".deleted_at IS NULL`)
 	return execAny(ctx, withTenant(query, "appointment", tenantID), "soft-delete appointment")
 }
@@ -595,7 +601,6 @@ func (s *Store) CancelOccurrence(ctx context.Context, appointmentID int64, occur
 		ModelTableExpr(`calendar.appointment_occurrence_overrides`).
 		On("CONFLICT (tenant_id, appointment_id, occurrence_date) DO UPDATE").
 		Set("cancelled = TRUE").
-		Set("updated_at = NOW()").
 		Where("NOT appointment_occurrence_overrides.cancelled")
 	stats, rows, err := execute(ctx, query, "cancel occurrence")
 	if err == nil && rows == 0 {
@@ -660,9 +665,9 @@ func (s *Store) UpdateAppointmentRecipientResponse(ctx context.Context, response
 		query = query.
 			Set(`occurrence_responses = "appointment_recipient".occurrence_responses || jsonb_build_object(?::text, ?::text)`,
 				response.OccurrenceDate.String(), response.Status).
-			Set("responded_at = NOW()")
+			Set("responded_at = ?", s.now())
 	case response.Status == appointments.ResponseStatusAccepted || response.Status == appointments.ResponseStatusDeclined:
-		query = query.Set("status = ?", response.Status).Set(`occurrence_responses = '{}'::jsonb`).Set("responded_at = NOW()")
+		query = query.Set("status = ?", response.Status).Set(`occurrence_responses = '{}'::jsonb`).Set("responded_at = ?", s.now())
 	default:
 		query = query.Set("status = ?", response.Status).Set(`occurrence_responses = '{}'::jsonb`).Set("responded_at = NULL")
 	}

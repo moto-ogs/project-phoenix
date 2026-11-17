@@ -8,6 +8,8 @@ import {
   PortalSidebarLink,
   PortalSettingsSidebarEntries,
 } from "~/components/ui/portal-sidebar";
+import { portalSidebarTopOffset } from "~/components/ui/sidebar-geometry";
+import { useDemoBannerShown } from "~/components/demo/demo-banner";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   isTraegerNavActive,
@@ -39,10 +41,15 @@ export function TraegerSidebar({
   const { data: session } = useSession();
   const settingsItems = traegerSettingsNavItemsFor(session ?? null);
   const returnHref = useTraegerReturnHref();
+  // The demo banner (#6193) sits above the header; the sidebar moves with it.
+  const topOffset = portalSidebarTopOffset(useDemoBannerShown());
 
   if (isTraegerSettingsPath(pathname)) {
     return (
-      <PortalSidebar navLabel={TRAEGER_SETTINGS_NAV.label}>
+      <PortalSidebar
+        navLabel={TRAEGER_SETTINGS_NAV.label}
+        topOffset={topOffset}
+      >
         <PortalSettingsSidebarEntries
           back={{ ...TRAEGER_BACK_NAV, href: returnHref }}
           groupLabel={TRAEGER_SETTINGS_NAV.label}
@@ -62,6 +69,7 @@ export function TraegerSidebar({
   const settingsEntry = settingsItems[0];
   return (
     <PortalSidebar
+      topOffset={topOffset}
       secondaryLabel="Hilfe und Einstellungen"
       secondary={
         <>

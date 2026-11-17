@@ -27,8 +27,8 @@ type documentColumns struct {
 	DeletedAt       *time.Time `bun:"deleted_at"`
 	DeletedBy       *int64     `bun:"deleted_by"`
 	FileDeletedAt   *time.Time `bun:"file_deleted_at"`
-	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 func (c documentColumns) document(ownerID int64) domain.Document {
@@ -128,27 +128,29 @@ var attachmentsTable = documentTable[*attachmentRow]{
 	},
 }
 
-// DocumentStore implements ports.DocumentStore over one document table.
+// DocumentStore implements ports.DocumentStore over one document table. now
+// stamps a soft delete and the removal of the bytes.
 type DocumentStore[R documentRow] struct {
 	database Database
 	table    documentTable[R]
+	now      func() time.Time
 }
 
 // NewFileStore persists documents.files.
-func NewFileStore(database Database) *DocumentStore[*fileRow] {
-	return newDocumentStore(database, filesTable)
+func NewFileStore(database Database, now func() time.Time) *DocumentStore[*fileRow] {
+	return newDocumentStore(database, filesTable, now)
 }
 
 // NewAttachmentStore persists documents.announcement_attachments.
-func NewAttachmentStore(database Database) *DocumentStore[*attachmentRow] {
-	return newDocumentStore(database, attachmentsTable)
+func NewAttachmentStore(database Database, now func() time.Time) *DocumentStore[*attachmentRow] {
+	return newDocumentStore(database, attachmentsTable, now)
 }
 
-func newDocumentStore[R documentRow](database Database, table documentTable[R]) *DocumentStore[R] {
-	if database == nil {
-		panic("file storage postgres: database runtime is required")
+func newDocumentStore[R documentRow](database Database, table documentTable[R], now func() time.Time) *DocumentStore[R] {
+	if database == nil || now == nil {
+		panic("file storage postgres: database runtime and clock are required")
 	}
-	return &DocumentStore[R]{database: database, table: table}
+	return &DocumentStore[R]{database: database, table: table, now: now}
 }
 
 func (s *DocumentStore[R]) Create(ctx context.Context, document domain.NewDocument) (domain.Document, domain.OperationStats, error) {
@@ -162,7 +164,7 @@ func (s *DocumentStore[R]) Create(ctx context.Context, document domain.NewDocume
 	row := s.table.newRow(tenantID, document)
 	started := time.Now()
 	err = s.table.insertRow(db, row).Returning("*").Scan(ctx)
-	stats := measure(started, 1)
+	stats := measure(time.Since(started), 1)
 	if err != nil {
 		return domain.Document{}, stats, fmt.Errorf("file storage postgres: create %s: %w", s.table.name, err)
 	}
@@ -183,7 +185,7 @@ func (s *DocumentStore[R]) FindForOwner(ctx context.Context, ownerID, documentID
 	}
 	started := time.Now()
 	err = query.Scan(ctx)
-	stats := measure(started, int64(len(rows)))
+	stats := measure(time.Since(started), int64(len(rows)))
 	if err != nil {
 		return domain.Document{}, false, stats, fmt.Errorf("file storage postgres: find %s: %w", s.table.name, err)
 	}
@@ -238,7 +240,7 @@ func (s *DocumentStore[R]) list(ctx context.Context, operation string, narrow fu
 	query := narrow(s.table.selectRows(db, &rows)).Where(`"document".tenant_id = ?`, tenantID)
 	started := time.Now()
 	err = query.Scan(ctx)
-	stats := measure(started, int64(len(rows)))
+	stats := measure(time.Since(started), int64(len(rows)))
 	if err != nil {
 		return nil, stats, fmt.Errorf("file storage postgres: %s %s: %w", operation, s.table.name, err)
 	}
@@ -258,14 +260,14 @@ func (s *DocumentStore[R]) SoftDelete(ctx context.Context, documentID, deletedBy
 	var rows []R
 	started := time.Now()
 	err = s.table.updateRows(db).
-		Set(`deleted_at = ?`, time.Now()).
+		Set(`deleted_at = ?`, s.now()).
 		Set(`deleted_by = ?`, deletedBy).
 		Where(`"document".id = ?`, documentID).
 		Where(`"document".tenant_id = ?`, tenantID).
 		Where(`"document".deleted_at IS NULL`).
 		Returning("*").
 		Scan(ctx, &rows)
-	stats := measure(started, int64(len(rows)))
+	stats := measure(time.Since(started), int64(len(rows)))
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return domain.Document{}, stats, fmt.Errorf("file storage postgres: soft delete %s: %w", s.table.name, err)
 	}
@@ -284,12 +286,12 @@ func (s *DocumentStore[R]) MarkBytesDeleted(ctx context.Context, documentID int6
 	}
 	started := time.Now()
 	result, err := s.table.updateRows(db).
-		Set(`file_deleted_at = ?`, time.Now()).
+		Set(`file_deleted_at = ?`, s.now()).
 		Where(`"document".id = ?`, documentID).
 		Where(`"document".tenant_id = ?`, tenantID).
 		Where(`"document".file_deleted_at IS NULL`).
 		Exec(ctx)
-	stats := measure(started, 0)
+	stats := measure(time.Since(started), 0)
 	if err != nil {
 		return stats, fmt.Errorf("file storage postgres: mark %s bytes deleted: %w", s.table.name, err)
 	}
@@ -309,7 +311,7 @@ func (s *DocumentStore[R]) CountByOwner(ctx context.Context, ownerID int64) (int
 		Where(`"document".deleted_at IS NULL`)
 	started := time.Now()
 	count, err := query.Count(ctx)
-	stats := measure(started, 1)
+	stats := measure(time.Since(started), 1)
 	if err != nil {
 		return 0, stats, fmt.Errorf("file storage postgres: count %s: %w", s.table.name, err)
 	}
@@ -330,7 +332,7 @@ func (s *DocumentStore[R]) TotalStoredBytes(ctx context.Context) (int64, domain.
 		Where(`"document".file_deleted_at IS NULL`)
 	started := time.Now()
 	err = query.Scan(ctx, &total)
-	stats := measure(started, 1)
+	stats := measure(time.Since(started), 1)
 	if err != nil {
 		return 0, stats, fmt.Errorf("file storage postgres: sum stored %s bytes: %w", s.table.name, err)
 	}

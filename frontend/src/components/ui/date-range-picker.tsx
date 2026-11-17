@@ -1,5 +1,5 @@
 "use client";
-import { BELOW_SM } from "~/lib/hooks/use-media-query";
+import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { Z_LAYER } from "./overlay-styles";
 import {
   MODAL_SCOPE_SELECTOR,
@@ -27,6 +27,7 @@ import {
   type PanelGeometry,
 } from "~/components/ui/calendar-panel-position";
 import { selectTriggerClassName } from "~/components/ui/select-trigger-styles";
+import { CONTROL_PART } from "~/components/ui/control-geometry";
 import {
   DAY_PICKER_CLASSNAMES,
   preloadDayPicker,
@@ -167,11 +168,15 @@ export function DateRangePicker({
         onPointerEnter={preloadDayPicker}
         onFocus={preloadDayPicker}
         // Derselbe Auslöser wie jedes Auswahlfeld (`CustomSelect`).
+        {...(embedded && CONTROL_PART)}
         className={
           embedded
             ? cn(
-                "flex h-9 w-full items-center justify-center gap-2 px-3 text-sm transition-colors",
-                isOpen ? "bg-gray-50" : "hover:bg-gray-50",
+                selectTriggerClassName({
+                  embedded: true,
+                  className: "w-full justify-center",
+                }),
+                isOpen && "bg-gray-50",
               )
             : cn(
                 selectTriggerClassName({ className: triggerClassName }),
@@ -394,20 +399,6 @@ function RangeCalendar({
   );
 }
 
-function useIsSingleMonthCalendar(): boolean {
-  const [isSingleMonth, setIsSingleMonth] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia(BELOW_SM);
-    const update = () => setIsSingleMonth(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-
-  return isSingleMonth;
-}
-
 function formatDraftRangeLabel(
   draftFrom: Date | undefined,
   draftTo: Date | undefined,
@@ -445,7 +436,7 @@ export function RangeCalendarInline({
 }: RangeCalendarProps) {
   const today = useBerlinToday();
   const [month, setMonth] = useState(value?.from ?? parseISODate(today));
-  const isSingleMonth = useIsSingleMonthCalendar();
+  const isSingleMonth = useMediaQuery(BELOW_SM);
   // Manual draft state. We use `mode="multiple"` on the underlying DayPicker
   // and manage the two-click range logic ourselves, react-day-picker v10's
   // mode="range" calls onSelect with surprising payloads (sometimes a complete

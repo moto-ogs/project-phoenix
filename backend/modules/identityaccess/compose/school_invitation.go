@@ -2,6 +2,7 @@ package compose
 
 import (
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application"
@@ -16,7 +17,7 @@ func newSchoolInvitation(
 	sessions *identityPorts.SessionDependencies,
 	lifecycleDeps *LifecycleDependencies,
 	deps *identityPorts.SchoolInvitationDependencies,
-	runtime tenantRuntime,
+	runtime tenantRuntime, now func() time.Time,
 ) (*application.SchoolInvitation, error) {
 	if deps == nil {
 		return nil, nil
@@ -45,6 +46,6 @@ func newSchoolInvitation(
 		Runtime: runtime,
 		Attach:  attach,
 		Expiry:  deps.Expiry,
-		Logger:  deps.Logger,
+		Logger:  deps.Logger, Now: now,
 	})
 }

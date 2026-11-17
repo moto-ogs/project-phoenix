@@ -38,16 +38,14 @@ type PlanRestoration struct {
 	today   func() calendar.Date
 }
 
-// NewPlanRestoration binds the lifecycle commands, Care Plan's roster resync and the
-// outer unit the lifecycle's own transaction joins.
+// NewPlanRestoration binds the lifecycle commands, Care Plan's roster resync,
+// the outer unit the lifecycle's own transaction joins and the day clock the
+// re-plan starts from.
 func NewPlanRestoration(exits RestoringCareExits, rosters RestoredPlanResync,
 	unit func(context.Context, func(context.Context) error) error, today func() calendar.Date,
 ) *PlanRestoration {
-	if exits == nil || rosters == nil || unit == nil {
-		panic("care plan restoration: care exits, roster resync and unit of work are required")
-	}
-	if today == nil {
-		today = calendar.TodayDate
+	if exits == nil || rosters == nil || unit == nil || today == nil {
+		panic("care plan restoration: care exits, roster resync, unit of work and day clock are required")
 	}
 	return &PlanRestoration{exits: exits, rosters: rosters, unit: unit, today: today}
 }

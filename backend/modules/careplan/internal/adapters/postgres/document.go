@@ -22,8 +22,8 @@ type careDocumentRow struct {
 	bun.BaseModel   `bun:"table:student_documents,alias:care_document"`
 	ID              int64      `bun:"id,pk,autoincrement"`
 	TenantID        int64      `bun:"tenant_id,notnull"`
-	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt       time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt       time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt       time.Time  `bun:"updated_at,nullzero,notnull"`
 	StudentID       int64      `bun:"student_id,notnull"`
 	Category        string     `bun:"category,notnull"`
 	FilenameDisplay string     `bun:"filename_display,notnull"`
@@ -46,8 +46,8 @@ type careDocumentCleanupRow struct {
 	bun.BaseModel  `bun:"table:student_document_file_cleanup,alias:care_document_cleanup"`
 	ID             int64      `bun:"id,pk,autoincrement"`
 	TenantID       int64      `bun:"tenant_id,notnull"`
-	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull"`
 	OwnerID        int64      `bun:"owner_id,notnull"`
 	FilenameStored string     `bun:"filename_stored,notnull"`
 	RetryAfter     time.Time  `bun:"retry_after,notnull"`

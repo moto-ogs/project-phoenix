@@ -26,8 +26,16 @@ import (
 // settings.
 func newOperatorProvisioning(
 	organizations organizationtenancy.Capability, identity identityaccess.Owner, accounts OperatorAccountDirectory,
-	adapters OperatorProvisioningAdapters, settings settingsCompose.SettingsService, logger *slog.Logger,
+	adapters OperatorProvisioningAdapters, schoolSettings settingsCompose.SettingsService, logger *slog.Logger, now func() time.Time,
 ) (organizationtenancy.OperatorProvisioning, error) {
+	// The zero runtime reads only the caller's transaction: the rows run in
+	// the administrative unit of the school creation or fail.
+	callerUnit := settingsCompose.TenantSettingsRuntime{}
+	schoolCreation, err := settingsCompose.NewSchoolCreationSettings(configModels.DefaultRegistry(),
+		settingsCompose.NewSettingValueRepository(callerUnit), settingsCompose.NewSettingAuditRepository(callerUnit), tenant.IsAdminTx)
+	if err != nil {
+		return organizationtenancy.OperatorProvisioning{}, err
+	}
 	return organizationCompose.NewProvisioning(organizationCompose.ProvisioningDependencies{
 		PWAUsageWindowDays: deliveryCompose.PWAUsageWindowDays,
 		Organizations:      organizations,
@@ -42,10 +50,11 @@ func newOperatorProvisioning(
 		People:     adapters.People,
 		Presence:   adapters.Presence,
 		Categories: adapters.Categories,
-		Settings:   provisioningSettings{settings: settings},
+		Settings:   provisioningSettings{SchoolCreationSettings: schoolCreation, settings: schoolSettings},
 		Audit:      adapters.Audit,
 		Secrets:    provisioningSecrets{},
 		Logger:     logger,
+		Now:        now,
 	}, newOperatorDashboard(adapters.ActiveAccountCounts))
 }
 
@@ -418,8 +427,10 @@ func (e invalidSchoolIdentityError) Unwrap() []error {
 	return []error{organizationCompose.ErrInvalidSchoolIdentity, e.err}
 }
 
-// provisioningSettings resolves the device online window of one school.
+// provisioningSettings resolves the device online window of one school; the
+// embedded school-creation settings record the federal state of a new one.
 type provisioningSettings struct {
+	*settingsCompose.SchoolCreationSettings
 	settings settingsCompose.SettingsService
 }
 

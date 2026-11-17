@@ -34,12 +34,13 @@ type Projection struct {
 	applicants PendingApplicants
 	links      GuardianLinks
 	today      func() calendar.Date
+	now        func() time.Time
 }
 
 // New builds the projection over the ambient transaction runtime and the
 // guardian-link row source. The optional clock fixes the calendar day the
-// activity-group targets are evaluated on; production uses Berlin's current
-// day.
+// activity-group targets are evaluated on and the instant an announcement is
+// live at; production passes the root's clock.
 func New(database Database, applicants PendingApplicants, links GuardianLinks, clocks ...func() time.Time) *Projection {
 	if database == nil {
 		panic("communication parent audience: database runtime is required")
@@ -50,7 +51,7 @@ func New(database Database, applicants PendingApplicants, links GuardianLinks, c
 	if links == nil {
 		panic("communication parent audience: guardian links are required")
 	}
-	return &Projection{database: database, applicants: applicants, links: links, today: calendar.CalendarDateClock(clocks...)}
+	return &Projection{database: database, applicants: applicants, links: links, today: calendar.CalendarDateClock(clocks...), now: calendar.InstantClock(clocks...)}
 }
 
 func (p *Projection) pendingApplicants(ctx context.Context) (string, error) {
@@ -449,7 +450,10 @@ func (p *Projection) CountReachableGuardiansForStudents(ctx context.Context, sch
 // feedSQL lists published, active, unexpired announcements the account is
 // targeted by across the given schools, newest-published first, with the
 // account's read/ack state.
-const feedSQL = pendingApplicantsFeedCTE + `
+//
+// Bind order: applicants, guardian links, account, account, news schools,
+// notice-only schools, now, now, today, today, today, account, account.
+const feedSQL = pendingApplicantsFeedCTE + `, ` + accountChildrenCTE + `
 			SELECT a.id, a.tenant_id, a.title, a.body, a.priority, a.link_url,
 				a.requires_acknowledgement, a.published_at, a.expires_at,
 				a.response_type, a.response_deadline, a.delivery_mode, a.system_kind,

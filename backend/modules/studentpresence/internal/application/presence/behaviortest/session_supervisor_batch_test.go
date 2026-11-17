@@ -120,7 +120,7 @@ func TestSessionSupervisorAssignmentRecoversEachSupervisorIndependently(t *testi
 				case "nfc":
 					workSessions.fault = fault
 				}
-				svc := active.NewService(active.ServiceDependencies{SupervisorRepo: repo, WorkSessionService: workSessions})
+				svc := active.NewService(active.ServiceDependencies{Now: time.Now, SupervisorRepo: repo, WorkSessionService: workSessions})
 				counter.Reset()
 				active.AssignSessionSupervisorsForTest(svc, txCtx, group.ID, append([]int64{staff[2]}, staff...), time.Now())
 				counter.Stop()

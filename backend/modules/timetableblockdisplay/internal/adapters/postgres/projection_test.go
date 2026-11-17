@@ -3,6 +3,7 @@ package timetableblockdisplay
 import (
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +34,7 @@ func TestListResolvesPlanningTrackThroughTemplate(t *testing.T) {
 		Exec(scope.Context())
 	require.NoError(t, err)
 
-	instance := testpkg.CreateTestActivityInstanceForTenant(t, db, scope.TenantID, testpkg.TodayDate().AddDays(1), room.ID, testpkg.ActivityInstanceOpts{
+	instance := testpkg.CreateTestActivityInstanceForTenant(t, db, scope.TenantID, calendar.NewDate(2030, 8, 27), room.ID, testpkg.ActivityInstanceOpts{
 		ActivityGroupID: &group.ID,
 	})
 	metadata, err := List(scope.Context(), db, scope.TenantID, []int64{instance.ID})

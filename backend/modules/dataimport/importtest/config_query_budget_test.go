@@ -273,7 +273,7 @@ func TestOpeningBalanceImportBatchQueryBudget(t *testing.T) {
 	actor := newImporter(t, db)
 	counter := testpkg.CaptureQueriesForContext(t, db)
 	runner := importBudgetRun[importModels.OpeningBalanceImportRow]{
-		importer: module.OpeningBalanceImport(testpkg.Date(2026, time.September, 1), "Übernahme", actor.staffID),
+		importer: module.OpeningBalanceImport.Build(testpkg.Date(2026, time.September, 1), "Übernahme", actor.staffID),
 		ctx:      counter.Context(tenant.WithUnitOfWork(testpkg.Ctx(t), testpkg.TenantRuntime(t, db))), counter: counter, userID: actor.accountID,
 		audit: importModels.BatchAudit{EntityType: "opening_balance", Filename: "budget.csv", AccountID: actor.accountID, Options: "2026-09-01"},
 	}

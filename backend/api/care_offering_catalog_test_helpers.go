@@ -160,6 +160,10 @@ func newCareOfferingCatalog(inputs careOfferingCatalogInputs) (careplan.CareOffe
 	if inputs.Phases == nil || inputs.Bookings == nil || inputs.Timetable == nil || inputs.Calendar == nil || inputs.Settings == nil {
 		return nil, errors.New("care offering catalog: phases, bookings, timetable, calendar and settings are required")
 	}
+	if inputs.Today == nil {
+		// A suite that pins no day reads the catalog on the real one, as the root does.
+		inputs.Today = calendar.TodayDate
+	}
 	return careplanCompose.NewCareOfferingCatalog(careplanCompose.CareOfferingCatalogDependencies{
 		Records:                inputs.Records,
 		Phases:                 owners.CareOfferingCatalogPhases{Phases: inputs.Phases},

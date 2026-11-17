@@ -139,7 +139,8 @@ func (s *studentDirectoryReads) ListRoster(
 
 // ListRosterOverlapping returns the children enrolled on at least one day of
 // [from, to]. Unlike the live roster it keeps children whose care has since
-// ended and omits later enrolments.
+// ended and omits later enrolments. It serves OGS care only (meals,
+// statistics), so a child without an OGS place (#4803) is never on it.
 //
 // The membership rule is expressed as an interval overlap so one statement
 // answers it for the whole window: the end must not lie before the window, the
@@ -156,6 +157,7 @@ func (s *studentDirectoryReads) ListRosterOverlapping(
 		// not when the window reaches it (#5630).
 		query = holidayGuestArrived(query, today)
 		query = query.
+			Where(`NOT "student".without_care_place`).
 			Where(`("student".enrolled_until IS NULL OR "student".enrolled_until >= ?)`, directoryDateParam(from)).
 			Where(`NOT ("student".enrolled_from IS NULL AND "student".enrolled_until IS NULL AND "student".status = ?)`,
 				"inactive")

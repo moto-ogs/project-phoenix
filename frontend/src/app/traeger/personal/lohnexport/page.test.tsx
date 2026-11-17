@@ -6,13 +6,16 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { SettingsSchema } from "~/lib/settings-api";
 import type {
   PayrollReport,
   TimeReport,
 } from "~/lib/traeger-staff-exports-api";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchPayrollReport: vi.fn(),
@@ -62,9 +65,20 @@ vi.mock("next/navigation", () => ({
 
 import TraegerPayrollExportPage from "./page";
 
+// The month `back` months before the month of the test day.
+function monthBefore(back: number): { year: number; month: number } {
+  const [year = 0, month = 1] = TEST_CLOCK_TODAY.split("-").map(Number);
+  const index = year * 12 + (month - 1) - back;
+  return { year: Math.floor(index / 12), month: (index % 12) + 1 };
+}
+// The Lohnbüro bills the month before the test day; EARLIER is the one before.
+const LAST = monthBefore(1);
+const EARLIER = monthBefore(2);
+const LAST_SUFFIX = `${LAST.year}-${String(LAST.month).padStart(2, "0")}`;
+
 const NOT_READY: PayrollReport = {
-  year: 2026,
-  month: 8,
+  year: LAST.year,
+  month: LAST.month,
   format: "datev_lodas",
   contracts: 3,
   people: 2,
@@ -92,8 +106,8 @@ const READY: PayrollReport = {
 };
 
 const TIMES: TimeReport = {
-  year: 2026,
-  month: 8,
+  year: LAST.year,
+  month: LAST.month,
   people: 2,
   schools: 2,
   rows: 5,
@@ -129,9 +143,9 @@ function payrollSchema(values: Record<string, string>): SettingsSchema {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerPayrollExportPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -149,9 +163,13 @@ describe("TraegerPayrollExportPage", () => {
 
   it("opens the last month and names what the file still waits for", async () => {
     renderPage();
-    // The test clock stands in September 2026: the Lohnbüro bills August.
+    // The Lohnbüro bills the month before the test day.
     expect(await screen.findByText("Das fehlt noch")).toBeInTheDocument();
-    expect(api.fetchPayrollReport).toHaveBeenCalledWith(2026, 8, "datev_lodas");
+    expect(api.fetchPayrollReport).toHaveBeenCalledWith(
+      LAST.year,
+      LAST.month,
+      "datev_lodas",
+    );
     expect(
       screen.getByText("Jonas Keller hat noch keine Personalnummer."),
     ).toBeInTheDocument();
@@ -180,7 +198,7 @@ describe("TraegerPayrollExportPage", () => {
     api.fetchPayrollReport.mockResolvedValue(READY);
     api.downloadPayrollFile.mockResolvedValue({
       blob: new Blob(["x"]),
-      filename: "lohnexport_datev_lug_2026-08.txt",
+      filename: `lohnexport_datev_lug_${LAST_SUFFIX}.txt`,
     });
     renderPage();
     fireEvent.click(
@@ -188,8 +206,8 @@ describe("TraegerPayrollExportPage", () => {
     );
     await waitFor(() =>
       expect(api.fetchPayrollReport).toHaveBeenLastCalledWith(
-        2026,
-        8,
+        LAST.year,
+        LAST.month,
         "datev_lug",
       ),
     );
@@ -201,10 +219,14 @@ describe("TraegerPayrollExportPage", () => {
     await waitFor(() =>
       expect(download.downloadBlob).toHaveBeenCalledWith(
         expect.any(Blob),
-        "lohnexport_datev_lug_2026-08.txt",
+        `lohnexport_datev_lug_${LAST_SUFFIX}.txt`,
       ),
     );
-    expect(api.downloadPayrollFile).toHaveBeenCalledWith(2026, 8, "datev_lug");
+    expect(api.downloadPayrollFile).toHaveBeenCalledWith(
+      LAST.year,
+      LAST.month,
+      "datev_lug",
+    );
   });
 
   it("goes to an earlier month and back to the last month", async () => {
@@ -213,16 +235,16 @@ describe("TraegerPayrollExportPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Vorheriger Monat" }));
     await waitFor(() =>
       expect(api.fetchPayrollReport).toHaveBeenLastCalledWith(
-        2026,
-        7,
+        EARLIER.year,
+        EARLIER.month,
         "datev_lodas",
       ),
     );
     fireEvent.click(screen.getByRole("button", { name: "Letzter Monat" }));
     await waitFor(() =>
       expect(api.fetchPayrollReport).toHaveBeenLastCalledWith(
-        2026,
-        8,
+        LAST.year,
+        LAST.month,
         "datev_lodas",
       ),
     );
@@ -231,7 +253,7 @@ describe("TraegerPayrollExportPage", () => {
   it("keeps the shown month when an earlier answer comes late", async () => {
     let answerAugust: (report: PayrollReport) => void = () => undefined;
     api.fetchPayrollReport.mockImplementation((_year: number, month: number) =>
-      month === 8
+      month === LAST.month
         ? new Promise<PayrollReport>((resolve) => {
             answerAugust = resolve;
           })
@@ -242,7 +264,11 @@ describe("TraegerPayrollExportPage", () => {
       await screen.findByRole("button", { name: "Vorheriger Monat" }),
     );
     await waitFor(() =>
-      expect(api.fetchPayrollReport).toHaveBeenLastCalledWith(2026, 7, "datev_lodas"),
+      expect(api.fetchPayrollReport).toHaveBeenLastCalledWith(
+        EARLIER.year,
+        EARLIER.month,
+        "datev_lodas",
+      ),
     );
     await waitFor(() => expect(screen.getByText("7")).toBeInTheDocument());
     answerAugust({ ...NOT_READY, contracts: 3 });
@@ -252,7 +278,11 @@ describe("TraegerPayrollExportPage", () => {
 
   it("refreshes the shown month after a download of another month fails", async () => {
     api.fetchPayrollReport.mockImplementation((_year: number, month: number) =>
-      Promise.resolve({ ...READY, month, contracts: month === 8 ? 3 : 7 }),
+      Promise.resolve({
+        ...READY,
+        month,
+        contracts: month === LAST.month ? 3 : 7,
+      }),
     );
     let failDownload: (err: unknown) => void = () => undefined;
     api.downloadPayrollFile.mockImplementation(
@@ -270,15 +300,13 @@ describe("TraegerPayrollExportPage", () => {
     await waitFor(() => expect(api.downloadPayrollFile).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: "Vorheriger Monat" }));
     await waitFor(() => expect(screen.getByText("7")).toBeInTheDocument());
-    failDownload(
-      new ApiError("down", 503, { code: "general.unavailable" }),
-    );
+    failDownload(new ApiError("down", 503, { code: "general.unavailable" }));
     await waitFor(() =>
       expect(api.fetchPayrollReport).toHaveBeenCalledTimes(3),
     );
     expect(api.fetchPayrollReport).toHaveBeenLastCalledWith(
-      2026,
-      7,
+      EARLIER.year,
+      EARLIER.month,
       "datev_lodas",
     );
     await waitFor(() => expect(screen.getByText("7")).toBeInTheDocument());
@@ -307,7 +335,7 @@ describe("TraegerPayrollExportPage", () => {
     const button = await screen.findByRole("button", {
       name: /CSV herunterladen/,
     });
-    expect(api.fetchTimeReport).toHaveBeenCalledWith(2026, 8);
+    expect(api.fetchTimeReport).toHaveBeenCalledWith(LAST.year, LAST.month);
     await waitFor(() =>
       expect(button).not.toHaveAttribute("aria-disabled", "true"),
     );
@@ -315,7 +343,7 @@ describe("TraegerPayrollExportPage", () => {
     await waitFor(() =>
       expect(download.downloadBlob).toHaveBeenCalledWith(
         expect.any(Blob),
-        "zeitexport_2026-08.csv",
+        `zeitexport_${LAST_SUFFIX}.csv`,
       ),
     );
     expect(screen.getByText("Spalten der Datei")).toBeInTheDocument();
@@ -335,9 +363,7 @@ describe("TraegerPayrollExportPage", () => {
     fireEvent.click(retry);
     await waitFor(() => expect(api.fetchTimeReport).toHaveBeenCalledTimes(2));
     await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: "Wiederholen" }),
-      ).toBeNull(),
+      expect(screen.queryByRole("button", { name: "Wiederholen" })).toBeNull(),
     );
     expect(
       await screen.findByRole("button", { name: /CSV herunterladen/ }),
@@ -398,8 +424,8 @@ describe("TraegerPayrollExportPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Vorheriger Monat" }));
     await waitFor(() =>
       expect(api.fetchPayrollReport).toHaveBeenLastCalledWith(
-        2026,
-        7,
+        EARLIER.year,
+        EARLIER.month,
         "datev_lodas",
       ),
     );
@@ -408,8 +434,8 @@ describe("TraegerPayrollExportPage", () => {
       expect(api.fetchPayrollReport).toHaveBeenCalledTimes(3),
     );
     expect(api.fetchPayrollReport).toHaveBeenLastCalledWith(
-      2026,
-      7,
+      EARLIER.year,
+      EARLIER.month,
       "datev_lodas",
     );
   });

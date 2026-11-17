@@ -12,8 +12,9 @@ import (
 )
 
 // accountSessionRow mirrors auth.tokens. The default tags keep the insert
-// semantics of the retained model: zero timestamps take the database clock
-// and an unset portal scope stores the column default. The token columns
+// semantics of the retained model: an unset portal scope stores the column
+// default. InsertAccountSession stamps zero timestamps with the owner's
+// clock, the clock HasLiveAccountSessionsCreatedAfter compares them with. The token columns
 // hold hex SHA-256 digests only (#4902); the raw value never reaches SQL.
 // A Träger-Portal session stores its Träger and no school, every other
 // session its school and no Träger (chk_tokens_session_owner); the zero value
@@ -39,8 +40,8 @@ type accountSessionRow struct {
 	RotatedAt            *time.Time `bun:"rotated_at"`
 	ReplacementTokenHash *string    `bun:"replacement_token"`
 	RecoveryProofHash    []byte     `bun:"recovery_proof_hash"`
-	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt            time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt            time.Time  `bun:"updated_at,nullzero,notnull"`
 	// OutsideAccessWindow is no column: only the family lookup selects it
 	// (ADR 0251), every other read leaves it false.
 	OutsideAccessWindow bool `bun:"outside_access_window,scanonly"`
@@ -236,6 +237,12 @@ func (s *Store) InsertAccountSession(ctx context.Context, session domain.Account
 		return domain.AccountSession{}, domain.OperationStats{}, err
 	}
 	row := accountSessionRowFromDomain(session)
+	if row.CreatedAt.IsZero() {
+		row.CreatedAt = s.now()
+	}
+	if row.UpdatedAt.IsZero() {
+		row.UpdatedAt = row.CreatedAt
+	}
 	started := time.Now()
 	result, err := db.NewInsert().Model(&row).Returning("id, created_at, updated_at").Exec(ctx)
 	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started)}

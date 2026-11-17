@@ -18,14 +18,6 @@ func mustLoadLocation(name string) *time.Location {
 	return location
 }
 
-// Today returns the current date in Berlin timezone with time set to midnight.
-// Use it only for TIMESTAMPTZ boundary instants. For calendar-day values
-// (DATE columns, API dates) use TodayDate() — time.Time params are converted
-// to UTC by the driver and must never reach a DATE column.
-func Today() time.Time {
-	return DateOf(time.Now())
-}
-
 // DateOf extracts the date portion of a timestamp in Berlin timezone.
 // Returns midnight of that date in Berlin timezone — an instant, for
 // TIMESTAMPTZ boundary math only. For calendar-day values use DateFromTime().

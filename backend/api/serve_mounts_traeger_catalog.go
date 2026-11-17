@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -33,9 +34,9 @@ import (
 // and the care-offering catalog of Care Plan, so a copy passes every check
 // of a school's own edit.
 func mountTraegerCatalogRoutes(root chi.Router, schoolPhaseAdministration *enrollmentCompose.Phases, schoolCatalog careplan.CareOfferingCatalogCapability, lockRecurrence func(context.Context) error,
-	organizations organizationtenancy.Capability, billing parentbilling.CareModulePrices, intake carecontract.Intake,
+	organizations organizationtenancy.Capability, billing parentbilling.CareModulePrices, intake carecontract.Intake, now func() time.Time,
 ) error {
-	schoolOfferings, err := careplanCompose.NewTraegerOfferingCopies(schoolCatalog, lockRecurrence)
+	schoolOfferings, err := careplanCompose.NewTraegerOfferingCopies(schoolCatalog, lockRecurrence, now)
 	if err != nil {
 		return err
 	}
@@ -43,7 +44,7 @@ func mountTraegerCatalogRoutes(root chi.Router, schoolPhaseAdministration *enrol
 	if schoolPhases == nil {
 		return errors.New("träger catalog: the phase administration has no copy commands")
 	}
-	phases, offerings := enrollmentCompose.NewTraegerPhases(), careplanCompose.NewTraegerOfferings()
+	phases, offerings := enrollmentCompose.NewTraegerPhases(now), careplanCompose.NewTraegerOfferings(now)
 	catalog, err := traegerCatalogCompose.New(ports.Dependencies{
 		Schools: organizations, Phases: phases, Offerings: offerings,
 		SchoolPhases: schoolPhases, SchoolOfferings: schoolOfferings,
@@ -113,11 +114,11 @@ func traegerCatalogContractTemplates(intake carecontract.Intake) ports.ContractT
 // over the same ports as their own Träger routes.
 func newTraegerCatalogBilling(organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings TraegerSchoolSettings,
 	marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
-	holidays carecontract.SchoolHolidays, parentsURL string, today func() calendar.Date,
+	holidays carecontract.SchoolHolidays, parentsURL string, today func() calendar.Date, now func() time.Time,
 ) (parentbilling.CareModulePrices, carecontract.Intake) {
 	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
 	billing, _ := parentBillingCompose.NewCareBilling(contracts, parentBillingCareSchools{organizations: organizations},
-		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings), today)
-	_, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL)
-	return billing, careContractCompose.NewIntake(intakePorts)
+		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings), today, now)
+	_, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL, now)
+	return billing, careContractCompose.NewIntake(intakePorts, today)
 }

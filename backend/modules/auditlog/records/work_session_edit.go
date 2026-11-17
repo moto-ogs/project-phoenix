@@ -17,7 +17,7 @@ type WorkSessionEdit struct {
 	OldValue  *string   `bun:"old_value" json:"old_value"`
 	NewValue  *string   `bun:"new_value" json:"new_value"`
 	Notes     *string   `bun:"notes" json:"notes"`
-	CreatedAt time.Time `bun:"created_at,notnull,default:now()" json:"created_at"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull" json:"created_at"`
 }
 
 // SystemEditorID is the sentinel edited_by value for changes performed by
@@ -63,10 +63,6 @@ func (e *WorkSessionEdit) Validate() error {
 		// Valid field names
 	default:
 		return errors.New("invalid field name")
-	}
-
-	if e.CreatedAt.IsZero() {
-		e.CreatedAt = time.Now()
 	}
 
 	return nil

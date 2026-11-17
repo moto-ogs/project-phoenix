@@ -107,7 +107,7 @@ func (s *Service) PatchSessionAttendance(ctx context.Context, participantID int6
 		if participantID <= 0 || !validSessionAttendancePatch(patch) {
 			return ports.Stats{}, errors.New("student presence: invalid session attendance patch")
 		}
-		return s.store.PatchSessionAttendance(txCtx, participantID, patch, time.Now().UTC())
+		return s.store.PatchSessionAttendance(txCtx, participantID, patch, s.now().UTC())
 	})
 }
 
@@ -137,25 +137,18 @@ func validSessionAttendanceSubstatus(value string) bool {
 	}
 }
 
-func (s *Service) TransitionParticipants(ctx context.Context, participantIDs []int64, from, to string, at time.Time) (int64, error) {
+func (s *Service) TransitionParticipants(ctx context.Context, participantIDs []int64, from, to string) (int64, error) {
 	if !validSessionAttendanceStatus(from) || !validSessionAttendanceStatus(to) {
 		return 0, s.runWrite(ctx, "transition_participants", func(ctx context.Context) (ports.Stats, error) {
 			return ports.Stats{}, errors.New("student presence: invalid attendance transition")
 		})
-	}
-	// A zero instant stamps the rows with the transaction time, so a
-	// completion that reads the same time from the database sees the rows
-	// as unchanged since then.
-	var stamp *time.Time
-	if !at.IsZero() {
-		stamp = &at
 	}
 	var rows int64
 	err := s.runWrite(ctx, "transition_participants", func(txCtx context.Context) (ports.Stats, error) {
 		if !validIDs(participantIDs) {
 			return ports.Stats{}, errInvalidParticipants
 		}
-		stats, err := s.store.TransitionParticipants(txCtx, participantIDs, from, to, stamp)
+		stats, err := s.store.TransitionParticipants(txCtx, participantIDs, from, to)
 		rows = stats.Rows
 		return stats, err
 	})
@@ -163,7 +156,7 @@ func (s *Service) TransitionParticipants(ctx context.Context, participantIDs []i
 }
 
 func (s *Service) MarkParticipantsNotScheduled(ctx context.Context, participantIDs []int64) (int64, error) {
-	return s.participantWrite(ctx, "mark_participants_not_scheduled", participantIDs, time.Now(), func(txCtx context.Context) (ports.Stats, error) {
+	return s.participantWrite(ctx, "mark_participants_not_scheduled", participantIDs, s.now(), func(txCtx context.Context) (ports.Stats, error) {
 		return s.store.MarkParticipantsNotScheduled(txCtx, participantIDs)
 	})
 }

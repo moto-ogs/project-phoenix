@@ -12,8 +12,10 @@ import (
 
 type retentionScanStore struct {
 	ports.UnregisteredTagScanStore
-	cutoff time.Time
+	now, cutoff time.Time
 }
+
+func (s *retentionScanStore) DatabaseTime(context.Context) (time.Time, error) { return s.now, nil }
 
 func (s *retentionScanStore) DeleteExpired(_ context.Context, cutoff time.Time) (int64, domain.OperationStats, error) {
 	s.cutoff = cutoff
@@ -30,13 +32,15 @@ func TestDeleteUnregisteredTagScansAfterRetentionUsesFixedUTCWindow(t *testing.T
 	t.Parallel()
 
 	// Migration 1.15.606 evaluates the database guard in UTC. The October
-	// DST rollback must not shorten the fixed 90 times 24-hour window.
+	// DST rollback must not shorten the fixed 90 times 24-hour window. The
+	// window counts back from the database time, not the owner clock, which
+	// stands years away (ADR 0281, Nachtrag).
 	now := time.Date(2026, time.October, 25, 1, 30, 0, 0, time.UTC)
-	store := &retentionScanStore{}
+	store := &retentionScanStore{now: now}
 	service := &Service{deps: Dependencies{
 		Scans: store,
 		Tx:    retentionTransaction{},
-		Now:   func() time.Time { return now },
+		Now:   func() time.Time { return now.AddDate(5, 0, 0) },
 		Observe: func(ports.Observation) {
 		},
 	}}
@@ -49,7 +53,7 @@ func TestDeleteUnregisteredTagScansAfterRetentionUsesFixedUTCWindow(t *testing.T
 	if days != devicefleet.UnregisteredTagScanRetentionDays {
 		t.Fatalf("retention days = %d, want %d", days, devicefleet.UnregisteredTagScanRetentionDays)
 	}
-	want := now.Add(-time.Duration(devicefleet.UnregisteredTagScanRetentionDays)*24*time.Hour - retentionClockMargin)
+	want := now.Add(-time.Duration(devicefleet.UnregisteredTagScanRetentionDays) * 24 * time.Hour)
 	if !store.cutoff.Equal(want) {
 		t.Fatalf("cutoff = %s, want %s", store.cutoff, want)
 	}

@@ -4,7 +4,7 @@ import { Suspense, use, useEffect, useMemo, useState } from "react";
 // eslint-disable-next-line no-restricted-imports -- public page; tenant-router not needed
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Mail } from "lucide-react";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { useLocale } from "next-intl";
 import { LATE_INVITE_QUERY_PARAM } from "~/lib/enrollment-http";

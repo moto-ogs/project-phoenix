@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -156,7 +155,7 @@ func (rs *Resource) getEnrollmentBootstrap(w http.ResponseWriter, r *http.Reques
 	var respond EnrollmentResponse
 	lateInviteToken := strings.TrimSpace(r.URL.Query().Get("late_invite"))
 	loadErr := withinTenant(r.Context(), schoolID, func(txCtx context.Context) error {
-		loaded, e := rs.EnrollmentForms.LoadFormBootstrap(txCtx, phaseID, time.Now(), lateInviteToken, linkedParents, existingStudents)
+		loaded, e := rs.EnrollmentForms.LoadFormBootstrap(txCtx, phaseID, rs.Now(), lateInviteToken, linkedParents, existingStudents)
 		respond = loaded
 		return e
 	})

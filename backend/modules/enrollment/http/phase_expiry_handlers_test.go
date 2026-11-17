@@ -34,6 +34,7 @@ func TestListPhaseExpiryWarnings_StringifiesIDsAndDates(t *testing.T) {
 
 	successorID := int64(22)
 	resource := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, PhaseExpiryService: &phaseExpiryServiceStub{warnings: []*enrollmentOwner.PhaseExpiryWarning{
 			{
 				SourcePhaseID:      3,
@@ -72,6 +73,7 @@ func TestListPhaseExpiryWarnings_RequiresAdminScope(t *testing.T) {
 	// Same gate as the route: whoever creates phases (config:manage) reads
 	// the warnings that ask for a successor phase (#3469).
 	resource := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, PhaseExpiryService: &phaseExpiryServiceStub{}}
 
 	readOnly := executeAdminRouteWithPermissions(

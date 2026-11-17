@@ -93,7 +93,7 @@ func createMoveStaffRow(t *testing.T, s *moveSetup, instanceID, staffID int64, m
 }
 
 func moveTestDate() calendar.Date {
-	return calendar.TodayDate().AddDays(7)
+	return lifecycleToday.AddDays(7)
 }
 
 func parseMoveClock(t *testing.T, hhmm string) time.Time {
@@ -106,7 +106,7 @@ func parseMoveClock(t *testing.T, hhmm string) time.Time {
 func makeMoveSetup(t *testing.T) *moveSetup {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
-	ttLifecycle, ttPlanning, ttMaterialization, ttActive, ttSchedules, ttCareOfferings, ttStatusDays, err := api.NewTestTimetable(testpkg.NewDatabase(t, db), slog.Default())
+	ttLifecycle, ttPlanning, ttMaterialization, ttActive, ttSchedules, ttCareOfferings, ttStatusDays, err := api.NewTestTimetable(testpkg.NewDatabase(t, db), slog.Default(), lifecycleClock)
 	require.NoError(t, err)
 
 	tenantID := testpkg.UniqueTestTenantID(t)
@@ -484,7 +484,7 @@ func TestMoveStaffBetweenBlocks_ActiveBlocksSyncSupervisionAndAllowRoundTrip(t *
 		StaffID:   s.staffID,
 		GroupID:   sourceGroup.ID,
 		Role:      "supervisor",
-		StartDate: calendar.TodayDate(),
+		StartDate: lifecycleToday,
 	}
 	sup.TenantID = s.tenantID
 	_, err := s.db.NewInsert().Model(sup).ModelTableExpr(`active.group_supervisors`).Exec(s.ctx)
@@ -572,7 +572,7 @@ func TestMoveStaffBetweenBlocks_ExistingOpenSupervisionIsReused(t *testing.T) {
 		StaffID:   s.otherID,
 		GroupID:   targetGroup.ID,
 		Role:      "supervisor",
-		StartDate: calendar.TodayDate(),
+		StartDate: lifecycleToday,
 	}
 	existing.TenantID = s.tenantID
 	_, err := s.db.NewInsert().Model(existing).ModelTableExpr(`active.group_supervisors`).Exec(s.ctx)
@@ -611,7 +611,7 @@ func TestMoveStaffBetweenBlocks_PastDateRejected(t *testing.T) {
 
 	s := makeMoveSetup(t)
 	past := &testpkg.ActivityInstance{
-		Date:      testpkg.ScheduleDate(calendar.TodayDate().AddDays(-1)),
+		Date:      testpkg.ScheduleDate(lifecycleToday.AddDays(-1)),
 		Title:     "Gestern",
 		StartTime: parseMoveClock(t, "14:00"),
 		EndTime:   parseMoveClock(t, "15:00"),

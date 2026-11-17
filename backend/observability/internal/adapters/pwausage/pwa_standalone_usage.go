@@ -42,15 +42,20 @@ func (r *PWAStandaloneUsageRepository) database(ctx context.Context) (bun.IDB, e
 	}
 }
 
-// RecordSeen marks one account as having opened its portal as a standalone PWA.
-func (r *PWAStandaloneUsageRepository) RecordSeen(ctx context.Context, tenantID, accountID int64, portal string) error {
+// RecordSeen marks one account as having opened its portal as a standalone PWA
+// at seenAt. The caller's clock stamps the report, so the retention cutoff and
+// the usage window that read last_seen_at count on the same clock.
+func (r *PWAStandaloneUsageRepository) RecordSeen(ctx context.Context, tenantID, accountID int64, portal string, seenAt time.Time) error {
+	if seenAt.IsZero() {
+		return fmt.Errorf("record pwa standalone usage: the instant is required")
+	}
 	db, err := r.database(ctx)
 	if err != nil {
 		return err
 	}
 	if _, err := db.NewRaw(
-		"SELECT iot.record_pwa_standalone_usage(?, ?, ?)",
-		tenantID, accountID, portal,
+		"SELECT iot.record_pwa_standalone_usage(?, ?, ?, ?)",
+		tenantID, accountID, portal, seenAt,
 	).Exec(ctx); err != nil {
 		return fmt.Errorf("record pwa standalone usage: %w", err)
 	}

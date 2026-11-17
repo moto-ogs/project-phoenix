@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -17,6 +18,7 @@ func NewEnrollmentRollovers(src EnrollmentRolloverSources) enrollmentOwner.Rollo
 		Bookings: src.Bookings, Phases: src.Phases, Requests: src.Requests, Children: src.Children,
 		Catalog: src.Catalog, Notifications: src.Notifications, PhaseEligibility: src.PhaseEligibility,
 		Decisions: src.Decisions, Outbox: src.Outbox, ParentsURL: src.ParentsURL, Random: securityruntime.FillRandom, Logger: src.Logger,
+		Now: src.Now,
 	}
 	if src.Settings != nil {
 		// The intake's settings binding serves the rollover too: grade
@@ -64,4 +66,6 @@ type EnrollmentRolloverSources struct {
 	Decisions  enrollmentCompose.RolloverDecider
 	ParentsURL string
 	Logger     *slog.Logger
+	// Now is the rollover's clock (ADR 0239); required.
+	Now func() time.Time
 }

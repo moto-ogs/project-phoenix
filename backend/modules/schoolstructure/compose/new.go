@@ -2,6 +2,9 @@ package compose
 
 import (
 	"errors"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/tenant"
 
@@ -18,6 +21,7 @@ type Observation = ports.Observation
 type Dependencies struct {
 	DB      *bun.DB
 	Observe func(Observation)
+	Now     func() time.Time // the root's clock; nil is the real one
 }
 
 // New composes the School Structure service, which is the whole Owner
@@ -26,6 +30,6 @@ func New(dependencies Dependencies) (schoolstructure.Owner, error) {
 	if dependencies.DB == nil || dependencies.Observe == nil {
 		return nil, errors.New("school structure compose: all dependencies are required")
 	}
-	store := postgres.New(postgres.NewAmbientDatabase(tenant.TransactionFromContext))
-	return application.New(store, application.NewTransitionRetention(store), dependencies.Observe), nil
+	store := postgres.New(postgres.NewAmbientDatabase(tenant.TransactionFromContext), calendar.InstantClock(dependencies.Now))
+	return application.New(store, application.NewTransitionRetention(store, calendar.CalendarDateClock(dependencies.Now)), dependencies.Observe), nil
 }

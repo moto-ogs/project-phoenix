@@ -54,10 +54,14 @@ func setupBirthdaysRoute(t *testing.T, clocks ...func() time.Time) *birthdayTest
 	t.Helper()
 
 	db, svc, userContext, settings := setupBirthdayModule(t, clocks...)
+	now := time.Now
+	if len(clocks) > 0 {
+		now = clocks[0]
+	}
 	return &birthdayTestContext{
 		db: db,
 		resource: birthdaysAPI.NewResource(
-			svc.Birthdays, lists.NewRendererService(), userContext, slog.Default(),
+			svc.Birthdays, lists.NewRendererService(), userContext, slog.Default(), now,
 		),
 		setFlag: func(ctx context.Context, key string, value bool) error {
 			return settings.Settings.SetValue(ctx, key, value, nil, nil)

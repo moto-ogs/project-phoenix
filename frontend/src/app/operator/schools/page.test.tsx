@@ -151,6 +151,12 @@ function withDefaultSWR(overrides: SWROverrides = {}) {
   });
 }
 
+// The Bundesland has no default (#7174): every new school names it.
+function chooseFederalState() {
+  fireEvent.click(screen.getByLabelText(/^Bundesland/));
+  fireEvent.click(screen.getByRole("option", { name: "Nordrhein-Westfalen" }));
+}
+
 describe("OperatorSchoolsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -266,6 +272,7 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@school.de" },
     });
+    chooseFederalState();
 
     fireEvent.click(screen.getByText("Erstellen"));
 
@@ -281,6 +288,7 @@ describe("OperatorSchoolsPage", () => {
           zip: "10115",
           phone: "030123",
           email: "info@school.de",
+          federal_state: "DE-NW",
         }),
       );
       expect(mockMutateSchools).toHaveBeenCalled();
@@ -312,6 +320,8 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     await waitFor(() => {
@@ -350,6 +360,8 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     await waitFor(() => {
@@ -390,6 +402,8 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     expect(
@@ -430,6 +444,8 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     expect(
@@ -468,6 +484,8 @@ describe("OperatorSchoolsPage", () => {
     fireEvent.change(screen.getByLabelText(/E-Mail/), {
       target: { value: "info@new-school.example" },
     });
+
+    chooseFederalState();
     fireEvent.click(screen.getByText("Erstellen"));
 
     await waitFor(() => {

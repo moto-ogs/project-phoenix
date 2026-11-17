@@ -58,8 +58,8 @@ func (s *Scheduler) resolveNonNegativeIntSetting(ctx context.Context, key string
 }
 
 // timeMatchesNow checks if an HH:MM time string matches the current minute.
-func timeMatchesNow(timeStr string) bool {
-	return timeMatchesAt(timeStr, time.Now())
+func (s *Scheduler) timeMatchesNow(timeStr string) bool {
+	return timeMatchesAt(timeStr, s.clock())
 }
 
 // timeMatchesAt checks if an HH:MM time string matches the minute of now.
@@ -80,8 +80,8 @@ func timeMatchesAt(timeStr string, now time.Time) bool {
 }
 
 // wasRunToday checks if a per-tenant job already ran today.
-func wasRunToday(lastRunMap *sync.Map, tenantID int64) bool {
-	return wasRunAt(lastRunMap, tenantID, time.Now())
+func (s *Scheduler) wasRunToday(lastRunMap *sync.Map, tenantID int64) bool {
+	return wasRunAt(lastRunMap, tenantID, s.clock())
 }
 
 func wasRunAt(lastRunMap *sync.Map, tenantID int64, now time.Time) bool {
@@ -97,7 +97,7 @@ func wasRunAt(lastRunMap *sync.Map, tenantID int64, now time.Time) bool {
 }
 
 func (s *Scheduler) markRunTodayAfterCommit(ctx context.Context, lastRunMap *sync.Map, tenantID int64) {
-	s.markRunAtAfterCommit(ctx, lastRunMap, tenantID, time.Now())
+	s.markRunAtAfterCommit(ctx, lastRunMap, tenantID, s.clock())
 }
 
 func markRunAt(lastRunMap *sync.Map, tenantID int64, now time.Time) {
@@ -110,10 +110,6 @@ func (s *Scheduler) markRunAtAfterCommit(ctx context.Context, lastRunMap *sync.M
 	})
 }
 
-// schedulerTime supplies the optional injected clock with the production default.
-func schedulerTime(now func() time.Time) time.Time {
-	if now == nil {
-		return time.Now()
-	}
-	return now()
-}
+// clock reads the Worker clock the composition passes as
+// WorkerDependencies.Now (required); a Scheduler a test builds bare sets now.
+func (s *Scheduler) clock() time.Time { return s.now() }

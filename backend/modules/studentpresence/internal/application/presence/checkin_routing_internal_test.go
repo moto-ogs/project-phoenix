@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
@@ -93,7 +92,7 @@ func TestCreateVisitRoutingUsesOnlyKnownGuardGroup(t *testing.T) {
 			publisher := &checkinRoutingPublisher{}
 			waker := &recordingWaker{}
 			student := &StudentRecord{ID: 42, GroupID: tc.group}
-			svc := &service{ServiceDependencies: ServiceDependencies{
+			svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow,
 				PrincipalReader: testAttendancePrincipal,
 				GroupRepo:       &groupRepoForActiveWrapperTest{group: &ports.ActiveGroup{ID: 93}},
 				SchoolPresence: checkinRoutingVisits{beforeWrite: func() {
@@ -109,7 +108,7 @@ func TestCreateVisitRoutingUsesOnlyKnownGuardGroup(t *testing.T) {
 				svc.StudentRepo = checkinRoutingStudents{student: student}
 			}
 			ctx, commit := tenanttest.WithAfterCommitHooks(tenant.WithTenantID(context.Background(), 84))
-			require.NoError(t, svc.createVisit(ctx, &studentpresence.Visit{StudentID: 42, ActiveGroupID: 93, EntryTime: time.Now()}))
+			require.NoError(t, svc.createVisit(ctx, &studentpresence.Visit{StudentID: 42, ActiveGroupID: 93, EntryTime: presenceTestNow()}))
 			if tc.known {
 				assert.Zero(t, lookups)
 			} else {
@@ -140,7 +139,7 @@ func TestCreateVisitWithoutBroadcasterStillWakesGuardians(t *testing.T) {
 		t.Run(map[bool]string{false: "nil guardian waker", true: "guardian waker"}[withWaker], func(t *testing.T) {
 			t.Parallel()
 			waker := &recordingWaker{}
-			svc := &service{}
+			svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
 			if withWaker {
 				svc.guardianWaker = waker
 			}

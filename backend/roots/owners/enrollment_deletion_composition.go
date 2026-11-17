@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -61,7 +62,7 @@ func NewEnrollmentDeletionModule(src EnrollmentDeletionSources) enrollmentCompos
 		Owner: src.Owner, Guardians: src.Guardians,
 		CountAuditAdjustments: src.CountAuditAdjustments, CountBookings: src.CountBookings,
 		SourceEnrollments: timetableProjection.New().CountSourceEnrollments,
-		Delivery:          src.Delivery, Logger: src.Logger, Today: src.Today,
+		Delivery:          src.Delivery, Logger: src.Logger, Now: src.Now, Today: src.Today,
 	}
 	if src.Audit != nil {
 		deps.Audit = enrollmentDeletionAudit{repo: src.Audit}
@@ -142,6 +143,9 @@ type EnrollmentDeletionSources struct {
 		ResolveInt(ctx context.Context, key string) (int, error)
 	}
 	Logger *slog.Logger
-	// Today is the retention cleanup's school day.
+	// Now is the clock of the deletion audit and the retention cutoffs
+	// (ADR 0239); required. Today is the retention cleanup's
+	// school day; nil is Now's Berlin day.
+	Now   func() time.Time
 	Today func() calendar.Date
 }

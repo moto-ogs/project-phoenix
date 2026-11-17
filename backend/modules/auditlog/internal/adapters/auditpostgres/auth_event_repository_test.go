@@ -20,7 +20,7 @@ func TestAuthEventRepository_Create(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	// Create a test account
@@ -92,7 +92,7 @@ func TestAuthEventRepository_FindByID(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	account := testpkg.CreateTestAccount(t, db, "find_event@example.com")
@@ -123,7 +123,7 @@ func TestAuthEventRepository_FindByAccountID(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	account1 := testpkg.CreateTestAccount(t, db, "account1@example.com")
@@ -173,7 +173,7 @@ func TestAuthEventRepository_List(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	account := testpkg.CreateTestAccount(t, db, "list@example.com")
@@ -212,7 +212,7 @@ func TestAuthEventRepository_PendingAccountWideWipes(t *testing.T) {
 	testpkg.SetupIsolatedTestDB(t)
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	account := testpkg.CreateTestAccount(t, db, "pending_wipe@example.com")
@@ -242,18 +242,18 @@ func TestAuthEventRepository_ListPendingAccountWideWipesIncludesOlderThanSevenDa
 	testpkg.SetupIsolatedTestDB(t)
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 	account := testpkg.CreateTestAccount(t, db, "old_pending_wipe@example.com")
 
-	createdAt := time.Now().Add(-8 * 24 * time.Hour)
+	createdAt := auditTestNow.Add(-8 * 24 * time.Hour)
 	_, err := db.NewRaw(`
 		INSERT INTO audit.auth_events (tenant_id, account_id, event_type, success, ip_address, metadata, created_at)
 		VALUES (?, ?, 'token_revoked', true, '0.0.0.0', jsonb_build_object('reason', 'password_reset', 'pending_account_wide_wipe', true), ?)
 	`, testpkg.Tenant(t), account.ID, createdAt).Exec(ctx)
 	require.NoError(t, err)
 
-	recentOnly, err := testpkg.TenantQuery1(t, ctx, db, repo.ListPendingAccountWideWipes, time.Now().Add(-7*24*time.Hour))
+	recentOnly, err := testpkg.TenantQuery1(t, ctx, db, repo.ListPendingAccountWideWipes, auditTestNow.Add(-7*24*time.Hour))
 	require.NoError(t, err)
 	assert.Empty(t, recentOnly)
 
@@ -269,7 +269,7 @@ func TestAuthEventRepository_ClaimPendingAccountWideWipes(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewAuthEventRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 	account := testpkg.CreateTestAccount(t, db, "claim_wipe@example.com")
 

@@ -62,6 +62,10 @@ func renderOperatorLookupError(w http.ResponseWriter, r *http.Request, operatorI
 		common.RenderError(w, r, AuthErrorRenderer(err))
 		return
 	}
+	if common.ClientCanceled(r, err) {
+		common.RenderError(w, r, common.ErrorClientClosed(err))
+		return
+	}
 
 	slog.ErrorContext(r.Context(), "operator status lookup failed",
 		slog.String("path", r.URL.Path),

@@ -357,7 +357,7 @@ func TestResendInvitationExtendsOnlyRedeemableInvitations(t *testing.T) {
 		ActorPermissions: []string{usersManagePermission},
 	})
 	require.NoError(t, err)
-	_, err = db.NewRaw(`UPDATE auth.invitation_tokens SET expires_at = NOW() + INTERVAL '1 minute', email_error = 'smtp down', email_sent_at = NOW() WHERE id = ?`, invitation.ID).Exec(ctx)
+	_, err = db.NewRaw(`UPDATE auth.invitation_tokens SET expires_at = ?, email_error = 'smtp down', email_sent_at = ? WHERE id = ?`, time.Now().Add(time.Minute), time.Now(), invitation.ID).Exec(ctx)
 	require.NoError(t, err)
 
 	var stored string
@@ -385,7 +385,7 @@ func TestResendInvitationExtendsOnlyRedeemableInvitations(t *testing.T) {
 		ActorPermissions: []string{usersManagePermission},
 	})
 	require.NoError(t, err)
-	_, err = db.NewRaw(`UPDATE auth.invitation_tokens SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = ?`, expired.ID).Exec(ctx)
+	_, err = db.NewRaw(`UPDATE auth.invitation_tokens SET expires_at = ? WHERE id = ?`, time.Now().Add(-time.Minute), expired.ID).Exec(ctx)
 	require.NoError(t, err)
 	require.ErrorIs(t, env.service.ResendSchoolInvitation(ctx, expired.ID, creator.ID), identityaccess.ErrInvitationExpired,
 		"an expired invitation is never revived")
@@ -411,7 +411,7 @@ func TestInvitationListingInvalidationAndCleanup(t *testing.T) {
 	require.NoError(t, err)
 	expired, err := env.service.CreateSchoolInvitation(ctx, request("listing-expired"))
 	require.NoError(t, err)
-	_, err = db.NewRaw(`UPDATE auth.invitation_tokens SET expires_at = NOW() - INTERVAL '1 minute' WHERE id = ?`, expired.ID).Exec(ctx)
+	_, err = db.NewRaw(`UPDATE auth.invitation_tokens SET expires_at = ? WHERE id = ?`, time.Now().Add(-time.Minute), expired.ID).Exec(ctx)
 	require.NoError(t, err)
 	spent, err := env.service.CreateSchoolInvitation(ctx, request("listing-spent"))
 	require.NoError(t, err)

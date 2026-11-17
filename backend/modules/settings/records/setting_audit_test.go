@@ -23,7 +23,7 @@ func TestSettingAuditEntryHasHonestShape(t *testing.T) {
 		t.Fatal("SettingAuditEntry must keep its direct audit identity mapping")
 	}
 	changedAtField, ok := modelType.FieldByName("ChangedAt")
-	if !ok || changedAtField.Tag.Get("bun") != "changed_at,notnull,default:current_timestamp" {
+	if !ok || changedAtField.Tag.Get("bun") != "changed_at,nullzero,notnull" {
 		t.Fatal("SettingAuditEntry must keep its changed_at mapping")
 	}
 }
@@ -98,7 +98,7 @@ func TestNewAuditEntry(t *testing.T) {
 	assert.Equal(t, json.RawMessage(`"old"`), entry.OldValue)
 	assert.Equal(t, json.RawMessage(`"new"`), entry.NewValue)
 	assert.Equal(t, changedBy, entry.ChangedBy)
-	assert.False(t, entry.ChangedAt.IsZero())
+	assert.True(t, entry.ChangedAt.IsZero(), "the column default stamps changed_at on the database clock")
 }
 
 func TestNewAuditEntry_NilValues(t *testing.T) {

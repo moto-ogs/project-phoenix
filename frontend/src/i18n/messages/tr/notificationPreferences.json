@@ -37,6 +37,10 @@
       "label": "Bakım iptal edildi",
       "description": "{careTerm} çocuğunuzun bir bakım gününü iptal ettiğinde."
     },
+    "parent_school_closing_day_changed": {
+      "label": "Kapalı günler",
+      "description": "{careTerm} bir kapalı gün eklediğinde, değiştirdiğinde veya sildiğinde. moto'daki bildirim her zaman gelir, telefona bildirim yalnızca önümüzdeki 14 gün içindeki kapalı günler için gelir."
+    },
     "parent_billing_document": {
       "label": "Kurumdan yeni belge",
       "description": "Kurum size bir belge gönderdiğinde veya paylaştığında, örneğin bir sözleşme."

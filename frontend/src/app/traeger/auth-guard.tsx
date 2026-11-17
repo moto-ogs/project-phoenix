@@ -1,12 +1,10 @@
 "use client";
 
-import { redirect, usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import type { Session } from "next-auth";
+import { PortalAuthGuard } from "~/components/auth/portal-auth-guard";
 import { ShellIntlProvider } from "~/components/dashboard/shell-intl-provider";
-import { Loading } from "~/components/ui/loading";
 import { TraegerShell } from "~/components/traeger/traeger-shell";
 import {
-  TraegerOwnNamePublisher,
   useTraegerOwnName,
   type TraegerMembershipKey,
 } from "~/components/traeger/traeger-own-name";
@@ -17,67 +15,50 @@ import { TraegerShellProvider } from "~/lib/shell-auth-context";
 import { traegerPath } from "~/lib/traeger-url";
 
 const TRAEGER_PUBLIC_PAGES = [
-  "/traeger/login",
   "/login",
-  "/traeger/reset-password",
   "/reset-password",
-  "/traeger/invite",
   "/invite",
+  // Entry of the public demo (#6193): it signs the visitor in itself.
+  "/demo",
 ];
 
 /**
- * Client-side auth guard for Träger routes ("moto träger", #4649). Mirrors
- * SchoolAuthGuard: other portals' tokens never reach this app (host-only
- * cookies plus the proxy), so it only handles "loading" → spinner,
- * "no session" → login, and a session of another scope or a terminally
- * failed refresh → login.
+ * A session whose refresh ended for good (expired or revoked refresh token,
+ * membership gone) goes back to the login page, which clears the failed
+ * session. The layout's server snapshot carries no token and stays (#4991).
  */
+function endedSessionRedirect(session: Session): string | null {
+  return session.error === "RefreshTokenExpired" || !hasSessionAccess(session)
+    ? traegerPath("/traeger/login")
+    : null;
+}
+
+/** Client-side auth guard for Träger routes ("moto träger", #4649). */
 export function TraegerAuthGuard({
   children,
 }: {
   readonly children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isPublicPage = TRAEGER_PUBLIC_PAGES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
-  const { data: session, status } = useSession();
-
-  if (isPublicPage) {
-    return <>{children}</>;
-  }
-
-  // A session of another scope, or one whose refresh ended for good (expired
-  // or revoked refresh token, membership gone), goes back to the login page,
-  // which clears the failed session. The layout's server snapshot carries no
-  // token and stays (#4991).
-  if (
-    status === "authenticated" &&
-    (session?.user?.scope !== "org" ||
-      session.error === "RefreshTokenExpired" ||
-      !hasSessionAccess(session))
-  ) {
-    redirect(traegerPath("/traeger/login"));
-  }
-  if (status === "unauthenticated") {
-    redirect(traegerPath("/traeger/login"));
-  }
-
-  if (status === "loading") {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4">
-        <Loading fullPage message="Wird geladen …" />
-      </div>
-    );
-  }
-
-  const user = session?.user;
   return (
-    <TraegerPortal
-      membership={user?.id ? `${user.id}:${user.orgId ?? ""}` : null}
+    <PortalAuthGuard
+      portal="traeger"
+      publicPages={TRAEGER_PUBLIC_PAGES}
+      wrongScope="login"
+      endedSessionRedirect={endedSessionRedirect}
+      loadingMessage="moto träger wird geöffnet …"
+      renderShell={(page, session) => {
+        const user = session?.user;
+        return (
+          <TraegerPortal
+            membership={user?.id ? `${user.id}:${user.orgId ?? ""}` : null}
+          >
+            {page}
+          </TraegerPortal>
+        );
+      }}
     >
       {children}
-    </TraegerPortal>
+    </PortalAuthGuard>
   );
 }
 
@@ -101,18 +82,16 @@ function TraegerPortal({
       organizationName={organization?.name}
       memberName={ownName.name}
     >
-      <TraegerOwnNamePublisher publish={ownName.publish}>
-        <BreadcrumbProvider>
-          <ShellIntlProvider>
-            <TraegerShell
-              testSystem={organization?.testSystem === true}
-              federalStates={organization?.federalStates}
-            >
-              {children}
-            </TraegerShell>
-          </ShellIntlProvider>
-        </BreadcrumbProvider>
-      </TraegerOwnNamePublisher>
+      <BreadcrumbProvider>
+        <ShellIntlProvider>
+          <TraegerShell
+            testSystem={organization?.testSystem === true}
+            federalStates={organization?.federalStates}
+          >
+            {children}
+          </TraegerShell>
+        </ShellIntlProvider>
+      </BreadcrumbProvider>
     </TraegerShellProvider>
   );
 }

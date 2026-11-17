@@ -1346,13 +1346,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r staffNoticeRepository) Acknowledge(ctx context.Context, noticeID, accountID int64) error {\n\tack := \u0026StaffNoticeAck{NoticeID: noticeID, AccountID: accountID, AcknowledgedAt: time.Now()}\n\tif err := r.store.AcknowledgeStaffNotice(ctx, ack); err != nil {\n\t\treturn \u0026domain.StoreError{Op: \"acknowledge staff notice\", Err: TranslateNotFound(err)}\n\t}\n\treturn nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/internal/adapters/postgres/staffNoticeRepository.Acknowledge",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "production",
       "evidence": "func (r staffNoticeRepository) AcknowledgedAtFor(ctx context.Context, accountID int64, noticeIDs []int64) (map[int64]time.Time, error) {\n\tresult := make(map[int64]time.Time, len(noticeIDs))\n\tif len(noticeIDs) == 0 {\n\t\treturn result, nil\n\t}\n\trows, err := r.store.ListOwnStaffNoticeAcks(ctx, accountID, noticeIDs)\n\tif err != nil {\n\t\treturn nil, \u0026domain.StoreError{Op: \"load own staff notice acknowledgements\", Err: TranslateNotFound(err)}\n\t}\n\tfor _, row := range rows {\n\t\tresult[row.NoticeID] = row.AcknowledgedAt\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/adapters/postgres/staffNoticeRepository.AcknowledgedAtFor",
@@ -1388,7 +1381,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r staffNoticeRepository) DeleteEndedBefore(ctx context.Context, cutoff calendar.Date) (int, error) {\n\tdeleted, err := r.store.DeleteStaffNoticesEndedBefore(ctx, cutoff)\n\tif err != nil {\n\t\treturn 0, \u0026domain.StoreError{Op: \"delete ended staff notices\", Err: err}\n\t}\n\treturn deleted, nil\n}",
+      "evidence": "func (r staffNoticeRepository) DeleteEndedBefore(ctx context.Context, cutoff calendar.Date, retentionDays int) (int, error) {\n\tdeleted, err := r.store.DeleteStaffNoticesEndedBefore(ctx, cutoff, retentionDays)\n\tif err != nil {\n\t\treturn 0, \u0026domain.StoreError{Op: \"delete ended staff notices\", Err: err}\n\t}\n\treturn deleted, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/adapters/postgres/staffNoticeRepository.DeleteEndedBefore",
       "owner": "modules/timetable"
@@ -1633,7 +1626,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (a *PlanningTrackViews) ArchivePlanningTrack(ctx context.Context, id int64) (timetable.PlanningTrack, error) {\n\ttrack, err := a.GetPlanningTrack(ctx, id)\n\tif err != nil || track.IsArchived() {\n\t\treturn track, err\n\t}\n\tnow := time.Now()\n\tif _, _, err := a.tracks.SetPlanningTrackArchivedAt(ctx, id, \u0026now); err != nil {\n\t\treturn timetable.PlanningTrack{}, err\n\t}\n\treturn a.GetPlanningTrack(ctx, id)\n}",
+      "evidence": "func (a *PlanningTrackViews) ArchivePlanningTrack(ctx context.Context, id int64) (timetable.PlanningTrack, error) {\n\ttrack, err := a.GetPlanningTrack(ctx, id)\n\tif err != nil || track.IsArchived() {\n\t\treturn track, err\n\t}\n\tnow := a.now()\n\tif _, _, err := a.tracks.SetPlanningTrackArchivedAt(ctx, id, \u0026now); err != nil {\n\t\treturn timetable.PlanningTrack{}, err\n\t}\n\treturn a.GetPlanningTrack(ctx, id)\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/PlanningTrackViews.ArchivePlanningTrack",
       "owner": "modules/timetable"
@@ -2879,7 +2872,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r staffNoticeRetention) DeleteExpiredStaffNotices(ctx context.Context, retentionDays int) (int, error) {\n\tif retentionDays \u003c= 0 {\n\t\treturn 0, fmt.Errorf(\"%w, got %d\", ErrStaffNoticeRetentionWindow, retentionDays)\n\t}\n\treturn r.store.DeleteEndedBefore(ctx, r.today().AddDays(-retentionDays))\n}",
+      "evidence": "func (r staffNoticeRetention) DeleteExpiredStaffNotices(ctx context.Context, retentionDays int) (int, error) {\n\tif retentionDays \u003c= 0 {\n\t\treturn 0, fmt.Errorf(\"%w, got %d\", ErrStaffNoticeRetentionWindow, retentionDays)\n\t}\n\treturn r.store.DeleteEndedBefore(ctx, r.today().AddDays(-retentionDays), retentionDays)\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/staffNoticeRetention.DeleteExpiredStaffNotices",
       "owner": "modules/timetable"

@@ -121,6 +121,8 @@ worktree's own frontend and never tests another checkout's server on 3000.
 If the port already serves a frontend started from another checkout, the
 Playwright config stops with that checkout's path (`e2e/own-server.ts`, local
 runs with `lsof` only).
+`test:e2e` starts `next dev`; `E2E_FRONTEND_SERVER=start` serves an existing
+`pnpm run build` with `next start` instead, as `.github/workflows/e2e.yml` does.
 
 ### Browser for Playwright
 

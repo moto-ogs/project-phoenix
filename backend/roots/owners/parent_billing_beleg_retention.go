@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
@@ -12,10 +13,10 @@ import (
 
 // NewBelegRetention binds the retention of the Belege of every Träger
 // (#4720, ADR 0184) to the contracts of Care Contract, whose read and
-// deletion join the administrative unit of the caller. nil today: Berlin
-// day.
-func NewBelegRetention(today func() calendar.Date) parentbilling.BelegRetention {
-	return parentBillingCompose.NewBelegRetention(retainedContracts{careContractCompose.NewContractRetention()}, today)
+// deletion join the administrative unit of the caller, on the root's clock
+// now and its Berlin day.
+func NewBelegRetention(now func() time.Time) parentbilling.BelegRetention {
+	return parentBillingCompose.NewBelegRetention(retainedContracts{careContractCompose.NewContractRetention()}, calendar.CalendarDateClock(now), now)
 }
 
 // retainedContracts translates the facts of Care Contract's retention

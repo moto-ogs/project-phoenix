@@ -90,7 +90,7 @@ func (s *Service) ListAccountSessions(ctx context.Context, public ports.AccountS
 		AccountID: public.AccountID, FamilyID: public.FamilyID, Mobile: public.Mobile, Liveness: domain.AccountSessionLiveness(public.Liveness),
 	}
 	err := s.run(ctx, s.tx.RunPlatform, "list_account_sessions", func(txCtx context.Context, stats *domain.OperationStats) error {
-		sessions, queryStats, listErr := s.sessions.ListAccountSessions(txCtx, filter, time.Now())
+		sessions, queryStats, listErr := s.sessions.ListAccountSessions(txCtx, filter, s.now())
 		stats.Add(queryStats)
 		if listErr != nil {
 			return listErr
@@ -107,7 +107,7 @@ func (s *Service) ListAccountSessions(ctx context.Context, public ports.AccountS
 func (s *Service) CountExpiredAccountSessions(ctx context.Context) (int, error) {
 	var result int
 	err := s.run(ctx, s.tx.RunPlatform, "count_expired_account_sessions", func(txCtx context.Context, stats *domain.OperationStats) error {
-		count, queryStats, countErr := s.sessions.CountExpiredAccountSessions(txCtx, time.Now())
+		count, queryStats, countErr := s.sessions.CountExpiredAccountSessions(txCtx, s.now())
 		stats.Add(queryStats)
 		if countErr != nil {
 			return countErr
@@ -124,7 +124,7 @@ func (s *Service) CountExpiredAccountSessions(ctx context.Context) (int, error) 
 func (s *Service) ListInactiveAccountIDsWithLiveSessions(ctx context.Context) ([]int64, error) {
 	var result []int64
 	err := s.run(ctx, s.tx.RunPlatform, "list_inactive_accounts_with_live_sessions", func(txCtx context.Context, stats *domain.OperationStats) error {
-		ids, queryStats, listErr := s.sessions.ListInactiveAccountIDsWithLiveSessions(txCtx, time.Now())
+		ids, queryStats, listErr := s.sessions.ListInactiveAccountIDsWithLiveSessions(txCtx, s.now())
 		stats.Add(queryStats)
 		if listErr != nil {
 			return listErr
@@ -138,10 +138,38 @@ func (s *Service) ListInactiveAccountIDsWithLiveSessions(ctx context.Context) ([
 	return result, nil
 }
 
+// livePushSubscriptionLinks decides on the owner's session clock which push
+// subscription links a live session still backs. The answer names every
+// link or the call fails, so a caller never mistakes a missing answer for a
+// dead session. It opens no unit of its own: the orphan push cleanup asks
+// inside its administrative unit.
+func (s *Service) livePushSubscriptionLinks(ctx context.Context, links []domain.PushSubscriptionLink) (map[int64]bool, error) {
+	var result map[int64]bool
+	inCaller := func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
+	err := s.run(ctx, inCaller, "live_push_subscription_links", func(txCtx context.Context, stats *domain.OperationStats) error {
+		live, queryStats, liveErr := s.sessions.LivePushSubscriptionLinks(txCtx, links, s.now())
+		stats.Add(queryStats)
+		if liveErr != nil {
+			return liveErr
+		}
+		for _, link := range links {
+			if _, answered := live[link.SubscriptionID]; !answered {
+				return fmt.Errorf("no liveness answer for push subscription %d", link.SubscriptionID)
+			}
+		}
+		result = live
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("identity access: live push subscription links: %w", MapError(err))
+	}
+	return result, nil
+}
+
 func (s *Service) HasLiveAccountSessionsCreatedAfter(ctx context.Context, accountID int64, since time.Time) (bool, error) {
 	var result bool
 	err := s.run(ctx, s.tx.RunPlatform, "has_live_account_sessions_created_after", func(txCtx context.Context, stats *domain.OperationStats) error {
-		exists, queryStats, existsErr := s.sessions.HasLiveAccountSessionsCreatedAfter(txCtx, accountID, since, time.Now())
+		exists, queryStats, existsErr := s.sessions.HasLiveAccountSessionsCreatedAfter(txCtx, accountID, since, s.now())
 		stats.Add(queryStats)
 		if existsErr != nil {
 			return existsErr
@@ -241,7 +269,7 @@ func (s *Service) RetireAccountSessionFamily(ctx context.Context, accountID int6
 func (s *Service) EnforceAccountSessionCap(ctx context.Context, accountID int64, portalScope string, keep int, minted int64) ([]ports.AccountSession, error) {
 	var result []domain.AccountSession
 	err := s.run(ctx, s.tx.RunPlatform, "enforce_account_session_cap", func(txCtx context.Context, stats *domain.OperationStats) error {
-		live, listStats, listErr := s.sessions.ListLiveAccountSessionsForCap(txCtx, accountID, domain.CapPortalScopes(portalScope), time.Now())
+		live, listStats, listErr := s.sessions.ListLiveAccountSessionsForCap(txCtx, accountID, domain.CapPortalScopes(portalScope), s.now())
 		stats.Add(listStats)
 		if listErr != nil {
 			return listErr
@@ -421,7 +449,7 @@ func (s *Service) RevokeTenantAccountSessions(ctx context.Context, tenantID int6
 func (s *Service) DeleteExpiredAccountSessions(ctx context.Context) (int, error) {
 	var result int
 	err := s.run(ctx, s.tx.RunPlatform, "delete_expired_account_sessions", func(txCtx context.Context, stats *domain.OperationStats) error {
-		deleted, queryStats, deleteErr := s.sessions.DeleteExpiredAccountSessions(txCtx, time.Now())
+		deleted, queryStats, deleteErr := s.sessions.DeleteExpiredAccountSessions(txCtx, s.now())
 		stats.Add(queryStats)
 		if deleteErr != nil {
 			return deleteErr

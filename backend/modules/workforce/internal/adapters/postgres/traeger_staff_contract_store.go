@@ -403,8 +403,8 @@ func (s *TraegerStaffStore) TraegerKeptStaffByMonth(ctx context.Context, staffID
 // as a schedule version up to the day until, when the employment has no
 // schedule version yet. The Soll resolution uses a template only while no
 // version exists (#1842); without this, the first mirrored version would
-// set the template's earlier open months to zero.
-func (s *TraegerStaffStore) KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date) error {
+// set the template's earlier open months to zero. now stamps the version.
+func (s *TraegerStaffStore) KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date, now time.Time) error {
 	db, schoolID, err := schoolStaffDB(ctx)
 	if err != nil {
 		return err
@@ -412,13 +412,13 @@ func (s *TraegerStaffStore) KeepTemplateHistory(ctx context.Context, staffID int
 	if _, err := db.ExecContext(ctx, `INSERT INTO `+tableStaffWorkSchedules+`
 		(tenant_id, staff_id, week_index, rotation_length, day_of_week, target_minutes, start_time, rotation_anchor_date, valid_from, valid_until, created_at, updated_at)
 		SELECT profile.tenant_id, profile.membership_id, entry.week_index, model.rotation_length, entry.day_of_week, entry.target_minutes, entry.start_time,
-			COALESCE(profile.rotation_anchor_date, model.rotation_anchor_date), DATE '2000-01-01', ?, now(), now()
+			COALESCE(profile.rotation_anchor_date, model.rotation_anchor_date), DATE '2000-01-01', ?, ?, ?
 		FROM users.staff_employment_profiles AS profile
 		JOIN config.work_time_models AS model ON model.id = profile.work_time_model_id AND model.tenant_id = profile.tenant_id
 		JOIN config.work_time_model_entries AS entry ON entry.model_id = model.id
 		WHERE profile.tenant_id = ? AND profile.membership_id = ?
 		  AND NOT EXISTS (SELECT FROM `+tableStaffWorkSchedules+` AS schedule WHERE schedule.tenant_id = profile.tenant_id AND schedule.staff_id = profile.membership_id)`,
-		until, schoolID, staffID); err != nil {
+		until, now, now, schoolID, staffID); err != nil {
 		return fmt.Errorf("workforce postgres: keep template history before the mirror: %w", err)
 	}
 	return nil
@@ -427,8 +427,9 @@ func (s *TraegerStaffStore) KeepTemplateHistory(ctx context.Context, staffID int
 // ReleaseMirror gives an employment back to its school from the day from
 // on, after the Träger deleted the only contract that named it: the versions
 // the mirror wrote from then on go, the version that ran until then runs on,
-// and the Ferien-Soll of the Träger from then on goes.
-func (s *TraegerStaffStore) ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date) error {
+// and the Ferien-Soll of the Träger from then on goes. now stamps the
+// reopened version.
+func (s *TraegerStaffStore) ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date, now time.Time) error {
 	db, schoolID, err := schoolStaffDB(ctx)
 	if err != nil {
 		return err
@@ -437,8 +438,8 @@ func (s *TraegerStaffStore) ReleaseMirror(ctx context.Context, staffID int64, fr
 		schoolID, staffID, from); err != nil {
 		return fmt.Errorf("workforce postgres: drop released mirror versions: %w", err)
 	}
-	if _, err := db.ExecContext(ctx, `UPDATE `+tableStaffWorkSchedules+` SET valid_until = NULL, updated_at = now()
-		WHERE tenant_id = ? AND staff_id = ? AND valid_until = ?`, schoolID, staffID, from); err != nil {
+	if _, err := db.ExecContext(ctx, `UPDATE `+tableStaffWorkSchedules+` SET valid_until = NULL, updated_at = ?
+		WHERE tenant_id = ? AND staff_id = ? AND valid_until = ?`, now, schoolID, staffID, from); err != nil {
 		return fmt.Errorf("workforce postgres: reopen the school version: %w", err)
 	}
 	if _, err := db.ExecContext(ctx, `DELETE FROM `+tableStaffTargetOverrides+`
@@ -452,12 +453,11 @@ func (s *TraegerStaffStore) ReleaseMirror(ctx context.Context, staffID int64, fr
 // employment from the day from on with rows: later versions go, the version
 // running over from ends there, and the employment leaves its work-time
 // template, so a template change no longer rewrites the Soll.
-func (s *TraegerStaffStore) MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule) error {
+func (s *TraegerStaffStore) MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule, now time.Time) error {
 	db, schoolID, err := schoolStaffDB(ctx)
 	if err != nil {
 		return err
 	}
-	now := time.Now()
 	if _, err := db.ExecContext(ctx, `DELETE FROM `+tableStaffWorkSchedules+` WHERE tenant_id = ? AND staff_id = ? AND valid_from >= ?`,
 		schoolID, staffID, from); err != nil {
 		return fmt.Errorf("workforce postgres: drop mirrored schedule versions: %w", err)

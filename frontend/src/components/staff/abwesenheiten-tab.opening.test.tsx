@@ -1,5 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 import type { StaffVacationQuotaSummary } from "~/lib/staff-api";
 import { ApiError } from "~/lib/api-error";
@@ -69,7 +73,8 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 }));
 const actionErrors = vi.hoisted(() => ({ show: vi.fn() }));
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
   useTenantMutateMatching: () => stable.mutateMatching,
 }));
 
@@ -124,7 +129,7 @@ const existingOpening = {
 };
 
 function renderTab() {
-  return render(
+  return renderWithCache(
     <AbwesenheitenTab staffId="4" canEdit canEditQuota canManageSickReports />,
   );
 }
@@ -303,7 +308,7 @@ describe("AbwesenheitenTab vacation takeover", () => {
   it("hides the takeover entry point without edit permission", async () => {
     mocks.getVacationQuota.mockResolvedValue(quota());
     mocks.getAbsences.mockResolvedValue([]);
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit={false}
@@ -318,3 +323,23 @@ describe("AbwesenheitenTab vacation takeover", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+// Echter SWR-Cache je Render und eine Sitzung mit Konto, sonst liest
+// useSWRAuth nichts.
+function TenantSWR({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-test", tenantId: 1 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const renderWithCache = (ui: React.ReactElement) =>
+  render(ui, { wrapper: TenantSWR });

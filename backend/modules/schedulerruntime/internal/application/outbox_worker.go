@@ -90,10 +90,10 @@ func (s *Scheduler) runOutboxOnce(ctx context.Context, task *ScheduledTask) {
 		)
 		return
 	}
-	s.recordOutboxResult(ctx, processed, started)
+	s.recordOutboxResult(ctx, processed, func() time.Duration { return time.Since(started) })
 }
 
-func (s *Scheduler) recordOutboxResult(ctx context.Context, processed int, started time.Time) {
+func (s *Scheduler) recordOutboxResult(ctx context.Context, processed int, elapsed func() time.Duration) {
 	backlog, err := s.outboxWorker.Backlog(ctx)
 	if err != nil {
 		recordJobCommandFailure(ctx, err)
@@ -108,5 +108,5 @@ func (s *Scheduler) recordOutboxResult(ctx context.Context, processed int, start
 		slog.String("job_id", "email-outbox"),
 		slog.Int("processed", processed),
 		slog.Int("backlog", backlog),
-		slog.Duration("duration", time.Since(started)))
+		slog.Duration("duration", elapsed()))
 }

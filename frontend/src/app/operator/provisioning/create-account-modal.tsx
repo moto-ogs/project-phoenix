@@ -1,5 +1,5 @@
 import { Alert } from "~/components/ui/alert";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { Input } from "~/components/ui/input";
@@ -9,10 +9,13 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import { getRoleDisplayName, isAssignableStaffRole } from "~/lib/auth-helpers";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { operatorKeys } from "~/lib/swr/operator-keys";
 import { FormField, SelectWithChevron } from "./provisioning-shared";
 
 const logger = createLogger({ component: "CreateAccountModal" });
@@ -49,58 +52,42 @@ export function CreateAccountModal({
   const formErrors = useApiFormError(formRef);
   const { show: showError, invalid, clear: clearError } = formErrors;
 
-  const [roles, setRoles] = useState<RoleOption[]>([]);
-  const [isLoadingRoles, setIsLoadingRoles] = useState(true);
-  const rolesLoad = useApiLoadError();
-  const { show: showRolesError, clear: clearRolesError } = rolesLoad;
-  // "Wiederholen" loads the roles again.
-  const [rolesReload, setRolesReload] = useState(0);
+  const {
+    data: roleList,
+    error: rolesError,
+    mutate: reloadRoles,
+  } = useSWRAuth(
+    operatorKeys.systemRoles(),
+    () => operatorProvisioningService.listSystemRoles(),
+    {
+      onError: (err) =>
+        logger.error("failed_to_load_roles", {
+          error: err instanceof Error ? err.message : String(err),
+        }),
+    },
+  );
+  const rolesLoad = useSwrResourceLoadError(
+    [{ data: roleList, error: rolesError }],
+    "die Liste der Rollen",
+    () => reloadRoles(),
+  );
+  const isLoadingRoles = !roleList && !rolesError;
+  const roles = useMemo(
+    () =>
+      (roleList ?? [])
+        .filter((role) => isAssignableStaffRole(role.name, role.isSystem))
+        .map<RoleOption>((role) => ({
+          id: role.id,
+          label: role.name ? getRoleDisplayName(role.name) : `Rolle ${role.id}`,
+          systemName: role.name,
+        })),
+    [roleList],
+  );
 
   const [result, setResult] = useState<{
     id: string;
     email: string;
   } | null>(null);
-
-  // Load roles on mount
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchRoles() {
-      try {
-        setIsLoadingRoles(true);
-        clearRolesError();
-        const roleList = await operatorProvisioningService.listSystemRoles();
-        if (cancelled) return;
-        const options = roleList
-          .filter((role) => isAssignableStaffRole(role.name, role.isSystem))
-          .map<RoleOption>((role) => ({
-            id: role.id,
-            label: role.name
-              ? getRoleDisplayName(role.name)
-              : `Rolle ${role.id}`,
-            systemName: role.name,
-          }));
-        setRoles(options);
-      } catch (err) {
-        logger.error("failed_to_load_roles", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (cancelled) return;
-        void showRolesError(err, {
-          object: "die Liste der Rollen",
-          retry: () => setRolesReload((count) => count + 1),
-        });
-      } finally {
-        if (!cancelled) {
-          setIsLoadingRoles(false);
-        }
-      }
-    }
-
-    void fetchRoles();
-    return () => {
-      cancelled = true;
-    };
-  }, [rolesReload, showRolesError, clearRolesError]);
 
   // Reset form when opening
   useEffect(() => {

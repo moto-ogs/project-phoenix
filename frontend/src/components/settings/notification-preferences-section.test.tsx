@@ -1,16 +1,35 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotificationPreferencesSection } from "./notification-preferences-section";
+import type { ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
-// The shared error path shows failures through the toast provider (#2517).
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in session per render; the shared
+// error path shows failures through the toast provider (#2517).
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>{children}</ToastProvider>
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
 function renderWithToast(
   ui: Parameters<typeof render>[0],
   options?: Parameters<typeof render>[1],
 ) {
-  return render(ui, { wrapper: ToastProvider, ...options });
+  return render(ui, { wrapper: Providers, ...options });
 }
 
 const api = vi.hoisted(() => ({

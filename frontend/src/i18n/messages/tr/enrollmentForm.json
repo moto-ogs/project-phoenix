@@ -140,7 +140,16 @@
   "captchaHelp": {
     "hint": "Güvenlik kontrolü yüklenmiyor veya takılı mı kaldı?",
     "restart": "Kontrolü yeniden başlat",
-    "restartTooltip": "Kontrolü yeniden yükler, bilgileriniz korunur."
+    "restartTooltip": "Kontrolü yeniden yükler, bilgileriniz korunur.",
+    "failedTitle": "Güvenlik kontrolü yüklenmiyor",
+    "failedText": "Kontrolü çoğu zaman bir reklam engelleyici engeller. Şunları yapabilirsiniz:",
+    "failedStepBlocker": "Bu sayfa için reklam engelleyiciyi kapatın.",
+    "failedStepRestart": "„Kontrolü yeniden başlat“ seçeneğini seçin.",
+    "failedStepBrowser": "Hâlâ olmuyor mu? Bağlantıyı kopyalayın ve başka bir tarayıcıda açın, örneğin Chrome. Bilgilerinizi orada yeniden girin.",
+    "copyLink": "Bağlantıyı kopyala",
+    "copyLinkTooltip": "Bu sayfanın adresini başka bir tarayıcı için kopyalar.",
+    "linkCopied": "Bağlantı kopyalandı",
+    "copyFailed": "Burada kopyalama çalışmıyor. Bağlantı şu:"
   },
   "structured": {
     "yes": "Evet",

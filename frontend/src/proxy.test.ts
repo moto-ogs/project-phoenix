@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { LOCALE_SCOPE_HEADER } from "~/i18n/locales";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 
 const OPERATOR_HOSTNAME = "operator.localhost:3000";
 const PARENTS_HOSTNAME = "parents.localhost:3000";
@@ -633,14 +634,15 @@ describe("proxy", () => {
     });
 
     it("anchors a week offset on the Berlin calendar day", () => {
-      // The test clock stands on Wednesday 2026-09-09; next week starts on
-      // Monday 14 September.
+      // Next week starts on the Monday after the Berlin test day.
+      const isoWeekday =
+        new Date(`${TEST_CLOCK_TODAY}T00:00:00Z`).getUTCDay() || 7;
       const { location } = redirectOf(
         "http://school-a.localhost:3000/vertretungsplan?week=1",
         "school-a.localhost:3000",
       );
 
-      expect(location?.search).toBe("?d=2026-09-14");
+      expect(location?.search).toBe(`?d=${testClockDay(8 - isoWeekday)}`);
     });
 
     it("leaves the new areas and unrelated paths to the tenant rewrite", () => {

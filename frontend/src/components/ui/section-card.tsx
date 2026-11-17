@@ -102,7 +102,7 @@ function SectionCardConceptIcon({
 }
 
 /** What the collapse toggle does in each state (#6744). */
-export interface SectionCollapseTooltip {
+interface SectionCollapseTooltip {
   /** While collapsed: what a click shows. */
   readonly expand: string;
   /** While open: what a click hides. */
@@ -560,7 +560,7 @@ export function SectionCard({
             "border-t border-gray-100 bg-gray-50/70 py-3",
             ZONE_PADDING_X,
             stickyFooter &&
-              `${STICKY_FOOTER} ${Z_LAYER.raised} rounded-b-2xl bg-gray-50/95 backdrop-blur-sm`,
+              `${STICKY_FOOTER} ${Z_LAYER.raised} rounded-b-2xl bg-gray-50`,
           )}
         >
           {footer}

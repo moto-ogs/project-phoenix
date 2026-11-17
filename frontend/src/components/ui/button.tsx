@@ -6,7 +6,7 @@ import {
   type ButtonSize,
   type ButtonVariant,
 } from "./button-styles";
-import { iconOnlyMarker } from "./control-geometry";
+import { CONTROL_PART, iconOnlyMarker } from "./control-geometry";
 import NavigationLink, { type NavigationLinkProps } from "./navigation-link";
 import { cn } from "~/lib/utils";
 
@@ -113,6 +113,9 @@ export function Button({
     <button
       type="submit"
       {...iconOnlyMarker(size === "icon")}
+      // Ein Segment füllt seine Gruppe; die Kopfhöhe von `TenantPage` lässt
+      // es deshalb aus (#7300).
+      {...(variant === "segment" && CONTROL_PART)}
       className={buttonClassName({ variant, size, className, touchTarget })}
       {...(blocked ? withoutActivation(props) : props)}
       {...(blocked && BLOCKED_ACTIVATION_PROPS)}

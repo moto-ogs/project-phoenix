@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   CareInvoice,
   CareLetterMailing,
   CareLetters,
   CareRunDetail,
 } from "~/lib/traeger-care-billing-api";
+
+vi.unmock("swr");
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -18,6 +20,27 @@ const { api } = vi.hoisted(() => ({
 vi.mock("~/lib/traeger-export-handovers-api", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   fetchExportRecipients: () => new Promise(() => undefined),
+}));
+// The SEPA direct debits of the run (#4697) are tested on their own: no
+// family pays by direct debit here.
+vi.mock("~/lib/traeger-sepa-debits-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/traeger-sepa-debits-api")>()),
+  fetchSepaDebitRun: () =>
+    Promise.resolve({
+      creditorId: "DE98ZZZ09999999999",
+      creditorName: "Träger",
+      creditorIbanMasked: "•••• 3000",
+      accountMissing: false,
+      messageId: "",
+      count: 0,
+      totalCents: 0,
+      groups: [],
+      pastDue: 0,
+      debits: [],
+      submitted: [],
+      left: [],
+      submittedAt: null,
+    }),
 }));
 vi.mock("~/lib/traeger-care-billing-api", async (original) => ({
   ...(await original<typeof import("~/lib/traeger-care-billing-api")>()),
@@ -85,9 +108,9 @@ function letters(overrides: Partial<CareLetters> = {}): CareLetters {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerCareRunPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

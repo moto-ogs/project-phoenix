@@ -44,6 +44,7 @@ func TestReplyToChangeRequestAcceptsPositiveID(t *testing.T) {
 
 	service := newCapturingChangeRequestService()
 	resource := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, ChangeRequestService: service}
 	recorder := httptest.NewRecorder()
 
@@ -72,6 +73,7 @@ func TestReplyToChangeRequestRejectsInvalidIDs(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			service := newCapturingChangeRequestService()
 			resource := &Resource{
+				Now:      resourceTestClock,
 				Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, ChangeRequestService: service}
 			recorder := httptest.NewRecorder()
 
@@ -89,6 +91,7 @@ func TestReplyToChangeRequestRejectsMissingTokenIndependently(t *testing.T) {
 
 	service := newCapturingChangeRequestService()
 	resource := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, ChangeRequestService: service}
 	recorder := httptest.NewRecorder()
 

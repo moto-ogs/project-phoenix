@@ -122,7 +122,7 @@ func newDailyCheckoutService(t *testing.T, db *testpkg.DB) (active.Service, *tes
 	require.NoError(t, err)
 	rooms, err := api.NewFacilities(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
-	svc := active.NewService(active.ServiceDependencies{PrincipalReader: api.AttendancePrincipal,
+	svc := active.NewService(active.ServiceDependencies{Now: time.Now, PrincipalReader: api.AttendancePrincipal,
 		GroupRepo:          sessionGroups(reposPresence.ActiveGroup),
 		SupervisorRepo:     sessionSupervisors(reposPresence.ActiveGroup),
 		SchoolPresence:     testSchoolPresence(t, db),

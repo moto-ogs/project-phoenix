@@ -140,7 +140,16 @@
   "captchaHelp": {
     "hint": "Kontrolli i sigurisë nuk ngarkohet ose ka ngecur?",
     "restart": "Rinis kontrollin",
-    "restartTooltip": "Ringarkon kontrollin, të dhënat tuaja mbeten."
+    "restartTooltip": "Ringarkon kontrollin, të dhënat tuaja mbeten.",
+    "failedTitle": "Kontrolli i sigurisë nuk ngarkohet",
+    "failedText": "Shpesh e bllokon një bllokues reklamash. Çfarë mund të bëni:",
+    "failedStepBlocker": "Çaktivizoni bllokuesin e reklamave për këtë faqe.",
+    "failedStepRestart": "Zgjidhni „Rinis kontrollin“.",
+    "failedStepBrowser": "Ende nuk funksionon? Kopjoni lidhjen dhe hapeni në një shfletues tjetër, për shembull Chrome. Atje plotësoni sërish të dhënat tuaja.",
+    "copyLink": "Kopjo lidhjen",
+    "copyLinkTooltip": "Kopjon adresën e kësaj faqeje për një shfletues tjetër.",
+    "linkCopied": "Lidhja u kopjua",
+    "copyFailed": "Kopjimi nuk funksionon këtu. Kjo është lidhja:"
   },
   "structured": {
     "yes": "Po",

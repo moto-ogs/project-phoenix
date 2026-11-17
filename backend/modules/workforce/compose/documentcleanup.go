@@ -18,7 +18,7 @@ func NewDocumentCleanup(db *bun.DB, now func() time.Time) (*workforce.DocumentCl
 	if now == nil {
 		now = time.Now
 	}
-	store := postgres.New(postgres.DatabaseRuntime(db))
+	store := postgres.New(postgres.DatabaseRuntime(db)).WithClock(now)
 	service := application.NewDocumentCleanup(store, transaction{lock: store.AcquireXactLock}, now)
 	return workforce.NewDocumentCleanup(service.Enqueue, service.Claim, service.Finish, service.Backlog), nil
 }
@@ -43,5 +43,5 @@ func NewQualifications(db *bun.DB, staff workforce.QualificationStaff, bound wor
 	if now == nil {
 		now = time.Now
 	}
-	return application.NewQualifications(postgres.New(postgres.DatabaseRuntime(db)), application.Clock{Time: now}, staff, bound, postgres.NewTraegerStaffStore())
+	return application.NewQualifications(postgres.New(postgres.DatabaseRuntime(db)).WithClock(now), application.Clock{Time: now}, staff, bound, postgres.NewTraegerStaffStore())
 }

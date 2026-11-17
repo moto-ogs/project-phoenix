@@ -300,3 +300,157 @@ for (const portal of portals) {
     await device2.close();
   });
 }
+
+// #2352: the guardians' portal answers `/api/parent/…` paths without a route
+// file through one catalog proxy. Next must prefer the route files that
+// exist, and the proxy must forward nothing the contract does not register.
+test("Eltern: the catalog proxy serves only registered routes", async ({
+  browser,
+}) => {
+  const portal = portals[0];
+  const context = await browser.newContext();
+  await isolate(context);
+  const page = await context.newPage();
+  const read = (path: string) =>
+    page.evaluate(async (target) => {
+      const response = await fetch(target);
+      return {
+        status: response.status,
+        cache: response.headers.get("Cache-Control"),
+        body: (await response.json().catch(() => null)) as {
+          data?: Record<string, unknown>[];
+          detail?: string;
+          code?: string;
+        } | null,
+      };
+    }, path);
+  const registered = "/api/parent/me/enrollable-schools";
+  const unregistered = "/api/parent/me/enrollable-schools/3";
+
+  // Without a session the registered route asks for one; a path the
+  // contract does not name does not exist, session or not.
+  await page.goto(`${portal.origin}${portal.basePath}/providers`);
+  expect((await read(registered)).status).toBe(401);
+  expect((await read(unregistered)).status).toBe(404);
+
+  await signIn(page, portal);
+  const phases = await read(registered);
+  expect(phases.status).toBe(200);
+  expect(phases.cache).toBe("private, no-store");
+  // Decoded against the contract: the identifier stays exact, and a field
+  // the contract does not know is dropped.
+  expect(phases.body?.data?.[0]?.school_id).toBe("9007199254740993");
+  expect(phases.body?.data?.[0]).not.toHaveProperty("internal_note");
+
+  const refused = await read(unregistered);
+  expect(refused.status).toBe(404);
+  // The proxy's own answer; the fixture API would say fixture.not_configured.
+  expect(refused.body?.detail).toBe("route not found");
+  expect(refused.cache).toBe("private, no-store");
+
+  // A route with its own file still answers through that file.
+  expect(await readStatus(page, portal.read)).toBe(200);
+  await context.close();
+});
+
+// The other portals' proxies: a registered route asks for the portal's
+// session and answers decoded, and a path the contract does not name for
+// the portal (here another portal's route under this prefix) does not exist.
+const catalogReads = {
+  Schule: {
+    registered: "/api/school/staff-messages/unread-count",
+    unregistered: "/api/school/billing/key-day",
+    data: { unread_count: 2 },
+  },
+  Betreiber: {
+    registered: "/api/operator/billing/key-day",
+    unregistered: "/api/operator/staff-messages/unread-count",
+    data: {
+      key_day: 15,
+      next_key_date: "2026-12-15",
+      updated_at: "2026-11-01T08:00:00Z",
+    },
+  },
+  Caterer: {
+    registered: "/api/caterer/schools",
+    unregistered: "/api/caterer/billing/key-day",
+    data: { caterer_name: "Fixture-Küche", schools: [] },
+  },
+} as const;
+
+for (const portal of portals.slice(1)) {
+  const { registered, unregistered, data } =
+    catalogReads[portal.name as keyof typeof catalogReads];
+  test(`${portal.name}: the catalog proxy serves only registered routes`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext();
+    await isolate(context);
+    const page = await context.newPage();
+    await page.goto(`${portal.origin}${portal.basePath}/providers`);
+    expect(await readStatus(page, registered)).toBe(401);
+    expect(await readStatus(page, unregistered)).toBe(404);
+
+    await signIn(page, portal);
+    const answer = await page.evaluate(async (target) => {
+      const response = await fetch(target);
+      return {
+        status: response.status,
+        body: (await response.json()) as { data?: unknown },
+      };
+    }, registered);
+    expect(answer.status).toBe(200);
+    // Exactly the contract's fields: the fixture's extra one is dropped.
+    expect(answer.body.data).toEqual(data);
+    expect(await readStatus(page, unregistered)).toBe(404);
+    await context.close();
+  });
+}
+
+// The proxy of moto schule beyond a plain read: only the registered query
+// travels, a legacy numeric id leaves as a string, and a write the backend
+// answers with 204 succeeds without data.
+test("Schule: the catalog proxy forwards a query and a write without data", async ({
+  browser,
+}) => {
+  const portal = portals[1];
+  const context = await browser.newContext();
+  await isolate(context);
+  const page = await context.newPage();
+  await page.goto(`${portal.origin}${portal.basePath}/providers`);
+  await signIn(page, portal);
+
+  const feed = await page.evaluate(async () => {
+    const response = await fetch(
+      "/api/school/notifications/feed?limit=5&debug=1",
+    );
+    return (await response.json()) as {
+      data?: { entries: { id: unknown }[]; next_cursor: string };
+    };
+  });
+  expect(feed.data?.next_cursor).toBe("?limit=5");
+  expect(feed.data?.entries[0]?.id).toBe("7");
+
+  const write = (path: string) =>
+    page.evaluate(async (target) => {
+      const response = await fetch(target, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: true }),
+      });
+      return {
+        status: response.status,
+        body: (await response.json().catch(() => null)) as {
+          data?: unknown;
+        } | null,
+      };
+    }, path);
+  const saved = await write("/api/school/notifications/preferences/absence");
+  expect(saved.status).toBe(200);
+  expect(saved.body?.data).toBeNull();
+  // The same path under a method the contract does not register.
+  expect((await write("/api/school/notifications/feed/read-all")).status).toBe(
+    404,
+  );
+  await context.close();
+});

@@ -136,7 +136,7 @@ func declarationProofRequest(query string) *http.Request {
 func TestDeclarationProofDownloadsTheMotoPDF(t *testing.T) {
 	t.Parallel()
 	renderer := &capturingProofRenderer{}
-	rs := &Resource{ParentService: &fakeParentService{declarationProof: declarationProofFixture(true)}, Reports: renderer}
+	rs := &Resource{ParentService: &fakeParentService{declarationProof: declarationProofFixture(true)}, Reports: renderer, Now: enrollmentTestNow}
 	w := httptest.NewRecorder()
 
 	rs.declarationProof(w, declarationProofRequest("student_id=7&format=pdf"))
@@ -148,11 +148,12 @@ func TestDeclarationProofDownloadsTheMotoPDF(t *testing.T) {
 	assert.Equal(t, "%PDF-1.7", w.Body.String())
 	require.NotNil(t, renderer.doc)
 	assert.Equal(t, "Nachweis Ihrer Antwort", renderer.doc.Title)
+	assert.Equal(t, enrollmentTestNow(), renderer.doc.GeneratedAt, "the proof is issued on the resource clock")
 }
 
 func TestDeclarationProofWithoutFormatStaysJSON(t *testing.T) {
 	t.Parallel()
-	rs := &Resource{ParentService: &fakeParentService{declarationProof: declarationProofFixture(true)}}
+	rs := &Resource{ParentService: &fakeParentService{declarationProof: declarationProofFixture(true)}, Now: enrollmentTestNow}
 	w := httptest.NewRecorder()
 
 	rs.declarationProof(w, declarationProofRequest("student_id=7"))
@@ -161,4 +162,5 @@ func TestDeclarationProofWithoutFormatStaysJSON(t *testing.T) {
 	assert.Contains(t, w.Body.String(), `"child_name":"Lina Richter"`)
 	assert.Contains(t, w.Body.String(), `"integrity_ok":true`)
 	assert.Contains(t, w.Body.String(), `"attachments":[{"id":"19","filename":"Ausflug.pdf"`)
+	assert.Contains(t, w.Body.String(), `"generated_at":"2026-08-24T12:00:00Z"`, "the proof is issued on the resource clock")
 }

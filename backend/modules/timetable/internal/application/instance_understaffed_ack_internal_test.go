@@ -55,7 +55,7 @@ func TestClearUnderstaffedAckIfStaffed_NoAckIsNoop(t *testing.T) {
 		InstanceRepo:      fakeInstanceRows(instanceRepo),
 		InstanceStaffRepo: staffRepo,
 		Protocol:          &recordingDeviationProtocol{},
-		Logger:            slog.New(slog.DiscardHandler),
+		Logger:            slog.New(slog.DiscardHandler), Now: internalTestNow,
 	}}
 
 	require.NoError(t, svc.ClearUnderstaffedAckIfStaffed(context.Background(), inst.ID, nil))
@@ -76,7 +76,7 @@ func TestClearUnderstaffedAckIfStaffed_StillShortStaffedKeepsAck(t *testing.T) {
 		InstanceRepo:      fakeInstanceRows(instanceRepo),
 		InstanceStaffRepo: staffRepo,
 		Protocol:          &recordingDeviationProtocol{},
-		Logger:            slog.New(slog.DiscardHandler),
+		Logger:            slog.New(slog.DiscardHandler), Now: internalTestNow,
 	}}
 
 	require.NoError(t, svc.ClearUnderstaffedAckIfStaffed(context.Background(), inst.ID, nil))
@@ -99,7 +99,7 @@ func TestClearUnderstaffedAckIfStaffed_FullyStaffedClearsAck(t *testing.T) {
 		InstanceRepo:      fakeInstanceRows(instanceRepo),
 		InstanceStaffRepo: staffRepo,
 		Protocol:          events,
-		Logger:            slog.New(slog.DiscardHandler),
+		Logger:            slog.New(slog.DiscardHandler), Now: internalTestNow,
 	}}
 
 	require.NoError(t, svc.ClearUnderstaffedAckIfStaffed(context.Background(), inst.ID, nil))
@@ -124,7 +124,7 @@ func TestClearUnderstaffedAckIfStaffed_LoadStaffError(t *testing.T) {
 		InstanceRepo:      fakeInstanceRows(instanceRepo),
 		InstanceStaffRepo: staffRepo,
 		Protocol:          &recordingDeviationProtocol{},
-		Logger:            slog.New(slog.DiscardHandler),
+		Logger:            slog.New(slog.DiscardHandler), Now: internalTestNow,
 	}}
 
 	err := svc.ClearUnderstaffedAckIfStaffed(context.Background(), inst.ID, nil)
@@ -140,7 +140,7 @@ func TestClearUnderstaffedAckIfStaffed_LoadInstanceError(t *testing.T) {
 	svc := &InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{
 		InstanceRepo:      fakeInstanceRows(instanceRepo),
 		InstanceStaffRepo: &ackUnitStaffRepo{},
-		Logger:            slog.New(slog.DiscardHandler),
+		Logger:            slog.New(slog.DiscardHandler), Now: internalTestNow,
 	}}
 
 	err := svc.ClearUnderstaffedAckIfStaffed(context.Background(), int64(700), nil)
@@ -161,7 +161,7 @@ func TestClearUnderstaffedAckIfStaffed_UpdatePersistError(t *testing.T) {
 		InstanceRepo:      fakeInstanceRows(instanceRepo),
 		InstanceStaffRepo: staffRepo,
 		Protocol:          &recordingDeviationProtocol{},
-		Logger:            slog.New(slog.DiscardHandler),
+		Logger:            slog.New(slog.DiscardHandler), Now: internalTestNow,
 	}}
 
 	err := svc.ClearUnderstaffedAckIfStaffed(context.Background(), inst.ID, nil)

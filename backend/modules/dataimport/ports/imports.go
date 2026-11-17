@@ -78,6 +78,8 @@ type StaffImportDeps struct {
 	// it exclusively while it locks the school's staff rows. Nil takes none.
 	LockStaffPersonMerge func(context.Context) error
 	Records              StaffRecords
+	// Now is the instant a birthday must not lie after; required.
+	Now func() time.Time
 }
 
 // OpeningBalanceImportDeps contains the request-independent dependencies for
@@ -120,6 +122,9 @@ type ImportRuntime struct {
 	// tenant.IsSavepointControlFailure): the transaction can no longer be
 	// trusted, so the upload ends without retry and without replay.
 	SavepointLost func(error) bool
+	// Now stamps the run, its batches and its row messages; required.
+	// Durations are measured on the monotonic clock regardless.
+	Now func() time.Time
 }
 
 // BatchStatement runs the bundled statements of a batch command as the
@@ -216,8 +221,11 @@ type StudentImportDeps struct {
 	// EnrollmentBatches is the People Directory's enrollment batch slice
 	// (#5552 step 7); without it each child is created in place.
 	EnrollmentBatches EnrollmentBatches
+	// Now stamps consents and their history and is the instant a birthday
+	// or a consent date must not lie after; required.
+	Now func() time.Time
 	// Today is the calendar day a new child's status is taken against;
-	// nil is calendar.TodayDate. Tests set a clock that crosses midnight.
+	// nil is the Berlin day of Now. Tests set a clock that crosses midnight.
 	Today func() calendar.Date
 	// FindRFIDCard resolves the optional RFID column to a card of this school
 	// (#2600). nil disables RFID import (the column is then rejected).

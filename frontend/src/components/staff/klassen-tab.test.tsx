@@ -1,22 +1,52 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as renderRaw,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import { KlassenTab } from "./klassen-tab";
 
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in session per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+const render = (ui: ReactNode) => renderRaw(ui, { wrapper: Providers });
+
 const OBJECT = "die Zuweisung der Schulklassen";
 
-const { mockAuthFetch } = vi.hoisted(() => ({ mockAuthFetch: vi.fn() }));
+const { mockAuthFetch, mockFetchSchoolClasses } = vi.hoisted(() => ({
+  mockAuthFetch: vi.fn(),
+  mockFetchSchoolClasses: vi.fn(),
+}));
 
 vi.mock("~/lib/api-helpers", () => ({ authFetch: mockAuthFetch }));
+vi.mock("~/lib/student-api", () => ({
+  fetchSchoolClasses: mockFetchSchoolClasses,
+}));
 
 function mockLoad(assigned: string[], known: string[] = ["1a", "2b", "3c"]) {
+  mockFetchSchoolClasses.mockResolvedValue(known);
   mockAuthFetch.mockImplementation(
-    (url: string, init?: { method?: string }) => {
-      if (url === "/api/students/school-classes") {
-        return Promise.resolve({ success: true, data: known });
-      }
+    (_url: string, init?: { method?: string }) => {
       if (init?.method === "PUT") {
         const body = (init as { body: { school_classes: string[] } }).body;
         return Promise.resolve({
@@ -40,6 +70,8 @@ const putCalls = () =>
 describe("KlassenTab", () => {
   beforeEach(() => {
     mockAuthFetch.mockReset();
+    mockFetchSchoolClasses.mockReset();
+    mockFetchSchoolClasses.mockResolvedValue([]);
   });
 
   it("shows the assignment read-only and offers Bearbeiten only with the right", async () => {

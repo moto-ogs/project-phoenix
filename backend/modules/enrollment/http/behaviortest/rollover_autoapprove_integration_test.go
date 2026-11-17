@@ -74,6 +74,7 @@ func setupAutoApproveIntegrationEnvWithDecision(
 	studentEnrollment, err := owners.NewPeopleDirectory(testpkg.MustDatabase(env.db), func() time.Time { return autoApproveNow })
 	require.NoError(t, err)
 	decision := newTestDecisions(enrollmentCompose.DecisionDependencies{
+		Now:            time.Now,
 		Requests:       repoFactory.Enrollment(),
 		Children:       repoFactory.Enrollment(),
 		Phases:         repoFactory.Enrollment(),
@@ -96,6 +97,7 @@ func setupAutoApproveIntegrationEnvWithDecision(
 
 	// Rebuild the rollover service so DecisionService is injected.
 	env.rolloverSvc = newTestRolloverService(owners.EnrollmentRolloverSources{
+		Now:        time.Now,
 		Bookings:   requestTestBookingCommands(),
 		Phases:     env.repos.Enrollment(),
 		Requests:   env.repos.Enrollment(),

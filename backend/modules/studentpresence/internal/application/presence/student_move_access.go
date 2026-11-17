@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -22,7 +21,7 @@ func (s *service) loadMoveSupervisedGroupIDs(ctx context.Context, staffID int64,
 
 	ids := make(map[int64]struct{}, len(supervisions))
 	for _, supervision := range supervisions {
-		if supervision == nil || supervision.GroupID <= 0 || !IsSupervisorActive(supervision, time.Now()) {
+		if supervision == nil || supervision.GroupID <= 0 || !IsSupervisorActive(supervision, s.now()) {
 			continue
 		}
 		ids[supervision.GroupID] = struct{}{}
@@ -155,7 +154,7 @@ func (s *service) ensureMoveTargetIsSupervised(ctx context.Context, targetGroup 
 	if err != nil {
 		return &ActiveError{Op: op, Err: ErrDatabaseOperation}
 	}
-	now := time.Now()
+	now := s.now()
 	for _, supervisor := range supervisors {
 		if supervisor != nil && IsSupervisorActive(supervisor, now) {
 			return nil
@@ -181,7 +180,7 @@ func (s *service) ensureSessionHasSupervisor(ctx context.Context, targetGroup *p
 	if err != nil {
 		return &ActiveError{Op: op, Err: ErrDatabaseOperation}
 	}
-	now := time.Now()
+	now := s.now()
 	for _, supervisor := range supervisors {
 		if supervisor != nil && IsSupervisorActive(supervisor, now) {
 			return nil

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, fireEvent, waitFor, screen } from "@testing-library/react";
+import {
+  render,
+  fireEvent,
+  waitFor,
+  screen,
+  within,
+} from "@testing-library/react";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { SettingsField } from "./settings-field";
 import type { ResolvedSetting } from "~/lib/settings-api";
@@ -35,6 +41,34 @@ function makeSetting(
 }
 
 describe("SettingsField", () => {
+  // #7174: the federal state has no default; a reset would lose the state.
+  it("offers no reset for a select whose default is none of its options", () => {
+    const { queryByRole, getByRole } = renderWithProviders(
+      <SettingsField
+        setting={makeSetting({
+          key: "operations.federal_state",
+          label: "Bundesland",
+          type: "select",
+          default: "",
+          value: "DE-NW",
+          options: {
+            static: [
+              { label: "Nordrhein-Westfalen", value: "DE-NW" },
+              { label: "Bayern", value: "DE-BY" },
+            ],
+          },
+        })}
+        onSave={vi.fn()}
+        onReset={vi.fn()}
+      />,
+    );
+
+    expect(getByRole("combobox", { name: "Bundesland" })).toBeEnabled();
+    expect(
+      queryByRole("button", { name: "Zurücksetzen" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("explains attendance history without prescribing a legal basis before saving", async () => {
     const onSave = vi.fn().mockResolvedValue(null);
     const { getByRole } = renderWithProviders(
@@ -154,6 +188,57 @@ describe("SettingsField", () => {
       expect(action === "switch" ? onReset : onSave).not.toHaveBeenCalled();
     },
   );
+
+  // #7208: switching child photos off deletes every photo and ends every
+  // photo consent. The dialog names all three consequences and saves only
+  // after a typed „LÖSCHEN“.
+  it("confirms the irreversible end of child photos and their consents", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { getByRole } = renderWithProviders(
+      <SettingsField
+        setting={makeSetting({
+          key: "operations.student_photos_enabled",
+          label: "Kinderfotos",
+          type: "boolean",
+          value: true,
+          default: false,
+        })}
+        onSave={onSave}
+        onReset={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(getByRole("switch", { name: "Kinderfotos" }));
+    const dialog = getByRole("dialog", { name: "Kinderfotos ausschalten?" });
+    const consequences = within(dialog).getAllByRole("listitem");
+    expect(consequences.map((item) => item.textContent)).toEqual([
+      "moto löscht sofort alle Kinderfotos.",
+      "Alle Foto-Einwilligungen der Eltern enden.",
+      "Schalten Sie Fotos wieder ein, braucht jedes Foto eine neue Einwilligung.",
+    ]);
+    expect(dialog).toHaveTextContent("Das lässt sich nicht rückgängig machen.");
+    const confirm = getByRole("button", { name: "Ausschalten und löschen" });
+    expect(confirm).toBeDisabled();
+
+    fireEvent.change(
+      getByRole("textbox", {
+        name: "Geben Sie LÖSCHEN ein, um alle Kinderfotos endgültig zu löschen.",
+      }),
+      { target: { value: "LÖSCHEN" } },
+    );
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.click(confirm);
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledExactlyOnceWith(
+        "operations.student_photos_enabled",
+        false,
+      );
+      expect(getByRole("switch", { name: "Kinderfotos" })).toHaveAttribute(
+        "aria-checked",
+        "false",
+      );
+    });
+  });
 
   it.each(["switch", "reset"] as const)(
     "keeps a failed history deletion open for %s",

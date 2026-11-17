@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	postgresNative "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/adapters/postgres"
@@ -73,6 +76,7 @@ type ProvisioningDependencies struct {
 	Secrets            ports.ProvisioningSecrets
 	// ActiveAccountCounts supplies bounded distinct-account aggregates.
 	Logger *slog.Logger
+	Now    func() time.Time // the root's clock
 }
 
 // NewProvisioning composes the operator provisioning capability over the
@@ -83,11 +87,11 @@ func NewProvisioning(dependencies ProvisioningDependencies, dashboard organizati
 	}
 	provisioning, err := application.NewProvisioning(application.ProvisioningDependencies{
 		PWAUsageWindowDays: dependencies.PWAUsageWindowDays, Organizations: dependencies.Organizations,
-		ErasureOrderRecords: application.New(postgresNative.New(postgresNative.NewDatabase()), postgresNative.Transaction{}, dependencies.Observe),
+		ErasureOrderRecords: application.New(postgresNative.New(postgresNative.NewDatabase(), dependencies.Now), postgresNative.Transaction{}, dependencies.Observe, calendar.CalendarDateClock(dependencies.Now)),
 		Transaction:         postgresNative.Transaction{}, Dashboard: dashboard,
 		Identity: dependencies.Identity, Devices: dependencies.Devices, People: dependencies.People,
 		Presence: dependencies.Presence, Categories: dependencies.Categories, Settings: dependencies.Settings,
-		Audit: dependencies.Audit, Secrets: dependencies.Secrets, Logger: dependencies.Logger,
+		Audit: dependencies.Audit, Secrets: dependencies.Secrets, Logger: dependencies.Logger, Now: dependencies.Now,
 	})
 	if err != nil {
 		return organizationtenancy.OperatorProvisioning{}, err

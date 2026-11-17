@@ -204,25 +204,57 @@ const audienceAccountsBound = `
 			SELECT DISTINCT COALESCE(req.guardian_account_id, ea.id) AS account_id` + pendingApplicantAccountsBound + `
 				AND COALESCE(req.guardian_account_id, ea.id) IS NOT NULL`
 
-// reachedAccountFeed is the SQL boolean "the bound account is reached by
-// announcement a right now" for the cross-school feed, where the announcement
-// and school are column references.
+// accountChildrenCTE is the bound account's children across schools: each
+// child the account holds parent_portal.access on through a linked guardian
+// profile with an ACTIVE membership at the child's school, and whether one of
+// those relationships also carries parent_portal.poll.response. The feed,
+// its outstanding count and the letter children start from it.
 //
-// Bind order: today, today, today, guardian links, account, account, account.
-const reachedAccountFeed = `(
-		EXISTS (
-			SELECT 1
-			FROM users.parent_announcement_targets pt
-			JOIN users.student_profiles s ON s.tenant_id = a.tenant_id` + studentMembershipJoins + ` AND (` + studentReachedFeed + `
-			)
-			JOIN users.persons p ON p.id = s.person_id AND p.deleted_at IS NULL
-			AND sm.status <> 'alumnus'
-			JOIN (?) sg ON sg.student_id = s.id AND sg.tenant_id = a.tenant_id
-				AND sg.permissions @> '{"parent_portal.access": true}'::jsonb
-			JOIN users.guardian_profiles gp ON gp.id = sg.guardian_profile_id AND gp.tenant_id = a.tenant_id
+// The set is a MATERIALIZED CTE on purpose (#7231). Joined in one statement
+// with the announcement, its targets and the child's rows, the guardian side
+// made the planner search the join orders of about ten relations, and bun
+// plans every statement anew: 30 to 75 ms of planning per feed call against
+// a few ms of execution. Computed first, from the account's few rows, it
+// leaves the planner two small problems. The per-announcement child lists
+// (answerableChildrenSQL, declarationChildrenForAccountSQL) keep the inline
+// join: without the guardian side they reach join_collapse_limit and measured
+// slower to plan, not faster.
+//
+// Bind order: guardian links, account.
+const accountChildrenCTE = `account_children AS MATERIALIZED (
+			SELECT sg.tenant_id, sg.student_id,
+				bool_or(sg.permissions @> '{"parent_portal.poll.response": true}'::jsonb) AS may_answer
+			FROM (?) sg
+			JOIN users.guardian_profiles gp ON gp.id = sg.guardian_profile_id AND gp.tenant_id = sg.tenant_id
 				AND gp.account_id = ?
 			JOIN auth.account_tenants act ON act.account_id = gp.account_id
 				AND act.tenant_id = gp.tenant_id AND act.status = 'active'
+			WHERE sg.permissions @> '{"parent_portal.access": true}'::jsonb
+			GROUP BY sg.tenant_id, sg.student_id
+		)`
+
+// accountReachedChildrenFeed continues a query over announcement a and its
+// target row pt with the account's live, non-graduated children that a
+// reaches, as s with sm and p. accountChildrenCTE must be in scope as
+// account_children.
+//
+// Bind order: today, today, today.
+const accountReachedChildrenFeed = `
+			JOIN account_children ac ON ac.tenant_id = a.tenant_id
+			JOIN users.student_profiles s ON s.id = ac.student_id AND s.tenant_id = a.tenant_id` + studentMembershipJoins + ` AND (` + studentReachedFeed + `
+			)
+			JOIN users.persons p ON p.id = s.person_id AND p.deleted_at IS NULL
+				AND sm.status <> 'alumnus'`
+
+// reachedAccountFeed is the SQL boolean "the bound account is reached by
+// announcement a right now" for the cross-school feed, where the announcement
+// and school are column references. accountChildrenCTE must be in scope.
+//
+// Bind order: today, today, today, account, account.
+const reachedAccountFeed = `(
+		EXISTS (
+			SELECT 1
+			FROM users.parent_announcement_targets pt` + accountReachedChildrenFeed + `
 			WHERE pt.announcement_id = a.id AND pt.tenant_id = a.tenant_id
 		)
 		OR EXISTS (
@@ -284,26 +316,17 @@ const reachedAccountBound = `(
 // and at least one of the bound account's reached children has no answer
 // yet". A guardian who read a poll but never answered still counts as
 // outstanding, because a poll that quietly stops nagging is a poll nobody
-// answers.
+// answers. accountChildrenCTE must be in scope.
 //
-// Bind order: today, today, today, guardian links, account.
+// Bind order: now, today, today, today.
 const openPollForAccountFeed = `(
 		a.response_type <> 'none'
-		AND (a.response_deadline IS NULL OR a.response_deadline > NOW())
+		AND (a.response_deadline IS NULL OR a.response_deadline > ?)
 		AND EXISTS (
 			SELECT 1
-			FROM users.parent_announcement_targets pt
-			JOIN users.student_profiles s ON s.tenant_id = a.tenant_id` + studentMembershipJoins + ` AND (` + studentReachedFeed + `
-			)
-			JOIN users.persons p ON p.id = s.person_id AND p.deleted_at IS NULL
-			AND sm.status <> 'alumnus'
-			JOIN (?) sg ON sg.student_id = s.id AND sg.tenant_id = a.tenant_id
-				AND sg.permissions @> '{"parent_portal.access": true, "parent_portal.poll.response": true}'::jsonb
-			JOIN users.guardian_profiles gp ON gp.id = sg.guardian_profile_id AND gp.tenant_id = a.tenant_id
-				AND gp.account_id = ?
-			JOIN auth.account_tenants act ON act.account_id = gp.account_id
-				AND act.tenant_id = gp.tenant_id AND act.status = 'active'
+			FROM users.parent_announcement_targets pt` + accountReachedChildrenFeed + `
 			WHERE pt.announcement_id = a.id AND pt.tenant_id = a.tenant_id
+				AND ac.may_answer
 				AND NOT EXISTS (
 					SELECT 1 FROM users.parent_announcement_responses resp
 					WHERE resp.announcement_id = a.id AND resp.student_id = s.id
@@ -317,12 +340,15 @@ const openPollForAccountFeed = `(
 // Bind order: news schools, notice-only schools.
 const feedScopePredicate = `((a.tenant_id IN (?) AND a.system_kind IS NULL) OR (a.tenant_id IN (?) AND a.system_kind IS NOT NULL))`
 
-// liveAnnouncementPredicate is "published, active, and not expired".
+// liveAnnouncementPredicate is "published, active, and not expired" at the
+// projection's instant, the clock that stamps the publication (#7295).
+//
+// Bind order: now, now.
 const liveAnnouncementPredicate = `
 				AND a.active
 				AND a.published_at IS NOT NULL
-				AND a.published_at <= NOW()
-				AND (a.expires_at IS NULL OR a.expires_at > NOW())`
+				AND a.published_at <= ?
+				AND (a.expires_at IS NULL OR a.expires_at > ?)`
 
 // pollAudienceStudentsBound is every portal-visible child a poll reaches.
 // Staff results must include every child the announcement reaches, even if

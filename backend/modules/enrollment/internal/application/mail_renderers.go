@@ -14,7 +14,10 @@ import (
 // NewMailRenderers returns Enrollment's mail renderers. Only holiday acceptance
 // mails look up account eligibility at delivery time; other fields are captured
 // in the outbox payload. Without a lookup or parents URL, no app link is shown.
-func NewMailRenderers(accounts enrollment.HolidayAcceptanceAccounts, parentsURL string) enrollment.MailRenderers {
+func NewMailRenderers(accounts enrollment.HolidayAcceptanceAccounts, parentsURL string, today func() calendar.Date) enrollment.MailRenderers {
+	if today == nil {
+		panic("enrollment: the mail renderers need the day of dispatch")
+	}
 	return enrollment.MailRenderers{
 		Submitted:                decodingRenderer(renderSubmitted),
 		AdminNotification:        decodingRenderer(renderAdminNotification),
@@ -44,8 +47,10 @@ func NewMailRenderers(accounts enrollment.HolidayAcceptanceAccounts, parentsURL 
 		HolidayRegistrationReceived: func(ctx context.Context, kind string, raw json.RawMessage) (*enrollment.RenderedMail, error) {
 			return renderHolidayRegistrationReceived(ctx, kind, raw, parentsURL)
 		},
-		HolidayPlaceGranted:  renderHolidayPlaceGranted,
-		HolidayClosureNotice: renderHolidayClosureNotice,
+		HolidayPlaceGranted: renderHolidayPlaceGranted,
+		HolidayClosureNotice: func(ctx context.Context, kind string, raw json.RawMessage) (*enrollment.RenderedMail, error) {
+			return renderHolidayClosureNotice(ctx, kind, raw, today())
+		},
 		HolidayRegistrationAccepted: func(ctx context.Context, kind string, raw json.RawMessage) (*enrollment.RenderedMail, error) {
 			return renderHolidayRegistrationAccepted(ctx, kind, raw, accounts, parentsURL)
 		},
@@ -145,7 +150,7 @@ func renderHolidayPlaceGranted(_ context.Context, kind string, raw json.RawMessa
 // days without care (#6434) or days that open again (#6457), in two
 // sections when a closing day moved: one mail, not two (ADR 0196). The
 // Träger is the sender.
-func renderHolidayClosureNotice(_ context.Context, kind string, raw json.RawMessage) (*enrollment.RenderedMail, error) {
+func renderHolidayClosureNotice(_ context.Context, kind string, raw json.RawMessage, today calendar.Date) (*enrollment.RenderedMail, error) {
 	var payload enrollment.HolidayClosureMail
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return nil, fmt.Errorf("%s payload is not a holiday closure mail: %w", kind, err)
@@ -153,7 +158,7 @@ func renderHolidayClosureNotice(_ context.Context, kind string, raw json.RawMess
 	if strings.TrimSpace(payload.Recipient) == "" {
 		return nil, fmt.Errorf("%s payload missing recipient_email", kind)
 	}
-	payload.ContainsPastDays = payload.ContainsPastDays || holidayClosureMailHasPastDays(payload, calendar.TodayDate())
+	payload.ContainsPastDays = payload.ContainsPastDays || holidayClosureMailHasPastDays(payload, today)
 	closed, closedWaitlisted, closedPending := holidayClosureMailChildren(payload.Children)
 	reopened, reopenedWaitlisted, reopenedPending := holidayClosureMailChildren(payload.ReopenedChildren)
 	subject := "Ferienbetreuung: An einem gebuchten Tag ist geschlossen"

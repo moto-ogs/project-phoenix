@@ -75,13 +75,17 @@ func newStudentDocumentScenario(t *testing.T) *studentDocumentScenario {
 	}
 }
 
+// studentDocumentsNow is the fixed instant the document capability decides
+// and stamps on, a Monday after the sample accident of 2026-10-20.
+func studentDocumentsNow() time.Time { return time.Date(2026, 11, 2, 11, 0, 0, 0, time.UTC) }
+
 // newStudentDocuments composes the production document capability with the
 // caller's staff identity stood in.
 func newStudentDocuments(t *testing.T, db *bun.DB, userContext stubDocumentUserContext) careplan.StudentDocuments {
 	t.Helper()
 	repos := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db))
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
-	documents, err := api.NewStudentDocumentsTestModule(testpkg.NewDatabase(t, db), repos.CarePlan(), reposPeople.Student, userContext, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).StudentFieldEdit, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).DataAccessLog)
+	documents, err := api.NewStudentDocumentsTestModule(testpkg.NewDatabase(t, db), repos.CarePlan(), reposPeople.Student, userContext, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).StudentFieldEdit, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).DataAccessLog, studentDocumentsNow)
 	require.NoError(t, err)
 	return documents
 }
@@ -431,12 +435,12 @@ func TestStudentDocumentService_RefusesToWriteWithoutAnAuditTrail(t *testing.T) 
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	staff := stubDocumentUserContext{staff: &peopleValues.Staff{}}
 
-	unaudited, err := api.NewStudentDocumentsTestModule(testpkg.NewDatabase(t, db), repos.CarePlan(), reposPeople.Student, staff, nil, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).DataAccessLog)
+	unaudited, err := api.NewStudentDocumentsTestModule(testpkg.NewDatabase(t, db), repos.CarePlan(), reposPeople.Student, staff, nil, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).DataAccessLog, studentDocumentsNow)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "refusing unaudited changes")
 	assert.Nil(t, unaudited)
 
-	unlogged, err := api.NewStudentDocumentsTestModule(testpkg.NewDatabase(t, db), repos.CarePlan(), reposPeople.Student, staff, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).StudentFieldEdit, nil)
+	unlogged, err := api.NewStudentDocumentsTestModule(testpkg.NewDatabase(t, db), repos.CarePlan(), reposPeople.Student, staff, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).StudentFieldEdit, nil, studentDocumentsNow)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "refusing unaudited changes")
 	assert.Nil(t, unlogged)

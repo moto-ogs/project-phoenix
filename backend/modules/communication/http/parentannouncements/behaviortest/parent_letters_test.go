@@ -138,7 +138,7 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 		emil.StudentID: {first: "Emil", last: "Weber", class: "1a", group: "Igel"},
 	}
 	access := &countingLetterAccess{}
-	service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}},
+	service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}, Now: time.Now},
 		settings.Settings, delivery.EmailOutbox, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes,
 		owners.DeliveryNotifications{Notifier: delivery.Notifications, Preferences: delivery.NotificationPreferences}, repos.MessagingRepositories, files,
 		communicationCompose.ParentLetterPorts{Sources: values.ports(), Access: access})
@@ -151,7 +151,7 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 	_, foreign := testpkg.CreateTestStaffWithAccountForTenant(t, db, foreignTenant, "Fremd", "Schule")
 	foreignAdmin := testutil.MintTestJWT(t, sessiontoken.AppClaims{ID: int(foreign.ID), Sub: foreign.Email, TenantID: foreignTenant, Roles: []string{"user"}, Permissions: []string{permissions.AdminWildcard}})
 
-	resource := announcement.NewResource(service, nil)
+	resource := announcement.NewResource(service, nil, time.Now)
 	resource.Letters = owners.NewParentLetterPrinter()
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))

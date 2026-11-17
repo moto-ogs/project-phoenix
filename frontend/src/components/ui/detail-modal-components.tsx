@@ -6,23 +6,9 @@ import {
   BuildingsIcon,
   BusIcon,
   FileTextIcon,
-  HeartIcon,
   NotePencilIcon,
-  UserIcon,
-  UsersThreeIcon,
 } from "@phosphor-icons/react";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
-
-// Data-field primitives live in data-field.tsx, so a kit card can
-// use them without loading the icon constants below (#5581).
-export {
-  DataField,
-  DataFieldSkeleton,
-  DataGrid,
-} from "~/components/ui/data-field";
-// InfoSection lives in info-section.tsx for the same reason: FilterPanel uses
-// it on every list page and must not load the icon constants below (#6571).
-export { InfoSection } from "~/components/ui/info-section";
 
 // =============================================================================
 // InfoText - Shared component for text-only info sections
@@ -49,9 +35,6 @@ export function InfoText({ children }: InfoTextProps) {
 
 export const DetailIcons = {
   // Domain-flavored glyphs: self-colored via MotoDuotoneIcon.
-  person: <MotoDuotoneIcon icon={UserIcon} tone="greenVivid" size="100%" />,
-  group: <MotoDuotoneIcon icon={UsersThreeIcon} tone="greenDeep" size="100%" />,
-  heart: <MotoDuotoneIcon icon={HeartIcon} tone="coral" size="100%" />,
   notes: <MotoDuotoneIcon icon={NotePencilIcon} tone="teal" size="100%" />,
   document: <MotoDuotoneIcon icon={FileTextIcon} tone="neutral" size="100%" />,
   building: <MotoDuotoneIcon icon={BuildingsIcon} tone="petrol" size="100%" />,

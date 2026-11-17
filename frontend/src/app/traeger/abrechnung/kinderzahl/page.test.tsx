@@ -1,11 +1,14 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   FamilyChildren,
   FamilyChildrenSet,
 } from "~/lib/traeger-family-children-api";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 import TraegerKinderzahlPage from "./page";
+
+vi.unmock("swr");
 
 const { fetchFamilyChildren, confirmFamilyChildren } = vi.hoisted(() => ({
   fetchFamilyChildren: vi.fn(),
@@ -81,9 +84,9 @@ const data: FamilyChildrenSet = {
 function renderPage(set: FamilyChildrenSet = data) {
   fetchFamilyChildren.mockResolvedValue(set);
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerKinderzahlPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -119,7 +122,8 @@ describe("TraegerKinderzahlPage", () => {
       expect(confirmFamilyChildren).toHaveBeenCalledWith({
         contractId: "31",
         children: 3,
-        validFrom: "2026-09-01",
+        // Die bestätigte Zahl gilt ab dem Ersten des laufenden Monats.
+        validFrom: `${TEST_CLOCK_TODAY.slice(0, 8)}01`,
         validUntil: null,
       }),
     );

@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { SepaDebitRun } from "~/lib/traeger-sepa-debits-api";
 import { SepaDebitCard } from "./sepa-debit-card";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchSepaDebitRun: vi.fn(),
@@ -66,9 +68,9 @@ it("offers the handover of the debit file without the right to read the recipien
     new ApiError("forbidden", 403, { code: "general.forbidden" }),
   );
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <SepaDebitCard kind="care-runs" runId="42" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   fireEvent.click(
     await screen.findByRole("button", { name: /an die Empfänger übergeben/ }),
@@ -80,9 +82,9 @@ it("offers the handover of the debit file without the right to read the recipien
 
 it("confirms the downloaded file rather than the stale overview", async () => {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <SepaDebitCard kind="care-runs" runId="42" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   fireEvent.click(
     await screen.findByRole("button", { name: "Datei herunterladen" }),
@@ -105,9 +107,9 @@ it("confirms the downloaded file rather than the stale overview", async () => {
 
 it("requires a downloaded file before confirmation", async () => {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <SepaDebitCard kind="care-runs" runId="42" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   expect(
     await screen.findByRole("button", { name: "Bei der Bank eingereicht" }),
@@ -120,9 +122,9 @@ it("confirms the message ID of a file named with its file number (#4693)", async
     filename: "lastschrift-112-MOTO-M3-20291104.xml",
   });
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <SepaDebitCard kind="care-runs" runId="42" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   fireEvent.click(
     await screen.findByRole("button", { name: "Datei herunterladen" }),

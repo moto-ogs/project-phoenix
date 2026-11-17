@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 
@@ -26,7 +27,7 @@ func NewEnrollmentIntake(src EnrollmentIntakeSources) *enrollmentCompose.Intake 
 		ParentChanges: src.ParentChanges, Uploads: src.Uploads, Signatures: EnrollmentSignatures{Ledger: SignatureLedger()},
 		Random: securityruntime.FillRandom, Fingerprint: securityruntime.Fingerprint,
 		FrontendURL: src.FrontendURL, ParentsURL: src.ParentsURL, Logger: src.Logger, FamilyChildrenPurpose: src.FamilyChildrenPurpose,
-		LockTemplateRecurrence: src.LockTemplateRecurrence,
+		LockTemplateRecurrence: src.LockTemplateRecurrence, Now: src.Now,
 	})
 }
 
@@ -64,7 +65,7 @@ func NewEnrollmentChangeRequests(src EnrollmentChangeRequestSources) enrollmentO
 		GuardianInvitations: src.GuardianInvitations,
 		Settings:            intakeSettings(src.Settings), Outbox: src.OutboxEnqueuer,
 		FrontendURL: src.FrontendURL, ParentsURL: src.ParentsURL, Logger: src.Logger,
-		LockTemplateRecurrence: src.LockTemplateRecurrence,
+		LockTemplateRecurrence: src.LockTemplateRecurrence, Now: src.Now,
 	}
 	if src.PersonRepo != nil {
 		deps.Reviewers = enrollmentReviewerNames{persons: src.PersonRepo}
@@ -170,6 +171,8 @@ type EnrollmentIntakeSources struct {
 	// LockTemplateRecurrence is the recurrence gate the phase bounds reader
 	// takes before a write reads the phase (#6657); the root always binds it.
 	LockTemplateRecurrence func(context.Context) error
+	// Now is the intake's clock (ADR 0239); required.
+	Now func() time.Time
 }
 
 // EnrollmentChangeRequestSources are the owners and retained repositories the
@@ -206,6 +209,8 @@ type EnrollmentChangeRequestSources struct {
 	// LockTemplateRecurrence is the recurrence gate the phase bounds reader
 	// takes before a change request reads the phase (#6657).
 	LockTemplateRecurrence func(context.Context) error
+	// Now is the clock of the change requests (ADR 0239); required.
+	Now func() time.Time
 }
 
 // EnrollmentReviewerPersons resolves the persons behind reviewer accounts.

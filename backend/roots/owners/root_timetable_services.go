@@ -76,7 +76,7 @@ func BuildTimetableLifecycle(
 		Exceptions: repos.ActivityException, Schedules: repos.ActivitySchedule, Staff: NewTimetableStaff(people.Staff),
 		CalendarPeriods: owner.TemplateRows.CalendarPeriods, ArrivalExceptions: careRows.ArrivalExceptions,
 		Sessions: presence.SessionRecords, Shifts: shifts, Presence: presence.Presence,
-		Logger: env.Logger.With("service", "timetable-conflicts"),
+		Logger: env.Logger.With("service", "timetable-conflicts"), Now: env.Now,
 	}, schedules.ArrivalBaselines)
 	if err != nil {
 		return TimetableLifecycle{}, fmt.Errorf("compose timetable conflict detection: %w", err)
@@ -91,7 +91,7 @@ func BuildTimetableLifecycle(
 		StaffRepo: NewTimetableStaff(people.Staff), ActiveGroupRepo: presence.SessionRecords, SupervisorRepo: supervisions,
 		Presence: presence.Presence, ActiveService: active, CareDayLocks: carePlan,
 		Materialization: materialization, SickReports: sickReports, RecurrenceLock: owner.RecurrenceLock,
-		StartConflicts: conflicts, SubstituteConflicts: substituteConflicts, StaffNotices: staffNotices.Cancellations,
+		StartConflicts: conflicts, SubstituteConflicts: substituteConflicts, StaffNotices: staffNotices.Cancellations, RoomNotices: staffNotices.RoomChanges,
 		Logger: env.Logger.With("service", "instance-lifecycle"), Now: env.Now,
 		// Development and test seed profiles create completed instances at
 		// the current clock time; dedicated tests cover the policy.

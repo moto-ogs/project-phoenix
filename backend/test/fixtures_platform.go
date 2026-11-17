@@ -165,6 +165,7 @@ func CreateTestSchoolInOrganization(tb testing.TB, db *bun.DB, organizationID in
 		VALUES (?, ?, ?, ?, ?, true)`,
 		schoolID, organizationID, name, "test-school-"+token, fmt.Sprintf("t%d", schoolID))
 	require.NoError(tb, err, "Failed to create test school in organization")
+	require.NoError(tb, setTestSchoolFederalState(context.Background(), db, schoolID))
 	return schoolID
 }
 

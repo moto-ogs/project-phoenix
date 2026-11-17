@@ -232,11 +232,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/workforce/internal/application/Service.CurrentStaffSchedule",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/workforce/internal/application/Service.ExpiredWorkSessionBreaks",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

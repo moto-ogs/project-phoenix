@@ -162,7 +162,7 @@ type refreshRotation struct {
 // lock, the portal's eligibility, then the presented session, the floor and
 // the live-account stamp.
 func (r *refreshRotation) run(ctx context.Context) error {
-	now := time.Now()
+	now := r.service.sessions.now()
 	if err := r.lockAccount(ctx); err != nil {
 		return err
 	}
@@ -341,7 +341,13 @@ func (s *AccountAuthentication) auditRejectedRefresh(ctx context.Context, accoun
 	if !errors.Is(err, identityaccess.ErrAccountInactive) || ipAddress == "" {
 		return
 	}
-	if auditErr := s.logAuthEvent(ctx, accountID, domain.AuthEventTokenRefresh, false, ipAddress, userAgent, "Account inactive"); auditErr != nil {
+	auditErr := s.logAuthEvent(ctx, accountID, domain.AuthEventTokenRefresh, false, ipAddress, userAgent, "Account inactive")
+	if errors.Is(auditErr, errAuthEventWithoutSchool) {
+		s.logger.Warn("rejected refresh not audited: account has no live school",
+			slog.Int64("account_id", accountID))
+		return
+	}
+	if auditErr != nil {
 		s.logger.Error("failed to audit rejected refresh",
 			slog.Int64("account_id", accountID),
 			slog.Any("error", auditErr))

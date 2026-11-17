@@ -23,16 +23,16 @@ type StudentStatusDayService struct {
 
 // NewStudentStatusDayServiceWithPartialAbsences also prevents a full-day
 // status from silently overwriting a time-specific excusal on the same date.
+// now is the composition's clock and is required.
 func NewStudentStatusDayServiceWithPartialAbsences(
 	repo StudentStatusDayRepository,
 	pickupExceptions ManualPartialAbsenceReader,
 	db DatabaseHandle,
 	lockExceptionDay func(context.Context, int64, string) error,
-	clocks ...func() time.Time,
+	now func() time.Time,
 ) *StudentStatusDayService {
-	now := time.Now
-	if len(clocks) > 0 && clocks[0] != nil {
-		now = clocks[0]
+	if now == nil {
+		panic("studentpresence status days: the clock is required")
 	}
 	return &StudentStatusDayService{repo: repo, pickupExceptions: pickupExceptions, db: db, now: now, lockExceptionDay: lockExceptionDay}
 }

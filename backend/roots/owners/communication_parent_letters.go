@@ -123,6 +123,10 @@ func (a parentLetterAccessLog) RecordParentLetterAccess(ctx context.Context, acc
 		entry.ResourceType = auditModels.ResourceTypeParentLetterPrint
 	case communication.ParentLetterAccessPublish:
 		entry.ResourceType = auditModels.ResourceTypeParentLetterPublish
+	case communication.ParentLetterAccessStudentRecords:
+		entry.ResourceType = auditModels.ResourceTypeStudentParentRecords
+	case communication.ParentLetterAccessDeclarationProof:
+		entry.ResourceType = auditModels.ResourceTypeParentDeclarationProof
 	default:
 		return fmt.Errorf("parent letter access: unknown kind %q", access.Kind)
 	}

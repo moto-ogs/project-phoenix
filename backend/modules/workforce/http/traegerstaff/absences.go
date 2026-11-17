@@ -10,7 +10,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // AbsenceTypesResource serves the Abwesenheitsarten of the session's Träger
@@ -119,7 +118,7 @@ func (rs *RecordsResource) absenceAccounts(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
-	year := calendar.TodayDate().Year()
+	year := rs.today().Year()
 	if raw := r.URL.Query().Get("year"); raw != "" {
 		parsed, err := strconv.Atoi(raw)
 		if err != nil {

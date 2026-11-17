@@ -36,7 +36,9 @@ import { PersonalizationTab } from "./personalization-tab";
 import { EnrollmentLinkPanel } from "./enrollment-link-panel";
 import { useOptionalSupervision } from "~/lib/supervision-context";
 import { useNFCEnabled } from "~/lib/tenant-context";
+import { useInvalidateFamily } from "~/lib/swr";
 import { useTenantMutate } from "~/lib/swr/hooks";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useSettingsSchema } from "~/lib/hooks/use-settings-schema";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 
@@ -46,6 +48,14 @@ import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 const SUPERVISION_AFFECTING_KEYS = new Set<string>([
   "operations.operational_overview_scope",
 ]);
+
+// Settings the arrival settings of the care plan forms are made of
+// (`/api/students/arrival-settings`): care days source, lesson ends, defaults.
+const ARRIVAL_SETTING_PREFIXES = [
+  "enrollment.bookings_authoritative",
+  "care_times.",
+  "school_periods.",
+];
 
 const logger = createLogger({ component: "SettingsPage" });
 
@@ -284,18 +294,23 @@ function SettingsContent({ tabKey, highlightKey }: SettingsContentProps) {
     () => revalidate(),
   );
 
+  const invalidateFamily = useInvalidateFamily();
   // Reminders settings decide whether the header reminders bell shows at all.
   // After saving/resetting one, revalidate THIS tenant's /api/reminders cache
   // so the bell's `enabled` flag flips immediately instead of waiting for the
   // poll. The reminders SWR key is scoped ("{slug}:{account}:reminders");
   // useTenantMutate applies that prefix, so a different tenant's cache held in
-  // another tab is left untouched (no cross-tenant revalidation).
-  const revalidateRemindersIfNeeded = useCallback(
+  // another tab is left untouched (no cross-tenant revalidation). The arrival
+  // settings are read the same way by the care plan forms.
+  const revalidateReadersOf = useCallback(
     (key: string) => {
+      if (ARRIVAL_SETTING_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+        void invalidateFamily(tenantStudentKeys.arrivalSettings());
+      }
       if (!key.startsWith("reminders.")) return;
       void tenantMutate("reminders");
     },
-    [tenantMutate],
+    [invalidateFamily, tenantMutate],
   );
 
   const applyOptimistic = useCallback(
@@ -326,9 +341,9 @@ function SettingsContent({ tabKey, highlightKey }: SettingsContentProps) {
       if (SUPERVISION_AFFECTING_KEYS.has(key)) {
         void refreshSupervision({ force: true });
       }
-      revalidateRemindersIfNeeded(key);
+      revalidateReadersOf(key);
     },
-    [applyOptimistic, refreshSupervision, revalidateRemindersIfNeeded, router],
+    [applyOptimistic, refreshSupervision, revalidateReadersOf, router],
   );
 
   const handleReset = useCallback(
@@ -345,9 +360,9 @@ function SettingsContent({ tabKey, highlightKey }: SettingsContentProps) {
       if (SUPERVISION_AFFECTING_KEYS.has(key)) {
         void refreshSupervision({ force: true });
       }
-      revalidateRemindersIfNeeded(key);
+      revalidateReadersOf(key);
     },
-    [refreshSupervision, revalidate, revalidateRemindersIfNeeded, router],
+    [refreshSupervision, revalidate, revalidateReadersOf, router],
   );
 
   const handleSchemaRefresh = useCallback(() => {

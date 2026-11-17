@@ -47,7 +47,7 @@ func (s *RetainedGuardianService) getStudentGuardians(ctx context.Context, stude
 	if err != nil {
 		return nil, err
 	}
-	now := time.Now()
+	now := s.Now()
 
 	result := make([]*peoplePorts.GuardianWithRelationship, 0, len(relationships))
 	for _, rel := range relationships {

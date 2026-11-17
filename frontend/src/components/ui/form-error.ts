@@ -36,6 +36,11 @@ export interface FormErrorDetail {
    * showing an error.
    */
   readonly notBookedModule?: ModuleKey;
+  /**
+   * The registered code of the refusal (#7092). With an `ErrorFixProvider`
+   * the alert shows a link to the place where the person fixes it.
+   */
+  readonly code?: string;
 }
 
 /** What the error slots accept: a plain string still works for one-shot

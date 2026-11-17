@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -28,6 +29,7 @@ func NewEnrollmentReports(sources EnrollmentReportSources) enrollmentOwner.Repor
 		PickupSchedules:   sources.PickupSchedules,
 		CareParticipation: sources.CareParticipation,
 		Settings:          enrollmentReportSettings{settings: sources.Settings},
+		Now:               sources.Now,
 	}
 	if sources.AccessLog != nil {
 		deps.AccessLog = enrollmentExportAccessLog{repo: sources.AccessLog}
@@ -63,6 +65,8 @@ func (b enrollmentRosterStudents) ListClassRoster(ctx context.Context, schoolCla
 			ID: student.ID, PersonID: student.PersonID, SchoolClass: student.SchoolClass, GroupID: student.GroupID,
 			AllowedDepartureModes: student.AllowedDepartureModes, DepartureDays: student.DepartureDays,
 			DepartureCompanionNote: student.DepartureCompanionNote,
+			WithoutCarePlace:       student.WithoutCarePlace, Departed: student.LeftSchool(),
+			MemberFrom: student.ClassMemberFrom(), MemberUntil: student.EnrolledUntil,
 		})
 	}
 	return out, nil
@@ -171,4 +175,7 @@ type EnrollmentReportSources struct {
 	Settings          interface {
 		ResolveBool(ctx context.Context, key string) (bool, error)
 	}
+	// Now is the clock of the reports' day and export audits (ADR 0239);
+	// required.
+	Now func() time.Time
 }

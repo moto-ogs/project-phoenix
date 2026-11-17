@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -99,7 +100,7 @@ func TestPublicContractFollowsAnApprovedChangeWithANewVersionAndAnswersOneVersio
 	contractPorts := compose.ContractPorts{Holidays: holidaysDouble{}, Letterheads: letterheadDouble{}, Post: &postDouble{}, Runtime: runtimeDouble{}, Access: school,
 		Ledger: ledgerDouble{}, Links: testSigningLinks()}
 	amendments := compose.NewConclusion(contractPorts, compose.IntakePorts{Schools: school, Applications: school,
-		Bookings: school, Access: school, Runtime: runtimeDouble{}, Modes: modesDouble{}, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}})
+		Bookings: school, Access: school, Runtime: runtimeDouble{}, Modes: modesDouble{}, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{}}, time.Now)
 
 	run, err := amendments.AmendFromBookings(ctx, organization)
 	require.NoError(t, err)
@@ -109,7 +110,7 @@ func TestPublicContractFollowsAnApprovedChangeWithANewVersionAndAnswersOneVersio
 	require.NoError(t, err)
 	assert.Empty(t, again.Amended, "a repeated run makes no second version")
 
-	contracts := compose.NewContracts(contractPorts)
+	contracts := compose.NewContracts(contractPorts, time.Now)
 	detail, err := contracts.Contract(ctx, reviewer, contract)
 	require.NoError(t, err)
 	require.Len(t, detail.Versions, 2, "the old version stays readable")

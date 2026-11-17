@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/adapters/postgres"
@@ -93,6 +94,7 @@ type TimeTrackingCleanupDependencies struct {
 	Audit    DeletionAudit
 	Settings TimeTrackingCleanupSettings
 	Logger   *slog.Logger
+	Now      func() time.Time // required: the root's clock (ADR 0239)
 }
 
 // NewTimeTrackingCleanup builds the time-tracking retention cleanup over the
@@ -101,7 +103,7 @@ func NewTimeTrackingCleanup(deps TimeTrackingCleanupDependencies) (TimeTrackingC
 	if deps.Workforce == nil {
 		return nil, errors.New("time tracking cleanup: the Workforce capability is required")
 	}
-	return timetracking.NewCleanup(timetracking.CleanupDependencies{Sessions: deps.Workforce, Absences: deps.Absences, Audit: deps.Audit, Settings: deps.Settings, Logger: deps.Logger})
+	return timetracking.NewCleanup(timetracking.CleanupDependencies{Sessions: deps.Workforce, Absences: deps.Absences, Audit: deps.Audit, Settings: deps.Settings, Logger: deps.Logger, Now: deps.Now})
 }
 
 type WorkSessionSide struct {

@@ -5,7 +5,7 @@
 // opens the child, whose Betreuungszeiten tab shows the days.
 
 import { Download, FileSpreadsheet } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -14,18 +14,20 @@ import Link from "~/components/ui/navigation-link";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import type { OverflowMenuEntry } from "~/components/ui/page-header/types";
 import { SectionCard } from "~/components/ui/section-card";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
 import {
   careTimeOverrunsExportUrl,
   fetchCareTimeOverruns,
   type CareTimeExportFormat,
   type CareTimeOverrunRow,
-  type CareTimeOverruns,
 } from "~/lib/care-times";
 import { formatDate } from "~/lib/date-helpers";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
 const logger = createLogger({ component: "CareTimeOverrunsSection" });
@@ -51,50 +53,30 @@ export function CareTimeOverrunsSection({
   schoolClasses: readonly string[];
 }>) {
   const tenantPath = useTenantAwarePath();
-  const [data, setData] = useState<CareTimeOverruns | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [reloadKey, setReloadKey] = useState(0);
   const [exporting, setExporting] = useState<CareTimeExportFormat | null>(null);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
   const { show: showExportError } = useApiErrorDisplay();
   const retryExportRef = useRef<() => void>(() => undefined);
   // Klassennamen dürfen Kommas enthalten; der Schlüssel bleibt deshalb JSON.
   const filterKey = JSON.stringify([groupIds, schoolClasses]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setData(null);
-    clearLoadError();
-    const [groups, classes] = JSON.parse(filterKey) as [string[], string[]];
-    fetchCareTimeOverruns(fromISO, toISO, {
-      groupIds: groups,
-      schoolClasses: classes,
-    })
-      .then((result) => {
-        if (!cancelled) setData(result);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        setData(null);
-        logger.error("care_time_overruns_fetch_failed", {
-          from: fromISO,
-          to: toISO,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        void showLoadError(error, {
-          object: "die Liste Soll und Ist",
-          retry: () => setReloadKey((key) => key + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [fromISO, toISO, filterKey, reloadKey, showLoadError, clearLoadError]);
+  const {
+    data,
+    error: loadFailure,
+    mutate,
+  } = useSWRAuth(
+    tenantDailyKeys.careTimeOverruns(fromISO, toISO, groupIds, schoolClasses),
+    () =>
+      fetchCareTimeOverruns(fromISO, toISO, {
+        groupIds: [...groupIds],
+        schoolClasses: [...schoolClasses],
+      }),
+    { keepPreviousData: false },
+  );
+  const loading = data === undefined && !loadFailure;
+  const load = useSwrResourceLoadError(
+    [{ data, error: loadFailure }],
+    "die Liste Soll und Ist",
+    () => mutate(),
+  );
 
   const downloadExport = useCallback(
     async (format: CareTimeExportFormat) => {

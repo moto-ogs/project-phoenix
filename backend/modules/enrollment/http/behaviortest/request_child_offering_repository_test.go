@@ -55,7 +55,7 @@ func setupChildOfferingTest(t *testing.T, db *bun.DB) (
 		return childRepo.InsertChild(ctx, child)
 	}))
 
-	offeringRepo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}))
+	offeringRepo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}, time.Now))
 	offering := makeOffering(phase.ID, uniqueOfferingName("childoffering"))
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		return offeringRepo.Create(ctx, offering)
@@ -108,7 +108,7 @@ func requestIDOf(t *testing.T, db *bun.DB, tenantID, childID int64) int64 {
 // batched query has more than one id to separate.
 func addSiblingOffering(t *testing.T, db *bun.DB, tenantID, phaseID int64, prefix string) int64 {
 	t.Helper()
-	offeringRepo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}))
+	offeringRepo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}, time.Now))
 	offering := makeOffering(phaseID, uniqueOfferingName(prefix))
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		return offeringRepo.Create(ctx, offering)
@@ -120,7 +120,7 @@ func addSiblingOffering(t *testing.T, db *bun.DB, tenantID, phaseID int64, prefi
 // are phase-scoped, and the shared fixture does not hand the phase back.
 func phaseIDOfOffering(t *testing.T, db *bun.DB, tenantID, offeringID int64) int64 {
 	t.Helper()
-	offeringRepo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}))
+	offeringRepo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}, time.Now))
 	var phaseID int64
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		offering, err := offeringRepo.FindByID(ctx, offeringID)
@@ -243,7 +243,7 @@ func TestOwnerOffering_ListByRequestChildID_ReturnsAllForChild(t *testing.T) {
 	repo := api.NewEnrollmentBookingFixtureWithin(testpkg.WithinCurrentTenant)
 
 	// Second offering so the child has two picks.
-	offering2Repo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}))
+	offering2Repo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}, time.Now))
 	o2 := makeOffering(0, uniqueOfferingName("second"))
 	// We need o2's PhaseID; fetch the first offering's phase via repo.
 	var first *offeringContract.CareOfferingRecord
@@ -284,7 +284,7 @@ func TestOwnerOffering_ListByRequestChildIDs_BatchLoad(t *testing.T) {
 	repo := api.NewEnrollmentBookingFixtureWithin(testpkg.WithinCurrentTenant)
 
 	// Two offering links for the one child.
-	offering2Repo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}))
+	offering2Repo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}, time.Now))
 	var first *offeringContract.CareOfferingRecord
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var fbErr error
@@ -319,7 +319,7 @@ func TestOwnerOffering_ListByRequestChildIDsAtDate_ExcludesHistoricalIntervals(t
 
 	db, _, tenantID, childID, offeringID := setupChildOfferingTest(t, testpkg.SetupTestDB(t))
 	repo := api.NewEnrollmentBookingFixtureWithin(testpkg.WithinCurrentTenant)
-	offeringRepo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}))
+	offeringRepo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}, time.Now))
 	var first *offeringContract.CareOfferingRecord
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var err error

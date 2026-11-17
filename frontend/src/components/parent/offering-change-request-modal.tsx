@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -24,7 +17,10 @@ import { RequestSharingSelector } from "~/components/parent/request-sharing-cont
 import { useRequestVersion } from "~/components/parent/request-edit-modal";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { Textarea } from "~/components/ui/textarea";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   getChildOfferingCatalog,
   updateOfferingChangeRequest,
@@ -38,12 +34,9 @@ import {
   careOfferingDayConflicts,
   conflictOfferingList,
 } from "~/lib/care-offering-day-conflicts";
-import { createLogger } from "~/lib/logger";
 import { formatDate } from "~/lib/date-helpers";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
-
-const logger = createLogger({ component: "OfferingChangeRequestModal" });
 
 // Day abbreviations as the backend stores them, in week order. The label comes
 // from parentMasterData.weekdayShort keyed by ISO weekday.
@@ -164,25 +157,17 @@ export function OfferingChangeRequestModal({
   const [draft, setDraft] = useState<DraftMap>({});
   const [effectiveFrom, setEffectiveFrom] = useState("");
   const [note, setNote] = useState("");
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  // Beide Fehler stehen im Dialog: ein Toast läge unsichtbar unter ihm.
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
   const form = useApiFormError();
   const latestSubmitRef = useRef<(confirmed: boolean) => void>(() => undefined);
-  const latestLoadRef = useRef<() => void>(() => undefined);
-  const latestEffectiveDateRef = useRef<(date: string) => void>(
-    () => undefined,
-  );
   const [recipientIds, setRecipientIds] = useState<string[]>([]);
   const [confirmCompleteWithdrawal, setConfirmCompleteWithdrawal] =
     useState(false);
   const editedOfferingIDs = useRef(new Set<string>());
-  const catalogRequestID = useRef(0);
+  // The date the family picked; without one the catalog answers for the
+  // earliest possible date.
+  const [requestedDate, setRequestedDate] = useState<string | undefined>();
+  const invalidateFamily = useInvalidateFamily();
   const { version, editedAt } = useRequestVersion(
     studentId,
     "offering",
@@ -190,63 +175,37 @@ export function OfferingChangeRequestModal({
     editRequestId !== undefined,
   );
 
-  const load = useCallback(async () => {
-    const requestID = ++catalogRequestID.current;
-    setLoading(true);
-    clearLoadError();
-    try {
-      const loaded = await getChildOfferingCatalog(studentId);
-      if (requestID !== catalogRequestID.current) return;
-      setCatalog(loaded);
+  const resource = useSWRAuth(
+    parentKeys.offeringCatalog(studentId, requestedDate),
+    () => getChildOfferingCatalog(studentId, requestedDate),
+    { keepPreviousData: false },
+  );
+  const loading = !resource.data && !resource.error;
+  // Both errors stay in the dialog: a toast would sit hidden beneath it.
+  const { error: loadError } = useSwrResourceLoadError(
+    [resource],
+    t("careOfferingsModal.errorObjectCatalog"),
+    () => resource.mutate(),
+  );
+  // The draft starts from the first catalog; a later one (another date, a
+  // revalidation) keeps the offerings the family already changed.
+  const loaded = resource.data;
+  if (loaded && loaded !== catalog) {
+    if (catalog === null) {
       setDraft(draftFromCatalog(loaded.items));
       editedOfferingIDs.current.clear();
-      setEffectiveFrom(loaded.earliest_effective_from);
-    } catch (err) {
-      if (requestID !== catalogRequestID.current) return;
-      logger.warn("offering_catalog_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        student_id: studentId,
-      });
-      void showLoadError(err, {
-        object: t("careOfferingsModal.errorObjectCatalog"),
-        retry: () => latestLoadRef.current(),
-      });
-    } finally {
-      if (requestID === catalogRequestID.current) setLoading(false);
-    }
-  }, [clearLoadError, showLoadError, studentId, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const loadForEffectiveDate = async (date: string) => {
-    if (!date || date === effectiveFrom) return;
-    const requestID = ++catalogRequestID.current;
-    setLoading(true);
-    clearLoadError();
-    try {
-      const loaded = await getChildOfferingCatalog(studentId, date);
-      if (requestID !== catalogRequestID.current) return;
-      setCatalog(loaded);
+    } else {
       setDraft((current) =>
         rebaseDraftForCatalog(current, loaded.items, editedOfferingIDs.current),
       );
-      setEffectiveFrom(date);
-    } catch (err) {
-      if (requestID !== catalogRequestID.current) return;
-      logger.warn("offering_catalog_reload_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        student_id: studentId,
-        effective_from: date,
-      });
-      void showLoadError(err, {
-        object: t("careOfferingsModal.errorObjectCatalog"),
-        retry: () => latestEffectiveDateRef.current(date),
-      });
-    } finally {
-      if (requestID === catalogRequestID.current) setLoading(false);
     }
+    setCatalog(loaded);
+    setEffectiveFrom(requestedDate ?? loaded.earliest_effective_from);
+  }
+
+  const loadForEffectiveDate = (date: string) => {
+    if (!date || date === effectiveFrom) return;
+    setRequestedDate(date);
   };
 
   const weekdayLabel = useCallback(
@@ -357,6 +316,7 @@ export function OfferingChangeRequestModal({
             : {}),
           expectedVersion: version,
         });
+        void invalidateFamily(parentKeys.requestEventsFamily(studentId));
         onEdited?.();
         onClose();
         return;
@@ -417,8 +377,6 @@ export function OfferingChangeRequestModal({
 
   useLayoutEffect(() => {
     latestSubmitRef.current = (confirmed) => void handleSubmit(confirmed);
-    latestLoadRef.current = () => void load();
-    latestEffectiveDateRef.current = (date) => void loadForEffectiveDate(date);
   });
 
   return (
@@ -620,7 +578,7 @@ export function OfferingChangeRequestModal({
                   max={catalog.latest_effective_from}
                   required
                   disabled={loading}
-                  onChange={(date) => void loadForEffectiveDate(date)}
+                  onChange={loadForEffectiveDate}
                   hint={t("careOfferingsModal.effectiveFromHint", {
                     date: formatDate(
                       catalog.earliest_effective_from,

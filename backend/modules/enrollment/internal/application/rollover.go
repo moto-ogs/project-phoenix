@@ -104,6 +104,9 @@ type RolloverDependencies struct {
 	Random  func([]byte) error
 	Runtime Runtime
 	Logger  *slog.Logger
+	// Now is the clock of the new request's stamps and token expiry
+	// (ADR 0239); nil is the real clock.
+	Now func() time.Time
 }
 
 // Rollovers creates a new phase from a source phase, carrying every approved
@@ -122,6 +125,9 @@ var _ enrollment.Rollovers = (*Rollovers)(nil)
 func NewRollovers(deps RolloverDependencies) *Rollovers {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
+	}
+	if deps.Now == nil {
+		panic("enrollment rollovers: the clock is required")
 	}
 	return &Rollovers{deps: deps}
 }

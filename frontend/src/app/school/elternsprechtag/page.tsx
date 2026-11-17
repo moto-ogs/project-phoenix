@@ -7,7 +7,7 @@
 // `?sprechtag=…` in der Adresse, damit der Hinweis zu einer Buchung direkt
 // dorthin führt.
 
-import { Suspense, useLayoutEffect, useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -164,14 +164,14 @@ function SchoolParentConferences() {
   const submitting = save.pending;
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
-  const latestSubmitRef = useRef<() => void>(() => undefined);
+  // A retry submits the form again, so it saves the current draft.
+  const conferenceFormRef = useRef<HTMLFormElement>(null);
 
   const [deleteTarget, setDeleteTarget] = useState<ParentConference | null>(
     null,
   );
   const [deleting, setDeleting] = useState(false);
   const deleteErrors = useApiFormError();
-  const latestDeleteRef = useRef<() => void>(() => undefined);
 
   const select = (id: string | null) => {
     const query = id ? `?${CONFERENCE_PARAM}=${encodeURIComponent(id)}` : "";
@@ -231,15 +231,11 @@ function SchoolParentConferences() {
         if (!op.isCurrent()) return;
         await formErrors.show(err, {
           object: "das Speichern des Elternsprechtags",
-          retry: () => latestSubmitRef.current(),
+          retry: () => conferenceFormRef.current?.requestSubmit(),
         });
       }
     });
   };
-  useLayoutEffect(() => {
-    latestSubmitRef.current = () => void submit();
-  });
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void submit();
@@ -263,16 +259,12 @@ function SchoolParentConferences() {
       });
       await deleteErrors.show(err, {
         object: "das Löschen des Elternsprechtags",
-        retry: () => latestDeleteRef.current(),
+        retry: () => void confirmDelete(),
       });
     } finally {
       setDeleting(false);
     }
   };
-  useLayoutEffect(() => {
-    latestDeleteRef.current = () => void confirmDelete();
-  });
-
   const noClasses = !error && data !== undefined && classes.length === 0;
   const classError = formErrors.fieldError("school_class");
   const breakError = formErrors.fieldError("breaks");
@@ -322,6 +314,7 @@ function SchoolParentConferences() {
                 </SlideOverTitle>
               </SlideOverHeader>
               <form
+                ref={conferenceFormRef}
                 className="flex min-h-0 flex-1 flex-col"
                 onSubmit={handleSubmit}
                 noValidate

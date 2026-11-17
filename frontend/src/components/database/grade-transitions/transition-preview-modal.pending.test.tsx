@@ -5,17 +5,20 @@
 import {
   act,
   fireEvent,
-  render,
+  render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
-import type {
-  GradeTransition,
-  TransitionPreview,
-  TransitionResult,
+import { SWRConfig } from "~/lib/swr/testing";
+import {
+  PREVIEW_STALE_CODE,
+  type GradeTransition,
+  type TransitionPreview,
+  type TransitionResult,
 } from "~/lib/grade-transition-api";
 import { catalogText } from "~/test/error-catalog-text";
 import {
@@ -25,6 +28,23 @@ import {
 } from "~/test/helpers/form-modal-pending";
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
+vi.unmock("swr");
+
+const session = {
+  data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+  status: "authenticated",
+};
+vi.mock("next-auth/react", () => ({ useSession: () => session }));
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }: { readonly children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    ),
+  });
+}
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -180,5 +200,21 @@ describe("TransitionPreviewModal pending lock (#6593)", () => {
 
     expect(onApplied).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("shows a failed reload after a stale refusal instead of the refused preview", async () => {
+    renderPreview();
+    api.applyGradeTransition.mockRejectedValueOnce(
+      new ApiError("stale", 409, { code: PREVIEW_STALE_CODE }),
+    );
+    api.previewGradeTransition.mockRejectedValueOnce(serverError());
+    expect(await screen.findByText("werden versetzt")).toBeInTheDocument();
+    await applyThroughConfirmation();
+
+    expect(
+      await screen.findByText(catalogText("general.server", "die Vorschau")),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("werden versetzt")).toBeNull();
+    expect(api.previewGradeTransition).toHaveBeenCalledTimes(2);
   });
 });

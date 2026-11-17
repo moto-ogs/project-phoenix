@@ -8,7 +8,6 @@ const DefaultDeviceOnlineWindow = 5 * time.Minute
 
 type UpdateDevice struct {
 	ID                    int64
-	UpdatedAt             time.Time
 	DeviceID              string
 	DeviceType            string
 	Name                  *string

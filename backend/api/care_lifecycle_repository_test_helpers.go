@@ -104,6 +104,9 @@ func (r CareLifecycleTestRepositories) NewCareLifecycle(config CareLifecycleTest
 	deps.LockCareBookingWrites = lock
 	deps.BookingsAuthoritative = config.BookingsAuthoritative
 	deps.Today, deps.Now = config.Today, config.Now
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	if config.PlanningStaffing != nil {
 		deps.Owners.PlanningStaffing = config.PlanningStaffing
 	}
@@ -112,8 +115,12 @@ func (r CareLifecycleTestRepositories) NewCareLifecycle(config CareLifecycleTest
 
 // NewCareResumption constructs the workflow entry independently of the domain.
 func (r CareLifecycleTestRepositories) NewCareResumption(config CareLifecycleTestConfig) carePlanHTTP.CareResumption {
+	today := config.Today
+	if today == nil {
+		today = owner0.CalendarDateClock(config.Now)
+	}
 	return owners.NewCareResumption(r.lifecycle.Owners.Students, r.lifecycle.Records,
-		owners.NewCareEndRecorder(config.Audit), config.Today, r.lifecycle.Logger).Resume
+		owners.NewCareEndRecorder(config.Audit), today, r.lifecycle.Logger).Resume
 }
 
 // MustNewStudentCompanions composes the companion capability over a test

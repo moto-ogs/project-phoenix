@@ -25,8 +25,8 @@ type transitionRow struct {
 	bun.BaseModel            `bun:"table:grade_transitions,alias:transition"`
 	ID                       int64      `bun:"id,pk,autoincrement"`
 	TenantID                 int64      `bun:"tenant_id,notnull"`
-	CreatedAt                time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt                time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt                time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt                time.Time  `bun:"updated_at,nullzero,notnull"`
 	AcademicYear             string     `bun:"academic_year,notnull"`
 	Status                   string     `bun:"status,notnull"`
 	AppliedAt                *time.Time `bun:"applied_at"`
@@ -51,7 +51,8 @@ type historyRow struct {
 	bun.BaseModel `bun:"table:grade_transition_history,alias:history"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	TransitionID  int64     `bun:"transition_id,notnull"`
 	StudentID     int64     `bun:"student_id,notnull"`
 	PersonName    string    `bun:"person_name,notnull"`
@@ -66,7 +67,7 @@ type classTeacherLedgerRow struct {
 	bun.BaseModel `bun:"table:grade_transition_class_teachers,alias:ledger"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
 	TransitionID  int64     `bun:"transition_id,notnull"`
 	StaffID       int64     `bun:"staff_id,notnull"`
 	SchoolClass   string    `bun:"school_class,notnull"`
@@ -77,7 +78,7 @@ type classListLedgerRow struct {
 	bun.BaseModel `bun:"table:grade_transition_class_list_entries,alias:ledger"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
 	TransitionID  int64     `bun:"transition_id,notnull"`
 	EntryID       *int64    `bun:"entry_id"`
 	FirstName     string    `bun:"first_name,notnull"`
@@ -285,7 +286,7 @@ func (s *Store) UpdateTransitionFields(ctx context.Context, tenantID, id int64, 
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	result, err := db.NewUpdate().TableExpr(transitionsTable).
-		Set(`academic_year = ?`, academicYear).Set(`notes = ?`, notes).Set(`updated_at = NOW()`).
+		Set(`academic_year = ?`, academicYear).Set(`notes = ?`, notes).
 		Where(`"transition".tenant_id = ?`, tenantID).Where(`"transition".id = ?`, id).
 		Where(`"transition".status = ?`, schoolstructure.TransitionStatusDraft).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
@@ -341,10 +342,18 @@ func (s *Store) DeleteTransition(ctx context.Context, tenantID, id int64) (int64
 	return stats.Rows, stats, nil
 }
 
+// draftCutoff is Berlin midnight of the database's day minus the bound
+// number of days: the trigger stamps a draft's updated_at with the database
+// clock, so its window counts from that clock (ADR 0281 point 3). It is this
+// package's one read of the database clock.
+const draftCutoff = `(((clock_timestamp() AT TIME ZONE 'Europe/Berlin')::date - ?::int)::timestamp AT TIME ZONE 'Europe/Berlin')`
+
 // DeleteTransitionsEndedBefore removes the transitions of the school that
-// ended before cutoff: an applied one at its application, a reverted one at
-// its reversal, a draft at its last change (#4045). Their child rows cascade.
-func (s *Store) DeleteTransitionsEndedBefore(ctx context.Context, tenantID int64, cutoff time.Time) (int64, domain.OperationStats, error) {
+// ended before the window: an applied one at its application and a reverted
+// one at its reversal before cutoff, stamped by the owner, a draft at its
+// last change before the window on the database's day (#4045). Their child
+// rows cascade.
+func (s *Store) DeleteTransitionsEndedBefore(ctx context.Context, tenantID int64, cutoff time.Time, retentionDays int) (int64, domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return 0, domain.OperationStats{}, err
@@ -353,7 +362,10 @@ func (s *Store) DeleteTransitionsEndedBefore(ctx context.Context, tenantID int64
 	started := time.Now()
 	result, err := db.NewDelete().TableExpr(transitionsTable).
 		Where(`"transition".tenant_id = ?`, tenantID).
-		Where(`COALESCE("transition".reverted_at, "transition".applied_at, "transition".updated_at) < ?`, cutoff).
+		WhereGroup(" AND ", func(q *bun.DeleteQuery) *bun.DeleteQuery {
+			return q.Where(`COALESCE("transition".reverted_at, "transition".applied_at) < ?`, cutoff).
+				WhereOr(`"transition".reverted_at IS NULL AND "transition".applied_at IS NULL AND "transition".updated_at < `+draftCutoff, retentionDays)
+		}).
 		Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
@@ -416,7 +428,6 @@ func (s *Store) MarkApplied(ctx context.Context, tenantID, id, accountID int64, 
 		Set(`status = ?`, schoolstructure.TransitionStatusApplied).
 		Set(`applied_at = ?`, at).Set(`applied_by = ?`, accountID).
 		Set(`roster_baseline_instance_id = ?`, rosterBaselineInstanceID).
-		Set(`updated_at = NOW()`).
 		Where(`"transition".tenant_id = ?`, tenantID).Where(`"transition".id = ?`, id).
 		Where(`"transition".status = ?`, schoolstructure.TransitionStatusDraft).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
@@ -440,7 +451,6 @@ func (s *Store) MarkReverted(ctx context.Context, tenantID, id, accountID int64,
 	result, err := db.NewUpdate().TableExpr(transitionsTable).
 		Set(`status = ?`, schoolstructure.TransitionStatusReverted).
 		Set(`reverted_at = ?`, at).Set(`reverted_by = ?`, accountID).
-		Set(`updated_at = NOW()`).
 		Where(`"transition".tenant_id = ?`, tenantID).Where(`"transition".id = ?`, id).
 		Where(`"transition".status = ?`, schoolstructure.TransitionStatusApplied).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
@@ -462,10 +472,10 @@ func (s *Store) InsertHistory(ctx context.Context, tenantID int64, entries []sch
 	if err != nil {
 		return domain.OperationStats{}, err
 	}
-	rows := make([]historyRow, 0, len(entries))
+	rows, now := make([]historyRow, 0, len(entries)), s.now()
 	for _, entry := range entries {
 		rows = append(rows, historyRow{
-			TenantID: tenantID, TransitionID: entry.TransitionID, StudentID: entry.StudentID, PersonName: entry.PersonName,
+			TenantID: tenantID, UpdatedAt: now, TransitionID: entry.TransitionID, StudentID: entry.StudentID, PersonName: entry.PersonName,
 			FromClass: entry.FromClass, ToClass: entry.ToClass, Action: entry.Action, FromStatus: entry.FromStatus, RFIDTag: entry.RFIDTag,
 		})
 	}

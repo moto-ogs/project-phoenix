@@ -196,11 +196,11 @@ func (y supervisionYard) Status(ctx context.Context, staffID int64) (*supervisio
 var errSupervisionIncompleteSources = errors.New("supervision dashboard adapters are not fully configured")
 
 // newSupervisionDashboard composes the supervision projection over the ports
-// the root bound. Rooms and Now are optional; every other port is required,
+// the root bound. Rooms is optional; every other port and the clock are required,
 // and a root constructor binds none when one of its sources is missing.
 func newSupervisionDashboard(deps supervisiondashboard.Dependencies) (supervisiondashboard.Query, error) {
 	if deps.Access == nil || deps.Sessions == nil || deps.Yard == nil || deps.Groups == nil || deps.Schedule == nil ||
-		deps.Presence == nil || deps.Planning == nil || deps.Settings == nil || deps.Staff == nil || deps.Calendar == nil {
+		deps.Presence == nil || deps.Planning == nil || deps.Settings == nil || deps.Staff == nil || deps.Calendar == nil || deps.Now == nil {
 		return nil, errSupervisionIncompleteSources
 	}
 	return supervisiondashboard.New(deps), nil

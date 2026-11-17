@@ -154,6 +154,9 @@ func NewStaffShiftService(repo staffShiftOperations, staffRepo staffDirectory, s
 			opt(service)
 		}
 	}
+	if service.today == nil {
+		panic("workforce staff shifts: the school day clock is required (WithStaffShiftToday)")
+	}
 	return service
 }
 

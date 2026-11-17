@@ -1,9 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 import type { AbsenceType } from "~/lib/absence-type-api";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { setTestClock } from "~/test/clock";
 import { suppressConsole } from "~/test/helpers/console";
 
 vi.mock("~/components/ui/date-picker", async () =>
@@ -155,7 +160,7 @@ function previewOf(
 function renderModal(types: AbsenceType[] = [regeneration, conversion, trip]) {
   const onSaved = vi.fn().mockResolvedValue(undefined);
   const onClose = vi.fn();
-  render(
+  renderWithCache(
     <AbsenceBookingModal
       staff={staff}
       types={types}
@@ -176,6 +181,9 @@ describe("AbsenceBookingModal", () => {
   suppressConsole("error");
 
   beforeEach(() => {
+    // Konten, Buchungstage und Jahreswechsel sind fest auf September 2026
+    // gerechnet (Mittwoch, 09.09.2026).
+    setTestClock("2026-09-09T12:00:00+02:00");
     vi.clearAllMocks();
     mocks.getVacationQuota.mockImplementation((_id: string, year: number) =>
       Promise.resolve(vacationQuota(year, 12)),
@@ -645,3 +653,23 @@ describe("AbsenceBookingModal", () => {
     });
   });
 });
+
+// Echter SWR-Cache je Render und eine Sitzung mit Konto, sonst liest
+// useSWRAuth nichts.
+function TenantSWR({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-test", tenantId: 1 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const renderWithCache = (ui: React.ReactElement) =>
+  render(ui, { wrapper: TenantSWR });

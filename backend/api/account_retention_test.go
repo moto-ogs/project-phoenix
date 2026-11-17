@@ -38,6 +38,9 @@ func TestHourlyCleanupErasesUnusedAccounts(t *testing.T) {
 	unused := testpkg.CreateTestAccount(t, admin, "erase-unused")
 	testpkg.UnclaimTestAccount(t, admin, unused.ID)
 	_, needed := testpkg.CreateTestPersonWithAccount(t, admin, "Bleibt", "Konto")
+	// The erasure leaves no trace of the person's failed sign-ins (#7214).
+	_, err = admin.NewRaw(`UPDATE auth.accounts SET password_attempts = 3, password_locked_until = now() + interval '1 minute', password_failed_at = now() WHERE id = ?`, unused.ID).Exec(ctx)
+	require.NoError(t, err)
 
 	var candidates []int64
 	require.NoError(t, admin.NewRaw(`SELECT id FROM auth.accounts
@@ -56,4 +59,9 @@ func TestHourlyCleanupErasesUnusedAccounts(t *testing.T) {
 	require.NoError(t, admin.NewRaw(`SELECT email FROM auth.accounts WHERE id IN (?, ?) ORDER BY id`, unused.ID, needed.ID).
 		Scan(context.Background(), &emails))
 	assert.Equal(t, []string{fmt.Sprintf("geloescht-%d@example.invalid", unused.ID), needed.Email}, emails)
+	var traces int
+	require.NoError(t, admin.NewRaw(`SELECT count(*) FROM auth.accounts WHERE id = ?
+		AND (password_attempts <> 0 OR password_locked_until IS NOT NULL OR password_failed_at IS NOT NULL)`, unused.ID).
+		Scan(context.Background(), &traces))
+	assert.Zero(t, traces, "an erased account keeps no failed sign-in state")
 }

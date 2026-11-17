@@ -58,10 +58,7 @@ type classHandover struct {
 }
 
 func newClassHandover(deps ClassDayDependencies) classHandover {
-	today := calendar.TodayDate
-	if now := deps.Now; now != nil {
-		today = func() calendar.Date { return calendar.DateFromTime(now()) }
-	}
+	today := calendar.CalendarDateClock(deps.clock())
 	return classHandover{
 		store: deps.Handovers, scope: deps.HandoverScope, names: deps.HandoverStaffNames,
 		announcer: deps.HandoverAnnouncer, rosters: deps.Rosters, today: today,
@@ -171,7 +168,7 @@ func checkHandoverChildren(roster *DayRoster, present, absent []int64) error {
 	onRoster := map[int64]bool{}
 	if roster != nil {
 		for _, row := range roster.Rows {
-			if !row.ListEntry && row.StudentID > 0 {
+			if !row.NoCare() && row.StudentID > 0 {
 				onRoster[row.StudentID] = true
 			}
 		}
@@ -255,7 +252,7 @@ func markHandoverAbsent(report *classday.DayReport, absent []int64) {
 	}
 	for i := range report.Rows {
 		row := &report.Rows[i]
-		if !row.ListEntry && marked[row.StudentID] {
+		if !row.NoCare() && marked[row.StudentID] {
 			row.HandoverAbsent = true
 		}
 	}

@@ -81,7 +81,7 @@ func (rs *Resource) getReport(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rs *Resource) exportReport(w http.ResponseWriter, r *http.Request) {
-	if rs.Runtime.Export == nil {
+	if rs.Runtime.Export == nil || rs.Runtime.Now == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("statistics export service is not configured")))
 		return
 	}
@@ -107,6 +107,7 @@ func (rs *Resource) exportReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	doc, name := buildSectionDocument(report, section)
+	doc.GeneratedAt = rs.Runtime.Now()
 	filename := name + "-" + report.From.String() + "-" + report.To.String()
 	file, err := rs.Runtime.Export(doc, format, filename)
 	if err != nil {

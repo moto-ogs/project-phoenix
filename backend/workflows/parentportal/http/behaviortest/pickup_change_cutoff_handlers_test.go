@@ -16,7 +16,7 @@ import (
 )
 
 // cutoffPassedSettings keeps every parent feature on and sets the same-day
-// pickup cutoff to midnight, so today is closed at any time the test runs.
+// pickup cutoff to midnight, so today is closed on the routes' fixed clock.
 type cutoffPassedSettings struct{ parentService.SettingsService }
 
 func (cutoffPassedSettings) ResolveBoolForTenant(ctx context.Context, tenantID int64, key string) (bool, error) {
@@ -54,7 +54,7 @@ func TestDeleteCareExceptionEndpoint_IsNoopWithoutGuardianPickupAfterCutoff(t *t
 
 	berlin, err := time.LoadLocation("Europe/Berlin")
 	require.NoError(t, err)
-	now := time.Now().In(berlin)
+	now := parentRouteNow().In(berlin)
 	today := now.Format("2006-01-02")
 	tomorrow := time.Date(now.Year(), now.Month(), now.Day()+1, 12, 0, 0, 0, berlin).Format("2006-01-02")
 

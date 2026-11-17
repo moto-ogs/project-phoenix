@@ -20,12 +20,19 @@ import (
 // occurrences newly possible before the old start materialize — existing
 // instances stay untouched.
 
-// futureMondayForStartPull returns a Monday at least eight days in the future,
-// so both the old and the pulled-forward start stay strictly after today on
-// every weekday the suite runs.
+// startPullToday is the day the suite runs on: its Timetable graph reads
+// startPullNow, so "in the past" is decided against this day, not the wall
+// clock.
+var startPullToday = calendar.NewDate(2030, 8, 26)
+
+func startPullNow() time.Time { return startPullToday.BerlinMidnight().Add(12 * time.Hour) }
+
+// futureMondayForStartPull returns a Monday at least eight days after
+// startPullToday, so both the old and the pulled-forward start stay strictly
+// after the suite's today.
 func futureMondayForStartPull(t *testing.T) calendar.Date {
 	t.Helper()
-	today := calendar.NewDate(2030, 8, 26)
+	today := startPullToday
 	daysAhead := (int(time.Monday) - int(today.Weekday()) + 7) % 7
 	if daysAhead == 0 {
 		daysAhead = 7
@@ -70,7 +77,7 @@ func TestUpdateTemplate_StartDatePullForward_MovesEnvelopeRosterAndMaterializesG
 	newStart := futureMondayForStartPull(t)
 	oldStart := newStart.AddDays(7)
 
-	s := makeWeekdayRosterScenario(t, newStart)
+	s := makeWeekdayRosterScenario(t, newStart, startPullNow)
 	defer s.teardown(t)
 
 	name := fmt.Sprintf("PullForward-%d", time.Now().UnixNano())
@@ -152,7 +159,7 @@ func TestUpdateTemplate_StartDatePullForward_MovesWeekdayScopedRoster(t *testing
 	newStart := futureMondayForStartPull(t)
 	oldStart := newStart.AddDays(7)
 
-	s := makeWeekdayRosterScenario(t, newStart)
+	s := makeWeekdayRosterScenario(t, newStart, startPullNow)
 	defer s.teardown(t)
 
 	name := fmt.Sprintf("PullForwardWeekday-%d", time.Now().UnixNano())
@@ -225,7 +232,7 @@ func TestUpdateTemplate_StartDatePullForward_MidweekDateStartsAtNextMatchingWeek
 	newStart := futureMondayForStartPull(t) // a Monday
 	oldStart := newStart.AddDays(8)         // Tuesday one week later
 
-	s := makeWeekdayRosterScenario(t, newStart)
+	s := makeWeekdayRosterScenario(t, newStart, startPullNow)
 	defer s.teardown(t)
 
 	name := fmt.Sprintf("PullForwardMidweek-%d", time.Now().UnixNano())
@@ -271,7 +278,7 @@ func TestUpdateTemplate_StartDatePullForward_Validation(t *testing.T) {
 	newStart := futureMondayForStartPull(t)
 	oldStart := newStart.AddDays(7)
 
-	s := makeWeekdayRosterScenario(t, newStart)
+	s := makeWeekdayRosterScenario(t, newStart, startPullNow)
 	defer s.teardown(t)
 
 	weekdays := []int{activityContract.WeekdayMonday}
@@ -352,7 +359,7 @@ func TestUpdateTemplate_StartDatePullForward_RejectsPredecessorOverlap(t *testin
 	newStart := futureMondayForStartPull(t)
 	splitDate := newStart.AddDays(14)
 
-	s := makeWeekdayRosterScenario(t, newStart)
+	s := makeWeekdayRosterScenario(t, newStart, startPullNow)
 	defer s.teardown(t)
 
 	weekdays := []int{activityContract.WeekdayMonday}

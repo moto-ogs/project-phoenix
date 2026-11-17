@@ -164,11 +164,9 @@ type service struct {
 	guardianWaker GuardianWaker
 }
 
+// now reads the composition's clock (ADR 0239), which NewService requires.
 func (s *service) now() time.Time {
-	if s.Now != nil {
-		return s.Now()
-	}
-	return time.Now()
+	return s.Now()
 }
 
 func (s *service) todayDate() calendar.Date {
@@ -265,6 +263,9 @@ func (s *service) attendanceMethod(ctx context.Context) string {
 
 // NewService creates a new active service instance
 func NewService(deps ServiceDependencies, options ...ServiceOption) Service {
+	if deps.Now == nil {
+		panic("studentpresence active service: the clock is required")
+	}
 	svc := &service{ServiceDependencies: deps}
 	for _, option := range options {
 		option(svc)

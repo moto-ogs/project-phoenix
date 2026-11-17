@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
@@ -33,9 +34,9 @@ type careExitOfferingSchool struct {
 func TestCareExitOfferingLinksTenantScopeRollbackAndRestore(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := api.NewEnrollmentBookingProjection(api.NewEnrollmentBookings(), api.UngatedEnrollmentPhaseBounds())
+	module := api.NewEnrollmentBookingProjection(api.NewEnrollmentBookings(time.Now), api.UngatedEnrollmentPhaseBounds(), time.Now)
 	const restoreDay = enrollmentTest.Date("2031-01-01")
-	bookings := carePlanCompose.NewOfferingBookings()
+	bookings := carePlanCompose.NewOfferingBookings(time.Now)
 	const validUntil = enrollmentTest.Date("2031-02-01")
 	const careUntil = careplan.Date(validUntil)
 	schools := make([]careExitOfferingSchool, 0, 2)

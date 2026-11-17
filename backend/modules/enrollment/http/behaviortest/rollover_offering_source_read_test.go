@@ -299,6 +299,7 @@ func TestRolloverCopiesSourceBookingCommittedWhileWaitingAtGate(t *testing.T) {
 		return owners.MustNewTimetableRecurrenceLock(testpkg.NewDatabase(t, env.db)).LockRecurrenceWrites(lockCtx)
 	}
 	svc := newTestRolloverService(owners.EnrollmentRolloverSources{
+		Now:        time.Now,
 		Bookings:   requestTestBookingCommands(),
 		Phases:     env.repos.Enrollment(),
 		Requests:   env.repos.Enrollment(),

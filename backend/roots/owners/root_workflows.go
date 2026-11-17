@@ -22,7 +22,7 @@ func BuildStudentDeletion(
 	carePlan careplan.Capability, timetableOwner timetable.Capability, owner TimetableOwner, feedback studentdeletioncompose.Feedback,
 	verifiedStaff func(context.Context) (bool, error), photos peoplePorts.StudentPhotoService, audit AuditOwner,
 ) (*studentdeletion.Workflow, error) {
-	owners, err := NewStudentDeletionOwners(db)
+	owners, err := NewStudentDeletionOwners(db, env.Now)
 	if err != nil {
 		return nil, fmt.Errorf("compose student deletion owners: %w", err)
 	}
@@ -32,6 +32,7 @@ func BuildStudentDeletion(
 		LockCareBookingWrites: owner.RecurrenceLock.LockRecurrenceWrites,
 		UnlinkPhoto:           photos.ScheduleUnlinkAfterCommit,
 		Broadcaster:           hub, Logger: env.Logger.With("workflow", "student_deletion"), Audit: audit.Command,
+		Now: env.Now,
 	}, NewStudentActivityEnrollments())
 	if err != nil {
 		return nil, fmt.Errorf("compose student deletion workflow: %w", err)

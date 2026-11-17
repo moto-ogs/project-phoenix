@@ -3,6 +3,8 @@
 package owners
 
 import (
+	"time"
+
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -21,9 +23,16 @@ func NewTestAuditPersistence(db transactionruntime.Database, command auditModels
 }
 
 // NewTestAuditStore composes the Audit append store over the test database
-// for narrow test compositions.
+// for narrow test compositions, on the real clock.
 func NewTestAuditStore(db transactionruntime.Database) auditModels.AppendStore {
-	return NewTestAuditPersistence(db, nil).AppendStore
+	return NewTestAuditStoreAt(db, nil)
+}
+
+// NewTestAuditStoreAt composes the Audit append store on the Audit clock
+// now, the clock of the command it serves (nil: the real one); it stamps
+// the ledgers the database does not.
+func NewTestAuditStoreAt(db transactionruntime.Database, now func() time.Time) auditModels.AppendStore {
+	return auditCompose.MustNewPersistence(auditCompose.PersistenceDependencies{DB: db.Pool(), Now: now}).AppendStore
 }
 
 // NewEnrollmentFlowTestRepositories composes the enrollment flow suites'

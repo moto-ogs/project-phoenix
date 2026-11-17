@@ -84,6 +84,19 @@ describe("presentError", () => {
     },
   );
 
+  it("tells the reader that the school's federal state is missing and whom to ask", () => {
+    const error = new ApiError("federal state is not set", 409, {
+      code: "calendar.federal_state_missing",
+      instance: "req-1",
+    });
+    const result = presentError(error, "Die Karte „Personal heute“");
+    expect(result.message).toBe(
+      "Für die Schule ist noch kein Bundesland eingetragen. Deshalb fehlen die Feiertage. Die Leitung trägt es in den Einstellungen ein.",
+    );
+    expect(result.retryable).toBe(false);
+    expect(result.requestId).toBeUndefined();
+  });
+
   it("explains a disguised proof and the next step in plain German", () => {
     const error = new ApiError("unsupported magic bytes", 400, {
       code: "enrollment.upload_content_mismatch",

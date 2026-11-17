@@ -96,7 +96,7 @@ func newClassLetterRoute(t *testing.T) *classLetterRoute {
 		other: {ID: other, Title: "Fremd", CreatedBy: account.ID + 1, Sender: &communication.ParentLetterSender{Name: "Bert", SchoolClass: "3b"}},
 		ogs:   {ID: ogs, Title: "OGS", CreatedBy: account.ID, Targets: []communication.ParentAnnouncementTarget{{TargetType: "class", RefText: &class}}},
 	}}
-	resource := announcement.NewResource(contract, nil)
+	resource := announcement.NewResource(contract, nil, time.Now)
 	resource.Classes = classReach{classes: []string{"3b"}}
 	return &classLetterRoute{
 		contract: contract,
@@ -193,7 +193,7 @@ func TestOGSListShowsSentClassLettersOnly(t *testing.T) {
 	letter := route.contract.letters[11]
 	letter.PublishedAt = &sent
 	route.contract.letters[11] = letter
-	resource := announcement.NewResource(ogsListContract{route.contract}, nil)
+	resource := announcement.NewResource(ogsListContract{route.contract}, nil, time.Now)
 	claims := routetest.DefaultTestClaims()
 	claims.Permissions = []string{permissions.AdminWildcard}
 	claims.IsAdmin = true
@@ -226,7 +226,7 @@ func (s ogsListContract) GetParentAnnouncement(_ context.Context, id int64, _ ..
 func TestOGSDirectReadHidesClassLetterDrafts(t *testing.T) {
 	t.Parallel()
 	route := newClassLetterRoute(t)
-	resource := announcement.NewResource(ogsListContract{route.contract}, nil)
+	resource := announcement.NewResource(ogsListContract{route.contract}, nil, time.Now)
 	router := resource.Router(rootAPI.ProtectedTenantRoutes)
 	claims := routetest.DefaultTestClaims()
 	claims.ID = route.claims.ID // Even the same account needs the school portal for drafts.
@@ -259,6 +259,16 @@ func (s relatedReadContract) ParentDeclarationStatus(ctx context.Context, id int
 	return &communication.ParentDeclarationStatus{Title: s.row.Title}, s.call(ctx, "declaration-status", id)
 }
 
+// ParentDeclarationProof serves the export the way the status does: the
+// proof reads the declaration's status (#4814).
+func (s relatedReadContract) ParentDeclarationProof(ctx context.Context, _, id int64, _ *int64) (*communication.ParentDeclarationStatus, error) {
+	return s.ParentDeclarationStatus(ctx, id)
+}
+
+func (s relatedReadContract) StudentParentRecords(context.Context, int64, int64) (*communication.StudentParentRecords, error) {
+	return &communication.StudentParentRecords{}, nil
+}
+
 type classLetterReport struct{ calls int }
 
 func (r *classLetterReport) RenderReport(doc announcement.ReportDocument, _ string) (announcement.ReportFile, error) {
@@ -270,6 +280,7 @@ func TestOGSRelatedReadsHideClassLetterDrafts(t *testing.T) {
 	t.Parallel()
 	s, resource, token := announcementRoute(t)
 	resource.Service = relatedReadContract{s}
+	resource.StudentRecords = relatedReadContract{s}
 	reports := &classLetterReport{}
 	resource.Reports = reports
 	schoolClaims := routetest.DefaultTestClaims()

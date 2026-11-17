@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 )
 
@@ -239,7 +237,7 @@ func (rs *Resource) readableVisitFilter(ctx context.Context, filter studentprese
 		return filter, err
 	}
 	if !enabled {
-		cutoff := calendar.TodayDate().BerlinMidnight()
+		cutoff := rs.today().BerlinMidnight()
 		filter.ClosedSince = &cutoff
 	}
 	return filter, nil

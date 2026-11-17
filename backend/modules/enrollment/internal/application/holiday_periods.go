@@ -39,7 +39,8 @@ type HolidayPeriodStore interface {
 	ListHolidayPeriods(ctx context.Context, organizationID int64) ([]enrollment.HolidayPeriod, error)
 	// FindHolidayPeriod reads one period; lock holds its row for an update.
 	FindHolidayPeriod(ctx context.Context, organizationID, periodID int64, lock bool) (enrollment.HolidayPeriod, bool, error)
-	InsertHolidayPeriod(ctx context.Context, organizationID int64, input enrollment.HolidayPeriodInput) (int64, error)
+	// InsertHolidayPeriod adds a draft period; its time models take effect on effectiveOn.
+	InsertHolidayPeriod(ctx context.Context, organizationID int64, input enrollment.HolidayPeriodInput, effectiveOn calendar.Date) (int64, error)
 	// UpdateHolidayPeriod writes the period and makes its weeks and time
 	// models those of input: kept by ID, added without one, removed when
 	// left out.
@@ -75,7 +76,7 @@ func NewHolidayPeriods(store HolidayPeriodStore, forms HolidayFormStore, today f
 		panic("enrollment: the holiday period store and the form store are required")
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("enrollment: the holiday periods need the day clock")
 	}
 	return &HolidayPeriods{store: store, forms: forms, today: today, calendar: schoolCalendar}
 }
@@ -122,7 +123,7 @@ func (h *HolidayPeriods) CreateHolidayPeriod(ctx context.Context, organizationID
 	if err := refuseHolidayWeeksWithoutCare(ctx, h.calendar, input.Weeks, enrollment.HolidayPeriod{}); err != nil {
 		return enrollment.HolidayPeriod{}, err
 	}
-	periodID, err := h.store.InsertHolidayPeriod(ctx, organizationID, input)
+	periodID, err := h.store.InsertHolidayPeriod(ctx, organizationID, input, h.today())
 	if err != nil {
 		return enrollment.HolidayPeriod{}, err
 	}

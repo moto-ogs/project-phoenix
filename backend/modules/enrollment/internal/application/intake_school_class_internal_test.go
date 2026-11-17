@@ -143,7 +143,7 @@ func TestValidateAndNormalizeSchoolClasses(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := NewIntake(IntakeDependencies{Settings: schoolClassSettings(tc.collect)})
+			svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: schoolClassSettings(tc.collect)})
 			children := []SubmitChild{tc.child}
 			err := svc.validateAndNormalizeSchoolClasses(context.Background(), tc.phase, children)
 			if tc.wantErr {

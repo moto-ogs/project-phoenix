@@ -6,7 +6,7 @@
 
 import { Alert } from "~/components/ui/alert";
 import { FramedList } from "~/components/ui/framed-list";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { ApiError } from "~/lib/api-error";
 import { StatCard } from "~/components/ui/stat-card";
 import { Button } from "~/components/ui/button";
@@ -24,14 +24,16 @@ import {
   SlideOverTitle,
 } from "~/components/ui/slide-over";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useFreshSWR } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { createLogger } from "~/lib/logger";
 import {
   applyGradeTransition,
   PREVIEW_STALE_CODE,
   previewGradeTransition,
   type GradeTransition,
-  type TransitionPreview,
   type TransitionResult,
 } from "~/lib/grade-transition-api";
 
@@ -58,15 +60,25 @@ export function TransitionPreviewModal({
   onBackToEditor,
   onApplied,
 }: TransitionPreviewModalProps) {
-  const [preview, setPreview] = useState<TransitionPreview | null>(null);
+  // Applied against exactly the cohort shown: each opening and each reload
+  // after a refusal waits for its own answer, never a cached preview.
+  const {
+    data: freshData,
+    error: previewError,
+    mutate,
+  } = useFreshSWR(tenantAdminKeys.gradeTransitionPreview(transition.id), () =>
+    previewGradeTransition(transition.id),
+  );
+  // A failed load shows its error, not the preview it was meant to replace.
+  const data = previewError ? undefined : freshData;
+  const preview = data ?? null;
   // Ladefehler und Anwendefehler bleiben im Panel, mit Katalogtext und
   // Wiederholen (#2517).
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const [reloadKey, setReloadKey] = useState(0);
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data, error: previewError }],
+    "die Vorschau",
+    () => mutate(),
+  );
   const [confirmOpen, setConfirmOpen] = useState(false);
   // Mounted only while a preview is shown. The session spans the hidden
   // panel while the confirmation applies (#6593), so the panel stays locked
@@ -81,46 +93,10 @@ export function TransitionPreviewModal({
   } = useApiFormError();
   const latestApplyRef = useRef<() => void>(() => undefined);
 
-  useEffect(() => {
-    let cancelled = false;
-    clearLoadError();
-    previewGradeTransition(transition.id)
-      .then((data) => {
-        if (!cancelled) setPreview(data);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        logger.error("preview_load_failed", {
-          transition_id: transition.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        void showLoadError(error, {
-          object: "die Vorschau",
-          retry: () => setReloadKey((key) => key + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [transition.id, reloadKey, clearLoadError, showLoadError]);
-
   // Reloads the preview after the backend refused a stale confirmation, so the
   // admin decides again on what is true NOW instead of on the numbers that were
   // rendered before someone else changed the classes or mappings (#405).
-  const reloadPreview = async () => {
-    try {
-      setPreview(await previewGradeTransition(transition.id));
-    } catch (error) {
-      logger.error("preview_reload_failed", {
-        transition_id: transition.id,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      void showLoadError(error, {
-        object: "die Vorschau",
-        retry: () => setReloadKey((key) => key + 1),
-      });
-    }
-  };
+  const reloadPreview = () => mutate();
 
   const handleApply = async () => {
     if (!preview) return;

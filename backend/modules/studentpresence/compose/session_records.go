@@ -35,8 +35,7 @@ type (
 type SessionRecordDependencies struct {
 	DB      *bun.DB
 	Observe func(Observation)
-	// Now is the clock "today" of the supervision reads comes from; nil uses
-	// time.Now.
+	// Now is the clock of the records and their supervision day; nil uses time.Now.
 	Now        func() time.Time
 	Devices    DeviceDirectory
 	Rooms      RoomDirectory
@@ -62,15 +61,11 @@ func NewSessionRecords(deps SessionRecordDependencies) (SessionRecords, error) {
 	if deps.DB == nil || deps.Observe == nil || deps.Errors == nil {
 		return nil, errors.New("student presence session records: database, observer and error representation are required")
 	}
-	var clocks []func() time.Time
-	now := time.Now
-	if deps.Now != nil {
-		clocks, now = append(clocks, deps.Now), deps.Now
-	}
-	records := application.New(postgres.New(databaseRuntime(deps.DB)), transaction{}, deps.Observe, ports.AttendanceRulePorts{}, now)
+	now := orWallClock(deps.Now)
+	records := application.New(postgres.New(databaseRuntime(deps.DB), now), transaction{}, deps.Observe, ports.AttendanceRulePorts{}, now)
 	return application.NewSessionRecords(
 		postgres.NewSessionRepository(records, deps.Errors, postgres.SessionDirectories{Devices: deps.Devices, Rooms: deps.Rooms, Activities: deps.Activities}),
-		postgres.NewSupervisionRepository(records, deps.Errors, deps.Staff, calendar.CalendarDateClock(clocks...)), deps.Staff), nil
+		postgres.NewSupervisionRepository(records, deps.Errors, deps.Staff, calendar.CalendarDateClock(now)), deps.Staff), nil
 }
 
 // SessionRepositories binds the native repositories of composed records.

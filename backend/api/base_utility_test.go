@@ -302,8 +302,8 @@ func setupCaregiverCompositionModule(t *testing.T, graph *goldenRuntime) *caregi
 	_, _, _, _, _, hub, _, _, settings, _, services, schedules, _, active, _, _, _, _, provisioning, _, _, _, deviceFleet, _, settingsWrites, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
 	auth := newAccountResource(graph.db, nil, nil, services.CaregiverCapability, settings.Service)
-	operator, err := newOperatorRouter(graph.db, slog.Default(), sessionAuth, authRateLimiters{}, devicefleetCompose.NewIoTService(deviceFleet), nil,
-		settings.Service, hub, active, settingsWrites, nil, provisioning, services.CaregiverCapability, schedules.Lifecycle, nil, nil, settings.Traeger)
+	operator, err := newOperatorRouter(graph.db, slog.Default(), sessionAuth, authRateLimiters{}, devicefleetCompose.NewIoTService(deviceFleet, time.Now), nil,
+		settings.Service, hub, active, settingsWrites, nil, provisioning, services.CaregiverCapability, schedules.Lifecycle, nil, nil, settings.Traeger, time.Now)
 	require.NoError(t, err)
 	return &caregiverComposition{
 		authWired:        auth != nil,
@@ -326,7 +326,7 @@ func setupSettingsCallbackRoute(t *testing.T) *settingsCallbackRoute {
 		SetHomeBlockPolicies(context.Context, int64, int64, []string, map[string]string) error
 	})
 	require.True(t, ok)
-	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, requireDevicePINOperations(module.Settings), repos.Enrollment().SchemaReferencesLegalDocument).SettingsRouter(), hub: hub}
+	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, requireDevicePINOperations(module.Settings), repos.Enrollment().SchemaReferencesLegalDocument, time.Now).SettingsRouter(), hub: hub}
 }
 
 func setupOperatorInvitationRoute(t *testing.T, graph *goldenRuntime) chi.Router {
@@ -338,8 +338,8 @@ func setupOperatorInvitationRoute(t *testing.T, graph *goldenRuntime) chi.Router
 	_, _, _, _, _, hub, _, _, settings, _, services, schedules, _, active, _, _, _, _, provisioning, _, _, _, deviceFleet, _, settingsWrites, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
 	operator, err := newOperatorRouter(graph.db, slog.Default(), sessionAuth, buildAuthRateLimiters(nil, "5", demoLoopbackExempt()),
-		devicefleetCompose.NewIoTService(deviceFleet), nil, settings.Service, hub, active, settingsWrites, nil, provisioning,
-		services.CaregiverCapability, schedules.Lifecycle, nil, nil, settings.Traeger)
+		devicefleetCompose.NewIoTService(deviceFleet, time.Now), nil, settings.Service, hub, active, settingsWrites, nil, provisioning,
+		services.CaregiverCapability, schedules.Lifecycle, nil, nil, settings.Traeger, time.Now)
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	router.Mount("/operator", operator)
@@ -829,7 +829,7 @@ func checkTimetableConflictWiring(t *testing.T, graph *goldenRuntime) {
 	_, _, _, _, _, _, _, _, settings, _, services, schedules, requests, _, _, lifecycle, planning, materialization, _, _, _, _, _, _, _, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
 	timetable := newTimetableResource(nil, nil, nil, nil, materialization, lifecycle, planning, nil, services.Users, schedules, nil, settings.Service,
-		requests.CareOfferings, ClassDayViews{}, nil, nil, nil, nil, nil, slog.Default())
+		requests.CareOfferings, ClassDayViews{}, nil, nil, nil, nil, nil, slog.Default(), time.Now)
 	require.NotNil(t, timetable)
 	require.NotNil(t, timetable.ConflictDetection, "api/timetable must hold the owner's conflict detection")
 	assert.Same(t, planning.Planning.ConflictDetection, timetable.ConflictDetection,

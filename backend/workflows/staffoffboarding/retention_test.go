@@ -85,7 +85,7 @@ func newRetentionDoubles(t *testing.T, doubles *retiredDoubles, window int, isol
 	retention, err := staffoffboarding.NewRetention(staffoffboarding.RetentionDependencies{
 		Window:            func(context.Context) (int, error) { return window, nil },
 		Tenant:            func(context.Context) int64 { return 7 },
-		Today:             func() calendar.Date { return calendar.NewDate(2028, time.June, 1) },
+		Today:             func(context.Context) (calendar.Date, error) { return calendar.NewDate(2028, time.June, 1), nil },
 		Membership:        doubles,
 		LiveStaff:         doubles,
 		Workforce:         doubles,

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { Survey, SurveyResults } from "~/lib/surveys-api";
+import { testClockDay } from "~/test/clock";
 
 import SurveyDetailPage from "./page";
 
@@ -68,7 +69,8 @@ function survey(patch: Partial<Survey> = {}): Survey {
     anonymous: true,
     send_email: false,
     status: "open",
-    closes_at: "2026-09-30T16:00:00Z",
+    // Die Umfrage läuft noch drei Wochen.
+    closes_at: `${testClockDay(21)}T16:00:00Z`,
     published_at: "2026-09-01T08:00:00Z",
     created_at: "2026-08-30T08:00:00Z",
     updated_at: "2026-09-01T08:00:00Z",

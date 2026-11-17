@@ -9,8 +9,6 @@
  * (ADR 0196). Die Zahlen kommen aus den Teilnehmerlisten (ADR 0116).
  */
 
-import { useEffect, useState } from "react";
-
 import type { ClosingDayDraft } from "~/components/planning/closing-day-modal";
 import { ApiError } from "~/lib/api-error";
 import {
@@ -18,6 +16,8 @@ import {
   type HostedHolidayWeek,
 } from "~/lib/holiday-host-api";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { holidayKeys } from "~/lib/swr/portal-keys";
 
 const logger = createLogger({ component: "ClosingDayHolidayHint" });
 
@@ -37,19 +37,18 @@ export function hostedWeeksInRange(
   );
 }
 
+const EMPTY: readonly HostedHolidayWeek[] = [];
+
 export function useHostedHolidayWeeks(open: boolean) {
-  const [weeks, setWeeks] = useState<readonly HostedHolidayWeek[]>([]);
-  useEffect(() => {
-    if (!open) return;
-    let current = true;
-    fetchHostedHolidayWeeks()
-      .then((loaded) => {
-        if (current) setWeeks(loaded);
-      })
-      .catch((err: unknown) => {
-        // Bewusst still: Der Hinweis ergänzt den Dialog nur. Ohne Recht auf
-        // die Teilnehmerlisten oder bei einem Fehler bleibt das Speichern
-        // möglich, und der Träger sieht den Schließtag trotzdem.
+  const { data } = useSWRAuth(
+    // Derselbe Eintrag wie auf der Seite „Ferienwochen“.
+    open ? holidayKeys.hostedWeeks() : null,
+    fetchHostedHolidayWeeks,
+    {
+      // Bewusst still: Der Hinweis ergänzt den Dialog nur. Ohne Recht auf
+      // die Teilnehmerlisten oder bei einem Fehler bleibt das Speichern
+      // möglich, und der Träger sieht den Schließtag trotzdem.
+      onError: (err: unknown) => {
         if (
           err instanceof ApiError &&
           (err.status === 401 || err.status === 403)
@@ -59,10 +58,8 @@ export function useHostedHolidayWeeks(open: boolean) {
         logger.warn("closing_day_hosted_weeks_failed", {
           error: err instanceof Error ? err.message : String(err),
         });
-      });
-    return () => {
-      current = false;
-    };
-  }, [open]);
-  return weeks;
+      },
+    },
+  );
+  return data ?? EMPTY;
 }

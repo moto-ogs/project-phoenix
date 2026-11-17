@@ -86,6 +86,7 @@ export interface SchoolDayChild {
   student_id?: string;
   list_entry?: boolean;
   list_entry_id?: string;
+  without_care_place?: boolean;
   first_name: string;
   last_name: string;
   status?: string;

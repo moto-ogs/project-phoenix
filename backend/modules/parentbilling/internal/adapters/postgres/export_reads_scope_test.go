@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +33,7 @@ func TestFinanceExportReadsKeepTheTraegerBelowRLS(t *testing.T) {
 	own := newMandateScope(t, db, "Träger Lesen A")
 	other := newMandateScope(t, db, "Träger Lesen B")
 	school := testpkg.CreateTestSchoolInOrganization(t, db, own.organization, "OGS Lesen A")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the reads back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, own.organization, func(ctx context.Context) error {

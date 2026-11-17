@@ -19,7 +19,7 @@ import (
 func TestIntakeCreationRollsBackEachAuthoritativeWrite(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := enrollmentCompose.New()
+	owner := enrollmentCompose.NewClocked(time.Now)
 	for _, stage := range []string{"phase", "request", "child"} {
 		t.Run(stage, func(t *testing.T) {
 			testpkg.OwnTenant(t)
@@ -70,7 +70,7 @@ func TestIntakeCreationRollsBackEachAuthoritativeWrite(t *testing.T) {
 func TestIntakeCommandsAndRLSPreserveTenantIsolation(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(time.Now)
 	var requests []*enrollment.Request
 	var children []*enrollment.RequestChild
 	for _, name := range []string{"first", "second"} {
@@ -144,7 +144,7 @@ func TestIntakeTimestampDefaults(t *testing.T) {
 	t.Parallel()
 	testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	owner := enrollmentCompose.New()
+	owner := enrollmentCompose.NewClocked(time.Now)
 	phase := &enrollment.Phase{Name: "Timestamp defaults", ServiceStartDate: "2030-08-01", ServiceEndDate: "2031-07-31"}
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, testpkg.SetupTestDB(t), owner.InsertPhase, phase))
 	before := time.Now().Add(-time.Second)

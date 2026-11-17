@@ -85,8 +85,8 @@ var security_init_mfa_1Definitions = []config.Definition{
 var security_init_lockout_2Definitions = []config.Definition{
 	{
 		Key:             config.KeyAccountLockoutThreshold,
-		Label:           "Fehlversuche bis zur Kontosperre",
-		Description:     "Nach so vielen falschen Bestätigungscodes sperrt moto die Code-Prüfung vorübergehend.",
+		Label:           "Fehlversuche bis zur Code-Sperre",
+		Description:     "Nach so vielen falschen Bestätigungscodes pausiert die Code-Prüfung.",
 		Type:            config.FieldNumber,
 		Default:         5,
 		ReadPermission:  "config:read",
@@ -98,8 +98,8 @@ var security_init_lockout_2Definitions = []config.Definition{
 	},
 	{
 		Key:             config.KeyAccountLockoutDurationMinutes,
-		Label:           "Dauer der Kontosperre (Minuten)",
-		Description:     "So lange bleibt das Konto danach gesperrt.",
+		Label:           "Dauer der Code-Sperre (Minuten)",
+		Description:     "So lange pausiert danach die Code-Prüfung. Für falsche Passwörter gilt diese Einstellung nicht.",
 		Type:            config.FieldNumber,
 		Default:         15,
 		ReadPermission:  "config:read",

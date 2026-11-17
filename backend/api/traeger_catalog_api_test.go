@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -63,7 +64,7 @@ func traegerCatalogRouter(t *testing.T, db *bun.DB, tariffOverride ...parentbill
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
-	audit, err := auditCompose.NewTenantPersistence(db)
+	audit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
 	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)
@@ -76,7 +77,8 @@ func traegerCatalogRouter(t *testing.T, db *bun.DB, tariffOverride ...parentbill
 	})
 	require.NoError(t, err)
 	billing, intake := newTraegerCatalogBilling(organizations, settings, schoolSettings.Settings, presence, delivery.Module,
-		providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000", traegerCatalogBillingDay)
+		providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000", traegerCatalogBillingDay,
+		func() time.Time { return traegerCatalogBillingDay().BerlinMidnight().Add(10 * time.Hour) })
 	if len(tariffOverride) > 0 {
 		billing = tariffOverride[0]
 	}
@@ -86,6 +88,7 @@ func traegerCatalogRouter(t *testing.T, db *bun.DB, tariffOverride ...parentbill
 	require.NoError(t, err)
 	noLock := func(context.Context) error { return nil }
 	phases, err := enrollmentCompose.NewResyncingPhases(enrollmentCompose.PhaseDependencies{
+		Now:                    time.Now,
 		Records:                NewEnrollmentSuiteRepositories(database).Enrollment(),
 		Offerings:              catalogPhaseOfferings{carePlan: NewRepositoryTestFactory(database).CarePlan()},
 		LockTemplateRecurrence: noLock, Resyncer: bookings.Bookings,
@@ -97,7 +100,7 @@ func traegerCatalogRouter(t *testing.T, db *bun.DB, tariffOverride ...parentbill
 			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), unit)))
 		})
 	})
-	require.NoError(t, mountTraegerCatalogRoutes(router, phases, catalog.Catalog, noLock, organizations, billing, intake))
+	require.NoError(t, mountTraegerCatalogRoutes(router, phases, catalog.Catalog, noLock, organizations, billing, intake, time.Now))
 	return testpkg.SessionVerifier(router)
 }
 

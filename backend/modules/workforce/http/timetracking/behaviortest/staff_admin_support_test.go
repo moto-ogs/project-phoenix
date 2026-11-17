@@ -117,6 +117,7 @@ func setupStaffRouteWith(t *testing.T, adjust func(*bun.DB, *timetracking.StaffA
 		QualificationTypes: qualifications,
 		Qualifications:     qualifications,
 		Logger:             slog.Default(),
+		Today:              capabilities.Today,
 	}
 	if adjust != nil {
 		adjust(db, &deps)

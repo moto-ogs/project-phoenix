@@ -10,7 +10,11 @@ import {
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
 import { Modal } from "~/components/ui/modal";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { payrollKeys } from "~/lib/swr/portal-keys";
+import { staffTimeKeys } from "~/lib/swr/staff-keys";
 import { formatOverviewMonth } from "~/components/staff/staff-time-accounts-table";
 import {
   fetchDatevExportReport,
@@ -47,14 +51,16 @@ type TransferState =
 // Wo die Vorschau fehlt, steht der Grund aus dem Fehlerkatalog (#2514).
 const DATEV_REPORT_OBJECT = "die Vorschau der DATEV-Datei";
 type DatevReportState =
-  | { readonly status: "idle"; readonly requestKey: null }
-  | { readonly status: "loading"; readonly requestKey: string }
-  | {
-      readonly status: "ready";
-      readonly requestKey: string;
-      readonly report: DatevExportReport;
-    }
-  | { readonly status: "failed"; readonly requestKey: string };
+  | { readonly status: "idle" }
+  | { readonly status: "loading" }
+  | { readonly status: "ready"; readonly report: DatevExportReport }
+  | { readonly status: "failed" };
+
+const SFTP_UNAVAILABLE: SFTPStatus = {
+  enabled: false,
+  ready: false,
+  missingSettings: [],
+};
 
 const isDatevFormat = (format: FileFormat): format is DatevFormat =>
   format === "datev_lodas" || format === "datev_lug";
@@ -246,39 +252,23 @@ export function StaffTimeExportModal({
   const [format, setFormat] = useState<FileFormat>("csv");
   const [timeFormat, setTimeFormat] = useState<TimeFormat>("hhmm");
   const [delivery, setDelivery] = useState<Delivery>("download");
-  const [sftpStatus, setSftpStatus] = useState<SFTPStatus | null>(null);
   const [transferState, setTransferState] = useState<TransferState>({
     status: "idle",
   });
   const transferErrors = useApiFormError();
   const tenantPath = useTenantAwarePath();
   const settingsHref = transferSettingsHref(transferState);
-  const reportLoad = useApiLoadError();
-  const showReportError = reportLoad.show;
-  const clearReportError = reportLoad.clear;
 
   // Der Status entscheidet, ob die Übertragung überhaupt angeboten wird. Ohne
   // ihn bleibt es beim Download — eine Schaltfläche, die nichts tun kann, ist
-  // schlimmer als keine.
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    fetchSFTPStatus()
-      .then((status) => {
-        if (!cancelled) setSftpStatus(status);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        logger.error("sftp_status_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        // Bewusst still: ohne Status bleibt der Download, der immer geht.
-        setSftpStatus({ enabled: false, ready: false, missingSettings: [] });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen]);
+  // schlimmer als keine. Derselbe Eintrag wie auf der Seite „Lohnabrechnung“.
+  const sftp = useSWRAuth(
+    isOpen ? payrollKeys.sftpStatus() : null,
+    fetchSFTPStatus,
+  );
+  // Bewusst still: ohne Status bleibt der Download, der immer geht.
+  const sftpStatus: SFTPStatus | null =
+    sftp.data ?? (sftp.error ? SFTP_UNAVAILABLE : null);
 
   // Auswahl zurücksetzen, sobald die Übertragung nicht mehr möglich ist.
   useEffect(() => {
@@ -287,59 +277,28 @@ export function StaffTimeExportModal({
     }
   }, [sftpStatus, delivery]);
 
-  const datev = isDatevFormat(format);
-  const reportRequestKey = datev ? `${format}:${year}:${month}` : null;
-  const [reportState, setReportState] = useState<DatevReportState>({
-    status: "idle",
-    requestKey: null,
-  });
-  const [reportAttempt, setReportAttempt] = useState(0);
-  const activeReportState: DatevReportState =
-    reportRequestKey !== null && reportState.requestKey !== reportRequestKey
-      ? { status: "loading", requestKey: reportRequestKey }
-      : reportState;
-
-  useEffect(() => {
-    if (!isOpen || !isDatevFormat(format)) {
-      setReportState({ status: "idle", requestKey: null });
-      clearReportError();
-      return;
-    }
-    const requestKey = `${format}:${year}:${month}`;
-    let cancelled = false;
-    setReportState({ status: "loading", requestKey });
-    clearReportError();
-    fetchDatevExportReport(year, month, format)
-      .then((result) => {
-        if (!cancelled) {
-          setReportState({ status: "ready", requestKey, report: result });
-        }
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        logger.error("datev_report_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        setReportState({ status: "failed", requestKey });
-        // The incomplete payroll setup arrives as an ApiError with the code
-        // workforce.payroll_config_incomplete; the catalog names the next step.
-        void showReportError(error, {
-          object: DATEV_REPORT_OBJECT,
-          retry: () => setReportAttempt((attempt) => attempt + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isOpen,
-    format,
-    year,
-    month,
-    reportAttempt,
-    showReportError,
-    clearReportError,
-  ]);
+  const datevFormat = isDatevFormat(format) ? format : null;
+  const datev = datevFormat !== null;
+  const report = useSWRAuth(
+    isOpen && datevFormat
+      ? staffTimeKeys.datevReport(datevFormat, year, month)
+      : null,
+    () => fetchDatevExportReport(year, month, datevFormat ?? "datev_lodas"),
+    { keepPreviousData: false },
+  );
+  // The incomplete payroll setup arrives as an ApiError with the code
+  // workforce.payroll_config_incomplete; the catalog names the next step.
+  const { error: reportError, failure: reportFailure } =
+    useSwrResourceLoadError([report], DATEV_REPORT_OBJECT, () =>
+      report.mutate(),
+    );
+  const activeReportState: DatevReportState = !datev
+    ? { status: "idle" }
+    : report.data
+      ? { status: "ready", report: report.data }
+      : reportFailure
+        ? { status: "failed" }
+        : { status: "loading" };
 
   const handleExport = () => {
     if (
@@ -579,10 +538,7 @@ export function StaffTimeExportModal({
               und bei Lohn und Gehalt die Importbeschreibung legt das Lohnbüro
               fest.
             </p>
-            <DatevReportPanel
-              state={activeReportState}
-              error={reportLoad.error}
-            />
+            <DatevReportPanel state={activeReportState} error={reportError} />
           </div>
         )}
       </div>

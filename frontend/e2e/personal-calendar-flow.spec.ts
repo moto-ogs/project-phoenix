@@ -1,6 +1,7 @@
 import { type Page } from "@playwright/test";
 
 import { expect, test } from "./a11y/scan";
+import { runToday, uniqueTitle } from "./clock";
 import {
   loginToTenant,
   MISSING_SEED_ACCESS,
@@ -9,11 +10,7 @@ import {
   tenantBase as base,
   waitForAnimations,
 } from "./tenant-session";
-import {
-  berlinTodayISO,
-  parseISODate,
-  toISODate,
-} from "../src/lib/date-helpers";
+import { parseISODate, toISODate } from "../src/lib/date-helpers";
 
 // Login und Tenant-Herkunft: e2e/tenant-session.ts.
 // Relative page.goto-Ziele laufen gegen die Tenant-Herkunft.
@@ -98,10 +95,10 @@ test.describe("Personal calendar flow", () => {
     // Die Seite zeigt die Woche des Berliner Schultags; der lokale Tag des
     // Runners (in CI UTC) ist bis 01:00/02:00 Uhr Berliner Zeit noch der
     // Vortag und läge montags in der Vorwoche (#6419).
-    const start = weekdayInCurrentWeek(parseISODate(berlinTodayISO()));
+    const start = weekdayInCurrentWeek(parseISODate(runToday()));
     const startDate = toISODate(start);
     const recurrenceEnd = toISODate(addDays(start, 7));
-    const title = `Playwright Kalendertermin ${Date.now()}`;
+    const title = uniqueTitle("Playwright Kalendertermin");
 
     await Promise.all([
       waitForCalendarResponse(page, startDate),

@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	api "github.com/moto-ogs/project-phoenix/api"
 
@@ -93,6 +94,7 @@ func restoreMatchFailureFixture(t *testing.T) (*decisionTestEnv, int64, []int64,
 	// Real student matching and per-child guardian authorization are wired;
 	// settings/outbox remain the existing explicit suite collaborators.
 	requestSvc := newTestRequestService(owners.EnrollmentIntakeSources{
+		Now:      time.Now,
 		Bookings: requestTestBookingCommands(), Requests: env.repos.Enrollment(), Children: env.repos.Enrollment(),
 		Guardians: env.repos.Enrollment(), CareOfferingRepo: enrollmentCompose.NewCareOfferingRecords(env.reposCare.CarePlan),
 		Catalog: env.repos.Enrollment(), StudentRepo: env.repos.Student, GuardianHold: testGuardianHold(env.db, env.repos),
@@ -172,6 +174,7 @@ func (s *restoreMatchSchedule) HasActiveRequestForMatchedStudent(ctx context.Con
 
 func restoreMatchDecision(env *decisionTestEnv, requests enrollmentCompose.DecisionRequests) enrollmentAPI.DecisionService {
 	return newTestDecisionService(enrollmentCompose.DecisionDependencies{
+		Now:      time.Now,
 		Requests: requests, Children: env.repos.Enrollment(), Phases: env.repos.Enrollment(),
 		Restorations: owners.EnrollmentDecisionRestorations(env.reposAudit.EnrollmentRestorationAudit),
 	}, nil)

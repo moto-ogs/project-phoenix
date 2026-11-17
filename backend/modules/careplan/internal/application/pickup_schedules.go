@@ -28,17 +28,17 @@ type pickupScheduleService struct {
 }
 
 // NewPickupSchedules builds the pickup schedules deciding on today, the
-// Berlin calendar day when nil.
+// composition's day clock (required).
 func NewPickupSchedules(schedules ports.PickupScheduleRepository, exceptions ports.EffectiveExceptionRepository[*careplan.PickupException],
 	notes ports.EffectiveNoteRepository[*careplan.PickupNote], tx ports.PickupScheduleTransaction,
 	baselines careplan.PickupBaselineReader, auto careplan.PickupAutoExcusal,
 	students ports.PickupBulkStudents, departures careplan.DepartureExceptions, logger *slog.Logger,
 	today func() calendar.Date,
 ) careplan.PickupScheduleService {
-	day := calendar.TodayDate
-	if today != nil {
-		day = today
+	if today == nil {
+		panic("care plan pickup schedules: the composition's day clock is required")
 	}
+	day := today
 	return &pickupScheduleService{
 		effectiveTimeCore: newEffectiveTimeCore(schedules, exceptions, notes, tx, PickupTimeDomain{}),
 		scheduleRepo:      schedules, autoExcusal: auto, PickupBaselineReader: baselines, tx: tx,

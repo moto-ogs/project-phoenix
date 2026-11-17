@@ -69,7 +69,7 @@ func (rs *Resource) exportStudentsDayLog(w http.ResponseWriter, r *http.Request)
 	}
 	log := buildDayLogResponse(date, groups, data)
 
-	file, err := rs.ListExportService.Render(buildDayLogExportDocument(log, date), format, "tagesauswertung-"+date.String())
+	file, err := rs.ListExportService.Render(buildDayLogExportDocument(log, date, rs.Now()), format, "tagesauswertung-"+date.String())
 	if err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -98,11 +98,11 @@ func parseDayLogExportFormat(r *http.Request) (lists.Format, error) {
 	return format, nil
 }
 
-func buildDayLogExportDocument(log dayLogResponse, date calendar.Date) lists.Document {
+func buildDayLogExportDocument(log dayLogResponse, date calendar.Date, generatedAt time.Time) lists.Document {
 	doc := lists.Document{
 		Title:       "Tagesauswertung",
 		Subtitle:    "Anwesenheit am " + date.Format("02.01.2006"),
-		GeneratedAt: time.Now(),
+		GeneratedAt: generatedAt,
 		Columns: []lists.Column{
 			{ID: dayLogColumnName, Label: "Name"},
 			{ID: dayLogColumnClass, Label: "Klasse"},

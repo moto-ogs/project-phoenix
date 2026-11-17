@@ -522,6 +522,73 @@ describe("ClassDayClass", () => {
       );
     });
 
+    it("lists children without a care place neutrally and saves attendance by student ID", async () => {
+      const record = vi.fn(() => Promise.resolve());
+      const noCareRow = {
+        student_id: 3,
+        first_name: "Mila",
+        last_name: "Schule",
+        without_care_place: true,
+        registered: false,
+        stays_today: false,
+        offerings: [],
+      };
+      const data = report({
+        can_record_morning_attendance: true,
+        totals: {
+          students: 3,
+          staying: 1,
+          leaving: 0,
+          absent: 1,
+          list_entries: 1,
+        },
+        rows: [
+          ...report().rows,
+          noCareRow,
+          { ...noCareRow, student_id: 4, first_name: "Nico", status: "sick" },
+        ],
+      });
+      render(
+        <ClassDayClass
+          schoolClass="4a"
+          fetchClassDay={() => Promise.resolve(data)}
+          recordMorningAttendance={record}
+        />,
+      );
+
+      const child = await screen.findByText("Schule, Mila");
+      const section = child.closest("ul")!.parentElement!;
+      expect(
+        within(section).getByRole("heading", { name: /Keine Betreuung/ }),
+      ).toBeInTheDocument();
+      expect(within(section).getByText("Keine Betreuung")).toBeInTheDocument();
+      expect(
+        within(section).queryByText("Schule, Nico"),
+      ).not.toBeInTheDocument();
+      const absentSection = screen
+        .getByText("Schule, Nico")
+        .closest("ul")!.parentElement!;
+      expect(
+        within(absentSection).getByRole("heading", { name: /Abgemeldet/ }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("keine OGS-Anmeldung")).not.toBeInTheDocument();
+
+      fireEvent.click(
+        within(group("Mila Schule")).getByRole("button", { name: "Fehlt" }),
+      );
+      expect(
+        within(section).getByText("Fehlt ohne Meldung"),
+      ).toBeInTheDocument();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Anwesenheit speichern" }),
+      );
+      await waitFor(() =>
+        expect(record).toHaveBeenCalledWith("4a", todayISO(), [
+          { student_id: 3, status: "absent" },
+        ]),
+      );
+    });
+
     it("retries morning attendance with the current marks", async () => {
       const record = vi
         .fn()
@@ -1228,6 +1295,15 @@ describe("ClassDayClass class trips (#4799)", () => {
       rows: [
         ...report().rows,
         {
+          student_id: 2,
+          without_care_place: true,
+          first_name: "Mila",
+          last_name: "Schule",
+          registered: false,
+          stays_today: false,
+          offerings: [],
+        },
+        {
           student_id: 0,
           list_entry: true,
           list_entry_id: "77",
@@ -1267,9 +1343,10 @@ describe("ClassDayClass class trips (#4799)", () => {
       }),
     );
     const dialog = screen.getByRole("dialog", { name: "Ausflug melden" });
-    // Only children with an OGS record can be reported.
+    // Only children with a care place can be reported.
     expect(dialog).toHaveTextContent("Klara Klassentag");
     expect(dialog).not.toHaveTextContent("Lena Liste");
+    expect(dialog).not.toHaveTextContent("Mila Schule");
 
     fireEvent.click(screen.getByRole("button", { name: "Melden" }));
     await waitFor(() => {

@@ -119,7 +119,7 @@ func TestCreateAnnouncement_EmptyTitle(t *testing.T) {
 	t.Parallel()
 
 	mockService := &mockAnnouncementService{}
-	resource := operatorannouncements.NewAnnouncementsResource(mockService)
+	resource := operatorannouncements.NewAnnouncementsResource(mockService, operatorTestClock)
 
 	body := map[string]any{
 		"title":   "",
@@ -143,7 +143,7 @@ func TestCreateAnnouncement_EmptyContent(t *testing.T) {
 	t.Parallel()
 
 	mockService := &mockAnnouncementService{}
-	resource := operatorannouncements.NewAnnouncementsResource(mockService)
+	resource := operatorannouncements.NewAnnouncementsResource(mockService, operatorTestClock)
 
 	body := map[string]any{
 		"title":   "Test Title",
@@ -167,7 +167,7 @@ func TestCreateAnnouncement_InvalidExpiresAt(t *testing.T) {
 	t.Parallel()
 
 	mockService := &mockAnnouncementService{}
-	resource := operatorannouncements.NewAnnouncementsResource(mockService)
+	resource := operatorannouncements.NewAnnouncementsResource(mockService, operatorTestClock)
 
 	expiresAt := "invalid-date"
 	body := map[string]any{
@@ -208,7 +208,7 @@ func TestUpdateAnnouncement_InvalidExpiresAt(t *testing.T) {
 		},
 	}
 
-	resource := operatorannouncements.NewAnnouncementsResource(mockService)
+	resource := operatorannouncements.NewAnnouncementsResource(mockService, operatorTestClock)
 
 	expiresAt := "invalid-date"
 	body := map[string]any{
@@ -306,7 +306,7 @@ func TestCreateAnnouncement_Targeting(t *testing.T) {
 					return nil
 				},
 			}
-			resource := operatorannouncements.NewAnnouncementsResource(mock)
+			resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 
 			body, _ := json.Marshal(map[string]any{
 				"title": "T", "content": "C",
@@ -335,7 +335,7 @@ func TestUpdateAnnouncement_WithOrgAndTenantTargeting(t *testing.T) {
 			return nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 
 	body, _ := json.Marshal(map[string]any{
 		"title": "Updated", "content": "Updated",
@@ -367,7 +367,7 @@ func TestCreateAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 			return nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 
 	body, _ := json.Marshal(map[string]any{
 		"title": "T", "content": "C",
@@ -409,7 +409,7 @@ func TestGetAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 			return a, nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	rr := callIDHandler(resource.GetAnnouncement, http.MethodGet, "/announcements/1", "1")
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -443,7 +443,7 @@ func TestListAnnouncements_IncludesOrgAndTenantIDs(t *testing.T) {
 			return []*platform.Announcement{a}, nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 
 	req := httptest.NewRequest(http.MethodGet, "/announcements", nil)
 	ctx := context.WithValue(req.Context(), sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: 1})
@@ -480,7 +480,7 @@ func TestAnnouncementResponse_NilOrgAndTenantIDsDefaultToEmptyArrays(t *testing.
 			return []*platform.Announcement{a}, nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 
 	req := httptest.NewRequest(http.MethodGet, "/announcements", nil)
 	ctx := context.WithValue(req.Context(), sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: 1})
@@ -535,7 +535,7 @@ func TestAnnouncementResponse_Status(t *testing.T) {
 					return a, nil
 				},
 			}
-			resource := operatorannouncements.NewAnnouncementsResource(mock)
+			resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 			rr := callIDHandler(resource.GetAnnouncement, http.MethodGet, "/announcements/1", "1")
 			assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -559,7 +559,7 @@ func TestCreateAnnouncement_DefaultTypeAndSeverity(t *testing.T) {
 			return nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	body, _ := json.Marshal(map[string]any{"title": "T", "content": "C"})
 	req := httptest.NewRequest(http.MethodPost, "/announcements", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -580,7 +580,7 @@ func TestCreateAnnouncement_WithVersion(t *testing.T) {
 			return nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	version := "2.0.0"
 	body, _ := json.Marshal(map[string]any{
 		"title": "Release", "content": "Notes", "type": platform.TypeRelease, "version": &version,
@@ -596,7 +596,7 @@ func TestCreateAnnouncement_WithVersion(t *testing.T) {
 func TestCreateAnnouncement_InvalidJSONBody(t *testing.T) {
 	t.Parallel()
 
-	resource := operatorannouncements.NewAnnouncementsResource(&mockAnnouncementService{})
+	resource := operatorannouncements.NewAnnouncementsResource(&mockAnnouncementService{}, operatorTestClock)
 	req := httptest.NewRequest(http.MethodPost, "/announcements", bytes.NewReader([]byte("not-json")))
 	req.Header.Set("Content-Type", "application/json")
 	ctx := context.WithValue(req.Context(), sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: 1})
@@ -608,7 +608,7 @@ func TestCreateAnnouncement_InvalidJSONBody(t *testing.T) {
 func TestUpdateAnnouncement_InvalidJSONBody(t *testing.T) {
 	t.Parallel()
 
-	resource := operatorannouncements.NewAnnouncementsResource(&mockAnnouncementService{})
+	resource := operatorannouncements.NewAnnouncementsResource(&mockAnnouncementService{}, operatorTestClock)
 	req := httptest.NewRequest(http.MethodPut, "/announcements/1", bytes.NewReader([]byte("not-json")))
 	req.Header.Set("Content-Type", "application/json")
 	rctx := chi.NewRouteContext()
@@ -630,7 +630,7 @@ func TestCreateAnnouncement_InvalidDataError(t *testing.T) {
 			return &platform.InvalidDataError{Err: errors.New("severity must be one of: info, warning, critical")}
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	body, _ := json.Marshal(map[string]any{"title": "T", "content": "C", "severity": "bad"})
 	req := httptest.NewRequest(http.MethodPost, "/announcements", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -653,7 +653,7 @@ func TestUpdateAnnouncement_InvalidDataError(t *testing.T) {
 			return &platform.InvalidDataError{Err: errors.New("title exceeds maximum length")}
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	body, _ := json.Marshal(map[string]any{
 		"title": "T", "content": "C",
 		"type": platform.TypeAnnouncement, "severity": platform.SeverityInfo,
@@ -696,7 +696,7 @@ func TestUpdateAnnouncement_ClearExpiresAt(t *testing.T) {
 			return nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	empty := ""
 	body, _ := json.Marshal(map[string]any{
 		"title": "T", "content": "C",
@@ -723,7 +723,7 @@ func TestUpdateAnnouncement_SetValidExpiresAt(t *testing.T) {
 			return nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	future := operatorTestNow.Add(72 * time.Hour).Format(time.RFC3339)
 	body, _ := json.Marshal(map[string]any{
 		"title": "T", "content": "C",
@@ -760,7 +760,7 @@ func TestUpdateAnnouncement_SetActiveFlag(t *testing.T) {
 			return nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	active := false
 	body, _ := json.Marshal(map[string]any{
 		"title": "T", "content": "C",
@@ -815,7 +815,7 @@ func TestDeleteAnnouncement_SuccessAndErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := &mockAnnouncementService{deleteFn: tt.deleteFn}
-			resource := operatorannouncements.NewAnnouncementsResource(mock)
+			resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 			rr := callIDHandler(resource.DeleteAnnouncement, http.MethodDelete, "/announcements/"+tt.id, tt.id)
 			assert.Equal(t, tt.wantStatus, rr.Code)
 			if tt.wantBody != "" {
@@ -858,7 +858,7 @@ func TestPublishAnnouncement_SuccessAndErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := &mockAnnouncementService{publishFn: tt.publishFn}
-			resource := operatorannouncements.NewAnnouncementsResource(mock)
+			resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 			rr := callIDHandler(resource.PublishAnnouncement, http.MethodPost, "/announcements/"+tt.id+"/publish", tt.id)
 			assert.Equal(t, tt.wantStatus, rr.Code)
 			if tt.wantBody != "" {
@@ -881,7 +881,7 @@ func TestGetStats_ResponseStructure(t *testing.T) {
 			}, nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	rr := callIDHandler(resource.GetStats, http.MethodGet, "/announcements/1/stats", "1")
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -896,7 +896,7 @@ func TestGetStats_ResponseStructure(t *testing.T) {
 func TestGetStats_InvalidID(t *testing.T) {
 	t.Parallel()
 
-	resource := operatorannouncements.NewAnnouncementsResource(&mockAnnouncementService{})
+	resource := operatorannouncements.NewAnnouncementsResource(&mockAnnouncementService{}, operatorTestClock)
 	rr := callIDHandler(resource.GetStats, http.MethodGet, "/announcements/abc/stats", "abc")
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -913,7 +913,7 @@ func TestGetViewDetails_ResponseStructure(t *testing.T) {
 			}, nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	rr := callIDHandler(resource.GetViewDetails, http.MethodGet, "/announcements/1/view-details", "1")
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -940,7 +940,7 @@ func TestGetViewDetails_Empty(t *testing.T) {
 			return []*platform.AnnouncementViewDetail{}, nil
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	rr := callIDHandler(resource.GetViewDetails, http.MethodGet, "/announcements/1/view-details", "1")
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -953,7 +953,7 @@ func TestGetViewDetails_Empty(t *testing.T) {
 func TestGetViewDetails_InvalidID(t *testing.T) {
 	t.Parallel()
 
-	resource := operatorannouncements.NewAnnouncementsResource(&mockAnnouncementService{})
+	resource := operatorannouncements.NewAnnouncementsResource(&mockAnnouncementService{}, operatorTestClock)
 	rr := callIDHandler(resource.GetViewDetails, http.MethodGet, "/announcements/abc/view-details", "abc")
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -968,7 +968,7 @@ func TestListAnnouncements_ServiceError(t *testing.T) {
 			return nil, errors.New("database error")
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	req := httptest.NewRequest(http.MethodGet, "/announcements", nil)
 	ctx := context.WithValue(req.Context(), sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: 1})
 	rr := httptest.NewRecorder()
@@ -979,7 +979,7 @@ func TestListAnnouncements_ServiceError(t *testing.T) {
 func TestGetAnnouncement_InvalidID(t *testing.T) {
 	t.Parallel()
 
-	resource := operatorannouncements.NewAnnouncementsResource(&mockAnnouncementService{})
+	resource := operatorannouncements.NewAnnouncementsResource(&mockAnnouncementService{}, operatorTestClock)
 	rr := callIDHandler(resource.GetAnnouncement, http.MethodGet, "/announcements/abc", "abc")
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -992,12 +992,13 @@ func TestGetAnnouncement_NotFound(t *testing.T) {
 			return nil, &platform.AnnouncementNotFoundError{AnnouncementID: 999}
 		},
 	}
-	resource := operatorannouncements.NewAnnouncementsResource(mock)
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
 	rr := callIDHandler(resource.GetAnnouncement, http.MethodGet, "/announcements/999", "999")
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
-// operatorTestNow is the fixed instant of the announcement fixtures, a
-// Wednesday 10:00 in Berlin (#7104). It lies in the past, so an announcement
-// that expired before it stays expired for the handler's real clock.
+// operatorTestNow is the fixed instant of the announcement fixtures and the
+// handler's clock, a Wednesday 10:00 in Berlin (#7104).
 var operatorTestNow = calendar.NewDate(2026, time.January, 14).BerlinMidnight().Add(10 * time.Hour)
+
+func operatorTestClock() time.Time { return operatorTestNow }

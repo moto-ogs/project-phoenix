@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import deMessages from "~/i18n/messages/de.generated";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
 
 const factor = vi.hoisted(() => ({
   status: vi.fn(),
@@ -29,11 +32,13 @@ import { ParentSignInSection } from "./parent-sign-in-section";
 
 function renderSection() {
   return render(
-    <NextIntlClientProvider locale="de" messages={deMessages}>
-      <ToastProvider>
-        <ParentSignInSection />
-      </ToastProvider>
-    </NextIntlClientProvider>,
+    <ParentResourceTestProvider>
+      <NextIntlClientProvider locale="de" messages={deMessages}>
+        <ToastProvider>
+          <ParentSignInSection />
+        </ToastProvider>
+      </NextIntlClientProvider>
+    </ParentResourceTestProvider>,
   );
 }
 

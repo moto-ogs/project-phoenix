@@ -38,6 +38,9 @@ import { contrastRatchetBaseline } from "./ui-kit-contrast-baseline.mjs";
 //                                     (moto-content-surface)
 //   ui-kit/require-checkbox-label   — every shared Checkbox is wrapped by a
 //                                     label so its visible box is clickable
+//   ui-kit/no-costly-motion         — no backdrop-filter, transition-all,
+//                                     size/position transitions or inline
+//                                     @keyframes, also inside the kit
 //
 // Four more rules belong to the tenant page scaffold (#2619):
 //
@@ -693,6 +696,10 @@ const SURFACE_KIT_CONTROLS = new Map([
   ],
   ["src/components/ui/page-header/SearchBar.tsx", "Suchfeld der Kopfzeile"],
   ["src/components/ui/checkbox-card.tsx", "Auswahlzeile mit Häkchen"],
+  [
+    "src/components/ui/sticky-action-bar.tsx",
+    "Speicherleiste: eigene Schattenstufe shadow-lg",
+  ],
 ]);
 
 // #5594 schärft die Regel außerhalb des Kits: eine Fläche ist auch
@@ -1081,6 +1088,134 @@ const noRounded3xl = makeClassStringRule({
   message:
     "rounded-3xl is off the brand radius scale. Cards/panels use rounded-2xl via moto-content-surface (see .claude/rules/frontend-ui-kit.md).",
 });
+
+// Motion the browser cannot hand to the compositor (frontend-ui-kit.md,
+// "Motion"). A `backdrop-filter` re-filters everything under its element on
+// every frame something under it moves or it moves itself: the blurred Cmd+K
+// backdrop halved the frame rate of the dialog's opening (#7252), the blur
+// under every card cost each scrolled frame. `transition-all` and transitions
+// of a size or position property run layout per frame. `@keyframes` live in
+// src/styles/*.css, where `scripts/css-motion.node-test.mjs` checks them.
+// `grid-template-rows` stays allowed: it is the kit's one height reveal
+// (`SidebarGroup`), with no transform counterpart.
+const BACKDROP_FILTER_CLASS_RE =
+  /(?<![\w-])backdrop-(?:blur|brightness|contrast|grayscale|hue-rotate|invert|opacity|saturate|sepia|filter)(?![\w])[^\s"'`]*/g;
+const TRANSITION_ALL_CLASS_RE = /(?<![\w-])transition-all(?![\w-])/g;
+const ARBITRARY_TRANSITION_CLASS_RE = /(?<![\w-])transition-\[([^\]]*)\]/g;
+const KEYFRAMES_RE = /@keyframes\b/g;
+const LAYOUT_PROPERTY_RE =
+  /^(?:width|height|min-width|min-height|max-width|max-height|top|right|bottom|left|inset(?:-[\w-]+)?|margin(?:-[\w-]+)?|padding(?:-[\w-]+)?|gap|row-gap|column-gap|flex-basis|grid-template-columns|font-size|line-height|border(?:-[\w-]+)?-width)$/;
+const BACKDROP_STYLE_KEYS = new Set(["backdropFilter", "WebkitBackdropFilter"]);
+const TRANSITION_STYLE_KEYS = new Set(["transition", "transitionProperty"]);
+
+/** The layout properties (or `all`) a transition list names. */
+function costlyTransitionProperties(list) {
+  return list
+    .split(/[\s,_]+/)
+    .filter((token) => token === "all" || LAYOUT_PROPERTY_RE.test(token));
+}
+
+const noCostlyMotion = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow motion the compositor cannot run alone: backdrop-filter, transition-all, transitions of size or position, and @keyframes outside src/styles.",
+    },
+    messages: {
+      backdropFilter:
+        "'{{match}}' blurs or filters everything behind the element, again on every frame something there moves. Overlays take OVERLAY_BACKDROP_BLUR_CLASS, small resting chips moto-glass; everything else an opaque or tinted background (see .claude/rules/frontend-ui-kit.md, Motion).",
+      transitionAll:
+        "transition-all also animates size and position, which costs a layout per frame. Name the properties: transition (colours, opacity, shadow, transform), transition-colors, transition-opacity or transition-transform.",
+      layoutTransition:
+        "Transition of '{{match}}' runs layout on every frame. Move the element with transform (translate, scale) or let the value change without animation (see .claude/rules/frontend-ui-kit.md, Motion).",
+      keyframes:
+        "@keyframes belong in src/styles/*.css, where scripts/css-motion.node-test.mjs allows only compositor properties. Add a named animate-* class there.",
+    },
+    schema: [],
+  },
+  create(context) {
+    const key = fileKey(context);
+    if (!key.startsWith("src/")) return {};
+    if (EXEMPT_FILE_RE.test(key)) return {};
+
+    const checkClasses = (node, text) => {
+      for (const match of text.matchAll(BACKDROP_FILTER_CLASS_RE)) {
+        context.report({
+          node,
+          messageId: "backdropFilter",
+          data: { match: match[0] },
+        });
+      }
+      for (const _match of text.matchAll(TRANSITION_ALL_CLASS_RE)) {
+        context.report({ node, messageId: "transitionAll" });
+      }
+      for (const match of text.matchAll(ARBITRARY_TRANSITION_CLASS_RE)) {
+        const costly = costlyTransitionProperties(match[1]);
+        if (costly.length > 0) {
+          context.report({
+            node,
+            messageId: "layoutTransition",
+            data: { match: costly.join(", ") },
+          });
+        }
+      }
+      for (const _match of text.matchAll(KEYFRAMES_RE)) {
+        context.report({ node, messageId: "keyframes" });
+      }
+    };
+
+    const staticText = (value) => {
+      if (value?.type === "Literal" && typeof value.value === "string") {
+        return value.value;
+      }
+      if (value?.type === "TemplateLiteral") {
+        return value.quasis.map((quasi) => quasi.value.raw).join(" ");
+      }
+      return null;
+    };
+
+    return {
+      Literal(node) {
+        if (typeof node.value === "string") checkClasses(node, node.value);
+      },
+      TemplateLiteral(node) {
+        for (const quasi of node.quasis) checkClasses(quasi, quasi.value.raw);
+      },
+      Property(node) {
+        const name =
+          node.key?.type === "Identifier"
+            ? node.key.name
+            : typeof node.key?.value === "string"
+              ? node.key.value
+              : null;
+        if (!name) return;
+        const value = staticText(node.value);
+        if (BACKDROP_STYLE_KEYS.has(name)) {
+          if (value?.trim() === "none") return;
+          context.report({
+            node,
+            messageId: "backdropFilter",
+            data: { match: name },
+          });
+          return;
+        }
+        if (TRANSITION_STYLE_KEYS.has(name) && value !== null) {
+          const costly = costlyTransitionProperties(value);
+          if (costly.includes("all")) {
+            context.report({ node, messageId: "transitionAll" });
+          } else if (costly.length > 0) {
+            context.report({
+              node,
+              messageId: "layoutTransition",
+              data: { match: costly.join(", ") },
+            });
+          }
+        }
+      },
+    };
+  },
+};
 
 const noShadcnTokens = makeClassStringRule({
   regex: SHADCN_TOKEN_RE,
@@ -3459,17 +3594,14 @@ function hasHexAlphaTemplate(node) {
 }
 
 // A hint box and a pill share their classes on a `div`. Only a pill sizes to
-// its label: fully round, or inline. A blur marks a glass surface such as the
-// brand chips in auth-shell, not a status.
+// its label: fully round, or inline.
 const DIV_PILL_INLINE_RE = /^(?:inline-flex|inline-block)$/;
-const GLASS_SURFACE_RE = /^backdrop-blur(?:-|$)/;
 
 function isDivPill(text) {
   const tokens = pillTokens(text);
   return (
-    (tokens.includes("rounded-full") ||
-      tokens.some((token) => DIV_PILL_INLINE_RE.test(token))) &&
-    !tokens.some((token) => GLASS_SURFACE_RE.test(token))
+    tokens.includes("rounded-full") ||
+    tokens.some((token) => DIV_PILL_INLINE_RE.test(token))
   );
 }
 
@@ -6655,6 +6787,7 @@ export default {
     "no-raw-z-index": noRawZIndex,
     "no-select-override": noSelectOverride,
     "no-rounded-3xl": noRounded3xl,
+    "no-costly-motion": noCostlyMotion,
     "no-section-card-bleed": noSectionCardBleed,
     "no-status-dot-outside-plans": noStatusDotOutsidePlans,
     "no-shadcn-tokens": noShadcnTokens,

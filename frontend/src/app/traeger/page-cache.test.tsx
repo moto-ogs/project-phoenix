@@ -11,7 +11,7 @@ import {
   HOLIDAY_SCHOOLS,
 } from "~/test/fixtures/holiday-registrations";
 import { useTenantMutateMatching } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { resumeSWRSession } from "~/lib/swr/scope";

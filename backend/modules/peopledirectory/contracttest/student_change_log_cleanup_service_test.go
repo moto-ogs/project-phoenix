@@ -15,13 +15,11 @@ import (
 )
 
 // Each test inserts audit.student_field_edits rows with controlled created_at
-// via raw INSERT (the repo/Validate path would stamp created_at = NOW()).
+// via raw INSERT, daysAgo days before the database clock: the column default
+// stamps the edits and the cleanup counts back from that clock (ADR 0281,
+// Nachtrag).
 
-func daysAgo(n int) time.Time {
-	return time.Now().AddDate(0, 0, -n)
-}
-
-func insertFieldEdit(tb testing.TB, db *bun.DB, studentID int64, createdAt time.Time) {
+func insertFieldEdit(tb testing.TB, db *bun.DB, studentID int64, daysAgo int) {
 	tb.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -29,8 +27,8 @@ func insertFieldEdit(tb testing.TB, db *bun.DB, studentID int64, createdAt time.
 	_, err := db.NewRaw(
 		`INSERT INTO audit.student_field_edits
 			(tenant_id, student_id, edited_by, edited_by_name, field_name, old_value, new_value, created_at)
-		 VALUES (?, ?, 1, 'Test Editor', 'supervisor_notes', 'alt', 'neu', ?)`,
-		testpkg.Tenant(tb), studentID, createdAt,
+		 VALUES (?, ?, 1, 'Test Editor', 'supervisor_notes', 'alt', 'neu', clock_timestamp() - make_interval(days => ?))`,
+		testpkg.Tenant(tb), studentID, daysAgo,
 	).Exec(ctx)
 	require.NoError(tb, err, "failed to insert student_field_edit")
 }
@@ -82,9 +80,9 @@ func TestStudentChangeLogCleanup_DeletesOldEdits(t *testing.T) {
 	student := testpkg.CreateTestStudent(t, db, "Cleanup", "Old", "1a")
 
 	// Two expired edits (200d, 400d) and one fresh (10d, inside the 90d window).
-	insertFieldEdit(t, db, student.ID, daysAgo(200))
-	insertFieldEdit(t, db, student.ID, daysAgo(400))
-	insertFieldEdit(t, db, student.ID, daysAgo(10))
+	insertFieldEdit(t, db, student.ID, 200)
+	insertFieldEdit(t, db, student.ID, 400)
+	insertFieldEdit(t, db, student.ID, 10)
 
 	svc := api.NewStudentChangeLogCleanup(
 		api.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).StudentFieldEdit,
@@ -112,8 +110,8 @@ func TestStudentChangeLogCleanup_NoOpWhenNothingExpired(t *testing.T) {
 
 	student := testpkg.CreateTestStudent(t, db, "Cleanup", "Fresh", "1a")
 
-	insertFieldEdit(t, db, student.ID, daysAgo(5))
-	insertFieldEdit(t, db, student.ID, daysAgo(30))
+	insertFieldEdit(t, db, student.ID, 5)
+	insertFieldEdit(t, db, student.ID, 30)
 
 	svc := api.NewStudentChangeLogCleanup(
 		api.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).StudentFieldEdit,

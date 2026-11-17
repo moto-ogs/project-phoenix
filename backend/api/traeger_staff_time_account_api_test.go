@@ -118,7 +118,7 @@ func TestTraegerStaffTimeAccountSumsAndClosesEverySchool(t *testing.T) {
 		}
 	})
 
-	months := newSchoolMonths(t, db, unit)
+	months := newSchoolMonths(t, db, unit, func() time.Time { return today })
 
 	t.Run("the reads stay flat in their query budgets", func(t *testing.T) {
 		counter := testpkg.CaptureQueriesForContext(t, db)
@@ -234,9 +234,9 @@ type schoolMonths struct {
 	within  func(t *testing.T, schoolID int64, fn func(context.Context))
 }
 
-func newSchoolMonths(t *testing.T, db *bun.DB, unit tenant.UnitOfWork) schoolMonths {
+func newSchoolMonths(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, now func() time.Time) schoolMonths {
 	t.Helper()
-	module, _, err := NewWorkforceTestModule(testpkg.NewDatabase(t, db), unit)
+	module, _, err := NewWorkforceTestModule(testpkg.NewDatabase(t, db), unit, now)
 	require.NoError(t, err)
 	within := func(t *testing.T, schoolID int64, fn func(context.Context)) {
 		t.Helper()

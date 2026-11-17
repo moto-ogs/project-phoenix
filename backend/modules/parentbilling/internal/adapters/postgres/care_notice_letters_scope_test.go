@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,7 +66,7 @@ func TestCareNoticeLetterFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	ownScope := newCareScope(t, db, "Träger Bescheidpost A")
 	otherScope := newCareScope(t, db, "Träger Bescheidpost B")
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the notice letters back")
 
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))

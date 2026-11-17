@@ -1,7 +1,11 @@
 import { act } from "@testing-library/react";
-import { setTestClock } from "~/test/clock";
+import { setTestClock, TEST_CLOCK_TODAY } from "~/test/clock";
 import { schoolDateCases, setSchoolDateClock } from "~/test/school-date-cases";
 import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
 import {
   fireEvent,
@@ -54,11 +58,23 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   useApiErrorDisplay: () => ({ show: actionErrors.show }),
 }));
 const actionErrors = vi.hoisted(() => ({ show: vi.fn() }));
-vi.mock("~/lib/swr", () => ({
-  useTenantMutateMatching: () => stable.mutateMatching,
-  // Soll-Hinweis des Buchungsdialogs (#6887): unbekannt, also kein Hinweis.
-  useSWRAuth: () => ({ data: undefined }),
-}));
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  return {
+    ...actual,
+    useTenantMutateMatching: () => stable.mutateMatching,
+    // Soll-Hinweis des Buchungsdialogs (#6887): unbekannt, also kein Hinweis.
+    useSWRAuth: ((key: unknown, ...rest: unknown[]) => {
+      const monthSummary =
+        typeof key === "string" && key.startsWith("staff-month-summary-");
+      const result = (actual.useSWRAuth as (...args: unknown[]) => object)(
+        monthSummary ? null : key,
+        ...rest,
+      );
+      return monthSummary ? { ...result, data: undefined } : result;
+    }) as typeof actual.useSWRAuth,
+  };
+});
 
 const mocks = vi.hoisted(() => ({
   getVacationQuota: vi.fn(),
@@ -106,8 +122,8 @@ function failSecondLoad(mock: ReturnType<typeof vi.fn>) {
 }
 const RELOAD_TEXT = `${catalogText("general.unavailable", "die Anzeige der Abwesenheiten")} ${SAVED_BUT_STALE_SUFFIX}`;
 
-// Test clock: 2026-09-09.
-const year = 2026;
+// The tab opens on the year of the test day.
+const year = Number(TEST_CLOCK_TODAY.slice(0, 4));
 const allowance = {
   staffId: "4",
   absenceTypeId: "12",
@@ -131,7 +147,7 @@ const regeneration = {
 };
 
 function renderTab(props: Partial<{ canEditQuota: boolean }> = {}) {
-  return render(
+  return renderWithCache(
     <AbwesenheitenTab
       staffId="4"
       canEdit
@@ -213,13 +229,15 @@ describe("AbwesenheitenTab Kontingente (#3256)", () => {
     renderTab();
 
     const card = await screen.findByRole("region", {
-      name: "Regenerationstag 2026",
+      name: `Regenerationstag ${year}`,
     });
     expect(
-      within(card).getByText("Rest verfällt am 31.03.2027."),
+      within(card).getByText(`Rest verfällt am 31.03.${year + 1}.`),
     ).toBeInTheDocument();
     expect(
-      within(card).getByText("4 Tage aus 2025 am 31.03.2026 verfallen."),
+      within(card).getByText(
+        `4 Tage aus ${year - 1} am 31.03.${year} verfallen.`,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -243,14 +261,14 @@ describe("AbwesenheitenTab Kontingente (#3256)", () => {
     renderTab();
 
     const card = await screen.findByRole("region", {
-      name: "Regenerationstag 2026",
+      name: `Regenerationstag ${year}`,
     });
     expect(
-      within(card).getByText("1,5 Tage am 31.12.2026 verfallen."),
+      within(card).getByText(`1,5 Tage am 31.12.${year} verfallen.`),
     ).toBeInTheDocument();
     expect(
       within(card).getByText(
-        "Dazu noch 3 Tage aus 2025, nutzbar bis 31.03.2027. Diese gehen zuerst ab.",
+        `Dazu noch 3 Tage aus ${year - 1}, nutzbar bis 31.03.${year + 1}. Diese gehen zuerst ab.`,
       ),
     ).toBeInTheDocument();
     expect(within(card).queryByText(/Rest verfällt/)).not.toBeInTheDocument();
@@ -438,3 +456,23 @@ describe("AbwesenheitenTab Kontingente (#3256)", () => {
     },
   );
 });
+
+// Echter SWR-Cache je Render und eine Sitzung mit Konto, sonst liest
+// useSWRAuth nichts.
+function TenantSWR({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-test", tenantId: 1 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const renderWithCache = (ui: React.ReactElement) =>
+  render(ui, { wrapper: TenantSWR });

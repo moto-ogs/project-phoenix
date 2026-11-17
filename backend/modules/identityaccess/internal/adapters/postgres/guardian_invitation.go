@@ -43,8 +43,8 @@ type guardianInvitationRow struct {
 	// Email is the address the link in the token column was issued for
 	// (#6294); it changes only together with the token.
 	Email     string    `bun:"email,nullzero"`
-	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 // LockGuardianAccountEmail closes the missing-row gap before the account lookup.
@@ -106,7 +106,7 @@ func (s *Store) FindGuardianInvitation(ctx context.Context, id int64) (domain.Gu
 	var row guardianInvitationRow
 	started := time.Now()
 	err = guardianTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).Where(`"guardian_invitation".id = ?`, id)).Scan(ctx)
-	found, _, err := scanOne("find guardian invitation", started, err)
+	found, _, err := scanOne("find guardian invitation", time.Since(started), err)
 	return row.toDomain(), found, err
 }
 
@@ -118,7 +118,7 @@ func (s *Store) FindGuardianInvitationByToken(ctx context.Context, token string)
 	var row guardianInvitationRow
 	started := time.Now()
 	err = guardianTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).Where(`"guardian_invitation".token = ?`, domain.HashToken(token))).Scan(ctx)
-	found, _, err := scanOne("find guardian invitation by token", started, err)
+	found, _, err := scanOne("find guardian invitation by token", time.Since(started), err)
 	invitation := row.toDomain()
 	invitation.Token = token
 	return invitation, found, err
@@ -153,7 +153,7 @@ func (s *Store) ListPendingGuardianApprovals(ctx context.Context) ([]domain.Guar
 	err = guardianTenantFilter(s.scope(ctx), db.NewSelect().Model(&rows).
 		Where(`"guardian_invitation".approval_status = ?`, domain.GuardianInvitationApprovalPending).
 		Where(`"guardian_invitation".accepted_at IS NULL`).
-		Where(`"guardian_invitation".expires_at > ?`, time.Now())).
+		Where(`"guardian_invitation".expires_at > ?`, s.now())).
 		OrderExpr(`"guardian_invitation".created_at DESC`).
 		Scan(ctx)
 	if err != nil {
@@ -274,7 +274,6 @@ func (s *Store) UpdateGuardianInvitation(ctx context.Context, invitation domain.
 	rows, _, err := s.exec(ctx, "update guardian invitation", func(db bun.IDB) executor {
 		return guardianTenantFilter(scope, db.NewUpdate().Model(&row).
 			Column(columns...).
-			Set("updated_at = NOW()").
 			Where(`"guardian_invitation".id = ?`, invitation.ID).
 			Where(`"guardian_invitation".accepted_at IS NULL`).
 			Where(`"guardian_invitation".expires_at = ?`, expectedExpiresAt).
@@ -298,7 +297,6 @@ func (s *Store) AcceptGuardianInvitation(ctx context.Context, id int64, token st
 	rows, _, err := s.exec(ctx, "accept guardian invitation", func(db bun.IDB) executor {
 		return guardianTenantFilter(scope, db.NewUpdate().Model((*guardianInvitationRow)(nil)).
 			Set("accepted_at = ?", acceptedAt).
-			Set("updated_at = NOW()").
 			Where(`"guardian_invitation".id = ?`, id).
 			Where(`"guardian_invitation".token = ?`, domain.HashToken(token)).
 			Where(`"guardian_invitation".accepted_at IS NULL`).
@@ -324,7 +322,6 @@ func (s *Store) InvalidateGuardianInvitations(ctx context.Context, profileID int
 		Set("expires_at = LEAST(expires_at, ?)", now).
 		Set("email = NULL").
 		Set("approval_status = CASE WHEN approval_status = ? THEN ? ELSE approval_status END", domain.GuardianInvitationApprovalPending, domain.GuardianInvitationApprovalRejected).
-		Set("updated_at = ?", now).
 		Where("(? OR approval_status <> ?)", includePendingApprovals, domain.GuardianInvitationApprovalPending).
 		Where("guardian_profile_id = ?", profileID).Where("accepted_at IS NULL").Where("expires_at > ?", now)).Exec(ctx)
 	return err

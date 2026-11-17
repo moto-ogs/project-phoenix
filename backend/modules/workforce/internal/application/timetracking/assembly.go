@@ -3,6 +3,7 @@ package timetracking
 import (
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -107,7 +108,9 @@ type Ports struct {
 	// AbsenceEmail is optional: nil sends no absence email.
 	AbsenceEmail *AbsenceEmailDeps
 	Logger       *slog.Logger
-	// Today is optional and pins the absence and ledger calendar day.
+	// Now is the clock every service reads (ADR 0239) and is required.
+	// Today is its calendar day; nil derives it from Now.
+	Now   func() time.Time
 	Today func() calendar.Date
 }
 
@@ -147,22 +150,25 @@ func NewClock(deps Dependencies) (*Clock, error) {
 	if err := deps.validate(); err != nil {
 		return nil, err
 	}
+	deps.Now, deps.Today = deps.clocks()
 	logger := loggerOrDefault(deps.Logger)
 	snapshots, absenceTypes := deps.MonthSnapshots, deps.AbsenceTypes
 	sessions, months := deps.sessionsAndMonths(absenceTypes, snapshots, logger)
 	ledger := deps.ledger(months, snapshots, logger)
 	// Monatsabschluss (#1417): freezes a month's closing balance so a
 	// retroactive correction can no longer rewrite every later Übertrag.
-	closing := NewStaffMonthCloseService(snapshots, months, deps.MonthCloseStaff, deps.Settings, logger, WithMonthCloseEvents(deps.Events), WithMonthCloseUnitOfWork(runTimeTrackingUnit), WithMonthClosePayrollRules(deps.PayrollRules), WithMonthCloseTraeger(deps.TraegerMonths))
+	closing := NewStaffMonthCloseService(snapshots, months, deps.MonthCloseStaff, deps.Settings, logger, WithMonthCloseEvents(deps.Events), WithMonthCloseUnitOfWork(runTimeTrackingUnit), WithMonthClosePayrollRules(deps.PayrollRules), WithMonthCloseTraeger(deps.TraegerMonths),
+		func(s *staffMonthCloseService) { s.now = deps.Now })
 	overview := deps.overview(snapshots, logger)
 	// Cross-staff payroll/evidence export (#1417 2b): rows via the overview's
 	// prefetch (month) and the single-staff export cells (day); every download
 	// writes an audit.data_access_logs row or fails.
-	export := NewStaffTimeExportService(overview, sessions, deps.ExportStaff, deps.DataAccessAudit, deps.Payroll, logger, deps.RenderWorkbook)
+	export := NewStaffTimeExportService(overview, sessions, deps.ExportStaff, deps.DataAccessAudit, deps.Payroll, logger, deps.RenderWorkbook, deps.Now)
 	export.payrollRules = deps.PayrollRules
+	export.todayFunc = deps.Today
 	// Cross-staff audit feed (#1417): merges the four change trails into one
 	// keyset-paginated view. Read-only; permission gating at the route.
-	auditLog := NewTimeTrackingAuditLogService(deps.AuditReader, deps.StaffNames, deps.Settings)
+	auditLog := NewTimeTrackingAuditLogService(deps.AuditReader, deps.StaffNames, deps.Settings, deps.Today)
 
 	return &Clock{deps: deps, services: Services{
 		Sessions: sessions, Months: months, Ledger: ledger,
@@ -199,6 +205,7 @@ func (deps Dependencies) sessionsAndMonths(absenceTypes AbsenceTypeReader, snaps
 		WithWorkSessionExternalCaregivers(deps.ExternalCaregivers),
 		WithWorkSessionAbsenceTypes(absenceTypes),
 		WithWorkSessionTargetOverrides(staffTargetOverrideWeeks{overrides: deps.TargetOverrides, months: func() WorkTimeMonthService { return months }}),
+		func(s *workSessionService) { s.nowFunc = deps.Now },
 	)
 	// Everything computed on read, the Übertrag is live.
 	months = NewWorkTimeMonthService(deps.Sessions, deps.Breaks, deps.Absences, deps.StaffSchedules, deps.ScheduleTargets,
@@ -211,6 +218,7 @@ func (deps Dependencies) sessionsAndMonths(absenceTypes AbsenceTypeReader, snaps
 		// Frozen months (#1417) short-circuit the carry chain so a retroactive
 		// correction can no longer rewrite a closed month's Übertrag.
 		WithMonthSnapshots(snapshots),
+		func(s *workTimeMonthService) { s.nowFunc, s.todayFunc = deps.Now, deps.Today },
 	)
 	return sessions, months
 }
@@ -228,10 +236,7 @@ func (deps Dependencies) ledger(months WorkTimeMonthService, snapshots MonthSnap
 		// Deletes leave an append-only tombstone in the cross-staff audit log
 		// (#1417). The delete path fails without this wiring.
 		WithAdjustmentDeletionAudit(deps.DeletionAudit),
-	}
-	if deps.Today != nil {
-		today := deps.Today
-		options = append(options, func(s *staffBalanceAdjustmentService) { s.todayFunc = today })
+		func(s *staffBalanceAdjustmentService) { s.nowFunc, s.todayFunc = deps.Now, deps.Today },
 	}
 	return NewStaffBalanceAdjustmentService(deps.Adjustments, months, deps.Settings, logger, options...)
 }
@@ -251,6 +256,7 @@ func (deps Dependencies) overview(snapshots MonthSnapshots, logger *slog.Logger)
 		WithOverviewVacationOpenings(deps.VacationOpenings),
 		// The Träger pays the staff its contracts cover (#4711).
 		WithOverviewTraeger(deps.TraegerMonths),
+		func(s *staffOverviewService) { s.nowFunc, s.todayFunc = deps.Now, deps.Today },
 	)
 }
 
@@ -268,10 +274,7 @@ func (deps Dependencies) absenceOptions(types AbsenceTypeReader, snapshots Month
 		// A rebooking inside a closed month (#3258) could not move its frozen
 		// closing balance, so the service rejects it.
 		WithAbsenceMonthSnapshots(snapshots),
-	}
-	if deps.Today != nil {
-		today := deps.Today
-		options = append(options, func(s *staffAbsenceService) { s.todayFunc = today })
+		func(s *staffAbsenceService) { s.nowFunc, s.todayFunc = deps.Now, deps.Today },
 	}
 	if deps.AbsenceEmail != nil {
 		// Absence email notifications (#1419 4d).
@@ -301,8 +304,16 @@ func (deps Dependencies) validate() error {
 		return errors.New("time tracking: the settings, payroll configuration, payroll rules and statutory holidays are required")
 	case deps.RenderPDF == nil || deps.RenderWorkbook == nil || deps.Events == nil:
 		return errors.New("time tracking: the document renderers and the change notification are required")
+	case deps.Now == nil:
+		return errors.New("time tracking: the clock is required")
 	}
 	return nil
+}
+
+// clocks returns the services' clock and its calendar day.
+func (deps Dependencies) clocks() (func() time.Time, func() calendar.Date) {
+	now := requireClock(deps.Now)
+	return now, dayOf(deps.Today, now)
 }
 
 // CleanupDependencies are the collaborators of the retention cleanup, which
@@ -314,14 +325,16 @@ type CleanupDependencies struct {
 	Audit    DeletionAudit
 	Settings Settings
 	Logger   *slog.Logger
+	// Now is the clock of the cutoff and the deletion stamps; required.
+	Now func() time.Time
 }
 
 // NewCleanup builds the time-tracking retention cleanup (Tranche 0b): it
 // deletes work sessions and staff absences older than the tenant's
 // retention window.
 func NewCleanup(deps CleanupDependencies) (TimeTrackingCleanupService, error) {
-	if deps.Sessions == nil || deps.Absences == nil || deps.Settings == nil {
-		return nil, errors.New("time tracking cleanup: the session and absence rows and the settings are required")
+	if deps.Sessions == nil || deps.Absences == nil || deps.Settings == nil || deps.Now == nil {
+		return nil, errors.New("time tracking cleanup: the session and absence rows, the settings and the clock are required")
 	}
-	return NewTimeTrackingCleanupService(deps.Sessions, deps.Absences, deps.Audit, deps.Settings, deps.Logger), nil
+	return NewTimeTrackingCleanupService(deps.Sessions, deps.Absences, deps.Audit, deps.Settings, deps.Logger, deps.Now), nil
 }

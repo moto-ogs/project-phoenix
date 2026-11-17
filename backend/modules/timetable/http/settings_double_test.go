@@ -2,6 +2,7 @@ package timetablehttp
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 )
@@ -59,6 +60,10 @@ func newResourceForTest(deps Dependencies) *Resource {
 				}
 			},
 		}
+	}
+	if deps.Now == nil {
+		// The handler unit tests build their fixtures on the wall clock.
+		deps.Now = time.Now
 	}
 	return NewResource(deps)
 }

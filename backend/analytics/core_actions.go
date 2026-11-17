@@ -5,48 +5,6 @@ import (
 	"net/http"
 )
 
-// RouteKey is one route of the HTTP API as chi reports it: the method and
-// the route pattern, never a concrete path.
-type RouteKey struct {
-	Method  string
-	Pattern string
-}
-
-// CoreAction classifies one writing route for the usage analytics (spec
-// #3598, "Kernaktionen per Middleware"). An empty Event means the route is
-// deliberately not captured.
-type CoreAction struct {
-	Event string
-	// CreatedOnly captures an event only when the standard response envelope
-	// carries data.created=true. Idempotent writes return created=false and
-	// must not be counted as another completed core action.
-	CreatedOnly bool
-	// Session: the response mints a session (login, demo entry); the actor
-	// comes from its access token, and a 2xx without one sends nothing.
-	Session bool
-	// Surface names the portal of a route whose request carries no session
-	// (a public form). It is the fallback when no session tells it.
-	Surface string
-	// ExportType is the only property a data export adds; it names the
-	// export by its route, never by the request body.
-	ExportType string
-}
-
-var notCaptured = CoreAction{}
-
-func event(name string) CoreAction { return CoreAction{Event: name} }
-func createdEvent(name string) CoreAction {
-	return CoreAction{Event: name, CreatedOnly: true}
-}
-func session(name string) CoreAction { return CoreAction{Event: name, Session: true} }
-func sessionOr(name, surface string) CoreAction {
-	return CoreAction{Event: name, Session: true, Surface: surface}
-}
-func public(name string) CoreAction { return CoreAction{Event: name, Surface: SurfacePublic} }
-func export(exportType string) CoreAction {
-	return CoreAction{Event: "data_exported", ExportType: exportType}
-}
-
 // coreActions classifies every writing route (POST, PUT, PATCH, DELETE) of
 // the portal routers: OGS portal (/api, /auth), parents portal (/parent),
 // school portal (/school), caterer portal (/caterer), Träger portal (/traeger), and the public demo
@@ -224,7 +182,7 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/me/profile/avatar"}:                                                            notCaptured,
 	{http.MethodPost, "/api/meal-caterer/invitations"}:                                                     event("caterer_invited"),
 	{http.MethodDelete, "/api/meal-caterer/invitations/{invitationId}"}:                                    notCaptured,
-	{http.MethodDelete, "/api/meal-caterer/supply"}:                                                        event("caterer_supply_ended"),
+	{http.MethodDelete, "/api/meal-caterer/supply"}:                                                        endedEvent("caterer_supply_ended"),
 	{http.MethodPost, "/api/meal-billing-months/{month}/release"}:                                          event("meal_month_released"),
 	{http.MethodDelete, "/api/meal-plan/{date}"}:                                                           notCaptured,
 	{http.MethodPut, "/api/meal-plan/{date}"}:                                                              notCaptured,
@@ -710,7 +668,9 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/demo/access/reset"}:    notCaptured,
 
 	// Caterer portal (ADR 0077). Accepting the mailed invitation starts no
-	// session yet, so it counts on the caterer surface itself.
+	// session yet, so it counts on the caterer surface itself. Both writes
+	// count for the school in their route (catererEvent); a caterer login
+	// names no school and stays outside the school-gated collection.
 	// The caterer's second factor (#4497): a redeemed code or passkey
 	// starts the session like the login; switching the factor on or off and
 	// managing devices and passkeys are account settings.
@@ -730,8 +690,8 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/caterer/auth/password-reset"}:                         notCaptured,
 	{http.MethodPost, "/caterer/auth/password-reset/confirm"}:                 notCaptured,
 	{http.MethodPost, "/caterer/auth/login"}:                                  session("login_success"),
-	{http.MethodPost, "/caterer/invitations/{schoolId}/{token}/accept"}:       {Event: "caterer_invite_accepted", Surface: SurfaceCaterer},
-	{http.MethodPost, "/caterer/schools/{schoolId}/orders/{orderId}/confirm"}: event("meal_order_confirmed"),
+	{http.MethodPost, "/caterer/invitations/{schoolId}/{token}/accept"}:       catererEvent("caterer_invite_accepted"),
+	{http.MethodPost, "/caterer/schools/{schoolId}/orders/{orderId}/confirm"}: catererEvent("meal_order_confirmed"),
 }
 
 // CoreActions returns a copy of the route table for the guard tests.

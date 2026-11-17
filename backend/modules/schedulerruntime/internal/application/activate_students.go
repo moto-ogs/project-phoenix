@@ -60,7 +60,7 @@ func (s *Scheduler) checkAndRunActivateStudents(ctx context.Context, task *Sched
 	ctx, cancel := s.taskContext(ctx, 30*time.Minute)
 	defer cancel()
 
-	now := time.Now()
+	now := s.clock()
 	s.forEachTenantSettings(ctx, "activate-students", func(tenantCtx context.Context, tenantID int64) error {
 		return s.runActivateStudentsForTenantWithError(tenantCtx, tenantID, now)
 	})

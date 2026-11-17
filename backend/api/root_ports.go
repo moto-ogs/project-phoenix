@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -26,9 +27,9 @@ func observeCarePlan(observation careplanCompose.Observation) {
 }
 
 // newEnrollmentFormSchemas builds the form schema administration where the
-// root mounts it, over the collection settings (#4012).
-func newEnrollmentFormSchemas(settings owners.EnrollmentSettingsReads, logger *slog.Logger) enrollmentOwner.FormSchemaAdministration {
-	return enrollmentCompose.NewFormSchemas(owners.NewEnrollmentBookings(), owners.EnrollmentCollectionSettings{Settings: settings}, logger.With("service", "enrollment-form-schema"))
+// root mounts it, over the collection settings (#4012), on the root clock now.
+func newEnrollmentFormSchemas(settings owners.EnrollmentSettingsReads, logger *slog.Logger, now func() time.Time) enrollmentOwner.FormSchemaAdministration {
+	return enrollmentCompose.NewFormSchemas(owners.NewEnrollmentBookings(now), owners.EnrollmentCollectionSettings{Settings: settings}, logger.With("service", "enrollment-form-schema"))
 }
 
 // newEnrollmentCaptcha builds the captcha verifier of the public enrollment
@@ -40,9 +41,10 @@ func newEnrollmentCaptcha(settings owners.EnrollmentSettingsReads, keys Turnstil
 }
 
 // newEnrollmentPhaseExpiry builds the phase expiry warnings over the People
-// Directory's enrolled students and Care Plan's offerings.
-func newEnrollmentPhaseExpiry(students peopledirectory.StudentQuery, carePlan careplan.Query) enrollmentOwner.PhaseExpiryWarnings {
-	bookings := owners.NewEnrollmentBookings()
+// Directory's enrolled students and Care Plan's offerings, on the root clock
+// now.
+func newEnrollmentPhaseExpiry(students peopledirectory.StudentQuery, carePlan careplan.Query, now func() time.Time) enrollmentOwner.PhaseExpiryWarnings {
+	bookings := owners.NewEnrollmentBookings(now)
 	return enrollmentCompose.NewPhaseExpiryWarnings(enrollmentCompose.NewPhaseExpirySnapshots(
 		bookings, phaseExpiryStudents{query: students}, phaseExpiryCarePlanDirectory{query: carePlan}, bookings,
 	))

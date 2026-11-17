@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
@@ -204,13 +205,13 @@ type CareContractSettings interface {
 // The Worker's context carries no unit of work; the job attaches unit, as the
 // HTTP middleware does for a request.
 func CareContractRemindersJob(unit tenant.UnitOfWork, organizations CareContractOrganizations, settings CareContractSettings,
-	delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, parentsURL string) schedulerPorts.CareContractReminders {
+	delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, parentsURL string, now func() time.Time) schedulerPorts.CareContractReminders {
 	reminders := careContractCompose.NewReminders(careContractCompose.ReminderPorts{
 		Organizations: careContractTraeger{organizations: organizations},
 		Settings:      careContractReminderSettings{settings: settings},
 		Sender:        CareContractSender{Settings: settings},
 		Post:          CareContractPost{Delivery: delivery, Outcomes: outcomes}, Runtime: CareContractRuntime{}, Links: CareContractLinks(parentsURL),
-	})
+	}, now)
 	return func(ctx context.Context) error {
 		return reminders.RemindDue(tenant.WithUnitOfWork(ctx, unit))
 	}

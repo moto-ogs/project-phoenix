@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/uptrace/bun"
@@ -18,7 +17,7 @@ func (r *Store) UpdateChildStatus(ctx context.Context, id int64, newStatus strin
 	if err != nil {
 		return err
 	}
-	now := time.Now()
+	now := r.currentTime()
 	q := db.NewUpdate().
 		TableExpr(`enrollment.request_children AS "request_child"`).
 		Where(`"request_child".tenant_id = ?`, tenantID).
@@ -71,7 +70,7 @@ func (r *Store) HoldAutoRenewedChild(ctx context.Context, id int64, reviewReason
 		Where(`"request_child".tenant_id = ?`, tenantID).
 		Set("status = ?", enrollment.ChildStatusSubmitted).
 		Set("review_reason = ?", reviewReason).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", r.currentTime()).
 		Where(`"request_child".id = ?`, id).
 		Where(`"request_child".status = ?`, enrollment.ChildStatusAutoRenewed).
 		Exec(ctx)
@@ -94,7 +93,7 @@ func (r *Store) ReviewRolloverChild(ctx context.Context, id int64, newStatus str
 	if err != nil {
 		return err
 	}
-	now := time.Now()
+	now := r.currentTime()
 	q := db.NewUpdate().
 		TableExpr(`enrollment.request_children AS "request_child"`).
 		Where(`"request_child".tenant_id = ?`, tenantID).

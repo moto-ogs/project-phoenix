@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"time"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
@@ -38,5 +39,5 @@ func NewParentContractNoticesForTests(db transactionruntime.Database) (parentpor
 	if err != nil {
 		return nil, err
 	}
-	return owners.NewParentContractNotices(fixedNoticeTemplates{}, delivery.Module, owners.CareContractTestHolidays{}), nil
+	return owners.NewParentContractNotices(fixedNoticeTemplates{}, delivery.Module, owners.CareContractTestHolidays{}, time.Now), nil
 }

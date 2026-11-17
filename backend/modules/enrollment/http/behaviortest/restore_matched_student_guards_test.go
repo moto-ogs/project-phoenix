@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	api "github.com/moto-ogs/project-phoenix/api"
 
@@ -110,6 +111,7 @@ func TestRestoreMatchedStudentAuditFailureRollsBack(t *testing.T) {
 	failure := errors.New("audit acknowledgement failed")
 	audit := &restoreAfterAuditFailure{RestorationAudit: owners.EnrollmentDecisionRestorations(env.reposAudit.EnrollmentRestorationAudit), failure: failure}
 	decision := newTestDecisionService(enrollmentCompose.DecisionDependencies{
+		Now:      time.Now,
 		Requests: env.repos.Enrollment(), Children: env.repos.Enrollment(), Phases: env.repos.Enrollment(), Restorations: audit,
 	}, nil)
 	counter := testpkg.CaptureQueries(t, env.db)

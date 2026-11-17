@@ -33,6 +33,8 @@ type Runtime struct {
 	// envelope, the conflict as details.
 	Conflict     func(http.ResponseWriter, *http.Request, string, devicescan.ConflictInfoResponse)
 	MarkRollback func(context.Context)
+	// Now is the root's clock the session answers are stamped with.
+	Now func() time.Time
 }
 
 func (rs *Resource) requireDevice(w http.ResponseWriter, r *http.Request) bool {

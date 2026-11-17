@@ -19,7 +19,7 @@ func NewDeviationEventRepository(runtime Runtime) audit.DeviationEventRepository
 }
 
 func (r *deviationEventRepository) Create(ctx context.Context, event *audit.DeviationEvent) error {
-	return NewAppender(r.runtime).Append(ctx, event)
+	return NewAppender(r.runtime, nil).Append(ctx, event)
 }
 
 func (r *deviationEventRepository) ListByRange(ctx context.Context, from, to audit.Date, activityGroupID *int64, startTime *string) ([]*audit.DeviationEvent, error) {

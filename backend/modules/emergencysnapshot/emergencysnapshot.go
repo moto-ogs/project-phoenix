@@ -123,7 +123,7 @@ type Dependencies struct {
 	AccessLog AccessLog
 	// Collate orders two names in German dictionary order (DIN 5007-1).
 	Collate func(a, b string) int
-	// Now supplies the export instant; optional, defaults to time.Now.
+	// Now supplies the export instant: the root's clock. Required.
 	Now func() time.Time
 	// Logger is optional; a nil logger falls back to slog.Default.
 	Logger *slog.Logger
@@ -134,16 +134,13 @@ type Projection struct {
 	deps Dependencies
 }
 
-// New composes the projection. Now and Logger are optional; every port is
-// required.
+// New composes the projection. Logger is optional; every port and the clock
+// are required.
 func New(deps Dependencies) (*Projection, error) {
 	if deps.Presence == nil || deps.Rooms == nil || deps.Students == nil || deps.Persons == nil ||
 		deps.Contacts == nil || deps.Calendar == nil || deps.Renderer == nil ||
-		deps.AccessLog == nil || deps.Collate == nil {
+		deps.AccessLog == nil || deps.Collate == nil || deps.Now == nil {
 		return nil, ErrIncompleteDependencies
-	}
-	if deps.Now == nil {
-		deps.Now = time.Now
 	}
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()

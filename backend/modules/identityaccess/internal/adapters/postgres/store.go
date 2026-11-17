@@ -32,13 +32,16 @@ type Scope func(context.Context) TenantScope
 type Store struct {
 	database Database
 	scope    Scope
+	// now is the owner's clock (ADR 0239): write stamps and the expiry
+	// comparisons the statements bind read it.
+	now func() time.Time
 }
 
-func New(database Database, scope Scope) *Store {
-	if database == nil || scope == nil {
-		panic("identity access postgres: database runtime and tenant scope are required")
+func New(database Database, scope Scope, now func() time.Time) *Store {
+	if database == nil || scope == nil || now == nil {
+		panic("identity access postgres: database runtime, tenant scope and clock are required")
 	}
-	return &Store{database: database, scope: scope}
+	return &Store{database: database, scope: scope, now: now}
 }
 
 type accountRow struct {
@@ -160,11 +163,11 @@ func (s *Store) EnsureActiveTenantMapping(ctx context.Context, accountID, tenant
 	// without an invitation, matching the legacy model that never set it on
 	// this path, and the column default would stamp NOW().
 	mappingStats, err := s.bindAccountToSchool(ctx, "ensure active tenant mapping", func(db bun.IDB) *bun.RawQuery {
-		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at, invited_at, created_at, updated_at)
-			SELECT ?, ?, 'active', NOW(), NULL::timestamptz, NOW(), NOW() FROM caterer WHERE NOT caterer.refused
+		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at, invited_at)
+			SELECT ?, ?, 'active', ?::timestamptz, NULL::timestamptz FROM caterer WHERE NOT caterer.refused
 			ON CONFLICT (account_id, tenant_id) DO UPDATE
-			SET status = EXCLUDED.status, activated_at = EXCLUDED.activated_at, deactivated_at = NULL, updated_at = NOW()
-			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID)
+			SET status = EXCLUDED.status, activated_at = EXCLUDED.activated_at, deactivated_at = NULL
+			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID, s.now())
 	})
 	stats.Add(mappingStats)
 	return stats, err
@@ -241,7 +244,7 @@ func (s *Store) AssignAccountRole(ctx context.Context, accountID, roleID, tenant
 	if err != nil {
 		return false, domain.OperationStats{}, err
 	}
-	now := time.Now()
+	now := s.now()
 	row := accountRoleRow{AccountID: accountID, RoleID: roleID, TenantID: tenantID, CreatedAt: now, UpdatedAt: now}
 	started := time.Now()
 	result, err := db.NewInsert().Model(&row).ModelTableExpr(`auth.account_roles`).

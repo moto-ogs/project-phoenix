@@ -298,7 +298,7 @@ func (rs *HolidayPeriodResource) exportRegistrations(w http.ResponseWriter, r *h
 		return
 	}
 	names, _ := r.Context().Value(holidaySchoolNamesKey{}).(map[int64]string)
-	doc := holidayRegistrationDocument(export, filter, names)
+	doc := holidayRegistrationDocument(export, filter, names, rs.Now())
 	if format == lists.FormatPDF {
 		doc.Columns = holidayRegistrationPrintColumns(doc.Columns)
 	}
@@ -369,7 +369,7 @@ func holidayRegistrationPrintColumns(columns []lists.Column) []lists.Column {
 	return printed
 }
 
-func holidayRegistrationDocument(export capability.HolidayRegistrationExport, filter capability.HolidayRegistrationFilter, names map[int64]string) lists.Document {
+func holidayRegistrationDocument(export capability.HolidayRegistrationExport, filter capability.HolidayRegistrationFilter, names map[int64]string, generatedAt time.Time) lists.Document {
 	period, rows := export.Period, export.Rows
 	schoolName := func(id int64) string {
 		if name, ok := names[id]; ok {
@@ -420,7 +420,7 @@ func holidayRegistrationDocument(export capability.HolidayRegistrationExport, fi
 		out = append(out, lists.Row{Values: values})
 	}
 	return lists.Document{
-		Title: "Ferienanmeldungen", Subtitle: period.Name, GeneratedAt: time.Now(),
+		Title: "Ferienanmeldungen", Subtitle: period.Name, GeneratedAt: generatedAt,
 		Filters: holidayRegistrationFilterLabels(period, filter, schoolName), Columns: holidayExportColumns(export.Columns), Rows: out,
 		Footer: "Vertraulich. Enthält personenbezogene Daten.",
 	}

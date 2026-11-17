@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -97,7 +98,7 @@ func TestInitiatePasswordResetIssuesARedeemableLink(t *testing.T) {
 
 	expired, err := resets.InitiatePasswordReset(ctx, email, identityaccess.PasswordResetScopeStaff)
 	require.NoError(t, err)
-	_, err = db.NewRaw(`UPDATE auth.password_reset_tokens SET expiry = NOW() - INTERVAL '1 minute' WHERE id = ?`, expired.ID).Exec(ctx)
+	_, err = db.NewRaw(`UPDATE auth.password_reset_tokens SET expiry = ? WHERE id = ?`, time.Now().Add(-time.Minute), expired.ID).Exec(ctx)
 	require.NoError(t, err)
 	require.ErrorIs(t, resets.ResetPassword(ctx, expired.Token, resetPassword), identityaccess.ErrInvalidToken,
 		"an expired link is refused")
@@ -232,6 +233,37 @@ func TestPasswordResetRateLimitDoesNotRevealAccountExistence(t *testing.T) {
 	require.Zero(t, windows, "no plaintext address is retained by the limiter")
 }
 
+// A failure past the account lookup happens only for an existing account.
+// It must answer like an unknown address (#7213): an error would tell the
+// caller that the address has an account.
+func TestPasswordResetFailureForAnAccountAnswersLikeAnUnknownAddress(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	resets := newResetCapability(t, db,
+		api.WithAuthTestMailer(testpkg.NewCapturingMailer()),
+		api.WithAuthTestTransactionalOutbox(failingResetOutbox{}))
+	ctx := testpkg.Ctx(t)
+	known := resetAccount(t, db, "reset-outbox-failure")
+
+	link, err := resets.InitiatePasswordReset(ctx, "reset-outbox-unknown@test.local", identityaccess.PasswordResetScopeStaff)
+	require.NoError(t, err)
+	require.Nil(t, link)
+	link, err = resets.InitiatePasswordReset(ctx, known, identityaccess.PasswordResetScopeStaff)
+	require.NoError(t, err, "a failing mail outbox answers like an unknown address")
+	require.Nil(t, link)
+
+	var issued int
+	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM auth.password_reset_tokens t
+		JOIN auth.accounts a ON a.id = t.account_id WHERE a.email = ?`, known).Scan(ctx, &issued))
+	require.Zero(t, issued, "the link rolls back with the failed mail")
+}
+
+type failingResetOutbox struct{}
+
+func (failingResetOutbox) EnqueueTransactionalMail(context.Context, owners.DurableMail) error {
+	return errors.New("outbox unavailable")
+}
+
 // Cleanup removes spent links and stale windows and keeps what is still in
 // use: a live link and a window the rate limit still counts.
 func TestPasswordResetCleanupKeepsLiveLinksAndTheWindow(t *testing.T) {
@@ -254,7 +286,7 @@ func TestPasswordResetCleanupKeepsLiveLinksAndTheWindow(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT id FROM auth.password_reset_tokens WHERE account_id = (SELECT account_id FROM auth.password_reset_tokens WHERE id = ?) ORDER BY id`, live.ID).Scan(ctx, &remaining))
 	assert.Equal(t, []int64{live.ID}, remaining, "a redeemable link survives the cleanup")
 
-	_, err = db.NewRaw(`UPDATE auth.password_reset_rate_limits SET window_start = NOW() - INTERVAL '25 hours' WHERE email = ?`, resetLimitKey(email)).Exec(ctx)
+	_, err = db.NewRaw(`UPDATE auth.password_reset_rate_limits SET window_start = ? WHERE email = ?`, time.Now().Add(-25*time.Hour), resetLimitKey(email)).Exec(ctx)
 	require.NoError(t, err)
 	recent := resetAccount(t, db, "reset-cleanup-recent")
 	_, err = resets.InitiatePasswordReset(ctx, recent, identityaccess.PasswordResetScopeStaff)
@@ -317,7 +349,7 @@ func TestPasswordResetRateLimitPreservesLegacyWindow(t *testing.T) {
 	db := testpkg.SetupIsolatedTestDB(t)
 	resets := newResetCapability(t, db, api.WithAuthTestPasswordResetRateLimit(true))
 	email := resetAccount(t, db, "legacy-reset-limit")
-	_, err := db.NewRaw(`INSERT INTO auth.password_reset_rate_limits (email, attempts, window_start) VALUES (?, 3, NOW())`, email).Exec(testpkg.Ctx(t))
+	_, err := db.NewRaw(`INSERT INTO auth.password_reset_rate_limits (email, attempts, window_start) VALUES (?, 3, ?)`, email, time.Now()).Exec(testpkg.Ctx(t))
 	require.NoError(t, err)
 	_, err = resets.InitiatePasswordReset(testpkg.Ctx(t), email, identityaccess.PasswordResetScopeStaff)
 	require.ErrorIs(t, err, identityaccess.ErrPasswordResetRateLimited, "deploying hashed counters must not grant another three requests")

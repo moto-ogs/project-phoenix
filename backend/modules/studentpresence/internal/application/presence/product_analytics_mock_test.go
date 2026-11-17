@@ -28,7 +28,7 @@ func TestTrackProductEventCapturesTenantScopedEvent(t *testing.T) {
 	t.Parallel()
 
 	rec := &recordingTracker{}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, Tracker: rec}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Tracker: rec}}
 	ctx := tenant.WithTenantID(context.Background(), 42)
 
 	svc.trackProductEvent(ctx, "student_checked_in", map[string]any{"method": "rfid"})
@@ -47,7 +47,7 @@ func TestTrackProductEventSkipsWithoutTenant(t *testing.T) {
 	t.Parallel()
 
 	rec := &recordingTracker{}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, Tracker: rec}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Tracker: rec}}
 
 	svc.trackProductEvent(context.Background(), "student_checked_in", nil)
 
@@ -58,7 +58,7 @@ func TestTrackProductEventCreatesPropsWhenNil(t *testing.T) {
 	t.Parallel()
 
 	rec := &recordingTracker{}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, Tracker: rec}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Tracker: rec}}
 	ctx := tenant.WithTenantID(context.Background(), 7)
 
 	svc.trackProductEvent(ctx, "room_transfer", nil)
@@ -73,7 +73,7 @@ func TestTrackProductEventDefersUntilAfterCommit(t *testing.T) {
 	t.Parallel()
 
 	rec := &recordingTracker{}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, Tracker: rec}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Tracker: rec}}
 	ctx := tenant.WithTenantID(context.Background(), 42)
 	ctx, drain := tenanttest.WithAfterCommitHooks(ctx)
 
@@ -92,7 +92,7 @@ func TestTrackProductEventDefersUntilAfterCommit(t *testing.T) {
 func TestAttendanceMethod(t *testing.T) {
 	t.Parallel()
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal}}
 	assert.Equal(t, "manual", svc.attendanceMethod(context.Background()))
 
 	iotCtx := context.WithValue(context.Background(), attendancePrincipalTestKey{}, RequestPrincipal{IsIoT: true})
@@ -102,7 +102,7 @@ func TestAttendanceMethod(t *testing.T) {
 func TestTrackProductEventNilTrackerIsSafe(t *testing.T) {
 	t.Parallel()
 
-	svc := &service{}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
 	ctx := tenant.WithTenantID(context.Background(), 42)
 
 	assert.NotPanics(t, func() {

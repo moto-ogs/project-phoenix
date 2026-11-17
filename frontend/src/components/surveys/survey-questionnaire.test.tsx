@@ -1,11 +1,42 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
 import type { SurveyForm } from "~/lib/survey-form";
+import { setTestClock } from "~/test/clock";
 import { SurveyAnswerPanel } from "./survey-questionnaire";
+
+vi.unmock("swr");
+
+function SWRTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(
+  ui: Parameters<typeof rtlRender>[0],
+  options?: Parameters<typeof rtlRender>[1],
+) {
+  return rtlRender(ui, { wrapper: SWRTestWrapper, ...options });
+}
 
 function form(
   patch: Partial<SurveyForm["survey"]> = {},
@@ -19,7 +50,7 @@ function form(
       title: "Zufriedenheit",
       intro: "Ihre Meinung hilft uns.",
       anonymous: true,
-      // Nach der Testuhr (09.09.2026), also noch offen.
+      // Nach der festen Uhr (09.09.2026), also noch offen.
       closes_at: "2026-09-30T16:00:00Z",
       questions: [
         {
@@ -45,9 +76,13 @@ function form(
 }
 
 describe("SurveyAnswerPanel", () => {
+  // Die Umfrage endet am 30.09.2026; die Tests brauchen einen Tag davor.
+  beforeEach(() => setTestClock("2026-09-09T12:00:00+02:00"));
+
   it("states before the first question that the survey is anonymous", async () => {
     render(
       <SurveyAnswerPanel
+        formId="7"
         load={() => Promise.resolve(form())}
         submit={vi.fn()}
         respondent="parent"
@@ -74,6 +109,7 @@ describe("SurveyAnswerPanel", () => {
   it("says plainly when the school sees the name", async () => {
     render(
       <SurveyAnswerPanel
+        formId="7"
         load={() => Promise.resolve(form({ anonymous: false }))}
         submit={vi.fn()}
         respondent="staff"
@@ -90,6 +126,7 @@ describe("SurveyAnswerPanel", () => {
     const submit = vi.fn();
     render(
       <SurveyAnswerPanel
+        formId="7"
         load={() => Promise.resolve(form())}
         submit={submit}
         respondent="staff"
@@ -122,6 +159,7 @@ describe("SurveyAnswerPanel", () => {
     const onSubmitted = vi.fn();
     render(
       <SurveyAnswerPanel
+        formId="7"
         load={() => Promise.resolve(form())}
         submit={submit}
         respondent="staff"
@@ -161,6 +199,7 @@ describe("SurveyAnswerPanel", () => {
     const submit = vi.fn().mockResolvedValue(undefined);
     render(
       <SurveyAnswerPanel
+        formId="7"
         load={() =>
           Promise.resolve(
             form({
@@ -212,6 +251,7 @@ describe("SurveyAnswerPanel", () => {
   it("shows the done state instead of the questions after taking part", async () => {
     render(
       <SurveyAnswerPanel
+        formId="7"
         load={() => Promise.resolve(form({}, true))}
         submit={vi.fn()}
         respondent="parent"
@@ -238,7 +278,12 @@ describe("SurveyAnswerPanel", () => {
       )
       .mockResolvedValueOnce(form());
     render(
-      <SurveyAnswerPanel load={load} submit={vi.fn()} respondent="staff" />,
+      <SurveyAnswerPanel
+        formId="7"
+        load={load}
+        submit={vi.fn()}
+        respondent="staff"
+      />,
     );
 
     fireEvent.click(

@@ -104,13 +104,13 @@ func (rs *Resource) loadActiveSupervisorsMap(ctx context.Context, groups []stude
 	for i, group := range groups {
 		groupIDs[i] = group.ID
 	}
-	day := calendar.TodayDate().String()
+	day := rs.today().String()
 	rows, err := rs.Presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: groupIDs, ActiveOn: &day})
 	if err != nil {
 		slog.Default().Error("failed to load supervisors", slog.String("error", err.Error()))
 		return supervisorMap
 	}
-	today := calendar.TodayDate()
+	today := rs.today()
 	for _, row := range rows {
 		response, err := presenceSupervisionResponse(row, today)
 		if err != nil {
@@ -298,7 +298,7 @@ func (rs *Resource) extractStaffFromRequest(w http.ResponseWriter, r *http.Reque
 
 // verifyStaffSupervisionAccess verifies staff has permission to view an active group
 func (rs *Resource) verifyStaffSupervisionAccess(w http.ResponseWriter, r *http.Request, staffID int64, activeGroupID int64) error {
-	day := calendar.TodayDate().String()
+	day := rs.today().String()
 	supervisions, err := rs.presenceSupervisionResponses(r.Context(), studentpresence.GroupSupervisionFilter{StaffID: &staffID, ActiveOn: &day}, "GetStaffActiveSupervisions")
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
@@ -470,7 +470,7 @@ func (rs *Resource) getActiveGroupSupervisors(w http.ResponseWriter, r *http.Req
 	}
 
 	// Get active group with supervisors
-	responses, err := rs.presenceSessionSupervisors(r.Context(), id, calendar.TodayDate())
+	responses, err := rs.presenceSessionSupervisors(r.Context(), id, rs.today())
 	if err != nil {
 		common.RenderError(w, r, ErrorRenderer(err))
 		return

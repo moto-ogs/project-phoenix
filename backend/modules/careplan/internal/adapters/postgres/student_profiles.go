@@ -18,7 +18,7 @@ func (s *DirectoryStore) ClearStudentStatusFlags(ctx context.Context, ids []int6
 	members := s.directory.StudentRows(db, tenantID).
 		ColumnExpr("student.membership_id").Where("student.id IN (?)", bun.List(ids))
 	query := db.NewUpdate().TableExpr("users.student_care_profiles AS care").
-		Set("updated_at = NOW()").Where("care.tenant_id = ?", tenantID).
+		Where("care.tenant_id = ?", tenantID).
 		Where("care.membership_id IN (?)", members)
 	switch status {
 	case "sick":
@@ -63,7 +63,7 @@ func (s *DirectoryStore) SaveStudentCareProfile(ctx context.Context, profile dom
   ON CONFLICT (membership_id) DO UPDATE SET
    health_data = EXCLUDED.health_data,
    pickup_status = EXCLUDED.pickup_status, sick = EXCLUDED.sick, sick_since = EXCLUDED.sick_since,
-   excused = EXCLUDED.excused, excused_since = EXCLUDED.excused_since, updated_at = NOW(),
+   excused = EXCLUDED.excused, excused_since = EXCLUDED.excused_since,
    allowed_departure_modes = CASE WHEN ? THEN EXCLUDED.allowed_departure_modes ELSE care.allowed_departure_modes END,
    departure_days = CASE WHEN ? THEN EXCLUDED.departure_days ELSE care.departure_days END,
    bus_days = CASE WHEN ? THEN EXCLUDED.bus_days ELSE care.bus_days END,
@@ -94,7 +94,7 @@ func (s *DirectoryStore) SetStudentLiveStatus(ctx context.Context, input domain.
 	query := db.NewUpdate().TableExpr("users.student_care_profiles AS care").
 		Set("sick = ?", input.Sick).Set("sick_since = ?", input.SickSince).
 		Set("excused = ?", input.Excused).Set("excused_since = ?", input.ExcusedSince).
-		Set("updated_at = NOW()").Where("care.tenant_id = ?", tenantID).
+		Where("care.tenant_id = ?", tenantID).
 		Where("care.membership_id IN (?)", members)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -132,7 +132,7 @@ func (s *DirectoryStore) SetStudentHealthInfo(ctx context.Context, studentID int
 		stats.Queries++
 		started = time.Now()
 		result, err := db.NewUpdate().TableExpr("users.student_care_profiles AS care").
-			Set("health_data = ?", health).Set("updated_at = NOW()").
+			Set("health_data = ?", health).
 			Where("care.tenant_id = ?", tenantID).Where("care.membership_id = ?", membershipID).
 			Exec(ctx)
 		stats.StatementDuration += time.Since(started)
