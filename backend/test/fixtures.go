@@ -3014,11 +3014,9 @@ func CreateTestParentAnnouncement(tb testing.TB, db *bun.DB, createdBy int64, ti
 	return announcement
 }
 
-// PublishTestParentAnnouncement stamps an announcement as published now, so
-// tests can exercise the rules that only apply once it is out — above all that
-// a published announcement is immutable (#2890).
-// It stamps this process's clock, the one the audience projection judges
-// "published" on (#7295), not the database's.
+// PublishTestParentAnnouncement stamps an announcement as published now on this
+// process's clock, which the audience projection judges on (#7295), so tests can
+// exercise the rules of a published announcement, above all immutability (#2890).
 func PublishTestParentAnnouncement(tb testing.TB, db *bun.DB, announcementID int64) {
 	tb.Helper()
 	ctx := TenantContext(fixtureTenantID(tb))
