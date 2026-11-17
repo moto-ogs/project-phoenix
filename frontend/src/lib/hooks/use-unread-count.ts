@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSWRAuth } from "~/lib/swr";
+import { onSWRScopeReset, useSWRAuth, useSWRCacheKey } from "~/lib/swr";
 
 /**
  * Shared badge hook: one count read through the shared cache (useSWRAuth),
@@ -64,7 +64,13 @@ export interface UnreadCountReader extends UseUnreadCountResult {
 }
 
 /** Keys whose event-driven revalidation is in flight, for all their readers. */
-const eventRevalidations = new Set<string>();
+interface EventRevalidation {
+  events: WeakSet<Event>;
+  pending: boolean;
+  refresh: () => Promise<unknown>;
+}
+const eventRevalidations = new Map<string, EventRevalidation>();
+onSWRScopeReset(() => eventRevalidations.clear());
 
 /**
  * @param key - Unscoped key of a factory in ~/lib/swr (`shellResourceKeys`,
@@ -85,6 +91,8 @@ export function useUnreadCount<T = number>(
   } = options;
   const count = (options as { count?: (data: T) => number }).count;
   const readKey = enabled ? key : null;
+  const cacheKey = useSWRCacheKey();
+  const eventReadKey = readKey === null ? null : cacheKey(readKey);
   // A seeded or cached count is the answer on mount: no request. Once the
   // gate was closed (mounted disabled, or switched off since), the next
   // opening loads its count from the server: the seed or entry from before
@@ -110,21 +118,49 @@ export function useUnreadCount<T = number>(
   // effect only revalidates the reader above; it reads nothing itself.
   const eventKey = (eventNames ?? []).join("|");
   useEffect(() => {
-    if (readKey === null || !eventKey) return;
+    if (eventReadKey === null || !eventKey) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const revalidate = () => {
+    const revalidate = (event: Event) => {
       timer = null;
-      // Every reader of a key hears the event; one request answers them all.
-      if (eventRevalidations.has(readKey)) return;
-      eventRevalidations.add(readKey);
-      void mutate().finally(() => eventRevalidations.delete(readKey));
+      const running = eventRevalidations.get(eventReadKey);
+      if (running) {
+        // All readers hear the same event. Only a NEW event queues a trailing
+        // refresh, including when several arrive while the request is running.
+        if (!running.events.has(event)) {
+          running.events.add(event);
+          running.pending = true;
+        }
+        running.refresh = mutate;
+        return;
+      }
+      const flight: EventRevalidation = {
+        events: new WeakSet([event]),
+        pending: false,
+        refresh: mutate,
+      };
+      eventRevalidations.set(eventReadKey, flight);
+      void (async () => {
+        try {
+          do {
+            flight.pending = false;
+            await flight.refresh();
+          } while (
+            flight.pending &&
+            eventRevalidations.get(eventReadKey) === flight
+          );
+        } finally {
+          if (eventRevalidations.get(eventReadKey) === flight) {
+            eventRevalidations.delete(eventReadKey);
+          }
+        }
+      })();
     };
-    const handleEvent = () => {
+    const handleEvent = (event: Event) => {
       if (eventDebounceMs && eventDebounceMs > 0) {
         if (timer) clearTimeout(timer);
-        timer = setTimeout(revalidate, eventDebounceMs);
+        timer = setTimeout(() => revalidate(event), eventDebounceMs);
       } else {
-        revalidate();
+        revalidate(event);
       }
     };
     const names = eventKey.split("|");
@@ -133,7 +169,7 @@ export function useUnreadCount<T = number>(
       names.forEach((name) => window.removeEventListener(name, handleEvent));
       if (timer) clearTimeout(timer);
     };
-  }, [readKey, eventKey, eventDebounceMs, mutate]);
+  }, [eventReadKey, eventKey, eventDebounceMs, mutate]);
 
   const refresh = useCallback(async () => {
     await mutate();

@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityCategory } from "~/lib/activity-helpers";
 import type { PlanningTrack } from "~/lib/planning-track-api";
 import type {
+  CombinedOfferingCounts,
   ConflictCheckResult,
   ConflictWarningItem,
   EnrichedInstance,
@@ -542,6 +543,82 @@ describe("useEventForm submit locking", () => {
 });
 
 describe("useEventForm offering source roster stash", () => {
+  it("drops the previous selection's exact counts and classes while loading new sources", async () => {
+    vi.spyOn(plannerReferenceApi, "fetchPlannerRooms").mockResolvedValue([]);
+    vi.spyOn(plannerReferenceApi, "fetchPlannerGroups").mockResolvedValue([]);
+    vi.spyOn(
+      plannerReferenceApi,
+      "fetchPlannerActivityCategories",
+    ).mockResolvedValue([]);
+    vi.spyOn(formModel, "fetchAllStudentOptions").mockResolvedValue([]);
+    vi.spyOn(staffService, "getAllStaff").mockResolvedValue([]);
+    vi.mocked(timetableService.getOfferingSources).mockResolvedValue(
+      ["5", "6"].map((id) => ({
+        id,
+        name: id,
+        phaseId: "1",
+        phaseName: "Phase",
+        totalCount: 3,
+        gradeCounts: { 2: 3 },
+        sourcedTemplates: [],
+      })),
+    );
+    const pending = deferredValue<CombinedOfferingCounts>();
+    vi.mocked(timetableService.getCombinedOfferingCounts)
+      .mockResolvedValueOnce({
+        totalCount: 1,
+        gradeCounts: { 1: 1 },
+        students: [{ studentId: "11", schoolClass: "1a" }],
+      })
+      .mockReturnValueOnce(pending.promise);
+    const { result } = renderHook(() =>
+      useEventForm({
+        isOpen: true,
+        onClose: vi.fn(),
+        onSaved: vi.fn(),
+        defaultDate: "2026-08-03",
+        calendarPeriods: [],
+        defaultCalendarPeriodId: null,
+        planningPeriods: null,
+        initialInstance: null,
+        initialSeries: null,
+        convertInstance: null,
+        defaultRepeat: "weekly",
+        variant: "full",
+        canCheckShiftCoverage: false,
+      }),
+    );
+    act(() => result.current.changeTargetGroupType("angebot"));
+    await waitFor(() => expect(result.current.offeringSources).toHaveLength(2));
+    act(() => result.current.changeSourceOfferings(["5"]));
+    await waitFor(() =>
+      expect(result.current.sourceClassOptions).toEqual(["1a"]),
+    );
+    expect(result.current.sourceFilteredCount).toBe(1);
+    act(() => result.current.changeSourceOfferings(["6"]));
+    await waitFor(() =>
+      expect(timetableService.getCombinedOfferingCounts).toHaveBeenCalledTimes(
+        2,
+      ),
+    );
+    expect(result.current.sourceCountsPending).toBe(true);
+    expect(result.current.sourceClassOptions).toEqual([]);
+    expect(result.current.sourceFilteredCount).toBe(3);
+    await act(async () =>
+      pending.resolve({
+        totalCount: 2,
+        gradeCounts: { 2: 2 },
+        students: [
+          { studentId: "12", schoolClass: "2a" },
+          { studentId: "13", schoolClass: "2a" },
+        ],
+      }),
+    );
+    await waitFor(() => expect(result.current.sourceCountsPending).toBe(false));
+    expect(result.current.sourceClassOptions).toEqual(["2a"]);
+    expect(result.current.sourceFilteredCount).toBe(2);
+  });
+
   it("restores the manual roster when the source is cleared again", async () => {
     vi.spyOn(plannerReferenceApi, "fetchPlannerRooms").mockResolvedValue([]);
     vi.spyOn(plannerReferenceApi, "fetchPlannerGroups").mockResolvedValue([]);

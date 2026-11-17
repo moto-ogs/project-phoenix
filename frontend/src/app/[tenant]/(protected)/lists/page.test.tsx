@@ -301,9 +301,20 @@ describe("SlotListsPage error paths (#2516)", () => {
       slots: [{ ...options.slots[0]!, title: "Basketball" }],
     });
 
+    mocks.fetchSlotListPreview.mockResolvedValue({
+      ...preview,
+      slots: [{ ...options.slots[0]!, title: "Basketball" }],
+      rows: [{ ...preview.rows[0]!, name: "Ben Beispiel", slot: "Basketball" }],
+      signature: "sig-renamed",
+    });
+    const previewCallsBefore = mocks.fetchSlotListPreview.mock.calls.length;
     await openExportMenuAndPick("PDF herunterladen");
 
     expect(await screen.findByText(SLOTS_CHANGED_NOTICE)).toBeInTheDocument();
+    expect(await screen.findByText("Ben Beispiel")).toBeInTheDocument();
+    expect(mocks.fetchSlotListPreview.mock.calls.length).toBeGreaterThan(
+      previewCallsBefore,
+    );
     expect(mocks.exportSlotList).not.toHaveBeenCalled();
   });
 

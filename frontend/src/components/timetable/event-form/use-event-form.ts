@@ -3517,7 +3517,10 @@ export function useEventForm({
         combinedCountsKey.split(","),
         form.calendarPeriodId || undefined,
       ),
-    { onError: logLoadFailure("combined_offering_counts_failed") },
+    {
+      keepPreviousData: false,
+      onError: logLoadFailure("combined_offering_counts_failed"),
+    },
   );
   const combinedSourceCounts: CombinedOfferingCounts | null =
     combinedSourceCountsRead.error !== undefined

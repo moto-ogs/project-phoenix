@@ -1398,13 +1398,11 @@ export default function SlotListsPage() {
         );
         if (stillShowsOptionsAtStart()) {
           void mutateOptions(fresh, { revalidate: false });
-        } else {
-          // Newer options are already shown, so installing `fresh` would roll
-          // them back. But then NO preview key changes; refetch the preview so
-          // the user re-checks the current content the notice above points at
-          // (#1565 review pass 1 P2 follow-up).
-          void mutatePreview();
         }
+        // Metadata changes (labels, times, pickup cutoffs) need not change
+        // the preview key. Refresh even when the fresh options were installed,
+        // or newer options already shown prevented their installation.
+        void mutatePreview();
         return;
       }
 

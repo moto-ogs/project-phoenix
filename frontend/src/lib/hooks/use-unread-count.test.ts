@@ -294,6 +294,29 @@ describe("useUnreadCount — event listeners", () => {
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(3));
   });
 
+  it("coalesces events during a shared refresh into one trailing request", async () => {
+    const pending = deferred<number>();
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(2)
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValue(9);
+    const sidebar = render({ fetcher, eventNames: ["shared-refresh-event"] });
+    const home = render({ fetcher, eventNames: ["shared-refresh-event"] });
+    await waitFor(() => expect(home.result.current.unreadCount).toBe(2));
+    act(() => window.dispatchEvent(new Event("shared-refresh-event")));
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+    act(() => {
+      window.dispatchEvent(new Event("shared-refresh-event"));
+      window.dispatchEvent(new Event("shared-refresh-event"));
+    });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    await act(async () => pending.resolve(4));
+    await waitFor(() => expect(sidebar.result.current.unreadCount).toBe(9));
+    expect(home.result.current.unreadCount).toBe(9);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
   it("listens to multiple event names", async () => {
     const fetcher = vi.fn().mockResolvedValue(0);
     render({ fetcher, eventNames: ["event-a", "event-b"] });
