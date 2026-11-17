@@ -29,7 +29,7 @@ type requestRow struct {
 	SourceMetadata           json.RawMessage `bun:"source_metadata,type:jsonb,notnull,default:'{}'"`
 	StatusToken              string          `bun:"status_token,notnull,unique"`
 	StatusTokenExpires       *time.Time      `bun:"status_token_expires"`
-	SubmittedAt              time.Time       `bun:"submitted_at,notnull,default:current_timestamp"`
+	SubmittedAt              time.Time       `bun:"submitted_at,notnull"`
 	WithdrawnAt              *time.Time      `bun:"withdrawn_at"`
 	DecisionNotificationMode *string         `bun:"decision_notification_mode"`
 	// FamilyChildren and its time are read here and written only by

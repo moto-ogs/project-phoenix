@@ -34,7 +34,7 @@ import (
 // and the care-offering catalog of Care Plan, so a copy passes every check
 // of a school's own edit.
 func mountTraegerCatalogRoutes(root chi.Router, schoolPhaseAdministration *enrollmentCompose.Phases, schoolCatalog careplan.CareOfferingCatalogCapability, lockRecurrence func(context.Context) error,
-	organizations organizationtenancy.Capability, billing parentbilling.CareModulePrices, intake carecontract.Intake,
+	organizations organizationtenancy.Capability, billing parentbilling.CareModulePrices, intake carecontract.Intake, now func() time.Time,
 ) error {
 	schoolOfferings, err := careplanCompose.NewTraegerOfferingCopies(schoolCatalog, lockRecurrence)
 	if err != nil {
@@ -44,7 +44,7 @@ func mountTraegerCatalogRoutes(root chi.Router, schoolPhaseAdministration *enrol
 	if schoolPhases == nil {
 		return errors.New("träger catalog: the phase administration has no copy commands")
 	}
-	phases, offerings := enrollmentCompose.NewTraegerPhases(), careplanCompose.NewTraegerOfferings()
+	phases, offerings := enrollmentCompose.NewTraegerPhases(now), careplanCompose.NewTraegerOfferings()
 	catalog, err := traegerCatalogCompose.New(ports.Dependencies{
 		Schools: organizations, Phases: phases, Offerings: offerings,
 		SchoolPhases: schoolPhases, SchoolOfferings: schoolOfferings,

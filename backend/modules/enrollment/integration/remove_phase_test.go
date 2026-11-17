@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -45,7 +46,7 @@ func newRemovalStore() *postgres.Store {
 			return 0, err
 		}
 		return id.Int64(), nil
-	})
+	}).WithClock(time.Now)
 }
 
 // RemovePhase refuses a phase that holds enrollment requests and keeps the

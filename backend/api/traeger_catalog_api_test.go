@@ -100,7 +100,7 @@ func traegerCatalogRouter(t *testing.T, db *bun.DB, tariffOverride ...parentbill
 			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), unit)))
 		})
 	})
-	require.NoError(t, mountTraegerCatalogRoutes(router, phases, catalog.Catalog, noLock, organizations, billing, intake))
+	require.NoError(t, mountTraegerCatalogRoutes(router, phases, catalog.Catalog, noLock, organizations, billing, intake, time.Now))
 	return testpkg.SessionVerifier(router)
 }
 

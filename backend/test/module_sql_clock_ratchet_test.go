@@ -52,8 +52,14 @@ var moduleSQLClockBudget = map[string]int{
 	// orders messages, so their retention compares on its clock too. And the
 	// draft retention of the surveys (ADR 0281): the update trigger of
 	// users.surveys stamps a draft's last change.
-	"modules/communication":  20,
-	"modules/enrollment":     64,
+	"modules/communication": 20,
+	// Named exceptions on the database clock (ADR 0281): the read state of
+	// requests (3), where read_at and parent_changed_at are stamped there and
+	// only compared with each other; and family_children_stated_at (1), which
+	// parentbilling orders against its own clock_timestamp() stamps of the
+	// family children. The holiday registrations (31) follow in their own
+	// slice of #7295.
+	"modules/enrollment":     35,
 	"modules/exporttransfer": 10,
 	"modules/facilities":     1,
 	"modules/filestorage":    3,

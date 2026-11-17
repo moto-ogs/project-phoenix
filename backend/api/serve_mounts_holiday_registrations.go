@@ -80,7 +80,7 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	mountCareContractChangeRoutes(root, organizations, changes, schoolSettings, audit.Log)
 	// The office rolls its phases and offerings out into its schools (#4704).
 	billing, intake := newTraegerCatalogBilling(organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, audit.Log, contractHolidays, parentsURL, today, now)
-	return mountTraegerCatalogRoutes(root, schoolPhases, schoolCatalog, lockRecurrence, organizations, billing, intake)
+	return mountTraegerCatalogRoutes(root, schoolPhases, schoolCatalog, lockRecurrence, organizations, billing, intake, now)
 }
 
 // TraegerSettings is the Träger level of the settings system: the
