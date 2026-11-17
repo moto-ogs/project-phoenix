@@ -1307,7 +1307,7 @@ interface BackendTraegerLogo {
 }
 
 interface BackendTraegerBankAccount {
-  id: number;
+  id: string | number;
   label: string;
   account_holder: string;
   iban: string;
