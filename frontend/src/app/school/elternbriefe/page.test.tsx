@@ -90,7 +90,7 @@ function mockData(classes: string[], letters: Announcement[]) {
     if (key === null || key.startsWith("parent-letter-preview-")) {
       return { data: undefined, isLoading: false, mutate: mockMutate };
     }
-    if (key === "school-parent-letter-classes") {
+    if (key === "class-day-my-classes") {
       return {
         data: { classes },
         error: undefined,
@@ -263,7 +263,7 @@ describe("Elternbriefe in moto schule (#4800)", () => {
       loaded = true;
     });
     mockUseSWRAuth.mockImplementation((key: string | null) =>
-      key === "school-parent-letter-classes"
+      key === "class-day-my-classes"
         ? {
             data: loaded ? { classes: ["3b"] } : undefined,
             error: loaded ? undefined : failure,

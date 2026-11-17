@@ -37,6 +37,7 @@ import {
 } from "~/components/home/use-start-own-block";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
+import { homeKeys } from "~/lib/swr/portal-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import { canStartPlannedInstance } from "~/lib/timetable-lifecycle";
@@ -74,7 +75,7 @@ export function MyDayBlock() {
   const { data, error, isLoading, mutate } = useSWRAuth<
     PlannedTimetableInstance[]
   >(
-    "home-day-flow",
+    homeKeys.dayFlow(),
     () =>
       timetableOperationsApi.plannedNow({
         scope: "day",

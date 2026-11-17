@@ -4,6 +4,7 @@ import { SECTION_LABEL_CLASS } from "~/components/ui/section-label";
 import { EmptyState } from "~/components/ui/empty-state";
 import { me as meKeys } from "~/lib/swr/me";
 import { rooms as roomsKeys } from "~/lib/swr/rooms";
+import { checkinTargetKeys, roomKeys } from "~/lib/swr/rooms-keys";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -154,7 +155,7 @@ export function TransitStudentsSection({
   } = useSWRAuth<{
     students: Student[];
     pagination?: { total_records: number };
-  }>(dayStatus ? `transit-students-${dayStatus}` : "transit-students", () =>
+  }>(roomKeys.transitStudents(dayStatus), () =>
     fetchStudents({
       locationState: "transit",
       ...(dayStatus ? { dayStatus } : {}),
@@ -167,7 +168,7 @@ export function TransitStudentsSection({
     error: groupsError,
     isLoading: groupsLoading,
     mutate: reloadGroups,
-  } = useSWRAuth<ActiveGroup[]>("active-groups-for-transit", () =>
+  } = useSWRAuth<ActiveGroup[]>(checkinTargetKeys.activeGroups(), () =>
     activeService.getActiveGroups({ active: true }),
   );
   const {
@@ -184,7 +185,7 @@ export function TransitStudentsSection({
   } = useSWRAuth<Supervisor[]>(
     showAllTargets || !currentStaff?.id
       ? null
-      : `transit-target-supervisions-${currentStaff.id}`,
+      : checkinTargetKeys.supervisions(currentStaff.id),
     () => activeService.getStaffActiveSupervisions(currentStaff?.id ?? ""),
   );
 

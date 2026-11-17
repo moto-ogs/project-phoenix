@@ -2,13 +2,11 @@
 
 import { useSession } from "next-auth/react";
 
-import {
-  ENROLLMENTS_UNREAD_SWR_KEY,
-  fetchUnreadEnrollmentCount,
-} from "~/lib/enrollment-unread-api";
+import { fetchUnreadEnrollmentCount } from "~/lib/enrollment-unread-api";
 import { hasPermission } from "~/lib/auth-utils";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { useSWRAuth } from "~/lib/swr";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
 import { useModuleBooked } from "~/lib/tenant-context";
 
 /**
@@ -35,7 +33,7 @@ export function useEnrollmentsUnread() {
     onlineAnmeldungBooked &&
     hasPermission(session, "config:manage");
   const { data, isLoading, mutate } = useSWRAuth<number>(
-    enabled ? `${ENROLLMENTS_UNREAD_SWR_KEY}:${accountId}` : null,
+    enabled ? shellResourceKeys.enrollmentsUnread(accountId) : null,
     fetchUnreadEnrollmentCount,
     {
       revalidateOnFocus: true,

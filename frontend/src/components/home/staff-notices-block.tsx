@@ -11,12 +11,10 @@ import {
   HomeCardIcon,
 } from "~/components/home/home-card";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import {
-  fetchTodaysNotices,
-  staffNoticesTodayKey,
-} from "~/lib/staff-notices-api";
+import { fetchTodaysNotices } from "~/lib/staff-notices-api";
 import type { StaffNotice } from "~/lib/staff-notices-api";
 import { useSWRAuth } from "~/lib/swr";
+import { staffNoticeKeys } from "~/lib/swr/staff-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
   HomeCardLink,
@@ -48,7 +46,7 @@ export function StaffNoticesBlock() {
     isLoading,
     mutate,
   } = useSWRAuth<StaffNotice[]>(
-    staffNoticesTodayKey(accountId),
+    staffNoticeKeys.today(accountId),
     fetchTodaysNotices,
     {
       revalidateOnFocus: false,

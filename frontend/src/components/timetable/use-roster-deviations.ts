@@ -10,10 +10,6 @@ import { timetableService } from "~/lib/timetable-api";
 
 const logger = createLogger({ component: "useRosterDeviations" });
 
-export function rosterDeviationsKey(periodId: string): string {
-  return tenantDailyKeys.rosterDeviations(periodId);
-}
-
 /**
  * Regeltermine of the period whose children list differs from an offering's
  * bookings (#5103), by template id. The hint is information next to the

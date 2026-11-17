@@ -219,12 +219,6 @@ export const tenantDailyKeys = {
   calendarRecipientOptions: (search: string) =>
     `calendar-recipient-options-${search}`,
   /**
-   * Geburtstage (#1542): ohne Woche die Übersicht der Startseite, mit Woche
-   * die des Startseiten-Bausteins.
-   */
-  birthdayOverview: (weekStart?: string) =>
-    weekStart ? `birthday-overview:${weekStart}` : "birthday-overview",
-  /**
    * Ob die eigene Prüfzuständigkeit für Elternanfragen dieses Kind erreicht
    * (#3886), je Konto.
    */

@@ -64,7 +64,7 @@ import {
 import { schoolPortalLoginUrl } from "~/lib/school-url";
 import { useSWRAuth } from "~/lib/swr/hooks";
 import { dashboardKeys } from "~/lib/swr/shell-keys";
-import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
+import { homeKeys } from "~/lib/swr/portal-keys";
 import {
   useBookedModules,
   useOpenCareGroupMode,
@@ -233,7 +233,7 @@ function HomeContent() {
     error: birthdaysError,
     mutate: mutateBirthdays,
   } = useSWRAuth<BirthdayOverview>(
-    wantsBirthdayData ? tenantDailyKeys.birthdayOverview() : null,
+    wantsBirthdayData ? homeKeys.birthdayOverview() : null,
     // Ohne Argument: SWR reicht dem Abrufer sonst seinen Schlüssel durch,
     // der dann als Woche beim Server ankäme.
     () => fetchBirthdayOverviewClient(),

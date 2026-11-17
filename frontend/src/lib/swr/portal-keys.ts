@@ -270,6 +270,16 @@ export const schoolPortalKeys = {
   // eigene Route und eigene Schlüssel.
   notificationFeedFirstPage: () => "school-notification-feed-first-page",
   notificationFeedUnread: () => "school-notification-feed-unread",
+  parentLetters: () => "school-parent-letters",
+  parentLetter: (id: string) => `school-parent-letter-${id}`,
+  calendar: (from: string, to: string) => `school-calendar-${from}-${to}`,
+  sharedNotes: (schoolClass: string, studentId: string) =>
+    `school-shared-notes-${schoolClass}-${studentId}`,
+  // Die heutigen Hinweise: Seite und Karte der Klassenansicht teilen den
+  // Eintrag, damit eine Kenntnisnahme beide sofort nachzieht.
+  noticesToday: () => "school-staff-notices-today",
+  supervisions: (today: string) => `school-supervisions-${today}`,
+  supervisionRoster: (id: string) => `school-supervision-roster-${id}`,
 } as const;
 
 export const weekProtocolKeys = {
@@ -294,6 +304,45 @@ export const databaseKeys = {
 
 export const homeLayoutKeys = {
   key: () => "home-layout",
+} as const;
+
+/** Cards of the start page. Keys describe the response, not the card. */
+export const homeKeys = {
+  /**
+   * Today's planned blocks without rosters. „Ablauf des Tages“, „Mein Tag“
+   * and the now strip share it; a settings change refreshes it.
+   */
+  dayFlow: () => "home-day-flow",
+  /** Birthdays of the current week, or of the week starting `weekStart`. */
+  birthdayOverview: (weekStart?: string | null) =>
+    weekStart ? `birthday-overview:${weekStart}` : "birthday-overview",
+  staffSummary: () => "home-staff-summary",
+  ownGroup: (accountId: string) => `home-own-group:${accountId}`,
+} as const;
+
+/**
+ * Lists of the request page (#4988): the merged request feed and the care
+ * withdrawals, per account, view and everything the sources query. A
+ * decision refreshes every view and filter of a list through its family.
+ */
+export type RequestFeedName = "request-feed" | "care-withdrawal-feed";
+export const requestFeedKeys = {
+  family: (name: RequestFeedName, accountId: string | undefined) =>
+    `${name}:${accountId}:`,
+  key: (
+    name: RequestFeedName,
+    accountId: string | undefined,
+    view: "open" | "history",
+    parts: readonly unknown[],
+  ): string | null =>
+    accountId ? `${name}:${accountId}:${view}:${JSON.stringify(parts)}` : null,
+} as const;
+
+/** Dateiablage: the folders, the files of one folder and the audience choices. */
+export const fileKeys = {
+  folders: () => "files-folders",
+  folder: (folderId: string) => `files-folder-${folderId}`,
+  audience: () => "files-audience",
 } as const;
 
 export const schoolSetupKeys = {
@@ -326,6 +375,9 @@ export const parentAnnouncementKeys = {
   targetActivities: () => "parent-announcements-activities",
   /** School classes a parent announcement can target. */
   targetClasses: () => "parent-announcements-classes",
+  /** Child search by name in the target picker. */
+  targetStudentSearch: (search: string) =>
+    `parent-announcements-student-search-${search}`,
   preview(data: unknown, id: string) {
     const row = previewRow(data, id);
     const name = previewText(row?.title);
