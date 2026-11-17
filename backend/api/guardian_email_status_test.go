@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -50,10 +51,13 @@ func (c guardianEmailRoute) mark(t *testing.T, address, reason string) {
 
 func (c guardianEmailRoute) invitationMail(t *testing.T, address, state string) {
 	t.Helper()
+	// Delivery stamps these columns on its own clock, the time.Now of the route
+	// (ADR 0281), and judges a delayed mail's wait against it.
+	now := time.Now()
 	_, err := c.db.ExecContext(testpkg.Ctx(t), `INSERT INTO platform.email_outbox
 		(tenant_id, kind, recipient, payload, status, next_retry_at, sent_at, delivery_state, delivery_state_at)
-		VALUES (?, 'guardian_invitation', jsonb_build_object('address', ?::text), '{}', 'sent', NOW(), NOW(), ?, NOW())`,
-		testpkg.Tenant(t), address, state)
+		VALUES (?, 'guardian_invitation', jsonb_build_object('address', ?::text), '{}', 'sent', ?, ?, ?, ?)`,
+		testpkg.Tenant(t), address, now, now, state, now)
 	require.NoError(t, err)
 }
 

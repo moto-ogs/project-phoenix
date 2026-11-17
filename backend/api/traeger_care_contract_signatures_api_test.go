@@ -358,13 +358,15 @@ func TestCareContractRemindersFollowTheTraegersDays(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
+	// Care Contract stamps mailings and reminders on its owner clock, the
+	// fixture's holidayFixtureNow, and the reminders compare on it (ADR 0281).
 	age := func(days int) {
 		t.Helper()
 		for _, statement := range []string{
-			`UPDATE care_contract.contract_mailings SET sent_at = NOW() - make_interval(days => ?) WHERE organization_id = ?`,
-			`UPDATE care_contract.contract_reminders SET sent_at = NOW() - make_interval(days => ?) WHERE organization_id = ?`,
+			`UPDATE care_contract.contract_mailings SET sent_at = ? WHERE organization_id = ?`,
+			`UPDATE care_contract.contract_reminders SET sent_at = ? WHERE organization_id = ?`,
 		} {
-			_, err := f.db.ExecContext(ctx, statement, days, f.office.organization)
+			_, err := f.db.ExecContext(ctx, statement, holidayFixtureNow().Add(-time.Duration(days)*24*time.Hour), f.office.organization)
 			require.NoError(t, err)
 		}
 	}
@@ -374,7 +376,7 @@ func TestCareContractRemindersFollowTheTraegersDays(t *testing.T) {
 		reminders := careContractCompose.NewReminders(careContractCompose.ReminderPorts{
 			Organizations: reminderTraeger{id: f.office.organization}, Settings: reminderDays{days: days}, Sender: reminderSender{},
 			Post: mails, Runtime: owners.CareContractRuntime{}, Links: owners.CareContractLinks("http://parents.localhost:3000"),
-		}, time.Now)
+		}, holidayFixtureNow)
 		require.NoError(t, reminders.RemindDue(ctx))
 	}
 
@@ -525,7 +527,10 @@ func TestCareContractRemindersRecheckMailingsAfterCandidateSelection(t *testing.
 			require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
 			contract, _ := sentCareContract(t, f, f.child)
 			ctx := testpkg.WithPackageTenantRuntime(context.Background())
-			_, err := f.db.ExecContext(ctx, `UPDATE care_contract.contract_mailings SET sent_at = NOW() - INTERVAL '8 days' WHERE contract_id = ?`, contract)
+			// Mailings carry the owner clock of Care Contract, the fixture's
+			// holidayFixtureNow, which the reminders compare on (ADR 0281).
+			_, err := f.db.ExecContext(ctx, `UPDATE care_contract.contract_mailings SET sent_at = ? WHERE contract_id = ?`,
+				holidayFixtureNow().Add(-8*24*time.Hour), contract)
 			require.NoError(t, err)
 			mails := &owners.CareContractTestMails{}
 			sender := reminderResendSender{resend: func() {
@@ -536,13 +541,14 @@ func TestCareContractRemindersRecheckMailingsAfterCandidateSelection(t *testing.
 				_, err := f.db.ExecContext(ctx, `INSERT INTO care_contract.contract_mailings (organization_id, contract_id,
 					contract_document_id, recipient_email, sent_at, outbox_id)
 					SELECT organization_id, contract_id, contract_document_id, 'corrected@example.org',
-					NOW() - make_interval(days => ?), ? FROM care_contract.contract_mailings WHERE contract_id = ?`, age, testpkg.UniqueTestTenantID(t), contract)
+					?, ? FROM care_contract.contract_mailings WHERE contract_id = ?`,
+					holidayFixtureNow().Add(-time.Duration(age)*24*time.Hour), testpkg.UniqueTestTenantID(t), contract)
 				require.NoError(t, err)
 			}}
 			reminders := careContractCompose.NewReminders(careContractCompose.ReminderPorts{
 				Organizations: reminderTraeger{id: f.office.organization}, Settings: reminderDays{days: 7}, Sender: sender,
 				Post: mails, Runtime: owners.CareContractRuntime{}, Links: owners.CareContractLinks("http://parents.localhost:3000"),
-			}, time.Now)
+			}, holidayFixtureNow)
 			require.NoError(t, reminders.RemindDue(ctx))
 			if fresh {
 				assert.Empty(t, mails.Purposes(), "a resend restarts the reminder interval")

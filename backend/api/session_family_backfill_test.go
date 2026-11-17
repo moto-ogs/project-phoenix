@@ -38,7 +38,9 @@ func TestBackfilledLegacyChainStaysSignedInAndRevocable(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := testpkg.Ctx(t)
-	identity, err := NewTestIdentityAccess(testpkg.NewDatabase(t, db), slog.Default())
+	// Migration 1.15.707 decides expiry on the database clock; the sessions
+	// it backfills are issued on that clock too.
+	identity, err := NewTestIdentityAccess(testpkg.NewDatabase(t, db), slog.Default(), testpkg.DatabaseClock(t, db))
 	require.NoError(t, err)
 	account := testpkg.CreateTestAccount(t, db, "backfill-legacy-chain")
 	testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))
@@ -100,7 +102,9 @@ func TestBackfillAndConcurrentRotationWithPredecessorKeepsOneFamily(t *testing.T
 func backfillDuringRotation(t *testing.T, withPredecessor bool) {
 	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := testpkg.Ctx(t)
-	identity, err := NewTestIdentityAccess(testpkg.NewDatabase(t, db), slog.Default())
+	// Migration 1.15.707 decides expiry on the database clock; the sessions
+	// it backfills are issued on that clock too.
+	identity, err := NewTestIdentityAccess(testpkg.NewDatabase(t, db), slog.Default(), testpkg.DatabaseClock(t, db))
 	require.NoError(t, err)
 	account := testpkg.CreateTestAccount(t, db, "backfill-concurrent-rotation")
 	testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))

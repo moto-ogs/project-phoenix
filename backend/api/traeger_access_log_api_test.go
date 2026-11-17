@@ -138,7 +138,11 @@ func newTraegerAccessLogFixture(t *testing.T, role string) traegerAccessLogFixtu
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	unit := testpkg.TenantRuntime(t, db)
-	router, _ := traegerPortalOn(t, db, unit)
+	// The log lists up to the root clock's instant (ADR 0281); it runs on a
+	// fixed day after accessLogDay.
+	today := calendar.NewDate(2026, time.November, 18)
+	router := traegerPortalWithDaysOn(t, db, unit, owners.HolidayTestSchoolCalendar{}, func() calendar.Date { return today },
+		func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) })
 	return traegerAccessLogFixtureOn(t, db, router, role)
 }
 

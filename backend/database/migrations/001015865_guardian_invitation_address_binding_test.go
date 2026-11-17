@@ -28,20 +28,30 @@ func TestGuardianInvitationAddressBinding(t *testing.T) {
 		created := testpkg.CreateTestGuardianProfile(t, db, seed)
 		return created.ID, *created.Email
 	}
+	// Expiry and the profile's updated_at are written by PostgreSQL, and the
+	// migration compares them with its now(). Fixture times and assertions use
+	// that same clock: a local container's clock and the host clock can
+	// differ by milliseconds, and the Go clock may be on another day.
+	databaseNow := func() time.Time {
+		t.Helper()
+		var now time.Time
+		require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &now))
+		return now
+	}
 	// invitation plants a pre-migration row; issuedAgo places its last write
 	// before (positive) or after (negative) the profile's.
 	invitation := func(profileID int64, status string, accepted bool, issuedAgo time.Duration) int64 {
+		now := databaseNow()
 		var acceptedAt *time.Time
 		if accepted {
-			now := time.Now()
 			acceptedAt = &now
 		}
 		var id int64
 		require.NoError(t, db.NewRaw(`INSERT INTO auth.guardian_invitations
 			(tenant_id, token, guardian_profile_id, created_by, expires_at, accepted_at, approval_status, created_at, updated_at)
 			VALUES (?, encode(sha256(gen_random_uuid()::text::bytea), 'hex'), ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-			tenantID, profileID, creator.ID, time.Now().Add(48*time.Hour), acceptedAt, status,
-			time.Now().Add(-issuedAgo), time.Now().Add(-issuedAgo)).Scan(ctx, &id))
+			tenantID, profileID, creator.ID, now.Add(48*time.Hour), acceptedAt, status,
+			now.Add(-issuedAgo), now.Add(-issuedAgo)).Scan(ctx, &id))
 		return id
 	}
 	type state struct {
@@ -87,20 +97,12 @@ func TestGuardianInvitationAddressBinding(t *testing.T) {
 	// Spent links stay as they are.
 	accepted := invitation(changedProfile, "not_required", true, time.Hour)
 	expired := invitation(changedProfile, "not_required", false, time.Hour)
-	_, err = db.NewRaw(`UPDATE auth.guardian_invitations SET expires_at = ? WHERE id = ?`, time.Now().Add(-time.Hour), expired).Exec(ctx)
+	_, err = db.NewRaw(`UPDATE auth.guardian_invitations SET expires_at = ? WHERE id = ?`, databaseNow().Add(-time.Hour), expired).Exec(ctx)
 	require.NoError(t, err)
 	var expiredBefore time.Time
 	require.NoError(t, db.NewRaw(`SELECT expires_at FROM auth.guardian_invitations WHERE id = ?`, expired).Scan(ctx, &expiredBefore))
 
 	require.NoError(t, guardianInvitationAddressBindingUp(ctx, db))
-	// Expiry is written by PostgreSQL. Compare on that same clock: a local
-	// container's clock and the host clock can differ by milliseconds.
-	databaseNow := func() time.Time {
-		t.Helper()
-		var now time.Time
-		require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &now))
-		return now
-	}
 	assertBound := func() {
 		t.Helper()
 		now := databaseNow()

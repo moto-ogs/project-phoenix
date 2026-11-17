@@ -38,7 +38,9 @@ func TestOperatorRecordsBelegRetentionWithAudit(t *testing.T) {
 	organizationID, _ := provisionTestSchool(t, db, service, operatorID, "traeger-belege")
 	ctx := provisioningContext(t, db)
 	operator := chi.NewRouter()
-	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), time.Now)
+	// A fixed day after the instructions of 2026-11-09: none lies in the future (rule 14).
+	now := calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(12 * time.Hour)
+	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), func() time.Time { return now })
 	call := func(method, path string, body any) *httptest.ResponseRecorder {
 		t.Helper()
 		var payload bytes.Buffer

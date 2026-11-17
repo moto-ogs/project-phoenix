@@ -25,13 +25,16 @@ func TestBackfillSessionFamilies(t *testing.T) {
 	tenantID := testpkg.UniqueTestTenantID(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
 	hash := func(raw string) string { return testpkg.TokenHash(t, db, raw) }
-	future, past := time.Now().Add(time.Hour), time.Now().Add(-time.Hour)
+	// The migration decides expiry against the database clock.
+	var databaseNow time.Time
+	require.NoError(t, db.NewRaw(`SELECT now()`).Scan(ctx, &databaseNow))
+	future, past := databaseNow.Add(time.Hour), databaseNow.Add(-time.Hour)
 	insert := func(raw string, generation int, family any, rotatedTo string, expiry time.Time) int64 {
 		t.Helper()
 		var replacement any
 		var rotatedAt any
 		if rotatedTo != "" {
-			replacement, rotatedAt = hash(rotatedTo), time.Now()
+			replacement, rotatedAt = hash(rotatedTo), databaseNow
 		}
 		var id int64
 		require.NoError(t, db.NewRaw(`INSERT INTO auth.tokens

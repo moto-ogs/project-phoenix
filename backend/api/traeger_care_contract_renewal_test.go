@@ -61,9 +61,10 @@ func TestRenewalAcceptanceReachesTheContractIntake(t *testing.T) {
 				changed["notice_months"] = 3
 				traegerTemplateFor(t, f, child.offering, changed)
 			}
-			// The school accepts the renewed child afterwards.
+			// The school accepts the renewed child afterwards. Enrollment stamps
+			// reviewed_at on its owner clock, the intake's time.Now (ADR 0281).
 			_, err := f.db.ExecContext(context.Background(), `UPDATE enrollment.request_children
-  SET status = 'approved', reviewed_at = clock_timestamp() + interval '1 minute' WHERE id = ?`, child.id)
+  SET status = 'approved', reviewed_at = ? WHERE id = ?`, time.Now().Add(time.Minute), child.id)
 			require.NoError(t, err)
 
 			setTraegerConclusionMode(t, f, carecontract.ModeOnAcceptance)

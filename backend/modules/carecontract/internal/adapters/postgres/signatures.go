@@ -283,14 +283,16 @@ func (Store) DueReminders(ctx context.Context, organizationID, contractID int64,
 	return candidates, nil
 }
 
-func (Store) InsertReminder(ctx context.Context, organizationID, contractID int64, number int, outboxID int64, recipient string) error {
+// InsertReminder stamps sent_at with the owner clock's instant at, like
+// InsertMailing.
+func (Store) InsertReminder(ctx context.Context, organizationID, contractID int64, number int, outboxID int64, recipient string, at time.Time) error {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return err
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO care_contract.contract_reminders (organization_id, contract_id,
-			reminder_number, outbox_id, recipient_email) VALUES (?, ?, ?, ?, ?)`,
-		organizationID, contractID, number, outboxID, recipient); err != nil {
+			reminder_number, outbox_id, recipient_email, sent_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		organizationID, contractID, number, outboxID, recipient, at); err != nil {
 		return fmt.Errorf("care contract postgres: insert reminder: %w", err)
 	}
 	return nil

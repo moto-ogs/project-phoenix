@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -617,10 +618,13 @@ func TestCareContractMailFollowsTheCurrentStateOfTheAddress(t *testing.T) {
 		return rec.Body.String()
 	}
 	require.Contains(t, send(), fmt.Sprintf(`"sent":[%d]`, id))
+	// Delivery stamps the mail on its own clock, the time.Now of the portal
+	// (ADR 0281), and judges a delayed mail's wait against it.
 	set := func(state string) {
 		t.Helper()
-		_, err := f.db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET status = 'sent', sent_at = NOW(), delivery_state = ?, delivery_state_at = NOW()
-			WHERE organization_id = ? AND kind = 'care_contract' AND related_entity_id = ?`, state, f.office.organization, id)
+		now := time.Now()
+		_, err := f.db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET status = 'sent', sent_at = ?, delivery_state = ?, delivery_state_at = ?
+			WHERE organization_id = ? AND kind = 'care_contract' AND related_entity_id = ?`, now, state, now, f.office.organization, id)
 		require.NoError(t, err)
 	}
 	latest := func() (state, outcome, block, recipient string) {

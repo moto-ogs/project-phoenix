@@ -402,23 +402,20 @@ func TestStoreDeferredDeliveryKeepsItsAttemptBudget(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, finalized)
 
-	var timestamps struct {
-		UpdatedAt    time.Time `bun:"updated_at"`
-		DatabaseTime time.Time `bun:"database_time"`
-	}
+	var updatedAt time.Time
 	err = tenant.WithTenantTx(ctx, db, testpkg.Tenant(t), func(txCtx context.Context, tx bun.Tx) error {
 		status, found, statusErr := store.EmailStatus(txCtx, testpkg.Tenant(t), enqueued.ID)
 		require.NoError(t, statusErr)
 		require.True(t, found)
 		assert.Equal(t, string(domain.StatePending), status.Status)
 		assert.Zero(t, status.Attempts)
-		return tx.NewRaw(`SELECT updated_at, CURRENT_TIMESTAMP AS database_time
-			FROM platform.email_outbox WHERE tenant_id = ? AND id = ?`, testpkg.Tenant(t), enqueued.ID).
-			Scan(txCtx, &timestamps)
+		return tx.NewRaw(`SELECT updated_at FROM platform.email_outbox WHERE tenant_id = ? AND id = ?`,
+			testpkg.Tenant(t), enqueued.ID).Scan(txCtx, &updatedAt)
 	})
 	require.NoError(t, err)
-	assert.WithinDuration(t, timestamps.DatabaseTime, timestamps.UpdatedAt, time.Second)
-	assert.Less(t, timestamps.UpdatedAt, nextRetryAt)
+	// The store stamps updated_at on its own clock (ADR 0281), here time.Now.
+	assert.WithinDuration(t, time.Now(), updatedAt, time.Second)
+	assert.Less(t, updatedAt, nextRetryAt)
 }
 
 func TestStoreStatusReadTracksDeliveryState(t *testing.T) {

@@ -3,7 +3,6 @@ package migrations
 import (
 	"context"
 	"testing"
-	"time"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -32,8 +31,8 @@ func TestSchoolErasureRemovesRoomRevisionEvents(t *testing.T) {
 	open := func(schoolID int64) int64 {
 		student := testpkg.CreateTestStudentForTenant(t, db, schoolID, "Room", "Erasure", "2b")
 		group := testpkg.CreateTestActiveGroupForTenant(t, db, schoolID)
-		_, err := db.ExecContext(ctx, `INSERT INTO active.visits (tenant_id, student_id, active_group_id, entry_time) VALUES (?, ?, ?, ?)`,
-			schoolID, student.ID, group.ID, time.Now().Add(-time.Hour))
+		_, err := db.ExecContext(ctx, `INSERT INTO active.visits (tenant_id, student_id, active_group_id, entry_time) VALUES (?, ?, ?, NOW() - INTERVAL '1 hour')`,
+			schoolID, student.ID, group.ID)
 		require.NoError(t, err)
 		_, err = db.ExecContext(ctx, `UPDATE active.groups SET end_time = NOW() WHERE id = ?`, group.ID)
 		require.NoError(t, err)
@@ -57,7 +56,9 @@ func TestSchoolErasureRemovesRoomRevisionEvents(t *testing.T) {
 }
 
 // TestRoomVisitRevisionMigrationRoundTrip pins that 1.15.710 runs twice,
-// rolls back to the session-only events of 1.15.705 and applies again.
+// rolls back to the session-only events of 1.15.705 and applies again. The
+// visit enters on the database clock because the fixture ends it with NOW()
+// and chk_entry_before_exit orders both instants.
 func TestRoomVisitRevisionMigrationRoundTrip(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
@@ -73,8 +74,8 @@ func TestRoomVisitRevisionMigrationRoundTrip(t *testing.T) {
 	testpkg.EnsureTestTenant(t, db, school)
 	student := testpkg.CreateTestStudentForTenant(t, db, school, "Room", "RoundTrip", "2b")
 	group := testpkg.CreateTestActiveGroupForTenant(t, db, school)
-	_, err := db.ExecContext(ctx, `INSERT INTO active.visits (tenant_id, student_id, active_group_id, entry_time) VALUES (?, ?, ?, ?)`,
-		school, student.ID, group.ID, time.Now().Add(-time.Hour))
+	_, err := db.ExecContext(ctx, `INSERT INTO active.visits (tenant_id, student_id, active_group_id, entry_time) VALUES (?, ?, ?, NOW() - INTERVAL '1 hour')`,
+		school, student.ID, group.ID)
 	require.NoError(t, err)
 	_, err = db.ExecContext(ctx, `UPDATE active.groups SET end_time = NOW() WHERE id = ?`, group.ID)
 	require.NoError(t, err)
