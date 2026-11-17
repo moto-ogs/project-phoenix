@@ -57,7 +57,16 @@ const (
 	// child's values when a letter naming each child is published (#4813).
 	// StudentID stays NULL; metadata carries announcement_id and child_count.
 	ResourceTypeParentLetterPublish = "parent_letter_publish"
-	ResourceTypeGuardianEmailLift   = "guardian_email_lift"
+	// ResourceTypeStudentParentRecords records opening the letters and
+	// declarations of one child in its Dokumente tab (#4814). StudentID
+	// names the child.
+	ResourceTypeStudentParentRecords = "student_parent_records"
+	// ResourceTypeParentDeclarationProof records the download of a
+	// declaration's proof (#4814). StudentID names the child when the proof
+	// holds only that child; metadata carries announcement_id and
+	// child_count.
+	ResourceTypeParentDeclarationProof = "parent_declaration_proof"
+	ResourceTypeGuardianEmailLift      = "guardian_email_lift"
 	// ResourceTypeGuardianFinancialView records serving the MASKED bank
 	// details of one guardian (#2608). StudentID stays NULL; metadata carries
 	// guardian_profile_id.
@@ -247,7 +256,7 @@ type DataAccessLog struct {
 	StudentID      *int64    `bun:"student_id" json:"student_id,omitempty"`
 	RangeStart     time.Time `bun:"range_start,notnull" json:"range_start"`
 	RangeEnd       time.Time `bun:"range_end,notnull" json:"range_end"`
-	AccessedAt     time.Time `bun:"accessed_at,notnull,default:now()" json:"accessed_at"`
+	AccessedAt     time.Time `bun:"accessed_at,nullzero,notnull" json:"accessed_at"`
 	// Metadata holds event-specific context (migration 1.15.101).
 	// Mirrors the metadata column on the sibling audit tables.
 	Metadata map[string]interface{} `bun:"metadata,type:jsonb" json:"metadata,omitempty"`

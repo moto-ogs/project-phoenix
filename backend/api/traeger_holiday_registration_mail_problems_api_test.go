@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -181,18 +182,24 @@ func TestHolidayRegistrationMailsNameSuppressedAndRefusedMails(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Mailstand Zurückgehalten")
 	ctx := context.Background()
-	set := func(id int64, kind, set string) {
-		_, err := f.db.NewRaw(`UPDATE platform.email_outbox SET `+set+`, delivery_state_at = NOW()
-			WHERE organization_id = ? AND kind = ? AND related_entity_id = ?`, f.office.organization, kind, id).Exec(ctx)
+	// Delivery stamps sent_at and created_at on its own clock, the time.Now of
+	// the fixture (ADR 0281), and lists the mails in the order of created_at:
+	// the acceptance comes about after the receipt. delivery_state_at is the
+	// provider's event time; a provider reporting in real time reports that now.
+	set := func(id int64, kind, state string) {
+		now := time.Now()
+		_, err := f.db.NewRaw(`UPDATE platform.email_outbox SET status = 'sent', sent_at = ?, delivery_state = ?, delivery_state_at = ?
+			WHERE organization_id = ? AND kind = ? AND related_entity_id = ?`, now, state, now, f.office.organization, kind, id).Exec(ctx)
 		require.NoError(t, err)
 	}
-	set(f.siblings, enrollment.MailKindHolidayRegistrationReceived, `status = 'sent', sent_at = NOW(), delivery_state = 'suppressed'`)
-	set(f.again, enrollment.MailKindHolidayRegistrationReceived, `status = 'sent', sent_at = NOW(), delivery_state = 'complained'`)
+	set(f.siblings, enrollment.MailKindHolidayRegistrationReceived, "suppressed")
+	set(f.again, enrollment.MailKindHolidayRegistrationReceived, "complained")
+	now := time.Now()
 	_, err := f.db.NewRaw(`INSERT INTO platform.email_outbox
-		(organization_id, kind, recipient, payload, related_entity_type, related_entity_id, idempotency_key, status, sent_at, delivery_state, delivery_state_at)
-		VALUES (?, ?, '{"address":"papa.muster@example.org"}', '{}', ?, ?, ?, 'sent', NOW(), 'unsubscribed', NOW())`,
+		(organization_id, kind, recipient, payload, related_entity_type, related_entity_id, idempotency_key, status, sent_at, delivery_state, delivery_state_at, created_at)
+		VALUES (?, ?, '{"address":"papa.muster@example.org"}', '{}', ?, ?, ?, 'sent', ?, 'unsubscribed', ?, ?)`,
 		f.office.organization, enrollment.MailKindHolidayRegistrationAccepted, enrollment.MailRelatedHolidayRegistration, f.again,
-		"holiday-registration-accepted:test").Exec(ctx)
+		"holiday-registration-accepted:test", now, now, now).Exec(ctx)
 	require.NoError(t, err)
 
 	detail := func(id int64) enrollment.HolidayRegistrationDetail {

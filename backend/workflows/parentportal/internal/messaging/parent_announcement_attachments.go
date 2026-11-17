@@ -178,7 +178,7 @@ func (s *Service) announcementAudienceIn(adminCtx context.Context, accountID, an
 	if err != nil {
 		return announcementAudience{}, fmt.Errorf("parent: load announcement for attachment: %w", err)
 	}
-	if a == nil || !announcementIsLive(a) {
+	if a == nil || !announcementIsLive(a, s.now()) {
 		return announcementAudience{}, nil
 	}
 	matched, err := s.AnnouncementRepo.AccountMatchesAnnouncement(adminCtx, a.GetTenantID(), announcementID, accountID)

@@ -39,7 +39,7 @@ func NewActivityService(
 	today func() calendar.Date,
 ) (*ActivityService, error) {
 	if today == nil {
-		today = calendar.TodayDate
+		return nil, errors.New("timetable activity service: the school day clock is required")
 	}
 	return &ActivityService{
 		today:           today,

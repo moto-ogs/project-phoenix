@@ -590,7 +590,7 @@ func TestSickCascade_MarkWaitsForConcurrentShiftWrite(t *testing.T) {
 	t.Parallel()
 
 	e := buildSickCascadeEnv(t)
-	day := calendar.TodayDate().AddDays(1)
+	day := calendar.NewDate(2026, 8, 24).AddDays(1)
 	absenceID := e.createSickAbsence(t, day, day)
 	input := sickCascadeInput(e.subject.ID, e.admin.ID, absenceID, day, day)
 
@@ -648,7 +648,7 @@ func TestSickCascade_ClearWaitsForConcurrentReplacement(t *testing.T) {
 	t.Parallel()
 
 	e := buildSickCascadeEnv(t)
-	day := calendar.TodayDate().AddDays(1)
+	day := calendar.NewDate(2026, 8, 24).AddDays(1)
 	origin := e.createShift(t, e.subject.ID, day, "08:00", "10:00", nil)
 	absenceID := e.createSickAbsence(t, day, day)
 	input := sickCascadeInput(e.subject.ID, e.admin.ID, absenceID, day, day)
@@ -703,7 +703,7 @@ func TestSickCascade_ClearLocksCommittedReplacementStaffBeforeReversal(t *testin
 	t.Parallel()
 
 	e := buildSickCascadeEnv(t)
-	day := calendar.TodayDate().AddDays(1)
+	day := calendar.NewDate(2026, 8, 24).AddDays(1)
 	origin := e.createShift(t, e.subject.ID, day, "08:00", "10:00", nil)
 	absenceID := e.createSickAbsence(t, day, day)
 	cover := e.createShift(t, e.sub.ID, day, "08:00", "10:00", func(shift *workforce.StaffShift) {
@@ -864,7 +864,7 @@ func TestSickCascade_DeleteDoesNotReactivateManuallyRetainedCancellation(t *test
 	t.Parallel()
 
 	e := buildSickCascadeEnv(t)
-	day := calendar.TodayDate().AddDays(1)
+	day := calendar.NewDate(2026, 8, 24).AddDays(1)
 	shift := e.createShift(t, e.subject.ID, day, "08:00", "12:00", nil)
 	absenceID := e.createSickAbsence(t, day, day)
 
@@ -902,7 +902,7 @@ func TestSickCascade_ReassignSickStamps(t *testing.T) {
 	t.Parallel()
 
 	e := buildSickCascadeEnv(t)
-	tomorrow := calendar.TodayDate().AddDays(1)
+	tomorrow := calendar.NewDate(2026, 8, 24).AddDays(1)
 
 	shift := e.createShift(t, e.subject.ID, tomorrow, "08:00", "12:00", nil)
 	_, row := e.createBlock(t, tomorrow, timetable.InstanceStatusPlanned, "09:00", e.subject.ID, testpkg.InstanceStaffOpts{})

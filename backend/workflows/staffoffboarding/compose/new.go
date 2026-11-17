@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/realtime"
@@ -57,6 +58,7 @@ type Dependencies struct {
 	Cleanup         func(context.Context, int64) error
 	Broadcaster     realtime.Broadcaster
 	Logger          *slog.Logger
+	Now             func() time.Time // the root's clock; the exit takes effect on its Berlin day
 	// Audit appends the offboarding's audit records in the caller's
 	// transaction, as StaffDeletionRecord builds them; the root binds both.
 	Audit               AuditLog

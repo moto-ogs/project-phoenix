@@ -7,7 +7,7 @@ import {
   useRefusalGuard,
 } from "./use-traeger-confirmed-resource";
 import { useSWRAuth } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   type DailyAttendancePeriod,
   fetchTraegerDailyAttendance,

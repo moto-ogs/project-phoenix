@@ -8,12 +8,12 @@ export class Deadline {
   private readonly end: number;
 
   constructor(budgetMs: number) {
-    this.end = Date.now() + budgetMs;
+    this.end = performance.now() + budgetMs;
   }
 
   /** Restzeit in Millisekunden für `what`; wirft, wenn keine bleibt. */
   remaining(what: string): number {
-    const left = this.end - Date.now();
+    const left = this.end - performance.now();
     if (left <= 0) throw new Error(`${what}: Zeitbudget überschritten.`);
     return left;
   }

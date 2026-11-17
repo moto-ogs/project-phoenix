@@ -58,7 +58,7 @@ func TestClassRosterParticipationUsesOneTodaySnapshot(t *testing.T) {
 		},
 	})
 
-	students, err := svc.classRosterStudents(context.Background(), enrollmentNative.ClassRosterFilters{SchoolClass: "2b"})
+	students, _, err := svc.classRosterStudents(context.Background(), enrollmentNative.ClassRosterFilters{SchoolClass: "2b"})
 
 	require.NoError(t, err)
 	require.Len(t, students, 1)
@@ -185,11 +185,12 @@ func TestClassRosterAppliesStudentLimitAfterParticipationFiltering(t *testing.T)
 		})
 	}
 	svc := NewReports(ReportDependencies{
+		Now:               enrollmentTestClock,
 		Students:          &fakeClassRosterStudentRepo{students: students},
 		CareParticipation: participating,
 	})
 
-	result, err := svc.classRosterStudents(context.Background(), enrollmentNative.ClassRosterFilters{AllClasses: true})
+	result, _, err := svc.classRosterStudents(context.Background(), enrollmentNative.ClassRosterFilters{AllClasses: true})
 	require.NoError(t, err)
 	require.Len(t, result, 1)
 	assert.Equal(t, students[0].ID, result[0].ID)
@@ -284,7 +285,7 @@ func TestReportServiceClassRosterGroupNamesLoadsUniqueGroups(t *testing.T) {
 		groupID:      "Klasse 2a",
 		otherGroupID: "Klasse 3b",
 	}}
-	svc := NewReports(ReportDependencies{Groups: repo, Persons: &fakeClassRosterPersonRepo{}})
+	svc := NewReports(ReportDependencies{Now: enrollmentTestClock, Groups: repo, Persons: &fakeClassRosterPersonRepo{}})
 	in := &classRosterInputs{students: []*RosterStudent{
 		{GroupID: &groupID},
 		{GroupID: &groupID},
@@ -536,4 +537,44 @@ func TestClassRosterOfferingDatePinsSelection(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, pinned, capture.seenDate)
+}
+
+// A child without an OGS place (#4803) never passes the care participation,
+// yet belongs to the Klassenverband: the roster lists it under its student
+// ID as "Keine Betreuung", without times or guardians. A graduate does not.
+func TestClassRosterListsChildrenWithoutCarePlaceAsNoCare(t *testing.T) {
+	t.Parallel()
+	students := []*RosterStudent{
+		{ID: 51, PersonID: 151, SchoolClass: "3a"},
+		{ID: 52, PersonID: 152, SchoolClass: "3a", WithoutCarePlace: true},
+		{ID: 53, PersonID: 153, SchoolClass: "3a", WithoutCarePlace: true, Departed: true},
+	}
+	svc := classRosterTestService(students, map[int64]*RosterPerson{
+		151: {FirstName: "Mit", LastName: "Platz"},
+		152: {FirstName: "Ohne", LastName: "Platz"},
+		153: {FirstName: "Schon", LastName: "Weg"},
+	}, &fakeClassRosterRequestRepo{}, &fakeClassRosterChildRepo{})
+	// The participation resolver would keep everyone; the child without a
+	// place must not depend on it.
+	recorder := &idRecordingClassCareParticipation{}
+	svc.deps.CareParticipation = recorder
+
+	report, err := svc.classRoster(context.Background(), enrollmentNative.ClassRosterFilters{PhaseID: 55, SchoolClass: "3a"})
+
+	require.NoError(t, err)
+	require.Len(t, report.Rows, 2)
+	byID := map[int64]enrollmentNative.ClassRosterRow{}
+	for _, row := range report.Rows {
+		byID[row.StudentID] = row
+	}
+	withoutPlace, ok := byID[52]
+	require.True(t, ok, "the child without an OGS place stays in its class")
+	assert.True(t, withoutPlace.WithoutCarePlace)
+	assert.False(t, withoutPlace.ListEntry)
+	assert.Equal(t, "Ohne", withoutPlace.FirstName)
+	assert.Equal(t, enrollmentNative.ClassListEntryNoCareLabel, withoutPlace.EnrollmentSummary)
+	assert.Empty(t, withoutPlace.Guardians)
+	assert.False(t, byID[51].WithoutCarePlace)
+	assert.Equal(t, 1, report.Totals.ListEntries)
+	assert.NotContains(t, recorder.ids, int64(52), "only care candidates reach the participation rule")
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/uptrace/bun"
@@ -45,11 +46,13 @@ func reserveMessageAttachments(ctx context.Context, db bun.IDB, tenantID int64, 
 
 // claimMessageAttachments binds the reserved uploads to the message just
 // inserted. An upload another message already carries refuses the send.
-func claimMessageAttachments(ctx context.Context, db bun.IDB, claim *bun.UpdateQuery, tenantID int64, ids []int64) error {
+// sentAt is the message's created_at as PostgreSQL stamped it (ADR 0277):
+// the upload is sent with the message, at the same instant on the same clock.
+func claimMessageAttachments(ctx context.Context, db bun.IDB, claim *bun.UpdateQuery, tenantID int64, ids []int64, sentAt time.Time) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	result, err := claim.Set("claimed_at = clock_timestamp()").
+	result, err := claim.Set("claimed_at = ?", sentAt).
 		Where("attachment.tenant_id = ? AND attachment.claimed_at IS NULL", tenantID).
 		Where("attachment.id = ANY(?)", pgdialect.Array(ids)).Exec(ctx)
 	if err != nil {

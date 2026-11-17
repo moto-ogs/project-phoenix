@@ -2,13 +2,6 @@
   "sites": [
     {
       "build": "production",
-      "evidence": "func (r *RecordUnregisteredTagScan) Normalize(now time.Time) {\n\tr.TagUID = strings.TrimSpace(r.TagUID)\n\tif r.ScannedAt.IsZero() {\n\t\tr.ScannedAt = now\n\t}\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/devicefleet/RecordUnregisteredTagScan.Normalize",
-      "owner": "modules/devicefleet"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *administration) DeviceOnlineWindow(ctx context.Context) time.Duration {\n\treturn s.devices.DeviceOnlineWindow(ctx)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/devicefleet/administration.DeviceOnlineWindow",
@@ -219,13 +212,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) DeleteUnregisteredTagScansAfterRetention(ctx context.Context) (int, int, error) {\n\tcutoff := s.deps.Now().Add(-unregisteredTagScanRetentionWindow - retentionClockMargin)\n\tdeleted, err := s.DeleteExpiredUnregisteredTagScans(ctx, cutoff)\n\treturn int(deleted), devicefleet.UnregisteredTagScanRetentionDays, err\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/devicefleet/internal/application/Service.DeleteUnregisteredTagScansAfterRetention",
-      "owner": "modules/devicefleet"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) DeviceOnlineWindow(ctx context.Context) time.Duration {\n\tif s.deps.Window == nil {\n\t\treturn domain.DefaultDeviceOnlineWindow\n\t}\n\tif window := s.deps.Window(ctx); window \u003e 0 {\n\t\treturn window\n\t}\n\treturn domain.DefaultDeviceOnlineWindow\n}",
       "form": "unclassified-evidence",
       "id": "modules/devicefleet/internal/application/Service.DeviceOnlineWindow",
@@ -257,6 +243,13 @@
       "evidence": "func (s *Service) ListDisplays(ctx context.Context) ([]devicefleet.Display, error) {\n\tvar displays []domain.Display\n\terr := s.runInTenant(ctx, \"list_displays\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tfound, queryStats, err := s.deps.Displays.List(ctx)\n\t\tstats.Add(queryStats)\n\t\tdisplays = found\n\t\treturn err\n\t})\n\tresult := make([]devicefleet.Display, 0, len(displays))\n\tfor _, value := range displays {\n\t\tresult = append(result, toPublicDisplay(value))\n\t}\n\treturn result, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/devicefleet/internal/application/Service.ListDisplays",
+      "owner": "modules/devicefleet"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s *Service) RecordUnregisteredTagScan(ctx context.Context, input devicefleet.RecordUnregisteredTagScan) (devicefleet.UnregisteredTagScan, error) {\n\tvar recorded devicefleet.UnregisteredTagScan\n\terr := s.runWrite(ctx, \"record_unregistered_tag_scan\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tinput.TagUID = strings.TrimSpace(input.TagUID)\n\t\tif err := input.Validate(); err != nil {\n\t\t\treturn err\n\t\t}\n\t\tstored, queryStats, err := s.deps.Scans.Insert(ctx, input)\n\t\tstats.Add(queryStats)\n\t\trecorded = stored\n\t\treturn err\n\t})\n\treturn recorded, err\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/devicefleet/internal/application/Service.RecordUnregisteredTagScan",
       "owner": "modules/devicefleet"
     },
     {

@@ -72,6 +72,19 @@ type PushSubscription struct {
 	TokenFamilyID string    `json:"-"`
 }
 
+// SessionLink names a push subscription and the session facts it was
+// registered under: account, school, portal and refresh-token family (empty
+// for a subscription bound to no family). The orphan cleanup hands these to
+// Identity & Access, which decides on its own session clock whether a live
+// session still backs the subscription.
+type SessionLink struct {
+	SubscriptionID int64
+	AccountID      int64
+	TenantID       int64
+	Portal         string
+	TokenFamilyID  string
+}
+
 // Validate ensures push subscription data is valid.
 func (s *PushSubscription) Validate() error {
 	if s.AccountID <= 0 {

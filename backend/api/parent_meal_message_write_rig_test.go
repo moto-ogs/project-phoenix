@@ -339,7 +339,7 @@ func newMealWriteRig(t *testing.T) mealWriteRig {
 	people := NewPeopleRepositorySuiteFactory(database)
 	mealSettings, err := owners.BuildMealPlanSettings(settings.Settings)
 	require.NoError(t, err)
-	schoolCalendar, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings)
+	schoolCalendar, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings, nil)
 	require.NoError(t, err)
 	meals, err := newMealPlanAt(database, mealSettings, owners.NewStudentRootReads(people.Student), owners.MustNewPeopleDirectory(database), schoolCalendar, mealWriteNow)
 	require.NoError(t, err)

@@ -513,9 +513,11 @@ var operations_init_standort_10Definitions = []config.Definition{
 		Tab:             "operations",
 		Category:        "standort",
 		SortOrder:       45,
-		// Schools see their state read-only (#4775); changing it shifts the
-		// whole Arbeitszeitkonto, so only operators write it.
-		AccessPolicy: config.AccessOperatorManaged,
+		// The school's management sets its own state, also when the
+		// operator left it empty: the missing-state message links here
+		// (#7174). A change shifts the holidays of the Arbeitszeitkonto, so
+		// only config:manage writes it. Replaces the read-only rule of #4775.
+		AccessPolicy: config.AccessShared,
 		Options: &config.SelectOptions{
 			Static: []config.SelectOption{
 				{Label: "Baden-Württemberg", Value: "DE-BW"},

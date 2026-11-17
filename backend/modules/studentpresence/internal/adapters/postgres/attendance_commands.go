@@ -74,9 +74,9 @@ func (s *Store) DeleteAttendanceBefore(ctx context.Context, cutoff ports.Date) (
 	}
 	// The mark only grows: a longer retention later does not bring the
 	// deleted days back (#4686).
-	if _, err := db.NewRaw(`INSERT INTO active.attendance_retention_marks (school_id, deleted_before) VALUES (?, ?)
+	if _, err := db.NewRaw(`INSERT INTO active.attendance_retention_marks (school_id, deleted_before, updated_at) VALUES (?, ?, ?)
 		ON CONFLICT (school_id) DO UPDATE SET deleted_before = GREATEST(attendance_retention_marks.deleted_before, EXCLUDED.deleted_before),
-			updated_at = CURRENT_TIMESTAMP`, tenantID, cutoff).Exec(ctx); err != nil {
+			updated_at = EXCLUDED.updated_at`, tenantID, cutoff, s.now()).Exec(ctx); err != nil {
 		return stats, fmt.Errorf("mark the deleted attendance: %w", err)
 	}
 	stats.Queries++

@@ -58,17 +58,15 @@ type (
 	PWAUsageService              = pwa.UsageService
 )
 
-// The kinds of the parent appointment notices.
+// Root vocabulary for parent appointments, enrollment and moto-schule-only staff delivery.
 const (
-	ParentAppointmentPublished = notifications.ParentAppointmentPublished
-	ParentAppointmentUpdated   = notifications.ParentAppointmentUpdated
-	ParentAppointmentCancelled = notifications.ParentAppointmentCancelled
-	ParentAppointmentReminder  = notifications.ParentAppointmentReminder
+	ParentAppointmentPublished      = notifications.ParentAppointmentPublished
+	ParentAppointmentUpdated        = notifications.ParentAppointmentUpdated
+	ParentAppointmentCancelled      = notifications.ParentAppointmentCancelled
+	ParentAppointmentReminder       = notifications.ParentAppointmentReminder
+	NotificationEnrollmentSubmitted = notifications.TypeEnrollmentSubmitted
+	NotificationPortalSchool        = notifications.PortalSchool
 )
-
-// NotificationEnrollmentSubmitted is the notification type of a new
-// enrollment.
-const NotificationEnrollmentSubmitted = notifications.TypeEnrollmentSubmitted
 
 var (
 	NewEmailOutbox                   = emailoutbox.NewService
@@ -96,9 +94,9 @@ var (
 	ErrNoWebPushSubscribers      = notifications.ErrNoWebPushSubscribers
 	ErrNotificationsDisabled     = notifications.ErrDisabled
 	ErrOutsideNotificationWindow = notifications.ErrOutsideActiveWindow
-	// ParentAppointmentCopy is the localized title and body of a parent
-	// appointment notice.
+	// ParentAppointmentCopy and ParentRoomChangedCopy (#7141): localized parent notice copy.
 	ParentAppointmentCopy = notifications.ParentAppointmentCopy
+	ParentRoomChangedCopy = notifications.ParentRoomChangedCopy
 	// MotoLogoURL and SchoolLogoURL brand the tenant mail.
 	MotoLogoURL   = emailbranding.MotoLogoURL
 	SchoolLogoURL = emailbranding.SchoolLogoURL

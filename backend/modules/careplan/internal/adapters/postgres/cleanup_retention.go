@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // DeleteFinishedStudentDocumentFileCleanups goes through the database
@@ -27,13 +29,16 @@ func (s *Store) DeleteFinishedStudentDocumentFileCleanups(ctx context.Context, w
 // DeleteFinishedWithdrawalCompletions removes resolved and obsolete
 // completions; a pending one always stays. A care exit that named the
 // completion loses only the link (ON DELETE SET NULL).
+// The window counts Berlin calendar days on the store's clock, which stamps
+// resolved_at (#7295, ADR 0281).
 func (s *Store) DeleteFinishedWithdrawalCompletions(ctx context.Context, window time.Duration) (int, error) {
 	db, tenantID, err := s.databaseForWrite(ctx, "delete finished withdrawal completions")
 	if err != nil {
 		return 0, err
 	}
 	result, err := db.NewRaw(`DELETE FROM users.care_withdrawal_completions
-		WHERE tenant_id = ? AND state <> ? AND resolved_at < statement_timestamp() - (? * INTERVAL '1 day')`, tenantID, withdrawalStatePending, window.Hours()/24).Exec(ctx)
+		WHERE tenant_id = ? AND state <> ? AND resolved_at < ?`, tenantID, withdrawalStatePending,
+		s.currentTime().In(calendar.Berlin).AddDate(0, 0, -int(window.Hours()/24))).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("care plan postgres: delete finished withdrawal completions: %w", err)
 	}

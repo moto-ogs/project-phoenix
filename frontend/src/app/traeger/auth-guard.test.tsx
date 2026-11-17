@@ -1,8 +1,10 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { _resetTraegerHostCache } from "~/lib/traeger-url";
 
+vi.unmock("swr");
 const { mockUseSession, mockRedirect, mockFetchOrganization, mockPathname } =
   vi.hoisted(() => ({
     mockUseSession: vi.fn(),
@@ -31,9 +33,18 @@ vi.mock("~/components/traeger/traeger-shell", () => ({
 }));
 vi.mock("~/lib/traeger-api", () => ({
   fetchTraegerOrganization: mockFetchOrganization,
+  fetchTraegerProfile: vi.fn(() => new Promise(() => {})),
 }));
 
 import { TraegerAuthGuard } from "./auth-guard";
+
+function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
 
 function session(user: Record<string, unknown>, error?: string) {
   return { status: "authenticated", data: { user, error } };
@@ -84,7 +95,7 @@ describe("TraegerAuthGuard", () => {
       <TraegerAuthGuard>
         <p>Schulen</p>
       </TraegerAuthGuard>,
-      { wrapper: ToastProvider },
+      { wrapper: Providers },
     );
 
     expect(screen.getByTestId("shell")).toHaveTextContent("Schulen");
@@ -98,7 +109,7 @@ describe("TraegerAuthGuard", () => {
       <TraegerAuthGuard>
         <p>Schulen</p>
       </TraegerAuthGuard>,
-      { wrapper: ToastProvider },
+      { wrapper: Providers },
     );
 
     expect(screen.getByTestId("shell")).toHaveTextContent("Schulen");
@@ -119,7 +130,7 @@ describe("TraegerAuthGuard", () => {
       <TraegerAuthGuard>
         <p>Schulen</p>
       </TraegerAuthGuard>,
-      { wrapper: ToastProvider },
+      { wrapper: Providers },
     );
 
     expect(mockRedirect).toHaveBeenCalledWith("/traeger/login");
@@ -133,12 +144,14 @@ describe("TraegerAuthGuard", () => {
       name: "Test-Träger",
       testSystem: true,
     });
-    mockUseSession.mockReturnValue(session({ scope: "org" }));
+    mockUseSession.mockReturnValue(
+      session({ id: "1", scope: "org", orgId: 7 }),
+    );
     render(
       <TraegerAuthGuard>
         <p>Schulen</p>
       </TraegerAuthGuard>,
-      { wrapper: ToastProvider },
+      { wrapper: Providers },
     );
 
     await waitFor(() =>
@@ -150,12 +163,14 @@ describe("TraegerAuthGuard", () => {
   });
 
   it("shows no test-system mark for a real Träger", async () => {
-    mockUseSession.mockReturnValue(session({ scope: "org" }));
+    mockUseSession.mockReturnValue(
+      session({ id: "1", scope: "org", orgId: 7 }),
+    );
     render(
       <TraegerAuthGuard>
         <p>Schulen</p>
       </TraegerAuthGuard>,
-      { wrapper: ToastProvider },
+      { wrapper: Providers },
     );
 
     await waitFor(() => expect(mockFetchOrganization).toHaveBeenCalled());

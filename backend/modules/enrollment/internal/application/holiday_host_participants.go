@@ -56,7 +56,7 @@ func NewHolidayHostParticipants(store HolidayHostStore, log enrollment.HolidayPa
 		panic(errHolidayHealthCipherRequired)
 	}
 	if today == nil {
-		today = calendar.TodayDate
+		panic("enrollment: the holiday host participants need the day clock")
 	}
 	return &HolidayHostParticipants{store: store, log: log, health: health, students: students, calendar: noCare, today: today}
 }

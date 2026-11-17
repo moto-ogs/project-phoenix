@@ -163,7 +163,7 @@ func schoolCheckinCandidates(
 	actionableStudents := make([]*StudentRecord, 0, len(writeOrder))
 	for _, studentID := range writeOrder {
 		student := locked[studentID]
-		if student == nil || student.IsAlumnus() || student.CareEndedOn(today) {
+		if student == nil || student.OGSAdmissionRefused(today) != nil {
 			outcomes[studentID] = SchoolCheckinBatchItem{StudentID: studentID}
 			continue
 		}

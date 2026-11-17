@@ -65,7 +65,7 @@ func TestTenantReturnCLIKeepsSecretsOffStdout(t *testing.T) {
 	})
 	store := t.TempDir()
 	open := func(context.Context) (organizationtenancy.DataReturnRelease, func(), error) {
-		release, err := organizationCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store)
+		release, err := organizationCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store, time.Now)
 		return release, func() {}, err
 	}
 	run := func(args ...string) (string, error) {
@@ -84,7 +84,8 @@ func TestTenantReturnCLIKeepsSecretsOffStdout(t *testing.T) {
 	})
 	secrets := t.TempDir()
 	require.NoError(t, os.Chmod(secrets, 0o700))
-	keepUntil := time.Now().AddDate(0, 0, 40).Format("2006-01-02")
+	// The database clock bounds the retrieval period (ADR 0274).
+	keepUntil := testpkg.DatabaseNow(t, db).AddDate(0, 0, 40).Format("2006-01-02")
 	releaseArgs := func(out string) []string {
 		return []string{"release", "--package", returnPackage(t, school), "--school", strconv.FormatInt(school, 10),
 			"--operator", strconv.FormatInt(operator.ID, 10), "--keep-until", keepUntil, "--recipient", "customer",

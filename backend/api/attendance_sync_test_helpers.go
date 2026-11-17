@@ -5,6 +5,7 @@ package api
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -21,7 +22,7 @@ import (
 func NewAttendanceSyncTestRepositories(db transactionruntime.Database, capability timetable.Capability) TimetableOwnerRows {
 	presence := owners.NewUnloggedStudentPresence(db)
 	return timetableCompose.NewNativeMirrorRows(timetableCompose.OwnerRows{
-		Instances:    timetablePorts.InstanceRows{Plans: capability, Sessions: presence, Reads: owners.MustPresenceReads(db)},
+		Instances:    timetablePorts.InstanceRows{Plans: capability, Sessions: presence, Reads: owners.MustPresenceReads(db), Now: time.Now},
 		Participants: timetablePorts.ParticipantRows{Plans: capability, Presence: presence, Reads: owners.MustPresenceReads(db)},
 	})
 }

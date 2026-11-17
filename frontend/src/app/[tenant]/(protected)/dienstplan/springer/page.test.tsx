@@ -2,11 +2,15 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import { MODULE_KEYS } from "~/lib/modules";
 import type { PoolSpringer, PoolWeek } from "~/lib/staff-pool-api";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { useBookedModules, useTenantSafe } from "~/lib/tenant-context";
+import { setTestClock } from "~/test/clock";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchSchoolPoolWeek: vi.fn(),
@@ -19,7 +23,10 @@ vi.mock("~/lib/staff-pool-api", async (importOriginal) => ({
   ...api,
 }));
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: null, status: "unauthenticated" }),
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1", token: "test-token" } },
+  }),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -29,7 +36,8 @@ vi.mock("next/navigation", () => ({
 
 import StaffPoolPage from "./page";
 
-// The test clock stands on Wednesday 2026-09-09; its week starts 2026-09-07.
+// The fixture week is fixed around Wednesday 2026-09-09 (week from 2026-09-07);
+// every test pins the clock to that day.
 const LENA: PoolSpringer = {
   recordId: "7",
   firstName: "Lena",
@@ -80,13 +88,17 @@ const TENANT = { tenantId: 1, slug: "demo" } as TenantInfo;
 function renderPage() {
   return render(
     <ToastProvider>
-      <StaffPoolPage />
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <StaffPoolPage />
+      </SWRConfig>
     </ToastProvider>,
   );
 }
 
 describe("StaffPoolPage", () => {
   beforeEach(() => {
+    // Fixture week with blocks on Thursday and Friday around this Wednesday.
+    setTestClock("2026-09-09T12:00:00+02:00");
     vi.clearAllMocks();
     vi.mocked(useTenantSafe).mockReturnValue({
       tenantSlug: "demo",

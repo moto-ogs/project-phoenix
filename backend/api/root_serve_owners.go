@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	communicationModule "github.com/moto-ogs/project-phoenix/modules/communication"
 	communicationCompose "github.com/moto-ogs/project-phoenix/modules/communication/composition"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
@@ -27,9 +28,16 @@ import (
 // administration: the recurrence gate serializes it against every
 // recurrence-derived write, and Care Plan's catalog refuses a period change
 // a linked care offering still needs.
-func buildCalendarAdministration(db transactionruntime.Database, observe func(schoolCalendarCompose.Observation), records schoolcalendar.Days, lock timetable.RecurrenceWriteLock, offerings careplan.CareOfferingGuards) (schoolcalendar.Calendar, error) {
+//
+// A planned, changed or cancelled closing day reaches the whole school and
+// its families through Delivery's notification feed, without the account of
+// the request that changed it (#7144).
+func buildCalendarAdministration(db transactionruntime.Database, observe func(schoolCalendarCompose.Observation), records schoolcalendar.Days, lock timetable.RecurrenceWriteLock, offerings careplan.CareOfferingGuards, notifications owners.DeliveryNotifications) (schoolcalendar.Calendar, error) {
 	return schoolCalendarCompose.NewAdministration(records, schoolCalendarCompose.AdministrationDependencies{
 		DB: db.Pool(), Observe: observe, RecurrenceGate: lock.LockRecurrenceWrites,
+		ClosingDayNotices: owners.NewSchoolCalendarClosingDayNotices(notifications, func(ctx context.Context) int64 {
+			return int64(sessiontoken.ClaimsFromCtx(ctx).ID)
+		}),
 		CareOfferingGuard: func(ctx context.Context, periodID int64, replacement *schoolcalendar.CalendarPeriodFields) error {
 			err := offerings.ValidateCalendarPeriodChange(ctx, periodID, calendarPeriodReplacement(replacement))
 			if errors.Is(err, careplan.ErrCalendarPeriodCareOfferingConflict) {

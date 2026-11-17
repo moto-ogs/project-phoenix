@@ -49,7 +49,7 @@ func cleanupOwnerFixture(t *testing.T, db *bun.DB, mode string) cleanupOwnerOper
 	} else {
 		fixture.ownerID = testpkg.CreateTestParentAnnouncement(t, db, account.ID, "Cancellation subject").ID
 		oldOwnerID = testpkg.CreateTestParentAnnouncement(t, db, account.ID, "Cancellation sentinel").ID
-		purger, err := compose.NewAttachmentPurger(compose.AttachmentPurgerDependencies{DB: db, Objects: objects, Observe: func(compose.Observation) {}})
+		purger, err := compose.NewAttachmentPurger(compose.AttachmentPurgerDependencies{DB: db, Objects: objects, Observe: func(compose.Observation) {}, Now: time.Now})
 		require.NoError(t, err)
 		fixture.run = func(ctx context.Context) error {
 			return purger.QueueAttachmentCleanupForAnnouncement(ctx, fixture.ownerID)

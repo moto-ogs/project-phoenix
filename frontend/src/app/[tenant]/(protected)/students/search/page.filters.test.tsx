@@ -1,3 +1,6 @@
+import { useSWRAuth } from "~/lib/swr";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
+import { fetchEnrollmentAnswerFilters } from "~/lib/student-api";
 /**
  * Behaviour tests for StudentSearchPage behind one stubbed mock header. Each
  * describe is a former test file and keeps its name and tests:
@@ -37,6 +40,7 @@ import {
 } from "vitest";
 import type { FilterConfig } from "~/components/ui/page-header/types";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 
 const {
@@ -244,13 +248,22 @@ vi.mock("~/lib/api", () => ({
   },
 }));
 
-vi.mock("~/lib/swr", () => ({
-  useImmutableSWR: (...args: unknown[]) => mockUseImmutableSWR(...args),
-  useSWRAuth: (key: string | null, fetcher?: () => Promise<unknown>) =>
-    mockUseSWRAuth(key, fetcher),
-  mutate: vi.fn(),
-  useTenantMutate: () => vi.fn(),
-}));
+// The registration questions (#6954) read through real SWR: their tests
+// depend on a pending, refused or late answer. The reader is told apart by
+// its fetcher, since its key is null while the session loads.
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  const { fetchEnrollmentAnswerFilters } = await import("~/lib/student-api");
+  return {
+    useImmutableSWR: (...args: unknown[]) => mockUseImmutableSWR(...args),
+    useSWRAuth: (key: string | null, fetcher: () => Promise<unknown>) =>
+      fetcher === fetchEnrollmentAnswerFilters
+        ? actual.useSWRAuth(key, fetcher)
+        : mockUseSWRAuth(key, fetcher),
+    mutate: vi.fn(),
+    useTenantMutate: () => vi.fn(),
+  };
+});
 
 vi.mock("~/components/students/student-card", () => ({
   StudentCard: ({
@@ -305,6 +318,17 @@ vi.mock("~/components/students/student-search-transit-card", () => ({
 }));
 
 import StudentSearchPage from "./page";
+
+vi.unmock("swr");
+
+/** A cache of its own per render, so no answer leaks between tests. */
+function FreshSwrCache({ children }: { children: React.ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
 
 // Defaults of the former files; a describe overrides what its file mocked
 // differently. Each hook returns a fresh object per render, as the former
@@ -437,14 +461,14 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
 
   it("forwards a registration answer from the URL with users:read (#6954)", async () => {
     mockUseSession.mockImplementation(() => ({
-      data: { user: { token: "t", permissions: ["users:read"] } },
+      data: { user: { id: "7", token: "t", permissions: ["users:read"] } },
       status: "authenticated",
     }));
     currentSearch = new URLSearchParams({
       enrollment_answer: "seepferdchen=true",
     });
 
-    render(<StudentSearchPage />);
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
 
     await waitFor(() => {
       expect(
@@ -466,7 +490,7 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
       enrollment_answer: "seepferdchen=true",
     });
 
-    render(<StudentSearchPage />);
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
 
     await waitFor(() => {
       expect(mockGetStudents).toHaveBeenCalled();
@@ -484,7 +508,7 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
     // on the child's page. A saved link with the filter must not empty the
     // whole list with a 403.
     mockUseSession.mockImplementation(() => ({
-      data: { user: { token: "t", permissions: ["users:read"] } },
+      data: { user: { id: "7", token: "t", permissions: ["users:read"] } },
       status: "authenticated",
     }));
     mockFetchAnswerFilters.mockRejectedValue(
@@ -497,7 +521,7 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
       enrollment_answer: "seepferdchen=true",
     });
 
-    render(<StudentSearchPage />);
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
 
     await waitFor(() => {
       expect(mockFetchAnswerFilters).toHaveBeenCalled();
@@ -517,11 +541,58 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
     expect(screen.queryByText(/Seepferdchen/)).not.toBeInTheDocument();
   });
 
+  it("drops an enrollment filter after cached options are refused", async () => {
+    mockUseSession.mockImplementation(() => ({
+      data: { user: { id: "7", token: "t", permissions: ["users:read"] } },
+      status: "authenticated",
+    }));
+    currentSearch = new URLSearchParams({
+      enrollment_answer: "seepferdchen=true",
+    });
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(
+        tenantListKeys.enrollmentAnswerFilters(),
+        fetchEnrollmentAnswerFilters,
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <>
+        <StudentSearchPage />
+        <Probe />
+      </>,
+      { wrapper: FreshSwrCache },
+    );
+    await waitFor(() =>
+      expect(
+        mockGetStudents.mock.calls.some(
+          (call) =>
+            (call[0] as Record<string, unknown>).enrollmentAnswer ===
+            "seepferdchen=true",
+        ),
+      ).toBe(true),
+    );
+    mockGetStudents.mockClear();
+    mockFetchAnswerFilters.mockRejectedValueOnce(new ApiError("denied", 403));
+    await act(async () => {
+      await reload();
+    });
+    await waitFor(() => expect(mockGetStudents).toHaveBeenCalled());
+    expect(
+      mockGetStudents.mock.calls.every(
+        (call) =>
+          (call[0] as Record<string, unknown>).enrollmentAnswer === undefined,
+      ),
+    ).toBe(true);
+  });
+
   it("holds the list and the export until the server has answered for a saved registration answer (#6954)", async () => {
     // Loaded before the answer, the list came once without the filter and
     // again with it, and an export in between carried every child.
     mockUseSession.mockImplementation(() => ({
-      data: { user: { token: "t", permissions: ["users:read"] } },
+      data: { user: { id: "7", token: "t", permissions: ["users:read"] } },
       status: "authenticated",
     }));
     let grant: (questions: unknown[]) => void = () => undefined;
@@ -534,7 +605,7 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
       enrollment_answer: "seepferdchen=true",
     });
 
-    render(<StudentSearchPage />);
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
 
     await waitFor(() => {
       expect(mockFetchAnswerFilters).toHaveBeenCalled();
@@ -583,14 +654,16 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
       enrollment_answer: "seepferdchen=true",
     });
 
-    const { rerender } = render(<StudentSearchPage />);
+    const { rerender } = render(<StudentSearchPage />, {
+      wrapper: FreshSwrCache,
+    });
     await act(async () => {
       await Promise.resolve();
     });
     expect(mockFetchAnswerFilters).not.toHaveBeenCalled();
 
     mockUseSession.mockImplementation(() => ({
-      data: { user: { token: "t", permissions: ["users:read"] } },
+      data: { user: { id: "7", token: "t", permissions: ["users:read"] } },
       status: "authenticated",
     }));
     rerender(<StudentSearchPage />);
@@ -615,14 +688,14 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
 
   it("loads the list at once when no registration answer is saved (#6954)", async () => {
     mockUseSession.mockImplementation(() => ({
-      data: { user: { token: "t", permissions: ["users:read"] } },
+      data: { user: { id: "7", token: "t", permissions: ["users:read"] } },
       status: "authenticated",
     }));
     mockFetchAnswerFilters.mockReturnValue(
       new Promise<unknown[]>(() => undefined),
     );
 
-    render(<StudentSearchPage />);
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
 
     await waitFor(() => {
       expect(mockGetStudents).toHaveBeenCalled();

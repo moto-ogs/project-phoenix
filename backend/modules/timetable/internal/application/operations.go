@@ -38,18 +38,14 @@ func NewOperations(deps ports.OperationDependencies, caller ports.OperationCalle
 		deps.Sessions == nil || deps.Supervisions == nil || deps.Visits == nil || deps.Attendance == nil ||
 		deps.Students == nil || deps.People == nil || deps.CallerStaff == nil || deps.EducationGroups == nil || deps.Rooms == nil || deps.BlockMetadata == nil ||
 		deps.Settings == nil || deps.CareDays == nil || deps.Arrivals == nil || deps.Pickups == nil ||
-		deps.Lifecycle == nil || deps.NormalizeSchoolClass == nil {
+		deps.Lifecycle == nil || deps.NormalizeSchoolClass == nil || deps.Now == nil {
 		return nil, errors.New("timetable operations: required dependency is nil")
 	}
 	return &operations{deps: deps, caller: caller}, nil
 }
 
 func (s *operations) now() time.Time {
-	now := s.deps.Now
-	if now == nil {
-		now = time.Now
-	}
-	return now()
+	return s.deps.Now()
 }
 
 func (s *operations) today() calendar.Date {

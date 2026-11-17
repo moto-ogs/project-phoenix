@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken/tokentest"
+	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +56,7 @@ func serveSentrySession(t *testing.T, session *sessiontoken.AppClaims, handler h
 	report, _ := sentrySessionTestAdapters()
 	router.Use(report)
 	router.Use(tokenAuth.Verifier())
-	router.Use(SentrySessionContext)
+	router.Use(SentrySessionContext(testSentryUserPseudonym(t)))
 	var requestID string
 	router.Get("/api/students/{id}", func(w http.ResponseWriter, r *http.Request) {
 		requestID = middleware.GetReqID(r.Context())
@@ -79,6 +80,21 @@ func serveSentrySession(t *testing.T, session *sessiontoken.AppClaims, handler h
 		got.events = append(got.events, event)
 	}
 	return got
+}
+
+// testSentryUserPseudonym keys the pseudonym like the Serve root, with the
+// test's session secret.
+func testSentryUserPseudonym(t *testing.T) SentryUserPseudonym {
+	t.Helper()
+	pseudonym, err := NewSentryUserPseudonym("sentry-session-test-secret-32-chars")
+	require.NoError(t, err)
+	return pseudonym
+}
+
+// sentryUser is the Sentry user of an account: its pseudonym, never its ID.
+func sentryUser(t *testing.T, accountID int) sentry.User {
+	t.Helper()
+	return sentry.User{ID: testSentryUserPseudonym(t)(accountID)}
 }
 
 func failWithCode(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +137,7 @@ func TestServerErrorEventOfTenantSessionCarriesSessionContext(t *testing.T) {
 		"error_code":       "STUDENT_LOAD_FAILED",
 		"http.status_code": "500",
 	}, event.Tags)
-	assert.Equal(t, sentry.User{ID: "7"}, event.User)
+	assert.Equal(t, sentryUser(t, 7), event.User)
 }
 
 // sentryhttp reports a panic, not the 5xx check; the event names the
@@ -139,7 +155,7 @@ func TestPanicEventCarriesSessionContext(t *testing.T) {
 		"role":       "staff",
 		"request_id": got.requestID,
 	}, event.Tags)
-	assert.Equal(t, sentry.User{ID: "7"}, event.User)
+	assert.Equal(t, sentryUser(t, 7), event.User)
 }
 
 // Operator and cross-school parent sessions are not bound to one school: the
@@ -182,7 +198,7 @@ func TestServerErrorEventOmitsSchoolWithoutSingleSchoolSession(t *testing.T) {
 			assert.Equal(t, tc.portal, event.Tags["portal"])
 			assert.Equal(t, tc.role, event.Tags["role"])
 			assert.Equal(t, got.requestID, event.Tags["request_id"])
-			assert.Equal(t, sentry.User{ID: tc.session.Sub}, event.User)
+			assert.Equal(t, sentryUser(t, tc.session.ID), event.User)
 		})
 	}
 }
@@ -237,7 +253,7 @@ func TestSentrySessionRoleFollowsTheTokenScope(t *testing.T) {
 			assert.Equal(t, tc.portal, event.Tags["portal"])
 			assert.Equal(t, tc.role, event.Tags["role"])
 			assert.Equal(t, tc.schoolID, event.Tags["school_id"])
-			assert.Equal(t, sentry.User{ID: tc.session.Sub}, event.User)
+			assert.Equal(t, sentryUser(t, tc.session.ID), event.User)
 		})
 	}
 }
@@ -278,4 +294,36 @@ func TestSentryEventsCarryNoNameEmailOrIP(t *testing.T) {
 			}
 		})
 	}
+}
+
+// #3843: user.id is a keyed pseudonym of the account, never its ID or an
+// unkeyed hash of it. One account keeps it, another gets its own, and
+// another secret derives other pseudonyms.
+func TestSentryUserIsAKeyedPseudonymOfTheAccount(t *testing.T) {
+	t.Parallel()
+
+	pseudonym := testSentryUserPseudonym(t)
+	got := serveSentrySession(t, staffSession(), failWithCode)
+
+	require.Len(t, got.events, 1)
+	id := got.events[0].User.ID
+	assert.Regexp(t, `^[0-9a-f]{32}$`, id)
+	assert.Equal(t, pseudonym(7), id)
+	assert.NotEqual(t, pseudonym(8), id)
+	for _, unkeyed := range []string{"7", "moto-sentry-user-v1\x007"} {
+		assert.NotEqual(t, securityruntime.Fingerprint([]byte(unkeyed))[:32], id)
+	}
+
+	rotated, err := NewSentryUserPseudonym("another-session-secret-of-32-chars")
+	require.NoError(t, err)
+	assert.NotEqual(t, rotated(7), id)
+}
+
+// Without a secret there is no pseudonym: the Serve root fails to start
+// rather than send an unkeyed one.
+func TestSentryUserPseudonymNeedsTheSessionSecret(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewSentryUserPseudonym("")
+	require.Error(t, err)
 }

@@ -38,9 +38,7 @@ import { ParentSubsection } from "~/components/parent/shell/parent-section";
 import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
-  getChildFeatures,
   getChildMealPlan,
-  listMyChildren,
   type MealParticipation,
   type MealPlanEntry,
 } from "~/lib/parent-api";
@@ -57,13 +55,19 @@ import {
   MealAllergenLegend,
   MealAllergenMarks,
 } from "~/components/meal-plan/meal-allergens";
+import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import {
-  useApiErrorDisplay,
-  useApiFormError,
-  useApiLoadError,
-} from "~/contexts/ToastContext";
+  PARENT_RESOURCE_OPTIONS,
+  useParentChildren,
+  useParentFeatures,
+} from "~/lib/hooks/use-parent-resources";
+import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 
 const logger = createLogger({ component: "ParentMealPlanPage" });
+
+const NO_ENTRIES: MealPlanEntry[] = [];
+const NO_SCHOOLS: ChildOption[] = [];
 
 // One school the parent has a child at, with a representative child used for the
 // per-child (school-scoped) backend calls.
@@ -1200,9 +1204,41 @@ function ParticipationWeek({
 export function ParentMealPlanPage() {
   const locale = useLocale();
 
-  const [schools, setSchools] = useState<ChildOption[]>([]);
-  const [hasLinkedChildren, setHasLinkedChildren] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  // Which of the parent's schools actually run a meal plan. A failed
+  // feature lookup surfaces as an error, never as meal_plan_enabled: false
+  // (which would silently remove the school).
+  const children = useParentChildren();
+  const features = useParentFeatures(children.data);
+  const resolved = useMemo(() => {
+    if (!children.data || !features.data) return null;
+    const enabled: ChildOption[] = [];
+    for (const child of children.data) {
+      const childFeatures = features.data?.[child.student_id];
+      if (childFeatures?.meal_plan_enabled) {
+        enabled.push({
+          tenantId: child.tenant_id,
+          schoolName: child.school_name,
+          studentId: child.student_id,
+          childName: `${child.first_name} ${child.last_name}`,
+          registrationEnabled: childFeatures.meal_registration_enabled === true,
+          careTerm: childFeatures.care_facility_term,
+        });
+      }
+    }
+    return enabled;
+  }, [children.data, features.data]);
+  // The features are read per Berlin day: at midnight they load again, and
+  // the page keeps the schools it knows meanwhile instead of a skeleton.
+  const [knownSchools, setKnownSchools] = useState<ChildOption[] | null>(null);
+  if (resolved && resolved !== knownSchools) setKnownSchools(resolved);
+  const schools = resolved ?? knownSchools ?? NO_SCHOOLS;
+  const hasLinkedChildren = (children.data?.length ?? 0) > 0;
+  const [chosenStudent, setSelectedStudent] = useState<string | null>(null);
+  const selectedStudent = schools.some(
+    (school) => school.studentId === chosenStudent,
+  )
+    ? chosenStudent
+    : (schools[0]?.studentId ?? null);
   // Der Plan gehört zur Schule des gewählten Kindes; seine Texte nennen die
   // Betreuung so, wie diese Schule sie nennt (#6082).
   const accountTerm = useCareFacilityTerm();
@@ -1215,29 +1251,19 @@ export function ParentMealPlanPage() {
   // selection.
   const tSchools = useTranslations("parentMealPlan");
   const [weekOffset, setWeekOffset] = useState<WeekOffset>(0);
-  const [entries, setEntries] = useState<MealPlanEntry[]>([]);
-  // The Monday the current `entries` were loaded for. Used to detect when
-  // `entries` belongs to a previous week (a slower request still in flight, or
-  // a week switch not yet resolved) so we never map stale dishes onto the newly
-  // selected week's dates.
-  const [loadedMonday, setLoadedMonday] = useState<string | null>(null);
-  const [loadingSchools, setLoadingSchools] = useState(true);
   // Distinguish operational failures (backend/network/session errors) from a
-  // genuinely empty result. Without these flags a failed request would render
-  // as "no meal plan available" / "no plan entered" — false information.
-  const {
-    error: schoolsError,
-    show: showSchoolsError,
-    clear: clearSchoolsError,
-  } = useApiLoadError();
-  const {
-    error: weekError,
-    show: showWeekError,
-    clear: clearWeekError,
-  } = useApiLoadError();
-  // Bumped by Wiederholen to run the matching load effect again.
-  const [schoolsAttempt, setSchoolsAttempt] = useState(0);
-  const [weekAttempt, setWeekAttempt] = useState(0);
+  // genuinely empty result: a failed request must not render as "no meal
+  // plan available" / "no plan entered", which would be false information.
+  const { error: schoolsError, failure: schoolsFailure } =
+    useSwrResourceLoadError(
+      [children, features],
+      tSchools("errorObjectSchools"),
+      () => {
+        void children.mutate();
+        void features.mutate();
+      },
+    );
+  const loadingSchools = !schoolsFailure && !resolved && !knownSchools;
   const [participationEditing, setParticipationEditing] = useState(false);
 
   // useBerlinToday re-renders on the Berlin midnight rollover, so a page left
@@ -1253,75 +1279,12 @@ export function ParentMealPlanPage() {
   );
   const weekDates = useMemo(() => workWeekDates(mondayISO), [mondayISO]);
 
-  // Resolve which of the parent's schools actually run a meal plan.
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setLoadingSchools(true);
-      clearSchoolsError();
-      try {
-        const children = await listMyChildren();
-        // Let a failed feature lookup reject the whole resolution. A transient
-        // 500/session/proxy error must surface as an error, never be treated
-        // as meal_plan_enabled: false (which silently removes the school).
-        const features = await Promise.all(
-          children.map((child) => getChildFeatures(child.student_id)),
-        );
-        const enabled: ChildOption[] = [];
-        children.forEach((child, index) => {
-          if (features[index]?.meal_plan_enabled) {
-            enabled.push({
-              tenantId: child.tenant_id,
-              schoolName: child.school_name,
-              studentId: child.student_id,
-              childName: `${child.first_name} ${child.last_name}`,
-              registrationEnabled:
-                features[index]?.meal_registration_enabled === true,
-              careTerm: features[index]?.care_facility_term,
-            });
-          }
-        });
-        if (cancelled) return;
-        setHasLinkedChildren(children.length > 0);
-        setSchools(enabled);
-        setSelectedStudent(enabled[0]?.studentId ?? null);
-      } catch (err) {
-        if (cancelled) return;
-        logger.error("parent_meal_plan_schools_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        // Awaited so no empty state flashes before the error arrives.
-        await showSchoolsError(err, {
-          object: tSchools("errorObjectSchools"),
-          retry: () => setSchoolsAttempt((attempt) => attempt + 1),
-        });
-      } finally {
-        if (!cancelled) setLoadingSchools(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [clearSchoolsError, schoolsAttempt, showSchoolsError, tSchools]);
-
   const selectedSchool = useMemo(
     () =>
       schools.find((school) => school.studentId === selectedStudent) ?? null,
     [schools, selectedStudent],
   );
 
-  // Switching schools must drop the previous school's menu immediately, or it
-  // would show under the new school's label until the new request returns —
-  // wrong information. Clearing loadedMonday makes the week "not ready" so the
-  // loading skeleton shows until the new school's week resolves.
-  useEffect(() => {
-    setEntries([]);
-    setLoadedMonday(null);
-  }, [selectedStudent]);
-
-  // Load the selected school's week. A slower response from a previous
-  // school/week selection must never overwrite the current one, so each run
-  // captures a `cancelled` flag the cleanup flips when the inputs change.
   // A school without the registration only shows the meal plan, so a week
   // beyond it cannot stay selected after switching to that school.
   useEffect(() => {
@@ -1335,53 +1298,23 @@ export function ParentMealPlanPage() {
   // Beyond next week parents only see their registration; the meal plan for
   // those weeks is not public yet, so it is not loaded.
   const planLater = weekOffset > LAST_MEAL_PLAN_WEEK;
-  useEffect(() => {
-    if (!selectedSchool) return;
-    let cancelled = false;
-    const { studentId } = selectedSchool;
-    clearWeekError();
-    if (planLater) {
-      setEntries([]);
-      setLoadedMonday(mondayISO);
-      return;
-    }
-    void (async () => {
-      try {
-        const rows = await getChildMealPlan(studentId, mondayISO);
-        if (cancelled) return;
-        setEntries(rows);
-      } catch (err) {
-        if (cancelled) return;
-        logger.error("parent_meal_plan_week_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        // Operational failure — show the load error, not an empty week
-        // (which would falsely tell parents no plan was entered).
-        setEntries([]);
-        await showWeekError(err, {
-          object: t("errorObjectWeek"),
-          retry: () => setWeekAttempt((attempt) => attempt + 1),
-        });
-      } finally {
-        if (!cancelled) {
-          // Mark which week `entries` now reflects (success or error) so the
-          // render can tell a resolved week from stale/in-flight data.
-          setLoadedMonday(mondayISO);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    clearWeekError,
-    mondayISO,
-    planLater,
-    selectedSchool,
-    showWeekError,
-    t,
-    weekAttempt,
-  ]);
+  // The key carries school and week: a slower answer of a previous
+  // selection never shows under the new school's label or week.
+  const week = useSWRAuth(
+    selectedSchool && !planLater
+      ? parentInboxKeys.mealPlan(selectedSchool.studentId, mondayISO)
+      : null,
+    () => getChildMealPlan(selectedSchool?.studentId ?? "", mondayISO),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  // Operational failure: the load error, not an empty week (which would
+  // falsely tell parents no plan was entered).
+  const { error: weekError } = useSwrResourceLoadError(
+    [week],
+    t("errorObjectWeek"),
+    () => week.mutate(),
+  );
+  const entries = (!planLater && week.data) || NO_ENTRIES;
 
   const dishesByDate = useMemo(() => {
     const map = new Map<string, MealPlanEntry[]>();
@@ -1399,7 +1332,7 @@ export function ParentMealPlanPage() {
   // Monday has resolved. Until then (first load, a week switch, a slow request
   // still returning the previous week) the data is stale: rendering it would
   // map old dishes onto the new dates — a false-empty or wrong week.
-  const weekReady = loadedMonday === mondayISO;
+  const weekReady = planLater || week.data !== undefined || !!week.error;
   const weekIsEmpty = entries.length === 0;
 
   const weekdayLabel = (iso: string) =>

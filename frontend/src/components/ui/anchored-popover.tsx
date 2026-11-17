@@ -83,10 +83,7 @@ interface AnchoredPopoverProps<
     panelId: string;
     toggle: () => void;
   }) => ReactNode;
-  readonly children: (props: {
-    close: () => void;
-    overflowMenuPortal: { ownerId: string; zIndex: number };
-  }) => ReactNode;
+  readonly children: (props: { close: () => void }) => ReactNode;
 }
 
 export function AnchoredPopover<
@@ -218,12 +215,7 @@ export function AnchoredPopover<
 
   const hasSlots = header != null || footer != null;
   const content =
-    open && portalContainer
-      ? children({
-          close: () => close(),
-          overflowMenuPortal: { ownerId: panelId, zIndex: Z_INDEX.popoverMenu },
-        })
-      : null;
+    open && portalContainer ? children({ close: () => close() }) : null;
 
   const panelClassName = cn(
     "moto-popover-surface rounded-xl border focus:outline-none",

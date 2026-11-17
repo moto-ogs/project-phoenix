@@ -1,13 +1,27 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { SepaMandate } from "~/lib/traeger-sepa-api";
 import { traegerRequest } from "~/lib/traeger-api";
+import { deferred } from "~/test/helpers/form-modal-pending";
+import { SepaMandateStatusCard } from "./sepa-mandate-status-card";
+import TraegerSepaMandatePage from "~/app/traeger/abrechnung/lastschrift/[contractId]/page";
 import { SepaMandatesCard } from "./sepa-mandates-card";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchSepaMandates: vi.fn(),
+  fetchSepaMandateCollections: vi.fn(),
   fetchSepaMandateHistory: vi.fn(),
   createSepaMandate: vi.fn(),
   revokeSepaMandate: vi.fn(),
@@ -20,6 +34,13 @@ vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 vi.mock("~/lib/traeger-api", () => ({
   traegerRequest: vi.fn(),
   fetchTraegerBuero: () => Promise.resolve({ members: [] }),
+}));
+
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ contractId: "42" }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/traeger/abrechnung/lastschrift/42",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const MANDATE: SepaMandate = {
@@ -46,15 +67,93 @@ const MANDATE: SepaMandate = {
 
 function renderCard() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <SepaMandatesCard contractId="42" holder="Eva Beispiel" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
 describe("SepaMandatesCard (#4695)", () => {
   beforeEach(() => {
     for (const fn of Object.values(api)) fn.mockReset();
+    api.fetchSepaMandateCollections.mockResolvedValue([]);
+  });
+
+  it.each(["list", "status", "detail"] as const)(
+    "reads the audited %s on every opening",
+    async (surface) => {
+      api.fetchSepaMandates.mockResolvedValueOnce([MANDATE]);
+      const next = deferred<SepaMandate[]>();
+      api.fetchSepaMandates.mockReturnValueOnce(next.promise);
+      const content =
+        surface === "list" ? (
+          <SepaMandatesCard contractId="42" holder="Eva Beispiel" />
+        ) : surface === "status" ? (
+          <SepaMandateStatusCard contractId="42" />
+        ) : (
+          <TraegerSepaMandatePage />
+        );
+      const view = render(
+        <TraegerResourceTestProvider>{content}</TraegerResourceTestProvider>,
+      );
+      expect(
+        (await screen.findAllByText(new RegExp(MANDATE.reference)))[0],
+      ).toBeVisible();
+      view.rerender(
+        <TraegerResourceTestProvider>{null}</TraegerResourceTestProvider>,
+      );
+      view.rerender(
+        <TraegerResourceTestProvider>{content}</TraegerResourceTestProvider>,
+      );
+      await waitFor(() =>
+        expect(api.fetchSepaMandates).toHaveBeenCalledTimes(2),
+      );
+      expect(
+        screen.queryByText(new RegExp(MANDATE.reference)),
+      ).not.toBeInTheDocument();
+      await act(async () => {
+        next.resolve([MANDATE]);
+      });
+      expect(
+        (await screen.findAllByText(new RegExp(MANDATE.reference)))[0],
+      ).toBeVisible();
+    },
+  );
+
+  it("reads the mandate history on every reopening", async () => {
+    api.fetchSepaMandates.mockResolvedValue([MANDATE]);
+    api.fetchSepaMandateHistory.mockResolvedValueOnce([]);
+    renderCard();
+    async function openHistory() {
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: `Aktionen für das Mandat ${MANDATE.reference}`,
+        }),
+      );
+      fireEvent.click(
+        screen.getByRole("menuitem", { name: "Verlauf ansehen" }),
+      );
+    }
+    await openHistory();
+    expect(await screen.findByText("Noch keine Einträge.")).toBeVisible();
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Modal schließen" }),
+    );
+    await waitForElementToBeRemoved(dialog);
+    const next = deferred<[]>();
+    api.fetchSepaMandateHistory.mockReturnValueOnce(next.promise);
+    await openHistory();
+    await waitFor(() =>
+      expect(api.fetchSepaMandateHistory).toHaveBeenCalledTimes(2),
+    );
+    expect(
+      within(screen.getByRole("dialog")).getByText("Wird geladen …"),
+    ).toBeVisible();
+    await act(async () => {
+      next.resolve([]);
+    });
+    expect(await screen.findByText("Noch keine Einträge.")).toBeVisible();
   });
 
   it("offers a new mandate while none is in force and sends the compacted IBAN", async () => {

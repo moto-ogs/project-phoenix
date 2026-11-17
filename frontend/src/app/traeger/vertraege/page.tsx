@@ -9,14 +9,7 @@
 
 import { Plus, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {
-  type MouseEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type MouseEvent, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { CareContractCreateModal } from "~/components/traeger/care-contract-create-modal";
 import {
@@ -30,6 +23,13 @@ import {
 } from "~/components/traeger/care-contract-format";
 import { careContractTabs } from "~/components/traeger/care-contract-tabs";
 import { emptySearchText } from "~/components/traeger/empty-search";
+import { useSWRRequestGuard } from "~/lib/swr/hooks";
+import {
+  isRefusal,
+  useRefusalGuard,
+} from "~/components/traeger/use-traeger-confirmed-resource";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import {
   TraegerListExportMenu,
   traegerExportScope,
@@ -45,7 +45,6 @@ import type {
   FilterConfig,
 } from "~/components/ui/page-header/types";
 import { SectionCard } from "~/components/ui/section-card";
-import { ApiError } from "~/lib/api-error";
 import { hasPermission } from "~/lib/auth-utils";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { SelectionBar } from "~/components/ui/selection-bar";
@@ -60,6 +59,9 @@ import { careContractsConcept } from "~/lib/concepts/careContracts";
 import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
+import { useLatest } from "~/lib/hooks/use-latest";
+import { useInvalidateFamily, useInvalidateMatching } from "~/lib/swr";
+import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import {
   type CareContractList,
   type CareContractStatus,
@@ -72,7 +74,7 @@ import {
   fetchContractCandidates,
   sendCareContracts,
 } from "~/lib/traeger-care-contracts-api";
-import { fetchTraegerSchools, type TraegerSchool } from "~/lib/traeger-api";
+import type { TraegerSchool } from "~/lib/traeger-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { useDebounce } from "~/lib/use-debounce";
 import { traegerPath } from "~/lib/traeger-url";
@@ -80,6 +82,48 @@ import { traegerPath } from "~/lib/traeger-url";
 const logger = createLogger({ component: "TraegerVertraegePage" });
 
 type StatusChoice = CareContractStatus | "all";
+
+/** Older contracts loaded below the first page, for the page they follow. */
+interface MorePages {
+  readonly after: CareContractList;
+  readonly list: CareContractList;
+}
+
+/**
+ * At a school that concludes at acceptance a child gets no draft here: the
+ * reason why it still has no contract stands in its place.
+ */
+function withConclusionIssue(
+  candidates: readonly ContractCandidate[],
+  modes: readonly SchoolConclusionMode[],
+): ContractCandidate[] {
+  return candidates.map((candidate) =>
+    modes.some(
+      (school) =>
+        school.schoolId === candidate.schoolId && school.mode === "bei_annahme",
+    )
+      ? {
+          ...candidate,
+          templateIssue:
+            candidate.templateIssue ??
+            (!candidate.guardianEmail.trim()
+              ? ("recipient_missing" as const)
+              : null) ??
+            (candidate.acceptanceIssue === "acceptance_missing" &&
+            candidate.renewal
+              ? ("acceptance_missing_renewal" as const)
+              : candidate.acceptanceIssue) ??
+            (candidate.mailBlock === "stopped"
+              ? ("mail_stopped" as const)
+              : null) ??
+            (candidate.mailBlock === "address"
+              ? ("mail_blocked" as const)
+              : null) ??
+            ("conclusion_automatic" as const),
+        }
+      : candidate,
+  );
+}
 
 interface PageData {
   readonly list: CareContractList;
@@ -211,156 +255,150 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
 export default function TraegerVertraegePage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const [data, setData] = useState<PageData | null>(null);
   const [status, setStatus] = useState<StatusChoice>("all");
   const [schoolId, setSchoolId] = useState("");
   const [search, setSearch] = useState("");
   // Null until the person opens or closes the card: then the device decides.
   const [rulesOpen, setRulesOpen] = useState<boolean | null>(null);
   const debouncedSearch = useDebounce(search.trim(), 250);
-  const context = useRef<{
-    candidates: ContractCandidate[];
-    schools: TraegerSchool[];
-    modes: SchoolConclusionMode[];
-  } | null>(null);
-  const request = useRef(0);
+  const filter = {
+    status: status === "all" ? undefined : status,
+    schoolId,
+    search: debouncedSearch,
+  };
+  const listKey = traegerContractKeys.list(filter);
+  const listGuard = useRefusalGuard(listKey);
+  const beginPageRead = useSWRRequestGuard();
+  const firstPage = useTraegerResource(
+    listKey,
+    () => fetchCareContracts({ ...filter, offset: 0 }),
+    "die Liste der Verträge",
+  );
+  const candidateRead = useTraegerResource(
+    traegerContractKeys.candidates(),
+    fetchContractCandidates,
+    "die Liste der Verträge",
+  );
+  const modeRead = useTraegerResource(
+    traegerContractKeys.conclusionModes(),
+    fetchConclusionModes,
+    "die Liste der Verträge",
+  );
+  const schoolList = useTraegerSchools();
+  const invalidateFamily = useInvalidateFamily();
+  const invalidateMatching = useInvalidateMatching();
+  const [more, setMore] = useState<MorePages | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const moreLoad = useApiLoadError();
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [creating, setCreating] = useState(false);
   const [sending, setSending] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const actionError = useApiErrorDisplay();
   const { success, warning } = useToast();
 
-  // Reads one page of the list for request `currentRequest` and sets it;
-  // rejects on a failure. An answer for an older request is dropped.
-  const readContracts = useCallback(
-    async (offset: number, currentRequest: number) => {
-      const [list, metadata] = await Promise.all([
-        fetchCareContracts({
-          status: status === "all" ? undefined : status,
-          schoolId,
-          search: debouncedSearch,
-          offset,
-        }),
-        context.current ??
-          Promise.all([
-            fetchContractCandidates(),
-            fetchTraegerSchools(),
-            fetchConclusionModes(),
-          ]).then(([candidates, schools, modes]) => ({
-            candidates: candidates.map((candidate) =>
-              modes.some(
-                (school) =>
-                  school.schoolId === candidate.schoolId &&
-                  school.mode === "bei_annahme",
-              )
-                ? {
-                    ...candidate,
-                    templateIssue:
-                      candidate.templateIssue ??
-                      (!candidate.guardianEmail.trim()
-                        ? ("recipient_missing" as const)
-                        : null) ??
-                      (candidate.acceptanceIssue === "acceptance_missing" &&
-                      candidate.renewal
-                        ? ("acceptance_missing_renewal" as const)
-                        : candidate.acceptanceIssue) ??
-                      (candidate.mailBlock === "stopped"
-                        ? ("mail_stopped" as const)
-                        : null) ??
-                      (candidate.mailBlock === "address"
-                        ? ("mail_blocked" as const)
-                        : null) ??
-                      ("conclusion_automatic" as const),
-                  }
-                : candidate,
-            ),
-            schools,
-            modes,
-          })),
-      ]).catch((error: unknown) => {
-        if (
-          currentRequest === request.current &&
-          error instanceof ApiError &&
-          (error.status === 401 || error.status === 403)
-        ) {
-          setData(null);
-          context.current = null;
-          setSelected(new Set());
-          setCreating(false);
-        }
-        throw error;
-      });
-      if (currentRequest !== request.current) return;
-      context.current = metadata;
-      setData((previous) => ({
-        ...metadata,
-        list: {
-          ...list,
-          contracts:
-            offset > 0 && previous
-              ? [...previous.list.contracts, ...list.contracts]
-              : list.contracts,
-        },
-      }));
-    },
-    [status, schoolId, debouncedSearch],
-  );
-
-  const load = useCallback(
-    async (offset = 0) => {
-      const currentRequest = ++request.current;
-      if (offset > 0) setLoadingMore(true);
-      try {
-        await readContracts(offset, currentRequest);
-        if (currentRequest !== request.current) return;
-        clearLoadError();
-      } catch (err) {
-        if (currentRequest !== request.current) return;
-        logger.error("traeger_care_contracts_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        await showLoadError(err, {
-          object: "die Liste der Verträge",
-          retry: () => void load(offset),
-        });
-      } finally {
-        if (currentRequest === request.current) setLoadingMore(false);
-      }
-    },
-    [readContracts, clearLoadError, showLoadError],
-  );
-
-  const invalidateRequest = useCallback(() => {
-    request.current++;
-  }, []);
-
-  useEffect(() => {
-    setData(null);
+  // Another filter is another list: its rows start unselected.
+  const [selectionFor, setSelectionFor] = useState(listKey);
+  if (selectionFor !== listKey) {
+    setSelectionFor(listKey);
     setSelected(new Set());
-    void load();
-    return invalidateRequest;
-  }, [load, invalidateRequest]);
+  }
+  // A refusal takes the list away, and the choices made on it.
+  if (firstPage.refused && (selected.size > 0 || creating)) {
+    setSelected(new Set());
+    setCreating(false);
+  }
+
+  const data = useMemo<PageData | null>(() => {
+    if (!firstPage.data || !candidateRead.data || !modeRead.data) return null;
+    if (!schoolList.schools) return null;
+    // Older pages count only below the first page they were read after.
+    const list =
+      more?.after === firstPage.data
+        ? {
+            ...more.list,
+            contracts: [...firstPage.data.contracts, ...more.list.contracts],
+          }
+        : firstPage.data;
+    return {
+      list,
+      candidates: withConclusionIssue(candidateRead.data, modeRead.data),
+      schools: schoolList.schools,
+      modes: modeRead.data,
+    };
+  }, [
+    firstPage.data,
+    candidateRead.data,
+    modeRead.data,
+    schoolList.schools,
+    more,
+  ]);
+  const loadError =
+    firstPage.error ??
+    candidateRead.error ??
+    modeRead.error ??
+    schoolList.error;
+
+  const loadMore = async () => {
+    const after = firstPage.data;
+    if (!after || !data) return;
+    const complete = beginPageRead(listKey);
+    setLoadingMore(true);
+    moreLoad.clear();
+    try {
+      const page = await fetchCareContracts({
+        ...filter,
+        offset: data.list.contracts.length,
+      });
+      setMore((previous) => ({
+        after,
+        list:
+          previous?.after === after
+            ? {
+                ...page,
+                contracts: [...previous.list.contracts, ...page.contracts],
+              }
+            : page,
+      }));
+    } catch (err) {
+      // Pagination has the same access boundary as the first page. Record
+      // its refusal before any later request can replace it with a 5xx.
+      if (isRefusal(err))
+        complete(() => {
+          listGuard.callbacks.onError(err);
+          void firstPage.mutate(undefined, { revalidate: false });
+          setMore(null);
+        });
+      else
+        await moreLoad.show(err, {
+          object: "die Liste der Verträge",
+          retry: () => void loadMore(),
+        });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Reload after a send: a failure there is a load error above the
-  // confirmed rows, not a failed send (#6652). A reload that a newer filter
-  // overtook fails silently; the newer load answers for it. The reload
-  // replaces a page that was still loading more.
+  // confirmed rows, not a failed send (#6652). The reload replaces the
+  // older pages loaded below the first.
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige der Verträge",
-    async () => {
-      const currentRequest = ++request.current;
-      try {
-        await readContracts(0, currentRequest);
-      } catch (err) {
-        if (currentRequest === request.current) throw err;
-      } finally {
-        if (currentRequest === request.current) setLoadingMore(false);
-      }
-    },
+    // A mutation drops an answer to a request that started before it.
+    () =>
+      firstPage.mutate(fetchCareContracts({ ...filter, offset: 0 }), {
+        revalidate: false,
+      }),
   );
+
+  // The lists of the other filters count the written contracts too; the
+  // list shown when the write ends reloads through afterWrite.
+  const shownList = useLatest(listKey);
+  const invalidateOtherLists = () =>
+    void invalidateMatching(
+      (key) =>
+        key.startsWith(traegerContractKeys.listFamily) &&
+        key !== shownList.current,
+    );
 
   const contracts = useMemo(() => [...(data?.list.contracts ?? [])], [data]);
   const schools = (data?.schools ?? []).map((school) => ({
@@ -391,7 +429,8 @@ export default function TraegerVertraegePage() {
       });
       void actionError.show(err, { object: "das Senden der Entwürfe" });
       setSelected(new Set());
-      await load();
+      invalidateOtherLists();
+      await firstPage.mutate();
       setSending(false);
       return;
     }
@@ -409,6 +448,7 @@ export default function TraegerVertraegePage() {
       );
     }
     setSelected(new Set());
+    invalidateOtherLists();
     await afterWrite.refresh();
     setSending(false);
   };
@@ -429,11 +469,17 @@ export default function TraegerVertraegePage() {
           : `${result.skipped.length} Kinder hatten inzwischen einen Vertrag oder keine Bedingungen.`,
       );
     }
-    context.current = null;
+    candidateRead.reload();
+    modeRead.reload();
     // Die Entwürfe sind angelegt; ein Fehler beim Nachladen lässt die
     // bestätigte Liste stehen (#6652). Ein anderer Filter lädt neu.
-    if (status === "entwurf") await afterWrite.refresh();
-    else setStatus("entwurf");
+    if (status === "entwurf") {
+      invalidateOtherLists();
+      await afterWrite.refresh();
+    } else {
+      void invalidateFamily(traegerContractKeys.listFamily);
+      setStatus("entwurf");
+    }
   };
 
   const filters: FilterConfig[] = [
@@ -515,7 +561,7 @@ export default function TraegerVertraegePage() {
           />
         ) : null
       }
-      statsLoading={!data && !pageLoad.error}
+      statsLoading={!data && !loadError}
       search={{
         value: search,
         onChange: setSearch,
@@ -566,10 +612,10 @@ export default function TraegerVertraegePage() {
           </Button>
         </>
       }
-      error={pageLoad.error ?? (!data ? afterWrite.error : null)}
+      error={loadError ?? (!data ? afterWrite.error : null)}
       // A list loads in the shape of its rows.
       loading={
-        !pageLoad.error && !afterWrite.error && !data ? (
+        !loadError && !afterWrite.error && !data ? (
           <ListSkeleton rows={6} avatar={false} />
         ) : (
           false
@@ -589,7 +635,10 @@ export default function TraegerVertraegePage() {
         ) : null
       }
     >
-      <LoadErrorAlert error={afterWrite.error} className="mb-4" />
+      <LoadErrorAlert
+        error={afterWrite.error ?? moreLoad.error}
+        className="mb-4"
+      />
       {data && data.modes.length > 0 ? (
         <SectionCard
           title="Wann gilt der Vertrag?"
@@ -683,7 +732,7 @@ export default function TraegerVertraegePage() {
                     status === "all" && !schoolId && !search.trim()
                       ? `Weitere Verträge laden (${contracts.length} von ${total})`
                       : "Weitere Verträge laden",
-                  onClick: () => void load(contracts.length),
+                  onClick: () => void loadMore(),
                   loading: loadingMore,
                   loadingText: "Wird geladen …",
                   disabled: loadingMore || sending,

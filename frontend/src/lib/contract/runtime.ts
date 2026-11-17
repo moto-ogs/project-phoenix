@@ -50,6 +50,19 @@ export function knownEnum<T extends string>(
   return values.find((known) => known === value);
 }
 
+/**
+ * The body a registered route binds. It carries no value: the route entry
+ * names the type so that the client can check what it sends. Go checks the
+ * body itself (`Bind`) and answers a refusal through the error contract.
+ */
+export interface RequestBody<T> {
+  readonly body?: T;
+}
+
+export function requestBody<T>(): RequestBody<T> {
+  return {};
+}
+
 const pagination = z.object({
   current_page: safeInt,
   page_size: safeInt,
@@ -61,6 +74,17 @@ const pagination = z.object({
 export function success<T extends z.ZodType>(data: T) {
   return z.object({ status: z.literal("success"), data });
 }
+
+/**
+ * A route that answers no data: a 204, which the backend client reads as
+ * undefined, or the envelope without a data member.
+ */
+export const noData = z
+  .union([
+    z.undefined(),
+    z.object({ status: z.literal("success"), data: z.null().optional() }),
+  ])
+  .transform(() => ({ data: null }));
 
 /** common.PaginatedResponse */
 export function paginated<T extends z.ZodType>(data: T) {

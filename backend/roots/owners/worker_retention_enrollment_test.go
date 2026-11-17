@@ -20,8 +20,10 @@ import (
 )
 
 // enrollmentFixture writes the enrollments of one school through the
-// Enrollment owner and backdates them as the superuser.
+// Enrollment owner and backdates them as the superuser, on the suite clock
+// the settled cleanup cuts off on.
 type enrollmentFixture struct {
+	now      time.Time
 	admin    retentionDB
 	tenantID int64
 	ctx      context.Context
@@ -33,7 +35,7 @@ type enrollmentFixture struct {
 func (s retentionSuite) enrollments(t *testing.T, tenantID int64) enrollmentFixture {
 	t.Helper()
 	ctx := testpkg.WithTenantRuntime(t, testpkg.TenantContext(tenantID), s.admin)
-	owner := enrollmentCompose.NewClocked(nil)
+	owner := enrollmentCompose.NewClocked(func() time.Time { return s.now })
 	phase := &enrollment.Phase{
 		Name:                      fmt.Sprintf("Löschfrist-%d", tenantID),
 		Kind:                      enrollment.PhaseKindSchoolYear,
@@ -45,7 +47,7 @@ func (s retentionSuite) enrollments(t *testing.T, tenantID int64) enrollmentFixt
 	}
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, testpkg.SetupTestDB(t), owner.InsertPhase, phase))
 	creator := testpkg.CreateTestAccount(t, s.admin, fmt.Sprintf("late-invite-%d@example.com", tenantID)).ID
-	return enrollmentFixture{admin: s.admin, tenantID: tenantID, ctx: ctx, owner: owner, phaseID: phase.ID, creator: creator}
+	return enrollmentFixture{now: s.now, admin: s.admin, tenantID: tenantID, ctx: ctx, owner: owner, phaseID: phase.ID, creator: creator}
 }
 
 // settledChild is one child of a request: its status, how many days back it
@@ -91,7 +93,7 @@ func (f enrollmentFixture) requestIn(t *testing.T, phaseID int64, label string, 
 		GuardianEmail:     fmt.Sprintf("%s-%d@example.invalid", label, f.tenantID),
 		SubmissionSource:  enrollment.RequestSourcePublic,
 		StatusToken:       fmt.Sprintf("%s-token-%d", label, f.tenantID),
-		SubmittedAt:       time.Now(),
+		SubmittedAt:       f.now,
 	}
 	require.NoError(t, testpkg.TenantCommand1(t, f.ctx, testpkg.SetupTestDB(t), f.owner.InsertRequest, request))
 	childIDs := make([]int64, 0, len(children))
@@ -113,10 +115,10 @@ func (f enrollmentFixture) requestIn(t *testing.T, phaseID int64, label string, 
 		}
 		require.NoError(t, testpkg.TenantCommand1(t, f.ctx, testpkg.SetupTestDB(t), f.owner.InsertChild, child))
 		childIDs = append(childIDs, child.ID)
-		_, err := f.admin.ExecContext(context.Background(), `UPDATE enrollment.request_children
-			SET reviewed_at = CASE WHEN ? THEN NULL ELSE CURRENT_TIMESTAMP - make_interval(days => ?) END,
-				updated_at = CURRENT_TIMESTAMP - make_interval(days => ?)
-			WHERE id = ?`, settled.lapsed, settled.daysAgo, settled.daysAgo, child.ID)
+		_, err := f.admin.ExecContext(context.Background(), onClock(f.now, `UPDATE enrollment.request_children
+			SET reviewed_at = CASE WHEN ? THEN NULL ELSE ROOT_NOW - make_interval(days => ?) END,
+				updated_at = ROOT_NOW - make_interval(days => ?)
+			WHERE id = ?`), settled.lapsed, settled.daysAgo, settled.daysAgo, child.ID)
 		require.NoError(t, err)
 	}
 	return request.ID, childIDs
@@ -136,14 +138,14 @@ func (f enrollmentFixture) lateInvite(t *testing.T, label string, daysAgo int, u
 	t.Helper()
 	invite := &enrollment.LateInvite{
 		PhaseID: f.phaseID, TokenHash: fmt.Sprintf("%s-hash-%d", label, f.tenantID),
-		GuardianEmail: fmt.Sprintf("%s-%d@example.invalid", label, f.tenantID), ExpiresAt: time.Now().Add(time.Hour), CreatedBy: f.creator,
+		GuardianEmail: fmt.Sprintf("%s-%d@example.invalid", label, f.tenantID), ExpiresAt: f.now.Add(time.Hour), CreatedBy: f.creator,
 	}
 	require.NoError(t, testpkg.TenantCommand1(t, f.ctx, testpkg.SetupTestDB(t), f.owner.InsertLateInvite, invite))
-	_, err := f.admin.ExecContext(context.Background(), `UPDATE enrollment.late_invites
-		SET created_at = CURRENT_TIMESTAMP - make_interval(days => ? + 30),
-			expires_at = CURRENT_TIMESTAMP - make_interval(days => ?),
-			used_request_id = NULLIF(?, 0), used_at = CASE WHEN ? > 0 THEN CURRENT_TIMESTAMP - make_interval(days => ?) END
-		WHERE id = ?`, daysAgo, daysAgo, usedBy, usedBy, daysAgo+1, invite.ID)
+	_, err := f.admin.ExecContext(context.Background(), onClock(f.now, `UPDATE enrollment.late_invites
+		SET created_at = ROOT_NOW - make_interval(days => ? + 30),
+			expires_at = ROOT_NOW - make_interval(days => ?),
+			used_request_id = NULLIF(?, 0), used_at = CASE WHEN ? > 0 THEN ROOT_NOW - make_interval(days => ?) END
+		WHERE id = ?`), daysAgo, daysAgo, usedBy, usedBy, daysAgo+1, invite.ID)
 	require.NoError(t, err)
 	return invite.ID
 }
@@ -151,7 +153,7 @@ func (f enrollmentFixture) lateInvite(t *testing.T, label string, daysAgo int, u
 // mail queues an enrollment mail of the request.
 func (f enrollmentFixture) mail(t *testing.T, requestID int64) int64 {
 	t.Helper()
-	module, err := NewEnrollmentFlowDelivery(testpkg.MustDatabase(f.admin))
+	module, err := NewEnrollmentFlowDelivery(testpkg.MustDatabase(f.admin), func() time.Time { return f.now })
 	require.NoError(t, err)
 	var queued deliveryContract.Enqueued
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), f.admin, f.tenantID, func(ctx context.Context, _ bun.Tx) error {
@@ -237,9 +239,9 @@ func TestNightlyRetentionCountsWithdrawnEnrollmentsFromTheirStatusChange(t *test
 	f := suite.enrollments(t, school)
 
 	requestID := f.request(t, "spaet-korrigiert", settledChild{status: enrollment.ChildStatusWithdrawn, daysAgo: 91})
-	_, err := suite.admin.ExecContext(context.Background(), `UPDATE enrollment.request_children
-		SET updated_at = CURRENT_TIMESTAMP
-		WHERE request_id = ?`, requestID)
+	_, err := suite.admin.ExecContext(context.Background(), suite.onRootClock(`UPDATE enrollment.request_children
+		SET updated_at = ROOT_NOW
+		WHERE request_id = ?`), requestID)
 	require.NoError(t, err)
 
 	suite.run(t, school)

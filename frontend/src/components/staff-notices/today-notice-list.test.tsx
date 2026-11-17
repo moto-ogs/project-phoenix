@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
@@ -8,6 +10,18 @@ import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 
 import { TodayNoticeList } from "./today-notice-list";
+
+// The component refreshes the scoped cache, which needs the session.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <ToastProvider>{children}</ToastProvider>
+    </SessionProvider>
+  );
+}
 
 const notice: StaffNotice = {
   id: "42",
@@ -39,7 +53,7 @@ describe("TodayNoticeList", () => {
         onChanged={onChanged}
         acknowledge={acknowledge}
       />,
-      { wrapper: ToastProvider },
+      { wrapper: Providers },
     );
 
     fireEvent.click(
@@ -78,7 +92,7 @@ describe("TodayNoticeList", () => {
         onChanged={onChanged}
         acknowledge={acknowledge}
       />,
-      { wrapper: ToastProvider },
+      { wrapper: Providers },
     );
 
     fireEvent.click(
@@ -104,16 +118,16 @@ describe("TodayNoticeList", () => {
   // als Raster; Startseite und moto schule behalten die gestapelte Liste.
   it("lays the notices out as a grid only when asked to", () => {
     const { rerender } = render(
-      <ToastProvider>
+      <Providers>
         <TodayNoticeList notices={[notice]} onChanged={vi.fn()} />
-      </ToastProvider>,
+      </Providers>,
     );
     expect(screen.getByRole("list").className).not.toContain("grid");
 
     rerender(
-      <ToastProvider>
+      <Providers>
         <TodayNoticeList notices={[notice]} onChanged={vi.fn()} layout="grid" />
-      </ToastProvider>,
+      </Providers>,
     );
     expect(screen.getByRole("list").className).toContain("grid");
   });

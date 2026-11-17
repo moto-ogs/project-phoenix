@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 import { useLatest } from "~/lib/hooks/use-latest";
 import {
+  OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   OVERLAY_PANEL_STYLE,
   Z_LAYER,
@@ -371,9 +372,8 @@ export function Modal({
           onClick={handleClose}
           disabled={isDismissDisabled || isBackdropDismissDisabled}
           aria-label={backdropLabel}
-          // The tint stays put and only its opacity fades: the compositor
-          // runs an opacity transition without repainting the page.
-          className={`absolute inset-0 cursor-default border-none p-0 ${OVERLAY_BACKDROP_TINT_CLASS} transition-opacity duration-200 ease-out ${
+          // Tint and blur fade in together, as before #7252.
+          className={`absolute inset-0 cursor-default border-none p-0 ${OVERLAY_BACKDROP_TINT_CLASS} ${OVERLAY_BACKDROP_BLUR_CLASS} transition-opacity duration-200 ease-out ${
             isAnimating && !isExiting ? "opacity-100" : "opacity-0"
           }`}
         />

@@ -3,7 +3,7 @@
 import { Megaphone, Pencil, Trash2, Users } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useLayoutEffect, useRef, useState } from "react";
+import { Suspense, useState } from "react";
 
 import {
   OverflowMenu,
@@ -113,7 +113,6 @@ function TagesinformationenContent() {
   // Löschfehler bleiben im Bestätigungsdialog (#2517).
   const deleteErrors = useApiFormError();
   const [deletePending, setDeletePending] = useState(false);
-  const latestDeleteRef = useRef<() => void>(() => undefined);
   const toast = useToast();
 
   const todayLoadError = useSwrLoadError(
@@ -199,16 +198,12 @@ function TagesinformationenContent() {
       });
       void deleteErrors.show(err, {
         object: "das Löschen des Hinweises",
-        retry: () => latestDeleteRef.current(),
+        retry: () => void confirmDelete(),
       });
     } finally {
       setDeletePending(false);
     }
   };
-
-  useLayoutEffect(() => {
-    latestDeleteRef.current = () => void confirmDelete();
-  });
 
   // Statuszeile aus echten Zahlen: was heute gilt, für Admins zusätzlich der
   // Bestand. Der frühere Erklärsatz steht in der Hilfe, nicht im Kopf. Eine

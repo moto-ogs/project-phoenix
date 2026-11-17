@@ -36,12 +36,12 @@ type Search struct {
 	today      func() calendar.Date
 }
 
-// New builds the search; every port is required.
-func New(reader Reader, answers schoolsearchview.StudentAnswerSearch, notes schoolsearchview.StudentNoteSearch, activities schoolsearchview.ActivityEnrollments) (*Search, error) {
-	if reader == nil || answers == nil || notes == nil || activities == nil {
-		return nil, errors.New("school search: reader, answer, note and activity searches are required")
+// New builds the search; every port and the root's day clock are required.
+func New(reader Reader, answers schoolsearchview.StudentAnswerSearch, notes schoolsearchview.StudentNoteSearch, activities schoolsearchview.ActivityEnrollments, today func() calendar.Date) (*Search, error) {
+	if reader == nil || answers == nil || notes == nil || activities == nil || today == nil {
+		return nil, errors.New("school search: reader, answer, note and activity searches and the day clock are required")
 	}
-	return &Search{reader: reader, answers: answers, notes: notes, activities: activities, today: calendar.TodayDate}, nil
+	return &Search{reader: reader, answers: answers, notes: notes, activities: activities, today: today}, nil
 }
 
 // SearchSchool answers one query within its Scope. Contact persons match a

@@ -2,9 +2,12 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useSession } from "next-auth/react";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { useIsMobile } from "~/components/ui/hooks/useIsMobile";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  DESKTOP_WIDTH,
+  PHONE_WIDTH,
+  setViewportWidth,
+} from "~/test/helpers/viewport";
 
 import TeachersPage from "./page";
 
@@ -84,10 +87,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   useToast: () => ({ success: mocks.toastSuccess }),
 }));
 
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => false),
-}));
-
 vi.mock("~/components/ui/navigation-link", () => ({
   default: ({ href, children }: { href: string; children: ReactNode }) => (
     <a href={href}>{children}</a>
@@ -153,10 +152,13 @@ function chooseCreate(entry: "Personal einladen" | "Externe Person anlegen") {
   fireEvent.click(screen.getByRole("menuitem", { name: entry }));
 }
 
+afterEach(() => {
+  setViewportWidth(DESKTOP_WIDTH);
+});
+
 describe("Personalverwaltung: externe Personen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useIsMobile).mockReturnValue(false);
   });
 
   it("marks an external person without account and invites them from the row menu", async () => {
@@ -358,7 +360,7 @@ describe("Personalverwaltung: externe Personen", () => {
   });
 
   it("offers both ways to create from the floating button on a phone", async () => {
-    vi.mocked(useIsMobile).mockReturnValue(true);
+    setViewportWidth(PHONE_WIDTH);
     signInWith(["users:read", "users:create", "users:manage"]);
     render(<TeachersPage />);
 

@@ -1,20 +1,37 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  render,
+  act,
+  render as rtlRender,
   screen,
   waitFor,
   fireEvent,
   within,
 } from "@testing-library/react";
 
+import type { ReactNode } from "react";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { PaymentOverviewRow } from "~/lib/guardian-payment-api";
+import { releaseFakeTimers } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import {
   DESKTOP_WIDTH,
   PHONE_WIDTH,
   setViewportWidth,
 } from "~/test/helpers/viewport";
+
+vi.unmock("swr");
+
+function render(ui: ReactNode) {
+  const cache = new Map();
+  return rtlRender(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => cache, errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    ),
+  });
+}
 
 const mockFetchOverview = vi.fn();
 const mockExport = vi.fn();
@@ -27,7 +44,7 @@ let mockPermissions: string[] = ["guardians:financial"];
 let mockSessionStatus: "authenticated" | "loading" = "authenticated";
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { permissions: mockPermissions } },
+    data: { user: { id: "1", permissions: mockPermissions } },
     status: mockSessionStatus,
   }),
 }));
@@ -53,6 +70,8 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 }));
 
 import BankverbindungenPage from "./page";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 
 function openExportDialog() {
   fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
@@ -84,6 +103,50 @@ describe("BankverbindungenPage", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("withdraws cached financial data after a 403 until an authorized read succeeds", async () => {
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const resource = useSWRAuth(
+        tenantAdminKeys.paymentOverview(),
+        mockFetchOverview,
+      );
+      reload = () => resource.mutate();
+      return null;
+    }
+    mockFetchOverview.mockResolvedValue([row({})]);
+    render(
+      <>
+        <BankverbindungenPage />
+        <Probe />
+      </>,
+    );
+    expect(await screen.findByText("Sabine Schneider")).toBeVisible();
+    mockFetchOverview.mockRejectedValue(
+      new ApiError("forbidden", 403, { code: "general.permission" }),
+    );
+    await act(async () => {
+      await reload();
+    });
+    // Anker: die Ablehnung ersetzt die zuvor geladene Tabelle.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Bankverbindungen"),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Sabine Schneider")).not.toBeInTheDocument();
+    expect(screen.queryByText("•••• 3000")).not.toBeInTheDocument();
+    mockFetchOverview.mockRejectedValue(new ApiError("offline", 503));
+    await act(async () => {
+      await reload();
+    });
+    expect(screen.queryByText("Sabine Schneider")).not.toBeInTheDocument();
+    mockFetchOverview.mockResolvedValue([row({})]);
+    await act(async () => {
+      await reload();
+    });
+    expect(await screen.findByText("Sabine Schneider")).toBeVisible();
   });
 
   it("refuses the page without the bank permission", () => {
@@ -296,10 +359,15 @@ describe("BankverbindungenPage", () => {
         new ApiError("down", 503, { code: "general.unavailable" }),
       );
 
+    // The session switch below refetches once the shared reader's
+    // deduplication window has passed.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const { rerender } = render(<BankverbindungenPage />);
     await waitFor(() =>
       expect(table().getByText("Mia Schneider")).toBeInTheDocument(),
     );
+    await act(() => vi.advanceTimersByTimeAsync(5_000));
+    releaseFakeTimers();
 
     mockSessionStatus = "loading";
     rerender(<BankverbindungenPage />);

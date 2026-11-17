@@ -38,6 +38,7 @@ func setupExistingChildTest(t *testing.T, audience string) *existingChildEnv {
 	t.Helper()
 	env := setupDecisionTest(t)
 	matching := newTestRequestService(owners.EnrollmentIntakeSources{
+		Now:              time.Now,
 		Bookings:         requestTestBookingCommands(),
 		Requests:         env.repos.Enrollment(),
 		Children:         env.repos.Enrollment(),

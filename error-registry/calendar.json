@@ -5,6 +5,12 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "calendar.occurrence_unavailable"
+    },
+    {
+      "code": "calendar.federal_state_missing",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "calendar.federal_state_missing"
     }
   ]
 }

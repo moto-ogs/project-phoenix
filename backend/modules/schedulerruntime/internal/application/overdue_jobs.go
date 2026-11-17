@@ -63,8 +63,9 @@ func (s *Scheduler) checkAndRunOverdue(ctx context.Context, task *ScheduledTask)
 }
 
 // runOverdueForTenant iterates today's instances for a single tenant and
-// emits instance_overdue once per still-planned, past-threshold row. `now`
-// is injected for deterministic tests. `threshold` < 1 is a no-op.
+// emits instance_overdue once per still-planned, past-threshold block that
+// is not a duty. `now` is injected for deterministic tests. `threshold` < 1
+// is a no-op.
 func (s *Scheduler) runOverdueForTenant(ctx context.Context, tenantID int64, threshold int, now time.Time) {
 	if threshold < 1 {
 		return
@@ -85,7 +86,9 @@ func (s *Scheduler) runOverdueForTenant(ctx context.Context, tenantID int64, thr
 	roomIDs := make(map[int64]struct{})
 
 	for _, inst := range instances {
-		if !inst.Planned {
+		// A duty (#3822) is never started, so it is never overdue; it may
+		// also have no room, which the room check below would refuse.
+		if !inst.Planned || inst.Duty {
 			continue
 		}
 		instanceStart := combineDayAndTime(today, inst.StartTime)

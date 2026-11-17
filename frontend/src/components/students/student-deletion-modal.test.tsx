@@ -1,10 +1,49 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode as TenantSWRNode } from "react";
+import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ModalProvider } from "~/components/ui/modal-context";
 import { ApiError } from "~/lib/api-error";
 import type { StudentDeletionImpact } from "~/lib/student-api";
 import { StudentDeletionModal } from "./student-deletion-modal";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in OGS session per render.
+function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <TenantSWRConfig
+        value={{ provider: () => new Map(), errorRetryCount: 0 }}
+      >
+        {children}
+      </TenantSWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  const Outer = options?.wrapper;
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: TenantSWRNode }>) => (
+      <TenantSWRWrapper>
+        {Outer ? <Outer>{children}</Outer> : children}
+      </TenantSWRWrapper>
+    ),
+  });
+}
 
 const { mockFetchImpact, mockDeleteStudent } = vi.hoisted(() => ({
   mockFetchImpact: vi.fn(),
@@ -96,6 +135,55 @@ describe("StudentDeletionModal", () => {
     vi.clearAllMocks();
     mockFetchImpact.mockResolvedValue(impact);
     mockDeleteStudent.mockResolvedValue(undefined);
+  });
+
+  it("waits for a fresh impact on every opening before fixing the confirmation", async () => {
+    const props = {
+      studentId: "42",
+      displayName: "Mia Muster",
+      onClose: vi.fn(),
+      onDeleted: vi.fn(),
+    };
+    const view = (isOpen: boolean) => (
+      <ModalProvider>
+        <StudentDeletionModal {...props} isOpen={isOpen} />
+      </ModalProvider>
+    );
+    const { rerender } = render(view(true));
+    expect(
+      await screen.findByText("Was wird gelöscht oder gelöst? (5)"),
+    ).toBeVisible();
+    rerender(view(false));
+    const fresh = {
+      ...impact,
+      fingerprint: "fresh",
+      total: 8,
+      counts: { ...impact.counts, timetable_assignments: 5 },
+    };
+    let resolve!: (value: StudentDeletionImpact) => void;
+    mockFetchImpact.mockReturnValueOnce(
+      new Promise<StudentDeletionImpact>((done) => {
+        resolve = done;
+      }),
+    );
+    rerender(view(true));
+    await waitFor(() => expect(mockFetchImpact).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("Auswirkungen werden geladen…")).toBeVisible();
+    expect(
+      screen.queryByText("Was wird gelöscht oder gelöst? (5)"),
+    ).not.toBeInTheDocument();
+    await act(async () => resolve(fresh));
+    expect(
+      await screen.findByText("Was wird gelöscht oder gelöst? (8)"),
+    ).toBeVisible();
+    fireEvent.click(await advanceToFinalConfirmation());
+    await waitFor(() =>
+      expect(mockDeleteStudent).toHaveBeenCalledWith(
+        "42",
+        expect.objectContaining({ expected_fingerprint: "fresh" }),
+        undefined,
+      ),
+    );
   });
 
   it("shows the impact and requires a reason and acknowledgement", async () => {

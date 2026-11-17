@@ -2,6 +2,7 @@ package api
 
 import (
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -9,6 +10,7 @@ import (
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/staffoffboarding"
 	offboardingcompose "github.com/moto-ogs/project-phoenix/workflows/staffoffboarding/compose"
 )
@@ -18,10 +20,10 @@ import (
 // Timetable's offboarding and Student Presence's supervision lock, built over
 // db without observation as the workflow composition did before (#4004, ADR
 // 0059 point 6), with the ambient-transaction audit command logging on
-// logger and the Audit owner's offboarding records. The caller adds the
-// access, authorization and cleanup steps.
-func NewStaffOffboardingOwners(db transactionruntime.Database, people staffoffboarding.People, employment schoolMembershipCompose.StaffEmployment, logger *slog.Logger) (offboardingcompose.Dependencies, error) {
-	memberDeps := schoolMembershipCompose.Dependencies{DB: db.Pool(), Observe: func(schoolMembershipCompose.Observation) {}, Employment: employment}
+// logger and the Audit owner's offboarding records, all on the root's clock
+// now. The caller adds the access, authorization and cleanup steps.
+func NewStaffOffboardingOwners(db transactionruntime.Database, people staffoffboarding.People, employment schoolMembershipCompose.StaffEmployment, logger *slog.Logger, now func() time.Time) (offboardingcompose.Dependencies, error) {
+	memberDeps := schoolMembershipCompose.Dependencies{DB: db.Pool(), Observe: func(schoolMembershipCompose.Observation) {}, Employment: employment, Today: calendar.CalendarDateClock(now), Now: now}
 	membership, err := schoolMembershipCompose.New(memberDeps)
 	if err != nil {
 		return offboardingcompose.Dependencies{}, err
@@ -31,7 +33,7 @@ func NewStaffOffboardingOwners(db transactionruntime.Database, people staffoffbo
 		return offboardingcompose.Dependencies{}, err
 	}
 
-	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: func(presenceCompose.Observation) {}})
+	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: func(presenceCompose.Observation) {}, Now: now})
 	if err != nil {
 		return offboardingcompose.Dependencies{}, err
 	}
@@ -46,6 +48,6 @@ func NewStaffOffboardingOwners(db transactionruntime.Database, people staffoffbo
 	return offboardingcompose.Dependencies{
 		DB: db.Pool(), People: people, Membership: membership, Retirement: retirement, Timetable: timetable,
 		LockSupervision: presence.LockStaffSupervision,
-		Audit:           audit, StaffDeletionRecord: staffOffboardingRecord,
+		Audit:           audit, StaffDeletionRecord: staffOffboardingRecord, Now: now,
 	}, nil
 }

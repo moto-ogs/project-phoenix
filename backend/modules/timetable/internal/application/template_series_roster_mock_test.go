@@ -265,7 +265,7 @@ func TestReconcileSeriesPredecessorRoster_RepositoryFailures(t *testing.T) {
 				return NewTemplateService(TemplateServiceDependencies{
 					Directories:          fakeDirectories(),
 					ActivityGroupRepo:    &seriesMockGroupRepo{err: errSeriesMock},
-					ActivityScheduleRepo: &seriesMockScheduleRepo{},
+					ActivityScheduleRepo: &seriesMockScheduleRepo{}, Today: templateTestToday,
 				})
 			},
 		},
@@ -277,7 +277,7 @@ func TestReconcileSeriesPredecessorRoster_RepositoryFailures(t *testing.T) {
 					ActivityGroupRepo: &seriesMockGroupRepo{groups: []*activityContract.Group{
 						seriesMockGroup(seriesMockLivingID),
 					}},
-					ActivityScheduleRepo: &seriesMockScheduleRepo{err: errSeriesMock},
+					ActivityScheduleRepo: &seriesMockScheduleRepo{err: errSeriesMock}, Today: templateTestToday,
 				})
 			},
 		},
@@ -439,7 +439,7 @@ func TestResolveLivingTemplateSegment_PropagatesLineageErrors(t *testing.T) {
 	svc := NewTemplateService(TemplateServiceDependencies{
 		Directories:          fakeDirectories(),
 		ActivityGroupRepo:    &seriesMockGroupRepo{err: errSeriesMock},
-		ActivityScheduleRepo: &seriesMockScheduleRepo{},
+		ActivityScheduleRepo: &seriesMockScheduleRepo{}, Today: templateTestToday,
 	})
 
 	_, _, err := svc.ResolveLivingTemplateSegment(t.Context(), seriesMockLivingID)

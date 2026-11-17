@@ -14,7 +14,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { StatisticsReport } from "~/lib/statistics-api";
 import { catalogText } from "~/test/error-catalog-text";
-import { TEST_CLOCK_TODAY } from "~/test/clock";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 
 vi.unmock("swr");
 
@@ -148,6 +148,11 @@ function report(overrides: Partial<StatisticsReport> = {}): StatisticsReport {
     ...overrides,
   };
 }
+
+// Startzustand „Letzte 30 Tage“ endet heute; der vorherige Zeitraum davor
+// umfasst wieder 30 Tage.
+const PREVIOUS_FROM = testClockDay(-59);
+const PREVIOUS_TO = testClockDay(-30);
 
 /** Ein Datum weit nach heute, damit der Zeitraum sicher davor liegt. */
 function futureISODate(): string {
@@ -329,8 +334,8 @@ describe("Statistik — ausgeschaltete Raumhistorie (#3844)", () => {
         );
         await waitFor(() =>
           expect(mockFetchReport).toHaveBeenLastCalledWith(
-            "2026-07-12",
-            "2026-08-10",
+            PREVIOUS_FROM,
+            PREVIOUS_TO,
             { groupIds: [], schoolClasses: [] },
             ["attendance", "rooms", "courses"],
           ),
@@ -451,7 +456,7 @@ describe("Statistik — Filterkatalog", () => {
     mockFetchReport.mockReset();
     mockFetchReport.mockImplementation((_from: string, to: string) =>
       Promise.resolve(
-        to === "2026-08-10"
+        to === PREVIOUS_TO
           ? report({ students: [previousStudent], groups: [previousGroup] })
           : report({ students: [currentStudent], groups: [currentGroup] }),
       ),
@@ -471,8 +476,8 @@ describe("Statistik — Filterkatalog", () => {
 
     await waitFor(() =>
       expect(mockFetchReport).toHaveBeenCalledWith(
-        "2026-07-12",
-        "2026-08-10",
+        PREVIOUS_FROM,
+        PREVIOUS_TO,
         {},
         ["attendance"],
       ),

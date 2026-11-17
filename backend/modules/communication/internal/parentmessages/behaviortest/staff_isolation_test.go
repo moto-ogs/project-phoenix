@@ -3,7 +3,6 @@ package messaging_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -172,7 +171,7 @@ func TestRetentionSweep(t *testing.T) {
 	// fall back to the surviving message instead of retaining expired content.
 	_, err = db.NewUpdate().
 		Table("users.staff_messages").
-		Set("created_at = ?", time.Now().AddDate(0, 0, -40)).
+		Set("created_at = NOW() - INTERVAL '40 days'").
 		Where("id = ?", expired.ID).
 		Exec(ctx)
 	require.NoError(t, err)
@@ -198,13 +197,13 @@ func TestRetentionSweep(t *testing.T) {
 	// older than the window may be swept.
 	_, err = db.NewUpdate().
 		Table("users.staff_messages").
-		Set("created_at = ?", time.Now().AddDate(0, 0, -40)).
+		Set("created_at = NOW() - INTERVAL '40 days'").
 		Where("thread_id = ?", thread.ThreadID).
 		Exec(ctx)
 	require.NoError(t, err)
 	_, err = db.NewUpdate().
 		Table("users.staff_message_threads").
-		Set("created_at = ?", time.Now().AddDate(0, 0, -40)).
+		Set("created_at = NOW() - INTERVAL '40 days'").
 		Where("id = ?", thread.ThreadID).
 		Exec(ctx)
 	require.NoError(t, err)
@@ -235,7 +234,7 @@ func TestRetentionRunsForDisabledSchool(t *testing.T) {
 
 	_, err = db.NewUpdate().
 		Table("users.staff_messages").
-		Set("created_at = ?", time.Now().AddDate(0, 0, -40)).
+		Set("created_at = NOW() - INTERVAL '40 days'").
 		Where("id = ?", msg.ID).
 		Exec(ctx)
 	require.NoError(t, err)
@@ -306,7 +305,7 @@ func TestFreshEmptyThreadSurvivesSweep(t *testing.T) {
 	// An OLD empty thread is a different matter and does go.
 	_, err = db.NewUpdate().
 		Table("users.staff_message_threads").
-		Set("created_at = ?", time.Now().AddDate(0, 0, -40)).
+		Set("created_at = NOW() - INTERVAL '40 days'").
 		Where("id = ?", thread.ThreadID).
 		Exec(ctx)
 	require.NoError(t, err)
@@ -365,7 +364,7 @@ func TestRetentionSkipsWhenWindowUnresolvable(t *testing.T) {
 	require.NoError(t, err)
 	_, err = db.NewUpdate().
 		Table("users.staff_messages").
-		Set("created_at = ?", time.Now().AddDate(0, 0, -400)).
+		Set("created_at = NOW() - INTERVAL '400 days'").
 		Where("id = ?", msg.ID).
 		Exec(ctx)
 	require.NoError(t, err)

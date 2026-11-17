@@ -218,6 +218,30 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 			north, miraNorth.ID))
 	})
 
+	t.Run("the Soll is kept up to the end day of the owner's clock", func(t *testing.T) {
+		// ends_on is a day the Personalverwaltung sets, so the school day of
+		// the owner's clock decides, not the database clock (#7295): one of
+		// the two days lies on the other side of the end from the database's.
+		_, err := db.ExecContext(ctx, `INSERT INTO config.staff_work_schedules (tenant_id, staff_id, week_index, rotation_length, day_of_week, target_minutes, valid_from)
+			SELECT ?, ?, 0, 1, day, 240, DATE '2027-01-01' FROM generate_series(0, 4) AS day`, north, miraNorth.ID)
+		require.NoError(t, err)
+		school, err := tenant.NewTenantID(north)
+		require.NoError(t, err)
+		for day, kept := range map[time.Time]bool{
+			time.Date(2026, time.December, 31, 23, 30, 0, 0, calendar.Berlin): true,
+			time.Date(2027, time.January, 1, 0, 30, 0, 0, calendar.Berlin):    false,
+		} {
+			workTime, err := owners.NewWorkforceWithClock(testpkg.NewDatabase(t, db), owners.MustNewSchoolMembership(testpkg.NewDatabase(t, db)), func() time.Time { return day })
+			require.NoError(t, err)
+			require.NoError(t, tenant.WithinTenant(staffInSchool(t, unit, north), school, func(ctx context.Context) error {
+				rows, err := workTime.CurrentStaffSchedule(ctx, miraNorth.ID)
+				require.NotEmpty(t, rows)
+				assert.Equal(t, kept, rows[0].KeptByTraeger, day)
+				return err
+			}))
+		}
+	})
+
 	t.Run("a contract that ran is ended, not deleted", func(t *testing.T) {
 		rec := traegerJSON(t, router, office.token, http.MethodDelete, fmt.Sprintf("%s/%d", contracts, contractID), nil)
 		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())

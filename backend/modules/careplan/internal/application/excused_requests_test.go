@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -280,6 +282,9 @@ type harness struct {
 	workflow    *ExcusedRequests
 }
 
+// fakeNow is noon of fakeToday, the instant the workflow stamps decisions with.
+func fakeNow() time.Time { return calendar.Date(fakeToday).BerlinMidnight().Add(12 * time.Hour) }
+
 func newHarness(t *testing.T, carePlan *fakeCarePlan, students *fakeStudents) *harness {
 	t.Helper()
 	h := &harness{
@@ -289,7 +294,7 @@ func newHarness(t *testing.T, carePlan *fakeCarePlan, students *fakeStudents) *h
 	}
 	h.messenger.committedView = h.hooks.AfterCommit
 	workflow, err := NewExcusedRequests(ExcusedRequestDependencies{
-		CarePlan: carePlan, Students: students, Hooks: h.hooks, Today: func() careplan.Date { return fakeToday },
+		CarePlan: carePlan, Students: students, Hooks: h.hooks, Today: func() careplan.Date { return fakeToday }, Now: fakeNow,
 		Scope:     func(context.Context) (careplan.ReviewScope, error) { return h.scope, h.scopeErr },
 		Messenger: h.messenger, Broadcaster: h.broadcaster, Notifier: h.notifier, Ledger: h.ledger,
 	})

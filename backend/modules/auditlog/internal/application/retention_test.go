@@ -24,6 +24,13 @@ func (s *ledgerStore) record(ledger string, cutoff time.Time) (int64, error) {
 	return 2, nil
 }
 
+// DatabaseTime is the clock the ledgers are stamped and guarded on; the
+// cutoffs count back from it, not from the Audit clock (ADR 0281,
+// Nachtrag).
+func (s *ledgerStore) DatabaseTime(context.Context) (time.Time, error) {
+	return retentionTestNow, nil
+}
+
 func (s *ledgerStore) DeleteExpiredAuthEvents(_ context.Context, cutoff time.Time) (int64, error) {
 	return s.record("auth", cutoff)
 }
@@ -40,17 +47,20 @@ func (s *ledgerStore) DeleteExpiredProtocol(_ context.Context, kind string, cuto
 	return s.record(kind, cutoff)
 }
 
-// retentionTestNow is the fixed instant of the Audit clock the retention
-// windows count back from, so the cutoffs do not depend on the day the tests
-// run (ADR 0239).
+// retentionTestNow is the fixed database time the retention windows count
+// back from, so the cutoffs do not depend on the day the tests run.
 var retentionTestNow = time.Date(2026, time.November, 2, 9, 30, 0, 0, time.UTC)
 
 func retentionTestClock() time.Time { return retentionTestNow }
 
+// auditClockYearsAhead is an Audit clock years after the database time: the
+// ledger cutoffs ignore it.
+func auditClockYearsAhead() time.Time { return retentionTestNow.AddDate(5, 0, 0) }
+
 func TestCommandDeletesTheAuditLedgersInsideTheirFixedWindows(t *testing.T) {
 	t.Parallel()
 	store := &ledgerStore{}
-	command, err := NewCommand(store, func(AppendObservation) {}, retentionTestClock)
+	command, err := NewCommand(store, func(AppendObservation) {}, auditClockYearsAhead)
 	require.NoError(t, err)
 	before := retentionTestNow
 
@@ -143,7 +153,7 @@ func TestCommandDeletesTheOperatorLedgerAtTheFollowingYearCutoff(t *testing.T) {
 func TestCommandDeletesTheProtocolsInsideTheirFixedWindows(t *testing.T) {
 	t.Parallel()
 	store := &ledgerStore{}
-	command, err := NewCommand(store, func(AppendObservation) {}, retentionTestClock)
+	command, err := NewCommand(store, func(AppendObservation) {}, auditClockYearsAhead)
 	require.NoError(t, err)
 	before := retentionTestNow
 

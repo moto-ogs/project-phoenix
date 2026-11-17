@@ -70,7 +70,7 @@ func templateFixtures() map[int64]*ports.SessionActivity {
 
 func activeSession(id int64, templateID *int64, roomID int64) *ports.ActiveGroup {
 	session := &ports.ActiveGroup{
-		StartTime: time.Now().Add(-10 * time.Minute),
+		StartTime: presenceTestNow().Add(-10 * time.Minute),
 		GroupID:   templateID,
 		RoomID:    roomID,
 	}

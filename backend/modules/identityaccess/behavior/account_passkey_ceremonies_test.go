@@ -237,7 +237,7 @@ func TestAccountPasskeySessionIsConsumedOnce(t *testing.T) {
 	require.ErrorIs(t, err, identityaccess.ErrPasskeySessionInvalid, "a replayed login is refused")
 
 	expired := scene.beginLogin(t, scene.tenantID, scene.subdomain)
-	_, err = db.NewRaw("UPDATE auth.passkey_sessions SET expires_at = now() - interval '1 minute' WHERE id = ?", expired.SessionID).Exec(ctx)
+	_, err = db.NewRaw("UPDATE auth.passkey_sessions SET expires_at = ? WHERE id = ?", time.Now().Add(-time.Minute), expired.SessionID).Exec(ctx)
 	require.NoError(t, err)
 	_, err = scene.passkeys.FinishAccountPasskeyLogin(ctx, identityaccess.AccountPasskeyLoginFinish{
 		SessionID: expired.SessionID, CredentialResponse: authenticator.Assert(t, expired.Options, scene.origin),

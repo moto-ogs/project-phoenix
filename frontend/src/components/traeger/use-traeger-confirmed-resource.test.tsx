@@ -7,6 +7,7 @@ import { SWRConfig, useSWRConfig } from "~/lib/swr/testing";
 import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
 import { resetSWRScope } from "~/lib/swr/scope";
 import { useSWRAuth } from "~/lib/swr";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import {
   useConfirmedResource,
   useRefusalGuard,
@@ -165,6 +166,51 @@ function useReader() {
 }
 
 describe("a refusal per key, for every reader (invariant 4)", () => {
+  it.each([false, true])(
+    "lifts a refusal after a plain reader succeeds (scoped guard=%s)",
+    async (scoped) => {
+      const options = setup();
+      const guarded = () =>
+        scoped ? useConfirmedSWR(KEY, fetchFigures) : useReader();
+      const first = renderHook(guarded, options);
+      await waitFor(() => expect(first.result.current.data).toEqual(CONFIRMED));
+      fetchFigures.mockRejectedValue(new ApiError("forbidden", 403));
+      await refetch(first.result.current.reload);
+      await waitFor(() => expect(first.result.current.refused).toBe(true));
+      first.unmount();
+
+      fetchFigures.mockResolvedValue(AGAIN);
+      const plain = renderHook(() => useSWRAuth(KEY, fetchFigures), options);
+      await waitFor(() => expect(plain.result.current.data).toEqual(AGAIN));
+      // The returning detail borrows this successful request rather than making its own.
+      const detail = renderHook(guarded, options);
+      await waitFor(() => expect(detail.result.current.data).toEqual(AGAIN));
+      expect(detail.result.current.refused).toBe(false);
+    },
+  );
+
+  it("keeps a mounted refusal until a plain reader of the same key succeeds", async () => {
+    const options = setup();
+    const first = renderHook(() => useReader(), options);
+    await waitFor(() => expect(first.result.current.data).toEqual(CONFIRMED));
+    fetchFigures.mockRejectedValue(new ApiError("forbidden", 403));
+    await refetch(first.result.current.reload);
+    await waitFor(() => expect(first.result.current.refused).toBe(true));
+
+    const other = renderHook(
+      () => useSWRAuth("other-figures", async () => AGAIN),
+      options,
+    );
+    await waitFor(() => expect(other.result.current.data).toEqual(AGAIN));
+    expect(first.result.current.refused).toBe(true);
+
+    fetchFigures.mockResolvedValue(AGAIN);
+    const plain = renderHook(() => useSWRAuth(KEY, fetchFigures), options);
+    await waitFor(() => expect(plain.result.current.data).toEqual(AGAIN));
+    await waitFor(() => expect(first.result.current.data).toEqual(AGAIN));
+    expect(first.result.current.refused).toBe(false);
+  });
+
   it("keeps a second reader empty after the first one's 403, also when another view writes back on 503", async () => {
     const options = setup();
     const first = renderHook(() => useFigures(), options);

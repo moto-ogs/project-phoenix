@@ -22,7 +22,7 @@
     },
     {
       "decision": "0123",
-      "id": "modules/parentbilling/internal/adapters/rendering/Renderer.CombineLetters",
+      "id": "modules/parentbilling/internal/adapters/rendering/LetterRenderer.CombineLetters",
       "reason": "ADR 0123 (#4670): Adapter of the Elternabrechnung onto the letter contract of Document Rendering; it translates a combination without letters into ErrBillingLettersMissing."
     },
     {

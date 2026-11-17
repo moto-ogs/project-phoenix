@@ -42,7 +42,7 @@ func NativeMirrorInstances(rows ports.InstanceRows) *ports.MirrorInstanceRecords
 			row.SetWallClockTimes(value.StartTime, value.EndTime)
 			row.ID, row.TenantID, row.CreatedAt, row.UpdatedAt = value.ID, value.TenantID, value.CreatedAt, value.UpdatedAt
 		}
-		err := createLegacyInstance(ctx, rows, row, NewClock(rows.Now))
+		err := createLegacyInstance(ctx, rows, row, rows.Now)
 		if value != nil && row != nil {
 			*value = *mirrorInstance(row)
 		}

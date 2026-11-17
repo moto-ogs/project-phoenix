@@ -154,6 +154,7 @@ func writeServiceConfig(t *testing.T, sickEnabled, notesEnabled bool, reportFlag
 		MealPlan:       availableMealPlan(false),
 		StudentUpdates: owners.BindParentStudentUpdates(bc),
 		Logger:         slog.Default(),
+		Now:            careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
@@ -208,6 +209,7 @@ func buildMessagingWriteService(t *testing.T, sickEnabled, notesEnabled bool, no
 		MessageReadRepo:       owners.BindParentMessageInboxReads(reposMessages.ParentMessageRead),
 		Conversations:         api.NewParentConversationCore(reposMessages.ParentMessageThread, communicationtest.NewParentMessageRepository(db), reposMessages.ParentMessageRead, bc, slog.Default()),
 		Logger:                slog.Default(),
+		Now:                   careFixtureNow,
 		ParentMessageNotifier: notifier,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
@@ -226,7 +228,7 @@ func TestSubmitSickNote_TodayFlipsLiveFlagAndStoresReason(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	sickResult, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
-		[]calendar.Date{calendar.TodayDate()}, "Fieber, beim Arzt", absencerecords.StudentStatusDaySick, nil)
+		[]calendar.Date{careFixtureToday()}, "Fieber, beim Arzt", absencerecords.StudentStatusDaySick, nil)
 	require.NoError(t, err)
 	require.Len(t, sickResult.StatusDays, 1)
 	assert.Equal(t, absencerecords.StudentStatusDaySick, sickResult.StatusDays[0].Status)
@@ -257,7 +259,7 @@ func TestSubmitSickNote_ResubmitDoesNotNotifyAgain(t *testing.T) {
 			testpkg.WithPackageTenantRuntime(context.Background()),
 			chain.AccountID,
 			chain.StudentID,
-			[]calendar.Date{calendar.TodayDate()},
+			[]calendar.Date{careFixtureToday()},
 			"Fieber",
 			absencerecords.StudentStatusDaySick,
 			nil,
@@ -409,7 +411,7 @@ func TestSubmitSickNote_FutureDateDoesNotFlipLiveFlag(t *testing.T) {
 	svc, _, db := buildWriteService(t, true, true)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	future := calendar.TodayDate().AddDays(7)
+	future := careFixtureToday().AddDays(7)
 	sickResult, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 		[]calendar.Date{future}, "Fieber", absencerecords.StudentStatusDaySick, nil)
 	require.NoError(t, err)
@@ -515,13 +517,14 @@ func TestSubmitSickNote_FutureWriteSerializesWithStaffConflictCheck(t *testing.T
 		},
 		StudentUpdates: owners.BindParentStudentUpdates(testpkg.NewRecordingBroadcaster()),
 		Logger:         slog.Default(),
+		Now:            careFixtureNow,
 
 		DataRequests: owners.NewParentDataRequestCommands(repos.CarePlan()),
 
 		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
 	})
 
-	statusSvc := presenceservice.NewStatusDays(repos.StudentStatusDay, nil, nil, repos.CarePlan().LockExceptionDay)
+	statusSvc := presenceservice.NewStatusDays(repos.StudentStatusDay, nil, nil, repos.CarePlan().LockExceptionDay, time.Now)
 	staffAttempted := make(chan struct{})
 	staffStudentSvc := newSignalingStudentService(api.NewStudentDirectory(owners.MustNewPeopleDirectory(testpkg.MustDatabase(db))), reposPeople.Student, staffAttempted)
 	date := calendar.NewDate(2026, 8, 24).AddDays(40)
@@ -594,7 +597,7 @@ func TestSubmitSickNote_NotOwnedChild(t *testing.T) {
 	other := testpkg.CreateTestStudent(t, db, "Mara", "Fremd", "2b")
 
 	_, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, other.ID,
-		[]calendar.Date{calendar.TodayDate()}, "", absencerecords.StudentStatusDaySick, nil)
+		[]calendar.Date{careFixtureToday()}, "", absencerecords.StudentStatusDaySick, nil)
 	require.ErrorIs(t, err, parentService.ErrChildNotLinked)
 }
 
@@ -605,7 +608,7 @@ func TestSubmitSickNote_FeatureDisabled(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	_, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
-		[]calendar.Date{calendar.TodayDate()}, "", absencerecords.StudentStatusDaySick, nil)
+		[]calendar.Date{careFixtureToday()}, "", absencerecords.StudentStatusDaySick, nil)
 	require.ErrorIs(t, err, parentService.ErrSickNoteDisabled)
 }
 
@@ -625,7 +628,7 @@ func TestSubmitSickNote_MissingGuardianPermission(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
-		[]calendar.Date{calendar.TodayDate()}, "", absencerecords.StudentStatusDaySick, nil)
+		[]calendar.Date{careFixtureToday()}, "", absencerecords.StudentStatusDaySick, nil)
 	require.ErrorIs(t, err, parentService.ErrGuardianPermissionDenied)
 }
 
@@ -636,7 +639,7 @@ func TestSubmitSickNote_ReasonTooLong(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	_, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
-		[]calendar.Date{calendar.TodayDate()}, strings.Repeat("x", 2001), absencerecords.StudentStatusDaySick, nil)
+		[]calendar.Date{careFixtureToday()}, strings.Repeat("x", 2001), absencerecords.StudentStatusDaySick, nil)
 	require.ErrorIs(t, err, parentService.ErrNoteTooLong)
 }
 
@@ -647,7 +650,7 @@ func TestSubmitSickNote_EmptyReasonRejected(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	_, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
-		[]calendar.Date{calendar.TodayDate()}, "   ", absencerecords.StudentStatusDaySick, nil)
+		[]calendar.Date{careFixtureToday()}, "   ", absencerecords.StudentStatusDaySick, nil)
 	require.ErrorIs(t, err, parentService.ErrEmptyNote)
 }
 
@@ -667,7 +670,7 @@ func TestSubmitSickNote_SchoolClassTripBecomesRequest(t *testing.T) {
 		StudentID:  chain.StudentID,
 		Date:       date,
 		Status:     absencerecords.StudentStatusDayClassTrip,
-		ReportedAt: time.Now(),
+		ReportedAt: careFixtureNow(),
 		Source:     absencerecords.StudentStatusSourcePlanned,
 	}))
 
@@ -691,12 +694,12 @@ func TestListSickDays_ReturnsSickOnlyAfterSubmit(t *testing.T) {
 	svc, _, db := buildWriteService(t, true, true)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	day := calendar.TodayDate().AddDays(3)
+	day := careFixtureToday().AddDays(3)
 	_, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Krank", absencerecords.StudentStatusDaySick, nil)
 	require.NoError(t, err)
 
-	from := calendar.TodayDate()
+	from := careFixtureToday()
 	to := calendar.NewDate(from.Year(), from.Month()+1, from.Day())
 	sick, err := svc.ListSickDays(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, from, to)
 	require.NoError(t, err)
@@ -819,7 +822,7 @@ func TestSubmitSickNote_NonContiguousExcludesUnrelatedRows(t *testing.T) {
 		StudentID:  chain.StudentID,
 		Date:       tue,
 		Status:     absencerecords.StudentStatusDayExcused,
-		ReportedAt: time.Now(),
+		ReportedAt: careFixtureNow(),
 		Source:     absencerecords.StudentStatusSourceManual,
 	}))
 
@@ -842,7 +845,7 @@ func TestSubmitSickNote_ExcusedTodayStoresExcusedWithoutLiveFlag(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	sickResult, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
-		[]calendar.Date{calendar.TodayDate()}, "Zahnarzttermin", absencerecords.StudentStatusDayExcused, nil)
+		[]calendar.Date{careFixtureToday()}, "Zahnarzttermin", absencerecords.StudentStatusDayExcused, nil)
 	require.NoError(t, err)
 	require.Len(t, sickResult.StatusDays, 1)
 	assert.Equal(t, absencerecords.StudentStatusDayExcused, sickResult.StatusDays[0].Status)
@@ -871,11 +874,11 @@ func TestSubmitSickNote_ExcusedTodayClearsStaleLiveSickFlag(t *testing.T) {
 	// day to an excused absence: the stale live sick flag must be cleared so the
 	// flag stays consistent with the now-cleared sick status day.
 	_, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
-		[]calendar.Date{calendar.TodayDate()}, "Krank", absencerecords.StudentStatusDaySick, nil)
+		[]calendar.Date{careFixtureToday()}, "Krank", absencerecords.StudentStatusDaySick, nil)
 	require.NoError(t, err)
 
 	sickResult, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
-		[]calendar.Date{calendar.TodayDate()}, "Termin", absencerecords.StudentStatusDayExcused, nil)
+		[]calendar.Date{careFixtureToday()}, "Termin", absencerecords.StudentStatusDayExcused, nil)
 	require.NoError(t, err)
 	require.Len(t, sickResult.StatusDays, 1)
 	assert.Equal(t, absencerecords.StudentStatusDayExcused, sickResult.StatusDays[0].Status)
@@ -893,7 +896,7 @@ func TestSubmitSickNote_InvalidStatus(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
 	_, err := svc.SubmitSickNote(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID,
-		[]calendar.Date{calendar.TodayDate()}, "", "class_trip", nil)
+		[]calendar.Date{careFixtureToday()}, "", "class_trip", nil)
 	require.ErrorIs(t, err, parentService.ErrInvalidStatus)
 }
 
@@ -947,7 +950,7 @@ func TestListSickDays_ExcludesStaffCreatedExcused(t *testing.T) {
 		StudentID:  chain.StudentID,
 		Date:       staffExcusedDay,
 		Status:     absencerecords.StudentStatusDayExcused,
-		ReportedAt: time.Now(),
+		ReportedAt: careFixtureNow(),
 		Source:     absencerecords.StudentStatusSourceManual,
 		Note:       &staffNote,
 	}))
@@ -994,7 +997,7 @@ func TestParentReportKindsAreIndependent(t *testing.T) {
 					{absencerecords.StudentStatusDaySick, sickEnabled},
 					{absencerecords.StudentStatusDayExcused, excusedEnabled},
 				} {
-					result, err := svc.SubmitSickNote(ctx, chain.AccountID, chain.StudentID, []calendar.Date{calendar.TodayDate().AddDays(index)}, "Testmeldung", report.status, nil)
+					result, err := svc.SubmitSickNote(ctx, chain.AccountID, chain.StudentID, []calendar.Date{careFixtureToday().AddDays(index)}, "Testmeldung", report.status, nil)
 					if report.enabled {
 						require.NoError(t, err)
 						require.Len(t, result.StatusDays, 1)

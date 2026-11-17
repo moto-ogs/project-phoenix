@@ -1030,11 +1030,13 @@ func clockTime(hour, minute int) time.Time {
 	return time.Date(2000, time.January, 1, hour, minute, 0, 0, time.UTC)
 }
 
-func makeWeekdayRosterScenario(t *testing.T, anchor calendar.Date) *weekdayRosterScenario {
+// makeWeekdayRosterScenario composes the Timetable graph on the given clock,
+// the wall clock when none is given.
+func makeWeekdayRosterScenario(t *testing.T, anchor calendar.Date, clocks ...func() time.Time) *weekdayRosterScenario {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 
-	ttLifecycle, ttPlanning, ttMaterialization, ttActive, ttSchedules, ttCareOfferings, ttStatusDays, err := api.NewTestTimetable(testpkg.NewDatabase(t, db), slog.Default())
+	ttLifecycle, ttPlanning, ttMaterialization, ttActive, ttSchedules, ttCareOfferings, ttStatusDays, err := api.NewTestTimetable(testpkg.NewDatabase(t, db), slog.Default(), clocks...)
 	require.NoError(t, err)
 
 	tenantID := testpkg.UniqueTestTenantID(t)

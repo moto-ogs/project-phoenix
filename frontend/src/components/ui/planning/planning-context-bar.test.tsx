@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { PlanningContextBar, PlanningDayChip } from "./planning-context-bar";
 import { SegmentedControl } from "../segmented-control";
+import { CustomSelect } from "../custom-select";
 
 describe("PlanningContextBar", () => {
   it("navigiert zurück und weiter und trägt keine eigene Überschrift", () => {
@@ -92,6 +93,44 @@ describe("PlanningContextBar", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Letzte 30 Tage" }));
     expect(onToday).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads as one control with an embedded select between the arrows", () => {
+    // Stichtagszahlen, Länger als gebucht (#7300): one outer frame from the
+    // group, no second frame on the field, and every part keeps the group's
+    // height instead of the head's forced control height.
+    render(
+      <PlanningContextBar
+        navigationInGroup
+        navigationSlot={
+          <CustomSelect
+            embedded
+            ariaLabel="Monat"
+            value="2026-11"
+            onChange={vi.fn()}
+            options={[{ value: "2026-11", label: "November 2026" }]}
+          />
+        }
+        onPrevious={vi.fn()}
+        onNext={vi.fn()}
+        previousLabel="Monat davor"
+        nextLabel="Monat danach"
+      />,
+    );
+
+    const field = screen.getByRole("combobox", { name: "Monat" });
+    const fieldClasses = field.className.split(" ");
+    expect(fieldClasses).not.toContain("rounded-lg");
+    expect(fieldClasses).not.toContain("border");
+    expect(fieldClasses).not.toContain("moto-content-surface");
+    for (const part of [
+      screen.getByRole("button", { name: "Monat davor" }),
+      field,
+      screen.getByRole("button", { name: "Monat danach" }),
+    ]) {
+      expect(part).toHaveAttribute("data-control-part");
+      expect(part.className.split(" ")).toContain("h-full");
+    }
   });
 
   it("renders the view-switcher and actions slots", () => {

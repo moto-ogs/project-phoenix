@@ -55,7 +55,7 @@ func TestResolveMatchedStudentID_AmbiguousRejected(t *testing.T) {
 	t.Parallel()
 
 	repo := &stubMatchStudentRepo{matchID: nil, exists: true}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, Students: repo})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Students: repo})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceExistingStudents)
 
 	id, err := svc.resolveMatchedStudentID(context.Background(), int64(7001), phase, 2,
@@ -71,7 +71,7 @@ func TestResolveMatchedStudentID_ZeroMatchAllowsFreshCreate(t *testing.T) {
 	t.Parallel()
 
 	repo := &stubMatchStudentRepo{matchID: nil, exists: false}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, Students: repo})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Students: repo})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceExistingStudents)
 
 	id, err := svc.resolveMatchedStudentID(context.Background(), int64(7002), phase, 0,
@@ -86,7 +86,7 @@ func TestResolveMatchedStudentID_SingleMatchReturnsID(t *testing.T) {
 
 	want := int64PtrEligibility(555)
 	repo := &stubMatchStudentRepo{matchID: want}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, Students: repo})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Students: repo})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceExistingStudents)
 
 	id, err := svc.resolveMatchedStudentID(context.Background(), int64(7003), phase, 0,
@@ -102,7 +102,7 @@ func TestResolveMatchedStudentID_NonExistingAudienceSkips(t *testing.T) {
 	t.Parallel()
 
 	repo := &stubMatchStudentRepo{matchID: int64PtrEligibility(1), exists: true}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, Students: repo})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Students: repo})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceOpen)
 
 	id, err := svc.resolveMatchedStudentID(context.Background(), int64(7004), phase, 0,
@@ -158,7 +158,7 @@ func strPtrEligibility(s string) *string { return &s }
 func TestValidatePhaseEligibility_LinkedParentsRejectsAnonymous(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceLinkedParents)
 
 	err := svc.validatePhaseEligibility(context.Background(), phase, SubmitRequest{})
@@ -168,7 +168,7 @@ func TestValidatePhaseEligibility_LinkedParentsRejectsAnonymous(t *testing.T) {
 func TestValidatePhaseEligibility_LinkedParentsRequiresSubmitEligibility(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceLinkedParents)
 	accountID := int64(4711)
 
@@ -189,7 +189,7 @@ func TestValidatePhaseEligibility_LinkedParentsRequiresSubmitEligibility(t *test
 func TestValidatePhaseEligibility_TrustedPathsBypass(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceLinkedParents, "2a")
 
 	// Admin manual enrollment and late invites set AllowClosedPhase and
@@ -204,7 +204,7 @@ func TestValidatePhaseEligibility_TrustedPathsBypass(t *testing.T) {
 func TestValidatePhaseEligibility_EligibleClassesEnforced(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceOpen, "2a", " 3b ")
 
 	// No class declared → rejected.
@@ -230,7 +230,7 @@ func TestValidatePhaseEligibility_EligibleClassesEnforced(t *testing.T) {
 func TestValidatePhaseEligibility_EmptyClassListMeansNoRestriction(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceOpen)
 
 	err := svc.validatePhaseEligibility(context.Background(), phase, SubmitRequest{
@@ -243,7 +243,7 @@ func TestValidatePhaseEligibility_NewStudentsRejectsEnrolledChild(t *testing.T) 
 	t.Parallel()
 
 	repo := &stubEligibilityStudentRepo{exists: true}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, Students: repo})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Students: repo})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceNewStudents)
 	tenantID := int64(9042)
 
@@ -259,7 +259,7 @@ func TestValidatePhaseEligibility_NewStudentsAcceptsUnknownChild(t *testing.T) {
 	t.Parallel()
 
 	repo := &stubEligibilityStudentRepo{exists: false}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, Students: repo})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Students: repo})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceNewStudents)
 
 	err := svc.validatePhaseEligibility(context.Background(), phase, SubmitRequest{
@@ -286,7 +286,7 @@ func TestPhaseEligibility_ClassBypassClosedAfterCanonicalization(t *testing.T) {
 
 	// Grade-1 child crafts an eligible "2a"; canonicalization drops it
 	// because grade 1 never declares a concrete class.
-	svc := NewIntake(IntakeDependencies{Settings: schoolClassSettings(true)})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: schoolClassSettings(true)})
 	children := []SubmitChild{{FirstName: "Kim", LastName: "Test", TargetGradeLevel: grade(1), TargetSchoolClass: classPtr("2a")}}
 	require.NoError(t, svc.validateAndNormalizeSchoolClasses(context.Background(), phase, children))
 	require.Nil(t, children[0].TargetSchoolClass, "grade 1 must not keep a concrete class")
@@ -294,7 +294,7 @@ func TestPhaseEligibility_ClassBypassClosedAfterCanonicalization(t *testing.T) {
 	require.ErrorIs(t, err, enrollmentNative.ErrChildClassNotEligible, "canonicalized empty class must fail eligibility")
 
 	// Concrete-class collection disabled tenant-wide: same erase-then-reject.
-	svcOff := NewIntake(IntakeDependencies{Settings: schoolClassSettings(false)})
+	svcOff := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: schoolClassSettings(false)})
 	children2 := []SubmitChild{{FirstName: "Kim", LastName: "Test", TargetGradeLevel: grade(2), TargetSchoolClass: classPtr("2a")}}
 	require.NoError(t, svcOff.validateAndNormalizeSchoolClasses(context.Background(), phase, children2))
 	require.Nil(t, children2[0].TargetSchoolClass, "collection off must drop the class")
@@ -306,7 +306,7 @@ func TestValidatePhaseEligibility_ExistingStudentsRejectsUnknownChild(t *testing
 	t.Parallel()
 
 	repo := &stubEligibilityStudentRepo{exists: false}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, Students: repo})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Students: repo})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceExistingStudents)
 	tenantID := int64(9052)
 	accountID := int64(4712)
@@ -326,7 +326,7 @@ func TestValidatePhaseEligibility_ExistingStudentsAcceptsEnrolledChild(t *testin
 	t.Parallel()
 
 	repo := &stubEligibilityStudentRepo{exists: true}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, Students: repo})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Students: repo})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceExistingStudents)
 	accountID := int64(4713)
 
@@ -348,7 +348,7 @@ func TestValidatePhaseEligibility_ExistingStudentsRejectsAnonymous(t *testing.T)
 	t.Parallel()
 
 	repo := &stubEligibilityStudentRepo{exists: true}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, Students: repo})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Students: repo})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceExistingStudents)
 	accountID := int64(4714)
 	child := []SubmitChild{{FirstName: "Kim", LastName: "Test", DateOfBirth: calendar.NewDate(2019, 4, 12)}}
@@ -385,7 +385,7 @@ func TestValidatePhaseEligibility_ExistingStudentsRejectsAnonymous(t *testing.T)
 func TestValidatePhaseChildEligibility_SkipsLinkedParentsAudienceGate(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceLinkedParents)
 
 	// No guardian account, no submit eligibility: the full audience gate
@@ -401,7 +401,7 @@ func TestValidatePhaseChildEligibility_SkipsLinkedParentsAudienceGate(t *testing
 func TestValidatePhaseChildEligibility_EnforcesClassRegardlessOfAudience(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceLinkedParents, "2a")
 
 	err := svc.validatePhaseChildEligibility(context.Background(), phase, SubmitRequest{
@@ -416,7 +416,7 @@ func TestValidatePhaseChildEligibility_EnforcesNewStudents(t *testing.T) {
 	t.Parallel()
 
 	repo := &stubEligibilityStudentRepo{exists: true}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, Students: repo})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Students: repo})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceNewStudents)
 
 	err := svc.validatePhaseChildEligibility(context.Background(), phase, SubmitRequest{
@@ -444,7 +444,7 @@ func TestValidatePhaseEligibility_NewStudentsLookupErrorPropagates(t *testing.T)
 	t.Parallel()
 
 	repo := &stubEligibilityStudentRepo{err: errors.New("boom")}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, Students: repo})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, Students: repo})
 	phase := eligibilityTestPhase(enrollmentNative.PhaseAudienceNewStudents)
 
 	err := svc.validatePhaseEligibility(context.Background(), phase, SubmitRequest{
@@ -543,7 +543,7 @@ func TestHoldReEnrollment_GrantedPasses(t *testing.T) {
 	t.Parallel()
 
 	auth := &stubGuardianAuthorizer{granted: true}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, GuardianHold: auth})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, GuardianHold: auth})
 
 	err := reEnrollmentGate(svc, portalSubmitter(4711), int64PtrEligibility(555), int64(9001), 0)
 	require.NoError(t, err)
@@ -564,7 +564,7 @@ func TestHoldReEnrollment_NotGrantedRejected(t *testing.T) {
 
 	emailGranted := true
 	auth := &stubGuardianAuthorizer{granted: false, emailGranted: &emailGranted}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, GuardianHold: auth})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, GuardianHold: auth})
 
 	err := reEnrollmentGate(svc, portalSubmitter(4711), int64PtrEligibility(555), int64(9001), 3)
 	require.ErrorIs(t, err, enrollmentNative.ErrChildEnrollmentNotPermitted)
@@ -577,7 +577,7 @@ func TestHoldReEnrollment_NoMatchSkips(t *testing.T) {
 	t.Parallel()
 
 	auth := &stubGuardianAuthorizer{granted: false}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, GuardianHold: auth})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, GuardianHold: auth})
 
 	err := reEnrollmentGate(svc, portalSubmitter(4711), nil, int64(9001), 0)
 	require.NoError(t, err)
@@ -592,7 +592,7 @@ func TestHoldReEnrollment_EmailIdentityGrantedPasses(t *testing.T) {
 	t.Parallel()
 
 	auth := &stubGuardianAuthorizer{granted: true}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, GuardianHold: auth})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, GuardianHold: auth})
 
 	err := reEnrollmentGate(svc, reEnrollmentSubmitter{GuardianEmail: "invited@example.test"}, int64PtrEligibility(555), int64(9001), 0)
 	require.NoError(t, err)
@@ -611,7 +611,7 @@ func TestHoldReEnrollment_EmailIdentityNotGrantedRejected(t *testing.T) {
 	t.Parallel()
 
 	auth := &stubGuardianAuthorizer{granted: false}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, GuardianHold: auth})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, GuardianHold: auth})
 
 	err := reEnrollmentGate(svc, reEnrollmentSubmitter{GuardianEmail: "invited@example.test"}, int64PtrEligibility(555), int64(9001), 2)
 	require.ErrorIs(t, err, enrollmentNative.ErrChildEnrollmentNotPermitted)
@@ -624,7 +624,7 @@ func TestHoldReEnrollment_NoIdentityFailsClosed(t *testing.T) {
 	t.Parallel()
 
 	auth := &stubGuardianAuthorizer{granted: true}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, GuardianHold: auth})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, GuardianHold: auth})
 
 	err := reEnrollmentGate(svc, reEnrollmentSubmitter{}, int64PtrEligibility(555), int64(9001), 0)
 	require.ErrorIs(t, err, enrollmentNative.ErrChildEnrollmentNotPermitted)
@@ -639,7 +639,7 @@ func TestHoldReEnrollment_AdminManagedBypasses(t *testing.T) {
 	t.Parallel()
 
 	auth := &stubGuardianAuthorizer{granted: false}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, GuardianHold: auth})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, GuardianHold: auth})
 
 	err := reEnrollmentGate(svc, reEnrollmentSubmitterFor(enrollmentNative.RequestSourceAdminManual, nil, "office@example.test"),
 		int64PtrEligibility(555), int64(9001), 0)
@@ -665,7 +665,7 @@ func TestReEnrollmentSubmitterFor_OnlyAdminManualOverrides(t *testing.T) {
 func TestHoldReEnrollment_NilAuthorizerFailsClosed(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}})
 
 	err := reEnrollmentGate(svc, portalSubmitter(4711), int64PtrEligibility(555), int64(9001), 1)
 	require.ErrorIs(t, err, enrollmentNative.ErrChildEnrollmentNotPermitted)
@@ -675,7 +675,7 @@ func TestHoldReEnrollment_NilAuthorizerFailsClosed(t *testing.T) {
 func TestHoldReEnrollment_NilAuthorizerFailsClosedForEmail(t *testing.T) {
 	t.Parallel()
 
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}})
 
 	err := reEnrollmentGate(svc, reEnrollmentSubmitter{GuardianEmail: "invited@example.test"}, int64PtrEligibility(555), int64(9001), 1)
 	require.ErrorIs(t, err, enrollmentNative.ErrChildEnrollmentNotPermitted)
@@ -686,7 +686,7 @@ func TestHoldReEnrollment_ProbeErrorPropagates(t *testing.T) {
 	t.Parallel()
 
 	auth := &stubGuardianAuthorizer{err: errors.New("boom")}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, GuardianHold: auth})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, GuardianHold: auth})
 
 	err := reEnrollmentGate(svc, portalSubmitter(4711), int64PtrEligibility(555), int64(9001), 0)
 	require.Error(t, err)
@@ -699,7 +699,7 @@ func TestHoldReEnrollment_EmailProbeErrorPropagates(t *testing.T) {
 	t.Parallel()
 
 	auth := &stubGuardianAuthorizer{emailErr: errors.New("boom")}
-	svc := NewIntake(IntakeDependencies{Settings: intakeSettingsFake{}, GuardianHold: auth})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Settings: intakeSettingsFake{}, GuardianHold: auth})
 
 	err := reEnrollmentGate(svc, reEnrollmentSubmitter{GuardianEmail: "invited@example.test"}, int64PtrEligibility(555), int64(9001), 0)
 	require.Error(t, err)

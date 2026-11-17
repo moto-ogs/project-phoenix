@@ -61,6 +61,7 @@ func newStaffNoticeService(t *testing.T, db *bun.DB) timetable.StaffNotices {
 	require.NoError(t, err)
 	return compose.NewStaffNotices(compose.StaffNoticeDependencies{
 		DB:      db,
+		Now:     time.Now,
 		Periods: timetableRepos.CalendarPeriod,
 		Names: func(ctx context.Context, accountIDs []int64) (map[int64]string, error) {
 			rows, err := persons.ListPersonsByAccount(ctx, accountIDs)

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useSearchParams } from "next/navigation";
 import { DatabasePageLayout } from "~/components/database/database-page-layout";
@@ -18,12 +18,13 @@ import {
   formatPermissionDisplay,
   localizeDescription,
 } from "@/lib/permission-labels";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
-import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 
-const logger = createLogger({ component: "DatabasePermissionsPage" });
+const NO_PERMISSIONS: Permission[] = [];
 
 export default function PermissionsPage() {
   return (
@@ -42,15 +43,6 @@ function PermissionsPageContent() {
   const selectedId = searchParams.get("permission");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [loading, setLoading] = useState(true);
-  // Ladefehler im Gerüst mit Wiederholen (#2517).
-  const {
-    error,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-
   const { status } = useSession({
     required: true,
     onUnauthenticated() {
@@ -60,31 +52,23 @@ function PermissionsPageContent() {
 
   const service = useMemo(() => createCrudService(permissionsConfig), []);
 
-  const fetchPermissions = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await service.getList({ page: 1, pageSize: 500 });
-      const arr = Array.isArray(data.data) ? data.data : [];
-      setPermissions(arr);
-      clearLoadError();
-    } catch (err) {
-      logger.error("failed to fetch permissions", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setPermissions([]);
-      // Bis der Katalogtext da ist, bleibt das Skelett stehen.
-      await showLoadError(err, {
-        object: "die Liste der Berechtigungen",
-        retry: () => void fetchPermissions(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [service, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void fetchPermissions();
-  }, [fetchPermissions]);
+  const {
+    data,
+    error: permissionsError,
+    mutate,
+  } = useSWRAuth(tenantAdminKeys.permissions(), async () => {
+    const response = await service.getList({ page: 1, pageSize: 500 });
+    return Array.isArray(response.data) ? response.data : [];
+  });
+  const permissions = data ?? NO_PERMISSIONS;
+  // Ladefehler im Gerüst mit Wiederholen (#2517). Bis der Katalogtext da ist,
+  // bleibt das Skelett stehen.
+  const { error, failure } = useSwrResourceLoadError(
+    [{ data, error: permissionsError }],
+    "die Liste der Berechtigungen",
+    () => mutate(),
+  );
+  const loading = !data && (!failure || error === null);
 
   const filters: FilterConfig[] = useMemo(() => [], []);
 

@@ -87,6 +87,8 @@ func (r *studentRepository) FindBirthdaysOn(ctx context.Context, days []peopleBi
 		// as newStudentWithGroupQuery). users.students itself carries no
 		// deleted_at column — status IS the marker.
 		Where(`"student".status <> ?`, string(users.StudentStatusAlumnus)).
+		// A child without an OGS place (#4803) is not cared for here.
+		Where(`NOT "student".without_care_place`).
 		// Same for a child whose care has ended (#2487): the birthday card is
 		// a staff-facing list of the children the school currently cares for.
 		Where(

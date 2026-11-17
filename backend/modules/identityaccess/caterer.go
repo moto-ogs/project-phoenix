@@ -55,6 +55,9 @@ type CatererInvitation struct {
 	AcceptedAt      *time.Time
 	RevokedAt       *time.Time
 	CreatedAt       time.Time
+	// Expired says the invitation's expiry had passed on the database
+	// clock when it was read (ADR 0285); the HTTP status reads it.
+	Expired bool
 }
 
 // CatererInvitationPreview is what the public acceptance page shows.
@@ -72,6 +75,9 @@ type CatererInvitationPreview struct {
 type CatererRegistration struct {
 	Password        string
 	ConfirmPassword string
+	// IPAddress and UserAgent audit a refused password, as at the login.
+	IPAddress string
+	UserAgent string
 }
 
 // CatererAcceptance is the outcome of an accepted invitation.
@@ -98,10 +104,14 @@ type CatererAccessEngine interface {
 	// CatererInvitationMailStates reports, in one read, what became of the mail
 	// of each of the school's invitations (#5960); one without a mail has no key.
 	CatererInvitationMailStates(ctx context.Context, invitationIDs []int64) (map[int64]InvitationMailState, error)
+	// RevokeCatererInvitation takes the invitation back and stops its mail
+	// if it is not sent yet (#4496).
 	RevokeCatererInvitation(ctx context.Context, invitationID int64) error
 	PreviewCatererInvitation(ctx context.Context, token string) (CatererInvitationPreview, error)
 	// AcceptCatererInvitation spends the invitation and starts the school's
-	// supply by the caterer.
+	// supply by the caterer. ErrInvalidCredentials means a wrong password was
+	// counted towards the account's lock in the caller's transaction, which
+	// holds no other write: the caller commits it before answering (#4496).
 	AcceptCatererInvitation(ctx context.Context, token string, registration CatererRegistration) (CatererAcceptance, error)
 	// EndCatererSchool ends the school's supply by its caterer.
 	EndCatererSchool(ctx context.Context, accountID int64) (bool, error)

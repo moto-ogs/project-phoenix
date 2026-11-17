@@ -95,12 +95,41 @@ default unless they already opted in. Do not carry a previous child, thread or
 audience into a newly selected key.
 
 The pure `*-keys.ts` modules keep API clients out of always-mounted invalidators.
-`portal-keys.ts` contains the smaller portal resource families. There is no
+`portal-keys.ts` contains the smaller portal resource families; the Träger
+portal has one module per area (`traeger-keys`, `traeger-billing-keys`,
+`traeger-billing-run-keys`, `traeger-contract-keys`, `traeger-staff-keys`,
+`traeger-report-keys`).
+
+## No load in an effect
+
+A read that an effect starts and stores with `useState` is gone at the next
+page switch, shares nothing and repeats its own stale-answer and retry code.
+`swr/no-effect-load` fails every new one; `scripts/swr-effect-load-baseline.json`
+lists the remaining files and only shrinks. Read through `useSWRAuth` with a
+factory key instead. Träger pages and cards use `useTraegerResource`
+(`components/traeger/use-traeger-resource.ts`): Träger session gate, refusal
+rules and load error in one return shape. A read the access log records on a
+person's explicit click (`utilization-children.tsx`) stays a click handler.
+A read that must be new each time its surface opens (the preview of a
+deletion, the version an edit saves against, a form's template) uses
+`useFreshSWR`: it shows nothing of an earlier opening. There is no
 runtime registry. Direct package imports outside this boundary and new free
 hook keys fail oxlint; both legacy baselines are shrink-only. A free key is
 anything at a `useSWRAuth` or `useImmutableSWR` call that is
 not built by an export of `~/lib/swr` (directly, through a local constant or
 in a branch with `null`).
+
+## Refused reads
+
+After the server refuses a read (401 or 403 as an access decision,
+`isReadRefusal` in `~/lib/access-refusal`), every reader of that key reports
+no data and the data leaves the cache. It shows again only after a read of
+the key succeeded: a later 5xx, a network failure or a cache write does not
+bring it back. Logout and an account switch lift every refusal. This holds
+for `useSWRAuth`, `useImmutableSWR` and `useFreshSWR` without anything at the
+call site; a page shows the error because its data is gone. A 404, or a
+refusal that has to remove other keys too (a child a guardian lost), stays
+with `useConfirmedSWR`, `useTraegerResource` or `useDiscardRefusedEntity`.
 
 ## List-to-detail previews
 

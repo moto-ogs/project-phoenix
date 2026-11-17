@@ -15,7 +15,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { ApiError } from "~/lib/api-error";
+import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { Check, Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
@@ -78,6 +79,10 @@ import { type Phase, listPhases } from "~/lib/enrollment-phase-api";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
 import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { databaseKeys } from "~/lib/swr/portal-keys";
 import { createLogger } from "~/lib/logger";
 import { timetableService } from "~/lib/timetable-api";
 import type { TimetableTemplate } from "~/lib/timetable-types";
@@ -86,11 +91,7 @@ import {
   supportedGradeLevelMax,
 } from "~/lib/grade-level";
 import { useTenant } from "~/lib/tenant-context";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import {
   copyStableObjectKey,
   getStableObjectKey,
@@ -112,6 +113,12 @@ import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 
 const logger = createLogger({ component: "CareOfferingsEditor" });
+
+const NO_PHASES: Phase[] = [];
+const NO_OFFERINGS: CareOffering[] = [];
+const NO_TEMPLATES: TimetableTemplate[] = [];
+const NO_PERIODS: CalendarPeriod[] = [];
+const NO_STATS: Record<string, CareOfferingBookingStats> = {};
 
 const KIND_LABELS: Record<Phase["kind"], string> = {
   school_year: "Schuljahr",
@@ -414,28 +421,78 @@ export function CareOfferingsEditor({
 } = {}) {
   const { tenant } = useTenant();
   const gradeLevelMax = supportedGradeLevelMax(tenant?.gradeLevelMax);
-  const [phases, setPhases] = useState<Phase[]>([]);
-  const [selectedPhaseId, setSelectedPhaseId] = useState<string>("");
-  const selectedPhaseIdRef = useRef("");
-  const catalogLoadSeq = useRef(0);
-  const metadataLoadSeq = useRef(0);
-  const invalidateLoads = useCallback(() => {
-    catalogLoadSeq.current++;
-    metadataLoadSeq.current++;
-  }, []);
-  const [offerings, setOfferings] = useState<CareOffering[]>([]);
-  const [templates, setTemplates] = useState<TimetableTemplate[]>([]);
-  const [periods, setPeriods] = useState<CalendarPeriod[]>([]);
-  const [metadataStatus, setMetadataStatus] =
-    useState<PlannerMetadataStatus>("loading");
-  const [loading, setLoading] = useState(true);
-  // Set at once when the catalog load fails, so the page header never counts
-  // the emptied list as "0 Angebote" (#2517).
-  const [catalogFailed, setCatalogFailed] = useState(false);
+  const discard = useDiscardRefusedEntity();
+  const phasesRead = useSWRAuth(enrollmentKeys.phases(), () => listPhases());
+  const { mutate: mutatePhases } = phasesRead;
+  // The phase the person picked; while it does not exist (first visit, phase
+  // deleted) the first active phase stands in.
+  const [chosenPhaseId, setChosenPhaseId] = useState("");
+  const loadedPhases = phasesRead.data;
+  const selectedPhaseId = useMemo(() => {
+    if (!loadedPhases) return "";
+    if (loadedPhases.some((phase) => phase.id === chosenPhaseId)) {
+      return chosenPhaseId;
+    }
+    const first =
+      loadedPhases.find((phase) => phase.is_active) ?? loadedPhases[0];
+    return first?.id ?? "";
+  }, [loadedPhases, chosenPhaseId]);
+  const offeringsRead = useSWRAuth(
+    selectedPhaseId ? enrollmentKeys.careOfferings(selectedPhaseId) : null,
+    () => listCareOfferings(selectedPhaseId),
+    { keepPreviousData: false },
+  );
+  const { mutate: mutateOfferings } = offeringsRead;
+  // Planner metadata and the phase's catalog are independent: a metadata
+  // failure (SWR logs it) must never hide the catalog.
+  const templatesRead = useSWRAuth(enrollmentKeys.timetableTemplates(), () =>
+    timetableService.getTemplates(),
+  );
+  const periodsRead = useSWRAuth(databaseKeys.calendarPeriods(), () =>
+    calendarPeriodService.list(),
+  );
+  const { mutate: mutateTemplates } = templatesRead;
+  const { mutate: mutatePeriods } = periodsRead;
+  const templates = templatesRead.data?.templates ?? NO_TEMPLATES;
+  const periods = periodsRead.data ?? NO_PERIODS;
+  const metadataStatus: PlannerMetadataStatus =
+    templatesRead.data && periodsRead.data
+      ? "ready"
+      : (templatesRead.error && !templatesRead.data) ||
+          (periodsRead.error && !periodsRead.data)
+        ? "unavailable"
+        : "loading";
+  // A refused read shows nothing of the catalog and closes what is open.
+  const accessRefused =
+    isAccessRefusal(phasesRead.error) || isAccessRefusal(offeringsRead.error);
+  const phases = accessRefused ? NO_PHASES : (loadedPhases ?? NO_PHASES);
+  const offerings = accessRefused
+    ? NO_OFFERINGS
+    : (offeringsRead.data ?? NO_OFFERINGS);
   // A failed catalog load stands where the catalog would be (#2515).
-  const catalogLoad = useApiLoadError();
-  const showCatalogError = catalogLoad.show;
-  const clearCatalogError = catalogLoad.clear;
+  const catalogLoad = useSwrResourceLoadError(
+    [
+      {
+        data: accessRefused ? undefined : loadedPhases,
+        error: phasesRead.error,
+      },
+      {
+        data: accessRefused ? undefined : offeringsRead.data,
+        error: offeringsRead.error,
+      },
+    ],
+    "die Liste der Betreuungsangebote",
+    () =>
+      Promise.all([
+        mutatePhases(),
+        selectedPhaseId ? mutateOfferings() : undefined,
+      ]),
+  );
+  // The page header never counts a failed list as "0 Angebote" (#2517).
+  const catalogFailed = catalogLoad.failure !== undefined || accessRefused;
+  const loading =
+    !catalogFailed &&
+    (!loadedPhases || (selectedPhaseId !== "" && !offeringsRead.data));
   // Saving, cloning: alert in the slide-over, field errors at the field.
   const formErrors = useApiFormError();
   const clearFormErrors = formErrors.clear;
@@ -461,10 +518,18 @@ export function CareOfferingsEditor({
   // shows occupancy and free places (#4782). A failure to load them must never
   // block catalog editing; the list then hides the numbers, and the rule
   // editor says the count is unknown instead of reading as "no conflicts".
-  const [bookingStats, setBookingStats] = useState<
-    Record<string, CareOfferingBookingStats>
-  >({});
-  const [bookingStatsUnavailable, setBookingStatsUnavailable] = useState(false);
+  const statsRead = useSWRAuth(
+    selectedPhaseId ? enrollmentKeys.bookingStats(selectedPhaseId) : null,
+    () => fetchCareOfferingBookingStats(selectedPhaseId),
+    { keepPreviousData: false },
+  );
+  const { mutate: mutateStats } = statsRead;
+  const bookingStatsUnavailable = Boolean(statsRead.error);
+  const bookingStats =
+    accessRefused || bookingStatsUnavailable
+      ? NO_STATS
+      : (statsRead.data ?? NO_STATS);
+  const invalidateMatching = useInvalidateMatching();
   const toast = useToast();
 
   const hasNoPhases = phases.length === 0;
@@ -547,134 +612,67 @@ export function CareOfferingsEditor({
       );
   }, [offerings, gradeLevelMax]);
 
-  const loadPlannerMetadata = useCallback(async () => {
-    const requestSeq = ++metadataLoadSeq.current;
-    setMetadataStatus("loading");
-    try {
-      const [templateData, periodData] = await Promise.all([
-        timetableService.getTemplates(),
-        calendarPeriodService.list(),
-      ]);
-      if (metadataLoadSeq.current !== requestSeq) return;
-      setTemplates(templateData.templates);
-      setPeriods(periodData);
-      setMetadataStatus("ready");
-    } catch (err) {
-      if (metadataLoadSeq.current !== requestSeq) return;
-      const message =
-        err instanceof Error ? err.message : "Unbekannter Metadatenfehler";
-      logger.warn("care_offerings_planner_metadata_load_failed", {
-        error: message,
-      });
-      setMetadataStatus("unavailable");
-    }
-  }, []);
-
-  const loadAll = useCallback(
-    async (preferredPhaseId?: string, options: { rethrow?: boolean } = {}) => {
-      const requestSeq = ++catalogLoadSeq.current;
-      // Nach einem Schreiben bleibt die bestätigte Liste stehen (#6652).
-      if (!options.rethrow) {
-        setLoading(true);
-        clearCatalogError();
-      }
-      try {
-        const phasesData = await listPhases();
-        if (catalogLoadSeq.current !== requestSeq) return;
-
-        let phaseId = preferredPhaseId ?? selectedPhaseIdRef.current;
-        if (!phasesData.some((phase) => phase.id === phaseId)) {
-          const first =
-            phasesData.find((phase) => phase.is_active) ?? phasesData[0];
-          phaseId = first?.id ?? "";
-        }
-        // Planner metadata and the phase-specific catalog are independent once
-        // the phase is known. Metadata failure must never hide the catalog.
-        void loadPlannerMetadata();
-        const offeringsData = phaseId ? await listCareOfferings(phaseId) : [];
-        if (catalogLoadSeq.current !== requestSeq) return;
-        setPhases(phasesData);
-        selectedPhaseIdRef.current = phaseId;
-        setSelectedPhaseId(phaseId);
-        setOfferings(offeringsData);
-        setCatalogFailed(false);
-      } catch (err) {
-        if (catalogLoadSeq.current !== requestSeq) return;
-        logger.error("care_offerings_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (
-          err instanceof ApiError &&
-          (err.status === 401 || err.status === 403)
-        ) {
-          setOfferings([]);
-          setPhases([]);
-          setCatalogFailed(true);
-          selectedPhaseIdRef.current = "";
-          setSelectedPhaseId("");
-          setDraft(null);
-          setEditingId(null);
-          setCloneSource(null);
-          setDeleteTarget(null);
-          setBookingStats({});
-        }
-        // Vorübergehende Nachladefehler lassen bestätigte Daten stehen;
-        // der Aufrufer zeigt sie als Nachladefehler (#6652).
-        if (options.rethrow) throw err;
-        setOfferings([]);
-        setCatalogFailed(true);
-        await showCatalogError(err, {
-          object: "die Liste der Betreuungsangebote",
-          retry: () => void latestLoadAll.current(selectedPhaseIdRef.current),
-        });
-      } finally {
-        if (catalogLoadSeq.current === requestSeq) setLoading(false);
-      }
-    },
-    [loadPlannerMetadata, showCatalogError, clearCatalogError],
-  );
-  // „Wiederholen“ lädt mit der aktuellen Fassung neu.
-  const latestLoadAll = useRef(loadAll);
-  useLayoutEffect(() => {
-    latestLoadAll.current = loadAll;
-  });
-
   useEffect(() => {
-    void loadAll();
-    return invalidateLoads;
-  }, [invalidateLoads, loadAll]);
+    if (!accessRefused) return;
+    setDraft(null);
+    setEditingId(null);
+    setCloneSource(null);
+    setDeleteTarget(null);
+    if (isAccessRefusal(phasesRead.error) && loadedPhases !== undefined) {
+      const key = enrollmentKeys.phases();
+      discard(phasesRead.error, {
+        codes: ["general.permission", "module.not_booked"],
+        matches: (candidate) => candidate === key,
+        refusedKey: key,
+      });
+    }
+    if (
+      isAccessRefusal(offeringsRead.error) &&
+      offeringsRead.data !== undefined
+    ) {
+      const key = enrollmentKeys.careOfferings(selectedPhaseId);
+      discard(offeringsRead.error, {
+        codes: ["general.permission", "module.not_booked"],
+        matches: (candidate) => candidate === key,
+        refusedKey: key,
+      });
+    }
+  }, [
+    accessRefused,
+    discard,
+    loadedPhases,
+    phasesRead.error,
+    offeringsRead.data,
+    offeringsRead.error,
+    selectedPhaseId,
+  ]);
+
   // Nachladen nach Speichern, Löschen oder Duplizieren: ein Fehler dabei ist
   // ein Ladefehler über der Liste, kein Fehler der Aktion (#6652).
   const afterWrite = useRefreshAfterWrite(
     "die Anzeige der Betreuungsangebote",
-    () => loadAll(undefined, { rethrow: true }),
+    async () => {
+      await Promise.all([
+        invalidateMatching(
+          (key) =>
+            key.startsWith(enrollmentKeys.careOfferingsFamily) &&
+            key !==
+              (selectedPhaseId
+                ? enrollmentKeys.careOfferings(selectedPhaseId)
+                : null),
+        ),
+        mutatePhases(listPhases(), { revalidate: false }),
+        selectedPhaseId
+          ? mutateOfferings(listCareOfferings(selectedPhaseId), {
+              revalidate: false,
+            })
+          : undefined,
+        // Revalidate through the reader so SWR records any failure.
+        // Display-only: a failed occupancy reload hides the numbers.
+        selectedPhaseId ? mutateStats() : undefined,
+      ]);
+    },
   );
-
-  useEffect(() => {
-    if (!selectedPhaseId) {
-      setBookingStats({});
-      setBookingStatsUnavailable(false);
-      return;
-    }
-    let cancelled = false;
-    void fetchCareOfferingBookingStats(selectedPhaseId)
-      .then((stats) => {
-        if (cancelled) return;
-        setBookingStats(stats);
-        setBookingStatsUnavailable(false);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setBookingStats({});
-        setBookingStatsUnavailable(true);
-        logger.warn("care_offering_booking_stats_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedPhaseId, offerings]);
 
   const beginCreate = () => {
     if (!selectedPhaseId) return;
@@ -827,6 +825,10 @@ export function CareOfferingsEditor({
           target_phase_id: Number(targetPhaseId),
         });
         toast.success(`Das Betreuungsangebot „${cloned.name}“ ist dupliziert.`);
+        if (targetPhaseId !== selectedPhaseId) {
+          const target = enrollmentKeys.careOfferings(targetPhaseId);
+          void invalidateMatching((key) => key === target);
+        }
         if (op.isCurrent()) setCloneSource(null);
         await afterWrite.refresh();
       } catch (err) {
@@ -960,7 +962,9 @@ export function CareOfferingsEditor({
     // Bildschirms wächst (`.moto-tenant-body`).
     <div className="flex flex-col space-y-4">
       {metadataStatus === "unavailable" ? (
-        <PlannerMetadataNotice onRetry={() => void loadPlannerMetadata()} />
+        <PlannerMetadataNotice
+          onRetry={() => void Promise.all([mutateTemplates(), mutatePeriods()])}
+        />
       ) : null}
 
       <LoadErrorAlert error={afterWrite.error} />
@@ -989,10 +993,7 @@ export function CareOfferingsEditor({
             hasCapacityLimit={hasCapacityLimit}
             freePlaces={freePlaces}
             focusMode={Boolean(draft || cloneSource)}
-            onPhaseChange={(phaseId) => {
-              selectedPhaseIdRef.current = phaseId;
-              void loadAll(phaseId);
-            }}
+            onPhaseChange={setChosenPhaseId}
             onCreate={beginCreate}
           />
 

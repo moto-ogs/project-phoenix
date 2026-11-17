@@ -31,6 +31,8 @@ import {
   type OfferingSelection,
   type RosterDeviation,
 } from "~/lib/roster-deviation";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type { OfferingSourceOption } from "~/lib/timetable-types";
 
@@ -38,6 +40,8 @@ import { OfferingPreviewList } from "./offering-preview-list";
 import { SpinnerIcon } from "~/components/ui/icons";
 
 const logger = createLogger({ component: "ConnectOfferingModal" });
+
+const NO_OFFERINGS: readonly OfferingSourceOption[] = [];
 
 const OFFERINGS_FIELD_ID = "connect-offering-offerings";
 
@@ -105,9 +109,13 @@ export function ConnectOfferingModal({
   const [offeringIds, setOfferingIds] = useState<string[]>(() =>
     initialKey ? initialKey.split(",") : [],
   );
-  const [periodOfferings, setPeriodOfferings] = useState<
-    OfferingSourceOption[]
-  >([]);
+  // Bewusst ohne Anzeige eines Ladefehlers: die vorgeschlagenen Angebote
+  // bleiben wählbar und das Verbinden funktioniert; es fehlen nur weitere
+  // Angebote zur Auswahl.
+  const { data: periodOfferings = NO_OFFERINGS } = useSWRAuth(
+    isOpen && periodId ? tenantDailyKeys.offeringSources(periodId) : null,
+    () => timetableService.getOfferingSources(periodId),
+  );
   const save = useFormModalPending(isOpen);
   const saving = save.pending;
   const formErrors = useApiFormError();
@@ -120,28 +128,6 @@ export function ConnectOfferingModal({
     setOfferingIds(initialKey ? initialKey.split(",") : []);
     clearFormError();
   }, [isOpen, initialKey, clearFormError]);
-
-  useEffect(() => {
-    if (!isOpen || !periodId) return;
-    let active = true;
-    timetableService
-      .getOfferingSources(periodId)
-      .then((offerings) => {
-        if (active) setPeriodOfferings(offerings);
-      })
-      .catch((err: unknown) => {
-        // Bewusst ohne Anzeige: die vorgeschlagenen Angebote bleiben
-        // wählbar und das Verbinden funktioniert; es fehlen nur weitere
-        // Angebote zur Auswahl.
-        logger.warn("offering_sources_load_failed", {
-          period_id: periodId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      active = false;
-    };
-  }, [isOpen, periodId]);
 
   const selection: OfferingSelection = useMemo(
     () => ({

@@ -77,6 +77,7 @@ func setupUploadFlow(t *testing.T) *uploadFlowEnv {
 		requestTestEnv: env,
 		intake:         owners.NewEnrollmentIntake(env.config),
 		uploads: enrollmentNative.NewRequestUploads(enrollmentNative.RequestUploadDependencies{
+			Now:     time.Now,
 			Records: env.repos.Enrollment(), AccessLog: access, Settings: env.settings,
 			NotFound: func(err error) bool { return errors.Is(err, sql.ErrNoRows) }, Logger: slog.Default(),
 		}),

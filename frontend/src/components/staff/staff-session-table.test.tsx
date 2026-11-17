@@ -1,4 +1,5 @@
 import { render, screen, within, fireEvent } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import type {
   StaffAbsenceRow,
@@ -13,11 +14,31 @@ import {
 } from "./staff-session-table";
 import { ApiError } from "~/lib/api-error";
 import { setTestClock } from "~/test/clock";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 
 // The table invalidates the cache of the signed-in session after a save;
-// these tests render it without a SessionProvider.
-vi.mock("~/lib/swr", () => ({ useInvalidateMatching: () => vi.fn() }));
+// these tests render it without a SessionProvider. The expanded edit
+// history reads through real SWR with a fresh cache.
+vi.unmock("swr");
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
+  useInvalidateMatching: () => vi.fn(),
+}));
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1" }, expires: "2099-01-01" },
+  }),
+}));
+
+function FreshCache({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
 
 describe("staff-session-table.targets", () => {
   // Mo–Fr 8h nach dem HEUTE gültigen Plan. Genau dieser Plan darf bei einem
@@ -1094,6 +1115,7 @@ describe("staff-session-table.blocks", () => {
             isAdminView
             fetchEdits={fetchEdits}
           />,
+          { wrapper: FreshCache },
         );
 
         fireEvent.click(

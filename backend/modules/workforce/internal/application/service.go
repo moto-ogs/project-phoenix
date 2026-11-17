@@ -366,7 +366,7 @@ func (s *Service) CurrentStaffSchedule(ctx context.Context, staffID int64) ([]wo
 	var err error
 	err = s.run(ctx, "current_staff_schedule", func(ctx context.Context, stats *domain.OperationStats) error {
 		var queryStats domain.OperationStats
-		result, queryStats, err = s.store.CurrentStaffSchedule(ctx, staffID)
+		result, queryStats, err = s.store.CurrentStaffSchedule(ctx, staffID, s.clock.Today())
 		stats.Add(queryStats)
 		return err
 	})

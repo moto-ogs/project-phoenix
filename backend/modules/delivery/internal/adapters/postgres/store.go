@@ -600,15 +600,19 @@ func (s *Store) ReplaceEmailDeliveries(ctx context.Context, tenantID int64, rela
 	if len(rows) == 0 {
 		return nil
 	}
+	// The log carries the store's clock: the retention dates it on the same
+	// one (#7295).
+	now := s.now()
 	values := make([]emailDeliveryRow, 0, len(rows))
 	for _, row := range rows {
 		values = append(values, emailDeliveryRow{
 			TenantID: tenantID, RelatedEntityType: relatedType, RelatedEntityID: relatedID,
 			OutboxID: row.OutboxID, GuardianProfileID: row.GuardianProfileID, AccountID: row.AccountID,
 			RecipientEmail: row.RecipientEmail, Reachability: row.Reachability,
+			CreatedAt: now, UpdatedAt: now,
 		})
 	}
-	if _, err := db.NewInsert().Model(&values).ExcludeColumn("created_at", "updated_at").
+	if _, err := db.NewInsert().Model(&values).
 		ModelTableExpr(`platform.delivery_email_deliveries AS "email_delivery"`).Exec(ctx); err != nil {
 		return fmt.Errorf("delivery postgres: replace email deliveries insert: %w", err)
 	}
@@ -642,7 +646,7 @@ func (s *Store) AttachEmailOutbox(ctx context.Context, tenantID, deliveryID, out
 	}
 	result, err := db.NewUpdate().Model((*emailDeliveryRow)(nil)).
 		ModelTableExpr(`platform.delivery_email_deliveries AS "email_delivery"`).
-		Set("outbox_id = ?", outboxID).Set("updated_at = NOW()").
+		Set("outbox_id = ?", outboxID).Set("updated_at = ?", s.now()).
 		Where(`"email_delivery".tenant_id = ?`, tenantID).
 		Where(`"email_delivery".id = ?`, deliveryID).
 		Where(`EXISTS (SELECT 1 FROM platform.email_outbox AS outbox WHERE outbox.id = ? AND outbox.tenant_id = "email_delivery".tenant_id)`, outboxID).Exec(ctx)

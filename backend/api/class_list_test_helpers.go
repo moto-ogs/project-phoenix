@@ -28,7 +28,7 @@ func NewClassListTestModule(db transactionruntime.Database) (ClassListTestModule
 	if err != nil {
 		return ClassListTestModule{}, err
 	}
-	membership, err := composeClassListEntries(db, persons, command)
+	membership, err := composeClassListEntries(db, persons, command, nil)
 	if err != nil {
 		return ClassListTestModule{}, err
 	}

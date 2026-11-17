@@ -40,6 +40,7 @@ func TestSchemaPreviewBootstrapErrors(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rs := &Resource{
+				Now:               resourceTestClock,
 				FormSchemaService: &mockFormSchemaService{getByIDErr: tc.schemaErr},
 				PhaseService:      &mockPhaseService{listErr: tc.listErr},
 				RequestService:    previewErrorRequestService{err: tc.phaseErr},

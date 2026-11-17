@@ -14,6 +14,11 @@ import { setTestClock } from "~/test/clock";
 // them settable via fireEvent.change and forwards min/max so the bound
 // assertions below still pin what the component computes. Imported inside the
 // factory because vi.mock is hoisted above the imports.
+// The weekday preview of a sourced series reads through the session-scoped
+// SWR hooks; without a session it reads nothing, as under the SWR mock.
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ data: null, status: "unauthenticated" }),
+}));
 vi.mock("~/components/ui/date-picker", async () =>
   (await import("~/test/mocks/date-picker")).datePickerModuleMock(),
 );
@@ -4640,6 +4645,9 @@ describe("TimetableEventModal", () => {
   });
 
   it("aborts a hanging direct-series pre-save coverage check and still writes", async () => {
+    // The fixture period runs 2026-05-01 to 2026-12-31; the pre-save check
+    // only runs while the series has days left in it.
+    setTestClock("2026-09-09T12:00:00+02:00");
     renderModal({ initialSeries: template });
     await waitFor(() => expect(screen.getByLabelText("Raum")).toBeEnabled());
     // #2025: walk to the last step (where Speichern lives) BEFORE the fake
@@ -4794,6 +4802,9 @@ describe("TimetableEventModal", () => {
 
   it("preserves an A-week series in both coverage and direct saves", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    // The fixture period runs 2026-05-01 to 2026-12-31; the coverage check
+    // needs remaining series days in it.
+    setTestClock("2026-09-09T12:00:00+02:00");
     const aWeekTemplate: TimetableTemplate = {
       ...template,
       schedules: template.schedules.map((schedule) => ({

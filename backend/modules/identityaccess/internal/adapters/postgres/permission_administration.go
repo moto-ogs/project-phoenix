@@ -20,8 +20,8 @@ type permissionRow struct {
 	Description   string    `bun:"description"`
 	Resource      string    `bun:"resource"`
 	Action        string    `bun:"action"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 func permissionRecord(p domain.ManagedPermission) permissionRow {

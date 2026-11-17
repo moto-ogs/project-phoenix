@@ -96,6 +96,10 @@ function NotificationsBell({
     [isOpen, schoolId],
   );
   const close = useCallback(() => setIsOpen(false), []);
+  const badgeLabel =
+    badgeCount > NOTIFICATIONS_BADGE_MAX
+      ? `${NOTIFICATIONS_BADGE_MAX}+ Benachrichtigungen, insgesamt ${badgeCount}`
+      : `${badgeCount} ${badgeCount === 1 ? "Benachrichtigung" : "Benachrichtigungen"}`;
 
   const renderTrigger = ({
     ref,
@@ -114,22 +118,20 @@ function NotificationsBell({
       variant="ghost"
       size="icon"
       onClick={toggle}
+      aria-label={badgeCount > 0 ? badgeLabel : "Benachrichtigungen"}
       aria-expanded={expanded}
       aria-haspopup="dialog"
       aria-controls={expanded ? panelId : undefined}
       tooltip={tooltip}
       className="relative"
     >
-      {/* Name from content: the visible count stays part of it (WCAG 2.5.3,
-          #7112). */}
-      <span className="sr-only">Benachrichtigungen</span>
-      <Bell className="h-5 w-5" aria-hidden="true" />
+      <Bell className="h-5 w-5" />
       <NotificationBadge
         count={badgeCount}
         tone="red"
         size="sm"
         max={NOTIFICATIONS_BADGE_MAX}
-        ariaLabel={`${badgeCount} neu`}
+        ariaLabel={badgeLabel}
         className="absolute -top-0.5 -right-0.5"
       />
     </Button>

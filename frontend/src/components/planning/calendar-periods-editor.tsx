@@ -293,7 +293,7 @@ export function CalendarPeriodsEditor({
       <CalendarPeriodModal
         isOpen={modalOpen}
         onClose={closeModal}
-        onSaved={() => void reload({ silent: true })}
+        onSaved={() => void reload()}
         onDeleted={() => void reload()}
         initial={editing}
         createDefaults={createDefaults}

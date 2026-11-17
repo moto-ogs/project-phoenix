@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
+import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
 /** Text of a FormErrorInput, as the shared kit components render it. */
@@ -17,10 +18,6 @@ interface MockErrorPath {
   show: (error: unknown, options: { object: string }) => unknown;
   clear: () => void;
 }
-
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: vi.fn(() => false),
-}));
 
 // Mirrors DatabaseForm in production: a rejected save goes to the owner's
 // error path, whose text the form renders.
@@ -223,7 +220,11 @@ describe("GroupsMasterDetail", () => {
 });
 
 describe("GroupsMasterDetail Feriengruppe", () => {
-  // Testuhr: Mittwoch, 09.09.2026. Die Woche liegt im Januar 2027.
+  // Die Woche im Januar 2027 muss noch bevorstehen, sonst gibt es keinen Hinweis.
+  beforeEach(() => {
+    setTestClock("2026-09-09T12:00:00+02:00");
+  });
+
   const holidayGroup: Group = {
     id: "7",
     name: "Ferienbetreuung Januar 2027",

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { SectionLabel } from "~/components/ui/section-label";
 import { Check } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
@@ -15,13 +9,17 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Skeleton } from "~/components/ui/skeleton";
 import { SectionCard } from "~/components/ui/section-card";
 import { Switch } from "~/components/ui/switch";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import {
   disableAllNotificationPreferences,
   fetchNotificationPreferences,
   setNotificationPreference,
+  type NotificationPreferences,
   type NotificationPreferenceType,
   type PreferencePortal,
 } from "~/lib/notification-preferences-api";
@@ -48,6 +46,8 @@ const GROUP_LABELS: Record<string, string> = {
   dienstplan: "Dienstplan und Vertretung",
 };
 
+const NO_TYPES: NotificationPreferenceType[] = [];
+
 const PARENT_GROUPS = new Set(["kinder", "mitteilungen", "termine"]);
 const PARENT_TYPES = new Set([
   "parent_announcement",
@@ -57,6 +57,7 @@ const PARENT_TYPES = new Set([
   "parent_request_decided",
   "parent_care_cancelled",
   "parent_class_timetable_changed",
+  "parent_school_closing_day_changed",
   "parent_billing_document",
 ]);
 
@@ -119,56 +120,48 @@ function NotificationPreferencesSectionContent({
       isParentPortal ? t(key, values) : german,
     [isParentPortal, t],
   );
-  const [types, setTypes] = useState<NotificationPreferenceType[]>([]);
-  const [tenantEnabled, setTenantEnabled] = useState(true);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [bulkEnabling, setBulkEnabling] = useState(false);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const {
+    data,
+    error: preferencesError,
+    mutate,
+  } = useSWRAuth(tenantAdminKeys.notificationPreferences(portal), () =>
+    fetchNotificationPreferences(portal),
+  );
+  const types = data?.types ?? NO_TYPES;
+  const tenantEnabled = data?.tenant_enabled ?? true;
   // Every portal uses the shared error path (#2517, #2518): a load error
   // stays in the card with retry, a failed switch is a toast.
-  const { error: loadError, show: showLoadError, clear } = useApiLoadError();
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [{ data, error: preferencesError }],
+    errorObject("errorObjectList", "die Liste der Benachrichtigungen"),
+    () => mutate(),
+  );
+  const loading = data === undefined && !failure;
   const { show: showActionError } = useApiErrorDisplay();
-  const latestLoadRef = useRef<() => void>(() => undefined);
   const latestToggleRef = useRef<
     (type: NotificationPreferenceType, enabled: boolean) => void
   >(() => undefined);
   const latestDisableAllRef = useRef<() => void>(() => undefined);
   const latestEnableAllRef = useRef<() => void>(() => undefined);
 
+  const setTypes = (
+    update: (
+      current: NotificationPreferenceType[],
+    ) => NotificationPreferenceType[],
+  ) =>
+    void mutate(
+      (current: NotificationPreferences | undefined) =>
+        current && { ...current, types: update(current.types) },
+      { revalidate: false },
+    );
+
   function typeLabel(type: NotificationPreferenceType): string {
     return isParentPortal && PARENT_TYPES.has(type.key)
       ? t(`types.${type.key}.label`)
       : type.label;
   }
-
-  const load = useCallback(async () => {
-    setLoadFailed(false);
-    clear();
-    try {
-      const data = await fetchNotificationPreferences(portal);
-      setTypes(data.types);
-      setTenantEnabled(data.tenant_enabled);
-    } catch (err) {
-      logger.error("notification_preferences_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setLoadFailed(true);
-      void showLoadError(err, {
-        object: errorObject(
-          "errorObjectList",
-          "die Liste der Benachrichtigungen",
-        ),
-        retry: () => latestLoadRef.current(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [clear, errorObject, portal, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const toggle = async (type: NotificationPreferenceType, enabled: boolean) => {
     // Optimistic: the switch answers immediately and rolls back on failure.
@@ -244,7 +237,7 @@ function NotificationPreferencesSectionContent({
           failedCount: results.filter((result) => result.status === "rejected")
             .length,
         });
-        await load();
+        await mutate();
         void showActionError(failure.reason, {
           object: errorObject(
             "errorObjectEnableAll",
@@ -265,7 +258,6 @@ function NotificationPreferencesSectionContent({
   };
 
   useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
     latestToggleRef.current = (type, enabled) => void toggle(type, enabled);
     latestDisableAllRef.current = () => void disableAll();
     latestEnableAllRef.current = () => void enableAll();
@@ -374,7 +366,7 @@ function NotificationPreferencesSectionContent({
         </div>
       )}
 
-      {loading || (loadFailed && !loadError) ? (
+      {loading || (failure && !loadError) ? (
         <div
           data-testid="notification-preferences-skeleton"
           className="space-y-5"

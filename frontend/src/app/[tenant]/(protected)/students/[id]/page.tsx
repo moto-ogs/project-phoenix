@@ -44,6 +44,8 @@ import { useLocalStorageValue } from "~/lib/hooks/use-local-storage-value";
 import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { useSWRAuth, useTenantMutate, useSWRSeedFrom } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import type { Student, SupervisorContact } from "~/lib/student-helpers";
 import {
   allowedDepartureModesFromDeparture,
@@ -115,12 +117,9 @@ import {
 } from "~/lib/student-status-days-api";
 import { parseISODate, berlinTodayISO } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { useWeekendFollowsFriday } from "~/lib/tenant-context";
+import { useModuleBooked, useWeekendFollowsFriday } from "~/lib/tenant-context";
 import { careWithdrawalNotice } from "~/lib/care-withdrawal-notice";
-import {
-  fetchStudentCareWithdrawal,
-  type CareWithdrawalCompletion,
-} from "~/lib/care-exit-api";
+import { fetchStudentCareWithdrawal } from "~/lib/care-exit-api";
 import { fetchStudentCarePlanDay } from "~/lib/student-care-plan-api";
 import {
   deleteStudentPartialAbsence,
@@ -603,6 +602,14 @@ function StudentDetailPageContent() {
   const canRecordAccidents =
     sessionStatus === "authenticated" &&
     hasPermission(session, "student_accidents:manage");
+  // „Aus moto“ im Dokumente-Tab (#4814): Elternbriefe und Einverständnisse
+  // lesen dieselben Rollen wie unter „Mitteilungen“ (admin:*), und nur an
+  // einer Schule mit der Eltern-App.
+  const elternAppBooked = useModuleBooked("eltern_app");
+  const showParentRecords =
+    sessionStatus === "authenticated" &&
+    elternAppBooked &&
+    hasPermission(session, "admin:*");
   // Eltern, Notizen und Nachrichten hängen an users:read; die Rolle „Gast“
   // sieht das Kind nur mit students:read (ADR 0091).
   const canReadParentData = sessionReadsChildDetails;
@@ -622,13 +629,31 @@ function StudentDetailPageContent() {
   // dieselbe Berechtigung wie das frühere Pane der Kinderdaten (#2487, #3115).
   const canManageRecord =
     sessionStatus === "authenticated" && hasPermission(session, "users:delete");
-  const [careWithdrawal, setCareWithdrawal] =
-    useState<CareWithdrawalCompletion | null>(null);
-  const careWithdrawalLoad = useApiLoadError();
-  const showCareWithdrawalError = careWithdrawalLoad.show;
-  const clearCareWithdrawalError = careWithdrawalLoad.clear;
-  // Bumped by „Wiederholen“ on a failed load of the open withdrawal.
-  const [careWithdrawalAttempt, setCareWithdrawalAttempt] = useState(0);
+  const {
+    data: loadedCareWithdrawal,
+    error: careWithdrawalError,
+    mutate: mutateCareWithdrawal,
+  } = useSWRAuth(
+    canCompleteCareWithdrawal && studentId
+      ? tenantStudentKeys.careWithdrawal(studentId)
+      : null,
+    () => fetchStudentCareWithdrawal(studentId),
+    { keepPreviousData: false },
+  );
+  const careWithdrawal = loadedCareWithdrawal ?? null;
+  const careWithdrawalLoad = useSwrResourceLoadError(
+    [{ data: loadedCareWithdrawal, error: careWithdrawalError }],
+    "die offene Abmeldung",
+    () => mutateCareWithdrawal(),
+  );
+  // A request decided, corrected or created elsewhere on the page can close
+  // or open the withdrawal.
+  useEffect(() => {
+    const reload = () => void mutateCareWithdrawal();
+    window.addEventListener(CHANGE_REQUESTS_REFRESH_EVENT, reload);
+    return () =>
+      window.removeEventListener(CHANGE_REQUESTS_REFRESH_EVENT, reload);
+  }, [mutateCareWithdrawal]);
   const [careWithdrawalModalOpen, setCareWithdrawalModalOpen] = useState(false);
   const visibleTabs = useMemo(
     () =>
@@ -952,47 +977,6 @@ function StudentDetailPageContent() {
   // while data is still loading: hasFullAccess defaults to false then, so acting
   // early would wrongly strip a valid full-access deep-link before it resolves.
   const urlTab = searchParams.get("tab");
-  useEffect(() => {
-    if (!canCompleteCareWithdrawal || !studentId) {
-      setCareWithdrawal(null);
-      clearCareWithdrawalError();
-      return;
-    }
-    let cancelled = false;
-    const load = () => {
-      void fetchStudentCareWithdrawal(studentId)
-        .then((result) => {
-          if (cancelled) return;
-          setCareWithdrawal(result);
-          clearCareWithdrawalError();
-        })
-        .catch((error: unknown) => {
-          if (cancelled) return;
-          logger.warn("care_withdrawal_warning_load_failed", {
-            student_id: studentId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          setCareWithdrawal(null);
-          void showCareWithdrawalError(error, {
-            object: "die offene Abmeldung",
-            retry: () => setCareWithdrawalAttempt((attempt) => attempt + 1),
-          });
-        });
-    };
-    load();
-    window.addEventListener(CHANGE_REQUESTS_REFRESH_EVENT, load);
-    return () => {
-      cancelled = true;
-      window.removeEventListener(CHANGE_REQUESTS_REFRESH_EVENT, load);
-    };
-  }, [
-    canCompleteCareWithdrawal,
-    careWithdrawalAttempt,
-    clearCareWithdrawalError,
-    showCareWithdrawalError,
-    studentId,
-  ]);
-
   useEffect(() => {
     if (loading || !student || sessionStatus === "loading") return;
     if (urlTab !== null && urlTab !== activeTab) {
@@ -1810,7 +1794,7 @@ function StudentDetailPageContent() {
             onClose={() => setCareWithdrawalModalOpen(false)}
             onFinished={() => {
               setCareWithdrawalModalOpen(false);
-              setCareWithdrawal(null);
+              void mutateCareWithdrawal(null, { revalidate: false });
               announceChangeRequestsChanged();
             }}
           />
@@ -1849,6 +1833,7 @@ function StudentDetailPageContent() {
           canViewEnrollments={canViewEnrollments}
           canViewCarePlan={canViewCarePlan}
           canRecordAccidents={canRecordAccidents}
+          showParentRecords={showParentRecords}
           canManageFamilyProtection={canViewEnrollments}
           canViewCareTimes={canReadParentData}
           onTabChange={handleTabChange}
@@ -2142,6 +2127,8 @@ interface FullAccessViewProps {
   canViewCarePlan: boolean;
   /** student_accidents:manage: „Unfall erfassen“ (#4771). */
   canRecordAccidents: boolean;
+  /** admin:* with the Eltern-App: „Aus moto“ in Dokumente (#4814). */
+  showParentRecords: boolean;
   canManageFamilyProtection: boolean;
   /** Soll und Ist (#4774) reads with users:read, as the backend route does. */
   canViewCareTimes: boolean;
@@ -2170,6 +2157,7 @@ function FullAccessView({
   canViewEnrollments,
   canViewCarePlan,
   canRecordAccidents,
+  showParentRecords,
   canManageFamilyProtection,
   canViewCareTimes,
   onTabChange,
@@ -2386,6 +2374,7 @@ function FullAccessView({
           <StudentDokumenteTab
             studentId={studentId}
             canRecordAccidents={canRecordAccidents}
+            showParentRecords={showParentRecords}
           />
         )}
       </StudentTabPanel>

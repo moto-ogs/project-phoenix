@@ -66,6 +66,6 @@ type EnrollmentRolloverSources struct {
 	Decisions  enrollmentCompose.RolloverDecider
 	ParentsURL string
 	Logger     *slog.Logger
-	// Now is the rollover's clock (ADR 0239); nil is the real clock.
+	// Now is the rollover's clock (ADR 0239); required.
 	Now func() time.Time
 }

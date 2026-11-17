@@ -1,13 +1,7 @@
 "use client";
 
 import type { ChangeRequestStatus } from "~/lib/enrollment-status";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
 import { ArrowRight, Check, Mail, UserRound, X } from "lucide-react";
@@ -27,15 +21,14 @@ import { CarePlanImpact } from "~/components/students/care-plan-impact";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EnrollmentChangeRequestDiff } from "~/components/enrollment/enrollment-change-request-diff";
 import { enrollmentChangeRequestStatusMeta } from "~/components/enrollment/enrollment-change-request-status";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Textarea } from "~/components/ui/textarea";
@@ -56,17 +49,12 @@ export function AdminEnrollmentChangeRequestDetail({
   readonly changeRequestId: string;
 }) {
   const tenantPath = useTenantAwarePath();
-  const [data, setData] = useState<AdminEnrollmentChangeRequest | null>(null);
   const [question, setQuestion] = useState("");
   const [reviewNote, setReviewNote] = useState("");
   const [busy, setBusy] = useState<"question" | "approve" | "reject" | null>(
     null,
   );
-  const [loading, setLoading] = useState(true);
   const toast = useToast();
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
   const questionErrors = useApiFormError();
   const reviewErrors = useApiFormError();
   // „Wiederholen“ sendet den aktuellen Stand, nicht den vom Fehler.
@@ -74,60 +62,37 @@ export function AdminEnrollmentChangeRequestDetail({
   const latestReviewRef = useRef<(approved: boolean) => Promise<void>>(
     async () => undefined,
   );
-  const reloadRef = useRef<() => Promise<void>>(async () => undefined);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    clearLoadError();
-    try {
-      const fresh = await getAdminEnrollmentChangeRequest(changeRequestId);
-      setData(fresh);
-    } catch (err) {
-      logger.error("change_request_detail_failed", {
-        error: err instanceof Error ? err.message : "unknown",
-      });
-      await showLoadError(err, {
-        object: "die Änderungsanfrage",
-        retry: () => void reloadRef.current(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [changeRequestId, clearLoadError, showLoadError]);
-
-  useLayoutEffect(() => {
-    reloadRef.current = load;
-  });
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const requestId = data?.request_id;
-  const [formLabels, setFormLabels] = useState<EnrollmentFormLabels | null>(
-    null,
+  const {
+    data,
+    error: dataError,
+    mutate: mutateData,
+  } = useSWRAuth(
+    enrollmentKeys.changeRequest(changeRequestId),
+    () => getAdminEnrollmentChangeRequest(changeRequestId),
+    { keepPreviousData: false },
   );
-  useLayoutEffect(() => {
-    setFormLabels(null);
-  }, [changeRequestId, requestId]);
-  useEffect(() => {
-    if (!requestId || data?.id !== changeRequestId) return;
-    let cancelled = false;
-    getAdminEnrollmentFormLabels(requestId)
-      .then((labels) => {
-        if (!cancelled) setFormLabels(labels);
-      })
-      .catch((err: unknown) => {
-        // Stays silent on purpose: the rows still show every value, only
-        // named by their stored key, and the review needs no extra step.
-        logger.warn("change_request_form_labels_failed", {
-          error: err instanceof Error ? err.message : "unknown",
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [changeRequestId, data?.id, requestId]);
+  const loadError = useSwrResourceLoadError(
+    [{ data, error: dataError }],
+    "die Änderungsanfrage",
+    () => mutateData(),
+  );
+  // A failed load stays loading until its error text is there, so no
+  // fallback shows in its place.
+  const loading =
+    (!data && !loadError.failure) ||
+    (loadError.failure !== undefined && loadError.error === null);
+  const setData = (fresh: AdminEnrollmentChangeRequest) =>
+    void mutateData(fresh, { revalidate: false });
+
+  // Without the labels the rows still show every value, named by its stored
+  // key, and the review needs no extra step: a failure stays silent.
+  const requestId = data?.id === changeRequestId ? data.request_id : undefined;
+  const { data: formLabels = null } = useSWRAuth(
+    requestId ? enrollmentKeys.formLabels(requestId) : null,
+    () => getAdminEnrollmentFormLabels(requestId ?? ""),
+    { keepPreviousData: false },
+  );
 
   const handleQuestion = async () => {
     const body = question.trim();

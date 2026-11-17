@@ -1,25 +1,18 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { MotoBrand } from "~/components/auth/moto-brand";
 import { useTenant } from "~/lib/tenant-context";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
 import { sessionFetch } from "~/lib/session-cache";
 import { loginImageSrc } from "~/lib/tenant-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Button } from "~/components/ui/button";
 import { Dropzone } from "~/components/ui/dropzone";
@@ -29,63 +22,69 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "PersonalizationTab" });
 
+interface LoginImageSetting {
+  readonly loginImageUrl: string | null;
+  readonly canEdit: boolean;
+}
+
+async function fetchLoginImage(): Promise<LoginImageSetting> {
+  const res = await sessionFetch("/api/settings/login-image");
+  if (!res.ok) {
+    throw await apiErrorFromResponse(
+      res,
+      `Login image fetch failed (${res.status})`,
+    );
+  }
+  const json = (await res.json()) as {
+    data?: {
+      login_image_url?: string | null;
+      can_edit?: boolean;
+    };
+  };
+  return {
+    loginImageUrl: json?.data?.login_image_url ?? null,
+    canEdit: json?.data?.can_edit ?? false,
+  };
+}
+
 export function PersonalizationTab() {
   const { tenant } = useTenant();
   const router = useRouter();
   const { success: toastSuccess } = useToast();
 
-  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(
-    tenant?.settings?.loginImageUrl ?? null,
-  );
-  const [canEdit, setCanEdit] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Laden: Fehler vor Ort mit Wiederholen, das Bild aus dem Schulkontext
   // bleibt stehen. Hochladen und Entfernen sind Aktionen ohne Formular: ein
   // Fehler kommt als Toast (#2517).
-  const { error: loadError, show: showLoadError, clear } = useApiLoadError();
+  const {
+    data,
+    error: imageError,
+    mutate,
+  } = useSWRAuth(tenantAdminKeys.loginImage(), fetchLoginImage);
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [{ data, error: imageError }],
+    "das Login-Bild",
+    () => mutate(),
+  );
+  const isLoading = data === undefined && !failure;
+  const currentImageUrl =
+    data?.loginImageUrl ??
+    (data ? null : (tenant?.settings?.loginImageUrl ?? null));
+  const canEdit = data?.canEdit ?? false;
+  const setCurrentImageUrl = useCallback(
+    (loginImageUrl: string | null) =>
+      void mutate(
+        (current: LoginImageSetting | undefined) =>
+          current && { ...current, loginImageUrl },
+        { revalidate: false },
+      ),
+    [mutate],
+  );
   const { show: showActionError, showMessage } = useApiErrorDisplay();
-  const latestLoadRef = useRef<() => void>(() => undefined);
   const latestUploadRef = useRef<(file: File) => void>(() => undefined);
   const latestDeleteRef = useRef<() => void>(() => undefined);
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    clear();
-    try {
-      const res = await sessionFetch("/api/settings/login-image");
-      if (!res.ok) {
-        throw await apiErrorFromResponse(
-          res,
-          `Login image fetch failed (${res.status})`,
-        );
-      }
-      const json = (await res.json()) as {
-        data?: {
-          login_image_url?: string | null;
-          can_edit?: boolean;
-        };
-      };
-      setCurrentImageUrl(json?.data?.login_image_url ?? null);
-      setCanEdit(json?.data?.can_edit ?? false);
-    } catch (err) {
-      logger.warn("login_image_fetch_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showLoadError(err, {
-        object: "das Login-Bild",
-        retry: () => latestLoadRef.current(),
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [clear, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const processFile = useCallback(
     async (file: File) => {
@@ -142,7 +141,7 @@ export function PersonalizationTab() {
         setIsUploading(false);
       }
     },
-    [toastSuccess, showMessage, router, showActionError],
+    [toastSuccess, showMessage, router, showActionError, setCurrentImageUrl],
   );
 
   const handleDelete = useCallback(async () => {
@@ -175,10 +174,9 @@ export function PersonalizationTab() {
     } finally {
       setIsDeleting(false);
     }
-  }, [toastSuccess, router, showActionError]);
+  }, [toastSuccess, router, showActionError, setCurrentImageUrl]);
 
   useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
     latestUploadRef.current = (file) => void processFile(file);
     latestDeleteRef.current = () => void handleDelete();
   });

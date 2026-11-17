@@ -9,6 +9,9 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
+      // The account's Sentry pseudonym (#3843): computed on the server with
+      // its secret, so the browser's error reports never carry the ID.
+      sentryUserId?: string;
       name?: string | null;
       email?: string | null;
       image?: string | null;

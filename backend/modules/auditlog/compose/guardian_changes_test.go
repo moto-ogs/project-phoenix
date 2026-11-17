@@ -61,7 +61,6 @@ func TestGuardianChangeLogRecordsRowsInAmbientTenantTransaction(t *testing.T) {
 		},
 	}
 	log := NewGuardianChangeLog()
-	before := time.Now().Add(-time.Minute)
 
 	require.NoError(t, testpkg.WithinTenantContext(t, context.Background(), db, tenantID, func(ctx context.Context) error {
 		return log.RecordGuardianChanges(ctx, changes)
@@ -78,7 +77,9 @@ func TestGuardianChangeLogRecordsRowsInAmbientTenantTransaction(t *testing.T) {
 	require.Equal(t, "can_pickup", rows[0].FieldName)
 	require.Equal(t, "false", *rows[0].OldValue)
 	require.Equal(t, "true", *rows[0].NewValue)
-	require.True(t, rows[0].ChangedAt.After(before), "changed_at comes from the database default")
+	var databaseNow time.Time
+	require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(context.Background(), &databaseNow))
+	require.WithinDuration(t, databaseNow, rows[0].ChangedAt, time.Minute, "the column default stamps changed_at (ADR 0281, Nachtrag)")
 	require.Equal(t, tenantID, rows[1].TenantID)
 	require.Nil(t, rows[1].ActorAccountID)
 	require.Nil(t, rows[1].ActorNameSnapshot)

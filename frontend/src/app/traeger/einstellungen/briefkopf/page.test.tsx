@@ -1,5 +1,5 @@
 import { useTenantMutateMatching } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 import {

@@ -51,10 +51,6 @@ vi.mock("~/components/messaging/new-message-modal", () => ({
   NewMessageModal: () => null,
 }));
 
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: () => false,
-}));
-
 import MessagesPage from "./page";
 
 // #4361: Absender und Kind tragen die Symbole aus dem Konzeptregister, damit

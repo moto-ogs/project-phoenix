@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,11 +36,14 @@ func TestAnOpenFallbackRequestEndsOnceTheFallbackIsGone(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := testpkg.WithTenantRuntime(t, context.Background(), db)
+	// Delivery stamps and claims next_retry_at and stamps the fallback request
+	// on its own clock, the real clock NewModule falls back to.
 	var mail int64
+	now := time.Now()
 	require.NoError(t, db.NewRaw(`INSERT INTO platform.email_outbox
 		(tenant_id, kind, recipient, payload, security, status, next_retry_at, fallback_requested_at)
-		VALUES (?, 'welcome', '{"address":"code@example.org"}'::jsonb, '{}'::jsonb, TRUE, 'pending', NOW() - INTERVAL '1 minute', NOW())
-		RETURNING id`, testpkg.Tenant(t)).Scan(ctx, &mail))
+		VALUES (?, 'welcome', '{"address":"code@example.org"}'::jsonb, '{}'::jsonb, TRUE, 'pending', ?, ?)
+		RETURNING id`, testpkg.Tenant(t), now.Add(-time.Minute), now).Scan(ctx, &mail))
 	runtime, err := NewModule(ModuleDependencies{DB: db, People: noGuardians{}, Observe: func(deliveryContract.Observation) {}})
 	require.NoError(t, err)
 	accepted, refused := 0, 0

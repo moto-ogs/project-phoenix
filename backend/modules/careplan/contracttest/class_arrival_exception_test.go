@@ -20,13 +20,14 @@ func TestClassArrivalExceptionRechecksMembershipAndRollsBack(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	first := testpkg.CreateTestStudent(t, db, "Arrival", "First", "1a")
 	second := testpkg.CreateTestStudent(t, db, "Arrival", "Transferred", "1a")
 	staff := testpkg.CreateTestStaff(t, db, "Arrival", "Author")
 	people := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db))
 	_, deps, err := owners.ArrivalScheduleBinding(people, nil, nil, nil)
 	require.NoError(t, err)
+	deps.Today = decisionTestDay
 
 	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, deps)
 	require.NoError(t, err)

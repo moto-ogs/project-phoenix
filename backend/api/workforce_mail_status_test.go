@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -169,7 +170,7 @@ func TestPayrollDispatchShowsWhatBecameOfItsMails(t *testing.T) {
 		{StaffID: 2, FirstName: "Max", LastName: "Leitung", Email: fmt.Sprintf("max-%d@example.test", testpkg.UniqueSuffix())},
 	}}
 	dispatch, err := owners.BuildPayrollDispatch(database, settings.Settings, payrollMailTestExport{}, transfer, outbox,
-		email.NewEmail("moto", "no-reply@example.test"), nil, organizations, managers, "https://moto.example", slog.Default())
+		email.NewEmail("moto", "no-reply@example.test"), nil, organizations, managers, "https://moto.example", slog.Default(), time.Now)
 	require.NoError(t, err)
 	testpkg.SetTestTenantSetting(t, db, testpkg.Tenant(t), "payroll.dispatch_auto", `true`)
 	testpkg.SetTestTenantSetting(t, db, testpkg.Tenant(t), "payroll.dispatch_channel", `"email"`)

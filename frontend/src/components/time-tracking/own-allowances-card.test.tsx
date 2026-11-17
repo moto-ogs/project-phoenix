@@ -1,5 +1,9 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 import { ABSENCES_REFRESH_EVENT } from "~/lib/absence-helpers";
 import { ApiError } from "~/lib/api-error";
@@ -51,7 +55,7 @@ describe("OwnAllowancesCard", () => {
   it("shows each Kontingent read-only with who changes the claim", async () => {
     mocks.getOwnAbsenceAllowances.mockResolvedValue([regeneration()]);
 
-    render(<OwnAllowancesCard />);
+    renderWithCache(<OwnAllowancesCard />);
 
     const card = await screen.findByRole("region", {
       name: "Regenerationstag 2026",
@@ -78,7 +82,7 @@ describe("OwnAllowancesCard", () => {
 
   it("stays away when the school has no type with an allowance", async () => {
     mocks.getOwnAbsenceAllowances.mockResolvedValue([]);
-    const { container } = render(<OwnAllowancesCard />);
+    const { container } = renderWithCache(<OwnAllowancesCard />);
     await waitFor(() =>
       expect(mocks.getOwnAbsenceAllowances).toHaveBeenCalledTimes(1),
     );
@@ -102,7 +106,7 @@ describe("OwnAllowancesCard", () => {
       }),
     );
 
-    render(<OwnAllowancesCard />);
+    renderWithCache(<OwnAllowancesCard />);
 
     expect(
       await screen.findByText(
@@ -116,7 +120,7 @@ describe("OwnAllowancesCard", () => {
 
   it("reloads when an absence changed", async () => {
     mocks.getOwnAbsenceAllowances.mockResolvedValue([regeneration()]);
-    render(<OwnAllowancesCard />);
+    renderWithCache(<OwnAllowancesCard />);
     expect(await screen.findByText("1,5 Tage")).toBeInTheDocument();
 
     const changed = regeneration();
@@ -130,3 +134,23 @@ describe("OwnAllowancesCard", () => {
     expect(await screen.findByText("2 Tage")).toBeInTheDocument();
   });
 });
+
+// Echter SWR-Cache je Render und eine Sitzung mit Konto, sonst liest
+// useSWRAuth nichts.
+function TenantSWR({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-test", tenantId: 1 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const renderWithCache = (ui: React.ReactElement) =>
+  render(ui, { wrapper: TenantSWR });

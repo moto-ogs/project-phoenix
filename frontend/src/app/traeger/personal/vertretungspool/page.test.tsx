@@ -1,9 +1,18 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { PoolWeek } from "~/lib/staff-pool-api";
+import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
+
+vi.unmock("swr");
 
 const { api, download } = vi.hoisted(() => ({
   api: {
@@ -30,10 +39,14 @@ vi.mock("next/navigation", () => ({
 
 import TraegerStaffPoolPage from "./page";
 
-// The test clock stands on Wednesday 2026-09-09; its week starts 2026-09-07.
+// The week of the test day starts on its Monday.
+const weekday = new Date(`${TEST_CLOCK_TODAY}T00:00:00Z`).getUTCDay();
+const MONDAY = testClockDay(-((weekday + 6) % 7));
+const THURSDAY = testClockDay(3 - ((weekday + 6) % 7));
+
 const WEEK: PoolWeek = {
-  weekStart: "2026-09-07",
-  today: "2026-09-09",
+  weekStart: MONDAY,
+  today: TEST_CLOCK_TODAY,
   available: true,
   springers: [
     {
@@ -49,7 +62,7 @@ const WEEK: PoolWeek = {
           schoolId: "2",
           schoolName: "OGS Süd",
           own: false,
-          date: "2026-09-10",
+          date: THURSDAY,
           startTime: "08:00",
           endTime: "12:00",
           lifted: false,
@@ -61,9 +74,9 @@ const WEEK: PoolWeek = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerStaffPoolPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -95,27 +108,32 @@ describe("TraegerStaffPoolPage", () => {
   });
 
   it("downloads the blocks of the shown week from the backend", async () => {
-    api.downloadTraegerPoolWeek.mockResolvedValue({
-      blob: new Blob(["x"]),
-      filename: "vertretungspool-2026-09-07.csv",
-    });
-    renderPage();
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "Blockungen der Woche herunterladen",
+    let resolveWeek!: (week: PoolWeek) => void;
+    api.fetchTraegerPoolWeek.mockReturnValue(
+      new Promise<PoolWeek>((resolve) => {
+        resolveWeek = resolve;
       }),
     );
+    api.downloadTraegerPoolWeek.mockResolvedValue({
+      blob: new Blob(["x"]),
+      filename: `vertretungspool-${MONDAY}.csv`,
+    });
+    renderPage();
+    const exportButton = await screen.findByRole("button", {
+      name: "Blockungen der Woche herunterladen",
+    });
+    expect(exportButton).toBeDisabled();
+    resolveWeek(WEEK);
+    await waitFor(() => expect(exportButton).toBeEnabled());
+    fireEvent.click(exportButton);
     fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
     await vi.waitFor(() =>
       expect(download).toHaveBeenCalledWith(
         expect.any(Blob),
-        "vertretungspool-2026-09-07.csv",
+        `vertretungspool-${MONDAY}.csv`,
       ),
     );
-    expect(api.downloadTraegerPoolWeek).toHaveBeenCalledWith(
-      "2026-09-07",
-      "csv",
-    );
+    expect(api.downloadTraegerPoolWeek).toHaveBeenCalledWith(MONDAY, "csv");
   });
 
   it("explains a Träger without the release", async () => {

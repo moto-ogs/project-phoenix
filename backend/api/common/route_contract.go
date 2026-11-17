@@ -4,8 +4,20 @@ package common
 // scope claim of that portal's session token.
 type PortalScope string
 
-// PortalTenant is the school staff portal.
-const PortalTenant PortalScope = "tenant"
+const (
+	// PortalTenant is the school staff portal.
+	PortalTenant PortalScope = "tenant"
+	// PortalParent is the guardians' portal, across every school of a guardian.
+	PortalParent PortalScope = "parent"
+	// PortalSchool is moto schule, the teachers' portal of one school.
+	PortalSchool PortalScope = "school"
+	// PortalTraeger is the Träger-Portal, bound to a Träger and no school.
+	PortalTraeger PortalScope = "org"
+	// PortalCaterer is the caterer portal, bound to no school.
+	PortalCaterer PortalScope = "caterer"
+	// PortalOperator is the operator portal of the moto team.
+	PortalOperator PortalScope = "platform"
+)
 
 // RouteContract is the typed registration of one route (ADR 0270): what the
 // route catalog's METHOD /pattern line does not say. The owner's http role
@@ -24,6 +36,9 @@ type RouteContract struct {
 	Response any
 	// Paginated says the route answers through RespondPaginated.
 	Paginated bool
+	// NoData replaces Response on a route that answers no data: a 204, or
+	// the envelope without a data member.
+	NoData bool
 	// Variants replaces Response on a legacy route whose query selects the
 	// response shape. New routes may not use it.
 	Variants *ResponseVariants

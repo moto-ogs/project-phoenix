@@ -16,8 +16,8 @@ import (
 type ActiveGroupRow struct {
 	bun.BaseModel  `bun:"table:active.groups,alias:group"`
 	ID             int64      `bun:"id,pk,autoincrement" json:"id"`
-	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+	CreatedAt      time.Time  `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt      time.Time  `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 	TenantID       int64      `bun:"tenant_id,notnull" json:"tenant_id"`
 	StartTime      time.Time  `bun:"start_time,notnull" json:"start_time"`
 	EndTime        *time.Time `bun:"end_time" json:"end_time,omitempty"`
@@ -32,8 +32,8 @@ type ActiveGroupRow struct {
 type GroupSupervisorRow struct {
 	bun.BaseModel `bun:"table:active.group_supervisors,alias:group_supervisor"`
 	ID            int64          `bun:"id,pk,autoincrement" json:"id"`
-	CreatedAt     time.Time      `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt     time.Time      `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+	CreatedAt     time.Time      `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt     time.Time      `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 	TenantID      int64          `bun:"tenant_id,notnull" json:"tenant_id"`
 	StaffID       int64          `bun:"staff_id,notnull" json:"staff_id"`
 	GroupID       int64          `bun:"group_id,notnull" json:"group_id"`

@@ -55,8 +55,11 @@ type EmailReconciliation struct {
 func NewEmailReconciliation(store interface {
 	ports.EmailReconciliationStore
 	ports.EmailDeliveryEventStore
-}, api ports.EmailProviderAPI, fallback bool, logger *slog.Logger, observe ports.Observer) *EmailReconciliation {
-	return &EmailReconciliation{store: store, api: api, fallback: fallback, logger: logger, observe: observe, now: time.Now}
+}, api ports.EmailProviderAPI, fallback bool, logger *slog.Logger, observe ports.Observer, now func() time.Time) *EmailReconciliation {
+	if now == nil {
+		panic("email reconciliation: the composition's clock is required")
+	}
+	return &EmailReconciliation{store: store, api: api, fallback: fallback, logger: logger, observe: observe, now: now}
 }
 
 // NewEmailEvents composes the webhook, the reconciliation and the lifting of a
@@ -75,10 +78,8 @@ func NewEmailEvents(config mail.ProviderConfig, store *WorkerCommands, observe p
 		api = newLettermintClient(lettermintClientConfig{TeamToken: config.TeamToken, WebhookID: config.WebhookID})
 	}
 	fallback := config.UsesLettermint()
-	webhooks := NewEmailWebhooks(store, []ports.EmailWebhookProvider{newLettermintWebhook(config.WebhookSecrets)}, fallback, logger, observe)
-	reconciliation := NewEmailReconciliation(store, api, fallback, logger, observe)
-	webhooks.now, reconciliation.now = now, now
-	return webhooks, reconciliation
+	webhooks := NewEmailWebhooks(store, []ports.EmailWebhookProvider{newLettermintWebhook(config.WebhookSecrets)}, fallback, logger, observe, now)
+	return webhooks, NewEmailReconciliation(store, api, fallback, logger, observe, now)
 }
 
 var (

@@ -20,12 +20,12 @@ type StaffMessageThreadRepository interface {
 	TouchLastMessage(context.Context, int64, time.Time, int64, int64, string) error
 	ParticipantAccountIDs(context.Context, int64) ([]int64, error)
 	IsParticipant(context.Context, int64, int64) (bool, error)
-	DeleteEmpty(context.Context, time.Time) (int64, error)
+	DeleteEmpty(ctx context.Context, retentionDays int) (int64, error)
 }
 type StaffMessageRepository interface {
 	Create(context.Context, *StaffMessage) error
 	ListByThread(context.Context, int64) ([]*StaffMessage, error)
-	DeleteOlderThan(context.Context, time.Time) (int64, error)
+	DeleteOlderThan(ctx context.Context, retentionDays int) (int64, error)
 }
 type StaffMessageReadRepository interface {
 	MarkReadUpTo(context.Context, int64, int64, time.Time, int64) error
@@ -64,8 +64,8 @@ func (r staffThreadRecords) ParticipantAccountIDs(ctx context.Context, id int64)
 func (r staffThreadRecords) IsParticipant(ctx context.Context, id, accountID int64) (bool, error) {
 	return r.source.HasStaffParticipant(ctx, id, accountID)
 }
-func (r staffThreadRecords) DeleteEmpty(ctx context.Context, before time.Time) (int64, error) {
-	return r.source.DeleteEmptyStaffThreads(ctx, before)
+func (r staffThreadRecords) DeleteEmpty(ctx context.Context, retentionDays int) (int64, error) {
+	return r.source.DeleteEmptyStaffThreads(ctx, retentionDays)
 }
 
 type staffMessageRecords struct{ source values.StaffMessageSource }
@@ -90,8 +90,8 @@ func (r staffMessageRecords) ListByThread(ctx context.Context, id int64) ([]*Sta
 	}
 	return result, err
 }
-func (r staffMessageRecords) DeleteOlderThan(ctx context.Context, before time.Time) (int64, error) {
-	return r.source.DeleteStaffMessagesBefore(ctx, before)
+func (r staffMessageRecords) DeleteOlderThan(ctx context.Context, retentionDays int) (int64, error) {
+	return r.source.DeleteStaffMessagesBefore(ctx, retentionDays)
 }
 
 type staffReadRecords struct{ source values.StaffReadSource }

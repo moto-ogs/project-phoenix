@@ -19,6 +19,7 @@
 
 // Re-export hooks
 export {
+  useFreshSWR,
   useSWRAuth,
   useSWRCacheKey,
   useSWRPreload,

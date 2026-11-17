@@ -66,8 +66,8 @@ type lifecycleSetup struct {
 	student2  int64
 	tmplID    int64
 	period    *testpkg.CalendarPeriod
-	// clock is the day the owner and the lifecycle decide on; nil is the
-	// real clock.
+	// clock is the day the owner and the lifecycle decide on, the real
+	// clock unless the suite pins one.
 	clock func() time.Time
 }
 
@@ -134,7 +134,7 @@ func buildLifecycle(t *testing.T, clocks ...func() time.Time) *lifecycleSetup {
 		student2:        student2.ID,
 		tmplID:          templateRow.ID,
 		period:          period,
-		clock:           api.OptionalClock(clocks),
+		clock:           suiteClock(clocks),
 	}
 	// These state-machine fixtures use fixed wall-clock windows. Time-policy
 	// boundaries have dedicated clock-injected tests; keep this suite focused on
@@ -524,4 +524,13 @@ func loadDeviationEvents(t *testing.T, db *bun.DB, ctx context.Context, tenantID
 		Scan(ctx)
 	require.NoError(t, err)
 	return rows
+}
+
+// suiteClock is the clock a suite pins, the real one otherwise: these
+// state-machine fixtures run on fixed wall-clock windows.
+func suiteClock(clocks []func() time.Time) func() time.Time {
+	if clock := api.OptionalClock(clocks); clock != nil {
+		return clock
+	}
+	return time.Now
 }

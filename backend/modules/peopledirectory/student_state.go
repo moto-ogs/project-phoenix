@@ -64,6 +64,10 @@ type StudentState struct {
 	// known (School Membership, #6073). Not on the wire.
 	CarePausedAfter *calendar.Date `json:"-"`
 	CareResumedFrom *calendar.Date `json:"-"`
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (School Membership, #4803). It never takes part in OGS care: no
+	// group, rooms, check-in, pickup, meals or OGS counts.
+	WithoutCarePlace bool `json:"without_care_place,omitempty"`
 
 	PhotoPath           *string    `json:"-"`
 	PhotoConsentGivenAt *time.Time `json:"photo_consent_given_at,omitempty"`
@@ -107,18 +111,40 @@ func (s *StudentState) HealthInfoOn(day calendar.Date) *string {
 	return s.HealthInfo
 }
 
-// CareLifecycle is a child's graduation and end-of-care facts, as every
-// student view of the People Directory reports them.
+// HasCarePlace reports whether the child has a place in the OGS. A child
+// without one (#4803) belongs to its class only. A nil row has none.
+func (s *StudentState) HasCarePlace() bool { return s != nil && !s.WithoutCarePlace }
+
+// ClassMemberFrom is the first day a child without an OGS place belongs to
+// its class: its enrollment start, else the Berlin day its record was
+// created. The class-name read (ListNamesByClass) states the same rule in SQL.
+func (s *StudentState) ClassMemberFrom() calendar.Date {
+	if s.EnrolledFrom != nil {
+		return *s.EnrolledFrom
+	}
+	return calendar.DateFromTime(s.CreatedAt)
+}
+
+// LeftSchool reports a child that is neither active nor waiting for its
+// start (graduate or inactive); it belongs to its class only up to a dated
+// enrollment end.
+func (s *StudentState) LeftSchool() bool {
+	return s.Status != StudentStatusActive && s.Status != StudentStatusPending
+}
+
+// CareLifecycle is a child's graduation, end-of-care and OGS-place facts, as
+// every student view of the People Directory reports them.
 type CareLifecycle interface {
 	IsAlumnus() bool
 	CareEndedOn(day calendar.Date) bool
+	HasCarePlace() bool
 }
 
-// AttendsOn reports whether a child still attends on day: a graduate does
-// not, nor a child past the last care day (#405, #2487); the last care day
-// itself still counts.
+// AttendsOn reports whether a child still attends the OGS on day: a
+// graduate does not, nor a child past the last care day (#405, #2487), nor a
+// child without an OGS place (#4803); the last care day itself still counts.
 func AttendsOn(student CareLifecycle, day calendar.Date) bool {
-	return !student.IsAlumnus() && !student.CareEndedOn(day)
+	return !student.IsAlumnus() && !student.CareEndedOn(day) && student.HasCarePlace()
 }
 
 // SnapshotDeparturePlan records the current in-memory departure plan as the
@@ -168,6 +194,8 @@ func StudentStateFromRecord(record StudentRecord) *StudentState {
 		FirstCareFrom:   OptionalCalendarDate(record.FirstCareFrom),
 		CarePausedAfter: OptionalCalendarDate(record.CarePausedAfter),
 		CareResumedFrom: OptionalCalendarDate(record.CareResumedFrom),
+
+		WithoutCarePlace: record.WithoutCarePlace,
 
 		PhotoPath:           record.PhotoPath,
 		PhotoConsentGivenAt: record.PhotoConsentGivenAt,

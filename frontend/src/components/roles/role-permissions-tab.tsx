@@ -1,14 +1,7 @@
 "use client";
 
 import { EmptyState } from "~/components/ui/empty-state";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { EditActions } from "~/components/ui/edit-actions";
@@ -19,15 +12,14 @@ import {
 import { Input } from "~/components/ui/input";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
 import { SectionCard } from "~/components/ui/section-card";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { authService } from "~/lib/auth-service";
 import type { Permission, Role } from "~/lib/auth-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import {
   formatPermissionDisplay,
   isReservedPermission,
@@ -50,6 +42,8 @@ interface RolePermissionsTabProps {
 }
 
 type AssignedMap = Record<string, boolean>;
+
+const NO_PERMISSIONS: readonly Permission[] = [];
 
 function groupByResource(
   permissions: readonly Permission[],
@@ -102,17 +96,66 @@ export function RolePermissionsTab({
   onCancelEdit,
 }: RolePermissionsTabProps) {
   const { success: toastSuccess } = useToast();
-  const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
-  const [assignedMap, setAssignedMap] = useState<AssignedMap>({});
-  const [draftMap, setDraftMap] = useState<AssignedMap>({});
-  const [loading, setLoading] = useState(true);
+  const wasEditing = useRef(editing);
+  const enteringEdit = editing && !wasEditing.current;
+  const assignedRead = useFreshSWR(
+    staffAccessKeys.rolePermissions(role.id),
+    () => authService.getRolePermissions(role.id),
+    {
+      keepPreviousData: false,
+      // Eine bestätigte Liste ersetzt einen älteren Hinweis zum Nachladen.
+      onSuccess: () => clearReloadError.current(),
+    },
+  );
+  const catalogRead = useSWRAuth(
+    editing ? staffAccessKeys.permissionCatalog() : null,
+    () => authService.getPermissions(),
+  );
+  const assigned = assignedRead.data;
+  const mutateAssigned = assignedRead.mutate;
+  const mutateCatalog = catalogRead.mutate;
+  const allPermissions = useMemo(
+    () => (editing ? catalogRead.data : assigned) ?? NO_PERMISSIONS,
+    [editing, catalogRead.data, assigned],
+  );
+  const assignedMap = useMemo(() => {
+    const map: AssignedMap = {};
+    for (const permission of assigned ?? NO_PERMISSIONS)
+      map[permission.id] = true;
+    return map;
+  }, [assigned]);
   // Ladefehler vor Ort, Speicherfehler im Formular, beide mit Wiederholen
-  // (#2517).
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+  // (#2517). Bis der Katalogtext eines Ladefehlers da ist, bleibt der
+  // Ladezustand.
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [
+      {
+        data: assigned,
+        error: assignedRead.error,
+        // Im Bearbeiten zählt nur der Stand dieses Abrufs: Schlägt er fehl,
+        // zeigt der Reiter den Ladefehler statt Kästchen auf älterem Stand.
+        ...(editing ? { hasConfirmedData: false } : {}),
+      },
+      ...(editing
+        ? [{ data: catalogRead.data, error: catalogRead.error }]
+        : []),
+    ],
+    "die Liste der Berechtigungen",
+    () => Promise.all([mutateAssigned(), editing ? mutateCatalog() : null]),
+  );
+  const loadFailed = failure !== undefined;
+  const loading =
+    !loadFailed &&
+    (enteringEdit ||
+      // Im Bearbeiten beginnt kein Entwurf, solange ein Abruf läuft: Er
+      // überschriebe sonst die Änderung einer Kollegin.
+      (editing && assignedRead.isValidating) ||
+      !assigned ||
+      (editing && catalogRead.data === undefined));
+  // Der Entwurf: null heißt unverändert, also der gespeicherte Stand. Ein
+  // Klick setzt ihn auf Grundlage des gerade gezeigten Stands (#3346).
+  const [draft, setDraft] = useState<AssignedMap | null>(null);
+  const draftMap = draft ?? assignedMap;
   const [completingSave, setSaving] = useState(false);
   const [reloading, setReloading] = useState(false);
   const saving = completingSave || reloading;
@@ -123,65 +166,26 @@ export function RolePermissionsTab({
     clear: clearSaveError,
   } = useApiFormError(formRef);
   const latestSaveRef = useRef<() => void>(() => undefined);
-  // Bis der Katalogtext eines Ladefehlers da ist, bleibt der Ladezustand.
-  const [loadFailed, setLoadFailed] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const latestPermissionRequest = useRef(0);
-  const draftDirty = useRef(false);
   const clearReloadError = useRef<() => void>(() => undefined);
 
-  const fetchPermissions = useCallback(
-    async (includeCatalogue: boolean, options: { rethrow?: boolean } = {}) => {
-      const request = ++latestPermissionRequest.current;
-      try {
-        // Nach dem Speichern bleibt die bestätigte Liste stehen (#6652).
-        if (!options.rethrow) {
-          setLoading(true);
-          setLoadFailed(false);
-          clearLoadError();
-        }
-        const assignedRequest = authService.getRolePermissions(role.id);
-        const [assigned, all] = includeCatalogue
-          ? await Promise.all([assignedRequest, authService.getPermissions()])
-          : [await assignedRequest, undefined];
-        if (request !== latestPermissionRequest.current) return;
-        const map: AssignedMap = {};
-        for (const permission of assigned) map[permission.id] = true;
-        setAllPermissions(all ?? assigned);
-        setAssignedMap(map);
-        if (!draftDirty.current) setDraftMap(map);
-        clearReloadError.current();
-      } catch (error) {
-        if (request !== latestPermissionRequest.current) return;
-        logger.error("role_permissions_load_failed", {
-          role_id: role.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        if (options.rethrow) throw error;
-        setLoadFailed(true);
-        void showLoadError(error, {
-          object: "die Liste der Berechtigungen",
-          retry: () => void fetchPermissions(includeCatalogue),
-        });
-      } finally {
-        if (request === latestPermissionRequest.current) setLoading(false);
-      }
-    },
-    [role.id, clearLoadError, showLoadError],
-  );
-
-  useEffect(() => {
-    void fetchPermissions(editing);
-  }, [editing, fetchPermissions]);
   // Nachladen nach dem Speichern: ein Fehler dabei ist ein Ladefehler, kein
-  // Fehler des Speicherns (#6652).
+  // Fehler des Speicherns (#6652). Der Abruf läuft direkt, damit sein Fehler
+  // hier ankommt; die Antwort ersetzt den Eintrag im Cache.
   const afterSave = useRefreshAfterWrite(
     "die Anzeige der Berechtigungen",
     async () => {
       setReloading(true);
       try {
-        await fetchPermissions(true, { rethrow: true });
+        const [fresh, catalog] = await Promise.all([
+          authService.getRolePermissions(role.id),
+          authService.getPermissions(),
+        ]);
+        await Promise.all([
+          mutateAssigned(fresh, { revalidate: false }),
+          mutateCatalog(catalog, { revalidate: false }),
+        ]);
       } finally {
         setReloading(false);
       }
@@ -192,24 +196,18 @@ export function RolePermissionsTab({
     clearReloadError.current = afterSave.clear;
   });
 
-  const wasEditing = useRef(false);
-
-  // Der Entwurf beginnt beim Umschalten in den Bearbeiten-Zustand immer beim
-  // gespeicherten Stand; ein Abbruch wirft die Kästchen zurück. Nur beim
-  // Umschalten: setAssignedMap übergibt bei jedem Laden ein frisches Objekt,
-  // und ein Reset auf dessen Identität verwirft einen Klick, der vor dem
-  // passiven Effekt des Lade-Commits liegt. Den Entwurf setzt der Ladepfad in
-  // fetchPermissions selbst (#3346).
+  // Beim Umschalten zwischen Ansicht und Bearbeiten liest der Reiter den
+  // gespeicherten Stand neu; der Entwurf beginnt dort, ein Abbruch wirft die
+  // Kästchen zurück.
   useEffect(() => {
-    const entersEditing = editing && !wasEditing.current;
+    if (wasEditing.current === editing) return;
     wasEditing.current = editing;
-    if (!editing) draftDirty.current = false;
-    if (!entersEditing) return;
-    draftDirty.current = false;
-    setDraftMap(assignedMap);
+    setDraft(null);
+    void mutateAssigned();
+    if (!editing) return;
     setSearchTerm("");
     clearSaveError();
-  }, [assignedMap, editing, clearSaveError]);
+  }, [editing, mutateAssigned, clearSaveError]);
 
   const assignedCount = useMemo(
     () => allPermissions.filter((p) => assignedMap[p.id] === true).length,
@@ -268,16 +266,15 @@ export function RolePermissionsTab({
     filteredPermissions.every((p) => draftMap[p.id] === true);
 
   const toggleOne = (permissionId: string) => {
-    draftDirty.current = true;
-    setDraftMap((current) => ({
-      ...current,
-      [permissionId]: !current[permissionId],
-    }));
+    setDraft((previous) => {
+      const current = previous ?? assignedMap;
+      return { ...current, [permissionId]: !current[permissionId] };
+    });
   };
 
   const toggleMany = (permissions: readonly Permission[]) => {
-    draftDirty.current = true;
-    setDraftMap((current) => {
+    setDraft((previous) => {
+      const current = previous ?? assignedMap;
       const allChecked = permissions.every((p) => current[p.id] === true);
       const next = { ...current };
       for (const p of permissions) next[p.id] = !allChecked;
@@ -307,8 +304,11 @@ export function RolePermissionsTab({
       return;
     }
     // The write confirms this selection even if the following reads fail.
-    draftDirty.current = false;
-    setAssignedMap({ ...draftMap });
+    setDraft(null);
+    await mutateAssigned(
+      allPermissions.filter((permission) => draftMap[permission.id] === true),
+      { revalidate: false },
+    );
     try {
       await afterSave.refresh();
       await onSaved();

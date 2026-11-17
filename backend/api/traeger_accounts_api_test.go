@@ -445,8 +445,9 @@ func TestTraegerInvitationExpiresWithTheSchoolInvitations(t *testing.T) {
 	_, admin := traegerMember(t, db, router, organizationID, identityaccess.TraegerRoleLeadership)
 	expired := traegerInvite(t, db, router, admin.AccessToken, fmt.Sprintf("alt-%d@test.local", testpkg.UniqueTestTenantID(t)), identityaccess.TraegerRoleReadOnly)
 	open := traegerInvite(t, db, router, admin.AccessToken, fmt.Sprintf("neu-%d@test.local", testpkg.UniqueTestTenantID(t)), identityaccess.TraegerRoleReadOnly)
-	_, err := db.ExecContext(context.Background(), `UPDATE auth.traeger_invitations SET expires_at = NOW() - INTERVAL '1 minute'
-		WHERE organization_id = ? AND email LIKE 'alt-%'`, organizationID)
+	// Identity & Access dates invitations on its clock, time.Now (ADR 0281).
+	_, err := db.ExecContext(context.Background(), `UPDATE auth.traeger_invitations SET expires_at = ?
+		WHERE organization_id = ? AND email LIKE 'alt-%'`, time.Now().Add(-time.Minute), organizationID)
 	require.NoError(t, err)
 
 	rec := traegerCall(t, router, http.MethodGet, "/traeger/invitations/"+expired, "", nil)

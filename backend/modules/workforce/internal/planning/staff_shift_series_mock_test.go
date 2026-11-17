@@ -189,9 +189,8 @@ func newSeriesServiceForTest(m seriesServiceMocks) StaffShiftSeriesService {
 	}
 	// nil db skips the advisory lock (same convention as the single-shift
 	// unit tests).
-	service := NewStaffShiftSeriesService(m.series, m.exceptions, m.shifts, m.staff, m.period, nil, nil, nil, m.occurrenceUpdater)
-	service.(*staffShiftSeriesService).today = func() calendar.Date { return calendar.Date(seriesTestToday) }
-	return service
+	return NewStaffShiftSeriesService(m.series, m.exceptions, m.shifts, m.staff, m.period, nil, nil, nil, m.occurrenceUpdater,
+		WithStaffShiftSeriesToday(func() calendar.Date { return calendar.Date(seriesTestToday) }))
 }
 
 func unitSeries(t *testing.T) *StaffShiftSeries {

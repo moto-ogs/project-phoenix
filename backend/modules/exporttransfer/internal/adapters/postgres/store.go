@@ -201,6 +201,20 @@ const settleExpiredTraegerTransfers = `WITH expired AS (
  status='failed',failure_reason='internal_error',updated_at=clock_timestamp()
  FROM expired WHERE attempt.id=expired.id`
 
+// DatabaseTime reads the clock that stamps the journal and guards its
+// deletion window.
+func (s *Store) DatabaseTime(ctx context.Context) (time.Time, error) {
+	db, _, err := s.database(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	var now time.Time
+	if err := db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &now); err != nil {
+		return time.Time{}, fmt.Errorf("export transfer postgres: read the database time: %w", err)
+	}
+	return now, nil
+}
+
 // DeleteExpired removes the school's journal entries before the instant
 // through the database function of 1.15.454: the direct DELETE on
 // audit.export_transfers stays revoked from the tenant role, and the

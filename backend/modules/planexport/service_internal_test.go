@@ -402,7 +402,7 @@ func TestDienstplanLabelsNonWorkingDays(t *testing.T) {
 	t.Parallel()
 
 	renderer := &captureRenderer{}
-	service := NewService(Dependencies{
+	service := NewService(Dependencies{Now: planExportTestClock,
 		Overview: stubOverview{overview: &StaffScheduleOverview{
 			Staff:  []*StaffMember{staffMember(7, "Franziska", "Kessener")},
 			Shifts: []*Shift{shift(1, 7, monday, clock(7, 30), clock(14, 0))},
@@ -423,7 +423,7 @@ func TestDienstplanKeepsNonWorkingDaysForAnOtherwiseEmptyWeek(t *testing.T) {
 	t.Parallel()
 
 	renderer := &captureRenderer{}
-	service := NewService(Dependencies{
+	service := NewService(Dependencies{Now: planExportTestClock,
 		Overview: stubOverview{overview: &StaffScheduleOverview{}},
 		ClosingDays: stubClosingDays{days: []*ClosingPeriod{
 			closingRange(monday, monday.AddDays(4), "Betriebsferien"),
@@ -442,7 +442,7 @@ func TestDienstplanKeepsNonWorkingDaysForAnOtherwiseEmptyWeek(t *testing.T) {
 func TestNonWorkingDaysClampsLongClosingRangesToTheExportWindow(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(Dependencies{
+	svc := NewService(Dependencies{Now: planExportTestClock,
 		ClosingDays: stubClosingDays{days: []*ClosingPeriod{
 			closingRange(monday.AddDays(-100_000), monday.AddDays(100_000), "Betriebsferien"),
 		}},

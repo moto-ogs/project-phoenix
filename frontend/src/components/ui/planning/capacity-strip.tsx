@@ -53,11 +53,6 @@ interface CapacityStripProps {
   /** Leading cell label, e.g. "Kapazität 12-16". */
   readonly rowLabel: ReactNode;
   readonly cells: readonly CapacityStripCell[];
-  /**
-   * Sticks the label cell to the left so it aligns under a sticky row-header
-   * column. Default on; turn off for standalone use without a sticky column.
-   */
-  readonly stickyLabel?: boolean;
   readonly className?: string;
   /**
    * Render as a table row (default, drops into a ResourceGrid <tfoot>) or as
@@ -124,7 +119,6 @@ function CellValue({ cell }: { readonly cell: CapacityStripCell }) {
 export function CapacityStrip({
   rowLabel,
   cells,
-  stickyLabel = true,
   className,
   as = "tr",
   gridTemplateColumns,
@@ -151,7 +145,7 @@ export function CapacityStrip({
         >
           <div
             role="rowheader"
-            className={`${stickyLabel ? `sticky left-0 ${Z_LAYER.raised}` : ""} ${labelWidthClassName} bg-gray-50 px-2 py-1.5 text-left text-xs font-medium text-gray-500`}
+            className={`sticky left-0 ${Z_LAYER.raised} ${labelWidthClassName} bg-gray-50 px-2 py-1.5 text-left text-xs font-medium text-gray-500`}
           >
             {rowLabel}
           </div>
@@ -174,7 +168,7 @@ export function CapacityStrip({
     <tr className={`${borderClass} bg-gray-50 ${className ?? ""}`.trim()}>
       <th
         scope="row"
-        className={`${stickyLabel ? `sticky left-0 ${Z_LAYER.raised}` : ""} ${labelWidthClassName} bg-gray-50 px-2 py-1.5 text-left text-xs font-medium text-gray-500`}
+        className={`sticky left-0 ${Z_LAYER.raised} ${labelWidthClassName} bg-gray-50 px-2 py-1.5 text-left text-xs font-medium text-gray-500`}
       >
         {rowLabel}
       </th>

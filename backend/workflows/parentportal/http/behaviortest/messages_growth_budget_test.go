@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api"
@@ -45,7 +46,7 @@ func TestParentPortalMessagesPositiveGrowthQueryBudget(t *testing.T) {
 		MessageThreadRepo: owners.BindParentMessageThreadAccess(messages.ParentMessageThread), MessageRepo: owners.BindParentMessageReads(messageRepo), MessageReadRepo: owners.BindParentMessageInboxReads(messages.ParentMessageRead),
 		Conversations: api.NewParentConversationCore(messages.ParentMessageThread, messageRepo, messages.ParentMessageRead, broadcaster, slog.Default()), GroupThreads: api.NewParentGroupThreadTestPort(database),
 	})
-	router := parentHTTP.NewResource(parentHTTP.ResourceConfig{Parent: portal}).Router(func(r chi.Router) {
+	router := parentHTTP.NewResource(parentHTTP.ResourceConfig{Now: time.Now, Parent: portal}).Router(func(r chi.Router) {
 		r.Use(api.RequestSettingsCacheMiddleware, api.RequestIdentityCacheMiddleware)
 		api.ParentSessionChain(r)
 	})

@@ -75,7 +75,7 @@ func NewRejectedCleanup(deps RejectedCleanupDependencies) *RejectedCleanup {
 		deps.Logger = slog.Default()
 	}
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("enrollment rejected cleanup: the clock is required")
 	}
 	if deps.Today == nil {
 		deps.Today = calendar.CalendarDateClock(deps.Now)

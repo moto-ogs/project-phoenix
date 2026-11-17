@@ -56,6 +56,9 @@ type SubstitutionAdapterDependencies struct {
 	Engine        ScheduleDeviations
 	Broadcaster   realtime.Broadcaster
 	Logger        *slog.Logger
+	// Today is the school day the overview compares appointments with: one
+	// before it can no longer change.
+	Today func() calendar.Date
 }
 
 // SubstitutionAdapter serves the schedule writes of the Terminvertretung
@@ -111,7 +114,7 @@ func (a *SubstitutionAdapter) overview(
 		return nil, err
 	}
 	return &education.ScheduleOverview{
-		Appointments: projectSubstitutionAppointments(instances, deviations, staffByID, canManage),
+		Appointments: projectSubstitutionAppointments(instances, deviations, staffByID, canManage, a.deps.Today()),
 		Targets:      targets,
 	}, nil
 }
@@ -147,7 +150,7 @@ func (a *SubstitutionAdapter) loadOverviewStaff(ctx context.Context, instances [
 	return deviationsByInstance, staffByID, nil
 }
 
-func projectSubstitutionAppointments(instances []*timetable.ScheduledInstance, deviations map[int64][]*timetable.InstanceStaff, staffByID map[int64]*workforce.PlanStaff, canManage bool) []education.ScheduleAppointmentOverview {
+func projectSubstitutionAppointments(instances []*timetable.ScheduledInstance, deviations map[int64][]*timetable.InstanceStaff, staffByID map[int64]*workforce.PlanStaff, canManage bool, today calendar.Date) []education.ScheduleAppointmentOverview {
 	appointments := make([]education.ScheduleAppointmentOverview, 0, len(deviations))
 	for _, instance := range instances {
 		rows := deviations[instance.ID]
@@ -155,7 +158,7 @@ func projectSubstitutionAppointments(instances []*timetable.ScheduledInstance, d
 			continue
 		}
 		staff := make([]education.ScheduleAppointmentStaff, 0, len(rows))
-		canChange := canManage && !instance.Date.Before(calendar.TodayDate()) && isPlannableInstance(instance)
+		canChange := canManage && !instance.Date.Before(today) && isPlannableInstance(instance)
 		for _, row := range rows {
 			member := staffByID[row.StaffID]
 			name := ""

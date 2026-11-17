@@ -56,6 +56,12 @@ jobs:
       # frontend-only pushes and CI changes outside its own workflow definition
       # cannot affect it and must not buy another runner.
       run-seed-smoke: ${{ steps.filter.outputs.backend-production == 'true' || steps.filter.outputs.seed-smoke-infra == 'true' }}
+      # Pull requests run only the profiles scenario: it seeds every profile and
+      # the standing demo and holds the coverage ratchet. isolation and queue
+      # (two schools in one database, prospect schools) took two thirds of the
+      # job's hosted minutes (14.11.2026: 837 of 1250) and run on release pull
+      # requests, main pushes, nightly and changes to the seeder or this job.
+      seed-smoke-all-scenarios: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.seed-smoke-infra == 'true' || steps.filter.outputs.seeder == 'true' }}
       # Changes to main.yml or test.yml validate the complete test commands.
       # Ordinary PRs use changed-test selection; protected-branch pushes and
       # release pull requests are always full because they revalidate the whole
@@ -197,6 +203,8 @@ jobs:
               - 'backend/modules/organizationtenancy/data_lifecycle_catalog.json'
               - 'backend/modules/documentrendering/internal/application/listrenderer/assets/**'
               - 'backend/templates/email/**'
+            seeder:
+              - 'backend/internal/devtools/**'
             seed-smoke-infra:
               - '.github/workflows/main.yml'
               - '.github/workflows/test.yml'
@@ -492,7 +500,12 @@ jobs:
           ) }}
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    # Blacksmith: in a private repository GitHub-hosted runners bill at a
+    # higher price per vCPU (.claude/rules/ci-test-performance.md). unit keeps
+    # its cores busy: 168 + 52 s on 2 vCPU against 70 + 20 s on the hosted
+    # 4 vCPU, same price at half the wall time (#7286). The restore suites
+    # wait on I/O and took as long on 2 vCPU (283 s) as hosted.
+    runs-on: ${{ (matrix.suite == 'restore' || matrix.suite == 'release-restore') && 'blacksmith-2vcpu-ubuntu-2404' || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -792,6 +805,7 @@ jobs:
       run-backend: ${{ needs.detect-changes.outputs.run-backend == 'true' }}
       run-frontend: ${{ needs.detect-changes.outputs.run-frontend == 'true' }}
       run-seed-smoke: ${{ needs.detect-changes.outputs.run-seed-smoke == 'true' }}
+      seed-smoke-all-scenarios: ${{ needs.detect-changes.outputs.seed-smoke-all-scenarios == 'true' }}
       changed-scope: ${{ needs.detect-changes.outputs.changed-scope == 'true' }}
       base_ref: ${{ needs.detect-changes.outputs.base-ref }}
       full-backend-suite: ${{ needs.detect-changes.outputs.full-backend-suite == 'true' }}

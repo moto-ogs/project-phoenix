@@ -33,7 +33,7 @@ func (c scalarStudentPreview) AddsToChildQuota(ctx context.Context, row dataimpo
 
 func previewConfigForTest(persons ports.PersonDirectory, students ports.StudentDirectory) ports.ImportConfig[dataimport.StudentImportRow] {
 	empty := func(context.Context) ([]dataimport.Reference, error) { return nil, nil }
-	return imports.NewStudentImportConfig(ports.StudentImportDeps{
+	return imports.NewStudentImportConfig(ports.StudentImportDeps{Now: time.Now,
 		Transactions: importCompose.NewTransactions(), Persons: persons, Students: students,
 		Resolver: imports.NewRelationshipResolver(empty, empty), CountsTowardChildQuota: api.ImportChildQuotaRule(),
 	})
@@ -45,7 +45,7 @@ func runPreviewForTest(t *testing.T, ctx context.Context, config ports.ImportCon
 	require.NoError(t, err)
 	request.Rows = nil
 	require.NoError(t, json.Unmarshal(encoded, &request.Rows))
-	result, err := imports.NewImportService(config, ports.ImportRuntime{}).Import(ctx, request)
+	result, err := imports.NewImportService(config, ports.ImportRuntime{Now: time.Now}).Import(ctx, request)
 	require.NoError(t, err)
 	result.StartedAt, result.CompletedAt = time.Time{}, time.Time{}
 	for index := range result.Errors {

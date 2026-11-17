@@ -4,7 +4,7 @@ import { FieldShell, useFieldIds } from "~/components/ui/field-shell";
 import { ToggleChip } from "~/components/ui/toggle-chip";
 import { cn } from "~/lib/utils";
 
-export interface WeekdayToggleOption<T extends string | number> {
+interface WeekdayToggleOption<T extends string | number> {
   readonly value: T;
   /** Sichtbares Kürzel: „Mo“. */
   readonly label: string;

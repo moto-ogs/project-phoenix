@@ -24,6 +24,7 @@ func TestRecordCareUsageExportAuditIncludesLayout(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := &fakeExportAccessLog{}
 			svc := NewReports(ReportDependencies{
+				Now:       enrollmentTestClock,
 				AccessLog: repo,
 				Phases:    &fakeClassRosterPhaseRepo{},
 			})

@@ -17,7 +17,10 @@ import { toISODate } from "~/lib/date-helpers";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { ParentCalendarPage } from "./parent-calendar-page";
+
+vi.unmock("swr");
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -79,7 +82,12 @@ function calendarResponse(events: ReturnType<typeof event>[]) {
 }
 
 function renderPage() {
-  return render(<ParentCalendarPage />, { wrapper: ToastProvider });
+  return render(
+    <ParentResourceTestProvider>
+      <ParentCalendarPage />
+    </ParentResourceTestProvider>,
+    { wrapper: ToastProvider },
+  );
 }
 
 beforeEach(() => {

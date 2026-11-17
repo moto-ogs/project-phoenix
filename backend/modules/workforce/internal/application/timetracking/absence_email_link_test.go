@@ -21,7 +21,7 @@ func TestAbsenceEmailLinkRequiresSchoolSubdomain(t *testing.T) {
 		{"missing subdomain", absenceEmailSchoolFinderStub{found: true}, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := &staffAbsenceService{emailDeps: &AbsenceEmailDeps{SchoolRepo: tc.school, FrontendURL: "http://localhost:3000"}}
+			svc := &staffAbsenceService{emailDeps: &AbsenceEmailDeps{SchoolRepo: tc.school, FrontendURL: "http://localhost:3000"}, nowFunc: testNow}
 			absence := notificationTestAbsence(AbsenceStatusRequested)
 			link, ok := svc.absenceEmailLink(context.Background(), absence, "/staff")
 			require.Equal(t, tc.want, link)

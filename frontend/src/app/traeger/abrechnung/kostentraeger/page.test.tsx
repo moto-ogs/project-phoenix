@@ -1,12 +1,13 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   CareCostShare,
   CareCostShareSet,
 } from "~/lib/traeger-care-cost-shares-api";
 import TraegerKostentraegerPage from "./page";
 
+vi.unmock("swr");
 const { fetchCareCostShares, saveCareCostShare } = vi.hoisted(() => ({
   fetchCareCostShares: vi.fn(),
   saveCareCostShare: vi.fn(),
@@ -92,9 +93,9 @@ const data: CareCostShareSet = {
 function renderPage() {
   fetchCareCostShares.mockResolvedValue(data);
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerKostentraegerPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

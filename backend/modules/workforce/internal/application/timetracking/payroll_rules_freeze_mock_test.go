@@ -61,7 +61,7 @@ func TestMonthClose_FreezesTheRulesInForce(t *testing.T) {
 	events := []string{}
 	service := NewStaffMonthCloseService(repo, &recordingMonthCloseMonthService{events: &events},
 		&recordingMonthCloseStaffLister{events: &events}, &wtmMockSettings{accountStart: "2025-01-01"},
-		slog.New(slog.DiscardHandler), WithMonthClosePayrollRules(fixedRuleSet{set: ruleSetWithNight(2500)}))
+		slog.New(slog.DiscardHandler), WithMonthClosePayrollRules(fixedRuleSet{set: ruleSetWithNight(2500)}), WithMonthCloseClock(testNow))
 
 	_, err := service.CloseMonth(context.Background(), 42, 2025, 8, "Monatsabschluss")
 

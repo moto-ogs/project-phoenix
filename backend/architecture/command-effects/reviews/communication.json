@@ -578,7 +578,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterAccessLog.RecordParentLetterAccess",
-      "reason": "Platform protocol participation (mutation): communication reaches modules/auditlog/compose.Command.Append (audit-platform) through roots/owners.parentLetterAccessLog.RecordParentLetterAccess. The Serienbrief preview and print append their data access entry inside the request's tenant unit (#4813); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): communication reaches modules/auditlog/compose.Command.Append (audit-platform) through roots/owners.parentLetterAccessLog.RecordParentLetterAccess. The Serienbrief preview and print append their data access entry inside the request's tenant unit (#4813), and so do the read of a child's letters and declarations and the download of a declaration's proof (#4814); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/auditlog/compose.Command.Append",
       "target_owner": "audit-platform"
@@ -589,7 +589,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterAccessLog.RecordParentLetterAccess",
-      "reason": "Platform protocol participation (mutation): communication reaches modules/auditlog/records.AppendStore.Append (audit-platform) through roots/owners.parentLetterAccessLog.RecordParentLetterAccess. The Serienbrief preview and print append their data access entry inside the request's tenant unit (#4813); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): communication reaches modules/auditlog/records.AppendStore.Append (audit-platform) through roots/owners.parentLetterAccessLog.RecordParentLetterAccess. The Serienbrief preview and print append their data access entry inside the request's tenant unit (#4813), and so do the read of a child's letters and declarations and the download of a declaration's proof (#4814); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.AppendStore.Append",
       "target_owner": "audit-platform"
@@ -600,7 +600,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterAccessLog.RecordParentLetterAccess",
-      "reason": "Platform protocol participation (mutation): communication reaches modules/auditlog/records.Command.Append (audit-platform) through roots/owners.parentLetterAccessLog.RecordParentLetterAccess. The Serienbrief preview and print append their data access entry inside the request's tenant unit (#4813); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): communication reaches modules/auditlog/records.Command.Append (audit-platform) through roots/owners.parentLetterAccessLog.RecordParentLetterAccess. The Serienbrief preview and print append their data access entry inside the request's tenant unit (#4813), and so do the read of a child's letters and declarations and the download of a declaration's proof (#4814); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.Command.Append",
       "target_owner": "audit-platform"
@@ -611,7 +611,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterAccessLog.RecordParentLetterAccess",
-      "reason": "Platform protocol participation (mutation): communication reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.parentLetterAccessLog.RecordParentLetterAccess. The Serienbrief preview and print append their data access entry inside the request's tenant unit (#4813); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): communication reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.parentLetterAccessLog.RecordParentLetterAccess. The Serienbrief preview and print append their data access entry inside the request's tenant unit (#4813), and so do the read of a child's letters and declarations and the download of a declaration's proof (#4814); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
       "target_owner": "audit-platform"
@@ -621,7 +621,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterAccessLog.RecordParentLetterAccess",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope: reads what a Serienbrief names per child, or the signed-in account the access log names, in the caller's transaction (#4813).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope: reads what a Serienbrief names per child, or the signed-in account the access log names, in the caller's transaction (#4813). Re-reviewed for #4814: the binding also maps the child-record and proof reads to their access-log resource types.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
       "target_owner": "identity-access"
@@ -2792,7 +2792,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.AnnouncementAudienceReads.PermittedLetterChildren",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/parentannouncementaudience/internal/adapters/postgres.Projection.PermittedLetterChildren: reads what a Serienbrief names per child, or which own children's letters an account may read, in the caller's transaction (#4813).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/parentannouncementaudience/internal/adapters/postgres.Projection.PermittedLetterChildren: reads what a Serienbrief names per child, or which own children's letters an account may read, in the caller's transaction (#4813). Re-reviewed for #4814: the binding also maps the child-record and proof reads to their access-log resource types.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/parentannouncementaudience/internal/adapters/postgres.Projection.PermittedLetterChildren",
       "target_owner": "parent-announcement-audience"
@@ -2845,6 +2845,16 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/parentannouncementaudience/internal/adapters/postgres.Projection.Stats; modules/parentannouncementaudience/internal/adapters/postgres/feed.go:131. May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/parentannouncementaudience/internal/adapters/postgres.Projection.Stats",
+      "target_owner": "parent-announcement-audience"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.communicationAnnouncementAudience.StudentAnnouncements",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.AnnouncementAudienceReads.StudentAnnouncements",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/parentannouncementaudience/internal/adapters/postgres.Projection.StudentAnnouncements; modules/parentannouncementaudience/internal/adapters/postgres/student_announcements.go:99. Added for #4814: the letters and declarations of one child for its Dokumente tab; the binding maps a child of no school to Communication's ErrStudentNotInSchool. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "communication",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/parentannouncementaudience/internal/adapters/postgres.Projection.StudentAnnouncements",
       "target_owner": "parent-announcement-audience"
     },
     {

@@ -112,8 +112,8 @@ func newSchoolTimetableResource(db *bun.DB, resource *schoolportal.Resource, clo
 }
 
 func firstSchoolClock(clocks []func() time.Time) func() time.Time {
-	if len(clocks) == 0 {
-		return nil
+	if len(clocks) == 0 || clocks[0] == nil {
+		return time.Now
 	}
 	return clocks[0]
 }

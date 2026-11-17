@@ -142,7 +142,7 @@ func TestResolveHolidayWishesRefusesOnlyAStatedNo(t *testing.T) {
 // error, never a silent default.
 func TestHolidayWishProofsAndModes(t *testing.T) {
 	t.Parallel()
-	proofs := NewHolidayWishProofs(approvedWish{}, boundCipher{}, nil)
+	proofs := NewHolidayWishProofs(approvedWish{}, boundCipher{}, func() time.Time { return wishNow })
 	stated, err := proofs.HolidayWishProof(context.Background(), wishClaim)
 	require.NoError(t, err)
 	assert.Equal(t, enrollment.HolidayWishStatement{}, stated)

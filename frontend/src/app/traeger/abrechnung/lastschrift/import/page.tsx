@@ -8,7 +8,7 @@
 
 import { CheckCircle } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { SepaImportLogCard } from "~/components/traeger/sepa-import-log-card";
 import { SepaImportMappingCard } from "~/components/traeger/sepa-import-mapping-card";
 import {
@@ -16,6 +16,7 @@ import {
   importChangesLabel,
 } from "~/components/traeger/sepa-import-format";
 import { SepaImportPreviewCard } from "~/components/traeger/sepa-import-preview-card";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { Dropzone } from "~/components/ui/dropzone";
@@ -33,6 +34,10 @@ import {
 import { hasPermission } from "~/lib/auth-utils";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchSepaCreditor,
   type MandateSequence,
@@ -42,7 +47,6 @@ import {
   applySepaImport,
   fetchSepaImportLog,
   previewSepaImport,
-  type ImportLogEntry,
   type ImportMapping,
   type ImportResult,
 } from "~/lib/traeger-sepa-import-api";
@@ -64,8 +68,19 @@ function errorText(err: unknown): string {
 export default function TraegerSepaImportPage() {
   const { data: session } = useSession();
   const canBill = hasPermission(session ?? null, "traeger_billing:manage");
-  const [creditorId, setCreditorId] = useState<string | null>(null);
-  const [log, setLog] = useState<ImportLogEntry[] | null>(null);
+  const creditor = useTraegerResource(
+    canBill ? traegerKeys.sepaCreditor() : null,
+    fetchSepaCreditor,
+    "den Import",
+  );
+  const logRead = useTraegerResource(
+    canBill ? traegerBillingRunKeys.sepaImportLog() : null,
+    fetchSepaImportLog,
+    "den Import",
+  );
+  const creditorId = creditor.data?.creditorId ?? null;
+  const log = logRead.data;
+  const pageError = creditor.error ?? logRead.error;
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [verified, setVerified] = useState(false);
@@ -73,18 +88,20 @@ export default function TraegerSepaImportPage() {
   const [reading, setReading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [done, setDone] = useState<ImportResult | null>(null);
-  const pageLoad = useApiLoadError();
+  // The list after an import: a failure keeps the import and retries only
+  // the list.
   const logLoad = useApiLoadError();
   const { show: showLogError, clear: clearLogError } = logLoad;
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const { show, showMessage } = useApiErrorDisplay();
   const { success } = useToast();
   // Only the answer to the newest look at the file counts.
   const request = useRef(0);
 
+  const { mutate: mutateLog } = logRead;
+  const invalidateFamily = useInvalidateFamily();
   const loadLog = useCallback(async () => {
     try {
-      setLog(await fetchSepaImportLog());
+      await mutateLog(fetchSepaImportLog(), { revalidate: false });
       clearLogError();
     } catch (err) {
       logger.error("sepa_import_log_load_failed", { error: errorText(err) });
@@ -93,30 +110,7 @@ export default function TraegerSepaImportPage() {
         action: { label: "Erneut laden", onClick: () => void loadLog() },
       });
     }
-  }, [clearLogError, showLogError]);
-
-  const load = useCallback(async () => {
-    if (!canBill) return;
-    try {
-      const [creditor, entries] = await Promise.all([
-        fetchSepaCreditor(),
-        fetchSepaImportLog(),
-      ]);
-      setCreditorId(creditor.creditorId);
-      setLog(entries);
-      clearLoadError();
-    } catch (err) {
-      logger.error("sepa_import_load_failed", { error: errorText(err) });
-      await showLoadError(err, {
-        object: "den Import",
-        retry: () => void load(),
-      });
-    }
-  }, [canBill, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  }, [mutateLog, clearLogError, showLogError]);
 
   const read = useCallback(
     async (
@@ -188,6 +182,12 @@ export default function TraegerSepaImportPage() {
         fingerprint: result.fingerprint,
       });
       setDone(applied);
+      // The mandates of the contracts, and the families' debtor numbers the
+      // file carried.
+      void invalidateFamily(traegerBillingRunKeys.sepaMandatesFamily);
+      if (applied.counts.debtorNumbers > 0) {
+        void invalidateFamily(traegerBillingKeys.familiesFamily);
+      }
       success(
         `${importChangesLabel(applied.counts.imported, applied.counts.debtorNumbers)} übernommen.`,
       );
@@ -230,7 +230,7 @@ export default function TraegerSepaImportPage() {
   const focusOn = (target: number | "done") =>
     (done ? target === "done" : target === step) ? stepFocus : undefined;
   const loading =
-    canBill && !pageLoad.error && (creditorId === null || log === null);
+    canBill && !pageError && (creditorId === null || log === null);
   const missingCreditor = creditorId === "";
 
   return (
@@ -240,7 +240,7 @@ export default function TraegerSepaImportPage() {
       back
       backHref={traegerPath(LASTSCHRIFT)}
       backLabel="Zurück zur Lastschrift"
-      error={pageLoad.error}
+      error={pageError}
       loading={loading}
     >
       <div className="flex flex-col gap-6">

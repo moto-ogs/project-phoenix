@@ -16,8 +16,8 @@ import (
 type StudentStatusDayRow struct {
 	bun.BaseModel     `bun:"table:active.student_status_days,alias:student_status_day"`
 	ID                int64         `bun:"id,pk,autoincrement" json:"id"`
-	CreatedAt         time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt         time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+	CreatedAt         time.Time     `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt         time.Time     `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 	TenantID          int64         `bun:"tenant_id,notnull" json:"tenant_id"`
 	StudentID         int64         `bun:"student_id,notnull" json:"student_id"`
 	Date              calendar.Date `bun:"date,notnull,type:date" json:"date"`
@@ -33,8 +33,8 @@ type StudentStatusDayRow struct {
 type ExcusedAbsenceRequestRow struct {
 	bun.BaseModel  `bun:"table:active.excused_absence_requests,alias:excused_absence_request"`
 	ID             int64           `bun:"id,pk,autoincrement" json:"id"`
-	CreatedAt      time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt      time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+	CreatedAt      time.Time       `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt      time.Time       `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 	TenantID       int64           `bun:"tenant_id,notnull" json:"tenant_id"`
 	StudentID      int64           `bun:"student_id,notnull" json:"student_id"`
 	SubmittedBy    int64           `bun:"submitted_by,notnull" json:"submitted_by"`

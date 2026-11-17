@@ -1,5 +1,5 @@
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import type { DocumentTemplatePlaceholder } from "~/lib/traeger-document-templates";
 

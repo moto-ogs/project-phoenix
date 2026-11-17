@@ -7,9 +7,10 @@ import { box, compileGlobalsCss, render, tenantPage } from "./harness";
 // `useFillHeight` und scrollen in der Karte; die Wachs-Regel aus globals.css
 // darf sie nicht aufblähen. Diese Datei prüft CSS-Geometrie mit nachgebautem
 // Markup, nicht die Breakpoint-Auswahl der Komponenten: Playwright importiert
-// kein JSX aus `src`. Die Unit-Tests der beiden Komponenten prüfen dafür
-// `useIsMobile` mit beiden Rückgabewerten. Auf dem Telefon scrollt die ganze
-// Seite, dort gilt die Regel.
+// kein JSX aus `src`. Die Breakpoint-Auswahl kommt aus
+// `useMediaQuery(BELOW_MD)`; der Unit-Test von `MasterDetailLayout` prüft
+// beide Rückgabewerte. Auf dem Telefon scrollt die ganze Seite, dort gilt
+// die Regel.
 
 const FRAME_HEIGHT = 500;
 const ROW_COUNT = 60;

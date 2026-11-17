@@ -1,8 +1,5 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
 import type {
   DraftRoster,
@@ -12,75 +9,37 @@ import type {
   OfferingPreview,
   OfferingSelection,
 } from "~/lib/roster-deviation";
+import { useFreshSWR } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
+
+import { useSwrResourceLoadError } from "./use-swr-load-error";
 
 const logger = createLogger({ component: "useOfferingPreview" });
 
 /**
- * Loads a preview whenever its key changes; a null key loads nothing. A
- * failed load is shown where the preview is missing, with a retry.
+ * Reads the preview of `key`; a null key reads nothing. A failed load is
+ * shown where the preview is missing, with a retry.
  */
 function usePreviewLoad(
   key: string | null,
   load: () => Promise<OfferingPreview>,
   logFields: Record<string, unknown>,
 ) {
-  const [preview, setPreview] = useState<OfferingPreview | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  const loadError = useApiLoadError();
-  const { show, clear } = loadError;
-  // The loader closes over the current selection; the key says when it
-  // changed, so the effect never reloads on a new function identity.
-  const loadRef = useRef(load);
-  const logRef = useRef(logFields);
-  useLayoutEffect(() => {
-    loadRef.current = load;
-    logRef.current = logFields;
+  const { data, error, isLoading, mutate } = useFreshSWR(key, load, {
+    keepPreviousData: false,
+    onError: (err) =>
+      logger.error("offering_preview_failed", {
+        ...logFields,
+        error: err instanceof Error ? err.message : String(err),
+      }),
   });
-
-  useEffect(() => {
-    if (key === null) {
-      setPreview(null);
-      return;
-    }
-    let active = true;
-    setLoading(true);
-    clear();
-    loadRef
-      .current()
-      .then((result) => {
-        if (active) setPreview(result);
-      })
-      .catch((err: unknown) => {
-        logger.error("offering_preview_failed", {
-          ...logRef.current,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!active) return;
-        setPreview(null);
-        void show(err, {
-          object: "die Vorschau der Kinderliste",
-          retry: () => setAttempt((value) => value + 1),
-        });
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [key, attempt, show, clear]);
-
-  return { preview, loading, error: loadError.error };
-}
-
-function selectionKey(selection: OfferingSelection): string {
-  return [
-    selection.offeringIds.join(","),
-    selection.gradeLevels.join(","),
-    selection.schoolClasses.join(","),
-  ].join("|");
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data, error }],
+    "die Vorschau der Kinderliste",
+    () => mutate(),
+  );
+  return { preview: data ?? null, loading: isLoading, error: loadError };
 }
 
 /**
@@ -94,7 +53,7 @@ export function useOfferingPreview(
 ) {
   const key =
     templateId && selection.offeringIds.length > 0
-      ? `${templateId}|${selectionKey(selection)}|${from ?? ""}`
+      ? tenantDailyKeys.offeringPreview(templateId, selection, from)
       : null;
   return usePreviewLoad(
     key,
@@ -120,7 +79,13 @@ export function useDraftOfferingPreview(
 ) {
   const key =
     periodId && roster && selection.offeringIds.length > 0
-      ? `${periodId}|${selectionKey(selection)}|${JSON.stringify(roster)}|${from ?? ""}|${template?.type ?? ""}|${template?.listKind ?? ""}`
+      ? tenantDailyKeys.draftOfferingPreview(
+          periodId,
+          selection,
+          roster,
+          from,
+          template,
+        )
       : null;
   return usePreviewLoad(
     key,

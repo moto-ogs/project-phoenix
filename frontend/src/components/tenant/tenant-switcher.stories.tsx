@@ -102,9 +102,9 @@ export const MultipleTenantsSameOrganization: Story = {
 export const MultipleOrganizationsOpen: Story = {
   beforeEach: () => mockAccountTenants(multiOrgTenants),
   play: async ({ canvasElement }) => {
-    const deadline = Date.now() + 2000;
+    const deadline = performance.now() + 2000;
     let trigger: HTMLButtonElement | null = null;
-    while (Date.now() < deadline) {
+    while (performance.now() < deadline) {
       trigger = canvasElement.querySelector("button");
       if (trigger) break;
       await new Promise((resolve) => setTimeout(resolve, 50));

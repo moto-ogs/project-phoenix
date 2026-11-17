@@ -42,7 +42,7 @@ import type {
 } from "~/lib/student-companion-api";
 import { childrenConcept } from "~/lib/concepts/children";
 import { permissionsConcept } from "~/lib/concepts/permissions";
-import { InfoSection } from "~/components/ui/detail-modal-components";
+import { InfoSection } from "~/components/ui/info-section";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
 interface SelectOption {

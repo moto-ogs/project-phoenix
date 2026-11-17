@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { storyNow } from "~storybook/clock";
 import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { DatePicker, ISODateInput, ISODatePicker } from "./date-picker";
@@ -22,7 +23,7 @@ function SingleDemo() {
 }
 
 function SingleWithValueDemo() {
-  const [value, setValue] = useState<Date | null>(new Date());
+  const [value, setValue] = useState<Date | null>(storyNow());
   return (
     <div className="p-10">
       <DatePicker value={value} onChange={setValue} />
@@ -40,7 +41,7 @@ function MultipleDemo() {
 }
 
 function MonthYearDemo() {
-  const [value, setValue] = useState<Date | null>(new Date());
+  const [value, setValue] = useState<Date | null>(storyNow());
   return (
     <div className="p-10">
       <DatePicker
@@ -54,7 +55,7 @@ function MonthYearDemo() {
 }
 
 function InDialogDemo() {
-  const [value, setValue] = useState<Date | null>(new Date());
+  const [value, setValue] = useState<Date | null>(storyNow());
   return (
     <Modal isOpen onClose={() => undefined} title="Termin verschieben">
       <DatePicker value={value} onChange={setValue} calendarLayout="popover" />

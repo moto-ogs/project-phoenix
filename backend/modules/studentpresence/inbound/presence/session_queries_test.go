@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +43,7 @@ func TestSessionVisitsPreserveExistenceGateAndErrors(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			queriedVisits := false
-			rs := &Resource{SettingsService: &settingsDouble{ResolveBoolFn: func(context.Context, string) (bool, error) { return true, nil }}, Presence: sessionQueryStub{
+			rs := &Resource{runtime: RequestRuntime{Now: time.Now}, SettingsService: &settingsDouble{ResolveBoolFn: func(context.Context, string) (bool, error) { return true, nil }}, Presence: sessionQueryStub{
 				query: func(got context.Context, ids []int64) ([]studentpresence.LiveGroup, error) {
 					assert.Same(t, ctx, got)
 					assert.Equal(t, []int64{42}, ids)
@@ -86,7 +87,7 @@ func TestRoomSessionQueryPreservesFilterAndErrorContract(t *testing.T) {
 	roomID := int64(42)
 	failure := errors.New("query failed")
 	for _, queryErr := range []error{nil, failure} {
-		rs := &Resource{Presence: sessionQueryStub{list: func(got context.Context, filter studentpresence.LiveGroupFilter) ([]studentpresence.LiveGroup, error) {
+		rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: sessionQueryStub{list: func(got context.Context, filter studentpresence.LiveGroupFilter) ([]studentpresence.LiveGroup, error) {
 			assert.Same(t, ctx, got)
 			assert.Equal(t, studentpresence.LiveGroupFilter{RoomID: &roomID, OpenOnly: true}, filter)
 			return []studentpresence.LiveGroup{{ID: 7, RoomID: roomID}}, queryErr
@@ -111,7 +112,7 @@ func TestActivitySessionQueryPreservesFilterAndErrorContract(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	for _, queryErr := range []error{nil, errors.New("query failed")} {
-		rs := &Resource{Presence: sessionQueryStub{list: func(got context.Context, filter studentpresence.LiveGroupFilter) ([]studentpresence.LiveGroup, error) {
+		rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: sessionQueryStub{list: func(got context.Context, filter studentpresence.LiveGroupFilter) ([]studentpresence.LiveGroup, error) {
 			assert.Same(t, ctx, got)
 			assert.Equal(t, studentpresence.LiveGroupFilter{ActivityGroupIDs: []int64{42}, OpenOnly: true}, filter)
 			return []studentpresence.LiveGroup{{ID: 7}}, queryErr
@@ -146,7 +147,7 @@ func TestSessionQueryPreservesLookupErrors(t *testing.T) {
 			t.Parallel()
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			rs := &Resource{Presence: sessionQueryStub{query: func(got context.Context, ids []int64) ([]studentpresence.LiveGroup, error) {
+			rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: sessionQueryStub{query: func(got context.Context, ids []int64) ([]studentpresence.LiveGroup, error) {
 				assert.Same(t, ctx, got)
 				assert.Equal(t, []int64{42}, ids)
 				return tc.rows, tc.err

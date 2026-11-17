@@ -1,8 +1,8 @@
 "use client";
 
 // Shared realistic loading skeletons. Each primitive mirrors the markup of
-// its real kit counterpart (DataTable, SectionCard, TenantPage,
-// detail-modal-components) so the pulse state has the same silhouette as the
+// its real kit counterpart (DataTable, SectionCard, TenantPage, InfoSection,
+// DataGrid) so the pulse state has the same silhouette as the
 // loaded screen and the swap causes no layout reshuffle.
 //
 // Composition rule: exactly one wrapper per loading region announces itself
@@ -212,7 +212,7 @@ export function CardGridSkeleton({
 }
 
 /**
- * Mirrors InfoSection + DataGrid from detail-modal-components: section
+ * Mirrors InfoSection + DataGrid: section
  * heading, then a two-column grid of label/value field pairs.
  */
 export function DetailSectionSkeleton({

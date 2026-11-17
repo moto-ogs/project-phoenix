@@ -12,6 +12,8 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/api"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -41,7 +43,7 @@ func TestDeliveryCheckpointReportsOnlyItsWorkerQueries(t *testing.T) {
 	require.NoError(t, err)
 	identity, err := api.NewIdentityAccessForTests(database)
 	require.NoError(t, err)
-	env := owners.RootEnvironment{Logger: slog.Default(), Config: owners.ServiceConfig{AppEnv: "test"}}
+	env := owners.RootEnvironment{Logger: slog.Default(), Config: owners.ServiceConfig{AppEnv: "test"}, Now: time.Now, Today: calendar.TodayDate}
 	mailer, _, from, vapid, err := owners.BuildMailTransport(env)
 	require.NoError(t, err)
 	mailIdentity := owners.TenantMailIdentity(schools, settings.Settings, env)

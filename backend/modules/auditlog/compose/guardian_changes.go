@@ -8,7 +8,7 @@ import (
 
 // NewGuardianChangeLog composes the guardian-change append command. It holds
 // no database handle: every append runs in the caller's ambient tenant
-// transaction and is refused without one.
+// transaction and is refused without one; the column default stamps it.
 func NewGuardianChangeLog() auditlog.GuardianChangeLog {
 	return postgres.NewGuardianChanges(postgres.NewGuardianTransaction(tenant.TenantFromContext, tenant.TransactionFromContext))
 }
@@ -19,10 +19,8 @@ func NewSignatureLedger(fingerprint func([]byte) string) auditlog.SignatureLedge
 	return postgres.NewSignatures(postgres.NewAmbientTransaction("audit signatures", tenant.TenantFromContext, tenant.TransactionFromContext), fingerprint)
 }
 
-// NewTraegerSignatureLedger composes the signature ledger at a Träger
-// (#4679): every append and read runs in the caller's Träger transaction
-// and is refused without one.
+// NewTraegerSignatureLedger composes it at a Träger (#4679), in the caller's
+// Träger transaction; it refuses every append and read without one.
 func NewTraegerSignatureLedger(fingerprint func([]byte) string) auditlog.TraegerSignatureLedger {
-	return postgres.NewTraegerSignatures(postgres.NewAmbientTraegerTransaction("audit Träger signatures",
-		tenant.TraegerTransactionFromContext, tenant.TransactionFromContext), fingerprint)
+	return postgres.NewTraegerSignatures(postgres.NewAmbientTraegerTransaction("audit Träger signatures", tenant.TraegerTransactionFromContext, tenant.TransactionFromContext), fingerprint)
 }

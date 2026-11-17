@@ -89,7 +89,7 @@ func (failingCompanions) ListLinksForStudents(context.Context, []int64) (map[int
 }
 
 // fakeClassDayAccessLog captures access rows per record method and answers
-// ClassDayViewSeenSince from the captured class day views, mirroring the real
+// ClassDayViewSeenToday from the captured class day views, mirroring the real
 // dedupe semantics (actor + school_class + date metadata).
 type fakeClassDayAccessLog struct {
 	views       []AccessRecord
@@ -98,7 +98,7 @@ type fakeClassDayAccessLog struct {
 	sharedNotes []AccessRecord
 }
 
-func (f *fakeClassDayAccessLog) SchoolDayViewSeenSince(_ context.Context, actorAccountID int64, date string, _ time.Time) (bool, error) {
+func (f *fakeClassDayAccessLog) SchoolDayViewSeenToday(_ context.Context, actorAccountID int64, date string) (bool, error) {
 	for _, entry := range f.schoolViews {
 		if entry.ActorAccountID == actorAccountID && fmt.Sprint(entry.Metadata["date"]) == date {
 			return true, nil
@@ -112,7 +112,7 @@ func (f *fakeClassDayAccessLog) RecordSchoolDayView(_ context.Context, entry Acc
 	return nil
 }
 
-func (f *fakeClassDayAccessLog) ClassDayViewSeenSince(_ context.Context, actorAccountID int64, schoolClass, date string, _ time.Time) (bool, error) {
+func (f *fakeClassDayAccessLog) ClassDayViewSeenToday(_ context.Context, actorAccountID int64, schoolClass, date string) (bool, error) {
 	for _, entry := range f.views {
 		if entry.ActorAccountID != actorAccountID {
 			continue
@@ -189,7 +189,7 @@ func TestClassDayWeekdayKey(t *testing.T) {
 func TestClassDayRequiresConfiguredDependencies(t *testing.T) {
 	t.Parallel()
 
-	svc := NewClassDay(ClassDayDependencies{Caller: fakeClassDayCaller{}, Rosters: fakeDayRosters{}})
+	svc := NewClassDay(ClassDayDependencies{Caller: fakeClassDayCaller{}, Rosters: fakeDayRosters{}, MorningAttendanceDependencies: MorningAttendanceDependencies{Now: classDayTestNow}})
 
 	_, err := svc.DayReport(context.Background(), "1a", "2026-08-05", classday.Actor{AccountID: 42, Roles: "lehrkraft"})
 
@@ -210,8 +210,9 @@ func TestClassDayWithoutPhaseListsFullClass(t *testing.T) {
 		Students: []DayRosterStudent{{ID: 1}, {ID: 2}},
 	}
 	svc := NewClassDay(ClassDayDependencies{
-		Caller:  fakeClassDayCaller{},
-		Rosters: fakeDayRosters{roster: roster},
+		Caller:                        fakeClassDayCaller{},
+		Rosters:                       fakeDayRosters{roster: roster},
+		MorningAttendanceDependencies: MorningAttendanceDependencies{Now: classDayTestNow},
 		StatusDays: fakeClassDayStatusDays{entries: []StatusDayEntry{
 			{StudentID: 2, Status: statusDayExcused},
 		}},
@@ -238,7 +239,7 @@ func TestRecordClassDayViewAuditDedupesPerActorClassAndDate(t *testing.T) {
 	t.Parallel()
 
 	log := &fakeClassDayAccessLog{}
-	svc := newDayReports(ClassDayDependencies{AccessLog: log})
+	svc := newDayReports(ClassDayDependencies{AccessLog: log, MorningAttendanceDependencies: MorningAttendanceDependencies{Now: classDayTestNow}})
 	report := &classday.DayReport{SchoolClass: "1a", Date: "2026-08-05"}
 
 	// The view revalidates itself (interval + focus): identical repeat reads
@@ -263,7 +264,7 @@ func TestRecordClassDayViewAuditDedupesPerActorClassAndDate(t *testing.T) {
 func TestClassDayRequiresSchoolClass(t *testing.T) {
 	t.Parallel()
 
-	svc := NewClassDay(ClassDayDependencies{Caller: fakeClassDayCaller{}, Rosters: fakeDayRosters{}})
+	svc := NewClassDay(ClassDayDependencies{Caller: fakeClassDayCaller{}, Rosters: fakeDayRosters{}, MorningAttendanceDependencies: MorningAttendanceDependencies{Now: classDayTestNow}})
 
 	_, err := svc.DayReport(context.Background(), "  ", "2026-08-05", classday.Actor{AccountID: 42, Roles: "lehrkraft"})
 
@@ -335,4 +336,10 @@ func TestClassDayPlanKeyFollowsFridayOnTheWeekend(t *testing.T) {
 	key, err = classDayPlanKey(following(true), calendar.NewDate(2026, 8, 4))
 	require.NoError(t, err)
 	assert.Equal(t, "tue", key)
+}
+
+// classDayTestNow is the class day clock of the unit tests: noon of the
+// Wednesday 2026-08-05 the reports are read for.
+func classDayTestNow() time.Time {
+	return time.Date(2026, time.August, 5, 12, 0, 0, 0, calendar.Berlin)
 }

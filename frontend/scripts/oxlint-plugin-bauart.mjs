@@ -90,7 +90,7 @@
 //
 //   bauart/no-local-field-grid — a label/value pair in a detail view comes
 //                               from `DataField` / `DataGrid` in
-//                               ui/detail-modal-components (Bauart 2 Regel 2,
+//                               ui/data-field (Bauart 2 Regel 2,
 //                               issue #3117). The rule flags every hand-
 //                               written `<dt>` outside the kit: the `<dt>` is
 //                               the label cell of a local field grid, and it
@@ -315,14 +315,14 @@ const ROW_ACTION_BASELINE = new Map(
       "aus Zielen entfernen@785",
     ],
     "src/app/[tenant]/(protected)/meal-plan/page.tsx": [
-      "Gericht entfernen@891",
+      "Gericht entfernen@885",
     ],
     "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
       "Antwort entfernen@1687",
-      "Entfernen@2103",
+      "Entfernen@2101",
     ],
     "src/components/enrollment/care-offerings-editor.tsx": [
-      "Bedingung löschen@2036",
+      "Bedingung löschen@2037",
     ],
     "src/components/guardians/guardian-form-modal.tsx": [
       "Entfernen@596",
@@ -334,7 +334,7 @@ const ROW_ACTION_BASELINE = new Map(
     ],
     "src/components/students/companion-picker.tsx": ["entfernen@297"],
     "src/components/students/student-create-modal.tsx": [
-      "Erziehungsberechtigte/n entfernen@818",
+      "Erziehungsberechtigte/n entfernen@793",
     ],
     "src/components/timetable/substitution-slide-over.tsx": [
       "Rückgängig Entfernen@810",
@@ -1220,7 +1220,7 @@ const OWN_OBJECT_ENTRY_EXCEPTIONS = new Map(
   Object.entries({
     // Teilentschuldigungen genau dieses Kindes an genau diesen Tagen.
     "src/components/students/planned-status-days-modal.tsx": [
-      "Bearbeiten@1370",
+      "Bearbeiten@1369",
     ],
   }),
 );
@@ -1462,8 +1462,8 @@ const FORM_CONTEXT_EXCEPTIONS = new Map(
   Object.entries({
     // Übergabe einer Gruppe: Erklärung und die Gruppe, um die es geht.
     "src/components/groups/group-transfer-modal.tsx": [
-      "InfoSection@245",
-      "DataGrid@259",
+      "InfoSection@242",
+      "DataGrid@256",
     ],
   }),
 );
@@ -1601,13 +1601,13 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Schultermin anlegen Schultermin bearbeiten@334",
     ],
     "src/components/database/grade-transitions/transition-editor.tsx": [
-      "Schuljahreswechsel bearbeiten Neuer Schuljahreswechsel@274",
+      "Schuljahreswechsel bearbeiten Neuer Schuljahreswechsel@268",
     ],
     "src/components/enrollment/care-offerings-editor.tsx": [
-      "Betreuungsangebot duplizieren new Neues Betreuungsangebot Betreuungsangebot bearbeiten@1011",
+      "Betreuungsangebot duplizieren new Neues Betreuungsangebot Betreuungsangebot bearbeiten@1012",
     ],
     "src/components/enrollment/phases-editor.tsx": [
-      "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1036",
+      "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1039",
     ],
     "src/components/files/folder-modal.tsx": [
       "Ordner bearbeiten Neuer Ordner@156",
@@ -1626,10 +1626,10 @@ const EDIT_OVERLAY_BASELINE = new Map(
     // Betreuung): keine Feldgruppe des Datensatzes, aus dem Kebab der
     // Personalakte geöffnet (#3116).
     "src/components/auth/mfa-admin-override-modal.tsx": [
-      "Zwei-Faktor-Authentifizierung verwalten@379",
+      "Zwei-Faktor-Authentifizierung verwalten@328",
     ],
     "src/components/teachers/caregiver-capability-modal.tsx": [
-      "resolve Zuordnungen auflösen: Betreuung verwalten:@337",
+      "resolve Zuordnungen auflösen: Betreuung verwalten:@338",
     ],
   }),
 );
@@ -1709,11 +1709,11 @@ const noLocalFieldGrid = {
     type: "problem",
     docs: {
       description:
-        "Label/value pairs in a detail view come from DataField/DataGrid (ui/detail-modal-components); no hand-written <dt>/<dd> field grid outside the kit.",
+        "Label/value pairs in a detail view come from DataField/DataGrid (ui/data-field); no hand-written <dt>/<dd> field grid outside the kit.",
     },
     messages: {
       fieldGrid:
-        "Handgebautes Feldgitter (`<dt>`): Felder kommen aus `DataField`/`DataGrid` in ui/detail-modal-components (BAUARTEN-SPEC Bauart 2 Regel 2, #3117).",
+        "Handgebautes Feldgitter (`<dt>`): Felder kommen aus `DataField`/`DataGrid` in ui/data-field (BAUARTEN-SPEC Bauart 2 Regel 2, #3117).",
     },
     schema: [],
   },

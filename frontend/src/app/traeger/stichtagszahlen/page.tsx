@@ -448,6 +448,7 @@ export default function TraegerKeyDateCountsPage() {
             navigationInGroup
             navigationSlot={
               <CustomSelect
+                embedded
                 ariaLabel="Monat"
                 value={selection.month.period}
                 onChange={setPeriod}

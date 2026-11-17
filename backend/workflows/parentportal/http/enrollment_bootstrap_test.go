@@ -22,6 +22,7 @@ import (
 // ParentForms tests.
 type fakeEnrollmentForms struct {
 	loadCalled       bool
+	loadedAt         time.Time
 	linkedParents    bool
 	existingStudents bool
 	submitCalled     bool
@@ -35,8 +36,9 @@ type fakeEnrollmentForms struct {
 	uploadExisting   bool
 }
 
-func (f *fakeEnrollmentForms) LoadFormBootstrap(_ context.Context, _ int64, _ time.Time, _ string, linkedParents, existingStudents bool) (EnrollmentResponse, error) {
+func (f *fakeEnrollmentForms) LoadFormBootstrap(_ context.Context, _ int64, now time.Time, _ string, linkedParents, existingStudents bool) (EnrollmentResponse, error) {
 	f.loadCalled = true
+	f.loadedAt = now
 	f.linkedParents = linkedParents
 	f.existingStudents = existingStudents
 	return func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }, nil
@@ -62,6 +64,12 @@ func (f *fakeEnrollmentForms) StoreUpload(w http.ResponseWriter, _ *http.Request
 	f.uploadCalled = true
 	f.uploadSchoolID, f.uploadLinked, f.uploadExisting = schoolID, linkedParents, existingStudents
 	w.WriteHeader(http.StatusCreated)
+}
+
+// enrollmentTestNow is the resource clock of these tests; the form loads on
+// its instant.
+func enrollmentTestNow() time.Time {
+	return time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
 }
 
 func serveBootstrap(t *testing.T, rs *Resource, accountID int) *httptest.ResponseRecorder {
@@ -98,6 +106,7 @@ func TestUploadParentEnrollment_ForwardsDerivedAudienceAccess(t *testing.T) {
 	school.ID = testpkg.Tenant(t)
 	forms := &fakeEnrollmentForms{}
 	rs := &Resource{
+		Now: enrollmentTestNow,
 		ParentService: &fakeParentService{submitStatus: &parentService.GuardianSubmitStatus{
 			Linked:                      true,
 			HasGuardianLink:             true,
@@ -129,6 +138,7 @@ func TestGetEnrollmentBootstrap_EligibleGuardianUsesEnrolleeGate(t *testing.T) {
 	school.ID = 1
 	requestSvc := &fakeEnrollmentForms{}
 	rs := &Resource{
+		Now: enrollmentTestNow,
 		ParentService: &fakeParentService{submitStatus: &parentService.GuardianSubmitStatus{
 			Linked:              true,
 			HasGuardianLink:     true,
@@ -142,6 +152,7 @@ func TestGetEnrollmentBootstrap_EligibleGuardianUsesEnrolleeGate(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 	require.True(t, requestSvc.loadCalled)
+	assert.Equal(t, enrollmentTestNow(), requestSvc.loadedAt, "the form loads on the resource clock")
 	assert.True(t, requestSvc.linkedParents,
 		"an eligible guardian must unlock the linked_parents audience")
 	assert.False(t, requestSvc.existingStudents,
@@ -158,6 +169,7 @@ func TestGetEnrollmentBootstrap_EnrolledChildUnlocksExistingStudents(t *testing.
 	school.ID = 1
 	requestSvc := &fakeEnrollmentForms{}
 	rs := &Resource{
+		Now: enrollmentTestNow,
 		ParentService: &fakeParentService{submitStatus: &parentService.GuardianSubmitStatus{
 			Linked:                      true,
 			HasGuardianLink:             true,
@@ -188,6 +200,7 @@ func TestGetEnrollmentBootstrap_IneligibleAccountUsesPublicGate(t *testing.T) {
 	school.ID = 1
 	requestSvc := &fakeEnrollmentForms{}
 	rs := &Resource{
+		Now: enrollmentTestNow,
 		// Zero-value status: no guardian link, no submit permission.
 		ParentService:   &fakeParentService{},
 		EnrollmentForms: requestSvc,
@@ -212,6 +225,7 @@ func TestGetEnrollmentBootstrap_RevokedPermissionUsesPublicGate(t *testing.T) {
 	school.ID = 1
 	requestSvc := &fakeEnrollmentForms{}
 	rs := &Resource{
+		Now: enrollmentTestNow,
 		ParentService: &fakeParentService{submitStatus: &parentService.GuardianSubmitStatus{
 			Linked:              true,
 			HasGuardianLink:     true,
@@ -241,6 +255,7 @@ func TestGetEnrollmentBootstrap_HiddenSchoolIsUnreachableWithoutFamilyLink(t *te
 	school.ID = 1
 	requestSvc := &fakeEnrollmentForms{}
 	rs := &Resource{
+		Now: enrollmentTestNow,
 		// Linked as an account (e.g. staff, or a stale mapping) but with no
 		// guardian relationship — exactly the case ListEnrollable refuses.
 		ParentService: &fakeParentService{submitStatus: &parentService.GuardianSubmitStatus{
@@ -267,6 +282,7 @@ func TestGetEnrollmentBootstrap_HiddenSchoolLoadsForLinkedFamily(t *testing.T) {
 	school.ID = 1
 	requestSvc := &fakeEnrollmentForms{}
 	rs := &Resource{
+		Now: enrollmentTestNow,
 		ParentService: &fakeParentService{submitStatus: &parentService.GuardianSubmitStatus{
 			Linked:              true,
 			HasGuardianLink:     true,
@@ -293,6 +309,7 @@ func TestGetEnrollmentBootstrap_InactiveSchoolIsUnreachable(t *testing.T) {
 	school.ID = 1
 	requestSvc := &fakeEnrollmentForms{}
 	rs := &Resource{
+		Now: enrollmentTestNow,
 		ParentService: &fakeParentService{submitStatus: &parentService.GuardianSubmitStatus{
 			Linked:              true,
 			HasGuardianLink:     true,

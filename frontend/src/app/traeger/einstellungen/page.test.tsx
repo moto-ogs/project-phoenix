@@ -1,5 +1,5 @@
 import { useTenantMutateMatching } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 import {
@@ -53,7 +53,20 @@ vi.mock("~/lib/traeger-api", () => ({
   clearTraegerSettingValue: (key: string) => mockClear(key),
 }));
 
+const mockFetchDebtorSettings = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/traeger-billing-families-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchDebtorNumberSettings: () => mockFetchDebtorSettings(),
+}));
+
+import { useDebtorNumberSettings } from "~/components/traeger/use-debtor-number-format";
 import TraegerSettingsPage from "./page";
+
+/** A page elsewhere that shows the debtor number format (#6675). */
+function DebtorScope() {
+  const { settings } = useDebtorNumberSettings();
+  return <p>{settings ? `Bezug: ${settings.scope}` : null}</p>;
+}
 
 function item(overrides: Partial<ResolvedSetting>): ResolvedSetting {
   return {
@@ -423,6 +436,36 @@ describe("TraegerSettingsPage", () => {
         await screen.findByText("Bitte geben Sie eine Zahl von 1 bis 35 ein."),
       ).toBeInTheDocument();
       expect(mockSave).not.toHaveBeenCalled();
+    });
+
+    it("refreshes the format other pages hold after a save", async () => {
+      mockFetchSchema.mockResolvedValue(formatSchema(true, 5, 5));
+      mockFetchDebtorSettings.mockReset().mockResolvedValue({
+        format: { digitsOnly: true, minDigits: 5, maxDigits: 5 },
+        scope: "payer",
+      });
+      render(
+        <ToastProvider>
+          <TraegerSettingsPage />
+          <DebtorScope />
+        </ToastProvider>,
+      );
+      expect(await screen.findByText("Bezug: payer")).toBeInTheDocument();
+      expect(mockFetchDebtorSettings).toHaveBeenCalledTimes(1);
+
+      const to = await screen.findByRole("textbox", { name: "Ziffern bis" });
+      fireEvent.change(to, { target: { value: "7" } });
+      fireEvent.blur(to);
+
+      await waitFor(() =>
+        expect(mockSave).toHaveBeenCalledWith(
+          "parent_billing.debtor_number_max_digits",
+          7,
+        ),
+      );
+      await waitFor(() =>
+        expect(mockFetchDebtorSettings).toHaveBeenCalledTimes(2),
+      );
     });
 
     it("hides the lengths while the switch is off", async () => {

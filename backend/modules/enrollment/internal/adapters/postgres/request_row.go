@@ -13,8 +13,8 @@ type requestRow struct {
 	bun.BaseModel            `bun:"table:enrollment.requests,alias:request"`
 	ID                       int64           `bun:"id,pk,autoincrement"`
 	TenantID                 int64           `bun:"tenant_id,notnull"`
-	CreatedAt                time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt                time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt                time.Time       `bun:"created_at,nullzero,notnull"`
+	UpdatedAt                time.Time       `bun:"updated_at,nullzero,notnull"`
 	SchemaID                 *int64          `bun:"schema_id"`
 	PhaseID                  int64           `bun:"phase_id,notnull"`
 	GuardianFirstName        string          `bun:"guardian_first_name,notnull"`
@@ -29,7 +29,7 @@ type requestRow struct {
 	SourceMetadata           json.RawMessage `bun:"source_metadata,type:jsonb,notnull,default:'{}'"`
 	StatusToken              string          `bun:"status_token,notnull,unique"`
 	StatusTokenExpires       *time.Time      `bun:"status_token_expires"`
-	SubmittedAt              time.Time       `bun:"submitted_at,notnull,default:current_timestamp"`
+	SubmittedAt              time.Time       `bun:"submitted_at,notnull"`
 	WithdrawnAt              *time.Time      `bun:"withdrawn_at"`
 	DecisionNotificationMode *string         `bun:"decision_notification_mode"`
 	// FamilyChildren and its time are read here and written only by
@@ -39,7 +39,7 @@ type requestRow struct {
 	// ParentChangedAt is the read-state anchor (#3778). It stays out of the
 	// value: inserts take the column default and only MarkRequestParentChanged
 	// moves it.
-	ParentChangedAt time.Time `bun:"parent_changed_at,nullzero,notnull,default:current_timestamp"`
+	ParentChangedAt time.Time `bun:"parent_changed_at,nullzero,notnull"`
 }
 
 // value decodes the row into the owner's request. The JSON columns decode

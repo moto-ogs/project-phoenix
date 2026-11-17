@@ -52,22 +52,6 @@ describe("CapacityStrip", () => {
     expect(screen.getByText("6")).not.toHaveStyle({ color: "#DC2626" });
   });
 
-  it("can drop the sticky positioning for standalone use", () => {
-    render(
-      <table>
-        <tfoot>
-          <CapacityStrip
-            rowLabel="Kapazität"
-            cells={[{ key: "mo", content: 6 }]}
-            stickyLabel={false}
-          />
-        </tfoot>
-      </table>,
-    );
-
-    expect(screen.getByText("Kapazität")).not.toHaveClass("sticky");
-  });
-
   describe('div mode (as="div")', () => {
     it("renders without a <table> context, applying the given column template", () => {
       render(

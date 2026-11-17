@@ -2,6 +2,7 @@ package compose
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/adapters/postgres"
@@ -17,10 +18,10 @@ func NewRetiredStaffRecords() workforce.RetiredStaffRecords {
 }
 
 // NewCleanupRetention composes the staff cleanup-job retention of the nightly
-// cleanup (#4046). It runs on the tenant transaction of the school in
-// context and needs no object store.
-func NewCleanupRetention() workforce.CleanupRetention {
-	return application.NewCleanupRetention(postgres.New(postgres.RetentionDatabase))
+// cleanup (#4046) on now, the root's clock. It runs on the tenant transaction
+// of the school in context and needs no object store.
+func NewCleanupRetention(now func() time.Time) workforce.CleanupRetention {
+	return application.NewCleanupRetention(postgres.New(postgres.RetentionDatabase).WithClock(now))
 }
 
 // SickNoteRetentionWindow resolves the staff sick note retention window of
@@ -30,8 +31,8 @@ type SickNoteRetentionWindow interface {
 }
 
 // NewSickNoteRetention composes the sick note retention of the nightly
-// cleanup (#3961). It runs on the tenant transaction of the school in
-// context and resolves the school's window through window.
+// cleanup (#3961) on the database clock, which stamps the upload and guards
+// the cutoff (ADR 0281), in the school's tenant transaction.
 func NewSickNoteRetention(window SickNoteRetentionWindow) workforce.SickNoteRetention {
 	if window == nil {
 		panic("workforce compose: sick note retention requires settings")

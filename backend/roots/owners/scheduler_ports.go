@@ -120,6 +120,7 @@ func schedulerDayInstances(timetableRepositories timetableCompose.Repositories) 
 				StartTime: row.StartTime,
 				RoomID:    row.RoomID,
 				Planned:   timetable.IsPlannedInstanceStatus(row.Status),
+				Duty:      row.IsDuty,
 			})
 		}
 		return dayInstances, nil

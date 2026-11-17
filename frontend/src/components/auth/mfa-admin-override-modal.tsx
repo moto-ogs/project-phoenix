@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import {
@@ -18,12 +12,12 @@ import { ChoiceTile } from "~/components/ui/choice-tile";
 import { Modal } from "~/components/ui/modal";
 import { Radio } from "~/components/ui/radio";
 import { Textarea } from "~/components/ui/textarea";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { operatorKeys } from "~/lib/swr/operator-keys";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import {
   adminGetMFAState,
   adminResetMFA,
@@ -98,40 +92,68 @@ export function MFAAdminOverrideModal({
   const overrideErrors = useApiFormError(overrideRef);
   const globalRef = useRef<HTMLElement>(null);
   const globalErrors = useApiFormError(globalRef);
-  const stateLoad = useApiLoadError();
   const { clear: clearResetError } = resetErrors;
   const { clear: clearOverrideError } = overrideErrors;
   const { clear: clearGlobalError } = globalErrors;
-  const { show: showStateError, clear: clearStateError } = stateLoad;
   const latestResetRef = useRef<() => void>(() => undefined);
   const latestOverrideRef = useRef<() => void>(() => undefined);
   const latestGlobalRef = useRef<() => void>(() => undefined);
-  const latestLoadRef = useRef<() => void>(() => undefined);
 
-  // Override-section state. The current override drives which toggle
-  // buttons are offered. We fetch it lazily once the modal opens.
-  const [override, setOverride] = useState<MFAAdminOverride>("none");
-  // selectedOverride is the radio-button selection (what the admin
-  // *wants* to apply). It defaults to the currently-persisted override
-  // so the form opens in a no-op state — saving is only meaningful when
-  // the admin changes the value.
-  const [selectedOverride, setSelectedOverride] =
-    useState<MFAAdminOverride>("none");
-  const [enrolled, setEnrolled] = useState<boolean>(false);
-  const [stateLoaded, setStateLoaded] = useState(false);
+  // Tenant-only: the per-school override state. The operator surface does
+  // NOT render the per-school section, so it skips this read entirely —
+  // otherwise it would hit the per-school endpoint with a school the
+  // operator modal isn't even scoped to and 404.
+  const schoolState = useSWRAuth(
+    isOpen && scope === "tenant"
+      ? tenantAdminKeys.accountMfaState(accountId)
+      : null,
+    () => adminGetMFAState(accountId),
+    { keepPreviousData: false },
+  );
+  // Operator-only: the account-wide override row + enrollment flag. It is
+  // the operator modal's single source of state (it renders no per-school
+  // section), so it also drives `enrolled` + `stateLoaded` for the header.
+  // Tenant admins intentionally cannot reach the platform-wide row, since
+  // flipping it bypasses MFA across every tenant the account belongs to.
+  // The "mailbox lockout emergency switch" is operator-only by design.
+  // (#1430 review round 2)
+  const globalState = useSWRAuth(
+    isOpen && scope === "operator"
+      ? operatorKeys.accountGlobalMfaOverride(accountId)
+      : null,
+    () => operatorAdminGetGlobalMFAOverride(accountId),
+    { keepPreviousData: false },
+  );
+  const shownState = scope === "operator" ? globalState : schoolState;
+  // Das Zurücksetzen bleibt möglich. Statt eines geratenen "Standard" steht
+  // über der Auswahl der Ladefehler mit Wiederholen; die Auswahl bleibt
+  // gesperrt, bis der Stand geladen ist.
+  const stateLoad = useSwrResourceLoadError(
+    [{ data: shownState.data, error: shownState.error }],
+    scope === "operator"
+      ? "die Account-weite 2FA-Einstellung"
+      : "die 2FA-Einstellung",
+    () => shownState.mutate(),
+  );
+  const enrolled = shownState.data?.enrolled ?? false;
+  const stateLoaded = shownState.data !== undefined;
+
+  // The current override drives which toggle buttons are offered.
+  const override: MFAAdminOverride = schoolState.data?.override ?? "none";
+  // The radio-button selection (what the admin *wants* to apply). Until the
+  // admin picks one it follows the persisted override, so the form opens in
+  // a no-op state — saving is only meaningful when the admin changes it.
+  const [pickedOverride, setSelectedOverride] =
+    useState<MFAAdminOverride | null>(null);
+  const selectedOverride = pickedOverride ?? override;
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideWorking, setOverrideWorking] = useState(false);
 
-  // Account-wide override section state. Only rendered on the operator
-  // surface (`scope === "operator"`) — tenant admins intentionally
-  // cannot reach the platform-wide row, since flipping it bypasses MFA
-  // across every tenant the account belongs to. The "mailbox lockout
-  // emergency switch" is operator-only by design. (#1430 review round 2)
-  const [globalOverride, setGlobalOverride] =
-    useState<MFAAdminOverride>("none");
-  const [selectedGlobalOverride, setSelectedGlobalOverride] =
-    useState<MFAAdminOverride>("none");
-  const [globalStateLoaded, setGlobalStateLoaded] = useState(false);
+  const globalOverride: MFAAdminOverride = globalState.data?.override ?? "none";
+  const [pickedGlobalOverride, setSelectedGlobalOverride] =
+    useState<MFAAdminOverride | null>(null);
+  const selectedGlobalOverride = pickedGlobalOverride ?? globalOverride;
+  const globalStateLoaded = globalState.data !== undefined;
   const [globalReason, setGlobalReason] = useState("");
   const [globalWorking, setGlobalWorking] = useState(false);
 
@@ -141,101 +163,22 @@ export function MFAAdminOverrideModal({
       setReason("");
       clearResetError();
       setIsWorking(false);
-      setOverride("none");
-      setSelectedOverride("none");
-      setEnrolled(false);
-      setStateLoaded(false);
+      setSelectedOverride(null);
       setOverrideReason("");
       clearOverrideError();
       setOverrideWorking(false);
-      setGlobalOverride("none");
-      setSelectedGlobalOverride("none");
-      setGlobalStateLoaded(false);
+      setSelectedGlobalOverride(null);
       setGlobalReason("");
       clearGlobalError();
-      clearStateError();
       setGlobalWorking(false);
     }
-  }, [
-    isOpen,
-    clearResetError,
-    clearOverrideError,
-    clearGlobalError,
-    clearStateError,
-  ]);
-
-  // Tenant-only: the per-school override state. The operator surface
-  // does NOT render the per-school section, so it skips this call
-  // entirely — otherwise it would hit the per-school endpoint with a
-  // school the operator modal isn't even scoped to and 404.
-  const loadState = useCallback(async () => {
-    if (scope !== "tenant") return;
-    clearStateError();
-    try {
-      const state = await adminGetMFAState(accountId);
-      setOverride(state.override);
-      setSelectedOverride(state.override);
-      setEnrolled(state.enrolled);
-      setStateLoaded(true);
-    } catch (err) {
-      // Das Zurücksetzen bleibt möglich. Statt eines geratenen "Standard"
-      // steht über der Auswahl der Ladefehler mit Wiederholen; die Auswahl
-      // bleibt gesperrt, bis der Stand geladen ist.
-      logger.warn("admin_mfa_state_load_failed", {
-        account_id: accountId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showStateError(err, {
-        object: "die 2FA-Einstellung",
-        retry: () => latestLoadRef.current(),
-      });
-    }
-  }, [accountId, scope, clearStateError, showStateError]);
-
-  // Operator-only: the account-wide override row + enrollment flag.
-  // This is the operator modal's single source of state (it renders no
-  // per-school section), so it also drives `enrolled` + `stateLoaded`
-  // for the header.
-  const loadGlobalState = useCallback(async () => {
-    if (scope !== "operator") return;
-    clearStateError();
-    try {
-      const state = await operatorAdminGetGlobalMFAOverride(accountId);
-      setGlobalOverride(state.override);
-      setSelectedGlobalOverride(state.override);
-      setEnrolled(state.enrolled);
-      setStateLoaded(true);
-      setGlobalStateLoaded(true);
-    } catch (err) {
-      logger.warn("operator_global_mfa_state_load_failed", {
-        account_id: accountId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showStateError(err, {
-        object: "die Account-weite 2FA-Einstellung",
-        retry: () => latestLoadRef.current(),
-      });
-    }
-  }, [accountId, scope, clearStateError, showStateError]);
-
-  useEffect(() => {
-    if (isOpen) {
-      // Fire-and-forget pattern is the project convention for async work in
-      // useEffect; errors are surfaced via the function's own try/catch.
-      void loadState();
-      void loadGlobalState();
-    }
-  }, [isOpen, loadState, loadGlobalState]);
+  }, [isOpen, clearResetError, clearOverrideError, clearGlobalError]);
 
   // „Wiederholen“ sendet den Stand, der dann im Dialog steht.
   useLayoutEffect(() => {
     latestResetRef.current = () => void handleReset();
     latestOverrideRef.current = () => void handleOverrideSubmit();
     latestGlobalRef.current = () => void handleGlobalOverrideSubmit();
-    latestLoadRef.current = () => {
-      void loadState();
-      void loadGlobalState();
-    };
   });
 
   if (!isOpen) return null;
@@ -299,7 +242,10 @@ export function MFAAdminOverrideModal({
         selectedGlobalOverride,
         trimmed,
       );
-      setGlobalOverride(selectedGlobalOverride);
+      void globalState.mutate(
+        { enrolled, override: selectedGlobalOverride },
+        { revalidate: false },
+      );
       let msg: string;
       if (selectedGlobalOverride === "force_off") {
         msg = `2FA für ${accountLabel} wurde Account-weit deaktiviert (alle Schulen).`;
@@ -349,7 +295,10 @@ export function MFAAdminOverrideModal({
       } else {
         await adminSetMFAOverride(accountId, selectedOverride, trimmed);
       }
-      setOverride(selectedOverride);
+      void schoolState.mutate(
+        { enrolled, override: selectedOverride },
+        { revalidate: false },
+      );
       let msg: string;
       if (selectedOverride === "force_off") {
         msg = `Die 2FA für ${accountLabel} ist ausgeschaltet.`;

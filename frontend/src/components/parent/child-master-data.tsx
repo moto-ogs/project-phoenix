@@ -32,10 +32,13 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { EditActions } from "~/components/ui/edit-actions";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { useNavigationGuard } from "~/lib/hooks/use-navigation-guard";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import { SUPPORTED_LOCALES } from "~/i18n/locales";
 import { formatDate } from "~/lib/date-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import { createLogger } from "~/lib/logger";
 import {
   type ChildFeatures,
@@ -52,10 +55,7 @@ import {
 } from "~/components/parent/shell/parent-section";
 import { VisibilityBadge } from "~/components/ui/visibility-badge";
 import { ParentSectionSkeleton } from "~/components/parent/parent-page";
-import {
-  useChildRequests,
-  useSharedParentFeatures,
-} from "~/components/parent/child-requests-context";
+import { useChildFeatures } from "~/components/parent/child-requests-context";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ChildMasterDataRequestModal } from "~/components/parent/child-master-data-request-modal";
 import {
@@ -195,75 +195,37 @@ export function useChildMasterData(
   studentId: string,
   enabled = true,
 ): ChildMasterDataState {
-  const [data, setData] = useState<ChildMasterData | null>(null);
-  const [features, setFeatures] = useState<ChildFeatures | null>(null);
-  const sharedFeatures = useSharedParentFeatures();
-  const hasSharedFeatures = sharedFeatures !== null;
-  const [loading, setLoading] = useState(true);
   const t = useCareTermTranslations("parentMasterData");
-  const { error, show, clear } = useApiLoadError();
-  const childRequests = useChildRequests();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    clear();
-    try {
-      const [md, feats] = await Promise.all([
-        getChildMasterData(studentId),
-        hasSharedFeatures
-          ? Promise.resolve(null)
-          : childRequests.features(studentId),
-      ]);
-      setData(md);
-      setFeatures(feats);
-    } catch (err) {
-      logger.warn("child_master_data_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        student_id: studentId,
-      });
-      void show(err, {
-        object: t("errorObject"),
-        retry: () => void loadRef.current(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [clear, childRequests, hasSharedFeatures, show, studentId, t]);
-  // The retry runs the latest load, not the one of the failed attempt.
-  const loadRef = useRef(load);
-  useLayoutEffect(() => {
-    loadRef.current = load;
-  });
-
-  useEffect(() => {
-    if (!enabled) return;
-    void load();
-  }, [enabled, load]);
-
-  const sharedFailure =
-    sharedFeatures?.errorsByChild[studentId] ??
-    (sharedFeatures && !sharedFeatures.data?.[studentId]
-      ? sharedFeatures.error
-      : undefined);
-  const reloadFeatures = sharedFeatures?.mutate;
+  const master = useSWRAuth(
+    enabled ? parentKeys.masterData(studentId) : null,
+    () => getChildMasterData(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const { mutate } = master;
+  const { error } = useSwrResourceLoadError([master], t("errorObject"), () =>
+    mutate(),
+  );
+  const featureState = useChildFeatures(studentId, enabled);
+  const reloadFeatures = featureState.reload;
   const { error: featureError } = useSwrResourceLoadError(
-    [
-      {
-        data: sharedFeatures?.data?.[studentId],
-        error: enabled ? sharedFailure : undefined,
-      },
-    ],
+    [{ data: featureState.features, error: featureState.failure }],
     t("errorObject"),
-    () => reloadFeatures?.(),
+    () => reloadFeatures(),
+  );
+  const setData = useCallback<Dispatch<SetStateAction<ChildMasterData | null>>>(
+    (next) =>
+      void mutate(
+        (current) =>
+          (typeof next === "function" ? next(current ?? null) : next) ??
+          undefined,
+        { revalidate: false },
+      ),
+    [mutate],
   );
   return {
-    data,
-    features: sharedFeatures
-      ? (sharedFeatures.data?.[studentId] ?? null)
-      : features,
-    loading:
-      loading ||
-      (!!sharedFeatures && !sharedFeatures.data && !sharedFeatures.error),
+    data: master.data ?? null,
+    features: featureState.features ?? null,
+    loading: (enabled && !master.data && !master.error) || featureState.loading,
     error: error ?? featureError,
     setData,
   };

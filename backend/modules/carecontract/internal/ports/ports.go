@@ -152,7 +152,9 @@ type Store interface {
 	Mailings(ctx context.Context, organizationID, contractID int64) ([]StoredMailing, error)
 	InsertDocument(ctx context.Context, organizationID, accountID int64, record ContractRecord, templateVersion int, file carecontract.File) (int64, error)
 	Document(ctx context.Context, organizationID, contractID int64) (carecontract.File, error)
-	InsertMailing(ctx context.Context, organizationID, accountID, contractID, documentID, outboxID int64, recipient string) error
+	// InsertMailing records a send at the owner clock's instant at; the
+	// reminders compare it with that clock (ADR 0281).
+	InsertMailing(ctx context.Context, organizationID, accountID, contractID, documentID, outboxID int64, recipient string, at time.Time) error
 	MarkSent(ctx context.Context, organizationID, contractID int64, at time.Time) error
 	DeleteDraft(ctx context.Context, organizationID, contractID int64) (bool, error)
 	// MarkConcluded moves a sent contract with its version beantragt to

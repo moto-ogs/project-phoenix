@@ -42,7 +42,7 @@ func wsCreateTestServiceWithAbsenceRepo() (*workSessionService, *wsMockWorkSessi
 		auditRepo:                 auditRepo,
 		absenceRepo:               absenceRepo,
 		GroupSupervisorRepository: supervisorRepo,
-		settings:                  &wsMockSettingsResolver{},
+		settings:                  &wsMockSettingsResolver{}, nowFunc: testNow,
 	}
 
 	return service, sessionRepo, breakRepo, auditRepo, absenceRepo, supervisorRepo
@@ -1072,7 +1072,7 @@ func TestWSUpdateSession_StatusChange(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: sessionID},
 			StaffID:     staffID,
-			CheckInTime: time.Now().Add(-8 * time.Hour),
+			CheckInTime: testNow().Add(-8 * time.Hour),
 			Status:      WorkSessionStatusPresent,
 			Date:        TodayDate(),
 			CreatedBy:   staffID,
@@ -1119,7 +1119,7 @@ func TestWSUpdateSession_StatusChangeRequiresNotes(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: sessionID},
 			StaffID:     staffID,
-			CheckInTime: time.Now().Add(-8 * time.Hour),
+			CheckInTime: testNow().Add(-8 * time.Hour),
 			Status:      WorkSessionStatusPresent,
 			Date:        TodayDate(),
 			CreatedBy:   staffID,
@@ -1173,7 +1173,7 @@ func TestWSUpdateSession_NotesOnlyDoesNotRequireReason(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: sessionID},
 			StaffID:     staffID,
-			CheckInTime: time.Now().Add(-8 * time.Hour),
+			CheckInTime: testNow().Add(-8 * time.Hour),
 			Status:      WorkSessionStatusHomeOffice,
 			Date:        TodayDate(),
 			CreatedBy:   staffID,
@@ -1206,7 +1206,7 @@ func TestWSUpdateSession_NotesChange(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: sessionID},
 			StaffID:     staffID,
-			CheckInTime: time.Now().Add(-8 * time.Hour),
+			CheckInTime: testNow().Add(-8 * time.Hour),
 			Status:      WorkSessionStatusPresent,
 			Date:        TodayDate(),
 			CreatedBy:   staffID,
@@ -1245,7 +1245,7 @@ func TestWSUpdateSession_BreakMinutesWithoutIndividualBreaks(t *testing.T) {
 		return &WorkSession{
 			Model:        Model{ID: sessionID},
 			StaffID:      staffID,
-			CheckInTime:  time.Now().Add(-8 * time.Hour),
+			CheckInTime:  testNow().Add(-8 * time.Hour),
 			Status:       WorkSessionStatusPresent,
 			Date:         TodayDate(),
 			CreatedBy:    staffID,
@@ -1280,14 +1280,14 @@ func TestWSUpdateSession_CheckOutTimeChange(t *testing.T) {
 	staffID := int64(100)
 	sessionID := int64(100)
 
-	oldCheckOut := time.Now().Add(-1 * time.Hour)
-	newCheckOut := time.Now()
+	oldCheckOut := testNow().Add(-1 * time.Hour)
+	newCheckOut := testNow()
 
 	sessionRepo.findByIDFunc = func(_ context.Context, _ any) (*WorkSession, error) {
 		return &WorkSession{
 			Model:        Model{ID: sessionID},
 			StaffID:      staffID,
-			CheckInTime:  time.Now().Add(-8 * time.Hour),
+			CheckInTime:  testNow().Add(-8 * time.Hour),
 			CheckOutTime: &oldCheckOut,
 			Status:       WorkSessionStatusPresent,
 			Date:         TodayDate(),
@@ -1325,7 +1325,7 @@ func TestWSUpdateSession_NoChanges(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: sessionID},
 			StaffID:     staffID,
-			CheckInTime: time.Now().Add(-8 * time.Hour),
+			CheckInTime: testNow().Add(-8 * time.Hour),
 			Status:      WorkSessionStatusPresent,
 			Date:        TodayDate(),
 			CreatedBy:   staffID,
@@ -1360,7 +1360,7 @@ func TestWSUpdateSession_AuditRepoError(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: sessionID},
 			StaffID:     staffID,
-			CheckInTime: time.Now().Add(-8 * time.Hour),
+			CheckInTime: testNow().Add(-8 * time.Hour),
 			Status:      WorkSessionStatusPresent,
 			Date:        TodayDate(),
 			CreatedBy:   staffID,
@@ -1545,7 +1545,7 @@ func TestWSCheckOut_BreakCheckError(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: 1},
 			StaffID:     100,
-			CheckInTime: time.Now().Add(-4 * time.Hour),
+			CheckInTime: testNow().Add(-4 * time.Hour),
 		}, nil
 	}
 
@@ -1568,7 +1568,7 @@ func TestWSCheckOut_CloseSessionError(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: 1},
 			StaffID:     100,
-			CheckInTime: time.Now().Add(-4 * time.Hour),
+			CheckInTime: testNow().Add(-4 * time.Hour),
 		}, nil
 	}
 
@@ -1595,7 +1595,7 @@ func TestWSCheckOut_FindByIDError(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: 1},
 			StaffID:     100,
-			CheckInTime: time.Now().Add(-4 * time.Hour),
+			CheckInTime: testNow().Add(-4 * time.Hour),
 		}, nil
 	}
 
@@ -1645,7 +1645,7 @@ func TestWSEndBreak_EndBreakError(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: 1},
 			StaffID:     100,
-			CheckInTime: time.Now().Add(-2 * time.Hour),
+			CheckInTime: testNow().Add(-2 * time.Hour),
 		}, nil
 	}
 
@@ -1653,7 +1653,7 @@ func TestWSEndBreak_EndBreakError(t *testing.T) {
 		return &WorkSessionBreak{
 			Model:     Model{ID: 1},
 			SessionID: 1,
-			StartedAt: time.Now().Add(-30 * time.Minute),
+			StartedAt: testNow().Add(-30 * time.Minute),
 		}, nil
 	}
 
@@ -1676,7 +1676,7 @@ func TestWSEndBreak_RecalcBreakMinutesError(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: 1},
 			StaffID:     100,
-			CheckInTime: time.Now().Add(-2 * time.Hour),
+			CheckInTime: testNow().Add(-2 * time.Hour),
 		}, nil
 	}
 
@@ -1684,7 +1684,7 @@ func TestWSEndBreak_RecalcBreakMinutesError(t *testing.T) {
 		return &WorkSessionBreak{
 			Model:     Model{ID: 1},
 			SessionID: 1,
-			StartedAt: time.Now().Add(-30 * time.Minute),
+			StartedAt: testNow().Add(-30 * time.Minute),
 		}, nil
 	}
 
@@ -1711,7 +1711,7 @@ func TestWSEndBreak_FindByIDError(t *testing.T) {
 		return &WorkSession{
 			Model:       Model{ID: 1},
 			StaffID:     100,
-			CheckInTime: time.Now().Add(-2 * time.Hour),
+			CheckInTime: testNow().Add(-2 * time.Hour),
 		}, nil
 	}
 
@@ -1719,7 +1719,7 @@ func TestWSEndBreak_FindByIDError(t *testing.T) {
 		return &WorkSessionBreak{
 			Model:     Model{ID: 1},
 			SessionID: 1,
-			StartedAt: time.Now().Add(-30 * time.Minute),
+			StartedAt: testNow().Add(-30 * time.Minute),
 		}, nil
 	}
 

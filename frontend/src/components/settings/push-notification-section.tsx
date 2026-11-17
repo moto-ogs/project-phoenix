@@ -14,7 +14,7 @@ import { PushInstallSteps } from "~/components/settings/push-install-steps";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { SectionCard } from "~/components/ui/section-card";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import {
   OverflowMenu,
   type OverflowMenuEntry,

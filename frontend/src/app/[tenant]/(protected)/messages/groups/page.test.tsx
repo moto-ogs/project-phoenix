@@ -42,10 +42,6 @@ vi.mock("~/lib/tenant-router", () => ({
 vi.mock("~/components/messaging/new-group-message-modal", () => ({
   NewGroupMessageModal: () => <div>Formular Gruppennachricht</div>,
 }));
-vi.mock("~/components/ui/hooks/useIsMobile", () => ({
-  useIsMobile: () => false,
-}));
-
 import GroupMessagesPage from "./page";
 
 describe("Gruppennachrichten: Liste", () => {

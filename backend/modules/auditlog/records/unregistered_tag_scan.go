@@ -9,7 +9,7 @@ type UnregisteredTagScan struct {
 	TenantModel
 	TagUID               string     `bun:"tag_uid,notnull" json:"tag_uid"`
 	DeviceID             *int64     `bun:"device_id" json:"device_id,omitempty"`
-	ScannedAt            time.Time  `bun:"scanned_at,notnull,default:now()" json:"scanned_at"`
+	ScannedAt            time.Time  `bun:"scanned_at,nullzero,notnull" json:"scanned_at"`
 	ResolvedAt           *time.Time `bun:"resolved_at" json:"resolved_at,omitempty"`
 	ResolvedByOperatorID *int64     `bun:"resolved_by_operator_id" json:"resolved_by_operator_id,omitempty"`
 	ResolutionNote       *string    `bun:"resolution_note" json:"resolution_note,omitempty"`

@@ -33,7 +33,7 @@ func (guardSender) WithdrawalReach(context.Context, int64) (carecontract.Withdra
 
 // signatures binds the paper signature of the fixture's contracts.
 func (f raceFixture) signatures() *Signatures {
-	return NewSignatures(postgres.NewStore(), SignaturePorts{
+	return NewSignatures(postgres.NewStore(calendar.TodayDate), SignaturePorts{
 		Ledger: struct{ carecontract.SignatureLedger }{}, Links: f.contracts.links, Sender: guardSender{},
 		Post: &racePost{next: time.Now().UnixNano()}, Runtime: raceRuntime{}, Holidays: schoolHolidays{}, Families: familyNumbersDouble{},
 	}, Clock{Now: time.Now}, f.contracts)
@@ -85,7 +85,7 @@ func TestPaperSignatureOfAnotherTraegerFindsNothingBeneathRLS(t *testing.T) {
 func TestSigningLinkClosesOnce(t *testing.T) {
 	t.Parallel()
 	f := newRaceFixture(t, "Träger Link einmal")
-	store := postgres.NewStore()
+	store := postgres.NewStore(calendar.TodayDate)
 	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
 		_, err := f.contracts.SendContracts(txCtx, f.reviewer, []int64{f.contract})
 		return err
@@ -168,7 +168,7 @@ func TestPaperSignatureAgainstDiscardLetsOneWin(t *testing.T) {
 func TestSignatureStaysVisibleAfterAnApprovedChange(t *testing.T) {
 	t.Parallel()
 	f := newRaceFixture(t, "Träger Unterschrift nach Änderung")
-	store := postgres.NewStore()
+	store := postgres.NewStore(calendar.TodayDate)
 	// The contract began on 01.01.2026, before anything was signed.
 	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_versions SET effective_from = '2026-01-01'
 		WHERE contract_id = ?`, f.contract)

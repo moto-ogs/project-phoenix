@@ -323,7 +323,6 @@ export function ShiftMoveDialog({
               onChange={(picked) =>
                 setTargetDate(picked ? toISODate(picked) : "")
               }
-              dropdownPlacement="down"
               placeholder="Datum auswählen"
             />
             {targetClosingReason !== undefined && (

@@ -115,7 +115,7 @@ func BuildReminders(
 	timetableOwner timetable.Capability, rooms facilitiesModule.Catalog, people PeopleRows, calendarApp calendarCompose.Application,
 	announcements communication.ParentAnnouncementReminders, delivery DeliveryRuntime, sessions timetable.SessionRecords,
 ) reminder.Module {
-	presence := NewLoggedStudentPresence(db, env.Logger)
+	presence := NewLoggedStudentPresence(db, env.Logger, env.Now)
 	return reminder.Module{
 		Query: reminderCompose.NewQuery(reminderPorts.QueryDependencies{
 			Clock:        ReminderClock(),

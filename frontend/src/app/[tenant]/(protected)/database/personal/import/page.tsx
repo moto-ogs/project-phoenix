@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import { Download, Info, ListChecks, RefreshCw } from "lucide-react";
@@ -53,7 +46,9 @@ import {
 import { hasPermission } from "~/lib/auth-utils";
 import { createCrudService } from "~/lib/database/service-factory";
 import { rolesConfig } from "~/components/database/configs/roles.config";
-import { getRoleDisplayName, type Role } from "~/lib/auth-helpers";
+import { getRoleDisplayName } from "~/lib/auth-helpers";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "StaffImportPage" });
@@ -175,25 +170,18 @@ export default function StaffImportPage() {
   // The list endpoint accepts users:create, the permission this page opens
   // on, so the hint is complete for every user who may import (#2906).
   const rolesService = useMemo(() => createCrudService(rolesConfig), []);
-  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
-
-  useEffect(() => {
-    rolesService
-      .getList({ page: 1, pageSize: 500 })
-      .then((data) => {
-        const list: Role[] = Array.isArray(data.data) ? data.data : [];
-        setAvailableRoles(
-          list
-            .map((r) => getRoleDisplayName(r.name))
-            .filter((name) => name !== ""),
-        );
-      })
-      .catch((err: unknown) => {
-        logger.warn("roles_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-  }, [rolesService]);
+  // Without the list the hint is missing; the import still works.
+  const { data: roles } = useSWRAuth(tenantAdminKeys.roles(), async () => {
+    const response = await rolesService.getList({ page: 1, pageSize: 500 });
+    return Array.isArray(response.data) ? response.data : [];
+  });
+  const availableRoles = useMemo(
+    () =>
+      (roles ?? [])
+        .map((r) => getRoleDisplayName(r.name))
+        .filter((name) => name !== ""),
+    [roles],
+  );
 
   const resetForm = useCallback(() => {
     setUploadedFile(null);

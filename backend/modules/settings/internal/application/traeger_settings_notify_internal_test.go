@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
-	"time"
 
 	config "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/stretchr/testify/assert"
@@ -75,7 +74,7 @@ func TestTraegerChangeNotifiesEverySchoolAfterTheCommitOnly(t *testing.T) {
 					notified = append(notified, school)
 				},
 				Rights: map[config.TraegerRight]string{config.TraegerRightSettings: "settings", config.TraegerRightStaff: "staff", config.TraegerRightBilling: "billing"},
-				Logger: slog.Default(), Now: time.Now, Registry: registry,
+				Logger: slog.Default(), Registry: registry,
 			})
 			require.NoError(t, err)
 			err = service.SetValue(context.Background(), 5, 6, []string{"settings"}, "beide.key", false)
@@ -101,7 +100,7 @@ func TestTraegerChangeLocksTheKeyBeforeItReadsTheOldValue(t *testing.T) {
 		Schools: func(context.Context, int64) ([]int64, error) { return nil, nil },
 		Notify:  func(context.Context, int64, string) {},
 		Rights:  map[config.TraegerRight]string{config.TraegerRightSettings: "settings", config.TraegerRightStaff: "staff", config.TraegerRightBilling: "billing"},
-		Logger:  slog.Default(), Now: time.Now, Registry: registry,
+		Logger:  slog.Default(), Registry: registry,
 	})
 	require.NoError(t, err)
 	require.NoError(t, service.ResetValue(context.Background(), 5, 6, []string{"settings"}, "beide.key"))

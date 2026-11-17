@@ -120,7 +120,10 @@ func newKeyDateReportFixture(t *testing.T, db *bun.DB, router *traegerPortalHand
 
 func TestTraegerKeyDateReportCountsChildrenStaffAbsencesAndDemand(t *testing.T) {
 	t.Parallel()
-	db, router, _, _ := newTraegerPortal(t)
+	// The report ends its absence window at today at the latest: the day lies
+	// after the key date, so the window runs to the key date (rule 14).
+	today := calendar.NewDate(2026, time.November, 18)
+	db, router, _, _ := newTraegerPortalAt(t, func() calendar.Date { return today }, func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) })
 	fixture := newKeyDateReportFixture(t, db, router, identityaccess.TraegerRoleAdministration)
 
 	rec := traegerOccupancyRequest(t, router, keyDateReportPath+keyDateReportQuery(0), fixture.token, nil)

@@ -1,12 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   act,
-  render,
+  render as renderComponent,
   screen,
   fireEvent,
   waitFor,
 } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
+import type { ReactElement, ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
+import { resetSWRScope } from "~/lib/swr/scope";
+import { useInvalidateFamily } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 // ============================================================================
 // Mocks
@@ -20,7 +28,8 @@ const { mockListReview, mockDecideReview, mockTenantMutate } = vi.hoisted(
   }),
 );
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
   useTenantMutate: () => mockTenantMutate,
 }));
 
@@ -44,13 +53,28 @@ import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { RolloverReviewQueue as Queue } from "./rollover-review-queue";
 
+// The queue reads through real SWR under a staff session; each render starts
+// with a fresh cache, a rerender keeps it.
 function RolloverReviewQueue(props: { phaseID: string }) {
+  return <Queue {...props} />;
+}
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <ToastProvider>
-      <Queue {...props} />
-    </ToastProvider>
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>{children}</ToastProvider>
+      </SWRConfig>
+    </SessionProvider>
   );
 }
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 import type { ReviewQueueItem } from "~/lib/enrollment-phase-api";
 import {
   expectPageReloadedAfterRefusal,
@@ -321,6 +345,32 @@ describe("RolloverReviewQueue", () => {
     expect(await screen.findByText(/Lina Beispiel/)).toBeInTheDocument();
   });
 
+  it("never shows the empty list while a failed first load waits for its text", async () => {
+    mockListReview.mockRejectedValueOnce(
+      new ApiError("kaputt", 503, { code: "general.unavailable" }),
+    );
+    // Records every text the page shows on the way to the error.
+    let emptyShown = false;
+    const observer = new MutationObserver(() => {
+      if (document.body.textContent?.includes("Keine offenen Einträge"))
+        emptyShown = true;
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    render(<RolloverReviewQueue phaseID="77" />);
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Prüfliste"),
+      ),
+    ).toBeInTheDocument();
+    observer.disconnect();
+    expect(emptyShown).toBe(false);
+  });
+
   // #6652: a write holds once it is through; a failed reload keeps the list
   // and says the change is saved, and its retry only reloads.
   describe("reload after a write (#6652)", () => {
@@ -451,3 +501,55 @@ describe("RolloverReviewQueue", () => {
     });
   });
 });
+
+beforeEach(() => resetSWRScope({ revalidate: false }));
+it.each([401, 403])(
+  "hides cached rollover entries and decisions on a reader %s",
+  async (status) => {
+    mockListReview.mockReset().mockResolvedValue([makeItem()]);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const invalidate = useInvalidateFamily();
+      reload = () => invalidate(enrollmentKeys.rolloverReview("77"));
+      return null;
+    }
+    render(
+      <>
+        <RolloverReviewQueue phaseID="77" />
+        <Probe />
+      </>,
+    );
+    expect(await screen.findByText(/Lina Beispiel/)).toBeVisible();
+    mockListReview.mockRejectedValue(new ApiError("refused", status));
+    await act(async () => {
+      await reload();
+    });
+    if (status === 403)
+      expect(
+        await screen.findByText(
+          catalogText("general.permission", "die Prüfliste"),
+        ),
+      ).toBeVisible();
+    else
+      await waitFor(() =>
+        expect(
+          document.querySelector('[aria-busy="true"]'),
+        ).toBeInTheDocument(),
+      );
+    expect(screen.queryByText(/Lina Beispiel/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/anna@example.com/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Behalten/ }),
+    ).not.toBeInTheDocument();
+    mockListReview.mockRejectedValue(new ApiError("offline", 503));
+    await act(async () => {
+      await reload();
+    });
+    expect(screen.queryByText(/Lina Beispiel/)).not.toBeInTheDocument();
+    mockListReview.mockResolvedValue([makeItem()]);
+    await act(async () => {
+      await reload();
+    });
+    expect(await screen.findByText(/Lina Beispiel/)).toBeVisible();
+  },
+);

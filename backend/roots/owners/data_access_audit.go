@@ -2,7 +2,6 @@ package owners
 
 import (
 	"context"
-	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -116,7 +115,7 @@ func (a holidayParticipantAccessLog) RecordHolidayParticipantAccess(ctx context.
 	}
 	return a.writer.Create(ctx, &auditModels.DataAccessLog{
 		ActorAccountID: access.ActorAccountID, ActorRole: access.ActorRole, ResourceType: resourceType,
-		RangeStart: access.StartsOn.BerlinMidnight(), RangeEnd: access.EndsOn.EndOfDay(), AccessedAt: time.Now(),
+		RangeStart: access.StartsOn.BerlinMidnight(), RangeEnd: access.EndsOn.EndOfDay(),
 		Metadata: metadata,
 	})
 }
@@ -128,7 +127,7 @@ func (a holidayParticipantAccessLog) RecordHolidayStudentHealthAccess(ctx contex
 	studentID := access.StudentID
 	return a.writer.Create(ctx, &auditModels.DataAccessLog{
 		ActorAccountID: access.ActorAccountID, ActorRole: access.ActorRole, ResourceType: auditModels.ResourceTypeHolidayStudentHealth,
-		StudentID: &studentID, RangeStart: access.StartsOn.BerlinMidnight(), RangeEnd: access.EndsOn.EndOfDay(), AccessedAt: time.Now(),
+		StudentID: &studentID, RangeStart: access.StartsOn.BerlinMidnight(), RangeEnd: access.EndsOn.EndOfDay(),
 		Metadata: map[string]any{"week_ids": access.WeekIDs},
 	})
 }
@@ -150,7 +149,7 @@ type holidayGuestAccessLog struct {
 func (a holidayGuestAccessLog) RecordHolidayGuestAccess(ctx context.Context, access enrollmentOwner.HolidayGuestAccess) error {
 	entry := &auditModels.DataAccessLog{
 		ActorAccountID: access.ActorAccountID, ActorRole: access.ActorRole,
-		RangeStart: access.StartsOn.BerlinMidnight(), RangeEnd: access.EndsOn.EndOfDay(), AccessedAt: time.Now(),
+		RangeStart: access.StartsOn.BerlinMidnight(), RangeEnd: access.EndsOn.EndOfDay(),
 		Metadata: map[string]any{"week_id": access.WeekID},
 	}
 	switch access.Kind {

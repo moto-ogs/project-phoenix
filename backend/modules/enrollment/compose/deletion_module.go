@@ -31,7 +31,7 @@ type DeletionModuleDependencies struct {
 	Delivery              EnrollmentDeletionDelivery
 	Retention             RetentionSettings
 	Logger                *slog.Logger
-	Now                   func() time.Time     // the audit stamps and the cleanup's cutoffs; nil is the real clock
+	Now                   func() time.Time     // the audit stamps and the cleanup's cutoffs; required
 	Today                 func() calendar.Date // the cleanup's school day; nil is Now's Berlin day
 }
 

@@ -40,7 +40,7 @@ func (s *Store) SaveClassArrivalPlan(ctx context.Context, input timetable.ClassA
 		Column("tenant_id", "school_class", "arrival_times", "updated_by").
 		On("CONFLICT (tenant_id, (LOWER(BTRIM(school_class)))) DO UPDATE").
 		Set("arrival_times = EXCLUDED.arrival_times").Set("school_class = EXCLUDED.school_class").
-		Set("updated_by = EXCLUDED.updated_by").Set("updated_at = NOW()").Returning("*").Scan(ctx)
+		Set("updated_by = EXCLUDED.updated_by").Returning("*").Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return timetable.ClassArrivalPlan{}, stats, classifyWriteError("upsert class arrival plan", err, &stats)

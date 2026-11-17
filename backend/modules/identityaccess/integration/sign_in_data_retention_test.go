@@ -127,12 +127,13 @@ func TestPasskeySessionsAreDeletedSevenDaysAfterExpiry(t *testing.T) {
 
 // #3873: a school's invitation to its caterer holds an e-mail address and
 // goes 30 days after its acceptance, revocation or expiry, like one for
-// parents.
+// parents. The invitation's instants are on the database clock (ADR 0285),
+// so the fixture dates them from it.
 func TestCatererInvitationsAreDeletedThirtyDaysAfterTheyEnd(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	module := newOwner(t, db)
-	now := time.Now()
+	now := testpkg.DatabaseNow(t, db)
 	daysAgo := func(days int) time.Time { return now.Add(-time.Duration(days) * 24 * time.Hour) }
 	invitation := func(expiresAt time.Time, acceptedAt, revokedAt *time.Time) int64 {
 		var id int64

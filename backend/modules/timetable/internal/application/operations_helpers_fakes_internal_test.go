@@ -42,7 +42,7 @@ func newTimetableOpsDeps() *timetableOpsTestDeps {
 		Settings:  deps.settings,
 		Rooms:     helperRooms{810: "Lernraum"},
 		CareDays:  careRuleDays{},
-		Announcer: deps.announcer,
+		Announcer: deps.announcer, Now: internalTestNow,
 	}}
 	return deps
 }

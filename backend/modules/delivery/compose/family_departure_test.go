@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,11 +42,13 @@ func TestNoSchoolMailingReachesAFamilyWhoseLastChildLeft(t *testing.T) {
 			WHERE tenant_id = ? AND student_profile_id = ?`, status, school, studentID)
 		require.NoError(t, err)
 	}
+	// Delivery claims next_retry_at on its own clock, the real clock
+	// NewModule falls back to.
 	queue := func(kind string) int64 {
 		var id int64
 		require.NoError(t, db.NewRaw(`INSERT INTO platform.email_outbox (tenant_id, kind, recipient, payload, status, next_retry_at)
-			VALUES (?, ?, jsonb_build_object('address', ?::text), '{}'::jsonb, 'pending', NOW() - INTERVAL '1 minute')
-			RETURNING id`, school, kind, *guardian.Email).Scan(ctx, &id))
+			VALUES (?, ?, jsonb_build_object('address', ?::text), '{}'::jsonb, 'pending', ?)
+			RETURNING id`, school, kind, *guardian.Email, time.Now().Add(-time.Minute)).Scan(ctx, &id))
 		return id
 	}
 	runtime, err := NewModule(ModuleDependencies{DB: db, People: noGuardians{}, Observe: func(deliveryContract.Observation) {}})

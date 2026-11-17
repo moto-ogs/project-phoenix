@@ -41,7 +41,7 @@ type Dependencies struct {
 	Observe          func(ports.Observation)
 	People           careplanPorts.StudentNameFinder
 	Runtime          Runtime
-	// Today dates the status-day retention; nil is the real Berlin day.
+	// Today dates the status-day retention; required.
 	Today func() calendar.Date
 }
 
@@ -68,9 +68,10 @@ func NewService(dependencies Dependencies) *Service {
 	service.OfferingBookings, service.DayLocks = dependencies.OfferingBookings, dependencies.Runtime
 	service.requests, service.statusDays, service.withdrawals = dependencies.Requests, dependencies.StatusDays, dependencies.Withdrawals
 	service.people, service.runtime = dependencies.People, dependencies.Runtime
-	if dependencies.Today != nil {
-		service.today = dependencies.Today
+	if dependencies.Today == nil {
+		panic("care plan application: the composition's day clock is required")
 	}
+	service.today = dependencies.Today
 	return service
 }
 
@@ -79,7 +80,7 @@ func New(store ports.Store, observe ports.Observer) *Service {
 	if store == nil || observe == nil {
 		panic("care plan application: store and observer are required")
 	}
-	return &Service{store: store, observe: observe, today: calendar.TodayDate}
+	return &Service{store: store, observe: observe}
 }
 
 // NewExceptionQueryService serves the schedule, exception, note and status

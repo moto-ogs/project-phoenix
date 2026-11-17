@@ -52,7 +52,7 @@ func TestParentAnnouncementSetResponse_StoresReplacesAndWithdraws(t *testing.T) 
 	ctx := tenantCtx(t)
 
 	poll, options := api.ParentStorePollAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		userModels.ParentAnnouncementResponseMultiChoice)
 
@@ -89,7 +89,7 @@ func TestParentAnnouncementSetResponse_RejectsWithoutPollPermission(t *testing.T
 	ctx := tenantCtx(t)
 
 	poll, options := api.ParentStorePollAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		userModels.ParentAnnouncementResponseSingleChoice)
 
@@ -139,11 +139,11 @@ func TestParentAnnouncementSetResponse_RejectsStaleVersionAndForeignOptions(t *t
 	ctx := tenantCtx(t)
 
 	poll, options := api.ParentStorePollAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		userModels.ParentAnnouncementResponseMultiChoice)
 	other, otherOptions := api.ParentStorePollAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		userModels.ParentAnnouncementResponseMultiChoice)
 	require.NotEqual(t, poll.ID, other.ID)
@@ -177,7 +177,7 @@ func TestParentAnnouncementSetResponse_SingleChoiceRejectsMultipleOptions(t *tes
 	ctx := tenantCtx(t)
 
 	poll, options := api.ParentStorePollAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-		return databaseTimestamp(t, db)
+		return publishedNow()
 	}, repo, chain.AccountID, chain.TenantID,
 		userModels.ParentAnnouncementResponseSingleChoice)
 

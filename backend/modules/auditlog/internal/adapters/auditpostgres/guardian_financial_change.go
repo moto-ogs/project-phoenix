@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"fmt"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 )
@@ -11,11 +12,12 @@ import (
 // audit.guardian_financial_changes (#2608).
 type GuardianFinancialChangeRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
 // NewGuardianFinancialChangeRepository creates the audit writer.
-func NewGuardianFinancialChangeRepository(runtime Runtime) auditModels.GuardianFinancialChangeCreator {
-	return &GuardianFinancialChangeRepository{runtime: requireRuntime(runtime)}
+func NewGuardianFinancialChangeRepository(runtime Runtime, now func() time.Time) auditModels.GuardianFinancialChangeCreator {
+	return &GuardianFinancialChangeRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 // Create inserts one field-level change row.
@@ -26,5 +28,5 @@ func (r *GuardianFinancialChangeRepository) Create(ctx context.Context, event *a
 	if err := event.Validate(); err != nil {
 		return fmt.Errorf("invalid guardian financial change audit event: %w", err)
 	}
-	return NewAppender(r.runtime, nil).Append(ctx, event)
+	return NewAppender(r.runtime, r.now).Append(ctx, event)
 }

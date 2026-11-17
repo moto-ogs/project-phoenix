@@ -130,6 +130,7 @@ func exceptionConflictsWithArrivalBaseline(
 		// Exception conflicts carry no fingerprint; the digest is never used.
 		ContentHash: func([]byte) string { return "" },
 		Logger:      slog.Default(),
+		Now:         func() time.Time { return decisionTestToday.BerlinMidnight().Add(10 * time.Hour) },
 	})
 	require.NoError(t, err)
 	return detection

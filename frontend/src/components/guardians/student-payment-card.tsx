@@ -5,7 +5,7 @@ import { Eye, Landmark } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import {
   FormErrorAlert,
@@ -16,9 +16,13 @@ import { SectionCard } from "~/components/ui/section-card";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
+import { useInvalidateFamily, useSWRCacheKey } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import type { GuardianWithRelationship } from "@/lib/guardian-helpers";
 import { getGuardianFullName } from "@/lib/guardian-helpers";
 import {
@@ -74,16 +78,41 @@ export function StudentPaymentCard({
     [guardians],
   );
 
-  const [ibanMasked, setIbanMasked] = useState<string | null>(null);
-  const [accountHolder, setAccountHolder] = useState<string | null>(null);
-  const [revealedIban, setRevealedIban] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const payerId = payer?.id ?? null;
+  const invalidateFamily = useInvalidateFamily();
+  const cacheKey = useSWRCacheKey();
+  const paymentScope = cacheKey(
+    tenantContactKeys.guardianPayment(payerId ?? ""),
+  );
+  const payment = useConfirmedSWR(
+    payerId ? tenantContactKeys.guardianPayment(payerId) : null,
+    () => fetchGuardianPayment(payerId ?? ""),
+  );
   // Ladefehler stehen in der Karte, mit Wiederholen (#2517). Ohne geladene
   // Daten heißt es „Nicht geladen“, nie „Noch keine IBAN gespeichert“.
-  const [loadFailed, setLoadFailed] = useState(false);
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
+  const loadError = useSwrResourceLoadError(
+    [{ data: payment.data ?? undefined, error: payment.failure }],
+    "die Bankverbindung",
+    () => payment.mutate(),
+  );
+  const loadFailed = loadError.failure !== undefined;
+  const isLoading =
+    payerId !== null && payment.data === null && !payment.failure;
+  const ibanMasked = payment.data?.ibanMasked ?? null;
+  const accountHolder = payment.data?.accountHolder ?? null;
+  // The full IBAN of one payer, shown after the audited „Anzeigen“ only.
+  const [revealed, setRevealed] = useState<{
+    payerId: string;
+    iban: string | null;
+    source: typeof payment.data;
+  } | null>(null);
+  const revealedIban =
+    !payment.refused &&
+    revealed !== null &&
+    revealed.payerId === payerId &&
+    revealed.source === payment.data
+      ? revealed.iban
+      : null;
   // „Anzeigen“ ist eine Aktion ohne Formular: Fehler als Toast.
   const { show: showActionError } = useApiErrorDisplay();
   const [isRevealing, setIsRevealing] = useState(false);
@@ -101,8 +130,6 @@ export function StudentPaymentCard({
   const latestStartEditRef = useRef<() => void>(() => undefined);
   const latestSaveRef = useRef<() => void>(() => undefined);
 
-  const payerId = payer?.id ?? null;
-
   useEffect(() => {
     if (draft !== null && baseline?.payerId !== payerId) {
       setDraft(null);
@@ -111,57 +138,28 @@ export function StudentPaymentCard({
     }
   }, [baseline?.payerId, draft, payerId, clearEditError]);
 
-  // Reload trigger. The effect below deliberately depends on payerId and this
-  // counter only: a card that refetches on every render — and resets the
-  // revealed IBAN while doing so — is not a failure worth risking.
-  const [reloadToken, setReloadToken] = useState(0);
-
-  useEffect(() => {
-    if (!payerId) {
-      setIbanMasked(null);
-      setAccountHolder(null);
-      setRevealedIban(null);
-      setLoadFailed(false);
-      clearLoadError();
-      return;
-    }
-    let cancelled = false;
-    setIsLoading(true);
-    fetchGuardianPayment(payerId)
-      .then((data) => {
-        if (cancelled) return;
-        setIbanMasked(data.ibanMasked);
-        setAccountHolder(data.accountHolder);
-        setRevealedIban(null);
-        setLoadFailed(false);
-        clearLoadError();
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        logger.error("load_guardian_payment_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        setLoadFailed(true);
-        void showLoadError(error, {
-          object: "die Bankverbindung",
-          retry: () => setReloadToken((token) => token + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [payerId, reloadToken, showLoadError, clearLoadError]);
+  // Late reveal/edit answers must not restore data after a refusal or a
+  // payer/account change. A new audited read owns a new attempt.
+  const readAttempt = useRef(0);
+  useLayoutEffect(() => {
+    readAttempt.current++;
+    setIsRevealing(false);
+    setRevealed(null);
+    setDraft(null);
+    setBaseline(null);
+    clearEditError();
+  }, [paymentScope, payment.refused, clearEditError]);
 
   const handleReveal = async () => {
-    if (!payerId) return;
+    if (!payerId || payment.refused) return;
+    const attempt = ++readAttempt.current;
     setIsRevealing(true);
     try {
       const data = await revealGuardianPayment(payerId);
-      setRevealedIban(data.iban);
+      if (attempt !== readAttempt.current) return;
+      setRevealed({ payerId, iban: data.iban, source: payment.data });
     } catch (error) {
+      if (attempt !== readAttempt.current) return;
       logger.error("reveal_guardian_payment_failed", {
         error: error instanceof Error ? error.message : String(error),
       });
@@ -170,11 +168,12 @@ export function StudentPaymentCard({
         retry: () => void handleReveal(),
       });
     } finally {
-      setIsRevealing(false);
+      if (attempt === readAttempt.current) setIsRevealing(false);
     }
   };
 
   const handleStartEdit = async () => {
+    if (payment.refused) return;
     clearEditError();
     if (!payerId) {
       const empty = { payerId: null, iban: "", holder: "" };
@@ -182,11 +181,13 @@ export function StudentPaymentCard({
       setDraft(empty);
       return;
     }
+    const attempt = ++readAttempt.current;
     setIsRevealing(true);
     try {
       // Edit starts from the real value: a form prefilled with a masked string
       // would silently overwrite the stored IBAN with dots on save.
       const data = await revealGuardianPayment(payerId);
+      if (attempt !== readAttempt.current) return;
       const opened = {
         payerId,
         iban: data.iban ?? "",
@@ -195,6 +196,7 @@ export function StudentPaymentCard({
       setBaseline(opened);
       setDraft(opened);
     } catch (error) {
+      if (attempt !== readAttempt.current) return;
       logger.error("open_guardian_payment_failed", {
         error: error instanceof Error ? error.message : String(error),
       });
@@ -203,7 +205,7 @@ export function StudentPaymentCard({
         retry: () => latestStartEditRef.current(),
       });
     } finally {
-      setIsRevealing(false);
+      if (attempt === readAttempt.current) setIsRevealing(false);
     }
   };
 
@@ -222,13 +224,14 @@ export function StudentPaymentCard({
       draft.holder.trim() !== baseline.holder.trim());
 
   const handleSave = async () => {
-    if (!draft) return;
+    if (!draft || payment.refused) return;
     setIsSaving(true);
     clearEditError();
     try {
       if (payerChanged) {
         await setStudentPayer(studentId, draft.payerId);
         setDraft(null);
+        void invalidateFamily(tenantAdminKeys.paymentOverview());
         toast.success("Das Zahlungskonto ist gespeichert.");
         onChanged?.();
         return;
@@ -240,7 +243,9 @@ export function StudentPaymentCard({
             draft.holder.trim() === "" ? null : draft.holder.trim(),
         });
         setDraft(null);
-        setReloadToken((token) => token + 1);
+        setRevealed(null);
+        void payment.mutate();
+        void invalidateFamily(tenantAdminKeys.paymentOverview());
         toast.success("Die Bankverbindung ist gespeichert.");
       }
     } catch (error) {
@@ -274,7 +279,7 @@ export function StudentPaymentCard({
   const draftPayer = draft?.payerId
     ? (guardians.find((g) => g.id === draft.payerId) ?? null)
     : null;
-  const editing = draft !== null;
+  const editing = draft !== null && !payment.refused;
 
   return (
     <SectionCard
@@ -289,7 +294,7 @@ export function StudentPaymentCard({
             size="md"
             variant="surface"
             onClick={() => void handleStartEdit()}
-            disabled={isRevealing || isLoading}
+            disabled={isRevealing || isLoading || payment.refused}
             tooltip="Öffnet das Zahlungskonto zum Ändern und protokolliert das Anzeigen der IBAN."
           >
             Bearbeiten

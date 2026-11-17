@@ -19,6 +19,8 @@ export interface ClassDayRow {
   // als String, weil JSON-Zahlen oberhalb von 2^53 im Client runden würden.
   list_entry?: boolean;
   list_entry_id?: string;
+  // Kind mit eigenem Datensatz, aber ohne OGS-Platz (#4803).
+  without_care_place?: boolean;
   group_name?: string;
   registered: boolean;
   stays_today: boolean;

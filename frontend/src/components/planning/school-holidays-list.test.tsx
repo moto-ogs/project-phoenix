@@ -11,6 +11,7 @@ vi.mock("~/lib/swr", () => ({ useSWRAuth: mockUseSWRAuth }));
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
+import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
 import { SchoolHolidaysList, holidayWindow } from "./school-holidays-list";
@@ -74,6 +75,8 @@ describe("SchoolHolidaysList", () => {
   });
 
   it("lists the holidays of the school year read-only and names the state", () => {
+    // Fixed fixture world: the school year 2026/27 runs on this day.
+    setTestClock("2026-09-09T12:00:00+02:00");
     mockUseSWRAuth.mockReturnValue({
       data: holidays,
       error: undefined,

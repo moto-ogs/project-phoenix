@@ -12,6 +12,9 @@ import { ApiError } from "~/lib/api-error";
 import { getPickupSignatureStatement } from "~/lib/parent-api";
 import { catalogText } from "~/test/error-catalog-text";
 import { CareScheduleRequestModal } from "./care-schedule-request-modal";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
 
 vi.mock("~/lib/parent-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-api")>()),
@@ -53,6 +56,7 @@ function renderModal(
         onSubmit={onSubmit}
       />
     </NextIntlClientProvider>,
+    { wrapper: ParentResourceTestProvider },
   );
   return onSubmit;
 }

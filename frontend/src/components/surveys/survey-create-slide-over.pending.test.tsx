@@ -4,8 +4,10 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { parseISODate } from "~/lib/date-helpers";
 import { newQuestionDraft, type SurveyEditorDraft } from "~/lib/survey-editor";
 import type { Survey } from "~/lib/surveys-api";
+import { testClockDay } from "~/test/clock";
 import {
   deferred,
   expectSlideOverSaveLocked,
@@ -50,7 +52,8 @@ vi.mock("./survey-editor-fields", () => ({
             audience: "staff",
             anonymous: true,
             sendEmail: false,
-            closesDay: new Date(2026, 8, 30),
+            // Der Schluss liegt drei Wochen nach dem Testtag.
+            closesDay: parseISODate(testClockDay(21)),
             closesTime: "18:00",
             targets: [],
             questions: [

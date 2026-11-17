@@ -4,7 +4,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 
@@ -13,8 +13,20 @@ import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
 // Errors and success messages run through the real display path (#2515).
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Reads run through real SWR, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
 const render = (ui: ReactElement) =>
-  renderComponent(ui, { wrapper: ToastProvider });
+  renderComponent(ui, { wrapper: Providers });
 
 const mocks = vi.hoisted(() => ({
   approveEnrollmentChangeRequest: vi.fn(),
@@ -42,7 +54,15 @@ vi.mock("~/lib/enrollment-admin-api", async (importOriginal) => {
 vi.mock("next-auth/react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next-auth/react")>()),
   useSession: () => ({
-    data: { user: { id: "1", token: "t", permissions: ["schedules:manage"] } },
+    data: {
+      user: {
+        id: "1",
+        token: "t",
+        permissions: ["schedules:manage"],
+        scope: "tenant",
+        tenantId: 42,
+      },
+    },
     status: "authenticated",
   }),
 }));
