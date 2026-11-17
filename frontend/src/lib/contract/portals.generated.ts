@@ -5,6 +5,7 @@ import { routes as operatorBilling } from "./operator-billing.generated";
 import { routes as parentMe } from "./parent-me.generated";
 import { routes as schoolNotifications } from "./school-notifications.generated";
 import { routes as schoolStaffMessages } from "./school-staff-messages.generated";
+import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as students } from "./students.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
 
@@ -35,7 +36,13 @@ export const portalRoutes = {
     schoolNotifications["POST /school/notifications/push/subscriptions"],
     schoolNotifications["POST /school/notifications/test"],
     schoolNotifications["PUT /school/notifications/preferences/{type}"],
+    schoolStaffMessages["GET /school/staff-messages/"],
+    schoolStaffMessages["GET /school/staff-messages/recipients"],
+    schoolStaffMessages["GET /school/staff-messages/threads/{threadID}"],
     schoolStaffMessages["GET /school/staff-messages/unread-count"],
+    schoolStaffMessages["POST /school/staff-messages/threads/open"],
+    schoolStaffMessages["POST /school/staff-messages/threads/{threadID}"],
+    schoolStaffMessages["POST /school/staff-messages/threads/{threadID}/leave"],
   ],
   tenant: [
     notifications["DELETE /api/notifications/preferences/"],
@@ -51,6 +58,16 @@ export const portalRoutes = {
     notifications["POST /api/notifications/test"],
     notifications["PUT /api/notifications/email-subscriptions/{type}"],
     notifications["PUT /api/notifications/preferences/{type}"],
+    staffMessages["GET /api/staff-messages/"],
+    staffMessages["GET /api/staff-messages/recipients"],
+    staffMessages["GET /api/staff-messages/threads/{threadID}"],
+    staffMessages["GET /api/staff-messages/unread-count"],
+    staffMessages["POST /api/staff-messages/groups"],
+    staffMessages["POST /api/staff-messages/threads/open"],
+    staffMessages["POST /api/staff-messages/threads/{threadID}"],
+    staffMessages["POST /api/staff-messages/threads/{threadID}/leave"],
+    staffMessages["POST /api/staff-messages/threads/{threadID}/members"],
+    staffMessages["PUT /api/staff-messages/threads/{threadID}/name"],
     students["GET /api/students/"],
     students["GET /api/students/{id}"],
     students["POST /api/students/"],

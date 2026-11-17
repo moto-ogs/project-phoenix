@@ -88,8 +88,10 @@ func TestStaffMessageCarriesUploadedPhotoForParticipantsOnly(t *testing.T) {
 	sent := f.do(t, anna, http.MethodPost, "/threads/"+thread.ThreadID, fmt.Sprintf(`{"body":"","attachment_ids":[%q]}`, attachment.ID))
 	require.Equal(t, http.StatusOK, sent.Code, sent.Body.String())
 	message := decodeData[staffmessaging.MessageResponse](t, sent.Body.Bytes())
+	sentFiles, err := json.Marshal(message.Attachments)
+	require.NoError(t, err)
 	var carried []attachmentWire
-	require.NoError(t, json.Unmarshal(message.Attachments, &carried))
+	require.NoError(t, json.Unmarshal(sentFiles, &carried))
 	require.Equal(t, []attachmentWire{attachment}, carried)
 
 	// Both participants read the file, a third colleague does not.
@@ -103,7 +105,7 @@ func TestStaffMessageCarriesUploadedPhotoForParticipantsOnly(t *testing.T) {
 	require.Equal(t, http.StatusOK, read.Code, read.Body.String())
 	messages := decodeData[staffmessaging.ThreadDetailResponse](t, read.Body.Bytes()).Messages
 	require.Len(t, messages, 1)
-	require.JSONEq(t, string(message.Attachments), string(messages[0].Attachments))
+	require.Equal(t, message.Attachments, messages[0].Attachments)
 	require.Equal(t, "📎 ausflug.png", f.inboxRow(t, ben, thread.ThreadID).LastMessageBody)
 
 	// A sent upload cannot ride on a second message, nor a foreign one on any.
