@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -336,6 +337,8 @@ func assertEnrollmentSource(t *testing.T, module timetable.Owner, ctx context.Co
 	assert.Equal(t, want, value.EnrollmentRequestChildID)
 }
 
+// createEnrollmentSource stamps submitted_at and reviewed_at on Enrollment's
+// clock, the real clock, as buildModule's Timetable stamps created_at.
 func createEnrollmentSource(t *testing.T, db *bun.DB, ctx context.Context, studentID int64) int64 {
 	t.Helper()
 	var phaseID, requestID, childID int64
@@ -344,11 +347,11 @@ func createEnrollmentSource(t *testing.T, db *bun.DB, ctx context.Context, stude
 	suffix := fmt.Sprintf("owner-source-%d", phaseID)
 	require.NoError(t, db.NewRaw(`INSERT INTO enrollment.requests (tenant_id, phase_id, guardian_first_name, guardian_last_name,
 		guardian_email, consent_flags, custom_data, status_token, submitted_at)
-		VALUES (?, ?, 'Owner', 'Source', ?, '{}'::jsonb, '{}'::jsonb, ?, NOW()) RETURNING id`,
-		testpkg.Tenant(t), phaseID, suffix+"@example.test", suffix).Scan(ctx, &requestID))
+		VALUES (?, ?, 'Owner', 'Source', ?, '{}'::jsonb, '{}'::jsonb, ?, ?) RETURNING id`,
+		testpkg.Tenant(t), phaseID, suffix+"@example.test", suffix, time.Now()).Scan(ctx, &requestID))
 	require.NoError(t, db.NewRaw(`INSERT INTO enrollment.request_children (tenant_id, request_id, first_name, last_name,
 		date_of_birth, status, activation_mode, created_student_id, reviewed_at, sort_order, custom_data)
-		VALUES (?, ?, 'Owner', 'Child', '2018-01-01', 'approved', 'scheduled', ?, NOW(), 0, '{}'::jsonb) RETURNING id`,
-		testpkg.Tenant(t), requestID, studentID).Scan(ctx, &childID))
+		VALUES (?, ?, 'Owner', 'Child', '2018-01-01', 'approved', 'scheduled', ?, ?, 0, '{}'::jsonb) RETURNING id`,
+		testpkg.Tenant(t), requestID, studentID, time.Now()).Scan(ctx, &childID))
 	return childID
 }
