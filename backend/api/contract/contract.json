@@ -67,6 +67,38 @@
       }
     },
     {
+      "method": "DELETE",
+      "pattern": "/traeger/documents/{id}",
+      "portals": [
+        "org"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/traeger/documents/{id}/releases/{releaseId}",
+      "portals": [
+        "org"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/traeger/master-data/bank-accounts/{id}",
+      "portals": [
+        "org"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/traeger/report-templates/{id}",
+      "portals": [
+        "org"
+      ],
+      "no_data": true
+    },
+    {
       "method": "GET",
       "pattern": "/api/notifications/email-subscriptions/{type}",
       "portals": [
@@ -727,6 +759,70 @@
       }
     },
     {
+      "method": "GET",
+      "pattern": "/traeger/documents/audiences",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TraegerDocumentSchool"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/master-data/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerProfile"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/master-data/document-templates",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TraegerDocumentTemplateSummary"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/master-data/document-templates/{kind}",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerDocumentTemplateDetail"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/report-templates/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TraegerReportTemplate"
+        }
+      }
+    },
+    {
       "method": "POST",
       "pattern": "/api/notifications/feed/read-all",
       "portals": [
@@ -1080,6 +1176,81 @@
       "no_data": true
     },
     {
+      "method": "POST",
+      "pattern": "/traeger/documents/{id}/releases",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ReleaseRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerDocumentRelease"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/master-data/bank-accounts",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "BankAccountRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerBankAccount"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/master-data/document-templates/{kind}/preview",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TemplateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SampleLetter"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/master-data/document-templates/{kind}/versions",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TemplateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerDocumentTemplate"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/report-templates/",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ReportTemplateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerReportTemplate"
+      }
+    },
+    {
       "method": "PUT",
       "pattern": "/api/notifications/email-subscriptions/{type}",
       "portals": [
@@ -1174,6 +1345,66 @@
         "ref": "preferenceRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/master-data/bank-accounts/{id}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "BankAccountRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerBankAccount"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/master-data/contact",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ContactRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerContact"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/master-data/withdrawal-contact",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "WithdrawalContactRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerWithdrawalContact"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/report-templates/{id}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ReportTemplateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerReportTemplate"
+      }
     }
   ],
   "enums": [
@@ -1395,6 +1626,90 @@
       ]
     },
     {
+      "name": "BankAccountRequest",
+      "go_type": "traeger.BankAccountRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_holder",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iban",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bic",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bank_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_default",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Block",
+      "go_type": "templates.Block",
+      "fields": [
+        {
+          "name": "heading",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "text",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bold",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Row"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ClassHandover",
       "go_type": "presenceprojectionhttp.ClassHandover",
       "fields": [
@@ -1446,6 +1761,34 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContactRequest",
+      "go_type": "traeger.ContactRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -1626,6 +1969,45 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InvoiceLayout",
+      "go_type": "templates.InvoiceLayout",
+      "fields": [
+        {
+          "name": "group_by_child",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "hide_time_models",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InvoiceLayoutRequest",
+      "go_type": "traeger.InvoiceLayoutRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "group_by_child",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "hide_time_models",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -2073,6 +2455,30 @@
       ]
     },
     {
+      "name": "Placeholder",
+      "go_type": "templates.Placeholder",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "table",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "PreferenceOverview",
       "go_type": "notifications.PreferenceOverview",
       "fields": [
@@ -2157,6 +2563,203 @@
           "name": "role_kind",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReleaseRequest",
+      "go_type": "traeger.ReleaseRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "audience",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReportDistrictRequest",
+      "go_type": "traeger.ReportDistrictRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "district",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReportTemplateRequest",
+      "go_type": "traeger.ReportTemplateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sections",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "key_date_month",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "key_date_day",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "districts",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ReportDistrictRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Row",
+      "go_type": "templates.Row",
+      "fields": [
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "value",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bold",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SampleLetter",
+      "go_type": "templates.SampleLetter",
+      "fields": [
+        {
+          "name": "recipient",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "facts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Row"
+            }
+          }
+        },
+        {
+          "name": "subject",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "salutation",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "blocks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Block"
+            }
+          }
+        },
+        {
+          "name": "closing",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "legal_remedy",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "Block"
+            }
           }
         }
       ]
@@ -3754,6 +4357,99 @@
       ]
     },
     {
+      "name": "Template",
+      "go_type": "templates.Template",
+      "fields": [
+        {
+          "name": "subject",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "salutation",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closing",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "invoice",
+          "schema": {
+            "kind": "ref",
+            "ref": "InvoiceLayout"
+          }
+        },
+        {
+          "name": "legal_remedy",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TemplateRequest",
+      "go_type": "traeger.TemplateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "subject",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "salutation",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closing",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "invoice",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "InvoiceLayoutRequest"
+          }
+        },
+        {
+          "name": "legal_remedy",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ThreadDetailResponse",
       "go_type": "staffmessaging.ThreadDetailResponse",
       "fields": [
@@ -3820,6 +4516,484 @@
               "kind": "ref",
               "ref": "MemberResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerBankAccount",
+      "go_type": "organizationtenancy.TraegerBankAccount",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_holder",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iban",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bic",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bank_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_default",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerContact",
+      "go_type": "organizationtenancy.TraegerContact",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerDocumentGroup",
+      "go_type": "organizationtenancy.TraegerDocumentGroup",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerDocumentRelease",
+      "go_type": "organizationtenancy.TraegerDocumentRelease",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "audience",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "group_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "group_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "released_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerDocumentSchool",
+      "go_type": "organizationtenancy.TraegerDocumentSchool",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "groups",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerDocumentGroup"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerDocumentTemplate",
+      "go_type": "organizationtenancy.TraegerDocumentTemplate",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "standard",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "subject",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "salutation",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closing",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "invoice",
+          "schema": {
+            "kind": "ref",
+            "ref": "InvoiceLayout"
+          }
+        },
+        {
+          "name": "legal_remedy",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerDocumentTemplateDetail",
+      "go_type": "organizationtenancy.TraegerDocumentTemplateDetail",
+      "fields": [
+        {
+          "name": "current",
+          "schema": {
+            "kind": "ref",
+            "ref": "TraegerDocumentTemplate"
+          }
+        },
+        {
+          "name": "standard_template",
+          "schema": {
+            "kind": "ref",
+            "ref": "Template"
+          }
+        },
+        {
+          "name": "placeholders",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Placeholder"
+            }
+          }
+        },
+        {
+          "name": "versions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerDocumentTemplate"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerDocumentTemplateSummary",
+      "go_type": "organizationtenancy.TraegerDocumentTemplateSummary",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "standard",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerLogo",
+      "go_type": "organizationtenancy.TraegerLogo",
+      "fields": [
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "width",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "height",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerProfile",
+      "go_type": "organizationtenancy.TraegerProfile",
+      "fields": [
+        {
+          "name": "contact",
+          "schema": {
+            "kind": "ref",
+            "ref": "TraegerContact"
+          }
+        },
+        {
+          "name": "withdrawal",
+          "schema": {
+            "kind": "ref",
+            "ref": "TraegerWithdrawalContact"
+          }
+        },
+        {
+          "name": "logo",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "TraegerLogo"
+          }
+        },
+        {
+          "name": "bank_accounts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerBankAccount"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerReportDistrict",
+      "go_type": "organizationtenancy.TraegerReportDistrict",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "district",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerReportTemplate",
+      "go_type": "organizationtenancy.TraegerReportTemplate",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sections",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "key_date_month",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "key_date_day",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "districts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerReportDistrict"
+            }
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerWithdrawalContact",
+      "go_type": "organizationtenancy.TraegerWithdrawalContact",
+      "fields": [
+        {
+          "name": "phone",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -4061,6 +5235,27 @@
               "kind": "ref",
               "ref": "CompanionEntry"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WithdrawalContactRequest",
+      "go_type": "traeger.WithdrawalContactRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

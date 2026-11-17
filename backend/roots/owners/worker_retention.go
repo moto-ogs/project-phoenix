@@ -110,10 +110,12 @@ func openGuardianInvitations(identity interface {
 		}
 		// The list also carries legacy links that ran out without a recorded
 		// recipient (#6294); only a link that has not run out keeps a contact.
-		now := time.Now()
+		// Identity & Access decides that on the database clock that stamped
+		// expires_at (ADR 0285); a Go clock here could delete a contact whose
+		// link is still valid.
 		invited := make(map[int64]bool, len(invitations))
 		for _, invitation := range invitations {
-			if invitation.ExpiresAt.After(now) {
+			if !invitation.Expired {
 				invited[invitation.GuardianProfileID] = true
 			}
 		}

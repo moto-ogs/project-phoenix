@@ -87,7 +87,7 @@ func TestGuardianComposition_ListMarksDeadInvitationLinks(t *testing.T) {
 		guardianID, studentID, _ := ctx.createLinkedGuardian(t, "dead-link-migrated")
 		invitation := testpkg.InsertTestGuardianInvitation(t, db, &testpkg.GuardianInvitation{
 			Token: fmt.Sprintf("dead-link-migrated-%d", time.Now().UnixNano()), GuardianProfileID: guardianID,
-			CreatedBy: inviter, ExpiresAt: time.Now().Add(-time.Hour),
+			CreatedBy: inviter, ExpiresAt: testpkg.DatabaseNow(t, db).Add(-time.Hour),
 		})
 		// 1.15.865 ends a legacy link without a recorded recipient.
 		_, err := db.NewRaw(`UPDATE auth.guardian_invitations SET email = NULL WHERE id = ?`, invitation.ID).Exec(context.Background())
@@ -99,7 +99,7 @@ func TestGuardianComposition_ListMarksDeadInvitationLinks(t *testing.T) {
 		guardianID, studentID, _ := ctx.createLinkedGuardian(t, "dead-link-expired")
 		testpkg.InsertTestGuardianInvitation(t, db, &testpkg.GuardianInvitation{
 			Token: fmt.Sprintf("dead-link-expired-%d", time.Now().UnixNano()), GuardianProfileID: guardianID,
-			CreatedBy: inviter, ExpiresAt: time.Now().Add(-time.Hour),
+			CreatedBy: inviter, ExpiresAt: testpkg.DatabaseNow(t, db).Add(-time.Hour),
 		})
 		assert.Equal(t, "none", statusOf(studentID, guardianID))
 	})

@@ -341,7 +341,7 @@ func TestRevokeAccess_ParentCancelsInviteForStaffManagedContactWithoutDeletingLi
 		Token:             fmt.Sprintf("staff-contact-open-invite-%d", time.Now().UnixNano()),
 		GuardianProfileID: profile.ID,
 		CreatedBy:         actorID,
-		ExpiresAt:         time.Now().Add(time.Hour),
+		ExpiresAt:         testpkg.DatabaseNow(t, env.db).Add(time.Hour),
 		StudentID:         &studentID,
 		ApprovalStatus:    identityaccess.GuardianInvitationApprovalNotRequired,
 	}
@@ -357,7 +357,7 @@ func TestRevokeAccess_ParentCancelsInviteForStaffManagedContactWithoutDeletingLi
 	assert.True(t, env.linkExists(t, student.ID, profile.ID), "cancelling portal invite must not delete staff contact data")
 
 	updated := testpkg.GuardianInvitationByID(t, env.db, invitation.ID)
-	assert.False(t, updated.ExpiresAt.After(time.Now()), "pending portal token must be invalidated")
+	assert.False(t, updated.ExpiresAt.After(testpkg.DatabaseNow(t, env.db)), "pending portal token must be invalidated")
 }
 
 func TestRevokeAccess_ParentPendingInviteRemovalExpiresToken(t *testing.T) {
@@ -389,7 +389,7 @@ func TestRevokeAccess_ParentPendingInviteRemovalExpiresToken(t *testing.T) {
 	assert.False(t, env.linkExists(t, student.ID, result.GuardianProfileID), "pending access link must be removed")
 
 	inv := testpkg.GuardianInvitationByID(t, env.db, *result.InvitationID)
-	assert.False(t, inv.ExpiresAt.After(time.Now()), "removing pending access must invalidate the token")
+	assert.False(t, inv.ExpiresAt.After(testpkg.DatabaseNow(t, env.db)), "removing pending access must invalidate the token")
 }
 
 func TestInviteToStudent_RequireApproval_QueuesPending(t *testing.T) {
@@ -515,7 +515,7 @@ func TestPendingApprovalQueue_LeavesOutExpiredRequests(t *testing.T) {
 
 	_, err = env.db.NewUpdate().
 		TableExpr("auth.guardian_invitations").
-		Set("expires_at = ?", time.Now().Add(-time.Hour)).
+		Set("expires_at = now() - interval '1 hour'").
 		Where("id = ?", *result.InvitationID).
 		Exec(context.Background())
 	require.NoError(t, err)
@@ -751,7 +751,7 @@ func TestInviteToStudent_ReusesOpenInvitationForSameChildAndProfile(t *testing.T
 
 	invitations := testpkg.GuardianInvitationsByProfile(t, env.db, first.GuardianProfileID)
 	openForStudent := 0
-	now := time.Now()
+	now := testpkg.DatabaseNow(t, env.db)
 	for _, inv := range invitations {
 		if inv.StudentID != nil && *inv.StudentID == student.ID && inv.AcceptedAt == nil && inv.ExpiresAt.After(now) {
 			openForStudent++
@@ -1061,7 +1061,7 @@ func TestInviteToStudent_ConfirmedUpgrade_ReusedPendingInvitationGetsFlag(t *tes
 		Token:                fmt.Sprintf("upgrade-reuse-%d", time.Now().UnixNano()),
 		GuardianProfileID:    profile.ID,
 		CreatedBy:            creatorID,
-		ExpiresAt:            time.Now().Add(time.Hour),
+		ExpiresAt:            testpkg.DatabaseNow(t, env.db).Add(time.Hour),
 		StudentID:            &studentID,
 		RequestedByAccountID: &creatorID,
 		ApprovalStatus:       identityaccess.GuardianInvitationApprovalPending,
@@ -1280,7 +1280,7 @@ func TestInviteToStudent_ConfirmedUpgrade_RequeuesOpenDirectInvitation(t *testin
 		Token:             fmt.Sprintf("upgrade-requeue-%d", time.Now().UnixNano()),
 		GuardianProfileID: profile.ID,
 		CreatedBy:         creatorID,
-		ExpiresAt:         time.Now().Add(48 * time.Hour),
+		ExpiresAt:         testpkg.DatabaseNow(t, env.db).Add(48 * time.Hour),
 		StudentID:         &studentID,
 		ApprovalStatus:    identityaccess.GuardianInvitationApprovalNotRequired,
 	}
@@ -1345,7 +1345,7 @@ func TestInviteToStudent_ConfirmedUpgrade_RequeueRefreshesExpiry(t *testing.T) {
 
 	// Earlier staff direct invite, almost expired but still open.
 	studentID := student.ID
-	staleExpiry := time.Now().Add(2 * time.Minute)
+	staleExpiry := testpkg.DatabaseNow(t, env.db).Add(2 * time.Minute)
 	sentAt := time.Now().Add(-46 * time.Hour)
 	emailError := "smtp timeout"
 	existing := &testpkg.GuardianInvitation{
@@ -1468,7 +1468,7 @@ func TestInviteToStudent_PlainReinviteKeepsResolvedInvitation(t *testing.T) {
 			// (profile, student), so the previous subtest's still-open
 			// invitation must not be a reuse candidate here.
 			student := testpkg.CreateTestStudent(t, env.db, "Plain", "Reinvite", "7k")
-			now := time.Now()
+			now := testpkg.DatabaseNow(t, env.db)
 			studentID := student.ID
 			existing := &testpkg.GuardianInvitation{
 				Token:             fmt.Sprintf("plain-reinvite-%s-%d", status, now.UnixNano()),
