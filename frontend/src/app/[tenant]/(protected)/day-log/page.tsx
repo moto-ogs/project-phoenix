@@ -36,6 +36,7 @@ import {
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
+import { useErrorFixLink } from "~/components/ui/error-fix-slot";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import {
   apiErrorFromResponse,
@@ -324,6 +325,8 @@ export default function DayLogPage() {
   const state: DayLogState | null = loadFailure
     ? dayLogState(loadFailure)
     : null;
+  // The Leitung switches the log on in the settings (#7092).
+  const enableLogLink = useErrorFixLink("students.day_log_disabled");
   // Ladefehler stehen im Gerüst, mit Wiederholen (#2517).
   const load = useSwrResourceLoadError(
     [{ data, error: state ? undefined : loadFailure }],
@@ -501,7 +504,10 @@ export default function DayLogPage() {
       error={load.error}
       empty={
         state !== null
-          ? STATE_EMPTY[state]
+          ? {
+              ...STATE_EMPTY[state],
+              action: state === "disabled" ? enableLogLink : undefined,
+            }
           : load.error === null &&
               data !== undefined &&
               data.groups.length === 0

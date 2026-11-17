@@ -67,7 +67,7 @@ export const ERROR_CATALOG = {
       "care_contract.import_file_too_large":
         "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
       "care_contract.letterhead_too_long":
-        "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürzen Sie sie unter „Briefkopf und Vorlagen“.",
+        "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürzen Sie sie unter „Briefkopf und Vorlagen“. Das darf, wer das Recht „Einstellungen“ hat.",
       "care_contract.notice_end_not_open":
         "Für diesen Vertrag gibt es kein offenes Vertragsende mehr. Bitte laden Sie die Seite neu.",
       "care_contract.notice_template_missing":
@@ -913,7 +913,7 @@ export const ERROR_CATALOG = {
       "operator.audit_unavailable":
         "Die Anfrage konnte nicht sicher protokolliert werden. Bitte versuchen Sie es später erneut.",
       "parent_billing.bank_account_missing":
-        "Für die Schreiben fehlt eine Bankverbindung. Bitte tragen Sie unter „Abrechnungsvorgaben“ ein Konto ein.",
+        "Für die Schreiben fehlt eine Bankverbindung. Bitte tragen Sie unter „Abrechnungsvorgaben“ ein Konto ein. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.beleg_retention_basis_cites_statute":
         "Die Grundlage nennt § 147 AO, § 257 HGB oder § 14b UStG. Dann gelten deren Fristen. Bitte prüfen Sie die Grundlage.",
       "parent_billing.benefits_exemption_unavailable":
@@ -955,7 +955,7 @@ export const ERROR_CATALOG = {
       "parent_billing.care_amendment_conflict":
         "Diese Änderung passt nicht mehr zur Rechnung. Bitte laden Sie die Seite neu.",
       "parent_billing.care_amendment_disabled":
-        "Diese Änderung ist bei Ihrem Träger ausgeschaltet. Sie können sie in den Einstellungen der Abrechnung einschalten.",
+        "Diese Änderung ist bei Ihrem Träger ausgeschaltet. Sie lässt sich in den Einstellungen unter „Monatsbeitrag“ einschalten. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.care_amendment_invalid":
         "Bitte prüfen Sie die Eingaben für die Änderung.",
       "parent_billing.care_amendments_unresolved":
@@ -1040,7 +1040,7 @@ export const ERROR_CATALOG = {
       "parent_billing.datev_no_new_bookings":
         "Alle Buchungen dieses Laufs sind schon in einer DATEV-Datei. Es wurde keine Datei erstellt.",
       "parent_billing.datev_not_ready":
-        "Für die DATEV-Datei fehlen noch Werte. Tragen Sie sie in den Einstellungen unter „DATEV“ ein.",
+        "Für die DATEV-Datei fehlen noch Werte. Tragen Sie sie in den Einstellungen unter „DATEV“ ein. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.debtor_number_digit_range":
         "Die Debitorennummer hat {min_digits} bis {max_digits} Ziffern, zum Beispiel {example}.",
       "parent_billing.debtor_number_digits":
@@ -1102,7 +1102,7 @@ export const ERROR_CATALOG = {
       "parent_billing.invoice_number_taken":
         "Diese Rechnungsnummer gibt es schon. Bitte ändern Sie das Muster unter „Abrechnungsvorgaben“.",
       "parent_billing.legal_remedy_missing":
-        "Der Gebührenbescheid braucht eine Rechtsbehelfsbelehrung. Tragen Sie sie in der Vorlage „Bescheid“ ein. Danach können Sie freigeben.",
+        "Der Gebührenbescheid braucht eine Rechtsbehelfsbelehrung. Tragen Sie sie in der Vorlage „Bescheid“ ein. Das darf, wer das Recht „Einstellungen“ hat. Danach können Sie freigeben.",
       "parent_billing.letter_mail_block_unreadable":
         "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuchen Sie es später noch einmal.",
       "parent_billing.letter_mail_blocked":
@@ -1122,7 +1122,7 @@ export const ERROR_CATALOG = {
       "parent_billing.parent_document_not_found":
         "Dieses Dokument gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "parent_billing.payment_text_debtor_number_missing":
-        "Rechnungen ohne Debitorennummer: {count}. Ihr Zahlungstext nennt aber die Debitorennummer. Löschen Sie den eigenen Zahlungstext in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ oder nehmen Sie dort den Platzhalter für die Debitorennummer heraus.",
+        "Rechnungen ohne Debitorennummer: {count}. Ihr Zahlungstext nennt aber die Debitorennummer. Löschen Sie den eigenen Zahlungstext in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ oder nehmen Sie dort den Platzhalter für die Debitorennummer heraus. Das darf, wer das Recht „Einstellungen“ hat.",
       "parent_billing.recipient_email_missing":
         "Für diese Familie gibt es keine E-Mail-Adresse. Bitte drucken Sie das Schreiben und geben Sie es der Familie.",
       "parent_billing.sepa_account_holder_unsupported":
