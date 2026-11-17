@@ -45,6 +45,7 @@ import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { useSWRAuth, useTenantMutate, useSWRSeedFrom } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import type { Student, SupervisorContact } from "~/lib/student-helpers";
 import {
@@ -562,7 +563,7 @@ function StudentDetailPageContent() {
   // Zwischenspeicher teilen; ohne Schreibrecht wird gar nicht erst geladen.
   const { data: groupOptions = EMPTY_GROUP_OPTIONS } = useSWRAuth<
     ReadonlyArray<{ value: string; label: string }>
-  >(hasWriteAccess ? "database-groups-dropdown" : null, async () => {
+  >(hasWriteAccess ? tenantAdminKeys.groupOptions() : null, async () => {
     const groups = await groupService.getGroups();
     return groups
       .map((group) => ({ value: String(group.id), label: group.name }))

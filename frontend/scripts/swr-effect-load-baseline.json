@@ -1,6 +1,5 @@
 {
   "src/app/[tenant]/(protected)/lists/page.tsx": 3,
-  "src/app/[tenant]/(protected)/time-tracking/page.tsx": 1,
   "src/app/[tenant]/(public)/anmeldung/[phaseId]/page.tsx": 1,
   "src/app/[tenant]/(public)/anmeldung/page.tsx": 1,
   "src/app/[tenant]/(public)/anmeldung/preview/page.tsx": 1,

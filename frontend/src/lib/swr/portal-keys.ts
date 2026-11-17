@@ -322,6 +322,10 @@ export const parentAnnouncementKeys = {
     `parent-letter-preview-${base}-${studentId}-${body}`,
   letterPreviewChildren: (scope: string) =>
     `parent-letter-preview-children-${encodeURIComponent(scope)}`,
+  /** Activities a parent announcement can target. */
+  targetActivities: () => "parent-announcements-activities",
+  /** School classes a parent announcement can target. */
+  targetClasses: () => "parent-announcements-classes",
   preview(data: unknown, id: string) {
     const row = previewRow(data, id);
     const name = previewText(row?.title);
@@ -363,6 +367,33 @@ export const timeTrackingKeys = {
     `time-tracking-own-shifts-week-${from}-${to}`,
   ownShiftsAhead: (from: string, to: string) =>
     `time-tracking-own-shifts-week-ahead-${from}-${to}`,
+  /** Eigene Schichten eines Tages für die Stempeluhr. */
+  ownShiftsToday: (day: string) => `time-tracking-own-shifts-today-${day}`,
+  /** Die Zeiterfassungs-Einstellungen der Schule, auch Kontobeginn. */
+  config: () => "time-tracking-config",
+  /** Eigene Arbeitsblöcke für das Wochendiagramm. */
+  history: (from: string, to: string) => `time-tracking-history-${from}-${to}`,
+  /**
+   * Eigene Arbeitsblöcke, Abwesenheiten und Schichten der Tabelle. Alle
+   * beginnen mit „time-tracking-table“, das ein Stempeln neu lädt.
+   */
+  table: (from: string, to: string) => `time-tracking-table-${from}-${to}`,
+  tableAbsences: (from: string, to: string) =>
+    `time-tracking-table-absences-${from}-${to}`,
+  tableShifts: (from: string, to: string) =>
+    `time-tracking-table-shifts-${from}-${to}`,
+  /** Tagesprojektion (#2443): Soll, Gutschrift, Ist und Saldo je Tag. */
+  scheduleTargets: (from: string, to: string) =>
+    `time-tracking-schedule-targets-${from}-${to}`,
+  /** Gesetzliche Feiertage im Zeitraum (#1418). */
+  holidays: (from: string, to: string) =>
+    `time-tracking-holidays-${from}-${to}`,
+  /** OGS-Schließtage im Zeitraum (#1418). */
+  closingDays: (from: string, to: string) =>
+    `time-tracking-closing-days-${from}-${to}`,
+  /** Eigene Monatskarte (#1842). */
+  monthSummary: (year: number, month: number) =>
+    `time-tracking-month-summary-${year}-${month}`,
 } as const;
 
 /** Exact list identity shared with intent; preserve the SSE group segment. */
@@ -435,6 +466,8 @@ export const holidayKeys = {
   /** Zuordnung der eigenen Kinder einer Ferienwoche (#6678). */
   ownChildren: (weekId: string) =>
     `holiday-own-children:${encodeURIComponent(weekId)}`,
+  /** Die Kinder einer ausgerichteten Ferienwoche. */
+  participants: (weekId: string) => `holiday-participants:${weekId}`,
   /** Eigene Kinder in Ferienwochen anderer OGS (#6679). */
   homeSchoolBookings: () => "holiday-home-school-bookings",
   /** Feriengruppen, deren Woche noch nicht begonnen hat (#6680). */

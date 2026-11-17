@@ -64,4 +64,21 @@ export const tenantStudentKeys = {
   /** The correction trail of one child's closed block (`fetchAttendanceCorrections`). */
   attendanceCorrections: (instanceId: string, studentId: string) =>
     `attendance-corrections-${encodeURIComponent(instanceId)}-${encodeURIComponent(studentId)}`,
+  /** Die Einträge der Klassenliste (`fetchClassListEntries`). */
+  classListEntries: () => "class-list-entries",
+  /** Klassen, die die Klassenliste vorschlägt (`fetchClassSuggestions`). */
+  classListClassSuggestions: () => "class-list-class-suggestions",
+  /** Die angelegten Kinder neben der Klassenliste (`fetchRosterStudents`). */
+  classListRosterStudents: () => "class-list-roster-students",
+  /** Prefix of every page of ended care (`fetchEndedCare`). */
+  endedCareFamily: "students-ended-care",
+  /** One page of ended care for one search. */
+  endedCare: (page: number, search: string) =>
+    `students-ended-care:${page}:${search}`,
+  /**
+   * Today's Mensa/HA tracking indicators of these children; the SSE hook
+   * refreshes every key containing "tracking-indicators-".
+   */
+  trackingIndicators: (studentIdsKey: string) =>
+    `tracking-indicators-${studentIdsKey}`,
 } as const;

@@ -84,6 +84,13 @@ export const staffMonthSummaryKeys = {
  * Kenntnisnahme gehört zur Antwort, deshalb trägt der Schlüssel das Konto.
  */
 export const staffNoticeKeys = {
+  /**
+   * Die heute geltenden Hinweise je Konto: Badge der Seitenleiste,
+   * Startseiten-Baustein und /tagesinformationen teilen den Eintrag (#4989).
+   */
+  today: (accountId: string) => `staff-notices-today:${accountId}`,
+  /** Alle Hinweise der Leitung je Konto, mit eigener Kenntnisnahme. */
+  all: (accountId: string) => `staff-notices:${accountId}`,
   linked: (accountId: string, noticeId: string) =>
     `staff-notice:${accountId}:${encodeURIComponent(noticeId)}`,
   /** Wer eine Tagesinformation wann bestätigt hat (#2208). */
@@ -183,6 +190,35 @@ export const staffAccessKeys = {
     `role-permissions-${encodeURIComponent(roleId)}`,
   /** Alle Rechte zur Auswahl im Rollen-Reiter (`authService.getPermissions`). */
   permissionCatalog: () => "role-permission-catalog",
+  /** Die Systemrolle eines Kontos (Konto bearbeiten, #3116). */
+  roleAssignment: (accountId: string) => `staff-role-assignment-${accountId}`,
+} as const;
+
+/** Stammdaten, Verzeichnisse und Monatsstände der Personalverwaltung. */
+export const staffRecordKeys = {
+  /** Stammdaten einer Person (`staffStammdatenService.get`). */
+  stammdaten: (staffId: string) => `staff-stammdaten-${staffId}`,
+  /** Offene Abwesenheitsanträge einer Person, Zähler des Reiters. */
+  pendingAbsences: (staffId: string) => `staff-pending-absences-${staffId}`,
+  /** Ausgeschiedene Mitarbeitende (`staffService.getFormerStaff`). */
+  former: () => "staff-former-list",
+  /** Das Dokumentenverzeichnis aller Mitarbeitenden. */
+  documentDirectory: () => "staff-document-directory",
+  /** Zeitkonten eines Monats je Beschäftigungstyp und Saldo-Grenzen (#1417). */
+  timeAccounts: (
+    year: number,
+    month: number,
+    employment: string,
+    saldoMin: number | undefined,
+    saldoMax: number | undefined,
+  ) =>
+    `staff-time-accounts-${year}-${month}-${employment}-${saldoMin ?? ""}-${saldoMax ?? ""}`,
+  /** Die Personen eines Monats als Auswahl des Änderungsprotokolls. */
+  auditOptions: (year: number, month: number) =>
+    `staff-audit-options-${year}-${month}`,
+  /** Abschluss-Status eines Monats (#1417). */
+  monthClose: (year: number, month: number) =>
+    `staff-month-close-${year}-${month}`,
 } as const;
 
 /**

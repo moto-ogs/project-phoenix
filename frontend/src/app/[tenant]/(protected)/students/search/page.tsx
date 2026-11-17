@@ -185,6 +185,7 @@ import {
 import { useSWRAuth, useImmutableSWR } from "~/lib/swr";
 import { normalizeSearchStudentsGroupId } from "~/lib/swr/search-students-key";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   encodeMultiValueParam,
   normalizeMultiValues,
@@ -2001,7 +2002,7 @@ function SearchPageContent() {
   // the request is pure waste. Skip it entirely (#1939).
   const { data: trackingData } = useSWRAuth<TrackingIndicatorsResponse>(
     isToday && trackingStudentIds.length > 0
-      ? `tracking-indicators-${trackingStudentIdsKey}`
+      ? tenantStudentKeys.trackingIndicators(trackingStudentIdsKey)
       : null,
     async () => activeService.getTrackingIndicators(trackingStudentIds),
     { keepPreviousData: true, revalidateOnFocus: false },

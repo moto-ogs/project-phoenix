@@ -110,4 +110,29 @@ export const tenantDailyKeys = {
   /** Wen eine Nachricht zur Absage eines Termins erreicht (#2601). */
   guardianNoticeReach: (instanceId: string) =>
     `timetable-guardian-notice-reach-${encodeURIComponent(instanceId)}`,
+  /** Aktivitäten, Kategorien und eigenes Personalprofil der Seite „Aktivitäten“. */
+  activitiesOverview: () => "activities-page",
+  /** Termine des Team-Kalenders je Ansicht und Zeitraum. */
+  staffCalendar: (viewMode: string, from: string, to: string) =>
+    `staff-calendar-${viewMode}-${from}-${to}`,
+  /**
+   * Gesetzliche Feiertage des Bundeslands im Zeitraum (#4775); Kalender und
+   * Liste der Schulferien teilen die Antwort.
+   */
+  schoolHolidays: (from: string, to: string) => `school-holidays-${from}-${to}`,
+  /** Empfänger, die ein Termin erreichen kann, je Suche. */
+  calendarRecipientOptions: (search: string) =>
+    `calendar-recipient-options-${search}`,
+  /**
+   * Geburtstage (#1542): ohne Woche die Übersicht der Startseite, mit Woche
+   * die des Startseiten-Bausteins.
+   */
+  birthdayOverview: (weekStart?: string) =>
+    weekStart ? `birthday-overview:${weekStart}` : "birthday-overview",
+  /**
+   * Ob die eigene Prüfzuständigkeit für Elternanfragen dieses Kind erreicht
+   * (#3886), je Konto.
+   */
+  requestReviewCoverage: (accountId: string, studentId: string) =>
+    `request-review-coverage:${accountId}:${studentId}`,
 } as const;

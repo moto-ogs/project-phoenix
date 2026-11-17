@@ -9,6 +9,8 @@ export const tenantListKeys = {
    * diesem Schlüssel.
    */
   substitutionOverview: () => "substitution-overview",
+  /** Geplante Vertretungen eines Tages aus dem Betreuungsplan. */
+  substitutionSchedule: (day: string) => `substitution-schedule-${day}`,
   /** Anhänge einer Elternmitteilung im Assistenten, mit ihrer Änderbarkeit (#2890). */
   announcementAttachments: (announcementId: string) =>
     `announcement-attachments-${encodeURIComponent(announcementId)}`,
