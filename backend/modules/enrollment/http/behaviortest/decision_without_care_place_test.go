@@ -145,13 +145,31 @@ func TestDecisionService_FullChildQuotaHoldsOnlyThePlace(t *testing.T) {
 	assert.True(t, mark, "no place while the Kinderkontingent is full")
 	assert.NotEqual(t, "1a", class, "the child is in its new class")
 
+	// A confirmed edit of the approved child's class on a day the held plan
+	// is due keeps the plan that still owes the place (#4803 review).
+	_, err = env.db.ExecContext(ctx, `UPDATE enrollment.request_children SET class_switch_on = ?
+		WHERE tenant_id = ? AND id = ?`, decisionTestToday, testpkg.Tenant(t), childID)
+	require.NoError(t, err)
+	approved, err := ReadOwnerChildForTest(ctx, env.repos.Enrollment(), childID)
+	require.NoError(t, err)
+	grade := int16(3)
+	approved.TargetGradeLevel = &grade
+	require.NoError(t, UpdateOwnerChildForTest(ctx, env.repos.Enrollment(), approved))
+	_, err = changeRequestApplierForTest(t, env).SyncApprovedChildData(ctx, SyncApprovedChildDataInput{
+		RequestID: requestID, ChildID: childID, ActorAccountID: env.creatorID,
+	})
+	require.NoError(t, err)
+	mark, edited := membership()
+	assert.True(t, mark, "the edit gives no place")
+	assert.Equal(t, class, edited, "the tick, not the edit, writes the class")
+
 	testpkg.SetTestChildQuota(t, env.db, occupied+1, 1)
 	applied, err = testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), decisionOwner(t, env.decision).ApplyDueClassSwitches, newYearStart)
 	require.NoError(t, err)
 	assert.Equal(t, 1, applied, "the held place is granted once one is free")
 	mark, after := membership()
 	assert.False(t, mark)
-	assert.Equal(t, class, after, "the class stays")
+	assert.Equal(t, "3", after, "the class follows the confirmed edit")
 }
 
 // TestDecisionService_HolidayApprovalRefusesAChildWithoutCarePlace keeps a
