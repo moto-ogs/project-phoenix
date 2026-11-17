@@ -136,6 +136,14 @@ func (s *requestStore) CloseOpenCareRequests(ctx context.Context, studentIDs []i
 // so they share the database clock (ADR 0281, point 4).
 const requestStamp = "updated_at = DEFAULT"
 
+// recentlyDecided: the parent's "recently decided" windows filter decided
+// care and absence requests by reviewed_at against a cutoff of the owner's
+// clock. Every terminal writer stamps reviewed_at on that clock: decisions
+// with or without a reviewer, corrections, "done" and care_ended
+// (CloseOpenCareRequests). Rows decided before every writer did so and left
+// reviewed_at NULL fall out of the window; it is at most two months long, and
+// a fallback to the trigger-stamped updated_at would compare two clocks.
+
 func requestStats(elapsed time.Duration, rows int64) carePlanCompose.RequestStoreStats {
 	return carePlanCompose.RequestStoreStats{Queries: 1, Rows: rows, StatementDuration: elapsed}
 }
@@ -238,7 +246,8 @@ func (s *requestStore) ListExcusedAbsenceRequests(ctx context.Context, filter ca
 		query = query.Where(`"excused_absence_request".status IN (?)`, bun.List(filter.Statuses))
 	}
 	if !filter.RecentSince.IsZero() {
-		query = query.Where(`COALESCE("excused_absence_request".reviewed_at, "excused_absence_request".updated_at) >= ?`, filter.RecentSince)
+		// The cutoff is the owner's clock, so is reviewed_at (recentlyDecided).
+		query = query.Where(`"excused_absence_request".reviewed_at >= ?`, filter.RecentSince)
 	}
 	query = applyExcusedRequestOptions(s.directory, query, filter)
 	started := time.Now()
@@ -333,13 +342,17 @@ func (s *requestStore) DecideExcusedAbsenceRequest(ctx context.Context, value ca
 		ModelTableExpr(`active.excused_absence_requests AS "excused_absence_request"`).
 		Set("status = ?", value.Status).Set("decision_reason = ?", value.Reason).Set(requestStamp).
 		Where(`"excused_absence_request".id = ?`, value.ID)
+	// Every terminal transition stamps reviewed_at on the owner's clock, also
+	// a decision without a reviewer: the parent's "recently decided" window
+	// compares it with an owner-clock cutoff.
+	query = query.Set("reviewed_at = ?", now)
 	if correction {
-		query = query.Set("reviewed_by = ?", reviewerID(value.ReviewedBy)).Set("reviewed_at = ?", now).
+		query = query.Set("reviewed_by = ?", reviewerID(value.ReviewedBy)).
 			Where(`"excused_absence_request".status IN (?)`, bun.List([]string{requestApproved, requestRejected}))
 	} else {
 		query = query.Where(`"excused_absence_request".status = ?`, requestPending)
 		if value.ReviewedBy != nil && *value.ReviewedBy > 0 {
-			query = query.Set("reviewed_by = ?", *value.ReviewedBy).Set("reviewed_at = ?", now)
+			query = query.Set("reviewed_by = ?", *value.ReviewedBy)
 		}
 	}
 	if value.Applied {
@@ -436,7 +449,9 @@ func (s *requestStore) ListCareScheduleRequests(ctx context.Context, filter care
 
 func applyCareScheduleRequestOptions(directory StudentDirectory, query *bun.SelectQuery, filter careplan.CareScheduleRequestFilter) (*bun.SelectQuery, error) {
 	if !filter.RecentSince.IsZero() {
-		return query.Where(`("care_schedule_change_request".status = ? OR "care_schedule_change_request".updated_at >= ?)`, requestPending, filter.RecentSince).
+		// Pending requests show at any age; decided ones by reviewed_at,
+		// owner-stamped like the cutoff (recentlyDecided).
+		return query.Where(`("care_schedule_change_request".status = ? OR "care_schedule_change_request".reviewed_at >= ?)`, requestPending, filter.RecentSince).
 			OrderExpr(`"care_schedule_change_request".created_at DESC`).OrderExpr(`"care_schedule_change_request".id DESC`), nil
 	}
 	if filter.Queue == nil {
@@ -509,13 +524,17 @@ func (s *requestStore) DecideCareScheduleRequest(ctx context.Context, value care
 		ModelTableExpr(`schedule.care_schedule_change_requests AS "care_schedule_change_request"`).
 		Set("status = ?", value.Status).Set("decision_reason = ?", value.Reason).Set(requestStamp).
 		Where(`"care_schedule_change_request".id = ?`, value.ID)
+	// Every terminal transition stamps reviewed_at on the owner's clock, also
+	// a decision without a reviewer: the parent's "recently decided" window
+	// compares it with an owner-clock cutoff.
+	query = query.Set("reviewed_at = ?", now)
 	if correction {
-		query = query.Set("reviewed_by = ?", reviewerID(value.ReviewedBy)).Set("reviewed_at = ?", now).
+		query = query.Set("reviewed_by = ?", reviewerID(value.ReviewedBy)).
 			Where(`"care_schedule_change_request".status IN (?)`, bun.List([]string{requestApproved, requestRejected}))
 	} else {
 		query = query.Where(`"care_schedule_change_request".status = ?`, requestPending)
 		if value.ReviewedBy != nil && *value.ReviewedBy > 0 {
-			query = query.Set("reviewed_by = ?", *value.ReviewedBy).Set("reviewed_at = ?", now)
+			query = query.Set("reviewed_by = ?", *value.ReviewedBy)
 		}
 	}
 	if value.Applied {
