@@ -82,6 +82,9 @@ type LifecycleStudent struct {
 	GroupID       *int64
 	Alumnus       bool
 	EnrolledUntil *calendar.Date
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803); no AG or care offering takes it.
+	WithoutCarePlace bool
 }
 
 // OperationStudent is the part of a child the operational day names and

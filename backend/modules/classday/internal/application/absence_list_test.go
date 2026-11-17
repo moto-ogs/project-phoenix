@@ -453,3 +453,45 @@ func TestAbsenceListCountsChildrenWithoutCarePlace(t *testing.T) {
 	assert.Equal(t, 1, report.Children[0].AbsentDays)
 	assert.Equal(t, 1, report.Children[0].ExcusedDays)
 }
+
+// TestAbsenceListBoundsChildrenWithoutCarePlaceByMembership counts a child
+// without an OGS place only while it belongs to the class (#4803 review): a
+// converted class list entry from the day it was created, plus the earlier
+// days its moved marks cover, and a child that left the class up to its
+// enrollment end, graduated or not.
+func TestAbsenceListBoundsChildrenWithoutCarePlaceByMembership(t *testing.T) {
+	t.Parallel()
+	created, left := calendar.Date("2026-09-09"), calendar.Date("2026-09-08")
+	a := absenceList{
+		today: func() calendar.Date { return "2026-09-16" },
+		deps: AbsenceListDependencies{
+			Marks: &fakeAbsenceMarks{marks: []MorningMark{
+				// Moved from the class list entry before the conversion.
+				{StudentID: 5, Date: "2026-09-07", Status: classday.MorningAttendanceAbsent},
+				{StudentID: 5, Date: "2026-09-10", Status: classday.MorningAttendancePresent},
+				{StudentID: 7, Date: "2026-09-07", Status: classday.MorningAttendancePresent},
+			}},
+			StatusDays:    fakeAbsenceStatusDays{},
+			Calendar:      fakeAbsenceCalendar{},
+			AvailableFrom: func(context.Context, calendar.Date) (calendar.Date, error) { return "2025-09-16", nil },
+			Participation: fakeAbsenceParticipation{end: "2026-09-01"},
+			Children: func(context.Context, string) ([]classday.AbsenceListChild, error) {
+				return []classday.AbsenceListChild{
+					{StudentID: 5, FirstName: "Neu", LastName: "Angelegt", SchoolMemberOnly: true, SchoolMemberFrom: &created},
+					{StudentID: 7, FirstName: "Schon", LastName: "Gegangen", SchoolMemberOnly: true, SchoolMemberUntil: &left},
+				}, nil
+			},
+		},
+	}
+	report, err := a.AbsenceListReport(context.Background(), absenceQuery("2026-09-07", "2026-09-11"))
+	require.NoError(t, err)
+	require.Len(t, report.Children, 2)
+	byID := map[int64]classday.AbsenceListChild{}
+	for _, child := range report.Children {
+		byID[child.StudentID] = child
+	}
+	assert.Equal(t, 1, byID[5].AbsentDays, "the moved mark of 7 September counts")
+	assert.Equal(t, 2, byID[5].NotRecordedDays, "9 and 11 September, not 8 September before the child existed")
+	assert.Equal(t, 0, byID[7].AbsentDays)
+	assert.Equal(t, 1, byID[7].NotRecordedDays, "only 8 September, the last day in the class")
+}
