@@ -84,8 +84,12 @@ Deshalb erreichen sie Familien ohne OGS-Platz nicht. Ein zweiter Weg für Eltern
 - Wer ein Kind in ein OGS-Angebot schreibt, prüft das Merkmal selbst: Eine
   AG-Anmeldung lehnt ein solches Kind ab, und die Antwortübersicht einer
   Anmeldephase fragt seine Familie nicht.
+- Die Liste der angemeldeten Kinder, die nur OGS-Leser nutzen (AG-Zielregeln,
+  Abholplan, Zählung im Tagesprotokoll, Ablauf der Anmeldephasen), enthält
+  ein solches Kind nicht. Für Timetable hat es an keinem Tag Betreuung.
 - Ein Kind ohne OGS-Platz gehört zur Klasse ab dem Beginn seiner Anmeldung,
-  sonst ab dem Tag seiner Anlage, bis zum Ende seiner Anmeldung. Klassenliste
+  sonst ab dem Tag seiner Anlage, bis zum Ende seiner Anmeldung; hat es die
+  Schule verlassen (ehemalig oder inaktiv), nur mit einem Enddatum. Klassenliste
   und Fehlzeitenliste zeigen und zählen es nur in dieser Zeit. Vormittagsmarken,
   die ein umgewandelter Klassenlisteneintrag mitbringt, zählen auch davor.
 - Im Glossar stehen die Begriffe „Kind ohne OGS-Platz“ und „Klassenlisteneintrag“

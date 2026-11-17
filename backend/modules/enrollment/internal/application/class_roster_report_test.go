@@ -547,7 +547,7 @@ func TestClassRosterListsChildrenWithoutCarePlaceAsNoCare(t *testing.T) {
 	students := []*RosterStudent{
 		{ID: 51, PersonID: 151, SchoolClass: "3a"},
 		{ID: 52, PersonID: 152, SchoolClass: "3a", WithoutCarePlace: true},
-		{ID: 53, PersonID: 153, SchoolClass: "3a", WithoutCarePlace: true, Alumnus: true},
+		{ID: 53, PersonID: 153, SchoolClass: "3a", WithoutCarePlace: true, Departed: true},
 	}
 	svc := classRosterTestService(students, map[int64]*RosterPerson{
 		151: {FirstName: "Mit", LastName: "Platz"},
