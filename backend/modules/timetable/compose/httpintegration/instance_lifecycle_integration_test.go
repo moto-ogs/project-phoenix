@@ -594,6 +594,37 @@ func TestInstance_Reopen_OrdersLeavingSchoolOnTheOwnerClock(t *testing.T) {
 	assert.Equal(t, timetable.CodeReopenStudentLeft, coded.Code)
 }
 
+// Attendance rows carry the database clock, the clock of completed_at
+// (#7295): with the owners' clock behind the database's, a correction after
+// the completion still blocks the reopen instead of being overwritten by the
+// snapshot.
+func TestInstance_Reopen_SeesCorrectionWithTheOwnerClockBehind(t *testing.T) {
+	t.Parallel()
+
+	day := calendar.NewDate(2020, 6, 15)
+	now := time.Date(2020, 6, 15, 14, 30, 0, 0, calendar.Berlin)
+	s := buildLifecycle(t, func() time.Time { return now })
+	ai := seedInstanceOn(t, s, day, true, true)
+	_, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	_, err = s.svc.Complete(s.ctx, ai.ID)
+	require.NoError(t, err)
+
+	actor := testpkg.CreateTestAccount(t, s.db, "reopen-correction-clock")
+	note := "Nachtrag"
+	require.NoError(t, testpkg.WithinTenantContext(t, s.ctx, s.db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		_, err := s.timetableData.AttendanceCorrections.CorrectInstanceStudentAttendance(txCtx, ai.ID, s.student1,
+			timetable.AttendancePatch{Note: &note}, "Nachtrag nach Abschluss", actor.ID)
+		return err
+	}))
+
+	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
+	require.ErrorIs(t, err, timetable.ErrTimetableOperationConflict)
+	coded, ok := timetable.AsCoded(err)
+	require.True(t, ok)
+	assert.Equal(t, timetable.CodeReopenAttendanceChanged, coded.Code)
+}
+
 func TestInstance_Complete_ConfirmationMustMatchOpenVisits(t *testing.T) {
 	t.Parallel()
 

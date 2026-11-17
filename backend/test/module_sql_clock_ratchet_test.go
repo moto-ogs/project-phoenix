@@ -143,11 +143,13 @@ var moduleSQLClockBudget = map[string]int{
 	// and accounts, which the database stamps.
 	"modules/staffannouncementaudience": 2,
 	// Named exceptions on the database clock (ADR 0281): updated_at of
-	// active.activity_session_attendance (9), which Timetable's Reopen orders
-	// against completed_at, the database's transaction timestamp; and the
-	// reopen of an activity session (1), whose updated_at the completion
-	// stamps with that completed_at.
-	"modules/studentpresence": 10,
+	// active.activity_session_attendance (7), which Timetable's Reopen orders
+	// against completed_at, the database's transaction timestamp. Every
+	// writer stamps it there: an UPDATE sets now(), an INSERT takes the
+	// column default (EXCLUDED.updated_at on conflict). And the reopen of an
+	// activity session (1), whose updated_at the completion stamps with that
+	// completed_at.
+	"modules/studentpresence": 8,
 	// Named exceptions on the database clock (ADR 0281): CompletionTimestamp
 	// (1), completed_at, which Reopen orders against the updated_at of
 	// supervisor and attendance rows; and updated_at of

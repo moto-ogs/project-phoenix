@@ -42,17 +42,21 @@ type SessionAttendanceStore interface {
 	CloseOpenParticipants(context.Context, []int64, time.Time) (Stats, error)
 	ReconcileParticipantInterval(context.Context, int64, time.Time, *time.Time, time.Time, *time.Time) (Stats, error)
 	PatchSessionAttendance(context.Context, int64, studentpresence.SessionAttendancePatch, time.Time) (Stats, error)
-	// TransitionParticipants stamps updated_at with the given instant, or with
-	// the transaction time when nil.
-	TransitionParticipants(context.Context, []int64, string, string, *time.Time) (Stats, error)
+	// The writers stamp updated_at with the transaction time: Timetable's
+	// Reopen orders it against completed_at, the database's transaction
+	// timestamp of the completion (ADR 0281). An UPDATE sets now(), an INSERT
+	// takes the column default now() (EXCLUDED.updated_at on conflict). A
+	// time argument is the owner's instant of the change (check-in,
+	// checkout, manual decision).
+	TransitionParticipants(context.Context, []int64, string, string) (Stats, error)
 	MarkParticipantsNotScheduled(context.Context, []int64) (Stats, error)
 	RestoreSessionAttendance(context.Context, studentpresence.SessionAttendanceRestore) (Stats, error)
 	ReconnectParticipantPickupExceptions(context.Context, []studentpresence.ParticipantPickupException) (Stats, error)
 	LockSessionAttendance(context.Context, []int64) (Stats, error)
-	ApplyStatusDayAbsences(context.Context, []StatusDayAbsence, time.Time) (Stats, error)
-	ReleaseStatusDay(context.Context, int64, []StatusDayRelease, time.Time) (Stats, error)
-	ApplyPartialAbsences(context.Context, []PartialAbsence, time.Time) (Stats, error)
-	ReleasePartialAbsence(context.Context, int64, []StatusDayRelease, time.Time) (Stats, error)
+	ApplyStatusDayAbsences(context.Context, []StatusDayAbsence) (Stats, error)
+	ReleaseStatusDay(context.Context, int64, []StatusDayRelease) (Stats, error)
+	ApplyPartialAbsences(context.Context, []PartialAbsence) (Stats, error)
+	ReleasePartialAbsence(context.Context, int64, []StatusDayRelease) (Stats, error)
 	FindSessionAttendance(context.Context, int64) (studentpresence.SessionAttendance, bool, Stats, error)
 }
 
