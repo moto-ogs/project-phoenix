@@ -60,34 +60,6 @@ func customer(downloads int) organizationtenancy.DataReturnRecipient {
 		ValidFor: 7 * 24 * time.Hour, MaxDownloads: downloads}
 }
 
-// The data return lives on the database clock (ADR 0274): its functions
-// judge expires_at and keep_until against now(), so the fixture's clocks
-// and instants follow the database, not the test process. The offset is
-// measured once; databaseClock must run before databaseNow.
-var databaseOffset struct {
-	once   sync.Once
-	offset time.Duration
-	err    error
-}
-
-// databaseClock returns the database clock as seen from this process.
-func databaseClock(t *testing.T, db bun.IDB) func() time.Time {
-	t.Helper()
-	databaseOffset.once.Do(func() {
-		var dbNow time.Time
-		before := time.Now()
-		databaseOffset.err = db.NewRaw(`SELECT clock_timestamp()`).Scan(context.Background(), &dbNow)
-		databaseOffset.offset = dbNow.Sub(before.Add(time.Since(before) / 2))
-	})
-	require.NoError(t, databaseOffset.err)
-	return databaseNow
-}
-
-// databaseNow is the current instant on the database clock.
-func databaseNow() time.Time {
-	return time.Now().Add(databaseOffset.offset)
-}
-
 // fixture binds both sides to one test database and store. The release
 // side assumes phoenix_data_return by itself; the retrieval runs on a
 // session that assumed phoenix_auth, the role of the HTTP pool.
@@ -124,8 +96,8 @@ func newFixtureOn(t *testing.T, db *bun.DB) *fixture {
 	operator := testpkg.CreateTestOperator(t, db)
 	store := t.TempDir()
 	conn := roleSession(t, db, "phoenix_auth")
-	f := &fixture{db: db, store: store, operator: operator.ID, release: NewRelease(db, testCrypto(), store, databaseClock(t, db)),
-		retrieval: NewRetrieval(conn, testCrypto(), store, databaseClock(t, db), nil)}
+	f := &fixture{db: db, store: store, operator: operator.ID, release: NewRelease(db, testCrypto(), store, time.Now),
+		retrieval: NewRetrieval(conn, testCrypto(), store, time.Now, nil)}
 	t.Cleanup(func() {
 		_, err := db.ExecContext(context.Background(), `DELETE FROM platform.data_return_grants WHERE issued_by = ?`, f.operator)
 		require.NoError(t, err)
@@ -148,7 +120,7 @@ func (f *fixture) school(t *testing.T) int64 {
 func (f *fixture) releaseSchool(t *testing.T, school int64, secret string, downloads int) organizationtenancy.DataReturnIssued {
 	t.Helper()
 	issued, err := f.release.Release(t.Context(), organizationtenancy.DataReturnReleaseRequest{Package: writePackage(t, school, secret, nil),
-		SchoolID: school, OperatorID: f.operator, KeepUntil: databaseNow().Add(60 * 24 * time.Hour), DataReturnRecipient: customer(downloads)})
+		SchoolID: school, OperatorID: f.operator, KeepUntil: time.Now().Add(60 * 24 * time.Hour), DataReturnRecipient: customer(downloads)})
 	require.NoError(t, err)
 	return issued
 }
@@ -235,7 +207,7 @@ func TestDownloadBudgetHoldsUnderConcurrentDownloads(t *testing.T) {
 	f := newFixture(t)
 	issued := f.releaseSchool(t, f.school(t), "Synthetic", 2)
 	// The pool, not the single phoenix_auth session: downloads run in parallel.
-	pool := NewRetrieval(f.db, testCrypto(), f.store, databaseClock(t, f.db), nil)
+	pool := NewRetrieval(f.db, testCrypto(), f.store, time.Now, nil)
 	var wg sync.WaitGroup
 	results := make(chan error, 6)
 	for range 6 {
@@ -269,7 +241,7 @@ func TestRevocationStopsADownloadInFlight(t *testing.T) {
 	}
 	issued, err := f.release.Release(t.Context(), organizationtenancy.DataReturnReleaseRequest{
 		Package: writePackage(t, school, "x", map[string][]byte{"objects/1": big}), SchoolID: school, OperatorID: f.operator,
-		KeepUntil: databaseNow().Add(60 * 24 * time.Hour), DataReturnRecipient: customer(3)})
+		KeepUntil: time.Now().Add(60 * 24 * time.Hour), DataReturnRecipient: customer(3)})
 	require.NoError(t, err)
 	f.retrieval.recheckBytes = 64 << 10
 	var body bytes.Buffer
@@ -346,7 +318,7 @@ func TestGrantRevokeAllAndPurge(t *testing.T) {
 	// An orphan: a release that died between writing and storing its grant.
 	orphan := filepath.Join(f.store, strings.Repeat("ab", 16)+".mdr")
 	require.NoError(t, os.WriteFile(orphan, []byte("x"), 0o600))
-	old := databaseNow().Add(-2 * time.Hour)
+	old := time.Now().Add(-2 * time.Hour)
 	require.NoError(t, os.Chtimes(orphan, old, old))
 
 	purged, err := f.release.Purge(t.Context(), f.operator)
@@ -377,7 +349,7 @@ func TestReleaseRefusesAnythingButTheCheckedPackageOfTheNamedSubject(t *testing.
 	t.Parallel()
 	f := newFixture(t)
 	school := testpkg.UniqueTestTenantID(t)
-	keep := databaseNow().Add(60 * 24 * time.Hour)
+	keep := time.Now().Add(60 * 24 * time.Hour)
 	request := func(dir string, schoolID, operator int64) organizationtenancy.DataReturnReleaseRequest {
 		return organizationtenancy.DataReturnReleaseRequest{Package: dir, SchoolID: schoolID, OperatorID: operator, KeepUntil: keep, DataReturnRecipient: customer(1)}
 	}
@@ -410,7 +382,7 @@ func TestReleaseRefusesAnythingButTheCheckedPackageOfTheNamedSubject(t *testing.
 		},
 		"token outlives the retrieval period": func() organizationtenancy.DataReturnReleaseRequest {
 			r := request(writePackage(t, school, "x", nil), school, f.operator)
-			r.KeepUntil = databaseNow().Add(time.Hour)
+			r.KeepUntil = time.Now().Add(time.Hour)
 			return r
 		},
 	}
@@ -493,7 +465,7 @@ func TestRolesHoldExactlyTheirRights(t *testing.T) {
 func issueRelease(ctx context.Context, db bun.IDB, operator, school int64, archive string, keepUntil time.Time) error {
 	hex64 := strings.Repeat("ab", 32)
 	_, err := db.NewRaw(`SELECT platform.data_return_issue(?, 'release', 'school', ?, ?, 10, ?, ?, 1, ?, 'customer', 'Schule', ?, '\x01'::bytea, ?, ?, 1)`,
-		operator, school, archive, hex64, hex64, hex64, strings.Repeat("cd", 16)+archive, databaseNow().Add(time.Hour), keepUntil).Exec(ctx)
+		operator, school, archive, hex64, hex64, hex64, strings.Repeat("cd", 16)+archive, time.Now().Add(time.Hour), keepUntil).Exec(ctx)
 	return err
 }
 
@@ -506,7 +478,7 @@ func TestReleaseAndErasureOfTheSameSchoolAreSerialized(t *testing.T) {
 	holdSeveralConnections(t)
 	f := newFixture(t)
 	school := f.school(t)
-	keep := databaseNow().Add(30 * 24 * time.Hour)
+	keep := time.Now().Add(30 * 24 * time.Hour)
 
 	release, err := f.db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
@@ -554,7 +526,7 @@ func TestIssueTrustsNoCallerValuesForAGrant(t *testing.T) {
 	bogus := strings.Repeat("ef", 32)
 	var id int64
 	require.NoError(t, f.db.NewRaw(`SELECT platform.data_return_issue(?, 'grant', 'organization', 1, ?, 999999, ?, ?, 7, ?, 'customer', 'X', ?, '\x01'::bytea, ?, ?, 1)`,
-		f.operator, issued.ArchiveName, bogus, bogus, keyCheck, strings.Repeat("9", 64), databaseNow().Add(time.Hour), databaseNow().AddDate(5, 0, 0)).Scan(t.Context(), &id))
+		f.operator, issued.ArchiveName, bogus, bogus, keyCheck, strings.Repeat("9", 64), time.Now().Add(time.Hour), time.Now().AddDate(5, 0, 0)).Scan(t.Context(), &id))
 	var same bool
 	require.NoError(t, f.db.NewRaw(`SELECT g.package = o.package AND g.subject_id = o.subject_id AND g.archive_bytes = o.archive_bytes
 		AND g.archive_sha256 = o.archive_sha256 AND g.manifest_sha256 = o.manifest_sha256 AND g.format_version = o.format_version
@@ -563,7 +535,7 @@ func TestIssueTrustsNoCallerValuesForAGrant(t *testing.T) {
 	require.True(t, same)
 
 	school := f.school(t)
-	require.ErrorContains(t, issueRelease(t.Context(), f.db, f.operator, school, strings.Repeat("3", 32), databaseNow().AddDate(2, 0, 0)), "within a year")
+	require.ErrorContains(t, issueRelease(t.Context(), f.db, f.operator, school, strings.Repeat("3", 32), time.Now().AddDate(2, 0, 0)), "within a year")
 }
 
 // An erasure that has begun refuses a release like one that is done: a
@@ -575,11 +547,11 @@ func TestReleaseRefusesASubjectWhoseErasureHasBegun(t *testing.T) {
 	school := f.school(t)
 	var organization int64
 	require.NoError(t, f.db.NewRaw(`SELECT organization_id FROM platform.schools WHERE id = ?`, school).Scan(t.Context(), &organization))
-	keep := databaseNow().Add(30 * 24 * time.Hour)
+	keep := time.Now().Add(30 * 24 * time.Hour)
 	hex64 := strings.Repeat("ab", 32)
 	releaseOrganization := func(archive string) error {
 		_, err := f.db.NewRaw(`SELECT platform.data_return_issue(?, 'release', 'organization', ?, ?, 10, ?, ?, 1, ?, 'customer', 'Träger', ?, '\x01'::bytea, ?, ?, 1)`,
-			f.operator, organization, archive, hex64, hex64, hex64, strings.Repeat("ef", 16)+archive, databaseNow().Add(time.Hour), keep).Exec(t.Context())
+			f.operator, organization, archive, hex64, hex64, hex64, strings.Repeat("ef", 16)+archive, time.Now().Add(time.Hour), keep).Exec(t.Context())
 		return err
 	}
 	t.Cleanup(func() {
@@ -661,7 +633,7 @@ func TestReleaseAndStartOfTheTraegerErasureAreSerialized(t *testing.T) {
 		require.NoError(t, err)
 		archive := fmt.Sprintf("%032x", organization)
 		return organization, []any{f.operator, organization, archive, hex64, hex64, hex64, strings.Repeat("ef", 16) + archive,
-			databaseNow().Add(time.Hour), databaseNow().Add(30 * 24 * time.Hour)}
+			time.Now().Add(time.Hour), time.Now().Add(30 * 24 * time.Hour)}
 	}
 	state := func(t *testing.T, organization int64) (started bool, packages int) {
 		t.Helper()
