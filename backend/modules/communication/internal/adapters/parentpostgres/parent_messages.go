@@ -132,7 +132,7 @@ func (s *MessageStore) Create(ctx context.Context, message *domain.ParentMessage
 	if row.SendReplayed {
 		return nil
 	}
-	return claimMessageAttachments(ctx, db, db.NewUpdate().TableExpr("users.message_attachments AS attachment").Set("parent_message_id = ?", row.ID), message.TenantID, attachmentIDs)
+	return claimMessageAttachments(ctx, db, db.NewUpdate().TableExpr("users.message_attachments AS attachment").Set("parent_message_id = ?", row.ID), message.TenantID, attachmentIDs, row.CreatedAt)
 }
 
 // reserveAttachments locks the uploads a plain message names. Events and

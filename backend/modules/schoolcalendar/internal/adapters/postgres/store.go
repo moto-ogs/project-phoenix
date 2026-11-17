@@ -24,13 +24,26 @@ type Database func(context.Context) (bun.IDB, int64, error)
 type Store struct {
 	database        Database
 	closingDayReads schoolcalendar.ClosingDayReads
+	now             func() time.Time
 }
 
-func New(database Database, closingDayReads schoolcalendar.ClosingDayReads) *Store {
+// New builds the store. now is the composition's clock (ADR 0281): it
+// stamps the calendar periods and the closing day revision. Only the
+// writing store of compose.NewRecords carries one; nil builds a read store.
+func New(database Database, closingDayReads schoolcalendar.ClosingDayReads, now func() time.Time) *Store {
 	if database == nil {
 		panic("school calendar postgres: database runtime is required")
 	}
-	return &Store{database: database, closingDayReads: closingDayReads}
+	return &Store{database: database, closingDayReads: closingDayReads, now: now}
+}
+
+// stamp is the instant of the composition's clock. A store without one is
+// a read store; a write through it is a wiring error.
+func (s *Store) stamp() (time.Time, error) {
+	if s.now == nil {
+		return time.Time{}, errors.New("school calendar postgres: a write needs the store's clock")
+	}
+	return s.now(), nil
 }
 
 // calendarDate maps the module's YYYY-MM-DD strings onto PostgreSQL DATE
@@ -160,7 +173,11 @@ func (s *Store) CreateCalendarPeriod(ctx context.Context, fields schoolcalendar.
 	if tenantID <= 0 {
 		return schoolcalendar.CalendarPeriod{}, false, domain.OperationStats{}, errors.New("school calendar postgres: tenant is required to create a calendar period")
 	}
-	row := calendarPeriodRow{TenantID: tenantID}
+	at, err := s.stamp()
+	if err != nil {
+		return schoolcalendar.CalendarPeriod{}, false, domain.OperationStats{}, err
+	}
+	row := calendarPeriodRow{TenantID: tenantID, CreatedAt: at, UpdatedAt: at}
 	applyCalendarPeriodFields(&row, fields)
 	query := db.NewInsert().Model(&row).ModelTableExpr(`schedule.calendar_periods`)
 	if ifAbsent {
@@ -185,12 +202,15 @@ func (s *Store) UpdateCalendarPeriod(ctx context.Context, id int64, fields schoo
 	if err != nil {
 		return schoolcalendar.CalendarPeriod{}, domain.OperationStats{}, err
 	}
-	row := calendarPeriodRow{ID: id}
+	at, err := s.stamp()
+	if err != nil {
+		return schoolcalendar.CalendarPeriod{}, domain.OperationStats{}, err
+	}
+	row := calendarPeriodRow{ID: id, UpdatedAt: at}
 	applyCalendarPeriodFields(&row, fields)
 	query := withTenant(db.NewUpdate().Model(&row).
 		ModelTableExpr(`schedule.calendar_periods AS "calendar_period"`).
-		Column("name", "period_type", "start_date", "end_date", "week_cycle_length", "week_cycle_anchor", "is_active").
-		Set(`updated_at = NOW()`).
+		Column("name", "period_type", "start_date", "end_date", "week_cycle_length", "week_cycle_anchor", "is_active", "updated_at").
 		Where(`"calendar_period".id = ?`, id), "calendar_period", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()

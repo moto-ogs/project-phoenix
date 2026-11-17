@@ -48,11 +48,21 @@ var moduleSQLClockBudget = map[string]int{
 	// Only the finished student document cleanups: their database function
 	// guards the cutoff with the database clock (1.15.606).
 	"modules/careplan": 1,
-	// Includes the message retention of ADR 0277: the database stamps and
-	// orders messages, so their retention compares on its clock too. And the
-	// draft retention of the surveys (ADR 0281): the update trigger of
-	// users.surveys stamps a draft's last change.
-	"modules/communication": 20,
+	// Named exceptions on the database clock: the message retention of ADR
+	// 0277 (7), since PostgreSQL stamps and orders the messages and threads;
+	// the unsent uploads (1), stamped by column default, and the settled
+	// cleanup intents with their cleaned_at stamp (2), also ADR 0277; the
+	// history_from of a team group participant (1), compared with message
+	// stamps; the read cursor of a group thread (1), whose column default is
+	// clock_timestamp() like its messages; the close of a group thread (1),
+	// stamped beside its trigger-stamped updated_at; the team's unread mark
+	// (1), a compare-and-swap against its own stamp, and the notification
+	// throttle (2), stamped and compared there so every host agrees; the
+	// draft retention of the surveys (1, ADR 0281), against the trigger-
+	// stamped updated_at; and published_at of the operator announcements
+	// (1), which staffannouncementaudience orders against database-stamped
+	// created_at of schools, memberships and accounts (ADR 0281).
+	"modules/communication": 18,
 	// Named exceptions on the database clock (ADR 0281): the read state of
 	// requests (3), where read_at and parent_changed_at are stamped there and
 	// only compared with each other; and family_children_stated_at (1), which
@@ -82,10 +92,16 @@ var moduleSQLClockBudget = map[string]int{
 	// handover (2), judged against the transport's fences that lease on the
 	// database clock; and the age of the Beleg deletion log (1), whose entries
 	// parent_billing.log_removed_belege stamps by column default.
-	"modules/parentbilling":             13,
-	"modules/peopledirectory":           18,
-	"modules/schedulerruntime":          11,
-	"modules/schoolcalendar":            22,
+	"modules/parentbilling":    13,
+	"modules/peopledirectory":  18,
+	"modules/schedulerruntime": 11,
+	// The holiday closure commands of ADR 0273 (20): lease, due time and
+	// watchdog read one clock, PostgreSQL's. On it the commands also stamp
+	// processed_at (the watchdog's age) and completed_at, which the notice
+	// list (14 days) and the retirement (30 days) compare together with
+	// processed_at, and the confirmed_at, requested_at and prepared_at that
+	// the same statements set beside next_attempt_at and processed_at.
+	"modules/schoolcalendar":            20,
 	"modules/schoolmembership":          4,
 	"modules/schoolstructure":           4,
 	"modules/settings":                  20,
