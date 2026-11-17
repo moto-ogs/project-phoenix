@@ -114,7 +114,44 @@ type MessageResponse struct {
 	EligibleReaderAccountIDs []string `json:"eligible_reader_account_ids,omitempty"`
 	ReaderCount              int      `json:"reader_count"`
 	// Attachments are the photos and files of the message (#6685).
-	Attachments json.RawMessage `json:"attachments,omitempty"`
+	Attachments []AttachmentResponse `json:"attachments,omitempty"`
+}
+
+// AttachmentResponse is one file of a message: the stored snapshot
+// (communication.MessageAttachment) with the wire's types.
+type AttachmentResponse struct {
+	ID          string `json:"id"`
+	Filename    string `json:"filename"`
+	SizeBytes   int    `json:"size_bytes"`
+	ContentType string `json:"content_type"`
+	Width       int    `json:"width,omitempty"`
+	Height      int    `json:"height,omitempty"`
+}
+
+// toAttachmentResponses reads the snapshot a message stores. The store
+// writes and checks its shape; a message without files has none.
+func toAttachmentResponses(snapshot json.RawMessage) []AttachmentResponse {
+	if len(snapshot) == 0 {
+		return nil
+	}
+	var out []AttachmentResponse
+	if err := json.Unmarshal(snapshot, &out); err != nil || len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// openThreadRequest is the body of POST /threads/open.
+type openThreadRequest struct {
+	AccountID string `json:"account_id"`
+}
+
+// postMessageRequest is the body of POST /threads/{threadID}.
+type postMessageRequest struct {
+	ClientMessageID string `json:"client_message_id,omitempty"`
+	Body            string `json:"body"`
+	// AttachmentIDs names the uploads the message carries (#6685).
+	AttachmentIDs []string `json:"attachment_ids,omitempty"`
 }
 
 // ThreadDetailResponse is the chat window payload.
@@ -158,7 +195,7 @@ func toMessageResponses(messages []communication.StaffMessage, viewer ...int64) 
 			ReadByAccountIDs:         formatIDs(m.ReadByAccountIDs),
 			EligibleReaderAccountIDs: formatIDs(m.EligibleReaderAccountIDs),
 			ReaderCount:              m.ReaderCount,
-			Attachments:              m.Attachments,
+			Attachments:              toAttachmentResponses(m.Attachments),
 		})
 	}
 	return out
@@ -270,9 +307,7 @@ func (rs *Resource) listRecipients(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rs *Resource) openThread(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		AccountID string `json:"account_id"`
-	}
+	var body openThreadRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -309,12 +344,7 @@ func (rs *Resource) postMessage(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var body struct {
-		ClientMessageID string `json:"client_message_id,omitempty"`
-		Body            string `json:"body"`
-		// AttachmentIDs names the uploads the message carries (#6685).
-		AttachmentIDs []string `json:"attachment_ids,omitempty"`
-	}
+	var body postMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

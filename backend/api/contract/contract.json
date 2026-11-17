@@ -111,6 +111,62 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff-messages/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "only_unread",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "InboxThreadResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff-messages/recipients",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RecipientResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff-messages/threads/{threadID}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ThreadDetailResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff-messages/unread-count",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "unreadCountResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/",
       "portals": [
         "tenant"
@@ -369,6 +425,51 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/staff-messages/",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "only_unread",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "InboxThreadResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/staff-messages/recipients",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RecipientResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/staff-messages/threads/{threadID}",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ThreadDetailResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/school/staff-messages/unread-count",
       "portals": [
         "school"
@@ -433,6 +534,74 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/staff-messages/groups",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "groupRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ThreadDetailResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff-messages/threads/open",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "openThreadRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ThreadDetailResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff-messages/threads/{threadID}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "postMessageRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MessageResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff-messages/threads/{threadID}/leave",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff-messages/threads/{threadID}/members",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "groupRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ThreadDetailResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/students/",
       "portals": [
         "tenant"
@@ -489,6 +658,44 @@
       "no_data": true
     },
     {
+      "method": "POST",
+      "pattern": "/school/staff-messages/threads/open",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "openThreadRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ThreadDetailResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/staff-messages/threads/{threadID}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "postMessageRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MessageResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/staff-messages/threads/{threadID}/leave",
+      "portals": [
+        "school"
+      ],
+      "no_data": true
+    },
+    {
       "method": "PUT",
       "pattern": "/api/notifications/email-subscriptions/{type}",
       "portals": [
@@ -511,6 +718,21 @@
         "ref": "preferenceRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/staff-messages/threads/{threadID}/name",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "renameGroupRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ThreadDetailResponse"
+      }
     },
     {
       "method": "PUT",
@@ -710,6 +932,50 @@
       ]
     },
     {
+      "name": "AttachmentResponse",
+      "go_type": "staffmessaging.AttachmentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "width",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "height",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "AttendanceActorResponse",
       "go_type": "presenceprojectionhttp.AttendanceActorResponse",
       "fields": [
@@ -879,6 +1145,192 @@
           "schema": {
             "kind": "enum",
             "ref": "EnrollmentPhaseAudience"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InboxThreadResponse",
+      "go_type": "staffmessaging.InboxThreadResponse",
+      "fields": [
+        {
+          "name": "thread_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "counterpart_account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "counterpart_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "counterpart_role_kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_message_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_message_body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_message_mine",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "unread_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "member_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "last_sender_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MemberResponse",
+      "go_type": "staffmessaging.MemberResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_kind",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MessageResponse",
+      "go_type": "staffmessaging.MessageResponse",
+      "fields": [
+        {
+          "name": "client_message_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sender_account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sender_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "read_by_account_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "eligible_reader_account_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "reader_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "attachments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AttachmentResponse"
+            }
           }
         }
       ]
@@ -1174,6 +1626,30 @@
           "name": "available",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RecipientResponse",
+      "go_type": "staffmessaging.RecipientResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_kind",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -2771,6 +3247,77 @@
       ]
     },
     {
+      "name": "ThreadDetailResponse",
+      "go_type": "staffmessaging.ThreadDetailResponse",
+      "fields": [
+        {
+          "name": "thread_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "counterpart_account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "counterpart_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "counterpart_role_kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "messages",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "MessageResponse"
+            }
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "can_manage",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "members",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "MemberResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "UpdateStudentRequest",
       "go_type": "careplanhttp.UpdateStudentRequest",
       "request": true,
@@ -3176,6 +3723,77 @@
       ]
     },
     {
+      "name": "groupRequest",
+      "go_type": "staffmessaging.groupRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "openThreadRequest",
+      "go_type": "staffmessaging.openThreadRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "account_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "postMessageRequest",
+      "go_type": "staffmessaging.postMessageRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "client_message_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "attachment_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "preferenceRequest",
       "go_type": "notifications.preferenceRequest",
       "request": true,
@@ -3241,6 +3859,20 @@
           "schema": {
             "kind": "ref",
             "ref": "pushSubscriptionKeys"
+          }
+        }
+      ]
+    },
+    {
+      "name": "renameGroupRequest",
+      "go_type": "staffmessaging.renameGroupRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

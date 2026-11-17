@@ -4,17 +4,17 @@
 
 # General PR reviews are requested manually, not automatically on ready-for-review.
 
-# Deployment and production-state controls are owned by @yungweng.
-/.github/workflows/ @yungweng
-/scripts/deploy-remote.sh @yungweng
-/scripts/rollback-remote.sh @yungweng
-/environments/ @yungweng
-/backend/database/migrations/ @yungweng
-/.github/actions/ @yungweng
-/scripts/release-backup.sh @yungweng
-/scripts/restore-db.sh @yungweng
-/scripts/deploy-caddy-remote.sh @yungweng
-/scripts/demo-order-smoke.sh @yungweng
-/scripts/daily-backup.sh @yungweng
-/scripts/systemd/ @yungweng
-/deploy/caddy/ @yungweng
+# Deployment and production-state controls are owned by @yonnock.
+/.github/workflows/ @yonnock
+/scripts/deploy-remote.sh @yonnock
+/scripts/rollback-remote.sh @yonnock
+/environments/ @yonnock
+/backend/database/migrations/ @yonnock
+/.github/actions/ @yonnock
+/scripts/release-backup.sh @yonnock
+/scripts/restore-db.sh @yonnock
+/scripts/deploy-caddy-remote.sh @yonnock
+/scripts/demo-order-smoke.sh @yonnock
+/scripts/daily-backup.sh @yonnock
+/scripts/systemd/ @yonnock
+/deploy/caddy/ @yonnock
