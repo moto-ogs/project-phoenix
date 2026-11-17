@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatInvoiceNumber, patternHasYear } from "./number-range-format";
+import { formatInvoiceNumber } from "./number-range-format";
 
 describe("formatInvoiceNumber", () => {
   it("pads the running number to the count of N", () => {
@@ -16,13 +16,5 @@ describe("formatInvoiceNumber", () => {
       "FE-2027-0012",
     );
     expect(formatInvoiceNumber("{JJ}/{NNN}", 2027, 12)).toBe("27/012");
-  });
-});
-
-describe("patternHasYear", () => {
-  it("tells a yearly counter from one that counts on", () => {
-    expect(patternHasYear("FE-{JJJJ}-{NNNN}")).toBe(true);
-    expect(patternHasYear("{JJ}/{NNN}")).toBe(true);
-    expect(patternHasYear("{N}")).toBe(false);
   });
 });

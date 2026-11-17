@@ -12,8 +12,8 @@ import (
 )
 
 // The start values of the number ranges (#7358, ADR 0119 addendum
-// 2026-11-17). Rows are only added; the newest of a counter is its floor
-// (ReserveNumbers), the older ones its history.
+// 2026-11-17). The counter row holds the start value the release reads
+// (ReserveNumbers); number_range_starts is its history and only grows.
 
 type numberRangeStartRow struct {
 	bun.BaseModel `bun:"table:parent_billing.number_range_starts"`
@@ -31,9 +31,9 @@ type numberRangeStartRow struct {
 // the counter of the export files (service export) is not one of them.
 var invoiceNumberServices = []string{parentbilling.ServiceHoliday, parentbilling.ServiceCare}
 
-// NumberCounters names the last issued invoice number of the Träger per
-// service and year.
-func (s *Store) NumberCounters(ctx context.Context, organizationID int64) (map[string]map[int]int64, error) {
+// NumberCounters names per service and year the last issued invoice number
+// of the Träger and the number its next invoice gets.
+func (s *Store) NumberCounters(ctx context.Context, organizationID int64) (map[string]map[int]parentbilling.NumberCounter, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return nil, err
@@ -42,17 +42,19 @@ func (s *Store) NumberCounters(ctx context.Context, organizationID int64) (map[s
 		Service    string `bun:"service"`
 		Year       int    `bun:"year"`
 		LastNumber int64  `bun:"last_number"`
+		NextNumber int64  `bun:"next_number"`
 	}
-	if err := db.NewRaw(`SELECT service, year, last_number FROM parent_billing.number_range_counters
+	if err := db.NewRaw(`SELECT service, year, last_number, GREATEST(last_number, COALESCE(start_number, 1) - 1) + 1 AS next_number
+		FROM parent_billing.number_range_counters
 		WHERE organization_id = ? AND service IN (?)`, organizationID, bun.List(invoiceNumberServices)).Scan(ctx, &rows); err != nil {
 		return nil, err
 	}
-	counters := make(map[string]map[int]int64, len(invoiceNumberServices))
+	counters := make(map[string]map[int]parentbilling.NumberCounter, len(invoiceNumberServices))
 	for _, row := range rows {
 		if counters[row.Service] == nil {
-			counters[row.Service] = map[int]int64{}
+			counters[row.Service] = map[int]parentbilling.NumberCounter{}
 		}
-		counters[row.Service][row.Year] = row.LastNumber
+		counters[row.Service][row.Year] = parentbilling.NumberCounter{LastNumber: row.LastNumber, NextNumber: row.NextNumber}
 	}
 	return counters, nil
 }
@@ -76,30 +78,36 @@ func (s *Store) NumberRangeStarts(ctx context.Context, organizationID int64) ([]
 	return starts, nil
 }
 
-// LockNumberCounter holds the counter of the service and year until the
-// transaction ends and names its last issued number, 0 before the first.
-func (s *Store) LockNumberCounter(ctx context.Context, organizationID int64, service string, year int) (int64, error) {
+// SetNumberRangeStart sets the start value of the counter and adds it to
+// the history, on the store clock (ADR 0281). One statement checks and
+// writes on the counter row it holds, so a release and a start value never
+// pass each other: a value at or below the last issued number writes nothing
+// and answers that number with false.
+func (s *Store) SetNumberRangeStart(ctx context.Context, organizationID int64, start parentbilling.NumberRangeStart) (int64, bool, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
+	now := s.now()
 	var last int64
-	err = db.NewRaw(`SELECT last_number FROM parent_billing.number_range_counters
-		WHERE organization_id = ? AND service = ? AND year = ? FOR UPDATE`, organizationID, service, year).Scan(ctx, &last)
+	err = db.NewRaw(`INSERT INTO parent_billing.number_range_counters AS counter (organization_id, service, year, last_number, start_number, updated_at)
+		VALUES (?, ?, ?, 0, ?, ?)
+		ON CONFLICT (organization_id, service, year)
+		DO UPDATE SET start_number = EXCLUDED.start_number, updated_at = EXCLUDED.updated_at
+			WHERE counter.last_number < EXCLUDED.start_number
+		RETURNING last_number`, organizationID, start.Service, start.Year, start.NextNumber, now).Scan(ctx, &last)
 	if errors.Is(err, sql.ErrNoRows) {
-		return 0, nil
+		// The refused statement held no row; the number it names is the
+		// one issued by now.
+		err = db.NewRaw(`SELECT last_number FROM parent_billing.number_range_counters
+			WHERE organization_id = ? AND service = ? AND year = ?`, organizationID, start.Service, start.Year).Scan(ctx, &last)
+		return last, false, err
 	}
-	return last, err
-}
-
-// InsertNumberRangeStart adds a start value on the store clock (ADR 0281).
-func (s *Store) InsertNumberRangeStart(ctx context.Context, organizationID int64, start parentbilling.NumberRangeStart) error {
-	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
-		return err
+		return 0, false, err
 	}
 	row := &numberRangeStartRow{OrganizationID: organizationID, Service: start.Service, Year: start.Year,
-		NextNumber: start.NextNumber, ActorAccountID: start.AccountID, OccurredAt: s.now()}
+		NextNumber: start.NextNumber, ActorAccountID: start.AccountID, OccurredAt: now}
 	_, err = db.NewInsert().Model(row).Exec(ctx)
-	return err
+	return last, true, err
 }

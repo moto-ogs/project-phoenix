@@ -53,6 +53,7 @@ export function traegerCareMonthsTopic(): HelpTopic {
           "Wählen Sie bei `Rechnungsnummern der Monatsbeiträge` den Knopf `Nächste Nummer ändern`.",
           "Tragen Sie die Nummer nach der letzten Rechnung Ihres bisherigen Programms ein.",
           "Wählen Sie `Speichern`.",
+          "Mit `Verlauf ansehen` sehen Sie, wer die Nummer wann geändert hat.",
         ],
       },
       {

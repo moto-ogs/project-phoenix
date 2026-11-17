@@ -318,6 +318,14 @@ type NumberRangeStart struct {
 	AccountID *int64 `json:"-"`
 }
 
+// NumberCounter is the state of the counter of a service and year: the
+// last issued number, 0 before the first, and the number the next invoice
+// gets, which is the start value when that is larger (#7358).
+type NumberCounter struct {
+	LastNumber int64
+	NextNumber int64
+}
+
 // MaxNumberRangeStart is the largest start value: the eight digits of the
 // longest running number.
 const MaxNumberRangeStart = 99_999_999

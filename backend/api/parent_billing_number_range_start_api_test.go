@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -186,6 +187,15 @@ func TestNumberRangeStartNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.T
 	require.Len(t, own.Starts, 1)
 	assert.Equal(t, own.Year, own.Starts[0].Year)
 
+	// The history stays when the pattern moves to another counter; a value
+	// of the other counter keeps its bare number.
+	setNumberRange(t, f, billing, "{N}")
+	moved := numberRangeOf(t, f, billing, "holiday")
+	assert.Zero(t, moved.Year)
+	assert.EqualValues(t, 1, moved.NextNumber, "the counter without a year has no start value")
+	require.Len(t, moved.Starts, 1)
+	assert.Equal(t, "500", moved.Starts[0].Example)
+
 	// Another Träger sees neither the pattern nor the history and starts
 	// its own counter.
 	other := numberRangeOf(t, f, foreign.token, "holiday")
@@ -221,4 +231,45 @@ func TestNumberRangeListQueryBudgetIsFlat(t *testing.T) {
 	}
 	assert.Len(t, list().Statements, len(one.Statements), "the list reads the same statements for any number of start values")
 	querybudgets.AssertQueryBudget(t, "api.traeger.number_ranges", one)
+}
+
+// TestNumberRangeStartAndReleaseNeverPassEachOther sets a start value while
+// the first run of the counter is released. Whichever holds the counter
+// first, the start value applies: either the invoice carries it, or the next
+// invoice does.
+func TestNumberRangeStartAndReleaseNeverPassEachOther(t *testing.T) {
+	t.Parallel()
+	f := newReviewFixture(t, "Träger Nummernkreis Gleichzeitig")
+	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
+	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
+	setNumberRange(t, f, billing, "{N}")
+	run := startBillingRun(t, f, billing, f.period.ID)
+	preview := billingRun(t, f, billing, run.ID)
+
+	var wait sync.WaitGroup
+	var released, started int
+	wait.Add(2)
+	go func() {
+		defer wait.Done()
+		released = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(preview)).Code
+	}()
+	go func() {
+		defer wait.Done()
+		started = traegerJSON(t, f.traeger, billing, http.MethodPut, numberRangeStartPath("holiday"), map[string]any{"next_number": 50}).Code
+	}()
+	wait.Wait()
+	require.Equal(t, http.StatusOK, released)
+	require.Equal(t, http.StatusOK, started, "50 is above the one number a release can issue first")
+
+	number := billingRun(t, f, billing, run.ID).Documents[0].Number
+	after := numberRangeOf(t, f, billing, "holiday")
+	switch number {
+	case "50":
+		assert.EqualValues(t, 51, after.NextNumber, "the start value came first and the invoice carries it")
+	case "1":
+		assert.EqualValues(t, 50, after.NextNumber, "the release came first and the next invoice carries the start value")
+	default:
+		assert.Failf(t, "unexpected number", "the invoice carries %s", number)
+	}
+	assert.Len(t, after.Starts, 1)
 }

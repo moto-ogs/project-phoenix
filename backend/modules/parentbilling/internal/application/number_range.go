@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -71,16 +72,16 @@ func formatInvoiceNumber(pattern string, year int, sequence int64) string {
 }
 
 // numberRangeStartStore keeps the counters and the start values of the
-// number ranges (#7358). NumberCounters names the last issued number per
+// number ranges (#7358). NumberCounters names the state of every counter by
 // service and year; NumberRangeStarts lists every start value of the
-// Träger, the newest first. LockNumberCounter holds the counter until the
-// transaction ends, so a release waits, and names its last issued number, 0
-// before the first.
+// Träger, the newest first. SetNumberRangeStart checks and writes on the
+// counter row it holds until the transaction ends, so a release waits and
+// then counts from the start value: a value at or below the last issued
+// number writes nothing and answers that number with false.
 type numberRangeStartStore interface {
-	NumberCounters(ctx context.Context, organizationID int64) (map[string]map[int]int64, error)
+	NumberCounters(ctx context.Context, organizationID int64) (map[string]map[int]parentbilling.NumberCounter, error)
 	NumberRangeStarts(ctx context.Context, organizationID int64) ([]parentbilling.NumberRangeStart, error)
-	LockNumberCounter(ctx context.Context, organizationID int64, service string, year int) (int64, error)
-	InsertNumberRangeStart(ctx context.Context, organizationID int64, start parentbilling.NumberRangeStart) error
+	SetNumberRangeStart(ctx context.Context, organizationID int64, start parentbilling.NumberRangeStart) (last int64, set bool, err error)
 }
 
 // ListNumberRanges lists the number range of every service with the number
@@ -126,10 +127,11 @@ func (b *BillingRuns) SetNumberRange(ctx context.Context, reviewer parentbilling
 }
 
 // SetNumberRangeStart sets the number the next invoice of the service gets
-// (#7358). It holds the counter of today, so no release issues a number in
-// between, and refuses a value that is not above the last issued number:
-// numbers stay unique and never go back. The value is added to the history
-// of the range with the account.
+// (#7358), on the counter of today. The store checks and writes on the
+// counter row a release holds too, so neither passes the other; a value
+// that is not above the last issued number is refused: numbers stay unique
+// and never go back. The value is added to the history of the range with
+// the account.
 func (b *BillingRuns) SetNumberRangeStart(ctx context.Context, reviewer parentbilling.HolidayReviewer, service string, nextNumber int64) (parentbilling.NumberRange, error) {
 	if reviewer.OrganizationID <= 0 || reviewer.AccountID <= 0 {
 		return parentbilling.NumberRange{}, errTraegerRequired
@@ -147,19 +149,16 @@ func (b *BillingRuns) SetNumberRangeStart(ctx context.Context, reviewer parentbi
 	}
 	issueYear := b.today().Year()
 	year := numberYear(pattern, issueYear)
-	last, err := b.store.LockNumberCounter(ctx, reviewer.OrganizationID, service, year)
+	account := reviewer.AccountID
+	start := parentbilling.NumberRangeStart{Service: service, Year: year, NextNumber: nextNumber, AccountID: &account}
+	last, set, err := b.store.SetNumberRangeStart(ctx, reviewer.OrganizationID, start)
 	if err != nil {
-		return parentbilling.NumberRange{}, fmt.Errorf("parent billing: lock the number counter: %w", err)
+		return parentbilling.NumberRange{}, fmt.Errorf("parent billing: set the start of the number range: %w", err)
 	}
-	if nextNumber <= last {
+	if !set {
 		return parentbilling.NumberRange{}, &parentbilling.NumberRangeStartTakenError{
 			LastSequence: last, LastNumber: formatInvoiceNumber(pattern, issueYear, last),
 		}
-	}
-	account := reviewer.AccountID
-	start := parentbilling.NumberRangeStart{Service: service, Year: year, NextNumber: nextNumber, AccountID: &account}
-	if err := b.store.InsertNumberRangeStart(ctx, reviewer.OrganizationID, start); err != nil {
-		return parentbilling.NumberRange{}, fmt.Errorf("parent billing: set the start of the number range: %w", err)
 	}
 	return b.oneWithCounters(ctx, reviewer, parentbilling.NumberRange{Service: service, Pattern: pattern})
 }
@@ -177,8 +176,8 @@ func (b *BillingRuns) oneWithCounters(ctx context.Context, reviewer parentbillin
 }
 
 // withCounters names for every pattern the counter of today: the last
-// issued number, the number the next invoice gets, which is the newest start
-// value when that is larger, and the start values with who set them.
+// issued number and the number the next invoice gets, and every start value
+// of the service with who set it.
 func (b *BillingRuns) withCounters(ctx context.Context, reviewer parentbilling.HolidayReviewer, ranges []parentbilling.NumberRange) ([]parentbilling.NumberRange, error) {
 	counters, err := b.store.NumberCounters(ctx, reviewer.OrganizationID)
 	if err != nil {
@@ -200,16 +199,12 @@ func (b *BillingRuns) withCounters(ctx context.Context, reviewer parentbilling.H
 			continue
 		}
 		numberRange.Year = numberYear(numberRange.Pattern, issueYear)
-		numberRange.LastNumber = counters[numberRange.Service][numberRange.Year]
-		numberRange.NextNumber = numberRange.LastNumber + 1
+		counter := counters[numberRange.Service][numberRange.Year]
+		numberRange.LastNumber, numberRange.NextNumber = counter.LastNumber, max(counter.NextNumber, 1)
 		for _, start := range starts {
-			if start.Service == numberRange.Service && start.Year == numberRange.Year {
-				numberRange.Starts = append(numberRange.Starts, namedStart(start, numberRange.Pattern, issueYear, reviewer, names))
+			if start.Service == numberRange.Service {
+				numberRange.Starts = append(numberRange.Starts, namedStart(start, *numberRange, issueYear, reviewer, names))
 			}
-		}
-		// The newest start value is the floor of the counter.
-		if len(numberRange.Starts) > 0 {
-			numberRange.NextNumber = max(numberRange.NextNumber, numberRange.Starts[0].NextNumber)
 		}
 		numberRange.Example = formatInvoiceNumber(numberRange.Pattern, issueYear, numberRange.NextNumber)
 	}
@@ -217,9 +212,15 @@ func (b *BillingRuns) withCounters(ctx context.Context, reviewer parentbilling.H
 }
 
 // namedStart writes a start value in the pattern and names who set it: the
-// reader, a colleague by name, or nobody once the account is gone.
-func namedStart(start parentbilling.NumberRangeStart, pattern string, issueYear int, reviewer parentbilling.HolidayReviewer, names map[int64]string) parentbilling.NumberRangeStart {
-	start.Example = formatInvoiceNumber(pattern, issueYear, start.NextNumber)
+// reader, a colleague by name, or nobody once the account is gone. A value
+// of another counter of the service, an earlier year or the time before the
+// pattern named a year, keeps its bare number: the pattern of today would
+// give it a number it never stood for.
+func namedStart(start parentbilling.NumberRangeStart, numberRange parentbilling.NumberRange, issueYear int, reviewer parentbilling.HolidayReviewer, names map[int64]string) parentbilling.NumberRangeStart {
+	start.Example = strconv.FormatInt(start.NextNumber, 10)
+	if start.Year == numberRange.Year {
+		start.Example = formatInvoiceNumber(numberRange.Pattern, issueYear, start.NextNumber)
+	}
 	start.SetByYou = byAccount(start.AccountID, reviewer.AccountID)
 	start.SetByAccount = start.AccountID != nil
 	if !start.SetByYou && start.AccountID != nil {

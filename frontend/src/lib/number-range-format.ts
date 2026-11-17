@@ -9,11 +9,6 @@ const YEAR_TOKEN = /\{JJJJ\}|\{JJ\}/g;
 /** The largest running number a start value may name (#7358). */
 export const MAX_NUMBER_RANGE_START = 99_999_999;
 
-/** Whether the pattern names the year, so its counter starts again each year. */
-export function patternHasYear(pattern: string): boolean {
-  return pattern.search(YEAR_TOKEN) >= 0;
-}
-
 /** Writes the running number of the year into the pattern. */
 export function formatInvoiceNumber(
   pattern: string,

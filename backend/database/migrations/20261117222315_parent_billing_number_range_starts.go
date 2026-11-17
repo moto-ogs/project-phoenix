@@ -14,7 +14,7 @@ func init() {
 		Version:     parentBillingNumberRangeStartsVersion,
 		Description: "Elternabrechnung: Startwert je Nummernkreis mit Verlauf (#7358)",
 		DependsOn: []string{
-			parentBillingCareMonthsVersion, // the number ranges of both services (1.15.789)
+			parentBillingExportFilesVersion, // the counters with the check of the export files (1.15.875)
 		},
 	})
 	Migrations.MustRegister(parentBillingNumberRangeStartsUp, parentBillingNumberRangeStartsDown)
@@ -24,17 +24,27 @@ func init() {
 // numbers of the program it used before (#7358, ADR 0119 addendum
 // 2026-11-17).
 //
-// parent_billing.number_range_starts holds every start value the
-// Abrechnung set for the counter of a service and year (0 for a pattern
-// without a year): the number the next invoice gets, who set it and when.
-// Rows are only added. The newest row of a counter is its floor: the release
-// of a run takes the larger of the floor and the last issued number
-// (parent_billing.number_range_counters, which keeps its meaning), so a
-// start value never moves a number back. The older rows are the history.
+//   - number_range_counters.start_number is the number the next invoice of
+//     the counter gets at least. The release takes the larger of it and the
+//     number after the last issued one, in the statement that holds the
+//     counter row, so a start value never moves a number back and a release
+//     that waits for a start value sees it. A counter may now exist before
+//     its first invoice, with last_number 0.
+//   - parent_billing.number_range_starts is the history: every start value
+//     the Abrechnung set for the counter of a service and year (0 for a
+//     pattern without a year), who set it and when. Rows are only added.
 //
 // The table carries organization_id and the Träger policy of ADR 0105 and
 // goes with its Träger. The request role may only read and add.
 const parentBillingNumberRangeStartsUpSQL = `
+ALTER TABLE parent_billing.number_range_counters
+	ADD COLUMN start_number BIGINT,
+	ADD CONSTRAINT chk_number_range_counters_start CHECK (start_number BETWEEN 1 AND 99999999),
+	DROP CONSTRAINT chk_number_range_counters_last,
+	ADD CONSTRAINT chk_number_range_counters_last CHECK (last_number >= 0);
+COMMENT ON COLUMN parent_billing.number_range_counters.start_number IS
+	'Number the next invoice of the counter gets at least (#7358); the release takes the larger of it and last_number + 1.';
+
 CREATE TABLE parent_billing.number_range_starts (
 	id BIGSERIAL PRIMARY KEY,
 	organization_id BIGINT NOT NULL REFERENCES platform.organizations(id) ON DELETE CASCADE,
@@ -50,7 +60,7 @@ CREATE TABLE parent_billing.number_range_starts (
 CREATE INDEX idx_number_range_starts_counter
 	ON parent_billing.number_range_starts (organization_id, service, year, id DESC);
 COMMENT ON TABLE parent_billing.number_range_starts IS
-	'Start values of the invoice numbers of a Träger per service and year (#7358, ADR 0119): the newest is the floor of the counter, the older ones its history; only added.';
+	'History of the start values of the invoice numbers of a Träger per service and year (#7358, ADR 0119): value, account and time; only added.';
 
 ALTER TABLE parent_billing.number_range_starts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE parent_billing.number_range_starts FORCE ROW LEVEL SECURITY;
@@ -65,8 +75,16 @@ GRANT ALL ON parent_billing.number_range_starts TO phoenix_admin;
 GRANT ALL ON SEQUENCE parent_billing.number_range_starts_id_seq TO phoenix_admin;
 `
 
+// The Down drops the counters that only hold a start value: without the
+// column they would name a last number that was never issued.
 const parentBillingNumberRangeStartsDownSQL = `
 DROP TABLE IF EXISTS parent_billing.number_range_starts;
+DELETE FROM parent_billing.number_range_counters WHERE last_number = 0 AND service <> 'export';
+ALTER TABLE parent_billing.number_range_counters
+	DROP CONSTRAINT chk_number_range_counters_start,
+	DROP COLUMN start_number,
+	DROP CONSTRAINT chk_number_range_counters_last,
+	ADD CONSTRAINT chk_number_range_counters_last CHECK (last_number >= 1 OR (service = 'export' AND year = 0 AND last_number >= 0));
 `
 
 func parentBillingNumberRangeStartsUp(ctx context.Context, db *bun.DB) error {
