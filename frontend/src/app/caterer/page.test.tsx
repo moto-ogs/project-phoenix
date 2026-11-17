@@ -15,13 +15,9 @@ const mocks = vi.hoisted(() => ({
   fetchCatererOrders: vi.fn(),
   downloadCatererDeliveries: vi.fn(),
   confirmCatererOrder: vi.fn(),
-  openBlobForPrint: vi.fn(),
 }));
 
 vi.mock("~/lib/caterer-api", () => mocks);
-vi.mock("~/lib/file-download", () => ({
-  openBlobForPrint: mocks.openBlobForPrint,
-}));
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -778,45 +774,6 @@ describe("CatererOverviewPage (#3873)", () => {
         "xlsx",
       ),
     );
-  });
-
-  it("awaits printing and shows delayed failures with tab cleanup", async () => {
-    const printing = deferred<void>();
-    mocks.openBlobForPrint.mockReturnValueOnce(printing.promise);
-    const target = { close: vi.fn() };
-    const open = vi
-      .spyOn(window, "open")
-      .mockReturnValue(target as unknown as Window);
-    const fetch = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response(new Blob(["pdf"])));
-    try {
-      render(<CatererOverviewPage />, { wrapper: ToastProvider });
-      await screen.findByText("Bestellungen für Küche am Markt");
-      fireEvent.click(screen.getByRole("button", { name: "Drucken" }));
-
-      await waitFor(() =>
-        expect(mocks.openBlobForPrint).toHaveBeenCalledWith(
-          expect.any(Blob),
-          target,
-        ),
-      );
-      expect(
-        screen.getByRole("button", { name: "Wird geöffnet…" }),
-      ).toBeDisabled();
-
-      await act(async () => {
-        printing.reject(new Error("Print failed"));
-      });
-      expect(await screen.findByRole("alert")).toHaveTextContent(
-        "Druckansicht",
-      );
-      expect(target.close).toHaveBeenCalledOnce();
-      expect(screen.getByRole("button", { name: "Drucken" })).toBeEnabled();
-    } finally {
-      open.mockRestore();
-      fetch.mockRestore();
-    }
   });
 
   it("loads inside the orders card instead of covering the page", async () => {

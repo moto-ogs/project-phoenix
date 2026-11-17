@@ -53,18 +53,12 @@ const HANDED_OFF_URL_LIFETIME_MS = 60_000;
  * print and share menu.
  */
 function isCrossOriginBlock(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "name" in error &&
-    error.name === "SecurityError"
-  );
+  return error instanceof DOMException && error.name === "SecurityError";
 }
 
 /**
  * Opens a blob in a tab and triggers the print dialog. The returned promise
  * settles after the delayed print attempt, so callers can surface failures.
- * Browser-owned PDF viewers may require the user to print manually.
  *
  * `target` is a tab the caller already opened synchronously inside the
  * click handler. That matters: after an `await`, popup blockers (Safari,
