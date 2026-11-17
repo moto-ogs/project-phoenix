@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/workflows/parentportal/internal/care"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,11 +14,21 @@ func (childWithoutPlaceResolver) ResolvePermittedChild(context.Context, int64, i
 	return &Child{TenantID: 7, WithoutCarePlace: true}, nil
 }
 
-type tenantRuntimeStub struct{ care.Runtime }
+// tenantRuntimeStub runs every unit inline; only WithinTenant is reached.
+type tenantRuntimeStub struct{}
 
 func (tenantRuntimeStub) WithinTenant(ctx context.Context, _ int64, fn func(context.Context) error) error {
 	return fn(ctx)
 }
+func (tenantRuntimeStub) WithinAdmin(ctx context.Context, fn func(context.Context) error) error {
+	return fn(ctx)
+}
+func (tenantRuntimeStub) WithinAdminThenTenant(ctx context.Context, _ func(context.Context) (int64, error), fn func(context.Context) error) error {
+	return fn(ctx)
+}
+func (tenantRuntimeStub) AmbientScope(context.Context) (bool, int64)                { return false, 0 }
+func (tenantRuntimeStub) RegisterAfterCommit(context.Context, func())               {}
+func (tenantRuntimeStub) WithTenantID(ctx context.Context, _ int64) context.Context { return ctx }
 
 type storedAttachmentStub struct{ MessageAttachments }
 
