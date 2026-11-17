@@ -476,7 +476,9 @@ function SidebarContent({
   } = useStaffNavPages(session ?? null, {
     tagesplanRouteRightForAdmins: false,
     staffNoticesOpenForAdminRole: false,
-    loadSchoolSwitches: true,
+    // Nur mit Schulsitzung: der Operator hat keine Schule, seine Anfrage
+    // endete auf jeder Seite mit 404.
+    loadSchoolSwitches: mode === "teacher",
   });
   const { counts: groupAttendanceCounts } = useGroupAttendanceCounts();
   const canShowGroupAttendanceCounts = pathname.startsWith("/ogs-groups");
