@@ -36,7 +36,7 @@ export function useCompTimePreview({
   error: unknown;
   reload: () => void;
 } {
-  const { data, error, mutate, fresh } = useFreshSWR(
+  const { data, error, mutate, fresh, isValidating } = useFreshSWR(
     enabled && dateStart && dateEnd
       ? staffAbsenceKeys.compTimePreview(staffId, dateStart, dateEnd, halfDay)
       : null,
@@ -54,11 +54,12 @@ export function useCompTimePreview({
   // Rein informativ: der Block zeigt den Ladefehler (das Panel), die Buchung
   // selbst bleibt möglich und meldet ihre eigenen Fehler. Ein gescheitertes
   // Auffrischen zeigt keine alte Projektion als Grundlage einer Bestätigung.
-  const failure = fresh && data === undefined ? error : undefined;
+  const failure = fresh && !isValidating ? error : undefined;
+  const preview = isValidating || failure ? null : (data ?? null);
   const active = enabled && Boolean(dateStart && dateEnd);
   return {
-    preview: data ?? null,
-    loading: active && data === undefined && !failure,
+    preview,
+    loading: active && preview === null && !failure,
     error: failure ?? null,
     reload,
   };

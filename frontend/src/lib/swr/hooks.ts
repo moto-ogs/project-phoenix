@@ -568,10 +568,15 @@ export function useFreshSWR<T, E = Error>(
   const requestOwner = useRef<SWRResponse<T, E>["mutate"] | null>(null);
   const [openingKey, setOpeningKey] = useState(opening);
   const [flightKey, setFlightKey] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<{
+    opening: string | null;
+    owner: SWRResponse<T, E>["mutate"];
+  } | null>(null);
   const sameOpening = openingKey === opening;
   if (!sameOpening) {
     setOpeningKey(opening);
     setFlightKey(null);
+    setConfirmation(null);
   }
   // Reset only committed openings, before SWR's own layout effects can read.
   // An abandoned render must not pause the still-visible opening's requests.
@@ -612,16 +617,36 @@ export function useFreshSWR<T, E = Error>(
   }, [opening, mutate, paused]);
   // A later explicit reload can overtake this opening's first request. Its
   // confirmed answer counts too; never wait for the superseded flight.
-  const fresh =
+  const currentOpening =
     !paused &&
     sameOpening &&
     opening !== null &&
     flightKey === opening &&
-    requestOwner.current === mutate &&
-    !read.isValidating;
+    requestOwner.current === mutate;
+  const confirmedHere =
+    confirmation !== null &&
+    confirmation.opening === opening &&
+    confirmation.owner === mutate;
+  const accessRefused = isAccessRefusal(read.error);
+  if (currentOpening && confirmedHere && accessRefused) setConfirmation(null);
+  if (
+    currentOpening &&
+    !confirmedHere &&
+    !read.isValidating &&
+    read.error === undefined &&
+    read.data !== undefined
+  ) {
+    setConfirmation({ opening, owner: mutate });
+  }
+  // Confirmation survives refreshes, not a new opening or data generation.
+  // The reader still owns the value, so a scope/access discard stays empty.
+  const fresh = currentOpening && (confirmedHere || !read.isValidating);
   return {
     ...read,
-    data: fresh && read.error === undefined ? read.data : undefined,
+    data:
+      fresh && !accessRefused && (confirmedHere || read.error === undefined)
+        ? read.data
+        : undefined,
     error: fresh ? read.error : undefined,
     isLoading: key !== null && !fresh,
     fresh,

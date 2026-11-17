@@ -18,7 +18,7 @@ import {
 import { ConfirmationModal } from "~/components/ui/modal";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { LockIcon } from "@phosphor-icons/react/ssr";
 
@@ -50,6 +50,7 @@ function useProtectionValue(studentId: string, initialEnabled?: boolean) {
     { keepPreviousData: false },
   );
   const { data, mutate } = read;
+  const invalidate = useInvalidateMatching();
   const { error: loadError } = useSwrResourceLoadError(
     [read],
     PROTECTION_OBJECT,
@@ -65,6 +66,10 @@ function useProtectionValue(studentId: string, initialEnabled?: boolean) {
     (next: boolean) => {
       if (initialEnabled !== undefined) {
         setGiven(next);
+        void invalidate(
+          (key) => key === tenantStudentKeys.familyProtection(studentId),
+          { clear: true },
+        );
         return;
       }
       void mutate(
@@ -72,7 +77,7 @@ function useProtectionValue(studentId: string, initialEnabled?: boolean) {
         { revalidate: false },
       );
     },
-    [initialEnabled, mutate, data?.student_id, studentId],
+    [initialEnabled, mutate, data?.student_id, studentId, invalidate],
   );
   return { enabled, setEnabled, loadError };
 }

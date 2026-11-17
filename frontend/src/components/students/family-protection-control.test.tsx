@@ -73,6 +73,38 @@ describe("FamilyProtectionControl", () => {
     vi.clearAllMocks();
   });
 
+  it("invalidates the child record's protection cache after a seeded save", async () => {
+    mockGet.mockReset().mockResolvedValue({ student_id: "10", enabled: false });
+    mockSet.mockResolvedValue(undefined);
+    const changed = vi.fn();
+    function View({ seeded }: { seeded: boolean }) {
+      return (
+        <ToastProvider>
+          <FamilyProtectionControl
+            key={String(seeded)}
+            studentId="10"
+            canManage={seeded}
+            initialEnabled={seeded ? false : undefined}
+            onChanged={changed}
+          />
+        </ToastProvider>
+      );
+    }
+    const view = render(<View seeded={false} />);
+    expect(await screen.findByText("Ausgeschaltet")).toBeVisible();
+    view.rerender(<View seeded />);
+    fireEvent.click(screen.getByRole("button", { name: "Einschalten" }));
+    fireEvent.change(screen.getByLabelText("Grund für die Änderung"), {
+      target: { value: "Private Angaben schützen" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Schutz einschalten" }));
+    await waitFor(() => expect(changed).toHaveBeenCalledWith(true));
+    mockGet.mockResolvedValue({ student_id: "10", enabled: true });
+    view.rerender(<View seeded={false} />);
+    expect(await screen.findByText("Eingeschaltet")).toBeVisible();
+    expect(mockGet).toHaveBeenCalledTimes(2);
+  });
+
   it("zeigt einen Ladefehler vor Ort und lädt per Wiederholen neu", async () => {
     mockGet
       .mockRejectedValueOnce(

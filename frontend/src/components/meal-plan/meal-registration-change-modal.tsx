@@ -170,6 +170,7 @@ export function MealRegistrationChangeModal({
   }, [clearError, date, initialStudentId, isOpen, today]);
 
   function chooseChild(child: string) {
+    if (child !== studentId) setDraft(null);
     setStudentId(child);
     setChoice(eating.has(child) ? "skips" : "eats");
   }
@@ -322,7 +323,10 @@ export function MealRegistrationChangeModal({
             <ISODatePicker
               label={t("effectiveFrom")}
               value={effectiveFrom}
-              onChange={setEffectiveFrom}
+              onChange={(value) => {
+                if (value !== effectiveFrom) setDraft(null);
+                setEffectiveFrom(value);
+              }}
               min={today}
               max={latestStart}
               hideClearButton

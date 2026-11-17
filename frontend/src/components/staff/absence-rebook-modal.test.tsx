@@ -18,6 +18,7 @@ import type { AbsenceType } from "~/lib/absence-type-api";
 import { ApiError } from "~/lib/api-error";
 import type { AbsenceRebooking, StaffAbsenceRow } from "~/lib/staff-api";
 import { catalogText } from "~/test/error-catalog-text";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { suppressConsole } from "~/test/helpers/console";
 
 vi.mock("~/components/ui/modal", () => ({
@@ -365,13 +366,22 @@ it("withdraws a cached rebooking preview when a later dry run is rejected", asyn
   );
   fireEvent.click(screen.getByRole("radio", { name: /Krank-Urlaubstag/ }));
   expect(await screen.findByText("+16h")).toBeVisible();
-  mocks.rebookAbsences.mockRejectedValue(
-    new ApiError("blocked", 409, {
-      code: "workforce.rebooking_into_sick_report",
-    }),
-  );
+  const pending = deferred<AbsenceRebooking>();
+  mocks.rebookAbsences.mockReturnValueOnce(pending.promise);
+  let refresh!: Promise<unknown>;
+  act(() => {
+    refresh = reload();
+  });
+  // Anker: der offene Dialog darf während der Neuberechnung nicht speichern.
+  expect(submitButton()).toHaveAttribute("aria-disabled", "true");
+  expect(screen.queryByText("+16h")).not.toBeInTheDocument();
   await act(async () => {
-    await reload();
+    pending.reject(
+      new ApiError("blocked", 409, {
+        code: "workforce.rebooking_into_sick_report",
+      }),
+    );
+    await refresh;
   });
   expect(
     await screen.findByText(

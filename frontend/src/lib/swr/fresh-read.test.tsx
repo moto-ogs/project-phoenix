@@ -23,6 +23,8 @@ vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => "school-a",
 }));
 
+import { ApiError } from "~/lib/api-error";
+import { useInvalidateMatching } from "./hooks";
 import { useFreshSWR } from "./hooks";
 import { resetSWRScope } from "./scope";
 
@@ -78,6 +80,97 @@ describe("useFreshSWR", () => {
     expect(screen.getByText("confirmed")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Reload" }));
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+  });
+
+  it.each([false, true])(
+    "keeps this opening's confirmed data while refreshing (failure=%s)",
+    async (failure) => {
+      const next = deferred<string>();
+      const fetcher = vi
+        .fn()
+        .mockResolvedValueOnce("confirmed")
+        .mockReturnValueOnce(next.promise);
+      const { result } = renderHook(() =>
+        useFreshSWR("fresh-confirmed-refresh", fetcher, {
+          shouldRetryOnError: false,
+        }),
+      );
+      await waitFor(() => expect(result.current.data).toBe("confirmed"));
+      let refresh!: Promise<unknown>;
+      act(() => {
+        refresh = result.current.mutate();
+      });
+      expect(result.current.isValidating).toBe(true);
+      expect(result.current.data).toBe("confirmed");
+      expect(result.current.fresh).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+      const error = new Error("offline");
+      await act(async () => {
+        if (failure) next.reject(error);
+        else next.resolve("updated");
+        await refresh;
+      });
+      expect(result.current.data).toBe(failure ? "confirmed" : "updated");
+      expect(result.current.error).toBe(failure ? error : undefined);
+      expect(result.current.fresh).toBe(true);
+    },
+  );
+
+  it.each([401, 403])(
+    "does not retain confirmed data after access is refused (%s)",
+    async (status) => {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValueOnce("confirmed")
+        .mockRejectedValueOnce(new ApiError("refused", status))
+        .mockRejectedValueOnce(new Error("offline"))
+        .mockResolvedValueOnce("authorized");
+      const { result } = renderHook(() =>
+        useFreshSWR("fresh-refused-refresh", fetcher, {
+          shouldRetryOnError: false,
+        }),
+      );
+      await waitFor(() => expect(result.current.data).toBe("confirmed"));
+      await act(async () => {
+        await result.current.mutate();
+      });
+      expect(result.current.error).toBeDefined();
+      expect(result.current.data).toBeUndefined();
+      await act(async () => {
+        await result.current.mutate();
+      });
+      expect(result.current.data).toBeUndefined();
+      await act(async () => {
+        await result.current.mutate();
+      });
+      expect(result.current.data).toBe("authorized");
+    },
+  );
+
+  it("withdraws confirmed data when its generation is cleared", async () => {
+    const next = deferred<string>();
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce("confirmed")
+      .mockReturnValueOnce(next.promise);
+    const { result } = renderHook(() => ({
+      read: useFreshSWR("fresh-clear", fetcher),
+      invalidate: useInvalidateMatching(),
+    }));
+    await waitFor(() => expect(result.current.read.data).toBe("confirmed"));
+    await act(async () => {
+      await result.current.invalidate((key) => key === "fresh-clear", {
+        clear: true,
+      });
+    });
+    expect(result.current.read.data).toBeUndefined();
+    expect(result.current.read.fresh).toBe(false);
+    await act(async () => {
+      next.resolve("new generation");
+    });
+    await waitFor(() =>
+      expect(result.current.read.data).toBe("new generation"),
+    );
   });
 
   it("hides the answer of an earlier opening until this one has its own", async () => {

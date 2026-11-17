@@ -26,6 +26,51 @@ function Providers({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 describe("useCompTimePreview", () => {
+  it.each([false, true])(
+    "withdraws a balance used for confirmation while recalculating (failure=%s)",
+    async (failure) => {
+      const positive = {
+        currentBalanceMinutes: 600,
+        projectedBalanceMinutes: 120,
+        deductionMinutes: 480,
+        futureCommitmentMinutes: 0,
+        futureAdjustmentMinutes: 0,
+        realizedDeductionMinutes: 0,
+      };
+      const next = deferred<typeof positive>();
+      getPreview
+        .mockReset()
+        .mockResolvedValueOnce(positive)
+        .mockReturnValueOnce(next.promise);
+      const { result } = renderHook(
+        () =>
+          useCompTimePreview({
+            enabled: true,
+            staffId: "4",
+            dateStart: "2026-09-09",
+            dateEnd: "2026-09-09",
+            halfDay: false,
+          }),
+        { wrapper: Providers },
+      );
+      await waitFor(() => expect(result.current.preview).toEqual(positive));
+      act(() => {
+        result.current.reload();
+      });
+      expect(result.current.preview).toBeNull();
+      expect(result.current.loading).toBe(true);
+      await act(async () => {
+        if (failure) next.reject(new Error("offline"));
+        else next.resolve({ ...positive, projectedBalanceMinutes: -60 });
+      });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      if (failure) {
+        expect(result.current.preview).toBeNull();
+        expect(result.current.error).toBeInstanceOf(Error);
+      } else expect(result.current.preview?.projectedBalanceMinutes).toBe(-60);
+    },
+  );
+
   it("does not reuse an earlier opening's failure to stop waiting for a fresh preview", async () => {
     getPreview.mockRejectedValueOnce(new Error("offline"));
     const { result, rerender } = renderHook(

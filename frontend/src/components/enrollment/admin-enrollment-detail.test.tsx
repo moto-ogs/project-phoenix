@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { releaseFakeTimers, setTestClock } from "~/test/clock";
 
 import { SWRConfig } from "~/lib/swr/testing";
@@ -1452,6 +1453,46 @@ describe("AdminEnrollmentDetail future renewal (#6043)", () => {
     } finally {
       visibility.mockRestore();
     }
+  });
+
+  it("rechecks an initial weekly plan response that crosses Berlin midnight", async () => {
+    vi.useFakeTimers();
+    setTestClock("2027-02-03T23:59:30+01:00");
+    vi.mocked(useCareOfferingsEnabled).mockReturnValue(false);
+    const initial = deferred<unknown>();
+    const current = deferred<unknown>();
+    mocks.getAdminRequest
+      .mockReturnValueOnce(initial.promise)
+      .mockReturnValueOnce(current.promise);
+    await act(async () => {
+      render(<AdminEnrollmentDetail requestId="request-1" />);
+    });
+    expect(mocks.getAdminRequest).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+    await act(async () => {
+      initial.resolve({
+        ...request,
+        children: [{ ...approvedChild, weekly_plan_on: "2027-02-03" }],
+      });
+    });
+    expect(mocks.getAdminRequest).toHaveBeenCalledTimes(2);
+    // Anker: die bestätigte Anmeldung bleibt sichtbar, während der neue Tag geprüft wird.
+    expect(screen.getAllByText("Mara Beispiel").length).toBeGreaterThan(0);
+    expect(
+      screen.queryByText(/moto konnte sie noch nicht übernehmen/),
+    ).not.toBeInTheDocument();
+    await act(async () => {
+      current.resolve({ ...request, children: [approvedChild] });
+    });
+    releaseFakeTimers();
+    expect(screen.getAllByText("Mara Beispiel").length).toBeGreaterThan(0);
+    expect(
+      screen.queryByText(
+        /Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung/,
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("checks the pending plan again before showing a warning after midnight", async () => {

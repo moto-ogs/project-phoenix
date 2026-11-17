@@ -167,6 +167,94 @@ describe("MealParticipantList", () => {
     mocks.replaceChildMealSchedule.mockResolvedValue(undefined);
   });
 
+  it.each(["date", "child"] as const)(
+    "drops an edited draft when the %s selection changes and returns",
+    async (selection) => {
+      mocks.getChildMealSchedule
+        .mockReset()
+        .mockResolvedValueOnce({ weekdays: [1, 3] })
+        .mockResolvedValueOnce({ weekdays: [4] })
+        .mockResolvedValueOnce({ weekdays: [5] });
+      render(
+        <MealRegistrationChangeModal
+          isOpen
+          date="2026-09-07"
+          participants={[
+            {
+              studentId: "42",
+              firstName: "Mia",
+              lastName: "Muster",
+              schoolClass: "2a",
+            },
+          ]}
+          others={[
+            {
+              studentId: "43",
+              firstName: "Ben",
+              lastName: "Bauer",
+              schoolClass: "3b",
+            },
+          ]}
+          initialStudentId="42"
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+      await waitFor(() =>
+        expect(screen.getByRole("checkbox", { name: "Montag" })).toBeChecked(),
+      );
+      fireEvent.click(screen.getByRole("checkbox", { name: "Dienstag" }));
+      expect(screen.getByRole("checkbox", { name: "Dienstag" })).toBeChecked();
+      async function selectOther(back: boolean) {
+        if (selection === "date") {
+          fireEvent.click(
+            screen.getByRole("button", {
+              name: back ? "14.09.2026" : "07.09.2026",
+            }),
+          );
+          fireEvent.click(
+            await screen.findByRole("button", {
+              name: back
+                ? /Montag, 7\. September 2026/
+                : "Montag, 14. September 2026",
+            }),
+          );
+        } else {
+          fireEvent.click(screen.getByRole("combobox", { name: "Kind" }));
+          fireEvent.click(
+            await screen.findByRole("option", {
+              name: back
+                ? "Muster, Mia · 2a · Isst mit"
+                : "Bauer, Ben · 3b · Isst nicht mit",
+            }),
+          );
+        }
+      }
+      await selectOther(false);
+      await waitFor(() =>
+        expect(
+          screen.getByRole("checkbox", { name: "Donnerstag" }),
+        ).toBeChecked(),
+      );
+      await selectOther(true);
+      await waitFor(() =>
+        expect(screen.getByRole("checkbox", { name: "Freitag" })).toBeChecked(),
+      );
+      expect(
+        screen.getByRole("checkbox", { name: "Dienstag" }),
+      ).not.toBeChecked();
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() =>
+        expect(mocks.replaceChildMealSchedule).toHaveBeenCalledWith(
+          "42",
+          [5],
+          "2026-09-07",
+        ),
+      );
+    },
+  );
+
   it("waits for this opening's meal schedule before edits can freeze a draft", async () => {
     const props = {
       date: "2026-09-07",

@@ -34,6 +34,7 @@ import { StatCard } from "~/components/ui/stat-card";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import {
   type AdminRequestChild,
+  type AdminRequestDetail,
   type AdminRequestGuardian,
   type AdminRequestSchemaField,
   type AdminRequestSummary,
@@ -167,8 +168,11 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     null,
   );
   const invalidateFamily = useInvalidateFamily();
+  const requestDays = useRef(new WeakMap<AdminRequestDetail, string>());
   const fetchDetail = useCallback(async () => {
+    const checkedOn = berlinTodayISO();
     const fresh = await getAdminRequest(requestId);
+    requestDays.current.set(fresh, checkedOn);
     // Das Öffnen hat die Anmeldung für diese Person gelesen (#3778).
     announceAdminRequestOpened();
     void invalidateFamily(enrollmentKeys.adminRequestsFamily);
@@ -183,7 +187,8 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     // This GET marks the request read, including a warm reopening after „Ungelesen“.
     revalidateOnMount: true,
     dedupingInterval: 0,
-    onSuccess: () => setWeeklyPlanCheckedOn(berlinTodayISO()),
+    onSuccess: (answer) =>
+      setWeeklyPlanCheckedOn(requestDays.current.get(answer) ?? null),
   });
   const detailLoad = useSwrResourceLoadError(
     [{ data, error: detailError }],

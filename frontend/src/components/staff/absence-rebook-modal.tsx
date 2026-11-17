@@ -61,7 +61,7 @@ function useRebookingPreview(args: {
   const { staffId, absenceIds, value } = args;
   // Eine gesperrte Umbuchung (workforce.rebooking_*) ist kein Defekt; sie
   // steht wie jeder andere Fehler der Vorschau im Dialog.
-  const { data, error, mutate } = useFreshSWR(
+  const { data, error, mutate, isValidating } = useFreshSWR(
     value && absenceIds.length > 0
       ? staffAbsenceKeys.rebookingPreview(staffId, absenceIds, value)
       : null,
@@ -77,13 +77,16 @@ function useRebookingPreview(args: {
     },
     { keepPreviousData: false },
   );
+  // A dry run is a save prerequisite, not merely a read-only display.
+  const preview = isValidating || error ? undefined : data;
   const load = useSwrResourceLoadError(
-    [{ data, error }],
+    [{ data: preview, error: isValidating ? undefined : error }],
     "die Änderung der Art",
     () => mutate(),
   );
-  const loading = Boolean(value) && data === undefined && load.error === null;
-  return { preview: data ?? null, error: load.error, loading };
+  const loading =
+    Boolean(value) && preview === undefined && load.error === null;
+  return { preview: preview ?? null, error: load.error, loading };
 }
 
 function BalanceLine({ minutes }: { readonly minutes: number }) {
