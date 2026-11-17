@@ -57,7 +57,12 @@ var moduleSQLClockBudget = map[string]int{
 	"modules/exporttransfer": 10,
 	"modules/facilities":     1,
 	"modules/filestorage":    3,
-	"modules/identityaccess": 31,
+	// The Springer access windows (ADR 0251): the security-definer function
+	// auth.account_tenant_admitted admits a window on the database clock, so
+	// the prune of ended windows reads that clock too. And the deletion of
+	// deactivated operators: a trigger stamps platform.operators.deactivated_at
+	// with now(), so its cutoff compares on the database clock (ADR 0281).
+	"modules/identityaccess": 4,
 	// Includes the data return of ADR 0274: the database clock is the security
 	// boundary of the release functions.
 	"modules/organizationtenancy": 20,

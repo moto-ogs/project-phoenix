@@ -18,12 +18,12 @@ import (
 func (s *Store) EnsureSpringerAccountTenant(ctx context.Context, accountID, tenantID int64) error {
 	_, err := s.bindAccountToSchool(ctx, "ensure springer account tenant", func(db bun.IDB) *bun.RawQuery {
 		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants AS mapping
-				(account_id, tenant_id, status, activated_at, deactivated_at, created_at, updated_at)
-			SELECT ?, ?, 'active', NOW(), NULL::timestamptz, NOW(), NOW() FROM caterer WHERE NOT caterer.refused
+				(account_id, tenant_id, status, activated_at, deactivated_at)
+			SELECT ?, ?, 'active', ?::timestamptz, NULL::timestamptz FROM caterer WHERE NOT caterer.refused
 			ON CONFLICT (account_id, tenant_id) DO UPDATE
-			SET activated_at = CASE WHEN mapping.status = 'active' THEN mapping.activated_at ELSE NOW() END,
+			SET activated_at = CASE WHEN mapping.status = 'active' THEN mapping.activated_at ELSE EXCLUDED.activated_at END,
 				status = 'active', deactivated_at = NULL
-			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID)
+			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID, s.now())
 	})
 	return err
 }
