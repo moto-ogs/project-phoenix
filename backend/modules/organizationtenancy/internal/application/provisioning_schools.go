@@ -205,8 +205,8 @@ func (p *Provisioning) UpdateSchool(ctx context.Context, id int64, changes organ
 }
 
 // schoolContactEmailChange checks a changed contact address. Only a change
-// is checked: a school that predates the rule keeps its other edits until the
-// operator adds the address (#2872).
+// is checked: a stored address that predates the format rule must not block
+// the other edits. The address is optional and may be cleared.
 func schoolContactEmailChange(existing organizationtenancy.School, changes organizationtenancy.SchoolChanges) error {
 	if changes.Email == existing.Email {
 		return nil
