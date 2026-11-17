@@ -1987,7 +1987,7 @@ func TestInvitationService_CreateInvitation(t *testing.T) {
 		assert.Equal(t, inviteeEmail, invitation.Email)
 		assert.Equal(t, role.ID, invitation.RoleID)
 		assert.NotEmpty(t, invitation.Token)
-		assert.True(t, invitation.ExpiresAt.After(time.Now()))
+		assert.True(t, invitation.ExpiresAt.After(testpkg.DatabaseNow(t, db)))
 	})
 
 	t.Run("normalizes email to lowercase", func(t *testing.T) {
@@ -2638,7 +2638,7 @@ func TestInvitationService_InvalidatePendingInvitationsByTenantID_Success(t *tes
 	creator := testpkg.CreateTestAccount(t, db, "inv-svc-invalidate-creator")
 
 	// Create a pending invitation (scoped to tenant 1 by fixture)
-	testpkg.CreateTestInvitationToken(t, db, "svc-invalidate@example.com", role.ID, creator.ID, time.Now().Add(48*time.Hour))
+	testpkg.CreateTestInvitationToken(t, db, "svc-invalidate@example.com", role.ID, creator.ID, testpkg.DatabaseNow(t, db).Add(48*time.Hour))
 
 	// ACT
 	count, err := service.RevokeTenantSchoolInvitations(ctx, testpkg.Tenant(t))

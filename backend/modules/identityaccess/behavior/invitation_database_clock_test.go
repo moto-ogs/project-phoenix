@@ -58,9 +58,7 @@ func unusedAccount(t *testing.T, db *bun.DB, email string) int64 {
 	t.Helper()
 	var id int64
 	require.NoError(t, db.NewRaw(`INSERT INTO auth.accounts (email, active) VALUES (?, TRUE) RETURNING id`, email).Scan(t.Context(), &id))
-	t.Cleanup(func() {
-		_, _ = db.ExecContext(context.Background(), `DELETE FROM auth.accounts WHERE id = ?`, id)
-	})
+	testpkg.OwnTestAccount(t, db, id)
 	require.True(t, accountIsUnused(t, db, id), "nothing but the invitation names the account")
 	return id
 }

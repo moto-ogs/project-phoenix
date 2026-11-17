@@ -80,7 +80,7 @@ func TestOperatorAccountDirectory_ListAccountsByTenantID_IncludesPendingInvitati
 	testpkg.EnsureTestTenant(t, db, tenantID)
 	role := testpkg.GetOrCreateTestRole(t, db, "admin")
 
-	invitation := testpkg.CreateTestInvitationToken(t, db, "pending-invite", role.ID, 0, time.Now().Add(24*time.Hour))
+	invitation := testpkg.CreateTestInvitationToken(t, db, "pending-invite", role.ID, 0, testpkg.DatabaseNow(t, db).Add(24*time.Hour))
 	_, err := db.ExecContext(ctx,
 		`UPDATE auth.invitation_tokens SET tenant_id = ? WHERE id = ?`, tenantID, invitation.ID)
 	require.NoError(t, err)

@@ -90,9 +90,9 @@ func TestGuardianInvitationService_Create_TokenAndExpiry(t *testing.T) {
 	assert.NotEmpty(t, invitation.Token, "token must be set")
 	assert.Equal(t, profile.ID, invitation.GuardianProfileID)
 	assert.Equal(t, creatorID, invitation.CreatedBy)
-	assert.True(t, invitation.ExpiresAt.After(time.Now().Add(46*time.Hour)),
+	assert.True(t, invitation.ExpiresAt.After(testpkg.DatabaseNow(t, env.db).Add(46*time.Hour)),
 		"expiry should be at least 46 hours in the future (default 48h)")
-	assert.True(t, invitation.ExpiresAt.Before(time.Now().Add(50*time.Hour)),
+	assert.True(t, invitation.ExpiresAt.Before(testpkg.DatabaseNow(t, env.db).Add(50*time.Hour)),
 		"expiry should be at most 50 hours in the future")
 	assert.Nil(t, invitation.AcceptedAt, "fresh invitation must not be accepted")
 }
@@ -199,7 +199,7 @@ func TestGuardianInvitationService_Validate_ExpiredTokenReturnsExpired(t *testin
 	// Expire the invitation by direct UPDATE.
 	_, err = env.db.NewUpdate().
 		TableExpr("auth.guardian_invitations").
-		Set("expires_at = ?", time.Now().Add(-1*time.Hour)).
+		Set("expires_at = now() - interval '1 hour'").
 		Where("id = ?", invitation.ID).
 		Exec(context.Background())
 	require.NoError(t, err)
@@ -318,7 +318,7 @@ func TestGuardianInvitationService_PublicTokenRejectsUnapprovedStatuses(t *testi
 				Token:             "unapproved-token-" + status + "-" + time.Now().Format("150405.000000000"),
 				GuardianProfileID: profile.ID,
 				CreatedBy:         creatorID,
-				ExpiresAt:         time.Now().Add(time.Hour),
+				ExpiresAt:         testpkg.DatabaseNow(t, env.db).Add(time.Hour),
 				ApprovalStatus:    status,
 			}
 			invitation.TenantID = testpkg.Tenant(t)

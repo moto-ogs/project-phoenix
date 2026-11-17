@@ -757,7 +757,7 @@ func TestGuardianService_GetStudentGuardians(t *testing.T) {
 			Token:             fmt.Sprintf("pending-token-%d", time.Now().UnixNano()),
 			GuardianProfileID: guardian.ID,
 			CreatedBy:         inviter.ID,
-			ExpiresAt:         time.Now().Add(48 * time.Hour),
+			ExpiresAt:         testpkg.DatabaseNow(t, db).Add(48 * time.Hour),
 			ApprovalStatus:    "not_required",
 		}
 		invitation.TenantID = testpkg.Tenant(t)
@@ -1573,14 +1573,14 @@ func TestGuardianService_GetPendingInvitations(t *testing.T) {
 		Token:             fmt.Sprintf("pending-list-%d", time.Now().UnixNano()),
 		GuardianProfileID: guardian.ID,
 		CreatedBy:         inviter.ID,
-		ExpiresAt:         time.Now().Add(48 * time.Hour),
+		ExpiresAt:         testpkg.DatabaseNow(t, db).Add(48 * time.Hour),
 	})
-	spent := time.Now().Add(-time.Hour)
+	spent := testpkg.DatabaseNow(t, db).Add(-time.Hour)
 	testpkg.InsertTestGuardianInvitation(t, db, &testpkg.GuardianInvitation{
 		Token:             fmt.Sprintf("pending-list-accepted-%d", time.Now().UnixNano()),
 		GuardianProfileID: guardian.ID,
 		CreatedBy:         inviter.ID,
-		ExpiresAt:         time.Now().Add(48 * time.Hour),
+		ExpiresAt:         testpkg.DatabaseNow(t, db).Add(48 * time.Hour),
 		AcceptedAt:        &spent,
 	})
 
@@ -2405,7 +2405,7 @@ func TestGetStudentGuardians_AccountHolderPendingUpgradeApproval(t *testing.T) {
 		Token:             fmt.Sprintf("acct-pending-%d", time.Now().UnixNano()),
 		GuardianProfileID: guardian.ID,
 		CreatedBy:         account.ID,
-		ExpiresAt:         time.Now().Add(48 * time.Hour),
+		ExpiresAt:         testpkg.DatabaseNow(t, db).Add(48 * time.Hour),
 		StudentID:         &siblingID,
 		ApprovalStatus:    "pending",
 		RoleUpgrade:       true,
