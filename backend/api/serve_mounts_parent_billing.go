@@ -373,7 +373,8 @@ func parentBillingMailStatus(status deliveryContract.Status) string {
 // parentBillingLetterheads binds the letterhead of the letters to the
 // master data of Organisation & Tenancy, which logs the read of the
 // contact person and the bank accounts, to the branding settings and the
-// payment text of the Träger (ADR 0112, ADR 0121, #5622), and the template
+// payment text of the Träger (ADR 0112, ADR 0121, #5622) and its switch of
+// the GiroCode (#5624), and the template
 // of the confirmation letter to the document templates of the Träger
 // (#4677, ADR 0152).
 type parentBillingLetterheads struct {
@@ -407,6 +408,11 @@ func (b parentBillingLetterheads) Letterhead(ctx context.Context, reviewer paren
 		ContactPhone: profile.Contact.Phone, ContactEmail: profile.Contact.Email,
 		PaymentText: texts[configModels.KeyParentBillingPaymentText],
 	}
+	switches, err := b.settings.TraegerBools(ctx, reviewer.OrganizationID, []string{configModels.KeyParentBillingTransferCode})
+	if err != nil {
+		return parentbilling.Letterhead{}, err
+	}
+	head.WithoutTransferCode = !switches[configModels.KeyParentBillingTransferCode]
 	template, err := b.templates.Current(ctx, reviewer.OrganizationID, templates.KindConfirmation)
 	if err != nil {
 		return parentbilling.Letterhead{}, err

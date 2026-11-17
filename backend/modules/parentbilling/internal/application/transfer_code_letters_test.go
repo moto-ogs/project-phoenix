@@ -145,3 +145,36 @@ func TestMonthlyInvoiceAndNoticeCarryTheTransferCode(t *testing.T) {
 	assert.NotEqual(t, legalRemedyHeading, letter.Blocks[at[0]].Heading, "the legal remedy stays last")
 	assert.False(t, letter.OnePage, "a fee notice keeps its full type")
 }
+
+// A Träger that switched the GiroCode off (#5624) gets no code on any
+// letter it pays by transfer: confirmation, holiday invoice, fee notice,
+// monthly invoice and monthly fee notice. The payment text stays.
+func TestNoTransferCodeWhenTheTraegerSwitchedItOff(t *testing.T) {
+	t.Parallel()
+
+	confirmation := goldenLetterContent(t)
+	invoice := goldenLetterContent(t)
+	invoice.document.DocumentKind = parentbilling.DocumentKindInvoice
+	notice := noticeContent(t)
+	care := careLetterSJR()
+	careNotice := careLetterSJR()
+	careNotice.invoice.DocumentKind = parentbilling.DocumentKindFeeNotice
+	careNotice.invoice.DebtorNumber = "5.0311.000123.4"
+	careNotice.letterhead.Template = hardtNoticeTemplate()
+	for _, head := range []*parentbilling.Letterhead{&confirmation.letterhead, &invoice.letterhead,
+		&notice.letterhead, &care.letterhead, &careNotice.letterhead} {
+		head.WithoutTransferCode = true
+	}
+
+	for name, letter := range map[string]Letter{
+		"confirmation":    confirmationLetter(confirmation),
+		"holiday invoice": confirmationLetter(invoice),
+		"fee notice":      confirmationLetter(notice),
+		"care invoice":    careInvoiceLetter(care),
+		"care fee notice": careNoticeLetter(careNotice),
+	} {
+		codes, _ := paymentCodes(letter)
+		assert.Empty(t, codes, name)
+		assert.Contains(t, letterText(letter), "Bitte überweisen Sie", "%s keeps the payment text", name)
+	}
+}
