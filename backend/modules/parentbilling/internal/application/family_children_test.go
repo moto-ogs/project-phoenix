@@ -407,5 +407,5 @@ func TestFamilyChildrenNumberGoesWithTheFamily(t *testing.T) {
 	own := parentbilling.FamilyChildCount{ID: 9, ContractID: 2, FamilyEmail: "ute@example.org", ConfirmedChildren: ptr(4), ValidFrom: &from}
 	families = groupFamilies(versions, recipients, append(differing, own), today)
 	assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status)
-	assert.Equal(t, int64(9), families[0].Count.ID, "the office's confirmation for the family decides")
+	assert.Equal(t, own.ID, families[0].Count.ID, "the office's confirmation for the family decides")
 }
