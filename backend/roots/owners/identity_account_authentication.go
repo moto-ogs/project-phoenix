@@ -399,9 +399,13 @@ func (a AuthAudit) RecordAuthEvent(ctx context.Context, event identityaccess.Aut
 func pendingWipes(values []auditModels.PendingAccountWideWipe) []identityaccess.PendingAccountWideWipe {
 	result := make([]identityaccess.PendingAccountWideWipe, 0, len(values))
 	for _, value := range values {
-		result = append(result, identityaccess.PendingAccountWideWipe{
+		wipe := identityaccess.PendingAccountWideWipe{
 			EventID: value.EventID, TenantID: value.TenantID, AccountID: value.AccountID, Reason: value.Reason, CreatedAt: value.CreatedAt,
-		})
+		}
+		if value.Cutoff != nil {
+			wipe.Cutoff = *value.Cutoff
+		}
+		result = append(result, wipe)
 	}
 	return result
 }

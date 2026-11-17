@@ -415,7 +415,7 @@ func (s *ProvenanceStore) RestoreStudentEnrollmentsForCareExit(ctx context.Conte
 	if err != nil {
 		return 0, stats, err
 	}
-	deleted, err := restoreDeletedEnrollments(ctx, db, tenantID, studentIDs, periodIDs, requestChildIDs, encoded, countEligibleDeletedEnrollmentRemovals(payload, tenantID, studentIDs), &stats)
+	deleted, err := restoreDeletedEnrollments(ctx, db, tenantID, s.currentTime(), studentIDs, periodIDs, requestChildIDs, encoded, countEligibleDeletedEnrollmentRemovals(payload, tenantID, studentIDs), &stats)
 	return capped + deleted, stats, err
 }
 
@@ -440,18 +440,20 @@ func restoreCappedEnrollments(ctx context.Context, db bun.IDB, tenantID int64, s
 	return rowsAffected(result, "restored capped enrollments", stats)
 }
 
-func restoreDeletedEnrollments(ctx context.Context, db bun.IDB, tenantID int64, studentIDs, periodIDs, requestChildIDs []int64, payload []byte, expected int64, stats *domain.OperationStats) (int64, error) {
+// restoreDeletedEnrollments re-inserts the deleted rows, stamped createdAt on
+// the owner's clock like every other roster insert.
+func restoreDeletedEnrollments(ctx context.Context, db bun.IDB, tenantID int64, createdAt time.Time, studentIDs, periodIDs, requestChildIDs []int64, payload []byte, expected int64, stats *domain.OperationStats) (int64, error) {
 	started := time.Now()
 	result, err := db.ExecContext(ctx, `INSERT INTO activities.student_enrollments (
 		id, tenant_id, student_id, activity_group_id, valid_from, valid_until,
 		calendar_period_id, enrollment_request_child_id, selected_weekdays,
-		attendance_status, weekday)
+		attendance_status, weekday, created_at)
 		SELECT removal.enrollment_id, removal.tenant_id, removal.student_id, removal.activity_group_id,
 		       NULLIF(removal.valid_from, '')::date, NULLIF(removal.previous_valid_until, '')::date,
 		       CASE WHEN removal.calendar_period_id = ANY(?::BIGINT[]) THEN removal.calendar_period_id END,
 		       CASE WHEN removal.enrollment_request_child_id = ANY(?::BIGINT[])
 		            THEN removal.enrollment_request_child_id END,
-		       removal.selected_weekdays, removal.attendance_status, removal.weekday
+		       removal.selected_weekdays, removal.attendance_status, removal.weekday, ?::timestamptz
 		FROM jsonb_to_recordset(?::jsonb) AS removal(
 			tenant_id bigint, student_id bigint, enrollment_id bigint, was_deleted boolean,
 			previous_valid_until text, activity_group_id bigint, valid_from text,
@@ -460,7 +462,7 @@ func restoreDeletedEnrollments(ctx context.Context, db bun.IDB, tenantID int64, 
 		JOIN activities.groups AS activity_group
 		  ON activity_group.tenant_id = removal.tenant_id AND activity_group.id = removal.activity_group_id
 		WHERE removal.was_deleted = TRUE AND removal.tenant_id = ? AND removal.student_id IN (?)
-		ON CONFLICT DO NOTHING`, pgdialect.Array(periodIDs), pgdialect.Array(requestChildIDs), string(payload), tenantID, bun.List(studentIDs))
+		ON CONFLICT DO NOTHING`, pgdialect.Array(periodIDs), pgdialect.Array(requestChildIDs), createdAt, string(payload), tenantID, bun.List(studentIDs))
 	stats.Queries++
 	stats.StatementDuration += time.Since(started)
 	if err != nil {

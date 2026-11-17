@@ -115,7 +115,9 @@ func (s *Store) CreateStudentEnrollment(ctx context.Context, fields timetable.St
 	if err != nil {
 		return timetable.StudentEnrollment{}, domain.OperationStats{}, err
 	}
-	row := studentEnrollmentRow{TenantID: tenantID}
+	// created_at is on the owner's clock: enrollment provenance orders it
+	// against Enrollment's reviewed_at (ADR 0281 point 2, #7295).
+	row := studentEnrollmentRow{TenantID: tenantID, CreatedAt: s.currentTime()}
 	applyStudentEnrollmentFields(&row, fields)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()

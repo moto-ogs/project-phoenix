@@ -331,6 +331,7 @@ type RevokedSessionsEvidence struct {
 
 type PendingWipeEvidence struct {
 	Reason string
+	Cutoff time.Time
 }
 
 type CompletedWipeEvidence struct {
@@ -338,13 +339,15 @@ type CompletedWipeEvidence struct {
 }
 
 // PendingAccountWideWipe is a recorded account-wide revoke that may still
-// need recovery after a failed after-commit wipe.
+// need recovery after a failed after-commit wipe. Cutoff is on the clock
+// that stamps the sessions, zero for a wipe recorded without one.
 type PendingAccountWideWipe struct {
 	EventID   int64
 	TenantID  int64
 	AccountID int64
 	Reason    string
 	CreatedAt time.Time
+	Cutoff    time.Time
 }
 
 // SessionKind is the rules the refresh token's session follows; a scope no

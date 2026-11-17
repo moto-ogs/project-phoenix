@@ -964,11 +964,18 @@ func TestCleanupExpiredTokensKeepsParentPushForUnknownSession(t *testing.T) {
 	require.Equal(t, 1, countParentPush(t, db, account.ID, "https://fcm.googleapis.com/legacy-parent"))
 }
 
-func insertPendingAccountWideWipe(t *testing.T, db *bun.DB, accountID, tenantID int64, reason string, createdAt time.Time) {
+// insertPendingAccountWideWipe records a pending wipe on the clocks
+// production uses: the cutoff is on the session clock (time.Now in these
+// tests) in the metadata, created_at is the database's time aged by as much
+// as the cutoff lies in the past.
+func insertPendingAccountWideWipe(t *testing.T, db *bun.DB, accountID, tenantID int64, reason string, cutoff time.Time) {
 	t.Helper()
+	age := max(time.Since(cutoff), 0)
 	_, err := db.NewRaw(`
 		INSERT INTO audit.auth_events (tenant_id, account_id, event_type, success, ip_address, metadata, created_at)
-		VALUES (?, ?, 'token_revoked', true, '0.0.0.0', jsonb_build_object('reason', ?::text, 'pending_account_wide_wipe', true), ?)
-	`, tenantID, accountID, reason, createdAt).Exec(context.Background())
+		VALUES (?, ?, 'token_revoked', true, '0.0.0.0',
+			jsonb_build_object('reason', ?::text, 'pending_account_wide_wipe', true, 'session_cutoff', ?::text),
+			now() - make_interval(secs => ?))
+	`, tenantID, accountID, reason, cutoff.UTC().Format(time.RFC3339Nano), age.Seconds()).Exec(context.Background())
 	require.NoError(t, err)
 }

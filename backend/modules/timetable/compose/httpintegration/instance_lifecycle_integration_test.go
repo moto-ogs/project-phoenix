@@ -1115,9 +1115,11 @@ func TestInstance_Reopen_RejectsAttendanceChangedAfterComplete(t *testing.T) {
 	_, err = s.svc.Complete(s.ctx, ai.ID)
 	require.NoError(t, err)
 
+	// Attendance stamps updated_at, like completed_at, on the database's
+	// statement time (ADR 0281).
 	_, err = s.db.NewUpdate().
 		Table("schedule.instance_students").
-		Set("updated_at = ?", time.Now().Add(time.Minute)).
+		Set("updated_at = clock_timestamp() + INTERVAL '1 minute'").
 		Where("instance_id = ?", ai.ID).
 		Exec(s.ctx)
 	require.NoError(t, err)
