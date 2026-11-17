@@ -76,7 +76,11 @@ func (s *Store) RenewStudentEnrollment(ctx context.Context, input schoolmembersh
 	err = db.NewUpdate().TableExpr("users.student_school_memberships AS student").
 		Set("school_class = ?", input.SchoolClass).Set("status = ?", input.Status).
 		Set("enrolled_from = ?", from).Set("enrolled_until = ?", until).Set("updated_at = NOW()").
-		Set(firstCareFromNext, day, input.Status, from).
+		// The first OGS place establishes a known bound even when the child
+		// previously had no care history. Other renewals retain their history.
+		Set(`first_care_from = CASE WHEN student.without_care_place AND NOT ?::boolean
+            THEN COALESCE(?::date, ?::date) ELSE (?) END`, input.WithoutCarePlace, from, day,
+			bun.SafeQuery(firstCareFromNextValue, day, input.Status, from)).
 		Set(carePausedAfterNext, restart).Set(careResumedFromNext, day, input.Status, from, restart).
 		Set("group_id = ?", input.GroupID).Set("without_care_place = ?", input.WithoutCarePlace).
 		Where("student.tenant_id = ?", scope.TenantID).Where("student.student_profile_id = ?", input.StudentID).

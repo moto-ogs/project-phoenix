@@ -297,7 +297,6 @@ func mountSchoolRoutes(
 	tenant.Mount("/import", importAPI.NewResource(importAPI.Dependencies{
 		Students: dataImports.Student, Staff: dataImports.Staff, ClassList: dataImports.ClassList,
 		Files: dataImportCompose.NewFileDecoder(), Runtime: dataImportHTTPRuntime(persons, membership, dataImports.OpeningBalance),
-		ClassListConversion: classListImportConversion(dataImports.ClassListConversion, settings),
 	}).Router())
 	tenant.Mount("/admin/grade-transitions", gradeTransitionHTTP.NewGradeTransitionResource(gradeTransition).Router(ProtectedTenantRoutes))
 }

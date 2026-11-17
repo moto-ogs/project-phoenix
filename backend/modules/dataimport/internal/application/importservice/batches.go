@@ -71,7 +71,7 @@ func (s *ImportService[T]) ImportBatches(ctx context.Context, request importMode
 	if scoped, ok := s.config.(requestScopedConfig[T]); ok {
 		clone := &ImportService[T]{config: scoped.NewRequestScoped(), batchSize: s.batchSize, audit: s.audit, observe: s.observe, fingerprint: s.fingerprint, checkpoints: s.checkpoints, transactions: s.transactions,
 			boundStatements: s.boundStatements, batchLimit: s.batchLimit, connectionLost: s.connectionLost,
-			savepointLost: s.savepointLost, now: s.now}
+			savepointLost: s.savepointLost, now: s.now, beforeBatchCommit: s.beforeBatchCommit}
 		if locker, ok := clone.config.(importConfigLocker); ok {
 			locker.ImportLock().Lock()
 			defer locker.ImportLock().Unlock()
@@ -346,6 +346,12 @@ func (a *batchImportAttempt[T]) execute(ctx context.Context) (attemptErr error) 
 	batch, err = a.applyChunk(ctx, batch)
 	if err != nil {
 		return err
+	}
+	// Follow-ups share the batch transaction and receipt on both write paths.
+	if finish := a.service().beforeBatchCommit; finish != nil && batch.CreatedCount+batch.UpdatedCount > 0 {
+		if err := finish(ctx, a.run.request.UserID); err != nil {
+			return err
+		}
 	}
 	batch.CompletedAt = a.service().now()
 	if err := a.appendCheckpoint(ctx, batch); err != nil {

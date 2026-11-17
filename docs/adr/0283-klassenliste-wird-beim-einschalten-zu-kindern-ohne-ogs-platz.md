@@ -50,8 +50,11 @@ Owner an.
   in der Transaktion des Schreibens; scheitert die Umwandlung, bleibt der
   Schalter, wie er war. Ausschalten wandelt nichts zurück.
 - **Danach.** Ein Klassenlisten-Import bei eingeschaltetem Schalter wandelt
-  die importierten Einträge in einer eigenen Mandanten-Transaktion gleich mit
-  um. Einen einzelnen neuen Eintrag lehnt ein Dekorator im Root ab
+  die importierten Einträge in der Mandanten-Transaktion jedes Import-Batches
+  gleich mit um. Einträge, Umwandlung und Checkpoint committen gemeinsam;
+  ein Fehler rollt nur den betroffenen Batch zurück. Bereits bestätigte
+  Batches sind auch bei einem späteren Importfehler vollständig umgewandelt.
+  Einen einzelnen neuen Eintrag lehnt ein Dekorator im Root ab
   (`students.class_list_entries_replaced`); die Schule legt das Kind über
   „Ohne OGS-Platz“ im Anlegen-Dialog an. Ein Kind ohne OGS-Platz bekommt
   weder Gruppe noch Zeiten (`students.without_care_place_group`).
@@ -60,6 +63,6 @@ Owner an.
 
 - Die Anlage zählt nicht für das Kinderkontingent; eine spätere Verlängerung
   der Anmeldung gibt dem Kind seinen Platz und zählt dann.
-- Ein Rücksetzen des Modulschalters auf die Voreinstellung ruft den
-  Seiteneffekt nicht auf. Ist der Schalter dann schon an, wandelt erst ein
-  erneutes Setzen um.
+- Ein Rücksetzen des Vormittagsmoduls auf seine eingeschaltete
+  Voreinstellung führt denselben Seiteneffekt wie das Einschalten aus.
+  Scheitert die Umwandlung, bleibt das Modul ausgeschaltet.

@@ -35,14 +35,12 @@ type Resource struct {
 	studentImportService   importModels.RowImporter[importModels.StudentImportRow]
 	staffImportService     importModels.RowImporter[importModels.StaffImportRow]
 	classListImportService importModels.RowImporter[importModels.ClassListEntryImportRow]
-	classListConversion    func(context.Context, int64) error
 	runtime                Runtime
 }
 
 func NewResource(deps Dependencies) *Resource {
 	return &Resource{files: deps.Files, studentImportService: deps.Students,
-		staffImportService: deps.Staff, classListImportService: deps.ClassList, runtime: deps.Runtime,
-		classListConversion: deps.ClassListConversion}
+		staffImportService: deps.Staff, classListImportService: deps.ClassList, runtime: deps.Runtime}
 }
 
 // Router returns a configured router for import endpoints

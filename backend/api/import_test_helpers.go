@@ -43,7 +43,9 @@ type ImportTestModule struct {
 // per-row savepoint and the batch rollback are observable without a
 // contrived data shape.
 type ImportTestOptions struct {
-	WrapGuardians importPorts.GuardianPortDecorator
+	// ClassListConversion runs with each written class-list batch.
+	ClassListConversion func(context.Context, int64) error
+	WrapGuardians       importPorts.GuardianPortDecorator
 	// Clock is the clock of the import and of the Workforce it books into;
 	// nil is the real one.
 	Clock func() time.Time
@@ -194,7 +196,7 @@ func NewImportTestModuleWithOwners(db transactionruntime.Database, unit tenant.U
 			studentGuardians, students.CarePlan, NewStudentPresenceForTests(db), auditCompose.NewConsentRecorder(command), options.Today, importTestCohorts(db, options),
 		),
 		Staff:     newStaffImport(runtime, rfid, auth.Invitation, organizations, persons, membership, workTime),
-		ClassList: newClassListImport(runtime, membership, persons, wrapClassListBatches(classListBatches(membership), options.WrapClassListBatches)),
+		ClassList: newClassListImport(runtime, membership, persons, wrapClassListBatches(classListBatches(membership), options.WrapClassListBatches), options.ClassListConversion),
 		OpeningBalance: newOpeningBalanceImport(runtime, importPorts.OpeningBalanceImportDeps{
 			BalanceAdjustService: workforce.TimeTracking.OpeningBalances,
 			StaffAbsenceService:  workforce.TimeTracking.VacationTakeovers,

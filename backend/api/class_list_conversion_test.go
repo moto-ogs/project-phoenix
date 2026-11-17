@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -93,8 +94,15 @@ func TestRenewalGivesAChildWithoutCarePlaceItsPlace(t *testing.T) {
 	}))
 
 	var withoutPlace, dated bool
-	require.NoError(t, db.NewRaw(`SELECT without_care_place, enrolled_from IS NOT NULL FROM users.student_school_memberships
-		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID).Scan(ctx, &withoutPlace, &dated))
+	var firstCare *calendar.Date
+	require.NoError(t, db.NewRaw(`SELECT without_care_place, enrolled_from IS NOT NULL, first_care_from FROM users.student_school_memberships
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID).Scan(ctx, &withoutPlace, &dated, &firstCare))
 	assert.False(t, withoutPlace, "the renewal gives the child its OGS place")
 	assert.True(t, dated, "the OGS care starts with the place, so no past day turns into OGS participation")
+	require.NotNil(t, firstCare, "the first OGS place must bound historical care")
+	assert.Equal(t, calendar.TodayDate(), *firstCare)
+	yesterday := calendar.TodayDate().AddDays(-1).String()
+	roster, err := people.ListStudentRosterOverlapping(ctx, yesterday, yesterday, calendar.TodayDate().String())
+	require.NoError(t, err)
+	assert.Empty(t, roster, "granting the first place must not add the child to historical care reports")
 }
