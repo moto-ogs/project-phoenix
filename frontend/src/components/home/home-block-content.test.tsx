@@ -365,7 +365,7 @@ describe("HomeBlockContent — Listen", () => {
 
     expect(
       screen.getByRole("link", {
-        name: "OGS Gruppe A, Aktiv: Betreuung öffnen",
+        name: /^OGS Gruppe A .* ?, Aktiv: Betreuung öffnen$/,
       }),
     ).toHaveAttribute("href", "/test-tenant/ogs-groups");
   });
@@ -434,7 +434,9 @@ describe("HomeBlockContent — Kinder (#4347)", () => {
     ];
     for (const [label, count, href] of rows) {
       const link = screen.getByRole("link", {
-        name: `${label}: ${count}, Liste öffnen`,
+        // Named by its visible label and count; the target follows hidden
+        // (WCAG 2.5.3, #7112).
+        name: `${label} ${count} , Liste öffnen`,
       });
       expect(link).toHaveAttribute("href", href);
     }
@@ -460,7 +462,7 @@ describe("HomeBlockContent — Kinder (#4347)", () => {
 
     // Anker: die Statuszeile bleibt während des Ladens erreichbar.
     expect(
-      screen.getByRole("link", { name: "Krank: …, Liste öffnen" }),
+      screen.getByRole("link", { name: "Krank , Liste öffnen" }),
     ).toHaveAttribute("href", "/test-tenant/students/search?status=krank");
     expect(screen.queryByText("4")).not.toBeInTheDocument();
   });

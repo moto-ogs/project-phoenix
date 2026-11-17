@@ -408,8 +408,11 @@ export function InstanceBlock({
               paddingBottom: 2,
             }),
       }}
-      aria-label={[
-        `${instance.title}, ${instance.startTime} bis ${instance.endTime}`,
+      // Zeit und Titel zeigt der Block; versteckt folgt, was er nicht zeigt
+      // (WCAG 2.5.3, #7112).
+      details={[
+        // Only the start shows in a block with inline names; the end is read.
+        ...(showInlineNames ? [`bis ${instance.endTime}`] : []),
         ...(instance.planningTrackName
           ? [`Planungsspur ${instance.planningTrackName}`]
           : []),

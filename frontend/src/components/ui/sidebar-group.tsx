@@ -64,9 +64,6 @@ export function SidebarGroup({
   children,
 }: SidebarGroupProps) {
   const shownBadge = badge != null && badge.count > 0 && !isOpen ? badge : null;
-  const collapsedLabel = shownBadge
-    ? `${label}, ${shownBadge.ariaLabel}`
-    : label;
 
   return (
     <div>
@@ -78,7 +75,7 @@ export function SidebarGroup({
         data-setup-tour={tourId}
         className={`${SIDEBAR_GROUP_HEADING_CLASSES} cursor-pointer`}
         aria-expanded={isOpen}
-        {...(collapsed ? { title: label, "aria-label": collapsedLabel } : {})}
+        {...(collapsed ? { title: label } : {})}
       >
         <SidebarRowContent
           icon={

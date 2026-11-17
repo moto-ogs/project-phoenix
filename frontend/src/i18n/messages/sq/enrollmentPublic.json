@@ -6,7 +6,8 @@
     "phase": "Zgjedhja",
     "form": "Formulari",
     "done": "Konfirmimi",
-    "aria": "Përparimi i regjistrimit"
+    "aria": "Përparimi i regjistrimit",
+    "completed": "përfunduar"
   },
   "loading": "Regjistrimi po ngarkohet…",
   "phaseTitle": "Për çfarë dëshironi ta regjistroni fëmijën?",

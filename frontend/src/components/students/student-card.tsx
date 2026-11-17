@@ -230,14 +230,16 @@ export function StudentCard({
   const dayChangeKind = dayHomeChange
     ? dayHomeChangeKind(dayHomeChange)
     : undefined;
-  const nameLabel = dayChangeLabel
-    ? `${firstName} ${lastName}, ${dayChangeLabel}`
-    : `${firstName} ${lastName}`;
-  const ariaLabel = selectMode
-    ? `${nameLabel} - ${isCheckinSelected ? "Auswahl entfernen" : "Auswählen"}`
+  // The card is named by what it shows, name first (WCAG 2.5.3, #7112): the
+  // day change and the tap strip are visible text in it. Only the target of
+  // a navigating card is added as hidden text; selection is aria-pressed.
+  const hiddenAction = selectMode
+    ? null
     : checkinMode
-      ? `${nameLabel} - ${tapStrip?.copy ?? "Tippen zum An-/Abmelden"}`
-      : `${nameLabel} - Details öffnen`;
+      ? tapStrip
+        ? null
+        : ", Tippen zum An-/Abmelden"
+      : ", Details öffnen";
 
   // A selected card gets a brand-green ring on top of the resting shadow.
   // Inline style (not an arbitrary-value class) so the hex stays sourced from
@@ -265,7 +267,6 @@ export function StudentCard({
         activeHandler();
       }}
       disabled={isCheckinPending}
-      aria-label={ariaLabel}
       aria-busy={isCheckinPending}
       aria-pressed={selectMode ? isCheckinSelected : undefined}
       data-checkin-mode={checkinMode || undefined}
@@ -408,6 +409,7 @@ export function StudentCard({
           <span>{tapStrip.copy}</span>
         </div>
       ) : null}
+      {hiddenAction ? <span className="sr-only">{hiddenAction}</span> : null}
     </button>
   );
 

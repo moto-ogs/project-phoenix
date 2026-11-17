@@ -218,6 +218,7 @@ export function ParentMessagesPage() {
             studentId={children[0]!.student_id}
             showChild
             tourAnchor="messages"
+            headingLevel={2}
           />
         </SharedParentFeaturesProvider>
       </ParentPage>
