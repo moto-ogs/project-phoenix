@@ -7816,6 +7816,17 @@
       "target_owner": "timetable-activities"
     },
     {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Decisions.ApplyDueClassSwitches",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RolloverDecider.ApplyDueClassSwitches",
+      "reason": "Platform protocol participation (scope): enrollment reaches tenant.WithSavepoint (tenant-runtime) through modules/enrollment/compose.Decisions.ApplyDueClassSwitches. Each due class switch runs in its own savepoint, so a switch the Kinderkontingent refuses for a child without an OGS place (#4803, ADR 0283) leaves nothing half written and the other switches still apply; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithSavepoint",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0083",
       "approval_adr": "0162",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Decisions.ApplyDueWeeklyPlans",

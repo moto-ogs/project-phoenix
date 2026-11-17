@@ -83,26 +83,13 @@ func (d *Decisions) ApplyDueClassSwitches(ctx context.Context, asOf calendar.Dat
 	applied := 0
 	previousClasses := make(map[int64]string, len(due))
 	for _, change := range due {
-		ok, err := d.applyClassSwitchInSavepoint(ctx, change)
-		if isChildQuotaReached(err) {
-			// Only a child without an OGS place (#4803) can raise the
-			// Kontingentzahl here: its place starts with this switch. A full
-			// Kinderkontingent holds this one switch; the plan stays, so a
-			// later run grants the place once one is free, and the other
-			// switches of the school still apply.
-			d.logger().Warn("class switch held: child quota reached",
-				slog.Int64("request_child_id", change.RequestChildID))
-			continue
-		}
+		ok, err := d.applyDueClassSwitch(ctx, change)
 		if err != nil {
 			return applied, err
 		}
 		if ok {
 			applied++
 			previousClasses[*change.CreatedStudentID] = change.From
-		}
-		if err := d.deps.Children.SetChildClassSwitch(ctx, change.RequestChildID, nil); err != nil {
-			return applied, fmt.Errorf("class switch: clear request child %d: %w", change.RequestChildID, err)
 		}
 	}
 	if applied > 0 {
@@ -114,6 +101,27 @@ func (d *Decisions) ApplyDueClassSwitches(ctx context.Context, asOf calendar.Dat
 		return applied, fmt.Errorf("class switch: follow class changes on targeted templates: %w", err)
 	}
 	return applied, nil
+}
+
+// applyDueClassSwitch applies one due switch and clears its plan. Only a
+// child without an OGS place (#4803) can raise the Kontingentzahl here: its
+// place starts with this switch. A full Kinderkontingent holds this one
+// switch; the plan stays, so a later run grants the place once one is free,
+// and the other switches of the school still apply.
+func (d *Decisions) applyDueClassSwitch(ctx context.Context, change enrollmentNative.DueClassSwitch) (bool, error) {
+	ok, err := d.applyClassSwitchInSavepoint(ctx, change)
+	if isChildQuotaReached(err) {
+		d.logger().Warn("class switch held: child quota reached",
+			slog.Int64("request_child_id", change.RequestChildID))
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if err := d.deps.Children.SetChildClassSwitch(ctx, change.RequestChildID, nil); err != nil {
+		return false, fmt.Errorf("class switch: clear request child %d: %w", change.RequestChildID, err)
+	}
+	return ok, nil
 }
 
 // applyClassSwitchInSavepoint runs one switch in its own savepoint, so a
