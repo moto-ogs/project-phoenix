@@ -24,6 +24,15 @@ export const staffKeys = {
     }),
   teachersKey: () =>
     resourceKey("staff-directory-teachers-", { page: 1, pageSize: 1000 }),
+  /** Dokumente der Personalakte (Reiter „Dokumente“). */
+  documents: (staffId: string) => `staff-documents-${staffId}`,
+  /** Personalnummer für die Lohnabrechnung, nur mit Lohnrecht gelesen. */
+  payrollNumber: (staffId: string) => `staff-payroll-number-${staffId}`,
+  /** Stammdaten der Personalakte; dieselbe Antwort liest die Detailseite. */
+  stammdaten: (staffId: string) => `staff-stammdaten-${staffId}`,
+  /** Die maskierten Finanzangaben, nur mit `staff:financial`. */
+  stammdatenFinancial: (staffId: string) =>
+    `staff-stammdaten-financial-${staffId}`,
 } as const;
 
 /**
@@ -89,6 +98,12 @@ export const staffNoticeKeys = {
   /** Wer eine Tagesinformation wann bestätigt hat (#2208). */
   acknowledgements: (noticeId: string) =>
     `staff-notice-acknowledgements-${encodeURIComponent(noticeId)}`,
+  /**
+   * Die heute geltenden Hinweise im OGS-Portal, je Konto. Den Eintrag teilen
+   * sich das Badge der Seitenleiste, der Startseiten-Baustein und
+   * /tagesinformationen; die App-Hülle legt ihn aus dem Server-Seed an (#4989).
+   */
+  today: (accountId: string) => `staff-notices-today:${accountId}`,
 } as const;
 
 /**
@@ -142,6 +157,27 @@ export const staffAbsenceKeys = {
   ownVacationQuota: (year: number) => `time-tracking-absences-quota-${year}`,
   ownQuestioned: () => "time-tracking-absences-questioned",
   ownAllowances: () => "time-tracking-absences-allowances",
+  /** Abwesenheiten für das Stundenkonto einer Person (Reiter „Übersicht“). */
+  accountListFamily: (staffId: string) => `staff-absences-account-${staffId}-`,
+  accountList: (staffId: string, from: string, to: string): string =>
+    `${staffAbsenceKeys.accountListFamily(staffId)}${from}-${to}`,
+  /**
+   * Wartende Anträge: alle der Schule und die einer Person (Reiter-Badge).
+   * Beide liegen unter dem Präfix „staff-pending-absences-“, das jede
+   * Entscheidung auffrischt.
+   */
+  pendingAll: () => "staff-pending-absences-all",
+  pendingForStaff: (staffId: string) => `staff-pending-absences-${staffId}`,
+  /** Die Anträge je Konto, Ansicht und Filter (#4988). */
+  requestsFamily: (accountId: string | undefined) =>
+    `staff-absence-requests:${accountId}:`,
+  requests: (
+    accountId: string,
+    view: string,
+    search: string,
+    types: readonly string[],
+  ): string =>
+    `${staffAbsenceKeys.requestsFamily(accountId)}${view}:${JSON.stringify([search, types])}`,
 } as const;
 
 /** Zeiterfassung, Schichten und Protokoll je Person. */
@@ -161,6 +197,41 @@ export const staffTimeKeys = {
    *  frischt sie mit jeder Planänderung auf (PLAN_CACHE_KEY_PREFIXES). */
   shiftSeries: (seriesId: string) =>
     `dienstplan-shifts-series-${encodeURIComponent(seriesId)}`,
+  /** Arbeitszeitplan einer Person; Präfix „staff-schedule-“. */
+  schedule: (staffId: string) => `staff-schedule-${staffId}`,
+  /**
+   * Tagesprojektion (Soll, Gutschrift, Ist, Saldo) einer Person im Zeitraum.
+   * Zeiterfassungstabelle und Wochenkachel teilen den Eintrag; Speichern
+   * frischt alles mit „staff-schedule-targets-<id>-“ auf.
+   */
+  scheduleTargets: (staffId: string, from: string, to: string) =>
+    `staff-schedule-targets-${staffId}-${from}-${to}`,
+  /** Dieselbe Projektion über das Stundenkonto (Reiter „Übersicht“). */
+  scheduleTargetsAccount: (staffId: string, from: string, to: string) =>
+    `staff-schedule-targets-${staffId}-account-${from}-${to}`,
+  /** Vorschau der Sollzeiten im Reiter „Arbeitszeitmodell“. */
+  scheduleTargetsPreview: (staffId: string, from: string, to: string) =>
+    `staff-schedule-targets-preview-${staffId}-${from}-${to}`,
+  /** Arbeitsblöcke einer Person im Zeitraum; Präfix „staff-history-“ im SSE. */
+  history: (staffId: string, from: string, to: string) =>
+    `staff-history-${staffId}-${from}-${to}`,
+  /** Arbeitsblöcke über das Stundenkonto (Reiter „Übersicht“). */
+  historyAccountFamily: (staffId: string) =>
+    `staff-history-account-${staffId}-`,
+  historyAccount: (staffId: string, from: string, to: string): string =>
+    `${staffTimeKeys.historyAccountFamily(staffId)}${from}-${to}`,
+  /** Stundenkonto-Buchungen (#1420) einer Person. */
+  balanceAdjustmentsFamily: (staffId: string) =>
+    `staff-balance-adjustments-${staffId}-`,
+  balanceAdjustments: (staffId: string, from: string, to: string): string =>
+    `${staffTimeKeys.balanceAdjustmentsFamily(staffId)}${from}-${to}`,
+  /** Geplante Schichten einer Person im sichtbaren Zeitraum. */
+  shiftsVisible: (staffId: string, from: string, to: string) =>
+    `staff-shifts-visible-${staffId}-${from}-${to}`,
+  /** Sonderarbeitszeiten einer Person. */
+  targetOverrides: (staffId: string) => `staff-target-overrides-${staffId}`,
+  /** Zeiterfassung der Schule im Überblick, je Zeitraum. */
+  dashboardSummary: (period: string) => `staff-dashboard-summary-${period}`,
 } as const;
 
 /** Rollen, Klassen und Betreuungsrechte der Mitarbeitenden. */

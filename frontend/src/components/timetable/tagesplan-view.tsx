@@ -63,6 +63,7 @@ import { createLogger } from "~/lib/logger";
 import { STAFF_FLAT_PAGES } from "~/lib/section-navigation";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { useSWRAuth } from "~/lib/swr/hooks";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import {
   useOperationalOverviewScope,
   useTimetableEnabled,
@@ -500,7 +501,7 @@ export function TagesplanView() {
     error: listError,
     mutate: reloadList,
   } = useSWRAuth(
-    timetableEnabled ? `tagesplan-${day}` : null,
+    timetableEnabled ? tenantDailyKeys.dayPlan(day) : null,
     () => timetableOperationsApi.plannedNow({ scope: "day", date: day }),
     { revalidateOnFocus: true, focusThrottleInterval: 60_000 },
   );

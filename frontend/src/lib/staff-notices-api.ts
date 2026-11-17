@@ -10,6 +10,7 @@
  */
 
 import { ApiError, apiErrorFromText, transportFetch } from "./api-error";
+import { staffNoticeKeys } from "~/lib/swr/staff-keys";
 
 export type StaffNoticePriority = "info" | "important";
 
@@ -26,7 +27,7 @@ export const STAFF_NOTICES_REFRESH_EVENT = "staff-notices-refresh";
  * legt ihn beim vollen Seitenaufruf aus dem Server-Seed an (#4989).
  */
 export function staffNoticesTodayKey(accountId: string): string {
-  return `staff-notices-today:${accountId}`;
+  return staffNoticeKeys.today(accountId);
 }
 
 /**

@@ -107,6 +107,9 @@ import { useTimetableDayHours } from "~/lib/hooks/use-timetable-day-hours";
 import { useUrlParams } from "~/lib/hooks/use-url-params";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { databaseKeys } from "~/lib/swr/portal-keys";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import {
   useTimetableEnabled,
   useWeekendFollowsFriday,
@@ -121,7 +124,6 @@ import {
 import {
   isPlanFilterActive,
   parsePlanFilterId,
-  planFilterKey,
   type PlanFilter,
 } from "~/lib/plan-filter";
 import { substitutionService } from "~/lib/substitution-api";
@@ -173,9 +175,9 @@ import {
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
 
 const logger = createLogger({ component: "TimetablesPage" });
-const PERIODS_SWR_KEY = "database-calendar-periods-list";
-const PHASES_SWR_KEY = "timetable-enrollment-phases";
-const CONFLICT_ACKS_SWR_KEY = "timetable-conflict-acks";
+const PERIODS_SWR_KEY = databaseKeys.calendarPeriods();
+const PHASES_SWR_KEY = enrollmentKeys.phases();
+const CONFLICT_ACKS_SWR_KEY = tenantDailyKeys.conflictAcks();
 
 // Was ein fehlgeschlagener Schritt im Raster nennt (#2516). Der Katalog setzt
 // das Objekt in Nominativ und Akkusativ ein, deshalb nur feminine oder
@@ -652,7 +654,12 @@ function TimetablesContent() {
     ? tenantPath("/ferienwochen")
     : undefined;
 
-  const swrKey = `timetable-${view}-${fetchFromISO}-${fetchToISO}${planFilterKey(planFilter)}`;
+  const swrKey = tenantDailyKeys.planInstances(
+    view,
+    fetchFromISO,
+    fetchToISO,
+    planFilter,
+  );
   const shouldLoadInstances = view !== "series";
   // Lücken sind vorwärtsgerichtet: der Endpunkt lehnt ein vergangenes `date`
   // ab, also den Fensterstart auf heute klemmen und vollständig vergangene
@@ -668,7 +675,7 @@ function TimetablesContent() {
   // Lücken sind Planungswerkzeug — in der Leseansicht weder Chip noch Fetch.
   const shouldLoadGaps =
     canManageSchedules && view === "week" && fetchToISO >= todayTargetISO;
-  const gapsSWRKey = `timetable-gaps-${gapsFromISO}-${fetchToISO}`;
+  const gapsSWRKey = tenantDailyKeys.planGaps(gapsFromISO, fetchToISO);
   // Schlank (#4996): das Raster zeigt Zahlen, keine Kinderzeilen. Die
   // Kinderzeilen des geöffneten Termins lädt das Detailpanel nach.
   const { data, error, isLoading } = useSWRAuth(
@@ -685,7 +692,15 @@ function TimetablesContent() {
           (inst) => inst.id === selectedInstanceId,
         );
         if (selected) {
-          void tenantMutate(`${swrKey}-detail-${selected.date}`);
+          void tenantMutate(
+            tenantDailyKeys.planInstanceDetail(
+              view,
+              fetchFromISO,
+              fetchToISO,
+              planFilter,
+              selected.date,
+            ),
+          );
         }
       },
     },
@@ -703,13 +718,13 @@ function TimetablesContent() {
   // Auch die Monatsansicht braucht sie für die Personenauswahl.
   const { data: planStaffOverview, error: planStaffOverviewError } = useSWRAuth(
     status === "authenticated" && !canReadTenantRosters && view !== "series"
-      ? `timetable-plan-staff-names-${fetchFromISO}-${fetchToISO}`
+      ? tenantDailyKeys.planStaffNames(fetchFromISO, fetchToISO)
       : null,
     () => substitutionService.fetchScheduleOverview(fetchFromISO, fetchToISO),
   );
   const { data: studentData, error: studentError } = useSWRAuth(
     status === "authenticated" && canReadTenantRosters
-      ? "timetable-student-list"
+      ? tenantDailyKeys.planStudents()
       : null,
     // Nur Name und ID werden gebraucht: die Namens-Projektion (#4996).
     () => fetchStudents({ pageSize: 500, view: "names" }),
@@ -717,7 +732,7 @@ function TimetablesContent() {
   // Auswahl des Gruppenfilters (#4766). Die Serienansicht filtert nicht.
   const { data: filterGroups } = useSWRAuth(
     status === "authenticated" && canFilterByGroup && view !== "series"
-      ? "timetable-filter-groups"
+      ? tenantDailyKeys.plannerGroups()
       : null,
     () => fetchPlannerGroups(),
     { revalidateOnFocus: false },
@@ -725,7 +740,7 @@ function TimetablesContent() {
   // Auswahl des Raumfilters (#4768).
   const { data: filterRooms } = useSWRAuth(
     status === "authenticated" && canFilterByRoom && view !== "series"
-      ? "timetable-filter-rooms"
+      ? tenantDailyKeys.plannerRooms()
       : null,
     () => fetchPlannerRooms(),
     { revalidateOnFocus: false },
@@ -778,10 +793,8 @@ function TimetablesContent() {
     () =>
       Promise.all([
         tenantMutate(staffKeys.key()),
-        tenantMutate("timetable-student-list"),
-        tenantMutate(
-          `timetable-plan-staff-names-${fetchFromISO}-${fetchToISO}`,
-        ),
+        tenantMutate(tenantDailyKeys.planStudents()),
+        tenantMutate(tenantDailyKeys.planStaffNames(fetchFromISO, fetchToISO)),
       ]),
   );
 
@@ -1034,7 +1047,7 @@ function TimetablesContent() {
     status === "authenticated" &&
       templatePeriodID &&
       (view === "series" || selectedInstanceId)
-      ? `timetable-templates-${templatePeriodID}`
+      ? tenantDailyKeys.templates(templatePeriodID)
       : null,
     () => timetableService.getTemplates(templatePeriodID),
     { keepPreviousData: false },
@@ -1042,7 +1055,7 @@ function TimetablesContent() {
   const templatesLoadError = useSwrLoadError(
     templatesError,
     "die Liste der Regeltermine",
-    () => tenantMutate(`timetable-templates-${templatePeriodID}`),
+    () => tenantMutate(tenantDailyKeys.templates(templatePeriodID ?? "")),
   );
   const templates = useMemo(
     () => templateData?.templates ?? [],
@@ -1064,7 +1077,7 @@ function TimetablesContent() {
     isValidating: connectTemplatesValidating,
   } = useSWRAuth(
     status === "authenticated" && needsConnectLookup
-      ? "timetable-connect-templates"
+      ? enrollmentKeys.timetableTemplates()
       : null,
     () => timetableService.getTemplates(),
     { keepPreviousData: false, revalidateOnMount: true },
@@ -1072,7 +1085,7 @@ function TimetablesContent() {
   const connectTemplatesLoadError = useSwrLoadError(
     needsConnectLookup ? connectTemplatesError : undefined,
     "den Regeltermin",
-    () => tenantMutate("timetable-connect-templates"),
+    () => tenantMutate(enrollmentKeys.timetableTemplates()),
   );
   // Abweichungen von den Anmeldungen (#5103): Hinweis an Karte und Termin.
   const {
@@ -1396,7 +1409,13 @@ function TimetablesContent() {
   // Woche, damit Echtzeit-Aktualisierungen ihn mitnehmen.
   const detailDateISO = selectedInstance?.date ?? null;
   const detailSWRKey = detailDateISO
-    ? `${swrKey}-detail-${detailDateISO}`
+    ? tenantDailyKeys.planInstanceDetail(
+        view,
+        fetchFromISO,
+        fetchToISO,
+        planFilter,
+        detailDateISO,
+      )
     : null;
   const { data: detailData, error: detailError } = useSWRAuth(
     status === "authenticated" && detailSWRKey ? detailSWRKey : null,
@@ -1661,7 +1680,7 @@ function TimetablesContent() {
           `Der Regeltermin ist ab ${formatDate(result.effectiveDate)} beendet.`,
         );
         if (templatePeriodID) {
-          await tenantMutate(`timetable-templates-${templatePeriodID}`);
+          await tenantMutate(tenantDailyKeys.templates(templatePeriodID ?? ""));
         }
         await tenantMutate(swrKey);
         await tenantMutate(gapsSWRKey);
@@ -1704,7 +1723,7 @@ function TimetablesContent() {
             : `Der Hinweis zu „${template.name}“ wird wieder gezeigt.`,
         );
         if (templatePeriodID) {
-          await tenantMutate(`timetable-templates-${templatePeriodID}`);
+          await tenantMutate(tenantDailyKeys.templates(templatePeriodID ?? ""));
         }
       } catch (err) {
         logger.error("manual_roster_confirmation_failed", {
@@ -1727,7 +1746,7 @@ function TimetablesContent() {
   // Nach „Mit Angebot verbinden“ (#5103) ändern sich Kinderlisten im Plan.
   const handleOfferingConnected = useCallback(async () => {
     if (templatePeriodID) {
-      await tenantMutate(`timetable-templates-${templatePeriodID}`);
+      await tenantMutate(tenantDailyKeys.templates(templatePeriodID ?? ""));
     }
     await tenantMutate(swrKey);
     await tenantMutate(gapsSWRKey);
@@ -1755,7 +1774,7 @@ function TimetablesContent() {
         setEditingTemplate(null);
         setConvertingInstance(null);
         if (templatePeriodID) {
-          await tenantMutate(`timetable-templates-${templatePeriodID}`);
+          await tenantMutate(tenantDailyKeys.templates(templatePeriodID ?? ""));
         }
         await tenantMutate(swrKey);
         await tenantMutate(gapsSWRKey);
@@ -1947,7 +1966,7 @@ function TimetablesContent() {
   // Plan, sein Wiederholen lädt nur nach (#6636).
   const reloadAfterArchive = useCallback(async () => {
     if (templatePeriodID) {
-      await tenantMutate(`timetable-templates-${templatePeriodID}`);
+      await tenantMutate(tenantDailyKeys.templates(templatePeriodID ?? ""));
     }
     await tenantMutate(swrKey);
     await tenantMutate(gapsSWRKey);
@@ -2344,7 +2363,9 @@ function TimetablesContent() {
           void tenantMutate(swrKey);
           void tenantMutate(gapsSWRKey);
           if (templatePeriodID) {
-            void tenantMutate(`timetable-templates-${templatePeriodID}`);
+            void tenantMutate(
+              tenantDailyKeys.templates(templatePeriodID ?? ""),
+            );
           }
           if (result.kind === "instance" && result.instance.id) {
             updateUrlParams({ block: result.instance.id });

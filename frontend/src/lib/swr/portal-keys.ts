@@ -363,6 +363,24 @@ export const timeTrackingKeys = {
     `time-tracking-own-shifts-week-${from}-${to}`,
   ownShiftsAhead: (from: string, to: string) =>
     `time-tracking-own-shifts-week-ahead-${from}-${to}`,
+  /** Einstellungen der Zeiterfassung der Schule. */
+  config: () => "time-tracking-config",
+  /** Feiertage und Schließtage im sichtbaren Zeitraum der Tabelle. */
+  holidays: (from: string, to: string) =>
+    `time-tracking-holidays-${from}-${to}`,
+  closingDays: (from: string, to: string) =>
+    `time-tracking-closing-days-${from}-${to}`,
+  /** Eigene Einsätze von heute: Startseite und Zeiterfassung teilen sie. */
+  ownAssignmentsToday: (today: string) =>
+    `time-tracking-own-assignments-today-${today}`,
+  /** Eigene Tagesprojektion im Zeitraum (#2443). */
+  scheduleTargets: (from: string, to: string) =>
+    `time-tracking-schedule-targets-${from}-${to}`,
+  /** Eigene Monatskarte. */
+  monthSummary: (year: number, month: number) =>
+    `time-tracking-month-summary-${year}-${month}`,
+  /** Eigener Arbeitszeitplan; Präfix „time-tracking-own-schedule-“ im SSE. */
+  ownSchedule: (staffId: string) => `time-tracking-own-schedule-${staffId}`,
 } as const;
 
 /** Exact list identity shared with intent; preserve the SSE group segment. */

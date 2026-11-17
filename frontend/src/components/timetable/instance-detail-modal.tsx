@@ -77,6 +77,7 @@ import {
   completeAvailableClock,
 } from "~/lib/timetable-lifecycle";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type { InstanceParticipantNames } from "~/lib/timetable-api";
 import type { RosterDeviation } from "~/lib/roster-deviation";
@@ -309,7 +310,7 @@ function SeriesRosterMaintenance({
   const { data } = useSWRAuth(
     known || !periodId
       ? null
-      : `timetable-template-roster-maintenance-${templateId}-${periodId}`,
+      : tenantDailyKeys.templateRosterMaintenance(templateId, periodId),
     () => timetableService.getTemplate(templateId, periodId ?? ""),
   );
   const state = known ?? data?.rosterMaintenance;
@@ -511,7 +512,7 @@ function ParticipantNamesLoader({
   children: (names: InstanceParticipantNames) => React.ReactNode;
 }>) {
   const { data, error, mutate } = useSWRAuth(
-    `timetable-participants-${instanceId}`,
+    tenantDailyKeys.instanceParticipants(instanceId),
     () => timetableService.getInstanceParticipants(instanceId),
   );
   const loadError = useSwrLoadError(error, "die Liste der Teilnehmenden", () =>

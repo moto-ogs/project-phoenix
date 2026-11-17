@@ -52,6 +52,7 @@ import { createLogger } from "~/lib/logger";
 import type { StaffScheduleStaff, StaffShift } from "~/lib/shift-helpers";
 import { startOfWeek } from "~/lib/staff-metrics-helpers";
 import { useSWRAuth } from "~/lib/swr";
+import { databaseKeys } from "~/lib/swr/portal-keys";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
@@ -158,7 +159,7 @@ function DienstplanContent() {
     mutate: mutatePeriods,
   } = useSWRAuth(
     sessionStatus === "authenticated" && canEdit
-      ? "database-calendar-periods-list"
+      ? databaseKeys.calendarPeriods()
       : null,
     () => calendarPeriodService.list(),
   );
