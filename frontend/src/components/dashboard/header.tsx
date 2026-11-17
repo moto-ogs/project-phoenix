@@ -5,7 +5,6 @@
 import { AT_LEAST_LG } from "~/lib/hooks/use-media-query";
 import { useState, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -13,6 +12,7 @@ import { LogoutModal } from "~/components/auth/logout-modal";
 import { AnchoredPopover } from "~/components/ui/anchored-popover";
 import { useSidebarCollapsed } from "~/lib/hooks/use-sidebar-collapsed";
 import { BrandTenantSwitcher } from "~/components/tenant/tenant-switcher";
+import { StaffPreviewModal } from "~/components/staff-preview/staff-preview-modal";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { useBreadcrumb } from "~/lib/breadcrumb-context";
 import { type SidebarMemory, useSidebarMemory } from "~/lib/sidebar-memory";
@@ -27,9 +27,9 @@ import { PORTAL_ROUTES, type HostedPortalKey } from "~/lib/portal-paths";
 import { pathBelow } from "~/lib/route-templates";
 import { isSchoolNavActive } from "~/components/school/shell/school-nav-active";
 import {
-  SCHOOL_PRIMARY_NAV,
-  SCHOOL_SETTINGS_ENTRY,
-} from "~/components/school/shell/school-nav-items";
+  SCHOOL_PRIMARY_PAGES,
+  SCHOOL_SETTINGS_PAGE,
+} from "~/components/school/shell/school-nav-pages";
 import {
   getHelpTopicForPath,
   getParentHelpTopicForPath,
@@ -72,13 +72,6 @@ import {
   getSectionBreadcrumb,
 } from "./header/breadcrumb-utils";
 
-// Only a staff member who opens the preview needs its form and API client.
-const StaffPreviewModal = dynamic(() =>
-  import("~/components/staff-preview/staff-preview-modal").then(
-    (module) => module.StaffPreviewModal,
-  ),
-);
-
 // Nur oberhalb von lg existiert die Desktop-Seitenleiste; darunter zeigt
 // die App die mobile Bottom-Nav und der Shortcut hätte nichts zu schalten.
 const SIDEBAR_VISIBLE_QUERY = AT_LEAST_LG;
@@ -106,7 +99,7 @@ function portalPagePath(portal: HostedPortalKey, pathname: string): string {
 // Adresse gehört. Unterseiten (Klassenseite #2294, Beobachtungen #4797, eine
 // Unterhaltung, ein Elternbrief) behalten den Namen ihres Bereichs; ihren
 // eigenen Namen trägt die Seite selbst.
-const SCHOOL_TITLED_NAV = [...SCHOOL_PRIMARY_NAV, SCHOOL_SETTINGS_ENTRY];
+const SCHOOL_TITLED_NAV = [...SCHOOL_PRIMARY_PAGES, SCHOOL_SETTINGS_PAGE];
 
 function schoolTitleForPath(pathname: string): string | null {
   return (
@@ -613,7 +606,7 @@ export function Header({ notificationBell }: HeaderProps = {}) {
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
       />
-      {mode === "teacher" && canStartStaffPreview && isPreviewModalOpen && (
+      {mode === "teacher" && canStartStaffPreview && (
         <StaffPreviewModal
           isOpen={isPreviewModalOpen}
           onClose={() => setIsPreviewModalOpen(false)}
