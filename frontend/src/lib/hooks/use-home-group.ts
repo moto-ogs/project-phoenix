@@ -14,6 +14,7 @@ import {
   comesOnlyIfLessonCancelled,
 } from "~/lib/student-time-status";
 import { useSWRAuth } from "~/lib/swr";
+import { homeKeys } from "~/lib/swr/portal-keys";
 
 /** Eine Abholung, die heute noch kommt. */
 export interface HomePickup {
@@ -213,7 +214,7 @@ export function useHomeGroup(
   const accountId = session?.user?.id;
 
   const { data, error, isLoading, mutate } = useSWRAuth<OgsLiveViewData>(
-    enabled && accountId ? `home-own-group:${accountId}` : null,
+    enabled && accountId ? homeKeys.ownGroup(accountId) : null,
     () => fetchOgsGroupLive(null),
     { revalidateOnFocus: false, errorRetryCount: 1 },
   );

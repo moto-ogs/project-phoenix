@@ -928,12 +928,13 @@ func TestOfferingChangeRequestService_GetForStudent_ReportsRecentDecision(t *tes
 	assert.Equal(t, []string{"mon"}, view.LastDecision.Requested[0].Days)
 
 	// Aged past the recency window it drops out, so the card does not turn into
-	// a history list.
+	// a history list. The decision stamps reviewed_at on the owner clock
+	// (time.Now in this composition), so it is aged on that clock (#7295).
 	_, err = env.db.NewRaw(`
 		UPDATE enrollment.offering_change_requests
-		SET reviewed_at = NOW() - INTERVAL '20 days'
+		SET reviewed_at = ?
 		WHERE id = ?
-	`, row.ID).Exec(ctx)
+	`, time.Now().AddDate(0, 0, -20), row.ID).Exec(ctx)
 	require.NoError(t, err)
 
 	view, err = svc.GetForStudent(ctx, fx.studentID)

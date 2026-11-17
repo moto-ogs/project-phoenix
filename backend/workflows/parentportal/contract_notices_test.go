@@ -3,6 +3,7 @@ package parentportal_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,8 +35,10 @@ func activeInboxContract(t *testing.T, db *bun.DB, organization, school, student
 	ctx := context.Background()
 	_, err := db.ExecContext(ctx, `UPDATE care_contract.contract_versions SET status = 'wirksam' WHERE contract_id = ?`, contract)
 	require.NoError(t, err)
-	_, err = db.ExecContext(ctx, `UPDATE care_contract.contracts SET status = 'aktiv', concluded_at = NOW(),
-		conclusion_method = 'mit_anmeldung' WHERE id = ?`, contract)
+	// The conclusion stamps concluded_at on the owner clock, the portal's
+	// time.Now, not on the database clock (#7295).
+	_, err = db.ExecContext(ctx, `UPDATE care_contract.contracts SET status = 'aktiv', concluded_at = ?,
+		conclusion_method = 'mit_anmeldung' WHERE id = ?`, time.Now(), contract)
 	require.NoError(t, err)
 	return contract
 }
@@ -166,7 +169,8 @@ func TestInboxOffersTheWithdrawalWhileThePeriodRuns(t *testing.T) {
 	require.Len(t, documents, 1)
 	assert.True(t, documents[0].CanWithdrawContract, "concluded today, inside the period")
 
-	_, err = db.ExecContext(ctx, `UPDATE care_contract.contracts SET concluded_at = NOW() - INTERVAL '2 years' WHERE id = ?`, contract)
+	_, err = db.ExecContext(ctx, `UPDATE care_contract.contracts SET concluded_at = ? WHERE id = ?`,
+		time.Now().AddDate(-2, 0, 0), contract)
 	require.NoError(t, err)
 	documents, err = portal.ListBillingDocuments(ctx, chain.AccountID, parentService.DocumentInboxContracts)
 	require.NoError(t, err)

@@ -80,8 +80,8 @@ func NewCareLifecycleTestRepositories(db transactionruntime.Database, _ auditMod
 // and returns them with the Enrollment graph. The audit trails the suites
 // read back come from NewStudentAuditRows, the access log recording into
 // the suite's command from NewEnrollmentAuditRows.
-func NewStudentTestRepositories(db transactionruntime.Database, _ auditModels.Command) (StudentTestRepositories, EnrollmentTestRepositories, error) {
-	result, enrollment, err := NewStudentTestRepositoriesWithMembers(db, owners.MustNewMembershipTestRepositories(db))
+func NewStudentTestRepositories(db transactionruntime.Database, _ auditModels.Command, clocks ...func() time.Time) (StudentTestRepositories, EnrollmentTestRepositories, error) {
+	result, enrollment, err := NewStudentTestRepositoriesWithMembers(db, owners.MustNewMembershipTestRepositories(db), clocks...)
 	if err != nil {
 		return StudentTestRepositories{}, EnrollmentTestRepositories{}, err
 	}

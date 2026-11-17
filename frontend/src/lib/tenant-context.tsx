@@ -77,6 +77,7 @@ export function TenantProvider({
   const requestSeqRef = useRef(0);
   const needsInitialResolve = serverTenant === null;
 
+  // oxlint-disable-next-line swr/no-effect-load -- resolves the host's school before and without a session and gates analytics on each answer; timing-sensitive, ~/lib/swr has no public reader
   useEffect(() => {
     if (!tenantSlug) return undefined;
 

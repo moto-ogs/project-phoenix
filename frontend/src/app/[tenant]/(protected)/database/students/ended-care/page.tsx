@@ -42,14 +42,14 @@ import {
   useRefreshAfterWrite,
 } from "~/lib/hooks/use-refresh-after-write";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useDebounce } from "~/lib/use-debounce";
 
 const ENDED_CARE_DESCRIPTION =
   "Kinder, die nicht mehr in der OGS sind. Die Daten dieser Kinder bleiben erhalten. Sie stehen in keiner normalen Liste mehr und in keinem Export. Abgänge aus dem Schuljahreswechsel stehen weiterhin dort.";
 
-// Der Schlüssel-Stamm. Suche und Seite hängen daran, damit jede Kombination
-// ihren eigenen Cache-Eintrag bekommt; aktualisiert wird über den Stamm.
-const SWR_KEY = "students-ended-care";
+// Suche und Seite gehören zum Schlüssel, damit jede Kombination ihren
+// eigenen Cache-Eintrag bekommt; aktualisiert wird über den Stamm.
 const PAGE_SIZE = 50;
 
 function reasonLabel(entry: EndedCareEntry): string {
@@ -75,7 +75,9 @@ export default function EndedCarePage() {
   const [resumeTarget, setResumeTarget] = useState<EndedCareEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EndedCareEntry | null>(null);
   const { success: toastSuccess } = useToast();
-  const refreshEndedCare = useTenantMutateMatching([SWR_KEY]);
+  const refreshEndedCare = useTenantMutateMatching([
+    tenantStudentKeys.endedCareFamily,
+  ]);
 
   // Gesucht wird auf dem Server, nicht in der geladenen Seite: sonst fände die
   // Suche nur die Kinder, die gerade zufällig sichtbar sind (#2487).
@@ -91,7 +93,7 @@ export default function EndedCarePage() {
     error: swrError,
     mutate,
   } = useSWRAuth(
-    canManage ? `${SWR_KEY}:${page}:${debouncedSearch}` : null,
+    canManage ? tenantStudentKeys.endedCare(page, debouncedSearch) : null,
     () =>
       fetchEndedCare({
         page,
@@ -101,7 +103,7 @@ export default function EndedCarePage() {
     { keepPreviousData: true },
   );
   const { data, accessRefused: dataAccessRefused } = useAccessControlledData(
-    canManage ? `${SWR_KEY}:${page}:${debouncedSearch}` : null,
+    canManage ? tenantStudentKeys.endedCare(page, debouncedSearch) : null,
     cachedData,
     swrError,
   );

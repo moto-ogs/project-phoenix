@@ -80,6 +80,7 @@ export default function CatererInvitationPage() {
     }
   }, [clearLoadError, schoolId, showLoadError, token]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- invitation token page before the caterer has a session; ~/lib/swr has no public reader
   useEffect(() => {
     void load();
   }, [load]);

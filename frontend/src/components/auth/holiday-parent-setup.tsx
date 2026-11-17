@@ -102,6 +102,7 @@ export function HolidayParentSetupView({ token }: Readonly<{ token: string }>) {
     }
   }, [clear, show, t, token]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- invitation token page before the parent account exists; ~/lib/swr has no public reader
   useEffect(() => {
     void load();
   }, [load]);

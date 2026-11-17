@@ -79,6 +79,7 @@ function EnrollPhaseFormPageContent({ params }: PageProps) {
   } = useApiLoadError();
   const [loadAttempt, setLoadAttempt] = useState(0);
 
+  // oxlint-disable-next-line swr/no-effect-load -- public enrollment form for families without a session (optional late-invite token); ~/lib/swr has no public reader
   useEffect(() => {
     let cancelled = false;
     setLoading(true);

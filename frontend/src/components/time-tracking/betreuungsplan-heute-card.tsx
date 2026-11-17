@@ -29,6 +29,7 @@ import {
 import { ownShiftService } from "~/lib/shift-api";
 import type { OwnAssignment } from "~/lib/shift-helpers";
 import { useSWRAuth } from "~/lib/swr";
+import { timeTrackingKeys } from "~/lib/swr/portal-keys";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { roomsConcept } from "~/lib/concepts/rooms";
 
@@ -104,7 +105,7 @@ export function BetreuungsplanHeuteCard({
     error,
     mutate,
   } = useSWRAuth<OwnAssignment[]>(
-    `time-tracking-own-assignments-today-${today}`,
+    timeTrackingKeys.ownAssignmentsToday(today),
     () => ownShiftService.getOwnAssignments(today, today),
     { revalidateOnFocus: false, errorRetryCount: 1 },
   );

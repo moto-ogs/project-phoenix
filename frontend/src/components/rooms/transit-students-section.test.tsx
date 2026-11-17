@@ -203,7 +203,7 @@ function mockTransitData({
       } as never;
     }
 
-    if (key === "active-groups-for-transit") {
+    if (key === "room-bulk-active-groups") {
       return {
         data: activeGroups,
         error: groupsError,
@@ -219,7 +219,7 @@ function mockTransitData({
       } as never;
     }
 
-    if (key === "transit-target-supervisions-20") {
+    if (key === "room-bulk-active-supervisions-20") {
       return {
         data: activeSupervisions,
         error: supervisionsError,

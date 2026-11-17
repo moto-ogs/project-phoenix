@@ -2,8 +2,10 @@
 import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as notifications } from "./notifications.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
+import { routes as parentAnnouncements } from "./parent-announcements.generated";
 import { routes as parentMe } from "./parent-me.generated";
 import { routes as schoolNotifications } from "./school-notifications.generated";
+import { routes as schoolParentLetters } from "./school-parent-letters.generated";
 import { routes as schoolStaffMessages } from "./school-staff-messages.generated";
 import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as students } from "./students.generated";
@@ -36,6 +38,20 @@ export const portalRoutes = {
     schoolNotifications["POST /school/notifications/push/subscriptions"],
     schoolNotifications["POST /school/notifications/test"],
     schoolNotifications["PUT /school/notifications/preferences/{type}"],
+    schoolParentLetters["DELETE /school/parent-letters/{announcementId}"],
+    schoolParentLetters["GET /school/parent-letters/"],
+    schoolParentLetters["GET /school/parent-letters/letter-placeholders"],
+    schoolParentLetters["GET /school/parent-letters/{announcementId}"],
+    schoolParentLetters["GET /school/parent-letters/{announcementId}/declaration-status"],
+    schoolParentLetters["GET /school/parent-letters/{announcementId}/letter-status"],
+    schoolParentLetters["GET /school/parent-letters/{announcementId}/recipients"],
+    schoolParentLetters["GET /school/parent-letters/{announcementId}/stats"],
+    schoolParentLetters["POST /school/parent-letters/"],
+    schoolParentLetters["POST /school/parent-letters/letter-preview"],
+    schoolParentLetters["POST /school/parent-letters/{announcementId}/publish"],
+    schoolParentLetters["POST /school/parent-letters/{announcementId}/remind"],
+    schoolParentLetters["POST /school/parent-letters/{announcementId}/resend-failed"],
+    schoolParentLetters["POST /school/parent-letters/{announcementId}/unpublish"],
     schoolStaffMessages["GET /school/staff-messages/"],
     schoolStaffMessages["GET /school/staff-messages/recipients"],
     schoolStaffMessages["GET /school/staff-messages/threads/{threadID}"],
@@ -58,6 +74,24 @@ export const portalRoutes = {
     notifications["POST /api/notifications/test"],
     notifications["PUT /api/notifications/email-subscriptions/{type}"],
     notifications["PUT /api/notifications/preferences/{type}"],
+    parentAnnouncements["DELETE /api/parent-announcements/{announcementId}"],
+    parentAnnouncements["GET /api/parent-announcements/"],
+    parentAnnouncements["GET /api/parent-announcements/letter-placeholders"],
+    parentAnnouncements["GET /api/parent-announcements/students/{studentId}"],
+    parentAnnouncements["GET /api/parent-announcements/{announcementId}"],
+    parentAnnouncements["GET /api/parent-announcements/{announcementId}/declaration-status"],
+    parentAnnouncements["GET /api/parent-announcements/{announcementId}/letter-status"],
+    parentAnnouncements["GET /api/parent-announcements/{announcementId}/poll-children"],
+    parentAnnouncements["GET /api/parent-announcements/{announcementId}/poll-results"],
+    parentAnnouncements["GET /api/parent-announcements/{announcementId}/recipients"],
+    parentAnnouncements["GET /api/parent-announcements/{announcementId}/stats"],
+    parentAnnouncements["POST /api/parent-announcements/"],
+    parentAnnouncements["POST /api/parent-announcements/letter-preview"],
+    parentAnnouncements["POST /api/parent-announcements/{announcementId}/publish"],
+    parentAnnouncements["POST /api/parent-announcements/{announcementId}/remind"],
+    parentAnnouncements["POST /api/parent-announcements/{announcementId}/resend-failed"],
+    parentAnnouncements["POST /api/parent-announcements/{announcementId}/unpublish"],
+    parentAnnouncements["PUT /api/parent-announcements/{announcementId}"],
     staffMessages["GET /api/staff-messages/"],
     staffMessages["GET /api/staff-messages/recipients"],
     staffMessages["GET /api/staff-messages/threads/{threadID}"],

@@ -93,7 +93,9 @@ type ReminderCandidate struct {
 // contracts of a Träger in its Träger transaction.
 type SignatureStore interface {
 	CurrentDocument(ctx context.Context, organizationID, contractID, versionID int64) (StoredDocument, error)
-	InsertSigningLink(ctx context.Context, organizationID, contractID, documentID int64, tokenSHA256 string, sent SentState, expiresAt time.Time) error
+	// InsertSigningLink stamps the link's created_at and expires_at on the
+	// owner clock, the clock every reader of the link compares with (#7295).
+	InsertSigningLink(ctx context.Context, organizationID, contractID, documentID int64, tokenSHA256 string, sent SentState, createdAt, expiresAt time.Time) error
 	SigningLink(ctx context.Context, organizationID int64, tokenSHA256 string) (SigningLinkRecord, error)
 	// LatestSigningLink reads the newest link of a contract; found is false
 	// when the contract was never sent with one.

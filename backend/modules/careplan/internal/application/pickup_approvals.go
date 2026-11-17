@@ -70,7 +70,8 @@ func (s *PickupApprovals) lockApprovalDay(ctx context.Context, input carerequest
 }
 
 // applyLegs writes the requested Gehzeit and Abholart (#3945) of the day in
-// the name of the deciding staff member.
+// the name of the deciding staff member. Each leg returns the version of its
+// row as this transaction leaves it, for the decision ledger.
 func (s *PickupApprovals) applyLegs(ctx context.Context, input carerequests.PickupApproval, change carerequests.PickupChange) (carerequests.PickupApplied, error) {
 	var applied carerequests.PickupApplied
 	staffID, err := actingStaffID(ctx, s.People, pickupRequestStaff)
@@ -78,36 +79,70 @@ func (s *PickupApprovals) applyLegs(ctx context.Context, input carerequests.Pick
 		return applied, err
 	}
 	if change.PickupTime != nil {
-		id, err := s.SaveApprovedException(ctx, input.TenantID, input.StudentID, change.Date, *change.PickupTime, change.Reason, staffID)
-		if err != nil {
+		if applied.PickupExceptionID, applied.PickupExceptionVersion, err = s.applyPickupTime(ctx, input, change, staffID); err != nil {
 			return applied, err
 		}
-		if err := s.Excusal.Sync(ctx, id); err != nil {
-			return applied, fmt.Errorf("schedule: sync approved pickup exception: %w", err)
-		}
-		applied.PickupExceptionID = id
 	}
 	if change.DepartureMode != "" {
-		id, err := s.saveApprovedDeparture(ctx, input.StudentID, change.Date, change.DepartureMode, change.Reason, staffID)
-		if err != nil {
+		if applied.DepartureExceptionID, applied.DepartureExceptionVersion, err = s.applyDepartureMode(ctx, input, change, staffID); err != nil {
 			return applied, err
 		}
-		applied.DepartureExceptionID = id
 	}
 	if change.PickupPerson != nil {
-		if err := s.People.ValidatePickupPerson(ctx, input.StudentID, change.PickupPerson.GuardianProfileID); err != nil {
+		if applied.PickupNoteID, applied.PickupNoteVersion, err = s.applyPickupPerson(ctx, input, change, staffID); err != nil {
 			return applied, err
 		}
-		id, err := s.Exceptions.CreateNote(ctx, careplan.PickupNote{
-			TenantID: input.TenantID, StudentID: input.StudentID, NoteDate: careplan.Date(change.Date),
-			Content: DayCollectorNote(change.PickupPerson.Name), CreatedBy: staffID,
-		})
-		if err != nil {
-			return applied, fmt.Errorf("schedule: save approved day collector: %w", err)
-		}
-		applied.PickupNoteID = id
 	}
 	return applied, nil
+}
+
+func (s *PickupApprovals) applyPickupTime(ctx context.Context, input carerequests.PickupApproval, change carerequests.PickupChange, staffID int64) (int64, string, error) {
+	id, err := s.SaveApprovedException(ctx, input.TenantID, input.StudentID, change.Date, *change.PickupTime, change.Reason, staffID)
+	if err != nil {
+		return 0, "", err
+	}
+	if err := s.Excusal.Sync(ctx, id); err != nil {
+		return 0, "", fmt.Errorf("schedule: sync approved pickup exception: %w", err)
+	}
+	row, err := s.Exceptions.FindForDate(ctx, input.StudentID, change.Date)
+	if err == nil && row == nil {
+		err = careplan.ErrStudentScheduleNotFound
+	}
+	if err != nil {
+		return 0, "", fmt.Errorf("schedule: read back approved pickup exception: %w", err)
+	}
+	return id, pickupExceptionVersion(*row), nil
+}
+
+func (s *PickupApprovals) applyDepartureMode(ctx context.Context, input carerequests.PickupApproval, change carerequests.PickupChange, staffID int64) (int64, string, error) {
+	id, err := s.saveApprovedDeparture(ctx, input.StudentID, change.Date, change.DepartureMode, change.Reason, staffID)
+	if err != nil {
+		return 0, "", err
+	}
+	row, err := s.Exceptions.FindDepartureForDate(ctx, input.StudentID, change.Date)
+	if err == nil && row == nil {
+		err = careplan.ErrStudentScheduleNotFound
+	}
+	if err != nil {
+		return 0, "", fmt.Errorf("schedule: read back approved departure exception: %w", err)
+	}
+	return id, departureExceptionVersion(*row), nil
+}
+
+// applyPickupPerson writes the approval's last row. The insert returns the
+// note as stored, which is how this transaction leaves it.
+func (s *PickupApprovals) applyPickupPerson(ctx context.Context, input carerequests.PickupApproval, change carerequests.PickupChange, staffID int64) (int64, string, error) {
+	if err := s.People.ValidatePickupPerson(ctx, input.StudentID, change.PickupPerson.GuardianProfileID); err != nil {
+		return 0, "", err
+	}
+	note, err := s.Exceptions.CreateNote(ctx, careplan.PickupNote{
+		TenantID: input.TenantID, StudentID: input.StudentID, NoteDate: careplan.Date(change.Date),
+		Content: DayCollectorNote(change.PickupPerson.Name), CreatedBy: staffID,
+	})
+	if err != nil {
+		return 0, "", fmt.Errorf("schedule: save approved day collector: %w", err)
+	}
+	return note.ID, pickupNoteVersion(note), nil
 }
 
 // DayCollectorNote is the dated pickup note of an approved one-day collector

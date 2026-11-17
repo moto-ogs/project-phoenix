@@ -51,6 +51,9 @@ export const tenantContactKeys = {
   /** What became of the e-mails to each guardian of one child. */
   studentGuardianEmailStates: (studentId: string) =>
     `student-guardian-email-states-${encodeURIComponent(studentId)}`,
+  /** Guardians of the school matching a picker search term (name or e-mail). */
+  guardianSearch: (query: string) =>
+    `guardian-search-${encodeURIComponent(query)}`,
   /** One guardian's masked bank details (#2608); the full IBAN is never cached. */
   guardianPayment: (guardianId: string) =>
     `guardian-payment-${encodeURIComponent(guardianId)}`,

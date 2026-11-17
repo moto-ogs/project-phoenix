@@ -27,6 +27,7 @@ import {
   type StaffDocumentList,
 } from "~/lib/staff-documents-api";
 import { useSWRAuth } from "~/lib/swr";
+import { staffKeys } from "~/lib/swr/staff-keys";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 
 // Dokumente tab (#1424, phase 1): flat file list per staff member with
@@ -94,7 +95,7 @@ function RetentionCell({ doc }: { readonly doc: StaffDocument }) {
 
 export function DokumenteTab({ staffId }: { readonly staffId: string }) {
   const { data, isLoading, error, mutate } = useSWRAuth<StaffDocumentList>(
-    `staff-documents-${staffId}`,
+    staffKeys.documents(staffId),
     () => staffDocumentsService.list(staffId),
   );
 

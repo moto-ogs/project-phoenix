@@ -13,6 +13,7 @@ import { Input } from "~/components/ui/input";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
+import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 import { fetchSchoolClasses, fetchStudents } from "~/lib/student-api";
 import { fetchActivities } from "~/lib/activity-api";
 import type { Group } from "~/lib/api";
@@ -173,7 +174,7 @@ export function ParentTargetPicker({
     mutate: retryStudentSearch,
   } = useSWRAuth<Student[]>(
     debouncedSearch.length >= 2
-      ? `parent-announcements-student-search-${debouncedSearch}`
+      ? parentAnnouncementKeys.targetStudentSearch(debouncedSearch)
       : null,
     async () => {
       const result = await fetchStudents({
@@ -396,7 +397,7 @@ export function useParentTargetLookups(enabled: boolean): {
     error: activitiesError,
     mutate: reloadActivities,
   } = useSWRAuth<Activity[]>(
-    enabled ? "parent-announcements-activities" : null,
+    enabled ? parentAnnouncementKeys.targetActivities() : null,
     () => fetchActivities(),
     { revalidateOnFocus: false },
   );
@@ -405,7 +406,7 @@ export function useParentTargetLookups(enabled: boolean): {
     error: classesError,
     mutate: reloadClasses,
   } = useSWRAuth<string[]>(
-    enabled ? "parent-announcements-classes" : null,
+    enabled ? parentAnnouncementKeys.targetClasses() : null,
     () => fetchSchoolClasses(),
     { revalidateOnFocus: false },
   );

@@ -35,3 +35,10 @@ func (r RequestCorrectionRecordsAdapter) FindDepartureException(ctx context.Cont
 	}
 	return &rows[0], nil
 }
+func (r RequestCorrectionRecordsAdapter) FindPickupNote(ctx context.Context, id int64) (*careplan.PickupNote, error) {
+	rows, err := r.ListPickupNotes(ctx, careplan.StudentScheduleFilter{IDs: []int64{id}, LockForUpdate: true})
+	if err != nil || len(rows) == 0 {
+		return nil, err
+	}
+	return &rows[0], nil
+}

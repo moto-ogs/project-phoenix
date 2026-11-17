@@ -3,6 +3,11 @@
 import { createCrudService } from "~/lib/database/service-factory";
 import { teachersConfig } from "~/components/database/configs/teachers.config";
 import { staff as staffKeys } from "~/lib/swr/staff";
+import {
+  staffAbsenceKeys,
+  staffAccessKeys,
+  staffKeys as staffDataKeys,
+} from "~/lib/swr/staff-keys";
 import { isScopeBooked, STAFF_TAB_MODULES } from "~/lib/module-register";
 import { useBookedModules } from "~/lib/tenant-context";
 import {
@@ -94,11 +99,6 @@ import { DetailSkeleton } from "~/components/ui/page-skeletons";
 import { StaffDetailSkeleton } from "./page-skeleton";
 
 const logger = createLogger({ component: "StaffDetailPage" });
-
-/** SWR-Schlüssel der Systemrolle des Kontos (Konto-Bearbeiten, #3116). */
-function roleAssignmentKey(accountId: string): string {
-  return `staff-role-assignment-${accountId}`;
-}
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
@@ -303,7 +303,9 @@ export default function StaffDetailContent() {
   }, [staffDirectory]);
   const { data: roleAssignment, error: roleAssignmentError } =
     useSWRAuth<AccountRoleAssignment>(
-      kontoEditing && canEditRole ? roleAssignmentKey(accountId) : null,
+      kontoEditing && canEditRole
+        ? staffAccessKeys.roleAssignment(accountId)
+        : null,
       () => loadAccountRoleAssignment(accountId),
     );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -376,7 +378,7 @@ export default function StaffDetailContent() {
           }
           throw new KontoRoleSaveError(err);
         }
-        await tenantMutate(roleAssignmentKey(accountId));
+        await tenantMutate(staffAccessKeys.roleAssignment(accountId));
       }
       toastSuccess("Die Änderungen sind gespeichert.");
       await refreshRecord();
@@ -426,7 +428,7 @@ export default function StaffDetailContent() {
   // das Feld leer, das ist kein Fehler.
   const { data: plannedExitStammdaten } = useSWRAuth(
     showPlannedExitModal && canViewStammdatenSections
-      ? `staff-stammdaten-${staffId}`
+      ? staffDataKeys.stammdaten(staffId)
       : null,
     () => staffStammdatenService.get(staffId),
   );
@@ -472,7 +474,7 @@ export default function StaffDetailContent() {
   // The /staff dashboard inbox (Tranche 4c) will count across all staff.
   const { data: pendingForStaff } = useSWRAuth<number>(
     canManageAbsences && staff && !staff.endedOn
-      ? `staff-pending-absences-${staffId}`
+      ? staffAbsenceKeys.pendingForStaff(staffId)
       : null,
     async () => {
       const year = Number(berlinTodayISO().slice(0, 4));

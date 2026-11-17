@@ -9,6 +9,8 @@ export const tenantListKeys = {
    * diesem Schlüssel.
    */
   substitutionOverview: () => "substitution-overview",
+  /** Geplante Vertretungen eines Tages aus dem Betreuungsplan. */
+  substitutionSchedule: (day: string) => `substitution-schedule-${day}`,
   /** Anhänge einer Elternmitteilung im Assistenten, mit ihrer Änderbarkeit (#2890). */
   announcementAttachments: (announcementId: string) =>
     `announcement-attachments-${encodeURIComponent(announcementId)}`,
@@ -19,6 +21,8 @@ export const tenantListKeys = {
   enrollmentAnswerFilters: () => "enrollment-answer-filters",
   /** Der kleine Hilfe-Index der Suche (Titel, Frage, Zusammenfassung; #6954). */
   helpSearchIndex: () => "help-search-index",
+  /** Die Treffer der Schulsuche (Cmd/Ctrl+K) zu einem Suchtext. */
+  schoolSearch: (term: string) => `school-search-${encodeURIComponent(term)}`,
   /** Pausen der eigenen offenen Arbeitszeit. */
   sessionBreaks: (sessionId: string) =>
     `time-tracking-session-breaks-${encodeURIComponent(sessionId)}`,
