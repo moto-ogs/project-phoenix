@@ -354,7 +354,7 @@ func insertOpenPayrollDownload(t *testing.T, db *bun.DB, store *Store, tokenHash
 		}
 		_, err = tx.ExecContext(ctx, `UPDATE active.payroll_dispatches SET download_token_hash = ?, file_data = ?,
 			filename = 'admission.xlsx', content_type = 'application/octet-stream', byte_size = 1,
-			download_expires_at = now() + interval '1 hour' WHERE id = ?`, tokenHash, []byte("x"), id)
+			download_expires_at = ? WHERE id = ?`, tokenHash, []byte("x"), time.Now().Add(time.Hour), id)
 		return err
 	}))
 	return id

@@ -3,6 +3,7 @@ package behavior_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -50,10 +51,10 @@ func TestSchoolSwitchRequiresLiveSameAccountMFAProof(t *testing.T) {
 			case "revoked":
 				require.NoError(t, service.LogoutWithAudit(ctx, refresh, "", ""))
 			case "expired":
-				_, err := db.ExecContext(ctx, `UPDATE auth.tokens SET expiry = NOW() - INTERVAL '1 second' WHERE family_id = ?`, family)
+				_, err := db.ExecContext(ctx, `UPDATE auth.tokens SET expiry = ? WHERE family_id = ?`, time.Now().Add(-time.Second), family)
 				require.NoError(t, err)
 			case "expired-cap":
-				_, err := db.ExecContext(ctx, `UPDATE auth.tokens SET family_expiry_cap = NOW() - INTERVAL '1 second' WHERE family_id = ?`, family)
+				_, err := db.ExecContext(ctx, `UPDATE auth.tokens SET family_expiry_cap = ? WHERE family_id = ?`, time.Now().Add(-time.Second), family)
 				require.NoError(t, err)
 			case "other-portal":
 				_, err := db.ExecContext(ctx, `UPDATE auth.tokens SET portal_scope = 'tenant' WHERE family_id = ?`, family)

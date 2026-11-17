@@ -157,10 +157,13 @@ var moduleSQLClockBudget = map[string]int{
 	// of supervisor, attendance and plan rows, and of updated_at of
 	// schedule.instance_students, the plan side of that comparison.
 	"modules/timetable": 1,
-	// The finished staff document cleanups: their database function guards
-	// the cutoff with the database clock (1.15.606). And the lift of a pool
-	// block by the Träger (ADR 0281): the school lifts its blocks through the
-	// database function workforce.pool_lift, which stamps lifted_at with
+	// Store.DatabaseTime (1), the cutoffs of the staff document retentions:
+	// users.delete_expired_staff_sick_notes (1.15.453) and
+	// users.delete_finished_staff_document_file_cleanups (1.15.449, 1.15.606)
+	// guard their cutoff with the database clock, and the column default
+	// stamps created_at of a sick note on it (#7295). And the lift of a pool
+	// block by the Träger (1, ADR 0281): the school lifts its blocks through
+	// the database function workforce.pool_lift, which stamps lifted_at with
 	// now(), so the Träger's lift stamps the column on the same clock.
 	"modules/workforce": 2,
 }

@@ -472,7 +472,10 @@ func TestSeriesPlanRollsBackWithTheCallerTransaction(t *testing.T) {
 	dates, err := capability.SeriesExceptionDates(ctx, retriedSeriesID)
 	require.NoError(t, err)
 	assert.Len(t, dates, 1)
-	assert.WithinDuration(t, time.Now(), retried.CreatedAt, time.Minute)
+	// The column default stamps created_at on the database clock.
+	var databaseNow time.Time
+	require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &databaseNow))
+	assert.WithinDuration(t, databaseNow, retried.CreatedAt, time.Minute)
 }
 
 func TestStaffShiftSickAbsencePreservesOtherFieldsAndRollsBack(t *testing.T) {

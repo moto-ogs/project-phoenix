@@ -325,9 +325,9 @@ func TestIntegration_EmailChange_Cleanup_ServiceLevel(t *testing.T) {
 	expiredToken := uuid.Must(uuid.NewV4()).String()
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO platform.operator_email_change_tokens
-		 (operator_id, new_email, token, expiry, used)
-		 VALUES (?, ?, ?, ?, false)`,
-		operatorID, "expired@test.local", sha256Hex(expiredToken), time.Now().Add(-10*time.Minute),
+		 (operator_id, new_email, token, expiry, used, created_at)
+		 VALUES (?, ?, ?, ?, false, ?)`,
+		operatorID, "expired@test.local", sha256Hex(expiredToken), time.Now().Add(-10*time.Minute), time.Now().Add(-20*time.Minute),
 	)
 	require.NoError(t, err)
 
@@ -335,8 +335,8 @@ func TestIntegration_EmailChange_Cleanup_ServiceLevel(t *testing.T) {
 	_, err = db.ExecContext(ctx,
 		`INSERT INTO platform.operator_email_change_tokens
 		 (operator_id, new_email, token, expiry, used, created_at)
-		 VALUES (?, ?, ?, ?, true, NOW() - INTERVAL '2 hours')`,
-		operatorID, "stale@test.local", sha256Hex(staleToken), time.Now().Add(-90*time.Minute),
+		 VALUES (?, ?, ?, ?, true, ?)`,
+		operatorID, "stale@test.local", sha256Hex(staleToken), time.Now().Add(-90*time.Minute), time.Now().Add(-2*time.Hour),
 	)
 	require.NoError(t, err)
 

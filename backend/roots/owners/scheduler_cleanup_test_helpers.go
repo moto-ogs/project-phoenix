@@ -83,7 +83,7 @@ func NewSchedulerFileRetentionTestDependencies(db transactionruntime.Database, u
 	if err != nil {
 		return deps, err
 	}
-	audit, _, steps, err := NewRetentionTestOwners(db, unit)
+	audit, _, steps, err := NewRetentionTestOwnersAt(db, unit, auditTestClock(now))
 	if err != nil {
 		return deps, err
 	}

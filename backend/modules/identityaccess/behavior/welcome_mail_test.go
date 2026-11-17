@@ -553,8 +553,8 @@ func TestSchoolInvitationShowsItsMailAndRefusesAResendWhileDelayed(t *testing.T)
 	}
 	assert.NotEqual(t, "delivered", outcomeOf(), "no event, no delivery")
 
-	_, err = db.ExecContext(ctx, `UPDATE platform.email_outbox SET status = 'sent', delivery_state = 'delayed', delivery_state_at = NOW()
-		WHERE tenant_id = ? AND related_entity_type = 'invitation' AND related_entity_id = ?`, testpkg.Tenant(t), invitation.ID)
+	_, err = db.ExecContext(ctx, `UPDATE platform.email_outbox SET status = 'sent', delivery_state = 'delayed', delivery_state_at = ?
+		WHERE tenant_id = ? AND related_entity_type = 'invitation' AND related_entity_id = ?`, time.Now(), testpkg.Tenant(t), invitation.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "delayed", outcomeOf())
 

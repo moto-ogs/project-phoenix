@@ -38,16 +38,27 @@ func newRetentionSuite(t *testing.T) retentionSuite {
 	return newRetentionSuiteAt(t, nil)
 }
 
-// newRetentionSuiteAt composes the suite on the root clock now (nil: the
-// real one).
+// newRetentionSuiteAt composes the staff retention of the suite on the root
+// clock now (nil: the real one) and its other steps on the real clock.
 func newRetentionSuiteAt(t *testing.T, now func() time.Time) retentionSuite {
+	t.Helper()
+	return composeRetentionSuite(t, time.Now, now)
+}
+
+// newRetentionSuiteOn composes every step of the suite on the root clock now.
+func newRetentionSuiteOn(t *testing.T, now func() time.Time) retentionSuite {
+	t.Helper()
+	return composeRetentionSuite(t, now, now)
+}
+
+func composeRetentionSuite(t *testing.T, stepsNow, now func() time.Time) retentionSuite {
 	t.Helper()
 	admin := testpkg.SetupTestDB(t)
 	serve := testpkg.SetupServeTestDB(t)
 	t.Cleanup(func() { require.NoError(t, serve.Close()) })
 	db, err := transactionruntime.NewDatabase(admin)
 	require.NoError(t, err)
-	audit, settings, steps, err := NewRetentionTestOwners(db, testpkg.TenantRuntime(t, admin))
+	audit, settings, steps, err := NewRetentionTestOwnersAt(db, testpkg.TenantRuntime(t, admin), stepsNow)
 	require.NoError(t, err)
 	students, err := NewStudentTestRetention(db, audit, settings)
 	require.NoError(t, err)

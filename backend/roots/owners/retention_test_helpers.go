@@ -42,7 +42,14 @@ import (
 // the technical remains of #4046. unit is the tenant runtime the settings
 // resolve in.
 func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWork) (*auditCompose.Command, settingsCompose.BatchSettingsService, []schedulerPorts.RetentionStep, error) {
-	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
+	return NewRetentionTestOwnersAt(db, unit, time.Now)
+}
+
+// NewRetentionTestOwnersAt is NewRetentionTestOwners on now, the clock a
+// test pins for the whole Worker composition (ADR 0262): the owners compute
+// their cutoffs on it, as the Worker's steps compute them on the root clock.
+func NewRetentionTestOwnersAt(db transactionruntime.Database, unit tenant.UnitOfWork, now func() time.Time) (*auditCompose.Command, settingsCompose.BatchSettingsService, []schedulerPorts.RetentionStep, error) {
+	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, now)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -50,7 +57,7 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	fleet, err := NewDeviceFleet(db, time.Now)
+	fleet, err := NewDeviceFleet(db, now)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -69,13 +76,13 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 	steps := dataRetentionSteps(
 		settings.Settings, fleet, statusDays,
 		communicationCompose.NewParentMessageRetention(db.Pool(), settingsModule.NewParentMessageRetentionValues(settings.Settings)),
-		enrollments, workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings.Settings}, time.Now),
-		command, deliveryCompose.NewRetention(time.Now),
+		enrollments, workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings.Settings}),
+		command, deliveryCompose.NewRetention(now),
 	)
 	steps = append(steps, protocolRetentionSteps(command, settingsCompose.NewAuditRetention(), exportTransferCompose.NewJournalRetention())...)
 	steps = append(steps, cleanupJobRetentionSteps(
-		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(time.Now),
-		carePlanCompose.NewCleanupRetention(time.Now), enrollmentCompose.NewClocked(time.Now),
+		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(now),
+		carePlanCompose.NewCleanupRetention(now), enrollmentCompose.NewClocked(now),
 	)...)
 	announcements, err := newRetentionTestAnnouncements(db, settings.Settings)
 	if err != nil {
