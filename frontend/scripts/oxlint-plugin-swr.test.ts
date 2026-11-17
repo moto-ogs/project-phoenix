@@ -21,6 +21,7 @@ describe.concurrent("swr/no-direct-import", () => {
   it.each([
     ["useSWRAuth", "~/lib/swr"],
     ["useConfirmedSWR", "~/lib/hooks/use-confirmed-resource"],
+    ["useUnreadCount", "~/lib/hooks/use-unread-count"],
   ])("checks forwarded keys of %s, including aliases", async (hook, source) => {
     const bad = await lintSource(
       `import { ${hook} as useRead } from "${source}"; export function useProbe() { return useRead("new-key", async () => []); }`,

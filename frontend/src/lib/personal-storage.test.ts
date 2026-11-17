@@ -225,17 +225,15 @@ describe("personalStorageOwner", () => {
 describe("inventory", () => {
   const SRC = join(process.cwd(), "src");
 
-  // Files that read or write web storage, hand a key to a helper that does,
-  // or build a badge cache key.
+  // Files that read or write web storage or hand a key to a helper that does.
   const STORAGE_FILE =
-    /\b(?:localStorage|sessionStorage)\b|useLocalStorageValue\(|useDemoDayNotice\(|StorageKey\b|\bcacheKey:/;
+    /\b(?:localStorage|sessionStorage)\b|useLocalStorageValue\(|useDemoDayNotice\(|StorageKey\b/;
 
   // Storage files whose keys come from elsewhere. Each line names where.
   const KEYS_FROM_ELSEWHERE: Record<string, string> = {
     "src/components/ui/settings-return-path.tsx": "storageKey from the portal",
     "src/lib/sidebar-memory.ts": "SIDEBAR_MEMORY_ENTRIES, checked below",
     "src/lib/hooks/use-local-storage-value.ts": "key from the caller",
-    "src/lib/hooks/use-unread-count.ts": "cacheKey from the badge hooks",
     "src/lib/shell-auth-context.tsx": "DELIBERATE_LOGOUT_KEY (session-cache)",
     "src/lib/login-session-notice.ts": "DELIBERATE_LOGOUT_KEY (session-cache)",
     "src/lib/breadcrumb-context.tsx": "sidebar memory",
@@ -266,7 +264,6 @@ describe("inventory", () => {
       LITERAL,
     // localeStorageKey = "…", also as default parameter or JSX prop
     String.raw`\b\w*StorageKey\s*=\s*` + LITERAL,
-    String.raw`\bcacheKey:\s*` + LITERAL,
   ].map((rule) => new RegExp(rule, "g"));
   // What a function named …Key returns: `return "…";` or `? "…" : null`.
   const KEY_FUNCTION_RESULT = new RegExp(
@@ -359,7 +356,6 @@ describe("inventory", () => {
         "moto-pwa-usage-reported.*.*.*",
         "passwordResetWaits",
         "passwordResetRateLimitUntil",
-        "messages_unread_count:*:*",
         "collection-view:*:*:*",
         "moto.*.notification-setup.v1*.*",
         "parent-first-steps:v1:*",

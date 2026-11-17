@@ -1,60 +1,140 @@
+import { createElement, type ReactNode } from "react";
+import type { Session } from "next-auth";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor as waitForDOM, act } from "@testing-library/react";
-import {
-  bindPersonalStorage,
-  clearPersonalStorage,
-} from "~/lib/personal-storage";
-import { useUnreadCount } from "./use-unread-count";
+
+// The badge reads through the real shared cache: key scope, generation lock,
+// seed and revalidation are what this hook relies on.
+vi.unmock("swr");
+
+const { identity } = vi.hoisted(() => ({
+  identity: {
+    session: null as Session | null,
+    slug: "school-a" as string | null,
+  },
+}));
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: identity.session,
+    status: identity.session ? "authenticated" : "unauthenticated",
+  }),
+}));
+vi.mock("~/lib/tenant-context", () => ({
+  useTenantSlugSafe: () => identity.slug,
+  useTenantRoutingModeSafe: () => null,
+}));
+vi.mock("~/lib/session-cache", () => ({ announceSessionChange: vi.fn() }));
+
+import { scopedSWRKey, tenantSWRScope, writeSWRSeeds } from "~/lib/swr";
+import { resetSWRScope, resumeSWRSession } from "~/lib/swr/scope";
+import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
+import { useUnreadCount, type UseUnreadCountOptions } from "./use-unread-count";
 
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
-// The cached count belongs to the signed-in account at school 1 (#5000).
-const OWNER = "1:7";
-
 // renderHook updates result.current without a DOM mutation, so waitFor only
 // rechecks on its interval. Poll the same assertions more promptly; keep
-// Testing Library's timeout. Timers stay real except in the debounce test,
-// the only one that moves the clock: under fake timers every waitFor waited
-// for the next 20 ms auto-advance tick before it could settle.
+// Testing Library's timeout.
 const waitFor: typeof waitForDOM = (callback, options) =>
   waitForDOM(callback, { interval: 5, ...options });
 
+const KEY = "badge-test-unread";
+
+function signIn(id = "7", tenantId = 1) {
+  identity.session = {
+    user: { id, tenantId },
+    expires: "2099-01-01",
+  } as Session;
+}
+
+/** The cache key useSWRAuth builds for KEY in this session. */
+function scoped(slug = "school-a", account = "7") {
+  return scopedSWRKey(tenantSWRScope(slug, account), KEY);
+}
+
+function wrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return createElement("div", null, createElement(SWRScopeBoundary), children);
+}
+
+type Props = Partial<UseUnreadCountOptions> & { key?: string | null };
+
+function render(options: Props = {}) {
+  const { key = KEY, ...rest } = options;
+  const props = {
+    enabled: true,
+    fetcher: vi.fn().mockResolvedValue(0),
+    ...rest,
+  } as UseUnreadCountOptions;
+  return renderHook(
+    (next: Partial<UseUnreadCountOptions>) =>
+      useUnreadCount(key, { ...props, ...next } as UseUnreadCountOptions),
+    { wrapper, initialProps: {} },
+  );
+}
+
+/** Lets the pending mount revalidation (if any) start and settle. */
+async function settle() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
+function deferred<T>() {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
 beforeEach(() => {
-  localStorage.clear();
-  bindPersonalStorage(OWNER);
+  identity.slug = "school-a";
+  signIn();
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  localStorage.clear();
+  resumeSWRSession();
+  resetSWRScope({ revalidate: false });
 });
-
-const CACHE_KEY = "test_unread_count";
 
 // ---------------------------------------------------------------------------
 // enabled gate
 // ---------------------------------------------------------------------------
 
 describe("useUnreadCount — enabled gate", () => {
-  it("returns 0 and isLoading=false when enabled is false", async () => {
+  it("issues no request and shows no count while disabled", async () => {
     const fetcher = vi.fn();
-    const { result } = renderHook(() =>
-      useUnreadCount({ enabled: false, fetcher }),
-    );
+    const { result } = render({ enabled: false, fetcher });
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await settle();
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.unreadCount).toBe(0);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("issues no request without a key", async () => {
+    const fetcher = vi.fn();
+    const { result } = render({ key: null, fetcher });
+
+    await settle();
 
     expect(result.current.unreadCount).toBe(0);
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("fetches when enabled is true", async () => {
-    const fetcher = vi.fn().mockResolvedValue(3);
-    renderHook(() => useUnreadCount({ enabled: true, fetcher }));
+  it("shows no count once the gate closes, also not the cached one", async () => {
+    const fetcher = vi.fn().mockResolvedValue(6);
+    const { result, rerender } = render({ fetcher });
+    await waitFor(() => expect(result.current.unreadCount).toBe(6));
 
-    await waitFor(() => expect(fetcher).toHaveBeenCalled());
+    rerender({ enabled: false });
+
+    expect(result.current.unreadCount).toBe(0);
+    expect(result.current.isLoading).toBe(false);
   });
 });
 
@@ -65,234 +145,110 @@ describe("useUnreadCount — enabled gate", () => {
 describe("useUnreadCount — basic fetch", () => {
   it("sets unreadCount after a successful fetch", async () => {
     const fetcher = vi.fn().mockResolvedValue(7);
-    const { result } = renderHook(() =>
-      useUnreadCount({ enabled: true, fetcher }),
-    );
+    const { result } = render({ fetcher });
 
+    expect(result.current.isLoading).toBe(true);
     await waitFor(() => expect(result.current.unreadCount).toBe(7));
     expect(result.current.isLoading).toBe(false);
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
-  it("swallows fetch errors silently (badge must never break nav)", async () => {
+  it("keeps the badge at 0 when the fetch fails", async () => {
     const fetcher = vi.fn().mockRejectedValue(new Error("network fail"));
-    const { result } = renderHook(() =>
-      useUnreadCount({ enabled: true, fetcher }),
-    );
+    const onError = vi.fn();
+    const { result } = render({ fetcher, onError });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-
     expect(result.current.unreadCount).toBe(0);
   });
 
   it("calls onError with the error when fetch fails", async () => {
+    const error = new Error("boom");
     const onError = vi.fn();
-    const err = new Error("oops");
-    const fetcher = vi.fn().mockRejectedValue(err);
+    render({ fetcher: vi.fn().mockRejectedValue(error), onError });
 
-    renderHook(() => useUnreadCount({ enabled: true, fetcher, onError }));
-
-    await waitFor(() => expect(onError).toHaveBeenCalledWith(err));
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(error));
   });
-});
 
-// ---------------------------------------------------------------------------
-// LocalStorage cache
-// ---------------------------------------------------------------------------
-
-describe("useUnreadCount — cache", () => {
-  it("shows cached count immediately before the fetch resolves", async () => {
-    localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ count: 4, timestamp: Date.now() }),
-    );
-
-    let resolve: (n: number) => void = () => undefined;
-    const fetcher = vi.fn(
+  it("derives the count from a resource that is not itself a number", async () => {
+    const { result } = renderHook(
       () =>
-        new Promise<number>((r) => {
-          resolve = r;
-        }),
-    );
-
-    const { result } = renderHook(() =>
-      useUnreadCount({
-        enabled: true,
-        fetcher,
-        cacheKey: CACHE_KEY,
-        cacheOwner: OWNER,
-      }),
-    );
-
-    // Cached value appears synchronously / immediately
-    expect(result.current.unreadCount).toBe(4);
-
-    resolve(10);
-    await waitFor(() => expect(result.current.unreadCount).toBe(10));
-  });
-
-  it("ignores a cache entry older than 60 seconds", async () => {
-    localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ count: 4, timestamp: Date.now() - 61_000 }),
-    );
-
-    const fetcher = vi.fn().mockResolvedValue(9);
-    const { result } = renderHook(() =>
-      useUnreadCount({
-        enabled: true,
-        fetcher,
-        cacheKey: CACHE_KEY,
-        cacheOwner: OWNER,
-      }),
-    );
-
-    await waitFor(() => expect(result.current.unreadCount).toBe(9));
-  });
-
-  it("handles malformed cache JSON without throwing", async () => {
-    localStorage.setItem(CACHE_KEY, "not-json");
-
-    const fetcher = vi.fn().mockResolvedValue(5);
-    const { result } = renderHook(() =>
-      useUnreadCount({
-        enabled: true,
-        fetcher,
-        cacheKey: CACHE_KEY,
-        cacheOwner: OWNER,
-      }),
-    );
-
-    await waitFor(() => expect(result.current.unreadCount).toBe(5));
-  });
-
-  it("writes the fetched count back to localStorage", async () => {
-    const fetcher = vi.fn().mockResolvedValue(15);
-    renderHook(() =>
-      useUnreadCount({
-        enabled: true,
-        fetcher,
-        cacheKey: CACHE_KEY,
-        cacheOwner: OWNER,
-      }),
-    );
-
-    await waitFor(() => {
-      const raw = localStorage.getItem(CACHE_KEY);
-      expect(raw).not.toBeNull();
-      const data = JSON.parse(raw!) as { count: number; timestamp: number };
-      expect(data.count).toBe(15);
-    });
-  });
-
-  // The count starts loading for this account; a logout or account switch
-  // clears the cache before the answer arrives (#5000).
-  it.each([
-    ["a logout", () => clearPersonalStorage()],
-    ["an account switch", () => bindPersonalStorage("1:8")],
-  ])(
-    "does not cache a count that arrives after %s",
-    async (_change, change) => {
-      let answer!: (count: number) => void;
-      const fetcher = vi.fn(
-        () =>
-          new Promise<number>((resolve) => {
-            answer = resolve;
-          }),
-      );
-      const { result } = renderHook(() =>
-        useUnreadCount({
+        useUnreadCount<string[]>(KEY, {
           enabled: true,
-          fetcher,
-          cacheKey: CACHE_KEY,
-          cacheOwner: OWNER,
+          fetcher: () => Promise.resolve(["a", "b", "c"]),
+          count: (items) => items.length,
         }),
-      );
-      await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+      { wrapper },
+    );
 
-      change();
-      await act(async () => {
-        answer(15);
-      });
-
-      expect(result.current.isLoading).toBe(false);
-      expect(localStorage.getItem(CACHE_KEY)).toBeNull();
-    },
-  );
-
-  it("does not write to localStorage when no cacheKey is given", async () => {
-    // Without the bound owner the storage starts empty.
-    localStorage.clear();
-    const fetcher = vi.fn().mockResolvedValue(3);
-    renderHook(() => useUnreadCount({ enabled: true, fetcher }));
-
-    await waitFor(() => {
-      // localStorage should be empty — no keys written
-      expect(localStorage.length).toBe(0);
-    });
+    await waitFor(() => expect(result.current.unreadCount).toBe(3));
   });
 });
 
 // ---------------------------------------------------------------------------
-// refresh()
+// Shared cache: one answer for every reader (replaces the localStorage cache)
+// ---------------------------------------------------------------------------
+
+describe("useUnreadCount — shared cache", () => {
+  it("shares one request between two readers of the same key", async () => {
+    const fetcher = vi.fn().mockResolvedValue(4);
+    const sidebar = render({ fetcher });
+    const homeBlock = render({ fetcher });
+
+    await waitFor(() => expect(sidebar.result.current.unreadCount).toBe(4));
+    await waitFor(() => expect(homeBlock.result.current.unreadCount).toBe(4));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the cached answer to a reader mounted later, without a request", async () => {
+    const fetcher = vi.fn().mockResolvedValue(4);
+    const sidebar = render({ fetcher });
+    await waitFor(() => expect(sidebar.result.current.unreadCount).toBe(4));
+
+    const later = render({ fetcher });
+
+    expect(later.result.current.unreadCount).toBe(4);
+    await settle();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// refresh
 // ---------------------------------------------------------------------------
 
 describe("useUnreadCount — refresh", () => {
   it("refresh() fetches a fresh count and updates state", async () => {
-    const fetcher = vi.fn().mockResolvedValueOnce(2).mockResolvedValueOnce(8);
-    const { result } = renderHook(() =>
-      useUnreadCount({ enabled: true, fetcher }),
-    );
+    const fetcher = vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(8);
+    const { result } = render({ fetcher });
 
-    await waitFor(() => expect(result.current.unreadCount).toBe(2));
+    await waitFor(() => expect(result.current.unreadCount).toBe(1));
+    await act(() => result.current.refresh());
 
-    await act(async () => {
-      await result.current.refresh();
-    });
-
-    await waitFor(() => expect(result.current.unreadCount).toBe(8));
+    expect(result.current.unreadCount).toBe(8);
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
-  it("refresh(true) busts the cache", async () => {
-    localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ count: 3, timestamp: Date.now() }),
-    );
+  it("the newest answer wins over one that was already in flight", async () => {
+    const first = deferred<number>();
+    const fetcher = vi
+      .fn()
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValue(9);
+    const { result } = render({ fetcher });
 
-    const fetcher = vi.fn().mockResolvedValue(10);
-    const { result } = renderHook(() =>
-      useUnreadCount({
-        enabled: true,
-        fetcher,
-        cacheKey: CACHE_KEY,
-        cacheOwner: OWNER,
-      }),
-    );
+    await act(() => result.current.refresh());
+    expect(result.current.unreadCount).toBe(9);
 
-    await waitFor(() => expect(result.current.unreadCount).toBe(10));
-
-    // Write stale value to cache
-    localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ count: 99, timestamp: Date.now() }),
-    );
-
-    fetcher.mockResolvedValue(20);
-    await act(async () => {
-      await result.current.refresh(true);
-    });
-
-    await waitFor(() => expect(result.current.unreadCount).toBe(20));
+    await act(async () => first.resolve(3));
+    expect(result.current.unreadCount).toBe(9);
   });
 
   it("does not fetch when enabled=false and refresh() is called", async () => {
-    const fetcher = vi.fn().mockResolvedValue(5);
-    const { result } = renderHook(() =>
-      useUnreadCount({ enabled: false, fetcher }),
-    );
+    const fetcher = vi.fn();
+    const { result } = render({ enabled: false, fetcher });
 
-    await act(async () => {
-      await result.current.refresh();
-    });
+    await act(() => result.current.refresh());
 
     expect(fetcher).not.toHaveBeenCalled();
     expect(result.current.unreadCount).toBe(0);
@@ -300,71 +256,26 @@ describe("useUnreadCount — refresh", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Event-driven refresh
+// Event listeners
 // ---------------------------------------------------------------------------
 
 describe("useUnreadCount — event listeners", () => {
   it("refetches when a registered event fires", async () => {
-    const fetcher = vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(6);
-    const { result } = renderHook(() =>
-      useUnreadCount({
-        enabled: true,
-        fetcher,
-        eventNames: ["test-refresh-event"],
-      }),
-    );
+    const fetcher = vi.fn().mockResolvedValueOnce(2).mockResolvedValueOnce(9);
+    const { result } = render({ fetcher, eventNames: ["my-refresh-event"] });
 
-    await waitFor(() => expect(result.current.unreadCount).toBe(1));
+    await waitFor(() => expect(result.current.unreadCount).toBe(2));
 
     act(() => {
-      window.dispatchEvent(new Event("test-refresh-event"));
+      window.dispatchEvent(new Event("my-refresh-event"));
     });
 
-    await waitFor(() => expect(result.current.unreadCount).toBe(6));
-  });
-
-  it("removes the cache entry before refetching on event", async () => {
-    localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ count: 99, timestamp: Date.now() }),
-    );
-
-    const fetcher = vi.fn().mockResolvedValue(7);
-    renderHook(() =>
-      useUnreadCount({
-        enabled: true,
-        fetcher,
-        cacheKey: CACHE_KEY,
-        cacheOwner: OWNER,
-        eventNames: ["test-refresh-event"],
-      }),
-    );
-
-    await waitFor(() => expect(fetcher).toHaveBeenCalled());
-
-    act(() => {
-      window.dispatchEvent(new Event("test-refresh-event"));
-    });
-
-    await waitFor(() => {
-      expect(localStorage.getItem(CACHE_KEY)).toBeNull();
-    });
+    await waitFor(() => expect(result.current.unreadCount).toBe(9));
   });
 
   it("listens to multiple event names", async () => {
-    const fetcher = vi
-      .fn()
-      .mockResolvedValueOnce(1)
-      .mockResolvedValueOnce(2)
-      .mockResolvedValueOnce(3);
-
-    renderHook(() =>
-      useUnreadCount({
-        enabled: true,
-        fetcher,
-        eventNames: ["event-a", "event-b"],
-      }),
-    );
+    const fetcher = vi.fn().mockResolvedValue(0);
+    render({ fetcher, eventNames: ["event-a", "event-b"] });
 
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
 
@@ -378,14 +289,7 @@ describe("useUnreadCount — event listeners", () => {
   it("debounces rapid event bursts into a single refetch", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetcher = vi.fn().mockResolvedValue(5);
-    renderHook(() =>
-      useUnreadCount({
-        enabled: true,
-        fetcher,
-        eventNames: ["burst-event"],
-        eventDebounceMs: 300,
-      }),
-    );
+    render({ fetcher, eventNames: ["burst-event"], eventDebounceMs: 300 });
 
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
 
@@ -402,6 +306,16 @@ describe("useUnreadCount — event listeners", () => {
 
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
   });
+
+  it("ignores events while disabled", async () => {
+    const fetcher = vi.fn();
+    render({ enabled: false, fetcher, eventNames: ["my-refresh-event"] });
+
+    act(() => window.dispatchEvent(new Event("my-refresh-event")));
+    await settle();
+
+    expect(fetcher).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -410,12 +324,13 @@ describe("useUnreadCount — event listeners", () => {
 
 describe("useUnreadCount — refetchOnFocus", () => {
   it("refetches when window gains focus and refetchOnFocus is true", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetcher = vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(4);
-    const { result } = renderHook(() =>
-      useUnreadCount({ enabled: true, fetcher, refetchOnFocus: true }),
-    );
+    const { result } = render({ fetcher, refetchOnFocus: true });
 
     await waitFor(() => expect(result.current.unreadCount).toBe(1));
+    // Past the shared reader's dedupe window of the mount request.
+    act(() => vi.advanceTimersByTime(10_000));
 
     act(() => window.dispatchEvent(new Event("focus")));
 
@@ -423,231 +338,153 @@ describe("useUnreadCount — refetchOnFocus", () => {
   });
 
   it("does NOT refetch on focus when refetchOnFocus is false (default)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetcher = vi.fn().mockResolvedValue(2);
-    renderHook(() => useUnreadCount({ enabled: true, fetcher }));
+    render({ fetcher });
 
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    act(() => vi.advanceTimersByTime(10_000));
 
     act(() => window.dispatchEvent(new Event("focus")));
-
-    // No additional fetch triggered
-    expect(fetcher).toHaveBeenCalledTimes(1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Concurrency guard
-// ---------------------------------------------------------------------------
-
-describe("useUnreadCount — concurrency guard", () => {
-  it("does not start a second fetch while one is already in flight", async () => {
-    let resolveFirst: (n: number) => void = () => undefined;
-    const firstFetch = new Promise<number>((r) => {
-      resolveFirst = r;
-    });
-    const fetcher = vi
-      .fn()
-      .mockReturnValueOnce(firstFetch)
-      .mockResolvedValue(9);
-
-    const { result } = renderHook(() =>
-      useUnreadCount({ enabled: true, fetcher }),
-    );
-
-    // While the first fetch is still pending, call refresh() — should be a no-op
-    void result.current.refresh();
-    void result.current.refresh();
+    await settle();
 
     expect(fetcher).toHaveBeenCalledTimes(1);
-
-    resolveFirst(3);
-    await waitFor(() => expect(result.current.unreadCount).toBe(3));
   });
 });
 
 // ---------------------------------------------------------------------------
-// Tenant/session isolation
+// Server seed (replaces initialCount)
 // ---------------------------------------------------------------------------
 
-describe("useUnreadCount — tenant/session isolation", () => {
-  it("discards an old tenant result and retries with the new tenant fetcher", async () => {
-    const oldKey = "unread:school-a";
-    const newKey = "unread:school-b";
-    localStorage.setItem(
-      oldKey,
-      JSON.stringify({ count: 4, timestamp: Date.now() }),
-    );
-
-    let resolveOld: (count: number) => void = () => undefined;
-    const oldFetcher = vi.fn(
-      () =>
-        new Promise<number>((resolve) => {
-          resolveOld = resolve;
-        }),
-    );
-    const newFetcher = vi.fn().mockResolvedValue(9);
-
-    const { result, rerender } = renderHook(
-      ({ cacheKey, fetcher }) =>
-        useUnreadCount({ enabled: true, cacheKey, cacheOwner: OWNER, fetcher }),
-      { initialProps: { cacheKey: oldKey, fetcher: oldFetcher } },
-    );
-
-    expect(result.current.unreadCount).toBe(4);
-    await waitFor(() => expect(oldFetcher).toHaveBeenCalledTimes(1));
-
-    rerender({ cacheKey: newKey, fetcher: newFetcher });
-
-    // The old tenant's cached count is cleared during the switch commit, before
-    // either request resolves.
-    expect(result.current.unreadCount).toBe(0);
-
-    resolveOld(7);
-
-    await waitFor(() => expect(result.current.unreadCount).toBe(9));
-    expect(oldFetcher).toHaveBeenCalledTimes(1);
-    expect(newFetcher).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(localStorage.getItem(oldKey)!).count).toBe(4);
-    expect(JSON.parse(localStorage.getItem(newKey)!).count).toBe(9);
-  });
-
-  it("retries the new tenant when the old tenant request rejects", async () => {
-    let rejectOld: (error: Error) => void = () => undefined;
-    const oldFetcher = vi.fn(
-      () =>
-        new Promise<number>((_resolve, reject) => {
-          rejectOld = reject;
-        }),
-    );
-    const newFetcher = vi.fn().mockResolvedValue(6);
-    const onError = vi.fn();
-
-    const { result, rerender } = renderHook(
-      ({ cacheKey, fetcher }) =>
-        useUnreadCount({
-          enabled: true,
-          cacheKey,
-          cacheOwner: OWNER,
-          fetcher,
-          onError,
-        }),
-      {
-        initialProps: {
-          cacheKey: "unread:school-a",
-          fetcher: oldFetcher,
-        },
-      },
-    );
-
-    await waitFor(() => expect(oldFetcher).toHaveBeenCalledTimes(1));
-    rerender({ cacheKey: "unread:school-b", fetcher: newFetcher });
-
-    rejectOld(new Error("old tenant request rejected"));
-
-    await waitFor(() => expect(result.current.unreadCount).toBe(6));
-    expect(newFetcher).toHaveBeenCalledTimes(1);
-    expect(onError).not.toHaveBeenCalled();
-  });
-
-  it("does not publish or cache an in-flight result after logout", async () => {
-    const cacheKey = "unread:logout";
-    let resolveAfterLogout: (count: number) => void = () => undefined;
-    const fetcher = vi
-      .fn()
-      .mockResolvedValueOnce(5)
-      .mockImplementationOnce(
-        () =>
-          new Promise<number>((resolve) => {
-            resolveAfterLogout = resolve;
-          }),
-      );
-
-    const { result, rerender } = renderHook(
-      ({ enabled }) =>
-        useUnreadCount({ enabled, cacheKey, cacheOwner: OWNER, fetcher }),
-      { initialProps: { enabled: true } },
-    );
-
-    await waitFor(() => expect(result.current.unreadCount).toBe(5));
-    act(() => {
-      void result.current.refresh(true);
-    });
-    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
-
-    rerender({ enabled: false });
-    expect(result.current.unreadCount).toBe(0);
-    expect(result.current.isLoading).toBe(false);
-
-    resolveAfterLogout(12);
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.unreadCount).toBe(0);
-    expect(JSON.parse(localStorage.getItem(cacheKey)!).count).toBe(5);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// initialCount (server-preloaded seed, #2973)
-// ---------------------------------------------------------------------------
-
-describe("useUnreadCount — initialCount", () => {
-  it("shows the seed, caches it, and skips the mount fetch", async () => {
+describe("useUnreadCount — server seed", () => {
+  it("shows the seed as the first answer without a mount request", async () => {
+    writeSWRSeeds({ [scoped()]: 4 });
     const fetcher = vi.fn().mockResolvedValue(9);
-    const { result } = renderHook(() =>
-      useUnreadCount({
-        enabled: true,
-        fetcher,
-        cacheKey: CACHE_KEY,
-        cacheOwner: OWNER,
-        initialCount: 4,
-      }),
-    );
+    const { result } = render({ fetcher });
 
     expect(result.current.unreadCount).toBe(4);
     expect(result.current.isLoading).toBe(false);
-    await act(async () => {
-      await Promise.resolve();
-    });
+    await settle();
     expect(fetcher).not.toHaveBeenCalled();
-    expect(JSON.parse(localStorage.getItem(CACHE_KEY) ?? "{}")).toMatchObject({
-      count: 4,
-    });
+    expect(result.current.unreadCount).toBe(4);
   });
 
   it("still refetches on a refresh event after being seeded", async () => {
-    const fetcher = vi.fn().mockResolvedValue(9);
-    const { result } = renderHook(() =>
-      useUnreadCount({
-        enabled: true,
-        fetcher,
-        cacheKey: CACHE_KEY,
-        cacheOwner: OWNER,
-        eventNames: ["seed-refresh"],
-        initialCount: 4,
-      }),
-    );
+    writeSWRSeeds({ [scoped()]: 4 });
+    const fetcher = vi.fn().mockResolvedValue(11);
+    const { result } = render({ fetcher, eventNames: ["seed-refresh"] });
+    expect(result.current.unreadCount).toBe(4);
 
-    act(() => {
-      window.dispatchEvent(new Event("seed-refresh"));
-    });
+    act(() => window.dispatchEvent(new Event("seed-refresh")));
 
-    await waitFor(() => expect(result.current.unreadCount).toBe(9));
+    await waitFor(() => expect(result.current.unreadCount).toBe(11));
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
   it("ignores the seed while disabled and fetches once enabled", async () => {
-    const fetcher = vi.fn().mockResolvedValue(9);
-    const { result, rerender } = renderHook(
-      ({ enabled }: { enabled: boolean }) =>
-        useUnreadCount({ enabled, fetcher, initialCount: 4 }),
-      { initialProps: { enabled: false } },
-    );
+    writeSWRSeeds({ [scoped()]: 4 });
+    const fetcher = vi.fn().mockResolvedValue(6);
+    const { result, rerender } = render({ enabled: false, fetcher });
 
-    await waitFor(() => expect(result.current.unreadCount).toBe(0));
+    expect(result.current.unreadCount).toBe(0);
+    await settle();
     expect(fetcher).not.toHaveBeenCalled();
 
     rerender({ enabled: true });
 
-    await waitFor(() => expect(result.current.unreadCount).toBe(9));
+    await waitFor(() => expect(result.current.unreadCount).toBe(6));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("loads anew when a closed gate opens again", async () => {
+    writeSWRSeeds({ [scoped()]: 4 });
+    const fetcher = vi.fn().mockResolvedValue(6);
+    const { result, rerender } = render({ fetcher });
+    expect(result.current.unreadCount).toBe(4);
+
+    rerender({ enabled: false });
+    expect(result.current.unreadCount).toBe(0);
+    rerender({ enabled: true });
+
+    await waitFor(() => expect(result.current.unreadCount).toBe(6));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tenant/session isolation (replaces the cacheKey/owner guards)
+// ---------------------------------------------------------------------------
+
+describe("useUnreadCount — tenant/session isolation", () => {
+  it("never shows the old school's count after a tenant switch", async () => {
+    const oldSchool = deferred<number>();
+    const newSchool = deferred<number>();
+    const fetcher = vi
+      .fn()
+      .mockReturnValueOnce(oldSchool.promise)
+      .mockReturnValueOnce(newSchool.promise);
+    const { result, rerender } = render({ fetcher });
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+
+    // Same account, other school: the slug and the session's school change.
+    identity.slug = "school-b";
+    signIn("7", 2);
+    rerender({});
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+
+    // The old school answers late: its count must not appear.
+    await act(async () => oldSchool.resolve(9));
+    expect(result.current.unreadCount).toBe(0);
+
+    await act(async () => newSchool.resolve(2));
+    expect(result.current.unreadCount).toBe(2);
+  });
+
+  it("drops a seeded count of the old school at once on a tenant switch", async () => {
+    writeSWRSeeds({ [scoped()]: 5 });
+    const next = deferred<number>();
+    const fetcher = vi.fn().mockReturnValue(next.promise);
+    const { result, rerender } = render({ fetcher });
+    expect(result.current.unreadCount).toBe(5);
+
+    identity.slug = "school-b";
+    signIn("7", 2);
+    rerender({});
+
+    // Not even until the new school's first answer.
+    expect(result.current.unreadCount).toBe(0);
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    await act(async () => next.resolve(1));
+    expect(result.current.unreadCount).toBe(1);
+  });
+
+  it("never shows another account's count after an account switch", async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(8);
+    const { result, rerender } = render({ fetcher });
+    await waitFor(() => expect(result.current.unreadCount).toBe(8));
+
+    const next = deferred<number>();
+    fetcher.mockReturnValueOnce(next.promise);
+    signIn("8");
+    rerender({});
+
+    expect(result.current.unreadCount).toBe(0);
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+    await act(async () => next.resolve(3));
+    expect(result.current.unreadCount).toBe(3);
+  });
+
+  it("does not publish an in-flight result after logout", async () => {
+    const pending = deferred<number>();
+    const fetcher = vi.fn().mockReturnValue(pending.promise);
+    const { result, rerender } = render({ fetcher });
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+
+    identity.session = null;
+    rerender({ enabled: false });
+    await act(async () => pending.resolve(9));
+
+    expect(result.current.unreadCount).toBe(0);
+    expect(result.current.isLoading).toBe(false);
   });
 });

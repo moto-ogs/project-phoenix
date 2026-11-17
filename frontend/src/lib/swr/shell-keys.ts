@@ -37,6 +37,24 @@ export const shellResourceKeys = {
   enrollmentsUnreadPrefix: "enrollments-unread-count",
   enrollmentsUnread: (accountId: string) =>
     `enrollments-unread-count:${accountId}`,
+  // Sidebar badges (useUnreadCount). The tenant layout seeds them from the
+  // server snapshot (ShellCounts) under the same keys.
+  messagesUnread: (accountId: string) => `badge-messages-unread:${accountId}`,
+  teamChatUnread: (accountId: string) => `badge-team-chat-unread:${accountId}`,
+  changeRequestsPending: (accountId: string) =>
+    `badge-change-requests-pending:${accountId}`,
+  enrollmentRequestsPending: (accountId: string) =>
+    `badge-enrollment-requests-pending:${accountId}`,
+  careWithdrawalsPending: (accountId: string) =>
+    `badge-care-withdrawals-pending:${accountId}`,
+  staffAbsencesPending: (accountId: string) =>
+    `badge-staff-absences-pending:${accountId}`,
+  // The school portal shell. Its session scope (`school:{tenantId}:{id}`)
+  // binds them to school and account.
+  schoolTeamChatUnread: () => "school-team-chat-unread",
+  // Today's notices: the badge counts the pending acknowledgements in the
+  // same entry the page and the class-view card show.
+  schoolNoticesToday: () => "school-staff-notices-today",
 } as const;
 
 // Family prefixes of the shared resource factories, here so the
