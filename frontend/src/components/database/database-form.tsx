@@ -353,7 +353,7 @@ export function DatabaseForm<T = Record<string, unknown>>({
   const [isSubmitting, setIsSubmitting] = useState(false);
   // What each field's FieldOptionsReader read through the shared cache.
   const [asyncOptions, setAsyncOptions] = useState<
-    Record<string, Array<{ value: string; label: string }>>
+    Record<string, FieldOption[] | undefined>
   >({});
   const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>(
     {},
@@ -367,7 +367,6 @@ export function DatabaseForm<T = Record<string, unknown>>({
       setLoadingOptions((prev) =>
         prev[fieldName] === loading ? prev : { ...prev, [fieldName]: loading },
       );
-      if (options === undefined) return;
       setAsyncOptions((prev) =>
         prev[fieldName] === options ? prev : { ...prev, [fieldName]: options },
       );

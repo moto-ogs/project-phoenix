@@ -706,9 +706,13 @@ export default function SlotListsPage() {
     ? tenantDailyKeys.slotListOptions(dateISO)
     : null;
   const listOptionsRef = useRef<SlotListOptionsResult | null>(null);
+  const optionsRequestRevision = useRef(0);
   const optionsRead = useSWRAuth(
     optionsKey,
-    () => fetchSlotListOptions(dateISO),
+    () => {
+      optionsRequestRevision.current += 1;
+      return fetchSlotListOptions(dateISO);
+    },
     {
       keepPreviousData: false,
       revalidateOnFocus: false,
@@ -1279,12 +1283,14 @@ export default function SlotListsPage() {
       // read below happens only while they are still the shown ones: a focus
       // refresh that committed newer options in the meantime keeps them, so an
       // older snapshot never rolls a newer one back (#1565 review pass 1 P2).
-      // A refresh still in flight when the preflight's options are installed is
-      // dropped by the cache, which discards answers older than a mutation.
+      // A cache write also discards in-flight reads. Preserve a refresh that
+      // started after this preflight, even before its answer is visible.
       const optionsAtStart = listOptions;
+      const optionsRevisionAtStart = optionsRequestRevision.current;
       const stillShowsOptionsAtStart = () =>
         dateISORef.current === dateISO &&
-        listOptionsRef.current === optionsAtStart;
+        listOptionsRef.current === optionsAtStart &&
+        optionsRequestRevision.current === optionsRevisionAtStart;
       // The no-drift path below cannot install `fresh` inline: its drift check
       // is scoped to the list being exported, and installing would churn
       // activeInstanceIds -> request and trip the identity gates further down,
@@ -1550,6 +1556,9 @@ export default function SlotListsPage() {
           // failed export before options finally update. Revalidate the options
           // snapshot alongside so activeInstanceIds is re-derived and the stale
           // selection is pruned (#1565 review pass 9).
+          // The preflight predates the refused export. Do not let finally
+          // install it over the recovery request's newer answer.
+          refreshedOptions = null;
           void mutateOptions();
           void mutatePreview();
           return;
@@ -1565,15 +1574,16 @@ export default function SlotListsPage() {
         setIsExporting(false);
         // Install the options snapshot the no-drift preflight staged, on EVERY
         // terminal outcome of the export round-trip — a clean success, a
-        // superseded/aborted handoff (SlotListExportSupersededError), a 409 drift
-        // refusal, or a generic failure. Returning here without installing the
-        // staged `fresh` would strand listOptions on the previous snapshot, so a
+        // superseded/aborted handoff (SlotListExportSupersededError), or a
+        // generic failure. A 409 drops it in favor of the recovery read.
+        // Otherwise, returning without installing the staged `fresh` would strand
+        // listOptions on the previous snapshot, so a
         // slot cancelled in a DIFFERENT list_kind (which the
         // document-scoped drift check correctly ignored) would stay selectable and
         // re-send its stale active IDs until the next focus refresh.
         // commitRefreshedOptions is a no-op once the snapshot is installed or was
         // never staged, and its own guard skips the install if a newer refresh has
-        // since won (#1565 review pass 1 P2 / pass 2 P2).
+        // since started (#1565 review pass 1 P2 / pass 2 P2).
         commitRefreshedOptions();
       }
     },

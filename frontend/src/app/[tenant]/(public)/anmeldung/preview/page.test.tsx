@@ -1,3 +1,4 @@
+import type { Session } from "next-auth";
 import { Suspense } from "react";
 import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +13,7 @@ vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   search: new URLSearchParams(),
+  redirect: vi.fn(),
   fetchEnrollmentPreviewBootstrap: vi.fn(),
   listPhases: vi.fn(),
   formProps: [] as Record<string, unknown>[],
@@ -19,6 +21,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => mocks.search,
+  redirect: mocks.redirect,
 }));
 
 vi.mock("~/lib/tenant-context", () => ({
@@ -69,15 +72,16 @@ vi.mock("~/components/enrollment/public-enrollment-shell", () => ({
 
 import EnrollmentPreviewPage from "./page";
 
-function Providers({ children }: Readonly<{ children: React.ReactNode }>) {
+const staffSession: Session = {
+  user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+  expires: "2099-01-01",
+};
+function Providers({
+  children,
+  session = staffSession,
+}: Readonly<{ children: React.ReactNode; session?: Session | null }>) {
   return (
-    <SessionProvider
-      session={{
-        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
-        expires: "2099-01-01",
-      }}
-      refetchOnWindowFocus={false}
-    >
+    <SessionProvider session={session} refetchOnWindowFocus={false}>
       <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
         {children}
       </SWRConfig>
@@ -85,13 +89,17 @@ function Providers({ children }: Readonly<{ children: React.ReactNode }>) {
   );
 }
 
-async function renderPage() {
+async function renderPage(session: Session | null = staffSession) {
   await act(async () => {
     render(
       <Suspense fallback={null}>
         <EnrollmentPreviewPage />
       </Suspense>,
-      { wrapper: Providers },
+      {
+        wrapper: ({ children }) => (
+          <Providers session={session}>{children}</Providers>
+        ),
+      },
     );
   });
 }
@@ -127,10 +135,19 @@ function offering(overrides: Record<string, unknown>) {
 describe("EnrollmentPreviewPage", () => {
   beforeEach(() => {
     mocks.search = new URLSearchParams();
+    mocks.redirect.mockClear();
     mocks.formProps = [];
     mocks.fetchEnrollmentPreviewBootstrap.mockReset();
     mocks.listPhases.mockReset();
     mocks.listPhases.mockResolvedValue([]);
+  });
+
+  it("redirects an unauthenticated base preview to the school's login without reading protected data", async () => {
+    mocks.search = new URLSearchParams("base=1");
+    await renderPage(null);
+    expect(mocks.redirect).toHaveBeenCalledWith("/demo/");
+    expect(mocks.fetchEnrollmentPreviewBootstrap).not.toHaveBeenCalled();
+    expect(mocks.listPhases).not.toHaveBeenCalled();
   });
 
   // Der Rückweg zeigte auf `/enrollment-form` ohne Schule und landete im

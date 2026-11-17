@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render as rtlRender,
@@ -130,6 +131,14 @@ const SLOTS_CHANGED_NOTICE =
   "Die Angebote für diesen Tag haben sich geändert. Bitte prüfen Sie die Liste und exportieren Sie erneut.";
 const PRINT_BLOCKED_NOTICE =
   "Das Druckfenster konnte nicht geöffnet werden. Bitte laden Sie die Liste als PDF herunter.";
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
 
 async function openExportMenuAndPick(label: string) {
   fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
@@ -268,6 +277,61 @@ describe("SlotListsPage error paths (#2516)", () => {
     await waitFor(() =>
       expect(mocks.fetchSlotListPreview.mock.calls.length).toBeGreaterThan(
         previewCallsBefore,
+      ),
+    );
+  });
+
+  it("keeps the recovery options response after an export drift refusal", async () => {
+    const recovery = deferred<SlotListOptionsResult>();
+    mocks.fetchSlotListOptions
+      .mockResolvedValueOnce(options)
+      .mockResolvedValueOnce(options)
+      .mockReturnValueOnce(recovery.promise);
+    mocks.exportSlotList.mockRejectedValueOnce(
+      new ApiError("drift", 409, { code: "timetable.slot_list_drifted" }),
+    );
+    render(<SlotListsPage />);
+    await screen.findByText("Mia Muster");
+    await openExportMenuAndPick("PDF herunterladen");
+    expect(await screen.findByText(LIST_CHANGED_NOTICE)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mocks.fetchSlotListOptions).toHaveBeenCalledTimes(3),
+    );
+    await act(async () => recovery.resolve({ ...options, slots: [] }));
+    expect(
+      await screen.findByText("Für dieses Datum sind keine Angebote geplant."),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mocks.fetchSlotListPreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ instance_ids: [] }),
+      ),
+    );
+  });
+
+  it("does not overwrite an options refresh that started during an export", async () => {
+    const refresh = deferred<SlotListOptionsResult>();
+    const exporting = deferred<void>();
+    mocks.fetchSlotListOptions
+      .mockResolvedValueOnce(options)
+      .mockResolvedValueOnce(options)
+      .mockReturnValueOnce(refresh.promise);
+    mocks.exportSlotList.mockReturnValueOnce(exporting.promise);
+    render(<SlotListsPage />);
+    await screen.findByText("Mia Muster");
+    await openExportMenuAndPick("PDF herunterladen");
+    await waitFor(() => expect(mocks.exportSlotList).toHaveBeenCalledTimes(1));
+    act(() => window.dispatchEvent(new Event("focus")));
+    await waitFor(() =>
+      expect(mocks.fetchSlotListOptions).toHaveBeenCalledTimes(3),
+    );
+    await act(async () => exporting.resolve());
+    await act(async () => refresh.resolve({ ...options, slots: [] }));
+    expect(
+      await screen.findByText("Für dieses Datum sind keine Angebote geplant."),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mocks.fetchSlotListPreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ instance_ids: [] }),
       ),
     );
   });

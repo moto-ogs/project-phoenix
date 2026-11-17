@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { redirect, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Eye, Info } from "lucide-react";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
@@ -39,6 +40,10 @@ import { Skeleton } from "~/components/ui/skeleton";
 const PHASE_GONE = new Error("Diese Anmeldephase gibt es nicht mehr.");
 
 export default function EnrollmentPreviewPage() {
+  const { status } = useSession();
+  const tenantPath = useTenantAwarePath();
+  // This public URL previews protected configuration, not a public form.
+  if (status === "unauthenticated") return redirect(tenantPath("/"));
   return (
     <Suspense fallback={null}>
       <EnrollmentPreviewPageContent />
