@@ -150,11 +150,8 @@ func (s *service) rejectInactiveMoveStudents(ctx context.Context, studentIDs []i
 		if student == nil {
 			continue
 		}
-		if student.IsAlumnus() {
-			return nil, &ActiveError{Op: opMoveStudents, Err: ErrStudentGraduated}
-		}
-		if student.CareEndedOn(today) {
-			return nil, &ActiveError{Op: opMoveStudents, Err: ErrStudentCareEnded}
+		if err := student.OGSAdmissionRefused(today); err != nil {
+			return nil, &ActiveError{Op: opMoveStudents, Err: err}
 		}
 	}
 	return lockedStudents, nil

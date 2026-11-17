@@ -14545,7 +14545,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByClass; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByClass; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRecordsByClass",
       "target_owner": "people-directory"
@@ -14555,7 +14555,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByClass; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByClass; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRecordsByClass",
       "target_owner": "people-directory"
@@ -14565,7 +14565,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.CareEndedOn",
       "target_owner": "people-directory"
@@ -14575,7 +14575,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.IsAlumnus",
       "target_owner": "people-directory"
@@ -14585,7 +14585,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByGroup; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByGroup; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRecordsByGroup",
       "target_owner": "people-directory"
@@ -14595,7 +14595,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByGroup; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByGroup; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRecordsByGroup",
       "target_owner": "people-directory"
@@ -14605,7 +14605,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.CareEndedOn",
       "target_owner": "people-directory"
@@ -14615,7 +14615,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByGroup",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.IsAlumnus",
       "target_owner": "people-directory"
@@ -14625,7 +14625,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentRecordsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRecordsByID",
       "target_owner": "people-directory"
@@ -14635,7 +14635,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRecordsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRecordsByID",
       "target_owner": "people-directory"
@@ -14645,7 +14645,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.CareEndedOn",
       "target_owner": "people-directory"
@@ -14655,7 +14655,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.ByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.IsAlumnus",
       "target_owner": "people-directory"
@@ -14666,7 +14666,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByID",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.FindStudentRecordForMutation; modules/peopledirectory.Capability (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.FindStudentRecordForMutation; modules/peopledirectory.Capability (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecordForMutation",
       "target_owner": "people-directory"
@@ -14677,7 +14677,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByID",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.FindStudentRecordForMutation; modules/peopledirectory.Owner (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.FindStudentRecordForMutation; modules/peopledirectory.Owner (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecordForMutation",
       "target_owner": "people-directory"
@@ -14687,7 +14687,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.CareEndedOn",
       "target_owner": "people-directory"
@@ -14697,7 +14697,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.IsAlumnus",
       "target_owner": "people-directory"
@@ -14708,7 +14708,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByIDs",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.LockStudentRecordsByID; modules/peopledirectory.Capability (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.LockStudentRecordsByID; modules/peopledirectory.Capability (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentRecordsByID",
       "target_owner": "people-directory"
@@ -14719,7 +14719,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByIDs",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.LockStudentRecordsByID; modules/peopledirectory.Owner (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.LockStudentRecordsByID; modules/peopledirectory.Owner (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentRecordsByID",
       "target_owner": "people-directory"
@@ -14729,7 +14729,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.CareEndedOn; modules/peopledirectory/student_directory.go:82. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.CareEndedOn",
       "target_owner": "people-directory"
@@ -14739,7 +14739,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.LockByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentRecord.IsAlumnus; modules/peopledirectory/student_directory.go:78. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecord.IsAlumnus",
       "target_owner": "people-directory"
@@ -14749,7 +14749,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.Name",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.FindPerson; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.FindPerson; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindPerson",
       "target_owner": "people-directory"
@@ -14759,7 +14759,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.Name",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindPerson; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindPerson; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindPerson",
       "target_owner": "people-directory"
@@ -14769,7 +14769,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalBulkStudents.Name",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Person.FullName; modules/peopledirectory/peopledirectory.go:51. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Person.FullName; modules/peopledirectory/peopledirectory.go:51. May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Person.FullName",
       "target_owner": "people-directory"
@@ -14822,7 +14822,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalRuleStudents.LockStudent",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.FindStudentRecordForMutation; modules/peopledirectory.Capability (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.FindStudentRecordForMutation; modules/peopledirectory.Capability (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecordForMutation",
       "target_owner": "people-directory"
@@ -14833,7 +14833,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalRuleStudents.LockStudent",
-      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.FindStudentRecordForMutation; modules/peopledirectory.Owner (supplied contract method). ",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.FindStudentRecordForMutation; modules/peopledirectory.Owner (supplied contract method).  The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecordForMutation",
       "target_owner": "people-directory"
@@ -14843,7 +14843,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalRuleStudents.SchoolClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.FindStudentRecord; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.FindStudentRecord; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecord",
       "target_owner": "people-directory"
@@ -14853,7 +14853,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ArrivalRuleStudents.SchoolClass",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindStudentRecord; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindStudentRecord; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The mapping also treats a child without an OGS place as care ended (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecord",
       "target_owner": "people-directory"
@@ -16749,19 +16749,19 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.CareStudentDirectory.FindCareStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StudentRepository.FindByIDs; modules/peopledirectory/ports/repository_contracts.go:87. Also maps School Membership's first-care fact (ADR 0166) and care gap (ADR 0180). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StudentRepository.FindByIDs; modules/peopledirectory/ports/repository_contracts.go:87. Also maps School Membership's first-care fact (ADR 0166), care gap (ADR 0180) and mark of a child without an OGS place (ADR 0282). May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByIDs",
       "target_owner": "people-directory"
     },
     {
       "adr": "0067",
-      "approval_adr": "0180",
+      "approval_adr": "0282",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareStudents.FindCareStudents",
       "classification": "E2",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.CareStudentDirectory.FindCareStudents",
-      "reason": "E2 named care confirm/cancel/due-effects protocol: class(shared), recurrence, sorted children, locked preview/removal ledger and conditional membership command; preserve current transaction and failures. Hand row 6 and ADR 0067 E2. Target modules/peopledirectory/ports.StudentRepository.FindByIDsForUpdate; modules/peopledirectory/ports/repository_contracts.go:213. The binding also maps School Membership's first-care fact (ADR 0166) and care gap; lock order and transaction unchanged (ADR 0180).",
+      "reason": "E2 named care confirm/cancel/due-effects protocol: class(shared), recurrence, sorted children, locked preview/removal ledger and conditional membership command; preserve current transaction and failures. Hand row 6 and ADR 0067 E2. Target modules/peopledirectory/ports.StudentRepository.FindByIDsForUpdate; modules/peopledirectory/ports/repository_contracts.go:213. The binding also maps School Membership's first-care fact (ADR 0166), care gap (ADR 0180) and mark of a child without an OGS place; lock order and transaction unchanged (ADR 0282).",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByIDsForUpdate",
       "target_owner": "people-directory"

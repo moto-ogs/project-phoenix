@@ -38,6 +38,9 @@ type StudentRecord struct {
 
 	EnrolledFrom  *calendar.Date
 	EnrolledUntil *calendar.Date
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803). It never checks in at the OGS; its status days still apply.
+	WithoutCarePlace bool
 
 	Sick         *bool
 	SickSince    *time.Time
@@ -54,6 +57,20 @@ func (s *StudentRecord) IsAlumnus() bool {
 // given day; the lifecycle status may still lag behind the scheduler.
 func (s *StudentRecord) CareEndedOn(day calendar.Date) bool {
 	return s != nil && s.EnrolledUntil != nil && day.After(*s.EnrolledUntil)
+}
+
+// OGSAdmissionRefused reports why the child cannot enter the OGS on day, or
+// nil: a graduate, a child whose care has ended, or a child without an OGS
+// place (#4803), which refuses as care ended so every existing mapping,
+// including the /api/iot/* contract, answers it unchanged.
+func (s *StudentRecord) OGSAdmissionRefused(day calendar.Date) error {
+	switch {
+	case s.IsAlumnus():
+		return ErrStudentGraduated
+	case s.CareEndedOn(day), s != nil && s.WithoutCarePlace:
+		return ErrStudentCareEnded
+	}
+	return nil
 }
 
 // StatusDayStudents supports the status-day write transaction: the locked

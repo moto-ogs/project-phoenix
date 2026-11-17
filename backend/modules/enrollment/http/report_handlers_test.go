@@ -385,3 +385,22 @@ func TestClassRosterWeeklyCellSchedulePickupPriority(t *testing.T) {
 		})
 	}
 }
+
+// TestClassRosterExportMarksChildrenWithoutCarePlace marks a child without
+// an OGS place (#4803) in the exported class list like a class list entry:
+// it has no OGS care, so it must not read as an OGS child without times.
+func TestClassRosterExportMarksChildrenWithoutCarePlace(t *testing.T) {
+	t.Parallel()
+	report := &capability.ClassRosterReport{Rows: []capability.ClassRosterRow{
+		{FirstName: "Eintrag", LastName: "Liste", SchoolClass: "1a", ListEntry: true},
+		{FirstName: "Ohne", LastName: "Platz", SchoolClass: "1a", WithoutCarePlace: true, StudentID: 7},
+	}}
+
+	doc := buildClassRosterTableDocument(report)
+
+	require.Len(t, doc.Rows, 2)
+	entryName := doc.Rows[0].Values[lists.ColumnName]
+	childName := doc.Rows[1].Values[lists.ColumnName]
+	assert.NotEqual(t, "Eintrag Liste", entryName, "the class list entry carries the marker")
+	assert.Equal(t, strings.Replace(entryName, "Eintrag Liste", "Ohne Platz", 1), childName)
+}

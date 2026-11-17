@@ -42,15 +42,13 @@ func (s *service) ensureStudentCheckinAllowed(ctx context.Context, studentID int
 }
 
 func (s *service) checkStudentAdmission(student *StudentRecord) (*StudentRecord, error) {
-	if student.IsAlumnus() {
-		return nil, ErrStudentGraduated
-	}
-	// A child whose care ended yesterday cannot start a new day here (#2487).
-	// Checked against the enrollment interval rather than the lifecycle
+	// A graduate, a child whose care ended yesterday (#2487) and a child
+	// without an OGS place (#4803) cannot start a day here. The end of care
+	// is checked against the enrollment interval rather than the lifecycle
 	// status: the status only follows once the scheduler ticks, and the kiosk
 	// must not let a departed child in during that window.
-	if student.CareEndedOn(s.todayDate()) {
-		return nil, ErrStudentCareEnded
+	if err := student.OGSAdmissionRefused(s.todayDate()); err != nil {
+		return nil, err
 	}
 	return student, nil
 }

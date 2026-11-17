@@ -99,6 +99,31 @@ describe("StudentRow", () => {
     expect(screen.queryByText("Andere Abholzeit")).not.toBeInTheDocument();
   });
 
+  it("zeigt ohne Betreuungsplatz weiterhin Tagesstatus und Vormittagsanwesenheit", () => {
+    render(
+      <ul>
+        <StudentRow
+          row={row({
+            without_care_place: true,
+            registered: false,
+            stays_today: false,
+            offerings: [],
+            status: "sick",
+            morning_attendance: { status: "absent", source: "report" },
+          })}
+          enrollmentKnown
+          now={NOW}
+          morning={{ draft: {} }}
+        />
+      </ul>,
+    );
+
+    expect(screen.getByText("Keine Betreuung")).toBeInTheDocument();
+    expect(screen.getByText("Krank")).toBeInTheDocument();
+    expect(screen.getByText("Vormittag: Fehlt")).toBeInTheDocument();
+    expect(screen.queryByText("keine OGS-Anmeldung")).not.toBeInTheDocument();
+  });
+
   it("bleibt reine Anzeige ohne Bedienelemente", () => {
     // Missverständnis-Check: Änderungen macht das OGS-Team, nicht die
     // Lehrkraft an dieser Zeile.

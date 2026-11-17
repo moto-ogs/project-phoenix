@@ -65,6 +65,8 @@ func (b enrollmentRosterStudents) ListClassRoster(ctx context.Context, schoolCla
 			ID: student.ID, PersonID: student.PersonID, SchoolClass: student.SchoolClass, GroupID: student.GroupID,
 			AllowedDepartureModes: student.AllowedDepartureModes, DepartureDays: student.DepartureDays,
 			DepartureCompanionNote: student.DepartureCompanionNote,
+			WithoutCarePlace:       student.WithoutCarePlace, Departed: student.LeftSchool(),
+			MemberFrom: student.ClassMemberFrom(), MemberUntil: student.EnrolledUntil,
 		})
 	}
 	return out, nil

@@ -61,6 +61,9 @@ const (
 	CareBlockerAlreadyEnded  = "Die Betreuung dieses Kindes ist bereits beendet."
 	CareBlockerBeforeStart   = "Die Betreuung dieses Kindes beginnt erst am %s. Bitte wählen Sie einen späteren letzten Betreuungstag."
 	CareBlockerResumeMissing = "Für dieses Kind ist keine beendete Betreuung hinterlegt."
+	// CareBlockerWithoutCarePlace keeps a child without an OGS place
+	// (#4803) out of an OGS care exit: it never had OGS care.
+	CareBlockerWithoutCarePlace = "Dieses Kind hat keinen Platz in der OGS. Es gibt keine Betreuung zu beenden."
 )
 
 // CareWithdrawalDateError is a client-correctable retroactive-date conflict

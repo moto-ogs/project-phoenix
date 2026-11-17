@@ -66,3 +66,39 @@ func TestRosterDateSetKeepsPointMembershipAndTenantScope(t *testing.T) {
 		assert.Equal(t, foreign.ID, batch[date][0].Record.ID)
 	}
 }
+
+// TestRosterWithoutCarePlace keeps a child without an OGS place (#4803) off
+// the OGS care range read that meals and statistics use, while the live
+// school roster that the parent conference and the calendar read keeps it,
+// marked, so the kiosk can leave it out.
+func TestRosterWithoutCarePlace(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, err := peopleCompose.New(peopleCompose.Dependencies{
+		DB: db, StudentDirectory: testpkg.StudentDirectory{}, Observe: func(peopleCompose.Observation) {},
+	}, nil)
+	require.NoError(t, err)
+	ctx := testpkg.Ctx(t)
+	withPlace := testpkg.CreateTestStudent(t, db, "Mit", "Platz", "2a")
+	withoutPlace := testpkg.CreateTestStudent(t, db, "Ohne", "Platz", "2a")
+	testpkg.MarkTestStudentWithoutCarePlace(t, db, withoutPlace.ID)
+
+	care, err := module.ListStudentRosterOverlapping(ctx, "2026-09-07", "2026-09-11", "2026-09-08")
+	require.NoError(t, err)
+	careIDs := map[int64]bool{}
+	for _, entry := range care {
+		careIDs[entry.Record.ID] = true
+	}
+	assert.True(t, careIDs[withPlace.ID])
+	assert.False(t, careIDs[withoutPlace.ID], "a child without an OGS place has no OGS care days")
+
+	live, err := module.ListStudentRoster(ctx, "2026-09-08")
+	require.NoError(t, err)
+	marked := map[int64]bool{}
+	for _, entry := range live {
+		marked[entry.Record.ID] = entry.Record.WithoutCarePlace
+	}
+	require.Contains(t, marked, withoutPlace.ID, "the school roster keeps the child of the class")
+	assert.True(t, marked[withoutPlace.ID])
+	assert.False(t, marked[withPlace.ID])
+}

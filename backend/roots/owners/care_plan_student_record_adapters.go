@@ -101,17 +101,18 @@ func StudentRecord(row *peopleValues.StudentState) *studentpresence.StudentRecor
 		return nil
 	}
 	return &studentpresence.StudentRecord{
-		ID:            row.ID,
-		TenantID:      row.TenantID,
-		PersonID:      row.PersonID,
-		GroupID:       row.GroupID,
-		SchoolClass:   row.SchoolClass,
-		Lifecycle:     studentLifecycle(row.Status),
-		EnrolledFrom:  row.EnrolledFrom,
-		EnrolledUntil: row.EnrolledUntil,
-		Sick:          row.Sick,
-		SickSince:     row.SickSince,
-		Excused:       row.Excused,
-		ExcusedSince:  row.ExcusedSince,
+		ID:               row.ID,
+		TenantID:         row.TenantID,
+		PersonID:         row.PersonID,
+		GroupID:          row.GroupID,
+		SchoolClass:      row.SchoolClass,
+		Lifecycle:        studentLifecycle(row.Status),
+		EnrolledFrom:     row.EnrolledFrom,
+		EnrolledUntil:    row.EnrolledUntil,
+		WithoutCarePlace: row.WithoutCarePlace,
+		Sick:             row.Sick,
+		SickSince:        row.SickSince,
+		Excused:          row.Excused,
+		ExcusedSince:     row.ExcusedSince,
 	}
 }

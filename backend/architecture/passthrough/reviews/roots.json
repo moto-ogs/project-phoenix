@@ -5022,11 +5022,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/phaseResponseRoster.ListRunningStudents",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/pickupAdjustmentStudents.LockStudent",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

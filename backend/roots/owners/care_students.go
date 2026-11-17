@@ -72,7 +72,8 @@ func (s CareStudents) FindCareStudents(ctx context.Context, studentIDs []int64, 
 			ID: row.ID, PersonID: row.PersonID, SchoolClass: row.SchoolClass, Status: string(row.Status),
 			EnrolledFrom: row.EnrolledFrom, EnrolledUntil: row.EnrolledUntil, FirstCareFrom: row.FirstCareFrom,
 			CarePausedAfter: row.CarePausedAfter, CareResumedFrom: row.CareResumedFrom,
-			UpdatedAt: row.UpdatedAt,
+			WithoutCarePlace: row.WithoutCarePlace,
+			UpdatedAt:        row.UpdatedAt,
 		}
 	}
 	return result, nil
