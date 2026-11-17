@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
 
 import { ButtonLink } from "./button";
 import { useInOverlay } from "./in-overlay";
@@ -36,6 +36,20 @@ export function ErrorFixProvider({
     <ErrorFixContext.Provider value={resolve}>
       {children}
     </ErrorFixContext.Provider>
+  );
+}
+
+/**
+ * The target of the refusal `code` for this viewer, else `null`. For a
+ * surface that cannot hold a link, such as a toast (#7092).
+ */
+export function useErrorFixTarget(): (
+  code: string | undefined,
+) => ErrorFixTarget | null {
+  const resolve = useContext(ErrorFixContext);
+  return useCallback(
+    (code: string | undefined) => (code && resolve ? resolve(code) : null),
+    [resolve],
   );
 }
 

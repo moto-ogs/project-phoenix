@@ -6,6 +6,8 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { ErrorFixProvider } from "~/components/ui/error-fix-slot";
+import { InOverlayContext } from "~/components/ui/in-overlay";
 import { Input } from "~/components/ui/input";
 import {
   loginUrl,
@@ -33,6 +35,60 @@ function TestForm({ error }: { error: ApiError }) {
 }
 
 describe("useApiErrorDisplay", () => {
+  // #7092: a refusal fixed elsewhere offers the way there in the toast.
+  it("leads a refusal from a dialog to where it is fixed, in a new tab", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    function TestAction() {
+      const display = useApiErrorDisplay();
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            display.show(
+              new ApiError("not ready", 409, {
+                code: "parent_billing.datev_not_ready",
+              }),
+              { object: "Die DATEV-Datei" },
+            )
+          }
+        >
+          Herunterladen
+        </button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <ErrorFixProvider
+          resolve={(code) =>
+            code === "parent_billing.datev_not_ready"
+              ? {
+                  href: "/einstellungen?bereich=datev",
+                  label: "DATEV-Werte eintragen",
+                  tooltip: "Öffnet die DATEV-Werte in den Einstellungen.",
+                }
+              : null
+          }
+        >
+          <InOverlayContext.Provider value>
+            <TestAction />
+          </InOverlayContext.Provider>
+        </ErrorFixProvider>
+      </ToastProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Herunterladen" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "DATEV-Werte eintragen" }),
+    );
+
+    expect(open).toHaveBeenCalledWith(
+      "/einstellungen?bereich=datev",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    open.mockRestore();
+  });
+
   it("shows a message the screen found itself as a lasting error toast", async () => {
     vi.useFakeTimers();
     try {

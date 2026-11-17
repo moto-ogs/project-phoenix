@@ -42,6 +42,14 @@ const GRADE_COLLECTION: FixTarget = {
   permitted: updatesSettings,
 };
 
+/** The Regeltermine of the care plan; the error names the one meant. */
+const TEMPLATES: FixTarget = {
+  path: "/betreuungsplan?view=serien",
+  label: "Zu den Regelterminen",
+  tooltip: "Öffnet die Regeltermine im Betreuungsplan.",
+  permitted: holds("schedules:manage"),
+};
+
 /**
  * Where the school fixes a refusal with a known code (#7092). One table, not
  * a link per page: every `LoadErrorAlert` and `FormErrorAlert` of the staff
@@ -71,20 +79,12 @@ const ERROR_FIX_TARGETS: Partial<Record<ErrorCode, FixTarget>> = {
     tooltip: "Öffnet die Seite Abrechnung mit den fehlenden Angaben.",
     permitted: leadsSchool,
   },
-  // A Regeltermin changes only in the plan, with `schedules:manage`.
-  "timetable.activity_template_protected": {
-    path: "/betreuungsplan",
-    label: "Zum Betreuungsplan",
-    tooltip: "Öffnet den Betreuungsplan, in dem Sie Regeltermine ändern.",
-    permitted: holds("schedules:manage"),
-  },
-  // Shift series end in the Dienstplan, with `time_tracking:manage`.
-  "timetable.calendar_period_shift_series_conflict": {
-    path: "/dienstplan",
-    label: "Zum Dienstplan",
-    tooltip: "Öffnet den Dienstplan, in dem Sie Schichtserien beenden.",
-    permitted: holds("time_tracking:manage"),
-  },
+  // A Regeltermin and its „Angebote als Quelle“ change only in the plan.
+  "timetable.activity_template_protected": TEMPLATES,
+  "enrollment.care_offering_template_mixed_phases": TEMPLATES,
+  "enrollment.care_offering_template_no_active_source": TEMPLATES,
+  "enrollment.care_offering_template_outside_period": TEMPLATES,
+  "enrollment.care_offering_template_source_invalid": TEMPLATES,
 };
 
 /** Gives the kit's error alerts the link to where a refusal is fixed. */
