@@ -128,5 +128,5 @@
   "export_recipient_not_found": "This recipient no longer exists. Please reload the page.",
   "export_recipient_name_taken": "A recipient with this name already exists. Please choose another name.",
   "export_formats_invalid": "The assignment was not saved. Please reload the page and try again.",
-  "letterhead_missing": "{object} could not be changed. Please check its current status."
+  "letterhead_missing": "The sender in the letterhead is missing. No invoices or notices are created without the provider's name and address. Please add it under “Letterhead and templates”."
 }

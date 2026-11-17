@@ -128,5 +128,5 @@
   "export_recipient_not_found": "This recipient no longer exists. Please reload the page.",
   "export_recipient_name_taken": "A recipient with this name already exists. Please choose another name.",
   "export_formats_invalid": "The assignment was not saved. Please reload the page and try again.",
-  "letterhead_missing": "{object} değiştirilemedi. Güncel durumu kontrol edin."
+  "letterhead_missing": "Antette gönderen bilgisi eksik. Sağlayıcının adı ve adresi olmadan fatura veya bildirim oluşturulmaz. Bunları „Antet ve şablonlar“ bölümüne ekleyin."
 }

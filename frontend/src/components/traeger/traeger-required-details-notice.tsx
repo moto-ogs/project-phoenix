@@ -11,14 +11,14 @@ import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { hasPermission } from "~/lib/auth-utils";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/portal-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchTraegerRequiredDetails,
   type TraegerRequiredDetail,
 } from "~/lib/traeger-required-details-api";
 import { TRAEGER_ROLE_LABELS, type TraegerRole } from "~/lib/traeger-roles";
 import { traegerPath } from "~/lib/traeger-url";
+import { useTraegerResource } from "./use-traeger-resource";
 
 const logger = createLogger({ component: "TraegerRequiredDetailsNotice" });
 
@@ -80,19 +80,20 @@ const PAGES = [
  */
 export function TraegerRequiredDetailsNotice() {
   const { data: session } = useSession();
-  const { data, error } = useSWRAuth(
-    session?.user.scope === "org" ? traegerKeys.requiredDetails() : null,
+  const { data, failure } = useTraegerResource(
+    traegerKeys.requiredDetails(),
     fetchTraegerRequiredDetails,
+    "die Pflichtangaben",
   );
   useEffect(() => {
     // The hint only adds to the page; the school list carries the page's
     // own load error. A failed read leaves the hint out and is logged.
-    if (!error) return;
+    if (!failure) return;
     logger.warn("traeger_required_details_load_failed", {
-      error: error instanceof Error ? error.message : String(error),
+      error: failure instanceof Error ? failure.message : String(failure),
     });
-  }, [error]);
-  if (error || !data || data.length === 0) return null;
+  }, [failure]);
+  if (failure || !data || data.length === 0) return null;
   const can = (detail: TraegerRequiredDetail) =>
     hasPermission(session ?? null, DETAILS[detail].right);
   const links = PAGES.filter((page) =>

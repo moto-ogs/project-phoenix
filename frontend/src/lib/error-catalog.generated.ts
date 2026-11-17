@@ -2716,6 +2716,8 @@ export const ERROR_CATALOG = {
         "The fee cannot be calculated for these weeks. Please reload the page.",
       "parent_billing.letter_mail_block_unreadable":
         "We cannot check right now whether this address is blocked. Please try again later.",
+      "parent_billing.letterhead_missing":
+        "The sender in the letterhead is missing. No invoices or notices are created without the provider's name and address. Please add it under “Letterhead and templates”.",
       "parent_billing.online_mandate_disabled":
         "Your provider does not accept the direct debit mandate in the app right now.",
       "parent_billing.parent_document_not_found":
@@ -3413,6 +3415,8 @@ export const ERROR_CATALOG = {
         "Не удаётся рассчитать взнос за эти недели. Пожалуйста, обновите страницу.",
       "parent_billing.letter_mail_block_unreadable":
         "Сейчас нельзя проверить, заблокирован ли этот адрес. Попробуйте позже.",
+      "parent_billing.letterhead_missing":
+        "В бланке отсутствуют данные отправителя. Без названия и адреса организации счета и решения не создаются. Добавьте их в разделе «Бланк и шаблоны».",
       "parent_billing.online_mandate_disabled":
         "Ваш попечитель сейчас не принимает мандат на прямое дебетование в приложении.",
       "parent_billing.parent_document_not_found":
@@ -4047,6 +4051,8 @@ export const ERROR_CATALOG = {
         "Pagesa për këto javë nuk mund të llogaritet. Ju lutemi ringarkoni faqen.",
       "parent_billing.letter_mail_block_unreadable":
         "Tani nuk mund të kontrollohet nëse kjo adresë është e bllokuar. Ju lutemi provoni përsëri më vonë.",
+      "parent_billing.letterhead_missing":
+        "Mungon dërguesi në kokën e letrës. Pa emrin dhe adresën e ofruesit nuk krijohen fatura ose vendime. Shtojini te „Koka e letrës dhe modelet“.",
       "parent_billing.online_mandate_disabled":
         "Ofruesi juaj nuk e pranon tani mandatin e debitimit direkt në aplikacion.",
       "parent_billing.parent_document_not_found":
@@ -4670,6 +4676,8 @@ export const ERROR_CATALOG = {
         "Nie można obliczyć opłaty za te tygodnie. Proszę odświeżyć stronę.",
       "parent_billing.letter_mail_block_unreadable":
         "Nie można teraz sprawdzić, czy ten adres jest zablokowany. Spróbuj ponownie później.",
+      "parent_billing.letterhead_missing":
+        "Brakuje nadawcy w nagłówku. Bez nazwy i adresu organizatora nie powstaną faktury ani decyzje. Dodaj te dane w sekcji „Nagłówek i szablony”.",
       "parent_billing.online_mandate_disabled":
         "Twój organ prowadzący nie przyjmuje teraz upoważnienia do polecenia zapłaty w aplikacji.",
       "parent_billing.parent_document_not_found":
@@ -5297,6 +5305,8 @@ export const ERROR_CATALOG = {
         "Bu haftalar için ücret hesaplanamıyor. Lütfen sayfayı yeniden yükleyin.",
       "parent_billing.letter_mail_block_unreadable":
         "Bu adresin engelli olup olmadığı şu anda kontrol edilemiyor. Lütfen daha sonra tekrar deneyin.",
+      "parent_billing.letterhead_missing":
+        "Antette gönderen bilgisi eksik. Sağlayıcının adı ve adresi olmadan fatura veya bildirim oluşturulmaz. Bunları „Antet ve şablonlar“ bölümüne ekleyin.",
       "parent_billing.online_mandate_disabled":
         "Kurumunuz şu anda otomatik ödeme talimatını uygulamada kabul etmiyor.",
       "parent_billing.parent_document_not_found":
@@ -5918,6 +5928,8 @@ export const ERROR_CATALOG = {
         "Не вдається розрахувати внесок за ці тижні. Будь ласка, оновіть сторінку.",
       "parent_billing.letter_mail_block_unreadable":
         "Зараз неможливо перевірити, чи заблоковано цю адресу. Спробуйте пізніше.",
+      "parent_billing.letterhead_missing":
+        "У бланку відсутні дані відправника. Без назви та адреси організатора рахунки й рішення не створюються. Додайте їх у розділі «Бланк та шаблони».",
       "parent_billing.online_mandate_disabled":
         "Ваш засновник зараз не приймає мандат на пряме дебетування в застосунку.",
       "parent_billing.parent_document_not_found":
