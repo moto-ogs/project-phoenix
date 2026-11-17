@@ -2,22 +2,41 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
+  render as rtlRender,
   screen,
   within,
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactElement, ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
 import { setTestClock } from "~/test/clock";
+
+function SwrProviders({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: SwrProviders });
+}
 
 // The date fields moved from native inputs to the kit picker; this stub keeps
 // them settable via fireEvent.change and forwards min/max so the bound
 // assertions below still pin what the component computes. Imported inside the
 // factory because vi.mock is hoisted above the imports.
-// The weekday preview of a sourced series reads through the session-scoped
-// SWR hooks; without a session it reads nothing, as under the SWR mock.
+// The form reads its lists, probes and offering data through the shared,
+// session-scoped cache (~/lib/swr): a signed-in session and a fresh cache
+// per render, without automatic retries.
+vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: null, status: "unauthenticated" }),
+  useSession: () => ({
+    data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
 }));
 vi.mock("~/components/ui/date-picker", async () =>
   (await import("~/test/mocks/date-picker")).datePickerModuleMock(),
@@ -118,6 +137,9 @@ vi.mock("~/lib/timetable-api", () => ({
     // its content is covered in step-personal-kinder.test.tsx.
     getOfferingPreview: () =>
       Promise.resolve({ from: "2026-09-09", weekdays: [], segments: [] }),
+    // The offering suggestion of a planned roster (#5104) is covered in
+    // offering-suggestion tests; here it finds nothing.
+    getOfferingSuggestion: () => Promise.resolve(null),
   },
 }));
 
@@ -282,26 +304,9 @@ function deferred<T>() {
 }
 
 function setupRefs() {
-  vi.stubGlobal(
-    "fetch",
-    vi
-      .fn()
-      .mockResolvedValueOnce({
-        json: async () => ({
-          data: [{ id: 3, name: "Mensa", building: "Haus A" }],
-        }),
-      })
-      .mockResolvedValueOnce({
-        json: async () => ({
-          data: [{ id: "2", name: "AG" }],
-        }),
-      })
-      .mockResolvedValueOnce({
-        json: async () => ({
-          data: [{ id: 31, name: "Klasse 1a" }],
-        }),
-      }),
-  );
+  // Answers by address: the form reads rooms, groups and categories as
+  // separate cache entries, in no fixed order.
+  setupRepeatableReferenceFetch();
   mockFetchStudents.mockResolvedValue({
     students: [
       {

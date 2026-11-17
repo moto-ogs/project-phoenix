@@ -157,6 +157,13 @@ export const tenantDailyKeys = {
   planStudents: () => "timetable-student-list",
   /** Gruppen des Gruppenfilters. */
   plannerGroups: () => "timetable-filter-groups",
+  /**
+   * Kategorien des Terminformulars (`fetchPlannerActivityCategories`). Die
+   * Rohantwort des Endpunkts, nicht die Abbildung von `activityCategories`.
+   */
+  plannerCategories: () => "planner-activity-categories",
+  /** Alle Kinder als Auswahl des Terminformulars (`fetchAllStudentOptions`). */
+  plannerStudentOptions: () => "planner-student-options",
   /** Bestätigte Konflikte des Plans. */
   conflictAcks: () => "timetable-conflict-acks",
   /** Regeltermine eines Planungszeitraums. */
