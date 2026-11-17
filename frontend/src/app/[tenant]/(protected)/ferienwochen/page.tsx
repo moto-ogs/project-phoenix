@@ -330,7 +330,7 @@ export default function FerienwochenPage() {
     ? undefined
     : (weeks.data?.find((week) => week.id === chosenWeek) ?? weeks.data?.[0]);
   const participants = useSWRAuth(
-    selectedWeek ? `holiday-participants:${selectedWeek.id}` : null,
+    selectedWeek ? holidayKeys.participants(selectedWeek.id) : null,
     () => fetchHolidayParticipants(selectedWeek?.id ?? ""),
     // A week switch must not show the previous week's children under the new
     // week's heading while its list loads.
