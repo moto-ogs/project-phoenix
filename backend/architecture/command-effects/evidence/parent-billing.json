@@ -186,7 +186,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
-      "binding_digest": "d97712a8e7ebf74540460a49a20d7e83",
+      "binding_digest": "5de6f04e51502ec555a724764360941d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
+      "source_owner": "parent-billing",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerBools",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
+      "binding_digest": "4892e94c88e217708aaf39cc14a23b2d",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
@@ -194,7 +202,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
-      "binding_digest": "c37abf60d16a3d185d0c3130dd414f9c",
+      "binding_digest": "07fcc1db6e994ece9a921c6dc9d3f8a4",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerDocumentTemplates.Current",
@@ -202,7 +210,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
-      "binding_digest": "8a95a3cad4056b7e6c88dd18cbd364a8",
+      "binding_digest": "903ae2479b69a531dd8e79afa203eae0",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.LogoImage",
@@ -210,7 +218,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
-      "binding_digest": "e16f74bf5bc76bfb4b03941741c22f85",
+      "binding_digest": "68711e8c9facb2fdff8230b5afec51ed",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.Profile",
