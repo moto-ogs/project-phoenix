@@ -20,10 +20,11 @@ const TRIGGER_DISABLED_CLASS = "border-gray-200";
 const TRIGGER_INVALID_CLASS = "border-moto-red! bg-moto-red/5!";
 // Between the arrows of a framed group (#7300): frame, radius and surface come
 // from the group. The trigger fills the group's height and tints on hover like
-// its segments (`Button variant="segment"`). The focus outline sits inside the
-// trigger, where the group's `overflow-hidden` cannot clip it.
+// its segments (`Button variant="segment"`). By finger the text is 16 px like
+// every kit field. The focus outline sits inside the trigger, where the
+// group's `overflow-hidden` cannot clip it.
 const TRIGGER_EMBEDDED_CLASS =
-  "h-full rounded-none focus-visible:-outline-offset-2";
+  "h-full rounded-none pointer-coarse:text-base focus-visible:-outline-offset-2";
 const TRIGGER_EMBEDDED_ENABLED_CLASS = "hover:bg-gray-100 active:bg-gray-200";
 const TRIGGER_EMBEDDED_INVALID_CLASS =
   "bg-moto-red/5 ring-1 ring-moto-red ring-inset";

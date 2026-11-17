@@ -60,6 +60,8 @@ describe("CustomSelect", () => {
     expect(trigger).toHaveAttribute("data-control-part");
     // The group clips with overflow-hidden: the focus outline stays inside.
     expect(classes).toContain("focus-visible:-outline-offset-2");
+    // By finger 16-px text, like the select outside a group.
+    expect(classes).toContain("pointer-coarse:text-base");
   });
 
   it("keeps the field frame outside a group", () => {
