@@ -40,7 +40,9 @@ var (
 // auth.roles: a caterer holds no permission at any school.
 const CatererRoleName = "caterer"
 
-// CatererInvitationLifetime is how long a school's invitation stays open.
+// CatererInvitationLifetime is how long a school's invitation stays open,
+// counted on the database clock that auth.create_invited_caterer checks
+// (ADR 0285).
 const CatererInvitationLifetime = 14 * 24 * time.Hour
 
 // Caterer is a caterer business.
@@ -64,6 +66,10 @@ type CatererInvitation struct {
 	AcceptedAccountID *int64
 	RevokedAt         *time.Time
 	CreatedAt         time.Time
+	// ReadAt is the database time of the statement that read the
+	// invitation (ADR 0285): the instant its expiry is judged against. It
+	// is zero on a row the caller wrote.
+	ReadAt time.Time
 }
 
 // CatererInvitationRequest is what a school enters to invite its caterer.
@@ -86,7 +92,8 @@ func (r CatererInvitationRequest) Normalized() (CatererInvitationRequest, error)
 	return r, nil
 }
 
-// Redeemable reports why an invitation can no longer be accepted.
+// Redeemable reports why an invitation can no longer be accepted at the
+// instant now of the database clock.
 func (i CatererInvitation) Redeemable(now time.Time) error {
 	switch {
 	case i.RevokedAt != nil:

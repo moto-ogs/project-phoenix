@@ -52,14 +52,16 @@ type inviteRequest struct {
 	DeliveryAddress string `json:"delivery_address"`
 }
 
-func invitationResponse(invitation identityaccess.CatererInvitation, now time.Time) InvitationResponse {
+// invitationResponse names the invitation's status. Identity & Access
+// judged the expiry on the database clock that stamps it (ADR 0285).
+func invitationResponse(invitation identityaccess.CatererInvitation) InvitationResponse {
 	status := "open"
 	switch {
 	case invitation.AcceptedAt != nil:
 		status = "accepted"
 	case invitation.RevokedAt != nil:
 		status = "revoked"
-	case !invitation.ExpiresAt.After(now):
+	case invitation.Expired:
 		status = "expired"
 	}
 	return InvitationResponse{
@@ -69,10 +71,10 @@ func invitationResponse(invitation identityaccess.CatererInvitation, now time.Ti
 	}
 }
 
-func schoolCatererResponse(caterer catererportal.SchoolCaterer, now time.Time) SchoolCatererResponse {
+func schoolCatererResponse(caterer catererportal.SchoolCaterer) SchoolCatererResponse {
 	response := SchoolCatererResponse{Invitations: make([]InvitationResponse, 0, len(caterer.Invitations))}
 	for _, invitation := range caterer.Invitations {
-		item := invitationResponse(invitation, now)
+		item := invitationResponse(invitation)
 		mail := caterer.InvitationMail[invitation.ID]
 		item.MailOutcome, item.AddressMark, item.ProviderBlock = mail.Outcome, mail.AddressMark, mail.ProviderBlock
 		response.Invitations = append(response.Invitations, item)
@@ -92,7 +94,7 @@ func (rs *Resource) getSchoolCaterer(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, schoolCatererResponse(caterer, rs.runtime.Now()), "Caterer retrieved")
+	common.Respond(w, r, http.StatusOK, schoolCatererResponse(caterer), "Caterer retrieved")
 }
 
 // inviteCaterer mails the school's invitation to its caterer.
@@ -110,7 +112,7 @@ func (rs *Resource) inviteCaterer(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusCreated, invitationResponse(invitation, rs.runtime.Now()), "Caterer invited")
+	common.Respond(w, r, http.StatusCreated, invitationResponse(invitation), "Caterer invited")
 }
 
 // revokeInvitation takes an open invitation back.
