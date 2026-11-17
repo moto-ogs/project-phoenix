@@ -45,9 +45,9 @@ var moduleSQLClockBudget = map[string]int{
 	"modules/appointments": 2,
 	"modules/auditlog":     17,
 	"modules/carecontract": 2,
-	// Includes the finished student document cleanups: their database function
+	// Only the finished student document cleanups: their database function
 	// guards the cutoff with the database clock (1.15.606).
-	"modules/careplan": 20,
+	"modules/careplan": 1,
 	// Includes the message retention of ADR 0277: the database stamps and
 	// orders messages, so their retention compares on its clock too. And the
 	// draft retention of the surveys (ADR 0281): the update trigger of

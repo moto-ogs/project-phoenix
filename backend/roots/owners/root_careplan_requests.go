@@ -112,7 +112,7 @@ func newPickupChangeTeam(reach careplan.PickupChangeTeamReach, env RootEnvironme
 	if reach == nil {
 		return nil
 	}
-	return carePlanCompose.NewPickupChangeTeam(reach, StudentDirectoryReader(), env.Observe.CarePlan, env.Today)
+	return carePlanCompose.NewPickupChangeTeam(reach, StudentDirectoryReader(), env.Observe.CarePlan, env.Today, env.Now)
 }
 
 // buildOfferingChanges binds the offering-change review over Enrollment's

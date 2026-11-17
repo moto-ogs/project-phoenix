@@ -112,6 +112,8 @@ func (s *Store) UpsertPendingWithdrawal(ctx context.Context, value domain.Withdr
 	if row.TenantID == 0 {
 		row.TenantID = tenantID
 	}
+	now := s.currentTime()
+	row.CreatedAt, row.UpdatedAt = now, now
 	if len(row.SourceOfferings) == 0 {
 		row.SourceOfferings = []careplan.CareExitSourceOffering{}
 	}
@@ -129,7 +131,7 @@ func (s *Store) UpsertPendingWithdrawal(ctx context.Context, value domain.Withdr
 		Set(preserveConfirmedWithdrawalConfirmedRole, preserveConfirmedWithdrawalArgs...).
 		Set(preserveConfirmedWithdrawalConfirmedAt, preserveConfirmedWithdrawalArgs...).
 		Set(preserveConfirmedSourceOfferings, preserveConfirmedWithdrawalArgs...).
-		Set("updated_at = NOW()").
+		Set("updated_at = EXCLUDED.updated_at").
 		Returning("id, created_at, updated_at").
 		Exec(ctx)
 	stats.StatementDuration = time.Since(started)

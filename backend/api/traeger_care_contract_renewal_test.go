@@ -135,7 +135,7 @@ func newRenewalContractFlow(t *testing.T, f careContractFixture) (renewalIntake,
 	})
 	rollovers := owners.NewEnrollmentRollovers(owners.EnrollmentRolloverSources{
 		Now:      time.Now,
-		Bookings: NewEnrollmentCareBookingCommands(carePlanCompose.NewOfferingBookings()),
+		Bookings: NewEnrollmentCareBookingCommands(carePlanCompose.NewOfferingBookings(time.Now)),
 		Phases:   repos.Enrollment(), Requests: repos.Enrollment(), Children: repos.Enrollment(),
 		Catalog: catalog.Catalog, Settings: settings.Settings, ParentsURL: "http://parents.localhost:3000", Logger: slog.Default(),
 	})

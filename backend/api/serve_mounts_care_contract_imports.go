@@ -37,7 +37,7 @@ func NewCareContractImports(organizations HolidayOrganizations, settings Traeger
 	return careContractCompose.NewContractImports(careContractCompose.ImportPorts{
 		Schools:      careContractSchools{organizations: organizations},
 		Applications: careContractApplications{applications: enrollmentCompose.NewContractApplications(securityruntime.Fingerprint)},
-		Bookings:     careContractBookings{offerings: carePlanCompose.NewContractOfferings(), bookings: carePlanCompose.NewOfferingBookings()},
+		Bookings:     careContractBookings{offerings: carePlanCompose.NewContractOfferings(), bookings: carePlanCompose.NewOfferingBookings(now)},
 		Access:       careContractAccessLog{log: accessLog}, Runtime: owners.CareContractRuntime{},
 		Numbers:     owners.NewCareContractDebtorNumbers(parentBillingSettings{settings: settings}, today, now),
 		Fingerprint: securityruntime.Fingerprint,

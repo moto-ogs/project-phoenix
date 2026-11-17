@@ -46,14 +46,12 @@ type (
 	StudentDocumentAudit       = ports.StudentDocumentAudit
 )
 
-// CareLifecycleDependencies wires the care lifecycle over the Care Plan
-// records the same graph composed.
+// CareLifecycleDependencies wire the lifecycle over the graph's Care Plan records.
 type CareLifecycleDependencies struct {
 	DB      *bun.DB
 	Records careplan.Capability
 	Owners  CareLifecycleOwners
-	// LockCareBookingWrites is the transaction-scoped gate authoritative
-	// booking writes take.
+	// LockCareBookingWrites is the transaction gate authoritative booking writes take.
 	LockCareBookingWrites func(context.Context) error
 	// BookingsAuthoritative resolves the school's booking-led care setting.
 	BookingsAuthoritative func(context.Context) (bool, error)
@@ -73,7 +71,7 @@ func NewCareLifecycle(deps CareLifecycleDependencies) (careplan.CareLifecycle, e
 		return nil, errors.New("care lifecycle compose: database and student directory are required")
 	}
 	return application.NewCareLifecycle(application.CareLifecycleDependencies{
-		Owners: deps.Owners, Records: deps.Records, SourceBookings: NewOfferingBookings(),
+		Owners: deps.Owners, Records: deps.Records, SourceBookings: NewOfferingBookings(deps.Now),
 		Directory:             postgres.NewDirectoryStore(postgres.New(postgres.CarePlanDatabase(deps.DB)), deps.StudentDirectory),
 		Unit:                  tenant.NewTransactionRunner().RunInTx,
 		LockCareBookingWrites: deps.LockCareBookingWrites,
@@ -119,19 +117,18 @@ func NewStudentDocuments(deps StudentDocumentDependencies) (application.StudentD
 	return application.StudentDocumentsBinding{StudentDocuments: documents, DocumentFileRecords: application.DocumentFileRecords{Records: deps.Records}}, nil
 }
 
-// ownTenantTransaction runs every command in a transaction of its own for the
-// request's school, committed before the command returns.
+// ownTenantTransaction runs each command in its own school transaction, committed on return.
 func ownTenantTransaction(db *bun.DB) ports.UnitOfWork {
 	return postgres.OwnTenantTransactionBinding(db, tenant.WithTenantTx)
 }
 
 // NewTraegerOfferings builds the Träger care offerings (ADR 0195) in the Träger transaction the caller opens.
-func NewTraegerOfferings() careplan.TraegerOfferings {
-	return application.NewTraegerOfferings(postgres.NewTraegerOfferingStore())
+func NewTraegerOfferings(now func() time.Time) careplan.TraegerOfferings {
+	return application.NewTraegerOfferings(postgres.NewTraegerOfferingStore(now))
 }
 
 // NewTraegerOfferingCopies builds the copy commands of Träger offerings in a school's tenant transaction (ADR 0195) over the catalog and its recurrence gate.
-func NewTraegerOfferingCopies(catalog careplan.CareOfferingCatalogCapability, lockRecurrence func(context.Context) error) (careplan.TraegerOfferingCopies, error) {
+func NewTraegerOfferingCopies(catalog careplan.CareOfferingCatalogCapability, lockRecurrence func(context.Context) error, now func() time.Time) (careplan.TraegerOfferingCopies, error) {
 	runtime := application.TraegerCopyRuntime{LockRecurrence: lockRecurrence, Savepoint: tenant.WithSavepoint, ControlFailure: tenant.IsSavepointControlFailure, ReferenceRefusal: postgres.IsReferenceRefusal}
-	return application.NewTraegerOfferingCopies(catalog, postgres.New(postgres.CarePlanDatabase(nil)), runtime)
+	return application.NewTraegerOfferingCopies(catalog, postgres.New(postgres.CarePlanDatabase(nil)).WithClock(now), runtime)
 }

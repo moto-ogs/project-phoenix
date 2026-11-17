@@ -45,7 +45,7 @@ func NewRequestReviewSchedules(db transactionruntime.Database, students carecomp
 	}
 	return carecompose.NewScheduleReviews(db.Pool(), observeCare, carecompose.ScheduleReviewDependencies{
 		People:   reviewbindings.NewScheduleReviewDirectory(people),
-		Bookings: reviewbindings.NewScheduleReviewBookings(enrollmentcompose.NewClocked(time.Now), carecompose.NewOfferingBookings()), Classes: classes,
+		Bookings: reviewbindings.NewScheduleReviewBookings(enrollmentcompose.NewClocked(time.Now), carecompose.NewOfferingBookings(time.Now)), Classes: classes,
 		Scope: scope, BookingsAuthoritative: bookingsAuthoritative, Today: today,
 		Blocks: blocks, Fingerprint: securityruntime.Fingerprint, StudentDirectory: students,
 	})
@@ -65,7 +65,7 @@ func NewRequestReviewOfferings(db transactionruntime.Database, people reviewbind
 	}
 	return carecompose.NewOfferingReviews(db.Pool(), observeCare, carecompose.OfferingReviewDependencies{
 		People:     reviewbindings.NewOfferingReviewDirectory(people),
-		Enrollment: reviewbindings.NewOfferingReviewEnrollment(enrollmentcompose.NewClocked(time.Now), carecompose.NewOfferingBookings()),
+		Enrollment: reviewbindings.NewOfferingReviewEnrollment(enrollmentcompose.NewClocked(time.Now), carecompose.NewOfferingBookings(time.Now)),
 		Courses:    reviewbindings.NewOfferingReviewCourses(courses), Scope: scope, Today: today,
 	})
 }

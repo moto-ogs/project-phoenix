@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,7 +39,7 @@ func (r *fixedPickupReach) NotifyPickupChanged(_ context.Context, push careplan.
 var pickupTeamToday = calendar.NewDate(2026, 11, 12)
 
 func pickupTeam(reach careplan.PickupChangeTeamReach) careplan.PickupChangeTeam {
-	return NewPickupChangeTeam(reach, testpkg.StudentDirectory{}, nil, func() calendar.Date { return pickupTeamToday })
+	return NewPickupChangeTeam(reach, testpkg.StudentDirectory{}, nil, func() calendar.Date { return pickupTeamToday }, time.Now)
 }
 
 func pickupRequest(t *testing.T, db *testpkg.DB, ctx context.Context, studentID, submitter int64, date calendar.Date, status string) int64 {
@@ -229,7 +230,7 @@ func TestPickupChangeTeamSkipsPastDays(t *testing.T) {
 		StudentID: child.ID, Date: date, PickupTime: "15:00", RequestID: request,
 	})
 
-	later := NewPickupChangeTeam(reach, testpkg.StudentDirectory{}, nil, func() calendar.Date { return date.AddDays(1) })
+	later := NewPickupChangeTeam(reach, testpkg.StudentDirectory{}, nil, func() calendar.Date { return date.AddDays(1) }, time.Now)
 	assert.Empty(t, unreadPickups(t, db, ctx, later, colleague.ID), "a day that has passed is no longer news")
 }
 
