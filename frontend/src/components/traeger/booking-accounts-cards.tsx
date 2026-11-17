@@ -11,6 +11,7 @@ import {
   costCenterError,
   costCenterOn,
   costCenterTimeline,
+  effectiveHolidayCostCenter,
   effectiveRevenue,
   nextCostCenter,
   ownRevenueAccount,
@@ -282,15 +283,23 @@ export function RevenueAccountsCard({
   );
 }
 
-/** What holds now and what comes next, in words. */
+/** The cost center a scope without its own books on, and whose it is. */
+type InheritedCostCenter = { readonly code: string; readonly label: string };
+
+/**
+ * What holds now and what comes next, in words. A scope without its own
+ * cost center shows the one it books on instead, with whose it is.
+ */
 function CostCenterState({
   timeline,
   today,
   required,
+  inherited,
 }: Readonly<{
   timeline: readonly CostCenter[];
   today: string;
   required: boolean;
+  inherited?: InheritedCostCenter;
 }>) {
   const current = costCenterOn(timeline, today);
   const next = nextCostCenter(timeline, today);
@@ -304,6 +313,13 @@ function CostCenterState({
           <span className="text-sm text-gray-600">
             seit {formatDate(current.validFrom)}
           </span>
+        </span>
+      ) : inherited ? (
+        <span className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
+          <span className="max-w-full min-w-0 font-mono text-sm font-semibold break-all text-gray-900">
+            {inherited.code}
+          </span>
+          <StatusBadge tone="gray" size="xs" label={inherited.label} />
         </span>
       ) : required ? (
         <StatusBadge tone="warning" label="Keine Kostenstelle" />
@@ -392,32 +408,39 @@ function CostCenterForm({
   );
 }
 
-/** One scope with its cost centers, the form to add one and the history. */
+/**
+ * One scope with its cost centers, the form to add one and the history.
+ * `object` names the scope in a sentence („… für GS Ispringen“).
+ */
 function CostCenterRow({
   title,
   hint,
+  object,
   scope,
   scopeId,
   page,
   today,
   required,
+  inherited,
   onAdd,
   onDelete,
 }: Readonly<{
   title: string;
   hint: string;
+  object: string;
   scope: CostCenterScope;
   scopeId: string;
   page: BookingAccounts;
   today: string;
   required: boolean;
+  inherited?: InheritedCostCenter;
   onAdd: (
     scope: CostCenterScope,
     scopeId: string,
     validFrom: string,
     code: string,
   ) => Promise<void>;
-  onDelete: (center: CostCenter, title: string) => void;
+  onDelete: (center: CostCenter, object: string) => void;
 }>) {
   const [adding, setAdding] = useState(false);
   const [history, setHistory] = useState(false);
@@ -435,6 +458,7 @@ function CostCenterRow({
             timeline={timeline}
             today={today}
             required={required}
+            inherited={inherited}
           />
           {timeline.length > 0 ? (
             <Button
@@ -442,7 +466,7 @@ function CostCenterRow({
               variant="link"
               size="compact"
               aria-expanded={history}
-              aria-label={`Verlauf der Kostenstellen für ${title}`}
+              aria-label={`Verlauf der Kostenstellen für ${object}`}
               tooltip={
                 history
                   ? "Blendet die früheren und geplanten Kostenstellen wieder aus."
@@ -462,7 +486,7 @@ function CostCenterRow({
           type="button"
           variant="surface"
           size="compact"
-          aria-label={`Neue ${label} für ${title}`}
+          aria-label={`Neue ${label} für ${object}`}
           disabled={adding}
           tooltip="Öffnet ein Formular für eine Kostenstelle ab einem gewählten Tag."
           onClick={() => setAdding(true)}
@@ -473,7 +497,7 @@ function CostCenterRow({
       {adding ? (
         <div className="mt-3 sm:col-span-2">
           <CostCenterForm
-            title={title}
+            title={object}
             today={today}
             onCancel={() => setAdding(false)}
             onAdd={async (validFrom, code) => {
@@ -487,7 +511,7 @@ function CostCenterRow({
         <InsetPanel padding="sm" className="mt-3 min-w-0 sm:col-span-2">
           <ol
             className="divide-y divide-gray-100"
-            aria-label={`Verlauf für ${title}`}
+            aria-label={`Verlauf für ${object}`}
           >
             {[...timeline].reverse().map((center) => (
               <li
@@ -510,14 +534,14 @@ function CostCenterRow({
                   ) : null}
                 </span>
                 <OverflowMenu
-                  ariaLabel={`Aktionen für die Kostenstelle ab ${formatDate(center.validFrom)} von ${title}`}
+                  ariaLabel={`Aktionen für die Kostenstelle ab ${formatDate(center.validFrom)} für ${object}`}
                   triggerSize="sm"
                   items={[
                     {
                       label: "Löschen",
                       description: "Ausgestellte Rechnungen behalten sie.",
                       destructive: true,
-                      onClick: () => onDelete(center, title),
+                      onClick: () => onDelete(center, object),
                     },
                   ]}
                 />
@@ -534,13 +558,82 @@ type CostCenterScopeRow = {
   readonly key: string;
   readonly title: string;
   readonly hint: string;
+  readonly object: string;
   readonly scope: CostCenterScope;
   readonly scopeId: string;
+  readonly inherited?: InheritedCostCenter;
+};
+
+/** Rows under one name; without a name the rows stand alone. */
+type CostCenterGroup = {
+  readonly key: string;
+  readonly title: string | null;
+  readonly rows: readonly CostCenterScopeRow[];
 };
 
 /**
- * The cost centers: KOST1 of each school and of the holiday care, or KOST2
- * of each Angebot. A cost center holds from its day until the next one.
+ * KOST1: each school with the cost center of its monthly contributions
+ * and the one of its holiday care (#7357), then the one every holiday week
+ * falls back on. A holiday row without its own shows where its weeks book.
+ */
+function kost1Groups(page: BookingAccounts, today: string): CostCenterGroup[] {
+  return [
+    ...page.schools.map((school) => {
+      const holiday = effectiveHolidayCostCenter(
+        page.costCenters,
+        school.id,
+        today,
+      );
+      return {
+        key: `school-${school.id}`,
+        title: school.name,
+        rows: [
+          {
+            key: "school",
+            title: "Monatsbeiträge und Mensa",
+            hint: "Rechnungen der Monatsläufe",
+            object: school.name,
+            scope: "school" as const,
+            scopeId: school.id,
+          },
+          {
+            key: "school_holiday",
+            title: "Ferienbetreuung",
+            hint: "Ferienwochen an dieser Schule",
+            object: `die Ferienbetreuung an ${school.name}`,
+            scope: "school_holiday" as const,
+            scopeId: school.id,
+            inherited:
+              holiday.source === "school"
+                ? { code: holiday.code, label: "wie Monatsbeiträge" }
+                : holiday.source === "fallback"
+                  ? { code: holiday.code, label: "Ersatz-Kostenstelle" }
+                  : undefined,
+          },
+        ],
+      };
+    }),
+    {
+      key: "holiday",
+      title: "Alle Schulen",
+      rows: [
+        {
+          key: "holiday",
+          title: "Ersatz für die Ferienbetreuung",
+          hint: "Für Ferienwochen an einer Schule ohne Kostenstelle",
+          object: "den Ersatz der Ferienbetreuung",
+          scope: "holiday",
+          scopeId: "0",
+        },
+      ],
+    },
+  ];
+}
+
+/**
+ * The cost centers: KOST1 of each school, of its holiday care and of the
+ * holiday care of the Träger, or KOST2 of each Angebot. A cost center holds
+ * from its day until the next one.
  */
 export function CostCentersCard({
   kind,
@@ -562,38 +655,35 @@ export function CostCentersCard({
 }>) {
   const [deleting, setDeleting] = useState<{
     center: CostCenter;
-    title: string;
+    object: string;
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const deleteErrors = useApiFormError();
   const { success } = useToast();
   const schoolName = (id: string) =>
     page.schools.find((school) => school.id === id)?.name ?? "Schule";
-  const rows: CostCenterScopeRow[] =
+  const groups: CostCenterGroup[] =
     kind === "kost1"
-      ? [
-          ...page.schools.map((school) => ({
-            key: `school-${school.id}`,
-            title: school.name,
-            hint: "Monatsbeiträge, Mensa und Ferienwochen an dieser Schule",
-            scope: "school" as const,
-            scopeId: school.id,
-          })),
-          {
-            key: "holiday",
-            title: "Ferienbetreuung",
-            hint: "Ersatz für Ferienwochen einer Schule ohne Kostenstelle",
-            scope: "holiday",
-            scopeId: "0",
-          },
-        ]
-      : page.offerings.map((offering) => ({
-          key: `offering-${offering.offeringId}`,
-          title: offering.moduleNames.join(", ") || "Angebot",
-          hint: schoolName(offering.schoolId),
-          scope: "offering" as const,
-          scopeId: offering.offeringId,
-        }));
+      ? kost1Groups(page, today)
+      : page.offerings.length === 0
+        ? []
+        : [
+            {
+              key: "offerings",
+              title: null,
+              rows: page.offerings.map((offering) => {
+                const title = offering.moduleNames.join(", ") || "Angebot";
+                return {
+                  key: `offering-${offering.offeringId}`,
+                  title,
+                  hint: schoolName(offering.schoolId),
+                  object: title,
+                  scope: "offering" as const,
+                  scopeId: offering.offeringId,
+                };
+              }),
+            },
+          ];
   const required = kind === "kost1" && page.costCenterRequired;
 
   const confirmDelete = async () => {
@@ -635,38 +725,61 @@ export function CostCentersCard({
       }
       description={
         kind === "kost1"
-          ? "Jede Schule und die Ferienbetreuung können eine Kostenstelle haben. Sie gilt ab ihrem Tag bis zur nächsten."
+          ? "Jede Schule kann eine Kostenstelle haben, für ihre Ferienbetreuung auch eine eigene. Eine Kostenstelle gilt ab ihrem Tag bis zur nächsten."
           : "Nur, wenn Ihr Steuerbüro die Angebote getrennt auswerten will."
       }
     >
-      {rows.length === 0 ? (
+      {groups.length === 0 ? (
         <p className="text-sm text-gray-600">
           Angebote stehen hier, sobald sie einen Preis haben.
         </p>
       ) : (
-        <ResponsiveActionList>
-          {rows.map((row) => (
-            <CostCenterRow
-              key={row.key}
-              title={row.title}
-              hint={row.hint}
-              scope={row.scope}
-              scopeId={row.scopeId}
-              page={page}
-              today={today}
-              required={required}
-              onAdd={onAdd}
-              onDelete={(center, title) => setDeleting({ center, title })}
-            />
-          ))}
-        </ResponsiveActionList>
+        <div className="flex flex-col gap-5">
+          {groups.map((group) => {
+            const rows = (
+              <ResponsiveActionList>
+                {group.rows.map((row) => (
+                  <CostCenterRow
+                    key={row.key}
+                    title={row.title}
+                    hint={row.hint}
+                    object={row.object}
+                    scope={row.scope}
+                    scopeId={row.scopeId}
+                    page={page}
+                    today={today}
+                    required={required}
+                    inherited={row.inherited}
+                    onAdd={onAdd}
+                    onDelete={(center, object) =>
+                      setDeleting({ center, object })
+                    }
+                  />
+                ))}
+              </ResponsiveActionList>
+            );
+            return group.title === null ? (
+              <div key={group.key}>{rows}</div>
+            ) : (
+              <div
+                key={group.key}
+                role="group"
+                aria-label={group.title}
+                className="flex flex-col gap-3"
+              >
+                <ListGroupHeader title={group.title} />
+                {rows}
+              </div>
+            );
+          })}
+        </div>
       )}
       <ConfirmDeleteModal
         isOpen={deleting !== null}
         title="Kostenstelle löschen?"
         description={
           deleting
-            ? `${deleting.center.code || "„Keine Kostenstelle“"} ab ${formatDate(deleting.center.validFrom)} für ${deleting.title}. Schon ausgestellte Rechnungen behalten ihre Kostenstelle.`
+            ? `${deleting.center.code || "„Keine Kostenstelle“"} ab ${formatDate(deleting.center.validFrom)} für ${deleting.object}. Schon ausgestellte Rechnungen behalten ihre Kostenstelle.`
             : ""
         }
         gate={{ mode: "twoStep", firstStepLabel: "Löschen" }}

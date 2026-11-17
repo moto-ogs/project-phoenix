@@ -120,6 +120,40 @@ export function nextCostCenter(
   return timeline.find((center) => center.validFrom > day) ?? null;
 }
 
+/** Where the cost center of the holiday care of a school comes from. */
+type HolidayCostCenterSource = "own" | "school" | "fallback" | "missing";
+
+export interface EffectiveHolidayCostCenter {
+  readonly code: string;
+  readonly source: HolidayCostCenterSource;
+  /** "YYYY-MM-DD", the first day of the own cost center; "" otherwise. */
+  readonly since: string;
+}
+
+/**
+ * The cost center a holiday week at a school books on, on day (#7357): the
+ * school's own of the holiday care, else the school's, else the one of the
+ * holiday care of the Träger. The backend resolves the same order when it
+ * issues an invoice.
+ */
+export function effectiveHolidayCostCenter(
+  centers: readonly CostCenter[],
+  schoolId: string,
+  day: string,
+): EffectiveHolidayCostCenter {
+  const on = (scope: CostCenterScope, scopeId: string) =>
+    costCenterOn(costCenterTimeline(centers, scope, scopeId), day);
+  const own = on("school_holiday", schoolId);
+  if (own?.code) {
+    return { code: own.code, source: "own", since: own.validFrom };
+  }
+  const school = on("school", schoolId)?.code;
+  if (school) return { code: school, source: "school", since: "" };
+  const fallback = on("holiday", "0")?.code;
+  if (fallback) return { code: fallback, source: "fallback", since: "" };
+  return { code: "", source: "missing", since: "" };
+}
+
 const REVENUE_ACCOUNT = /^0*[1-9][0-9]*$/;
 const COST_CENTER = /^[A-Za-z0-9_ ]*$/;
 

@@ -7,6 +7,7 @@ import {
   costCenterError,
   costCenterOn,
   costCenterTimeline,
+  effectiveHolidayCostCenter,
   effectiveRevenue,
   nextCostCenter,
   revenueAccountError,
@@ -38,6 +39,52 @@ describe("cost centers", () => {
     expect(costCenterOn(timeline, "2027-03-01")?.code).toBe("");
     expect(nextCostCenter(timeline, "2026-10-01")?.code).toBe("K2");
     expect(nextCostCenter(timeline, "2027-03-01")).toBeNull();
+  });
+});
+
+// The order the backend resolves when it issues a holiday invoice (#7357).
+describe("the cost center of the holiday care of a school", () => {
+  const of = (
+    id: string,
+    scope: CostCenter["scope"],
+    scopeId: string,
+    validFrom: string,
+    code: string,
+  ): CostCenter => ({ id, scope, scopeId, validFrom, code });
+  const centers = [
+    of("1", "school", "11", "2026-01-01", "5467"),
+    of("2", "school_holiday", "11", "2026-11-04", "5469"),
+    of("3", "school_holiday", "11", "2027-08-01", ""),
+    of("4", "school", "12", "2026-01-01", "5567"),
+    of("5", "holiday", "0", "2026-01-01", "FER"),
+  ];
+  it("is its own, else the school's, else the one of the Träger", () => {
+    expect(effectiveHolidayCostCenter(centers, "11", "2026-11-04")).toEqual({
+      code: "5469",
+      source: "own",
+      since: "2026-11-04",
+    });
+    expect(
+      effectiveHolidayCostCenter(centers, "11", "2026-11-03"),
+      "before its first day",
+    ).toEqual({ code: "5467", source: "school", since: "" });
+    expect(
+      effectiveHolidayCostCenter(centers, "11", "2027-08-01"),
+      "ended again",
+    ).toEqual({ code: "5467", source: "school", since: "" });
+    expect(effectiveHolidayCostCenter(centers, "12", "2026-11-04")).toEqual({
+      code: "5567",
+      source: "school",
+      since: "",
+    });
+    expect(effectiveHolidayCostCenter(centers, "13", "2026-11-04")).toEqual({
+      code: "FER",
+      source: "fallback",
+      since: "",
+    });
+    expect(
+      effectiveHolidayCostCenter(centers.slice(0, 4), "13", "2026-11-04"),
+    ).toEqual({ code: "", source: "missing", since: "" });
   });
 });
 
