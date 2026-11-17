@@ -26,10 +26,12 @@ interface FixTarget {
 }
 
 /** Operational settings (`config:update`), like the enrollment form. */
-function updatesSettings(session: Session | null): boolean {
-  return (
-    hasEffectiveAdminScope(session) || hasPermission(session, "config:update")
-  );
+const updatesSettings = holds("config:update");
+
+/** A viewer who holds `permission` (or the admin scope). */
+function holds(permission: string): (session: Session | null) => boolean {
+  return (session) =>
+    hasEffectiveAdminScope(session) || hasPermission(session, permission);
 }
 
 /** The grade question of the enrollment form, which both codes need. */
@@ -68,6 +70,20 @@ const ERROR_FIX_TARGETS: Partial<Record<ErrorCode, FixTarget>> = {
     label: "Abrechnung öffnen",
     tooltip: "Öffnet die Seite Abrechnung mit den fehlenden Angaben.",
     permitted: leadsSchool,
+  },
+  // A Regeltermin changes only in the plan, with `schedules:manage`.
+  "timetable.activity_template_protected": {
+    path: "/betreuungsplan",
+    label: "Zum Betreuungsplan",
+    tooltip: "Öffnet den Betreuungsplan, in dem Sie Regeltermine ändern.",
+    permitted: holds("schedules:manage"),
+  },
+  // Shift series end in the Dienstplan, with `time_tracking:manage`.
+  "timetable.calendar_period_shift_series_conflict": {
+    path: "/dienstplan",
+    label: "Zum Dienstplan",
+    tooltip: "Öffnet den Dienstplan, in dem Sie Schichtserien beenden.",
+    permitted: holds("time_tracking:manage"),
   },
 };
 
