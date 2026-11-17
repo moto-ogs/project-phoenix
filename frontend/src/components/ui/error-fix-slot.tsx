@@ -3,6 +3,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 
 import { ButtonLink } from "./button";
+import { useInOverlay } from "./in-overlay";
 
 /**
  * The place where the person fixes a refusal with a known code (#7092),
@@ -38,9 +39,13 @@ export function ErrorFixProvider({
   );
 }
 
-/** The link to the place that fixes the refusal `code`, else `undefined`. */
+/**
+ * The link to the place that fixes the refusal `code`, else `undefined`.
+ * Inside a dialog or slide-over it opens a new tab, so the input stays.
+ */
 export function useErrorFixLink(code: string | undefined): ReactNode {
   const resolve = useContext(ErrorFixContext);
+  const inOverlay = useInOverlay();
   const target = code && resolve ? resolve(code) : null;
   if (!target) return undefined;
   return (
@@ -49,6 +54,7 @@ export function useErrorFixLink(code: string | undefined): ReactNode {
       variant="surface"
       size="compact"
       tooltip={target.tooltip}
+      newTab={inOverlay}
       className="shrink-0 self-start"
     >
       {target.label}
