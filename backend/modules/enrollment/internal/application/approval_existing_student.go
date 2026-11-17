@@ -148,7 +148,7 @@ func (d *Decisions) renewExistingStudent(ctx context.Context, child *enrollmentN
 	if deferred {
 		planned = &enrollmentNative.ClassSwitch{RequestChildID: child.ID, From: previousSchoolClass, To: targetSchoolClass, On: enrollmentNative.Date(switchOn.String())}
 	}
-	if err := d.planClassSwitch(ctx, child.ID, planned); err != nil {
+	if err := d.planClassSwitchKeepingPlace(ctx, child.ID, planned, existing.WithoutCarePlace); err != nil {
 		return nil, err
 	}
 	if err := d.auditRenewedStatus(ctx, existing, beforeStatus, reviewedBy); err != nil {

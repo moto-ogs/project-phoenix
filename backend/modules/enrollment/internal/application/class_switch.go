@@ -21,6 +21,19 @@ func (d *Decisions) planClassSwitch(ctx context.Context, requestChildID int64, c
 	return nil
 }
 
+// planClassSwitchKeepingPlace is planClassSwitch for a deferred renewal: a
+// child without an OGS place (#4803) keeps a plan that keeps its class, so
+// the switch day still grants its place.
+func (d *Decisions) planClassSwitchKeepingPlace(ctx context.Context, requestChildID int64, change *enrollmentNative.ClassSwitch, withoutCarePlace bool) error {
+	if change == nil || change.From != change.To || !withoutCarePlace {
+		return d.planClassSwitch(ctx, requestChildID, change)
+	}
+	if err := d.deps.Children.SetChildClassSwitch(ctx, requestChildID, change); err != nil {
+		return fmt.Errorf("decision: plan class switch: %w", err)
+	}
+	return nil
+}
+
 // replanApprovedChildClass re-derives a still planned class switch after a
 // confirmed edit of the approved child. The child keeps its running class;
 // only the planned target follows the edit. ok is false when no switch is
@@ -42,7 +55,7 @@ func (d *Decisions) replanApprovedChildClass(ctx context.Context, run *approvedC
 	replanned := &enrollmentNative.ClassSwitch{
 		RequestChildID: run.child.ID, From: current, To: resolveRolloverSchoolClass(run.child, current), On: planned.On,
 	}
-	return true, d.planClassSwitch(ctx, run.child.ID, replanned)
+	return true, d.planClassSwitchKeepingPlace(ctx, run.child.ID, replanned, run.student.WithoutCarePlace)
 }
 
 // ApplyDueClassSwitches moves the children whose planned class switch is due
@@ -111,6 +124,12 @@ func (d *Decisions) applyClassSwitch(ctx context.Context, change enrollmentNativ
 		d.logger().Info("class switch skipped: class changed since approval",
 			slog.Int64("request_child_id", change.RequestChildID),
 			slog.Int64("student_id", student.ID))
+		// The renewal still starts on this day: it keeps the school's class
+		// and gives a child without an OGS place (#4803) the place the
+		// approval deferred to it. A child with a place keeps its values.
+		if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, student.ID, enrollmentStudentInput(student)); err != nil {
+			return false, fmt.Errorf("class switch: grant place to student %d: %w", student.ID, err)
+		}
 		return false, nil
 	}
 	student.SchoolClass = change.To

@@ -82,7 +82,8 @@ Owner an.
 - Die Anlage zählt nicht für das Kinderkontingent; eine spätere Verlängerung
   der Anmeldung gibt dem Kind seinen Platz und zählt dann. Der Platz beginnt
   frühestens am Tag der Zusage; beginnt die Anmeldung erst im nächsten
-  Schuljahr, gibt ihn der geplante Klassenwechsel an diesem Tag.
+  Schuljahr, gibt ihn der geplante Klassenwechsel an diesem Tag, auch wenn
+  die Klasse gleich bleibt oder die Schule sie vorher ändert.
 - Ein Rücksetzen des Vormittagsmoduls auf seine eingeschaltete
   Voreinstellung führt denselben Seiteneffekt wie das Einschalten aus.
   Scheitert die Umwandlung, bleibt das Modul ausgeschaltet.
