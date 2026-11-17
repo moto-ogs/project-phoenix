@@ -119,6 +119,18 @@ anything at a `useSWRAuth` or `useImmutableSWR` call that is
 not built by an export of `~/lib/swr` (directly, through a local constant or
 in a branch with `null`).
 
+## Refused reads
+
+After the server refuses a read (401 or 403 as an access decision,
+`isReadRefusal` in `~/lib/access-refusal`), every reader of that key reports
+no data and the data leaves the cache. It shows again only after a read of
+the key succeeded: a later 5xx, a network failure or a cache write does not
+bring it back. Logout and an account switch lift every refusal. This holds
+for `useSWRAuth`, `useImmutableSWR` and `useFreshSWR` without anything at the
+call site; a page shows the error because its data is gone. A 404, or a
+refusal that has to remove other keys too (a child a guardian lost), stays
+with `useConfirmedSWR`, `useTraegerResource` or `useDiscardRefusedEntity`.
+
 ## List-to-detail previews
 
 `studentKeys`, `roomKeys` and `staffKeys` own `previewSources` and `preview`.

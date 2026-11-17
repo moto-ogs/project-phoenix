@@ -17,7 +17,10 @@ import { DocumentTemplatePreviewBody } from "~/components/traeger/document-templ
 import { DocumentTemplateVersionsCard } from "~/components/traeger/document-template-versions-card";
 import { TraegerLetterheadPreview } from "~/components/traeger/traeger-letterhead-preview";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import {
+  useFreshTraegerResource,
+  useTraegerResource,
+} from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
@@ -105,7 +108,8 @@ function TemplateEditorPage({
     isLoading: schemaLoading,
     loadError: schemaError,
   } = useTraegerSettingsSchema();
-  const template = useTraegerResource(
+  // The version a save builds on: read anew each time the editor opens.
+  const template = useFreshTraegerResource(
     traegerKeys.documentTemplate(kind),
     () => fetchDocumentTemplate(kind),
     "die Vorlage",

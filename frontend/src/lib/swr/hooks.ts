@@ -33,9 +33,19 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useSession } from "next-auth/react";
-import { liftRefusal } from "~/lib/resource-refusals";
+import {
+  liftAllRefusals,
+  liftRefusal,
+  markRefused,
+  refusalFor,
+  subscribeRefusals,
+} from "~/lib/resource-refusals";
 import { swrConfig, immutableConfig } from "./config";
-import { isAccessRefusal, noteShownDataRefusal } from "~/lib/access-refusal";
+import {
+  isAccessRefusal,
+  isReadRefusal,
+  noteShownDataRefusal,
+} from "~/lib/access-refusal";
 import {
   DiscardedAnswer,
   currentSWRDataGeneration,
@@ -59,6 +69,7 @@ import {
 } from "./generation";
 import {
   authGeneration,
+  onSWRScopeReset,
   isSWRSessionPending,
   useSWRSessionRefresh,
   discardScopedEntries,
@@ -69,6 +80,9 @@ import {
 } from "./scope";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
+
+// A refusal belongs to the session that got it.
+onSWRScopeReset(liftAllRefusals);
 
 /**
  * The scope of the signed-in session: the prefix of every key the wrappers
@@ -122,6 +136,11 @@ const generationLockMiddleware: Middleware =
       // of it here, since the revalidation itself never rejects (#6801).
       const shown = (current as { cache?: Cache }).cache?.get(errorKey)?.data;
       if (isAccessRefusal(error) && shown !== undefined) noteShownDataRefusal();
+      if (isReadRefusal(error)) {
+        // Every reader of the key stops showing its data (useScopedSWR)
+        // until a read succeeds; SWR alone would keep it next to the error.
+        markRefused(errorKey, error);
+      }
       config.onError?.(error, errorKey, current);
     };
     const onErrorRetry: OnErrorRetry = (
@@ -364,6 +383,11 @@ function lockBoundMutate<T>(
  * generation moved since it arrived: a new key after an account switch, a
  * logout or a discard starts empty. The marker moves once data of the
  * current key arrived.
+ *
+ * Access refusal: after the server refused a read of the key (401, 403), no
+ * reader of it shows data until a read succeeds. A later 5xx, a network
+ * failure or a cache write does not bring the data back. Logout and an
+ * account switch lift every refusal.
  */
 type ScopedSWRResponse<T, E> = SWRResponse<T, E> & {
   /** Current protected values, including between renders. Never raw cache. */
@@ -454,7 +478,16 @@ function useScopedSWR<T, E>(
   }, [data]);
   const errorVisible =
     !discarded && (fullKey === null || isCurrentSWRError(fullKey, rawError));
-  const error = errorVisible ? rawError : undefined;
+  const ownError = errorVisible ? rawError : undefined;
+  const refusal = useSyncExternalStore(
+    subscribeRefusals,
+    () => (fullKey === null ? undefined : refusalFor(fullKey)),
+    () => undefined,
+  );
+  const refused = refusal !== undefined || isReadRefusal(ownError);
+  // SWR's own failure when it has one; the cache removal clears it, then
+  // the refusal in force is the failure.
+  const error = ownError ?? (refusal as E | undefined);
 
   const arrived = configured === true && !keep && data !== undefined;
   useLayoutEffect(() => {
@@ -484,8 +517,14 @@ function useScopedSWR<T, E>(
     () => lockBoundMutate<T>(fullKey, cacheMutate, mutationGeneration),
     [fullKey, cacheMutate, mutationGeneration],
   );
+  // The refused answer leaves the cache itself, so no cache read and no
+  // later render can show it; the refusal stays in its own store.
+  const withdraw = refused && raw !== undefined;
+  useEffect(() => {
+    if (withdraw) void mutate(undefined, { revalidate: false });
+  }, [withdraw, mutate]);
   return {
-    data,
+    data: refused ? undefined : data,
     error,
     mutate,
     readCurrent() {
@@ -496,14 +535,16 @@ function useScopedSWR<T, E>(
       )
         return { data: undefined, error: undefined };
       const current = cache.get(fullKey);
+      const held = refusalFor(fullKey);
       return {
         data:
+          held === undefined &&
           isCurrentSWRValue(fullKey, current?.data) === true
             ? (current?.data as T)
             : undefined,
         error: isCurrentSWRError(fullKey, current?.error)
           ? (current?.error as E)
-          : undefined,
+          : (held as E | undefined),
       };
     },
     get isValidating() {

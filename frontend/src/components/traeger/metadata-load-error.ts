@@ -9,7 +9,12 @@ export function metadataLoadError<E extends FormErrorDetail>(
   ...failures: unknown[]
 ) {
   const refused = failures.some(isRefusal);
-  return error && hasData
+  if (!error) return error;
+  // Without data nothing confirmed is left to keep, whatever an earlier
+  // presentation of the same error said.
+  return hasData
     ? { ...error, action: errorAlertActions(error), keepContent: !refused }
-    : error;
+    : "keepContent" in error && error.keepContent
+      ? { ...error, keepContent: false }
+      : error;
 }

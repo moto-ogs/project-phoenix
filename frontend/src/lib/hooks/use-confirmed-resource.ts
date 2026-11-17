@@ -6,12 +6,10 @@ import {
   subscribeRefusals,
   markRefused,
   liftRefusal,
-  liftAllRefusals,
 } from "~/lib/resource-refusals";
 import { ApiError } from "~/lib/api-error";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
-  onSWRScopeReset,
   useSWRCacheKey,
   useSWRAuth,
   type SWRResponse,
@@ -52,9 +50,6 @@ export function isRefusal(failure: unknown): boolean {
  *    cache is filled again. Only a successful fetch of the key lifts it.
  *    Logout and an account switch (resetSWRScope) lift every refusal.
  */
-
-// A refusal belongs to the session that got it.
-onSWRScopeReset(liftAllRefusals);
 
 /** The refusal in force for one key, cleared only by a successful fetch. */
 export interface RefusalGuard {

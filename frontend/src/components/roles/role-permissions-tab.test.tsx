@@ -403,6 +403,31 @@ describe("RolePermissionsTab", () => {
     ).toBeInTheDocument();
   });
 
+  it("offers no checkbox while the read for editing is still on its way", async () => {
+    const props = { role, onSaved, onCancelEdit };
+    const { rerender } = render(
+      <RolePermissionsTab {...props} editing={false} />,
+    );
+    await screen.findByText("1 Berechtigung zugewiesen.");
+
+    // Eine Kollegin hat inzwischen eine Berechtigung ergänzt.
+    const editRead = deferred<Permission[]>();
+    mockGetRolePermissions.mockReturnValue(editRead.promise);
+    rerender(<RolePermissionsTab {...props} editing />);
+    await waitFor(() => expect(mockGetPermissions).toHaveBeenCalled());
+    await act(async () => undefined);
+    // Kein Kästchen, auf dem ein Entwurf mit dem älteren Stand beginnen kann.
+    expect(screen.queryByLabelText("rooms:read")).not.toBeInTheDocument();
+
+    await act(async () =>
+      editRead.resolve([allPermissions[0]!, allPermissions[2]!]),
+    );
+    expect(
+      await screen.findByText("2 von 3 Berechtigungen ausgewählt."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("rooms:read")).toBeChecked();
+  });
+
   it("starts the draft at the saved state again after cancelling", async () => {
     const { rerender } = render(
       <RolePermissionsTab

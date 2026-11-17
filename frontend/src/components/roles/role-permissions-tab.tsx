@@ -140,7 +140,12 @@ export function RolePermissionsTab({
   const loadFailed = failure !== undefined;
   const loading =
     !loadFailed &&
-    (enteringEdit || !assigned || (editing && catalogRead.data === undefined));
+    (enteringEdit ||
+      // Im Bearbeiten beginnt kein Entwurf, solange ein Abruf läuft: Er
+      // überschriebe sonst die Änderung einer Kollegin.
+      (editing && assignedRead.isValidating) ||
+      !assigned ||
+      (editing && catalogRead.data === undefined));
   // Der Entwurf: null heißt unverändert, also der gespeicherte Stand. Ein
   // Klick setzt ihn auf Grundlage des gerade gezeigten Stands (#3346).
   const [draft, setDraft] = useState<AssignedMap | null>(null);
