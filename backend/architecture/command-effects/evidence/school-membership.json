@@ -554,7 +554,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
-      "binding_digest": "920c7ed7ef6ba1eda75f5c421fa1918c",
+      "binding_digest": "a27e32bac6d8c77272cd45643236fa89",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings.ChildrenWithoutCarePlaceOn",
@@ -562,7 +562,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
-      "binding_digest": "8e9060a3dd81b41f06289e9bbc9a9757",
+      "binding_digest": "a2608cc3ccf1651812787062067e39da",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
+      "binding_digest": "b485af756f83fc8c0bc2fec08e6d4914",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettingsSource.ResolveBool",
@@ -570,7 +578,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
-      "binding_digest": "67ace60dba84bef19154d74203b52493",
+      "binding_digest": "ff358c99ba463b8a68e74e1736c0ccbe",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings.Resolver.ResolveBool",
@@ -578,7 +586,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
-      "binding_digest": "be49351f144fa3be5d0ebc3742c7b09a",
+      "binding_digest": "d345f7975ba2832412c235f22731f643",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
@@ -586,7 +594,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
-      "binding_digest": "d4a1a8ad07a5315cab2729181da3aea4",
+      "binding_digest": "a5c272583bd57f246885dda00f8685c7",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
@@ -594,7 +602,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
-      "binding_digest": "7c6480825e58134f25638de7dbecceaa",
+      "binding_digest": "744bd6faa93ed214ccbea288b74b4feb",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.TenantSettings.ResolveBool",
@@ -602,7 +610,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
-      "binding_digest": "11a91223b294798b2b19b4cab9dbb099",
+      "binding_digest": "c5f741ed46fc0842c68b41989567eaa4",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",

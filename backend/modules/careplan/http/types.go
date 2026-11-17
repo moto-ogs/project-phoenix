@@ -292,7 +292,7 @@ func (req *StudentRequest) Bind(_ *http.Request) error {
 	if err := validatePickupScheduleItems(req.PickupSchedules); err != nil {
 		return err
 	}
-	if req.WithoutCarePlace && (req.GroupID != nil || len(req.ArrivalSchedules) > 0 || len(req.PickupSchedules) > 0) {
+	if req.WithoutCarePlace && (req.GroupID != nil || len(req.ArrivalSchedules) > 0 || len(req.PickupSchedules) > 0 || req.hasDeparturePlan()) {
 		return ErrWithoutCarePlaceCareData
 	}
 	if err := req.normalizeDayFields(); err != nil {
@@ -419,4 +419,11 @@ func (req *UpdateStudentRequest) touchesCompanions() bool {
 	return req.hasCompanionUpdate() ||
 		req.DepartureCompanionNote != nil ||
 		req.hasDeparturePlanUpdate()
+}
+
+// hasDeparturePlan reports any way home of the OGS on a new child: a child
+// without an OGS place (#4803) has none.
+func (req *StudentRequest) hasDeparturePlan() bool {
+	return req.DepartureDays != nil || req.AllowedDepartureModes != nil || req.DepartureCompanionNote != nil ||
+		req.PickupDays != nil || req.BusDays != nil
 }

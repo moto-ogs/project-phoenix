@@ -47,6 +47,9 @@ func TestCreateStudentWithoutCarePlace(t *testing.T) {
 	status, code = post(body(map[string]any{"group_id": group.ID}))
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Equal(t, "students.without_care_place_group", code)
+	status, code = post(body(map[string]any{"bus_days": map[string]bool{"mon": true}}))
+	assert.Equal(t, http.StatusBadRequest, status, "no way home of the OGS either")
+	assert.Equal(t, "students.without_care_place_group", code)
 
 	unterricht, ok := settings.LookupModule(settings.ModuleUnterrichtVormittag)
 	require.True(t, ok)

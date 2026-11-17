@@ -701,6 +701,17 @@
       "target_owner": "settings-platform"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
+      "classification": "platform",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.AddClassListEntry",
+      "reason": "Platform protocol participation (lock): school-membership reaches modules/settings.ClassListConversionLock.LockClassListConversionShared (settings-platform) through api.classListEntriesWhileChildrenKept.AddClassListEntry, the shared side of the lock both class-list conversion switches take (ADR 0283). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ClassListConversionLock.LockClassListConversionShared",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.classListEntriesWhileChildrenKept.AddClassListEntry",
       "classification": "query",
       "effect": "query",
