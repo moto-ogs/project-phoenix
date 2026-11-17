@@ -43,7 +43,10 @@ import (
 // values.
 var moduleSQLClockBudget = map[string]int{
 	"modules/appointments": 2,
-	"modules/auditlog":     17,
+	// The retention of the ledgers without a school (ADR 0281): the column
+	// defaults stamp the operator ledger, the Träger account ledger and the
+	// Träger document downloads, so their cutoff reads the database clock.
+	"modules/auditlog":     1,
 	"modules/carecontract": 2,
 	// Only the finished student document cleanups: their database function
 	// guards the cutoff with the database clock (1.15.606).
@@ -105,7 +108,6 @@ var moduleSQLClockBudget = map[string]int{
 	"modules/schoolcalendar":            20,
 	"modules/schoolmembership":          4,
 	"modules/schoolstructure":           4,
-	"modules/settings":                  20,
 	"modules/staffannouncementaudience": 2,
 	"modules/studentpresence":           16,
 	// Includes CompletionTimestamp (ADR 0281): completed_at is ordered against

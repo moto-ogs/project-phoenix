@@ -19,7 +19,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
+	"github.com/moto-ogs/project-phoenix/modules/auditlog"
+	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
+	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -135,6 +139,12 @@ func newTraegerAccessLogFixture(t *testing.T, role string) traegerAccessLogFixtu
 	db := testpkg.SetupTestDB(t)
 	unit := testpkg.TenantRuntime(t, db)
 	router, _ := traegerPortalOn(t, db, unit)
+	return traegerAccessLogFixtureOn(t, db, router, role)
+}
+
+// traegerAccessLogFixtureOn builds the fixture over router.
+func traegerAccessLogFixtureOn(t *testing.T, db *bun.DB, router *traegerPortalHandler, role string) traegerAccessLogFixture {
+	t.Helper()
 	password := testpkg.NewTestPassword()
 	f := traegerAccessLogFixture{db: db, router: router}
 	f.own = traegerOrganization(t, db, "Träger Protokoll", true)
@@ -501,4 +511,44 @@ func TestTraegerAccessLogNamesTheDeletedAccountOfAHolidayEntryUnknown(t *testing
 	require.Len(t, page.Entries, 1)
 	assert.Equal(t, "Unbekannte Person", page.Entries[0].Person)
 	assert.Nil(t, page.Entries[0].AccountID)
+}
+
+// The access log lists up to the instant of the root clock, the clock that
+// stamps the school ledgers it reads (ADR 0281). With the root clock years
+// ahead of the database, a read and a guardian change recorded a minute
+// before are listed. Before, the list ended at the real clock's instant and
+// the database dated the guardian change, so neither was listed.
+func TestTraegerAccessLogListsUpToTheRootClock(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	unit := testpkg.TenantRuntime(t, db)
+	day := calendar.NewDate(2031, time.March, 30)
+	current := day.BerlinMidnight().Add(9 * time.Hour)
+	clock := func() time.Time { return current }
+	router := traegerPortalWithDaysOn(t, db, unit, owners.HolidayTestSchoolCalendar{}, calendar.TodayDate, clock)
+	f := traegerAccessLogFixtureOn(t, db, router, identityaccess.TraegerRoleAdministration)
+	student := testpkg.CreateTestStudentForTenant(t, db, f.first, "Mia", "Muster", "1a")
+	guardian := testpkg.CreateTestGuardianProfileForTenant(t, db, f.first, "Erika", "Muster", "erika-root-clock@example.test")
+	audits, err := auditCompose.NewTenantPersistence(db, clock)
+	require.NoError(t, err)
+	require.NoError(t, testpkg.WithinTenantContext(t, context.Background(), db, f.first, func(ctx context.Context) error {
+		require.NoError(t, audits.DataAccessLog.Create(ctx, &auditModels.DataAccessLog{
+			ActorAccountID: f.staff, ActorRole: "staff", ResourceType: "attendance_history", RangeStart: current, RangeEnd: current,
+		}))
+		return owners.ParentGuardianChanges(clock).RecordGuardianChanges(ctx, []auditlog.GuardianChange{{
+			StudentID: student.ID, GuardianProfileID: guardian.ID, ActorAccountID: &f.staff,
+			ChangeType: auditlog.GuardianChangeTypeContact, FieldName: auditlog.GuardianFieldPhones,
+		}})
+	}))
+	current = current.Add(time.Minute)
+
+	rec := accessLogRequest(t, f.router, f.token, "/traeger/access-log/", url.Values{"from": {day.String()}, "to": {day.String()}})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	page := decodeSchoolPortalData[accessLogPage](t, rec.Body.Bytes())
+	assert.True(t, page.AsOf.Equal(current), "the list reads up to the root clock's instant")
+	data := make([]string, 0, len(page.Entries))
+	for _, entry := range page.Entries {
+		data = append(data, entry.Data)
+	}
+	assert.ElementsMatch(t, []string{"attendance_history", "guardian_record"}, data)
 }

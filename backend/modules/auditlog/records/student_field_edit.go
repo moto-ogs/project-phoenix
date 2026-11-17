@@ -23,7 +23,7 @@ type StudentFieldEdit struct {
 	FieldName    string    `bun:"field_name,notnull" json:"field_name"`
 	OldValue     *string   `bun:"old_value" json:"old_value"`
 	NewValue     *string   `bun:"new_value" json:"new_value"`
-	CreatedAt    time.Time `bun:"created_at,notnull,default:now()" json:"created_at"`
+	CreatedAt    time.Time `bun:"created_at,nullzero,notnull" json:"created_at"`
 }
 
 // Valid field names for student audit entries. These mirror the human-editable

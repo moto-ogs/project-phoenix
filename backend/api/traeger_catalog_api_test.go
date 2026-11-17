@@ -66,7 +66,7 @@ func traegerCatalogRouter(t *testing.T, db *bun.DB, tariffOverride ...parentbill
 	require.NoError(t, err)
 	audit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
-	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil, time.Now)
+	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)
 	schoolSettings, err := owners.NewSettingsTestModule(database, unit)
 	require.NoError(t, err)

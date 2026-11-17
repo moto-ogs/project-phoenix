@@ -81,7 +81,7 @@ func buildRelAcctService(t *testing.T, inviteMode string, canRemove bool) (*pare
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:        parentMemberships(t, db),
 		InvitationAccounts: owners.NewParentInvitationAccountLock(testpkg.NewDatabase(t, db)),
-		GuardianChanges:    owners.ParentGuardianChanges(),
+		GuardianChanges:    owners.ParentGuardianChanges(time.Now),
 		DeparturePolicy:    owners.ParentDeparturePolicy(),
 		GuardianPolicy:     owners.NewParentGuardianPolicy(),
 		Fingerprints:       owners.SecurityFingerprints{},
@@ -470,7 +470,7 @@ func buildRelAcctServiceWith(t *testing.T, settings parentService.SettingsServic
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
 		InvitationAccounts:  owners.NewParentInvitationAccountLock(testpkg.NewDatabase(t, db)),
-		GuardianChanges:     owners.ParentGuardianChanges(),
+		GuardianChanges:     owners.ParentGuardianChanges(time.Now),
 		DeparturePolicy:     owners.ParentDeparturePolicy(),
 		GuardianPolicy:      owners.NewParentGuardianPolicy(),
 		Fingerprints:        owners.SecurityFingerprints{},
@@ -556,7 +556,7 @@ func buildRelAcctServiceInvites(t *testing.T, inviteMode string, canRemove bool,
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:        parentMemberships(t, db),
 		InvitationAccounts: owners.NewParentInvitationAccountLock(testpkg.NewDatabase(t, db)),
-		GuardianChanges:    owners.ParentGuardianChanges(),
+		GuardianChanges:    owners.ParentGuardianChanges(time.Now),
 		DeparturePolicy:    owners.ParentDeparturePolicy(),
 		GuardianPolicy:     owners.NewParentGuardianPolicy(),
 		Fingerprints:       owners.SecurityFingerprints{},

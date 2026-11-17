@@ -18,7 +18,7 @@ type OperatorAuditEntry struct {
 	ResourceID   *int64          `bun:"resource_id" json:"resource_id,omitempty"`
 	Changes      json.RawMessage `bun:"changes,type:jsonb" json:"changes,omitempty"`
 	RequestIP    net.IP          `bun:"request_ip,type:inet,nullzero" json:"request_ip,omitempty"`
-	CreatedAt    time.Time       `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
+	CreatedAt    time.Time       `bun:"created_at,nullzero,notnull" json:"created_at"`
 }
 
 // PlatformScoped marks the entry as tenantless: the Audit adapter appends it

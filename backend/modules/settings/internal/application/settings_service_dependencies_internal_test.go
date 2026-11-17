@@ -33,7 +33,6 @@ func completeSettingsDependencies() SettingsServiceDependencies {
 		GradeCapGuard:         func(context.Context) (int, error) { return 4, nil },
 		TraegerValues:         stubTraegerValues{},
 		SchoolTraeger:         func(context.Context, []int64) (map[int64]int64, error) { return nil, nil },
-		Now:                   func() time.Time { return time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC) },
 	}
 }
 
@@ -72,7 +71,6 @@ func TestNewSettingsServiceWithDependenciesRejectsAMissingDependency(t *testing.
 		"grade cap":         func(d *SettingsServiceDependencies) { d.GradeCapGuard = nil },
 		"traeger values":    func(d *SettingsServiceDependencies) { d.TraegerValues = nil },
 		"school traeger":    func(d *SettingsServiceDependencies) { d.SchoolTraeger = nil },
-		"clock":             func(d *SettingsServiceDependencies) { d.Now = nil },
 	} {
 		dependencies := completeSettingsDependencies()
 		drop(&dependencies)

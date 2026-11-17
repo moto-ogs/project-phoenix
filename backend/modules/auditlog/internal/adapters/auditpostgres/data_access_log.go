@@ -12,15 +12,17 @@ import (
 // It satisfies audit.DataAccessLogRepository (interface declared in modules/auditlog/records).
 type dataAccessLogRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
-// NewDataAccessLogRepository creates a new DataAccessLogRepository.
-func NewDataAccessLogRepository(runtime Runtime) audit.DataAccessLogRepository {
-	return &dataAccessLogRepository{runtime: requireRuntime(runtime)}
+// NewDataAccessLogRepository creates a new DataAccessLogRepository; now
+// stamps an access recorded without its time.
+func NewDataAccessLogRepository(runtime Runtime, now func() time.Time) audit.DataAccessLogRepository {
+	return &dataAccessLogRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 func (r *dataAccessLogRepository) Create(ctx context.Context, entry *audit.DataAccessLog) error {
-	return NewAppender(r.runtime, nil).Append(ctx, entry)
+	return NewAppender(r.runtime, r.now).Append(ctx, entry)
 }
 
 // ExistsSince implements audit.DataAccessLogRepository. Metadata values are

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,7 +29,7 @@ func buildRequestService(t *testing.T) (*parentService.Portal, *bun.DB) {
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
 		StudentGuardianRepo: guardStudentGuardians(t, db),
-		GuardianChanges:     owners.ParentGuardianChanges(),
+		GuardianChanges:     owners.ParentGuardianChanges(time.Now),
 		DeparturePolicy:     owners.ParentDeparturePolicy(),
 		GuardianPolicy:      owners.NewParentGuardianPolicy(),
 		Fingerprints:        owners.SecurityFingerprints{},
@@ -302,7 +303,7 @@ func TestSubmitMasterDataChangeRequest_PerRowCreatedPills(t *testing.T) {
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
 		StudentGuardianRepo: guardStudentGuardians(t, db),
-		GuardianChanges:     owners.ParentGuardianChanges(),
+		GuardianChanges:     owners.ParentGuardianChanges(time.Now),
 		DeparturePolicy:     owners.ParentDeparturePolicy(),
 		GuardianPolicy:      owners.NewParentGuardianPolicy(),
 		Fingerprints:        owners.SecurityFingerprints{},

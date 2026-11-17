@@ -4,7 +4,6 @@ package api
 
 import (
 	"log/slog"
-	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -20,7 +19,7 @@ func NewSettingsTestService(runtime interface {
 	settingsCompose.SettingsRuntime
 }) settingsCompose.SettingsService {
 	repos := owners.NewSettingsTestRepositories(runtime)
-	return settingsCompose.NewSettingsService(repos.Values, repos.Audit, nil, runtime, slog.Default(), time.Now)
+	return settingsCompose.NewSettingsService(repos.Values, repos.Audit, nil, runtime, slog.Default())
 }
 
 // NewDisplayTestRepositories composes the readers the info-point dashboard

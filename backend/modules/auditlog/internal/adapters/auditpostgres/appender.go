@@ -15,9 +15,12 @@ import (
 )
 
 // Appender is the only Audit persistence adapter allowed to insert ledger
-// rows. Read repositories stay table-specific. now is the Audit clock: an
-// auth event, data deletion or field edit without its time is stamped from
-// it (ADR 0239). A repository that appends none of these passes nil.
+// rows. Read repositories stay table-specific. now is the Audit clock: every
+// school ledger whose retention compares its time with a cutoff of that
+// clock, or that the Träger access log lists up to an instant of the root
+// clock, is stamped from it when the event comes without its time (ADR 0239,
+// 0281). A repository that appends only ledgers the database stamps passes
+// nil.
 type Appender struct {
 	runtime Runtime
 	now     func() time.Time
@@ -256,26 +259,70 @@ func importEventRow(value *auditImports.DataImport) *auditModels.DataImport {
 }
 
 // stampRecordedAt gives an event without its time the instant of the Audit
-// clock. A set time stays: the producer recorded when it happened.
+// clock. A set time stays: the producer recorded when it happened. The
+// ledgers the database stamps and deletes on its own clock (operator,
+// Träger account and document ledgers) and the deviation events, kept by
+// their occurrence date, are not stamped here.
 func (a *Appender) stampRecordedAt(event any) error {
-	var stamp *time.Time
-	switch value := event.(type) {
-	case *auditModels.AuthEvent:
-		stamp = &value.CreatedAt
-	case *auditModels.DataDeletion:
-		stamp = &value.DeletedAt
-	case *auditModels.StudentFieldEdit:
-		stamp = &value.CreatedAt
-	case *auditModels.WorkSessionEdit:
-		stamp = &value.CreatedAt
-	}
-	if stamp == nil || !stamp.IsZero() {
+	stamps := recordedAtStamps(event)
+	if len(stamps) == 0 || !stamps[0].IsZero() {
 		return nil
 	}
 	if a.now == nil {
 		return errors.New("audit appender: clock is required to stamp the event")
 	}
-	*stamp = a.now()
+	now := a.now()
+	for _, stamp := range stamps {
+		*stamp = now
+	}
+	return nil
+}
+
+// recordedAtStamps names the time columns of a ledger the Audit clock
+// stamps; the first one decides whether the producer set the time.
+func recordedAtStamps(event any) []*time.Time {
+	switch value := event.(type) {
+	case *auditModels.AuthEvent:
+		return []*time.Time{&value.CreatedAt}
+	case *auditModels.DataDeletion:
+		return []*time.Time{&value.DeletedAt}
+	case *auditModels.StudentFieldEdit:
+		return []*time.Time{&value.CreatedAt}
+	case *auditModels.WorkSessionEdit:
+		return []*time.Time{&value.CreatedAt}
+	case *auditModels.DataAccessLog:
+		return []*time.Time{&value.AccessedAt}
+	case *auditModels.StudentDeletion:
+		return []*time.Time{&value.DeletedAt}
+	case *auditModels.EnrollmentDeletion:
+		return []*time.Time{&value.DeletedAt}
+	case *auditModels.EnrollmentRestoration:
+		return []*time.Time{&value.RestoredAt}
+	case *auditModels.FileEvent:
+		return []*time.Time{&value.CreatedAt, &value.UpdatedAt}
+	case *auditModels.SubstitutionChange:
+		return []*time.Time{&value.CreatedAt, &value.UpdatedAt}
+	case *auditModels.ClassListEntryChange:
+		return []*time.Time{&value.OccurredAt}
+	case *classlist.ClassListEntryChange:
+		return []*time.Time{&value.OccurredAt}
+	case *auditModels.StaffMasterDataChange:
+		return []*time.Time{&value.OccurredAt}
+	case *auditModels.PersonnelNumberChange:
+		return []*time.Time{&value.OccurredAt}
+	case *auditModels.GuardianFinancialChange:
+		return []*time.Time{&value.OccurredAt}
+	case *auditModels.TimeTrackingDeletion:
+		return []*time.Time{&value.OccurredAt}
+	case *auditModels.GuardianChange:
+		return []*time.Time{&value.ChangedAt}
+	case *auditModels.StudentConsentChange:
+		return []*time.Time{&value.CreatedAt, &value.UpdatedAt}
+	case *consents.ConsentChange:
+		return []*time.Time{&value.ChangedAt}
+	case *auditModels.AttendanceCorrection:
+		return []*time.Time{&value.CreatedAt, &value.UpdatedAt}
+	}
 	return nil
 }
 

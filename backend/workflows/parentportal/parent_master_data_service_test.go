@@ -54,7 +54,7 @@ func masterDataServiceDependencies(t *testing.T, db *bun.DB, editEnabled bool) p
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	return parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
-		GuardianChanges:     owners.ParentGuardianChanges(),
+		GuardianChanges:     owners.ParentGuardianChanges(time.Now),
 		DeparturePolicy:     owners.ParentDeparturePolicy(),
 		GuardianPolicy:      owners.NewParentGuardianPolicy(),
 		Fingerprints:        owners.SecurityFingerprints{},
@@ -155,7 +155,7 @@ func TestChildFeatures_SplitsMasterDataContactCapability(t *testing.T) {
 		StudentGuardianRepo: guardStudentGuardians(t, db),
 		GuardianProfileRepo: guardProfiles(t, db),
 		StudentRepo:         guardStudents(t, db),
-		GuardianChanges:     owners.ParentGuardianChanges(),
+		GuardianChanges:     owners.ParentGuardianChanges(time.Now),
 		DeparturePolicy:     owners.ParentDeparturePolicy(),
 		GuardianPolicy:      owners.NewParentGuardianPolicy(),
 		Fingerprints:        owners.SecurityFingerprints{},

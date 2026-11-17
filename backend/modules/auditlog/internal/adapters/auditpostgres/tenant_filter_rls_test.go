@@ -22,7 +22,7 @@ func TestAuditTenantReadsRejectMissingScopeAndEnforceRLS(t *testing.T) {
 			return err
 		},
 		func() error {
-			_, err := NewFileEventRepository(missing).ListRecent(context.Background(), 10)
+			_, err := NewFileEventRepository(missing, time.Now).ListRecent(context.Background(), 10)
 			return err
 		},
 		func() error {
@@ -30,11 +30,11 @@ func TestAuditTenantReadsRejectMissingScopeAndEnforceRLS(t *testing.T) {
 			return err
 		},
 		func() error {
-			_, err := NewAttendanceCorrectionRepository(missing).ListByInstanceAndStudent(context.Background(), 1, 1)
+			_, err := NewAttendanceCorrectionRepository(missing, time.Now).ListByInstanceAndStudent(context.Background(), 1, 1)
 			return err
 		},
 		func() error {
-			_, err := NewAttendanceCorrectionRepository(missing).CountByInstanceAndStudents(context.Background(), 1, []int64{1})
+			_, err := NewAttendanceCorrectionRepository(missing, time.Now).CountByInstanceAndStudents(context.Background(), 1, []int64{1})
 			return err
 		},
 		func() error {
@@ -54,13 +54,13 @@ func TestAuditTenantReadsRejectMissingScopeAndEnforceRLS(t *testing.T) {
 			folderID := id
 			event := &records.FileEvent{FolderID: &folderID, Action: records.FileEventFolderCreated, ActorName: "Audit scope", Detail: "Tenant isolation"}
 			event.TenantID = id
-			return NewFileEventRepository(runtime).Create(ctx, event)
+			return NewFileEventRepository(runtime, time.Now).Create(ctx, event)
 		}))
 	}
 	for _, id := range ids {
 		require.NoError(t, testpkg.WithinTenantTransaction(base, db, id, func(ctx context.Context, tx bun.Tx) error {
 			runtime := Runtime(func(context.Context) (bun.IDB, int64) { return tx, id })
-			rows, err := NewFileEventRepository(runtime).ListRecent(ctx, 10)
+			rows, err := NewFileEventRepository(runtime, time.Now).ListRecent(ctx, 10)
 			require.NoError(t, err)
 			require.Len(t, rows, 1)
 			require.Equal(t, id, rows[0].TenantID)

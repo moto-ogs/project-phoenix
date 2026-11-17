@@ -48,7 +48,8 @@ func (l enrollmentUploadAccessLog) RecordUploadAccess(ctx context.Context, entry
 		ResourceType:   auditModels.ResourceTypeEnrollmentUploadView,
 		RangeStart:     at,
 		RangeEnd:       at,
-		AccessedAt:     at,
+		// A read without its instant is stamped by the Audit clock.
+		AccessedAt: entry.AccessedAt,
 		Metadata: map[string]any{
 			"request_id": entry.RequestID,
 			"upload_id":  entry.UploadID,

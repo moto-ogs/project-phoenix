@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
+	"time"
 
 	api "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -88,7 +89,7 @@ func newSvcWithChild(t *testing.T, child *stubChildRepo) *parentService.Portal {
 		StudentGuardianRepo: guardStudentGuardians(t, db),
 		GuardianProfileRepo: guardProfiles(t, db),
 		StudentRepo:         guardStudents(t, db),
-		GuardianChanges:     api.ParentGuardianChanges(),
+		GuardianChanges:     api.ParentGuardianChanges(time.Now),
 		DeparturePolicy:     api.ParentDeparturePolicy(),
 		GuardianPolicy:      api.NewParentGuardianPolicy(),
 		Fingerprints:        api.SecurityFingerprints{},
@@ -110,7 +111,7 @@ func newSvcWithEnrollable(t *testing.T, enroll *stubEnrollableRepo) *parentServi
 		StudentGuardianRepo: guardStudentGuardians(t, db),
 		GuardianProfileRepo: guardProfiles(t, db),
 		StudentRepo:         guardStudents(t, db),
-		GuardianChanges:     api.ParentGuardianChanges(),
+		GuardianChanges:     api.ParentGuardianChanges(time.Now),
 		DeparturePolicy:     api.ParentDeparturePolicy(),
 		GuardianPolicy:      api.NewParentGuardianPolicy(),
 		Fingerprints:        api.SecurityFingerprints{},
@@ -149,7 +150,7 @@ func TestService_ListEnrollableForAccount_FiltersDisabledTenantsThroughTypedSett
 		{SchoolID: 22, PhaseID: 202},
 	}}
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
-		GuardianChanges:     api.ParentGuardianChanges(),
+		GuardianChanges:     api.ParentGuardianChanges(time.Now),
 		DeparturePolicy:     api.ParentDeparturePolicy(),
 		GuardianPolicy:      api.NewParentGuardianPolicy(),
 		Fingerprints:        api.SecurityFingerprints{},
@@ -174,7 +175,7 @@ func TestService_ListEnrollableForAccount_PropagatesTypedSettingsFailure(t *test
 
 	want := errors.New("settings unavailable")
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
-		GuardianChanges:     api.ParentGuardianChanges(),
+		GuardianChanges:     api.ParentGuardianChanges(time.Now),
 		DeparturePolicy:     api.ParentDeparturePolicy(),
 		GuardianPolicy:      api.NewParentGuardianPolicy(),
 		Fingerprints:        api.SecurityFingerprints{},
@@ -321,7 +322,7 @@ func TestNewService_NilLoggerFallsBackToDefault(t *testing.T) {
 		StudentGuardianRepo: guardStudentGuardians(t, db),
 		GuardianProfileRepo: guardProfiles(t, db),
 		StudentRepo:         guardStudents(t, db),
-		GuardianChanges:     api.ParentGuardianChanges(),
+		GuardianChanges:     api.ParentGuardianChanges(time.Now),
 		DeparturePolicy:     api.ParentDeparturePolicy(),
 		GuardianPolicy:      api.NewParentGuardianPolicy(),
 		Fingerprints:        api.SecurityFingerprints{},

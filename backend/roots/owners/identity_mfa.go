@@ -301,7 +301,7 @@ func (l operatorActionLog) RecordOperatorAction(ctx context.Context, entry ident
 	}()
 	row := &auditModels.OperatorAuditEntry{
 		OperatorID: entry.OperatorID, Action: entry.Action, ResourceType: entry.ResourceType,
-		ResourceID: entry.ResourceID, RequestIP: securityruntime.ParseClientAddress(entry.IPAddress), CreatedAt: time.Now(),
+		ResourceID: entry.ResourceID, RequestIP: securityruntime.ParseClientAddress(entry.IPAddress),
 	}
 	if changes, encodeErr := entry.MFAAuditChanges(); encodeErr != nil {
 		l.logger.Warn("failed to encode operator mfa audit changes",

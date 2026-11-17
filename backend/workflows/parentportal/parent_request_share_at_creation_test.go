@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +33,7 @@ func buildSharingAtCreationServices(t *testing.T) (*parentService.Portal, parent
 	require.NoError(t, err)
 	svc := parentportalcompose.New(parentportalcompose.Dependencies{
 		Memberships:            parentMemberships(t, db),
-		GuardianChanges:        owners.ParentGuardianChanges(),
+		GuardianChanges:        owners.ParentGuardianChanges(time.Now),
 		DeparturePolicy:        owners.ParentDeparturePolicy(),
 		GuardianPolicy:         owners.NewParentGuardianPolicy(),
 		Fingerprints:           owners.SecurityFingerprints{},
