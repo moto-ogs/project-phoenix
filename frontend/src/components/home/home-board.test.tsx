@@ -119,8 +119,14 @@ describe("HomeBoard lädt das Anpassen erst bei Bedarf", () => {
 
     // Bis das Anpassen geladen ist, steht die Leseansicht weiter da.
     expect(screen.getByText("tile.students_present")).toBeInTheDocument();
+    // Der Editor wird erst hier kalt importiert; auf einer ausgelasteten
+    // Maschine dauert das länger als die Standardwartezeit von einer Sekunde.
     expect(
-      await screen.findByRole("button", { name: /^Kinder anwesend auswählen/ }),
+      await screen.findByRole(
+        "button",
+        { name: /^Kinder anwesend auswählen/ },
+        { timeout: 5000 },
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText("tile.students_present")).not.toBeInTheDocument();
     expect(motionLibrary.loaded).toBe(true);
