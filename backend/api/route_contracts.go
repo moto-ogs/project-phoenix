@@ -11,6 +11,7 @@ import (
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
@@ -37,6 +38,9 @@ func ContractDocument() (contract.Document, error) {
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
 		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
+		{"/traeger/master-data", organizationTenancyTraeger.MasterDataRouteContracts()},
+		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
+		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
 		{"/traeger/notifications", traegerNotificationRouteContracts()},
 		{"/caterer", catererPortalHTTP.RouteContracts()},

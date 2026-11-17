@@ -8,7 +8,6 @@ import (
 	"net/mail"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
@@ -245,7 +244,7 @@ func (l *AccountLifecycle) bulkInviteCandidates(links []domain.StudentGuardianLi
 }
 
 func (l *AccountLifecycle) openInvitationsByProfile(ctx context.Context, profileIDs []int64) (map[int64][]domain.GuardianInvitation, error) {
-	invitations, err := l.invitations.ListOpenGuardianInvitations(ctx, profileIDs, l.sessions.now())
+	invitations, err := l.invitations.ListOpenGuardianInvitations(ctx, profileIDs)
 	if err != nil {
 		return nil, failed(opGuardianBulkInvite, err)
 	}
@@ -390,11 +389,12 @@ func (l *AccountLifecycle) skipBulkInviteEmailProblem(run *bulkInviteRun, candid
 // request awaiting staff, or a running link issued for the address the
 // guardian has now. A legacy link without a recipient or one mailed to an
 // earlier address works for nobody (#6294); the guardian gets a new link
-// instead of being counted as already invited.
-func workingBulkInvitations(profile domain.GuardianProfile, open []domain.GuardianInvitation, now time.Time) []domain.GuardianInvitation {
+// instead of being counted as already invited. The read judged the expiry on
+// the database clock.
+func workingBulkInvitations(profile domain.GuardianProfile, open []domain.GuardianInvitation) []domain.GuardianInvitation {
 	working := make([]domain.GuardianInvitation, 0, len(open))
 	for _, invitation := range open {
-		if !invitation.ExpiresAt.After(now) {
+		if invitation.Expired {
 			continue
 		}
 		if invitation.IsPendingApproval() || identityaccess.GuardianInvitation(invitation).AddressedTo(profile.Email) {
@@ -405,7 +405,7 @@ func workingBulkInvitations(profile domain.GuardianProfile, open []domain.Guardi
 }
 
 func (l *AccountLifecycle) inviteEligibleBulkGuardian(ctx context.Context, run *bulkInviteRun, candidate bulkInviteCandidate, profile domain.GuardianProfile, email string, open []domain.GuardianInvitation) error {
-	open = workingBulkInvitations(profile, open, l.sessions.now())
+	open = workingBulkInvitations(profile, open)
 	if len(open) > 0 && !run.req.ResendOpen {
 		run.result.SkippedOpen++
 		return nil
@@ -455,18 +455,22 @@ func (l *AccountLifecycle) resendOpenInvitation(ctx context.Context, dryRun bool
 			return true, nil
 		}
 		readExpiry := invitation.ExpiresAt
-		expiry, err := l.delivery.InvitationExpiry(ctx)
+		lifetime, err := l.delivery.InvitationExpiry(ctx)
+		if err != nil {
+			return false, failed(opGuardianBulkInvite, err)
+		}
+		now, err := l.invitationTime(ctx)
 		if err != nil {
 			return false, failed(opGuardianBulkInvite, err)
 		}
 		issueGuardianInvitationLink(&invitation, profile)
-		invitation.ExpiresAt = l.sessions.now().Add(expiry)
+		invitation.ExpiresAt = now.Add(lifetime)
 		invitation.EmailSentAt = nil
 		invitation.EmailError = nil
 		if err := l.invitations.UpdateGuardianInvitation(ctx, invitation, invitation.ApprovalStatus, readExpiry); err != nil {
 			return false, failed(opGuardianBulkInvite, err)
 		}
-		if _, err := l.enqueueInvitationEmail(ctx, invitation, profile, l.delivery.SchoolName(ctx, invitation.TenantID)); err != nil {
+		if _, err := l.enqueueInvitationEmail(ctx, invitation, lifetime, profile, l.delivery.SchoolName(ctx, invitation.TenantID)); err != nil {
 			return false, failed(opGuardianBulkInvite, err)
 		}
 		return true, nil

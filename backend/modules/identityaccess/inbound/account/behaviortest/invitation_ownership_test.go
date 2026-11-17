@@ -34,7 +34,7 @@ func TestInvitationHTTPRequiresVerifiedOwner(t *testing.T) {
 	role := testpkg.CreateTestRoleForTenant(t, db, "invited-http-staff", schoolA)
 	invitation := &testpkg.InvitationTokenFixture{
 		Email: owner.Email, RoleID: role.ID, Token: fmt.Sprintf("http-owner-%d", schoolA),
-		FirstName: testpkg.StrPtr("Invited"), LastName: testpkg.StrPtr("Owner"), ExpiresAt: time.Now().Add(time.Hour),
+		FirstName: testpkg.StrPtr("Invited"), LastName: testpkg.StrPtr("Owner"), ExpiresAt: testpkg.DatabaseNow(t, db).Add(time.Hour),
 	}
 	invitation.TenantID = schoolA
 	testpkg.InsertTestInvitationToken(t, db, invitation)
