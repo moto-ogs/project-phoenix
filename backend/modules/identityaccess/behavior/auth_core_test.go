@@ -104,8 +104,9 @@ func setupInvitationService(t *testing.T, db *bun.DB, clocks ...func() time.Time
 	return &fixtureOwnedInvitationService{InvitationCapability: service, t: t, db: db}
 }
 
-// invitationTestNow is the Monday morning the invitation tests run on; their
-// links expire relative to it, not to the day the suite runs.
+// invitationTestNow is the Monday morning the invitation tests' Go clock
+// stands on. Their links expire on the database clock (ADR 0285, Nachtrag),
+// so the fixtures date them from the database time instead.
 var invitationTestNow = time.Date(2026, time.November, 16, 9, 0, 0, 0, calendar.Berlin)
 
 func invitationTestClock() time.Time { return invitationTestNow }
@@ -2020,6 +2021,9 @@ func TestInvitationService_ValidateInvitation(t *testing.T) {
 	invitationService := setupInvitationService(t, db, invitationTestClock)
 	authService := setupAuthService(t, db)
 	ctx := testpkg.Ctx(t)
+	// The links expire on the database clock (ADR 0285, Nachtrag); the
+	// service keeps its own clock pinned, which no expiry is judged on.
+	databaseNow := testpkg.DatabaseNow(t, db)
 
 	t.Run("validates valid invitation token", func(t *testing.T) {
 		// ARRANGE
@@ -2032,7 +2036,7 @@ func TestInvitationService_ValidateInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationTokenWithOptions(
 			t, db, "validate",
 			role.ID, creator.ID,
-			invitationTestNow.Add(24*time.Hour),
+			databaseNow.Add(24*time.Hour),
 			&testpkg.InvitationTokenOptions{FirstName: &firstName, LastName: &lastName},
 		)
 
@@ -2058,7 +2062,7 @@ func TestInvitationService_ValidateInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationToken(
 			t, db, "expired",
 			role.ID, creator.ID,
-			invitationTestNow.Add(-1*time.Hour), // Expired
+			databaseNow.Add(-1*time.Hour), // Expired
 		)
 
 		// ACT
@@ -2086,6 +2090,9 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 	invitationService := setupInvitationService(t, db, invitationTestClock)
 	authService := setupAuthService(t, db)
 	ctx := testpkg.Ctx(t)
+	// The links expire on the database clock (ADR 0285, Nachtrag); the
+	// service keeps its own clock pinned, which no expiry is judged on.
+	databaseNow := testpkg.DatabaseNow(t, db)
 
 	t.Run("accepts invitation and creates account", func(t *testing.T) {
 		// ARRANGE
@@ -2097,7 +2104,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationToken(
 			t, db, "accept",
 			role.ID, creator.ID,
-			invitationTestNow.Add(24*time.Hour),
+			databaseNow.Add(24*time.Hour),
 		)
 
 		// ACT
@@ -2134,7 +2141,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationToken(
 			t, db, "weakpass",
 			role.ID, creator.ID,
-			invitationTestNow.Add(24*time.Hour),
+			databaseNow.Add(24*time.Hour),
 		)
 
 		// ACT
@@ -2164,7 +2171,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationToken(
 			t, db, "expiredaccept",
 			role.ID, creator.ID,
-			invitationTestNow.Add(-1*time.Hour), // Expired
+			databaseNow.Add(-1*time.Hour), // Expired
 		)
 
 		// ACT
@@ -2189,6 +2196,9 @@ func TestInvitationService_RevokeInvitation(t *testing.T) {
 	invitationService := setupInvitationService(t, db, invitationTestClock)
 	authService := setupAuthService(t, db)
 	ctx := testpkg.Ctx(t)
+	// The links expire on the database clock (ADR 0285, Nachtrag); the
+	// service keeps its own clock pinned, which no expiry is judged on.
+	databaseNow := testpkg.DatabaseNow(t, db)
 
 	t.Run("revokes pending invitation", func(t *testing.T) {
 		// ARRANGE
@@ -2200,7 +2210,7 @@ func TestInvitationService_RevokeInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationToken(
 			t, db, "revoke",
 			role.ID, creator.ID,
-			invitationTestNow.Add(24*time.Hour),
+			databaseNow.Add(24*time.Hour),
 		)
 
 		// ACT

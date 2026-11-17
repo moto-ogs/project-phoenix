@@ -85,3 +85,65 @@ Einladung länger offen, als Go sie zeigte.
   Go stempelt. Ihre Annahme bewacht keine Funktion der Datenbank; nur die
   Kontolöschung hält ein Konto bei auseinanderlaufenden Uhren um diesen
   Abstand zu lang oder zu kurz. Sie folgen in einem eigenen Schnitt.
+
+## Nachtrag 2026-11-17: Einladungen für Mitarbeitende und Eltern
+
+Für [#7295](https://github.com/moto-ogs/project-phoenix/issues/7295) schließt
+dieser Nachtrag den oben offenen Punkt. `auth.account_is_unused` behält ein
+Konto, solange eine unbenutzte Einladung für Mitarbeitende
+(`auth.invitation_tokens`) oder Eltern (`auth.guardian_invitations`) seine
+Adresse nennt und `expires_at > statement_timestamp()` gilt. Go stempelte
+`expires_at` mit der Uhr von Identity & Access. Lief sie einen Monat nach,
+war eine neue Einladung für die Datenbank sofort abgelaufen: Die stündliche
+Löschung konnte ein Konto unwiderruflich anonymisieren, das eine gültige
+Einladung schützen sollte. Lief sie vor, blieb das Konto einen Monat zu
+lange.
+
+1. Wie bei den Caterer-Einladungen liegen alle Zeitpunkte beider Tabellen
+   auf der Datenbankuhr: `expires_at`, `used_at` (Mitarbeitende) sowie
+   `accepted_at` und `approved_at` (Eltern). `created_at` stempelt weiter
+   die Spaltenvorgabe, `updated_at` der Trigger. Nur `email_sent_at`
+   stempelt weiter die Zustellung; keine Entscheidung vergleicht es.
+2. Jede Operation liest die Datenbankzeit über `databaseClock`:
+   - Einladen, erneut Senden, Freigeben, Ablehnen, die Verknüpfung für
+     Eltern und der Widerruf durch Eltern lesen sie einmal mit
+     `DatabaseTime`. Daraus entstehen `expires_at` und die Stempel.
+   - Die Listen (offene Einladungen der Schule, Kontoliste, Elternliste,
+     offene Freigaben) vergleichen in derselben Abfrage mit
+     `databaseClock`. Jede gelesene Elterneinladung trägt `Expired`,
+     entschieden zur Datenbankzeit der lesenden Abfrage.
+   - Erneutes Senden einer Einladung für Mitarbeitende sperrt die Zeile
+     und liest die Zeit danach. Die Annahme sperrt sie nach Konto und
+     Schule, in der Reihenfolge der Einladung, und prüft dort erneut.
+     Das `UPDATE`, das `used_at` stempelt, trägt `expires_at >
+     statement_timestamp()`. Unter der gehaltenen Sperre heißt 0 Zeilen
+     „abgelaufen“.
+   - Die Annahme einer Elterneinladung sperrt die Zeile vor dem `UPDATE`,
+     das `accepted_at` stempelt und `expires_at >= statement_timestamp()`
+     prüft. Verweigert es, nennt eine neue Lesung den Grund wie bisher.
+   - Ablösen und Beenden von Elternlinks (`InvalidateGuardianInvitations`)
+     setzen `expires_at` auf `LEAST(expires_at, statement_timestamp())`.
+   - Das Aufräumen der Einladungen für Mitarbeitende vergleicht mit
+     `databaseClock`. Die Aufbewahrung der Elterneinladungen zählt ihre
+     30 Tage von `DatabaseTime` zurück. Träger-Einladungen bleiben auf der
+     Uhr von Identity & Access.
+3. Die Mails rechnen auf der Uhr der Komposition. Für Mitarbeitende erhält
+   die Zustellung als Ablauf diese Uhr plus die Laufzeit. Der Renderer der
+   Transaktionsmails verwirft damit keinen gültigen Link. Für Eltern erhält
+   die Zustellung diese Uhr plus die verbleibende Zeit des Links zur
+   Datenbankzeit der Operation. Beide Ports bleiben unverändert.
+4. Für die Elternliste (People Directory) und das Elternportal entscheidet
+   `Expired`. Keiner der beiden Owner hält eine eigene Uhr gegen
+   `expires_at`.
+5. Wächter, Mandantentrennung, Token-Hashing und Fehlercodes bleiben
+   unverändert. `moduleSQLClockBudget["modules/identityaccess"]` bleibt
+   bei 5: Alle neuen Stellen verwenden die Konstante.
+
+Tests: `TestStaffInvitationProtectsTheAccountOnTheDatabaseClockWithGoAhead`
+und `…WithGoBehind` sowie die Gegenstücke für Eltern prüfen mit einer Go-Uhr
+31 Tage vor oder zurück: den Schutz durch `auth.account_is_unused`, die
+Laufzeit und die Gültigkeit in der Mail.
+`TestStaffAndGuardianInvitationExpiredDuringTheLockWaitIsRefused` lässt beide
+Einladungen ablaufen, während eine andere Transaktion sie sperrt.
+`TestGetStudentGuardians_OpenInvitationPendingOnTheDatabaseClock` hält die
+Elternliste.
