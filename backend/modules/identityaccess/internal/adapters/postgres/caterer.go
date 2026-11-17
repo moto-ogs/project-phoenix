@@ -46,14 +46,39 @@ type catererInvitationRow struct {
 	AcceptedAccountID *int64     `bun:"accepted_account_id"`
 	RevokedAt         *time.Time `bun:"revoked_at"`
 	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull"`
+	ReadAt            time.Time  `bun:"read_at,scanonly"`
 }
 
 func (r catererInvitationRow) toDomain() domain.CatererInvitation {
 	return domain.CatererInvitation{
 		ID: r.ID, TenantID: r.TenantID, TokenHash: r.TokenHash, Email: r.Email, CatererName: r.CatererName,
 		DeliveryAddress: r.DeliveryAddress, CreatedBy: r.CreatedBy, ExpiresAt: r.ExpiresAt, AcceptedAt: r.AcceptedAt,
-		AcceptedAccountID: r.AcceptedAccountID, RevokedAt: r.RevokedAt, CreatedAt: r.CreatedAt,
+		AcceptedAccountID: r.AcceptedAccountID, RevokedAt: r.RevokedAt, CreatedAt: r.CreatedAt, ReadAt: r.ReadAt,
 	}
+}
+
+// databaseClock is the package's one read of the database clock (ADR
+// 0285): auth.create_invited_caterer, auth.account_is_unused and
+// auth.delete_unused_caterers judge a caterer invitation's expires_at
+// against statement_timestamp(), so the invitation is stamped and judged
+// on that clock in every writer and reader.
+const databaseClock = `statement_timestamp()`
+
+// catererInvitationRead selects the invitation with the database time of
+// the same statement, which its expiry is judged against.
+const catererInvitationRead = `"caterer_invitation".*, ` + databaseClock + ` AS read_at`
+
+// DatabaseTime reads the database clock once, in the transaction of ctx.
+func (s *Store) DatabaseTime(ctx context.Context) (time.Time, domain.OperationStats, error) {
+	db, err := s.database(ctx)
+	if err != nil {
+		return time.Time{}, domain.OperationStats{}, err
+	}
+	var now time.Time
+	started := time.Now()
+	err = db.NewRaw(`SELECT `+databaseClock).Scan(ctx, &now)
+	_, stats, err := scanOne("read database time", time.Since(started), err)
+	return now, stats, err
 }
 
 func catererInvitationTenantFilter[Q tenantFilterable[Q]](scope TenantScope, query Q) Q {
@@ -109,7 +134,7 @@ func (s *Store) ListCatererInvitations(ctx context.Context) ([]domain.CatererInv
 	}
 	var rows []catererInvitationRow
 	started := time.Now()
-	err = catererInvitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&rows)).
+	err = catererInvitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&rows).ColumnExpr(catererInvitationRead)).
 		OrderExpr(`"caterer_invitation".created_at DESC, "caterer_invitation".id DESC`).
 		Scan(ctx)
 	_, stats, err := scanOne("list caterer invitations", time.Since(started), err)
@@ -139,7 +164,7 @@ func (s *Store) FindCatererInvitationByTokenHash(ctx context.Context, tokenHash 
 	}
 	var row catererInvitationRow
 	started := time.Now()
-	err = catererInvitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).
+	err = catererInvitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).ColumnExpr(catererInvitationRead).
 		Where(`"caterer_invitation".token_hash = ?`, tokenHash)).
 		For("UPDATE").
 		Scan(ctx)

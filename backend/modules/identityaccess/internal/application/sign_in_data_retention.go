@@ -77,8 +77,14 @@ func (r *SignInDataRetention) DeleteExpiredCatererInvitations(ctx context.Contex
 	return value0, nil
 }
 
+// inUnitDeleteExpiredCatererInvitations counts the window back from the
+// database clock that stamps the invitation's instants (ADR 0285).
 func (r *SignInDataRetention) inUnitDeleteExpiredCatererInvitations(ctx context.Context) (int, error) {
-	deleted, _, err := r.store.DeleteExpiredCatererInvitations(ctx, r.now().Add(-GuardianInvitationRetention))
+	now, _, err := r.store.DatabaseTime(ctx)
+	if err != nil {
+		return 0, failed("read database time", err)
+	}
+	deleted, _, err := r.store.DeleteExpiredCatererInvitations(ctx, now.Add(-GuardianInvitationRetention))
 	if err != nil {
 		return 0, failed("delete expired caterer invitations", err)
 	}

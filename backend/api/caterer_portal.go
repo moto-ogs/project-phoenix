@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -40,7 +39,7 @@ type catererIdentity interface {
 // caterer under /api/meal-caterer and the caterer's own routes under
 // /caterer, where the auth rate limiter guards the sign-in and the
 // invitation.
-func mountCatererPortal(root, tenantRouter chi.Router, limiters authRateLimiters, identity catererIdentity, mealPlan mealplanModule.Capability, schools organizationtenancy.Capability, now func() time.Time) error {
+func mountCatererPortal(root, tenantRouter chi.Router, limiters authRateLimiters, identity catererIdentity, mealPlan mealplanModule.Capability, schools organizationtenancy.Capability) error {
 	caterers := identity.Caterers()
 	if caterers == nil {
 		return errors.New("caterer portal: identity access composed no caterer flows")
@@ -62,7 +61,6 @@ func mountCatererPortal(root, tenantRouter chi.Router, limiters authRateLimiters
 		},
 		Resets: portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeCaterer),
 		Auth:   catererauth.NewResource(caterers.CatererSignIn, caterers.CatererSecondFactor),
-		Now:    now,
 	})
 	tenantRouter.Mount("/meal-caterer", resource.SchoolRouter(ProtectedTenantRoutes, requireMealPlanAccess(mealplanAPI.AccessWrite), common.RequiresPermission(permissions.AdminWildcard), requireMealPlanAccess(mealplanAPI.AccessParticipants)))
 	root.Mount("/caterer", resource.CatererRouter(limiters.authMiddleware(), CatererSessionChain))

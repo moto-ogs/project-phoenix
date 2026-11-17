@@ -562,7 +562,7 @@ func composeServeRoot(
 				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog, env.Now)
 			mountCalendarRoutes(router, tenant, logger, calendarApp)
 			return errors.Join(mountMealBillingMonths(tenant, mealPlan, calendar, presence.Presence, settings.Service), mountCommunicationRoutes(tenant, logger, chat, announcements, reminders, deliveryDevices, communication),
-				mountDeliveryRoutes(router, tenant, logger, fileStore, parent, hub, caller, identity), mountCatererPortal(router, tenant, limiters, identity, mealPlan, organizations, env.Now))
+				mountDeliveryRoutes(router, tenant, logger, fileStore, parent, hub, caller, identity), mountCatererPortal(router, tenant, limiters, identity, mealPlan, organizations))
 		},
 		func() error {
 			operator, err := newOperatorRouter(db, logger, sessionAuth, limiters, iot, organizations, settings.Service, hub,
