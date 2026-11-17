@@ -36,7 +36,7 @@ func (f raceFixture) signatures() *Signatures {
 	return NewSignatures(postgres.NewStore(calendar.TodayDate), SignaturePorts{
 		Ledger: struct{ carecontract.SignatureLedger }{}, Links: f.contracts.links, Sender: guardSender{},
 		Post: &racePost{next: time.Now().UnixNano()}, Runtime: raceRuntime{}, Holidays: schoolHolidays{}, Families: familyNumbersDouble{},
-	}, Clock{Now: time.Now}, f.contracts)
+	}, f.contracts.clock, f.contracts)
 }
 
 func paperOf(name string) carecontract.PaperInput {
@@ -95,7 +95,7 @@ func TestSigningLinkClosesOnce(t *testing.T) {
 		if err != nil || !found {
 			return fmt.Errorf("the send made no link: %w", err)
 		}
-		now := time.Now()
+		now := f.contracts.clock.now()
 		if err := store.UseSigningLink(txCtx, f.org, link.ID, now); err != nil {
 			return fmt.Errorf("first use: %w", err)
 		}

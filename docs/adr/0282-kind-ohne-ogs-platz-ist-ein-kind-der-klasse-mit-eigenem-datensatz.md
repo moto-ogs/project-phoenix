@@ -97,6 +97,10 @@ Deshalb erreichen sie Familien ohne OGS-Platz nicht. Ein zweiter Weg für Eltern
   Schule verlassen (ehemalig oder inaktiv), nur mit einem Enddatum. Klassenliste
   und Fehlzeitenliste zeigen und zählen es nur in dieser Zeit. Vormittagsmarken,
   die ein umgewandelter Klassenlisteneintrag mitbringt, zählen auch davor.
+  Bekommt das Kind später einen OGS-Platz, beginnt seine Anmeldung frühestens
+  mit dem Platz. Den Beginn seiner Zeit in der Klasse behält School Membership
+  in `class_member_from`; die Fehlzeitenliste zählt das Kind bis zum Tag vor
+  dem Platz als Kind der Klasse, danach über seine OGS-Teilnahme.
 - Im Glossar stehen die Begriffe „Kind ohne OGS-Platz“ und „Klassenlisteneintrag“
   getrennt.
 - Löschfristen: Für ein Kind ohne OGS-Platz gelten die Fristen eines

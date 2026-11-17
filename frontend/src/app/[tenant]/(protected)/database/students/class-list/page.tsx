@@ -53,6 +53,7 @@ import { createLogger } from "~/lib/logger";
 import { schoolClassName } from "~/lib/school-class-label";
 import type { Student } from "~/lib/student-helpers";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useChildrenWithoutCarePlace } from "~/lib/tenant-context";
 import { Alert } from "~/components/ui/alert";
@@ -61,7 +62,7 @@ import { ChoiceTile } from "~/components/ui/choice-tile";
 
 const logger = createLogger({ component: "ClassListEntriesPage" });
 
-const SWR_KEY = "class-list-entries";
+const SWR_KEY = tenantStudentKeys.classListEntries();
 
 interface EntryFormState {
   firstName: string;
@@ -204,7 +205,7 @@ export default function ClassListEntriesPage() {
     mutate(),
   );
   const { data: classSuggestions } = useSWRAuth(
-    "class-list-class-suggestions",
+    tenantStudentKeys.classListClassSuggestions(),
     fetchClassSuggestions,
   );
   // Die regulären Kinder gehören mit auf diese Seite: ohne sie kann niemand
@@ -215,7 +216,10 @@ export default function ClassListEntriesPage() {
     data: students,
     error: studentsError,
     mutate: mutateStudents,
-  } = useSWRAuth("class-list-roster-students", fetchRosterStudents);
+  } = useSWRAuth(
+    tenantStudentKeys.classListRosterStudents(),
+    fetchRosterStudents,
+  );
   const studentsLoadError = useSwrLoadError(
     studentsError,
     "die Liste der angelegten Kinder",

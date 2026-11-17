@@ -187,6 +187,7 @@ export function PushNotificationSection({
     }
   }, [installAccepted, installationCompleted, portal]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- reads this device's push subscription and Notification permission and syncs the subscription; per-device browser state, not a shared resource
   useEffect(() => {
     void refresh();
   }, [refresh]);

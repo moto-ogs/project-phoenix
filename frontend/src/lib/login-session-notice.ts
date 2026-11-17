@@ -138,6 +138,7 @@ export function useLoginSessionCheck({
   const started = useRef(false);
   const onAccessRef = useLatest(onAccess);
 
+  // oxlint-disable-next-line swr/no-effect-load -- session guard: signs a stale session out or reports access once; no read
   useEffect(() => {
     const cleanup = signOutStaleSession({ status, session, started, logger });
     if (cleanup) {

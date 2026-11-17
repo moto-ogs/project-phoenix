@@ -28,7 +28,6 @@ import {
   participantLabel,
   SurveyAnonymityBadge,
   remindedMessage,
-  SURVEY_LIST_KEY,
   SurveyStatusBadge,
 } from "~/components/surveys/survey-meta";
 import { useToast } from "~/contexts/ToastContext";
@@ -36,6 +35,7 @@ import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { hasPermission } from "~/lib/auth-utils";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import {
   fetchSurveys,
   fetchSurveysToAnswer,
@@ -44,8 +44,6 @@ import {
 } from "~/lib/surveys-api";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { pollsConcept } from "~/lib/concepts/polls";
-
-const TO_ANSWER_KEY = "surveys-to-answer";
 
 type View = "fuer-sie" | "alle";
 
@@ -88,12 +86,12 @@ function SurveysContent() {
   const [action, setAction] = useState<LifecycleAction>(null);
 
   const toAnswer = useSWRAuth<SurveyToAnswer[]>(
-    TO_ANSWER_KEY,
+    tenantAdminKeys.surveysToAnswer(),
     fetchSurveysToAnswer,
     { revalidateOnFocus: false, keepPreviousData: true },
   );
   const surveys = useSWRAuth<Survey[]>(
-    canManage ? SURVEY_LIST_KEY : null,
+    canManage ? tenantAdminKeys.surveys() : null,
     fetchSurveys,
     { revalidateOnFocus: false, keepPreviousData: true },
   );

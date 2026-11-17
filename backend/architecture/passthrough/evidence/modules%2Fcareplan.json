@@ -1241,7 +1241,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (a pickupApprovalExceptions) CreateNote(ctx context.Context, value careplan.PickupNote) (int64, error) {\n\tif value.StudentID \u003c= 0 || value.NoteDate == \"\" || strings.TrimSpace(value.Content) == \"\" {\n\t\treturn 0, carerequests.ErrInvalidPayload\n\t}\n\trow, err := a.records.CreatePickupNote(ctx, value)\n\treturn row.ID, err\n}",
+      "evidence": "func (a pickupApprovalExceptions) CreateNote(ctx context.Context, value careplan.PickupNote) (careplan.PickupNote, error) {\n\tif value.StudentID \u003c= 0 || value.NoteDate == \"\" || strings.TrimSpace(value.Content) == \"\" {\n\t\treturn careplan.PickupNote{}, carerequests.ErrInvalidPayload\n\t}\n\treturn a.records.CreatePickupNote(ctx, value)\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/pickupApprovalExceptions.CreateNote",
       "owner": "modules/careplan"

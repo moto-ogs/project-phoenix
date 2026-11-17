@@ -132,6 +132,9 @@ func TestRenewalGivesAChildWithoutCarePlaceItsPlace(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	child := testpkg.CreateTestStudent(t, db, "Bald", "Angemeldet", "3c")
 	testpkg.MarkTestStudentWithoutCarePlace(t, db, child.ID)
+	_, err = db.ExecContext(testpkg.Ctx(t), `UPDATE users.student_school_memberships SET enrolled_from = '2026-08-03'
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), child.ID)
+	require.NoError(t, err)
 
 	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
 		return people.RenewEnrollmentStudent(txCtx, child.ID, peopledirectory.EnrollmentStudent{SchoolClass: "3c", Status: peopledirectory.StudentStatusActive})
@@ -149,6 +152,27 @@ func TestRenewalGivesAChildWithoutCarePlaceItsPlace(t *testing.T) {
 	roster, err := people.ListStudentRosterOverlapping(ctx, yesterday, yesterday, today.String())
 	require.NoError(t, err)
 	assert.Empty(t, roster, "granting the first place must not add the child to historical care reports")
+
+	// Its class time before the place stays: the Fehlzeitenliste still counts
+	// the morning absences it had without a place (#4803 review).
+	var names []peopledirectory.StudentName
+	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		var err error
+		names, err = people.ListStudentNamesByClass(txCtx, "3c")
+		return err
+	}))
+	var granted *peopledirectory.StudentName
+	for i := range names {
+		if names[i].StudentID == child.ID {
+			granted = &names[i]
+		}
+	}
+	require.NotNil(t, granted)
+	assert.True(t, granted.SchoolMemberOnly, "the class time before the place is kept")
+	require.NotNil(t, granted.SchoolMemberFrom)
+	require.NotNil(t, granted.SchoolMemberUntil)
+	assert.True(t, granted.SchoolMemberFrom.Before(today), "the class time starts before the place")
+	assert.Equal(t, yesterday, granted.SchoolMemberUntil.String(), "it ends the day before the place")
 
 	// An approval dated into the running year (phase start 1 August) starts
 	// the place today all the same (#4803 review).

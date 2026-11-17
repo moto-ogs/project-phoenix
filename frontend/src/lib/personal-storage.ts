@@ -44,7 +44,9 @@ export const PERSONAL_STORAGE_PREFIXES: readonly string[] = [
   // Aufsicht, zuletzt offene Seite der Datenverwaltung (sidebar-memory.ts).
   "sidebar-last-",
   "supervision-last-session",
-  // Zähler je Konto (useUnreadCount-Caches).
+  // Zähler je Konto: die früheren useUnreadCount-Caches. Die Zähler liegen
+  // seit dem geteilten SWR-Cache nur noch im RAM; die Präfixe räumen
+  // Einträge aus der Zeit davor.
   "messages_unread_count:",
   "team_chat_unread_count:",
   "enrollments_unread_count:",

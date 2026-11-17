@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import type { UseUnreadCountOptions } from "./use-unread-count";
 
+/** The key and options the hook handed useUnreadCount. */
+type Captured = UseUnreadCountOptions & { key: string | null };
+
 const {
   mockUseSession,
   mockUseShellAuth,
@@ -40,8 +43,8 @@ vi.mock("~/lib/tenant-context", () => ({
 }));
 
 vi.mock("./use-unread-count", () => ({
-  useUnreadCount: (opts: UseUnreadCountOptions): unknown =>
-    mockUseUnreadCount(opts) as unknown,
+  useUnreadCount: (key: string | null, opts: UseUnreadCountOptions): unknown =>
+    mockUseUnreadCount({ key, ...opts }) as unknown,
 }));
 
 let mockTenantSlug: string | null = "testschool";
@@ -50,10 +53,10 @@ let mockModuleBooked = true;
 import { useEnrollmentRequestsPending } from "./use-enrollment-requests-pending";
 
 /** Rendert den Hook und gibt die an useUnreadCount übergebenen Optionen zurück. */
-function capturedOptions(): UseUnreadCountOptions {
+function capturedOptions(): Captured {
   renderHook(() => useEnrollmentRequestsPending());
   expect(mockUseUnreadCount).toHaveBeenCalledTimes(1);
-  return mockUseUnreadCount.mock.calls[0]![0] as UseUnreadCountOptions;
+  return mockUseUnreadCount.mock.calls[0]![0] as Captured;
 }
 
 beforeEach(() => {
@@ -99,18 +102,17 @@ describe("useEnrollmentRequestsPending", () => {
     expect(opts.refetchOnFocus).toBe(true);
   });
 
-  it("bindet den Cache-Schlüssel an Schule und Konto", () => {
-    expect(capturedOptions().cacheKey).toBe(
-      "enrollment_requests_pending_count:testschool:7",
-    );
+  // Die Schule stellt useSWRAuth davor; der Schlüssel trägt das Konto.
+  it("bindet den Schlüssel an das Konto", () => {
+    expect(capturedOptions().key).toBe("badge-enrollment-requests-pending:7");
   });
 
-  it("kommt ohne Schul-Slug und ohne Konto-ID aus", () => {
+  it("liest nichts ohne Konto-ID", () => {
     mockTenantSlug = null;
     mockUseSession.mockReturnValue({ data: {}, status: "authenticated" });
-    expect(capturedOptions().cacheKey).toBe(
-      "enrollment_requests_pending_count::",
-    );
+    const opts = capturedOptions();
+    expect(opts.key).toBeNull();
+    expect(opts.enabled).toBe(false);
   });
 
   // Ohne Online-Anmeldung gibt es keine Anmeldungsänderungen (#4894).

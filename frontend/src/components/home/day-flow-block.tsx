@@ -19,6 +19,7 @@ import { formatMinutesAhead, minutesBetween } from "~/lib/home-clock";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { useSWRAuth } from "~/lib/swr";
+import { homeKeys } from "~/lib/swr/portal-keys";
 import { useDayPlanHref, useDayPlanLabel } from "~/lib/hooks/use-day-plan-href";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
@@ -58,7 +59,7 @@ export function DayFlowBlock() {
   const { data, error, isLoading, mutate } = useSWRAuth<
     PlannedTimetableInstance[]
   >(
-    "home-day-flow",
+    homeKeys.dayFlow(),
     () =>
       timetableOperationsApi.plannedNow({
         scope: "day",

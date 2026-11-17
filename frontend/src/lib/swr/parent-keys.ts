@@ -31,6 +31,9 @@ export const parentKeys = {
     `parent-meal-participation-${encodeURIComponent(schoolId)}-${encodeURIComponent(studentId)}-${from}-${to}-${asOf}`,
 
   shellChildren: () => "parent-shell-children",
+  // Badges of the parents shell (useUnreadCount).
+  messagesUnreadCount: () => "parent-messages-unread-count",
+  newsUnreadCount: () => "parent-news-unread-count",
   // Die Glocke (#7140): Zähler und erste Seite der Hinweise des Kontos.
   notificationFeed: {
     firstPage: () => "parent-notification-feed-first-page",

@@ -2,6 +2,28 @@ import { Suspense } from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// The form loads through real SWR under a parent session, a fresh cache per
+// render.
+vi.unmock("swr");
+
+function Providers({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "parent-1", scope: "parent" },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
 
 const mocks = vi.hoisted(() => ({
   fetchBootstrap: vi.fn(),
@@ -19,6 +41,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("~/lib/tenant-context", () => ({
   TenantProvider: ({ children }: { children: React.ReactNode }) => children,
   useTenantSafe: () => null,
+  useTenantSlugSafe: () => null,
 }));
 
 vi.mock("~/lib/tenant-api", () => ({
@@ -132,6 +155,7 @@ describe("ParentEnrollFormPage", () => {
             params={Promise.resolve({ tenantSlug: "demo", phaseId: "5" })}
           />
         </Suspense>,
+        { wrapper: Providers },
       );
     });
 
@@ -188,6 +212,7 @@ describe("ParentEnrollFormPage", () => {
             />
           </Suspense>
         </CareFacilityTermScope>,
+        { wrapper: Providers },
       );
     });
 
@@ -208,6 +233,7 @@ describe("ParentEnrollFormPage", () => {
             params={Promise.resolve({ tenantSlug: "demo", phaseId: "5" })}
           />
         </Suspense>,
+        { wrapper: Providers },
       );
     });
 

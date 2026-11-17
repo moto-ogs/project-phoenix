@@ -35,6 +35,7 @@ import {
   OPEN_MONTH_REFRESH_MS,
 } from "~/lib/time-tracking-helpers";
 import { useLiveRefreshInterval, useSWRAuth } from "~/lib/swr";
+import { staffTimeKeys } from "~/lib/swr/staff-keys";
 import {
   staffOverviewService,
   type DashboardPeriod,
@@ -79,7 +80,7 @@ export function SchoolOverviewSection() {
     isLoading,
     mutate,
   } = useSWRAuth(
-    `staff-dashboard-summary-${period}`,
+    staffTimeKeys.dashboardSummary(period),
     () => staffOverviewService.getDashboardSummary(period),
     // The period label changes immediately. Previous-key data would therefore
     // appear as a summary for the wrong period while this request is pending.

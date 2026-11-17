@@ -212,7 +212,7 @@ import {
   useTenantSlugSafe,
   useTimetableEnabled,
 } from "~/lib/tenant-context";
-import useSWR from "swr";
+import { useSWR } from "~/lib/swr/testing";
 
 const mockUsePathname = vi.mocked(usePathname);
 const mockUseSearchParams = vi.mocked(useSearchParams);

@@ -34,8 +34,8 @@ type PickupApprovalExceptions interface {
 	FindDepartureForDate(context.Context, int64, calendar.Date) (*careplan.DepartureException, error)
 	SaveDeparture(context.Context, careplan.DepartureException) (int64, error)
 	// CreateNote writes the dated pickup note naming the day's collector
-	// (#4780).
-	CreateNote(context.Context, careplan.PickupNote) (int64, error)
+	// (#4780) and returns it as stored.
+	CreateNote(context.Context, careplan.PickupNote) (careplan.PickupNote, error)
 }
 
 type PickupApprovalExcusal interface {

@@ -1,21 +1,20 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { personalStorageOwner } from "~/lib/personal-storage";
 import { fetchPendingChangeRequestCount } from "~/lib/change-requests-api";
 import { useShellAuth } from "~/lib/shell-auth-context";
-import { useTenantSlugSafe } from "~/lib/tenant-context";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
 import { useChangeRequestAccess } from "./use-change-request-access";
-import { useShellSeed } from "~/lib/shell-seed";
-import { useUnreadCount } from "./use-unread-count";
+import { useUnreadCount, type UseUnreadCountResult } from "./use-unread-count";
 import { CHANGE_REQUESTS_REFRESH_EVENT } from "~/lib/change-requests-refresh";
 
 /**
  * Pending-count badge for the Änderungsanfragen sidebar item — the actionable
  * counterpart to the Nachrichten unread badge, using the same UnreadBadge and
- * the same shared useUnreadCount machinery (cache, focus refetch, tenant/account
- * cache key). Gated on users:update OR users:absence in the tenant-staff shell —
- * the same pair the backend endpoint and the page it links to require. The
+ * the same shared useUnreadCount machinery (shared cache, focus refetch, one
+ * key per account, seeded by the tenant layout). Gated on users:update OR
+ * users:absence in the tenant-staff shell — the same pair the backend
+ * endpoint and the page it links to require. The
  * endpoint scopes the count per child (admin or the child's group supervisor),
  * so a supervising staffer gets a badge for their group's requests, and it
  * counts only the queues the caller may open: with users:absence alone that is
@@ -27,7 +26,7 @@ import { CHANGE_REQUESTS_REFRESH_EVENT } from "~/lib/change-requests-refresh";
  * messaging is off the pill (and its fan-out) is suppressed, so a freshly
  * submitted master-data request lands on the badge via the next focus refetch.
  */
-export function useChangeRequestsPending() {
+export function useChangeRequestsPending(): UseUnreadCountResult {
   const { data: session, status } = useSession();
   const { mode } = useShellAuth();
   const { canReviewParentRequests } = useChangeRequestAccess();
@@ -40,19 +39,19 @@ export function useChangeRequestsPending() {
   // state. The pending-count endpoint (summing the queues this caller may open)
   // is the source of truth: it returns 0 when nothing is pending, so no
   // feature-flag gate is needed here — an empty count clears the badge on its own.
-  const tenantSlug = useTenantSlugSafe();
-  const accountId = session?.user?.id ?? "";
-  return useUnreadCount({
-    enabled:
-      status === "authenticated" &&
-      mode === "teacher" &&
-      canReviewParentRequests,
-    fetcher: fetchPendingChangeRequestCount,
-    cacheKey: `change_requests_pending_count:${tenantSlug ?? ""}:${accountId}`,
-    cacheOwner: personalStorageOwner(session?.user),
-    eventNames: ["messages-unread-refresh", CHANGE_REQUESTS_REFRESH_EVENT],
-    eventDebounceMs: 500,
-    refetchOnFocus: true,
-    initialCount: useShellSeed()?.counts.changeRequestsPending,
-  });
+  const accountId = session?.user?.id;
+  return useUnreadCount(
+    accountId ? shellResourceKeys.changeRequestsPending(accountId) : null,
+    {
+      enabled:
+        status === "authenticated" &&
+        mode === "teacher" &&
+        !!accountId &&
+        canReviewParentRequests,
+      fetcher: fetchPendingChangeRequestCount,
+      eventNames: ["messages-unread-refresh", CHANGE_REQUESTS_REFRESH_EVENT],
+      eventDebounceMs: 500,
+      refetchOnFocus: true,
+    },
+  );
 }

@@ -41,6 +41,8 @@ import {
 import { useAccountBalance } from "~/lib/hooks/use-account-balance";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { timeTrackingKeys } from "~/lib/swr/portal-keys";
+import { staffAbsenceKeys, staffTimeKeys } from "~/lib/swr/staff-keys";
 import { timeTrackingService } from "~/lib/time-tracking-api";
 import {
   balanceSessionEnd,
@@ -96,8 +98,9 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
   const todayISO = useBerlinToday();
   const today = useMemo(() => parseISODate(todayISO), [todayISO]);
 
-  const { data: timeTrackingConfig } = useSWRAuth("time-tracking-config", () =>
-    timeTrackingService.getConfig(),
+  const { data: timeTrackingConfig } = useSWRAuth(
+    timeTrackingKeys.config(),
+    () => timeTrackingService.getConfig(),
   );
 
   const accountAnchor = useMemo(() => {
@@ -118,7 +121,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
     error: sessionsError,
     mutate: mutateSessions,
   } = useSWRAuth<StaffHistorySession[]>(
-    `staff-history-account-${staffId}-${accountHistoryStartKey}-${yearEndKey}`,
+    staffTimeKeys.historyAccount(staffId, accountHistoryStartKey, yearEndKey),
     () =>
       staffHistoryService.getHistory(
         staffId,
@@ -132,7 +135,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
     error: absencesError,
     mutate: mutateAbsences,
   } = useSWRAuth<StaffAbsenceRow[]>(
-    `staff-absences-account-${staffId}-${accountStartKey}-${yearEndKey}`,
+    staffAbsenceKeys.accountList(staffId, accountStartKey, yearEndKey),
     () => staffAbsenceService.getAbsences(staffId, accountStartKey, yearEndKey),
   );
   // Stundenkonto-Buchungen (#1420) — Teil der Saldo-Wahrheit: sie fliessen in
@@ -144,7 +147,11 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
     error: adjustmentsError,
     mutate: mutateAdjustments,
   } = useSWRAuth<BalanceAdjustment[]>(
-    `staff-balance-adjustments-${staffId}-${accountStartKey}-${adjustmentHistoryEndKey}`,
+    staffTimeKeys.balanceAdjustments(
+      staffId,
+      accountStartKey,
+      adjustmentHistoryEndKey,
+    ),
     () =>
       staffBalanceAdjustmentService.list(
         staffId,
@@ -154,9 +161,9 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
   );
   const refreshStundenkonto = useTenantMutateMatching([
     `staff-month-summary-${staffId}-`,
-    `staff-balance-adjustments-${staffId}-`,
-    `staff-history-account-${staffId}-`,
-    `staff-absences-account-${staffId}-`,
+    staffTimeKeys.balanceAdjustmentsFamily(staffId),
+    staffTimeKeys.historyAccountFamily(staffId),
+    staffAbsenceKeys.accountListFamily(staffId),
   ]);
 
   // The server's per-day projection for the whole account range — the days
@@ -173,7 +180,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
     error: targetsError,
     mutate: mutateTargets,
   } = useSWRAuth<ProjectionByDay>(
-    `staff-schedule-targets-${staffId}-account-${accountStartKey}-${yearEndKey}`,
+    staffTimeKeys.scheduleTargetsAccount(staffId, accountStartKey, yearEndKey),
     () =>
       staffMonthSummaryService.getDailyProjectionRange(
         staffId,

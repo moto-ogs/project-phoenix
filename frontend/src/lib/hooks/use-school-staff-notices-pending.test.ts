@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 
+import type { StaffNotice } from "~/lib/staff-notices-api";
 import type { UseUnreadCountOptions } from "./use-unread-count";
+
+/** The key and options the hook handed useUnreadCount. */
+type Captured = UseUnreadCountOptions & { key: string | null };
 
 const { mockUseSession, mockUseUnreadCount, mockFetchTodaysNotices } =
   vi.hoisted(() => ({
@@ -22,16 +26,16 @@ vi.mock("~/lib/school-staff-notices-api", () => ({
 }));
 
 vi.mock("./use-unread-count", () => ({
-  useUnreadCount: (opts: UseUnreadCountOptions): unknown =>
-    mockUseUnreadCount(opts) as unknown,
+  useUnreadCount: (key: string | null, opts: UseUnreadCountOptions): unknown =>
+    mockUseUnreadCount({ key, ...opts }) as unknown,
 }));
 
 import { useSchoolStaffNoticesPending } from "./use-school-staff-notices-pending";
 
-function capturedOptions(): UseUnreadCountOptions {
+function capturedOptions(): Captured {
   renderHook(() => useSchoolStaffNoticesPending());
   expect(mockUseUnreadCount).toHaveBeenCalledTimes(1);
-  return mockUseUnreadCount.mock.calls[0]![0] as UseUnreadCountOptions;
+  return mockUseUnreadCount.mock.calls[0]![0] as Captured;
 }
 
 beforeEach(() => {
@@ -55,15 +59,20 @@ describe("useSchoolStaffNoticesPending", () => {
       { id: "3", requires_acknowledgement: false },
     ]);
 
-    const opts = capturedOptions();
-    await expect(opts.fetcher()).resolves.toBe(1);
+    const opts = capturedOptions() as unknown as UseUnreadCountOptions<
+      StaffNotice[]
+    >;
+    const notices = await opts.fetcher();
+    expect(opts.count(notices)).toBe(1);
   });
 
   it("bindet Zähler und Ereignis an die Schul-Sitzung", () => {
     const opts = capturedOptions();
 
     expect(opts.enabled).toBe(true);
-    expect(opts.cacheKey).toBe("school_staff_notices_pending:3:7");
+    // Derselbe Eintrag wie Seite und Karte; die Sitzung (Schule + Konto)
+    // stellt useSWRAuth davor.
+    expect(opts.key).toBe("school-staff-notices-today");
     expect(opts.eventNames).toEqual(["staff-notices-refresh"]);
     expect(opts.refetchOnFocus).toBe(true);
   });

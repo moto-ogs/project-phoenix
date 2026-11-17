@@ -243,12 +243,11 @@ func (a pickupApprovalExceptions) SaveDeparture(ctx context.Context, value carep
 	return row.ID, err
 }
 
-func (a pickupApprovalExceptions) CreateNote(ctx context.Context, value careplan.PickupNote) (int64, error) {
+func (a pickupApprovalExceptions) CreateNote(ctx context.Context, value careplan.PickupNote) (careplan.PickupNote, error) {
 	if value.StudentID <= 0 || value.NoteDate == "" || strings.TrimSpace(value.Content) == "" {
-		return 0, carerequests.ErrInvalidPayload
+		return careplan.PickupNote{}, carerequests.ErrInvalidPayload
 	}
-	row, err := a.records.CreatePickupNote(ctx, value)
-	return row.ID, err
+	return a.records.CreatePickupNote(ctx, value)
 }
 
 // NewPickupExcusalRows serves the pointer-based excusal rows from records.

@@ -25,9 +25,10 @@ import { STALE_DATA_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { activitiesConcept } from "~/lib/concepts/activities";
 
-const CACHE_KEY = "database-categories";
+const CACHE_KEY = tenantAdminKeys.categories();
 const DEFAULT_COLOR: string = LOCATION_COLORS.GROUP_ROOM;
 /** Spiegelt maxCategoryNameLength / maxCategoryDescriptionLength in Go. */
 const NAME_MAX_LENGTH = 60;

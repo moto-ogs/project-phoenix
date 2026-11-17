@@ -24,6 +24,7 @@ import { userContextService } from "~/lib/usercontext-api";
 import type { Staff } from "~/lib/usercontext-helpers";
 import { useToast } from "~/contexts/ToastContext";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { BinaryModeGuard } from "~/components/tenant/binary-mode-guard";
@@ -43,7 +44,6 @@ import { foldForSearch } from "~/lib/search-fold";
 const logger = createLogger({ component: "ActivitiesPage" });
 
 // SWR cache key for activities page data
-const ACTIVITIES_PAGE_KEY = "activities-page";
 
 // Define interface for the combined page data
 interface ActivitiesPageData {
@@ -106,7 +106,7 @@ function ActivitiesPageContent() {
     error: fetchError,
     mutate: mutatePageData,
   } = useSWRAuth<ActivitiesPageData>(
-    ACTIVITIES_PAGE_KEY,
+    tenantDailyKeys.activitiesOverview(),
     async () => {
       const [activitiesData, categoriesData, staffData] = await Promise.all([
         fetchActivities(),
