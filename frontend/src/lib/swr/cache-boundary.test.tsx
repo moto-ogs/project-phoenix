@@ -160,6 +160,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
     "studentKeys",
     "timeTrackingKeys",
     "timetableKeys",
+    "traegerKeys",
     "weekProtocolKeys",
   ],
   "traeger-keys": ["traegerKeys"],
