@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
@@ -34,6 +35,13 @@ type retentionSuite struct {
 
 func newRetentionSuite(t *testing.T) retentionSuite {
 	t.Helper()
+	return newRetentionSuiteAt(t, nil)
+}
+
+// newRetentionSuiteAt composes the suite on the root clock now (nil: the
+// real one).
+func newRetentionSuiteAt(t *testing.T, now func() time.Time) retentionSuite {
+	t.Helper()
 	admin := testpkg.SetupTestDB(t)
 	serve := testpkg.SetupServeTestDB(t)
 	t.Cleanup(func() { require.NoError(t, serve.Close()) })
@@ -43,7 +51,7 @@ func newRetentionSuite(t *testing.T) retentionSuite {
 	require.NoError(t, err)
 	students, err := NewStudentTestRetention(db, audit, settings)
 	require.NoError(t, err)
-	staff, err := newStaffRetention(db, audit, settings, nil)
+	staff, err := newStaffRetention(db, audit, settings, now, nil)
 	require.NoError(t, err)
 	attendance, err := presenceCompose.New(presenceCompose.Dependencies{DB: admin, Observe: func(presenceCompose.Observation) {}})
 	require.NoError(t, err)

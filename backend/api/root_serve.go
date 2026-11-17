@@ -230,7 +230,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			classListEntries, err = composeClassListEntries(db, persons, audit.Command)
+			classListEntries, err = composeClassListEntries(db, persons, audit.Command, env.Now)
 			return
 		},
 		func() (err error) {

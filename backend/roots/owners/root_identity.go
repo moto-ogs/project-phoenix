@@ -55,7 +55,7 @@ func BuildIdentityAccess(
 	if err != nil {
 		return nil, nil, err
 	}
-	reinstatement, err := ComposeStaffReinstatement(db)
+	reinstatement, err := ComposeStaffReinstatement(db, env.Now)
 	if err != nil {
 		return nil, nil, err
 	}

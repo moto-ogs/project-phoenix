@@ -34,9 +34,9 @@ type Store struct {
 	// today is the composition's day clock: an external caregiver record
 	// counts for a staff member on the days of its window.
 	today func() calendar.Date
-	// now is the composition's clock: it stamps deleted_at, which the
-	// automatic deletion of staff compares with its cutoff, and the other
-	// columns this store sets in time.
+	// now is the composition's clock: it stamps the time columns no
+	// decision compares, the retired caregiver profile, the planned exit and
+	// the erasure mark. The staff retirement stays on the database clock.
 	now func() time.Time
 }
 
@@ -259,10 +259,12 @@ func (s *Store) SoftDeleteStaff(ctx context.Context, id int64) (domain.Operation
 	}
 	// A planned exit belongs to the live membership only (#4809): the
 	// retirement clears it, whether the scheduler or an immediate deletion
-	// retires the member.
+	// retires the member. The database stamps the retirement: the erasure
+	// function of 1.15.459 compares it with a cutoff it guards on its own
+	// clock (ADR 0281 point 3).
 	query := withTenant(clearPlannedExit(db.NewUpdate().Model((*staffRow)(nil)).
 		ModelTableExpr(`users.staff_school_memberships AS "staff"`)).
-		Set(`deleted_at = ?`, s.now()).
+		Set(`deleted_at = NOW()`).
 		Where(`"staff".id = ?`, id).
 		Where(`"staff".deleted_at IS NULL`), "staff", scope)
 	return execOne(ctx, query, "soft delete staff", schoolmembership.ErrStaffNotFound)

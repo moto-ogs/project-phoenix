@@ -132,6 +132,12 @@ var moduleSQLClockBudget = map[string]int{
 	// processed_at, and the confirmed_at, requested_at and prepared_at that
 	// the same statements set beside next_attempt_at and processed_at.
 	"modules/schoolcalendar": 20,
+	// The automatic deletion of staff (2, ADR 0281 point 3): the retirement
+	// stamps deleted_at with NOW(), and the cutoff counts from the day of
+	// clock_timestamp(), because users.erase_retired_staff_records (1.15.459)
+	// compares that column with the cutoff and guards the cutoff with its
+	// own clock.
+	"modules/schoolmembership": 2,
 	// The visibility window of the operator announcements (2, ADR 0281):
 	// communication stamps published_at with CURRENT_TIMESTAMP, and the
 	// projection orders it against the created_at of schools, memberships
