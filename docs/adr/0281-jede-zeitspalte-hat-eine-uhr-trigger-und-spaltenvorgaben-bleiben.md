@@ -188,3 +188,38 @@ nach dem Start ihrer Transaktion, der Trigger der Anfrage mit dem Start
 selbst. Eine unberührte Zeile liegt dann zwischen beiden Stempeln. Die
 bekannten Grenzen dieser alten Prüfung bleiben für diese Einträge:
 überlappende Transaktionen, Uhren auseinander, die ungeprüfte Notiz.
+
+## Nachtrag 2026-11-17: Geänderte Vertragsbedingungen erkennt der Träger am Text, nicht an der Zeit
+
+Die Vertragsvorbereitung unterscheidet „Bedingungen nach der Anmeldung
+geändert“ (`acceptance_changed`) von „Zustimmung fehlt“
+(`acceptance_missing`), wenn der angekreuzte Bedingungsblock nicht den
+aktuellen Bedingungen der Vorlage entspricht. Bisher ordnete sie dafür
+`updated_at` der Vorlage (`care_contract.contract_templates`, Trigger) gegen
+den Zeitpunkt des Ankreuzens, den Enrollment mit seiner Uhr stempelt. Das
+sind zwei Uhren (Punkt 4).
+
+Enrollment kann die Fassung der Vorlage beim Ankreuzen nicht festhalten: Der
+Block ist ein freier Rechtsblock, den die Schule in ihr Formular kopiert,
+ohne Verweis auf eine Vorlage. Die Vorlage liegt in der Träger-Transaktion,
+das Ankreuzen in der Schul-Transaktion (ADR 0105), und Care Contract liest
+schon von Enrollment; ein Lesen in Gegenrichtung schlösse einen Zyklus
+(ADR 0058). Deshalb hält Care Contract die Fassungen selbst fest: Jede
+Speicherung einer Vorlage, einzeln oder beim Ausrollen des Katalogs, legt im
+Protokolleintrag `template` unter `acceptance_texts` alle Bedingungstexte
+dieser Fassung ab (alle Wortlaute aus `acceptanceTexts`). Gleicht der
+angekreuzte Text einer gespeicherten Fassung,
+die die Vorlage nicht mehr hat, sind die Bedingungen geändert; sonst fehlt
+die Zustimmung. Kein Zeitpunkt wird geordnet.
+
+Grenzen:
+
+- Vorlagen, deren Protokoll eine Speicherung ohne `acceptance_texts` hat
+  (gespeichert vor dieser Änderung), behalten zusätzlich die alte Prüfung:
+  geändert, wenn `updated_at` der Vorlage nach dem Ankreuzen liegt. Für sie
+  bleibt der bekannte Fehler bei auseinanderlaufenden Uhren, solange der
+  angekreuzte Text nur aus einer Fassung vor dieser Änderung stammt.
+- Kreuzen Eltern einen Text an, den die Vorlage schon vor dem Ankreuzen
+  ersetzt hatte (die Schule hat ihr Formular nicht nachgezogen), lautet der
+  Grund jetzt „geändert“ statt „fehlt“. In beiden Fällen entsteht kein
+  Vertrag.

@@ -112,19 +112,33 @@ func (c *Conclusions) concludeChild(ctx context.Context, organizationID int64, k
 	return nil
 }
 
-// templateChanges holds when the conditions of each offering last changed.
-type templateChanges map[[2]int64]time.Time
+// templateChanges holds the saved versions of the conditions of each
+// offering.
+type templateChanges map[[2]int64]templateHistory
 
-// since is the latest change of the conditions of the offerings at the
-// school.
-func (t templateChanges) since(schoolID int64, offerings []int64) time.Time {
-	var latest time.Time
+// templateHistory is what the trail knows about the versions of the
+// conditions of one or more offerings: the conditions texts of every saved
+// version, whether every save recorded them, and the last change of the
+// template row, which the database stamps.
+type templateHistory struct {
+	updatedAt time.Time
+	versions  []string
+	complete  bool
+}
+
+// since joins the histories of the offerings at the school. It is complete
+// only when the history of each of them is.
+func (t templateChanges) since(schoolID int64, offerings []int64) templateHistory {
+	joined := templateHistory{complete: len(offerings) > 0}
 	for _, offering := range offerings {
-		if changed := t[[2]int64{schoolID, offering}]; changed.After(latest) {
-			latest = changed
+		history, ok := t[[2]int64{schoolID, offering}]
+		joined.complete = joined.complete && ok && history.complete
+		joined.versions = append(joined.versions, history.versions...)
+		if history.updatedAt.After(joined.updatedAt) {
+			joined.updatedAt = history.updatedAt
 		}
 	}
-	return latest
+	return joined
 }
 
 // readContracts reads the templates of the Träger with their last change and
@@ -254,13 +268,24 @@ func sendHoldBack(err error) error {
 // shown, before the acceptance. Its complete text must equal the applicable
 // template conditions. A save timestamp alone neither proves nor invalidates
 // agreement; the contract waits when its conditions have not been accepted.
-func acceptanceIssue(draft NewContract, termsChanged time.Time) string {
+//
+// A ticked text that equals a saved version of the template the contract no
+// longer has means the conditions changed since. The ticked text and the
+// template versions are compared for equality: the parents' submission is
+// stamped by Enrollment's clock, the template row by the database (ADR
+// 0281). Only a template whose history the trail does not hold completely,
+// saved before the versions were recorded, keeps the earlier guard: a
+// template row changed after the submission.
+func acceptanceIssue(draft NewContract, history templateHistory) string {
 	if _, ok := acceptanceProof(draft); ok {
 		return ""
 	}
 	for _, proof := range draft.Acceptances {
-		if proof.Required && submittedAcceptance(draft, proof) && strings.HasPrefix(proof.Text, "Vertragsbedingungen für die Betreuung\n") &&
-			termsChanged.After(proof.SubmittedAt) {
+		if !proof.Required || !submittedAcceptance(draft, proof) || !strings.HasPrefix(proof.Text, "Vertragsbedingungen für die Betreuung\n") {
+			continue
+		}
+		if slices.Contains(history.versions, proof.Text) ||
+			!history.complete && history.updatedAt.After(proof.SubmittedAt) {
 			return carecontract.SkipAcceptanceChanged
 		}
 	}
