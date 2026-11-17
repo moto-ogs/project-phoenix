@@ -29,7 +29,10 @@ const (
 // Cross-school administrative access is an explicit scope, never tenant 0.
 type Database func(context.Context) (bun.IDB, TenantScope, error)
 
-type Store struct{ database Database }
+type Store struct {
+	database Database
+	clock
+}
 
 type personRow struct {
 	bun.BaseModel `bun:"table:persons,alias:person"`
@@ -315,7 +318,7 @@ func (s *Store) SoftDelete(ctx context.Context, id int64) (domain.OperationStats
 	}
 	query := withTenant(db.NewUpdate().Model((*personRow)(nil)).
 		ModelTableExpr(`users.persons AS "person"`).
-		Set(`deleted_at = NOW()`).
+		Set(`deleted_at = ?`, s.stamp()).
 		Where(`"person".id = ?`, id).
 		Where(`"person".deleted_at IS NULL`), scope)
 	return execOne(ctx, query, "soft delete person")
@@ -337,7 +340,7 @@ func (s *Store) AnonymizeAndSoftDelete(ctx context.Context, id int64) (domain.Op
 		Set(`first_name = ?`, deletedPersonFirstName).
 		Set(`last_name = ?`, deletedPersonLastName).
 		Set(`birthday = NULL`).
-		Set(`deleted_at = NOW()`).
+		Set(`deleted_at = ?`, s.stamp()).
 		Where(`"person".id = ?`, id), scope)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()

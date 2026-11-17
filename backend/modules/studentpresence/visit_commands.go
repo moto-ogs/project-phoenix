@@ -6,7 +6,7 @@ import (
 )
 
 type VisitMaintenance interface {
-	// CloseGroupVisits uses the database clock, clamped to each entry time.
+	// CloseGroupVisits uses the owner's clock, clamped to each entry time.
 	CloseGroupVisits(context.Context, []int64) (int64, error)
 	TransferOpenVisits(context.Context, int64, int64) (int64, error)
 	TransferRecentDeviceVisits(context.Context, int64, int64) (int64, error)

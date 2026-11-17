@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/uptrace/bun"
 
@@ -38,6 +39,14 @@ func requireRuntime(runtime Runtime) Runtime {
 		panic("people directory repository: runtime is required")
 	}
 	return runtime
+}
+
+// requireClock is the composition's clock a ledger stamps its rows with.
+func requireClock(now func() time.Time) func() time.Time {
+	if now == nil {
+		panic("people directory repository: the composition's clock is required")
+	}
+	return now
 }
 
 // withTenantFilter adds the defense-in-depth tenant_id filter for alias when

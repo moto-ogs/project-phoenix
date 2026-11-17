@@ -508,9 +508,12 @@ func (s *Store) CreateOfferingChange(ctx context.Context, value careplan.Offerin
 		return careplan.OfferingChangeRequest{}, domain.OperationStats{}, err
 	}
 	row := offeringChangeFromDomain(value)
-	// created_at stays with the column default: the parent request feed
-	// orders it against the requests of other owners.
+	// The parent request feed filters and orders created_at with the
+	// requests of other kinds on the owner's clock (ADR 0281).
 	row.TenantID, row.UpdatedAt = tenantID, s.currentTime()
+	if row.CreatedAt.IsZero() {
+		row.CreatedAt = row.UpdatedAt
+	}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = db.NewInsert().Model(&row).ModelTableExpr(`enrollment.offering_change_requests`).Returning("*").Scan(ctx)
