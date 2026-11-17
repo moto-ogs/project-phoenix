@@ -791,6 +791,7 @@ export function SickNoteModal({
   reasonRequired = true,
   careExceptions = NO_CARE_EXCEPTIONS,
   sickDays = NO_STATUS_DAYS,
+  withoutCarePlace = false,
 }: Readonly<{
   studentId?: string;
   onClose: () => void;
@@ -816,6 +817,11 @@ export function SickNoteModal({
    * (`source` nicht `parent`) ist ein Schuleintrag wie eine Teil-Abwesenheit.
    */
   sickDays?: readonly StatusDay[];
+  /**
+   * Das Kind hat keinen Platz in der OGS (#4803): die Meldung geht an die
+   * Schule, die Texte nennen darum keine OGS.
+   */
+  withoutCarePlace?: boolean;
 }>) {
   const t = useCareTermTranslations("parentChildCare");
   const locale = useLocale();
@@ -881,8 +887,12 @@ export function SickNoteModal({
   const kindHint =
     status === "sick"
       ? requiresApproval === false
-        ? "sick.kindHintSick"
-        : "sick.kindHintSickUnknown"
+        ? withoutCarePlace
+          ? "sick.kindHintSickWithoutCarePlace"
+          : "sick.kindHintSick"
+        : withoutCarePlace
+          ? "sick.kindHintSickUnknownWithoutCarePlace"
+          : "sick.kindHintSickUnknown"
       : requiresApproval === false
         ? "sick.kindHintExcused"
         : "sick.kindHintExcusedUnknown";
@@ -907,9 +917,10 @@ export function SickNoteModal({
       return;
     }
     if (reasonRequired && noteMissing) {
-      form.invalid(t("sick.reasonRequiredError"), {
-        [SICK_REASON_FIELD]: t("sick.reasonRequiredError"),
-      });
+      const message = withoutCarePlace
+        ? t("sick.reasonRequiredErrorWithoutCarePlace")
+        : t("sick.reasonRequiredError");
+      form.invalid(message, { [SICK_REASON_FIELD]: message });
       return;
     }
     setSubmitting(true);
@@ -985,11 +996,15 @@ export function SickNoteModal({
               onClick={() => void handleSubmit()}
               disabled={submitting || (!sickEnabled && !excusedEnabled)}
               tooltip={t(
-                requiresApproval === true
-                  ? "sick.submitRequestTooltip"
-                  : requiresApproval === false && schoolDays.length === 0
-                    ? "sick.submitDirectTooltip"
-                    : "sick.submitTooltip",
+                withoutCarePlace
+                  ? requiresApproval === true
+                    ? "sick.submitRequestTooltipWithoutCarePlace"
+                    : "sick.submitTooltipWithoutCarePlace"
+                  : requiresApproval === true
+                    ? "sick.submitRequestTooltip"
+                    : requiresApproval === false && schoolDays.length === 0
+                      ? "sick.submitDirectTooltip"
+                      : "sick.submitTooltip",
               )}
               disabledReason={
                 !sickEnabled && !excusedEnabled
@@ -999,9 +1014,13 @@ export function SickNoteModal({
               isLoading={submitting}
               loadingText={t("sick.submitting")}
             >
-              {status === "sick"
-                ? t("sick.submitSick")
-                : t("sick.submitExcused")}
+              {withoutCarePlace
+                ? status === "sick"
+                  ? t("sick.submitSickWithoutCarePlace")
+                  : t("sick.submitExcusedWithoutCarePlace")
+                : status === "sick"
+                  ? t("sick.submitSick")
+                  : t("sick.submitExcused")}
             </Button>
           </>
         )
@@ -1013,11 +1032,17 @@ export function SickNoteModal({
             ? t("sick.requestSentPartlyBody")
             : requiresApproval === false
               ? t("sick.requestSentSchoolBody")
-              : t("sick.requestSentBody")}
+              : withoutCarePlace
+                ? t("sick.requestSentBodyWithoutCarePlace")
+                : t("sick.requestSentBody")}
         </p>
       ) : (
         <div className="space-y-4">
-          <p className="text-sm leading-6 text-gray-700">{t("sick.intro")}</p>
+          <p className="text-sm leading-6 text-gray-700">
+            {withoutCarePlace
+              ? t("sick.introWithoutCarePlace")
+              : t("sick.intro")}
+          </p>
           <CustomSelect
             label={t("sick.kindLabel")}
             value={status}
@@ -1108,7 +1133,11 @@ export function SickNoteModal({
           )}
           {dayCopy && <p className="text-sm text-gray-600">{dayCopy}</p>}
           <Textarea
-            label={t("sick.reasonLabelRequired")}
+            label={
+              withoutCarePlace
+                ? t("sick.reasonLabelWithoutCarePlace")
+                : t("sick.reasonLabelRequired")
+            }
             value={reason}
             maxLength={MAX_NOTE_LEN}
             onChange={(event) => {

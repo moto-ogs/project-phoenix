@@ -390,6 +390,7 @@ function ChildSections({
           excusedRequiresApproval={care.features.excused_requires_approval}
           careExceptions={care.careExceptions}
           sickDays={care.sickDays}
+          withoutCarePlace={withoutCarePlace}
         />
       )}
       {modal === "pickup" && (

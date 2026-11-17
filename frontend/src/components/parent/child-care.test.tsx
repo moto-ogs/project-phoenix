@@ -1140,6 +1140,35 @@ describe("SickNoteModal — Abmeldegrund", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
+  // #4803: die Meldung für ein Kind ohne OGS-Platz geht an die Schule.
+  it("names no OGS for a child without an OGS place", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SickNoteModal onClose={vi.fn()} onSubmit={onSubmit} withoutCarePlace />,
+    );
+    expect(
+      screen.getByText(
+        "Melden Sie Ihr Kind für die ausgewählten Tage ab. Die Schule sieht die Abmeldung.",
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Krankmeldung senden" }),
+    );
+    expect(
+      await screen.findAllByText("Bitte geben Sie einen kurzen Hinweis ein."),
+    ).not.toHaveLength(0);
+    fireEvent.change(screen.getByRole("textbox", { name: "Grund / Hinweis" }), {
+      target: { value: "Fieber" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Krankmeldung senden" }),
+    );
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/OGS/)).toBeNull();
+  });
+
   it("uses neutral copy while the approval settings are unknown", () => {
     render(<SickNoteModal onClose={vi.fn()} onSubmit={vi.fn()} />);
 
