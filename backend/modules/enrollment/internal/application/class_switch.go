@@ -109,11 +109,15 @@ func (d *Decisions) ApplyDueClassSwitches(ctx context.Context, asOf calendar.Dat
 // switch; the plan stays, so a later run grants the place once one is free,
 // and the other switches of the school still apply.
 func (d *Decisions) applyDueClassSwitch(ctx context.Context, change enrollmentNative.DueClassSwitch) (bool, error) {
-	ok, err := d.applyClassSwitchInSavepoint(ctx, change)
+	ok, err := d.inSavepoint(ctx, func(applyCtx context.Context) (bool, error) {
+		return d.applyClassSwitch(applyCtx, change)
+	})
 	if isChildQuotaReached(err) {
-		d.logger().Warn("class switch held: child quota reached",
+		d.logger().Warn("class switch: place held, child quota reached",
 			slog.Int64("request_child_id", change.RequestChildID))
-		return false, nil
+		return d.inSavepoint(ctx, func(applyCtx context.Context) (bool, error) {
+			return d.applyClassHoldingPlace(applyCtx, change)
+		})
 	}
 	if err != nil {
 		return false, err
@@ -124,17 +128,44 @@ func (d *Decisions) applyDueClassSwitch(ctx context.Context, change enrollmentNa
 	return ok, nil
 }
 
-// applyClassSwitchInSavepoint runs one switch in its own savepoint, so a
-// switch the Kinderkontingent refuses leaves nothing half written behind.
-func (d *Decisions) applyClassSwitchInSavepoint(ctx context.Context, change enrollmentNative.DueClassSwitch) (bool, error) {
+// applyClassHoldingPlace applies the class of a switch the Kinderkontingent
+// refused: the child without an OGS place moves into its new class on this
+// day all the same, and only its place waits. The plan stays, now from the
+// new class to itself, so a later run grants the place once one is free.
+// A switch the school already overtook keeps its plan as it is.
+func (d *Decisions) applyClassHoldingPlace(ctx context.Context, change enrollmentNative.DueClassSwitch) (bool, error) {
+	student, err := d.readEnrollmentStudent(ctx, *change.CreatedStudentID, "update")
+	if err != nil {
+		return false, fmt.Errorf("class switch: load student %d: %w", *change.CreatedStudentID, err)
+	}
+	if student == nil || student.SchoolClass != change.From || change.From == change.To {
+		return false, nil
+	}
+	student.SchoolClass = change.To
+	input := enrollmentStudentInput(student)
+	input.PreserveCarePlaceStatus = true
+	if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, student.ID, input); err != nil {
+		return false, fmt.Errorf("class switch: update student %d: %w", student.ID, err)
+	}
+	held := change.ClassSwitch
+	held.From = change.To
+	if err := d.planClassSwitchKeepingPlace(ctx, change.RequestChildID, &held, true); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// inSavepoint runs one step of a switch in its own savepoint, so a step the
+// Kinderkontingent refuses leaves nothing half written behind.
+func (d *Decisions) inSavepoint(ctx context.Context, step func(context.Context) (bool, error)) (bool, error) {
 	if d.deps.Runtime.InTransaction == nil || !d.deps.Runtime.InTransaction(ctx) {
-		return d.applyClassSwitch(ctx, change)
+		return step(ctx)
 	}
 	var ok bool
-	err := d.deps.Runtime.Savepoint(ctx, func(applyCtx context.Context) error {
-		var applyErr error
-		ok, applyErr = d.applyClassSwitch(applyCtx, change)
-		return applyErr
+	err := d.deps.Runtime.Savepoint(ctx, func(stepCtx context.Context) error {
+		var stepErr error
+		ok, stepErr = step(stepCtx)
+		return stepErr
 	})
 	return ok, err
 }
@@ -157,9 +188,12 @@ func (d *Decisions) applyClassSwitch(ctx context.Context, change enrollmentNativ
 		d.logger().Info("class switch skipped: class changed since approval",
 			slog.Int64("request_child_id", change.RequestChildID),
 			slog.Int64("student_id", student.ID))
-		// The renewal still starts on this day: it keeps the school's class
-		// and gives a child without an OGS place (#4803) the place the
-		// approval deferred to it. A child with a place keeps its values.
+		// A child without an OGS place (#4803) still gets the place the
+		// approval deferred to this day; the renewal keeps the school's
+		// class. A child with a place has nothing left to apply.
+		if !student.WithoutCarePlace {
+			return false, nil
+		}
 		if err := d.deps.StudentEnrollment.RenewEnrollmentStudent(ctx, student.ID, enrollmentStudentInput(student)); err != nil {
 			return false, fmt.Errorf("class switch: grant place to student %d: %w", student.ID, err)
 		}

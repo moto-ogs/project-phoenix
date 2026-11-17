@@ -26,8 +26,12 @@ Owner an.
 
 - **Workflow Data Import.** `ClassListConversion.ConvertClassListEntries`
   (`modules/dataimport`) liest alle Einträge der Schule. Ein Eintrag, dessen
-  Namen ein nicht abgegangenes Kind seiner Klasse schon trägt, wird diesem
-  Kind zugeordnet. Für jeden anderen Eintrag legt die Stapelanlage des
+  Namen ein nicht abgegangenes Kind seiner Klasse mit laufender Betreuung
+  schon trägt, wird diesem Kind zugeordnet. Ist die Betreuung des
+  gleichnamigen Kindes schon beendet, steht der Eintrag für die Zeit danach:
+  er wird ein eigenes Kind ohne OGS-Platz, damit seine Vormittags-Marken in
+  den Klassenansichten bleiben und das beendete Kind seine OGS-Geschichte
+  behält. Für jeden anderen Eintrag legt die Stapelanlage des
   Kinder-Imports (`StudentImportConfig.CreateChunk`) ein Kind ohne OGS-Platz
   an. Danach liest ein zweiter Lesezugriff die neuen Kinder nach Name und
   Klasse; beides ist mengenbasiert. Dann zieht die Anwesenheit am Vormittag
@@ -83,7 +87,10 @@ Owner an.
   der Anmeldung gibt dem Kind seinen Platz und zählt dann. Der Platz beginnt
   frühestens am Tag der Zusage; beginnt die Anmeldung erst im nächsten
   Schuljahr, gibt ihn der geplante Klassenwechsel an diesem Tag, auch wenn
-  die Klasse gleich bleibt oder die Schule sie vorher ändert.
+  die Klasse gleich bleibt oder die Schule sie vorher ändert. Ist das
+  Kinderkontingent an diesem Tag voll, wechselt das Kind trotzdem die
+  Klasse; nur der Platz wartet, und ein späterer Lauf gibt ihn, sobald einer
+  frei ist. Die übrigen Klassenwechsel der Schule laufen weiter.
 - Ein Rücksetzen des Vormittagsmoduls auf seine eingeschaltete
   Voreinstellung führt denselben Seiteneffekt wie das Einschalten aus.
   Scheitert die Umwandlung, bleibt das Modul ausgeschaltet.
