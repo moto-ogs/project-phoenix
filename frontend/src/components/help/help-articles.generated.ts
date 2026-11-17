@@ -11182,6 +11182,18 @@ export const traegerBillingRunTopic =
           ],
         },
         {
+          title: "Nummern aus dem bisherigen Programm fortführen",
+          description:
+            "Nur nötig, wenn Ihre Rechnungen nicht bei 1 beginnen sollen.",
+          steps: [
+            "Wählen Sie bei `Rechnungsnummern der Ferien` den Knopf `Nächste Nummer ändern`.",
+            "Tragen Sie die Nummer nach der letzten Rechnung Ihres bisherigen Programms ein, zum Beispiel 7100.",
+            "Prüfen Sie darunter, welche Nummer die nächste Rechnung bekommt.",
+            "Wählen Sie `Speichern`.",
+            "Mit `Verlauf ansehen` sehen Sie, wer die Nummer wann geändert hat.",
+          ],
+        },
+        {
           title: "Lauf starten und prüfen",
           steps: [
             "Wählen Sie in der Navigation `Abrechnungsläufe`. Der Reiter `Ferien` ist schon offen.",
@@ -11986,6 +11998,16 @@ export const traegerCareMonthsTopic =
             "Wählen Sie unten in der Navigation `Einstellungen` und dann `Abrechnungsvorgaben`.",
             "Wählen Sie bei `Rechnungsnummern der Monatsbeiträge` den Knopf `Muster festlegen`.",
             "Tragen Sie ein Muster ein, zum Beispiel MB-{JJJJ}-{NNNN}. Nehmen Sie ein anderes Kürzel als bei den Ferien.",
+            "Wählen Sie `Speichern`.",
+          ],
+        },
+        {
+          title: "Nummern aus dem bisherigen Programm fortführen",
+          description:
+            "Nur nötig, wenn Ihre Rechnungen nicht bei 1 beginnen sollen.",
+          steps: [
+            "Wählen Sie bei `Rechnungsnummern der Monatsbeiträge` den Knopf `Nächste Nummer ändern`.",
+            "Tragen Sie die Nummer nach der letzten Rechnung Ihres bisherigen Programms ein.",
             "Wählen Sie `Speichern`.",
           ],
         },

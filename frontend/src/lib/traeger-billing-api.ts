@@ -228,11 +228,33 @@ export interface BillingPeriod {
   readonly endsOn: string;
 }
 
+/** One start value the Abrechnung set for a number range (#7358). */
+export interface NumberRangeStart {
+  /** The running number the next invoice got from then on. */
+  readonly nextNumber: number;
+  /** That number in the pattern of today. */
+  readonly example: string;
+  readonly setAt: string;
+  readonly setByYou: boolean;
+  /** False once the account that set the value is deleted. */
+  readonly setByAccount: boolean;
+  /** The colleague's name; empty for you. */
+  readonly setByName: string;
+}
+
 export interface NumberRange {
   readonly service: string;
   readonly pattern: string;
-  /** The first number of this year in the pattern. */
+  /** The number the next invoice gets today, in the pattern. */
   readonly example: string;
+  /** The running number of `example`; 0 without a pattern. */
+  readonly nextNumber: number;
+  /** The last issued running number of this counter; 0 before the first. */
+  readonly lastNumber: number;
+  /** The year the counter belongs to; 0 when the pattern names no year. */
+  readonly year: number;
+  /** The start values of this counter, the newest first. */
+  readonly starts: readonly NumberRangeStart[];
 }
 
 interface BackendRun {
@@ -897,58 +919,101 @@ export async function downloadCostTakeoverList(
 
 const NUMBER_RANGES_PATH = "/api/traeger/number-ranges";
 
-/** The number range of the holiday invoices; the pattern may be empty. */
-export async function fetchHolidayNumberRange(): Promise<NumberRange> {
-  const ranges = await traegerRequest<
-    { service: string; pattern: string; example: string }[] | null
-  >(NUMBER_RANGES_PATH);
-  const holiday = (ranges ?? []).find((range) => range.service === "holiday");
+type NumberRangeService = "holiday" | "care";
+
+interface BackendNumberRange {
+  service: string;
+  pattern: string;
+  example: string;
+  next_number?: number;
+  last_number?: number;
+  year?: number;
+  starts?:
+    | {
+        next_number: number;
+        example: string;
+        set_at: string;
+        set_by_you: boolean;
+        set_by_account: boolean;
+        set_by_name: string;
+      }[]
+    | null;
+}
+
+function mapNumberRange(
+  service: string,
+  range: BackendNumberRange | undefined,
+): NumberRange {
   return {
-    service: "holiday",
-    pattern: holiday?.pattern ?? "",
-    example: holiday?.example ?? "",
+    service,
+    pattern: range?.pattern ?? "",
+    example: range?.example ?? "",
+    nextNumber: range?.next_number ?? 0,
+    lastNumber: range?.last_number ?? 0,
+    year: range?.year ?? 0,
+    starts: (range?.starts ?? []).map((start) => ({
+      nextNumber: start.next_number,
+      example: start.example,
+      setAt: start.set_at,
+      setByYou: start.set_by_you,
+      setByAccount: start.set_by_account,
+      setByName: start.set_by_name,
+    })),
   };
 }
 
-export async function saveHolidayNumberRange(
+async function fetchNumberRange(
+  service: NumberRangeService,
+): Promise<NumberRange> {
+  const ranges = await traegerRequest<BackendNumberRange[] | null>(
+    NUMBER_RANGES_PATH,
+  );
+  return mapNumberRange(
+    service,
+    (ranges ?? []).find((range) => range.service === service),
+  );
+}
+
+async function saveNumberRange(
+  service: NumberRangeService,
   pattern: string,
 ): Promise<NumberRange> {
-  const range = await traegerRequest<{
-    service: string;
-    pattern: string;
-    example: string;
-  }>(`${NUMBER_RANGES_PATH}/holiday`, { method: "PUT", body: { pattern } });
-  return {
-    service: range.service,
-    pattern: range.pattern,
-    example: range.example,
-  };
+  const range = await traegerRequest<BackendNumberRange>(
+    `${NUMBER_RANGES_PATH}/${service}`,
+    { method: "PUT", body: { pattern } },
+  );
+  return mapNumberRange(range.service, range);
 }
+
+/**
+ * Sets the running number the next invoice of the service gets (#7358). The
+ * backend refuses a number that is not above the last issued one.
+ */
+async function saveNumberRangeStart(
+  service: NumberRangeService,
+  nextNumber: number,
+): Promise<NumberRange> {
+  const range = await traegerRequest<BackendNumberRange>(
+    `${NUMBER_RANGES_PATH}/${service}/start`,
+    { method: "PUT", body: { next_number: nextNumber } },
+  );
+  return mapNumberRange(range.service, range);
+}
+
+/** The number range of the holiday invoices; the pattern may be empty. */
+export const fetchHolidayNumberRange = () => fetchNumberRange("holiday");
+
+export const saveHolidayNumberRange = (pattern: string) =>
+  saveNumberRange("holiday", pattern);
+
+export const saveHolidayNumberRangeStart = (nextNumber: number) =>
+  saveNumberRangeStart("holiday", nextNumber);
 
 /** The number range of the monthly invoices (#4684); the pattern may be empty. */
-export async function fetchCareNumberRange(): Promise<NumberRange> {
-  const ranges = await traegerRequest<
-    { service: string; pattern: string; example: string }[] | null
-  >(NUMBER_RANGES_PATH);
-  const care = (ranges ?? []).find((range) => range.service === "care");
-  return {
-    service: "care",
-    pattern: care?.pattern ?? "",
-    example: care?.example ?? "",
-  };
-}
+export const fetchCareNumberRange = () => fetchNumberRange("care");
 
-export async function saveCareNumberRange(
-  pattern: string,
-): Promise<NumberRange> {
-  const range = await traegerRequest<{
-    service: string;
-    pattern: string;
-    example: string;
-  }>(`${NUMBER_RANGES_PATH}/care`, { method: "PUT", body: { pattern } });
-  return {
-    service: range.service,
-    pattern: range.pattern,
-    example: range.example,
-  };
-}
+export const saveCareNumberRange = (pattern: string) =>
+  saveNumberRange("care", pattern);
+
+export const saveCareNumberRangeStart = (nextNumber: number) =>
+  saveNumberRangeStart("care", nextNumber);

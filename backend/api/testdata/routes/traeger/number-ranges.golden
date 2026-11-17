@@ -1,2 +1,3 @@
 GET /traeger/number-ranges/
 PUT /traeger/number-ranges/{service}
+PUT /traeger/number-ranges/{service}/start

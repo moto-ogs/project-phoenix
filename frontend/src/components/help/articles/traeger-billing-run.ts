@@ -29,6 +29,18 @@ export function traegerBillingRunTopic(): HelpTopic {
         ],
       },
       {
+        title: "Nummern aus dem bisherigen Programm fortführen",
+        description:
+          "Nur nötig, wenn Ihre Rechnungen nicht bei 1 beginnen sollen.",
+        steps: [
+          "Wählen Sie bei `Rechnungsnummern der Ferien` den Knopf `Nächste Nummer ändern`.",
+          "Tragen Sie die Nummer nach der letzten Rechnung Ihres bisherigen Programms ein, zum Beispiel 7100.",
+          "Prüfen Sie darunter, welche Nummer die nächste Rechnung bekommt.",
+          "Wählen Sie `Speichern`.",
+          "Mit `Verlauf ansehen` sehen Sie, wer die Nummer wann geändert hat.",
+        ],
+      },
+      {
         title: "Lauf starten und prüfen",
         steps: [
           "Wählen Sie in der Navigation `Abrechnungsläufe`. Der Reiter `Ferien` ist schon offen.",

@@ -3,6 +3,7 @@ package parentbilling
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -66,6 +67,9 @@ var (
 	// ErrNumberRangeMissing reports a release without a number range for
 	// the service.
 	ErrNumberRangeMissing = errors.New("the Träger has no number range for this service")
+	// ErrNumberRangeStartTaken reports a start value at or below the last
+	// issued number of the counter (#7358).
+	ErrNumberRangeStartTaken = errors.New("the start value is not above the last issued number")
 	// ErrInvoiceNumberTaken reports an invoice number another invoice of the
 	// Träger already carries, after the pattern was changed.
 	ErrInvoiceNumberTaken = errors.New("an invoice of the Träger already carries this number")
@@ -278,13 +282,68 @@ type BillingRelease struct {
 	Fingerprint string
 }
 
-// NumberRange is the pattern of the invoice numbers of a service. Example
-// is the number the next invoice would get today.
+// NumberRange is the pattern of the invoice numbers of a service with its
+// counter today. Example is the number the next invoice would get today,
+// NextNumber its running number and LastNumber the last one issued (0
+// before the first). Year is the year the counter belongs to, 0 for a
+// pattern without a year. Starts lists the start values set for this
+// counter, the newest first (#7358).
 type NumberRange struct {
-	Service   string     `json:"service"`
-	Pattern   string     `json:"pattern"`
-	Example   string     `json:"example"`
-	UpdatedAt *time.Time `json:"updated_at"`
+	Service    string             `json:"service"`
+	Pattern    string             `json:"pattern"`
+	Example    string             `json:"example"`
+	NextNumber int64              `json:"next_number"`
+	LastNumber int64              `json:"last_number"`
+	Year       int                `json:"year"`
+	Starts     []NumberRangeStart `json:"starts"`
+	UpdatedAt  *time.Time         `json:"updated_at"`
+}
+
+// NumberRangeStart is one start value of a number range (#7358): the
+// running number the next invoice got from then on, written in the pattern
+// of today as Example, when it was set and by whom. SetByYou names the
+// reader; SetByName is the name a colleague carries at the Träger, empty for
+// the reader; SetByAccount is false once the account is gone.
+type NumberRangeStart struct {
+	NextNumber int64     `json:"next_number"`
+	Example    string    `json:"example"`
+	Year       int       `json:"year"`
+	SetAt      time.Time `json:"set_at"`
+	SetByYou   bool      `json:"set_by_you"`
+	SetByName  string    `json:"set_by_name"`
+	// SetByAccount is false once the account that set the value is deleted.
+	SetByAccount bool `json:"set_by_account"`
+	// Service and AccountID are the owner's own keys of the row.
+	Service   string `json:"-"`
+	AccountID *int64 `json:"-"`
+}
+
+// MaxNumberRangeStart is the largest start value: the eight digits of the
+// longest running number.
+const MaxNumberRangeStart = 99_999_999
+
+// NumberRangeStartTakenError refuses a start value that is not above the
+// last issued number of the counter; numbers never go back (#7358). It is
+// ErrNumberRangeStartTaken.
+type NumberRangeStartTakenError struct {
+	LastSequence int64
+	LastNumber   string
+}
+
+func (e *NumberRangeStartTakenError) Error() string {
+	return fmt.Sprintf("%s: last issued %d", ErrNumberRangeStartTaken, e.LastSequence)
+}
+
+func (e *NumberRangeStartTakenError) Unwrap() error { return ErrNumberRangeStartTaken }
+
+// NumberRangeStarts sets the number the next invoice of a service gets
+// (#7358), so a Träger continues the numbers of the program it used before.
+// The value must be above the last issued number of the counter of today
+// (ErrNumberRangeStartTaken); a service without a pattern is
+// ErrNumberRangeMissing. Every change stays in the history of the range
+// with the account.
+type NumberRangeStarts interface {
+	SetNumberRangeStart(ctx context.Context, reviewer HolidayReviewer, service string, nextNumber int64) (NumberRange, error)
 }
 
 // HolidayBillingPeriod is a holiday period as a run needs it: its name and
@@ -387,6 +446,8 @@ type BillingRuns interface {
 	// every child whose invoice the cost bearer pays, with the sum (#5627).
 	// A cost bearer of another Träger is ErrCostBearerNotFound.
 	ExportCostTakeovers(ctx context.Context, reviewer HolidayReviewer, runID, costBearerID int64, format string) (ExportFile, error)
-	ListNumberRanges(ctx context.Context, organizationID int64) ([]NumberRange, error)
-	SetNumberRange(ctx context.Context, organizationID int64, service, pattern string) (NumberRange, error)
+	// ListNumberRanges lists the number range of every service with its
+	// counter and start values; the reviewer is the reader the history names.
+	ListNumberRanges(ctx context.Context, reviewer HolidayReviewer) ([]NumberRange, error)
+	SetNumberRange(ctx context.Context, reviewer HolidayReviewer, service, pattern string) (NumberRange, error)
 }

@@ -422,3 +422,49 @@ Anmeldung und Leistung“ gilt dann je Anmeldung, Kind und Leistung.
 5. Briefe, Mails, SEPA-Lastschriften, DATEV und Sollstellung bleiben je
    Rechnung; Eltern mit mehreren Kindern bekommen mehrere Rechnungen. Ein
    Brief nennt weiter nie Kinder einer anderen Anmeldung.
+
+## Nachtrag 2026-11-17: Startwert je Nummernkreis (#7358)
+
+Ein Träger, der aus einem anderen Programm wechselt, führt dessen
+Rechnungsnummern fort (SJR Pforzheim, Anschluss an OGS Connect zum
+01.01.2027). Punkt 5 kannte nur das Muster; der Zähler begann immer bei 1.
+
+- **Startwert.** `parent_billing.number_range_starts` hält je Träger,
+  Leistung und Jahr (0 ohne Jahr im Muster) die Nummer, die die nächste
+  Rechnung bekommt, mit Konto und Zeitpunkt. Zeilen werden nur angefügt. Die
+  neueste Zeile eines Zählers ist seine Untergrenze, die älteren sind der
+  Verlauf.
+- **Zähler bleibt, was er ist.** `number_range_counters.last_number` bleibt die
+  letzte vergebene Nummer. Die Vergabe aus Punkt 6 nimmt in ihrer einen
+  Anweisung das Größere aus letzter Nummer und Untergrenze und zählt von dort
+  (`GREATEST`). Ein Startwert kann eine Nummer deshalb nie zurücksetzen, auch
+  nicht, wenn er gleichzeitig mit einer Freigabe gesetzt wird; die lückenlose
+  Vergabe bei parallelen Freigaben bleibt unverändert.
+- **Regel.** Erlaubt ist ein Wert von 1 bis 99999999 über der letzten
+  vergebenen Nummer des Zählers von heute. Vor der ersten Rechnung lässt sich
+  der Startwert deshalb frei setzen und korrigieren, danach nur nach oben. Ein
+  Wert bis zur letzten Nummer ist 409
+  `parent_billing.number_range_start_taken` und nennt diese Nummer; ein Wert
+  außerhalb des Bereichs ist 400 `parent_billing.number_range_start_invalid`.
+  Das Setzen sperrt die Zeile des Zählers, wenn es sie gibt. Ohne Muster gibt
+  es keinen Zähler (409 `parent_billing.number_range_missing`).
+- **Jahr.** Ein Muster mit Jahr zählt weiter jedes Jahr ab 1. Ein Startwert
+  gilt für den Zähler des laufenden Jahres; das Folgejahr beginnt wieder bei 1.
+  Wer eine Reihe über die Jahre fortführt, nimmt ein Muster ohne Jahr.
+- **Anzeige.** `GET /traeger/number-ranges` nennt je Leistung die nächste
+  Nummer (`example`, `next_number`), die letzte vergebene (`last_number`) und
+  den Verlauf (`starts`) mit Zeitpunkt und Person: `set_by_you` für die
+  lesende Person, sonst der Name der Mitgliedschaft beim Träger
+  (`ExportActorNames`, wie im Exportprotokoll). Die Liste nennt damit Namen
+  aus dem Träger-Büro und bleibt hinter dem Recht „Abrechnung“.
+- **Recht und Grenze.** `PUT /traeger/number-ranges/{service}/start` liegt
+  hinter dem Recht „Abrechnung“ in der Träger-Transaktion; die Zeilen eines
+  anderen Trägers sieht niemand (RLS). Kein neuer Owner, keine neue Regel.
+- **Nicht gebaut.** Eine gemeinsame Reihe für Monats- und Ferienrechnungen und
+  ein eigener Nummernkreis für Gutschriften warten auf die Antwort des SJR
+  (offene Fragen in #7358). Bis dahin trennt das Muster die Kreise.
+- **Register.** Migration `20261117222315`; ein `data_object`
+  (`parent_billing.number_range_starts`) für `parent-billing`;
+  Datenlebenszyklus, Aufbewahrung und Rückgaberegister je ein Eintrag; die
+  Zeilen gehen mit dem Träger. Eine schreibende Route im Route-Golden und in
+  der Nutzungsanalyse als `notCaptured` (Träger, keine Schule).
