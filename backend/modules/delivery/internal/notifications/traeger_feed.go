@@ -80,17 +80,17 @@ func traegerFeedType(event contract.TraegerFeedEvent) (TypeDefinition, error) {
 	}
 	switch {
 	case event.TenantID <= 0:
-		return TypeDefinition{}, errors.New("Träger notification feed requires the school")
+		return TypeDefinition{}, errors.New("traeger notification feed requires the school")
 	case event.Title == "":
-		return TypeDefinition{}, errors.New("Träger notification feed requires a title")
+		return TypeDefinition{}, errors.New("traeger notification feed requires a title")
 	case event.DeepLink == "" || !appRelative(event.DeepLink):
-		return TypeDefinition{}, errors.New("Träger notification feed requires an app-relative deep link")
+		return TypeDefinition{}, errors.New("traeger notification feed requires an app-relative deep link")
 	case event.RelatedType == "" || event.RelatedID <= 0:
-		return TypeDefinition{}, errors.New("Träger notification feed requires the object it is about")
+		return TypeDefinition{}, errors.New("traeger notification feed requires the object it is about")
 	}
 	for _, accountID := range event.AccountIDs {
 		if accountID <= 0 {
-			return TypeDefinition{}, errors.New("Träger notification feed requires positive account ids")
+			return TypeDefinition{}, errors.New("traeger notification feed requires positive account ids")
 		}
 	}
 	return def, nil
@@ -161,7 +161,7 @@ func typesOfPortal(portal string) []TypeDefinition {
 
 func (f *traegerFeed) inAdminTx(ctx context.Context, organizationID, accountID int64, fn func(context.Context) error) error {
 	if organizationID <= 0 || accountID <= 0 {
-		return errors.New("Träger notification feed: Träger and account are required")
+		return errors.New("traeger notification feed: Träger and account are required")
 	}
 	ctx = tenant.WithUnitOfWork(ctx, f.runtime)
 	return tenant.WithAdminTx(ctx, f.db, func(txCtx context.Context, _ bun.Tx) error {

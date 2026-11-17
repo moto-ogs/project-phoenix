@@ -2014,6 +2014,17 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
+      "reason": "Platform protocol participation (durable): school-calendar reaches modules/delivery/contract.TraegerFeedNotifier.NotifyTraeger (delivery-platform) through roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged (#7146). The feed entries of the Träger-Portal bell join the unit that saves the closing day, in the school's tenant transaction; no push and no after-commit signal follow, and transaction correctness stays with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.TraegerFeedNotifier.NotifyTraeger",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
       "reason": "Platform protocol participation (durable): school-calendar reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged (#7144). The notification feed entries and the push outbox entries join the unit that saves the closing day; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",

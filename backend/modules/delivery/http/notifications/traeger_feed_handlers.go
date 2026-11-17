@@ -79,7 +79,7 @@ func (rs *TraegerFeedResource) Router() chi.Router {
 // caller is the Träger and the account of the session.
 func (rs *TraegerFeedResource) caller(w http.ResponseWriter, r *http.Request) (int64, int64, bool) {
 	if rs.Feed == nil {
-		rs.Runtime.Internal(w, r, errors.New("Träger notification feed is not configured"))
+		rs.Runtime.Internal(w, r, errors.New("traeger notification feed is not configured"))
 		return 0, 0, false
 	}
 	organizationID := rs.Runtime.OrganizationID(r.Context())

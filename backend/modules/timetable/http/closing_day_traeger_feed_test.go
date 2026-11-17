@@ -18,7 +18,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -37,10 +36,7 @@ type traegerFeedEntry struct {
 // Träger organizationID and decodes its data into out.
 func (f *closingFeedFixture) traegerFeedCall(t *testing.T, accountID, organizationID int64, method, path string, out any) {
 	t.Helper()
-	token := testpkg.MintTestJWT(t, sessiontoken.AppClaims{
-		ID: int(accountID), Sub: fmt.Sprintf("traeger-%d@example.org", accountID), Scope: "org", OrgID: organizationID,
-		Roles: []string{identityaccess.TraegerRoleReadOnly}, Permissions: identityaccess.TraegerRights([]string{identityaccess.TraegerRoleReadOnly}),
-	})
+	token := testpkg.MintTestJWT(t, traegerReaderClaims(accountID, organizationID))
 	req := testutil.NewAuthenticatedRequest(t, method, "/traeger/notifications/feed"+path, nil, testutil.WithJWTBearer(token))
 	rec := testutil.ExecuteRequestForTest(t, f.feed, req)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -49,6 +45,12 @@ func (f *closingFeedFixture) traegerFeedCall(t *testing.T, accountID, organizati
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope), rec.Body.String())
 	require.NoError(t, json.Unmarshal(envelope.Data, out), rec.Body.String())
+}
+
+// traegerReaderClaims is a read-only session of the Träger-Büro.
+func traegerReaderClaims(accountID, organizationID int64) testpkg.Claims {
+	roles := []string{identityaccess.TraegerRoleReadOnly}
+	return testpkg.TraegerTestClaims(int(accountID), organizationID, roles, identityaccess.TraegerRights(roles))
 }
 
 func (f *closingFeedFixture) traegerFeed(t *testing.T, accountID, organizationID int64) ([]traegerFeedEntry, int) {
@@ -139,8 +141,7 @@ func TestClosingDayReachesTheBellOfTheSchoolsTraegerOnly(t *testing.T) {
 	assert.NotNil(t, entries[0].ReadAt)
 
 	// Another Träger cannot mark the entry read.
-	token := testpkg.MintTestJWT(t, sessiontoken.AppClaims{ID: int(stranger.ID), Sub: "stranger@example.org", Scope: "org", OrgID: foreign, Roles: []string{identityaccess.TraegerRoleReadOnly},
-		Permissions: identityaccess.TraegerRights([]string{identityaccess.TraegerRoleReadOnly})})
+	token := testpkg.MintTestJWT(t, traegerReaderClaims(stranger.ID, foreign))
 	req := testutil.NewAuthenticatedRequest(t, http.MethodPost, fmt.Sprintf("/traeger/notifications/feed/%d/read", entries[0].ID), nil, testutil.WithJWTBearer(token))
 	assert.Equal(t, http.StatusNotFound, testutil.ExecuteRequestForTest(t, f.feed, req).Code)
 
