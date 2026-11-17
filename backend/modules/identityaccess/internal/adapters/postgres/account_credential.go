@@ -22,13 +22,18 @@ import (
 // the row started, as nothing can be bound to an earlier credential. The
 // expectations make a write a compare-and-swap: written=false when the row
 // is gone or erased, or holds another hash or generation by now.
+//
+// An initial write names a password (it would move nothing else), so every
+// write sets a column; updated_at is the update trigger's (ADR 0281).
 func (s *Store) WriteAccountCredential(ctx context.Context, accountID int64, write domain.CredentialWrite) (bool, domain.OperationStats, error) {
+	if write.Initial && write.PasswordHash == "" {
+		return false, domain.OperationStats{}, fmt.Errorf("identity access postgres: write account credential: an initial credential write names a password")
+	}
 	db, err := s.database(ctx)
 	if err != nil {
 		return false, domain.OperationStats{}, err
 	}
 	query := db.NewUpdate().TableExpr(`auth.accounts AS "account"`).
-		Set(`updated_at = NOW()`).
 		Where(`"account".id = ?`, accountID).
 		Where(liveAccountSQL)
 	if write.Initial {
