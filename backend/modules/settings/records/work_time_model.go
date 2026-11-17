@@ -28,8 +28,8 @@ type WorkTimeModel struct {
 	Name               string       `bun:"name,notnull" json:"name"`
 	RotationLength     int          `bun:"rotation_length,notnull,default:1" json:"rotation_length"`
 	RotationAnchorDate CalendarDate `bun:"rotation_anchor_date,notnull,type:date" json:"rotation_anchor_date"`
-	CreatedAt          time.Time    `bun:"created_at,notnull,default:now()" json:"created_at"`
-	UpdatedAt          time.Time    `bun:"updated_at,notnull,default:now()" json:"updated_at"`
+	CreatedAt          time.Time    `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt          time.Time    `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 	// ArchivedAt is set while the template is not offered for new
 	// assignments (#6891).
 	ArchivedAt *time.Time `bun:"archived_at" json:"archived_at,omitempty"`
@@ -62,8 +62,8 @@ type WorkTimeModelEntry struct {
 	DayOfWeek     int        `bun:"day_of_week,notnull" json:"day_of_week"`
 	TargetMinutes int        `bun:"target_minutes,notnull" json:"target_minutes"`
 	StartTime     *time.Time `bun:"start_time" json:"start_time,omitempty"`
-	CreatedAt     time.Time  `bun:"created_at,notnull,default:now()" json:"created_at"`
-	UpdatedAt     time.Time  `bun:"updated_at,notnull,default:now()" json:"updated_at"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 }
 
 func (e *WorkTimeModelEntry) Validate() error {

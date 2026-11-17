@@ -18,8 +18,8 @@ type staffOnboardingRow struct {
 	DoneSteps    []string   `bun:"done_steps,array,notnull"`
 	SkippedSteps []string   `bun:"skipped_steps,array,notnull"`
 	DismissedAt  *time.Time `bun:"dismissed_at"`
-	CreatedAt    time.Time  `bun:"created_at,notnull,default:now()"`
-	UpdatedAt    time.Time  `bun:"updated_at,notnull,default:now()"`
+	CreatedAt    time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt    time.Time  `bun:"updated_at,nullzero,notnull"`
 }
 
 // staffOnboardingAcrossSchools is one row of

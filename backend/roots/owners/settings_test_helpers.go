@@ -44,12 +44,11 @@ func NewSettingsTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		Logger: slog.Default(), HomeLayouts: homeLayouts, ObserveLookup: func(string, string, string, time.Duration) {},
 		ClassRestrictionGuard: repos.ClassRestriction, GradeRestrictionGuard: repos.GradeRestriction, GradeCapGuard: repos.GradeCap,
 		TraegerValues: settingsCompose.NewTraegerSettingRepository(runtime), SchoolTraeger: schoolTraeger(organizations),
-		Now: time.Now,
 	})
 	if err != nil {
 		return SettingsTestModule{}, err
 	}
-	traeger, err := BuildTraegerSettings(db, unit, slog.Default(), organizations, nil, time.Now)
+	traeger, err := BuildTraegerSettings(db, unit, slog.Default(), organizations, nil)
 	if err != nil {
 		return SettingsTestModule{}, err
 	}

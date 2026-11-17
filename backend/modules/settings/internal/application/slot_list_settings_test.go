@@ -38,7 +38,7 @@ func newSlotListTestService(t *testing.T, runtime config.Runtime) (*settingsServ
 	for key, value := range map[string]string{config.KeySlotListShortDayCutoff: `"15:00"`, config.KeySlotListLongDayCutoff: `"17:30"`} {
 		repo.values[repo.key(tenantID, key)] = slotListStoredValue(tenantID, key, value)
 	}
-	service := newSettingsService(repo, &mockAuditRepo{}, nil, runtime, slog.Default(), nil, config.ServiceOptions{Now: settingsTestClock}, registry)
+	service := newSettingsService(repo, &mockAuditRepo{}, nil, runtime, slog.Default(), nil, config.ServiceOptions{}, registry)
 	return service, repo, registry, withTestTenantID(context.Background(), tenantID), tenantID
 }
 

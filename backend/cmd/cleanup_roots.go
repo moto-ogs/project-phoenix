@@ -78,7 +78,6 @@ func newCleanupSettingsService(db transactionruntime.Database, schools organizat
 		owners.NewSchoolSettingsStore(schools),
 		settingsRuntime,
 		logger,
-		time.Now,
 	)
 }
 

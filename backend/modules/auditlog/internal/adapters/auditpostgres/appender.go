@@ -16,8 +16,11 @@ import (
 
 // Appender is the only Audit persistence adapter allowed to insert ledger
 // rows. Read repositories stay table-specific. now is the Audit clock: an
-// auth event, data deletion or field edit without its time is stamped from
-// it (ADR 0239). A repository that appends none of these passes nil.
+// event whose retention or window compares its time with a cutoff of that
+// clock (auth event, access, data, student and enrollment deletion,
+// enrollment restoration, field and work-session edit) is stamped from it
+// when it comes without its time (ADR 0239, 0281). A repository that appends
+// none of these passes nil.
 type Appender struct {
 	runtime Runtime
 	now     func() time.Time
@@ -268,6 +271,14 @@ func (a *Appender) stampRecordedAt(event any) error {
 		stamp = &value.CreatedAt
 	case *auditModels.WorkSessionEdit:
 		stamp = &value.CreatedAt
+	case *auditModels.DataAccessLog:
+		stamp = &value.AccessedAt
+	case *auditModels.StudentDeletion:
+		stamp = &value.DeletedAt
+	case *auditModels.EnrollmentDeletion:
+		stamp = &value.DeletedAt
+	case *auditModels.EnrollmentRestoration:
+		stamp = &value.RestoredAt
 	}
 	if stamp == nil || !stamp.IsZero() {
 		return nil
