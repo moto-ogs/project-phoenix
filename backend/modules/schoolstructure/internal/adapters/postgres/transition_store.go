@@ -52,6 +52,7 @@ type historyRow struct {
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
 	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	TransitionID  int64     `bun:"transition_id,notnull"`
 	StudentID     int64     `bun:"student_id,notnull"`
 	PersonName    string    `bun:"person_name,notnull"`
@@ -285,7 +286,7 @@ func (s *Store) UpdateTransitionFields(ctx context.Context, tenantID, id int64, 
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	result, err := db.NewUpdate().TableExpr(transitionsTable).
-		Set(`academic_year = ?`, academicYear).Set(`notes = ?`, notes).Set(`updated_at = NOW()`).
+		Set(`academic_year = ?`, academicYear).Set(`notes = ?`, notes).
 		Where(`"transition".tenant_id = ?`, tenantID).Where(`"transition".id = ?`, id).
 		Where(`"transition".status = ?`, schoolstructure.TransitionStatusDraft).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
@@ -416,7 +417,6 @@ func (s *Store) MarkApplied(ctx context.Context, tenantID, id, accountID int64, 
 		Set(`status = ?`, schoolstructure.TransitionStatusApplied).
 		Set(`applied_at = ?`, at).Set(`applied_by = ?`, accountID).
 		Set(`roster_baseline_instance_id = ?`, rosterBaselineInstanceID).
-		Set(`updated_at = NOW()`).
 		Where(`"transition".tenant_id = ?`, tenantID).Where(`"transition".id = ?`, id).
 		Where(`"transition".status = ?`, schoolstructure.TransitionStatusDraft).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
@@ -440,7 +440,6 @@ func (s *Store) MarkReverted(ctx context.Context, tenantID, id, accountID int64,
 	result, err := db.NewUpdate().TableExpr(transitionsTable).
 		Set(`status = ?`, schoolstructure.TransitionStatusReverted).
 		Set(`reverted_at = ?`, at).Set(`reverted_by = ?`, accountID).
-		Set(`updated_at = NOW()`).
 		Where(`"transition".tenant_id = ?`, tenantID).Where(`"transition".id = ?`, id).
 		Where(`"transition".status = ?`, schoolstructure.TransitionStatusApplied).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
@@ -462,10 +461,10 @@ func (s *Store) InsertHistory(ctx context.Context, tenantID int64, entries []sch
 	if err != nil {
 		return domain.OperationStats{}, err
 	}
-	rows := make([]historyRow, 0, len(entries))
+	rows, now := make([]historyRow, 0, len(entries)), s.now()
 	for _, entry := range entries {
 		rows = append(rows, historyRow{
-			TenantID: tenantID, TransitionID: entry.TransitionID, StudentID: entry.StudentID, PersonName: entry.PersonName,
+			TenantID: tenantID, UpdatedAt: now, TransitionID: entry.TransitionID, StudentID: entry.StudentID, PersonName: entry.PersonName,
 			FromClass: entry.FromClass, ToClass: entry.ToClass, Action: entry.Action, FromStatus: entry.FromStatus, RFIDTag: entry.RFIDTag,
 		})
 	}

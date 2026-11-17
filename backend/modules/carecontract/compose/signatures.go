@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
-	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/adapters/rendering"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/application"
 )
@@ -15,20 +14,20 @@ type SignaturePorts = application.SignaturePorts
 // NewSigning builds the one-time mail link; it opens its own Träger
 // transaction.
 func NewSigning(ports SignaturePorts, now func() time.Time) carecontract.Signing {
-	return application.NewSignatures(postgres.NewStore(), ports, application.Clock{Now: now}, nil)
+	return application.NewSignatures(storeOn(now), ports, application.Clock{Now: now}, nil)
 }
 
 // NewInboxSigning builds the signature in the parents portal, in the
 // Träger transaction the parents portal opens.
 func NewInboxSigning(ports SignaturePorts, now func() time.Time) carecontract.InboxSigning {
-	return application.NewSignatures(postgres.NewStore(), ports, application.Clock{Now: now}, nil)
+	return application.NewSignatures(storeOn(now), ports, application.Clock{Now: now}, nil)
 }
 
 // NewPaperSignatures builds the Träger-Büro's paper contracts. Writes use the
 // route's Träger transaction; reads open their own units and log school access.
 func NewPaperSignatures(contractPorts ContractPorts, ports SignaturePorts, now func() time.Time) carecontract.PaperSignatures {
 	clock := application.Clock{Now: now}
-	store := postgres.NewStore()
+	store := storeOn(now)
 	contracts := application.NewContracts(store, rendering.NewRenderer(), application.ContractPorts(contractPorts), clock, NewContractVersions())
 	return application.NewSignatures(store, ports, clock, contracts)
 }
@@ -45,5 +44,5 @@ type ReminderPorts struct {
 // NewReminders builds the reminder run of the Worker; it opens its own
 // units.
 func NewReminders(ports ReminderPorts, now func() time.Time) carecontract.Reminders {
-	return application.NewReminders(postgres.NewStore(), application.ReminderPorts(ports), application.Clock{Now: now})
+	return application.NewReminders(storeOn(now), application.ReminderPorts(ports), application.Clock{Now: now})
 }

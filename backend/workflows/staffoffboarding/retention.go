@@ -113,8 +113,10 @@ type RetentionDependencies struct {
 	// Window resolves the school's time-tracking window in days.
 	Window func(context.Context) (int, error)
 	// Tenant is the school of the tenant transaction in ctx.
-	Tenant     func(context.Context) int64
-	Today      func() calendar.Date
+	Tenant func(context.Context) int64
+	// Today is the day the window counts back from, on the clock that stamps
+	// the retirement and guards the erasure of the Workforce records.
+	Today      func(context.Context) (calendar.Date, error)
 	Membership RetiredMembership
 	LiveStaff  LiveStaff
 	Workforce  RetiredWorkforce
@@ -185,7 +187,11 @@ func (r *Retention) DeleteExpiredStaff(ctx context.Context) (RetentionResult, er
 	// 730 days, staff who left on 1 June 2026 go in the run on 1 June 2028,
 	// whose cutoff is 2 June 2026 00:00 because 2028 has a 29 February. A
 	// later cutoff would delete time tracking before the window has passed.
-	retiredBefore := r.deps.Today().AddDays(-days).BerlinMidnight()
+	today, err := r.deps.Today(ctx)
+	if err != nil {
+		return RetentionResult{}, fmt.Errorf("staff retention: read the day: %w", err)
+	}
+	retiredBefore := today.AddDays(-days).BerlinMidnight()
 	result := RetentionResult{RetentionDays: days}
 	// The cursor moves past every staff member taken, so a refused one,
 	// whose savepoint rolled the marking back, is not taken again.

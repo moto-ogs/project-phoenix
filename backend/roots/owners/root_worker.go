@@ -62,7 +62,7 @@ import (
 
 // workerRetentionOf builds the nightly cleanup's retention: the student and
 // staff deletions and every owner's retention step; now is the root clock
-// Enrollment's uploads expire on (ADR 0265).
+// Enrollment's uploads expire on (ADR 0265) and the staff erasure is marked with.
 func workerRetentionOf(
 	db transactionruntime.Database, logger *slog.Logger, settings settingsCompose.BatchSettingsService, audit auditCommand,
 	fleet devicefleet.Capability, carePlan carePlanModule.Owner, parentMessages communication.ParentMessageCleanup,
@@ -77,7 +77,7 @@ func workerRetentionOf(
 	if err != nil {
 		return workerRetention{}, fmt.Errorf("compose worker student retention: %w", err)
 	}
-	staff, err := newStaffRetention(db, audit, settings, logger.With("service", "staff_retention"))
+	staff, err := newStaffRetention(db, audit, settings, now, logger.With("service", "staff_retention"))
 	if err != nil {
 		return workerRetention{}, fmt.Errorf("compose worker staff retention: %w", err)
 	}
@@ -540,7 +540,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			facilities, err = BuildFacilitiesModule(db, ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings, groups, devices, env.Today)
+			facilities, err = BuildFacilitiesModule(db, ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings, groups, devices, env.Today, env.Now)
 			return
 		},
 		func() (err error) {

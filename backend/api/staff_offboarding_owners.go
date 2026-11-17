@@ -23,7 +23,7 @@ import (
 // logger and the Audit owner's offboarding records, all on the root's clock
 // now. The caller adds the access, authorization and cleanup steps.
 func NewStaffOffboardingOwners(db transactionruntime.Database, people staffoffboarding.People, employment schoolMembershipCompose.StaffEmployment, logger *slog.Logger, now func() time.Time) (offboardingcompose.Dependencies, error) {
-	memberDeps := schoolMembershipCompose.Dependencies{DB: db.Pool(), Observe: func(schoolMembershipCompose.Observation) {}, Employment: employment, Today: calendar.CalendarDateClock(now)}
+	memberDeps := schoolMembershipCompose.Dependencies{DB: db.Pool(), Observe: func(schoolMembershipCompose.Observation) {}, Employment: employment, Today: calendar.CalendarDateClock(now), Now: now}
 	membership, err := schoolMembershipCompose.New(memberDeps)
 	if err != nil {
 		return offboardingcompose.Dependencies{}, err

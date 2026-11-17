@@ -230,7 +230,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			classListEntries, err = composeClassListEntries(db, persons, audit.Command)
+			classListEntries, err = composeClassListEntries(db, persons, audit.Command, env.Now)
 			return
 		},
 		func() (err error) {
@@ -488,7 +488,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			facilities, err = owners.BuildFacilitiesModule(db, owners.ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings, groups, devices, env.Today)
+			facilities, err = owners.BuildFacilitiesModule(db, owners.ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings, groups, devices, env.Today, env.Now)
 			return
 		},
 		func() (err error) {

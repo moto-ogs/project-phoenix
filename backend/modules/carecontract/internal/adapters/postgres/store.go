@@ -22,11 +22,25 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-type Store struct{}
+// Store reads the current version of a contract on the Berlin day of the
+// owner's clock (ADR 0239).
+type Store struct{ today func() calendar.Date }
 
 var _ ports.Store = (*Store)(nil)
 
-func NewStore() *Store { return &Store{} }
+// NewStore builds the store on today, the composition's day clock. A store
+// of a composition that reads no current version (the billing reads, the
+// office's change decisions) may pass nil; its Contract and ListContracts
+// then fail.
+func NewStore(today func() calendar.Date) *Store { return &Store{today: today} }
+
+// day is the day the current version is picked on.
+func (s Store) day() (calendar.Date, error) {
+	if s.today == nil {
+		return "", errors.New("care contract postgres: the day clock is required to read the current version")
+	}
+	return s.today(), nil
+}
 
 // traegerDB returns the Träger transaction of organizationID. A school,
 // administrative or foreign Träger transaction is refused.
@@ -208,7 +222,7 @@ const moduleNamesSQL = `ARRAY(SELECT s.module_name FROM care_contract.contract_v
 		ORDER BY MIN(array_position(ARRAY['mon','tue','wed','thu','fri','sat','sun']::text[], s.weekday::text)), s.module_name)`
 
 // summarySQL reads a contract with its current version (currentVersionOrderSQL) and its first
-// party; the filter follows.
+// party; the filter follows. Bind order: today twice, then organization_id.
 const summarySQL = `SELECT c.id, c.status, c.school_id, c.student_id, c.created_at, c.sent_at, c.concluded_at, c.conclusion_method,
 	c.ends_on, c.early_start_requested,
 	v.school_name, v.child_first_name, v.child_last_name, ` + moduleNamesSQL + ` AS module_names, v.effective_from,
@@ -280,8 +294,12 @@ func accountRef(accountID int64) *int64 {
 }
 
 // ListContracts lists the contracts of the filter, newest first.
-func (Store) ListContracts(ctx context.Context, organizationID int64, filter carecontract.ContractFilter) ([]carecontract.ContractSummary, error) {
+func (s Store) ListContracts(ctx context.Context, organizationID int64, filter carecontract.ContractFilter) ([]carecontract.ContractSummary, error) {
 	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	today, err := s.day()
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +308,7 @@ func (Store) ListContracts(ctx context.Context, organizationID int64, filter car
 		search = "%" + likeEscape(filter.Search) + "%"
 	}
 	var rows []summaryRow
-	if err := db.NewRaw(listContractsSQL, organizationID, filter.Status, filter.Status, filter.SchoolID, filter.SchoolID,
+	if err := db.NewRaw(listContractsSQL, today, today, organizationID, filter.Status, filter.Status, filter.SchoolID, filter.SchoolID,
 		search, search, filter.Limit+1, filter.Offset).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: list contracts: %w", err)
 	}

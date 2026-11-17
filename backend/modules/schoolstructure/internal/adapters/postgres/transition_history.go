@@ -40,7 +40,7 @@ func (s *Store) AnonymizeStudentTransitionHistory(ctx context.Context, tenantID,
 	result, err := db.NewUpdate().TableExpr(`education.grade_transition_history AS "history"`).
 		Set(`person_name = ?`, purgedStudentPlaceholder).
 		Set(`rfid_tag = NULL`).
-		Set(`updated_at = NOW()`).
+		Set(`updated_at = ?`, s.now()).
 		Where(`"history".tenant_id = ?`, tenantID).
 		Where(`"history".student_id = ?`, studentID).
 		Where(`("history".person_name <> ? OR "history".rfid_tag IS NOT NULL)`, purgedStudentPlaceholder).

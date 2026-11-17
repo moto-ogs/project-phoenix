@@ -9,6 +9,21 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/domain"
 )
 
+// DatabaseTime reads the clock that stamps the staff retirement and guards
+// the window of users.erase_retired_staff_records (1.15.459): the automatic
+// deletion takes its cutoff from it (ADR 0281 point 3).
+func (s *Store) DatabaseTime(ctx context.Context) (time.Time, error) {
+	db, _, err := s.database(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	var now time.Time
+	if err := db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &now); err != nil {
+		return time.Time{}, fmt.Errorf("school membership postgres: read the database time: %w", err)
+	}
+	return now, nil
+}
+
 // MarkNextRetiredStaffErased marks the next tombstone of the school in
 // context erased: the one with the lowest ID above afterID whose staff
 // member left before the cutoff and is not erased yet. It locks the row and
@@ -29,7 +44,7 @@ func (s *Store) MarkNextRetiredStaffErased(ctx context.Context, before time.Time
 	var rows []schoolmembership.RetiredStaffErasure
 	query := withTenant(db.NewUpdate().Model((*staffRow)(nil)).
 		ModelTableExpr(`users.staff_school_memberships AS "staff"`).
-		Set(`personal_data_erased_at = NOW()`).
+		Set(`personal_data_erased_at = ?`, s.now()).
 		Where(`"staff".id = (?)`, due).
 		Returning(`"staff".id AS staff_id, "staff".person_id`), "staff", scope)
 	stats := domain.OperationStats{Queries: 1}

@@ -385,13 +385,17 @@ func staffRetentionStep(staff staffRetention) schedulerPorts.SubjectRetention {
 // db: School Membership with the Workforce employment profile, Workforce,
 // Student Presence and the People Directory. The window is the school's
 // time-tracking window; each staff member runs in a savepoint of the
-// cleanup's tenant transaction and is logged into audit by the system.
+// cleanup's tenant transaction and is logged into audit by the system. The
+// cutoff counts from the database day, the clock that stamps the retirement
+// and guards the erasure function (ADR 0281 point 3); now, the root clock,
+// stamps the erasure mark.
 func newStaffRetention(db transactionruntime.Database, audit auditModels.Command, settings interface {
 	ResolveInt(ctx context.Context, key string) (int, error)
-}, logger *slog.Logger) (*staffoffboarding.Retention, error) {
+}, now func() time.Time, logger *slog.Logger) (*staffoffboarding.Retention, error) {
 	memberDeps := schoolMembershipCompose.Dependencies{
 		DB: db.Pool(), Observe: func(schoolMembershipCompose.Observation) {},
 		Employment: MembershipStaffEmployment(workforceCompose.MustNewStaffEmployment(db.Pool())),
+		Now:        now,
 	}
 	membership, err := schoolMembershipCompose.New(memberDeps)
 	if err != nil {
@@ -415,7 +419,7 @@ func newStaffRetention(db transactionruntime.Database, audit auditModels.Command
 	}
 	return staffoffboarding.NewRetention(staffoffboarding.RetentionDependencies{
 		Window: settingsModule.StaffRetentionWindow(settings),
-		Tenant: tenant.FromContext, Today: calendar.TodayDate,
+		Tenant: tenant.FromContext, Today: retired.RetirementDay,
 		Membership: retired, LiveStaff: membership, Workforce: workforceCompose.NewRetiredStaffRecords(), Timetable: retiredTimetable,
 		SupervisionIDs: func(ctx context.Context, staffID int64) ([]int64, error) {
 			supervisions, err := presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{StaffIDs: []int64{staffID}})
