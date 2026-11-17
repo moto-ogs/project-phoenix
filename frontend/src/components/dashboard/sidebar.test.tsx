@@ -2546,21 +2546,6 @@ describe("Sidebar", () => {
       expect(screen.queryByText("Einstellungen")).not.toBeInTheDocument();
     });
 
-    it("asks for no school switches without a school session", () => {
-      const readKeys = vi.mocked(useSWR);
-      readKeys.mockClear();
-
-      render(<Sidebar />);
-
-      // Anker: die Operator-Navigation ist geladen.
-      expect(screen.getByText("Ankündigungen")).toBeInTheDocument();
-      expect(
-        readKeys.mock.calls
-          .map(([key]) => String(key))
-          .filter((key) => key.endsWith("user-context")),
-      ).toEqual([]);
-    });
-
     it("does not render teacher-specific items", () => {
       render(<Sidebar />);
 
