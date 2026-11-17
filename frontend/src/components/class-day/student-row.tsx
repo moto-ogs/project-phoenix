@@ -31,7 +31,7 @@ function rowDetailLine(row: ClassDayRow, enrollmentKnown: boolean): string {
   // Klassenlisteneintrag (#2382): "Keine Betreuung" ist die ganze Aussage —
   // das Badge rechts trägt sie, die Detailzeile bleibt leer (keine erfundene
   // Gehregel, keine Abholzeit).
-  if (row.list_entry) return "";
+  if (row.list_entry || row.without_care_place) return "";
   const parts: string[] = [];
   if (row.stays_today && row.offerings.length > 0) {
     parts.push(row.offerings.join(", "));
@@ -91,7 +91,10 @@ export function StudentRow({
   // Eine abweichende Abholzeit ohne gemeldeten Status: der Status trägt
   // sonst das Kennzeichen und ist die stärkere Aussage.
   const showPickupBadge = Boolean(
-    row.pickup_changed && !row.status && !row.list_entry,
+    row.pickup_changed &&
+    !row.status &&
+    !row.list_entry &&
+    !row.without_care_place,
   );
   return (
     // min-w-0: die Zeile ist ein Grid-Item, und Grid-Items haben
@@ -174,7 +177,7 @@ export function StudentRow({
         ) : null}
         {/* Klassenlisteneintrag (#2382): Kind ohne OGS-Datensatz — eindeutig
             als "Keine Betreuung" gekennzeichnet, unabhängig von Anmeldephasen. */}
-        {row.list_entry ? (
+        {row.list_entry || (row.without_care_place && !row.status) ? (
           <StatusColorBadge
             label="Keine Betreuung"
             color={LOCATION_COLORS.HOME}

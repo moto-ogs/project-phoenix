@@ -45,6 +45,7 @@ import { createClassListEntry } from "~/lib/class-list-entries-api";
 import { MasterDetailSkeleton } from "~/components/database/master-detail-skeleton";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+import { useChildrenWithoutCarePlace } from "~/lib/tenant-context";
 import { childrenConcept } from "~/lib/concepts/children";
 import { foldForSearch } from "~/lib/search-fold";
 
@@ -83,6 +84,7 @@ export default function StudentsPage() {
  */
 function StudentsPageContent() {
   const tenantPath = useTenantAwarePath();
+  const childrenWithoutCarePlace = useChildrenWithoutCarePlace();
   const searchParams = useSearchParams();
   const updateUrlParams = useUpdateUrlParams();
 
@@ -399,6 +401,24 @@ function StudentsPageContent() {
     [service, tenantMutate, toastSuccess, toastWarning, router, objectHref],
   );
 
+  // A child of the class without an OGS place (#4803): the same three fields
+  // create a child of its own once the school keeps such children.
+  const handleCreateWithoutCarePlace = useCallback(
+    async (input: {
+      firstName: string;
+      lastName: string;
+      schoolClass: string;
+    }) => {
+      await handleCreateStudent({
+        first_name: input.firstName,
+        second_name: input.lastName,
+        school_class: input.schoolClass,
+        without_care_place: true,
+      });
+    },
+    [handleCreateStudent],
+  );
+
   const handleArrivalChanged = useCallback(() => {
     setArrivalRevision((prev) => prev + 1);
     void tenantMutate("database-students-list");
@@ -470,8 +490,13 @@ function StudentsPageContent() {
             // Same gate as POST /api/class-list-entries (users:create) — without
             // the permission the modal must not offer the "Nur Klassenliste" mode.
             onCreateListEntry={
-              canCreateStudents ? handleCreateListEntry : undefined
+              canCreateStudents
+                ? childrenWithoutCarePlace
+                  ? handleCreateWithoutCarePlace
+                  : handleCreateListEntry
+                : undefined
             }
+            withoutCarePlace={childrenWithoutCarePlace}
             groups={allGroups}
           />
 

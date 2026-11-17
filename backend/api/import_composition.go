@@ -290,6 +290,7 @@ func newServeImports(
 ) imports {
 	runtime := newImportRuntime(audit.Command, observeDataImport, now)
 	return imports{
+		ClassListConversion: newClassListConversion(audit, identity, groups, rooms, persons, carePlan, presence, membership, now),
 		Student: newStudentImport(
 			runtime, identity, groups, rooms, persons, personBatches(persons), persons, carePlan, presence.Presence,
 			auditCompose.NewConsentRecorder(audit.Command), nil, cohorts,
@@ -313,9 +314,23 @@ func newClassListConversion(
 	audit owners.AuditOwner, identity identityaccess.Owner, groups schoolstructure.GroupListing, rooms facilities.Query,
 	persons peopledirectory.Capability, carePlan careplan.Capability, presence owners.PresenceOwner,
 	membership schoolmembership.Capability, now func() time.Time,
-) (importModels.ClassListConverter, error) {
-	return composeClassListConversion(newImportRuntime(audit.Command, observeDataImport, now), audit.Command, identity,
+) importModels.ClassListConverter {
+	converter, err := composeClassListConversion(newImportRuntime(audit.Command, observeDataImport, now), audit.Command, identity,
 		groups, rooms, persons, carePlan, presence.Presence, membership)
+	if err != nil {
+		// Like the other batch slices: without them the conversion refuses
+		// on use instead of the root failing to start.
+		return unboundClassListConversion{err: err}
+	}
+	return converter
+}
+
+// unboundClassListConversion answers a conversion whose owner slices are
+// not bound with that error, so switching the school on fails visibly.
+type unboundClassListConversion struct{ err error }
+
+func (u unboundClassListConversion) ConvertClassListEntries(context.Context, *int64) (importModels.ClassListConversion, error) {
+	return importModels.ClassListConversion{}, u.err
 }
 
 // composeClassListConversion is newClassListConversion over an import

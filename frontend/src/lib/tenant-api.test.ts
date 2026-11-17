@@ -185,6 +185,7 @@ describe("tenant-api", () => {
         // field, so the dialog never guesses a window.
         earlyCheckoutNoteToleranceMinutes: null,
         weekendFollowsFriday: false,
+        childrenWithoutCarePlace: false,
         childSearchOnlyNavigation: false,
         simpleStaffNavigation: false,
       });

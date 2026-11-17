@@ -320,12 +320,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return nil
 		},
 		func() (err error) {
-			classList, err := newClassListConversion(audit, identity, groups, rooms, persons, carePlan, presence, membership, env.Now)
-			if err != nil {
-				return err
-			}
-			settingsWrites, err = buildSettingsWrites(env, settings, payroll, yard, schedules.Lifecycle, services.StudentPhotos,
-				owners.BuildPresenceCleanup(env, presence, audit, settings.Service), hub, classList)
+			settingsWrites, err = buildSettingsWrites(env, settings, payroll, yard, schedules.Lifecycle, services.StudentPhotos, owners.BuildPresenceCleanup(env, presence, audit, settings.Service), hub, newClassListConversion(audit, identity, groups, rooms, persons, carePlan, presence, membership, env.Now))
 			return
 		},
 		func() error {

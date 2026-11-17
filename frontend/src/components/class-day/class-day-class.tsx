@@ -340,13 +340,26 @@ export function ClassDayClass({
   const staying = useMemo(() => rows.filter((row) => row.stays_today), [rows]);
   const leaving = useMemo(
     () =>
-      rows.filter((row) => !row.stays_today && !row.status && !row.list_entry),
+      rows.filter(
+        (row) =>
+          !row.stays_today &&
+          !row.status &&
+          !row.list_entry &&
+          !row.without_care_place,
+      ),
     [rows],
   );
-  // Klassenlisteneinträge (#2382): "Keine Betreuung" ist eine neutrale
-  // Verbands-Aussage, kein "geht nach Hause" — eigene Sektion statt der
-  // Übergabe-Kategorien.
-  const noCare = useMemo(() => rows.filter((row) => row.list_entry), [rows]);
+  // Klassenlisteneinträge (#2382) und Kinder ohne OGS-Platz (#4803): "Keine
+  // Betreuung" ist eine neutrale Verbands-Aussage, kein "geht nach Hause" —
+  // eigene Sektion statt der Übergabe-Kategorien. Ein krankes Kind ohne
+  // OGS-Platz steht bei den Abwesenden.
+  const noCare = useMemo(
+    () =>
+      rows.filter(
+        (row) => row.list_entry || (row.without_care_place && !row.status),
+      ),
+    [rows],
+  );
   const absent = useMemo(
     () => rows.filter((row) => Boolean(row.status)),
     [rows],
@@ -365,7 +378,8 @@ export function ClassDayClass({
   const sharedNotesHref =
     report?.can_read_shared_notes === true
       ? (row: ClassDayRow) => {
-          if (row.list_entry || row.student_id <= 0) return undefined;
+          if (row.list_entry || row.without_care_place || row.student_id <= 0)
+            return undefined;
           return schoolPath(
             classDayChildPath(schoolClass, String(row.student_id), dateISO),
           );
@@ -377,7 +391,7 @@ export function ClassDayClass({
   // Nur Kinder mit OGS-Datensatz: ein Klassenlisteneintrag hat keine
   // Kindakte, an der ein Hinweis stehen könnte.
   const hintChildren = rows.filter(
-    (row) => !row.list_entry && row.student_id > 0,
+    (row) => !row.list_entry && !row.without_care_place && row.student_id > 0,
   );
   const hintOptions = [
     {
@@ -480,8 +494,8 @@ export function ClassDayClass({
     }
   };
 
-  // Nur Kinder mit OGS-Datensatz lassen sich melden; Klassenlisteneinträge
-  // ("Keine Betreuung") hat die OGS nicht.
+  // Nur Kinder mit eigenem Datensatz lassen sich melden, auch Kinder ohne
+  // OGS-Platz (#4803); Klassenlisteneinträge ("Keine Betreuung") nicht.
   const tripStudents = useMemo(
     () =>
       rows

@@ -1596,6 +1596,13 @@
           }
         },
         {
+          "name": "without_care_place",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "care_exit_recorded",
           "optional": true,
           "schema": {
@@ -1902,6 +1909,13 @@
               "kind": "ref",
               "ref": "PickupScheduleRequest"
             }
+          }
+        },
+        {
+          "name": "without_care_place",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -2316,6 +2330,13 @@
         },
         {
           "name": "care_ended",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "without_care_place",
           "optional": true,
           "schema": {
             "kind": "bool"

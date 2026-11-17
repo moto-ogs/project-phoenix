@@ -1395,6 +1395,8 @@ export const ERROR_CATALOG = {
         "Die Notiz ist zu lang. Bitte kürzen Sie sie.",
       "students.child_quota_reached":
         "Das Kinderkontingent Ihrer Schule ist voll ({occupied_places} von {booked_places} Kindern). Bitte melden Sie sich beim moto-Team.",
+      "students.class_list_entries_replaced":
+        "Ihre Schule legt Kinder ohne OGS-Platz als Kind an. Bitte nutzen Sie dafür „Ohne OGS-Platz“ in den Kinderdaten.",
       "students.class_list_entry_assign_mismatch":
         "Das gewählte Kind passt nicht zum Eintrag. Name und Klasse müssen gleich sein.",
       "students.class_list_entry_duplicate":
@@ -1497,6 +1499,10 @@ export const ERROR_CATALOG = {
         "An einigen Tagen gibt es schon einen Eintrag. Diese Tage wurden nicht geändert.",
       "students.status_day_occupied":
         "Für heute ist eine Klassenfahrt eingetragen. Heben Sie zuerst die Klassenfahrt auf.",
+      "students.without_care_place_group":
+        "Ein Kind ohne OGS-Platz ist in keiner Gruppe. Bitte lassen Sie die Gruppe leer.",
+      "students.without_care_place_off":
+        "Kinder ohne OGS-Platz kann Ihre Schule noch nicht anlegen. Das moto-Team schaltet das auf Wunsch ein.",
       "substitutions.invalid_period":
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "substitutions.invalid_target":

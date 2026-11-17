@@ -200,16 +200,27 @@ func NewImportTestModuleWithOwners(db transactionruntime.Database, unit tenant.U
 			StaffAbsenceService:  workforce.TimeTracking.VacationTakeovers,
 		}, membership, persons, workTime),
 	}
-	conversion, err := composeClassListConversion(runtime, command, rfid, groups, rooms, persons, students.CarePlan,
-		NewStudentPresenceForTests(db), membership)
+	module, err := importTestModuleOf(dataImports, observations,
+		func() (importModels.ClassListConverter, error) {
+			return composeClassListConversion(runtime, command, rfid, groups, rooms, persons, students.CarePlan, NewStudentPresenceForTests(db), membership)
+		})
+	return module, persons, membership, err
+}
+
+// importTestModuleOf is the module a suite drives, with the class-list
+// conversion (#4803) over the same owners.
+func importTestModuleOf(
+	dataImports imports, observations *[]importModels.ImportObservation, conversion func() (importModels.ClassListConverter, error),
+) (ImportTestModule, error) {
+	converter, err := conversion()
 	if err != nil {
-		return ImportTestModule{}, nil, nil, err
+		return ImportTestModule{}, err
 	}
 	return ImportTestModule{
 		Import: dataImports.Student, StaffImport: dataImports.Staff, ClassListImport: dataImports.ClassList,
-		OpeningBalanceImport: dataImports.OpeningBalance, ClassListConversion: conversion,
+		OpeningBalanceImport: dataImports.OpeningBalance, ClassListConversion: converter,
 		Observations: observations,
-	}, persons, membership, nil
+	}, nil
 }
 
 func wrapClassListBatches(batches importPorts.ClassListEntryBatches, wrap func(importPorts.ClassListEntryBatches) importPorts.ClassListEntryBatches) importPorts.ClassListEntryBatches {

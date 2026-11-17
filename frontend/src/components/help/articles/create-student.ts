@@ -74,6 +74,7 @@ export function createStudentTopic(): HelpTopic {
     differences: [
       "`Vorname`, `Nachname` und `Klasse` tragen einen roten Stern. Sie sind Pflicht.",
       "Oben im Fenster können Sie auf `Nur Klassenliste` wechseln. Das ist für Kinder ohne OGS-Betreuung.",
+      "Statt `Nur Klassenliste` steht dort `Ohne OGS-Platz`? Dann hat das moto-Team für Ihre Schule Kinder ohne OGS-Platz eingeschaltet. Das Kind bekommt einen eigenen Eintrag. Seine Eltern können Sie in die Eltern-App einladen.",
       "Auf dem Handy steht statt `+ Kinder` ein rundes Plus unten rechts. `Importieren` fehlt dort ganz.",
     ],
     troubleshootingDetails: [

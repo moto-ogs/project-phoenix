@@ -1034,6 +1034,43 @@ describe("StudentCreateModal", () => {
     expect(screen.getByText("Erstellen")).toBeInTheDocument();
   });
 
+  it("creates a child without an OGS place in the second mode when the school keeps them (#4803)", async () => {
+    const onCreateListEntry = vi.fn().mockResolvedValue(undefined);
+    render(
+      <StudentCreateModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onCreate={mockOnCreate}
+        onCreateListEntry={onCreateListEntry}
+        withoutCarePlace
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ohne OGS-Platz" }));
+    expect(
+      screen.queryByRole("button", { name: "Nur Klassenliste" }),
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: /Vorname/ }), {
+      target: { value: "Lea" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /Nachname/ }), {
+      target: { value: "Lang" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /Klasse/ }), {
+      target: { value: "2a" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Erstellen"));
+    });
+
+    expect(onCreateListEntry).toHaveBeenCalledWith({
+      firstName: "Lea",
+      lastName: "Lang",
+      schoolClass: "2a",
+    });
+    expect(mockOnCreate).not.toHaveBeenCalled();
+  });
+
   it("blocks direct creation when care days cannot be loaded and offers a retry", async () => {
     mockFetchArrivalSettings.mockRejectedValueOnce(
       new ApiError("offline", 503, { code: "general.unavailable" }),

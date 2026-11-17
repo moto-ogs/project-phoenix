@@ -280,6 +280,17 @@ export function useWeekendFollowsFriday(): boolean {
 }
 
 /**
+ * Returns whether the school keeps children of a class without an OGS place
+ * as children of their own (#4803): its switch is on and Unterricht am
+ * Vormittag is booked. Defaults to false when tenant metadata is
+ * unavailable, which keeps the class list entries.
+ */
+export function useChildrenWithoutCarePlace(): boolean {
+  const ctx = useContext(TenantContext);
+  return ctx?.tenant?.childrenWithoutCarePlace === true;
+}
+
+/**
  * Returns whether staff find children through „Alle Kinder" alone
  * (operations.child_search_only_navigation, #1321). Sidebar and bottom bar
  * then drop „Meine Gruppe" and „Aktuelle Aufsicht"; the child search carries

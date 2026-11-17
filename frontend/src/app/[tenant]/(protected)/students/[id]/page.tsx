@@ -266,6 +266,7 @@ function studentTabs(
   canViewDocuments: boolean,
   canViewRequestLog: boolean,
   canReadParentData = true,
+  withoutCarePlace = false,
 ): StudentTabId[] {
   const base = hasStudentReadAccess
     ? canViewEnrollments
@@ -311,10 +312,21 @@ function studentTabs(
   // Notizen, Nachrichten and Erziehungsberechtigte read parent data and
   // notes, which stay on users:read. The role „Gast“ opens the child with
   // students:read only (ADR 0091); those tabs would only answer 403.
-  return canReadParentData
+  const withParentData = canReadParentData
     ? withRequestLog
     : withRequestLog.filter((tab) => !PARENT_DATA_TABS.has(tab));
+  // Ein Kind ohne OGS-Platz (#4803) hat keinen Betreuungsplan, keine
+  // Betreuungszeiten und keinen Chat der Eltern mit der OGS.
+  return withoutCarePlace
+    ? withParentData.filter((tab) => !OGS_ONLY_TABS.has(tab))
+    : withParentData;
 }
+
+const OGS_ONLY_TABS: ReadonlySet<StudentTabId> = new Set<StudentTabId>([
+  "betreuungsplan",
+  "betreuungszeiten",
+  "nachrichten",
+]);
 
 const PARENT_DATA_TABS: ReadonlySet<StudentTabId> = new Set<StudentTabId>([
   "notizen",
@@ -647,6 +659,7 @@ function StudentDetailPageContent() {
         canViewDocuments,
         canViewRequestLog,
         canReadParentData,
+        student?.without_care_place === true,
       ),
     [
       canViewEnrollments,
@@ -655,6 +668,7 @@ function StudentDetailPageContent() {
       canViewDocuments,
       canViewRequestLog,
       canReadParentData,
+      student?.without_care_place,
     ],
   );
   const tabResolutionTabs =
@@ -1452,8 +1466,10 @@ function StudentDetailPageContent() {
   // "Schule" (#3260) and "Im Unterricht" (#5656) are not checked in either: the
   // child still needs a check-in.
   const isNotCheckedIn = isNotCheckedInLocation(student.current_location);
-  const showCheckout = canCheckin && !isNotCheckedIn;
-  const showCheckin = canCheckin && isNotCheckedIn;
+  // Ein Kind ohne OGS-Platz (#4803) checkt in der OGS nicht ein und aus.
+  const withoutCarePlace = student?.without_care_place === true;
+  const showCheckout = canCheckin && !withoutCarePlace && !isNotCheckedIn;
+  const showCheckin = canCheckin && !withoutCarePlace && isNotCheckedIn;
   const hasQuickActions =
     showCheckout ||
     showCheckin ||
@@ -1825,7 +1841,14 @@ function StudentDetailPageContent() {
         </div>
       ) : null}
 
-      {!isHolidayGuest && hasFullAccess ? (
+      {withoutCarePlace ? (
+        <Alert
+          type="info"
+          announce="off"
+          message="Dieses Kind hat keinen Platz in der OGS. Krankmeldung und Elternbriefe gelten wie für jedes Kind. Gruppe, Abholung und Betreuungszeiten gibt es nicht."
+        />
+      ) : null}
+      {!isHolidayGuest && !withoutCarePlace && hasFullAccess ? (
         <StudentPickupChanges
           studentId={studentId}
           exceptions={pickupData?.exceptions}
@@ -1838,7 +1861,7 @@ function StudentDetailPageContent() {
           canRead={sessionReadsChildDetails}
         />
       )}
-      {!isHolidayGuest && hasFullAccess && (
+      {!isHolidayGuest && !withoutCarePlace && hasFullAccess && (
         <HolidayStudentRegistrationSection
           studentId={studentId}
           schoolHealthInfo={student?.health_info ?? null}

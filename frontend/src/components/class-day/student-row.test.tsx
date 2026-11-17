@@ -99,6 +99,21 @@ describe("StudentRow", () => {
     expect(screen.queryByText("Andere Abholzeit")).not.toBeInTheDocument();
   });
 
+  it("zeigt ein Kind ohne OGS-Platz als Keine Betreuung, eine Krankmeldung aber als Status (#4803)", () => {
+    const { unmount } = renderRow({
+      without_care_place: true,
+      stays_today: false,
+      pickup_changed: true,
+    });
+    expect(screen.getByText("Keine Betreuung")).toBeInTheDocument();
+    expect(screen.queryByText("Andere Abholzeit")).not.toBeInTheDocument();
+    unmount();
+
+    renderRow({ without_care_place: true, stays_today: false, status: "sick" });
+    expect(screen.getByText("Krank")).toBeInTheDocument();
+    expect(screen.queryByText("Keine Betreuung")).not.toBeInTheDocument();
+  });
+
   it("bleibt reine Anzeige ohne Bedienelemente", () => {
     // Missverständnis-Check: Änderungen macht das OGS-Team, nicht die
     // Lehrkraft an dieser Zeile.

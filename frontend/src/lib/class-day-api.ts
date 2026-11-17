@@ -19,6 +19,9 @@ export interface ClassDayRow {
   // als String, weil JSON-Zahlen oberhalb von 2^53 im Client runden würden.
   list_entry?: boolean;
   list_entry_id?: string;
+  // Kind ohne OGS-Platz (#4803): „Keine Betreuung“ wie ein Eintrag, aber mit
+  // student_id — Krankmeldung, Klassenfahrt und Vormittag gelten.
+  without_care_place?: boolean;
   group_name?: string;
   registered: boolean;
   stays_today: boolean;
