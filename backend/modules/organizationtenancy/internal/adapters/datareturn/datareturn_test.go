@@ -461,11 +461,12 @@ func TestRolesHoldExactlyTheirRights(t *testing.T) {
 }
 
 // issueRelease calls data_return_issue for a release of school with the
-// given archive name, inside db (a transaction or a pool).
+// given archive name, inside db (a transaction or a pool). The token lives an
+// hour of database time, as Release derives it from the database clock.
 func issueRelease(ctx context.Context, db bun.IDB, operator, school int64, archive string, keepUntil time.Time) error {
 	hex64 := strings.Repeat("ab", 32)
-	_, err := db.NewRaw(`SELECT platform.data_return_issue(?, 'release', 'school', ?, ?, 10, ?, ?, 1, ?, 'customer', 'Schule', ?, '\x01'::bytea, ?, ?, 1)`,
-		operator, school, archive, hex64, hex64, hex64, strings.Repeat("cd", 16)+archive, time.Now().Add(time.Hour), keepUntil).Exec(ctx)
+	_, err := db.NewRaw(`SELECT platform.data_return_issue(?, 'release', 'school', ?, ?, 10, ?, ?, 1, ?, 'customer', 'Schule', ?, '\x01'::bytea, now() + interval '1 hour', ?, 1)`,
+		operator, school, archive, hex64, hex64, hex64, strings.Repeat("cd", 16)+archive, keepUntil).Exec(ctx)
 	return err
 }
 
@@ -478,7 +479,8 @@ func TestReleaseAndErasureOfTheSameSchoolAreSerialized(t *testing.T) {
 	holdSeveralConnections(t)
 	f := newFixture(t)
 	school := f.school(t)
-	keep := time.Now().Add(30 * 24 * time.Hour)
+	// The database clock bounds the retrieval period (ADR 0274).
+	keep := testpkg.DatabaseNow(t, f.db).Add(30 * 24 * time.Hour)
 
 	release, err := f.db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
@@ -524,9 +526,11 @@ func TestIssueTrustsNoCallerValuesForAGrant(t *testing.T) {
 	var keyCheck string
 	require.NoError(t, f.db.NewRaw(`SELECT key_check FROM platform.data_return_grants WHERE id = ?`, issued.GrantID).Scan(t.Context(), &keyCheck))
 	bogus := strings.Repeat("ef", 32)
+	// The caller passes an expiry of database time, as Release does (ADR 0284).
+	issuedAt := testpkg.DatabaseNow(t, f.db)
 	var id int64
 	require.NoError(t, f.db.NewRaw(`SELECT platform.data_return_issue(?, 'grant', 'organization', 1, ?, 999999, ?, ?, 7, ?, 'customer', 'X', ?, '\x01'::bytea, ?, ?, 1)`,
-		f.operator, issued.ArchiveName, bogus, bogus, keyCheck, strings.Repeat("9", 64), time.Now().Add(time.Hour), time.Now().AddDate(5, 0, 0)).Scan(t.Context(), &id))
+		f.operator, issued.ArchiveName, bogus, bogus, keyCheck, strings.Repeat("9", 64), issuedAt.Add(time.Hour), issuedAt.AddDate(5, 0, 0)).Scan(t.Context(), &id))
 	var same bool
 	require.NoError(t, f.db.NewRaw(`SELECT g.package = o.package AND g.subject_id = o.subject_id AND g.archive_bytes = o.archive_bytes
 		AND g.archive_sha256 = o.archive_sha256 AND g.manifest_sha256 = o.manifest_sha256 AND g.format_version = o.format_version
@@ -547,11 +551,13 @@ func TestReleaseRefusesASubjectWhoseErasureHasBegun(t *testing.T) {
 	school := f.school(t)
 	var organization int64
 	require.NoError(t, f.db.NewRaw(`SELECT organization_id FROM platform.schools WHERE id = ?`, school).Scan(t.Context(), &organization))
-	keep := time.Now().Add(30 * 24 * time.Hour)
+	// Release derives expiry from the database clock, which also bounds the
+	// retrieval period (ADR 0274, ADR 0284).
+	keep := testpkg.DatabaseNow(t, f.db).Add(30 * 24 * time.Hour)
 	hex64 := strings.Repeat("ab", 32)
 	releaseOrganization := func(archive string) error {
-		_, err := f.db.NewRaw(`SELECT platform.data_return_issue(?, 'release', 'organization', ?, ?, 10, ?, ?, 1, ?, 'customer', 'Träger', ?, '\x01'::bytea, ?, ?, 1)`,
-			f.operator, organization, archive, hex64, hex64, hex64, strings.Repeat("ef", 16)+archive, time.Now().Add(time.Hour), keep).Exec(t.Context())
+		_, err := f.db.NewRaw(`SELECT platform.data_return_issue(?, 'release', 'organization', ?, ?, 10, ?, ?, 1, ?, 'customer', 'Träger', ?, '\x01'::bytea, now() + interval '1 hour', ?, 1)`,
+			f.operator, organization, archive, hex64, hex64, hex64, strings.Repeat("ef", 16)+archive, keep).Exec(t.Context())
 		return err
 	}
 	t.Cleanup(func() {
@@ -632,8 +638,10 @@ func TestReleaseAndStartOfTheTraegerErasureAreSerialized(t *testing.T) {
 			VALUES (?, 'ORDER-6665', '2026-01-02', '2026-01-03', ?, now(), 'erasure_chosen')`, organization, f.operator)
 		require.NoError(t, err)
 		archive := fmt.Sprintf("%032x", organization)
+		// Expiry and retrieval period on the database clock (ADR 0274, ADR 0284).
+		issuedAt := testpkg.DatabaseNow(t, f.db)
 		return organization, []any{f.operator, organization, archive, hex64, hex64, hex64, strings.Repeat("ef", 16) + archive,
-			time.Now().Add(time.Hour), time.Now().Add(30 * 24 * time.Hour)}
+			issuedAt.Add(time.Hour), issuedAt.Add(30 * 24 * time.Hour)}
 	}
 	state := func(t *testing.T, organization int64) (started bool, packages int) {
 		t.Helper()

@@ -55,7 +55,7 @@ var calendarFixtureShiftedLiveDateDebt = map[string]int{
 	// tests therefore place keep_until relative to the real day the
 	// database decides on. The root and composition tests read that day
 	// through testpkg.DatabaseNow (#7295) and left this register.
-	"modules/organizationtenancy/internal/adapters/datareturn/datareturn_test.go": 3,
+	"modules/organizationtenancy/internal/adapters/datareturn/datareturn_test.go": 2,
 }
 
 // applyCalendarShiftDebt removes the shifted-live-date findings that a
