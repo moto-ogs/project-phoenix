@@ -93,8 +93,11 @@ function PriceCell({
     );
   }
   return (
-    <span className="text-gray-500" aria-label="nicht gebucht">
-      –
+    // A span without a role carries no name (#7112): the dash is drawn,
+    // the words are read.
+    <span className="text-gray-500">
+      <span aria-hidden="true">–</span>
+      <span className="sr-only">nicht gebucht</span>
     </span>
   );
 }

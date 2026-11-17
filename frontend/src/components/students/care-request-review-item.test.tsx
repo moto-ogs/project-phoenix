@@ -196,7 +196,7 @@ describe("CareRequestReviewItem", () => {
     );
     expect(
       screen.getByRole("button", {
-        name: /Betreuungszeiten\. Betreuungszeiten\./,
+        name: /Betreuungszeiten Betreuungszeiten/,
       }),
     ).toBeInTheDocument();
 
@@ -208,7 +208,7 @@ describe("CareRequestReviewItem", () => {
     );
     expect(
       screen.getByRole("button", {
-        name: /Einzelner Tag\. Abholzeit\./,
+        name: /Einzelner Tag Abholzeit/,
       }),
     ).toBeInTheDocument();
   });

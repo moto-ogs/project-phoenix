@@ -16,12 +16,22 @@ import { getPillTone } from "~/lib/kit-palette";
 // #2476: a status pill is text on a tinted surface, nothing else. The leading
 // dot repeated what tint and label already said, so every kit pill renders its
 // label as the pill's sole content and leaves no spacer where the dot sat.
+// A pill with a tooltip also carries that text hidden for screen readers
+// (#7112); that hidden text is no visible element.
 function expectPlainPill(pill: Element | null, label?: string) {
   expect(pill).not.toBeNull();
   const el = pill as HTMLElement;
-  expect(el.children).toHaveLength(0);
-  expect(el.textContent).toBe(label ?? el.textContent);
-  expect(el.textContent).not.toBe("");
+  const hidden = (node: Node) =>
+    node instanceof Element && node.classList.contains("sr-only");
+  expect(
+    Array.from(el.children).filter((child) => !hidden(child)),
+  ).toHaveLength(0);
+  const shown = Array.from(el.childNodes)
+    .filter((node) => !hidden(node))
+    .map((node) => node.textContent)
+    .join("");
+  expect(shown).toBe(label ?? shown);
+  expect(shown).not.toBe("");
   expect(el.className).not.toMatch(/\bgap-|\bmr-/);
 }
 

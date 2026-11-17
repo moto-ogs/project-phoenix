@@ -48,15 +48,10 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
-};
+export const Default: Story = {};
 
 /** Tastaturfokus: dieselbe Fläche und derselbe Ring wie `TileCard`. */
 export const Focused: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   play: async ({ canvasElement }) => {
     await userEvent.tab();
     await expect(within(canvasElement).getByRole("button")).toHaveFocus();
@@ -64,29 +59,23 @@ export const Focused: Story = {
 };
 
 export const WithPhoto: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     photoUrl: "https://placekitten.com/200/200",
   },
 };
 
 export const WithExtraContent: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     extraContent: (
       <StudentInfoRow icon={<SchoolClassIcon />}>Klasse 3a</StudentInfoRow>
     ),
     trackingIndicators: (
-      <span className="text-xs text-gray-400">Indikator</span>
+      <span className="text-xs text-gray-600">Indikator</span>
     ),
   },
 };
 
 export const CheckinModePresent: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     checkinMode: true,
     checkinState: "anwesend",
@@ -94,8 +83,6 @@ export const CheckinModePresent: Story = {
 };
 
 export const CheckinModeAbsent: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     checkinMode: true,
     checkinState: "abwesend",
@@ -103,8 +90,6 @@ export const CheckinModeAbsent: Story = {
 };
 
 export const CheckinModePending: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     checkinMode: true,
     checkinState: "anwesend",

@@ -303,7 +303,7 @@ describe("DienstplanResourceGrid status mapping", () => {
     });
 
     const block = screen.getByRole("button", {
-      name: /08:00–12:00 Schicht, abwesend/,
+      name: /^08:00–12:00 Schicht ?, abwesend$/,
     });
     expect(block.style.backgroundImage).toContain("repeating-linear-gradient");
   });

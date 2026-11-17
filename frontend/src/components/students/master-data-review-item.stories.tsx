@@ -32,14 +32,9 @@ type Story = StoryObj<typeof meta>;
 // Deciding a card posts to "/api/students/master-data-change-requests/{id}".
 // In Storybook there is no backend, so the request fails and the card
 // gracefully falls into its error state (caught in a try/catch — no crash).
-export const Default: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
-};
+export const Default: Story = {};
 
 export const DepartureModes: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     row: {
       ...row,

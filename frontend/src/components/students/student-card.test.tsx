@@ -69,9 +69,10 @@ describe("StudentCard", () => {
   it("has accessible aria-label", () => {
     render(<StudentCard {...defaultProps} />);
 
-    expect(
-      screen.getByLabelText("Max Mustermann - Details öffnen"),
-    ).toBeInTheDocument();
+    // Named by what it shows, name first; the target follows hidden (#7112).
+    expect(screen.getByRole("button")).toHaveAccessibleName(
+      /^Max Mustermann In Room ?, Details öffnen$/,
+    );
   });
 
   it("renders extra content when provided", () => {
@@ -125,9 +126,9 @@ describe("StudentCard", () => {
       />,
     );
     // Navigation copy sits on the card's accessible name.
-    expect(
-      screen.getByLabelText("Max Mustermann - Details öffnen"),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button")).toHaveAccessibleName(
+      /^Max Mustermann In Room ?, Details öffnen$/,
+    );
     // The default click goes to onClick, NOT onCheckinClick.
     fireEvent.click(screen.getByRole("button"));
     expect(onClick).toHaveBeenCalledTimes(1);
@@ -372,8 +373,12 @@ describe("StudentCard one-day pickup change (#3946)", () => {
     (kind, change, label) => {
       render(<StudentCard {...props} dayHomeChange={change} />);
 
+      // The strip is visible text in the card, so its name reads it in
+      // place, after the badge (#7112).
       const button = screen.getByRole("button", {
-        name: `Max Mustermann, ${label} - Details öffnen`,
+        name: new RegExp(
+          `^Max Mustermann badge ${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} ?, Details öffnen$`,
+        ),
       });
       expect(button).toHaveAttribute("data-day-home-change", kind);
       expect(

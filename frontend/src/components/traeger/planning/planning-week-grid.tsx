@@ -236,7 +236,15 @@ export function PlanningWeekGrid({
           .join(" · ")}
         interactive={!shift.cancelled}
         onClick={() => onOpenShift(person, shift)}
-        aria-label={`${timeRange} an ${shift.schoolName}, ${label}${shift.plannedByTraeger ? ", vom Träger geplant" : ""}. Schicht ändern`}
+        details={[
+          shift.plannedByTraeger ? "vom Träger geplant" : "",
+          warned && !shift.cancelled
+            ? "Hinweis zu Arbeitszeit an diesem Tag"
+            : "",
+          shift.cancelled ? "" : "Schicht ändern",
+        ]
+          .filter(Boolean)
+          .join(", ")}
       />
     );
   };

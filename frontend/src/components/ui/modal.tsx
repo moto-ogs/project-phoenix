@@ -22,6 +22,7 @@ import { CloseIcon } from "./close-icon";
 import { SpinnerIcon } from "./icons";
 import { useBusyFocus } from "./hooks/useBusyFocus";
 import { ModalCancelButton, ModalFrameContext } from "./modal-frame";
+import { useScrollRegion } from "./hooks/useScrollRegion";
 import { MODAL_CLOSE_DELAY_MS, MODAL_MOTION_STYLE } from "./motion";
 
 const DEFAULT_CLOSE_LABEL = "Modal schließen";
@@ -197,18 +198,7 @@ export function Modal({
   // A body that scrolls must be reachable by keyboard, also when it holds
   // nothing focusable (a read-only list): it then joins the tab order.
   const bodyRef = React.useRef<HTMLDivElement>(null);
-  const [bodyScrolls, setBodyScrolls] = React.useState(false);
-  useEffect(() => {
-    const body = bodyRef.current;
-    if (!visible || !body || typeof ResizeObserver === "undefined") return;
-    const measure = () =>
-      setBodyScrolls(body.scrollHeight > body.clientHeight + 1);
-    const observer = new ResizeObserver(measure);
-    observer.observe(body);
-    if (body.firstElementChild) observer.observe(body.firstElementChild);
-    measure();
-    return () => observer.disconnect();
-  }, [visible]);
+  const bodyScrolls = useScrollRegion(bodyRef, visible);
 
   // Store onClose in a ref so handleClose never changes identity
   const onCloseRef = useLatest(onClose);
