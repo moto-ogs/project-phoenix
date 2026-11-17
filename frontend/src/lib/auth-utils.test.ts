@@ -366,10 +366,22 @@ describe("auth-utils", () => {
       ).toBe("Anna");
     });
 
+    it("behält einen doppelten Vornamen", () => {
+      expect(
+        getGreetingName(
+          sessionWith({ firstName: "Anna Lena", name: "Anna Lena Müller" }),
+        ),
+      ).toBe("Anna Lena");
+    });
+
     it("nimmt das erste Wort eines Namens mit Leerzeichen", () => {
       expect(
         getGreetingName(
-          sessionWith({ firstName: "Petra Träger", name: "Petra Träger" }),
+          sessionWith({
+            firstName: "Petra Träger",
+            name: "Petra Träger",
+            viaTraeger: true,
+          }),
         ),
       ).toBe("Petra");
       expect(getGreetingName(sessionWith({ name: "  Eva   Ziel " }))).toBe(

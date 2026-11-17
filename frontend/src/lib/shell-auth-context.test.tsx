@@ -1366,3 +1366,32 @@ describe("SchoolShellProvider names", () => {
     expect(result.current.profile).toBeNull();
   });
 });
+
+describe("Operator and caterer names", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // Die Adresse ist auch hier kein Name (#7305).
+  it.each([
+    ["Operator", OperatorShellProvider],
+    ["Caterer", CatererShellProvider],
+  ] as const)(
+    "%s never shows the sign-in address as the name",
+    (fallback, Provider) => {
+      mockUseSession.mockReturnValue({
+        data: { user: { name: "ops@moto.de", email: "ops@moto.de" } },
+        status: "authenticated",
+      });
+
+      const { result } = renderHook(() => useShellAuth(), {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <Provider>{children}</Provider>
+        ),
+      });
+
+      expect(result.current.user?.name).toBe(fallback);
+      expect(result.current.user?.email).toBe("ops@moto.de");
+    },
+  );
+});

@@ -332,18 +332,19 @@ export function OperatorShellProvider({
   const { show: showLogoutError } = useApiErrorDisplay();
 
   const value = useMemo<ShellAuthContextType>(() => {
+    // Die Adresse steht nur im Profil-Menü, nie als Name (#7305).
+    const displayName = getSessionPersonName(session);
     const user: ShellUser | null = session?.user
       ? {
           ...(session.user.id ? { id: session.user.id } : {}),
-          name: session.user.name?.trim() || "Operator",
+          name: displayName || "Operator",
           email: session.user.email ?? "",
           roles: session.user.roles ?? ["operator"],
         }
       : null;
 
-    const displayName = session?.user?.name ?? "";
-    const nameParts = displayName.split(" ");
-    const shellProfile: ShellProfile | null = session?.user
+    const nameParts = displayName.split(/\s+/);
+    const shellProfile: ShellProfile | null = displayName
       ? {
           firstName: nameParts[0],
           lastName: nameParts.slice(1).join(" ") || undefined,
@@ -413,7 +414,7 @@ export function SchoolShellProvider({
         }
       : null;
 
-    const nameParts = displayName.split(" ");
+    const nameParts = displayName.split(/\s+/);
     const shellProfile: ShellProfile | null = displayName
       ? {
           firstName: nameParts[0],
@@ -488,7 +489,8 @@ export function CatererShellProvider({
     const user: ShellUser | null = session?.user
       ? {
           ...(session.user.id ? { id: session.user.id } : {}),
-          name: session.user.name?.trim() || "Caterer",
+          // Die Adresse steht nur im Profil-Menü, nie als Name (#7305).
+          name: getSessionPersonName(session) || "Caterer",
           email: session.user.email ?? "",
           roles: session.user.roles ?? ["caterer"],
         }
@@ -660,12 +662,12 @@ export function ParentShellProvider({
     // karin.klein@email.de" liest sich wie ein Datenbankauswurf. Ohne
     // brauchbaren Namen bleibt das Profil leer, und die Oberflaeche gruesst
     // ohne Anrede.
-    const sessionName = session?.user?.name?.trim() ?? "";
+    const sessionName = getSessionPersonName(session);
     const nameParts = profileFirstName
       ? [profileFirstName, profileLastName].filter(Boolean)
-      : sessionName.includes("@")
-        ? []
-        : sessionName.split(" ");
+      : sessionName
+        ? sessionName.split(/\s+/)
+        : [];
     const displayName = nameParts.join(" ");
 
     const user: ShellUser | null = session?.user

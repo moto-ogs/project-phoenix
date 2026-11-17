@@ -131,9 +131,8 @@ export function canReadSupervisionData(session: Session | null): boolean {
  * im Sitzungsnamen den Benutzernamen, und der ist meist die E-Mail-Adresse
  * (#7305). Mit ihr wird nie gegrüßt und sie steht nie als Name da.
  */
-function isAddressName(value: string, email?: string | null): boolean {
-  const address = email?.trim().toLowerCase();
-  return value.includes("@") || (!!address && value.toLowerCase() === address);
+function isAddressName(value: string): boolean {
+  return value.includes("@");
 }
 
 /**
@@ -142,18 +141,22 @@ function isAddressName(value: string, email?: string | null): boolean {
  */
 export function getSessionPersonName(session: Session | null): string {
   const name = session?.user?.name?.trim() ?? "";
-  return isAddressName(name, session?.user?.email) ? "" : name;
+  return isAddressName(name) ? "" : name;
 }
 
 /**
- * Der Name für die Begrüßung: das erste Wort des Vornamens, sonst des Namens
- * der Sitzung. Ohne brauchbaren Namen nichts, dann grüßt die Seite ohne
- * Anrede (#7305).
+ * Der Name für die Begrüßung: der Vorname, sonst das erste Wort des Namens
+ * der Sitzung. Eine Sitzung über den Träger trägt den ganzen Namen aus dem
+ * Träger-Konto als Vornamen; sie grüßt mit dessen erstem Wort. Ohne
+ * brauchbaren Namen nichts, dann grüßt die Seite ohne Anrede (#7305).
  */
 export function getGreetingName(session: Session | null): string | undefined {
-  const source =
-    session?.user?.firstName?.trim() || session?.user?.name?.trim() || "";
-  const first = source.split(/\s+/)[0] ?? "";
-  if (!first || isAddressName(first, session?.user?.email)) return undefined;
-  return first;
+  const user = session?.user;
+  const firstName = user?.firstName?.trim() ?? "";
+  const greeting =
+    firstName && !user?.viaTraeger
+      ? firstName
+      : (firstName || user?.name?.trim() || "").split(/\s+/)[0];
+  if (!greeting || isAddressName(greeting)) return undefined;
+  return greeting;
 }
