@@ -37574,6 +37574,12 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "class_member_from",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
         }
       ],
       "relationships": [
