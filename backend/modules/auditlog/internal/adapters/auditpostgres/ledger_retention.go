@@ -64,11 +64,29 @@ func (a *Appender) DeleteExpiredDataDeletions(ctx context.Context, cutoff time.T
 	return deleted, nil
 }
 
+// DatabaseTime reads the clock that stamps the ledgers and guards their
+// retention windows.
+func (a *Appender) DatabaseTime(ctx context.Context) (time.Time, error) {
+	return readDatabaseTime(ctx, a.runtime)
+}
+
+func readDatabaseTime(ctx context.Context, runtime Runtime) (time.Time, error) {
+	db, _, err := database(ctx, runtime)
+	if err != nil {
+		return time.Time{}, wrapDatabase("read the database time", err)
+	}
+	var now time.Time
+	if err := db.NewRaw(`SELECT `+databaseClock).Scan(ctx, &now); err != nil {
+		return time.Time{}, wrapDatabase("read the database time", err)
+	}
+	return now, nil
+}
+
 // operatorAuditLogCutoffSQL is 1 January of last year in Berlin. It reads
 // the new year a minute late so that the database clock remains the one
 // source of time for ledger rows and their retention.
 const operatorAuditLogCutoffSQL = `(
-	(date_trunc('year', (statement_timestamp() AT TIME ZONE 'Europe/Berlin') - INTERVAL '1 minute') - INTERVAL '1 year')
+	(date_trunc('year', (` + databaseClock + ` AT TIME ZONE 'Europe/Berlin') - INTERVAL '1 minute') - INTERVAL '1 year')
 	AT TIME ZONE 'Europe/Berlin'
 )`
 

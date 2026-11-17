@@ -186,11 +186,14 @@ func extractBearerToken(authHeader string) string {
 }
 
 // renderVerificationError refuses a token the Verifier or RequireLiveSession
-// rejected: 503 when the session family could not be read, 401 otherwise.
+// rejected: 499 when the client closed the request during the family check,
+// 503 when the session family could not be read, 401 otherwise.
 func renderVerificationError(w http.ResponseWriter, r *http.Request, err error) {
 	slog.Warn("JWT error", slog.String("error", err.Error()))
 	response := ErrUnauthorized(ErrTokenUnauthorized)
 	switch {
+	case errors.Is(err, ErrSessionCheckCanceled):
+		response = ErrClientClosed(ErrSessionCheckCanceled)
 	case errors.Is(err, ErrSessionCheckUnavailable):
 		response = ErrServiceUnavailable(ErrSessionCheckUnavailable)
 	case errors.Is(err, ErrSessionRevoked):

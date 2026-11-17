@@ -39,12 +39,12 @@ func (s *Store) LockFamilies(ctx context.Context, organizationID int64, families
 		emails[i], first[i], last[i], used[i] = family.FamilyEmail, family.FirstName, family.LastName, family.UsedOn.String()
 	}
 	if _, err := db.NewRaw(`INSERT INTO parent_billing.family_billing (organization_id, family_email, care_contract_id, recipient_kind,
-			holder_first_name, holder_last_name, last_used_on)
-		SELECT ?0, family.email, NULL, ?5, family.first_name, family.last_name, family.used_on
+			holder_first_name, holder_last_name, last_used_on, updated_at)
+		SELECT ?0, family.email, NULL, ?5, family.first_name, family.last_name, family.used_on, ?6
 		FROM unnest(?1::text[], ?2::text[], ?3::text[], ?4::date[]) AS family(email, first_name, last_name, used_on)
 		ON CONFLICT (organization_id, family_email) DO NOTHING`,
 		organizationID, pgdialect.Array(emails), pgdialect.Array(first), pgdialect.Array(last), pgdialect.Array(used),
-		parentbilling.RecipientApplicant).Exec(ctx); err != nil {
+		parentbilling.RecipientApplicant, s.now()).Exec(ctx); err != nil {
 		return nil, fmt.Errorf("add the families of the holiday care: %w", err)
 	}
 	var rows []familyBillingRow
@@ -93,14 +93,14 @@ func (s *Store) RememberFamilies(ctx context.Context, organizationID, accountID 
 			debtor_number_registration_id = CASE
 				WHEN memory.set AND COALESCE(family.debtor_number, '') <> memory.number THEN NULLIF(memory.origin, 0)
 				ELSE family.debtor_number_registration_id END,
-			updated_by_account_id = ?7, updated_at = CURRENT_TIMESTAMP
+			updated_by_account_id = ?7, updated_at = ?9
 		FROM unnest(?1::text[], ?2::text[], ?3::text[], ?4::date[], ?5::text[], ?6::boolean[], ?8::bigint[])
 			AS memory(email, first_name, last_name, used_on, number, set, origin)
 		WHERE family.organization_id = ?0 AND family.family_email = memory.email
 			AND (memory.set OR family.debtor_number IS NOT NULL OR family.care_contract_id IS NULL)
 		RETURNING family.*`,
 		organizationID, pgdialect.Array(emails), pgdialect.Array(first), pgdialect.Array(last), pgdialect.Array(used),
-		pgdialect.Array(numbers), pgdialect.Array(set), accountRef(accountID), pgdialect.Array(origins)).Scan(ctx, &rows); err != nil {
+		pgdialect.Array(numbers), pgdialect.Array(set), accountRef(accountID), pgdialect.Array(origins), s.now()).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("remember the families of the holiday care: %w", err)
 	}
 	return familiesOfRows(rows), nil
@@ -153,12 +153,12 @@ func (s *Store) SetFamilyDebtorNumber(ctx context.Context, organizationID, accou
 		return parentbilling.FamilyBilling{}, err
 	}
 	row := &familyBillingRow{OrganizationID: organizationID, FamilyEmail: familyEmail, RecipientKind: parentbilling.RecipientApplicant,
-		DebtorNumber: textRef(number), LastUsedOn: &today, UpdatedByAccountID: accountRef(accountID)}
+		DebtorNumber: textRef(number), LastUsedOn: &today, UpdatedByAccountID: accountRef(accountID), UpdatedAt: s.now()}
 	if err := db.NewInsert().Model(row).
 		On("CONFLICT (organization_id, family_email) DO UPDATE").
 		Set("debtor_number = EXCLUDED.debtor_number").Set("debtor_number_registration_id = NULL").
 		Set("last_used_on = CASE WHEN family_billing_row.care_contract_id IS NULL THEN GREATEST(family_billing_row.last_used_on, EXCLUDED.last_used_on) ELSE family_billing_row.last_used_on END").
-		Set("updated_by_account_id = EXCLUDED.updated_by_account_id").Set("updated_at = CURRENT_TIMESTAMP").
+		Set("updated_by_account_id = EXCLUDED.updated_by_account_id").Set("updated_at = EXCLUDED.updated_at").
 		Returning("*").Scan(ctx); err != nil {
 		return parentbilling.FamilyBilling{}, fmt.Errorf("set the debtor number of the family: %w", err)
 	}
@@ -174,8 +174,9 @@ func (s *Store) SetFamilyDebtorNumber(ctx context.Context, organizationID, accou
 // Träger (parent_billing.lock_beleg_retention). The count per Träger goes
 // into the deletion log (BelegFamilyDebtorNumber); audit.data_deletions
 // belongs to a school and cannot hold it. Then it deletes the trail entries
-// without a contract whose row is gone and which are as old, and the
-// numbers of children under the same rule (#7007).
+// without a contract whose row is gone and which the owner's clock stamped
+// before the cutoff, Berlin midnight (ADR 0281), and the numbers of children
+// under the same rule (#7007).
 func (s *Store) DeleteExpiredFamilies(ctx context.Context, today calendar.Date) (int, error) {
 	db, err := adminDB(ctx)
 	if err != nil {
@@ -217,9 +218,10 @@ func (s *Store) DeleteExpiredFamilies(ctx context.Context, today calendar.Date) 
 		return 0, fmt.Errorf("parent billing postgres: delete expired family debtor numbers: %w", err)
 	}
 	result, err := db.NewRaw(`DELETE FROM parent_billing.family_billing_events AS event
-		WHERE event.care_contract_id IS NULL AND event.occurred_at < ?0::date
+		WHERE event.care_contract_id IS NULL AND event.occurred_at < ?
 			AND NOT EXISTS (SELECT 1 FROM parent_billing.family_billing AS family
-				WHERE family.organization_id = event.organization_id AND family.id = event.family_billing_id)`, cutoff).Exec(ctx)
+				WHERE family.organization_id = event.organization_id AND family.id = event.family_billing_id)`,
+		cutoff.BerlinMidnight()).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("parent billing postgres: delete the expired trail of family debtor numbers: %w", err)
 	}

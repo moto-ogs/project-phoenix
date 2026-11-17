@@ -49,7 +49,7 @@ func mergeRaceOffboarding(t *testing.T, db *bun.DB, actorStaffID int64) func(con
 	require.NoError(t, err)
 	actorAccount := testpkg.CreateTestAccount(t, db, "merge-race-actor@example.org")
 	deps, err := NewStaffOffboardingOwners(testpkg.NewDatabase(t, db), peopleCompose.MustNewReads(db, testpkg.StudentDirectory{}),
-		owners.MembershipStaffEmployment(MustNewStaffEmployment(testpkg.NewDatabase(t, db))), nil)
+		owners.MembershipStaffEmployment(MustNewStaffEmployment(testpkg.NewDatabase(t, db))), nil, time.Now)
 	require.NoError(t, err)
 	deps.Access = StaffOffboardingAccess(identity)
 	offboard, err := StaffOffboardForTest(deps, actorStaffID, actorAccount.ID)
@@ -149,7 +149,7 @@ func TestStaffPersonMergeAndOffboardingDoNotDeadlock(t *testing.T) {
 		return tenant.HoldsLock(ctx, tenant.LockStaffRows, tenant.LockIDKey(subject.StaffID)) &&
 			tenant.HoldsLock(ctx, tenant.LockStaffPersonMerge, tenant.LockIDKey(testpkg.Tenant(t)))
 	}}
-	merge, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(), membershipCompose.NewStaffPersonMerge(), audit,
+	merge, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(time.Now), membershipCompose.NewStaffPersonMerge(), audit,
 		func(context.Context) int64 { return operator.ID })
 	require.NoError(t, err)
 	var candidates []staffpersonmerge.Candidate

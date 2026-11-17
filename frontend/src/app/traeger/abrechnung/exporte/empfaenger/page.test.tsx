@@ -6,12 +6,14 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   ExportRecipient,
   ExportRecipientsPage,
 } from "~/lib/traeger-export-handovers-api";
 import TraegerExportRecipientsPage from "./page";
+
+vi.unmock("swr");
 
 // The recipients of the finance exports (#6911, ADR 0222): each file goes to
 // exactly one recipient or stays a download, the assignment is saved as a
@@ -103,9 +105,9 @@ beforeEach(() => {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerExportRecipientsPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

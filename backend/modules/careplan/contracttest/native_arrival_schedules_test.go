@@ -29,12 +29,12 @@ func TestNativeArrivalWeekPreservesInheritanceAndRollsBackFailures(t *testing.T)
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	student := testpkg.CreateTestStudent(t, db, "Arrival", "Native", "1a")
 	staff := testpkg.CreateTestStaff(t, db, "Arrival", "Staff")
 	clock := time.Date(1, 1, 1, 13, 30, 0, 0, time.UTC)
 	rules := &arrivalClassRules{times: map[int]time.Time{1: clock}}
-	service, err := compose.NewArrivalSchedules(db, owner, nil, rules, compose.ArrivalScheduleDependencies{})
+	service, err := compose.NewArrivalSchedules(db, owner, nil, rules, compose.ArrivalScheduleDependencies{Today: decisionTestDay})
 	require.NoError(t, err)
 	rows := []*careplan.ArrivalSchedule{{StudentID: student.ID, Weekday: 1, ExpectedArrival: clock, CreatedBy: staff.ID},
 		{StudentID: student.ID, Weekday: 2, ExpectedArrival: clock, CreatedBy: staff.ID}}
@@ -66,7 +66,7 @@ func TestNativeArrivalExceptionAndNoteUseOwnerRecords(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	student := testpkg.CreateTestStudent(t, db, "Arrival", "Exception", "1a")
 	staff := testpkg.CreateTestStaff(t, db, "Arrival", "Author")
 	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, compose.ArrivalScheduleDependencies{

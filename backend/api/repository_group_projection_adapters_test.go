@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,16 +56,12 @@ func TestSupervisionBlockersExcludeFutureSupervisions(t *testing.T) {
 	activity := testpkg.CreateTestActivityGroup(t, db, "Future Blocker Activity")
 	room := testpkg.CreateTestRoom(t, db, "Future Blocker Room")
 	group := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
-	supervision := testpkg.CreateTestGroupSupervisor(t, db, staff.ID, group.ID, "supervisor")
-	_, err := db.NewUpdate().
-		TableExpr("active.group_supervisors").
-		Set("start_date = CURRENT_DATE + 1").
-		Where("id = ?", supervision.ID).
-		Exec(testpkg.Ctx(t))
-	require.NoError(t, err)
+	// The owner reads today from its clock; the supervision starts the day after.
+	today := calendar.NewDate(2026, time.November, 18)
+	testpkg.CreateTestGroupSupervisorOn(t, db, staff.ID, group.ID, "supervisor", today.AddDays(1))
 
-	factory := NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db))
-	err = testpkg.WithinTenantContext(t, context.Background(), db, tenantID, func(ctx context.Context) error {
+	factory := NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db), func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) })
+	err := testpkg.WithinTenantContext(t, context.Background(), db, tenantID, func(ctx context.Context) error {
 		rows, err := factory.GroupSupervisor.ListActiveSupervisionBlockers(ctx, staff.ID)
 		require.NoError(t, err)
 		assert.Empty(t, rows)

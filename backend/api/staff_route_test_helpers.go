@@ -19,6 +19,7 @@ import (
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -111,7 +112,7 @@ type ShiftTypeTestModule struct {
 // with (#6845) and the Timetable side it runs over.
 func NewShiftTypeTestModule(db transactionruntime.Database) (workforce.ShiftTypeAdministration, workforce.ShiftPlanReferenceQuery, ShiftTypeTestModule, error) {
 	repos := NewShiftTypeTestRepositories(db, owners.MustNewMembershipTestRepositories(db))
-	linker, err := timetableCompose.NewService(repos.Timetable, nil, timetablePorts.RepositoryDirectories{}, nil, nil, nil, nil)
+	linker, err := timetableCompose.NewService(repos.Timetable, nil, timetablePorts.RepositoryDirectories{}, nil, nil, nil, timezone.TodayDate)
 	if err != nil {
 		return nil, nil, ShiftTypeTestModule{}, err
 	}
@@ -132,7 +133,7 @@ func NewShiftTypeTestModule(db transactionruntime.Database) (workforce.ShiftType
 		Workforce: workTime, Staff: owners.NewPlanStaffDirectory(owners.MustNewMembershipTestRepositories(db).Staff), CalendarPeriods: calendar.SchoolCalendar(),
 		Instances: timetableCompose.NewTimetableInstanceReads(timetable.ActivityInstance.Reads), InstanceStaff: timetableCompose.NewTimetableInstanceStaffReads(timetable.InstanceStaff),
 		Rooms: facilitiesCompose.NewRoomNameDirectory(rooms.Room), ActivityGroups: timetableCompose.NewTimetableGroupReads(timetable.Timetable),
-		CategoryLinker: linker.SetCategoryShiftTypeLinks, DB: db.Pool(), Logger: slog.Default(),
+		CategoryLinker: linker.SetCategoryShiftTypeLinks, DB: db.Pool(), Logger: slog.Default(), Today: timezone.TodayDate,
 	})
 	if err != nil {
 		return nil, nil, ShiftTypeTestModule{}, err

@@ -23,6 +23,13 @@ import {
 } from "~/lib/tenant-context";
 import { normalizeTenantPathname } from "~/lib/tenant-path";
 import { matchesPathPrefix } from "~/lib/section-navigation";
+import { PORTAL_ROUTES, type HostedPortalKey } from "~/lib/portal-paths";
+import { pathBelow } from "~/lib/route-templates";
+import { isSchoolNavActive } from "~/components/school/shell/school-nav-active";
+import {
+  SCHOOL_PRIMARY_PAGES,
+  SCHOOL_SETTINGS_PAGE,
+} from "~/components/school/shell/school-nav-pages";
 import {
   getHelpTopicForPath,
   getParentHelpTopicForPath,
@@ -79,70 +86,37 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-// Seitentitel des Schul-Portals. Beide Schreibweisen eines Pfades führen zum
-// selben Titel: auf dem Schul-Host zeigt die Adresszeile "/" und
-// "/aufsichten", intern laufen die Seiten unter /school und
-// /school/aufsichten.
-function schoolTitleForPath(pathname: string): string | null {
-  if (pathname === "/" || pathname === "/school") return "Klassenansicht";
-  // Die Klassenseite (#2294) ist eine Ebene der Klassenansicht, kein eigener
-  // Bereich: der Kopf behält den Namen des Bereichs, den Klassennamen trägt
-  // die Seite selbst. Die Beobachtungen der OGS zu einem Kind (#4797)
-  // liegen eine Ebene darunter und bleiben ebenfalls im Bereich.
-  if (
-    pathname === "/klasse" ||
-    pathname === "/school/klasse" ||
-    pathname.startsWith("/klasse/") ||
-    pathname.startsWith("/school/klasse/")
-  ) {
-    return "Klassenansicht";
-  }
-  if (pathname === "/aufsichten" || pathname === "/school/aufsichten") {
-    return "Meine Aufsichten";
-  }
-  // Der Verlauf einer Unterhaltung (/nachrichten/{id}) bleibt im Bereich
-  // "Nachrichten"; den Namen der Person trägt die Seite selbst.
-  if (
-    pathname === "/nachrichten" ||
-    pathname === "/school/nachrichten" ||
-    pathname.startsWith("/nachrichten/") ||
-    pathname.startsWith("/school/nachrichten/")
-  ) {
-    return "Nachrichten";
-  }
-  if (pathname === "/einstellungen" || pathname === "/school/einstellungen") {
-    return "Einstellungen";
-  }
-  // Tagesinformationen der OGS-Leitung (#2208).
-  if (
-    pathname === "/tagesinformationen" ||
-    pathname === "/school/tagesinformationen"
-  ) {
-    return "Hinweise der Leitung";
-  }
-  // Kalender in moto schule (#4798).
-  if (pathname === "/kalender" || pathname === "/school/kalender") {
-    return "Kalender";
-  }
-  // Elternbriefe in moto schule (#4800); ein einzelner Brief bleibt im
-  // Bereich, seinen Betreff trägt die Seite selbst.
-  if (
-    pathname === "/elternbriefe" ||
-    pathname === "/school/elternbriefe" ||
-    pathname.startsWith("/elternbriefe/") ||
-    pathname.startsWith("/school/elternbriefe/")
-  ) {
-    return "Elternbriefe";
-  }
-  return null;
+/**
+ * Die Seite eines Portals mit eigenem Host, ohne dessen App-Präfix: auf dem
+ * Host zeigt die Adresszeile "/konto", intern läuft die Seite unter
+ * /caterer/konto. Beide Schreibweisen führen zum selben Titel.
+ */
+function portalPagePath(portal: HostedPortalKey, pathname: string): string {
+  return pathBelow(pathname, PORTAL_ROUTES[portal].appPrefix) ?? pathname;
 }
 
-// Caterer-Portal (ADR 0077): die Bestellungen und das Konto (#4496), auf
-// dem Caterer-Host ohne /caterer-Präfix.
+// Seitentitel des Schul-Portals: der Name des Navigationseintrags, zu dem die
+// Adresse gehört. Unterseiten (Klassenseite #2294, Beobachtungen #4797, eine
+// Unterhaltung, ein Elternbrief) behalten den Namen ihres Bereichs; ihren
+// eigenen Namen trägt die Seite selbst.
+const SCHOOL_TITLED_NAV = [...SCHOOL_PRIMARY_PAGES, SCHOOL_SETTINGS_PAGE];
+
+function schoolTitleForPath(pathname: string): string | null {
+  return (
+    SCHOOL_TITLED_NAV.find((item) => isSchoolNavActive(item.href, pathname))
+      ?.label ?? null
+  );
+}
+
+// Caterer-Portal (ADR 0077): die Bestellungen und das Konto (#4496). Es hat
+// keine Seitennavigation, aus der die Namen kämen.
+const CATERER_PAGE_TITLES: Readonly<Record<string, string>> = {
+  "/": "Bestellungen",
+  "/konto": "Konto",
+};
+
 function catererTitleForPath(pathname: string): string | null {
-  if (pathname === "/" || pathname === "/caterer") return "Bestellungen";
-  if (pathname === "/konto" || pathname === "/caterer/konto") return "Konto";
-  return null;
+  return CATERER_PAGE_TITLES[portalPagePath("caterer", pathname)] ?? null;
 }
 
 // Träger-Portal (#5145): auf dem Träger-Host ohne /traeger-Präfix. Eine
@@ -183,7 +157,6 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
   ["/abrechnung/ermaessigungen", "Preise und Ermäßigungen"],
   ["/abrechnung", "Abrechnungsläufe"],
   ["/vertraege", "Verträge"],
-  ["/zeitvergleich", "Länger als gebucht"],
   ["/einstellungen/mitglieder", "Mitglieder und Rollen"],
   ["/einstellungen/briefkopf", "Briefkopf und Vorlagen"],
   ["/einstellungen/abrechnung", "Abrechnungsvorgaben"],
@@ -194,7 +167,7 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
 ];
 
 function traegerTitleForPath(pathname: string): string | null {
-  const page = pathname.replace(/^\/traeger(?=\/|$)/, "") || "/";
+  const page = portalPagePath("traeger", pathname);
   if (page === "/") return "Schulen";
   for (const [path, title] of TRAEGER_PAGE_TITLES) {
     if (matchesPathPrefix(page, path)) return title;

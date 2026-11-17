@@ -40,7 +40,7 @@ type StaffBalanceAdjustment struct {
 	EffectiveDate calendar.Date `bun:"effective_date,notnull,type:date" json:"effective_date"`
 	Note          string        `bun:"note,notnull,default:''" json:"note"`
 	DecidedBy     int64         `bun:"decided_by,notnull" json:"decided_by"`
-	DecidedAt     time.Time     `bun:"decided_at,notnull,default:current_timestamp" json:"decided_at"`
+	DecidedAt     time.Time     `bun:"decided_at,nullzero,notnull" json:"decided_at"`
 }
 
 // Validate validates the adjustment record.

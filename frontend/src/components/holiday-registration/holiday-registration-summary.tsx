@@ -11,7 +11,7 @@ import {
   useEnrollmentUploadTarget,
 } from "~/components/enrollment/enrollment-file-upload";
 import { Button } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatDate } from "~/lib/date-helpers";
 import type { HolidayFormField } from "~/lib/holiday-form-field";
@@ -313,10 +313,11 @@ export function HolidayRegistrationSummary({
       {accountQuestion}
 
       {/* The security check sits in the row of the send button: one step,
-          no gap below the contribution. */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          no gap below the contribution. Its failure notice wraps onto a line
+          of its own above the buttons. */}
+      <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-center md:justify-between">
         {securityCheck}
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end md:ml-auto">
           <Button
             type="button"
             variant="outline"

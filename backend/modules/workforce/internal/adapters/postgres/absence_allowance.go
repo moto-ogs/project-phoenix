@@ -71,11 +71,13 @@ func (s *Store) StaffEntitlementsByAbsenceType(ctx context.Context, staffID int6
 
 type staffAbsenceAllowanceRow struct {
 	bun.BaseModel `bun:"table:active.staff_absence_type_allowances"`
-	TenantID      int64   `bun:"tenant_id"`
-	StaffID       int64   `bun:"staff_id"`
-	AbsenceTypeID int64   `bun:"absence_type_id"`
-	Year          int     `bun:"year"`
-	EntitledDays  float64 `bun:"entitled_days"`
+	TenantID      int64     `bun:"tenant_id"`
+	StaffID       int64     `bun:"staff_id"`
+	AbsenceTypeID int64     `bun:"absence_type_id"`
+	Year          int       `bun:"year"`
+	EntitledDays  float64   `bun:"entitled_days"`
+	CreatedAt     time.Time `bun:"created_at"`
+	UpdatedAt     time.Time `bun:"updated_at"`
 }
 
 func (s *Store) UpsertStaffAbsenceTypeAllowance(ctx context.Context, input domain.SetAbsenceTypeAllowance) (domain.OperationStats, error) {
@@ -84,10 +86,11 @@ func (s *Store) UpsertStaffAbsenceTypeAllowance(ctx context.Context, input domai
 		return domain.OperationStats{}, err
 	}
 	row := staffAbsenceAllowanceRow{TenantID: scope.TenantID, StaffID: input.StaffID, AbsenceTypeID: input.AbsenceTypeID, Year: input.Year, EntitledDays: input.EntitledDays}
+	s.stampNew(&row.CreatedAt, &row.UpdatedAt)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	_, err = db.NewInsert().Model(&row).On("CONFLICT (tenant_id, staff_id, absence_type_id, year) DO UPDATE").
-		Set("entitled_days = EXCLUDED.entitled_days").Set("updated_at = CURRENT_TIMESTAMP").Exec(ctx)
+		Set("entitled_days = EXCLUDED.entitled_days").Set("updated_at = EXCLUDED.updated_at").Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err == nil {
 		stats.Rows = 1

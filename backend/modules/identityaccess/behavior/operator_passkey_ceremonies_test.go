@@ -216,7 +216,7 @@ func TestOperatorPasskeySessionIsConsumedOnce(t *testing.T) {
 	require.ErrorIs(t, err, identityaccess.ErrPasskeySessionInvalid, "a replayed login is refused")
 
 	expired := scene.beginLogin(ctx, t)
-	_, err = db.NewRaw("UPDATE platform.operator_passkey_sessions SET expires_at = now() - interval '1 minute' WHERE id = ?", expired.SessionID).Exec(ctx)
+	_, err = db.NewRaw("UPDATE platform.operator_passkey_sessions SET expires_at = ? WHERE id = ?", time.Now().Add(-time.Minute), expired.SessionID).Exec(ctx)
 	require.NoError(t, err)
 	_, err = scene.passkeys.FinishOperatorPasskeyLogin(ctx, identityaccess.OperatorPasskeyLoginFinish{
 		SessionID: expired.SessionID, CredentialResponse: authenticator.Assert(t, expired.Options, operatorPasskeyOrigin),

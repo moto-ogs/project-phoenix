@@ -219,13 +219,14 @@ func bindStaffMembershipRuntime(users peoplePorts.PersonDirectory, education sch
 }
 
 // newStaffExitPlanner binds the planned exit of #4809 to the offboarding
-// workflow, School Membership's planned exits and the audit trail.
+// workflow, School Membership's planned exits and the audit trail, on the
+// offboarding's clock.
 func newStaffExitPlanner(workflow *staffoffboarding.Workflow, offboarding offboardingcompose.Dependencies) *staffoffboarding.Planner {
 	planner, err := staffoffboarding.NewPlanner(workflow, staffoffboarding.PlannerDependencies{
 		AppendAudit: func(ctx context.Context, actor staffoffboarding.Actor, change staffoffboarding.ExitPlanChange) error {
 			return offboarding.Audit.Append(ctx, StaffExitPlanRecord(actor, change))
 		},
-		Now: time.Now,
+		Now: offboarding.Now,
 	})
 	if err != nil {
 		panic(err)

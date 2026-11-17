@@ -34,7 +34,8 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	today := time.Date(2037, time.November, 18, 12, 0, 0, 0, calendar.Berlin)
-	router, _, _, unit, office, schoolRoutes := newTraegerStaffFixtureWith(t, db, func() time.Time { return today }, &StaffPlanningTestRules{})
+	clock := func() time.Time { return today }
+	router, _, _, unit, office, schoolRoutes := newTraegerStaffFixtureWith(t, db, clock, &StaffPlanningTestRules{})
 	school := testpkg.TenantRuntimeMiddleware(t, db)(schoolRoutes)
 	north, south := office.schools[0], office.schools[1]
 	staffRelease(t, db, office.organization)
@@ -60,7 +61,7 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	}
 	account := miraAccount.ID
-	runSchool, err := NewSpringerExitsForTest(testpkg.NewDatabase(t, db), unit)
+	runSchool, err := NewSpringerExitsForTest(testpkg.NewDatabase(t, db), unit, clock)
 	require.NoError(t, err)
 	run := func(schoolID int64) []string {
 		t.Helper()

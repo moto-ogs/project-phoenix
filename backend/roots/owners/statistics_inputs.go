@@ -34,8 +34,8 @@ func (a StatisticsAuditLog) RecordStatisticsAccess(ctx context.Context, event pr
 	return a.Log.Create(ctx, entry)
 }
 
-func (a StatisticsAuditLog) SeenStatisticsAccessSince(ctx context.Context, actorID int64, metadata map[string]string, since time.Time) (bool, error) {
-	return a.Log.ExistsSince(ctx, actorID, auditModels.ResourceTypeAttendanceStatistics, metadata, since)
+func (a StatisticsAuditLog) SeenStatisticsAccessWithin(ctx context.Context, actorID int64, metadata map[string]string, window time.Duration) (bool, error) {
+	return a.Log.ExistsWithin(ctx, actorID, auditModels.ResourceTypeAttendanceStatistics, metadata, window)
 }
 
 type StatisticsReportRooms struct {
@@ -135,7 +135,8 @@ func (a StatisticsStatusDays) StatusDays(ctx context.Context, from, to timezone.
 // to and checks for a recent entry.
 type AccessLogLedger interface {
 	Create(context.Context, *auditModels.DataAccessLog) error
-	ExistsSince(context.Context, int64, string, map[string]string, time.Time) (bool, error)
+	ExistsToday(context.Context, int64, string, map[string]string) (bool, error)
+	ExistsWithin(context.Context, int64, string, map[string]string, time.Duration) (bool, error)
 }
 
 // StatisticsPlannedCareDays reads Care Plan's verdict with the planned clock

@@ -15,13 +15,20 @@ import (
 
 type Database func(context.Context) (bun.IDB, error)
 
-type Store struct{ database Database }
+// Store persists organizations, schools and Träger memberships. now is the
+// owner's clock: it stamps the soft deletion of an organization and the
+// activation and end of a membership (ADR 0281). A store built without it
+// refuses those writes.
+type Store struct {
+	database Database
+	now      func() time.Time
+}
 
 type organizationRow struct {
 	bun.BaseModel `bun:"table:organizations,alias:organization"`
 	ID            int64      `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time  `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time  `bun:"updated_at,nullzero,notnull"`
 	Name          string     `bun:"name,notnull"`
 	Slug          string     `bun:"slug,notnull"`
 	Active        bool       `bun:"active,notnull"`
@@ -30,11 +37,19 @@ type organizationRow struct {
 	TestSystem    bool       `bun:"test_system,notnull"`
 }
 
-func New(database Database) *Store {
+func New(database Database, now func() time.Time) *Store {
 	if database == nil {
 		panic("organization tenancy postgres: database runtime is required")
 	}
-	return &Store{database: database}
+	return &Store{database: database, now: now}
+}
+
+// stamp is the owner's instant for a write.
+func (s *Store) stamp() (time.Time, error) {
+	if s.now == nil {
+		return time.Time{}, errors.New("organization tenancy postgres: the store needs the owner's clock to write")
+	}
+	return s.now(), nil
 }
 
 func (s *Store) Create(ctx context.Context, input organizationtenancy.CreateOrganization) (organizationtenancy.Organization, domain.OperationStats, error) {
@@ -217,7 +232,11 @@ func (s *Store) setDeleted(ctx context.Context, id int64, deleted bool) (domain.
 		ModelTableExpr(`platform.organizations AS "organization"`).
 		Where(`"organization".id = ?`, id)
 	if deleted {
-		query = query.Set("deleted_at = NOW()").Where(`"organization".deleted_at IS NULL`)
+		at, err := s.stamp()
+		if err != nil {
+			return domain.OperationStats{}, err
+		}
+		query = query.Set("deleted_at = ?", at).Where(`"organization".deleted_at IS NULL`)
 	} else {
 		query = query.Set("deleted_at = NULL").Where(`"organization".deleted_at IS NOT NULL`)
 	}

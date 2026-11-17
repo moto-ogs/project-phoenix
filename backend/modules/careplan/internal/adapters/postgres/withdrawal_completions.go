@@ -22,8 +22,8 @@ const tableExprWithdrawalCompletions = `users.care_withdrawal_completions AS "ca
 type withdrawalCompletionRow struct {
 	bun.BaseModel           `bun:"table:users.care_withdrawal_completions,alias:care_withdrawal_completion"`
 	ID                      int64                             `bun:"id,pk,autoincrement"`
-	CreatedAt               time.Time                         `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt               time.Time                         `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt               time.Time                         `bun:"created_at,nullzero,notnull"`
+	UpdatedAt               time.Time                         `bun:"updated_at,nullzero,notnull"`
 	TenantID                int64                             `bun:"tenant_id,notnull"`
 	StudentID               *int64                            `bun:"student_id"`
 	FirstBookinglessDay     calendarDate                      `bun:"first_bookingless_day,type:date,notnull"`
@@ -112,6 +112,8 @@ func (s *Store) UpsertPendingWithdrawal(ctx context.Context, value domain.Withdr
 	if row.TenantID == 0 {
 		row.TenantID = tenantID
 	}
+	now := s.currentTime()
+	row.CreatedAt, row.UpdatedAt = now, now
 	if len(row.SourceOfferings) == 0 {
 		row.SourceOfferings = []careplan.CareExitSourceOffering{}
 	}
@@ -129,7 +131,7 @@ func (s *Store) UpsertPendingWithdrawal(ctx context.Context, value domain.Withdr
 		Set(preserveConfirmedWithdrawalConfirmedRole, preserveConfirmedWithdrawalArgs...).
 		Set(preserveConfirmedWithdrawalConfirmedAt, preserveConfirmedWithdrawalArgs...).
 		Set(preserveConfirmedSourceOfferings, preserveConfirmedWithdrawalArgs...).
-		Set("updated_at = NOW()").
+		Set("updated_at = EXCLUDED.updated_at").
 		Returning("id, created_at, updated_at").
 		Exec(ctx)
 	stats.StatementDuration = time.Since(started)

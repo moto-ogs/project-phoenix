@@ -7,8 +7,9 @@
 // Steuerdaten erscheinen nur maskiert und ziehen in die Akte um.
 
 import { useEffect, useRef, useState } from "react";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ChoiceTile } from "~/components/ui/choice-tile";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FieldLabel } from "~/components/ui/field-label";
@@ -21,6 +22,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   linkStaff,
   previewStaffLink,
@@ -52,35 +54,32 @@ export function StaffLinkModal({
   onLinked: (record: StaffRecordDetail) => void;
 }>) {
   const isOpen = request !== null;
-  const [preview, setPreview] = useState<StaffLinkPreview | null>(null);
+  const { data: preview, error: previewError } = useFreshTraegerResource(
+    request
+      ? traegerStaffKeys.linkPreview(request.recordId, request.members)
+      : null,
+    () =>
+      previewStaffLink({
+        recordId: request?.recordId ?? null,
+        members: request?.members ?? [],
+        choices: {},
+      }),
+    "die Vorschau",
+  );
   const [choices, setChoices] = useState<
     Partial<Record<StaffRecordField, string>>
   >({});
   const save = useFormModalPending(isOpen);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
-  const { clear: clearErrors, show: showError } = formErrors;
+  const { clear: clearErrors } = formErrors;
 
+  // A new request starts without the choices and errors of the one before.
   useEffect(() => {
     if (!request) return;
-    let current = true;
-    setPreview(null);
     setChoices({});
     clearErrors();
-    previewStaffLink({ ...request, choices: {} })
-      .then((result) => {
-        if (current) setPreview(result);
-      })
-      .catch((err: unknown) => {
-        logger.error("traeger_staff_link_preview_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (current) void showError(err, { object: "die Vorschau" });
-      });
-    return () => {
-      current = false;
-    };
-  }, [request, clearErrors, showError]);
+  }, [request, clearErrors]);
 
   const conflicts = preview?.fields.filter((field) => field.conflict) ?? [];
   const missing = conflicts.filter((field) => !choices[field.field]);
@@ -126,7 +125,7 @@ export function StaffLinkModal({
       }
       titleLevel={2}
       size="lg"
-      error={formErrors.error}
+      error={formErrors.error ?? previewError}
       footer={
         <EditActions
           onCancel={onClose}
@@ -268,7 +267,7 @@ export function StaffLinkModal({
               ) : null}
             </section>
           </>
-        ) : formErrors.error ? null : (
+        ) : formErrors.error || previewError ? null : (
           <Loading message="Vorschau wird geladen…" compact />
         )}
       </form>

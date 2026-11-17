@@ -15,14 +15,17 @@ import (
 type SickNoteRetention struct {
 	store    ports.SickNoteRetentionStore
 	settings ports.SickNoteRetentionSettings
-	today    func() calendar.Date
 }
 
+// NewSickNoteRetention composes the retention over the Berlin day of the
+// database clock: the column default stamps the upload, and
+// users.delete_expired_staff_sick_notes guards the cutoff on that clock
+// (ADR 0281 point 3, #7295).
 func NewSickNoteRetention(store ports.SickNoteRetentionStore, settings ports.SickNoteRetentionSettings) *SickNoteRetention {
 	if store == nil || settings == nil {
 		panic("workforce application: sick note retention requires its store and settings")
 	}
-	return &SickNoteRetention{store: store, settings: settings, today: calendar.TodayDate}
+	return &SickNoteRetention{store: store, settings: settings}
 }
 
 // DeleteExpiredStaffSickNotes deletes the sick notes uploaded before the first Berlin day
@@ -36,7 +39,11 @@ func (r *SickNoteRetention) DeleteExpiredStaffSickNotes(ctx context.Context) (de
 	if days < domain.MinSickNoteRetentionDays || days > domain.MaxSickNoteRetentionDays {
 		return 0, 0, fmt.Errorf("sick note retention window must be between %d and %d days, got %d", domain.MinSickNoteRetentionDays, domain.MaxSickNoteRetentionDays, days)
 	}
-	cutoff := r.today().AddDays(-days).BerlinMidnight()
+	now, err := r.store.DatabaseTime(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	cutoff := calendar.DateFromTime(now).AddDays(-days).BerlinMidnight()
 	deleted, err = r.store.DeleteStaffSickNotesUploadedBefore(ctx, cutoff)
 	if err != nil {
 		return 0, 0, err

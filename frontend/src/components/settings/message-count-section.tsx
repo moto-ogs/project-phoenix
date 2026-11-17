@@ -1,19 +1,13 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { MessageCircle } from "lucide-react";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { Radio } from "~/components/ui/radio";
 import { Skeleton } from "~/components/ui/skeleton";
 import { SectionCard } from "~/components/ui/section-card";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
@@ -21,6 +15,9 @@ import {
   saveMessageCountScope,
   type MessageCountScope,
 } from "~/lib/parent-messages-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useTenantSafe } from "~/lib/tenant-context";
 
 const logger = createLogger({ component: "MessageCountSection" });
@@ -62,72 +59,42 @@ const NO_GROUP_HINT =
  */
 export function MessageCountSection() {
   const messagingEnabled = useTenantSafe()?.tenant?.messagingEnabled === true;
-  const [scope, setScope] = useState<MessageCountScope>("all");
-  const [hasOwnGroups, setHasOwnGroups] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [available, setAvailable] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const {
+    data: setting,
+    error: settingError,
+    mutate,
+  } = useSWRAuth(
+    messagingEnabled ? tenantAdminKeys.messageCountSetting() : null,
+    fetchMessageCountSetting,
+  );
+  // Ohne Leserecht für Nachrichten gibt es keine Zahl, die man einstellen
+  // könnte: die Karte blendet sich aus.
+  const unavailable =
+    setting === undefined &&
+    settingError instanceof ApiError &&
+    wireErrorCode(settingError.code) === "general.permission";
   // Laden: Fehler vor Ort mit Wiederholen. Die Auswahl speichert sofort,
   // ohne Formular: ein Fehler kommt als Toast (#2517).
-  const { error: loadError, show: showLoadError, clear } = useApiLoadError();
+  const { error: loadError, failure } = useSwrResourceLoadError(
+    [{ data: setting, error: unavailable ? undefined : settingError }],
+    "die Einstellung zur Zahl bei Nachrichten",
+    () => mutate(),
+  );
   const { show: showSaveError } = useApiErrorDisplay();
-  const latestLoadRef = useRef<() => void>(() => undefined);
   const latestChooseRef = useRef<(next: MessageCountScope) => void>(
     () => undefined,
   );
-
-  const load = useCallback(
-    async (isCancelled: () => boolean = () => false) => {
-      setLoading(true);
-      setLoadFailed(false);
-      clear();
-      try {
-        const setting = await fetchMessageCountSetting();
-        if (isCancelled()) return;
-        setScope(setting.scope);
-        setHasOwnGroups(setting.hasOwnGroups);
-      } catch (err) {
-        if (isCancelled()) return;
-        // Ohne Leserecht für Nachrichten gibt es keine Zahl, die man
-        // einstellen könnte: die Karte blendet sich aus.
-        if (
-          err instanceof ApiError &&
-          wireErrorCode(err.code) === "general.permission"
-        ) {
-          setAvailable(false);
-          return;
-        }
-        setLoadFailed(true);
-        logger.error("message_count_scope_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: "die Einstellung zur Zahl bei Nachrichten",
-          retry: () => latestLoadRef.current(),
-        });
-      } finally {
-        if (!isCancelled()) setLoading(false);
-      }
-    },
-    [clear, showLoadError],
-  );
-
-  useEffect(() => {
-    if (!messagingEnabled) return;
-    let cancelled = false;
-    void load(() => cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [load, messagingEnabled]);
+  const scope = setting?.scope ?? "all";
+  const hasOwnGroups = setting?.hasOwnGroups ?? true;
 
   const choose = async (next: MessageCountScope) => {
     if (next === scope || busy) return;
     // Optimistic: the choice answers immediately and rolls back on failure.
-    const previous = scope;
+    const previous = setting;
     setBusy(true);
-    setScope(next);
+    if (setting)
+      void mutate({ ...setting, scope: next }, { revalidate: false });
     try {
       await saveMessageCountScope(next);
       window.dispatchEvent(new CustomEvent("messages-unread-refresh"));
@@ -135,7 +102,7 @@ export function MessageCountSection() {
       logger.error("message_count_scope_save_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      setScope(previous);
+      void mutate(previous, { revalidate: false });
       void showSaveError(err, {
         object: "die Einstellung zur Zahl bei Nachrichten",
         retry: () => latestChooseRef.current(next),
@@ -146,11 +113,10 @@ export function MessageCountSection() {
   };
 
   useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
     latestChooseRef.current = (next) => void choose(next);
   });
 
-  if (!messagingEnabled || !available) return null;
+  if (!messagingEnabled || unavailable) return null;
 
   return (
     <SectionCard
@@ -160,9 +126,9 @@ export function MessageCountSection() {
       description="Die Zahl bei „Nachrichten“ zeigt neue Nachrichten von Eltern. Die Einstellung gilt nur für Sie."
     >
       {/* Bis der Text eines Ladefehlers da ist, bleibt das Skelett stehen. */}
-      {loading || (loadFailed && !loadError) ? (
+      {(setting === undefined && !failure) || (failure && !loadError) ? (
         <Skeleton className="h-36 w-full" />
-      ) : loadFailed ? (
+      ) : failure ? (
         <LoadErrorAlert error={loadError} />
       ) : (
         <fieldset className="space-y-2">

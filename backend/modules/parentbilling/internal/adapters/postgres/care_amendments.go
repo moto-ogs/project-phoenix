@@ -36,7 +36,7 @@ type careRunAmendmentRow struct {
 	RevokesAmendmentID  *int64                           `bun:"revokes_amendment_id"`
 	RevokesCorrectionID *int64                           `bun:"revokes_correction_id"`
 	AccountID           *int64                           `bun:"account_id"`
-	AmendedAt           time.Time                        `bun:"amended_at,nullzero,default:current_timestamp"`
+	AmendedAt           time.Time                        `bun:"amended_at,nullzero"`
 }
 
 type careInvoiceCorrectionRow struct {

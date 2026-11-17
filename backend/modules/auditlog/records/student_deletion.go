@@ -17,7 +17,7 @@ type StudentDeletion struct {
 	ActorAccountID *int64                `bun:"actor_account_id" json:"actor_account_id"`
 	Reason         string                `bun:"reason,notnull" json:"reason"`
 	Counts         StudentDeletionCounts `bun:"counts,type:jsonb,notnull" json:"counts"`
-	DeletedAt      time.Time             `bun:"deleted_at,notnull,default:now()" json:"deleted_at"`
+	DeletedAt      time.Time             `bun:"deleted_at,nullzero,notnull" json:"deleted_at"`
 }
 
 // StudentDeletionCounts is the immutable dependency count stored with a

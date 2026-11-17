@@ -39,7 +39,7 @@ type careNoticeRunRow struct {
 	SchoolIDs          []int64        `bun:"school_ids,array,notnull"`
 	NoticeDate         *calendar.Date `bun:"notice_date,type:date"`
 	CreatedByAccountID *int64         `bun:"created_by_account_id"`
-	CreatedAt          time.Time      `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt          time.Time      `bun:"created_at,nullzero,notnull"`
 	ReleasedAt         *time.Time     `bun:"released_at"`
 	IssuedOn           *calendar.Date `bun:"issued_on,type:date"`
 	NoticeCount        *int           `bun:"notice_count"`
@@ -428,9 +428,9 @@ func (s *Store) MarkCareNoticeRunReleased(ctx context.Context, organizationID, r
 	}
 	row := &careNoticeRunRow{}
 	if err := db.NewRaw(`UPDATE parent_billing.care_notice_runs
-		SET status = 'released', released_at = CURRENT_TIMESTAMP, issued_on = ?, notice_count = ?, total_cents = ?
+		SET status = 'released', released_at = ?, issued_on = ?, notice_count = ?, total_cents = ?
 		WHERE organization_id = ? AND id = ? AND status = 'calculated'
-		RETURNING `+careNoticeRunSelectColumnsQ, issuedOn, count, totalCents, organizationID, runID).Scan(ctx, row); err != nil {
+		RETURNING `+careNoticeRunSelectColumnsQ, s.now(), issuedOn, count, totalCents, organizationID, runID).Scan(ctx, row); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return parentbilling.CareNoticeRun{}, parentbilling.ErrBillingRunReleased
 		}

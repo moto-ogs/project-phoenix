@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -12,14 +13,20 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// NewPresenceSeries reads on the caller's administrative transaction.
-func NewPresenceSeries(transaction func(context.Context) (any, bool), admin func(context.Context) bool) studentpresence.PresenceSeries {
-	return presenceSeries{transaction: transaction, admin: admin}
+// NewPresenceSeries reads on the caller's administrative transaction; now
+// ends open visits and dates the visit retention, the clock that stamps the
+// visits (ADR 0281).
+func NewPresenceSeries(transaction func(context.Context) (any, bool), admin func(context.Context) bool, now func() time.Time) studentpresence.PresenceSeries {
+	if now == nil {
+		panic("student presence postgres: the presence series needs the composition's clock")
+	}
+	return presenceSeries{transaction: transaction, admin: admin, now: now}
 }
 
 type presenceSeries struct {
 	transaction func(context.Context) (any, bool)
 	admin       func(context.Context) bool
+	now         func() time.Time
 }
 
 func (s presenceSeries) database(ctx context.Context) (bun.IDB, error) {
@@ -88,7 +95,8 @@ func (s presenceSeries) AttendanceCountsByTenant(ctx context.Context, schools []
 	return result, nil
 }
 
-// roomDaysSQL takes the school set and the window (from, to). It counts the
+// roomDaysSQL takes the school set, the window (from, to) and the owner's
+// instant (now). It counts the
 // visits the Statistik report counts (roomUtilizationQuery): only children
 // with an accepted privacy consent, only visits within its retention. A visit
 // belongs to the Berlin day it began on and ends at that day's end at the
@@ -102,13 +110,13 @@ const roomDaysSQL = `WITH retention AS (
 ),
 counted AS (
   SELECT v.tenant_id, ag.room_id, v.student_id, v.entry_time,
-    COALESCE(v.exit_time, NOW()) AS exit_time,
+    COALESCE(v.exit_time, ?3::timestamptz) AS exit_time,
     (v.entry_time AT TIME ZONE 'Europe/Berlin')::date AS day
   FROM active.visits AS v
   JOIN active.groups AS ag ON ag.id = v.active_group_id AND ag.tenant_id = v.tenant_id
   JOIN retention AS r ON r.tenant_id = v.tenant_id AND r.student_id = v.student_id
   WHERE v.tenant_id = ANY(?0) AND ag.room_id IS NOT NULL
-    AND v.created_at >= NOW() - make_interval(days => r.retention_days)
+    AND v.created_at >= ?3::timestamptz - make_interval(days => r.retention_days)
     AND v.entry_time < ((?2::date + 1)::timestamp AT TIME ZONE 'Europe/Berlin')
 ),
 firsts AS (
@@ -162,7 +170,7 @@ func (s presenceSeries) RoomDaysByTenant(ctx context.Context, schools []int64, f
 		Children int            `bun:"children"`
 		Peak     int            `bun:"peak"`
 	}
-	if err := db.NewRaw(roomDaysSQL, pgdialect.Array(schools), from, to).Scan(ctx, &rows); err != nil {
+	if err := db.NewRaw(roomDaysSQL, pgdialect.Array(schools), from, to, s.now()).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("student presence postgres: room days: %w", err)
 	}
 	for _, row := range rows {

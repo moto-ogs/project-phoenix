@@ -276,7 +276,7 @@ export function PortalSidebarButton({
   );
 }
 
-export interface PortalSettingsNavItem {
+interface PortalSettingsNavItem {
   readonly key: string;
   readonly href: string;
   readonly label: string;

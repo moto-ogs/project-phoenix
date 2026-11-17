@@ -17,7 +17,7 @@ import (
 func TestCarePlanDeletionCountsKeepCategoriesAndTenantScope(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
-	module := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	module := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 	student := testpkg.CreateTestStudent(t, db, "Deletion", "Counts", "1a")
 	companion := testpkg.CreateTestStudent(t, db, "Deletion", "Companion", "1a")

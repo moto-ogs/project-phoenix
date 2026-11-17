@@ -24,7 +24,7 @@ type DataDeletion struct {
 	RecordsDeleted int                    `bun:"records_deleted,notnull" json:"records_deleted"`
 	DeletionReason string                 `bun:"deletion_reason" json:"deletion_reason,omitempty"`
 	DeletedBy      string                 `bun:"deleted_by,notnull" json:"deleted_by"` // 'system' or account username
-	DeletedAt      time.Time              `bun:"deleted_at,notnull,default:now()" json:"deleted_at"`
+	DeletedAt      time.Time              `bun:"deleted_at,nullzero,notnull" json:"deleted_at"`
 	Metadata       map[string]interface{} `bun:"metadata,type:jsonb" json:"metadata,omitempty"`
 }
 

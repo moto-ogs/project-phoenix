@@ -594,7 +594,9 @@ test("another device keeps its session when one device logs out", async ({
   await device2.close();
 });
 
-test("a failed revocation keeps the session and shows the error with a retry", async ({
+// #7241: a failed revocation still ends the session on this device. The
+// server family stays alive until it expires, and the login page says so.
+test("a failed revocation still logs this device out and says so", async ({
   browser,
   request,
 }) => {
@@ -605,43 +607,35 @@ test("a failed revocation keeps the session and shows the error with a retry", a
   await page.route("**/api/auth/logout", (route) =>
     route.fulfill({
       status: 503,
-      json: { status: 503, code: "general.unavailable" },
+      json: { status: 503, code: "identity.logout_not_revoked" },
     }),
   );
   const before = await (await request.get(fixtureState)).json();
 
-  await page
-    .getByRole("button", { name: /Profilmenü|Profil/ })
-    .first()
-    .click();
-  await page.getByRole("button", { name: "Abmelden" }).first().click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Abmelden" })
-    .click();
+  let deleted!: Promise<boolean>;
+  await endActions.logout(page, () => {
+    deleted = waitForSessionCookieDeletion(page);
+  });
+  expect(await deleted).toBe(true);
 
-  const alert = page.getByRole("alert").filter({ hasText: "die Abmeldung" });
-  await expect(alert).toBeVisible();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const notice = page.getByTestId("logout-not-revoked-notice");
+  await expect(notice).toContainText("Sie sind auf diesem Gerät abgemeldet");
+  await expect(page.locator('input[type="email"]')).toBeVisible();
   if (process.env.LATE_COOKIE_SHOT_DIR) {
     await page.screenshot({
       path: `${process.env.LATE_COOKIE_SHOT_DIR}/logout-failed.png`,
     });
   }
-  expect(page.url()).toBe(`${source}/home`);
-  expect(await sessionCookie(context)).toBeDefined();
+  expect(await sessionCookie(context)).toBeUndefined();
   const after = await (await request.get(fixtureState)).json();
+  expect(after.logoutRequests).toBe(before.logoutRequests);
   expect(after.liveFamilies).toBe(before.liveFamilies);
 
   await page.unroute("**/api/auth/logout");
-  const [deleted] = await Promise.all([
-    waitForSessionCookieDeletion(page),
-    alert.getByRole("button", { name: "Wiederholen" }).click(),
-  ]);
+  expect(
+    await page.evaluate(() => fetch("/api/me/profile").then((r) => r.status)),
+  ).toBe(401);
+  await page.goto(`${source}/home`);
   await page.waitForURL((url) => url.pathname === "/");
-  expect(deleted).toBe(true);
-  const afterRetry = await (await request.get(fixtureState)).json();
-  expect(afterRetry.logoutRequests - before.logoutRequests).toBe(1);
-  expect(afterRetry.liveFamilies).toBe(before.liveFamilies - 1);
   await context.close();
 });

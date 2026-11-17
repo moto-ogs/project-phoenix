@@ -209,7 +209,7 @@ func (s *surveyService) DeleteExpiredSurveys(ctx context.Context, audience strin
 	if retentionDays <= 0 {
 		return 0, fmt.Errorf("survey: retention window must be positive, got %d", retentionDays)
 	}
-	expired, err := s.store.ExpiredSurveys(ctx, audience, surveyRetentionCutoff(s.now(), retentionDays))
+	expired, err := s.store.ExpiredSurveys(ctx, audience, surveyRetentionCutoff(s.now(), retentionDays), retentionDays)
 	if err != nil {
 		return 0, err
 	}

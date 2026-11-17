@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -87,7 +86,6 @@ func TestHolidayLegalDocumentsAndPinnedAcceptanceEvidence(t *testing.T) {
 	_, paths = registrationRefusalOf(t, rec)
 	assert.Contains(t, paths, "legal_acceptances.unknown")
 	body["legal_acceptances"] = map[string]bool{"hinweis_0": true, "hinweis_1": true, "foto_ferien": false}
-	before := time.Now().Add(-time.Second)
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	receipt := decodeSchoolPortalData[struct {
@@ -98,7 +96,8 @@ func TestHolidayLegalDocumentsAndPinnedAcceptanceEvidence(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[enrollment.HolidayRegistrationDetail](t, rec.Body.Bytes())
 	require.Len(t, detail.LegalAcceptances, 2)
-	assert.True(t, detail.LegalAcceptances["hinweis_0"].After(before))
+	// The registration stamps the acceptances with its owner clock (ADR 0281).
+	assert.True(t, holidayFixtureNow().Equal(detail.LegalAcceptances["hinweis_0"]), "accepted at %v", detail.LegalAcceptances["hinweis_0"])
 	assert.Equal(t, 2, detail.Form.Version)
 	// Replacement publishes a new version. The registration and private PDF
 	// keep the prior version, while the public link no longer exposes it.

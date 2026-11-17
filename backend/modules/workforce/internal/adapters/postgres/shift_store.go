@@ -261,7 +261,6 @@ func (s *Store) UpdateStaffShift(ctx context.Context, value domain.StaffShift) (
 		Model(row).
 		ModelTableExpr(tableStaffShifts+` AS "staff_shift"`).
 		ExcludeColumn("tenant_id", "created_at", "updated_at").
-		Set("updated_at = NOW()").
 		WherePK().
 		Returning("*")
 	query = scopeQuery(scope, query, `"staff_shift".tenant_id = ?`)
@@ -429,7 +428,6 @@ func (s *Store) UpdateStaffShiftSeries(ctx context.Context, value domain.StaffSh
 		Model(row).
 		ModelTableExpr(tableStaffShiftSeries+` AS "staff_shift_series"`).
 		ExcludeColumn("tenant_id", "created_at", "updated_at").
-		Set("updated_at = NOW()").
 		WherePK().
 		Returning("*")
 	query = scopeQuery(scope, query, `"staff_shift_series".tenant_id = ?`)
@@ -671,7 +669,6 @@ func (s *Store) UpdateShiftType(ctx context.Context, value domain.ShiftType) (do
 		Model(row).
 		ModelTableExpr(tableShiftTypes+` AS "shift_type"`).
 		Column("name", "color", "description", "is_active").
-		Set("updated_at = NOW()").
 		WherePK().
 		Where(`"shift_type".archived_at IS NULL`).
 		Returning("*")

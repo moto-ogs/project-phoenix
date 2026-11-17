@@ -4,7 +4,7 @@ import { Plus, Search } from "lucide-react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -12,15 +12,18 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import { SuggestInput } from "~/components/ui/suggest-input";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import { activityService } from "~/lib/activity-service";
 import type { Activity } from "~/lib/activity-helpers";
-import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   fetchPlannerRooms,
   type PlannerRoomReference,
 } from "~/lib/planner-reference-api";
-import { staffService, type Staff } from "~/lib/staff-api";
+import type { Staff } from "~/lib/staff-api";
+import { useSWRAuth } from "~/lib/swr";
+import { staff as staffResource } from "~/lib/swr/staff";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { externalAccountMark } from "~/lib/staff-helpers";
 import { ExternalBadge } from "~/components/staff/external-badge";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -31,7 +34,6 @@ import { IconTile } from "~/components/ui/icon-tile";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { SectionCard } from "~/components/ui/section-card";
 
-const logger = createLogger({ component: "SpontaneousActivityStart" });
 const EMPTY_OCCUPIED_ROOM_IDS: readonly string[] = [];
 
 interface RoomOption {
@@ -70,6 +72,24 @@ function normalizeRooms(rooms: PlannerRoomReference[]): RoomOption[] {
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
 }
 
+/**
+ * The room to preselect: the previous choice while free, else the configured
+ * default room while free, else the first free room.
+ */
+function preselectRoom(
+  rooms: readonly RoomOption[],
+  previous: string,
+  defaultRoomId: string | undefined,
+  occupied: ReadonlySet<string>,
+): string {
+  const previousRoom = rooms.find((room) => room.id === previous);
+  if (previousRoom && !isRoomOccupied(previousRoom, occupied)) return previous;
+  const configuredDefaultRoom = rooms.find((room) => room.id === defaultRoomId);
+  if (configuredDefaultRoom && !isRoomOccupied(configuredDefaultRoom, occupied))
+    return configuredDefaultRoom.id;
+  return rooms.find((room) => !isRoomOccupied(room, occupied))?.id ?? "";
+}
+
 function staffLabel(staff: Staff): string {
   return (
     staff.name || [staff.firstName, staff.lastName].filter(Boolean).join(" ")
@@ -106,135 +126,83 @@ export function SpontaneousActivityStart({
   onStart,
 }: SpontaneousActivityStartProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoadingRefs, setIsLoadingRefs] = useState(false);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [rooms, setRooms] = useState<RoomOption[]>([]);
-  const [staff, setStaff] = useState<Staff[]>([]);
-  // Without the staff list the section has nobody to offer, so it stays
-  // hidden after a failed load; the load error in the dialog says why.
-  const [staffLoaded, setStaffLoaded] = useState(false);
   const [activityInput, setActivityInput] = useState("");
   const [roomId, setRoomId] = useState("");
   const [additionalStaffIds, setAdditionalStaffIds] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearFormErrors } = formErrors;
-  // Auswahllisten (Aktivitäten, Räume, Personal): ein Fehlschlag steht im
-  // Dialog, „Wiederholen“ lädt alle drei neu.
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const [loadAttempt, setLoadAttempt] = useState(0);
   const occupiedRoomIdSet = useMemo(
     () => new Set(occupiedRoomIds),
     [occupiedRoomIds],
   );
-  // The dashboard poll hands over a new occupancy every few seconds. The
-  // load below only needs it to preselect a free room, so it reads the latest
-  // value instead of reloading on every poll: a reload hid the staff section
-  // and discarded a half-typed external person. The room list itself marks
-  // occupied rooms from the live value.
-  const occupiedRoomIdSetRef = useRef(occupiedRoomIdSet);
-  useEffect(() => {
-    occupiedRoomIdSetRef.current = occupiedRoomIdSet;
-  }, [occupiedRoomIdSet]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    setIsLoadingRefs(true);
-    clearFormErrors();
-    clearLoadError();
-    // Jede Liste füllt, was sie bekommt; der erste Fehlschlag steht im
-    // Dialog, statt still eine leere Auswahl zu zeigen.
-    let firstFailure: unknown = null;
-    const noteFailure = (event: string, err: unknown) => {
-      logger.error(event, {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      firstFailure ??= err;
-    };
+  // Auswahllisten (Aktivitäten, Räume, Personal): jede Liste füllt, was sie
+  // bekommt; der erste Fehlschlag steht im Dialog, „Wiederholen“ lädt alle
+  // drei neu.
+  const activityList = useSWRAuth(
+    isOpen ? tenantDailyKeys.activities() : null,
+    () => activityService.getActivities(),
+  );
+  // The staff room list includes Schulhof as a regular destination (#2161)
+  // while keeping WC infrastructure hidden.
+  const roomList = useSWRAuth(
+    isOpen ? tenantDailyKeys.plannerRooms() : null,
+    () => fetchPlannerRooms(),
+  );
+  const staffList = useSWRAuth(isOpen ? staffResource.key() : null, () =>
+    staffResource.fetcher(),
+  );
+  const resources = [activityList, roomList, staffList];
+  const isLoadingRefs =
+    isOpen &&
+    resources.some(
+      (resource) => resource.data === undefined && !resource.error,
+    );
+  const { error: loadError } = useSwrResourceLoadError(
+    resources,
+    "die Auswahl für die spontane Aktivität",
+    () => {
+      for (const resource of resources) void resource.mutate();
+    },
+  );
+  // Without the staff list the section has nobody to offer, so it stays
+  // hidden after a failed load; the load error in the dialog says why.
+  const staffData = isOpen ? staffList.data : undefined;
+  const staffLoaded = staffData !== undefined;
 
-    void Promise.all([
-      activityService.getActivities().catch((err: unknown) => {
-        noteFailure("spontaneous_activities_fetch_failed", err);
-        return [] as Activity[];
-      }),
-      fetchPlannerRooms()
-        .then(normalizeRooms)
-        .catch((err: unknown) => {
-          noteFailure("spontaneous_rooms_fetch_failed", err);
-          return [] as RoomOption[];
-        }),
-      staffService
-        .getAllStaff()
-        .then((list) => ({ list, loaded: true }))
-        .catch((err: unknown) => {
-          noteFailure("spontaneous_staff_fetch_failed", err);
-          return { list: [] as Staff[], loaded: false };
-        }),
-    ])
-      .then(([activityData, roomData, staffData]) => {
-        if (cancelled) return;
-        if (firstFailure) {
-          void showLoadError(firstFailure, {
-            object: "die Auswahl für die spontane Aktivität",
-            retry: () => setLoadAttempt((value) => value + 1),
-          });
-        }
-        // The staff room list includes Schulhof as a regular destination
-        // (#2161) while keeping WC infrastructure hidden.
-        const spontaneousRooms = roomData;
-        setActivities(
-          [...activityData].sort((a, b) => a.name.localeCompare(b.name, "de")),
-        );
-        setRooms(spontaneousRooms);
-        setStaffLoaded(staffData.loaded);
-        setStaff(
-          staffData.list
-            .filter((item) => item.id !== currentStaffId)
-            .sort((a, b) => staffLabel(a).localeCompare(staffLabel(b), "de")),
-        );
-        const occupied = occupiedRoomIdSetRef.current;
-        setRoomId((prev) => {
-          const firstAvailableRoom =
-            spontaneousRooms.find((room) => !isRoomOccupied(room, occupied)) ??
-            null;
-          const previousRoom = spontaneousRooms.find(
-            (room) => room.id === prev,
-          );
-          if (previousRoom && !isRoomOccupied(previousRoom, occupied)) {
-            return prev;
-          }
-          const configuredDefaultRoom = spontaneousRooms.find(
-            (room) => room.id === defaultRoomId,
-          );
-          if (
-            configuredDefaultRoom &&
-            !isRoomOccupied(configuredDefaultRoom, occupied)
-          ) {
-            return configuredDefaultRoom.id;
-          }
-          return firstAvailableRoom?.id ?? "";
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingRefs(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    currentStaffId,
-    defaultRoomId,
-    isOpen,
-    loadAttempt,
-    clearFormErrors,
-    clearLoadError,
-    showLoadError,
-  ]);
+  const activities = useMemo(
+    () =>
+      [...((isOpen ? activityList.data : undefined) ?? [])].sort((a, b) =>
+        a.name.localeCompare(b.name, "de"),
+      ),
+    [activityList.data, isOpen],
+  );
+  const rooms = useMemo(
+    () => normalizeRooms((isOpen ? roomList.data : undefined) ?? []),
+    [roomList.data, isOpen],
+  );
+  const staff = useMemo(
+    () =>
+      (staffData ?? [])
+        .filter((item) => item.id !== currentStaffId)
+        .sort((a, b) => staffLabel(a).localeCompare(staffLabel(b), "de")),
+    [staffData, currentStaffId],
+  );
+
+  // A room is preselected once per loaded list, with the occupancy of that
+  // moment. The dashboard poll hands over a new occupancy every few seconds;
+  // it must not move the choice. The room list itself marks occupied rooms
+  // from the live value.
+  const [preselectedFor, setPreselectedFor] = useState<
+    readonly RoomOption[] | null
+  >(null);
+  if (isOpen && roomList.data && !isLoadingRefs && preselectedFor !== rooms) {
+    setPreselectedFor(rooms);
+    setRoomId((prev) =>
+      preselectRoom(rooms, prev, defaultRoomId, occupiedRoomIdSet),
+    );
+  }
 
   const selectedActivity = useMemo(
     () => findSelectedActivity(activities, activityInput),
@@ -278,10 +246,9 @@ export function SpontaneousActivityStart({
   function addExternalCaregiver(saved: Staff) {
     // The new record carries its open invitation and is offered like
     // everyone else.
-    setStaff((prev) =>
-      [...prev.filter((item) => item.id !== saved.id), saved].sort((a, b) =>
-        staffLabel(a).localeCompare(staffLabel(b), "de"),
-      ),
+    void staffList.mutate(
+      (prev) => [...(prev ?? []).filter((item) => item.id !== saved.id), saved],
+      { revalidate: false },
     );
     setAdditionalStaffIds((prev) =>
       prev.includes(saved.id) ? prev : [...prev, saved.id],
@@ -293,8 +260,8 @@ export function SpontaneousActivityStart({
     setActivityInput("");
     setRoomId("");
     setAdditionalStaffIds([]);
+    setPreselectedFor(null);
     clearFormErrors();
-    clearLoadError();
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {

@@ -31,11 +31,8 @@ var _ timetable.StudentTemplateDays = (*StudentTemplateDays)(nil)
 // required.
 func NewStudentTemplateDays(deps ports.StudentTemplateDaysDependencies) (*StudentTemplateDays, error) {
 	if deps.Groups == nil || deps.Schedules == nil || deps.Timeframes == nil || deps.Periods == nil || deps.Enrollments == nil ||
-		deps.Instances == nil || deps.Participants.Reads == nil || deps.Participants.Plans == nil || deps.RecurrenceLock == nil {
-		return nil, errors.New("student template days: groups, schedules, timeframes, periods, enrollments, instances, participants and recurrence lock are required")
-	}
-	if deps.Today == nil {
-		deps.Today = calendar.TodayDate
+		deps.Instances == nil || deps.Participants.Reads == nil || deps.Participants.Plans == nil || deps.RecurrenceLock == nil || deps.Today == nil {
+		return nil, errors.New("student template days: groups, schedules, timeframes, periods, enrollments, instances, participants, recurrence lock and school day clock are required")
 	}
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()

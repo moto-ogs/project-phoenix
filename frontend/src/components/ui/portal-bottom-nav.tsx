@@ -30,7 +30,7 @@ interface IndicatorPosition {
   readonly width: number;
 }
 
-export interface PortalBottomNavIndicator {
+interface PortalBottomNavIndicator {
   readonly listRef: RefObject<HTMLUListElement | null>;
   readonly position: IndicatorPosition | null;
   readonly animated: boolean;

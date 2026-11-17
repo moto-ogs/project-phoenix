@@ -13,6 +13,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync"
 	"testing"
@@ -144,6 +145,41 @@ func TestOverdueTick_ActiveInstancesNotBroadcast(t *testing.T) {
 
 	assert.Equal(t, 0, spyFilter(s.spy, ai.ID, overdueAnnounced), "active instances must not trigger overdue broadcast")
 	assert.Equal(t, 0, spyFilter(s.spy, ai.ID, overdueRefreshed), "active instances must not trigger active supervision refresh")
+}
+
+// A duty (#3822) is never started, so it is never overdue, and it may have no
+// room. A roomless duty must neither be announced nor block the school's
+// other overdue blocks: the room port refuses room ID 0 like Facilities does.
+func TestOverdueTick_DutiesAreNeverOverdue(t *testing.T) {
+	t.Parallel()
+	s := buildOverdue(t)
+	s.sched.instanceRoomRepo = func(_ context.Context, roomIDs []int64) ([]int64, error) {
+		for _, id := range roomIDs {
+			if id <= 0 {
+				return nil, errors.New("invalid room")
+			}
+		}
+		return roomIDs, nil
+	}
+
+	block := seedPlanned(t, s, 30)
+	roomlessDuty := seedPlanned(t, s, 30)
+	roomedDuty := seedPlanned(t, s, 30)
+	for index := range s.instances.instances {
+		switch s.instances.instances[index].ID {
+		case roomlessDuty.ID:
+			s.instances.instances[index].RoomID = 0
+			s.instances.instances[index].Duty = true
+		case roomedDuty.ID:
+			s.instances.instances[index].Duty = true
+		}
+	}
+
+	s.sched.runOverdueForTenant(context.Background(), testpkg.Tenant(t), 5, s.now)
+
+	assert.Equal(t, 1, spyFilter(s.spy, block.ID, overdueAnnounced), "the overdue block next to a roomless duty must be announced")
+	assert.Equal(t, 0, spyFilter(s.spy, roomlessDuty.ID, overdueAnnounced), "a duty is never overdue")
+	assert.Equal(t, 0, spyFilter(s.spy, roomedDuty.ID, overdueAnnounced), "a duty with a room is never overdue either")
 }
 
 // overdueKind names the two announcements of an overdue planned block: the

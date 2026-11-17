@@ -75,7 +75,7 @@ func TestWorkTimeMonthSummary_DB(t *testing.T) {
 	svc := timetracking.NewWorkTimeMonthService(
 		workTime, workTime, repos.StaffAbsence, workforceCompose.StaffScheduleAssignments(api.MustNewStaffEmployment(testpkg.NewDatabase(t, db))),
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(workTime)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(workTime)), workforceCompose.NewTimeTrackingShifts(workTime),
-		wtmIntSettings{accountStart: "2026-06-01"}, nil,
+		wtmIntSettings{accountStart: "2026-06-01"}, nil, timetracking.WithMonthTestClock(testNow),
 	)
 
 	// June: 5 Mondays × 480 = 2400 target, 480 actual, 480 sick credit.

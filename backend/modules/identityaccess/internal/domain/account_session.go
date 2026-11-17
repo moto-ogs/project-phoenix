@@ -137,3 +137,14 @@ func (s AccountSession) KeptAtSchool() bool {
 	portal, ok := PortalOfPersisted(s.PortalScope)
 	return !ok || portal.KeptAtSchool()
 }
+
+// PushSubscriptionLink is a push subscription's session facts: account,
+// school, push portal and refresh-token family (empty when bound to no
+// family). SubscriptionID only identifies it in the liveness answer.
+type PushSubscriptionLink struct {
+	SubscriptionID int64
+	AccountID      int64
+	TenantID       int64
+	Portal         string
+	TokenFamilyID  string
+}

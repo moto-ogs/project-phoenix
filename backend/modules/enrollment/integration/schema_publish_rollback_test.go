@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -57,7 +58,7 @@ func TestSchemaPublishStandaloneRollsBackEveryWrite(t *testing.T) {
 					return 0, err
 				}
 				return id.Int64(), nil
-			})
+			}).WithClock(time.Now)
 			engine := &schemaRepointFailure{Store: store, before: stage == "after schema insert", failure: failure}
 			module := compose.NewWithStore(engine, nil)
 			input := enrollment.FormSchema{Name: "Application", CreatedBy: actor.ID}

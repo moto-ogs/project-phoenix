@@ -22,7 +22,7 @@ type submittedOfferingRow struct {
 	Notes          *string  `bun:"notes"`
 	// Terms is written once with the choice; the tenant role holds no UPDATE.
 	Terms     *enrollment.OfferingTerms `bun:"offering_terms,type:jsonb,nullzero"`
-	CreatedAt time.Time                 `bun:"created_at,nullzero,default:current_timestamp"`
+	CreatedAt time.Time                 `bun:"created_at,nullzero"`
 }
 
 func (r *Store) SubmittedOfferingChoices(ctx context.Context, childIDs []int64) ([]enrollment.SubmittedOfferingChoice, error) {

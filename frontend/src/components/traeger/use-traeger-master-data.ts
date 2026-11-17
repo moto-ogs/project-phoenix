@@ -1,14 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
+import { useCallback, useRef } from "react";
+import { useTraegerResource } from "./use-traeger-resource";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchTraegerMasterData,
   type TraegerMasterData,
 } from "~/lib/traeger-api";
-
-const logger = createLogger({ component: "TraegerMasterData" });
 
 const EMPTY: TraegerMasterData = {
   contact: { name: "", phone: "", email: "" },
@@ -24,69 +22,37 @@ const EMPTY: TraegerMasterData = {
  * Nachladen lässt die gezeigten Werte stehen und meldet es.
  */
 export function useTraegerMasterData(object: string, enabled = true) {
-  const [masterData, setMasterData] = useState<TraegerMasterData>(EMPTY);
-  const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState<unknown>();
-  const [loaded, setLoaded] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-  const request = useRef(0);
+  const resource = useTraegerResource(
+    enabled ? traegerKeys.masterData() : null,
+    fetchTraegerMasterData,
+    object,
+  );
+  const { mutate } = resource;
 
+  /** Reads again and rejects with its own failure (`useRefreshAfterWrite`). */
   const read = useCallback(async () => {
-    const current = ++request.current;
-    try {
-      const data = await fetchTraegerMasterData();
-      if (current !== request.current) return;
-      setMasterData(data);
-      setFailure(undefined);
-      setLoaded(true);
-      clearLoadError();
-    } catch (err) {
-      if (current === request.current) {
-        setFailure(err);
-        throw err;
-      }
-    } finally {
-      if (current === request.current) setLoading(false);
-    }
-  }, [clearLoadError]);
+    await mutate(fetchTraegerMasterData(), { revalidate: false });
+  }, [mutate]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      await read();
-    } catch (err) {
-      setFailure(err);
-      logger.error("traeger_master_data_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, { object, retry: () => void load() });
-    }
-  }, [object, read, showLoadError]);
-
+  // SWR drops the answer of an overtaken read but rejects with its failure;
+  // only the latest refresh may report one.
+  const latest = useRef(0);
+  /** Reads again; a failure shows as the load error, the values stay. */
   const refresh = useCallback(async () => {
+    const run = ++latest.current;
     try {
       await read();
-    } catch (err) {
-      setFailure(err);
-      logger.warn("traeger_master_data_refresh_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, { object, retry: () => void load() });
+    } catch {
+      if (run === latest.current) await mutate();
     }
-  }, [load, object, read, showLoadError]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    void load();
-  }, [enabled, load]);
+  }, [mutate, read]);
 
   return {
-    masterData,
-    loaded,
-    loading,
-    failure,
-    error: pageLoad.error,
+    masterData: resource.data ?? EMPTY,
+    loaded: resource.data !== null,
+    loading: resource.loading,
+    failure: resource.failure,
+    error: resource.error,
     read,
     refresh,
   };

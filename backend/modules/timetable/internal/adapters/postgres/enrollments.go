@@ -19,8 +19,8 @@ type studentEnrollmentRow struct {
 	bun.BaseModel            `bun:"table:activities.student_enrollments,alias:student_enrollment"`
 	ID                       int64          `bun:"id,pk,autoincrement"`
 	TenantID                 int64          `bun:"tenant_id,notnull"`
-	CreatedAt                time.Time      `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt                time.Time      `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt                time.Time      `bun:"created_at,nullzero,notnull"`
+	UpdatedAt                time.Time      `bun:"updated_at,nullzero,notnull"`
 	StudentID                int64          `bun:"student_id,notnull"`
 	ActivityGroupID          int64          `bun:"activity_group_id,notnull"`
 	ValidFrom                calendar.Date  `bun:"valid_from,notnull"`
@@ -115,7 +115,9 @@ func (s *Store) CreateStudentEnrollment(ctx context.Context, fields timetable.St
 	if err != nil {
 		return timetable.StudentEnrollment{}, domain.OperationStats{}, err
 	}
-	row := studentEnrollmentRow{TenantID: tenantID}
+	// created_at is on the owner's clock: enrollment provenance orders it
+	// against Enrollment's reviewed_at (ADR 0281 point 2, #7295).
+	row := studentEnrollmentRow{TenantID: tenantID, CreatedAt: s.currentTime()}
 	applyStudentEnrollmentFields(&row, fields)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -175,7 +177,7 @@ func (s *ProvenanceStore) BackfillStudentEnrollmentSource(ctx context.Context, s
 		return 0, stats, err
 	}
 	writeStats, err := execMeasuredWrite(ctx, db.NewUpdate().Table("activities.student_enrollments").
-		Set("enrollment_request_child_id = ?", requestChildID).Set("updated_at = NOW()").
+		Set("enrollment_request_child_id = ?", requestChildID).
 		Where("tenant_id = ?", tenantID).Where("id IN (?)", bun.List(ids)), "backfill student enrollment source")
 	stats.Add(writeStats)
 	return writeStats.Rows, stats, err
@@ -218,7 +220,7 @@ func (s *Store) SetStudentEnrollmentsKeptWithoutBooking(ctx context.Context, stu
 		return 0, total, err
 	}
 	scoped := func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set("updated_at = NOW()").Where("tenant_id = ?", tenantID).Where("student_id = ?", studentID).
+		return query.Where("tenant_id = ?", tenantID).Where("student_id = ?", studentID).
 			Where("id IN (?)", bun.List(ids)).Where("enrollment_request_child_id IS NULL")
 	}
 	keys := make([]string, 0, len(weekdays))

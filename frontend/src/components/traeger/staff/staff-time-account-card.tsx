@@ -6,10 +6,11 @@
 // ab, in jeder Schule, die der Vertrag abdeckt, und nur sie öffnet ihn
 // wieder. Jedes Laden steht im Zugriffsprotokoll jeder Schule der Person.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Lock, LockOpen } from "lucide-react";
 
 import { MonthCloseReasonModal } from "~/components/staff/month-close-modal";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -17,16 +18,15 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { createLogger } from "~/lib/logger";
 import {
   formatDuration,
   formatSignedDuration,
   monthLabel,
 } from "~/lib/duration-format";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   closeTraegerTimeAccountMonth,
   fetchTraegerTimeAccount,
@@ -34,8 +34,6 @@ import {
   type TraegerTimeAccount,
   type TraegerTimeAccountSchool,
 } from "~/lib/traeger-time-account-api";
-
-const logger = createLogger({ component: "TraegerStaffTimeAccount" });
 
 interface MonthKey {
   readonly year: number;
@@ -140,40 +138,17 @@ export function StaffTimeAccountCard({
   );
   // Abgeschlossen wird der Vormonat: dort beginnt die Karte.
   const [shown, setShown] = useState<MonthKey>(() => shift(thisMonth, -1));
-  const [account, setAccount] = useState<TraegerTimeAccount | null>(null);
+  const {
+    data: account,
+    error,
+    mutate,
+    reload,
+  } = useFreshTraegerResource(
+    traegerStaffKeys.timeAccount(recordId, shown.year, shown.month),
+    () => fetchTraegerTimeAccount(recordId, shown.year, shown.month),
+    "das Stundenkonto",
+  );
   const [dialog, setDialog] = useState<"close" | "reopen" | null>(null);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
-
-  // Wechselt der Monat während einer Anfrage, gewinnt die jüngste Anfrage.
-  const latestRequest = useRef(0);
-  const reload = useCallback(async () => {
-    const request = ++latestRequest.current;
-    try {
-      const loaded = await fetchTraegerTimeAccount(
-        recordId,
-        shown.year,
-        shown.month,
-      );
-      if (request !== latestRequest.current) return;
-      setAccount(loaded);
-      clearLoadError();
-    } catch (err) {
-      if (request !== latestRequest.current) return;
-      logger.error("traeger_time_account_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "das Stundenkonto",
-        retry: () => void reload(),
-      });
-    }
-  }, [recordId, shown, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    setAccount(null);
-    void reload();
-  }, [reload]);
 
   const isThisMonth =
     shown.year === thisMonth.year && shown.month === thisMonth.month;
@@ -350,11 +325,11 @@ export function StaffTimeAccountCard({
           {headAction}
         </>
       }
-      loading={account === null && !load.error}
+      loading={account === null && !error}
       bodyClassName="mt-4 space-y-4"
     >
-      {load.error ? (
-        <LoadErrorAlert error={load.error} actionLayout="responsive" />
+      {error ? (
+        <LoadErrorAlert error={error} actionLayout="responsive" />
       ) : account ? (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -433,15 +408,16 @@ export function StaffTimeAccountCard({
           successMessage={`${shownLabel} ist abgeschlossen.`}
           onSubmit={async (reason) => {
             try {
-              setAccount(
+              await mutate(
                 await closeTraegerTimeAccountMonth(recordId, {
                   ...shown,
                   reason,
                 }),
+                { revalidate: false },
               );
             } catch (err) {
               // Schulen vor dem Fehler sind schon abgeschlossen: neu laden.
-              void reload();
+              reload();
               throw err;
             }
           }}
@@ -470,14 +446,15 @@ export function StaffTimeAccountCard({
           destructive
           onSubmit={async (reason) => {
             try {
-              setAccount(
+              await mutate(
                 await reopenTraegerTimeAccountMonth(recordId, {
                   ...shown,
                   reason,
                 }),
+                { revalidate: false },
               );
             } catch (err) {
-              void reload();
+              reload();
               throw err;
             }
           }}

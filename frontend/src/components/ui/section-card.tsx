@@ -102,7 +102,7 @@ function SectionCardConceptIcon({
 }
 
 /** What the collapse toggle does in each state (#6744). */
-export interface SectionCollapseTooltip {
+interface SectionCollapseTooltip {
   /** While collapsed: what a click shows. */
   readonly expand: string;
   /** While open: what a click hides. */

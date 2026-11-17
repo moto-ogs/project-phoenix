@@ -25,7 +25,7 @@ func TestParentFeedNamesTheSenderOfAClassLetter(t *testing.T) {
 	ctx := tenantCtx(t)
 	publish := func(title string) int64 {
 		return api.ParentStorePublishedAnnouncement(parentStoreFixtureChecks(t), ctx, func() time.Time {
-			return databaseTimestamp(t, db)
+			return publishedNow()
 		}, repo, chain.AccountID, chain.TenantID, title, api.ParentStoreTargetValues([]api.ParentStoreTargetInput{
 			{TargetType: userModels.AnnouncementTargetClass, TargetRefText: strp("1a")},
 		})).ID

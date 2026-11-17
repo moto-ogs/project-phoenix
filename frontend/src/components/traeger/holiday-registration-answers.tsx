@@ -5,7 +5,7 @@
 // abgeschickt haben. Gesundheitsangaben sind gekennzeichnet; sie stehen nur
 // hier, nicht in Liste und Export.
 
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { formatDate } from "~/lib/date-helpers";
 import type { HolidayFormField } from "~/lib/holiday-form-field";
 

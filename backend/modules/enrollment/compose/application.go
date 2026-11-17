@@ -77,7 +77,7 @@ func NewResyncingPhases(deps PhaseDependencies) (*Phases, error) {
 		Students:                        deps.Students, Bookings: deps.Bookings, CareStudents: deps.CareStudents,
 		Settings:  deps.Settings,
 		Responses: responses,
-		Runtime:   tenantRuntime(), TraegerCopies: newStore(),
+		Runtime:   tenantRuntime(), TraegerCopies: newStore().WithClock(deps.Now),
 		Logger: deps.Logger, Now: deps.Now, Today: deps.Today,
 	})
 }

@@ -13,7 +13,19 @@ import { deferred } from "~/test/helpers/form-modal-pending";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 
+import { SWRConfig } from "~/lib/swr/testing";
+
 import MealPlanPage from "./page";
+
+vi.unmock("swr");
+
+function FreshSwrCache({ children }: { children: React.ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
 
 const { getMealPlanWeek, getMealOrders, setDay, rights, features } = vi.hoisted(
   () => ({
@@ -77,19 +89,15 @@ vi.mock("~/components/meal-plan/meal-participant-list", () => ({
   MealParticipantList: ({
     canRegister,
     canExport,
-    onRegistrationChanged,
   }: {
     canRegister: boolean;
     canExport: boolean;
-    onRegistrationChanged: () => void;
   }) => (
     <div
       data-testid="participants"
       data-register={String(canRegister)}
       data-export={String(canExport)}
-    >
-      <button onClick={onRegistrationChanged}>Save registration</button>
-    </div>
+    />
   ),
 }));
 
@@ -98,6 +106,7 @@ function renderPage() {
     <ToastProvider>
       <MealPlanPage />
     </ToastProvider>,
+    { wrapper: FreshSwrCache },
   );
 }
 
@@ -112,16 +121,6 @@ describe("Speiseplan: Statuszeile bei Ladefehler (#2517)", () => {
     });
     rights.admin = true;
     rights.permissions = [];
-  });
-
-  it("reloads the order overview after saving a registration", async () => {
-    getMealPlanWeek.mockResolvedValue([]);
-    renderPage();
-    await waitFor(() => expect(getMealOrders).toHaveBeenCalledTimes(1));
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Save registration" }),
-    );
-    await waitFor(() => expect(getMealOrders).toHaveBeenCalledTimes(2));
   });
 
   it("shows the catalog load error and no planned-days count", async () => {
@@ -426,5 +425,121 @@ describe("reload after a write (#6652)", () => {
       await screen.findByDisplayValue("Gespeicherter Plan"),
     ).not.toHaveAttribute("readonly");
     expect(setDay).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Saving compares against the plan this visit read: a week reopened from
+// the cache stays locked until its own read answered, and a failed read
+// shows the error instead of the cached week.
+describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
+  const stored = {
+    date: "2026-10-05",
+    position: 0,
+    dish: "Fischstäbchen",
+    note: null,
+    allergens: [],
+  };
+
+  beforeEach(() => {
+    getMealPlanWeek.mockReset().mockResolvedValueOnce([stored]);
+    getMealOrders.mockReset().mockResolvedValue({
+      rhythm: "daily",
+      detail: "total",
+      days: [],
+    });
+    rights.admin = true;
+    rights.permissions = [];
+    features.mealPlanEnabled = true;
+  });
+
+  async function visitTwice() {
+    const cache = new Map();
+    function SharedCache({ children }: { children: React.ReactNode }) {
+      return (
+        <SWRConfig value={{ provider: () => cache, errorRetryCount: 0 }}>
+          {children}
+        </SWRConfig>
+      );
+    }
+    const page = (
+      <ToastProvider>
+        <MealPlanPage />
+      </ToastProvider>
+    );
+    const first = render(page, { wrapper: SharedCache });
+    expect(
+      await screen.findByDisplayValue("Fischstäbchen"),
+    ).not.toHaveAttribute("readonly");
+    first.unmount();
+    render(page, { wrapper: SharedCache });
+  }
+
+  it("keeps the week locked until this visit's read answered", async () => {
+    const pending = deferred<(typeof stored)[]>();
+    getMealPlanWeek.mockReturnValueOnce(pending.promise);
+
+    await visitTwice();
+
+    await waitFor(() => expect(getMealPlanWeek).toHaveBeenCalledTimes(2));
+    expect(
+      screen.getByRole("status", {
+        name: "Der Bereich „Speiseplan“ wird geladen…",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Fischstäbchen")).not.toBeInTheDocument();
+
+    pending.resolve([{ ...stored, dish: "Nudeln" }]);
+    expect(await screen.findByDisplayValue("Nudeln")).not.toHaveAttribute(
+      "readonly",
+    );
+  });
+
+  it("drops discarded edits when the person returns after the next week failed to load", async () => {
+    getMealPlanWeek
+      .mockRejectedValueOnce(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValue([stored]);
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Nächste Woche" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Verwerfen & wechseln",
+      }),
+    );
+    // Anker: die nächste Woche ist mit ihrem Ladefehler auf dem Bildschirm.
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Woche im Speiseplan"),
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Diese Woche" }));
+    expect(
+      await screen.findByDisplayValue("Fischstäbchen"),
+    ).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Nudeln")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the load error instead of the cached week when the read fails", async () => {
+    getMealPlanWeek.mockRejectedValueOnce(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+
+    await visitTwice();
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Woche im Speiseplan"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Fischstäbchen")).not.toBeInTheDocument();
   });
 });

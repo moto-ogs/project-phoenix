@@ -2,11 +2,8 @@
 // Zeilen „Bezeichnung: Angabe“: in der Teilnehmerliste, beim Feriengast und
 // beim eigenen Kind der ausrichtenden OGS. Nur lesend.
 
-import {
-  DataField,
-  DataGrid,
-  InfoText,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoText } from "~/components/ui/detail-modal-components";
 import {
   formatHolidayHostAnswer,
   type HolidayHostHealth,

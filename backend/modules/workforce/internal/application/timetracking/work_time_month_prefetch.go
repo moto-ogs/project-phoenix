@@ -106,7 +106,7 @@ func (r prefetchedSessionReader) ListOverlappingWorkSessions(_ context.Context, 
 	result := make([]workforce.WorkSession, 0)
 	for _, staffID := range staffIDs {
 		for _, session := range r.p.sessions[staffID] {
-			end := clockOrWall(r.p.now)()
+			end := requireClock(r.p.now)()
 			if session.CheckOutTime != nil {
 				end = *session.CheckOutTime
 			}

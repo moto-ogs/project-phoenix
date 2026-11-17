@@ -122,11 +122,11 @@ func holdAdvisory(key string) func(context.Context, bun.Tx) error {
 func TestWorkforceRowLocksAreAdmittedBeforeTheyWait(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	store := New(DatabaseRuntime(db))
-	school := testpkg.Tenant(t)
 	// A fixed future school day: the paths take their locks whatever the
 	// wall clock says.
 	today := calendar.NewDate(2099, 6, 1)
+	store := New(DatabaseRuntime(db)).WithClock(func() time.Time { return today.BerlinMidnight() })
+	school := testpkg.Tenant(t)
 	from := calendar.NewDate(2026, 1, 1)
 	ctx := testpkg.Ctx(t)
 
@@ -354,7 +354,7 @@ func insertOpenPayrollDownload(t *testing.T, db *bun.DB, store *Store, tokenHash
 		}
 		_, err = tx.ExecContext(ctx, `UPDATE active.payroll_dispatches SET download_token_hash = ?, file_data = ?,
 			filename = 'admission.xlsx', content_type = 'application/octet-stream', byte_size = 1,
-			download_expires_at = now() + interval '1 hour' WHERE id = ?`, tokenHash, []byte("x"), id)
+			download_expires_at = ? WHERE id = ?`, tokenHash, []byte("x"), time.Now().Add(time.Hour), id)
 		return err
 	}))
 	return id

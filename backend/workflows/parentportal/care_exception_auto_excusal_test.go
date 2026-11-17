@@ -162,7 +162,7 @@ func TestDeleteCareException_ReleasesAutoExcusedBlocks(t *testing.T) {
 func newPickupExcusal(t *testing.T, db *bun.DB, records careplan.Capability, baselines careplan.PickupBaselineReader, tt timetable.Capability, extensions bool) careplan.PickupAutoExcusal {
 	t.Helper()
 	adapter := owners.NewPickupExcusalTimetable(tt, owners.NewPartialAbsencePreview(testpkg.MustDatabase(db)))
-	deps := compose.PickupExcusalDependencies{DB: db, Records: records, Baselines: baselines, Blocks: api.NewStudentPresenceForTests(testpkg.NewDatabase(t, db)), Preview: adapter}
+	deps := compose.PickupExcusalDependencies{DB: db, Records: records, Baselines: baselines, Blocks: api.NewStudentPresenceForTests(testpkg.NewDatabase(t, db)), Preview: adapter, Today: calendar.TodayDate}
 	if extensions {
 		deps.Extensions = adapter
 	}

@@ -42,7 +42,7 @@ type Store interface {
 	// one statement.
 	InsertStaffSchedules(ctx context.Context, rows []domain.StaffWorkSchedule) (domain.OperationStats, error)
 
-	CurrentStaffSchedule(context.Context, int64) ([]domain.StaffWorkSchedule, domain.OperationStats, error)
+	CurrentStaffSchedule(ctx context.Context, staffID int64, today string) ([]domain.StaffWorkSchedule, domain.OperationStats, error)
 	StaffScheduleOn(ctx context.Context, staffID int64, date string) ([]domain.StaffWorkSchedule, domain.OperationStats, error)
 	StaffSchedulesInRange(ctx context.Context, staffIDs []int64, from, to string) ([]domain.StaffWorkSchedule, domain.OperationStats, error)
 	StaffPlanningProfiles(ctx context.Context, staffIDs []int64, from, to string) ([]domain.StaffPlanningProfile, domain.OperationStats, error)
@@ -432,7 +432,7 @@ type TraegerStaffStore interface {
 	FindTraegerAbsenceType(ctx context.Context, organizationID, id int64, forUpdate bool) (domain.TraegerAbsenceType, error)
 	SaveTraegerAbsenceType(ctx context.Context, value domain.TraegerAbsenceType) (domain.TraegerAbsenceType, error)
 	TraegerAbsencePool(ctx context.Context, organizationID, recordID int64, typeIDs []int64, from, to string, lock bool) (map[int64]domain.AbsencePoolType, []domain.AbsencePoolUse, error)
-	SaveTraegerAbsenceAllowance(ctx context.Context, organizationID, accountID int64, input workforce.SetTraegerAbsenceAllowance, previous *float64) error
+	SaveTraegerAbsenceAllowance(ctx context.Context, organizationID, accountID int64, input workforce.SetTraegerAbsenceAllowance, previous *float64, now time.Time) error
 	SchoolAbsenceTypes(ctx context.Context) ([]domain.StaffAbsenceType, error)
 	SchoolAbsenceTypeInUse(ctx context.Context, schoolTypeID int64) (bool, error)
 	CarryTraegerAbsenceType(ctx context.Context, schoolTypeID int64, value domain.TraegerAbsenceType) error
@@ -520,7 +520,7 @@ type TraegerProofStore interface {
 	DeleteProof(ctx context.Context, organizationID, recordID, typeID int64) error
 	ClaimProofReminder(ctx context.Context, organizationID, proofID int64, stage, expiresOn string) (bool, error)
 	ListProofTypeMappings(ctx context.Context, organizationID int64) ([]domain.TraegerProofTypeMapping, error)
-	SaveProofTypeMapping(ctx context.Context, organizationID, accountID int64, mapping domain.TraegerProofTypeMapping) error
+	SaveProofTypeMapping(ctx context.Context, organizationID, accountID int64, mapping domain.TraegerProofTypeMapping, now time.Time) error
 	SchoolProofKinds(ctx context.Context) ([]domain.QualificationType, error)
 	SchoolTraegerProofStatus(ctx context.Context) ([]domain.SchoolTraegerProofStatus, error)
 }
@@ -544,8 +544,8 @@ type TraegerStaffContractStore interface {
 	SchoolClosedMonths(ctx context.Context, staffIDs []int64) (map[int64][]*domain.StaffMonthBalanceSnapshot, error)
 	SchoolOwnTargetOverrides(ctx context.Context, staffID int64, from calendar.Date) ([]domain.StaffTargetOverride, error)
 	SollKeptStaffIDs(ctx context.Context, staffIDs []int64, day calendar.Date) ([]int64, error)
-	KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date) error
-	ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date) error
+	KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date, now time.Time) error
+	ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date, now time.Time) error
 	// MirrorStaffSchedule stamps its writes with now.
 	MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule, now time.Time) error
 	MirrorStaffHolidayWeeks(ctx context.Context, staffID int64, from calendar.Date, overrides []domain.StaffTargetOverride) error

@@ -21,7 +21,7 @@ import type {
   ActiveFilter,
   FilterConfig,
 } from "~/components/ui/page-header/types";
-import { useIsMobile } from "~/components/ui/hooks/useIsMobile";
+import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import {
@@ -112,7 +112,7 @@ function StudentsPageContent() {
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const isMobile = useIsMobile();
+  const isMobile = useMediaQuery(BELOW_MD);
 
   // Der Rückweg trägt den tatsächlichen Such- und Filterzustand mit. Die
   // Suche lebt während der Arbeit lokal; beim Zurückkehren liest die Seite

@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -16,14 +9,13 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import type { FormError } from "~/components/ui/form-error";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
+import { useSWRAuth } from "~/lib/swr";
+import { operatorKeys } from "~/lib/swr/operator-keys";
 import type {
   DeviceTransferStatus,
   OperatorDevice,
@@ -97,56 +89,32 @@ function useDeviceTransferStatus(
   device: OperatorDevice | null,
   resetTargetSchool: () => void,
 ) {
-  const [status, setStatus] = useState<DeviceTransferStatus | null>(null);
-  const [statusLoading, setStatusLoading] = useState(false);
-  const statusLoad = useApiLoadError();
-  const { show: showStatusError, clear: clearStatusError } = statusLoad;
-  const statusRequestId = useRef(0);
-
-  const refreshStatus = useCallback(async () => {
-    if (!device) return;
-    const requestId = ++statusRequestId.current;
-    setStatusLoading(true);
-    clearStatusError();
-    try {
-      const nextStatus =
-        await operatorProvisioningService.getDeviceTransferStatus(device.id);
-      if (statusRequestId.current === requestId) setStatus(nextStatus);
-    } catch (statusError) {
-      if (statusRequestId.current === requestId) {
-        setStatus(null);
-        logger.warn("device_transfer_status_failed", {
-          device_id: device.id,
-          error:
-            statusError instanceof Error
-              ? statusError.message
-              : String(statusError),
-        });
-        void showStatusError(statusError, {
-          object: "die Prüfung des Gerätestatus",
-          retry: () => void refreshStatus(),
-        });
-      }
-    } finally {
-      if (statusRequestId.current === requestId) setStatusLoading(false);
-    }
-  }, [device, showStatusError, clearStatusError]);
+  const deviceId = device?.id ?? null;
+  const { data, error, isValidating, mutate } = useSWRAuth(
+    deviceId === null ? null : operatorKeys.deviceTransferStatus(deviceId),
+    () => operatorProvisioningService.getDeviceTransferStatus(deviceId ?? ""),
+    { keepPreviousData: false },
+  );
+  // The status gates the transfer: after a failed check no older answer may
+  // still offer it, so the error shows also while data is there.
+  const statusError = useSwrLoadError(
+    error,
+    "die Prüfung des Gerätestatus",
+    () => mutate(),
+  );
 
   useEffect(() => {
     resetTargetSchool();
-    setStatus(null);
-    clearStatusError();
-    if (!device) {
-      statusRequestId.current += 1;
-      return;
-    }
-    void refreshStatus();
-  }, [device, refreshStatus, resetTargetSchool, clearStatusError]);
+  }, [deviceId, resetTargetSchool]);
+
+  const refreshStatus = useCallback(async () => {
+    await mutate();
+  }, [mutate]);
 
   return {
-    status,
-    statusLoading,
-    statusError: statusLoad.error,
+    status: error ? null : (data ?? null),
+    statusLoading: isValidating,
+    statusError,
     refreshStatus,
   };
 }

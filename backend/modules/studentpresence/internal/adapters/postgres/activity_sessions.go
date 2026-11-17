@@ -19,8 +19,8 @@ type activitySessionRow struct {
 	bun.BaseModel      `bun:"table:active.activity_sessions,alias:session"`
 	ID                 int64           `bun:"id,pk,autoincrement"`
 	TenantID           int64           `bun:"tenant_id,notnull"`
-	CreatedAt          time.Time       `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt          time.Time       `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt          time.Time       `bun:"created_at,nullzero,notnull"`
+	UpdatedAt          time.Time       `bun:"updated_at,nullzero,notnull"`
 	InstanceID         int64           `bun:"schedule_instance_id,notnull"`
 	Status             string          `bun:"status,notnull"`
 	ActiveGroupID      *int64          `bun:"active_group_id"`
@@ -231,7 +231,7 @@ func (s *Store) ReopenActivitySession(ctx context.Context, instanceID, activeGro
 	started := time.Now()
 	err = db.NewUpdate().Model(&row).ModelTableExpr(`active.activity_sessions`).
 		Set("status = 'active'").Set("active_group_id = ?", activeGroupID).Set("completed_at = NULL").Set("completed_by = NULL").
-		Set("reopen_until = NULL").Set("completion_snapshot = NULL").Set("updated_at = now()").
+		Set("reopen_until = NULL").Set("completion_snapshot = NULL").Set("updated_at = "+statementClock).
 		Where("tenant_id = ?", tenantID).Where("schedule_instance_id = ?", instanceID).Where("status = 'completed'").
 		Returning(activitySessionColumns).Scan(ctx)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}

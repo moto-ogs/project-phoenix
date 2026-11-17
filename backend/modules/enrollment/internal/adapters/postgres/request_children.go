@@ -35,6 +35,8 @@ func (r *Store) InsertChild(ctx context.Context, child *enrollment.RequestChild)
 		return err
 	}
 	row.TenantID = tenantID
+	row.CreatedAt = r.currentTime()
+	row.UpdatedAt = row.CreatedAt
 
 	_, err = db.NewInsert().
 		Model(row).
@@ -261,7 +263,7 @@ func (r *Store) UpdateChildData(ctx context.Context, child *enrollment.RequestCh
 		Set("holiday_care_wish = ?", child.HolidayCareWish).
 		Set("custom_data = ?", row.CustomData).
 		Set("sort_order = ?", child.SortOrder).
-		Set("updated_at = NOW()").
+		Set("updated_at = ?", r.currentTime()).
 		Where(`"request_child".id = ?`, child.ID).
 		Exec(ctx)
 	if err != nil {

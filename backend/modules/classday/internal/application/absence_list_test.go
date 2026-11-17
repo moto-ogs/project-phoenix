@@ -300,8 +300,9 @@ func TestAbsenceListWithoutPortsIsNotConfigured(t *testing.T) {
 	t.Parallel()
 
 	list := NewClassDay(ClassDayDependencies{
-		Caller:  fakeClassDayCaller{classes: []string{"3a"}},
-		Rosters: fakeDayRosters{roster: absenceListRoster()},
+		Caller:                        fakeClassDayCaller{classes: []string{"3a"}},
+		Rosters:                       fakeDayRosters{roster: absenceListRoster()},
+		MorningAttendanceDependencies: MorningAttendanceDependencies{Now: func() time.Time { return absenceListToday }},
 	}).(classday.AbsenceList)
 
 	_, err := list.AbsenceListReport(context.Background(), absenceQuery("", ""))

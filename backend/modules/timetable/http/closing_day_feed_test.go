@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -67,7 +68,10 @@ func newClosingFeedFixture(t *testing.T) *closingFeedFixture {
 	testpkg.SetTestTenantSetting(t, db, tenantID, "notifications.dispatch_enabled", `true`)
 	testpkg.SetTestTenantSetting(t, db, tenantID, "notifications.active_window_start", `"06:00"`)
 	testpkg.SetTestTenantSetting(t, db, tenantID, "notifications.active_window_end", `"06:00"`)
-	resource := timetablehttp.NewResource(timetablehttp.Dependencies{ClosingDays: calendar, SettingsService: settings.Settings})
+	resource := timetablehttp.NewResource(timetablehttp.Dependencies{ClosingDays: calendar, SettingsService: settings.Settings,
+		// The resource runs on the calendar's pinned day.
+		Now: func() time.Time { return time.Date(2030, time.June, 10, 10, 0, 0, 0, time.UTC) },
+	})
 	consent := api.NewNotificationConsentTestStore(database)
 	return &closingFeedFixture{
 		db: db, tenantID: tenantID,

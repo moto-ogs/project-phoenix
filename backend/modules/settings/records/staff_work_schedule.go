@@ -44,8 +44,8 @@ type StaffWorkSchedule struct {
 	RotationAnchorDate *CalendarDate `bun:"rotation_anchor_date,type:date" json:"rotation_anchor_date,omitempty"`
 	ValidFrom          CalendarDate  `bun:"valid_from,notnull,type:date" json:"valid_from"`
 	ValidUntil         *CalendarDate `bun:"valid_until,type:date" json:"valid_until,omitempty"`
-	CreatedAt          time.Time     `bun:"created_at,notnull,default:now()" json:"created_at"`
-	UpdatedAt          time.Time     `bun:"updated_at,notnull,default:now()" json:"updated_at"`
+	CreatedAt          time.Time     `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt          time.Time     `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 }
 
 func (s *StaffWorkSchedule) Validate() error {

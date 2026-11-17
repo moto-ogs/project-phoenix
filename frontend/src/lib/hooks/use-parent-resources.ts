@@ -101,8 +101,16 @@ export function useParentResourceEvents() {
     }
   }, [account, relationships, invalidate]);
   useEffect(() => {
-    const refreshChild = () => {
-      void invalidate(parentKeys.isChildResource);
+    const refreshChild = (event: Event) => {
+      const studentId = (event as CustomEvent<{ studentId?: string | null }>)
+        .detail?.studentId;
+      // Also the child's state on pages not open now: returning to them
+      // within the dedupe window would show the decision's old state.
+      void invalidate(
+        (key) =>
+          parentKeys.isChildResource(key) ||
+          parentKeys.isChildStatusResource(key, studentId),
+      );
     };
     const refreshMessages = () => {
       void invalidate(parentKeys.isMessagesResource);

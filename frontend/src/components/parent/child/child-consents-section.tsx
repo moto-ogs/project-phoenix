@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import { ParentSection } from "~/components/parent/shell/parent-section";
 import { ParentSectionSkeleton } from "~/components/parent/parent-page";
@@ -15,13 +15,16 @@ import {
   StatusBadge,
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import {
   getChildConsents,
   grantChildPhotoConsent,
   withdrawChildPhotoConsent,
-  type ChildConsent,
   type ChildConsentState,
 } from "~/lib/parent-api";
 import { confirmationsConcept } from "~/lib/concepts/confirmations";
@@ -34,51 +37,28 @@ export function ChildConsentsSection({
 }: Readonly<{ studentId: string }>) {
   const t = useCareTermTranslations("parentChild.consents");
   const locale = useLocale();
-  const [consents, setConsents] = useState<ChildConsent[] | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
+  const resource = useSWRAuth(
+    parentKeys.consents(studentId),
+    () => getChildConsents(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
+  const consents = resource.data ?? null;
   const [pendingAction, setPendingAction] = useState<PhotoConsentAction | null>(
     null,
   );
   const [submittingAction, setSubmittingAction] = useState(false);
   const [successfulAction, setSuccessfulAction] =
     useState<PhotoConsentAction | null>(null);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
   // Der Fehler einer Änderung steht im offenen Dialog: ein Toast läge
   // unsichtbar unter ihm.
   const actionErrors = useApiFormError();
   const latestConfirmRef = useRef<() => void>(() => undefined);
 
-  useEffect(() => {
-    let active = true;
-    async function loadConsents() {
-      try {
-        const next = await getChildConsents(studentId);
-        if (!active) return;
-        setConsents(next);
-        setLoadFailed(false);
-      } catch (err) {
-        if (!active) return;
-        setLoadFailed(true);
-        void showLoadError(err, {
-          object: t("errorObjectList"),
-          retry: () => {
-            clearLoadError();
-            setLoadFailed(false);
-            setReloadKey((key) => key + 1);
-          },
-        });
-      }
-    }
-    void loadConsents();
-    return () => {
-      active = false;
-    };
-  }, [clearLoadError, reloadKey, showLoadError, studentId, t]);
+  const { error: loadError, failure: loadFailed } = useSwrResourceLoadError(
+    [resource],
+    t("errorObjectList"),
+    () => resource.mutate(),
+  );
 
   async function confirmAction() {
     const action = pendingAction;
@@ -91,7 +71,7 @@ export function ChildConsentsSection({
         action === "grant"
           ? await grantChildPhotoConsent(studentId)
           : await withdrawChildPhotoConsent(studentId);
-      setConsents(updatedConsents);
+      await resource.mutate(updatedConsents, { revalidate: false });
       setPendingAction(null);
       setSuccessfulAction(action);
     } catch (err) {

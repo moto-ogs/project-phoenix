@@ -86,7 +86,7 @@ func (s *Store) FinishAvatarCleanup(ctx context.Context, id int64, removed bool)
 		_, err = db.NewRaw(`DELETE FROM auth.account_avatar_file_cleanup WHERE id = ?`, id).Exec(ctx)
 	} else {
 		_, err = db.NewRaw(`UPDATE auth.account_avatar_file_cleanup
-			SET attempted_at = clock_timestamp() WHERE id = ?`, id).Exec(ctx)
+			SET attempted_at = ? WHERE id = ?`, s.now(), id).Exec(ctx)
 	}
 	return err
 }

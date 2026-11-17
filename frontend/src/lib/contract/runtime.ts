@@ -75,6 +75,17 @@ export function success<T extends z.ZodType>(data: T) {
   return z.object({ status: z.literal("success"), data });
 }
 
+/**
+ * A route that answers no data: a 204, which the backend client reads as
+ * undefined, or the envelope without a data member.
+ */
+export const noData = z
+  .union([
+    z.undefined(),
+    z.object({ status: z.literal("success"), data: z.null().optional() }),
+  ])
+  .transform(() => ({ data: null }));
+
 /** common.PaginatedResponse */
 export function paginated<T extends z.ZodType>(data: T) {
   return z.object({ status: z.literal("success"), data, pagination });

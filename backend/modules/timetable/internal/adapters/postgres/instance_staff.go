@@ -16,8 +16,8 @@ type instanceStaffRow struct {
 	bun.BaseModel `bun:"table:instance_staff,alias:instance_staff"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	InstanceID    int64     `bun:"instance_id,notnull"`
 	StaffID       int64     `bun:"staff_id,notnull"`
 	RoomID        *int64    `bun:"room_id"`

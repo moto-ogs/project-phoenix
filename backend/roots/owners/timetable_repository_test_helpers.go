@@ -132,7 +132,7 @@ func (r TimetableTestRepositories) WithDeviationAudit(events auditModels.Deviati
 }
 
 func (r TimetableTestRepositories) Enrollment() EnrollmentBookingProjection {
-	return NewEnrollmentBookingProjection(ComposeEnrollmentBookings(enrollmentCompose.NewClocked(time.Now)), UngatedEnrollmentPhaseBounds())
+	return NewEnrollmentBookingProjection(ComposeEnrollmentBookings(enrollmentCompose.NewClocked(time.Now), time.Now), UngatedEnrollmentPhaseBounds(), time.Now)
 }
 
 // CalendarPeriodUsage returns the planning owners' per-period reference

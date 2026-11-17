@@ -9,7 +9,7 @@
 // zeigt bei einem freigegebenen Monat den Weg zur Korrektur, erneute Freigabe
 // mit Grund und beim Träger Storno und Neuausstellung.
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -21,23 +21,20 @@ import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { Textarea } from "~/components/ui/textarea";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import {
   type MealBillingChild,
-  type MealBillingMonth,
   type MealBillingStatus,
-  type MealBillingSummary,
   fetchMealBillingMonth,
   fetchMealBillingMonths,
   releaseMealBillingMonth,
 } from "~/lib/meal-billing-api";
 import { schoolClassLabel } from "~/lib/school-class-label";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 const logger = createLogger({ component: "MealBillingReleasePage" });
 
@@ -157,75 +154,45 @@ function columns(released: boolean): DataTableColumn<MealBillingChild>[] {
 }
 
 export default function MealBillingReleasePage() {
-  const [months, setMonths] = useState<MealBillingSummary[] | null>(null);
-  const [selected, setSelected] = useState("");
-  const [loadedMonth, setMonth] = useState<MealBillingMonth | null>(null);
-  const [reload, setReload] = useState(0);
+  const {
+    data: months,
+    error: monthsError,
+    mutate: mutateMonths,
+  } = useSWRAuth(tenantDailyKeys.mealBillingMonths(), fetchMealBillingMonths);
+  const [picked, setSelected] = useState("");
+  // Start with the month that ended last; that is the one the
+  // OGS-Leitung releases at the end of a month.
+  const selected =
+    picked ||
+    (months?.find((entry) => entry.status !== "running")?.month ??
+      months?.[0]?.month ??
+      "");
+  const {
+    data: loadedMonth,
+    error: monthError,
+    mutate: mutateMonth,
+  } = useSWRAuth(
+    selected ? tenantDailyKeys.mealBillingMonth(selected) : null,
+    () => fetchMealBillingMonth(selected),
+    { keepPreviousData: false },
+  );
   const month = loadedMonth?.month === selected ? loadedMonth : null;
   const [confirming, setConfirming] = useState(false);
   const [releasing, setReleasing] = useState(false);
   const [reason, setReason] = useState("");
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
+  const monthsLoad = useSwrResourceLoadError(
+    [{ data: months, error: monthsError }],
+    "die Mensa-Monate",
+    () => mutateMonths(),
+  );
+  const monthLoad = useSwrResourceLoadError(
+    [{ data: loadedMonth, error: monthError }],
+    "den Mensa-Monat",
+    () => mutateMonth(),
+  );
+  const loadError = monthsLoad.error ?? monthLoad.error;
   const errors = useApiErrorDisplay();
   const { success } = useToast();
-
-  const loadMonths = useCallback(async () => {
-    try {
-      const list = await fetchMealBillingMonths();
-      setMonths(list);
-      // Start with the month that ended last; that is the one the
-      // OGS-Leitung releases at the end of a month.
-      const start =
-        list.find((entry) => entry.status !== "running")?.month ??
-        list[0]?.month ??
-        "";
-      setSelected((current) => current || start);
-      clearLoadError();
-    } catch (err) {
-      logger.error("meal_billing_months_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Mensa-Monate",
-        retry: () => void loadMonths(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void loadMonths();
-  }, [loadMonths]);
-
-  useEffect(() => {
-    if (!selected) return;
-    let active = true;
-    setMonth(null);
-    clearLoadError();
-    const load = async () => {
-      try {
-        const result = await fetchMealBillingMonth(selected);
-        if (!active) return;
-        setMonth(result);
-        clearLoadError();
-      } catch (err) {
-        // A superseded request must not replace the current month's error.
-        if (!active) return;
-        logger.error("meal_billing_month_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        await showLoadError(err, {
-          object: "den Mensa-Monat",
-          retry: () => setReload((current) => current + 1),
-        });
-      }
-    };
-    void load();
-    return () => {
-      active = false;
-      clearLoadError();
-    };
-  }, [selected, reload, clearLoadError, showLoadError]);
 
   const release = async () => {
     if (!month) return;
@@ -237,8 +204,8 @@ export default function MealBillingReleasePage() {
       const released = again
         ? await releaseMealBillingMonth(again, reason.trim())
         : await releaseMealBillingMonth(month);
-      setMonth(released);
-      setMonths(
+      void mutateMonth(released, { revalidate: false });
+      void mutateMonths(
         (current) =>
           current?.map((entry) =>
             entry.month === released.month
@@ -250,7 +217,8 @@ export default function MealBillingReleasePage() {
                   mealCount: released.mealCount,
                 }
               : entry,
-          ) ?? null,
+          ),
+        { revalidate: false },
       );
       success(
         again
@@ -265,7 +233,7 @@ export default function MealBillingReleasePage() {
       });
       setConfirming(false);
       void errors.show(err, { object: "die Freigabe" });
-      setReload((current) => current + 1);
+      void mutateMonth();
     } finally {
       setReleasing(false);
     }
@@ -321,8 +289,8 @@ export default function MealBillingReleasePage() {
           </Button>
         ) : undefined
       }
-      error={pageLoad.error}
-      loading={!pageLoad.error && !month}
+      error={loadError}
+      loading={!loadError && !month}
       overlays={
         <ConfirmationModal
           isOpen={confirming}

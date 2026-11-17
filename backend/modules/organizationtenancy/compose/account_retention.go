@@ -9,10 +9,10 @@ import (
 
 // NewAccountRetention composes the narrow offboarding read on the caller's transaction runtime, without an unscoped pool.
 func NewAccountRetention(observe func(Observation)) organizationtenancy.AccountRetention {
-	return application.New(postgres.New(postgres.NewDatabase()), postgres.Transaction{}, observe, calendar.TodayDate) // decides on no day
+	return application.New(postgres.New(postgres.NewDatabase(), nil), postgres.Transaction{}, observe, calendar.TodayDate) // decides on no day, writes no stamp
 }
 
 // NewTraegerMemberNames composes the names of the Träger memberships (#4693) on the caller's transaction runtime.
 func NewTraegerMemberNames(observe func(Observation)) organizationtenancy.TraegerMemberNames {
-	return application.New(postgres.New(postgres.NewDatabase()), postgres.Transaction{}, observe, calendar.TodayDate) // decides on no day
+	return application.New(postgres.New(postgres.NewDatabase(), nil), postgres.Transaction{}, observe, calendar.TodayDate) // decides on no day, writes no stamp
 }

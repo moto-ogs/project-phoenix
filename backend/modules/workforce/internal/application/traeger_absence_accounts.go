@@ -225,7 +225,7 @@ func (t *TraegerStaff) SetAbsenceAllowance(ctx context.Context, actor workforce.
 		if err != nil {
 			return err
 		}
-		return t.store.SaveTraegerAbsenceAllowance(ctx, actor.OrganizationID, actor.AccountID, input, previous)
+		return t.store.SaveTraegerAbsenceAllowance(ctx, actor.OrganizationID, actor.AccountID, input, previous, t.clock.Now())
 	})
 	return publicTraegerStaffError(err)
 }

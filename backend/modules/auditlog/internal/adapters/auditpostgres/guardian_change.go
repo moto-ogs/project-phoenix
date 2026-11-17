@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"fmt"
+	"time"
 
 	audit "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 )
@@ -11,14 +12,15 @@ const guardianChangeTableExpr = `audit.guardian_changes AS "guardian_change"`
 
 type guardianChangeRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
-func NewGuardianChangeRepository(runtime Runtime) audit.GuardianChangeRepository {
-	return &guardianChangeRepository{runtime: requireRuntime(runtime)}
+func NewGuardianChangeRepository(runtime Runtime, now func() time.Time) audit.GuardianChangeRepository {
+	return &guardianChangeRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 func (r *guardianChangeRepository) Create(ctx context.Context, entry *audit.GuardianChange) error {
-	return NewAppender(r.runtime, nil).Append(ctx, entry)
+	return NewAppender(r.runtime, r.now).Append(ctx, entry)
 }
 
 func (r *guardianChangeRepository) ListByStudentID(ctx context.Context, studentID int64) ([]*audit.GuardianChange, error) {

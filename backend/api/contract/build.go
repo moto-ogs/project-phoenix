@@ -162,6 +162,13 @@ func queryParams(params []QueryParam, where string) ([]QueryParam, error) {
 
 func (b *builder) responses(route *Route, rc Registration, options Options) error {
 	where := route.Key()
+	if rc.NoData {
+		if rc.Response != nil || rc.Variants != nil || rc.Paginated {
+			return fmt.Errorf("%s registers a response and no data", where)
+		}
+		route.NoData = true
+		return nil
+	}
 	if rc.Variants == nil {
 		if rc.Response == nil {
 			return fmt.Errorf("%s registers no response", where)

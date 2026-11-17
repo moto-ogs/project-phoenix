@@ -118,8 +118,7 @@ func (f *overviewFixture) newPayrollRulesExportService(t *testing.T) timetrackin
 		owners.NewTimeTrackingDataAccessAudit(owners.NewTestAuditPersistence(testpkg.MustDatabase(f.db), nil).DataAccessLog),
 		api.NewPayrollExportSettings(settingstest.New(datevFullConfig()), f.countPersonnelNumbers),
 		nil,
-		owners.RenderTimeTrackingWorkbook,
-	)
+		owners.RenderTimeTrackingWorkbook, testNow)
 }
 
 // TestDatevExport_PayrollRuleGoldenFiles pins both DATEV formats with

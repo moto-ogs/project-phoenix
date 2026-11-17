@@ -65,14 +65,16 @@ const servicesSQL = `COALESCE((SELECT json_agg(json_build_object('weekday', s.we
 // currentVersionOrderSQL orders the versions of a contract (alias v) so the
 // current one comes first (#4681): the effective version in force today
 // (Berlin date), else the next effective one, else the newest version. A
-// contract before its conclusion has only its first version.
+// contract before its conclusion has only its first version. Binds: today
+// twice, the Berlin day of the owner's clock.
 const currentVersionOrderSQL = `(v.status IN ` + effectiveStatusSQL + `
-		AND v.effective_from <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin')::date) DESC,
+		AND v.effective_from <= ?::date) DESC,
 	CASE WHEN v.status IN ` + effectiveStatusSQL + `
-		AND v.effective_from <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin')::date THEN v.effective_from END DESC NULLS LAST,
+		AND v.effective_from <= ?::date THEN v.effective_from END DESC NULLS LAST,
 	CASE WHEN v.status IN ` + effectiveStatusSQL + ` THEN v.effective_from END ASC NULLS LAST,
 	v.version_number DESC`
 
+// currentVersionSQL binds organization_id, contract_id, then today twice.
 const currentVersionSQL = `SELECT ` + versionColumns + `, v.source, ` + servicesSQL + ` AS services, ` + validUntilSQL + ` AS valid_until
 	FROM care_contract.contract_versions AS v
 	WHERE v.organization_id = ? AND v.contract_id = ? ORDER BY ` + currentVersionOrderSQL + ` LIMIT 1`
@@ -98,8 +100,12 @@ func (r versionRow) version() (carecontract.Version, error) {
 
 // Contract reads one contract of the Träger with its current version, its
 // parties and its stored document. forUpdate locks the contract row first.
-func (Store) Contract(ctx context.Context, organizationID, contractID int64, forUpdate bool) (ports.ContractRecord, error) {
+func (s Store) Contract(ctx context.Context, organizationID, contractID int64, forUpdate bool) (ports.ContractRecord, error) {
 	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return ports.ContractRecord{}, err
+	}
+	today, err := s.day()
 	if err != nil {
 		return ports.ContractRecord{}, err
 	}
@@ -115,7 +121,7 @@ func (Store) Contract(ctx context.Context, organizationID, contractID int64, for
 		}
 	}
 	var summary summaryRow
-	err = db.NewRaw(contractSQL, organizationID, contractID).Scan(ctx, &summary)
+	err = db.NewRaw(contractSQL, today, today, organizationID, contractID).Scan(ctx, &summary)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ports.ContractRecord{}, carecontract.ErrContractNotFound
 	}
@@ -123,7 +129,7 @@ func (Store) Contract(ctx context.Context, organizationID, contractID int64, for
 		return ports.ContractRecord{}, fmt.Errorf("care contract postgres: read contract: %w", err)
 	}
 	var version versionRow
-	if err := db.NewRaw(currentVersionSQL, organizationID, contractID).Scan(ctx, &version); err != nil {
+	if err := db.NewRaw(currentVersionSQL, organizationID, contractID, today, today).Scan(ctx, &version); err != nil {
 		return ports.ContractRecord{}, fmt.Errorf("care contract postgres: read version: %w", err)
 	}
 	var parties []struct {
@@ -244,14 +250,16 @@ func (r documentRow) file(err error, notFound error) (carecontract.File, error) 
 	return carecontract.File{Filename: r.Filename, ContentType: "application/pdf", Data: r.PDF, WithdrawalNotice: r.WithdrawalNotice}, nil
 }
 
-func (Store) InsertMailing(ctx context.Context, organizationID, accountID, contractID, documentID, outboxID int64, recipient string) error {
+// InsertMailing stamps sent_at with the owner clock's instant at, not the
+// column default: the reminders compare it with that clock (ADR 0281).
+func (Store) InsertMailing(ctx context.Context, organizationID, accountID, contractID, documentID, outboxID int64, recipient string, at time.Time) error {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return err
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO care_contract.contract_mailings (organization_id, contract_id,
-			contract_document_id, outbox_id, recipient_email, sent_by_account_id) VALUES (?, ?, ?, ?, ?, ?)`,
-		organizationID, contractID, documentID, outboxID, recipient, accountRef(accountID)); err != nil {
+			contract_document_id, outbox_id, recipient_email, sent_by_account_id, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		organizationID, contractID, documentID, outboxID, recipient, accountRef(accountID), at); err != nil {
 		return fmt.Errorf("care contract postgres: insert mailing: %w", err)
 	}
 	return nil

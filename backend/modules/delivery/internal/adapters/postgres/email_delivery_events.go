@@ -44,11 +44,11 @@ const emailEventRerouteSQL = `UPDATE platform.email_outbox
 	WHERE id = ?1`
 
 // A complaint is the stronger reason and stays once it is recorded.
-const emailSuppressionUpsertSQL = `INSERT INTO platform.email_suppressions (tenant_id, address, reason)
-	VALUES (?, ?, ?)
+const emailSuppressionUpsertSQL = `INSERT INTO platform.email_suppressions (tenant_id, address, reason, created_at, updated_at)
+	VALUES (?0, ?1, ?2, ?3, ?3)
 	ON CONFLICT (tenant_id, address) DO UPDATE SET
 		reason = CASE WHEN platform.email_suppressions.reason = 'complained' THEN 'complained' ELSE EXCLUDED.reason END,
-		updated_at = NOW()`
+		updated_at = EXCLUDED.updated_at`
 
 type emailEventMailRow struct {
 	ID            int64      `bun:"id"`
@@ -109,7 +109,7 @@ func applyEmailEvent(ctx context.Context, db bun.IDB, mail emailEventMailRow, ev
 		// the original provider no longer speaks for it. Local SMTP rejections
 		// still describe the fallback's outcome.
 		if event.State == domain.EmailDeliveryComplained {
-			return suppressEmailEventAddress(ctx, db, mail, event)
+			return suppressEmailEventAddress(ctx, db, mail, event, now)
 		}
 		return nil
 	}
@@ -131,14 +131,14 @@ func applyEmailEvent(ctx context.Context, db bun.IDB, mail emailEventMailRow, ev
 		}
 		result.State = next
 	}
-	return suppressEmailEventAddress(ctx, db, mail, event)
+	return suppressEmailEventAddress(ctx, db, mail, event, now)
 }
 
-func suppressEmailEventAddress(ctx context.Context, db bun.IDB, mail emailEventMailRow, event domain.EmailDeliveryEvent) error {
+func suppressEmailEventAddress(ctx context.Context, db bun.IDB, mail emailEventMailRow, event domain.EmailDeliveryEvent, now time.Time) error {
 	if !event.State.BlocksAddress() || event.KeepsAddress || mail.TenantID == nil || mail.Address == nil || *mail.Address == "" {
 		return nil
 	}
-	_, err := db.ExecContext(ctx, emailSuppressionUpsertSQL, *mail.TenantID, normalizedAddress(*mail.Address), string(event.State.SuppressionReason()))
+	_, err := db.ExecContext(ctx, emailSuppressionUpsertSQL, *mail.TenantID, normalizedAddress(*mail.Address), string(event.State.SuppressionReason()), now)
 	return err
 }
 

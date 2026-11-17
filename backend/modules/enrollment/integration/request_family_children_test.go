@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,7 +44,7 @@ func TestSetRequestFamilyChildrenKeepsTheSchoolBelowRLS(t *testing.T) {
 	testpkg.EnsureTestTenant(t, db, other)
 	ownRequest := familyChildrenRequest(t, db, own, "eva@example.org")
 	otherRequest := familyChildrenRequest(t, db, other, "olga@example.org")
-	store := postgres.NewStore(postgres.NewDatabase(), func(ctx context.Context) (int64, error) { return tenant.FromContext(ctx), nil })
+	store := postgres.NewStore(postgres.NewDatabase(), func(ctx context.Context) (int64, error) { return tenant.FromContext(ctx), nil }).WithClock(time.Now)
 
 	stored := func(id int64) *int {
 		var children *int

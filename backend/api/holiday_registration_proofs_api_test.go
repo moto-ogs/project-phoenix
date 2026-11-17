@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,7 +20,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -269,8 +267,8 @@ func TestUnclaimedHolidayProofsGoAfterADay(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	fresh := uploadedProof(t, public, f.period.PublicToken, "neu.pdf", proofPDF)
 	stale := uploadedProof(t, public, f.period.PublicToken, "alt.pdf", proofPDF)
-	_, err := f.db.ExecContext(ctx, `UPDATE enrollment.holiday_registration_proofs SET created_at = NOW() - INTERVAL '25 hours'
-		WHERE organization_id = ? AND filename IN ('alt.pdf', 'bescheid.pdf')`, f.office.organization)
+	_, err := f.db.ExecContext(ctx, `UPDATE enrollment.holiday_registration_proofs SET created_at = ?::timestamptz - INTERVAL '25 hours'
+		WHERE organization_id = ? AND filename IN ('alt.pdf', 'bescheid.pdf')`, holidayFixtureNow(), f.office.organization)
 	require.NoError(t, err)
 
 	// A day-old token claims nothing any more.
@@ -282,9 +280,7 @@ func TestUnclaimedHolidayProofsGoAfterADay(t *testing.T) {
 
 	unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, tenant.WithinAdmin(unit, func(adminCtx context.Context) error {
-		_, retainErr := owners.NewHolidayRegistrationRetention(func() calendar.Date {
-			return calendar.NewDate(2027, time.January, 1)
-		}).DeleteExpiredHolidayRegistrations(adminCtx)
+		_, retainErr := owners.NewHolidayRegistrationRetention(holidayFixtureNow).DeleteExpiredHolidayRegistrations(adminCtx)
 		return retainErr
 	}))
 	var kept []string

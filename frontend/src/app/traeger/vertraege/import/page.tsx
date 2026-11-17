@@ -8,7 +8,7 @@
 
 import { CheckCircle, Download } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   CONTRACT_IMPORT_SAMPLE,
   contractCountLabel,
@@ -18,6 +18,7 @@ import { CareContractImportLogCard } from "~/components/traeger/care-contract-im
 import { CareContractImportMappingCard } from "~/components/traeger/care-contract-import-mapping-card";
 import { CareContractImportPreviewCard } from "~/components/traeger/care-contract-import-preview-card";
 import { importFormatLabel } from "~/components/traeger/sepa-import-format";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { Dropzone } from "~/components/ui/dropzone";
@@ -26,21 +27,18 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { hasPermission } from "~/lib/auth-utils";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import {
   MAX_CONTRACT_IMPORT_FILE_BYTES,
   applyContractImport,
   fetchContractImportLog,
   previewContractImport,
-  type ContractImportLogEntry,
   type ContractImportMapping,
   type ContractImportResult,
 } from "~/lib/traeger-care-contract-import-api";
@@ -79,40 +77,26 @@ function doneDescription(done: ContractImportResult): string {
 export default function TraegerContractImportPage() {
   const { data: session } = useSession();
   const canManage = hasPermission(session ?? null, "traeger_contracts:manage");
-  const [log, setLog] = useState<ContractImportLogEntry[] | null>(null);
+  const {
+    data: log,
+    error: logError,
+    mutate: mutateLog,
+  } = useTraegerResource(
+    canManage ? traegerContractKeys.importLog() : null,
+    fetchContractImportLog,
+    "die Liste der Importe",
+  );
+  const invalidateFamily = useInvalidateFamily();
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ContractImportResult | null>(null);
   const [verified, setVerified] = useState(false);
   const [reading, setReading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [done, setDone] = useState<ContractImportResult | null>(null);
-  const logLoad = useApiLoadError();
-  const { show: showLogError, clear: clearLogError } = logLoad;
   const { show, showMessage } = useApiErrorDisplay();
   const { success } = useToast();
   // Only the answer to the newest look at the file counts.
   const request = useRef(0);
-
-  const loadLog = useCallback(async () => {
-    if (!canManage) return;
-    try {
-      setLog(await fetchContractImportLog());
-      clearLogError();
-    } catch (err) {
-      logger.error("contract_import_log_load_failed", {
-        error: errorText(err),
-      });
-      await showLogError(err, {
-        object: "die Liste der Importe",
-        // oxlint-disable-next-line ui-kit/menu-item-needs-description -- Aktion der Fehlermeldung, kein Menüeintrag.
-        action: { label: "Erneut laden", onClick: () => void loadLog() },
-      });
-    }
-  }, [canManage, clearLogError, showLogError]);
-
-  useEffect(() => {
-    void loadLog();
-  }, [loadLog]);
 
   const read = useCallback(
     async (chosen: File, mapping: ContractImportMapping | null) => {
@@ -186,7 +170,11 @@ export default function TraegerContractImportPage() {
     } finally {
       setApplying(false);
     }
-    await loadLog();
+    // The imported contracts are active at once, and their children no
+    // longer wait for a contract.
+    void invalidateFamily(traegerContractKeys.listFamily);
+    void invalidateFamily(traegerContractKeys.candidates());
+    await mutateLog();
   };
 
   const restart = () => {
@@ -375,8 +363,8 @@ export default function TraegerContractImportPage() {
             ) : null}
           </>
         )}
-        {logLoad.error ? (
-          <LoadErrorAlert error={logLoad.error} />
+        {logError ? (
+          <LoadErrorAlert error={logError} />
         ) : log ? (
           <CareContractImportLogCard entries={log} />
         ) : null}

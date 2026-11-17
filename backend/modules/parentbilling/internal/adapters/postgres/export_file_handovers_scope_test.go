@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,7 +32,7 @@ func TestExportHandoversKeepTheTraegerBelowRLS(t *testing.T) {
 	unique := testpkg.UniqueTestTenantID(t)
 	own := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{Name: "Träger Übergabe A", Slug: fmt.Sprintf("handover-a-%d", unique)}).ID
 	other := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{Name: "Träger Übergabe B", Slug: fmt.Sprintf("handover-b-%d", unique)}).ID
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the handovers back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, own, func(ctx context.Context) error {
@@ -133,7 +134,7 @@ func TestFailedHandoverReleasesItsDatevBookings(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	unique := testpkg.UniqueTestTenantID(t)
 	own := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{Name: "Träger DATEV A", Slug: fmt.Sprintf("handover-datev-a-%d", unique)}).ID
-	store := NewStore()
+	store := NewStore(time.Now)
 	rollback := errors.New("roll the bookings back")
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	err := testpkg.WithinTraeger(ctx, own, func(ctx context.Context) error {

@@ -4,14 +4,7 @@ import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
-import React, {
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -31,16 +24,16 @@ import {
   resolveStudentReferrer,
   studentHistoryBack,
 } from "../student-referrer";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
-import { fetchStudent, fetchStudentAttendanceHistory } from "~/lib/student-api";
-import type { Student } from "~/lib/student-helpers";
+import { fetchStudentAttendanceHistory } from "~/lib/student-api";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { useStudentData } from "~/lib/hooks/use-student-data";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useStudentHistoryBreadcrumb } from "~/lib/breadcrumb-context";
 import { useScrollToTop } from "~/lib/hooks/use-scroll-to-top";
-import { createLogger } from "~/lib/logger";
 
 import {
-  type AttendanceHistory,
   type AttendanceHistoryDay,
   formatDate,
   formatAttendanceSlotStatus,
@@ -61,8 +54,6 @@ import type { HistoryChartPoint } from "./history-charts";
 import { Button } from "~/components/ui/button";
 import { AttendanceExportDialog } from "~/components/students/attendance-export-dialog";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
-
-const logger = createLogger({ component: "StudentRoomHistoryPage" });
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -739,96 +730,39 @@ function StudentRoomHistoryPageContent() {
   const referrer = resolveStudentReferrer(searchParams.get("from"));
   useSession();
 
-  const [student, setStudent] = useState<Student | null>(null);
-  // Das Protokoll trägt das Kind, für das es geladen wurde; angezeigt wird
-  // es nur unter genau diesem Kind (#6503).
-  const [loadedHistory, setLoadedHistory] = useState<{
-    studentId: string;
-    history: AttendanceHistory;
-  } | null>(null);
-  const history =
-    loadedHistory?.studentId === studentId ? loadedHistory.history : null;
-  // Nur der jüngste Abruf darf das Protokoll oder einen Fehler setzen: Nach
-  // zwei Korrekturen überschreibt die ältere Antwort sonst die neuere.
-  const latestHistoryLoad = useRef(0);
-  const [loading, setLoading] = useState(true);
+  // Dieselbe Kindakte wie die Akte selbst (studentKeys.detail). Der Name
+  // schmückt nur den Kopf; ohne ihn zeigt die Seite das Protokoll unter dem
+  // allgemeinen Titel.
+  const { student, loading: studentLoading } = useStudentData(studentId);
+  // Der Schlüssel trägt das Kind: ein Protokoll steht nur unter genau diesem
+  // Kind, und nach zwei Korrekturen zählt nur der jüngste Abruf (#6503).
+  const {
+    data: loadedHistory,
+    error: historyError,
+    mutate: mutateHistory,
+  } = useSWRAuth(
+    tenantStudentKeys.attendanceHistory(studentId),
+    () => fetchStudentAttendanceHistory(studentId),
+    { keepPreviousData: false },
+  );
+  const history = loadedHistory ?? null;
   // A 404 is its own state, not an error to retry.
-  const [notFound, setNotFound] = useState(false);
-  const historyLoad = useApiLoadError();
-  const showHistoryError = historyLoad.show;
-  const clearHistoryError = historyLoad.clear;
-  // Bumped by „Wiederholen“ to load the page again.
-  const [attempt, setAttempt] = useState(0);
+  const notFound =
+    historyError instanceof ApiError && historyError.status === 404;
+  // Ein bereits geladenes Protokoll dieses Kindes bleibt stehen; der Fehler
+  // einer Aktualisierung steht dann darüber.
+  const historyLoadError = useSwrLoadError(
+    notFound ? undefined : historyError,
+    "das Anwesenheitsprotokoll",
+    () => mutateHistory(),
+  );
+  const loading = (!loadedHistory && !historyError) || studentLoading;
   const [exportOpen, setExportOpen] = useState(false);
 
   useStudentHistoryBreadcrumb({ studentName: student?.name, referrer });
 
   // Start at the top instead of inheriting the previous page's scroll position
   useScrollToTop(studentId);
-
-  const loadStudent = useCallback(async (): Promise<Student | null> => {
-    try {
-      return await fetchStudent(studentId);
-    } catch (err) {
-      // The name only decorates the header; without it the page still shows
-      // the protocol under its generic title.
-      logger.error("student_fetch_failed", {
-        student_id: studentId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return null;
-    }
-  }, [studentId]);
-
-  const fetchHistory = useCallback(async (): Promise<void> => {
-    const request = ++latestHistoryLoad.current;
-    const isLatest = () => request === latestHistoryLoad.current;
-    try {
-      const loaded = await fetchStudentAttendanceHistory(studentId);
-      if (!isLatest()) return;
-      setLoadedHistory({ studentId, history: loaded });
-      setNotFound(false);
-      clearHistoryError();
-    } catch (err) {
-      if (!isLatest()) return;
-      if (err instanceof ApiError && err.status === 404) {
-        setNotFound(true);
-        setLoadedHistory(null);
-        clearHistoryError();
-        return;
-      }
-      logger.error("attendance_history_fetch_failed", {
-        student_id: studentId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      // Ein bereits geladenes Protokoll dieses Kindes bleibt stehen; der
-      // Fehler steht dann darüber.
-      await showHistoryError(err, {
-        object: "das Anwesenheitsprotokoll",
-        retry: () => setAttempt((current) => current + 1),
-      });
-    }
-  }, [clearHistoryError, showHistoryError, studentId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    // Fehler und „nicht gefunden“ gehören zum vorigen Abruf, etwa des zuvor
-    // gezeigten Kindes; sie stehen nicht über dem nächsten (#6503).
-    setNotFound(false);
-    clearHistoryError();
-
-    void (async () => {
-      const [s] = await Promise.all([loadStudent(), fetchHistory()]);
-      if (cancelled) return;
-      setStudent(s);
-      setLoading(false);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [loadStudent, fetchHistory, clearHistoryError, attempt]);
 
   const displayName = student
     ? (student.name ?? `${student.first_name} ${student.second_name}`)
@@ -855,7 +789,7 @@ function StudentRoomHistoryPageContent() {
     ? "Kind nicht gefunden."
     : featureDisabled || hasDays
       ? null
-      : historyLoad.error;
+      : historyLoadError;
   const back = studentHistoryBack(studentId, referrer, pageError !== null);
 
   return (
@@ -907,8 +841,8 @@ function StudentRoomHistoryPageContent() {
       >
         {history && hasDays && (
           <>
-            {historyLoad.error ? (
-              <LoadErrorAlert error={historyLoad.error} />
+            {historyLoadError ? (
+              <LoadErrorAlert error={historyLoadError} />
             ) : null}
             <HistoryCharts days={history.days} />
 
@@ -916,7 +850,7 @@ function StudentRoomHistoryPageContent() {
               days={history.days}
               caps={history.caps}
               studentId={studentId}
-              onCorrected={() => void fetchHistory()}
+              onCorrected={() => void mutateHistory()}
             />
           </>
         )}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -207,4 +208,93 @@ func TestParentEnrollmentRequiresTargetAndMembershipSchools(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A caterer session names no school (#4496): its writes count for the school
+// in the route, and that school's switch decides. Without a session the
+// invitation still counts on the caterer surface.
+func TestCatererWritesCountForTheirRouteSchool(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name    string
+		actor   bool
+		path    string
+		pattern string
+		event   string
+		enabled bool
+		want    int
+	}{
+		{name: "confirmed order, school on", actor: true, path: "/caterer/schools/44/orders/7/confirm", pattern: "/caterer/schools/{schoolId}/orders/{orderId}/confirm", event: "meal_order_confirmed", enabled: true, want: 1},
+		{name: "confirmed order, school off", actor: true, path: "/caterer/schools/44/orders/7/confirm", pattern: "/caterer/schools/{schoolId}/orders/{orderId}/confirm", event: "meal_order_confirmed"},
+		{name: "accepted invitation, school on", path: "/caterer/invitations/44/token-1/accept", pattern: "/caterer/invitations/{schoolId}/{token}/accept", event: "caterer_invite_accepted", enabled: true, want: 1},
+		{name: "accepted invitation, school off", path: "/caterer/invitations/44/token-1/accept", pattern: "/caterer/invitations/{schoolId}/{token}/accept", event: "caterer_invite_accepted"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			target := &recordingTracker{}
+			var asked []int64
+			policy := CollectionPolicy{SchoolEnabled: func(_ context.Context, school int64) (bool, error) {
+				asked = append(asked, school)
+				return tc.enabled, nil
+			}}
+			router := chi.NewRouter()
+			router.Use(CoreActionMiddleware(CoreActionConfig{Tracker: target, Policy: policy,
+				RequestActor: func(*http.Request) (Actor, bool) {
+					return Actor{Surface: SurfaceCaterer, Role: RoleCaterer}, tc.actor
+				},
+				Consent: func(context.Context, int64) bool { return true }}))
+			router.Post(tc.pattern, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
+			request := httptest.NewRequest(http.MethodPost, tc.path, nil)
+			request.Header.Set(SessionIDHeader, "browser-session")
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, request)
+			require.Equal(t, http.StatusNoContent, response.Code)
+			assert.Equal(t, []int64{44}, asked, "the route school's switch decides, also when it is off")
+			events := target.captured()
+			require.Len(t, events, tc.want)
+			if tc.want == 0 {
+				return
+			}
+			assert.Equal(t, tc.event, events[0].event)
+			assert.Equal(t, "school:44", events[0].distinctID)
+			assert.Empty(t, events[0].sessionID, "a caterer account has no consent and names no browser session")
+			assert.Equal(t, map[string]any{"surface": SurfaceCaterer, "role": RoleCaterer, "school_id": "44"}, events[0].props)
+		})
+	}
+}
+
+func TestRouteSchoolNeverReplacesASessionSchool(t *testing.T) {
+	t.Parallel()
+	request := httptest.NewRequest(http.MethodPost, "/caterer/schools/44/orders/7/confirm", nil)
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("schoolId", "44")
+	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, routeCtx))
+	action := catererEvent("meal_order_confirmed")
+	assert.Equal(t, staffActor, routeSchoolActor(request, action, staffActor), "a session school stays")
+	parent := Actor{Surface: SurfaceParents, Role: RoleGuardian, AccountID: 91}
+	assert.Equal(t, parent, routeSchoolActor(request, action, parent), "only a caterer takes the route school")
+	own := Actor{Surface: SurfaceCaterer, SchoolID: 43}
+	assert.Equal(t, own, routeSchoolActor(request, action, own))
+	assert.Equal(t, Actor{Surface: SurfaceCaterer, SchoolID: 44, Role: RoleCaterer}, routeSchoolActor(request, action, Actor{Surface: SurfaceCaterer}))
+	assert.Equal(t, Actor{Surface: SurfaceCaterer}, routeSchoolActor(request, event("meal_order_confirmed"), Actor{Surface: SurfaceCaterer}), "only a SchoolFromRoute route")
+}
+
+func TestRouteSchoolRoutesNameTheirSchool(t *testing.T) {
+	t.Parallel()
+	count := 0
+	for key, action := range CoreActions() {
+		if strings.HasPrefix(key.Pattern, "/caterer/") && action.Event != "" && !action.Session {
+			// A caterer session names no school; any other caterer write would never count.
+			assert.True(t, action.SchoolFromRoute, "%v counts through catererEvent", key)
+		}
+		if !action.SchoolFromRoute {
+			continue
+		}
+		count++
+		assert.Contains(t, key.Pattern, "{schoolId}", "%v takes its school from the route", key)
+		assert.True(t, strings.HasPrefix(key.Pattern, "/caterer/"), "%v: only the caterer portal names no school", key)
+	}
+	assert.Equal(t, 2, count)
+	// Ending a supply is idempotent; only a request that ended one counts.
+	assert.True(t, CoreActions()[RouteKey{Method: http.MethodDelete, Pattern: "/api/meal-caterer/supply"}].EndedOnly)
 }

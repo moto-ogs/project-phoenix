@@ -558,3 +558,42 @@ func TestSurveyListsQueryBudgetStaysFlat(t *testing.T) {
 	require.Len(t, results.Questions, 0, "three answers stay below the minimum")
 	querybudgets.AssertQueryBudget(t, "modules.communication.surveys.results", evaluation.Measurement(evaluation.Queries()))
 }
+
+// The database stamps the last change of a draft (its update trigger), so
+// the retention dates a draft on the database clock (#7295, ADR 0281): one
+// last changed before the window goes, a fresh one stays, whatever day the
+// owner's clock shows.
+func TestSurveyRetention_DatesDraftsOnTheDatabaseClock(t *testing.T) {
+	t.Parallel()
+	f := newSurveyFixture(t, 1)
+	draft := func() *communication.Survey {
+		var survey *communication.Survey
+		require.NoError(t, f.inSchool(t, func(ctx context.Context) error {
+			var err error
+			survey, err = f.surveys.CreateSurvey(ctx, f.staff[0].AccountID, staffSurveyInput(true))
+			return err
+		}))
+		return survey
+	}
+	old, fresh := draft(), draft()
+	ctx := testpkg.Ctx(t)
+	require.NoError(t, f.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		// Without its triggers the row takes the backdated stamp.
+		if _, err := tx.ExecContext(ctx, "SET LOCAL session_replication_role = replica"); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, `UPDATE users.surveys SET updated_at = now() - INTERVAL '31 days' WHERE id = ?`, old.ID)
+		return err
+	}))
+
+	var deleted int
+	require.NoError(t, f.inSchool(t, func(ctx context.Context) error {
+		var err error
+		deleted, err = f.surveys.DeleteExpiredSurveys(ctx, communication.SurveyAudienceStaff, 30)
+		return err
+	}))
+	assert.Equal(t, 1, deleted)
+	var left []int64
+	require.NoError(t, f.db.NewRaw(`SELECT id FROM users.surveys WHERE id IN (?, ?)`, old.ID, fresh.ID).Scan(ctx, &left))
+	assert.Equal(t, []int64{fresh.ID}, left)
+}

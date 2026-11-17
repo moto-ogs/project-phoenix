@@ -20,8 +20,8 @@ type instanceStudentRow struct {
 	bun.BaseModel `bun:"table:instance_students,alias:instance_student"`
 	ID            int64     `bun:"id,pk,autoincrement"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	InstanceID    int64     `bun:"instance_id,notnull"`
 	StudentID     int64     `bun:"student_id,notnull"`
 	RoomID        *int64    `bun:"room_id"`
@@ -226,7 +226,7 @@ func (s *Store) UpdateInstanceStudent(ctx context.Context, id int64, fields time
 	started := time.Now()
 	err = db.NewUpdate().Model(&row).ModelTableExpr(`schedule.instance_students`).
 		Set("instance_id = ?", fields.InstanceID).Set("student_id = ?", fields.StudentID).Set("room_id = ?", fields.RoomID).
-		Set("updated_at = NOW()").Where("id = ?", id).Where("tenant_id = ?", tenantID).
+		Set("updated_at = "+statementClock).Where("id = ?", id).Where("tenant_id = ?", tenantID).
 		Returning(instanceStudentColumns).Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if errors.Is(err, sql.ErrNoRows) {

@@ -64,6 +64,18 @@ type stubActivationSettings struct {
 
 const decisionTestToday calendar.Date = "2026-08-24"
 
+// decisionTestStarted anchors decisionTestClock.
+var decisionTestStarted = time.Now()
+
+// decisionTestClock is the one clock of the decision harness: it starts at
+// the beginning of decisionTestToday and runs. Enrollment stamps reviewed_at
+// on it; Timetable stamps the roster rows' created_at at the start of that
+// day (WithBookingToday), which enrollment provenance orders against
+// reviewed_at; two decisions still get two instants.
+func decisionTestClock() time.Time {
+	return decisionTestToday.BerlinMidnight().Add(time.Since(decisionTestStarted))
+}
+
 func (s stubActivationSettings) ResolveString(_ context.Context, key string) (string, error) {
 	if key == settingKeyDefaultActivationMode {
 		return s.mode, nil
@@ -247,14 +259,15 @@ func newDecisionsForTestWithBookings(
 		pickupAutoExcusal = newPickupExcusal(t, env.db, repoFactoryCare.CarePlan, pickupBaselines, env.timetable, true)
 	}
 	studentEnrollment := testStudentEnrollment(env.db)
+	decisionRows := repoFactory.EnrollmentOn(decisionTestClock)
 	return newTestDecisions(enrollmentCompose.DecisionDependencies{
-		Now:            time.Now,
-		Requests:       repoFactory.Enrollment(),
-		Children:       repoFactory.Enrollment(),
-		Guardians:      repoFactory.Enrollment(),
-		LateInvites:    repoFactory.Enrollment(),
-		Phases:         repoFactory.Enrollment(),
-		Schemas:        repoFactory.Enrollment(),
+		Now:            decisionTestClock,
+		Requests:       decisionRows,
+		Children:       decisionRows,
+		Guardians:      decisionRows,
+		LateInvites:    decisionRows,
+		Phases:         decisionRows,
+		Schemas:        decisionRows,
 		Offerings:      enrollmentCompose.NewCareOfferingRecords(repoFactoryCare.CarePlan),
 		Bookings:       bookings,
 		GuardianAccess: testGuardianAccess(env.db), GuardianAuthorizer: repoFactory.StudentGuardian, GuardianHold: testGuardianHold(env.db, repoFactory),
@@ -4368,12 +4381,13 @@ func TestDecisionService_UpdateChildOfferings_RemovesSourcedEnrollmentAfterOffer
 		ValidUntil:      &manualValidUntil,
 	})
 	require.NoError(t, err)
+	// The manual row is created ten minutes after the decision, on the clock
+	// Timetable stamps created_at with.
 	_, err = env.db.NewRaw(`
 		UPDATE activities.student_enrollments
-		SET created_at = NOW() + INTERVAL '10 minutes',
-			updated_at = NOW() + INTERVAL '10 minutes'
+		SET created_at = ?
 		WHERE id = ?
-	`, manualEnrollment.ID).Exec(ctx)
+	`, decisionTestClock().Add(10*time.Minute), manualEnrollment.ID).Exec(ctx)
 	require.NoError(t, err)
 	offering.ActivityGroupID = &newGroup.ID
 	require.NoError(t, newCareOfferingFixtures(env.reposCare.CarePlan).Update(ctx, offering))
@@ -4470,12 +4484,13 @@ func TestDecisionService_UpdateChildOfferings_RemovesLegacyUnsourcedEnrollmentAf
 		ValidUntil:      &manualValidUntil,
 	})
 	require.NoError(t, err)
+	// The manual row is created ten minutes after the decision, on the clock
+	// Timetable stamps created_at with.
 	_, err = env.db.NewRaw(`
 		UPDATE activities.student_enrollments
-		SET created_at = NOW() + INTERVAL '10 minutes',
-			updated_at = NOW() + INTERVAL '10 minutes'
+		SET created_at = ?
 		WHERE id = ?
-	`, manualEnrollment.ID).Exec(ctx)
+	`, decisionTestClock().Add(10*time.Minute), manualEnrollment.ID).Exec(ctx)
 	require.NoError(t, err)
 
 	offering.ActivityGroupID = &newGroup.ID

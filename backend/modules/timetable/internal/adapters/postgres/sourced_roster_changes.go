@@ -31,8 +31,9 @@ func (s *Store) SaveSourcedRosterChanges(ctx context.Context, changes timetable.
 	}
 	if len(changes.Create) > 0 {
 		rows := make([]studentEnrollmentRow, 0, len(changes.Create))
+		createdAt := s.currentTime()
 		for _, input := range changes.Create {
-			row := studentEnrollmentRow{TenantID: tenantID}
+			row := studentEnrollmentRow{TenantID: tenantID, CreatedAt: createdAt}
 			applyStudentEnrollmentFields(&row, input)
 			rows = append(rows, row)
 		}
@@ -65,7 +66,7 @@ func (s *Store) UpdateGroupOfferingSources(ctx context.Context, changes map[int6
 		return domain.OperationStats{}, err
 	}
 	return execMeasuredWrite(ctx, db.NewRaw(`UPDATE activities.groups AS g SET source_care_offering_ids = NULLIF(x."Offerings", 'null'::jsonb),
-  source_grade_levels = NULLIF(x."Grades", 'null'::jsonb), source_school_classes = NULLIF(x."Classes", 'null'::jsonb), updated_at = NOW()
+  source_grade_levels = NULLIF(x."Grades", 'null'::jsonb), source_school_classes = NULLIF(x."Classes", 'null'::jsonb)
   FROM jsonb_to_recordset(?::jsonb) AS x("ID" bigint, "Offerings" jsonb, "Grades" jsonb, "Classes" jsonb)
   WHERE g.tenant_id = ? AND g.id = x."ID"`, string(payload), tenantID), "update group offering sources")
 }

@@ -37,9 +37,9 @@ func editHolidayTimesOn(t *testing.T, db *bun.DB, org, account int64, booking ow
 			TimeModels: []holidayTimeModelBody{{ID: model, Name: "Ganztag", StartsAt: start, EndsAt: end, PriceCents: 4500}}}}}
 	principal, err := permissions.NewPrincipal(permissions.PrincipalInput{AccountID: account, OrganizationID: org, Scope: tenant.ScopeOrg, Permissions: []string{identityaccess.TraegerRightEnrollmentManage}})
 	require.NoError(t, err)
-	review, places, allocation, records := enrollmentCompose.NewHolidayRegistrationReview(testHealthCipher(), nil, nil, owners.HolidayTestSchoolCalendar{}, nil, func() calendar.Date { return on })
+	review, places, allocation, records := enrollmentCompose.NewHolidayRegistrationReview(testHealthCipher(), nil, nil, owners.HolidayTestSchoolCalendar{}, nil, func() time.Time { return on.BerlinMidnight().Add(10 * time.Hour) })
 	_, wishes := enrollmentCompose.NewHolidayWishes(testHealthCipher(), func() time.Time { return on.BerlinMidnight().Add(10 * time.Hour) })
-	resource := enrollmentHTTP.NewHolidayPeriodResource(enrollmentCompose.NewHolidayPeriods(func() calendar.Date { return on }, owners.HolidayTestSchoolCalendar{}),
+	resource := enrollmentHTTP.NewHolidayPeriodResource(enrollmentCompose.NewHolidayPeriods(func() time.Time { return on.BerlinMidnight().Add(10 * time.Hour) }, owners.HolidayTestSchoolCalendar{}),
 		review, records, wishes, places, allocation, allocation, holidaySchoolNames{},
 		holidayKnownChildren{}, enrollmentCompose.NewHolidayKnownChildTrail(), traegerListRenderer(NewSimpleListRenderer()), common.RequiresPermission(identityaccess.TraegerRightEnrollmentManage), common.RequiresPermission(identityaccess.TraegerRightHealthRead),
 		func() time.Time { return on.BerlinMidnight().Add(10 * time.Hour) })

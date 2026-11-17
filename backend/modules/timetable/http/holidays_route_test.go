@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,6 +52,7 @@ func setupHolidayRoute(t *testing.T) holidayRouteSetup {
 	resource := timetableAPI.NewResource(timetableAPI.Dependencies{
 		Holidays:        holidays,
 		SettingsService: schoolSettings.Settings,
+		Now:             func() time.Time { return time.Date(2026, time.November, 16, 10, 0, 0, 0, calendar.Berlin) },
 	})
 	router := chi.NewRouter()
 	router.Mount("/timetable", resource.Router(rootAPI.ProtectedTenantRoutes))

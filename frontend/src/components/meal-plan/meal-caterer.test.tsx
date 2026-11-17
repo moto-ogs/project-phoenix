@@ -6,6 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 
@@ -18,8 +19,29 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("~/lib/meal-caterer-api", () => mocks);
 
-import { ToastProvider } from "~/contexts/ToastContext";
+// Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
+
+import { ToastProvider as Toasts } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
+
+function ToastProvider({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <Toasts>{children}</Toasts>
+    </SWRConfig>
+  );
+}
 import { ApiError } from "~/lib/api-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { MealCaterer } from "./meal-caterer";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { deferred } from "~/test/helpers/form-modal-pending";
@@ -46,6 +68,52 @@ describe("MealCaterer", () => {
     mocks.revokeMealCatererInvitation.mockResolvedValue(undefined);
     mocks.endMealCatererSupply.mockResolvedValue(undefined);
   });
+
+  it.each([401, 403])(
+    "withdraws cached invitations and dialogs after a background %s",
+    async (status) => {
+      mocks.getMealCaterer.mockResolvedValue({
+        supply: null,
+        invitations: [invitation],
+      });
+      let read!: ReturnType<typeof useSWRAuth>;
+      function Probe() {
+        read = useSWRAuth(
+          tenantContactKeys.mealCaterer(),
+          mocks.getMealCaterer,
+        );
+        return null;
+      }
+      function View({ open }: { open: boolean }) {
+        return (
+          <>
+            {open && <MealCaterer canManageSupply />}
+            <Probe />
+          </>
+        );
+      }
+      const view = render(<View open />, { wrapper: ToastProvider });
+      expect(await screen.findByText(invitation.email)).toBeVisible();
+      fireEvent.click(screen.getByRole("button", { name: "Caterer einladen" }));
+      expect(await screen.findByRole("dialog")).toBeVisible();
+      mocks.getMealCaterer.mockRejectedValue(new ApiError("refused", status));
+      await act(async () => {
+        await read.mutate();
+      });
+      // Anker: die Ablehnung ersetzt die geladenen Einladungen und das Formular.
+      if (status === 403)
+        expect(await screen.findByRole("alert")).toBeVisible();
+      expect(screen.queryByText(invitation.email)).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(read.readCurrent?.().data).toBeUndefined();
+      view.rerender(<View open={false} />);
+      mocks.getMealCaterer.mockRejectedValue(new ApiError("offline", 503));
+      view.rerender(<View open />);
+      if (status === 403)
+        expect(await screen.findByRole("alert")).toBeVisible();
+      expect(screen.queryByText(invitation.email)).not.toBeInTheDocument();
+    },
+  );
 
   // Bauart 2 Regel 4: Nachtragen ist eine Kopf-Aktion mit FormModal, kein
   // Formular im Kartenkörper.

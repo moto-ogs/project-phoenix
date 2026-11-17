@@ -29,8 +29,8 @@ type parentConferenceRow struct {
 	bun.BaseModel      `bun:"table:calendar.parent_conferences,alias:parent_conference"`
 	ID                 int64                                  `bun:"id,pk,autoincrement"`
 	TenantID           int64                                  `bun:"tenant_id,notnull"`
-	CreatedAt          time.Time                              `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt          time.Time                              `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt          time.Time                              `bun:"created_at,nullzero,notnull"`
+	UpdatedAt          time.Time                              `bun:"updated_at,nullzero,notnull"`
 	OrganizerStaffID   int64                                  `bun:"organizer_staff_id,notnull"`
 	OrganizerAccountID int64                                  `bun:"organizer_account_id,nullzero"`
 	SchoolClass        string                                 `bun:"school_class,notnull"`
@@ -46,8 +46,8 @@ type parentBookingRow struct {
 	bun.BaseModel     `bun:"table:calendar.parent_conference_bookings,alias:parent_booking"`
 	ID                int64     `bun:"id,pk,autoincrement"`
 	TenantID          int64     `bun:"tenant_id,notnull"`
-	CreatedAt         time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time `bun:"updated_at,nullzero,notnull"`
 	ConferenceID      int64     `bun:"conference_id,notnull"`
 	StudentID         int64     `bun:"student_id,notnull"`
 	GuardianProfileID *int64    `bun:"guardian_profile_id"`

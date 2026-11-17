@@ -42,6 +42,7 @@ type Registration struct {
 	Request          any
 	Response         any
 	Paginated        bool
+	NoData           bool
 	Variants         *VariantSpec
 	Enums            []EnumSpec
 	Deprecated       bool
@@ -71,6 +72,7 @@ func Legacy(identifiers map[reflect.Type]string) Options {
 		NumericIDs: []string{
 			"careplanhttp.StudentRequest.GroupID",
 			"careplanhttp.UpdateStudentRequest.GroupID",
+			"notifications.feedEntryResponse.ID",
 			"peopledirectory.NewStudentGuardian.GuardianProfileID",
 			"presenceprojectionhttp.NameStudentResponse.ID",
 			"presenceprojectionhttp.SlimStudentResponse.CompanionStudentIDs",

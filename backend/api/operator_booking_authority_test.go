@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,7 +45,7 @@ func newOperatorBookingAuthorityRoutes(t *testing.T) (*bun.DB, OperatorSettingsT
 		OperatorID: operatorIDFromSession,
 	})
 	router := chi.NewRouter()
-	router.Method(http.MethodGet, "/schools/{id}/settings/booking-authority-impact", newBookingAuthorityImpact(careLifecycle))
+	router.Method(http.MethodGet, "/schools/{id}/settings/booking-authority-impact", newBookingAuthorityImpact(careLifecycle, calendar.TodayDate))
 	router.Put("/schools/{id}/settings/values/{key}", settingsRoutes.SetSchoolSettingValue)
 	router.Delete("/schools/{id}/settings/values/{key}", settingsRoutes.ResetSchoolSettingValue)
 	account := testpkg.CreateTestAccount(t, db, "operator")

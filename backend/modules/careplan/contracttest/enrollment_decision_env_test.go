@@ -108,6 +108,9 @@ const decisionTestToday calendar.Date = "2026-08-24"
 // owners of the env that take one.
 func decisionTestClock() time.Time { return decisionTestToday.BerlinMidnight() }
 
+// decisionTestDay is the day clock of the fixed decision day.
+func decisionTestDay() calendar.Date { return decisionTestToday }
+
 func (s stubActivationSettings) ResolveString(_ context.Context, key string) (string, error) {
 	if key == enrollmentKeys.DefaultActivationMode {
 		return s.mode, nil
@@ -222,7 +225,7 @@ func setupEnrollmentTestEnv(t *testing.T, decisionSettings owners.EnrollmentDeci
 	offerings := enrollmentTest.NewCareOfferingRecords(repoFactory.CarePlan())
 	intake := owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
 		Now:              time.Now,
-		Bookings:         api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings()),
+		Bookings:         api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings(time.Now)),
 		Requests:         repoFactoryEnrollment.Enrollment(),
 		Children:         repoFactoryEnrollment.Enrollment(),
 		CareOfferingRepo: offerings,
@@ -444,7 +447,7 @@ func newChangeRequestServiceWithDecisionForTest(t *testing.T, env *decisionTestE
 	offerings := enrollmentTest.NewCareOfferingRecords(env.repos.CarePlan())
 	return owners.NewEnrollmentChangeRequests(owners.EnrollmentChangeRequestSources{
 		Now:                 time.Now,
-		Bookings:            api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings()),
+		Bookings:            api.NewEnrollmentCareBookingCommands(carePlanTest.NewOfferingBookings(time.Now)),
 		Requests:            env.reposEnrollment.Enrollment(),
 		Children:            env.reposEnrollment.Enrollment(),
 		Guardians:           env.reposEnrollment.Enrollment(),

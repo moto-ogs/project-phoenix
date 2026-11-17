@@ -129,8 +129,8 @@ type HomeLayout struct {
 	// order, and how wide each one sits (#2180). Empty means "never arranged
 	// anything", which yields the recommended start page of their role.
 	Blocks    []HomeBlockPlacement `bun:"blocks,type:jsonb,notnull" json:"blocks"`
-	CreatedAt time.Time            `bun:"created_at,notnull,default:now()" json:"created_at"`
-	UpdatedAt time.Time            `bun:"updated_at,notnull,default:now()" json:"updated_at"`
+	CreatedAt time.Time            `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt time.Time            `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 }
 
 func (l *HomeLayout) GetTenantID() int64   { return l.TenantID }
@@ -162,8 +162,8 @@ type HomeBlockPolicySet struct {
 	TenantID  int64                  `bun:"tenant_id,notnull" json:"tenant_id"`
 	Policies  map[string]BlockPolicy `bun:"policies,type:jsonb,notnull" json:"policies"`
 	UpdatedBy *int64                 `bun:"updated_by" json:"updated_by,omitempty"`
-	CreatedAt time.Time              `bun:"created_at,notnull,default:now()" json:"created_at"`
-	UpdatedAt time.Time              `bun:"updated_at,notnull,default:now()" json:"updated_at"`
+	CreatedAt time.Time              `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt time.Time              `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 }
 
 func (p *HomeBlockPolicySet) GetTenantID() int64   { return p.TenantID }

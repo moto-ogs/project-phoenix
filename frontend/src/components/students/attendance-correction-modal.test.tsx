@@ -1,9 +1,47 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode as TenantSWRNode } from "react";
+import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { duplicateIds } from "~/test/helpers/duplicate-ids";
 
 import { AttendanceCorrectionModal } from "./attendance-correction-modal";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in OGS session per render.
+function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <TenantSWRConfig
+        value={{ provider: () => new Map(), errorRetryCount: 0 }}
+      >
+        {children}
+      </TenantSWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  const Outer = options?.wrapper;
+  return rtlRender(ui, {
+    ...options,
+    wrapper: ({ children }: Readonly<{ children: TenantSWRNode }>) => (
+      <TenantSWRWrapper>
+        {Outer ? <Outer>{children}</Outer> : children}
+      </TenantSWRWrapper>
+    ),
+  });
+}
 
 // The session gate is passed; the request itself reaches the stubbed fetch.
 vi.mock("~/lib/session-cache", () => ({

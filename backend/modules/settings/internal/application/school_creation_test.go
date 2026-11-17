@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,8 +19,7 @@ func inTestAdminUnit(ctx context.Context) bool { return ctx.Value(adminUnitKey{}
 func TestSchoolCreationSettingsRecordTheFederalStateInTheAdminUnit(t *testing.T) {
 	t.Parallel()
 	values, audit := newMockValueRepo(), &mockAuditRepo{}
-	createdAt := time.Date(2031, time.June, 2, 12, 0, 0, 0, time.UTC)
-	settings, err := NewSchoolCreationSettings(config.DefaultRegistry(), values, audit, inTestAdminUnit, func() time.Time { return createdAt })
+	settings, err := NewSchoolCreationSettings(config.DefaultRegistry(), values, audit, inTestAdminUnit)
 	require.NoError(t, err)
 	admin := context.WithValue(t.Context(), adminUnitKey{}, true)
 
@@ -47,5 +45,5 @@ func TestSchoolCreationSettingsRecordTheFederalStateInTheAdminUnit(t *testing.T)
 	require.Len(t, audit.entries, 1)
 	assert.Equal(t, "set", audit.entries[0].Action)
 	assert.Nil(t, audit.entries[0].ChangedBy)
-	assert.Equal(t, createdAt, audit.entries[0].ChangedAt, "the audit entry carries the composition's clock")
+	assert.True(t, audit.entries[0].ChangedAt.IsZero(), "the column default stamps the entry on the database clock")
 }

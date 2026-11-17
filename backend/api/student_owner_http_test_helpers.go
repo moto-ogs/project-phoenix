@@ -174,7 +174,7 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			StudentHistoryService: presenceservice.NewStudentHistory(presence, studentHTTPTestRoomNames(repoFactoryRooms),
 				StudentTestDataAccessAudit(audit), svc.HistorySlots(repoFactoryTimetable.InstanceStudent.Reads),
 				owners.NewAttendanceStaffNames(owners.MustNewMembershipTestRepositories(store).Staff)),
-			StudentStatusDayService: presenceservice.NewStatusDays(repoFactoryCare.StudentStatusDay, svc.ManualPartialAbsences(students.CarePlan), store.Pool(), students.CarePlan.LockExceptionDay),
+			StudentStatusDayService: presenceservice.NewStatusDays(repoFactoryCare.StudentStatusDay, svc.ManualPartialAbsences(students.CarePlan), store.Pool(), students.CarePlan.LockExceptionDay, clock),
 			UserContextService:      caller,
 		},
 		presenceStudentsHTTP.ResourceConfig{
@@ -187,7 +187,7 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			Persons:                 peopleCompose.NewStudentRoutePersons(livePeople.Users),
 			PrivacyConsents:         presence,
 			SettingsService:         liveSettings.Settings,
-			StudentStatusDayService: presenceservice.NewStatusDays(repoFactoryCare.StudentStatusDay, svc.ManualPartialAbsences(students.CarePlan), store.Pool(), students.CarePlan.LockExceptionDay),
+			StudentStatusDayService: presenceservice.NewStatusDays(repoFactoryCare.StudentStatusDay, svc.ManualPartialAbsences(students.CarePlan), store.Pool(), students.CarePlan.LockExceptionDay, clock),
 			UserContextService:      caller,
 		},
 		deleteStudentsHTTP.ResourceConfig{

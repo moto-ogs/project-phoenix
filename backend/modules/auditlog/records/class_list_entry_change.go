@@ -30,7 +30,7 @@ type ClassListEntryChange struct {
 	NewValue         string    `bun:"new_value,notnull" json:"new_value"`
 	MatchedStudentID *int64    `bun:"matched_student_id" json:"matched_student_id,omitempty"`
 	ChangedBy        int64     `bun:"changed_by,notnull" json:"changed_by"`
-	OccurredAt       time.Time `bun:"occurred_at,nullzero,notnull,default:now()" json:"occurred_at"`
+	OccurredAt       time.Time `bun:"occurred_at,nullzero,notnull" json:"occurred_at"`
 }
 
 // Validate ensures the audit row is complete.

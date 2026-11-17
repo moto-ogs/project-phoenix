@@ -30,7 +30,7 @@ type schoolVacationRow struct {
 	Name          string        `bun:"name,notnull"`
 	StartDate     calendar.Date `bun:"start_date,notnull,type:date"`
 	EndDate       calendar.Date `bun:"end_date,notnull,type:date"`
-	SyncedAt      time.Time     `bun:"synced_at,nullzero,notnull,default:current_timestamp"`
+	SyncedAt      time.Time     `bun:"synced_at,nullzero,notnull"`
 }
 
 type schoolVacationAcknowledgementRow struct {
@@ -41,7 +41,7 @@ type schoolVacationAcknowledgementRow struct {
 	StartDate               calendar.Date `bun:"start_date,notnull,type:date"`
 	EndDate                 calendar.Date `bun:"end_date,notnull,type:date"`
 	AcknowledgedByAccountID *int64        `bun:"acknowledged_by_account_id"`
-	AcknowledgedAt          time.Time     `bun:"acknowledged_at,nullzero,notnull,default:current_timestamp"`
+	AcknowledgedAt          time.Time     `bun:"acknowledged_at,nullzero,notnull"`
 }
 
 type schoolVacationListRow struct {

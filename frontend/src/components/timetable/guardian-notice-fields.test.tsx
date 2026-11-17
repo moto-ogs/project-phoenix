@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -13,6 +21,28 @@ import { cancelledToast } from "./guardian-notice-toast";
 import { ApiError } from "~/lib/api-error";
 import type { GuardianNoticeReach } from "~/lib/timetable-types";
 import { catalogText } from "~/test/error-catalog-text";
+
+vi.unmock("swr");
+
+function SWRTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(
+  ui: Parameters<typeof rtlRender>[0],
+  options?: Parameters<typeof rtlRender>[1],
+) {
+  return rtlRender(ui, { wrapper: SWRTestWrapper, ...options });
+}
 
 const getGuardianNoticeReach = vi.fn();
 

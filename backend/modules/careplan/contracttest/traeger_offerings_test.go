@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,7 +54,7 @@ func TestTraegerOfferingStatementsKeepTheirTraegerBeneathRLS(t *testing.T) {
 	var foreignOffering int64
 	require.NoError(t, db.NewRaw(`INSERT INTO enrollment.traeger_care_offerings (organization_id, traeger_phase_id, draft)
 		VALUES (?, ?, '{"fields":{"name":"Fremd"}}') RETURNING id`, foreign, foreignPhase).Scan(bg, &foreignOffering))
-	store := careplanCompose.NewTraegerOfferings()
+	store := careplanCompose.NewTraegerOfferings(time.Now)
 
 	ctx := testpkg.ContextWithTenantRuntime(bg, testpkg.TenantRuntime(t, db))
 	require.NoError(t, testpkg.WithinTraeger(ctx, own, func(ctx context.Context) error {
@@ -105,7 +106,7 @@ func TestTraegerOfferingDraftFollowsTheCatalogRules(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	own, phase := newOfferingTraeger(t, "Trägerangebot Regeln")
-	offerings := careplanCompose.NewTraegerOfferings()
+	offerings := careplanCompose.NewTraegerOfferings(time.Now)
 	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	require.NoError(t, testpkg.WithinTraeger(ctx, own, func(ctx context.Context) error {
 		missingPickup := traegerOfferingDraft("Ohne Gehzeit", 10)
@@ -154,7 +155,7 @@ func TestTraegerOfferingCopyKeepsTheSchoolsChanges(t *testing.T) {
 	t.Parallel()
 	db, _, phase := setupCareTest(t)
 	catalog := testCareOfferingCatalog(t, db)
-	copies, err := careplanCompose.NewTraegerOfferingCopies(catalog, func(context.Context) error { return nil })
+	copies, err := careplanCompose.NewTraegerOfferingCopies(catalog, func(context.Context) error { return nil }, time.Now)
 	require.NoError(t, err)
 	ctx := testpkg.Ctx(t)
 	inTx := func(fn func(context.Context) error) {
@@ -275,7 +276,7 @@ func TestTraegerOfferingOutcomesAreBatchedAndKeepAppliedTerms(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	own, phase := newOfferingTraeger(t, "Trägerangebot Ergebnisse")
 	school := testpkg.CreateTestSchoolInOrganization(t, db, own, "Ergebnisse")
-	offerings := careplanCompose.NewTraegerOfferings()
+	offerings := careplanCompose.NewTraegerOfferings(time.Now)
 	ctx := testpkg.ContextWithTenantRuntime(t.Context(), testpkg.TenantRuntime(t, db))
 	counter := testpkg.CaptureQueriesForContext(t, db)
 	one := 1
@@ -447,7 +448,7 @@ func TestTraegerOfferingRefusesRemovalOfReleasedFinancialTerms(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	own, phase := newOfferingTraeger(t, "Veröffentlichte Konditionen")
-	offerings := careplanCompose.NewTraegerOfferings()
+	offerings := careplanCompose.NewTraegerOfferings(time.Now)
 	ctx := testpkg.ContextWithTenantRuntime(t.Context(), testpkg.TenantRuntime(t, db))
 	draft := traegerOfferingDraft("Mit Vertrag", 20)
 	draft.ContractTemplate = &careplan.TraegerContractTemplate{TermKind: "school_year", NoticeTo: "month_end"}

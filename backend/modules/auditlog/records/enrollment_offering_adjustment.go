@@ -36,7 +36,7 @@ type EnrollmentOfferingAdjustment struct {
 	Before                      json.RawMessage `bun:"before_json,type:jsonb,notnull" json:"before"`
 	After                       json.RawMessage `bun:"after_json,type:jsonb,notnull" json:"after"`
 	CompleteWithdrawalConfirmed bool            `bun:"complete_withdrawal_confirmed,notnull" json:"complete_withdrawal_confirmed"`
-	ChangedAt                   time.Time       `bun:"changed_at,notnull,default:now()" json:"changed_at"`
+	ChangedAt                   time.Time       `bun:"changed_at,nullzero,notnull" json:"changed_at"`
 }
 
 type EnrollmentOfferingAdjustmentRepository interface {

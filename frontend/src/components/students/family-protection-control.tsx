@@ -16,7 +16,10 @@ import {
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
 import { ConfirmationModal } from "~/components/ui/modal";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { LockIcon } from "@phosphor-icons/react/ssr";
 
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -38,37 +41,44 @@ interface FamilyProtectionControlProps {
 }
 
 function useProtectionValue(studentId: string, initialEnabled?: boolean) {
-  const [enabled, setEnabled] = useState<boolean | null>(
-    initialEnabled ?? null,
+  // A caller that already knows the state passes it; then nothing is read.
+  const read = useSWRAuth(
+    initialEnabled === undefined
+      ? tenantStudentKeys.familyProtection(studentId)
+      : null,
+    () => getFamilyProtection(studentId),
+    { keepPreviousData: false },
   );
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  // „Wiederholen“ zählt hoch und lädt damit neu.
-  const [loadAttempt, setLoadAttempt] = useState(0);
+  const { data, mutate } = read;
+  const invalidate = useInvalidateMatching();
+  const { error: loadError } = useSwrResourceLoadError(
+    [read],
+    PROTECTION_OBJECT,
+    () => mutate(),
+  );
+  const [given, setGiven] = useState<boolean | null>(initialEnabled ?? null);
   useEffect(() => {
-    if (initialEnabled !== undefined) {
-      setEnabled(initialEnabled);
-      return;
-    }
-    let active = true;
-    setEnabled(null);
-    clearLoadError();
-    void getFamilyProtection(studentId)
-      .then((state) => active && setEnabled(state.enabled))
-      .catch((err: unknown) => {
-        if (!active) return;
-        void showLoadError(err, {
-          object: PROTECTION_OBJECT,
-          retry: () => setLoadAttempt((attempt) => attempt + 1),
-        });
-      });
-    return () => {
-      active = false;
-    };
-  }, [clearLoadError, initialEnabled, loadAttempt, showLoadError, studentId]);
+    if (initialEnabled !== undefined) setGiven(initialEnabled);
+  }, [initialEnabled]);
+  const enabled =
+    initialEnabled === undefined ? (data?.enabled ?? null) : given;
+  const setEnabled = useCallback(
+    (next: boolean) => {
+      if (initialEnabled !== undefined) {
+        setGiven(next);
+        void invalidate(
+          (key) => key === tenantStudentKeys.familyProtection(studentId),
+          { clear: true },
+        );
+        return;
+      }
+      void mutate(
+        { student_id: data?.student_id ?? studentId, enabled: next },
+        { revalidate: false },
+      );
+    },
+    [initialEnabled, mutate, data?.student_id, studentId, invalidate],
+  );
   return { enabled, setEnabled, loadError };
 }
 

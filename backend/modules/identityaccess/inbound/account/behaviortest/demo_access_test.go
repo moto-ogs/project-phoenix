@@ -306,7 +306,7 @@ func TestDemoAccessRejectsUnknownAndExpiredTokens(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "identity.demo_access_unknown")
 
 	token := env.requestToken(t)
-	_, err := env.db.NewRaw(`UPDATE auth.demo_accesses SET expires_at = NOW() - INTERVAL '1 minute' WHERE token_hash = encode(sha256(?::bytea), 'hex')`, token).Exec(context.Background())
+	_, err := env.db.NewRaw(`UPDATE auth.demo_accesses SET expires_at = ? WHERE token_hash = encode(sha256(?::bytea), 'hex')`, time.Now().Add(-time.Minute), token).Exec(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusGone, env.status(token).Code)
 	rr = env.post(t, "/demo/access/sessions", map[string]string{"token": token})

@@ -45,7 +45,7 @@ type catererInvitationRow struct {
 	AcceptedAt        *time.Time `bun:"accepted_at"`
 	AcceptedAccountID *int64     `bun:"accepted_account_id"`
 	RevokedAt         *time.Time `bun:"revoked_at"`
-	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull"`
 }
 
 func (r catererInvitationRow) toDomain() domain.CatererInvitation {

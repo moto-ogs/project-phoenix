@@ -6,6 +6,10 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 import { ApiError } from "~/lib/api-error";
 import type { StaffVacationQuotaSummary } from "~/lib/staff-api";
@@ -27,7 +31,8 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 }));
 const actionErrors = vi.hoisted(() => ({ show: vi.fn() }));
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
   useTenantMutateMatching: () => stable.mutateMatching,
 }));
 
@@ -96,7 +101,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
 
   it("ignores an older year's late response before editing the current quota", async () => {
     let resolveOld!: (value: StaffVacationQuotaSummary) => void;
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -138,7 +143,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
 
   it("switches the section into the edit state and saves both fields", async () => {
     mocks.setVacationQuota.mockResolvedValue(undefined);
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -193,7 +198,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
         new ApiError("down", 503, { code: "general.unavailable" }),
       )
       .mockResolvedValue(quota({ entitled_days: 31 }));
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -222,7 +227,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
   });
 
   it("reports out-of-range values in the alert and at the field without saving", async () => {
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -261,7 +266,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
     mocks.setVacationQuota.mockRejectedValue(
       new ApiError("forbidden", 403, { code: "general.permission" }),
     );
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -286,7 +291,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
   });
 
   it("discards the draft on cancel", async () => {
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -311,7 +316,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
   });
 
   it("hides the entry point without time_tracking:manage", async () => {
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -334,7 +339,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
         }),
       )
       .mockResolvedValue(quota());
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -362,3 +367,23 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+// Echter SWR-Cache je Render und eine Sitzung mit Konto, sonst liest
+// useSWRAuth nichts.
+function TenantSWR({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-test", tenantId: 1 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const renderWithCache = (ui: React.ReactElement) =>
+  render(ui, { wrapper: TenantSWR });

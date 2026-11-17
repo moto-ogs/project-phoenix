@@ -6,11 +6,8 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
-import {
-  DataField,
-  DataGrid,
-  InfoSection,
-} from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
+import { InfoSection } from "~/components/ui/info-section";
 import { EnrollmentRequestUploadList } from "~/components/enrollment/admin-enrollment-upload-list";
 import { FeaturePill } from "~/components/enrollment/feature-pill";
 import {

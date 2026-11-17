@@ -18,7 +18,7 @@ import { ArchiveX, Inbox } from "lucide-react";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   BillingCorrectionModal,
   type BillingCorrectionTarget,
@@ -52,9 +52,10 @@ import { HolidayDebitHintsCard } from "~/components/traeger/care-run-review-lazy
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
 import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
@@ -62,17 +63,16 @@ import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { runDocumentKindLabel } from "~/components/traeger/run-document-kind";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { holidayWeeksConcept } from "~/lib/concepts/holidayWeeks";
 import { billingConcept } from "~/lib/concepts/billing";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   type BillingDocument,
   type BillingRunDetail,
@@ -190,7 +190,20 @@ function PaymentTextWarningLinks({
 export default function TraegerBillingRunPage() {
   const params = useParams<{ id: string }>();
   const runId = params?.id ?? "";
-  const [run, setRun] = useState<BillingRunDetail | null>(null);
+  const {
+    data: run,
+    loading,
+    error: loadError,
+    mutate,
+    reload,
+  } = useTraegerResource(
+    runId ? traegerBillingKeys.holidayRun(runId) : null,
+    () => fetchBillingRun(runId),
+    "der Abrechnungslauf",
+  );
+  const setRun = (next: BillingRunDetail) =>
+    void mutate(next, { revalidate: false });
+  const invalidate = useInvalidateFamily();
   const [correcting, setCorrecting] = useState<BillingCorrectionTarget | null>(
     null,
   );
@@ -200,8 +213,6 @@ export default function TraegerBillingRunPage() {
   const [releasing, setReleasing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const releaseErrors = useApiErrorDisplay();
   const letterErrors = useApiErrorDisplay();
   const { success } = useToast();
@@ -211,30 +222,14 @@ export default function TraegerBillingRunPage() {
     TRAEGER_ENROLLMENT_RIGHT,
   );
 
-  const load = useCallback(async () => {
-    try {
-      setRun(await fetchBillingRun(runId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_billing_run_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "der Abrechnungslauf",
-        retry: () => void load(),
-      });
-    }
-  }, [runId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   const release = async () => {
     if (!run) return;
     setReleasing(true);
     try {
-      setRun(await releaseBillingRun(run));
+      await mutate(await releaseBillingRun(run), { revalidate: false });
+      // The list shows the issued run, the exports its files.
+      void invalidate(traegerKeys.billingRuns());
+      void invalidate(traegerBillingKeys.exportRuns());
       setConfirmingRelease(false);
       success("Der Lauf ist freigegeben. Die Rechnungen sind ausgestellt.");
     } catch (err) {
@@ -243,7 +238,7 @@ export default function TraegerBillingRunPage() {
       });
       setConfirmingRelease(false);
       void releaseErrors.show(err, { object: "der Lauf" });
-      void load();
+      reload();
     } finally {
       setReleasing(false);
     }
@@ -253,7 +248,8 @@ export default function TraegerBillingRunPage() {
     if (!run) return;
     setDiscarding(true);
     try {
-      setRun(await discardBillingRun(run.id));
+      await mutate(await discardBillingRun(run.id), { revalidate: false });
+      void invalidate(traegerKeys.billingRuns());
       setConfirmingDiscard(false);
       success(
         `Der Lauf ist verworfen. Für ${run.periodName} können Sie einen neuen Lauf starten.`,
@@ -264,7 +260,7 @@ export default function TraegerBillingRunPage() {
       });
       setConfirmingDiscard(false);
       void releaseErrors.show(err, { object: "der Lauf" });
-      void load();
+      reload();
     } finally {
       setDiscarding(false);
     }
@@ -294,6 +290,7 @@ export default function TraegerBillingRunPage() {
           other.holidayPeriodId === run.holidayPeriodId,
       );
       const target = open ?? (await startBillingRun(run.holidayPeriodId));
+      if (!open) void invalidate(traegerKeys.billingRuns());
       router.push(traegerPath(`/traeger/abrechnung/${target.id}`));
     } catch (err) {
       logger.error("traeger_billing_reissue_failed", {
@@ -400,7 +397,7 @@ export default function TraegerBillingRunPage() {
           </HolidayHeadFacts>
         ) : null
       }
-      statsLoading={!run && !pageLoad.error}
+      statsLoading={loading}
       // The cross-link stands with the actions, as „Zur Abrechnung“ does on
       // the registrations; the status line carries only facts.
       actions={
@@ -459,8 +456,8 @@ export default function TraegerBillingRunPage() {
           </>
         ) : undefined
       }
-      error={pageLoad.error}
-      loading={!pageLoad.error && !run}
+      error={loadError}
+      loading={loading}
       overlays={
         run && empty ? (
           <ConfirmationModal
@@ -496,7 +493,9 @@ export default function TraegerBillingRunPage() {
               }}
               onIssued={() => {
                 setCorrecting(null);
-                void load();
+                reload();
+                // A Storno or Gutschrift changes the run's total in the list.
+                void invalidate(traegerKeys.billingRuns());
               }}
             />
             <ConfirmationModal

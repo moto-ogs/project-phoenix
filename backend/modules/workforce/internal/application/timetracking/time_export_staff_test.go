@@ -21,7 +21,7 @@ func TestDayExport_StaffLookupFailureStopsExport(t *testing.T) {
 	failure := errors.New("staff lookup failed")
 	svc := &staffTimeExportService{staffRepo: exportStaffQueryFunc(func(context.Context) ([]TimeExportStaff, error) {
 		return []TimeExportStaff{{ID: 42}}, failure
-	})}
+	}), nowFunc: testNow}
 	file, rows, staff, err := svc.exportDays(context.Background(), TimeExportRequest{}, Date("2026-07-01"), Date("2026-07-31"))
 	require.ErrorIs(t, err, failure)
 	assert.ErrorContains(t, err, "failed to list staff for export")

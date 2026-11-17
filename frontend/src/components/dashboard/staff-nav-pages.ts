@@ -56,6 +56,16 @@ export interface StaffCatalogViewer {
   readonly staffMessagingEnabled: boolean;
 }
 
+/** Recht und Schulschalter einer Katalogseite, Eingabe für `moduleGate`. */
+export type StaffCatalogPageRule = readonly [
+  permitted: boolean,
+  settingOn: boolean,
+];
+
+type PlanningPage = (typeof PLANNING_SUB_PAGES)[number];
+type ParentPage = (typeof PARENT_SUB_PAGES)[number];
+type CommunicationPage = (typeof COMMUNICATION_SUB_PAGES)[number];
+
 /**
  * Planung (#1946). Nicht-Admins sehen nur Seiten mit gehaltener
  * nonAdminPermission (#2283), bei offener Betreuung auch mit
@@ -64,17 +74,29 @@ export interface StaffCatalogViewer {
  * verknüpfen sich mit ihnen), Dienstplan und Abrechnung folgen ihren Modulen
  * (#4894).
  */
+export function planningPageRule(
+  page: PlanningPage,
+  viewer: Pick<
+    StaffCatalogViewer,
+    "session" | "isAdmin" | "openCareGroupMode" | "timetableEnabled"
+  >,
+): StaffCatalogPageRule {
+  return [
+    viewer.isAdmin ||
+      (page.nonAdminPermission !== undefined &&
+        hasPermission(viewer.session, page.nonAdminPermission)) ||
+      (viewer.openCareGroupMode &&
+        page.openCarePermission !== undefined &&
+        hasPermission(viewer.session, page.openCarePermission)),
+    !page.requiresTimetable || viewer.timetableEnabled,
+  ];
+}
+
 export function planningNavPages(viewer: StaffCatalogViewer) {
   return PLANNING_SUB_PAGES.flatMap((page) => {
     const gate = moduleGate(
       viewer.moduleNav.page(page.href),
-      viewer.isAdmin ||
-        (page.nonAdminPermission !== undefined &&
-          hasPermission(viewer.session, page.nonAdminPermission)) ||
-        (viewer.openCareGroupMode &&
-          page.openCarePermission !== undefined &&
-          hasPermission(viewer.session, page.openCarePermission)),
-      !page.requiresTimetable || viewer.timetableEnabled,
+      ...planningPageRule(page, viewer),
     );
     return gate.show ? [{ ...page, locked: gate.locked }] : [];
   });
@@ -103,36 +125,46 @@ export function databaseNavPages(viewer: StaffCatalogViewer) {
  * Eltern: Nachrichten für das Team mit users:read, der Rest je Recht und
  * Schulschalter.
  */
-export function parentNavPages(viewer: StaffCatalogViewer) {
+export function parentPageRule(
+  page: ParentPage,
+  viewer: Pick<
+    StaffCatalogViewer,
+    "session" | "isAdmin" | "parentNewsEnabled" | "mealPlanEnabled"
+  >,
+): StaffCatalogPageRule {
   const { session, isAdmin } = viewer;
+  switch (page.feature) {
+    case "messages":
+      // Elternnachrichten verlangen users:read (#4573: nicht für die
+      // AG-Leitung).
+      return [isAdmin || hasPermission(session, "users:read"), true];
+    case "approvals":
+      // Lesen users:manage, Entscheiden users:update (#3469).
+      return [canReviewGuardianApprovals(session), true];
+    case "announcements":
+      // Elternmitteilungen (#1669) schreibt in v1 nur der Adminzuschnitt:
+      // jede /api/parent-announcements-Route verlangt admin:*, weil der
+      // Dienst die Empfänger nicht nach Person eingrenzt. Ohne das Recht
+      // endete jeder Aufruf mit 403.
+      return [hasPermission(session, "admin:*"), viewer.parentNewsEnabled];
+    case "bankDetails":
+      return [hasPermission(session, "guardians:financial"), true];
+    case "mealPlan":
+      return [
+        isAdmin ||
+          hasPermission(session, "meals:read") ||
+          hasPermission(session, "meals:register"),
+        viewer.mealPlanEnabled,
+      ];
+  }
+}
+
+export function parentNavPages(viewer: StaffCatalogViewer) {
   return PARENT_SUB_PAGES.flatMap((page) => {
-    const rule = ((): readonly [permitted: boolean, settingOn: boolean] => {
-      switch (page.feature) {
-        case "messages":
-          // Elternnachrichten verlangen users:read (#4573: nicht für die
-          // AG-Leitung).
-          return [isAdmin || hasPermission(session, "users:read"), true];
-        case "approvals":
-          // Lesen users:manage, Entscheiden users:update (#3469).
-          return [canReviewGuardianApprovals(session), true];
-        case "announcements":
-          // Elternmitteilungen (#1669) schreibt in v1 nur der Adminzuschnitt:
-          // jede /api/parent-announcements-Route verlangt admin:*, weil der
-          // Dienst die Empfänger nicht nach Person eingrenzt. Ohne das Recht
-          // endete jeder Aufruf mit 403.
-          return [hasPermission(session, "admin:*"), viewer.parentNewsEnabled];
-        case "bankDetails":
-          return [hasPermission(session, "guardians:financial"), true];
-        case "mealPlan":
-          return [
-            isAdmin ||
-              hasPermission(session, "meals:read") ||
-              hasPermission(session, "meals:register"),
-            viewer.mealPlanEnabled,
-          ];
-      }
-    })();
-    const gate = moduleGate(viewer.moduleNav.page(page.href), ...rule);
+    const gate = moduleGate(
+      viewer.moduleNav.page(page.href),
+      ...parentPageRule(page, viewer),
+    );
     return gate.show ? [{ ...page, locked: gate.locked }] : [];
   });
 }
@@ -144,18 +176,30 @@ export function parentNavPages(viewer: StaffCatalogViewer) {
  * users:read hat. Umfragen beantwortet jede Person im Team; die Verwaltung
  * trennt die Seite selbst nach surveys:manage (#4781).
  */
+export function communicationPageRule(
+  page: CommunicationPage,
+  viewer: Pick<StaffCatalogViewer, "session" | "staffMessagingEnabled">,
+): StaffCatalogPageRule {
+  switch (page.feature) {
+    case "teamChat":
+      return [true, viewer.staffMessagingEnabled];
+    case "staffNotices":
+      return [hasPermission(viewer.session, "users:read"), true];
+    case "surveys":
+      return [true, true];
+  }
+}
+
+/**
+ * Die Seiten gehören zur Basis und stehen nie hinter einem Modul; deshalb
+ * filtert die Liste ohne `moduleGate` und trägt kein Schloss.
+ */
 export function communicationNavPages(
   viewer: Pick<StaffCatalogViewer, "session" | "staffMessagingEnabled">,
 ) {
   return COMMUNICATION_SUB_PAGES.filter((page) => {
-    switch (page.feature) {
-      case "teamChat":
-        return viewer.staffMessagingEnabled;
-      case "staffNotices":
-        return hasPermission(viewer.session, "users:read");
-      case "surveys":
-        return true;
-    }
+    const [permitted, settingOn] = communicationPageRule(page, viewer);
+    return permitted && settingOn;
   });
 }
 

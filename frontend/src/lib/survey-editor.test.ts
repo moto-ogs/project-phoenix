@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { TEST_CLOCK_INSTANT } from "~/test/clock";
 import {
   changeQuestionKind,
   emptySurveyDraft,
@@ -12,7 +11,9 @@ import {
   type SurveyEditorDraft,
 } from "./survey-editor";
 
-const now = new Date(TEST_CLOCK_INSTANT);
+// Die Schließtermine unten (30.9., 1.9., 1.10.2027) sind fest auf diesen
+// Mittwoch bezogen.
+const now = new Date("2026-09-09T12:00:00+02:00");
 
 function validDraft(patch: Partial<SurveyEditorDraft> = {}): SurveyEditorDraft {
   const base = emptySurveyDraft();

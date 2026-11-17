@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -14,7 +15,7 @@ func TestCareOfferingBookingsPreserveHalfOpenIntervalsAndRetry(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	phaseID, _, childID := testpkg.CreateAuditAdjustmentChain(t, db)
 	offering := testpkg.CreateTestCareOffering(t, db, phaseID, "Effective booking")
-	module := NewOfferingBookings()
+	module := NewOfferingBookings(time.Now)
 	ctx := testpkg.Ctx(t)
 	from, until := careplan.Date("2030-08-01"), careplan.Date("2031-08-01")
 	bookings := []careplan.CareOfferingBooking{{CareOfferingID: offering.ID, ManualSelectedDays: []string{"mon"}, AutomaticSelectedDays: []string{"wed"}, ValidFrom: &from, ValidUntil: &until}}
@@ -40,7 +41,7 @@ func TestCareOfferingBookingsPreserveHalfOpenIntervalsAndRetry(t *testing.T) {
 func TestCareOfferingBookingsEnforceTwoTenantIsolation(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := NewOfferingBookings()
+	module := NewOfferingBookings(time.Now)
 	type school struct {
 		ctx                 context.Context
 		childID, offeringID int64
@@ -88,7 +89,7 @@ func TestCareOfferingBookingSwitchPreservesHistoryAndIsIdempotent(t *testing.T) 
 	phaseID, _, childID := testpkg.CreateAuditAdjustmentChain(t, db)
 	first := testpkg.CreateTestCareOffering(t, db, phaseID, "Original booking")
 	second := testpkg.CreateTestCareOffering(t, db, phaseID, "Replacement booking")
-	module := NewOfferingBookings()
+	module := NewOfferingBookings(time.Now)
 	ctx := testpkg.Ctx(t)
 	start, change, end := careplan.Date("2030-08-01"), careplan.Date("2031-01-01"), careplan.Date("2031-08-01")
 	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, module.RecordCareOfferingBookings, childID, []careplan.CareOfferingBooking{{CareOfferingID: first.ID, ManualSelectedDays: []string{"mon"}, ValidFrom: &start, ValidUntil: &end}}))

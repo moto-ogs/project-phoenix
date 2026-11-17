@@ -174,7 +174,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
-	now := OptionalClock(clocks)
+	now := clockOrNow(clocks)
 	today := timezone.CalendarDateClock(now)
 	settingsService := liveSettings.Settings
 	// Care Plan is composed after the live graph's person directory; the
@@ -199,7 +199,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	approvedOfferings := enrollmentCompose.NewApprovedOfferingProjection(repos.Enrollment(), owners.OfferingStudents{Query: persons})
 	pickupBaselines, err := careplanCompose.NewPickupBaselines(students.CarePlan, approvedOfferings, func(ctx context.Context) (bool, error) {
 		return settingsService.ResolveBool(ctx, configModels.KeyEnrollmentBookingsAuthoritative)
-	})
+	}, timezone.CalendarDateClock(clocks...))
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
@@ -208,7 +208,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
 	pickupAutoExcusal, err := careplanCompose.NewPickupAutoExcusal(careplanCompose.PickupExcusalDependencies{
-		DB: db.Pool(), Records: students.CarePlan, Baselines: pickupBaselines, Blocks: owners.NewLoggedStudentPresence(db, logger), Preview: owners.NewPickupExcusalTimetable(reposTimetable.Timetable, owners.NewPartialAbsencePreview(db)),
+		DB: db.Pool(), Records: students.CarePlan, Baselines: pickupBaselines, Blocks: owners.NewLoggedStudentPresence(db, logger), Preview: owners.NewPickupExcusalTimetable(reposTimetable.Timetable, owners.NewPartialAbsencePreview(db)), Today: timezone.CalendarDateClock(clocks...),
 	})
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
@@ -326,7 +326,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	}
 	offeringChangeDeps.Planning = owners.ManualPlanningReader{Query: owners.PlanningQuery{DB: db}, CourseGroups: reposTimetable.Timetable}
 	offeringChangeDeps.Bookings = careBookings
-	offeringChangeDeps.Today = today
+	offeringChangeDeps.Today, offeringChangeDeps.Now = today, realClockUnless(clocks)
 	offeringChangeDeps.Logger = logger.With("service", "offering-change-requests")
 	offeringChanges, err := owners.ComposeOfferingChanges(offeringChangeDeps)
 	if err != nil {
@@ -344,7 +344,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	}
 	excusedRequestService, err := owners.NewExcusedAbsenceRequestService(
 		students.CarePlan, repos.Student, repos.Person, owners.ParentRequestReviewScope(requestReviewPolicy, requestTokenReads.Permissions),
-		pillEmitter, realtimeHub, parentRequestEvents, nil, nil, nil, logger.With("service", "excused-requests"), timezone.CalendarDateClock(clocks...), OptionalClock(clocks), partialAbsenceService,
+		pillEmitter, realtimeHub, parentRequestEvents, nil, nil, nil, logger.With("service", "excused-requests"), timezone.CalendarDateClock(clocks...), realClockUnless(clocks), partialAbsenceService,
 	)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err

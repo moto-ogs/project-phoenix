@@ -26,14 +26,11 @@ import {
   canReadSupervisionData,
   hasEffectiveAdminScope,
   hasPermission,
-  hasRole,
   isCaregiver,
   leadsSchool,
 } from "~/lib/auth-utils";
 import { canReadStudents } from "~/lib/student-access";
 import { canOpenActiveSupervision } from "~/lib/active-supervision-access";
-import { canReviewGuardianApprovals } from "~/lib/guardian-approval-access";
-import { useChangeRequestAccess } from "~/lib/hooks/use-change-request-access";
 import { useHelpHref } from "~/lib/hooks/use-help-href";
 import { useEnrollmentsUnread } from "~/lib/hooks/use-enrollments-unread";
 import { useSidebarGroups } from "~/lib/hooks/use-sidebar-groups";
@@ -59,21 +56,11 @@ import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { operatorPath } from "~/lib/operator-url";
 import {
   useChildSearchOnlyNavigation,
-  useOpenCareGroupMode,
-  useStaffMessagingEnabled,
-  usePresenceMode,
   useTenantRoutingModeSafe,
   useTenantSlugSafe,
-  useMealPlanEnabled,
-  useTimetableEnabled,
 } from "~/lib/tenant-context";
-import { useModuleNavigation } from "~/lib/hooks/use-module-navigation";
-import { useSchoolParentNewsEnabled } from "~/lib/hooks/use-school-switches";
 import { ModuleLockMark } from "~/components/ui/module-lock-mark";
-import {
-  isPlanningPageHref,
-  PLANNING_SUB_PAGES,
-} from "~/lib/planning-navigation";
+import { PLANNING_SUB_PAGES } from "~/lib/planning-navigation";
 import { normalizeTenantPathname, useTenantAwarePath } from "~/lib/tenant-path";
 import {
   COMMUNICATION_SUB_PAGES,
@@ -88,15 +75,12 @@ import {
   STAFF_FLAT_PAGES,
 } from "~/lib/section-navigation";
 import {
-  staffNavHiddenForAdmin,
   staffNavItemPermitted,
-  useStaffNavSettings,
   STAFF_NAV_BINARY_HIDDEN_HREFS,
   STAFF_NAV_ITEMS,
-  STAFF_NAV_ITEMS_BY_HREF,
   staffNavBorrowedActiveHref,
   staffNavPathActive,
-  staffNavSettingOn,
+  useStaffNavPages,
 } from "./staff-nav-items";
 import {
   getStaffNavDefaultOpenGroups,
@@ -216,10 +200,6 @@ interface NavItem {
   label: string;
   iconKey: keyof typeof navigationIcons;
   concept?: MotoConcept;
-  requiresAdmin?: boolean;
-  requiresGroups?: boolean;
-  requiresSupervision?: boolean;
-  requiresActiveSupervision?: boolean;
   alwaysShow?: boolean;
   // Additional pathname prefixes that should highlight this nav entry as
   // active, used when one bottom-nav slot represents a group of related
@@ -352,17 +332,10 @@ interface AdditionalNavItem {
   // Bild ohne Konzept; die Seiten der geteilten Liste haben immer eines.
   iconKey?: keyof typeof navigationIcons;
   concept?: MotoConcept;
-  requiresAdmin?: boolean;
-  // Show for admins or anyone holding this tenant permission (matches the
-  // backend route gate). Use instead of alwaysShow for permission-gated pages.
-  // An array shows the item when ANY listed permission is held.
+  // Bereiche: für Admins oder wer eines dieser Rechte hält (wie das Gate der
+  // Route).
   requiresPermission?: string | readonly string[];
-  // Bei offener Betreuung öffnet auch dieses Recht den Eintrag (#4769).
-  openCarePermission?: string;
-  // All listed permissions are required (matching RequiresAllPermissions).
-  requiresAllPermissions?: readonly string[];
   alwaysShow?: boolean;
-  hideForAdmin?: boolean; // Hide from admin users (for caregiver-specific features)
   activePaths?: string[];
   newTab?: boolean; // Open in a new browser tab (e.g. public help guide)
   // Modul nicht gebucht (#4894): nur für Leitungen, mit Schloss.
@@ -428,43 +401,33 @@ const OPERATOR_ADDITIONAL_ITEMS: AdditionalNavItem[] = [
 
 /**
  * Das Mehr-Menü ist dieselbe Liste wie die Seitenleiste (#2826): der Baum
- * in ~/lib/staff-navigation bestimmt Gruppe und Reihenfolge, hier stehen nur
- * Symbol und Sichtbarkeitsregel jeder Seite. Was die Reiter unten schon
+ * in ~/lib/staff-navigation bestimmt Gruppe und Reihenfolge,
+ * `useStaffNavPages` die Sichtbarkeit jeder Seite; hier steht nur ihr Symbol. Was die Reiter unten schon
  * zeigen, wird aus dem Menü entfernt; leere Gruppen fallen weg.
  */
 const PAGE_ITEMS: readonly AdditionalNavItem[] = [
   // Die Seiten mit eigenem Eintrag: dieselbe Liste wie in der Seitenleiste
   // (staff-nav-items.ts), mit Recht, Schulschalter und Bild.
   ...STAFF_NAV_ITEMS,
-  // Eltern: Nachrichten für alle, der Rest je Recht und Schulschalter
-  // (isHrefEnabled), dieselben Regeln wie in der Seitenleiste.
   ...PARENT_SUB_PAGES.map((page) => ({
     href: page.href,
     label: page.label,
     iconKey: "parents" as const,
     concept: STAFF_NAV_CONCEPTS[page.href],
   })),
-  // Team-Chat (#2598) ist Opt-in (isHrefEnabled); die Tagesinformationen
-  // (#2180) sind wie die Route an users:read gebunden. Auf kleinen
-  // Bildschirmen ist das Menü der einzige Zugang zu beiden.
+  // Auf kleinen Bildschirmen ist das Menü der einzige Zugang zu Team-Chat
+  // (#2598) und Tagesinformationen (#2180).
   ...COMMUNICATION_SUB_PAGES.map((page) => ({
     href: page.href,
     label: page.label,
     iconKey: "chat" as const,
     concept: STAFF_NAV_CONCEPTS[page.href],
-    ...(page.feature === "staffNotices"
-      ? { requiresPermission: "users:read" }
-      : {}),
   })),
-  // Planung: jeder Katalogeintrag hat einen eigenen mobilen Eintrag.
   ...PLANNING_SUB_PAGES.filter((page) => page.showInMobileNav).map((page) => ({
     href: page.href,
     label: page.label,
     iconKey: "betreuungsplan" as const,
     concept: STAFF_NAV_CONCEPTS[page.href],
-    requiresAdmin: page.nonAdminPermission === undefined,
-    requiresPermission: page.nonAdminPermission,
-    openCarePermission: page.openCarePermission,
   })),
 ];
 
@@ -520,12 +483,6 @@ const SECTION_ITEMS: Readonly<Record<StaffNavSectionKey, AdditionalNavItem>> = {
     activePaths: ENROLLMENT_SUB_PAGES.map((page) => page.href),
   },
 };
-
-function itemForEntry(entry: StaffNavEntry): AdditionalNavItem | undefined {
-  return entry.kind === "page"
-    ? PAGE_ITEMS_BY_HREF.get(entry.href)
-    : SECTION_ITEMS[entry.section];
-}
 
 interface DrawerGroup {
   readonly key: string;
@@ -637,7 +594,6 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
     searchParams.get("from"),
     getStaffNavDefaultOpenGroups(leadsSchool(session)),
   );
-  const changeRequestAccess = useChangeRequestAccess();
 
   // Get supervision state
   const { isLoadingSupervision, overviewEnabled, supervisedRooms } =
@@ -767,23 +723,26 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
         ]
       : baseMain;
 
-  // Pre-compute permission flags to reduce complexity in filter
-  const userIsAdmin = hasRole(session, "admin");
   const userHasEffectiveAdminScope = hasEffectiveAdminScope(session);
-  const userIsCaregiver = isCaregiver(session);
   const canReadSupervisions = canReadSupervisionData(session);
   // Aufsicht am Recht der Seite, nicht am Rollennamen (#4573): mit
   // `schedules:read` allein die eigene laufende Aufsicht.
   const userCanOpenSupervision = canOpenActiveSupervision(session);
-  // Gebuchte Module (#4894): dieselbe Regel wie in der Seitenleiste. Die
-  // Reiter unten zeigen nur offene Seiten; ein Eintrag mit Schloss steht im
-  // Mehr-Menü.
-  const moduleNav = useModuleNavigation();
-  const presenceMode = usePresenceMode();
-  const isBinaryMode = presenceMode === "binary";
-
-  // Gruppenübergaben (#1940) sind nur bei festen Gruppen sinnvoll.
-  const openCareGroupMode = useOpenCareGroupMode();
+  // Welche Seiten die Person sieht, offen oder mit Schloss (#4894): dieselbe
+  // Regel wie in der Seitenleiste (staff-nav-items.ts). Die Reiter unten
+  // zeigen nur offene Seiten; ein Eintrag mit Schloss steht im Mehr-Menü.
+  const {
+    pageState,
+    viewer: navViewer,
+    moduleNav,
+    isBinaryMode,
+    timetableEnabled,
+  } = useStaffNavPages(session ?? null, {
+    tagesplanRouteRightForAdmins: true,
+    staffNoticesOpenForAdminRole: true,
+    loadSchoolSwitches: mode === "teacher",
+  });
+  const { isAdmin: userIsAdmin, openCareGroupMode } = navViewer;
   // Kinder nur über „Alle Kinder“ (#1321): Gruppe und Aufsicht verlassen die
   // Leiste wie in der Seitenleiste; „Suchen“ steht dann auch für ihre Seiten.
   const childSearchOnlyNavigation = useChildSearchOnlyNavigation();
@@ -791,20 +750,6 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
   // des Betreuungsalltags, ohne Gruppen. Die Reiter unten stehen ohnehin in
   // dieser Liste.
   const simpleNav = useSimpleStaffNav(session ?? null);
-  const staffMessagingEnabled = useStaffMessagingEnabled();
-  // Betreuungsplan-Flag für den Tagesplan-Eintrag (#2383): vom Tenant-Resolve,
-  // damit es auch ohne config:read aufgelöst ist.
-  const tagesplanEnabled = useTimetableEnabled();
-  // Schulschalter der Seiten aus der geteilten Liste.
-  const navSettings = useStaffNavSettings();
-  // Schulschalter wie in der Desktop-Sidebar (#4996): timetable.enabled vom
-  // Tenant-Resolve, die Elternmitteilungen aus dem Navigationskontext. Die
-  // Navigation lädt dafür nicht das ganze Settings-Schema.
-  const timetableEnabled = tagesplanEnabled;
-  const parentNewsEnabled = useSchoolParentNewsEnabled(mode === "teacher");
-  // Vom Tenant-Resolve (#3873): eine Küchenrolle hält meals:*, aber kein
-  // config:read und liest das Settings-Schema nicht.
-  const mealPlanEnabled = useMealPlanEnabled();
   // Die Leitung landet auf dem Hub; wer nur einzelne Kataloge hält, startet
   // beim ersten erreichbaren Unterpunkt statt auf einer fast leeren Hub-Seite.
   const databaseLandingHref =
@@ -816,9 +761,6 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
             moduleNav.page(href) === "open" &&
             hasAnyDatabasePagePermission(session, href),
         );
-  // Elternmitteilungen (#1669) authoring is admin-only (admin:* wildcard on
-  // every /api/parent-announcements route); same rule as the sidebar entry.
-  const canAnnounce = hasPermission(session, "admin:*");
 
   // Filter additional navigation items based on permissions
   const filteredMainItemsByMode = filteredMainItems
@@ -866,36 +808,25 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
         // (/timetable/operations/planned-now), sonst wäre der Tab ein 403.
         !(
           item.href === "/tagesplan" &&
-          (presenceMode === "binary" ||
-            !tagesplanEnabled ||
+          (isBinaryMode ||
+            !timetableEnabled ||
             !hasPermission(session, "schedules:read"))
         ),
     );
 
-  // Laufzeit-Regeln je Seite (Schulschalter, Anwesenheitsmodus, Rolle) —
-  // dieselben wie in der Desktop-Sidebar, damit beide dieselben Seiten
-  // zeigen.
-  //
-  // `locked`: das Modul der Seite ist nicht gebucht, die Person sieht den
-  // Eintrag mit Schloss. Die Schuleinstellung des Moduls (Speiseplan,
-  // Mitteilungen) zählt dann nicht, nur das Recht (#4894).
-  const navViewer = {
-    session,
-    isAdmin: userIsAdmin,
-    isCaregiver: userIsCaregiver,
-    openCareGroupMode,
-  };
-  const isHrefEnabled = (href: string, locked = false): boolean => {
-    if (href === DATABASE_SECTION.href && databaseLandingHref === undefined) {
+  // Die Bereiche als je eine Zeile, mit denselben Regeln wie ihre
+  // Akkordeons in der Seitenleiste.
+  const isSectionItemVisible = (item: AdditionalNavItem): boolean => {
+    if (
+      item.href === DATABASE_SECTION.href &&
+      databaseLandingHref === undefined
+    ) {
       return false;
     }
-    // Anfragen (#2429/#2911): dieselbe effektive Regel wie in Sidebar,
-    // Seiten-Guard und Badge.
-    if (href === "/anfragen") return changeRequestAccess.canOpenRequestsPage;
-    if (childSearchOnlyNavigation && CHILD_SEARCH_MERGED_HREFS.has(href)) {
+    if (childSearchOnlyNavigation && CHILD_SEARCH_MERGED_HREFS.has(item.href)) {
       return false;
     }
-    if (href === "/ogs-groups") {
+    if (item.href === "/ogs-groups") {
       // Bei offener Betreuung gibt es keine "meine Gruppe" (#1544). Wie in der
       // Seitenleiste zählt auch die schulweite Übersicht (#2380): eine
       // Betreuungsrolle der Schule heißt nicht `user` (#3469).
@@ -907,73 +838,13 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
       );
     }
     // Aufsicht wie in der Seitenleiste: das Recht der Seite (#4573) oder die
-    // schulweite Übersicht (#2380); im binären Modus ohne Bedeutung.
-    if (href === "/active-supervisions") {
+    // schulweite Übersicht (#2380); im binären Modus ohne Bedeutung (#2915).
+    if (item.href === "/active-supervisions") {
       return (userCanOpenSupervision || overviewEnabled) && !isBinaryMode;
     }
-    // Tagesplan: das Recht der Route auch für die Rolle Admin (die
-    // Seitenleiste lässt es dort aus, #6708). Binärmodus und Schulschalter
-    // prüft die geteilte Liste unten.
-    if (href === "/tagesplan" && !hasPermission(session, "schedules:read")) {
-      return false;
-    }
-    // Schulschalter der Seite (Info-Displays, Tagesauswertung, Tagesplan),
-    // aus der geteilten Liste.
-    const sharedItem = STAFF_NAV_ITEMS_BY_HREF.get(href);
-    if (sharedItem && !staffNavSettingOn(sharedItem, navSettings)) {
-      return false;
-    }
-    // Binärer Anwesenheitsmodus (#2915): auch im Mehr-Menü kein Link auf eine
-    // Seite, die der BinaryModeGuard sperrt.
-    if (isBinaryMode && BINARY_HIDDEN_HREFS.has(href)) return false;
-    if (
-      isPlanningPageHref(href) &&
-      PLANNING_SUB_PAGES.some(
-        (page) => page.href === href && page.requiresTimetable,
-      ) &&
-      !timetableEnabled &&
-      !locked
-    ) {
-      // Gilt auch für Nicht-Admins mit nonAdminPermission (#2283): die
-      // Betreuungsplan-Leseansicht verschwindet mit timetable.enabled.
-      // Dienstplan und Abrechnung folgen ihren Modulen (#4894).
-      return false;
-    }
-    // Team-Chat (#2598) ist Opt-in und faellt fail-closed: ohne eingeschalteten
-    // Schalter taucht der Eintrag gar nicht erst auf, genau wie in der
-    // Seitenleiste.
-    if (href === "/team-chat" && !staffMessagingEnabled) return false;
-    // Eltern-Seiten: dieselben Regeln wie die Sidebar-Gruppe.
-    if (href === "/messages") {
-      return locked || userIsAdmin || hasPermission(session, "users:read");
-    }
-    if (href === "/admin/guardian-approvals") {
-      return locked || canReviewGuardianApprovals(session);
-    }
-    if (href === "/parent-announcements") {
-      return locked || (canAnnounce && parentNewsEnabled);
-    }
-    if (href === "/eltern/bankverbindungen") {
-      return hasPermission(session, "guardians:financial");
-    }
-    if (href === "/meal-plan") {
-      return (
-        locked ||
-        (mealPlanEnabled &&
-          (userIsAdmin ||
-            hasPermission(session, "meals:read") ||
-            hasPermission(session, "meals:register")))
-      );
-    }
-    return true;
-  };
-
-  const isAdditionalItemVisible = (item: AdditionalNavItem): boolean => {
-    if (!isHrefEnabled(item.href, item.locked)) return false;
     // Die Leitung muss ein nicht gebuchtes Modul unabhängig vom Recht seiner
-    // Zielseite finden können: der Eintrag erklärt zuerst die Buchung. Für
-    // offene Seiten bleiben die Routenrechte maßgeblich.
-    if (item.locked) return !staffNavHiddenForAdmin(item, navViewer);
+    // Zielseite finden können: der Eintrag erklärt zuerst die Buchung.
+    if (item.locked) return true;
     return staffNavItemPermitted(item, navViewer);
   };
 
@@ -990,23 +861,27 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
   // Rolle oben, dann die fünf Gruppen mit Überschrift, unten Notfall, Hilfe
   // und Einstellungen. Was die Reiter schon zeigen, fehlt hier; leere
   // Gruppen fallen weg.
+  const entryItem = (entry: StaffNavEntry): AdditionalNavItem | null => {
+    if (entry.kind === "page") {
+      const item = PAGE_ITEMS_BY_HREF.get(entry.href);
+      const state = item ? pageState(entry.href) : null;
+      return item && state ? { ...item, locked: state === "locked" } : null;
+    }
+    const section = SECTION_ITEMS[entry.section];
+    const item =
+      section.href === DATABASE_SECTION.href && databaseLandingHref
+        ? { ...section, href: databaseLandingHref }
+        : section;
+    const visibility = moduleNav.page(item.href);
+    if (visibility === "hidden") return null;
+    const shown = visibility === "locked" ? { ...item, locked: true } : item;
+    return isSectionItemVisible(shown) ? shown : null;
+  };
   const entriesToItems = (entries: readonly StaffNavEntry[]) =>
-    entries
-      .map(itemForEntry)
-      .filter((item): item is AdditionalNavItem => item !== undefined)
-      .map((item) =>
-        item.href === DATABASE_SECTION.href && databaseLandingHref
-          ? { ...item, href: databaseLandingHref }
-          : item,
-      )
-      .flatMap((item) => {
-        const visibility = moduleNav.page(item.href);
-        if (visibility === "hidden") return [];
-        return visibility === "locked" ? [{ ...item, locked: true }] : [item];
-      })
-      .filter(
-        (item) => isAdditionalItemVisible(item) && !mainHrefs.has(item.href),
-      );
+    entries.flatMap((entry) => {
+      const item = entryItem(entry);
+      return item && !mainHrefs.has(item.href) ? [item] : [];
+    });
 
   const drawerGroups: readonly DrawerGroup[] =
     mode === "operator"

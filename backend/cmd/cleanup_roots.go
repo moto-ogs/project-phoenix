@@ -26,14 +26,14 @@ import (
 // Audit trail it records its deletions in.
 
 func newSessionCleanupService(db transactionruntime.Database, schools organizationtenancy.Capability, timetableCapability timetable.Capability, logger *slog.Logger) studentpresence.Presence {
-	sessions, devices, completion := api.NewSessionCleanupRepositories(db, timetableCapability)
+	sessions, devices, completion := api.NewSessionCleanupRepositories(db, timetableCapability, time.Now)
 	groups, supervisors := presenceCompose.SessionRepositories(sessions)
 	settings := newCleanupSettingsService(db, schools, logger)
 	return presenceservice.NewPresence(presenceservice.PresenceDependencies{
 		PrincipalReader: api.AttendancePrincipal,
-		SchoolPresence:  owners.NewLoggedStudentPresence(db, logger),
+		SchoolPresence:  owners.NewLoggedStudentPresence(db, logger, time.Now),
 		GroupRepo:       groups, SupervisorRepo: supervisors,
-		DeviceRepo: owners.NewSessionDeviceDirectory(devices, settings, logger), TimetableBridgeCompleter: completion, DB: db.Pool(), Logger: logger,
+		DeviceRepo: owners.NewSessionDeviceDirectory(devices, settings, logger), TimetableBridgeCompleter: completion, DB: db.Pool(), Logger: logger, Now: time.Now,
 	}, presenceservice.WithPresenceTenantRuntime(db.UnitOfWork()), presenceservice.WithPresenceSettings(settingsCompose.PresenceSettings(settings)))
 }
 
@@ -41,7 +41,7 @@ func newRetentionCleanupService(db transactionruntime.Database, schools organiza
 	repos := api.NewRetentionCleanupRepositories(db, command)
 	_, supervisors := presenceCompose.SessionRepositories(repos.Sessions)
 	return presenceservice.NewPresenceCleanup(
-		owners.NewLoggedStudentPresence(db, logger), supervisors, owners.NewDeletionAudit(repos.Deletion),
+		owners.NewLoggedStudentPresence(db, logger, time.Now), supervisors, owners.NewDeletionAudit(repos.Deletion),
 		settingsCompose.PresenceSettings(newCleanupSettingsService(db, schools, logger)), time.Now,
 	)
 }
@@ -78,22 +78,22 @@ func newCleanupSettingsService(db transactionruntime.Database, schools organizat
 		owners.NewSchoolSettingsStore(schools),
 		settingsRuntime,
 		logger,
-		time.Now,
 	)
 }
 
 // listRecentAuditRetentionSummaries reads the Audit-owned cleanup query
 // without widening the producer-facing deletion repository. The summaries
 // read the root database outside any transaction, scoped by the Audit tenant
-// handoff.
-func listRecentAuditRetentionSummaries(ctx context.Context, db transactionruntime.Database, since time.Time, limit int) ([]auditModels.RecentDeletionSummary, error) {
+// handoff. The window counts back days from the database time, the clock
+// that stamps the deletion ledger.
+func listRecentAuditRetentionSummaries(ctx context.Context, db transactionruntime.Database, days, limit int) ([]auditModels.RecentDeletionSummary, error) {
 	audits, err := auditCompose.NewPersistence(auditCompose.PersistenceDependencies{
 		Reads: auditCompose.NewFixedRuntime(db.Pool(), auditModels.TenantIDFromContext),
 	})
 	if err != nil {
 		return nil, err
 	}
-	return audits.RetentionSummaries.ListRecentRetentionSummaries(ctx, since, limit)
+	return audits.RetentionSummaries.ListRecentRetentionSummaries(ctx, days, limit)
 }
 
 // newCleanupAudits composes the Audit repositories a command root reads

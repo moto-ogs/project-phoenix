@@ -8,11 +8,11 @@
 // Operator-Audit. Zurücknehmen geht erst, wenn der Träger keine Akte mehr
 // führt.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { ConfirmationModal } from "~/components/ui/modal";
-import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldLabel } from "~/components/ui/field-label";
 import { FormModal } from "~/components/ui/form-modal";
@@ -24,17 +24,18 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import {
   useApiErrorDisplay,
   useApiFormError,
-  useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import {
   traegerStaffReleaseService,
   type StaffRepresentation,
-  type TraegerStaffReleaseState,
 } from "~/lib/operator/traeger-staff-release-api";
+import { useSWRAuth } from "~/lib/swr";
+import { operatorKeys } from "~/lib/swr/operator-keys";
 
 const logger = createLogger({ component: "TraegerStaffReleaseSection" });
 
@@ -64,7 +65,20 @@ export function TraegerStaffReleaseSection({
 }: {
   readonly organizationId: string;
 }) {
-  const [state, setState] = useState<TraegerStaffReleaseState | null>(null);
+  const {
+    data: state,
+    error,
+    mutate,
+  } = useSWRAuth(
+    operatorKeys.traegerStaffRelease(organizationId),
+    () => traegerStaffReleaseService.getState(organizationId),
+    { keepPreviousData: false },
+  );
+  const load = useSwrResourceLoadError(
+    [{ data: state, error }],
+    "die Freigabe Personal beim Träger",
+    () => mutate(),
+  );
   const [granting, setGranting] = useState(false);
   const [representation, setRepresentation] =
     useState<StaffRepresentation | null>(null);
@@ -73,32 +87,15 @@ export function TraegerStaffReleaseSection({
   const save = useFormModalPending(granting);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
   const { show: showError } = useApiErrorDisplay();
   const { success } = useToast();
-  const afterWrite = useRefreshAfterWrite("die Freigabe", async () => {
-    setState(await traegerStaffReleaseService.getState(organizationId));
-  });
-
-  const refresh = useCallback(async () => {
-    try {
-      setState(await traegerStaffReleaseService.getState(organizationId));
-      clearLoadError();
-    } catch (err) {
-      logger.warn("traeger_staff_release_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Freigabe Personal beim Träger",
-        retry: () => void refresh(),
-      });
-    }
-  }, [organizationId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  // The reload reads directly: a bare revalidation never rejects, and its
+  // failure must say that the change is saved but the display is old.
+  const afterWrite = useRefreshAfterWrite("die Freigabe", () =>
+    mutate(traegerStaffReleaseService.getState(organizationId), {
+      revalidate: false,
+    }),
+  );
 
   const grant = async () => {
     formErrors.clear();
@@ -161,7 +158,7 @@ export function TraegerStaffReleaseSection({
         ) : undefined
       }
       description="Mit der Freigabe führt die Personalverwaltung des Trägers eine Personalakte über alle Schulen. Vorher bestätigt der Träger schriftlich eine der beiden Erklärungen."
-      loading={!state && !load.error}
+      loading={!state && !load.failure}
       action={
         state ? (
           release ? (

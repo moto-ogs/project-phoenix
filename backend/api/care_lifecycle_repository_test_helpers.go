@@ -104,6 +104,9 @@ func (r CareLifecycleTestRepositories) NewCareLifecycle(config CareLifecycleTest
 	deps.LockCareBookingWrites = lock
 	deps.BookingsAuthoritative = config.BookingsAuthoritative
 	deps.Today, deps.Now = config.Today, config.Now
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	if config.PlanningStaffing != nil {
 		deps.Owners.PlanningStaffing = config.PlanningStaffing
 	}

@@ -7,7 +7,7 @@
 // die Kinder mit Vertrag. Nur das Recht „Abrechnung“ sieht die Seite; jedes
 // Lesen steht im Zugriffsprotokoll des Vertrags.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   billingAreaTitle,
   billingTabs,
@@ -39,19 +39,16 @@ import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   type FamilyChildren,
-  type FamilyChildrenSet,
   fetchFamilyChildren,
   removeFamilyChildren,
 } from "~/lib/traeger-family-children-api";
@@ -157,35 +154,23 @@ function checkCardText(
 
 export default function TraegerKinderzahlPage() {
   const today = berlinTodayISO();
-  const [data, setData] = useState<FamilyChildrenSet | null>(null);
+  const {
+    data,
+    loading,
+    error: loadError,
+    mutate,
+  } = useTraegerResource(
+    traegerBillingKeys.childCounts(),
+    fetchFamilyChildren,
+    "die Übersicht der Kinderzahlen",
+  );
   const [search, setSearch] = useState("");
   const [checking, setChecking] = useState<FamilyChildren | null>(null);
   const [removing, setRemoving] = useState<FamilyChildren | null>(null);
   const [busy, setBusy] = useState(false);
   const [checksExpanded, setChecksExpanded] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const removeErrors = useApiFormError();
   const { success } = useToast();
-
-  const load = useCallback(async () => {
-    try {
-      setData(await fetchFamilyChildren());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_family_children_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Übersicht der Kinderzahlen",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const remove = async () => {
     const contract = removing?.count?.contractId;
@@ -193,7 +178,7 @@ export default function TraegerKinderzahlPage() {
     setBusy(true);
     removeErrors.clear();
     try {
-      setData(await removeFamilyChildren(contract));
+      await mutate(await removeFamilyChildren(contract), { revalidate: false });
       success(`Die Kinderzahl von ${familyName(removing)} ist entfernt.`);
       setRemoving(null);
     } catch (err) {
@@ -350,7 +335,7 @@ export default function TraegerKinderzahlPage() {
           />
         ) : null
       }
-      statsLoading={!data && !pageLoad.error}
+      statsLoading={loading}
       actions={
         <TraegerListExportMenu
           download={(format) =>
@@ -370,15 +355,15 @@ export default function TraegerKinderzahlPage() {
         placeholder: "Familie, Adresse oder Kind",
       }}
       tabs={billingTabs("kinderzahl")}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !data}
+      error={loadError}
+      loading={loading}
       overlays={
         <>
           <FamilyChildrenModal
             family={checking}
             onClose={() => setChecking(null)}
             onSaved={(next) => {
-              setData(next);
+              void mutate(next, { revalidate: false });
               setChecking(null);
             }}
           />

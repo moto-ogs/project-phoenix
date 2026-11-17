@@ -128,7 +128,7 @@ func TestHolidayRegistrationsGoAfterTheirRetentionAndInvoicesStay(t *testing.T) 
 		t.Helper()
 		unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, f.db))
 		require.NoError(t, tenant.WithinAdmin(unit, func(adminCtx context.Context) error {
-			_, err := owners.NewHolidayRegistrationRetention(func() calendar.Date { return today }).
+			_, err := owners.NewHolidayRegistrationRetention(func() time.Time { return today.BerlinMidnight().Add(10 * time.Hour) }).
 				DeleteExpiredHolidayRegistrations(adminCtx)
 			return err
 		}))
@@ -214,13 +214,16 @@ func TestHolidayRegistrationsGoAfterTheirRetentionAndInvoicesStay(t *testing.T) 
 	retain(lastDay.AddDays(holidayDefaultRetentionDays + 2))
 	assert.Len(t, deletions(), 2, "a period with nothing left writes no further entry")
 
-	// The log keeps an entry for three years.
+	// The log keeps an entry for three years on the clock that stamps it,
+	// the owner's; the database's runs years earlier here (ADR 0281).
+	logDay := lastDay.AddDays(holidayDefaultRetentionDays + 3)
 	_, err = f.db.ExecContext(ctx, `INSERT INTO enrollment.holiday_registration_deletions
 			(organization_id, holiday_period_id, period_ended_on, registrations, children, audit_entries, deleted_at)
-		VALUES (?0, ?1, '2022-01-14', 1, 1, 0, NOW() - INTERVAL '3 years 1 day'),
-			(?0, ?1, '2024-01-12', 1, 1, 0, NOW() - INTERVAL '2 years 11 months')`, organization, f.period.ID)
+		VALUES (?0, ?1, '2022-01-14', 1, 1, 0, ?2::timestamptz - INTERVAL '3 years 1 day'),
+			(?0, ?1, '2024-01-12', 1, 1, 0, ?2::timestamptz - INTERVAL '2 years 11 months')`, organization, f.period.ID,
+		logDay.BerlinMidnight().Add(10*time.Hour))
 	require.NoError(t, err)
-	retain(lastDay.AddDays(holidayDefaultRetentionDays + 3))
+	retain(logDay)
 	var kept []calendar.Date
 	for _, entry := range deletions() {
 		kept = append(kept, entry.PeriodEndedOn)

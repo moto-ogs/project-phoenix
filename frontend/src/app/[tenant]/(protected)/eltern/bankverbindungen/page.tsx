@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Download, Landmark, Lock } from "lucide-react";
 
@@ -13,20 +13,21 @@ import { SegmentedControl } from "~/components/ui/segmented-control";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { formErrorMessage } from "~/components/ui/form-error";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { useExportRun } from "~/hooks/use-export-run";
 import { hasPermission } from "~/lib/auth-utils";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   exportPaymentOverview,
   fetchPaymentOverview,
   type PaymentExportFormat,
   type PaymentOverviewRow,
 } from "~/lib/guardian-payment-api";
-import { createLogger } from "~/lib/logger";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { foldForSearch } from "~/lib/search-fold";
+import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 
-const logger = createLogger({ component: "BankverbindungenPage" });
+const NO_ROWS: PaymentOverviewRow[] = [];
 
 type CompletenessFilter = "all" | "missing";
 
@@ -43,53 +44,26 @@ const ROWS_PER_PAGE = 25;
 
 function BankverbindungenContent() {
   const { data: session, status } = useSession({ required: true });
-  // Ladefehler ersetzen die Liste (#2517), nie durch „Noch keine Kinder“;
-  // der Export meldet Fehler im offenen Export-Dialog.
-  const loadError = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = loadError;
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [reloadToken, setReloadToken] = useState(0);
-
-  const [rows, setRows] = useState<PaymentOverviewRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
   const [completeness, setCompleteness] = useState<CompletenessFilter>("all");
   const [exportOpen, setExportOpen] = useState(false);
 
   const canRead = hasPermission(session, "guardians:financial");
 
-  // The fetch effect depends on the session state and the retry counter.
-  // The error hooks' callbacks are stable, so the list never refetches on an
-  // ordinary render.
-  useEffect(() => {
-    if (status === "loading" || !canRead) return;
-    let cancelled = false;
-    setIsLoading(true);
-    fetchPaymentOverview()
-      .then((data) => {
-        if (cancelled) return;
-        setRows(data);
-        setLoadFailed(false);
-        clearLoadError();
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        logger.error("payment_overview_load_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        setLoadFailed(true);
-        void showLoadError(error, {
-          object: "die Liste der Bankverbindungen",
-          retry: () => setReloadToken((token) => token + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [status, canRead, reloadToken, showLoadError, clearLoadError]);
+  const overview = useConfirmedSWR(
+    status === "loading" || !canRead ? null : tenantAdminKeys.paymentOverview(),
+    fetchPaymentOverview,
+  );
+  const rows = overview.data ?? NO_ROWS;
+  const isLoading = !overview.data && !overview.failure;
+  // Ladefehler ersetzen die Liste (#2517), nie durch „Noch keine Kinder“;
+  // der Export meldet Fehler im offenen Export-Dialog.
+  const loadError = useSwrResourceLoadError(
+    [{ data: overview.data ?? undefined, error: overview.failure }],
+    "die Liste der Bankverbindungen",
+    () => overview.mutate(),
+  );
+  const loadFailed = Boolean(loadError.failure);
 
   const missingCount = useMemo(
     () => rows.filter((row) => row.ibanMasked === "").length,

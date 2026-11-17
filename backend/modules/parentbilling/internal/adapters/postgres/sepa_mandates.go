@@ -34,7 +34,7 @@ type sepaCreditorRow struct {
 	PrenotificationDays int       `bun:"prenotification_days" json:"prenotification_days"`
 	MissingMandate      string    `bun:"missing_mandate" json:"missing_mandate"`
 	UpdatedByAccountID  *int64    `bun:"updated_by_account_id" json:"-"`
-	UpdatedAt           time.Time `bun:"updated_at,nullzero,default:current_timestamp" json:"updated_at"`
+	UpdatedAt           time.Time `bun:"updated_at,nullzero" json:"updated_at"`
 }
 
 func (r sepaCreditorRow) creditor() parentbilling.SEPACreditor {
@@ -66,9 +66,9 @@ type sepaMandateRow struct {
 	RevokedByAccountID *int64         `bun:"revoked_by_account_id" json:"-"`
 	RevokedAt          *time.Time     `bun:"revoked_at" json:"revoked_at"`
 	CreatedByAccountID *int64         `bun:"created_by_account_id" json:"-"`
-	CreatedAt          time.Time      `bun:"created_at,nullzero,default:current_timestamp" json:"created_at"`
+	CreatedAt          time.Time      `bun:"created_at,nullzero" json:"created_at"`
 	UpdatedByAccountID *int64         `bun:"updated_by_account_id" json:"-"`
-	UpdatedAt          time.Time      `bun:"updated_at,nullzero,default:current_timestamp" json:"updated_at"`
+	UpdatedAt          time.Time      `bun:"updated_at,nullzero" json:"updated_at"`
 	IBANSealed         []byte         `bun:"iban_sealed" json:"-"`
 	// CreditorCurrent tells whether the mandate is given to the Träger's
 	// creditor identifier now; read with the row.
@@ -110,7 +110,7 @@ type sepaMandateEventRow struct {
 	Source         string    `bun:"source"`
 	Fields         []string  `bun:"fields,array"`
 	ActorAccountID *int64    `bun:"actor_account_id"`
-	OccurredAt     time.Time `bun:"occurred_at,nullzero,default:current_timestamp"`
+	OccurredAt     time.Time `bun:"occurred_at,nullzero"`
 	ImportFile     string    `bun:"import_file,nullzero"`
 	ImportLine     int       `bun:"import_line,nullzero"`
 }
@@ -140,12 +140,12 @@ func (s *Store) SaveSEPACreditor(ctx context.Context, organizationID, accountID 
 	}
 	row := &sepaCreditorRow{OrganizationID: organizationID, CreditorID: creditor.CreditorID,
 		PrenotificationDays: creditor.PrenotificationDays, MissingMandate: creditor.MissingMandate,
-		UpdatedByAccountID: accountRef(accountID)}
+		UpdatedByAccountID: accountRef(accountID), UpdatedAt: s.now()}
 	if _, err := db.NewInsert().Model(row).
 		On("CONFLICT (organization_id) DO UPDATE").
 		Set("creditor_id = EXCLUDED.creditor_id").Set("prenotification_days = EXCLUDED.prenotification_days").
 		Set("missing_mandate = EXCLUDED.missing_mandate").Set("updated_by_account_id = EXCLUDED.updated_by_account_id").
-		Set("updated_at = CURRENT_TIMESTAMP").Exec(ctx); err != nil {
+		Set("updated_at = EXCLUDED.updated_at").Exec(ctx); err != nil {
 		return fmt.Errorf("save SEPA creditor: %w", err)
 	}
 	return nil
@@ -200,13 +200,13 @@ func (s *Store) InsertSEPAMandate(ctx context.Context, organizationID, accountID
 	if err != nil {
 		return parentbilling.SEPAMandate{}, err
 	}
-	m := mandate.Mandate
+	m, now := mandate.Mandate, s.now()
 	row := &sepaMandateRow{
 		OrganizationID: organizationID, FamilyEmail: m.FamilyEmail, CareContractID: m.ContractID, Reference: m.Reference,
 		SignedOn: m.SignedOn, Kind: m.Kind, Sequence: m.Sequence, CreditorID: m.CreditorID, HolderSealed: mandate.Holder,
 		IBANMasked: m.IBANMasked, LastCollectedOn: m.LastCollectedOn,
 		BIC: m.BIC, Source: m.Source, CreatedByAccountID: accountRef(accountID), UpdatedByAccountID: accountRef(accountID),
-		IBANSealed: mandate.IBAN,
+		IBANSealed: mandate.IBAN, CreatedAt: now, UpdatedAt: now,
 	}
 	if _, err := db.NewInsert().Model(row).Returning(mandateReturning).Exec(ctx); err != nil {
 		switch constraintOf(err) {
@@ -231,7 +231,7 @@ func (s *Store) UpdateSEPAMandate(ctx context.Context, organizationID, accountID
 	row := &sepaMandateRow{}
 	query := db.NewUpdate().Model(row).Where("organization_id = ?", organizationID).Where("id = ?", m.ID).
 		Set("bic = ?", m.BIC).Set("sequence = ?", m.Sequence).
-		Set("updated_by_account_id = ?", accountRef(accountID)).Set("updated_at = CURRENT_TIMESTAMP")
+		Set("updated_by_account_id = ?", accountRef(accountID)).Set("updated_at = ?", s.now())
 	if mandate.IBAN != nil {
 		query = query.Set("iban_sealed = ?", mandate.IBAN).Set("iban_masked = ?", m.IBANMasked)
 	}
@@ -253,11 +253,11 @@ func (s *Store) RevokeSEPAMandate(ctx context.Context, organizationID, accountID
 	if err != nil {
 		return parentbilling.SEPAMandate{}, err
 	}
-	row := &sepaMandateRow{}
+	row, now := &sepaMandateRow{}, s.now()
 	if err := db.NewUpdate().Model(row).Where("organization_id = ?", organizationID).Where("id = ?", id).
 		Where("revoked_on IS NULL").
-		Set("revoked_on = ?", revokedOn).Set("revoked_at = CURRENT_TIMESTAMP").Set("revoked_by_account_id = ?", accountRef(accountID)).
-		Set("updated_by_account_id = ?", accountRef(accountID)).Set("updated_at = CURRENT_TIMESTAMP").
+		Set("revoked_on = ?", revokedOn).Set("revoked_at = ?", now).Set("revoked_by_account_id = ?", accountRef(accountID)).
+		Set("updated_by_account_id = ?", accountRef(accountID)).Set("updated_at = ?", now).
 		Returning(mandateReturning).Scan(ctx); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return parentbilling.SEPAMandate{}, parentbilling.ErrSEPAMandateNotFound

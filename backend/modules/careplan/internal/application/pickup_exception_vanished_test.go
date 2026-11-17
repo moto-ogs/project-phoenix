@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -42,7 +44,7 @@ func TestPickupExceptionUpdateReportsNotFoundWhenRowVanishedUnderLock(t *testing
 	for name, auto := range map[string]careplan.PickupAutoExcusal{"without auto excusal": nil, "with auto excusal": idleAutoExcusal{}} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			service := NewPickupSchedules(nil, vanishedExceptions{}, nil, passThroughTransaction{}, nil, auto, nil, nil, nil, nil)
+			service := NewPickupSchedules(nil, vanishedExceptions{}, nil, passThroughTransaction{}, nil, auto, nil, nil, nil, func() calendar.Date { return calendar.Date(fakeToday) })
 
 			_, err := service.UpdateException(context.Background(), 41, 42, "2026-09-21", nil, nil, true, nil)
 
@@ -67,7 +69,7 @@ func (racedExceptions) FindByIDForUpdate(context.Context, int64) (*careplan.Pick
 
 func TestPickupExceptionDeleteStaysIdempotentWhenRowVanishedUnderLock(t *testing.T) {
 	t.Parallel()
-	service := NewPickupSchedules(nil, racedExceptions{}, nil, passThroughTransaction{}, nil, nil, nil, nil, nil, nil)
+	service := NewPickupSchedules(nil, racedExceptions{}, nil, passThroughTransaction{}, nil, nil, nil, nil, nil, func() calendar.Date { return calendar.Date(fakeToday) })
 
 	err := service.DeleteStudentPickupException(context.Background(), 41, 42)
 

@@ -100,11 +100,11 @@ func (a *stubProviderAPI) LiftSuppression(_ context.Context, address string) err
 }
 
 func reconcilerWithoutProvider(store *reconcileStore) *EmailReconciliation {
-	return NewEmailReconciliation(store, nil, false, slog.New(slog.DiscardHandler), func(domain.Observation) {})
+	return NewEmailReconciliation(store, nil, false, slog.New(slog.DiscardHandler), func(domain.Observation) {}, func() time.Time { return reconcileNow })
 }
 
 func reconciler(store *reconcileStore, api *stubProviderAPI) *EmailReconciliation {
-	reconciliation := NewEmailReconciliation(store, api, true, slog.New(slog.DiscardHandler), func(domain.Observation) {})
+	reconciliation := NewEmailReconciliation(store, api, true, slog.New(slog.DiscardHandler), func(domain.Observation) {}, func() time.Time { return reconcileNow })
 	reconciliation.now = func() time.Time { return reconcileNow }
 	return reconciliation
 }
@@ -116,7 +116,7 @@ func providerEvent(id string, state domain.EmailDeliveryState) domain.EmailDeliv
 func TestReconciliationWithoutProviderDoesNothing(t *testing.T) {
 	t.Parallel()
 	store := &reconcileStore{mails: []domain.ProviderMail{{ID: 1, ProviderMessageID: "m1"}}}
-	reconciliation := NewEmailReconciliation(store, nil, false, slog.New(slog.DiscardHandler), func(domain.Observation) {})
+	reconciliation := NewEmailReconciliation(store, nil, false, slog.New(slog.DiscardHandler), func(domain.Observation) {}, func() time.Time { return reconcileNow })
 
 	require.NoError(t, reconciliation.ReconcileEmailDelivery(context.Background()))
 
@@ -259,7 +259,7 @@ func TestLiftSuppressionKeepsTheListWhenTheProviderFails(t *testing.T) {
 func TestLiftSuppressionWithoutProviderFreesTheSchoolsList(t *testing.T) {
 	t.Parallel()
 	store := &reconcileStore{listed: true, reason: domain.EmailSuppressionFailed}
-	reconciliation := NewEmailReconciliation(store, nil, false, slog.New(slog.DiscardHandler), func(domain.Observation) {})
+	reconciliation := NewEmailReconciliation(store, nil, false, slog.New(slog.DiscardHandler), func(domain.Observation) {}, func() time.Time { return reconcileNow })
 
 	require.NoError(t, reconciliation.LiftEmailSuppression(context.Background(), 7, "eltern@example.com"))
 
@@ -416,7 +416,7 @@ func TestLiftSuppressionReportsABlockThatStaysAndKeepsTheList(t *testing.T) {
 func TestLiftSuppressionWithoutProviderReportsAnAddressThatIsNotListed(t *testing.T) {
 	t.Parallel()
 	store := &reconcileStore{}
-	reconciliation := NewEmailReconciliation(store, nil, false, slog.New(slog.DiscardHandler), func(domain.Observation) {})
+	reconciliation := NewEmailReconciliation(store, nil, false, slog.New(slog.DiscardHandler), func(domain.Observation) {}, func() time.Time { return reconcileNow })
 
 	require.ErrorIs(t, reconciliation.LiftEmailSuppression(context.Background(), 7, "eltern@example.com"), deliveryContract.ErrEmailSuppressionNotFound)
 }
@@ -502,7 +502,7 @@ func TestProviderBlocksHoldTheCallerForAtMostTheBudget(t *testing.T) {
 	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
 		api := &hangingProviderAPI{}
-		reconciliation := NewEmailReconciliation(&reconcileStore{}, api, true, slog.New(slog.DiscardHandler), func(domain.Observation) {})
+		reconciliation := NewEmailReconciliation(&reconcileStore{}, api, true, slog.New(slog.DiscardHandler), func(domain.Observation) {}, func() time.Time { return reconcileNow })
 		start := time.Now()
 
 		blocks := reconciliation.ProviderEmailBlocks(context.Background(), []string{"a@example.com", "b@example.com"})
@@ -522,7 +522,7 @@ func TestProviderBlocksShareTheBudgetOfTheRequest(t *testing.T) {
 		t.Parallel()
 		synctest.Test(t, func(t *testing.T) {
 			api := &hangingProviderAPI{}
-			reconciliation := NewEmailReconciliation(&reconcileStore{}, api, true, slog.New(slog.DiscardHandler), func(domain.Observation) {})
+			reconciliation := NewEmailReconciliation(&reconcileStore{}, api, true, slog.New(slog.DiscardHandler), func(domain.Observation) {}, func() time.Time { return reconcileNow })
 			ctx := deliveryContract.WithProviderBlockBudget(context.Background())
 			start := time.Now()
 

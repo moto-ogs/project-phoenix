@@ -94,9 +94,9 @@ func newPeopleRepositorySuiteFactory(
 		MembershipTestRepositories: members,
 		GuardianPhoneNumber:        peopleCompose.NewGuardianPhoneNumberRepository(db.Pool()),
 		GuardianFinancialData:      peopleCompose.NewGuardianFinancialDataRepository(db.Pool()),
-		FamilyProtection:           peopleCompose.NewFamilyProtectionEventRepository(db.Pool()),
-		ParentRequestShare:         peopleCompose.NewParentRequestShareEventRepository(db.Pool()),
-		ParentRequestEvent:         peopleCompose.NewParentRequestEventRepository(db.Pool()),
+		FamilyProtection:           peopleCompose.NewFamilyProtectionEventRepository(db.Pool(), time.Now),
+		ParentRequestShare:         peopleCompose.NewParentRequestShareEventRepository(db.Pool(), time.Now),
+		ParentRequestEvent:         peopleCompose.NewParentRequestEventRepository(db.Pool(), time.Now),
 		GroupSubstitution:          owners.NewGroupSubstitutionRepository(owners.NewSchoolStructureRepositories(db, persons, identity, membership, rooms, workTime).Group, membership, workTime, timezone.TodayDate),
 		CaregiverBindingLock:       owners.NewCaregiverBindingLocker(membership, workTime, NewStudentPresenceForTests(db), capability),
 		CareWithdrawal:             owners.NewCareWithdrawalCompletionRepository(carePlan),
@@ -173,7 +173,7 @@ func (r *ParentMessagingSuiteRepositories) WithSchoolProjections(schools organiz
 // Communication stores over the unobserved owners of db.
 func NewParentMessagingSuiteRepositories(db transactionruntime.Database, clocks ...func() time.Time) *ParentMessagingSuiteRepositories {
 	return &ParentMessagingSuiteRepositories{MessagingRepositories: owners.ComposeParentMessagingRepositories(
-		db, MustNewSchoolStructure(db), owners.MustNewSchoolMembership(db), owners.NewPeopleIdentityAccess(db, nil), enrollmentCompose.NewClocked(time.Now), OptionalClock(clocks),
+		db, MustNewSchoolStructure(db), owners.MustNewSchoolMembership(db), owners.NewPeopleIdentityAccess(db, nil), enrollmentCompose.NewClocked(time.Now), realClockUnless(clocks),
 	)}
 }
 
@@ -262,7 +262,7 @@ type EnrollmentSuiteRepositories struct {
 
 // Enrollment is the Enrollment booking projection.
 func (f *EnrollmentSuiteRepositories) Enrollment() owners.EnrollmentBookingProjection {
-	return owners.NewEnrollmentBookingProjection(owners.ComposeEnrollmentBookings(f.enrollment), owners.UngatedEnrollmentPhaseBounds())
+	return owners.NewEnrollmentBookingProjection(owners.ComposeEnrollmentBookings(f.enrollment, time.Now), owners.UngatedEnrollmentPhaseBounds(), time.Now)
 }
 
 // NewEnrollmentSuiteRepositories composes the projection's owner.
@@ -309,7 +309,7 @@ func NewPeopleRepositorySuiteParentMessaging(db transactionruntime.Database) (Pa
 // NewPeopleRepositorySuiteAnnouncements is the parent announcement store over
 // its Enrollment audience, constructed here rather than by shared fixtures.
 func NewPeopleRepositorySuiteAnnouncements(db transactionruntime.Database, clocks ...func() time.Time) recordports.ParentAnnouncementRepository {
-	return parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentCompose.NewClocked(time.Now)), clocks...), OptionalClock(clocks))
+	return parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentCompose.NewClocked(time.Now)), clocks...), realClockUnless(clocks))
 }
 
 // NewPeopleRepositorySuiteCaregiverBindingLocker is the caregiver binding

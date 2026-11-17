@@ -26,7 +26,11 @@ import { TEST_CLOCK_INSTANT } from "./clock-instant";
  * weekday in the middle of a week, a month and a DST period. Tests covering
  * Berlin midnight, week changes or the DST switch pick their own instant.
  */
-export { TEST_CLOCK_INSTANT, TEST_CLOCK_TODAY } from "./clock-instant";
+export {
+  TEST_CLOCK_INSTANT,
+  TEST_CLOCK_TODAY,
+  testClockDay,
+} from "./clock-instant";
 
 /**
  * Move the frozen clock to `instant` (ISO string or `Date`). Works with and

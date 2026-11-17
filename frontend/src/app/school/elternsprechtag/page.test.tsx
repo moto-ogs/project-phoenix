@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testClockDay } from "~/test/clock";
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
 
@@ -143,14 +144,16 @@ describe("Elternsprechtag in moto schule (#4801)", () => {
     fireEvent.click(
       screen.getByRole("button", { name: /Neuer Elternsprechtag/ }),
     );
+    // Ein Tag in der nächsten Woche; vergangene Tage lehnt das Formular ab.
+    const nextWeek = testClockDay(7);
     fireEvent.change(screen.getByLabelText("Tag"), {
-      target: { value: "2026-11-12" },
+      target: { value: nextWeek },
     });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(mockCreate).toHaveBeenCalled());
     expect(mockCreate.mock.calls[0]?.[0]).toMatchObject({
       school_class: "2a",
-      date: "2026-11-12",
+      date: nextWeek,
       start_time: "14:00",
       end_time: "17:00",
       slot_minutes: 15,

@@ -128,14 +128,6 @@ func (g *ActiveGroup) SetEndTime(endTime time.Time) error {
 	return nil
 }
 
-// GetDuration returns the duration of the active group session
-func (g *ActiveGroup) GetDuration() time.Duration {
-	if g.EndTime == nil {
-		return time.Since(g.StartTime)
-	}
-	return g.EndTime.Sub(g.StartTime)
-}
-
 // GroupSupervisor is a staff member assigned to supervise a room session (one
 // active.group_supervisors row).
 type GroupSupervisor struct {

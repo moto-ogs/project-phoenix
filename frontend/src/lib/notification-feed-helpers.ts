@@ -2,9 +2,12 @@
 // Der Backend-Text (Titel, Text, Deep Link) entsteht beim Schreiben und kommt
 // fertig an; das Frontend zeigt ihn nur an.
 
-/** Ein Eintrag, wie ihn GET /api/notifications/feed liefert. */
+/**
+ * Ein Eintrag, wie ihn GET /api/notifications/feed liefert. Der Portal-Proxy
+ * (#2352) reicht die ID als String durch, das Elternportal noch als Zahl.
+ */
 export interface NotificationFeedEntryWire {
-  id: number;
+  id: string | number;
   type: string;
   title: string;
   body: string;

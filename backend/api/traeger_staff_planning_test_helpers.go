@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // StaffPlanningTestRules are the Träger values of the Einsatzplanung a test
@@ -59,7 +60,7 @@ func StaffPlanningTestComposition(database transactionruntime.Database, rules *S
 		Workforce: NewAbsenceTypeTestCapability(database), Staff: owners.NewPlanStaffDirectory(owners.MustNewMembershipTestRepositories(database).Staff), CalendarPeriods: calendar.SchoolCalendar(),
 		Instances: timetableCompose.NewTimetableInstanceReads(timetable.ActivityInstance.Reads), InstanceStaff: timetableCompose.NewTimetableInstanceStaffReads(timetable.InstanceStaff),
 		Rooms: facilitiesCompose.NewRoomNameDirectory(rooms.Room), ActivityGroups: timetableCompose.NewTimetableGroupReads(timetable.Timetable), DB: database.Pool(),
-		PlanRules: rules, WorkingTimeAudit: owners.NewWorkingTimeOverrideAudit(NewTimetableDeviationAudit(database).DeviationEvent),
+		PlanRules: rules, WorkingTimeAudit: owners.NewWorkingTimeOverrideAudit(NewTimetableDeviationAudit(database).DeviationEvent), Today: timezone.TodayDate,
 	})
 	if err != nil {
 		return nil, nil, err

@@ -32,8 +32,7 @@ func (f *overviewFixture) newExportService() timetracking.StaffTimeExportService
 		owners.NewTimeTrackingDataAccessAudit(owners.NewTestAuditPersistence(testpkg.MustDatabase(f.db), nil).DataAccessLog),
 		nil,
 		nil,
-		owners.RenderTimeTrackingWorkbook,
-	)
+		owners.RenderTimeTrackingWorkbook, testNow)
 }
 
 func (f *overviewFixture) newWorkSessionService() timetracking.WorkSessionService {
@@ -47,7 +46,7 @@ func (f *overviewFixture) newWorkSessionService() timetracking.WorkSessionServic
 		nil,
 		f.db,
 		owners.RenderTimeTrackingPDF,
-		owners.RenderTimeTrackingWorkbook,
+		owners.RenderTimeTrackingWorkbook, timetracking.WithSessionClock(testNow),
 	)
 }
 
@@ -177,11 +176,11 @@ func TestMonthExportRows_ClosedMonthCarriesFrozenValue(t *testing.T) {
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(f.workforce)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(f.workforce)), workforceCompose.NewTimeTrackingShifts(f.workforce),
 		settings, nil,
 		timetracking.WithMonthAdjustments(f.workforce),
-		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(f.workforce)),
+		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(f.workforce)), timetracking.WithMonthTestClock(testNow),
 	)
 	closeSvc := timetracking.NewStaffMonthCloseService(timetracking.MonthSnapshotCapability(f.workforce), monthSvc, owners.MonthCloseStaff(f.repos.Staff), settings, nil, timetracking.WithMonthCloseUnitOfWork(testpkg.
 		RunInTenantTransaction,
-	),
+	), timetracking.WithMonthCloseClock(testNow),
 	)
 	svc := f.newOverviewService(settings)
 
@@ -326,8 +325,7 @@ func TestStaffTimeExport_NoFileWithoutAudit(t *testing.T) {
 	actorID := f.newActorAccount(t)
 	exportSvc := timetracking.NewStaffTimeExportService(
 		f.svc, f.newWorkSessionService(), owners.TimeExportStaff(f.repos.Staff), failingAccessLogRepo{}, nil, nil,
-		owners.RenderTimeTrackingWorkbook,
-	)
+		owners.RenderTimeTrackingWorkbook, testNow)
 
 	file, err := exportSvc.Export(f.ctx, timetracking.TimeExportRequest{
 		Year:  f.today.Year(),
@@ -347,8 +345,7 @@ func TestStaffTimeExport_DayRowsMatchSingleExport(t *testing.T) {
 	sessionSvc := f.newWorkSessionService()
 	exportSvc := timetracking.NewStaffTimeExportService(
 		f.svc, sessionSvc, owners.TimeExportStaff(f.repos.Staff), owners.NewTimeTrackingDataAccessAudit(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, f.db), nil).DataAccessLog), nil, nil,
-		owners.RenderTimeTrackingWorkbook,
-	)
+		owners.RenderTimeTrackingWorkbook, testNow)
 
 	file, err := testpkg.TenantQuery3(t, f.ctx, testpkg.SetupTestDB(t), exportSvc.Export, timetracking.TimeExportRequest{
 		Year:        f.today.Year(),

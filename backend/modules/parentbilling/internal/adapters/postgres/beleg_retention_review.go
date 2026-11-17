@@ -24,7 +24,7 @@ type clarificationReviewRow struct {
 	ReviewedOn           calendar.Date `bun:"reviewed_on,type:date"`
 	NextReviewOn         calendar.Date `bun:"next_review_on,type:date"`
 	ReviewedByOperatorID *int64        `bun:"reviewed_by_operator_id"`
-	ReviewedAt           time.Time     `bun:"reviewed_at,nullzero,default:current_timestamp"`
+	ReviewedAt           time.Time     `bun:"reviewed_at,nullzero"`
 }
 
 func (r clarificationReviewRow) review() parentbilling.BelegClarificationReview {

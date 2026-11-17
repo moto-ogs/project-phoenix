@@ -31,7 +31,7 @@ func TestSettingChangeFailsWhenTheAuditInsertFails(t *testing.T) {
 	persistence := testpkg.ConfigRuntime(db)
 	values := configRepository.NewSettingValueRepository(persistence)
 	audits := configRepository.NewSettingAuditRepository(persistence)
-	service := NewSettingsService(values, audits, nil, testpkg.SettingsRuntime(t, db), slog.Default(), settingsTestClock, registry)
+	service := NewSettingsService(values, audits, nil, testpkg.SettingsRuntime(t, db), slog.Default(), registry)
 
 	stored := func() json.RawMessage {
 		t.Helper()

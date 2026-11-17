@@ -7,14 +7,15 @@ name: Demo uptime
 # It stays silent until the repository variable DEMO_MONITOR_ENABLED is "true",
 # so it does not fail before the demo answers. Scheduled runs can be delayed by
 # several minutes under GitHub load, so this is a safety net, not monitoring
-# with a guaranteed interval. Tighten the schedule for event days if needed.
+# with a guaranteed interval. Hourly: every ten minutes cost 95 runner minutes
+# a day (14.11.2026). Tighten the schedule for event days if needed.
 #
 # After a red run, the next green run posts a recovery notice, so the channel
 # shows when the alarm is over without someone opening the Actions tab.
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:

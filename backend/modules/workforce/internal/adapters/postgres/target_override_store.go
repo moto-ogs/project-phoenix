@@ -28,8 +28,8 @@ type staffTargetOverrideRow struct {
 	CreatedBy      *int64 `bun:"created_by"`
 	// TraegerContractID marks the Ferien-Soll the Träger mirrors (#4706).
 	TraegerContractID *int64    `bun:"traeger_contract_id"`
-	CreatedAt         time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt         time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt         time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt         time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 func (s *Store) ListStaffTargetOverrides(ctx context.Context, query domain.TargetOverrideQuery) ([]domain.StaffTargetOverride, domain.OperationStats, error) {

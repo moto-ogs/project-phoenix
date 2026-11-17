@@ -9,11 +9,18 @@ import (
 
 // pushSubscriptionRequest mirrors the browser's PushSubscription JSON.
 type pushSubscriptionRequest struct {
-	Endpoint string `json:"endpoint"`
-	Keys     struct {
-		P256dh string `json:"p256dh"`
-		Auth   string `json:"auth"`
-	} `json:"keys"`
+	Endpoint string               `json:"endpoint"`
+	Keys     pushSubscriptionKeys `json:"keys"`
+}
+
+type pushSubscriptionKeys struct {
+	P256dh string `json:"p256dh"`
+	Auth   string `json:"auth"`
+}
+
+// pushPublicKeyResponse is the VAPID public key of the server.
+type pushPublicKeyResponse struct {
+	PublicKey string `json:"public_key"`
 }
 
 // Bind implements render.Binder.
@@ -34,7 +41,7 @@ func (rs *Resource) getPushPublicKey(w http.ResponseWriter, r *http.Request) {
 		rs.Runtime.NotFound(w, r, err)
 		return
 	}
-	rs.Runtime.Respond(w, r, http.StatusOK, map[string]string{"public_key": key}, "")
+	rs.Runtime.Respond(w, r, http.StatusOK, pushPublicKeyResponse{PublicKey: key}, "")
 }
 
 // subscribePush registers (or refreshes) the caller's device for Web Push.

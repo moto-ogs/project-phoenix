@@ -19,7 +19,7 @@ import (
 // and settings routes, the service graph and the booking audit read it; now
 // stamps the owner's writes (nil: the real clock).
 func NewEnrollmentBookings(now func() time.Time) *enrollment.BookingProjection {
-	return ComposeEnrollmentBookings(enrollmentCompose.NewClocked(now))
+	return ComposeEnrollmentBookings(enrollmentCompose.NewClocked(now), now)
 }
 
 // NewEnrollmentPhaseBounds is Enrollment's phase bounds reader (#6657) over
@@ -35,8 +35,8 @@ func NewEnrollmentPhaseBounds(db transactionruntime.Database, now func() time.Ti
 	return enrollment.NewPhaseBoundsReader(enrollmentCompose.NewClocked(now), lock.LockRecurrenceWrites), nil
 }
 
-func ComposeEnrollmentBookings(owner enrollment.Owner) *enrollment.BookingProjection {
-	return enrollment.NewBookingProjection(owner, enrollmentBookingRows{bookings: carePlanCompose.NewOfferingBookings()})
+func ComposeEnrollmentBookings(owner enrollment.Owner, now func() time.Time) *enrollment.BookingProjection {
+	return enrollment.NewBookingProjection(owner, enrollmentBookingRows{bookings: carePlanCompose.NewOfferingBookings(now)})
 }
 
 // enrollmentBookingRows serves Enrollment's booking port from Care Plan's

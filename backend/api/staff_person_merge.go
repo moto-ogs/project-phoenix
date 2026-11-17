@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"time"
 
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	auditRecords "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
@@ -46,12 +47,12 @@ func (a staffPersonMergeAudit) RecordStaffPersonMerge(ctx context.Context, opera
 	id := candidate.Keeper.Person.ID
 	return a.create(ctx, &auditRecords.OperatorAuditEntry{OperatorID: operatorID, Action: "merge", ResourceType: "person", ResourceID: &id, Changes: changes})
 }
-func newStaffPersonMergeRoutes(db transactionruntime.Database) (http.Handler, error) {
+func newStaffPersonMergeRoutes(db transactionruntime.Database, now func() time.Time) (http.Handler, error) {
 	audit, err := auditCompose.NewPersistence(auditCompose.PersistenceDependencies{DB: db.Pool()})
 	if err != nil {
 		return nil, err
 	}
-	workflow, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(), membershipCompose.NewStaffPersonMerge(), staffPersonMergeAudit{create: audit.OperatorAuditLog.Create}, operatorIDFromSession)
+	workflow, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(now), membershipCompose.NewStaffPersonMerge(), staffPersonMergeAudit{create: audit.OperatorAuditLog.Create}, operatorIDFromSession)
 	if err != nil {
 		return nil, err
 	}

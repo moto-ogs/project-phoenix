@@ -839,7 +839,7 @@ func TestGetCurrentSession_CountCarriesItsRevision(t *testing.T) {
 	assert.Equal(t, []any{two["active_students"], two["active_students_revision"]}, []any{again["active_students"], again["active_students_revision"]},
 		"an unchanged count answers the same revision")
 
-	_, err := ctx.db.NewRaw("UPDATE active.visits SET exit_time = NOW() WHERE id = ?", leaving.ID).Exec(testpkg.Ctx(t))
+	_, err := ctx.db.NewRaw("UPDATE active.visits SET exit_time = ? WHERE id = ?", time.Now(), leaving.ID).Exec(testpkg.Ctx(t))
 	require.NoError(t, err)
 	one := current()
 	assert.Equal(t, float64(1), one["active_students"])

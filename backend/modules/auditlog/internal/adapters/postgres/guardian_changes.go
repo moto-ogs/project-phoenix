@@ -3,29 +3,38 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/auditlog"
 	"github.com/uptrace/bun"
 )
 
-// guardianChangeRow omits id and changed_at so the table's BIGSERIAL and
-// DEFAULT NOW() fill them, exactly as for the retained repository.
+// guardianChangeRow omits id so the table's BIGSERIAL fills it, and
+// changed_at so the column default stamps it, like every row of the retained
+// repository: the Träger access log orders the change against the ledgers
+// the database stamps and lists them up to the database time (ADR 0281,
+// Nachtrag).
 type guardianChangeRow struct {
 	bun.BaseModel      `bun:"table:audit.guardian_changes"`
-	TenantID           int64   `bun:"tenant_id"`
-	StudentID          int64   `bun:"student_id"`
-	GuardianProfileID  int64   `bun:"guardian_profile_id"`
-	ActorAccountID     *int64  `bun:"actor_account_id"`
-	ActorNameSnapshot  *string `bun:"actor_name_snapshot"`
-	ActorEmailSnapshot *string `bun:"actor_email_snapshot"`
-	ChangeType         string  `bun:"change_type"`
-	FieldName          string  `bun:"field_name"`
-	OldValue           *string `bun:"old_value"`
-	NewValue           *string `bun:"new_value"`
+	TenantID           int64     `bun:"tenant_id"`
+	StudentID          int64     `bun:"student_id"`
+	GuardianProfileID  int64     `bun:"guardian_profile_id"`
+	ActorAccountID     *int64    `bun:"actor_account_id"`
+	ActorNameSnapshot  *string   `bun:"actor_name_snapshot"`
+	ActorEmailSnapshot *string   `bun:"actor_email_snapshot"`
+	ChangeType         string    `bun:"change_type"`
+	FieldName          string    `bun:"field_name"`
+	OldValue           *string   `bun:"old_value"`
+	NewValue           *string   `bun:"new_value"`
+	ChangedAt          time.Time `bun:"changed_at,nullzero"`
 }
 
-type GuardianChanges struct{ database Database }
+type GuardianChanges struct {
+	database Database
+}
 
+// NewGuardianChanges binds the guardian-change append to the caller's
+// transaction.
 func NewGuardianChanges(database Database) *GuardianChanges {
 	return &GuardianChanges{database: database}
 }

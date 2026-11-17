@@ -44,8 +44,8 @@ type SlotListDependencies struct {
 	Access     ports.ReadAccess
 	ListExport application.ListRenderer
 	EnrolledOn func(status string, enrolledFrom, enrolledUntil *calendar.Date, date, today calendar.Date) bool
-	// Now overrides the service clock. Leave nil in production (defaults to
-	// time.Now); tests inject a fixed instant for a deterministic weekday.
+	// Now is the service clock and is required: the root binds its clock,
+	// tests a fixed instant for a deterministic weekday.
 	Now func() time.Time
 }
 

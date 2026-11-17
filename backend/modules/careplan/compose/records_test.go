@@ -38,7 +38,7 @@ func TestCompanionFacadePreservesNamesIsolationAndQueryCount(t *testing.T) {
 		StudentID: second.ID, FirstName: "Zweites", LastName: "Kind",
 	}}}
 	var observations []Observation
-	module, err := New(Dependencies{
+	module, err := New(Dependencies{Now: composeTestNow,
 		StudentDirectory: testpkg.StudentDirectory{},
 		DB:               db, Observe: func(value Observation) { observations = append(observations, value) },
 		AmbientDB: postgresNative.TenantAmbientDatabase(db), People: people,
@@ -425,7 +425,7 @@ func testCareDocumentRollbackAndRetry(t *testing.T, db *bun.DB, module careplan.
 				return err
 			}
 			_, err := module.QueueCareDocumentCleanup(commandCtx, careplan.CareDocumentCleanup{
-				OwnerID: student.ID, FilenameStored: filename, RetryAfter: time.Now(),
+				OwnerID: student.ID, FilenameStored: filename, RetryAfter: composeTestNow(),
 			})
 			return err
 		},

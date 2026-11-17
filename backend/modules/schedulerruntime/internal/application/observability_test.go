@@ -19,7 +19,7 @@ func TestRunCleanupJobsEmitsCorrelatedWorkerFailure(t *testing.T) {
 	t.Parallel()
 
 	runCalled := false
-	scheduler := &Scheduler{
+	scheduler := &Scheduler{now: time.Now,
 		cleanupJobs: []CleanupJob{{
 			Description: "must not run",
 			Run: func(context.Context) (int, error) {
@@ -65,7 +65,7 @@ func TestRunCleanupJobsEmitsCorrelatedWorkerFailure(t *testing.T) {
 func TestRunCleanupJobsReturnsTraceSetupFailure(t *testing.T) {
 	t.Parallel()
 
-	scheduler := &Scheduler{}
+	scheduler := &Scheduler{now: time.Now}
 	scheduler.workerTracer = ports.WorkerTracer{
 		StartJob: func(context.Context, string) (context.Context, error) {
 			return nil, errors.New("random source unavailable")
@@ -82,7 +82,7 @@ func TestRunCleanupJobsStartsCorrelationBeforeEmptyJobExit(t *testing.T) {
 
 	started := false
 	correlatedLog := false
-	scheduler := &Scheduler{}
+	scheduler := &Scheduler{now: time.Now}
 	scheduler.workerTracer = ports.WorkerTracer{
 		StartJob: func(ctx context.Context, _ string) (context.Context, error) {
 			started = true

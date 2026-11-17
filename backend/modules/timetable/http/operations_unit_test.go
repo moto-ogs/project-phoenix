@@ -1168,6 +1168,8 @@ func newRealSpontaneousOpsService(t *testing.T, instanceSvc timetable.InstanceLi
 		Lifecycle:            testOperationLifecycle{instances: instanceSvc},
 		Session:              testRequestSession{},
 		NormalizeSchoolClass: func(class string) string { return class },
+		// The lifecycle fake starts on the wall clock; the operations read it too.
+		Now: time.Now,
 	}, personSvc)
 	require.NoError(t, err)
 	return operations

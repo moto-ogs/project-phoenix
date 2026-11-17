@@ -54,6 +54,7 @@ func newExcusedRequests(t *testing.T, repos *api.PeopleRepositorySuiteFactory, c
 	requests, err := owners.NewExcusedAbsenceRequests(owners.ExcusedRequestWiring{
 		CarePlan: capability, Students: repos.Student, Persons: repos.Person,
 		Scope: careplantest.SchoolWideReviewScope, Today: func() careplan.Date { return excusedToday },
+		Now: func() time.Time { return calendar.Date(excusedToday).BerlinMidnight().Add(12 * time.Hour) },
 	})
 	require.NoError(t, err)
 	return requests
