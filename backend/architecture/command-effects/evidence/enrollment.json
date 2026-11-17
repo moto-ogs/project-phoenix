@@ -6090,7 +6090,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "321228fb38c28aa34658b57213d16bdb",
+      "binding_digest": "2a3efe118f6b6a128203881d879b7631",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassMemberFrom",
@@ -6098,7 +6098,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "f53019b377c48067a2ee297a3fdda06e",
+      "binding_digest": "3543c4f482d81a5b92624ae32ebd3b3d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
+      "source_owner": "enrollment",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassTimeBeforeCare",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
+      "binding_digest": "db928a1d335cb47d53823f8c6b6ce47a",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.LeftSchool",
@@ -6106,7 +6114,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "ab6c557e058e6fab6c7be402202cd14e",
+      "binding_digest": "6515b8c935ac9de7acc3800cb09244da",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.ListClassRoster",
