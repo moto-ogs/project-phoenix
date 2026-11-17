@@ -173,16 +173,27 @@ func (f *traegerFeed) Page(ctx context.Context, organizationID, accountID int64,
 	if limit <= 0 {
 		limit = FeedDefaultPageSize
 	}
-	limit = min(limit, FeedMaxPageSize)
 	after, err := decodeFeedCursor(cursor)
 	if err != nil {
 		return contract.TraegerNotificationFeedPage{}, err
 	}
+	return f.read(ctx, organizationID, accountID, after, min(limit, FeedMaxPageSize))
+}
+
+// UnreadCount is the read of a page without entries.
+func (f *traegerFeed) UnreadCount(ctx context.Context, organizationID, accountID int64) (int, error) {
+	page, err := f.read(ctx, organizationID, accountID, nil, 0)
+	return page.UnreadCount, err
+}
+
+// read loads the unread count and up to limit entries after the cursor in
+// one administrative transaction; a limit of 0 loads the count only.
+func (f *traegerFeed) read(ctx context.Context, organizationID, accountID int64, after *domain.FeedCursor, limit int) (contract.TraegerNotificationFeedPage, error) {
 	types := traegerFeedTypes()
 	var page contract.TraegerNotificationFeedPage
-	err = f.inAdminTx(ctx, organizationID, accountID, func(txCtx context.Context) error {
+	err := f.inAdminTx(ctx, organizationID, accountID, func(txCtx context.Context) error {
 		var err error
-		if page.UnreadCount, err = f.store.CountUnreadTraegerFeedEntries(txCtx, organizationID, accountID, types); err != nil {
+		if page.UnreadCount, err = f.store.CountUnreadTraegerFeedEntries(txCtx, organizationID, accountID, types); err != nil || limit == 0 {
 			return err
 		}
 		entries, err := f.store.ListTraegerFeedEntries(txCtx, organizationID, accountID, types, after, limit+1)
@@ -196,16 +207,6 @@ func (f *traegerFeed) Page(ctx context.Context, organizationID, accountID int64,
 		return contract.TraegerNotificationFeedPage{}, err
 	}
 	return page, nil
-}
-
-func (f *traegerFeed) UnreadCount(ctx context.Context, organizationID, accountID int64) (int, error) {
-	var count int
-	err := f.inAdminTx(ctx, organizationID, accountID, func(txCtx context.Context) error {
-		var err error
-		count, err = f.store.CountUnreadTraegerFeedEntries(txCtx, organizationID, accountID, traegerFeedTypes())
-		return err
-	})
-	return count, err
 }
 
 func (f *traegerFeed) MarkRead(ctx context.Context, organizationID, accountID, entryID int64) (int, error) {

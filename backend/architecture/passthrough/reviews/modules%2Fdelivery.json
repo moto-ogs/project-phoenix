@@ -7,6 +7,11 @@
     },
     {
       "decision": "0090",
+      "id": "modules/delivery/http/notifications/TraegerFeedResource.Router",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
       "id": "modules/delivery/internal/adapters/deliverypostgres/databaseError.Error",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
