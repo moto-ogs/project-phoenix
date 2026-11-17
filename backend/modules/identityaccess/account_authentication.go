@@ -311,6 +311,9 @@ func (e AuthEvent) Metadata() []AuthEventMetadataEntry {
 	if evidence := e.PendingWipe; evidence != nil {
 		add("reason", evidence.Reason)
 		add("pending_account_wide_wipe", true)
+		if !evidence.Cutoff.IsZero() {
+			add(PendingWipeCutoffMetadataKey, evidence.Cutoff.UTC().Format(time.RFC3339Nano))
+		}
 	}
 	if evidence := e.CompletedWipe; evidence != nil {
 		add("pending_event_id", evidence.PendingEventID)
@@ -342,9 +345,12 @@ type RevokedSessionsEvidence struct {
 }
 
 // PendingWipeEvidence marks an account-wide wipe still to be completed
-// after commit.
+// after commit. Cutoff is the instant on Identity & Access's clock up to
+// which sessions existed when the wipe was recorded; it stamps
+// auth.tokens.created_at on the same clock (#7295).
 type PendingWipeEvidence struct {
 	Reason string
+	Cutoff time.Time
 }
 
 // CompletedWipeEvidence closes a pending wipe.
@@ -352,14 +358,20 @@ type CompletedWipeEvidence struct {
 	PendingEventID int64
 }
 
+// PendingWipeCutoffMetadataKey names the auth-event metadata key that holds
+// a pending wipe's Cutoff.
+const PendingWipeCutoffMetadataKey = "session_cutoff"
+
 // PendingAccountWideWipe is a recorded account-wide revoke that may still
-// need recovery after a failed after-commit wipe.
+// need recovery after a failed after-commit wipe. Cutoff is the recorded
+// PendingWipeEvidence.Cutoff, zero for a wipe recorded without one.
 type PendingAccountWideWipe struct {
 	EventID   int64
 	TenantID  int64
 	AccountID int64
 	Reason    string
 	CreatedAt time.Time
+	Cutoff    time.Time
 }
 
 // AccountAuthentication is the capability tenant, parent and school login,
