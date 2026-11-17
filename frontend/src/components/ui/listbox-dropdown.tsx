@@ -21,6 +21,7 @@ import {
   selectTriggerClassName,
   type SelectTriggerSize,
 } from "./select-trigger-styles";
+import { CONTROL_PART } from "./control-geometry";
 
 import { CheckboxIndicator } from "./checkbox";
 import { MODAL_SCOPE_SELECTOR, SCROLL_AREA_PROPS } from "./overlay-stack";
@@ -199,6 +200,8 @@ interface ListboxDropdownProps<K extends string> {
   readonly className?: string;
   /** Field height: 40 px (`compact`) by default, `dense` 36 px for dense rows. */
   readonly size?: ListboxDropdownSize;
+  /** Between the arrows of a framed group, see `selectTriggerClassName`. */
+  readonly embedded?: boolean;
   /**
    * Kit-internal only: the caller draws the whole trigger itself (the filter
    * chip of `DesktopFilters`). Outside `src/components/ui` the field look is
@@ -376,6 +379,7 @@ export function ListboxDropdown<K extends string>({
   containerNodeRef,
   className = "",
   size,
+  embedded = false,
   unstyledTrigger = false,
   menuClassName = "",
   menuAlign = "start",
@@ -1072,6 +1076,7 @@ export function ListboxDropdown<K extends string>({
         aria-invalid={invalid || undefined}
         role={triggerRole === "combobox" ? "combobox" : undefined}
         disabled={disabled}
+        {...(embedded && CONTROL_PART)}
         className={
           unstyledTrigger
             ? className
@@ -1079,6 +1084,7 @@ export function ListboxDropdown<K extends string>({
                 size: size ?? "compact",
                 invalid,
                 disabled,
+                embedded,
                 className,
               })
         }
