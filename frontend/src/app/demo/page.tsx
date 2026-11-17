@@ -30,6 +30,7 @@ export default function DemoWaitingRoomPage() {
   const [attempt, setAttempt] = useState(0);
   const linkRef = useRef<DemoLink | null>(null);
 
+  // oxlint-disable-next-line swr/no-effect-load -- sessionless demo waiting room: consumes the fragment token and polls the demo school setup before any session exists
   useEffect(() => {
     const run = { cancelled: false };
     // The fragment is read once and removed; a repeated effect run (React

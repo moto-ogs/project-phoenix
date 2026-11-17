@@ -41,6 +41,7 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { ConfirmationModal } from "~/components/ui/modal";
 import {
   SlideOver,
+  SlideOverBody,
   SlideOverContent,
   SlideOverFooter,
   SlideOverHeader,
@@ -77,6 +78,7 @@ import {
   completeAvailableClock,
 } from "~/lib/timetable-lifecycle";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type { InstanceParticipantNames } from "~/lib/timetable-api";
 import type { RosterDeviation } from "~/lib/roster-deviation";
@@ -309,7 +311,7 @@ function SeriesRosterMaintenance({
   const { data } = useSWRAuth(
     known || !periodId
       ? null
-      : `timetable-template-roster-maintenance-${templateId}-${periodId}`,
+      : tenantDailyKeys.templateRosterMaintenance(templateId, periodId),
     () => timetableService.getTemplate(templateId, periodId ?? ""),
   );
   const state = known ?? data?.rosterMaintenance;
@@ -511,7 +513,7 @@ function ParticipantNamesLoader({
   children: (names: InstanceParticipantNames) => React.ReactNode;
 }>) {
   const { data, error, mutate } = useSWRAuth(
-    `timetable-participants-${instanceId}`,
+    tenantDailyKeys.instanceParticipants(instanceId),
     () => timetableService.getInstanceParticipants(instanceId),
   );
   const loadError = useSwrLoadError(error, "die Liste der Teilnehmenden", () =>
@@ -1099,7 +1101,7 @@ export function InstanceDetailModal({
           <SlideOverHeader>
             <SlideOverTitle>{instance.title}</SlideOverTitle>
           </SlideOverHeader>
-          <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
+          <SlideOverBody className="space-y-5">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <InstanceStatusBadge status={instance.status} />
@@ -1295,7 +1297,7 @@ export function InstanceDetailModal({
                 )}
               </>
             )}
-          </div>
+          </SlideOverBody>
           <SlideOverFooter>{footer}</SlideOverFooter>
         </SlideOverContent>
       </SlideOver>
@@ -1744,7 +1746,7 @@ interface SectionProps {
 function Section({ title, children }: SectionProps) {
   return (
     <div className="space-y-2">
-      <SectionLabel as="h4">{title}</SectionLabel>
+      <SectionLabel as="h3">{title}</SectionLabel>
       <div className="space-y-1.5">{children}</div>
     </div>
   );

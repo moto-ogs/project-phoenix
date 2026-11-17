@@ -74,6 +74,7 @@ export function InvitationPageContent({
     />
   ) : null;
 
+  // oxlint-disable-next-line swr/no-effect-load -- invitation token page before the account exists; ~/lib/swr has no public reader
   useEffect(() => {
     let cancelled = false;
     async function fetchInvitation() {

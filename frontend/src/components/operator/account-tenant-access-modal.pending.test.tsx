@@ -9,13 +9,36 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ReactNode } from "react";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import {
   deferred,
   expectDialogUnlocked,
   expectSaveLocksDialog,
 } from "~/test/helpers/form-modal-pending";
+
+// The modal reads through the shared cache; each render gets its own, under
+// an operator session (scope `platform`).
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: {
+      user: { id: "operator-1", scope: "platform" },
+      expires: "2099-01-01",
+    },
+    status: "authenticated",
+  }),
+}));
+
+function Providers({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
@@ -117,7 +140,7 @@ async function renderAndGrant() {
   const answer = deferred<ReturnType<typeof access>[]>();
   mocks.grant.mockReturnValue(answer.promise);
   const onClose = vi.fn();
-  const view = render(modal("42", onClose), { wrapper: ToastProvider });
+  const view = render(modal("42", onClose), { wrapper: Providers });
   const schoolSelect = await screen.findByLabelText("account-access-school");
   fireEvent.change(schoolSelect, { target: { value: "3" } });
   const roleSelect = screen.getByLabelText("account-access-role");

@@ -32,6 +32,7 @@ import {
   type StaffTargetOverride,
 } from "~/lib/staff-target-overrides-api";
 import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import { staffTimeKeys } from "~/lib/swr/staff-keys";
 
 import {
   formatDecimalHours,
@@ -179,7 +180,7 @@ export function SonderarbeitszeitenSection({
     error: loadError,
     isLoading,
     mutate: mutateList,
-  } = useSWRAuth(`staff-target-overrides-${staffId}`, () =>
+  } = useSWRAuth(staffTimeKeys.targetOverrides(staffId), () =>
     staffTargetOverrideService.list(staffId),
   );
   const invalidate = useInvalidateMatching();

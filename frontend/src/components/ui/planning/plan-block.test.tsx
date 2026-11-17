@@ -12,11 +12,14 @@ describe("PlanBlock", () => {
         timeRange="12:00–14:00"
         label="Mensa"
         onClick={onClick}
-        aria-label="Mensa bearbeiten"
+        details="bearbeiten"
       />,
     );
 
-    const block = screen.getByRole("button", { name: "Mensa bearbeiten" });
+    // Named by what it shows; details follow as hidden text (#7112).
+    const block = screen.getByRole("button", {
+      name: /^12:00–14:00 ?Mensa ?, bearbeiten$/,
+    });
     expect(block).toHaveAttribute("type", "button");
     fireEvent.click(block);
     expect(onClick).toHaveBeenCalledTimes(1);
@@ -89,12 +92,14 @@ describe("PlanBlock", () => {
         timeRange="12:00–14:00"
         label="Mensa"
         interactive={false}
-        aria-label="Mensa"
+        details="nur zur Ansicht"
       />,
     );
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Mensa").tagName).toBe("DIV");
+    const block = screen.getByText("Mensa").closest("div");
+    expect(block?.tagName).toBe("DIV");
+    expect(block).toHaveTextContent("12:00–14:00Mensa, nur zur Ansicht");
   });
 
   it("renders time and label on a single line and drops the footer slot when compact", () => {

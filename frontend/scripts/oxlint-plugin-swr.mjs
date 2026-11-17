@@ -367,11 +367,13 @@ const KEYED_HOOKS = new Set([
   "useImmutableSWR",
   "useTraegerResource",
   "useFreshTraegerResource",
+  "useUnreadCount",
 ]);
 // Resource readers that forward their caller's key; the caller's key is checked.
 const KEY_FORWARDERS = new Set([
   "src/components/traeger/use-traeger-resource.ts",
   "src/lib/hooks/use-confirmed-resource.ts",
+  "src/lib/hooks/use-unread-count.ts",
 ]);
 
 function rootIdentifier(node) {

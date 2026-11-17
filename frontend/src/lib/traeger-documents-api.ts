@@ -70,11 +70,15 @@ export interface TraegerDocumentReleaseInput {
   readonly groupId: string | null;
 }
 
+// The catalog proxy hands identifiers out as strings (ADR 0270); the list
+// route still sends numbers.
+type BackendId = string | number;
+
 interface BackendRelease {
-  id: number;
+  id: BackendId;
   audience: TraegerDocumentAudience;
-  school_id: number | null;
-  group_id: number | null;
+  school_id: BackendId | null;
+  group_id: BackendId | null;
   group_name: string;
   released_at: string;
 }
@@ -101,12 +105,12 @@ interface BackendSharedDocument {
 }
 
 interface BackendSchool {
-  id: number;
+  id: BackendId;
   name: string;
-  groups: { id: number; name: string }[] | null;
+  groups: { id: BackendId; name: string }[] | null;
 }
 
-const optionalId = (id: number | null): string | null =>
+const optionalId = (id: BackendId | null): string | null =>
   id === null ? null : String(id);
 
 function mapTraegerDocumentRelease(

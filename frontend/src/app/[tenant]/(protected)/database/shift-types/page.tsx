@@ -44,13 +44,14 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useModuleBooked } from "~/lib/tenant-context";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
 
 const logger = createLogger({ component: "DatabaseShiftTypesPage" });
 
-const CACHE_KEY = "database-shift-types";
-const CATEGORY_CACHE_KEY = "database-shift-type-categories";
+const CACHE_KEY = tenantAdminKeys.shiftTypes();
+const CATEGORY_CACHE_KEY = tenantAdminKeys.shiftTypeCategories();
 const DEFAULT_COLOR: string = LOCATION_COLORS.GROUP_ROOM;
 
 /** „12 geplante Dienste“ / „1 Schichtserie“ für die Rückfrage (#6845). */

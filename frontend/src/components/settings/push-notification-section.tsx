@@ -187,6 +187,7 @@ export function PushNotificationSection({
     }
   }, [installAccepted, installationCompleted, portal]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- reads this device's push subscription and Notification permission and syncs the subscription; per-device browser state, not a shared resource
   useEffect(() => {
     void refresh();
   }, [refresh]);
@@ -329,12 +330,13 @@ export function PushNotificationSection({
       <span className="text-sm leading-6 text-pretty">{t("onBody")}</span>
     ) : undefined;
 
+  // Named by the visible word (WCAG 2.5.3, #7112); the card's heading
+  // „Benachrichtigungen auf diesem Gerät“ gives the context.
   const primaryAction =
     state === "unsubscribed" ? (
       <Button
         type="button"
         size="md"
-        aria-label={t("enable")}
         tooltip={t("enableTooltip")}
         isLoading={busy}
         loadingText={t("enabling")}
@@ -347,7 +349,6 @@ export function PushNotificationSection({
         type="button"
         variant="surface"
         size="md"
-        aria-label={t("disable")}
         tooltip={t("disableTooltip")}
         disabled={busy}
         onClick={() => void disable()}

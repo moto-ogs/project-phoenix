@@ -5,13 +5,10 @@ import { useEffect, useMemo, useRef } from "react";
 import { createLogger } from "~/lib/logger";
 import type { RosterDeviation } from "~/lib/roster-deviation";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 
 const logger = createLogger({ component: "useRosterDeviations" });
-
-export function rosterDeviationsKey(periodId: string): string {
-  return `roster-deviations-${periodId}`;
-}
 
 /**
  * Regeltermine of the period whose children list differs from an offering's
@@ -35,7 +32,7 @@ export function useRosterDeviations(
   retry: () => unknown;
 } {
   const key = periodId
-    ? `${rosterDeviationsKey(periodId)}${freshReadID ? `-connect-${freshReadID}` : ""}`
+    ? tenantDailyKeys.rosterDeviations(periodId, freshReadID)
     : null;
   const { data, error, isValidating, mutate } = useSWRAuth(
     enabled ? key : null,

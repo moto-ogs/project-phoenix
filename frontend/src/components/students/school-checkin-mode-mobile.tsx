@@ -124,7 +124,7 @@ export function SchoolCheckinModeMobile({
         type="button"
         onClick={onToggle}
         aria-pressed={false}
-        aria-label="Kinder an- und abmelden"
+        data-checkin-toggle
         tooltip={CHECKIN_HINTS.start}
         variant="surface"
         size="base"

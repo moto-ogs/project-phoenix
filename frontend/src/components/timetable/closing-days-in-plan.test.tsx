@@ -81,8 +81,9 @@ describe("WeeklyCalendarGrid closing days (#2032)", () => {
     renderWeek();
 
     // Anker: das Wochenraster mit dem Termin-Block ist gerendert.
+    // The block is named by what it shows: time, then title (#7112).
     expect(
-      screen.getByLabelText(/^Mensa, 12:00 bis 13:00/),
+      screen.getByRole("button", { name: /^12:00 – 13:00 Mensa\b/ }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Schließtag/)).not.toBeInTheDocument();
     // Leere Tagesspalten tragen seit #2031 keine Beschriftung mehr; der

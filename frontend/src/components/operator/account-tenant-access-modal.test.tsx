@@ -11,9 +11,31 @@ import { AccountTenantAccessModal } from "./account-tenant-access-modal";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// The modal reads through the shared cache; each render gets its own, under
+// an operator session (scope `platform`).
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: {
+      user: { id: "operator-1", scope: "platform" },
+      expires: "2099-01-01",
+    },
+    status: "authenticated",
+  }),
+}));
+
+function Providers({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
 
 function render(ui: React.ReactElement) {
-  return renderPlain(ui, { wrapper: ToastProvider });
+  return renderPlain(ui, { wrapper: Providers });
 }
 
 const {

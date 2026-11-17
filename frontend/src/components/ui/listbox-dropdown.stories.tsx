@@ -39,42 +39,31 @@ export default meta;
 
 type Story = StoryObj<typeof ControlledListboxDropdown>;
 
-export const Default: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
-};
+export const Default: Story = {};
 
 /** Offene Liste: `play` klickt den Auslöser (Vorlage für offene Zustände, #6562). */
 export const Opened: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   play: async ({ canvasElement }) => {
     await userEvent.click(
-      within(canvasElement).getByRole("button", { name: "Frucht auswählen" }),
+      within(canvasElement).getByRole("button", { name: /Frucht auswählen/ }),
     );
     await expect(await screen.findByRole("listbox")).toBeVisible();
   },
 };
 
 export const Compact: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     size: "dense",
   },
 };
 
 export const Disabled: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     disabled: true,
   },
 };
 
 export const Invalid: Story = {
-  // axe meldet hier noch aria-allowed-attr, label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     invalid: true,
     required: true,
@@ -82,8 +71,6 @@ export const Invalid: Story = {
 };
 
 export const EmptyValuePlaceholder: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     initialValue: "",
     placeholder: "Bitte wählen",

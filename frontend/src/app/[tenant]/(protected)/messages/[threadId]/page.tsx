@@ -8,6 +8,7 @@ import {
 import { useMessageSendAttempt } from "~/lib/swr/optimistic";
 
 import { messageKeys } from "~/lib/swr/portal-keys";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 import {
   useCallback,
@@ -230,7 +231,7 @@ function MessageThreadContent() {
   const studentId = thread?.student_id;
   const { data: fetchedCoverage } = useSWRAuth<StudentRequestReviewCoverage>(
     canReviewRequests && !schoolWideReviewer && studentId && session?.user.id
-      ? `request-review-coverage:${session.user.id}:${studentId}`
+      ? tenantDailyKeys.requestReviewCoverage(session.user.id, studentId)
       : null,
     () => fetchStudentRequestReviewCoverage(studentId ?? ""),
     {

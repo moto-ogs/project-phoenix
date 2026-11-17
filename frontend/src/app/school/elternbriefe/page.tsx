@@ -59,7 +59,6 @@ import { NO_OWN_CLASS_REASON } from "~/components/school/no-own-class";
 import {
   emptySchoolParentLetterDraft,
   SCHOOL_PARENT_LETTER_KINDS,
-  SCHOOL_PARENT_LETTERS_KEY,
   SCHOOL_PARENT_LETTERS_ROUTE,
   schoolParentLetterFieldErrors,
   schoolParentLetterKindLabel,
@@ -69,6 +68,7 @@ import {
 } from "~/lib/school-parent-letters";
 import { schoolPath } from "~/lib/school-url";
 import { useSWRAuth } from "~/lib/swr";
+import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import { StatusBadge } from "~/components/ui/status-badge";
 
 const logger = createLogger({ component: "SchoolParentLettersPage" });
@@ -129,7 +129,7 @@ export default function SchoolParentLettersPage() {
     isLoading,
     mutate,
   } = useSWRAuth<Announcement[]>(
-    session ? SCHOOL_PARENT_LETTERS_KEY : null,
+    session ? schoolPortalKeys.parentLetters() : null,
     () => fetchAnnouncements(false, SCHOOL_PARENT_LETTERS_BASE),
   );
   const loadError = useSwrLoadError(error, "Ihre Elternbriefe", () => mutate());
@@ -138,7 +138,7 @@ export default function SchoolParentLettersPage() {
     error: classesError,
     mutate: reloadClasses,
   } = useSWRAuth(
-    session ? "school-parent-letter-classes" : null,
+    session ? schoolPortalKeys.classDayClasses() : null,
     fetchClassDayClassesSchool,
     { revalidateOnFocus: false },
   );

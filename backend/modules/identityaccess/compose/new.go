@@ -136,14 +136,14 @@ func NewGuardianInvitationReads(db *bun.DB, now func() time.Time) (identityacces
 	if db == nil {
 		return nil, errors.New("identity access compose: the guardian invitation reads need the database")
 	}
-	return application.NewGuardianInvitationReads(postgres.NewStore(db, clockOrReal(now)), newCommandTransactions(nil).RunRead, clockOrReal(now)), nil
+	return application.NewGuardianInvitationReads(postgres.NewStore(db, clockOrReal(now)), newCommandTransactions(nil).RunRead), nil
 }
 
 func NewGuardianInvitationInvalidation(db *bun.DB, now func() time.Time) (identityaccess.GuardianInvitationInvalidation, error) {
 	if db == nil {
 		return nil, errors.New("identity access compose: guardian invitation invalidation needs the database")
 	}
-	return application.NewGuardianInvitationInvalidation(postgres.NewStore(db, clockOrReal(now)), clockOrReal(now)), nil
+	return application.NewGuardianInvitationInvalidation(postgres.NewStore(db, clockOrReal(now))), nil
 }
 
 // clockOrReal binds the real clock where the root leaves it nil (ADR 0261).

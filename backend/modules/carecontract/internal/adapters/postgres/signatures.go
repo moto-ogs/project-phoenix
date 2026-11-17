@@ -47,16 +47,19 @@ func (Store) CurrentDocument(ctx context.Context, organizationID, contractID, ve
 }
 
 // InsertSigningLink stores the SHA-256 of a new mail link with what it was
-// sent with.
+// sent with. created_at is bound from the owner clock like expires_at: the
+// column default would stamp the database clock, and the expiry check
+// compares both columns (#7295).
 func (Store) InsertSigningLink(ctx context.Context, organizationID, contractID, documentID int64, tokenSHA256 string,
-	sent ports.SentState, expiresAt time.Time) error {
+	sent ports.SentState, createdAt, expiresAt time.Time) error {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return err
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO care_contract.contract_signing_links (organization_id, contract_id,
-			contract_document_id, token_sha256, sent_document_sha256, sent_version_sha256, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		organizationID, contractID, documentID, tokenSHA256, sent.DocumentSHA256, sent.VersionSHA256, expiresAt); err != nil {
+			contract_document_id, token_sha256, sent_document_sha256, sent_version_sha256, expires_at, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		organizationID, contractID, documentID, tokenSHA256, sent.DocumentSHA256, sent.VersionSHA256, expiresAt, createdAt); err != nil {
 		return fmt.Errorf("care contract postgres: insert signing link: %w", err)
 	}
 	return nil

@@ -73,14 +73,11 @@ export function EditSchoolModal({
     }
   }, [isOpen, school, clearError]);
 
-  // Legacy schools may keep an empty address while other fields are edited.
-  const contactEmailRequired = Boolean(school?.email);
   // The warning holds while the stored address is unchanged: a stored but
   // unusable address bounces as much as a missing one.
   const replyAddressMissing =
     requiredDetails?.replyAddressMissing === true &&
     schoolEmail.trim() === (school?.email ?? "").trim();
-
   const handleUpdate = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -95,12 +92,7 @@ export function EditSchoolModal({
         });
         return;
       }
-      if (
-        !schoolName.trim() ||
-        !schoolSlug.trim() ||
-        !schoolSubdomain.trim() ||
-        (contactEmailRequired && !schoolEmail.trim())
-      )
+      if (!schoolName.trim() || !schoolSlug.trim() || !schoolSubdomain.trim())
         return;
       if (!isValidSlug(schoolSlug)) {
         const hint =
@@ -161,7 +153,6 @@ export function EditSchoolModal({
       schoolZip,
       schoolPhone,
       schoolEmail,
-      contactEmailRequired,
       schoolHidden,
       onClose,
       onUpdated,
@@ -195,8 +186,7 @@ export function EditSchoolModal({
               !schoolOrgId ||
               !schoolName.trim() ||
               !schoolSlug.trim() ||
-              !schoolSubdomain.trim() ||
-              (contactEmailRequired && !schoolEmail.trim())
+              !schoolSubdomain.trim()
             }
             variant="primary"
             size="md"
@@ -348,7 +338,6 @@ export function EditSchoolModal({
                   value={schoolEmail}
                   onChange={(e) => setSchoolEmail(e.target.value)}
                   maxLength={255}
-                  required={contactEmailRequired}
                   label="E-Mail"
                   error={formErrors.fieldError("email")}
                   controlSize="compact"

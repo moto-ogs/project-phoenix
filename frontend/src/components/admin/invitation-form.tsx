@@ -26,7 +26,7 @@ import {
 } from "~/lib/invitation-helpers";
 import { looksLikeEmail } from "~/lib/email-format";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useDebounce } from "~/lib/use-debounce";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
@@ -56,47 +56,38 @@ function useFormerEmployment(email: string): {
 } {
   const current = email.trim().toLowerCase();
   const address = useDebounce(current, FORMER_EMPLOYMENT_DEBOUNCE_MS);
-  const [answer, setAnswer] = useState<{
-    address: string;
-    formerEmployment: FormerEmployment | null;
-  } | null>(null);
-
-  useEffect(() => {
-    // Only an address that could be complete is worth a lookup; a half-typed
-    // one would ask once per keystroke pause.
-    if (!looksLikeEmail(address)) return;
-    let cancelled = false;
-    setAnswer(null);
-    const controller = new AbortController();
-    const timeoutID = window.setTimeout(
-      () => controller.abort(),
-      FORMER_EMPLOYMENT_LOOKUP_TIMEOUT_MS,
-    );
-    findFormerEmployment(address, controller.signal)
-      .then((formerEmployment) => {
-        if (!cancelled) setAnswer({ address, formerEmployment });
-      })
-      .catch((err: unknown) => {
-        // Without a successful lookup there is no choice to offer. Keep the
-        // existing invitation behavior; sending reports its own form errors.
-        if (cancelled) return;
-        setAnswer({ address, formerEmployment: null });
+  // Each address asks anew, also when the person returns to one: a
+  // Wiederaufnahme must not rest on an earlier answer.
+  const lookup = useFreshSWR(
+    looksLikeEmail(address) ? enrollmentKeys.formerEmployment(address) : null,
+    async () => {
+      const controller = new AbortController();
+      const timeoutID = globalThis.setTimeout(
+        () => controller.abort(),
+        FORMER_EMPLOYMENT_LOOKUP_TIMEOUT_MS,
+      );
+      try {
+        return await findFormerEmployment(address, controller.signal);
+      } finally {
+        globalThis.clearTimeout(timeoutID);
+      }
+    },
+    {
+      shouldRetryOnError: false,
+      // Without a successful lookup there is no choice to offer. Keep the
+      // existing invitation behavior; sending reports its own form errors.
+      onError: (err) => {
         logger.warn("former_employment_lookup_failed", {
           error: err instanceof Error ? err.message : String(err),
         });
-      })
-      .finally(() => window.clearTimeout(timeoutID));
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutID);
-      controller.abort();
-    };
-  }, [address]);
+      },
+    },
+  );
+  const answered = address === current && lookup.fresh;
 
   return {
-    formerEmployment:
-      answer?.address === current ? answer.formerEmployment : null,
-    pending: looksLikeEmail(current) && answer?.address !== current,
+    formerEmployment: answered ? (lookup.data ?? null) : null,
+    pending: looksLikeEmail(current) && !answered,
   };
 }
 

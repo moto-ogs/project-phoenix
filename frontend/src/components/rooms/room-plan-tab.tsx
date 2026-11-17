@@ -35,6 +35,7 @@ import {
 } from "~/lib/room-plan";
 import { fetchRoomPlanBlocks } from "~/lib/room-plan-api";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { roomKeys } from "~/lib/swr/rooms-keys";
 import { useWeekendFollowsFriday } from "~/lib/tenant-context";
 import type { RoomPlanView } from "./room-plan-navigation";
 
@@ -57,11 +58,6 @@ function useRoomPlanDays(view: RoomPlanView, anchorISO: string) {
     };
   }, [dayISO, todayISO, view, weekendOpen]);
 }
-/** SWR-Schlüssel der Blöcke eines Raums im angezeigten Zeitraum. */
-function roomPlanKey(roomId: string, from: string, to: string): string {
-  return `room-plan-${roomId}-${from}-${to}`;
-}
-
 interface RoomPlanControlsProps {
   readonly view: RoomPlanView;
   readonly anchorISO: string;
@@ -153,7 +149,7 @@ export function RoomPlanTab({ roomId, view, anchorISO }: RoomPlanTabProps) {
   const tenantMutate = useTenantMutate();
   const from = days[0]!;
   const to = days[days.length - 1]!;
-  const key = roomPlanKey(roomId, from, to);
+  const key = roomKeys.plan(roomId, from, to);
   const { data, error, isLoading } = useSWRAuth(key, () =>
     fetchRoomPlanBlocks(roomId, from, to),
   );

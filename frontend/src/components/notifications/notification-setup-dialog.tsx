@@ -138,6 +138,7 @@ export function NotificationSetupDialog({
     [onFinished],
   );
 
+  // oxlint-disable-next-line swr/no-effect-load -- inspects this device's install, Notification permission and push subscription (syncs it with the server); per-device browser state, not a shared resource
   useEffect(() => {
     let active = true;
     const decision = readDecision(storageKey);

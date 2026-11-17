@@ -1,3 +1,4 @@
+import { planFilterKey, type PlanFilter } from "~/lib/plan-filter";
 import { resourceKey } from "./resource-key";
 
 /**
@@ -110,4 +111,130 @@ export const tenantDailyKeys = {
   /** Wen eine Nachricht zur Absage eines Termins erreicht (#2601). */
   guardianNoticeReach: (instanceId: string) =>
     `timetable-guardian-notice-reach-${encodeURIComponent(instanceId)}`,
+  /**
+   * Die Kinderliste der gewählten Aufsicht: nach Termin, sonst nach laufender
+   * Gruppe. Ohne Raum oder für eine Gruppe ohne Termin (404) kein Schlüssel.
+   */
+  activeSupervisionRoster: (options: {
+    readonly selectedTimetableInstanceId: string | null;
+    readonly currentRoomId: string | null | undefined;
+    readonly missingRosterActiveGroupIds: ReadonlySet<string>;
+  }): string | null => {
+    if (options.selectedTimetableInstanceId) {
+      return `timetable-roster-${options.selectedTimetableInstanceId}`;
+    }
+    if (
+      !options.currentRoomId ||
+      options.missingRosterActiveGroupIds.has(options.currentRoomId)
+    ) {
+      return null;
+    }
+    return `timetable-roster-active-group-${options.currentRoomId}`;
+  },
+  /** Gesetzliche Feiertage im Fenster; Liste und Kalender teilen sie. */
+  schoolHolidays: (from: string, to: string) => `school-holidays-${from}-${to}`,
+  /**
+   * Die Termine des Betreuungsplans je Ansicht, Fenster und Filter; das
+   * Präfix „timetable-“ lässt jedes Planereignis sie neu laden.
+   */
+  planInstances: (view: string, from: string, to: string, filter: PlanFilter) =>
+    `timetable-${view}-${from}-${to}${planFilterKey(filter)}`,
+  /** Die volle Fassung eines Tages für das Detailpanel. */
+  planInstanceDetail: (
+    view: string,
+    from: string,
+    to: string,
+    filter: PlanFilter,
+    date: string,
+  ): string =>
+    `${tenantDailyKeys.planInstances(view, from, to, filter)}-detail-${date}`,
+  /** Lücken der Planung im Fenster (höchstens 14 Tage). */
+  planGaps: (from: string, to: string) => `timetable-gaps-${from}-${to}`,
+  /** Namen der Planpersonen ohne users:read (#3817). */
+  planStaffNames: (from: string, to: string) =>
+    `timetable-plan-staff-names-${from}-${to}`,
+  /** Name und ID aller Kinder für den Plan (#4996). */
+  planStudents: () => "timetable-student-list",
+  /** Gruppen des Gruppenfilters. */
+  plannerGroups: () => "timetable-filter-groups",
+  /**
+   * Kategorien des Terminformulars (`fetchPlannerActivityCategories`). Die
+   * Rohantwort des Endpunkts, nicht die Abbildung von `activityCategories`.
+   */
+  plannerCategories: () => "planner-activity-categories",
+  /** Alle Kinder als Auswahl des Terminformulars (`fetchAllStudentOptions`). */
+  plannerStudentOptions: () => "planner-student-options",
+  /** Bestätigte Konflikte des Plans. */
+  conflictAcks: () => "timetable-conflict-acks",
+  /** Regeltermine eines Planungszeitraums. */
+  templates: (periodId: string) => `timetable-templates-${periodId}`,
+  /** Regeltermin mit Listenpflege für das Detail eines Serientermins. */
+  templateRosterMaintenance: (templateId: string, periodId: string) =>
+    `timetable-template-roster-maintenance-${templateId}-${periodId}`,
+  /** Teilnehmende eines Termins. */
+  instanceParticipants: (instanceId: string) =>
+    `timetable-participants-${instanceId}`,
+  /** Wer einen Termin vertreten kann. */
+  staffPool: (instanceId: string) => `timetable-staff-pool-${instanceId}`,
+  /** Termine des Zeitraums für die Sammel-Vertretung. */
+  bulkSubstitutionRange: (from: string, to: string) =>
+    `timetable-sammel-vertretung-${from}-${to}`,
+  /**
+   * Verlauf der Abweichungen eines Tages, für einen Block (Gruppe und Beginn)
+   * oder den ganzen Tag.
+   */
+  deviationHistory: (
+    date: string,
+    slot: { activityGroupId: string; startTime: string } | null,
+  ) =>
+    `deviation-history-${date}-${slot ? `${slot.activityGroupId}-${slot.startTime}` : "day"}`,
+  /** Der Tagesplan eines Tages. */
+  dayPlan: (day: string) => `tagesplan-${day}`,
+  /**
+   * Regeltermine, deren Kinderliste von den Buchungen abweicht (#5103); ein
+   * Deep-Link liest unter eigenem Schlüssel frisch.
+   */
+  rosterDeviations: (periodId: string, freshReadID?: string | null) =>
+    `roster-deviations-${periodId}${freshReadID ? `-connect-${freshReadID}` : ""}`,
+  /** Vertretungsansicht: Termine, Lücken und Personal einer Woche. */
+  vertretungWeekFamily: "vertretung-week-",
+  vertretungWeek: (from: string, to: string): string =>
+    `${tenantDailyKeys.vertretungWeekFamily}${from}-${to}`,
+  vertretungGapsFamily: "vertretung-gaps-",
+  vertretungGaps: (from: string, to: string): string =>
+    `${tenantDailyKeys.vertretungGapsFamily}${from}-${to}`,
+  vertretungStaffList: (from: string, to: string) =>
+    `vertretung-staff-list-${from}-${to}`,
+  /**
+   * Dienstplan: Übersicht (Mo–Fr-Fenster) und rohe Schichten (volle Woche).
+   * Die Präfixe stehen in PLAN_CACHE_KEY_PREFIXES.
+   */
+  dienstplanOverview: (from: string, to: string) =>
+    `dienstplan-overview-${from}-${to}`,
+  dienstplanShifts: (from: string, to: string) =>
+    `dienstplan-shifts-${from}-${to}`,
+  /** Alle Dienstarten, auch entfernte (#6845). */
+  shiftTypes: () => "dienstplan-shift-types",
+  /** Offene Entscheidungen über verlängerte Abholzeiten. */
+  pickupExtensions: () => "pickup-extensions",
+  /** Aktivitäten, Kategorien und eigenes Personalprofil der Seite „Aktivitäten“. */
+  activitiesOverview: () => "activities-page",
+  /** Termine des Team-Kalenders je Ansicht und Zeitraum. */
+  staffCalendar: (viewMode: string, from: string, to: string) =>
+    `staff-calendar-${viewMode}-${from}-${to}`,
+  /** Empfänger, die ein Termin erreichen kann, je Suche. */
+  calendarRecipientOptions: (search: string) =>
+    `calendar-recipient-options-${search}`,
+  /**
+   * Ob die eigene Prüfzuständigkeit für Elternanfragen dieses Kind erreicht
+   * (#3886), je Konto.
+   */
+  requestReviewCoverage: (accountId: string, studentId: string) =>
+    `request-review-coverage:${accountId}:${studentId}`,
+  /** Angebote und Abholzeiten eines Tages für die Tageslisten (`fetchSlotListOptions`). */
+  slotListOptions: (date: string) =>
+    `timetable-slot-list-options-${encodeURIComponent(date)}`,
+  /** Vorschau einer Tagesliste für genau diese Anfrage (`fetchSlotListPreview`). */
+  slotListPreview: (request: object) =>
+    resourceKey("timetable-slot-list-preview-", request),
 } as const;

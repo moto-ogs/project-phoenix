@@ -456,7 +456,7 @@ export interface CreateSchoolRequest {
   city?: string;
   zip?: string;
   phone?: string;
-  email: string;
+  email?: string;
   /** ISO 3166-2 code of the Bundesland; required, there is no default (#7174). */
   federal_state: string;
   hidden?: boolean;

@@ -125,9 +125,10 @@ describe("RoomPlanTab (#4768)", () => {
         "08:00–12:00Frei",
         "12:00–13:00Mittagessen · Sonnengruppe",
         "13:00–17:00Frei",
-        "14:00–15:00Kunst-AGAbgesagt",
+        "14:00–15:00Kunst-AGAbgesagt, Krank",
       ]
     `);
+    // The reason stays the tooltip and is read after the label (#7112).
     expect(screen.getByText("Abgesagt")).toHaveAttribute("title", "Krank");
   });
 

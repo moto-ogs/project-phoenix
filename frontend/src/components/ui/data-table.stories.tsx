@@ -96,8 +96,6 @@ export const Paginated: Story = {
 };
 
 export const ExpandableWithSubRowsAndSummary: Story = {
-  // axe meldet hier noch aria-conditional-attr; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     columns: demoColumns,
     rows: demoRows,

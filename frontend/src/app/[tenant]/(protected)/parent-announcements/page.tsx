@@ -128,6 +128,7 @@ import {
 } from "~/lib/announcement-poll-options";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
+import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 import { type Group } from "~/lib/api";
 import { fetchSchoolClasses, fetchAllStudentNames } from "~/lib/student-api";
 import { schoolClassLabel } from "~/lib/school-class-label";
@@ -323,7 +324,7 @@ function ParentAnnouncementsContent() {
     error: loadError,
     mutate,
   } = useSWRAuth<Announcement[]>(
-    "parent-announcements-list",
+    parentAnnouncementKeys.list(),
     () => fetchAnnouncements(true),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
@@ -356,7 +357,7 @@ function ParentAnnouncementsContent() {
     error: activitiesError,
     mutate: reloadActivities,
   } = useSWRAuth<Activity[]>(
-    isFormOpen ? "parent-announcements-activities" : null,
+    isFormOpen ? parentAnnouncementKeys.targetActivities() : null,
     () => fetchActivities(),
     { revalidateOnFocus: false },
   );
@@ -365,7 +366,7 @@ function ParentAnnouncementsContent() {
     error: classesError,
     mutate: reloadClasses,
   } = useSWRAuth<string[]>(
-    isFormOpen ? "parent-announcements-classes" : null,
+    isFormOpen ? parentAnnouncementKeys.targetClasses() : null,
     () => fetchSchoolClasses(),
     { revalidateOnFocus: false },
   );

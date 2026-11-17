@@ -23,6 +23,7 @@ import {
   type SchoolHolidays,
 } from "~/lib/school-holidays-api";
 import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 export interface HolidayWindow {
   readonly from: string;
@@ -115,7 +116,9 @@ export function SchoolHolidaysList({
     [periods],
   );
   const { data, error, isLoading, mutate } = useSWRAuth<SchoolHolidays>(
-    periodsLoading ? null : `school-holidays-${window.from}-${window.to}`,
+    periodsLoading
+      ? null
+      : tenantDailyKeys.schoolHolidays(window.from, window.to),
     () => getSchoolHolidays(window.from, window.to),
   );
   const loadError = useSwrLoadError(error, "die Liste der Feiertage", () =>
