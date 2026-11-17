@@ -167,7 +167,7 @@ func (s *GroupThreadStore) AppendMessage(ctx context.Context, threadID int64, se
 		value := row.value()
 		return &value, nil
 	}
-	if err := claimMessageAttachments(ctx, db, db.NewUpdate().TableExpr("users.message_attachments AS attachment").Set("parent_group_message_id = ?", row.ID), tenantID, attachmentIDs); err != nil {
+	if err := claimMessageAttachments(ctx, db, db.NewUpdate().TableExpr("users.message_attachments AS attachment").Set("parent_group_message_id = ?", row.ID), tenantID, attachmentIDs, row.CreatedAt); err != nil {
 		return nil, err
 	}
 	if len(recipients) > 0 {

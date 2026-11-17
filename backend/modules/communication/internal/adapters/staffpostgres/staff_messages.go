@@ -99,7 +99,7 @@ func (s *MessageStore) CreateStaffMessage(ctx context.Context, input *communicat
 	if row.SendReplayed {
 		return nil
 	}
-	return claimMessageAttachments(ctx, db, db.NewUpdate().TableExpr("users.message_attachments AS attachment").Set("staff_message_id = ?", row.ID), row.TenantID, attachmentIDs)
+	return claimMessageAttachments(ctx, db, db.NewUpdate().TableExpr("users.message_attachments AS attachment").Set("staff_message_id = ?", row.ID), row.TenantID, attachmentIDs, row.CreatedAt)
 }
 
 // ListByThread returns the thread's messages oldest-first, which is the order
