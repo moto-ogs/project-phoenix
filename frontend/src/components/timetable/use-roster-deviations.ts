@@ -5,12 +5,13 @@ import { useEffect, useMemo, useRef } from "react";
 import { createLogger } from "~/lib/logger";
 import type { RosterDeviation } from "~/lib/roster-deviation";
 import { useSWRAuth } from "~/lib/swr";
+import { timetableKeys } from "~/lib/swr/portal-keys";
 import { timetableService } from "~/lib/timetable-api";
 
 const logger = createLogger({ component: "useRosterDeviations" });
 
-export function rosterDeviationsKey(periodId: string): string {
-  return `roster-deviations-${periodId}`;
+function rosterDeviationsKey(periodId: string): string {
+  return timetableKeys.rosterDeviations(periodId);
 }
 
 /**

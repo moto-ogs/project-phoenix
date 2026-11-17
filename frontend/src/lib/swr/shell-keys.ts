@@ -24,6 +24,21 @@ export const ownSupervisionKeys = {
   sessions: () => "active-supervisions-own-sessions",
 } as const;
 
+// Resources of the always-mounted shell hooks: sidebar badges, bell, mode
+// and settings. Per-account keys carry the account so a switch never shows
+// the previous account's answer.
+export const shellResourceKeys = {
+  userContext: () => "user-context",
+  settingsSchema: () => "settings-schema",
+  reminders: () => "reminders",
+  changeRequestAccess: (accountId: string) =>
+    `change-request-access:${accountId}`,
+  /** Matched with `includes`; the account follows after a colon. */
+  enrollmentsUnreadPrefix: "enrollments-unread-count",
+  enrollmentsUnread: (accountId: string) =>
+    `enrollments-unread-count:${accountId}`,
+} as const;
+
 // Family prefixes of the shared resource factories, here so the
 // always-mounted SSE invalidator carries no key factory.
 export const SWR_FAMILIES = {

@@ -255,6 +255,9 @@ export const timetableKeys = {
   // Elternhinweise zu eigenen Schließtagen in Ferienwochen (ADR 0196):
   // Grund, Tage, Stand und eine Zahl, keine Namen.
   holidayClosureNotices: () => "timetable-holiday-closure-notices",
+  // Regeltermine whose roster differs from the enrollments (#5103). The
+  // Betreuungsplan and the home todo share this entry.
+  rosterDeviations: (periodId: string) => `roster-deviations-${periodId}`,
 } as const;
 
 // School portal (Lehrkräfte).
@@ -270,6 +273,16 @@ export const schoolPortalKeys = {
   // eigene Route und eigene Schlüssel.
   notificationFeedFirstPage: () => "school-notification-feed-first-page",
   notificationFeedUnread: () => "school-notification-feed-unread",
+  parentLetters: () => "school-parent-letters",
+  parentLetter: (id: string) => `school-parent-letter-${id}`,
+  calendar: (from: string, to: string) => `school-calendar-${from}-${to}`,
+  sharedNotes: (schoolClass: string, studentId: string) =>
+    `school-shared-notes-${schoolClass}-${studentId}`,
+  // Die heutigen Hinweise: Seite und Karte der Klassenansicht teilen den
+  // Eintrag, damit eine Kenntnisnahme beide sofort nachzieht.
+  noticesToday: () => "school-staff-notices-today",
+  supervisions: (today: string) => `school-supervisions-${today}`,
+  supervisionRoster: (id: string) => `school-supervision-roster-${id}`,
 } as const;
 
 export const weekProtocolKeys = {
@@ -294,6 +307,45 @@ export const databaseKeys = {
 
 export const homeLayoutKeys = {
   key: () => "home-layout",
+} as const;
+
+/** Cards of the start page. Keys describe the response, not the card. */
+export const homeKeys = {
+  /**
+   * Today's planned blocks without rosters. „Ablauf des Tages“, „Mein Tag“
+   * and the now strip share it; a settings change refreshes it.
+   */
+  dayFlow: () => "home-day-flow",
+  /** Birthdays of the current week, or of the week starting `weekStart`. */
+  birthdayOverview: (weekStart?: string | null) =>
+    weekStart ? `birthday-overview:${weekStart}` : "birthday-overview",
+  staffSummary: () => "home-staff-summary",
+  ownGroup: (accountId: string) => `home-own-group:${accountId}`,
+} as const;
+
+/**
+ * Lists of the request page (#4988): the merged request feed and the care
+ * withdrawals, per account, view and everything the sources query. A
+ * decision refreshes every view and filter of a list through its family.
+ */
+export type RequestFeedName = "request-feed" | "care-withdrawal-feed";
+export const requestFeedKeys = {
+  family: (name: RequestFeedName, accountId: string | undefined) =>
+    `${name}:${accountId}:`,
+  key: (
+    name: RequestFeedName,
+    accountId: string | undefined,
+    view: "open" | "history",
+    parts: readonly unknown[],
+  ): string | null =>
+    accountId ? `${name}:${accountId}:${view}:${JSON.stringify(parts)}` : null,
+} as const;
+
+/** Dateiablage: the folders, the files of one folder and the audience choices. */
+export const fileKeys = {
+  folders: () => "files-folders",
+  folder: (folderId: string) => `files-folder-${folderId}`,
+  audience: () => "files-audience",
 } as const;
 
 export const schoolSetupKeys = {
@@ -322,6 +374,12 @@ export const parentAnnouncementKeys = {
     `parent-letter-preview-${base}-${studentId}-${body}`,
   letterPreviewChildren: (scope: string) =>
     `parent-letter-preview-children-${encodeURIComponent(scope)}`,
+  // Lookups of the target picker: the AGs, the school classes and a child
+  // search by name.
+  targetActivities: () => "parent-announcements-activities",
+  targetSchoolClasses: () => "parent-announcements-classes",
+  targetStudentSearch: (search: string) =>
+    `parent-announcements-student-search-${search}`,
   preview(data: unknown, id: string) {
     const row = previewRow(data, id);
     const name = previewText(row?.title);
@@ -363,6 +421,13 @@ export const timeTrackingKeys = {
     `time-tracking-own-shifts-week-${from}-${to}`,
   ownShiftsAhead: (from: string, to: string) =>
     `time-tracking-own-shifts-week-ahead-${from}-${to}`,
+  /** Own planned assignments of one day (home now strip, Betreuungsplan card). */
+  ownAssignmentsToday: (today: string) =>
+    `time-tracking-own-assignments-today-${today}`,
+  config: () => "time-tracking-config",
+  /** Own month summary; invalidations match „time-tracking-month-summary-“. */
+  monthSummary: (year: number, month: number) =>
+    `time-tracking-month-summary-${year}-${month}`,
 } as const;
 
 /** Exact list identity shared with intent; preserve the SSE group segment. */

@@ -84,6 +84,12 @@ export const staffMonthSummaryKeys = {
  * Kenntnisnahme gehört zur Antwort, deshalb trägt der Schlüssel das Konto.
  */
 export const staffNoticeKeys = {
+  /**
+   * Die heute geltenden Hinweise im OGS-Portal, je Konto. Den Eintrag teilen
+   * sich das Badge der Seitenleiste, der Startseiten-Baustein und
+   * /tagesinformationen; die App-Hülle legt ihn aus dem Server-Seed an (#4989).
+   */
+  today: (accountId: string) => `staff-notices-today:${accountId}`,
   linked: (accountId: string, noticeId: string) =>
     `staff-notice:${accountId}:${encodeURIComponent(noticeId)}`,
   /** Wer eine Tagesinformation wann bestätigt hat (#2208). */

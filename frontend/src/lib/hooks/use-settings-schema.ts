@@ -2,12 +2,9 @@
 
 import type { ReaderOptions } from "~/lib/swr";
 
-import {
-  SETTINGS_SCHEMA_SWR_KEY,
-  fetchSettingsSchema,
-  type SettingsSchema,
-} from "~/lib/settings-api";
+import { fetchSettingsSchema, type SettingsSchema } from "~/lib/settings-api";
 import { useSWRAuth } from "~/lib/swr";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
 
 /** Reads the settings schema from the active tenant's isolated SWR cache. */
 export function useSettingsSchema(
@@ -15,7 +12,7 @@ export function useSettingsSchema(
   options?: ReaderOptions<SettingsSchema | null, Error>,
 ) {
   return useSWRAuth<SettingsSchema | null>(
-    enabled ? SETTINGS_SCHEMA_SWR_KEY : null,
+    enabled ? shellResourceKeys.settingsSchema() : null,
     fetchSettingsSchema,
     options,
   );

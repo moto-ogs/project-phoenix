@@ -71,7 +71,7 @@ const draftLetter = {
 
 function startSending() {
   mockUseSWRAuth.mockImplementation((key: string | null) => ({
-    data: key === "school-parent-letter-classes" ? { classes: ["3b"] } : [],
+    data: key === "class-day-my-classes" ? { classes: ["3b"] } : [],
     error: undefined,
     isLoading: false,
     mutate: mockMutate,

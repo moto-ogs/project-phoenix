@@ -10,6 +10,7 @@
  */
 
 import { ApiError, apiErrorFromText, transportFetch } from "./api-error";
+import { staffNoticeKeys } from "./swr/staff-keys";
 
 export type StaffNoticePriority = "info" | "important";
 
@@ -21,13 +22,11 @@ export const STAFF_NOTICES_REFRESH_EVENT = "staff-notices-refresh";
 
 /**
  * SWR-Schlüssel der heute geltenden Hinweise im OGS-Portal, je Konto;
- * useSWRAuth stellt die Schule davor. Den Eintrag teilen sich das Badge der
- * Seitenleiste, der Startseiten-Baustein und /tagesinformationen; die App-Hülle
- * legt ihn beim vollen Seitenaufruf aus dem Server-Seed an (#4989).
+ * useSWRAuth stellt die Schule davor. Die Quelle ist `staffNoticeKeys.today`
+ * (`~/lib/swr/staff-keys`); Leser nehmen die Factory, der Server-Seed der
+ * App-Hülle diesen Namen (#4989).
  */
-export function staffNoticesTodayKey(accountId: string): string {
-  return `staff-notices-today:${accountId}`;
-}
+export const staffNoticesTodayKey = staffNoticeKeys.today;
 
 /**
  * Hinweise, deren Kenntnisnahme verlangt ist und noch fehlt. Hinweise ohne

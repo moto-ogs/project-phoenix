@@ -1,3 +1,5 @@
+import { resourceKey } from "./resource-key";
+
 /**
  * Anmeldung in der OGS-Verwaltung: Phasen, Angebote, Anmeldungen, Übernahme, Einladungen.
  * Keys describe the response, not its screen; a family prefix ends in `-`.
@@ -76,4 +78,13 @@ export const enrollmentKeys = {
     `enrollment-requests-${phaseId ? encodeURIComponent(phaseId) : "all"}`,
   /** Every change request of the school (`listAdminEnrollmentChangeRequests`). */
   changeRequests: () => "enrollment-change-request-list",
+  /** Phase-end hints; a phase change, rollover or review decision reloads them. */
+  phaseExpiryWarnings: () => "enrollment-phase-expiry-warnings",
+  /** School class options of the phase detail's class roster export. */
+  phaseSchoolClasses: () => "enrollment-phase-school-classes",
+  /** Response overview of the existing children of a phase (#3379). */
+  phaseResponses: (phaseId: string) => `enrollment-phase-responses-${phaseId}`,
+  /** Care usage report of a phase for one filter set (`getCareUsageReport`). */
+  careUsageReport: (filters: object) =>
+    resourceKey("enrollment-care-usage-report-", filters),
 } as const;

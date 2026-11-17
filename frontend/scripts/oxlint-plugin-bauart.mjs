@@ -1598,7 +1598,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Schule bearbeiten@163",
     ],
     "src/app/school/kalender/page.tsx": [
-      "Schultermin anlegen Schultermin bearbeiten@334",
+      "Schultermin anlegen Schultermin bearbeiten@335",
     ],
     "src/components/database/grade-transitions/transition-editor.tsx": [
       "Schuljahreswechsel bearbeiten Neuer Schuljahreswechsel@268",
@@ -1610,7 +1610,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1039",
     ],
     "src/components/files/folder-modal.tsx": [
-      "Ordner bearbeiten Neuer Ordner@156",
+      "Ordner bearbeiten Neuer Ordner@157",
     ],
     "src/components/planning/closing-day-modal.tsx": [
       "Schließtag bearbeiten Schließtag anlegen@154",

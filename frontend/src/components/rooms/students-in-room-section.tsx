@@ -18,7 +18,7 @@ import { Alert } from "~/components/ui/alert";
 import { EmptyState } from "~/components/ui/empty-state";
 import { me as meKeys } from "~/lib/swr/me";
 import { rooms as roomsKeys } from "~/lib/swr/rooms";
-import { checkinTargetKeys } from "~/lib/swr/rooms-keys";
+import { checkinTargetKeys, roomKeys } from "~/lib/swr/rooms-keys";
 import {
   useEffect,
   useLayoutEffect,
@@ -151,7 +151,7 @@ export function StudentsInRoomSection({
   } = useSWRAuth<{
     students: Student[];
     pagination?: { total_records: number };
-  }>(`room-students-${roomId}`, async () =>
+  }>(roomKeys.students(roomId), async () =>
     fetchStudents({
       roomId,
       pageSize: 200,
@@ -214,13 +214,10 @@ export function StudentsInRoomSection({
     () => sourceGroups.map((group) => group.id).sort(),
     [sourceGroups],
   );
-  const sourceVisitsKey = useMemo(
-    () =>
-      !showAllTargets && sourceGroupIDs.length > 0
-        ? `room-bulk-source-visits-${JSON.stringify(sourceGroupIDs)}`
-        : null,
-    [showAllTargets, sourceGroupIDs],
-  );
+  const sourceVisitsKey =
+    !showAllTargets && sourceGroupIDs.length > 0
+      ? roomKeys.sourceVisits(sourceGroupIDs)
+      : null;
   const { data: sourceVisitsByStudentID } = useSWRAuth<Map<string, Visit>>(
     sourceVisitsKey,
     async () => {
