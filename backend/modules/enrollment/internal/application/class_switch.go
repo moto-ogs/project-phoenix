@@ -138,7 +138,7 @@ func (d *Decisions) applyClassHoldingPlace(ctx context.Context, change enrollmen
 	if err != nil {
 		return false, fmt.Errorf("class switch: load student %d: %w", *change.CreatedStudentID, err)
 	}
-	if student == nil || student.SchoolClass != change.From || change.From == change.To {
+	if student == nil || !student.WithoutCarePlace || student.SchoolClass != change.From || change.From == change.To {
 		return false, nil
 	}
 	student.SchoolClass = change.To
