@@ -112,7 +112,7 @@ const ERROR_FIX_TARGETS: Partial<Record<ErrorCode, FixTarget>> = {
 };
 
 /** The link to where `code` is fixed, if the viewer holds the right. */
-export function traegerFixTarget(
+function traegerFixTarget(
   code: string,
   session: Session | null,
 ): ErrorFixTarget | null {
