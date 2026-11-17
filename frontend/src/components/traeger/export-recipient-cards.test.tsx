@@ -54,8 +54,9 @@ it("keeps the card inset around the handover table", () => {
     </ToastProvider>,
   );
 
-  const card = screen
-    .getByRole("heading", { name: "Letzte Übergaben" })
-    .closest("section");
-  expect(card?.className).toMatch(/(?:^|\s)p-5(?:\s|$)/);
+  expect(
+    screen
+      .getByRole("heading", { name: "Letzte Übergaben" })
+      .closest("section"),
+  ).toHaveClass("p-5");
 });

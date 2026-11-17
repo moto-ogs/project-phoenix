@@ -687,19 +687,24 @@ describe("TenantPage", () => {
     expect(within(band).getAllByRole("tab")).toHaveLength(2);
   });
 
-  // Folgt unter den Reitern nichts, schließen sie die Kopfkarte ab: eine
-  // eigene Grundlinie 20 px über der Kartenkante las sich als doppelter Rand
-  // (#7303). Mit Suchzeile trennt die Grundlinie Reiter und Suche.
+  // #7303: ohne Zeile darunter schließen die Reiter die Kopfkarte ab
+  // (Spec Regel 7); mit Suchzeile trennt die Grundlinie Reiter und Suche.
   it.each([
-    { name: "ohne Suchzeile", search: undefined, closes: true },
+    {
+      name: "ohne Suchzeile",
+      search: undefined,
+      tabsLast: true,
+      headerClasses: ["sm:pb-0", "compact:pb-0", "max-sm:p-4"],
+    },
     {
       name: "mit Suchzeile",
       search: { value: "", onChange: vi.fn(), placeholder: "Suchen" },
-      closes: false,
+      tabsLast: false,
+      headerClasses: ["p-5", "max-sm:p-4"],
     },
   ])(
-    "schließt die Kopfkarte mit den Reitern $name ab: $closes",
-    ({ search, closes }) => {
+    "setzt die Grundlinie der Reiter $name",
+    ({ search, tabsLast, headerClasses }) => {
       const { container } = render(
         <TenantPage
           title="Einstellungen"
@@ -722,22 +727,16 @@ describe("TenantPage", () => {
       const band = screen.getByRole("tablist", {
         name: "Einstellungsbereiche",
       });
-      const bandWrapper = [...header.children].find((child) =>
-        child.contains(band),
-      )!;
-      const baseline = band.parentElement!.parentElement!;
-      // Die Linie liegt immer am Band; ab sm entfällt sie nur als letzte Zeile.
-      expect(baseline).toHaveClass("border-b", "sm:group-last/tabs:border-b-0");
-      expect(bandWrapper).toHaveClass("group/tabs");
-      expect(header.lastElementChild === bandWrapper).toBe(closes);
-      // Mobil bleiben Pillen und der Innenrand der Karte.
-      expect(header).toHaveClass("max-sm:p-4");
-      if (closes) {
-        expect(header).toHaveClass("sm:pb-0", "compact:pb-0");
-      } else {
-        expect(header).toHaveClass("p-5");
-        expect(header.className).not.toContain("pb-0");
-      }
+      const bandWrapper = header.querySelector(".group\\/tabs")!;
+      expect(bandWrapper).toContainElement(band);
+      // Ab sm entfällt die Linie des Bandes, wenn es die letzte Zeile ist.
+      expect(bandWrapper.firstElementChild).toHaveClass(
+        "border-b",
+        "sm:group-last/tabs:border-b-0",
+      );
+      expect(header.lastElementChild === bandWrapper).toBe(tabsLast);
+      expect(header).toHaveClass(...headerClasses);
+      expect(header.className.includes("pb-0")).toBe(tabsLast);
     },
   );
 

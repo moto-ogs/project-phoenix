@@ -603,9 +603,9 @@ function TenantPageView({
   // Mit Bedienelementen trägt die Suchzeile das Kebab selbst.
   const hasSearchRow = searchRowHasControls;
   const hasHeadActions = actions != null || kebabInTitleRow;
-  // Folgt unter den Reitern nichts mehr, schließen sie die Kopfkarte ab:
-  // ab sm sitzt die Unterstreichung des aktiven Reiters auf der Kartenkante.
-  const tabsCloseHead = tabs != null && !(searchSlot ?? hasSearchRow);
+  const hasRowBelowTabs = Boolean(searchSlot ?? hasSearchRow);
+  // Folgt unter den Reitern nichts, schließen sie die Kopfkarte ab (#7303).
+  const tabsCloseHead = tabs != null && !hasRowBelowTabs;
 
   const headRef = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -729,7 +729,7 @@ function TenantPageView({
             ein weiteres Filterelement. */}
         {tabs && <TenantPageTabs {...tabs} />}
 
-        {(searchSlot ?? hasSearchRow) && (
+        {hasRowBelowTabs && (
           <div
             className={cn(
               "compact:mt-3 mt-4 max-sm:mt-3",
@@ -1119,11 +1119,9 @@ function TenantPageTabs({
           dem Inhalt darunter; eine einzeln getönte Pille sagt das nicht, sie
           liest sich als Filter.
 
-          Die Grundlinie steht nur, wenn unter den Reitern noch etwas folgt
-          (Suchzeile, `searchSlot`). Ist das Band die letzte Zeile des Kopfes,
-          schließt es die Karte ab: die Kopfkarte hat dann ab sm keinen
-          unteren Innenrand, und die Kartenkante ist die Grundlinie. Eine
-          eigene Linie 20 px darüber las sich als doppelter Rand (#7303). */}
+          Ist das Band die letzte Zeile des Kopfes, ist ab sm die Kartenkante
+          die Grundlinie; eine eigene Linie darüber las sich als doppelter
+          Rand (#7303, Spec Regel 7). */}
       <div className="compact:px-4 relative border-b border-gray-200 px-5 max-sm:border-0 max-sm:px-0 sm:group-last/tabs:border-b-0">
         <div ref={rowRef} className="flex items-end gap-6 max-sm:gap-0">
           <div
