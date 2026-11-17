@@ -19,8 +19,15 @@ it("retries a failed script request and solves the replacement widget", async ()
     hint: "Prüfung lädt nicht?",
     restart: "Prüfung neu starten",
     restartTooltip: "Prüfung erneut laden",
-    failedTitle: "Prüfung lädt nicht.",
-    failedText: "Werbeblocker ausschalten.",
+    failedTitle: "Prüfung lädt nicht",
+    failedText: "Oft blockiert ein Werbeblocker die Prüfung.",
+    failedStepBlocker: "Werbeblocker ausschalten.",
+    failedStepRestart: "Prüfung neu starten.",
+    failedStepBrowser: "Anderen Browser nehmen.",
+    copyLink: "Link kopieren",
+    copyLinkTooltip: "Kopiert die Adresse.",
+    linkCopied: "Link kopiert",
+    copyFailed: "Das ist der Link:",
   };
   function Form() {
     const [token, setToken] = useState("");

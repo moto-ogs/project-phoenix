@@ -46,8 +46,15 @@ const copy = {
   hint: "Die Sicherheitsprüfung lädt nicht oder bleibt stehen?",
   restart: "Prüfung neu starten",
   restartTooltip: "Lädt die Sicherheitsprüfung neu.",
-  failedTitle: "Die Sicherheitsprüfung lädt nicht.",
-  failedText: "Oft blockiert ein Werbeblocker die Prüfung.",
+  failedTitle: "Die Sicherheitsprüfung lädt nicht",
+  failedText: "Oft blockiert ein Werbeblocker die Prüfung. So geht es weiter:",
+  failedStepBlocker: "Schalten Sie den Werbeblocker aus.",
+  failedStepRestart: "Wählen Sie „Prüfung neu starten“.",
+  failedStepBrowser: "Öffnen Sie den Link in einem anderen Browser.",
+  copyLink: "Link kopieren",
+  copyLinkTooltip: "Kopiert die Adresse dieser Seite.",
+  linkCopied: "Link kopiert",
+  copyFailed: "Kopieren geht hier nicht. Das ist der Link:",
 };
 
 function Check({ onToken }: { onToken: (value: string) => void }) {
@@ -113,6 +120,13 @@ describe("SecurityCheck (#7114)", () => {
 
     expect(screen.getByText(copy.failedTitle)).toBeVisible();
     expect(screen.getByText(copy.failedText)).toBeVisible();
+    expect(
+      screen.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual([
+      copy.failedStepBlocker,
+      copy.failedStepRestart,
+      copy.failedStepBrowser,
+    ]);
     expect(screen.queryByText(copy.hint)).not.toBeInTheDocument();
 
     fireEvent.click(
@@ -143,5 +157,43 @@ describe("SecurityCheck (#7114)", () => {
 
     expect(screen.getByText(copy.hint)).toBeVisible();
     expect(screen.queryByText(copy.failedTitle)).not.toBeInTheDocument();
+  });
+
+  it("hält den Platz der Prüfung frei, bis sie erscheint", () => {
+    const { container } = render(<Check onToken={vi.fn()} />);
+    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
+
+    act(() => mounts.props?.onWidgetLoad?.());
+
+    expect(container.querySelector(".animate-pulse")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Solve captcha" })).toBeVisible();
+  });
+
+  it("kopiert den Link dieser Seite für einen anderen Browser", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    render(<Check onToken={vi.fn()} />);
+    act(() => mounts.props?.scriptOptions?.onError?.());
+
+    fireEvent.click(screen.getByRole("button", { name: copy.copyLink }));
+
+    expect(
+      await screen.findByRole("button", { name: copy.linkCopied }),
+    ).toBeVisible();
+    expect(writeText).toHaveBeenCalledWith(window.location.href);
+    vi.unstubAllGlobals();
+  });
+
+  it("zeigt den Link zum Abschreiben, wenn das Gerät nicht kopieren lässt", async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    render(<Check onToken={vi.fn()} />);
+    act(() => mounts.props?.scriptOptions?.onError?.());
+
+    fireEvent.click(screen.getByRole("button", { name: copy.copyLink }));
+
+    expect(await screen.findByText(copy.copyFailed)).toBeVisible();
+    expect(screen.getByText(window.location.href)).toBeVisible();
+    vi.unstubAllGlobals();
   });
 });

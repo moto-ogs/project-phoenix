@@ -1,11 +1,14 @@
 "use client";
 
+import { ArrowClockwiseIcon, CheckIcon, LinkIcon } from "@phosphor-icons/react";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
-import { useEffect, useState, type Ref } from "react";
+import { useEffect, useState, type ReactNode, type Ref } from "react";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
+import { Skeleton } from "~/components/ui/skeleton";
 import { createLogger } from "~/lib/logger";
+import { useClipboardCopy } from "~/lib/use-clipboard-copy";
 
 const SCRIPT_ID = "moto-security-check-script";
 
@@ -25,8 +28,46 @@ export interface SecurityCheckCopy {
   readonly restartTooltip: string;
   /** Title of the notice when the check cannot load on this device. */
   readonly failedTitle: string;
-  /** What the person can do about it: ad blocker, other browser. */
+  /** The usual cause, leading into the steps. */
   readonly failedText: string;
+  /** Step 1: switch the ad blocker off for this page. */
+  readonly failedStepBlocker: string;
+  /** Step 2: restart the check. */
+  readonly failedStepRestart: string;
+  /** Step 3: open the copied link in another browser. */
+  readonly failedStepBrowser: string;
+  /** Label of the button that copies the page address. */
+  readonly copyLink: string;
+  /** What the copy button does. */
+  readonly copyLinkTooltip: string;
+  /** Label of the copy button once the address is copied. */
+  readonly linkCopied: string;
+  /** Shown above the address when the device does not allow copying. */
+  readonly copyFailed: string;
+}
+
+const SECURITY_CHECK_COPY_KEYS = [
+  "hint",
+  "restart",
+  "restartTooltip",
+  "failedTitle",
+  "failedText",
+  "failedStepBlocker",
+  "failedStepRestart",
+  "failedStepBrowser",
+  "copyLink",
+  "copyLinkTooltip",
+  "linkCopied",
+  "copyFailed",
+] as const satisfies readonly (keyof SecurityCheckCopy)[];
+
+/** Reads every text of the check from a form's `captchaHelp` messages. */
+export function securityCheckCopy(
+  translate: (key: keyof SecurityCheckCopy) => string,
+): SecurityCheckCopy {
+  return Object.fromEntries(
+    SECURITY_CHECK_COPY_KEYS.map((key) => [key, translate(key)]),
+  ) as unknown as SecurityCheckCopy;
 }
 
 /**
@@ -34,10 +75,12 @@ export interface SecurityCheckCopy {
  * (#7114, WCAG 3.3.8): a line says what to do and a button loads the check
  * again. The form keeps its entries; only the check starts over.
  *
- * When the check cannot load at all, the form says so: an ad blocker or a
- * DNS filter that blocks Cloudflare leaves an empty space and a locked
- * send button otherwise. The script error, a widget error, an unsupported
- * browser or a widget that has not shown after a timeout count as failed.
+ * Until Cloudflare shows the widget, a placeholder of its size holds the
+ * place. When the check cannot load at all, the form says so: an ad blocker
+ * or a DNS filter that blocks Cloudflare left an empty space and a locked
+ * send button before. The script error, a widget error, an unsupported
+ * browser or a widget that has not shown after a timeout count as failed;
+ * the notice then names the steps and copies the link for another browser.
  */
 export function SecurityCheck({
   siteKey,
@@ -62,6 +105,7 @@ export function SecurityCheck({
   const [shownAttempt, setShownAttempt] = useState(-1);
   const [failedAttempt, setFailedAttempt] = useState(-1);
   const failed = failedAttempt === attempt;
+  const shown = shownAttempt === attempt;
 
   const fail = (reason: FailureReason) => {
     onToken("");
@@ -72,13 +116,13 @@ export function SecurityCheck({
 
   // No callback fires when a blocker swallows the request without an error.
   useEffect(() => {
-    if (shownAttempt === attempt || failedAttempt === attempt) return;
+    if (shown || failed) return;
     const timer = window.setTimeout(() => {
       setFailedAttempt(attempt);
       logger.warn("security_check_failed", { reason: "timeout", attempt });
     }, SECURITY_CHECK_LOAD_TIMEOUT_MS);
     return () => window.clearTimeout(timer);
-  }, [attempt, shownAttempt, failedAttempt]);
+  }, [attempt, shown, failed]);
 
   const restart = (
     <Button
@@ -96,36 +140,47 @@ export function SecurityCheck({
         setAttempt((current) => current + 1);
       }}
     >
+      <ArrowClockwiseIcon className="size-4" aria-hidden="true" />
       {copy.restart}
     </Button>
   );
 
   return (
-    <div className="min-w-0 flex-1 space-y-2">
-      <Turnstile
-        key={attempt}
-        ref={instanceRef}
-        siteKey={siteKey}
-        scriptOptions={{ id: SCRIPT_ID, onError: () => fail("script") }}
-        options={{ theme: "light" }}
-        onWidgetLoad={() => setShownAttempt(attempt)}
-        onSuccess={(value) => {
-          setFailedAttempt(-1);
-          onToken(value);
-        }}
-        onExpire={() => onToken("")}
-        onError={() => fail("widget")}
-        onUnsupported={() => fail("unsupported")}
-      />
+    // basis-full: in a wrapping row beside the send button, the notice takes
+    // its own line instead of squeezing the text next to the buttons.
+    <div
+      className={`min-w-0 flex-1 space-y-2 ${failed && !token ? "basis-full" : ""}`}
+    >
+      {/* Turnstile draws its 300 × 65 px widget into this box. The placeholder
+          holds the place until then, so nothing jumps when it appears. */}
+      <div className={failed && !shown ? "hidden" : "relative w-fit"}>
+        {shown ? null : (
+          <Skeleton
+            shape="control"
+            className="absolute inset-0"
+            aria-hidden="true"
+          />
+        )}
+        <div className="relative min-h-[65px] min-w-[300px]">
+          <Turnstile
+            key={attempt}
+            ref={instanceRef}
+            siteKey={siteKey}
+            scriptOptions={{ id: SCRIPT_ID, onError: () => fail("script") }}
+            options={{ theme: "light" }}
+            onWidgetLoad={() => setShownAttempt(attempt)}
+            onSuccess={(value) => {
+              setFailedAttempt(-1);
+              onToken(value);
+            }}
+            onExpire={() => onToken("")}
+            onError={() => fail("widget")}
+            onUnsupported={() => fail("unsupported")}
+          />
+        </div>
+      </div>
       {token ? null : failed ? (
-        <Alert
-          type="warning"
-          announce="polite"
-          title={copy.failedTitle}
-          message={copy.failedText}
-          action={restart}
-          actionLayout="stacked"
-        />
+        <SecurityCheckFailed copy={copy} restart={restart} />
       ) : (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <p className="text-sm text-gray-600">{copy.hint}</p>
@@ -133,5 +188,65 @@ export function SecurityCheck({
         </div>
       )}
     </div>
+  );
+}
+
+/** The notice of a check that cannot load: cause, three steps, two actions. */
+function SecurityCheckFailed({
+  copy,
+  restart,
+}: Readonly<{ copy: SecurityCheckCopy; restart: ReactNode }>) {
+  const { copied, copy: copyText } = useClipboardCopy("SecurityCheck", 3000);
+  const [manualLink, setManualLink] = useState("");
+
+  return (
+    <Alert
+      type="warning"
+      announce="polite"
+      title={copy.failedTitle}
+      message={copy.failedText}
+      details={
+        <ol className="mt-2 list-decimal space-y-1 pl-5">
+          <li>{copy.failedStepBlocker}</li>
+          <li>{copy.failedStepRestart}</li>
+          <li>{copy.failedStepBrowser}</li>
+        </ol>
+      }
+      actionLayout="stacked"
+      action={
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            {restart}
+            <Button
+              type="button"
+              variant="outline"
+              size="compact"
+              tooltip={copy.copyLinkTooltip}
+              onClick={async () => {
+                const link = window.location.href;
+                setManualLink((await copyText(link)) ? "" : link);
+              }}
+            >
+              {copied ? (
+                <CheckIcon className="size-4" aria-hidden="true" />
+              ) : (
+                <LinkIcon className="size-4" aria-hidden="true" />
+              )}
+              <span aria-live="polite">
+                {copied ? copy.linkCopied : copy.copyLink}
+              </span>
+            </Button>
+          </div>
+          {manualLink ? (
+            <p>
+              {copy.copyFailed}{" "}
+              <span className="font-medium break-all select-all">
+                {manualLink}
+              </span>
+            </p>
+          ) : null}
+        </div>
+      }
+    />
   );
 }

@@ -6,7 +6,10 @@ import { HolidayRegistrationLegal } from "./holiday-registration-legal";
 // dem Absenden steht eine Zusammenfassung, danach die Eingangsbestätigung.
 // Eltern mit Elternkonto wählen ihre bekannten Kinder aus (#4662).
 
-import { SecurityCheck } from "~/components/captcha/security-check";
+import {
+  SecurityCheck,
+  securityCheckCopy,
+} from "~/components/captcha/security-check";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
@@ -306,13 +309,7 @@ export function HolidayRegistrationForm({
                 siteKey={offer.captchaSiteKey}
                 token={captchaToken}
                 onToken={setCaptchaToken}
-                copy={{
-                  hint: t("captchaHelp.hint"),
-                  restart: t("captchaHelp.restart"),
-                  restartTooltip: t("captchaHelp.restartTooltip"),
-                  failedTitle: t("captchaHelp.failedTitle"),
-                  failedText: t("captchaHelp.failedText"),
-                }}
+                copy={securityCheckCopy((key) => t(`captchaHelp.${key}`))}
               />
             ) : (
               <p className="text-sm text-gray-700">{t("captchaMissing")}</p>
