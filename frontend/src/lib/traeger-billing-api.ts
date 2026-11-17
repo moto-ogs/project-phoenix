@@ -229,7 +229,7 @@ export interface BillingPeriod {
 }
 
 /** One start value the Abrechnung set for a number range (#7358). */
-export interface NumberRangeStart {
+interface NumberRangeStart {
   /** The running number the next invoice got from then on. */
   readonly nextNumber: number;
   /** That number in the pattern of today. */
