@@ -14,6 +14,11 @@ import (
 func (s *service) currentStaff(ctx context.Context) (*ports.Staff, error) {
 	staff, err := s.cfg.UserContext.GetCurrentStaff(ctx)
 	if err != nil {
+		// No signed-in account is no missing profile; it keeps the generic
+		// refusal it had before.
+		if s.cfg.UserContext.MissingUser(err) {
+			return nil, fmt.Errorf("%w: current account required", ErrForbidden)
+		}
 		if s.cfg.UserContext.MissingStaff(err) {
 			return nil, ErrNoStaffProfile
 		}

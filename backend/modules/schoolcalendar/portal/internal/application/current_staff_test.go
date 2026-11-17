@@ -14,6 +14,7 @@ import (
 var (
 	errStaffMissingDouble = errors.New("caller not linked to staff")
 	errLookupFailedDouble = errors.New("connection reset")
+	errUserMissingDouble  = errors.New("caller not authenticated")
 )
 
 // currentStaffIdentity is an Identity double whose staff lookup fails with
@@ -31,15 +32,17 @@ func (i currentStaffIdentity) GetCurrentUser(context.Context) (*ports.Account, e
 	return &ports.Account{ID: 1, Active: true}, nil
 }
 
-// staffFeedRepoStub satisfies the configuration check; the staff lookup
-// fails before any feed row is read.
-type staffFeedRepoStub struct{ ports.StaffFeeds }
-
-func (currentStaffIdentity) MissingUser(error) bool { return false }
+func (currentStaffIdentity) MissingUser(err error) bool {
+	return errors.Is(err, errUserMissingDouble)
+}
 
 func (currentStaffIdentity) MissingStaff(err error) bool {
 	return errors.Is(err, errStaffMissingDouble)
 }
+
+// staffFeedRepoStub satisfies the configuration check; the staff lookup
+// fails before any feed row is read.
+type staffFeedRepoStub struct{ ports.StaffFeeds }
 
 func TestStaffOnlyReadsSeparateMissingProfileFromLookupFailures(t *testing.T) {
 	t.Parallel()
@@ -72,6 +75,12 @@ func TestStaffOnlyReadsSeparateMissingProfileFromLookupFailures(t *testing.T) {
 			t.Parallel()
 			err := read(newCurrentStaffService(errStaffMissingDouble))
 			require.ErrorIs(t, err, ErrNoStaffProfile)
+		})
+		t.Run(name+"/no account", func(t *testing.T) {
+			t.Parallel()
+			err := read(newCurrentStaffService(errUserMissingDouble))
+			require.ErrorIs(t, err, ErrForbidden)
+			assert.NotErrorIs(t, err, ErrNoStaffProfile, "without an account there is no profile to miss")
 		})
 		t.Run(name+"/lookup failure", func(t *testing.T) {
 			t.Parallel()

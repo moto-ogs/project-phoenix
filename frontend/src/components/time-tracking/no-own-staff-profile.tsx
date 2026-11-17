@@ -46,7 +46,7 @@ export function useNoOwnStaffProfileEmpty(
     icon,
     title: "Kein eigenes Personalprofil",
     description:
-      "Diese Seite zeigt Ihre eigenen Zeiten und Termine. Dafür brauchen Sie in dieser Schule ein Personalprofil.",
+      "Diese Seite zeigt Ihre eigenen Zeiten und Termine. Dafür brauchen Sie in dieser Schule ein Personalprofil. Die Leitung kann es anlegen.",
     action: (
       <ButtonLink
         href={tenantPath("/home")}

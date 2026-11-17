@@ -61,6 +61,10 @@ const ALLOWED_URL_PARAMS = ["d"] as const;
 
 const EMPTY_SHIFTS: readonly StaffShift[] = [];
 
+const STAFF_PLAN_ICON = (
+  <MotoConceptIcon concept={staffPlanConcept} size={48} />
+);
+
 export function OwnDienstplanView() {
   // Kein stilles Umleiten: ein Hinweis der Glocke (#7148) führt hierher, und
   // wer ohne eigenen Dienstplan auf der Startseite landete, wüsste nicht,
@@ -70,9 +74,7 @@ export function OwnDienstplanView() {
   });
   const tenantPath = useTenantAwarePath();
   // Ohne Personalprofil gibt es keinen eigenen Dienstplan (#7306).
-  const noOwnStaff = useNoOwnStaffProfileEmpty(
-    <MotoConceptIcon concept={staffPlanConcept} size={48} />,
-  );
+  const noOwnStaff = useNoOwnStaffProfileEmpty(STAFF_PLAN_ICON);
 
   if (noOwnStaff) {
     return (
@@ -90,7 +92,7 @@ export function OwnDienstplanView() {
         title="Mein Dienstplan"
         testId="own-dienstplan-page"
         empty={{
-          icon: <MotoConceptIcon concept={staffPlanConcept} size={48} />,
+          icon: STAFF_PLAN_ICON,
           title: "Sie haben keinen Zugriff auf einen eigenen Dienstplan.",
           description:
             "Fragen Sie Ihre Leitung, wenn Sie Ihre Schichten hier sehen möchten.",
@@ -164,10 +166,10 @@ function OwnDienstplanContent() {
   const { closingDays } = useClosingDaysState(weekFrom, weekTo);
   // Ladefehler über den gemeinsamen Fehlerpfad (Katalogtext, Wiederholen).
   // Die Ablehnung ohne Personalprofil zeigt stattdessen den Leerzustand.
-  const noOwnStaff = useNoOwnStaffProfileEmpty(
-    <MotoConceptIcon concept={staffPlanConcept} size={48} />,
-    [shiftsError, projectionError],
-  );
+  const noOwnStaff = useNoOwnStaffProfileEmpty(STAFF_PLAN_ICON, [
+    shiftsError,
+    projectionError,
+  ]);
   const shiftsLoadError = useSwrLoadError(
     noOwnStaff ? undefined : shiftsError,
     "die Liste Ihrer Schichten",
@@ -292,7 +294,7 @@ function OwnDienstplanContent() {
         noOwnStaff ??
         (weekIsEmpty && !shiftsError
           ? {
-              icon: <MotoConceptIcon concept={staffPlanConcept} size={48} />,
+              icon: STAFF_PLAN_ICON,
               title: "Keine Schichten in dieser Woche",
               description: emptyWeekDescription(aheadShifts, nextShiftDate),
               action:

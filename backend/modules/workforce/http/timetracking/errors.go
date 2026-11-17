@@ -26,7 +26,7 @@ var ownStaffErrorRules = []common.ErrorRule{
 }
 
 func isNoStaffProfile(err error) bool {
-	return errors.Is(err, workforce.ErrNoStaffProfile) || common.IsNotFound(err)
+	return errors.Is(err, workforce.ErrNoStaffProfile)
 }
 
 // classifyServiceError maps known business errors to appropriate HTTP status codes
