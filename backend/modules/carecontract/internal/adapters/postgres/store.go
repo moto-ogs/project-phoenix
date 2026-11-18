@@ -76,8 +76,8 @@ type templateRow struct {
 	UpdatedAt              time.Time `bun:"updated_at"`
 }
 
-func (r templateRow) template() carecontract.Template {
-	return carecontract.Template{ID: r.ID, UpdatedAt: r.UpdatedAt, TemplateInput: carecontract.TemplateInput{
+func (r templateRow) template() carecontract.ContractTemplate {
+	return carecontract.ContractTemplate{ID: r.ID, UpdatedAt: r.UpdatedAt, TemplateInput: carecontract.TemplateInput{
 		TermKind: r.TermKind, TermMonths: r.TermMonths, NoticeMonths: r.NoticeMonths, NoticeTo: r.NoticeTo,
 		SpecialTermination: r.SpecialTermination, SpecialTerminationNote: r.SpecialTerminationNote,
 		StatuteRequired: r.StatuteRequired, StatuteTitle: r.StatuteTitle, StatuteURL: r.StatuteURL,
@@ -129,10 +129,10 @@ func (Store) Templates(ctx context.Context, organizationID int64) ([]ports.Templ
 	return result, nil
 }
 
-func (Store) UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.Template, error) {
+func (Store) UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.ContractTemplate, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
-		return carecontract.Template{}, err
+		return carecontract.ContractTemplate{}, err
 	}
 	var row templateRow
 	err = db.NewRaw(`INSERT INTO care_contract.contract_templates (organization_id, school_id, care_offering_id,
@@ -152,7 +152,7 @@ func (Store) UpsertTemplate(ctx context.Context, organizationID, accountID, scho
 		input.SpecialTermination, input.SpecialTerminationNote, input.StatuteRequired, input.StatuteTitle,
 		input.StatuteURL, input.ContractPartner, accountID).Scan(ctx, &row)
 	if err != nil {
-		return carecontract.Template{}, fmt.Errorf("care contract postgres: save template: %w", err)
+		return carecontract.ContractTemplate{}, fmt.Errorf("care contract postgres: save template: %w", err)
 	}
 	return row.template(), nil
 }

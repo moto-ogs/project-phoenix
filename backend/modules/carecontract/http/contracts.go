@@ -292,7 +292,7 @@ func (rs *Resource) discard(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
 
 func (rs *Resource) templates(w http.ResponseWriter, r *http.Request) {
@@ -308,12 +308,12 @@ func (rs *Resource) templates(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, templates, "Contract templates retrieved successfully")
 }
 
-type TemplateRequest struct {
+type ContractTemplateRequest struct {
 	carecontract.TemplateInput
 }
 
 // Bind accepts the body; the owner validates the template.
-func (req *TemplateRequest) Bind(*http.Request) error { return nil }
+func (req *ContractTemplateRequest) Bind(*http.Request) error { return nil }
 
 func (rs *Resource) saveTemplate(w http.ResponseWriter, r *http.Request) {
 	reviewer, ok := reviewerOf(w, r)
@@ -330,7 +330,7 @@ func (rs *Resource) saveTemplate(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	req := &TemplateRequest{}
+	req := &ContractTemplateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

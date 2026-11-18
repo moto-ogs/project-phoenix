@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
+	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
@@ -25,13 +26,49 @@ import (
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
 
+// contractMount is the typed registration of an owner under its mount.
+type contractMount struct {
+	prefix string
+	routes []common.RouteContract
+}
+
+// traegerBillingContractMounts are the Elternabrechnung, the care contracts
+// and their evaluations in the Träger-Portal (#2352).
+func traegerBillingContractMounts() []contractMount {
+	return []contractMount{
+		{"/traeger/billing-runs", parentBillingHTTP.BillingRunRouteContracts()},
+		{"/traeger/number-ranges", parentBillingHTTP.NumberRangeRouteContracts()},
+		{"/traeger/billing-document-kinds", parentBillingHTTP.DocumentKindRouteContracts()},
+		{"/traeger/contribution-rules", parentBillingHTTP.ContributionRuleRouteContracts()},
+		{"/traeger/cost-bearers", parentBillingHTTP.CostBearerRouteContracts()},
+		{"/traeger/care-tariffs", parentBillingHTTP.CareTariffRouteContracts()},
+		{"/traeger/care-meal-tariffs", parentBillingHTTP.CareMealTariffRouteContracts()},
+		{"/traeger/care-billing-runs", parentBillingHTTP.CareRunRouteContracts()},
+		{"/traeger/care-notice-runs", parentBillingHTTP.CareNoticeRunRouteContracts()},
+		{"/traeger/care-rules", parentBillingHTTP.CareRuleRouteContracts()},
+		{"/traeger/care-evidences", parentBillingHTTP.CareEvidenceRouteContracts()},
+		{"/traeger/care-cost-shares", parentBillingHTTP.CareCostShareRouteContracts()},
+		{"/traeger/family-children", parentBillingHTTP.FamilyChildrenRouteContracts()},
+		{"/traeger/billing-terms", parentBillingHTTP.BillingTermsRouteContracts()},
+		{"/traeger/family-billing", parentBillingHTTP.FamilyBillingRouteContracts()},
+		{"/traeger/billing-run-due-dates", parentBillingHTTP.DueDateRouteContracts()},
+		{"/traeger/sepa-creditor", parentBillingHTTP.SEPACreditorRouteContracts()},
+		{"/traeger/sepa-mandates", parentBillingHTTP.SEPAMandateRouteContracts()},
+		{"/traeger/sepa-debits", parentBillingHTTP.SEPADebitRouteContracts()},
+		{"/traeger/finance-exports", parentBillingHTTP.FinanceExportRouteContracts()},
+		{"/traeger/finance-handovers", parentBillingHTTP.ExportHandoverRouteContracts()},
+		{"/traeger/contracts", careContractHTTP.ContractRouteContracts()},
+		{"/traeger/contract-templates", careContractHTTP.TemplateRouteContracts()},
+		{"/traeger/contract-notices", careContractHTTP.NoticeRouteContracts()},
+		{"/traeger/contract-changes", careContractHTTP.ChangeRouteContracts()},
+		{"/traeger/care-time-overruns", careContractHTTP.OverrunRouteContracts()},
+	}
+}
+
 // contractRegistrations lists every typed registration under its mount and
 // refuses one the route catalog does not know.
 func contractRegistrations() ([]contract.Registration, error) {
-	mounts := []struct {
-		prefix string
-		routes []common.RouteContract
-	}{
+	mounts := []contractMount{
 		{"/api/students", projectionStudentsHTTP.StudentRouteContracts()},
 		// The projection renders the answer of Care Plan's student writes
 		// (studentHTTPResources binds it), so its type is named here.
@@ -59,6 +96,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/caterer", catererPortalHTTP.RouteContracts()},
 		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
 	}
+	mounts = append(mounts, traegerBillingContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err

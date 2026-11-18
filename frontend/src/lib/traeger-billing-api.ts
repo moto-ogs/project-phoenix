@@ -258,8 +258,8 @@ export interface NumberRange {
 }
 
 interface BackendRun {
-  id: number;
-  holiday_period_id?: number;
+  id: number | string;
+  holiday_period_id?: number | string;
   period_name: string;
   service_from: string;
   service_until: string;
@@ -282,14 +282,14 @@ interface BackendPosition {
   discount_basis_points: number | null;
   discount_cents: number | null;
   note: string;
-  cost_bearer_id?: number | null;
+  cost_bearer_id?: number | string | null;
   cost_bearer_name?: string;
   booked_days?: number | null;
 }
 
 interface BackendDocumentLink {
-  id: number;
-  run_id: number;
+  id: number | string;
+  run_id: number | string;
   kind: BillingDocumentKind;
   number: string;
   issued_on: string;
@@ -298,7 +298,7 @@ interface BackendDocumentLink {
 }
 
 interface BackendDocument {
-  id: number;
+  id: number | string;
   kind?: BillingDocumentKind;
   reference_number?: string;
   reason?: string;
@@ -306,8 +306,8 @@ interface BackendDocument {
   replaced_credits?: BackendDocumentLink[] | null;
   number: string;
   issued_on: string | null;
-  registration_id: number;
-  registration_child_id?: number;
+  registration_id: number | string;
+  registration_child_id?: number | string;
   recipient_first_name: string;
   recipient_last_name: string;
   recipient_email: string;
@@ -319,13 +319,13 @@ interface BackendDocument {
   service_until: string;
   children?:
     | {
-        child_id: number;
+        child_id: number | string;
         first_name: string;
         last_name: string;
         positions?: BackendPosition[] | null;
         corrections?:
           | {
-              id: number;
+              id: number | string;
               amount_cents: number;
               total_before_cents: number;
               total_after_cents: number;
@@ -336,7 +336,7 @@ interface BackendDocument {
           | null;
         carried_corrections?:
           | {
-              position_id: number;
+              position_id: number | string;
               source_number: string;
               amount_cents: number;
               source_amount_cents: number;
@@ -438,7 +438,8 @@ function documentLinkFromBackend(
 
 function documentFromBackend(document: BackendDocument): BillingDocument {
   return {
-    id: document.id ? String(document.id) : "",
+    // A draft has no ID yet: 0, which the contract decoder hands on as "0".
+    id: String(document.id) === "0" ? "" : String(document.id),
     kind: document.kind ?? "invoice",
     referenceNumber: document.reference_number ?? "",
     reason: document.reason ?? "",
@@ -520,7 +521,13 @@ export async function fetchBillingRuns(): Promise<BillingRun[]> {
 /** The published holiday periods a run can bill, latest first. */
 export async function fetchBillingPeriods(): Promise<BillingPeriod[]> {
   const periods = await traegerRequest<
-    { id: number; name: string; starts_on: string; ends_on: string }[] | null
+    | {
+        id: number | string;
+        name: string;
+        starts_on: string;
+        ends_on: string;
+      }[]
+    | null
   >(`${RUNS_PATH}/periods`);
   return (periods ?? []).map((period) => ({
     id: String(period.id),
@@ -813,7 +820,7 @@ export interface LetterSeries {
 }
 
 interface BackendLetterMailing {
-  document_id: number;
+  document_id: number | string;
   kind?: BillingDocumentKind;
   number: string;
   recipient_first_name: string;

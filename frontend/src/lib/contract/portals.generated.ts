@@ -14,11 +14,37 @@ import { routes as schoolStaffMessages } from "./school-staff-messages.generated
 import { routes as schoolSupervisions } from "./school-supervisions.generated";
 import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as students } from "./students.generated";
+import { routes as traegerBillingDocumentKinds } from "./traeger-billing-document-kinds.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
+import { routes as traegerBillingRunDueDates } from "./traeger-billing-run-due-dates.generated";
+import { routes as traegerBillingRuns } from "./traeger-billing-runs.generated";
+import { routes as traegerBillingTerms } from "./traeger-billing-terms.generated";
+import { routes as traegerCareBillingRuns } from "./traeger-care-billing-runs.generated";
+import { routes as traegerCareCostShares } from "./traeger-care-cost-shares.generated";
+import { routes as traegerCareEvidences } from "./traeger-care-evidences.generated";
+import { routes as traegerCareMealTariffs } from "./traeger-care-meal-tariffs.generated";
+import { routes as traegerCareNoticeRuns } from "./traeger-care-notice-runs.generated";
+import { routes as traegerCareRules } from "./traeger-care-rules.generated";
+import { routes as traegerCareTariffs } from "./traeger-care-tariffs.generated";
+import { routes as traegerCareTimeOverruns } from "./traeger-care-time-overruns.generated";
+import { routes as traegerContractChanges } from "./traeger-contract-changes.generated";
+import { routes as traegerContractNotices } from "./traeger-contract-notices.generated";
+import { routes as traegerContractTemplates } from "./traeger-contract-templates.generated";
+import { routes as traegerContracts } from "./traeger-contracts.generated";
+import { routes as traegerContributionRules } from "./traeger-contribution-rules.generated";
+import { routes as traegerCostBearers } from "./traeger-cost-bearers.generated";
 import { routes as traegerDocuments } from "./traeger-documents.generated";
+import { routes as traegerFamilyBilling } from "./traeger-family-billing.generated";
+import { routes as traegerFamilyChildren } from "./traeger-family-children.generated";
+import { routes as traegerFinanceExports } from "./traeger-finance-exports.generated";
+import { routes as traegerFinanceHandovers } from "./traeger-finance-handovers.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
 import { routes as traegerNotifications } from "./traeger-notifications.generated";
+import { routes as traegerNumberRanges } from "./traeger-number-ranges.generated";
 import { routes as traegerReportTemplates } from "./traeger-report-templates.generated";
+import { routes as traegerSepaCreditor } from "./traeger-sepa-creditor.generated";
+import { routes as traegerSepaDebits } from "./traeger-sepa-debits.generated";
+import { routes as traegerSepaMandates } from "./traeger-sepa-mandates.generated";
 import { routes as traegerStaffRecords } from "./traeger-staff-records.generated";
 import { routes as workTimeModels } from "./work-time-models.generated";
 
@@ -32,11 +58,125 @@ export const portalRoutes = {
     catererSchools["GET /caterer/schools"],
   ],
   org: [
+    traegerBillingDocumentKinds["GET /traeger/billing-document-kinds/"],
+    traegerBillingDocumentKinds["PUT /traeger/billing-document-kinds/{service}"],
+    traegerBillingFamilies["GET /traeger/billing-families/"],
+    traegerBillingFamilies["GET /traeger/billing-families/children"],
     traegerBillingFamilies["GET /traeger/billing-families/debtor-number-format"],
+    traegerBillingFamilies["GET /traeger/billing-families/{id}"],
+    traegerBillingFamilies["PUT /traeger/billing-families/child-debtor-number"],
+    traegerBillingFamilies["PUT /traeger/billing-families/debtor-number"],
+    traegerBillingRunDueDates["PUT /traeger/billing-run-due-dates/care/{id}"],
+    traegerBillingRunDueDates["PUT /traeger/billing-run-due-dates/holiday/{id}"],
+    traegerBillingRuns["DELETE /traeger/billing-runs/{id}/carried-corrections/{positionID}"],
+    traegerBillingRuns["GET /traeger/billing-runs/"],
+    traegerBillingRuns["GET /traeger/billing-runs/periods"],
+    traegerBillingRuns["GET /traeger/billing-runs/{id}"],
+    traegerBillingRuns["GET /traeger/billing-runs/{id}/mailings"],
+    traegerBillingRuns["POST /traeger/billing-runs/"],
+    traegerBillingRuns["POST /traeger/billing-runs/{id}/corrections"],
+    traegerBillingRuns["POST /traeger/billing-runs/{id}/discard"],
+    traegerBillingRuns["POST /traeger/billing-runs/{id}/documents/{documentID}/cancellation"],
+    traegerBillingRuns["POST /traeger/billing-runs/{id}/documents/{documentID}/credits"],
+    traegerBillingRuns["POST /traeger/billing-runs/{id}/documents/{documentID}/mailings"],
+    traegerBillingRuns["POST /traeger/billing-runs/{id}/letters"],
+    traegerBillingRuns["POST /traeger/billing-runs/{id}/mailings"],
+    traegerBillingRuns["POST /traeger/billing-runs/{id}/release"],
+    traegerBillingRuns["PUT /traeger/billing-runs/{id}/carried-corrections/{positionID}"],
+    traegerBillingTerms["GET /traeger/billing-terms/"],
+    traegerBillingTerms["PUT /traeger/billing-terms/{service}"],
+    traegerCareBillingRuns["GET /traeger/care-billing-runs/"],
+    traegerCareBillingRuns["GET /traeger/care-billing-runs/schools"],
+    traegerCareBillingRuns["GET /traeger/care-billing-runs/{id}"],
+    traegerCareBillingRuns["GET /traeger/care-billing-runs/{id}/letters"],
+    traegerCareBillingRuns["POST /traeger/care-billing-runs/"],
+    traegerCareBillingRuns["POST /traeger/care-billing-runs/{id}/amendments"],
+    traegerCareBillingRuns["POST /traeger/care-billing-runs/{id}/discard"],
+    traegerCareBillingRuns["POST /traeger/care-billing-runs/{id}/exclusions"],
+    traegerCareBillingRuns["POST /traeger/care-billing-runs/{id}/inclusions"],
+    traegerCareBillingRuns["POST /traeger/care-billing-runs/{id}/invoices/{invoiceID}/cancellation"],
+    traegerCareBillingRuns["POST /traeger/care-billing-runs/{id}/invoices/{invoiceID}/mail"],
+    traegerCareBillingRuns["POST /traeger/care-billing-runs/{id}/letters"],
+    traegerCareBillingRuns["POST /traeger/care-billing-runs/{id}/letters/mail"],
+    traegerCareBillingRuns["POST /traeger/care-billing-runs/{id}/release"],
+    traegerCareBillingRuns["PUT /traeger/care-billing-runs/{id}/invoice-date"],
+    traegerCareCostShares["DELETE /traeger/care-cost-shares/{id}"],
+    traegerCareCostShares["GET /traeger/care-cost-shares/"],
+    traegerCareCostShares["POST /traeger/care-cost-shares/"],
+    traegerCareCostShares["PUT /traeger/care-cost-shares/{id}"],
+    traegerCareEvidences["DELETE /traeger/care-evidences/{id}"],
+    traegerCareEvidences["GET /traeger/care-evidences/"],
+    traegerCareEvidences["POST /traeger/care-evidences/"],
+    traegerCareEvidences["PUT /traeger/care-evidences/{id}"],
+    traegerCareMealTariffs["DELETE /traeger/care-meal-tariffs/{schoolID}/{validFrom}"],
+    traegerCareMealTariffs["GET /traeger/care-meal-tariffs/"],
+    traegerCareMealTariffs["PUT /traeger/care-meal-tariffs/"],
+    traegerCareNoticeRuns["GET /traeger/care-notice-runs/"],
+    traegerCareNoticeRuns["GET /traeger/care-notice-runs/{id}"],
+    traegerCareNoticeRuns["GET /traeger/care-notice-runs/{id}/letters"],
+    traegerCareNoticeRuns["GET /traeger/care-notice-runs/{id}/notices/{contractID}/letter"],
+    traegerCareNoticeRuns["POST /traeger/care-notice-runs/"],
+    traegerCareNoticeRuns["POST /traeger/care-notice-runs/{id}/discard"],
+    traegerCareNoticeRuns["POST /traeger/care-notice-runs/{id}/letters"],
+    traegerCareNoticeRuns["POST /traeger/care-notice-runs/{id}/letters/mail"],
+    traegerCareNoticeRuns["POST /traeger/care-notice-runs/{id}/notices/{contractID}/mail"],
+    traegerCareNoticeRuns["POST /traeger/care-notice-runs/{id}/release"],
+    traegerCareRules["DELETE /traeger/care-rules/{id}"],
+    traegerCareRules["GET /traeger/care-rules/"],
+    traegerCareRules["POST /traeger/care-rules/"],
+    traegerCareRules["PUT /traeger/care-rules/{id}"],
+    traegerCareTariffs["DELETE /traeger/care-tariffs/{schoolID}/{validFrom}"],
+    traegerCareTariffs["GET /traeger/care-tariffs/"],
+    traegerCareTariffs["PUT /traeger/care-tariffs/"],
+    traegerCareTimeOverruns["GET /traeger/care-time-overruns/"],
+    traegerCareTimeOverruns["GET /traeger/care-time-overruns/children"],
+    traegerContractChanges["GET /traeger/contract-changes/{id}"],
+    traegerContractChanges["POST /traeger/contract-changes/{id}/requests/{requestId}/decide"],
+    traegerContractNotices["GET /traeger/contract-notices/{id}"],
+    traegerContractNotices["POST /traeger/contract-notices/{id}"],
+    traegerContractNotices["POST /traeger/contract-notices/{id}/reason-rejection"],
+    traegerContractNotices["PUT /traeger/contract-notices/{id}/ends-on"],
+    traegerContractTemplates["GET /traeger/contract-templates/"],
+    traegerContractTemplates["PUT /traeger/contract-templates/{schoolId}/{offeringId}"],
+    traegerContracts["DELETE /traeger/contracts/{id}"],
+    traegerContracts["GET /traeger/contracts/"],
+    traegerContracts["GET /traeger/contracts/candidates"],
+    traegerContracts["GET /traeger/contracts/conclusion-modes"],
+    traegerContracts["GET /traeger/contracts/{id}"],
+    traegerContracts["POST /traeger/contracts/"],
+    traegerContracts["POST /traeger/contracts/send"],
+    traegerContributionRules["DELETE /traeger/contribution-rules/{id}"],
+    traegerContributionRules["GET /traeger/contribution-rules/"],
+    traegerContributionRules["POST /traeger/contribution-rules/"],
+    traegerContributionRules["PUT /traeger/contribution-rules/{id}"],
+    traegerCostBearers["DELETE /traeger/cost-bearers/{id}"],
+    traegerCostBearers["GET /traeger/cost-bearers/"],
+    traegerCostBearers["POST /traeger/cost-bearers/"],
+    traegerCostBearers["PUT /traeger/cost-bearers/{id}"],
     traegerDocuments["DELETE /traeger/documents/{id}"],
     traegerDocuments["DELETE /traeger/documents/{id}/releases/{releaseId}"],
     traegerDocuments["GET /traeger/documents/audiences"],
     traegerDocuments["POST /traeger/documents/{id}/releases"],
+    traegerFamilyBilling["GET /traeger/family-billing/"],
+    traegerFamilyBilling["PUT /traeger/family-billing/"],
+    traegerFamilyChildren["DELETE /traeger/family-children/{contractId}"],
+    traegerFamilyChildren["GET /traeger/family-children/"],
+    traegerFamilyChildren["PUT /traeger/family-children/"],
+    traegerFinanceExports["DELETE /traeger/finance-exports/booking-accounts/cost-centers/{id}"],
+    traegerFinanceExports["DELETE /traeger/finance-exports/settings/sollstellung"],
+    traegerFinanceExports["GET /traeger/finance-exports/booking-accounts"],
+    traegerFinanceExports["GET /traeger/finance-exports/datev-runs"],
+    traegerFinanceExports["GET /traeger/finance-exports/files"],
+    traegerFinanceExports["GET /traeger/finance-exports/invoice-history/{kind}/{id}"],
+    traegerFinanceExports["GET /traeger/finance-exports/runs"],
+    traegerFinanceExports["GET /traeger/finance-exports/settings"],
+    traegerFinanceExports["POST /traeger/finance-exports/booking-accounts/cost-centers"],
+    traegerFinanceExports["PUT /traeger/finance-exports/booking-accounts/revenue-accounts"],
+    traegerFinanceExports["PUT /traeger/finance-exports/settings/file-number-start"],
+    traegerFinanceExports["PUT /traeger/finance-exports/settings/sollstellung"],
+    traegerFinanceHandovers["POST /traeger/finance-handovers/runs/{kind}/{id}/datev"],
+    traegerFinanceHandovers["POST /traeger/finance-handovers/runs/{kind}/{id}/pain008"],
+    traegerFinanceHandovers["POST /traeger/finance-handovers/runs/{kind}/{id}/sollstellung"],
     traegerMasterData["DELETE /traeger/master-data/bank-accounts/{id}"],
     traegerMasterData["GET /traeger/master-data/"],
     traegerMasterData["GET /traeger/master-data/document-templates"],
@@ -51,10 +191,22 @@ export const portalRoutes = {
     traegerNotifications["GET /traeger/notifications/feed/unread-count"],
     traegerNotifications["POST /traeger/notifications/feed/read-all"],
     traegerNotifications["POST /traeger/notifications/feed/{id}/read"],
+    traegerNumberRanges["GET /traeger/number-ranges/"],
+    traegerNumberRanges["PUT /traeger/number-ranges/{service}"],
+    traegerNumberRanges["PUT /traeger/number-ranges/{service}/start"],
     traegerReportTemplates["DELETE /traeger/report-templates/{id}"],
     traegerReportTemplates["GET /traeger/report-templates/"],
     traegerReportTemplates["POST /traeger/report-templates/"],
     traegerReportTemplates["PUT /traeger/report-templates/{id}"],
+    traegerSepaCreditor["GET /traeger/sepa-creditor/"],
+    traegerSepaCreditor["PUT /traeger/sepa-creditor/"],
+    traegerSepaDebits["GET /traeger/sepa-debits/{kind}/{id}"],
+    traegerSepaDebits["POST /traeger/sepa-debits/{kind}/{id}/submission"],
+    traegerSepaMandates["GET /traeger/sepa-mandates/"],
+    traegerSepaMandates["GET /traeger/sepa-mandates/{id}/collections"],
+    traegerSepaMandates["GET /traeger/sepa-mandates/{id}/history"],
+    traegerSepaMandates["POST /traeger/sepa-mandates/"],
+    traegerSepaMandates["POST /traeger/sepa-mandates/{id}/revoke"],
     traegerStaffRecords["PUT /traeger/staff-records/{id}/person"],
   ],
   parent: [

@@ -69,8 +69,8 @@ export interface FamilyChildrenInput {
 }
 
 interface BackendCount {
-  id: number;
-  contract_id: number;
+  id: number | string;
+  contract_id: number | string;
   stated_children: number | null;
   stated_at: string | null;
   confirmed_children: number | null;
@@ -80,13 +80,13 @@ interface BackendCount {
 }
 
 interface BackendFamily {
-  contract_id: number;
+  contract_id: number | string;
   recipient_first_name: string;
   recipient_last_name: string;
   recipient_email: string;
   children:
     | {
-        contract_id: number;
+        contract_id: number | string;
         school_name: string;
         child_first_name: string;
         child_last_name: string;
@@ -98,7 +98,7 @@ interface BackendFamily {
 
 interface BackendSet {
   families: BackendFamily[] | null;
-  rules: { id: number; name: string }[] | null;
+  rules: { id: number | string; name: string }[] | null;
 }
 
 const PATH = "/api/traeger/family-children";

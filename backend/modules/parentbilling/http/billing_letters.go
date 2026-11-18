@@ -17,18 +17,30 @@ import (
 // (YYYY-MM-DD), the free text for the parents and the emergency numbers of
 // the hosting OGS.
 type BillingLettersRequest struct {
-	PaymentDueOn      calendar.Date                        `json:"payment_due_on"`
-	Notes             string                               `json:"notes"`
-	EmergencyContacts []capability.BillingEmergencyContact `json:"emergency_contacts"`
+	PaymentDueOn      calendar.Date             `json:"payment_due_on"`
+	Notes             string                    `json:"notes"`
+	EmergencyContacts []EmergencyContactRequest `json:"emergency_contacts"`
+}
+
+// EmergencyContactRequest is one emergency number of a hosting OGS in the
+// body of the letters.
+type EmergencyContactRequest struct {
+	Name  string `json:"name"`
+	Phone string `json:"phone"`
 }
 
 // Bind accepts the body; the Owner validates the letters.
 func (req *BillingLettersRequest) Bind(*http.Request) error { return nil }
 
 func (req *BillingLettersRequest) input() capability.BillingLetterInput {
-	return capability.BillingLetterInput{
-		PaymentDueOn: req.PaymentDueOn, Notes: req.Notes, EmergencyContacts: req.EmergencyContacts,
+	var contacts []capability.BillingEmergencyContact
+	if req.EmergencyContacts != nil {
+		contacts = make([]capability.BillingEmergencyContact, 0, len(req.EmergencyContacts))
 	}
+	for _, contact := range req.EmergencyContacts {
+		contacts = append(contacts, capability.BillingEmergencyContact(contact))
+	}
+	return capability.BillingLetterInput{PaymentDueOn: req.PaymentDueOn, Notes: req.Notes, EmergencyContacts: contacts}
 }
 
 // lettersRequest reads the session, the run and the body of the letters.

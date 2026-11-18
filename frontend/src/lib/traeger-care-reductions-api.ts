@@ -84,14 +84,14 @@ export interface CareEvidenceSet {
 }
 
 interface BackendRule {
-  id: number;
+  id: number | string;
   kind: CareRuleKind;
   name: string;
   valid_from: string;
   valid_until: string | null;
-  school_ids: number[] | null;
-  care_offering_ids: number[] | null;
-  count_school_ids: number[] | null;
+  school_ids: (number | string)[] | null;
+  care_offering_ids: (number | string)[] | null;
+  count_school_ids: (number | string)[] | null;
   sibling_from_child: number | null;
   discount_basis_points: number | null;
   discount_cents: number | null;
@@ -102,9 +102,9 @@ interface BackendRule {
 }
 
 interface BackendModule {
-  school_id: number;
+  school_id: number | string;
   school_name: string;
-  care_offering_id: number;
+  care_offering_id: number | string;
   module_name: string;
   ends_at: string;
   booked_weekdays: CareModule["bookedWeekdays"] | null;
@@ -114,15 +114,15 @@ interface BackendModule {
 
 interface BackendRuleSet {
   rules: BackendRule[] | null;
-  schools: { id: number; name: string }[] | null;
+  schools: { id: number | string; name: string }[] | null;
   modules: BackendModule[] | null;
 }
 
 interface BackendEvidence {
-  id: number;
-  contract_id: number;
+  id: number | string;
+  contract_id: number | string;
   kind: CareEvidenceKind;
-  rule_id: number | null;
+  rule_id: number | string | null;
   valid_from: string;
   valid_until: string | null;
   evidence: string;
@@ -132,8 +132,8 @@ interface BackendEvidence {
 interface BackendEvidenceSet {
   contracts:
     | {
-        contract_id: number;
-        school_id: number;
+        contract_id: number | string;
+        school_id: number | string;
         school_name: string;
         child_first_name: string;
         child_last_name: string;
@@ -146,7 +146,8 @@ interface BackendEvidenceSet {
 const RULES_PATH = "/api/traeger/care-rules";
 const EVIDENCES_PATH = "/api/traeger/care-evidences";
 
-const ids = (values: number[] | null): string[] => (values ?? []).map(String);
+const ids = (values: readonly (number | string)[] | null): string[] =>
+  (values ?? []).map(String);
 const numbers = (values: readonly string[]): number[] => values.map(Number);
 
 function ruleFromBackend(rule: BackendRule): CareRule {

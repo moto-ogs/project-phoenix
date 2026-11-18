@@ -52,7 +52,7 @@ var ErrVersionMoved = errors.New("care contract: the newest version changed")
 type TemplateRow struct {
 	SchoolID   int64
 	OfferingID int64
-	Template   carecontract.Template
+	Template   carecontract.ContractTemplate
 	// Versions are the conditions texts of every saved version of the template the trail recorded (VersionsDetail), the
 	// current one included. VersionsComplete tells that every save of the
 	// template recorded them; Templates reads both, UpsertTemplate and
@@ -154,7 +154,7 @@ type Store interface {
 	UpsertTemplates(ctx context.Context, organizationID, accountID, schoolID int64, inputs []carecontract.ModuleTemplateInput) ([]TemplateRow, error)
 	MarkWithdrawalInformed(ctx context.Context, organizationID, contractID int64, at time.Time) error
 	Templates(ctx context.Context, organizationID int64) ([]TemplateRow, error)
-	UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.Template, error)
+	UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.ContractTemplate, error)
 	ContractKeys(ctx context.Context, organizationID int64, schoolIDs []int64) (map[ContractKey]bool, error)
 	InsertContract(ctx context.Context, organizationID, accountID int64, contract NewContract) (int64, error)
 	ListContracts(ctx context.Context, organizationID int64, filter carecontract.ContractFilter) ([]carecontract.ContractSummary, error)

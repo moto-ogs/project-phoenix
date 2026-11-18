@@ -70,8 +70,8 @@ export interface CareNoticeSeries {
 }
 
 interface BackendMailing {
-  notice_id: number;
-  contract_id: number;
+  notice_id: number | string;
+  contract_id: number | string;
   kind: CareNoticeKind;
   number: string;
   amends_number?: string;

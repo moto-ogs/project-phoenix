@@ -52,6 +52,11 @@ type row struct {
 	Hidden   string         `json:"-"`
 	Born     string         `json:"born,omitempty" contract:"date"`
 	Pickup   *string        `json:"pickup,omitempty" contract:"clock"`
+	// An amount in cent and a running number travel as plain numbers.
+	PriceCents int64            `json:"price_cents"`
+	Next       int64            `json:"next" contract:"number"`
+	Image      []byte           `json:"image"`
+	BySchool   map[int64]string `json:"by_school"`
 }
 
 type body struct {
@@ -153,6 +158,10 @@ func TestBuildFollowsEncodingJSON(t *testing.T) {
 	assert.Equal(t, Schema{Kind: KindEnum, Ref: "Status"}, schema("status"))
 	assert.Equal(t, KindInt, schema("count").Kind)
 	assert.Equal(t, KindLegacyID, schema("legacy_id").Kind)
+	assert.Equal(t, Schema{Kind: KindInt}, schema("price_cents"), "an amount in cent is a number")
+	assert.Equal(t, Schema{Kind: KindInt}, schema("next"), "a running number tagged number stays a number")
+	assert.Equal(t, Schema{Kind: KindString, Nullable: true}, schema("image"), "[]byte renders base64, nil as null")
+	assert.Equal(t, KindMap, schema("by_school").Kind, "an integer key renders as its decimal string")
 	assert.Equal(t, KindID, schema("quoted_id").Kind)
 	assert.Equal(t, KindLaxID, schema("lax_id").Kind)
 	assert.True(t, fields["nick"].Deprecated)

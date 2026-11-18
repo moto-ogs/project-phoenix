@@ -127,21 +127,21 @@ export interface HandoverResult {
 }
 
 interface BackendHandover {
-  id: number;
+  id: number | string;
   created_at: string;
   format: ExportFormat;
   filename: string;
   byte_size: number;
   target_host: string;
   target_directory: string;
-  recipient_id?: number | null;
+  recipient_id?: number | string | null;
   recipient_name?: string;
   state: HandoverState;
   reason?: string;
 }
 
 interface BackendRecipient {
-  id: number;
+  id: number | string;
   name: string;
   enabled: boolean;
   ready: boolean;
@@ -159,7 +159,8 @@ interface BackendRecipient {
 
 interface BackendRecipientsPage {
   recipients: BackendRecipient[] | null;
-  assignments: { format: HandoverFormat; recipient_id: number | null }[] | null;
+  assignments:
+    { format: HandoverFormat; recipient_id: number | string | null }[] | null;
   handovers: BackendHandover[] | null;
 }
 

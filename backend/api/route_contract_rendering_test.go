@@ -134,7 +134,11 @@ func fillRendered(v reflect.Value, own, shape renderShape, format string, depth 
 		if own == shapeFilled {
 			member := reflect.New(v.Type().Elem()).Elem()
 			fillRendered(member, shapeFilled, shape, format, depth+1)
-			v.SetMapIndex(reflect.ValueOf("key").Convert(v.Type().Key()), member)
+			key := reflect.ValueOf("key")
+			if v.Type().Key().Kind() != reflect.String {
+				key = reflect.ValueOf(7)
+			}
+			v.SetMapIndex(key.Convert(v.Type().Key()), member)
 		}
 	case reflect.Struct:
 		for i := range v.NumField() {

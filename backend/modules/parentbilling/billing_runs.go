@@ -292,8 +292,8 @@ type NumberRange struct {
 	Service    string             `json:"service"`
 	Pattern    string             `json:"pattern"`
 	Example    string             `json:"example"`
-	NextNumber int64              `json:"next_number"`
-	LastNumber int64              `json:"last_number"`
+	NextNumber int64              `json:"next_number" contract:"number"`
+	LastNumber int64              `json:"last_number" contract:"number"`
 	Year       int                `json:"year"`
 	Starts     []NumberRangeStart `json:"starts"`
 	UpdatedAt  *time.Time         `json:"updated_at"`
@@ -305,7 +305,7 @@ type NumberRange struct {
 // reader; SetByName is the name a colleague carries at the Träger, empty for
 // the reader; SetByAccount is false once the account is gone.
 type NumberRangeStart struct {
-	NextNumber int64     `json:"next_number"`
+	NextNumber int64     `json:"next_number" contract:"number"`
 	Example    string    `json:"example"`
 	Year       int       `json:"year"`
 	SetAt      time.Time `json:"set_at"`
