@@ -165,9 +165,10 @@ interface DataTableProps<T> {
   canClickRow?: (row: T) => boolean;
   // Rows with their own buttons or menus must not also become an ARIA button
   // in the phone list: nested interactive elements have ambiguous keyboard
-  // and screen-reader semantics. The desktop table reaches every opening row
-  // through a button in its first cell instead (#7112).
-  rowHasInteractiveControls?: boolean;
+  // and screen-reader semantics. Use a predicate when the controls differ per
+  // row. The desktop table reaches every opening row through a button in its
+  // first cell instead (#7112).
+  rowHasInteractiveControls?: boolean | ((row: T) => boolean);
   emptyState?: ReactNode;
   headerActions?: ReactNode;
   caption?: string;
@@ -646,7 +647,7 @@ function StackedRows<T>({
   getRowKey: (row: T) => string | number;
   onRowClick?: (row: T) => void;
   canClickRow?: (row: T) => boolean;
-  rowHasInteractiveControls?: boolean;
+  rowHasInteractiveControls?: boolean | ((row: T) => boolean);
   rowClassName?: (row: T) => string;
   isLoading?: boolean;
   loadingRowCount: number;
@@ -683,9 +684,6 @@ function StackedRows<T>({
     (c) => c !== title && c !== meta && c !== rowMenu && c.stacked !== "hidden",
   );
   const clickable = Boolean(onRowClick);
-  const keyboardClickable =
-    clickable && !rowHasInteractiveControls && selection === undefined;
-
   if (isLoading) {
     return (
       <div className={`${surfaceClass} grow`} aria-hidden="true">
@@ -729,7 +727,15 @@ function StackedRows<T>({
             const active =
               activeRowKey != null && getRowKey(row) === activeRowKey;
             const rowClickable = clickable && (canClickRow?.(row) ?? true);
-            const rowKeyboardClickable = keyboardClickable && rowClickable;
+            const rowHasControls =
+              typeof rowHasInteractiveControls === "function"
+                ? rowHasInteractiveControls(row)
+                : rowHasInteractiveControls;
+            const rowKeyboardClickable =
+              clickable &&
+              !rowHasControls &&
+              selection === undefined &&
+              rowClickable;
             // The <li> stays a list item and keeps the handlers; a row that
             // is a button itself puts its role and tab stop on the wrapper
             // inside, or the list would lose its items (axe "list").

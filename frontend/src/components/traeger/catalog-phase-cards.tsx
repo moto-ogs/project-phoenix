@@ -319,7 +319,9 @@ export function CatalogOfferingsCard({
         )}
         getRowKey={(offering) => offering.id}
         stackedOnMobile
-        rowHasInteractiveControls
+        rowHasInteractiveControls={(offering) =>
+          editable && !offering.withdrawnAt
+        }
         onRowClick={(offering) =>
           router.push(traegerPath(`${base}/${offering.id}`))
         }
