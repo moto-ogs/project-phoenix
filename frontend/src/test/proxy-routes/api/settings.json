@@ -1,4 +1,7 @@
 {
+  "api/settings/device-pin-status": [
+    "GET tenant /api/settings/device-pin-status"
+  ],
   "api/settings/home-layout": [
     "DELETE tenant /api/settings/home-layout",
     "GET tenant /api/settings/home-layout",

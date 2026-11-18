@@ -13,6 +13,20 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def trivial_pin(pin):
+    """Mirror of IsTrivialDevicePIN (backend/modules/settings/records/device_pin.go):
+    one digit, a straight run up or down, or a repeated pair."""
+    steps = {int(b) - int(a) for a, b in zip(pin, pin[1:])}
+    return (len(steps) == 1 and steps <= {-1, 0, 1}) or pin[:2] * 2 == pin
+
+
+def device_pin():
+    while True:
+        pin = f"{secrets.randbelow(10000):04d}"
+        if not trivial_pin(pin):
+            return pin
+
+
 def main():
     target = ROOT / "environments/demo.sops.env"
     if target.exists():
@@ -42,8 +56,8 @@ def main():
         "TRAEGER_URL": "https://traeger.demo.moto-app.de", "EMAIL_FROM_NAME": "moto Demo",
         "ADMIN_EMAIL": "admin@demo.moto-app.de", "OPERATOR_EMAIL": "operator@demo.moto-app.de",
         # The demo seeder writes the PIN into security.ogs_device_pin, which
-        # accepts exactly four digits.
-        "OPERATOR_DISPLAY_NAME": "Demo Operator", "OGS_DEVICE_PIN": f"{secrets.randbelow(10000):04d}",
+        # accepts exactly four digits that are not easy to guess.
+        "OPERATOR_DISPLAY_NAME": "Demo Operator", "OGS_DEVICE_PIN": device_pin(),
         "SECURITY_LOGGING_ENABLED": "true", "RATE_LIMIT_ENABLED": "true", "SKIP_ENV_VALIDATION": "false",
         # The demo request form posts from the marketing website, so its origins
         # belong here too. The encrypted file is authoritative once it exists;

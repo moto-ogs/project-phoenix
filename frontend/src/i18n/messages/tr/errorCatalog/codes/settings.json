@@ -9,5 +9,6 @@
   "attendance_retention_below_visible": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "module_requires": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "module_required_by": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "device_pin_too_simple": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "enrollment_privacy_notice_missing": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin."
 }

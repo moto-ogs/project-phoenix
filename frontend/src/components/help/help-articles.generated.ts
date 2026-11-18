@@ -5344,11 +5344,11 @@ export const nfcSettingsTopic = function nfcSettingsTopic(
       {
         title: "Die Geräte-PIN setzen",
         description:
-          "Bei der Auslieferung ist eine einfache PIN gesetzt. Ändern Sie sie vor dem ersten Betreuungstag.",
+          "Ohne Geräte-PIN kann sich Ihr Team nicht am Tablet anmelden. Legen Sie die PIN vor dem ersten Betreuungstag fest.",
         steps: [
           "Wählen Sie unten in der Seitenleiste `Einstellungen`.",
           "Wählen Sie den Bereich `Geräte`.",
-          "Tragen Sie unter `Geräte-PIN` eine vierstellige Zahl ein.",
+          "Tragen Sie unter `Geräte-PIN` eine vierstellige Zahl ein. Leichte PINs wie 1234, 1111 oder 1212 nimmt moto nicht an.",
           "Geben Sie die neue PIN an Ihr Team weiter.",
         ],
       },
