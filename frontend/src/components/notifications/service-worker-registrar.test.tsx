@@ -1,5 +1,9 @@
 import { render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  TEST_PUSH_PUBLIC_KEY,
+  setPushPublicKey,
+} from "~/test/push-public-key-mock";
 import { PushSubscriptionSync } from "./service-worker-registrar";
 
 const mocks = vi.hoisted(() => ({
@@ -21,6 +25,10 @@ vi.mock("~/lib/push-api", () => ({
   syncExistingPushSubscription: mocks.syncExistingPushSubscription,
 }));
 
+vi.mock(
+  "~/lib/hooks/use-push-public-key",
+  async () => (await import("~/test/push-public-key-mock")).pushPublicKeyModule,
+);
 vi.mock("~/lib/logger", () => ({
   createLogger: () => ({ warn: mocks.warn }),
 }));
@@ -35,6 +43,7 @@ describe("PushSubscriptionSync", () => {
     mocks.isPushConfigurationMissing.mockReturnValue(false);
     mocks.isPushSupported.mockReturnValue(true);
     mocks.syncExistingPushSubscription.mockResolvedValue(null);
+    setPushPublicKey("ready");
     mocks.reportStandaloneUsage.mockResolvedValue(undefined);
   });
 
@@ -47,7 +56,10 @@ describe("PushSubscriptionSync", () => {
     render(<PushSubscriptionSync portal="parent" />);
 
     await waitFor(() =>
-      expect(mocks.syncExistingPushSubscription).toHaveBeenCalledWith("parent"),
+      expect(mocks.syncExistingPushSubscription).toHaveBeenCalledWith(
+        "parent",
+        TEST_PUSH_PUBLIC_KEY,
+      ),
     );
     expect(mocks.reportStandaloneUsage).toHaveBeenCalledWith(
       "parent",
@@ -73,6 +85,25 @@ describe("PushSubscriptionSync", () => {
       data: { user: { id: "account-1", tenantId: 1 } },
     });
     mocks.isPushSupported.mockReturnValue(false);
+
+    render(<PushSubscriptionSync portal="tenant" />);
+
+    await waitFor(() =>
+      expect(mocks.reportStandaloneUsage).toHaveBeenCalledWith(
+        "tenant",
+        "account-1",
+        1,
+      ),
+    );
+    expect(mocks.syncExistingPushSubscription).not.toHaveBeenCalled();
+  });
+
+  it("rebinds nothing while the server has no Web Push key", async () => {
+    mocks.useSession.mockReturnValue({
+      status: "authenticated",
+      data: { user: { id: "account-1", tenantId: 1 } },
+    });
+    setPushPublicKey("missing");
 
     render(<PushSubscriptionSync portal="tenant" />);
 

@@ -14,7 +14,7 @@ vi.mock("next-auth/react", () => ({
 }));
 
 vi.mock("~/components/notifications/service-worker-registrar", () => ({
-  PushSubscriptionSync: () => null,
+  PushSubscriptionSync: () => <span data-testid="push-subscription-sync" />,
 }));
 
 vi.mock("~/components/auth/tenant-auth-wrapper", () => ({
@@ -55,6 +55,12 @@ describe("TenantProviders", () => {
     );
 
     expect(screen.getByTestId("tenant-auth-wrapper").parentElement).toBe(
+      screen.getByTestId("tenant-provider"),
+    );
+    // The session sync reads the push key under the school's cache scope,
+    // the one the guided setup and the settings card read it under: outside
+    // the tenant context it would load the key a second time.
+    expect(screen.getByTestId("push-subscription-sync").parentElement).toBe(
       screen.getByTestId("tenant-provider"),
     );
     expect(mockTenantProvider).toHaveBeenCalledWith(

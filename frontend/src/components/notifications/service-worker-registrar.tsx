@@ -9,6 +9,7 @@ import {
   syncExistingPushSubscription,
   type PushPortal,
 } from "~/lib/push-api";
+import { usePushPublicKey } from "~/lib/hooks/use-push-public-key";
 import { reportStandaloneUsage } from "~/lib/pwa-usage-api";
 
 const logger = createLogger({ component: "ServiceWorkerRegistrar" });
@@ -52,10 +53,15 @@ export function PushSubscriptionSync({
   // would keep delivering that account's notifications to this device (#2208).
   const accountID = session?.user.id;
   const tenantID = session?.user.tenantId;
+  // Shared with the guided setup and the settings card: one read per page.
+  const pushKey = usePushPublicKey(portal);
+  const publicKey = pushKey.state === "ready" ? pushKey.require() : null;
 
   useEffect(() => {
-    if (status !== "authenticated" || !isPushSupported()) return;
-    syncExistingPushSubscription(portal).catch((err: unknown) => {
+    // Without a key (not answered yet, Web Push not set up, read failed)
+    // there is nothing to rebind to.
+    if (status !== "authenticated" || !isPushSupported() || !publicKey) return;
+    syncExistingPushSubscription(portal, publicKey).catch((err: unknown) => {
       // Silent rebind on session start; the push card shows the real state.
       if (isPushConfigurationMissing(err)) return;
       logger.warn("push_subscription_sync_failed", {
@@ -63,7 +69,7 @@ export function PushSubscriptionSync({
         error: err instanceof Error ? err.message : String(err),
       });
     });
-  }, [portal, status, accountID, tenantID]);
+  }, [portal, status, accountID, tenantID, publicKey]);
 
   useEffect(() => {
     if (status !== "authenticated" || !accountID) return;

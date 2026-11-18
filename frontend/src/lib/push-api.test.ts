@@ -1,15 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  fetchPushPublicKey,
   getExistingSubscription,
   isPushConfigurationMissing,
   isPushSupported,
   needsIOSInstall,
-  subscribePush,
-  syncExistingPushSubscription,
+  pushConfigurationMissing,
+  subscribePush as subscribePushWithKey,
+  syncExistingPushSubscription as syncExistingWithKey,
   unsubscribePush,
   unsubscribePushSilently,
-  verifyPushConfiguration,
+  type PushPortal,
 } from "./push-api";
+
+// The key reaches the actions from the shared reader (usePushPublicKey).
+// Here each action reads it itself, as that reader does on a page.
+async function serverKey(portal: PushPortal) {
+  const key = await fetchPushPublicKey(portal);
+  if (!key) throw pushConfigurationMissing();
+  return key;
+}
+const subscribePush = (portal: PushPortal) =>
+  subscribePushWithKey(portal, () => serverKey(portal));
+const syncExistingPushSubscription = async (portal: PushPortal) =>
+  syncExistingWithKey(portal, await serverKey(portal));
+const verifyPushConfiguration = async (portal: PushPortal) => {
+  await serverKey(portal);
+};
 
 const vapidPublicKey =
   "BAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE";
@@ -214,6 +231,18 @@ describe("push-api", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/parent/me/push/public-key",
       expect.any(Object),
+    );
+  });
+
+  it("answers null for a server without Web Push, as a valid answer", async () => {
+    fetchMock.mockResolvedValueOnce(response({ code: "general.input" }, 404));
+    await expect(fetchPushPublicKey("tenant")).resolves.toBeNull();
+
+    fetchMock.mockResolvedValueOnce(response({ data: {} }));
+    await expect(fetchPushPublicKey("school")).resolves.toBeNull();
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/school/notifications/push/public-key",
+      expect.anything(),
     );
   });
 

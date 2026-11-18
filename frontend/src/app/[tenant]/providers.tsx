@@ -247,6 +247,9 @@ export function TenantProviders({
         tenant={tenant}
         routingMode={routingMode}
       >
+        {/* Inside the tenant context: it reads the push key under the same
+            cache scope as the guided setup and the settings card. */}
+        <PushSubscriptionSync portal="tenant" />
         <TenantAuthWrapper>
           <ProfileProvider initialProfile={shell?.profile ?? null}>
             <SupervisionProvider initial={shell?.supervision ?? null}>
@@ -271,7 +274,6 @@ export function TenantProviders({
       <SWRScopeBoundary expectedTenantId={tenant.tenantId} />
       <SessionCachePrimer />
       <ModuleBookingAudienceBridge>
-        <PushSubscriptionSync portal="tenant" />
         <SentrySessionContext portal="tenant" />
         {swrSeed ? (
           <ShellSwrSeed seed={swrSeed} generation={seedGeneration}>
