@@ -166,7 +166,7 @@ export const DATABASE_PAGE_PERMISSIONS: Readonly<
   "/database/qualification-types": "staff:stammdaten",
   "/database/groups": "groups:manage",
   "/database/roles": "roles:read",
-  "/database/devices": "iot:manage",
+  "/database/devices": "devices:read",
   "/database/permissions": "permissions:read",
   "/database/grade-transitions": "grade_transitions:read",
   "/database/exports": "users:delete",

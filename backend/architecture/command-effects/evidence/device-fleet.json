@@ -385,6 +385,22 @@
       "target_owner": "timetable-activities"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DeviceSlotLimits.DeviceSlotLimit",
+      "binding_digest": "d0dd945b5023151710419b1e1004f86e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/ports.DeviceSlotLimits.DeviceSlotLimit",
+      "source_owner": "device-fleet",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DeviceSlotLimits.DeviceSlotLimit",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DeviceSlotLimits.LockDeviceSlotLimit",
+      "binding_digest": "81fa00f5f18e56a24bb0131e85912f8d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/ports.DeviceSlotLimits.LockDeviceSlotLimit",
+      "source_owner": "device-fleet",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.DeviceSlotLimits.LockDeviceSlotLimit",
+      "target_owner": "organization-tenancy"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.displayTenantFacts.DisplayEnabled",
       "binding_digest": "2e36ba53fbf574db3c9d38242bce3893",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/ports.TenantFacts.DisplayEnabled",

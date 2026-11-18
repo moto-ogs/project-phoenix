@@ -61,6 +61,23 @@
       "legacy": "provisioning.device_same_school"
     },
     {
+      "code": "provisioning.device_slots_below_occupied",
+      "class": "business_rejection",
+      "parameters": [
+        "device_slots",
+        "occupied"
+      ],
+      "legacy": "provisioning.device_slots_below_occupied"
+    },
+    {
+      "code": "provisioning.device_slots_full",
+      "class": "business_rejection",
+      "parameters": [
+        "device_slots"
+      ],
+      "legacy": "provisioning.device_slots_full"
+    },
+    {
       "code": "provisioning.device_transfer_protected",
       "class": "permission",
       "parameters": [],

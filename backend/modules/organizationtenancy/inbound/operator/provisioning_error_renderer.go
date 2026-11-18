@@ -121,6 +121,8 @@ func deviceErrorRenderer(err error) (render.Renderer, bool) {
 	var deviceTransferBlocked *organizationtenancy.DeviceTransferBlockedError
 	var deviceTransferOrganizationMismatch *organizationtenancy.DeviceTransferOrganizationMismatchError
 	var deviceTransferSameSchool *organizationtenancy.DeviceTransferSameSchoolError
+	var deviceSlotsFull *organizationtenancy.DeviceSlotsFullError
+	var deviceSlotsBelowOccupied *organizationtenancy.DeviceSlotsBelowOccupiedError
 
 	switch {
 	case errors.As(err, &operatorDeviceNotFound):
@@ -146,6 +148,12 @@ func deviceErrorRenderer(err error) (render.Renderer, bool) {
 		return common.OperatorRejection(http.StatusForbidden, common.CodeProvisioningDeviceOtherOrganization, "Device can only be transferred within its organization"), true
 	case errors.As(err, &deviceTransferSameSchool):
 		return common.OperatorRejection(http.StatusConflict, common.CodeProvisioningDeviceSameSchool, "Device already belongs to the target school"), true
+	case errors.As(err, &deviceSlotsFull):
+		return common.OperatorRejectionWithDetails(http.StatusConflict, common.CodeProvisioningDeviceSlotsFull, "Every device slot of the school is occupied",
+			map[string]any{"device_slots": deviceSlotsFull.DeviceSlots}), true
+	case errors.As(err, &deviceSlotsBelowOccupied):
+		return common.OperatorRejectionWithDetails(http.StatusConflict, common.CodeProvisioningDeviceSlotsBelowOccupied, "The school has more registered devices than the requested device slots",
+			map[string]any{"device_slots": deviceSlotsBelowOccupied.Requested, "occupied": deviceSlotsBelowOccupied.Occupied}), true
 	default:
 		return nil, false
 	}

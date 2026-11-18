@@ -133,7 +133,7 @@ func TestDemoRoleDefinitionsStayWithinTheirIntent(t *testing.T) {
 			assert.False(t, seen[name], "%s lists %s twice", definition.Name, name)
 			seen[name] = true
 			assert.NotContains(t, []string{"admin:*", "*:*", "system:manage", "auth:manage"}, name, "%s must not be an administrator", definition.Name)
-			assert.False(t, strings.HasPrefix(name, "roles:") || strings.HasPrefix(name, "permissions:") || strings.HasPrefix(name, "iot:"),
+			assert.False(t, strings.HasPrefix(name, "roles:") || strings.HasPrefix(name, "permissions:") || strings.HasPrefix(name, "devices:"),
 				"%s must leave system administration to all functions, got %s", definition.Name, name)
 		}
 	}

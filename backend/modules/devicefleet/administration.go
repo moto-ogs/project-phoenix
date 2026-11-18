@@ -73,14 +73,9 @@ func (s *administration) CreateDevice(ctx context.Context, device *Device) error
 		return &AdministrationError{Op: "CreateDevice", Err: err}
 	}
 
-	// Reject a device_id already taken in this tenant before the insert, so
-	// the caller sees the German duplicate message rather than a constraint
-	// error. The table's unique index remains the real guard.
-	existing, err := s.devices.FindDeviceByDeviceID(ctx, device.DeviceID)
-	if err == nil && existing.ID > 0 {
-		return &AdministrationError{Op: "CreateDevice", Err: &AdministrationDuplicateDeviceIDError{DeviceID: device.DeviceID}}
-	}
-
+	// The table's unique index alone decides a taken device_id, so a
+	// concurrent registration cannot slip past a check before the insert
+	// (#2312); its violation comes back as ErrDuplicateDeviceID.
 	if device.Status == "" {
 		device.Status = DeviceStatusActive
 	}
@@ -95,6 +90,9 @@ func (s *administration) CreateDevice(ctx context.Context, device *Device) error
 		LastSeen: device.LastSeen, RegisteredByID: device.RegisteredByID, RoomID: device.RoomID,
 		RecordedBy: recordedBy(ctx),
 	})
+	if errors.Is(err, ErrDuplicateDeviceID) {
+		return &AdministrationError{Op: "CreateDevice", Err: &AdministrationDuplicateDeviceIDError{DeviceID: device.DeviceID}}
+	}
 	if err != nil {
 		return &AdministrationError{Op: "CreateDevice", Err: err}
 	}

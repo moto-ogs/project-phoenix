@@ -24,3 +24,12 @@ func DeviceRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/{id}/history", Portals: operator, Response: []deviceHistoryResponse{}},
 	}
 }
+
+// SchoolDeviceSlotRouteContracts types the operator's change of a school's
+// Geräteplätze (#2312). It answers without data; the school page reloads.
+func SchoolDeviceSlotRouteContracts() []common.RouteContract {
+	operator := []common.PortalScope{common.PortalOperator}
+	return []common.RouteContract{
+		{Method: "PUT", Pattern: "/{id}/device-slots", Portals: operator, Request: deviceSlotsRequest{}, NoData: true},
+	}
+}

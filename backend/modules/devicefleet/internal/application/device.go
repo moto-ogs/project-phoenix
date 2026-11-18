@@ -12,6 +12,8 @@ import (
 // CreateDevice registers a device, minting an API key when the caller did not
 // supply one. Uniqueness of device_id is decided by the table's constraint,
 // so a concurrent registration cannot slip past an application-level check.
+// A device that occupies a Geräteplatz (#2312) takes the school's
+// Geräteplatz lock first and is inserted only while a place is free.
 func (s *Service) CreateDevice(ctx context.Context, input devicefleet.CreateDevice) (devicefleet.Device, error) {
 	var created devicefleet.Device
 	err := s.runWrite(ctx, "create_device", func(ctx context.Context, stats *domain.OperationStats) error {
@@ -31,7 +33,11 @@ func (s *Service) CreateDevice(ctx context.Context, input devicefleet.CreateDevi
 			input.APIKeyHash, input.MaskedAPIKey = &hash, s.deps.APIKeys.Mask(*raw)
 			input.APIKey = nil
 		}
-		stored, queryStats, err := s.deps.Devices.Create(ctx, input)
+		slotLimit, err := s.lockDeviceSlotLimit(ctx, input.DeviceID)
+		if err != nil {
+			return err
+		}
+		stored, queryStats, err := s.deps.Devices.Create(ctx, input, slotLimit)
 		stats.Add(queryStats)
 		if err == nil {
 			created = stored

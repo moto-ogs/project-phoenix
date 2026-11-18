@@ -33,7 +33,7 @@ func TestUpdateDevice_KeepsConcurrentKeyRotationAndStatus(t *testing.T) {
 		"name":        "Renamed during rotation",
 	},
 		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("iot:update"),
+		testutil.WithPermissions("devices:manage"),
 	)
 
 	callCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

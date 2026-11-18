@@ -228,6 +228,7 @@ const mockSchool = {
   childQuotaBundles: null as number | null,
   childQuotaBundleSize: 50,
   childQuotaCount: 37,
+  deviceSlots: null as number | null,
 };
 
 interface SetupOpts {
@@ -836,6 +837,39 @@ describe("OperatorSchoolDetailPage", () => {
       await renderPage();
 
       expect(await screen.findByText("OGS-001")).toBeInTheDocument();
+    });
+
+    it("shows the Geräteplätze with occupied and free places (#2312)", async () => {
+      currentSearchParams = new URLSearchParams("tab=geraete");
+      setupSWR({
+        devices: [mockDevice],
+        schools: [{ ...mockSchool, deviceSlots: 4 }],
+      });
+
+      await renderPage();
+
+      const card = await screen.findByTestId("device-slots-card");
+      expect(card).toHaveTextContent("Geräteplätze");
+      expect(card).toHaveTextContent("3 / 4 belegt");
+      expect(card).toHaveTextContent("1 Platz frei");
+      fireEvent.click(within(card).getByRole("button", { name: "Ändern" }));
+      expect(
+        await screen.findByRole("textbox", { name: "Anzahl Geräteplätze" }),
+      ).toHaveValue("4");
+    });
+
+    it("marks full Geräteplätze and offers a limit where none is set", async () => {
+      currentSearchParams = new URLSearchParams("tab=geraete");
+      setupSWR({
+        devices: [mockDevice],
+        schools: [{ ...mockSchool, deviceSlots: 3 }],
+      });
+
+      await renderPage();
+
+      expect(await screen.findByTestId("device-slots-card")).toHaveTextContent(
+        "Keine freien Plätze",
+      );
     });
 
     it("renders empty state when there are no devices", async () => {

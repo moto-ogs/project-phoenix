@@ -40,6 +40,9 @@ type Runtime struct {
 	// ActorNames names the school's staff accounts a history shows, in one
 	// read; an account without a person is left out.
 	ActorNames func(context.Context, []int64) (map[int64]string, error)
+	// DeviceSlots reads the school's Geräteplätze and their occupancy
+	// (#2312). Without it that route answers 500.
+	DeviceSlots devicefleet.DeviceSlotQuery
 	// Now is the root's clock the statistics and scan answers are stamped
 	// with.
 	Now func() time.Time
@@ -49,6 +52,17 @@ type Runtime struct {
 // device already uses (error-registry/). This package does not import
 // api/common, so it names the code once here.
 const codeDeviceIDTaken = "iot.device_id_taken"
+
+// The device permissions of a school (#2312): devices:read shows the devices
+// and the Geräteplätze, devices:manage every device-management action.
+const (
+	permissionDevicesRead   = "devices:read"
+	permissionDevicesManage = "devices:manage"
+)
+
+// codeDeviceSlotsFull is the registered code of a registration every
+// Geräteplatz of the school is taken for (error-registry/iot.json, #2312).
+const codeDeviceSlotsFull = "iot.device_slots_full"
 
 // codeDeviceInActiveSession is the registered code of a removal an open
 // kiosk session blocks (error-registry/iot.json).
@@ -110,6 +124,11 @@ func (e StatusAudit) Outcome() string {
 func (rs *Resource) renderError(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, devicefleet.ErrAdministrationDuplicateDeviceID) && rs.runtime.ConflictOnField != nil {
 		rs.runtime.ConflictOnField(w, r, err, codeDeviceIDTaken, "device_id")
+		return
+	}
+	var slotsFull *devicefleet.DeviceSlotsFullError
+	if errors.As(err, &slotsFull) {
+		rs.runtime.ConflictWithDetails(w, r, err, codeDeviceSlotsFull, map[string]any{"device_slots": slotsFull.DeviceSlots})
 		return
 	}
 	status := http.StatusInternalServerError

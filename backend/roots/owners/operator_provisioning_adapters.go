@@ -213,12 +213,16 @@ func provisioningDevice(device devicefleet.Device) organizationCompose.Provision
 }
 
 // deviceWriteError names the unique violations provisioning reacts to: the
-// API key constraint and, for any other one, the per-school device ID.
+// API key constraint and, for any other one, the per-school device ID. A
+// school without a free Geräteplatz (#2312) keeps its limit in the answer.
 func deviceWriteError(err error) error {
+	var slotsFull *devicefleet.DeviceSlotsFullError
 	switch {
+	case errors.As(err, &slotsFull):
+		return &organizationtenancy.DeviceSlotsFullError{DeviceSlots: slotsFull.DeviceSlots}
 	case transactionruntime.IsUniqueViolationOn(err, deviceAPIKeyConstraint):
 		return fmt.Errorf("%w: %w", organizationCompose.ErrDeviceAPIKeyTaken, err)
-	case transactionruntime.IsUniqueViolation(err):
+	case errors.Is(err, devicefleet.ErrDuplicateDeviceID), transactionruntime.IsUniqueViolation(err):
 		return fmt.Errorf("%w: %w", organizationCompose.ErrDeviceIDTaken, err)
 	default:
 		return err
