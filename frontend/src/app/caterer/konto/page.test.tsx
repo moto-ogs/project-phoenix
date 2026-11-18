@@ -306,7 +306,9 @@ describe("Caterer-Konto: Zwei-Faktor-Anmeldung (#4497)", () => {
     render(<CatererAccountPage />, { wrapper: Providers });
 
     expect(await screen.findByText("Eingeschaltet")).toBeInTheDocument();
-    expect(screen.getByText("Gemerkte Geräte (Karte)")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Gemerkte Geräte (Karte)"),
+    ).toBeInTheDocument();
 
     // Switching off deletes the remembered devices in the backend.
     fireEvent.click(screen.getByRole("button", { name: "Ausschalten" }));
@@ -316,8 +318,10 @@ describe("Caterer-Konto: Zwei-Faktor-Anmeldung (#4497)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ausschalten" }));
 
     expect(await screen.findByText("Ausgeschaltet")).toBeInTheDocument();
-    expect(
-      screen.queryByText("Gemerkte Geräte (Karte)"),
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Gemerkte Geräte (Karte)"),
+      ).not.toBeInTheDocument();
+    });
   });
 });

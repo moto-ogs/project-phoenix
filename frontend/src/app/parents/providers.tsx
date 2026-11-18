@@ -3,7 +3,7 @@
 import type { Session } from "next-auth";
 import { ParentPortalAnalyticsSession } from "~/components/analytics/parent-portal-analytics-session";
 import { PortalProviders } from "~/components/auth/portal-providers";
-import { PushSubscriptionSync } from "~/components/notifications/service-worker-registrar";
+import { PushSubscriptionSync } from "~/components/notifications/push-subscription-sync";
 import { ModulePortalProvider } from "~/lib/module-portal-context";
 import { ParentLocaleProvider } from "~/lib/parent-locale-context";
 import { KitLocaleFromIntl } from "~/components/ui/kit-locale-intl";

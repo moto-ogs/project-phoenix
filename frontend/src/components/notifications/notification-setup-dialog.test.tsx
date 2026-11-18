@@ -2,6 +2,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SessionProvider } from "next-auth/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  TEST_PUSH_PUBLIC_KEY,
+  setPushPublicKey,
+} from "~/test/push-public-key-mock";
 import { ModalProvider } from "~/components/ui/modal-context";
 import {
   NotificationSetupDialog,
@@ -36,7 +40,6 @@ const mocks = vi.hoisted(() => ({
   isPushSupported: vi.fn(),
   syncSubscription: vi.fn(),
   subscribePush: vi.fn(),
-  verifyPushConfiguration: vi.fn(),
   isStandaloneApp: vi.fn(),
   isAndroidDevice: vi.fn(),
   isSamsungInternet: vi.fn(),
@@ -56,10 +59,13 @@ vi.mock("~/lib/push-api", () => ({
   isPushSupported: mocks.isPushSupported,
   syncExistingPushSubscription: mocks.syncSubscription,
   subscribePush: mocks.subscribePush,
-  verifyPushConfiguration: mocks.verifyPushConfiguration,
   isStandaloneApp: mocks.isStandaloneApp,
 }));
 
+vi.mock(
+  "~/lib/hooks/use-push-public-key",
+  async () => (await import("~/test/push-public-key-mock")).pushPublicKeyModule,
+);
 vi.mock("~/lib/pwa-install-prompt", () => ({
   isAndroidDevice: mocks.isAndroidDevice,
   isSamsungInternet: mocks.isSamsungInternet,
@@ -89,7 +95,7 @@ describe("NotificationSetupDialog", () => {
     mocks.isPushSupported.mockReturnValue(true);
     mocks.syncSubscription.mockResolvedValue(null);
     mocks.subscribePush.mockResolvedValue(undefined);
-    mocks.verifyPushConfiguration.mockResolvedValue(undefined);
+    setPushPublicKey("ready");
     mocks.isStandaloneApp.mockReturnValue(false);
     mocks.isAndroidDevice.mockReturnValue(false);
     mocks.isSamsungInternet.mockReturnValue(false);
@@ -140,7 +146,10 @@ describe("NotificationSetupDialog", () => {
     await waitFor(() =>
       expect(mocks.fetchPreferences).toHaveBeenCalledWith("school"),
     );
-    expect(mocks.syncSubscription).toHaveBeenCalledWith("school");
+    expect(mocks.syncSubscription).toHaveBeenCalledWith(
+      "school",
+      TEST_PUSH_PUBLIC_KEY,
+    );
   });
 
   it("explains the home-screen step first on iPhone and iPad", async () => {

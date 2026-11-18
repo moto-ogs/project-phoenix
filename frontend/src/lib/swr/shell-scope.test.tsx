@@ -26,7 +26,7 @@ vi.mock("~/components/auth/personal-storage-guard", () => ({
 vi.mock("~/components/auth/sentry-session-context", () => ({
   SentrySessionContext: () => null,
 }));
-vi.mock("~/components/notifications/service-worker-registrar", () => ({
+vi.mock("~/components/notifications/push-subscription-sync", () => ({
   PushSubscriptionSync: () => null,
 }));
 vi.mock("~/components/auth/tenant-auth-wrapper", () => ({

@@ -219,6 +219,12 @@ Grenzen:
   geändert, wenn `updated_at` der Vorlage nach dem Ankreuzen liegt. Für sie
   bleibt der bekannte Fehler bei auseinanderlaufenden Uhren, solange der
   angekreuzte Text nur aus einer Fassung vor dieser Änderung stammt.
+  Wir behalten diese Prüfung dauerhaft für die alten Einträge (#7383).
+  Die früheren Speichervorgänge protokollieren den Wortlaut nicht. Ein
+  Nachtrag aus der heutigen Vorlage würde eine Fassung als damals gültig
+  ausgeben, für die der Nachweis fehlt. Sobald der angekreuzte Text einer
+  protokollierten Fassung oder der aktuellen Vorlage gleicht, entscheidet
+  der Textvergleich in der Verlängerung und beim Erstellen des Vertrags.
 - Kreuzen Eltern einen Text an, den die Vorlage schon vor dem Ankreuzen
   ersetzt hatte (die Schule hat ihr Formular nicht nachgezogen), lautet der
   Grund jetzt „Zustimmung passt nicht zum Vertrag“ statt

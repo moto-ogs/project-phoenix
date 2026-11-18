@@ -178,6 +178,8 @@ func TestAcceptanceIssueComparesTheTickedTextWithTheSavedVersions(t *testing.T) 
 		"a recorded version counts in an incomplete history as well")
 	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(current), legacyHistory(submitted.Add(-time.Hour))),
 		"an incomplete history keeps the earlier guard on the template row")
+	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(current), legacyHistory(submitted)),
+		"the old guard requires a template write strictly after the submission")
 	assert.Equal(t, carecontract.SkipAcceptanceChanged, acceptanceIssue(draft(current), legacyHistory(submitted.Add(time.Hour))),
 		"an incomplete history keeps the earlier guard on the template row")
 }
