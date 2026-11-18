@@ -134,10 +134,6 @@ function MetricCell({
           comparison.schools.length,
         )
       : null;
-  const keyDate =
-    metric === "active_students" && row.kind === "school"
-      ? row.school.keyDate
-      : null;
   if (value === undefined) {
     return (
       <span className="text-sm text-gray-500">
@@ -155,11 +151,6 @@ function MetricCell({
       {deviation ? (
         <span className="text-sm whitespace-nowrap text-gray-500">
           {deviation}
-        </span>
-      ) : null}
-      {keyDate ? (
-        <span className="text-sm whitespace-nowrap text-gray-500">
-          am {formatDate(keyDate)}
         </span>
       ) : null}
     </div>

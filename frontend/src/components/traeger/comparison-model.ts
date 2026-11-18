@@ -81,8 +81,8 @@ export const COMPARISON_METRIC_INFO: readonly ComparisonMetricInfo[] = [
   },
   {
     key: "active_students",
-    label: "Aktive Kinder am Stichtag",
-    hint: "Kinder am letzten Stichtag im Zeitraum, wie in den Stichtagszahlen",
+    label: "Aktive Kinder am letzten Tag",
+    hint: "Kinder, die die Schule am letzten Tag des Zeitraums aktiv führt",
     format: "number",
   },
 ];
@@ -95,7 +95,7 @@ export function metricInfo(key: ComparisonMetric): ComparisonMetricInfo {
   return info;
 }
 
-/** Die Spalten beim ersten Öffnen: Plätze, Kinder und Stichtag. */
+/** Die Spalten beim ersten Öffnen: Plätze und Kinder. */
 export const DEFAULT_METRICS: readonly ComparisonMetric[] = [
   "places_rate",
   "free_places",

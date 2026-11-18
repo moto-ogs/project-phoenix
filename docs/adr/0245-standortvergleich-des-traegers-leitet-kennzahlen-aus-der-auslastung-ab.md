@@ -74,3 +74,18 @@ eine eingebettete Schnittstelle, ginge darüber.
   Beginn des Zeitraums; die Seite weist darauf hin.
 - Neue Kennzahlen kommen als Schlüssel in `traegerview.ComparisonKeys` dazu;
   der Export und die Seite lesen die Liste.
+
+## Nachtrag 18.11.2026: Aktive Kinder aus dem Bestand des letzten Tags ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301))
+
+Bisher las `active_students` die neueste festgehaltene Stichtagszahl, deren
+Stichtag im Zeitraum liegt. Das ist die Zahl, nach der moto abrechnet; seit
+#7301 sieht nur noch der Betreiber sie (Nachtrag in ADR 0151).
+
+Jetzt zählt `active_students` die aktiv verwalteten Kinder am letzten Tag des
+Zeitraums. Das geschieht über `traegerview.SchoolRosters`
+(`ActiveStudentMembershipsByTenant`), dieselbe Regel wie im Stichtagsbericht
+(ADR 0246) und in der Belegung. Jede Schule hat damit eine Zahl, eine Schule
+ohne Kinder 0. `ComparedSchool.key_date` entfällt. Die Spalte heißt „Aktive
+Kinder am letzten Tag“. Der Vergleich bleibt eine Admin-Einheit mit sieben
+statt acht Anweisungen (`api.traeger.schools_comparison`), flach in der Zahl
+der Schulen.
