@@ -149,3 +149,36 @@ it("removes cached registration content after a refused school refresh", async (
     screen.queryByRole("heading", { name: "Status" }),
   ).not.toBeInTheDocument();
 });
+
+it("keeps a refused period unavailable through a later transient refresh", async () => {
+  render(
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <ToastProvider>
+        <Refresh />
+        <RegistrationPage />
+      </ToastProvider>
+    </SWRConfig>,
+  );
+  // Anker: Anmeldung und Zeitraum waren vor der verweigerten Neuladung sichtbar.
+  expect(await screen.findByRole("heading", { name: "Status" })).toBeVisible();
+  expect(screen.getByText(HOLIDAY_PERIOD.name)).toBeVisible();
+
+  period.mockRejectedValueOnce(new ApiError("gone", 404));
+  fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+  await waitFor(() => expect(period).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("heading", { name: "Status" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(screen.queryByText(HOLIDAY_PERIOD.name)).not.toBeInTheDocument();
+
+  period.mockRejectedValueOnce(new ApiError("unavailable", 503));
+  fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+  await waitFor(() => expect(period).toHaveBeenCalledTimes(3));
+
+  expect(
+    screen.queryByRole("heading", { name: "Status" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText(HOLIDAY_PERIOD.name)).not.toBeInTheDocument();
+});

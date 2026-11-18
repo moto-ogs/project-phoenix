@@ -60,10 +60,7 @@ import {
 import { RequestMailStatus } from "~/components/enrollment/request-mail-status";
 import { useHolidayPeriodBillingHref } from "~/components/traeger/use-holiday-period-billing-href";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
-import {
-  isRefusal,
-  useRefusalGuard,
-} from "~/components/traeger/use-traeger-confirmed-resource";
+import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-resource";
 import { useSWRRequestGuard } from "~/lib/swr/hooks";
 import { ApiError } from "~/lib/api-error";
 import {
@@ -270,6 +267,7 @@ function HolidayRegistrationContent() {
     data: period,
     loadError: periodError,
     error: periodFailure,
+    refused: periodRefused,
   } = useTraegerHolidayPeriod(periodId);
   // The way to the invoice of this period (#5688), for the billing right only.
   const billingHref = useHolidayPeriodBillingHref(period);
@@ -349,6 +347,7 @@ function HolidayRegistrationContent() {
     schools,
     error: schoolsError,
     fetchError: schoolsFailure,
+    refused: schoolsRefused,
   } = useTraegerSchools();
   const previewLoad = useApiLoadError();
   const { show: showLoadError, clear: clearPreviewError } = previewLoad;
@@ -532,7 +531,7 @@ function HolidayRegistrationContent() {
     );
   // A refused metadata read removes the content. Its dependent controls must
   // disappear with it, rather than act on a registration no longer accessible.
-  const metadataRefused = [periodFailure, schoolsFailure].some(isRefusal);
+  const metadataRefused = periodRefused || schoolsRefused;
   const names = schoolNames(schools);
   const known = useHolidayKnownChildren(
     periodId,
@@ -883,7 +882,7 @@ function HolidayRegistrationContent() {
             <TenantPageStats
               items={[
                 { label: `Nr. ${registration.id}` },
-                ...(period ? [{ label: period.name }] : []),
+                ...(period && !periodRefused ? [{ label: period.name }] : []),
                 {
                   label: `Eingegangen am ${formatBerlinDate(registration.submittedAt)}`,
                 },
@@ -1039,10 +1038,14 @@ function HolidayRegistrationContent() {
             </>
           ) : null}
           {metadataReady && (tab === "kind" || editingTab === "kind") ? (
-            <div hidden={tab !== "kind"}>{tabContent.kind}</div>
+            <div key="kind" hidden={tab !== "kind"}>
+              {tabContent.kind}
+            </div>
           ) : null}
           {metadataReady && (tab === "eltern" || editingTab === "eltern") ? (
-            <div hidden={tab !== "eltern"}>{tabContent.eltern}</div>
+            <div key="eltern" hidden={tab !== "eltern"}>
+              {tabContent.eltern}
+            </div>
           ) : null}
           {metadataReady && tab === "nachweise" ? tabContent.nachweise : null}
         </TenantPage>

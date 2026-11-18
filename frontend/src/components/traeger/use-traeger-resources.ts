@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { metadataLoadError } from "./metadata-load-error";
+import { useTraegerResource } from "./use-traeger-resource";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth, useSWRSeedFrom } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
@@ -36,37 +37,33 @@ export function useTraegerHolidayPeriods() {
 }
 
 export function useTraegerHolidayPeriod(id: string) {
-  const { data: session } = useSession();
-  const key = traegerKeys.period(id);
-  const response = useSWRAuth(
-    session?.user.scope === "org" && id ? key : null,
+  const periodKey = traegerKeys.period(id);
+  const resource = useTraegerResource(
+    id ? periodKey : null,
     () => fetchHolidayPeriod(id),
-    { keepPreviousData: false },
+    "die Übersicht des Ferienzeitraums",
   );
   const seedFrom = useSWRSeedFrom();
-  const needsPreview = response.data === undefined && !response.error;
+  const needsPreview = resource.data === null && !resource.failure;
   const preview = useMemo(
     () =>
       needsPreview
-        ? seedFrom(traegerKeys.periods(), key, (data: unknown) =>
+        ? seedFrom(traegerKeys.periods(), periodKey, (data: unknown) =>
             traegerKeys.periodPreview(data, id),
           )
         : undefined,
-    [needsPreview, seedFrom, key, id],
-  );
-  const error = useSwrLoadError(
-    response.error,
-    "die Übersicht des Ferienzeitraums",
-    response.mutate,
+    [needsPreview, seedFrom, periodKey, id],
   );
   return {
-    ...response,
+    ...resource,
+    // Existing metadata consumers use `undefined` as the loading value;
+    // `refused` remains the distinct signal for a withdrawn answer.
+    data: resource.data ?? undefined,
+    // Consumers need the raw, persistent failure to distinguish a refusal
+    // from the formatted load error.
+    error: resource.failure,
     preview,
-    loadError: metadataLoadError(
-      error,
-      response.data !== undefined,
-      response.error,
-    ),
+    loadError: resource.error,
   };
 }
 
