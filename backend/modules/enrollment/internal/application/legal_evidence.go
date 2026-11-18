@@ -78,16 +78,26 @@ func (s *ChangeRequests) proposedLegalEvidence(ctx context.Context, prepared *pr
 // approvalLegalEvidence carries over the parts of the proposal that were
 // applied. A school may remove a block while a proposal waits for review.
 func approvalLegalEvidence(run *approval) (*enrollment.LegalBlocksSnapshotEntry, error) {
-	if run.row.LegalEvidence == nil {
-		return nil, nil
-	}
-	entry := *run.row.LegalEvidence
-	var submitted map[string]any
-	if err := json.Unmarshal(entry.ConsentFlags, &submitted); err != nil {
-		return nil, fmt.Errorf("decode submitted consent evidence: %w", err)
+	proposed := mapFromAny(run.row.ProposedSnapshot["consent_flags"])
+	entry := enrollment.LegalBlocksSnapshotEntry{}
+	submitted := proposed
+	if run.row.LegalEvidence != nil {
+		entry = *run.row.LegalEvidence
+		submitted = nil
+		if err := json.Unmarshal(entry.ConsentFlags, &submitted); err != nil {
+			return nil, fmt.Errorf("decode submitted consent evidence: %w", err)
+		}
+	} else if run.row.Origin == enrollment.ChangeRequestOriginParent {
+		// Legacy pending proposals still have the submitted answers.
+		// Current labels identify the questions; the wording was never kept.
+		entry.SnapshotAt = run.row.CreatedAt
+		entry.ChangeRequest = true
+		entry.WordingUnavailable = true
+		for _, block := range run.prepared.legalBlocks {
+			entry.Blocks = append(entry.Blocks, enrollment.LegalBlockSnapshot{Key: block.Key, Kind: block.Kind, Title: block.Title})
+		}
 	}
 	before := formMap(run.req.ConsentFlags)
-	proposed := mapFromAny(run.row.ProposedSnapshot["consent_flags"])
 	applied := run.prepared.request.ConsentFlags
 	blocks := make([]enrollment.LegalBlockSnapshot, 0, len(entry.Blocks))
 	flags := make(map[string]any)

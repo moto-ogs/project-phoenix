@@ -75,6 +75,8 @@ type LegalBlockSnapshot struct {
 // or deleted while the request lives; they share the request's
 // retention.
 type LegalBlocksSnapshotEntry struct {
+	// WordingUnavailable marks older proposals that only retained the answers.
+	WordingUnavailable bool `json:"wording_unavailable,omitempty"`
 	// ChangeRequest marks evidence carried over after a family proposal was approved.
 	ChangeRequest bool                 `json:"change_request,omitempty"`
 	SnapshotAt    time.Time            `json:"snapshot_at"`

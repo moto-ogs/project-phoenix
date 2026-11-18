@@ -5243,6 +5243,7 @@ describe("EnrollmentForm restrictToOfferings (#2251)", () => {
 
     await waitFor(() => expect(submitter).toHaveBeenCalledTimes(1));
     const payload = submitter.mock.calls[0]?.[0] as {
+      consent_flags: Record<string, unknown>;
       guardian_first_name: string;
       guardian_email: string;
       children: {

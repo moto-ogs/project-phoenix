@@ -204,6 +204,7 @@ func (s *ChangeRequests) validateProposal(ctx context.Context, req *enrollmentNa
 		return err
 	}
 	prepared.schema, prepared.legalBlocks = schema, legalBlocks
+	editReq.ConsentFlags = filterConsentFlags(editReq.ConsentFlags, legalBlocks)
 	consentBlocks := legalBlocks
 	if renewalRequest(children) {
 		// A renewal's acceptance of the new phase comes only with its
@@ -216,10 +217,19 @@ func (s *ChangeRequests) validateProposal(ctx context.Context, req *enrollmentNa
 		if merged == nil {
 			merged = map[string]any{}
 		}
-		incoming := maps.Clone(editReq.ConsentFlags)
+		incoming := editReq.ConsentFlags
 		for _, block := range legalBlocks {
 			if block.Required {
 				delete(incoming, block.Key)
+			}
+		}
+		// The phase may have published terms since this request's
+		// schema was pinned. Keep their recorded answers too.
+		if evidence, ok := enrollmentNative.LastSubmissionLegalSnapshot(req.LegalBlocksSnapshot); ok {
+			for _, block := range evidence.Blocks {
+				if block.Required {
+					delete(incoming, block.Key)
+				}
 			}
 		}
 		maps.Copy(merged, incoming)
@@ -239,7 +249,6 @@ func (s *ChangeRequests) validateProposal(ctx context.Context, req *enrollmentNa
 	if err := s.validateAccountLinkedGuardianEdits(ctx, req, *editReq); err != nil {
 		return err
 	}
-	editReq.ConsentFlags = filterConsentFlags(editReq.ConsentFlags, legalBlocks)
 	if err := validateSubmittedFields(schema, changeRequestValidationSubmission(*editReq, children, opts.lockTakenOverChildren), prepared.offerings, children); err != nil {
 		return err
 	}

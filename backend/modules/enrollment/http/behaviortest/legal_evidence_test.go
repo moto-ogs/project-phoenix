@@ -84,7 +84,29 @@ func TestApprovedChangeKeepsTheConsentWordingFromTheProposal(t *testing.T) {
 	require.Len(t, evidence.Blocks, 1)
 	require.Equal(t, "Fotos beim Sportfest.", evidence.Blocks[0].Text)
 	require.JSONEq(t, `{"photo":true}`, string(evidence.ConsentFlags))
-	require.True(t, testFormValue(after.ConsentFlags, "photo").(bool))
+	require.Equal(t, true, testFormValue(after.ConsentFlags, "photo"))
+
+	// A pre-deployment proposal still has answers but no frozen wording.
+	submission.ConsentFlags = testFormValues(map[string]any{"photo": false})
+	legacy, err := service.Create(ctx, result.Request.StatusToken, enrollmentAPI.CreateChangeRequestInput{Submission: submission})
+	require.NoError(t, err)
+	_, err = env.db.NewRaw(`UPDATE enrollment.change_requests
+		SET proposed_snapshot = proposed_snapshot - '_legal_evidence'
+		WHERE id = ? AND tenant_id = ?`, legacy.ChangeRequest.ID, testpkg.Tenant(t)).Exec(ctx)
+	require.NoError(t, err)
+	_, err = testpkg.TenantQuery2(t, ctx, env.db, service.Approve, legacy.ChangeRequest.ID, enrollmentAPI.ReviewChangeRequestInput{
+		ActorAccountID: env.creatorID,
+		ActorRole:      "admin",
+	})
+	require.NoError(t, err)
+	stored, _, err := env.svc.GetByStatusToken(ctx, result.Request.StatusToken)
+	require.NoError(t, err)
+	require.Len(t, stored.LegalBlocksSnapshot, 3)
+	legacyEvidence := stored.LegalBlocksSnapshot[2]
+	require.True(t, legacyEvidence.WordingUnavailable)
+	require.Len(t, legacyEvidence.Blocks, 1)
+	require.Empty(t, legacyEvidence.Blocks[0].Text)
+	require.JSONEq(t, `{"photo":false}`, string(legacyEvidence.ConsentFlags))
 }
 
 func TestApprovalSkipsConsentEvidenceForABlockRemovedWhilePending(t *testing.T) {

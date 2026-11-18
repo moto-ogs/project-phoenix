@@ -88,14 +88,16 @@ function LegalEvidenceBlock({
   const textFromSettings = block.source === "standard";
   const heading = (
     <>
-      <span className="min-w-0 flex-1 basis-32 font-medium break-words text-gray-900">
+      <span className="min-w-0 font-medium break-words text-gray-900 sm:flex-1">
         {block.title}
       </span>
-      <LegalAnswer
-        kind={block.kind}
-        answer={answer}
-        versionUncertain={versionUncertain || textFromSettings}
-      />
+      <span className="max-sm:col-start-2">
+        <LegalAnswer
+          kind={block.kind}
+          answer={answer}
+          versionUncertain={versionUncertain || textFromSettings}
+        />
+      </span>
     </>
   );
   if (
@@ -115,7 +117,7 @@ function LegalEvidenceBlock({
       className="group"
       onToggle={(event) => setIsOpen(event.currentTarget.open)}
     >
-      <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 px-3 py-2.5 hover:bg-gray-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-700 [&::-webkit-details-marker]:hidden">
+      <summary className="grid min-h-11 cursor-pointer list-none grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2.5 hover:bg-gray-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-700 sm:flex sm:flex-wrap [&::-webkit-details-marker]:hidden">
         <ChevronDown
           aria-hidden="true"
           className="size-4 shrink-0 text-gray-500 group-open:rotate-180"
@@ -152,9 +154,11 @@ function LegalEvidenceBlock({
                       >
                         {LANGUAGE_NAMES.of(code) ?? label}
                       </p>
-                      <p className="font-semibold text-gray-900">
-                        {translated?.title}
-                      </p>
+                      {translated?.title && (
+                        <p className="font-semibold text-gray-900">
+                          {translated.title}
+                        </p>
+                      )}
                       {translated?.label && <p>{translated.label}</p>}
                       {translated?.text && (
                         <LegalMarkdown lang={code} text={translated.text} />
@@ -190,7 +194,9 @@ function LegalEvidenceEntry({
           {formatDateTime(entry.snapshot_at, DATE_TIME)} Uhr
         </time>
       </div>
-      {versionUncertain ? (
+      {entry.wording_unavailable ? (
+        <p className="text-gray-600">Der damalige Wortlaut fehlt.</p>
+      ) : versionUncertain ? (
         <Alert
           type="warning"
           announce="off"
@@ -208,7 +214,11 @@ function LegalEvidenceEntry({
               <LegalEvidenceBlock
                 block={block}
                 answer={entry.consent_flags?.[block.key]}
-                versionUncertain={versionUncertain}
+                versionUncertain={
+                  versionUncertain ||
+                  entry.staff_recorded === true ||
+                  entry.wording_unavailable === true
+                }
               />
             </li>
           ))}

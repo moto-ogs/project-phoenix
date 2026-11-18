@@ -371,6 +371,7 @@ export interface AdminLegalEvidenceEntry {
   consent_flags: Record<string, unknown> | null;
   version_mismatch?: boolean;
   version_unknown?: boolean;
+  wording_unavailable?: boolean;
   change_request?: boolean;
   staff_recorded?: boolean;
 }

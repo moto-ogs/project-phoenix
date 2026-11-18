@@ -73,6 +73,21 @@ func TestRolloverHolidayWishCanBeAnsweredWithBookingAdjustment(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
+			// The booking proposal uses the pinned old form. The renewal
+			// is accepted on the new form before the proposal is approved.
+			newSchema, err := NewTestFormSchemas(env.repos.Enrollment()).CreateSchemaWithLegal(ctx,
+				"Neue Bedingungen im nächsten Schuljahr", nil, env.creatorID,
+				enrollment.CoreRequirements{enrollment.CoreRequirementHolidayCareWish: true},
+				[]enrollment.FormLegalBlock{{
+					Key: "new_terms", Kind: enrollment.LegalBlockKindTerms, Title: "Neue Teilnahmebedingungen",
+					Label: "Ich stimme zu.", Text: "Die Betreuung nutzt neue Räume.", Required: true, Enabled: true,
+					Source: enrollment.LegalBlockSourceCustom,
+				}})
+			require.NoError(t, err)
+			result.Phase.FormSchemaID = &newSchema.ID
+			require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, result.Phase))
+			confirmation = acceptedRenewalTerms(t, ctx, env.requestSvc, request.StatusToken)
+			require.Equal(t, true, testFormValue(confirmation.ConsentFlags, "new_terms"))
 			_, err = env.requestSvc.ConfirmRenewal(ctx, request.StatusToken, confirmation)
 			require.NoError(t, err)
 			_, err = testpkg.TenantQuery2(t, ctx, env.db, svc.Approve, created.ChangeRequest.ID, enrollmentAPI.ReviewChangeRequestInput{
