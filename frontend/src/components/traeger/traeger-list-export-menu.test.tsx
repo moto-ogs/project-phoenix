@@ -13,6 +13,7 @@ vi.mock("~/contexts/ToastContext", () => ({
 vi.mock("~/lib/file-download", () => ({ downloadBlob: mockDownloadBlob }));
 
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
+import type { TraegerListFile } from "~/lib/traeger-list-export";
 
 import {
   TraegerListExportMenu,
@@ -191,11 +192,10 @@ describe("useTraegerListExportItems (#7403)", () => {
   });
 
   it("holds every format while one file is being created", async () => {
-    let finish: (file: { blob: Blob; filename: string | null }) => void = () =>
-      undefined;
+    let finish: (file: TraegerListFile) => void = () => undefined;
     const download = vi.fn(
       () =>
-        new Promise<{ blob: Blob; filename: string | null }>((resolve) => {
+        new Promise<TraegerListFile>((resolve) => {
           finish = resolve;
         }),
     );

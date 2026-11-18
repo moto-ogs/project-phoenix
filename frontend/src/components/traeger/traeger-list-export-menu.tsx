@@ -7,8 +7,8 @@
 //
 // Zwei Formen mit derselben Download-, Warte- und Fehlerlogik (#7403):
 // - `useTraegerListExportItems` im Seitenkopf: die Einträge stehen im
-//   Drei-Punkte-Menü der Seite (`TenantPage` `actions`) unter der Überschrift
-//   „Herunterladen“ (TENANT-PAGE-SPEC Regel 4).
+//   Drei-Punkte-Menü der Seite (`TenantPage` `overflowMenu`) unter der
+//   Überschrift „Herunterladen“ (TENANT-PAGE-SPEC Regel 4).
 // - `TraegerListExportMenu` auf einer Karte oder einem Tabellenkopf ohne
 //   eigenes Seitenmenü: der Knopf „Herunterladen ▾“.
 
@@ -119,10 +119,10 @@ function useTraegerListDownload({
 }
 
 /**
- * PDF, Excel and CSV of one list as entries for the page's own
- * `OverflowMenu`, under the heading „Herunterladen“ with the schools of the
- * file below it. For the page head; a card without a page menu takes
- * `TraegerListExportMenu`.
+ * PDF, Excel and CSV of one list as entries for the page menu
+ * (`TenantPage` `overflowMenu`), under the heading „Herunterladen“ with the
+ * schools of the file below it. For the page head; a card without a page
+ * menu takes `TraegerListExportMenu`.
  */
 export function useTraegerListExportItems(
   options: TraegerListDownloadOptions,

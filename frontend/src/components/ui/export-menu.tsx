@@ -104,9 +104,9 @@ export function exportMenuItems({
 /**
  * An export without options on a card or panel that has no page menu of its
  * own: a „Herunterladen“ button that opens the same entries as
- * `exportMenuItems`. A page head never carries it: there the export goes into
- * the page's `OverflowMenu` (`TenantPage` `actions`) under „Herunterladen“,
- * built with `exportMenuItems` (TENANT-PAGE-SPEC Regel 4).
+ * `exportMenuItems`. In a page head the export belongs in the page menu
+ * instead (`TenantPage` `overflowMenu`), under „Herunterladen“, built with
+ * `exportMenuItems` (TENANT-PAGE-SPEC Regel 4).
  */
 export function ExportMenu({
   label = EXPORT_ACTION_LABELS.download,

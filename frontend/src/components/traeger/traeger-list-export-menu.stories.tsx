@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 
-import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
+import { TenantPage } from "~/components/ui/tenant-page";
 import type {
   TraegerListFile,
   TraegerListFormat,
@@ -38,18 +38,22 @@ const exportProps = {
   errorObject: "die Belegung",
 } as const;
 
-function PageHeadMenu() {
-  const items = useTraegerListExportItems(exportProps);
-  return <OverflowMenu ariaLabel="Weitere Aktionen" items={items} />;
-}
-
 /** Seitenkopf: der Download steht im Drei-Punkte-Menü unter „Herunterladen“. */
 export const ImSeitenmenue: Story = {
-  render: () => (
-    <SectionCard title="Belegung" actions={<PageHeadMenu />}>
-      <p className="text-sm text-gray-600">Inhalt der Seite</p>
-    </SectionCard>
-  ),
+  render: function Render() {
+    const exportItems = useTraegerListExportItems(exportProps);
+    return (
+      <TenantPage
+        title="Belegung"
+        stats="412 Kinder · 9 Schulen"
+        overflowMenu={exportItems}
+      >
+        <SectionCard title="Schulen">
+          <p className="text-sm text-gray-600">Inhalt der Seite</p>
+        </SectionCard>
+      </TenantPage>
+    );
+  },
   play: async ({ canvasElement }) => {
     await userEvent.click(
       within(canvasElement).getByRole("button", { name: /Weitere Aktionen/ }),
