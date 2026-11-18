@@ -64,8 +64,8 @@ export const BillingMonthReleaseEntrySchema: z.ZodType<BillingMonthReleaseEntry,
   meal_count: safeInt,
 });
 
-/** Go: mealplan.BillingMonth */
-export interface BillingMonth {
+/** Go: mealplan.BillingMonthState */
+export interface BillingMonthState {
   month: string | null;
   status: string;
   school_days: number;
@@ -77,10 +77,9 @@ export interface BillingMonth {
   fingerprint: string;
   version: number;
   releases: BillingMonthReleaseEntry[] | null;
-  current?: BillingMonth;
 }
 
-export const BillingMonthSchema: z.ZodType<BillingMonth, unknown> = z.object({
+export const BillingMonthStateSchema: z.ZodType<BillingMonthState, unknown> = z.object({
   month: calendarDate.nullable(),
   status: z.string(),
   school_days: safeInt,
@@ -92,7 +91,37 @@ export const BillingMonthSchema: z.ZodType<BillingMonth, unknown> = z.object({
   fingerprint: z.string(),
   version: safeInt,
   releases: z.array(BillingMonthReleaseEntrySchema).nullable(),
-  current: BillingMonthSchema.optional(),
+});
+
+/** Go: mealplan.BillingMonthResponse */
+export interface BillingMonthResponse {
+  month: string | null;
+  status: string;
+  school_days: number;
+  released_at: string | null;
+  child_count: number;
+  meal_count: number;
+  absence_count: number;
+  children: BillingMonthChild[] | null;
+  fingerprint: string;
+  version: number;
+  releases: BillingMonthReleaseEntry[] | null;
+  current?: BillingMonthState;
+}
+
+export const BillingMonthResponseSchema: z.ZodType<BillingMonthResponse, unknown> = z.object({
+  month: calendarDate.nullable(),
+  status: z.string(),
+  school_days: safeInt,
+  released_at: instant.nullable(),
+  child_count: safeInt,
+  meal_count: safeInt,
+  absence_count: safeInt,
+  children: z.array(BillingMonthChildSchema).nullable(),
+  fingerprint: z.string(),
+  version: safeInt,
+  releases: z.array(BillingMonthReleaseEntrySchema).nullable(),
+  current: BillingMonthStateSchema.optional(),
 });
 
 /** Go: mealplan.BillingMonthReleaseRequest */
@@ -114,13 +143,13 @@ export const routes = {
     method: "GET",
     pattern: "/api/meal-billing-months/{month}",
     portals: ["tenant"],
-    response: success(BillingMonthSchema),
+    response: success(BillingMonthResponseSchema),
   },
   "POST /api/meal-billing-months/{month}/release": {
     method: "POST",
     pattern: "/api/meal-billing-months/{month}/release",
     portals: ["tenant"],
     request: requestBody<BillingMonthReleaseRequest>(),
-    response: success(BillingMonthSchema),
+    response: success(BillingMonthResponseSchema),
   },
 } as const;

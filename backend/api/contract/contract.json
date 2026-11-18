@@ -513,7 +513,7 @@
       ],
       "response": {
         "kind": "ref",
-        "ref": "BillingMonth"
+        "ref": "BillingMonthResponse"
       }
     },
     {
@@ -2218,7 +2218,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "BillingMonth"
+        "ref": "BillingMonthResponse"
       }
     },
     {
@@ -4800,98 +4800,6 @@
       ]
     },
     {
-      "name": "BillingMonth",
-      "go_type": "mealplan.BillingMonth",
-      "fields": [
-        {
-          "name": "month",
-          "schema": {
-            "kind": "date",
-            "nullable": true
-          }
-        },
-        {
-          "name": "status",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "school_days",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "released_at",
-          "schema": {
-            "kind": "instant",
-            "nullable": true
-          }
-        },
-        {
-          "name": "child_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "meal_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "absence_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "children",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "BillingMonthChild"
-            }
-          }
-        },
-        {
-          "name": "fingerprint",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "version",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "releases",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "BillingMonthReleaseEntry"
-            }
-          }
-        },
-        {
-          "name": "current",
-          "optional": true,
-          "schema": {
-            "kind": "ref",
-            "ref": "BillingMonth"
-          }
-        }
-      ]
-    },
-    {
       "name": "BillingMonthChild",
       "go_type": "mealplan.BillingMonthChild",
       "fields": [
@@ -5013,6 +4921,182 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BillingMonthResponse",
+      "go_type": "mealplan.BillingMonthResponse",
+      "fields": [
+        {
+          "name": "month",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "released_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "child_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "meal_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "absence_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BillingMonthChild"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "releases",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BillingMonthReleaseEntry"
+            }
+          }
+        },
+        {
+          "name": "current",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "BillingMonthState"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BillingMonthState",
+      "go_type": "mealplan.BillingMonthState",
+      "fields": [
+        {
+          "name": "month",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "released_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "child_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "meal_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "absence_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BillingMonthChild"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "releases",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BillingMonthReleaseEntry"
+            }
           }
         }
       ]
