@@ -104,6 +104,7 @@ var schoolBoundKeys = map[string]bool{
 	config.KeyParentRequestReviewScope: true, config.KeyParentAbsenceReviewScope: true,
 	config.KeyParentRequestGroupLeaderReviewEnabled: true, config.KeyGroupMode: true,
 	config.KeyEnrollmentLegalAGBDocumentURL: true, config.KeyEnrollmentLegalAGBDisplayMode: true,
+	config.KeyEnrollmentEnabled: true,
 }
 
 // ValidateTraegerLevels checks at startup that no Träger-level definition is

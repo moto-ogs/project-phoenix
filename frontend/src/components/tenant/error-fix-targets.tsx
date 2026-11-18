@@ -13,6 +13,7 @@ import {
   hasPermission,
   leadsSchool,
 } from "~/lib/auth-utils";
+import { ENROLLMENT_PRIVACY_NOTICE_SETTINGS_PATH } from "~/lib/enrollment-privacy-notice";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
@@ -66,6 +67,14 @@ const ERROR_FIX_TARGETS: Partial<Record<ErrorCode, FixTarget>> = {
   },
   "enrollment.form_grade_collection_required": GRADE_COLLECTION,
   "enrollment.phase_eligibility_setting_required": GRADE_COLLECTION,
+  // The online enrollment needs a privacy notice first (#7176); only who
+  // may write the legal texts (`config:manage`) gets the link.
+  "settings.enrollment_privacy_notice_missing": {
+    path: ENROLLMENT_PRIVACY_NOTICE_SETTINGS_PATH,
+    label: "Zur Datenschutzinformation",
+    tooltip: "Öffnet die Datenschutzinformation unter „Rechtstexte“.",
+    permitted: holds("config:manage"),
+  },
   "students.day_log_disabled": {
     path: "/settings?tab=gdpr&highlight=gdpr.attendance_log_enabled",
     label: "Protokoll einschalten",
