@@ -710,7 +710,7 @@ describe("DevicesPage", () => {
       });
     });
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      "Das Gerät „Eingang Kiosk“ ist nicht mehr in der Liste. Die Liste ist neu geladen.",
+      "Das Gerät „Eingang Kiosk“ ist hier nicht mehr verfügbar.",
     );
   });
 

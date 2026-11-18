@@ -83,7 +83,7 @@ export function DeleteDeviceModal({
   useEffect(() => {
     if (!device || !alreadyRemoved) return;
     toastSuccess(
-      `${device.name || device.deviceId} steht nicht mehr in der Liste. Die Liste ist neu geladen.`,
+      `${device.name || device.deviceId} ist hier nicht mehr verfügbar.`,
     );
     handleClose();
     void onDeleted();
@@ -108,9 +108,7 @@ export function DeleteDeviceModal({
         await refresh();
         return;
       }
-      toastSuccess(
-        `${title} steht nicht mehr in der Liste. Die Liste ist neu geladen.`,
-      );
+      toastSuccess(`${title} ist hier nicht mehr verfügbar.`);
     }
     setLoading(false);
     onClose();

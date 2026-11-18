@@ -324,9 +324,7 @@ function DevicesPageContent() {
       }
       // Das Gerät ist eben schon gegangen (entfernt oder an eine andere
       // Schule übertragen): die Liste lädt neu.
-      toastSuccess(
-        `Das Gerät „${title}“ ist nicht mehr in der Liste. Die Liste ist neu geladen.`,
-      );
+      toastSuccess(`Das Gerät „${title}“ ist hier nicht mehr verfügbar.`);
     } finally {
       setDeletePending(false);
     }
