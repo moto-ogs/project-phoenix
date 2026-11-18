@@ -31,7 +31,7 @@ export default function TraegerStaffHirePage() {
 
 function StaffHireContent() {
   const today = useBerlinToday();
-  const { backHref } = useStaffOverviewReturn();
+  const { from, backHref } = useStaffOverviewReturn();
   const {
     data: overview,
     loading,
@@ -71,11 +71,7 @@ function StaffHireContent() {
         </SectionCard>
       ) : null}
       {overview?.release && overview.schools.length > 0 ? (
-        <StaffHireWizard
-          schools={overview.schools}
-          today={today}
-          cancelHref={backHref}
-        />
+        <StaffHireWizard schools={overview.schools} today={today} from={from} />
       ) : null}
     </TenantPage>
   );

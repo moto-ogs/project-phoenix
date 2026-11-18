@@ -284,4 +284,13 @@ describe("TraegerStaffHirePage", () => {
       "/traeger/personal",
     );
   });
+
+  it("opens the new record with the tab of the Personalakten it came from", async () => {
+    address.search = "from=akten";
+    await fillToReview();
+    fireEvent.click(screen.getByRole("button", { name: "Person einstellen" }));
+    expect(
+      await screen.findByRole("link", { name: "Akte öffnen" }),
+    ).toHaveAttribute("href", "/traeger/personal/9?from=akten");
+  });
 });

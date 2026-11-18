@@ -199,7 +199,7 @@ describe("TraegerStaffRecordsPage", () => {
       }),
     );
     await vi.waitFor(() =>
-      expect(mockPush).toHaveBeenCalledWith("/personal/5?from=vorschlaege"),
+      expect(mockPush).toHaveBeenCalledWith("/personal/5"),
     );
   });
 
@@ -259,7 +259,7 @@ describe("TraegerStaffRecordsPage", () => {
     expect(mockPush).toHaveBeenCalledWith("/personal/5?from=akten");
   });
 
-  it("ignores an unknown tab in the address", async () => {
+  it("ignores an unknown tab in the address and pins no default tab", async () => {
     address.search = "tab=unbekannt";
     renderPage();
     expect(
@@ -267,7 +267,7 @@ describe("TraegerStaffRecordsPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Person einstellen/ }),
-    ).toHaveAttribute("href", "/personal/einstellen?from=vorschlaege");
+    ).toHaveAttribute("href", "/personal/einstellen");
   });
 });
 

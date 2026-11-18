@@ -173,7 +173,8 @@ describe("TraegerStaffRecordPage", () => {
       await screen.findByRole("link", { name: /Zurück zu den Personalakten/ }),
     ).toHaveAttribute(
       "href",
-      // Der Rückweg im Test bekommt das Schulpräfix der Testumgebung.
+      // Der Rückweg läuft über den Pfad-Kontext von TenantPage; die
+      // Testumgebung setzt davor ihr Tenant-Präfix.
       expect.stringMatching(/\/personal\?tab=akten$/),
     );
   });
