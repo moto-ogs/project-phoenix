@@ -58,8 +58,17 @@ export const ImSeitenmenue: Story = {
     await userEvent.click(
       within(canvasElement).getByRole("button", { name: /Weitere Aktionen/ }),
     );
-    await expect(await screen.findByText("Herunterladen")).toBeVisible();
+    const heading = await screen.findByText("Herunterladen");
+    await expect(heading).toBeVisible();
     await expect(screen.getByText("Alle Schulen")).toBeVisible();
+    // The open menu lies over the head card, not under it: the card that
+    // holds the trigger must not lift itself above the portaled menu.
+    const box = heading.getBoundingClientRect();
+    const topmost = document.elementFromPoint(
+      box.left + box.width / 2,
+      box.top + box.height / 2,
+    );
+    await expect(screen.getByRole("menu").contains(topmost)).toBe(true);
   },
 };
 
