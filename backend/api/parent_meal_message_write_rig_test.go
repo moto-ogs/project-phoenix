@@ -357,8 +357,12 @@ func newMealWriteRig(t *testing.T) mealWriteRig {
 		deps.MessageAttachments = owners.BindParentMessageAttachments(communicationCompose.NewPortalMessageAttachments(pool))
 	})
 	require.NoError(t, settings.Settings.SetValue(testpkg.Ctx(t), settingsModule.KeyParentMessageLeadershipEnabled, true, nil, nil))
+	var snapshot *sql.Stmt
+	if !useLegacyMealSnapshotReader() {
+		snapshot = prepareMealWriteSnapshot(t, super)
+	}
 	return mealWriteRig{
-		childReadRig: rig, super: super, faults: faults, readSnapshot: prepareMealWriteSnapshot(t, super),
+		childReadRig: rig, super: super, faults: faults, readSnapshot: snapshot,
 		broadcasts: func() int { return len(broadcaster.Calls()) },
 		openThread: func(t *testing.T, f mealWriteFamily) int64 {
 			t.Helper()
@@ -380,6 +384,13 @@ func newMealWriteRig(t *testing.T) mealWriteRig {
 			return settings.Settings.SetValue(ctx, key, value, nil, nil)
 		},
 	}
+}
+
+// The temporary CI comparison alternates variants across retries of one
+// workflow run, so both readers test exactly the same merge checkout.
+func useLegacyMealSnapshotReader() bool {
+	run := strings.Split(os.Getenv("PHX_TEST_RUN_ID"), "-")
+	return len(run) == 4 && run[0] == "ci" && (run[2] == "1" || run[2] == "3" || run[2] == "5")
 }
 
 // newMealPlanAt composes the Meal Plan like owners.BuildServeMealPlan, on
@@ -566,6 +577,9 @@ func prepareMealWriteSnapshot(t *testing.T, db *bun.DB) *sql.Stmt {
 // rowsOf reads all tables in one snapshot. A prepared statement lets
 // PostgreSQL reuse its plan across the scenario's fault cells.
 func (r mealWriteRig) rowsOf(tenantID int64, omittedColumns string) (map[string]string, error) {
+	if r.readSnapshot == nil {
+		return r.legacyRowsOf(tenantID, omittedColumns)
+	}
 	rows, err := r.readSnapshot.QueryContext(context.Background(), tenantID, omittedColumns)
 	if err != nil {
 		return nil, err
@@ -581,6 +595,23 @@ func (r mealWriteRig) rowsOf(tenantID int64, omittedColumns string) (map[string]
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	return out, nil
+}
+
+func (r mealWriteRig) legacyRowsOf(tenantID int64, omittedColumns string) (map[string]string, error) {
+	row := `to_jsonb(t)`
+	if omittedColumns != "{}" {
+		row += " - '" + omittedColumns + "'::text[]"
+	}
+	out := make(map[string]string, len(mealWriteTables))
+	for _, table := range mealWriteTables {
+		var raw string
+		query := fmt.Sprintf(`SELECT coalesce(jsonb_agg(%s ORDER BY (%s)::text), '[]'::jsonb)::text FROM %s t WHERE tenant_id = ?`, row, row, table)
+		if err := r.super.NewRaw(query, tenantID).Scan(context.Background(), &raw); err != nil {
+			return nil, err
+		}
+		out[table] = raw
 	}
 	return out, nil
 }
