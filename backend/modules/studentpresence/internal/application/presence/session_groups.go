@@ -317,7 +317,7 @@ func (s *service) EndActiveGroupSession(ctx context.Context, id int64) error {
 			return &ActiveError{Op: "EndActiveGroupSession", Err: err}
 		}
 
-		broadcasts, err = s.endActivitySessionLocked(txCtx, group)
+		broadcasts, _, err = s.endActivitySessionLocked(txCtx, group)
 		if err != nil {
 			// The bridge already completed the mirrored instance, so the
 			// transaction has to go. Joining the request's transaction means

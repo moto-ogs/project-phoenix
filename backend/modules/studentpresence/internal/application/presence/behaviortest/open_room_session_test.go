@@ -313,7 +313,8 @@ func TestEndingAnActivityLeavesIndependentRoomStays(t *testing.T) {
 	}
 
 	// Football ends: only its eight remaining children become Unterwegs.
-	require.NoError(t, svc.EndActivitySession(ctx, footballSession.ID))
+	_, endErr := svc.EndActivitySession(ctx, footballSession.ID)
+	require.NoError(t, endErr)
 	afterFootball := openVisitSessions(t, presence, all)
 	for _, id := range footballers {
 		_, stillInRoom := afterFootball[id]
@@ -365,7 +366,8 @@ func TestStartingAnActivityLeavesIndependentRoomStays(t *testing.T) {
 	require.NotEqual(t, roomSession.ID, footballSession.ID)
 
 	assert.Equal(t, roomSession.ID, openVisitSessions(t, presence, []int64{child})[child], "starting football must not absorb the independent stay")
-	require.NoError(t, svc.EndActivitySession(ctx, footballSession.ID))
+	_, endErr := svc.EndActivitySession(ctx, footballSession.ID)
+	require.NoError(t, endErr)
 	assert.Equal(t, roomSession.ID, openVisitSessions(t, presence, []int64{child})[child], "ending football must leave the independent stay")
 	assertStillAttending(t, presence, []int64{child})
 }
@@ -414,7 +416,8 @@ func TestOpenRoomRebookingAfterActivityEnd(t *testing.T) {
 			device := testpkg.CreateTestDevice(t, db, "open-room-rebooking")
 			child := presentChild(t, db, "Wiederbuchung", staff.ID, device.ID, footballSession.ID)
 
-			require.NoError(t, svc.EndActivitySession(ctx, footballSession.ID))
+			_, endErr := svc.EndActivitySession(ctx, footballSession.ID)
+			require.NoError(t, endErr)
 			require.Empty(t, openVisitSessions(t, presence, []int64{child}), "the child is Unterwegs after the activity")
 			assertStillAttending(t, presence, []int64{child})
 

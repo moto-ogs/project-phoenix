@@ -31458,7 +31458,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.EndActivitySession",
-      "binding_digest": "a04d8baf3b8ca40ab4fd11f206ce5be4",
+      "binding_digest": "4daea87d00d30750cc90cf8e7db362ac",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.SessionEnder.EndActivitySession",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.EndActivitySession",

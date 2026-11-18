@@ -26,9 +26,10 @@ type LifecyclePresence interface {
 }
 
 // SessionEnder ends the Student Presence session of a block: visits and
-// supervisors close and the checkout events fire.
+// supervisors close and the checkout events fire. It reports the IDs of the
+// supervision rows changed by the close.
 type SessionEnder interface {
-	EndActivitySession(ctx context.Context, activeGroupID int64) error
+	EndActivitySession(ctx context.Context, activeGroupID int64) ([]int64, error)
 }
 
 // LifecycleRooms is the consumer-owned port to the Facilities rooms the
