@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -12,7 +13,7 @@ export interface DeletedResponse {
   id: string;
 }
 
-export const DeletedResponseSchema: z.ZodType<DeletedResponse, unknown> = z.object({
+export const DeletedResponseSchema: z.ZodType<DeletedResponse, unknown> = object<DeletedResponse>({
   id: int64StringOrNumber,
 });
 
@@ -24,7 +25,7 @@ export interface EntryResponse {
   start_time?: string;
 }
 
-export const EntryResponseSchema: z.ZodType<EntryResponse, unknown> = z.object({
+export const EntryResponseSchema: z.ZodType<EntryResponse, unknown> = object<EntryResponse>({
   week_index: safeInt,
   day_of_week: safeInt,
   target_minutes: safeInt,
@@ -43,7 +44,7 @@ export interface ModelResponse {
   assigned_staff_count?: number;
 }
 
-export const ModelResponseSchema: z.ZodType<ModelResponse, unknown> = z.object({
+export const ModelResponseSchema: z.ZodType<ModelResponse, unknown> = object<ModelResponse>({
   id: int64StringOrNumber,
   name: z.string(),
   rotation_length: safeInt,
@@ -63,7 +64,7 @@ export interface StaffFactResponse {
   closed_through: string | null;
 }
 
-export const StaffFactResponseSchema: z.ZodType<StaffFactResponse, unknown> = z.object({
+export const StaffFactResponseSchema: z.ZodType<StaffFactResponse, unknown> = object<StaffFactResponse>({
   staff_id: int64StringOrNumber,
   work_time_model_id: int64StringOrNumber.nullable(),
   has_schedule: z.boolean(),
@@ -100,7 +101,7 @@ export interface AssignResponse {
   valid_from: string;
 }
 
-export const AssignResponseSchema: z.ZodType<AssignResponse, unknown> = z.object({
+export const AssignResponseSchema: z.ZodType<AssignResponse, unknown> = object<AssignResponse>({
   assigned_staff_ids: z.array(int64StringOrNumber).nullable(),
   unchanged_staff_ids: z.array(int64StringOrNumber).nullable(),
   valid_from: z.string(),

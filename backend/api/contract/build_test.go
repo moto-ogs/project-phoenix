@@ -52,6 +52,11 @@ type row struct {
 	Hidden   string         `json:"-"`
 	Born     string         `json:"born,omitempty" contract:"date"`
 	Pickup   *string        `json:"pickup,omitempty" contract:"clock"`
+	// An amount in cent and a running number travel as plain numbers.
+	PriceCents int64            `json:"price_cents"`
+	Next       int64            `json:"next" contract:"number"`
+	Image      []byte           `json:"image"`
+	BySchool   map[int64]string `json:"by_school"`
 }
 
 type body struct {
@@ -153,6 +158,10 @@ func TestBuildFollowsEncodingJSON(t *testing.T) {
 	assert.Equal(t, Schema{Kind: KindEnum, Ref: "Status"}, schema("status"))
 	assert.Equal(t, KindInt, schema("count").Kind)
 	assert.Equal(t, KindLegacyID, schema("legacy_id").Kind)
+	assert.Equal(t, Schema{Kind: KindInt}, schema("price_cents"), "an amount in cent is a number")
+	assert.Equal(t, Schema{Kind: KindInt}, schema("next"), "a running number tagged number stays a number")
+	assert.Equal(t, Schema{Kind: KindString, Nullable: true}, schema("image"), "[]byte renders base64, nil as null")
+	assert.Equal(t, KindMap, schema("by_school").Kind, "an integer key renders as its decimal string")
 	assert.Equal(t, KindID, schema("quoted_id").Kind)
 	assert.Equal(t, KindLaxID, schema("lax_id").Kind)
 	assert.True(t, fields["nick"].Deprecated)
@@ -381,7 +390,7 @@ func TestTypeScriptWritesATypeOfTwoResourcesOnce(t *testing.T) {
 	assert.Contains(t, shared, "  type OpenEnum,\n} from \"./runtime\";")
 	assert.Contains(t, shared, "  mode: OpenEnum<mode>;")
 	assert.Contains(t, shared, `export const MODE_VALUES = ["a", "b"] as const;`)
-	assert.Contains(t, shared, "export const rowSchema: z.ZodType<row, unknown> = z.object({")
+	assert.Contains(t, shared, "export const rowSchema: z.ZodType<row, unknown> = object<row>({")
 	assert.NotContains(t, shared, "export const routes")
 	for _, name := range []string{"rows.generated.ts", "school-rows.generated.ts"} {
 		assert.Contains(t, files[name], "import {\n  rowSchema,\n} from \"./shared.generated\";", name)
@@ -432,4 +441,52 @@ func TestARegisteredPointerAnswersTheObjectOrNull(t *testing.T) {
 	source := files["rows.generated.ts"]
 	assert.Contains(t, source, "response: success(innerSchema.nullable()),")
 	assert.Contains(t, source, "response: success(innerSchema),")
+}
+
+// stored hands on JSON its owner stored without reading it.
+type stored struct {
+	Old json.RawMessage `json:"old,omitempty"`
+	Raw json.RawMessage `json:"raw"`
+	Any any             `json:"any"`
+}
+
+// presence tells an absent key from null, as the template writes do.
+type presence struct {
+	Set   bool
+	Value *int64
+}
+
+func (p *presence) UnmarshalJSON(data []byte) error {
+	p.Set = true
+	return json.Unmarshal(data, &p.Value)
+}
+
+type presenceBody struct {
+	Track presence `json:"track_id"`
+}
+
+func TestARawValueAndAValueReaderTravelAsWhatTheyHold(t *testing.T) {
+	t.Parallel()
+	options := Options{
+		Identifiers: identifiers,
+		NumericIDs:  []string{"contract.presence.Value"},
+		Readers:     map[reflect.Type]string{reflect.TypeFor[presence](): ReadsValue},
+	}
+	doc, err := Build([]Registration{get("/api/stored/", stored{}), post(presenceBody{})}, options)
+	require.NoError(t, err)
+	fields := fieldsOf(t, doc, "stored")
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["raw"].Schema, "any JSON value, null included")
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["old"].Schema, "omitempty leaves an empty value out; a stored null still travels")
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["any"].Schema, "an empty interface holds any JSON")
+	assert.True(t, fields["old"].Optional)
+	assert.Equal(t, Schema{Kind: KindLegacyID, Nullable: true}, fieldsOf(t, doc, "presenceBody")["track_id"].Schema, "the wrapper reads its Value")
+
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["stored.generated.ts"], "  raw: unknown | null;")
+	assert.Contains(t, files["stored.generated.ts"], "raw: z.unknown().nullable(),")
+	assert.Contains(t, files["rows.generated.ts"], "  track_id?: number | null;")
+
+	_, err = Build([]Registration{post(presenceBody{})}, Options{Identifiers: identifiers, NumericIDs: options.NumericIDs})
+	require.ErrorContains(t, err, "has its own UnmarshalJSON", "without an entry the wrapper stops the generator")
 }

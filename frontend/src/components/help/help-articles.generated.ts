@@ -9404,21 +9404,26 @@ export const substitutionPlanTopic =
       steps: [
         "Klappe in der Seitenleiste `Planung` auf.",
         "Öffne `Vertretungsplan`.",
-        "Wähle oben `Tag` oder `Woche`.",
-        "Wähle den Einsatz, der vertreten werden soll.",
+        "Wähle oben den Tag. Die Zahl an einem Tag zeigt, wie viele Lücken dort offen sind.",
+        "Wähle unter `Offene Lücken` bei dem Termin `Besetzen`.",
         "Wähle die Person, die übernimmt.",
-        "Speichere die Vertretung.",
+        "Wähle `Vertretung speichern`.",
       ],
-      result: "Die vertretende Person sieht den Einsatz unter `Mein Kalender`.",
+      result:
+        "Der Termin steht jetzt unter `Schon geregelt`. Die vertretende Person sieht den Einsatz unter `Mein Kalender`.",
       notes: [
         "Mit `Sammel-Vertretung` trägst du mehrere Einsätze auf einmal ein.",
         "Auch ein `Dienst` ohne Kinder lässt sich vertreten. Sind weniger Personen da als unter `Benötigtes Personal` eingetragen, zeigt der Plan eine Lücke.",
       ],
       differences: [
+        "Mit `Woche` siehst du alle Tage untereinander. Tippe auf einen Tag, um ihn einzeln zu öffnen.",
+        "Steht bei dir `Details` statt `Besetzen`? Dann darfst du den Plan ansehen, aber nicht ändern.",
+        "Am Telefon steht der Zeitplan eingeklappt unter der Liste. Tippe auf `Tag als Zeitplan`.",
+        "Steht bei einer Lücke `Niemand eingeteilt`? Dann teilst du das Personal im Betreuungsplan ein.",
         "`Übergaben` im `Tagesbetrieb` ist etwas anderes: dort übergibst du Gruppen für heute. Unter `Vertretungen heute` siehst du dort auch die Vertretungen des Tages.",
       ],
       troubleshootingDetails: [
-        "Fehlt der Einsatz? Dann ist er noch nicht im Betreuungsplan angelegt.",
+        "Fehlt der Termin? Dann ist er noch nicht im Betreuungsplan angelegt.",
         "Eine externe Person steht nicht zur Wahl? Externe Personen übernehmen keine Vertretung.",
       ],
       related: [
@@ -11722,7 +11727,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Wähle in der Navigation `Verträge`.",
             "Wähle oben den Reiter `Vertragsbedingungen`.",
-            "Wähle links ein Angebot. `Fehlt` heißt: Für dieses Angebot gibt es noch keine Bedingungen.",
+            "Wähle links ein Angebot. `Fehlt` heißt: Für dieses Angebot gibt es noch keine Bedingungen. Auf dem Handy öffnen sich die Bedingungen über der Liste.",
             "Wähle die `Laufzeit`, die `Frist in Monaten` und wann die `Kündigung wirkt`.",
             "Erlaube bei Bedarf eine `Sonderkündigung`. Sie endet immer zum Halbjahr, also am 31. Januar oder 31. Juli. Es gilt dieselbe `Frist in Monaten`. Schreibe bei `In welchen Fällen?`, wann sie möglich ist. Ein anderes Datum in diesem Text ändert den Termin nicht. Ausnahmen klärst du wie bisher im Büro. Vertrag und Text für das Anmeldeformular nennen den Termin.",
             "Müssen die Eltern eine Satzung anerkennen? Setze den Haken bei `Satzung`. Trage den Namen und, wenn vorhanden, den Link ein.",
@@ -11791,7 +11796,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Wähle in der Navigation `Verträge`.",
             "Wähle bei Bedarf einen Status, einen Betreuungsort oder suche.",
-            "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
             "Die Datei enthält alle Verträge zu deiner Auswahl. Jeder Download steht im Zugriffsprotokoll der Schulen.",
           ],
         },
@@ -11802,7 +11807,7 @@ export const traegerCareContractsTopic =
           steps: [
             "Trage zuerst die `Vertragsbedingungen` für jedes Modul ein. Ohne Bedingungen übernimmt moto keinen Vertrag für das Modul.",
             "Speichere die Kinder im anderen Programm als CSV-Datei. Die erste Zeile enthält die Überschriften, jede weitere Zeile ein Kind.",
-            "Wähle in der Navigation `Verträge` und oben `Verträge importieren`.",
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Verträge importieren`.",
             "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`. Sie zeigt alle Spalten, die moto von selbst erkennt.",
             "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Pflicht sind Vorname und Nachname des Kindes.",

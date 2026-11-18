@@ -1,6 +1,6 @@
 // Pure unit tests for the Wochennotiz/Tagesnotiz helpers (#1837 follow-up):
 // normalizeNotes (trim -> nil-or-value) and the split flow's presence-aware
-// nullableStr JSON decoder. No database required.
+// NullableStr JSON decoder. No database required.
 package timetablehttp
 
 import (
@@ -47,10 +47,10 @@ func TestNullableStr_UnmarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	t.Run("omitted field leaves Set=false", func(t *testing.T) {
-		// A struct whose nullableStr field is absent from the JSON must keep the
+		// A struct whose NullableStr field is absent from the JSON must keep the
 		// zero value (Set=false) so the split treats it as "inherit".
 		var payload struct {
-			Notes nullableStr `json:"notes"`
+			Notes NullableStr `json:"notes"`
 		}
 		require.NoError(t, json.Unmarshal([]byte(`{}`), &payload))
 		assert.False(t, payload.Notes.Set)
@@ -58,14 +58,14 @@ func TestNullableStr_UnmarshalJSON(t *testing.T) {
 	})
 
 	t.Run("explicit null sets Set=true, Value=nil (clear)", func(t *testing.T) {
-		var n nullableStr
+		var n NullableStr
 		require.NoError(t, n.UnmarshalJSON([]byte(`null`)))
 		assert.True(t, n.Set)
 		assert.Nil(t, n.Value)
 	})
 
 	t.Run("string value sets Set=true and Value", func(t *testing.T) {
-		var n nullableStr
+		var n NullableStr
 		require.NoError(t, n.UnmarshalJSON([]byte(`"Wochennotiz"`)))
 		assert.True(t, n.Set)
 		require.NotNil(t, n.Value)
@@ -73,7 +73,7 @@ func TestNullableStr_UnmarshalJSON(t *testing.T) {
 	})
 
 	t.Run("invalid JSON returns an error", func(t *testing.T) {
-		var n nullableStr
+		var n NullableStr
 		require.Error(t, n.UnmarshalJSON([]byte(`{not-a-string`)))
 	})
 }

@@ -22,7 +22,10 @@ import {
   blockPlaceLine,
   blockStaffEntries,
 } from "~/components/timetable/block-staff-names";
-import { CoverageIndicator } from "~/components/ui/planning/coverage-indicator";
+import {
+  CoverageIndicator,
+  type CoverageState,
+} from "~/components/ui/planning/coverage-indicator";
 import { PlanBlock } from "~/components/ui/planning/plan-block";
 import { TIMETABLE_NEUTRAL_COLOR } from "~/components/timetable/timetable-colors";
 import { OverbookedBadge } from "~/components/activities/occupancy-badges";
@@ -53,11 +56,25 @@ interface InstanceBlockProps {
    */
   isGap?: boolean;
   /**
+   * Besetzung, wie die aufrufende Fläche sie zählt. Der Vertretungsplan
+   * zählt „da von geplant“ (#7493): seine Liste nennt dieselbe Zahl, und
+   * zwei verschiedene Brüche am selben Termin ließen offen, welcher die
+   * Lücke ist. Ohne Angabe zeigt der Block „eingeteilt von benötigt“.
+   */
+  staffing?: BlockStaffing;
+  /**
    * Personal-ID → voller Name. Damit zeigt der Block, wer ihn betreut
    * (#3817); ohne Namen bleibt es bei den Zahlen und der Zeile
    * „N abwesend · Ersatz“.
    */
   staffNames?: ReadonlyMap<string, string>;
+}
+
+/** Besetzung eines Blocks in der Zählweise der aufrufenden Fläche. */
+export interface BlockStaffing {
+  readonly state: CoverageState;
+  readonly current: number;
+  readonly total: number;
 }
 
 const EMPTY_STAFF_NAMES: ReadonlyMap<string, string> = new Map();
@@ -93,6 +110,7 @@ export function InstanceBlock({
   isSelected,
   onClick,
   isGap = false,
+  staffing,
   staffNames = EMPTY_STAFF_NAMES,
 }: InstanceBlockProps) {
   const showTimetableCounts = useShowTimetableCounts();
@@ -140,19 +158,30 @@ export function InstanceBlock({
     (s) => s.isSubstitute && !s.isAbsent,
   );
   const absentCount = instance.absentStaffCount;
-  const hasCoverageGap =
-    instance.requiredStaffCount > 0 &&
-    instance.assignedStaffCount < instance.requiredStaffCount;
+  // Mit `staffing` zählt auch der kurze Block wie die aufrufende Fläche.
+  const coverageCurrent = staffing?.current ?? instance.assignedStaffCount;
+  const coverageTotal = staffing?.total ?? instance.requiredStaffCount;
+  const hasCoverageGap = staffing
+    ? staffing.state === "gap"
+    : instance.requiredStaffCount > 0 &&
+      instance.assignedStaffCount < instance.requiredStaffCount;
 
   const compactStatusDetails = [
     isUnderstaffedAck ? "bewusst unbesetzt" : null,
     !isUnderstaffedAck && hasCoverageGap
-      ? `${instance.assignedStaffCount} von ${instance.requiredStaffCount} Positionen besetzt`
+      ? `${coverageCurrent} von ${coverageTotal} Positionen besetzt`
       : null,
     isActive ? "läuft" : null,
     absentCount > 0 ? `${absentCount} abwesend` : null,
     hasSubstitute ? "Ersatz" : null,
   ].filter((detail): detail is string => detail !== null);
+
+  // Ein kurzer Block hat keine Fußzeile: die Besetzung der aufrufenden
+  // Fläche steht dann wenigstens im Tooltip.
+  const staffingLine =
+    staffing && staffing.total > 0 && !isCancelled
+      ? [`Besetzung: ${staffing.current} von ${staffing.total} da`]
+      : [];
 
   const edgeColor = isUnderstaffedAck
     ? ACK_EDGE_COLOR
@@ -225,6 +254,17 @@ export function InstanceBlock({
           note="bewusst unbesetzt"
         />
       );
+    } else if (staffing) {
+      if (staffing.total > 0) {
+        coverage = (
+          <CoverageIndicator
+            size="sm"
+            state={staffing.state}
+            current={staffing.current}
+            total={staffing.total}
+          />
+        );
+      }
     } else if (instance.requiredStaffCount > 0) {
       coverage = (
         <CoverageIndicator
@@ -384,6 +424,7 @@ export function InstanceBlock({
       title={[
         `${instance.title}, ${instance.startTime} – ${instance.endTime}`,
         ...detailLines,
+        ...staffingLine,
       ].join("\n")}
       onClick={onClick}
       className="overflow-hidden"

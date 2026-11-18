@@ -139,12 +139,12 @@ export interface CareNoticeLetter {
 }
 
 interface BackendRun {
-  id: number;
+  id: number | string;
   year: number;
   period_from: string;
   period_until: string;
   status: CareNoticeRunStatus;
-  school_ids: number[] | null;
+  school_ids: (number | string)[] | null;
   notice_date: string | null;
   created_at: string;
   issued_on: string | null;
@@ -178,18 +178,18 @@ interface BackendInstallment {
 }
 
 interface BackendReference {
-  id: number;
+  id: number | string;
   number: string;
   issued_on: string | null;
 }
 
 interface BackendNotice {
-  id: number;
+  id: number | string;
   number: string;
   issued_on: string | null;
   kind: CareNoticeKind;
-  contract_id: number;
-  school_id: number;
+  contract_id: number | string;
+  school_id: number | string;
   school_name: string;
   child_first_name: string;
   child_last_name: string;

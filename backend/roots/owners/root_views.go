@@ -175,7 +175,7 @@ type DeliveryDevices struct {
 // BuildDeliveryDevices binds the push subscriptions and the PWA standalone
 // usage over the root's unit of work.
 func BuildDeliveryDevices(db transactionruntime.Database, unit rootUnitOfWork, env RootEnvironment, pushVAPID deliveryCompose.VAPIDConfig, identity identityaccess.Owner, provisioning organizationtenancy.Provisioning, settings settingsCompose.SettingsService) (DeliveryDevices, error) {
-	push, err := deliveryCompose.NewTenantPushSubscriptionService(unit, db.Pool(), deliveryCompose.NewPushSubscriptionRepository(db.Pool()), identity,
+	push, err := deliveryCompose.NewTenantPushSubscriptionService(unit, db.Pool(), deliveryCompose.NewPushSubscriptionRepository(db.Pool()),
 		pushVAPID, env.Logger.With("service", "push_subscriptions"))
 	if err != nil {
 		return DeliveryDevices{}, err

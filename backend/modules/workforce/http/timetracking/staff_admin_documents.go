@@ -390,7 +390,7 @@ func (rs *StaffAdminResource) deleteStaffDocument(w http.ResponseWriter, r *http
 			rs.cleanupStaffDocumentFile(cleanupCtx, id, doc.ID, doc.FilenameStored, "delete")
 		})
 	}
-	common.Respond(w, r, http.StatusOK, &stammdatenAck{StaffID: id}, "Staff document deleted successfully")
+	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: id}, "Staff document deleted successfully")
 }
 
 // --- helpers ---------------------------------------------------------------

@@ -87,7 +87,7 @@ func TestSubscribeSchoolRebindsTheEndpoint(t *testing.T) {
 	mock.ExpectCommit()
 
 	repo := &recordingPushRepository{}
-	service := newMockPushSubscriptionService(t, db, repo, nil, testVAPID(), nil)
+	service := newMockPushSubscriptionService(t, db, repo, testVAPID(), nil)
 	ctx := tenant.WithTenantID(context.Background(), 41)
 
 	require.NoError(t, service.SubscribeSchool(ctx, 42, validPushInput()))
@@ -111,7 +111,7 @@ func TestSubscribeSchoolReportsRebindFailures(t *testing.T) {
 	mock.ExpectRollback()
 
 	repo := &recordingPushRepository{deleteSchoolErr: errPushRepository}
-	service := newMockPushSubscriptionService(t, db, repo, nil, testVAPID(), nil)
+	service := newMockPushSubscriptionService(t, db, repo, testVAPID(), nil)
 	ctx := tenant.WithTenantID(context.Background(), 41)
 
 	err = service.SubscribeSchool(ctx, 42, validPushInput())
@@ -126,7 +126,7 @@ func TestSubscribeSchoolReportsRebindFailures(t *testing.T) {
 func TestSubscribeSchoolRequiresASchoolContext(t *testing.T) {
 	t.Parallel()
 	repo := &recordingPushRepository{}
-	service := newMockPushSubscriptionService(t, nil, repo, nil, testVAPID(), nil)
+	service := newMockPushSubscriptionService(t, nil, repo, testVAPID(), nil)
 
 	err := service.SubscribeSchool(context.Background(), 42, validPushInput())
 	require.EqualError(t, err, "school push subscription requires a school context")

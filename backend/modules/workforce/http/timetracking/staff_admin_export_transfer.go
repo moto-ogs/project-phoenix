@@ -19,10 +19,10 @@ import (
 // the transferred file cannot drift from the downloaded one: there is one
 // file, produced once, either written to the response or sent onwards.
 
-// transferExportRequest is the POST body. The parameters travel in the body,
+// TransferExportRequest is the POST body. The parameters travel in the body,
 // not the query: a POST proxy forwards the body, and relying on a forwarded
 // query string is how the first version silently lost every parameter.
-type transferExportRequest struct {
+type TransferExportRequest struct {
 	Year        int    `json:"year"`
 	Month       int    `json:"month"`
 	Granularity string `json:"granularity"`
@@ -34,7 +34,7 @@ type transferExportRequest struct {
 // Granularity, format and time format default in the service, so their
 // canonical values stay in one place.
 func parseTimeExportBody(r *http.Request) (workforce.TimeExportRequest, error) {
-	var body transferExportRequest
+	var body TransferExportRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return workforce.TimeExportRequest{}, errors.New("request body must be JSON")
 	}
@@ -83,7 +83,7 @@ func (rs *StaffAdminResource) transferExportViaSFTP(w http.ResponseWriter, r *ht
 	}
 	claims := rs.identity(r.Context())
 	if rs.ExportTransfer == nil {
-		common.Respond(w, r, http.StatusOK, ExportTransferOutcome{Reason: exportTransferReasonNotConfigured}, "SFTP transfer")
+		common.Respond(w, r, http.StatusOK, newExportTransferResponse(ExportTransferOutcome{Reason: exportTransferReasonNotConfigured}), "SFTP transfer")
 		return
 	}
 
@@ -98,9 +98,9 @@ func (rs *StaffAdminResource) transferExportViaSFTP(w http.ResponseWriter, r *ht
 		return
 	}
 	if !status.Ready {
-		common.Respond(w, r, http.StatusOK, ExportTransferOutcome{
+		common.Respond(w, r, http.StatusOK, newExportTransferResponse(ExportTransferOutcome{
 			Reason: exportTransferReasonNotConfigured,
-		}, "SFTP transfer")
+		}), "SFTP transfer")
 		return
 	}
 
@@ -124,5 +124,5 @@ func (rs *StaffAdminResource) transferExportViaSFTP(w http.ResponseWriter, r *ht
 		common.RenderError(w, r, common.RenderWithRules(err, timeExportErrorRules, common.ErrorInternalServer))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, outcome, "SFTP transfer")
+	common.Respond(w, r, http.StatusOK, newExportTransferResponse(outcome), "SFTP transfer")
 }

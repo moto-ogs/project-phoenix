@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64String,
+  object,
   openEnum,
   requestBody,
   safeInt,
@@ -26,7 +27,7 @@ export interface billingKeyDayOverrideResponse {
   updated_at: string;
 }
 
-export const billingKeyDayOverrideResponseSchema: z.ZodType<billingKeyDayOverrideResponse, unknown> = z.object({
+export const billingKeyDayOverrideResponseSchema: z.ZodType<billingKeyDayOverrideResponse, unknown> = object<billingKeyDayOverrideResponse>({
   scope: openEnum<BillingKeyDayScope>(),
   id: int64String,
   organization_id: int64String,
@@ -45,7 +46,7 @@ export interface billingKeyDayResponse {
   overrides: billingKeyDayOverrideResponse[] | null;
 }
 
-export const billingKeyDayResponseSchema: z.ZodType<billingKeyDayResponse, unknown> = z.object({
+export const billingKeyDayResponseSchema: z.ZodType<billingKeyDayResponse, unknown> = object<billingKeyDayResponse>({
   key_day: safeInt,
   next_key_date: calendarDate,
   updated_at: instant,

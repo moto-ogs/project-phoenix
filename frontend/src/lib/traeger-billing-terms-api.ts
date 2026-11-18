@@ -152,9 +152,9 @@ interface BackendAddress {
 }
 
 interface BackendFamilyBilling {
-  id: number;
+  id: number | string;
   family_email: string;
-  contract_id: number;
+  contract_id: number | string;
   recipient_kind: RecipientKind;
   second_first_name: string;
   second_last_name: string;
@@ -225,7 +225,8 @@ function familyFromBackend(family: BackendFamilyBilling): FamilyBilling {
   return {
     id: String(family.id),
     familyEmail: family.family_email,
-    contractId: family.contract_id ? String(family.contract_id) : "",
+    contractId:
+      String(family.contract_id) === "0" ? "" : String(family.contract_id),
     recipientKind: family.recipient_kind,
     secondFirstName: family.second_first_name,
     secondLastName: family.second_last_name,

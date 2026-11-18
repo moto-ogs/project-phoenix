@@ -71,7 +71,7 @@ function renderAndSave() {
     />
   );
   const view = render(panel(block("42", "Malen-AG")));
-  fireEvent.click(screen.getByRole("button", { name: /als abwesend/ }));
+  fireEvent.click(screen.getByRole("button", { name: /: Abwesend melden$/ }));
   fireEvent.click(
     screen.getByRole("radio", { name: /^Alle noch offenen Termine/ }),
   );

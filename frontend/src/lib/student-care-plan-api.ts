@@ -90,18 +90,18 @@ interface BackendAttendance {
 }
 
 interface BackendInstance {
-  id: number;
+  id: number | string;
   title: string;
   start_time: string;
   end_time: string;
-  room_id: number;
+  room_id: number | string;
   status: string;
-  active_group_id: number | null;
+  active_group_id: number | string | null;
   attendance: BackendAttendance;
 }
 
 interface BackendDay {
-  student_id: number;
+  student_id: number | string;
   date: string;
   weekday: number;
   arrival: BackendSlot;
@@ -110,7 +110,7 @@ interface BackendDay {
 }
 
 interface BackendWeek {
-  student_id: number;
+  student_id: number | string;
   from: string;
   to: string;
   days: BackendDay[] | null;

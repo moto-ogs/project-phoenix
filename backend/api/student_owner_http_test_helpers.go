@@ -25,6 +25,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/grouplive"
 	groupLiveHTTP "github.com/moto-ogs/project-phoenix/modules/grouplive/http"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	peopleStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
@@ -122,7 +123,7 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			StudentAuditService: peopleServices.PeopleDirectory,
 			StudentPhotos:       peopleServices.PeopleDirectory,
 			Uploads:             nativeUploads.UploadFiles{},
-			UserContextService:  caller, Now: clock,
+			UserContextService:  caller, Now: clock, StudentNotes: peopleServices.PeopleDirectory, StudentNoteTeam: studentHTTPTestNoteTeam(peopleServices),
 		},
 		careStudentsHTTP.ResourceConfig{
 			ArrivalScheduleService: live.ArrivalSchedule,
@@ -216,6 +217,16 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 	return people, care, projection, status, deletion, review, router, nil
 
 }
+
+// studentHTTPTestNoteTeam binds the team notices of the child notes to the
+// owner composition, as the server does.
+func studentHTTPTestNoteTeam(people StudentTestPeople) peopledirectory.StudentNoteTeamNotices {
+	if directory, ok := people.PeopleDirectory.(*peopleCompose.Directory); ok {
+		return directory.StudentNoteTeam
+	}
+	return nil
+}
+
 func newStudentHTTPTestChildQuota(store transactionruntime.Database) (schoolmembership.ChildQuotaUsages, error) {
 	membership, err := NewStudentHTTPTestMembership(store)
 	if err != nil {

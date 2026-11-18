@@ -39,7 +39,7 @@ describe("shiftTypeService requests", () => {
     await expect(shiftTypeService.getShiftTypes()).resolves.toEqual([
       mappedShiftType,
     ]);
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shift-types");
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types");
   });
 
   it("maps a nullable list response to an empty list", async () => {
@@ -77,7 +77,7 @@ describe("shiftTypeService requests", () => {
       }),
     ).resolves.toEqual(mappedShiftType);
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shift-types", {
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -230,7 +230,7 @@ describe("shiftTypeService requests", () => {
       },
     ]);
     expect(mockSessionFetch).toHaveBeenCalledWith(
-      "/api/staff/shift-types?include_archived=true&with_usage=true",
+      "/api/shift-types?include_archived=true&with_usage=true",
     );
   });
 
@@ -242,10 +242,9 @@ describe("shiftTypeService requests", () => {
     await expect(shiftTypeService.createDefaults()).resolves.toEqual([
       mappedShiftType,
     ]);
-    expect(mockSessionFetch).toHaveBeenCalledWith(
-      "/api/staff/shift-types/defaults",
-      { method: "POST" },
-    );
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types/defaults", {
+      method: "POST",
+    });
   });
 });
 

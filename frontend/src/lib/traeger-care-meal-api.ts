@@ -66,9 +66,9 @@ export interface CareMealChanged {
 }
 
 export interface BackendMealChanged {
-  school_id: number;
+  school_id: number | string;
   school_name: string;
-  student_id: number;
+  student_id: number | string;
   child_first_name: string;
   child_last_name: string;
   month: string;
@@ -119,16 +119,16 @@ export interface BackendMealPosition {
 }
 
 export interface BackendMealGap {
-  school_id: number;
+  school_id: number | string;
   school_name: string;
   month: string;
   expired?: boolean;
 }
 
 export interface BackendMealUnbilled {
-  school_id: number;
+  school_id: number | string;
   school_name: string;
-  student_id: number;
+  student_id: number | string;
   child_first_name: string;
   child_last_name: string;
   month: string;
@@ -137,11 +137,11 @@ export interface BackendMealUnbilled {
 }
 
 interface BackendMealTariffs {
-  schools: { id: number; name: string }[] | null;
+  schools: { id: number | string; name: string }[] | null;
   tariffs:
     | {
-        id: number;
-        school_id: number;
+        id: number | string;
+        school_id: number | string;
         valid_from: string;
         valid_until: string | null;
         mode: CareMealMode;
@@ -153,8 +153,10 @@ interface BackendMealTariffs {
 
 const MEAL_TARIFFS_PATH = "/api/traeger/care-meal-tariffs";
 
-function id(value: number): string {
-  return value ? String(value) : "";
+/** An ID of the backend, number or string; 0 is none. */
+function id(value: number | string): string {
+  const text = String(value);
+  return text === "0" ? "" : text;
 }
 
 export function mealPositionsFromBackend(

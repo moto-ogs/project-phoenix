@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64String,
+  object,
   openEnum,
   requestBody,
   safeInt,
@@ -29,7 +30,7 @@ export interface ParentCalendarResponse {
   events: Event[] | null;
 }
 
-export const ParentCalendarResponseSchema: z.ZodType<ParentCalendarResponse, unknown> = z.object({
+export const ParentCalendarResponseSchema: z.ZodType<ParentCalendarResponse, unknown> = object<ParentCalendarResponse>({
   from: calendarDate.nullable(),
   to: calendarDate.nullable(),
   events: z.array(EventSchema).nullable(),
@@ -42,7 +43,7 @@ export interface AppointmentResponseCounts {
   pending: number;
 }
 
-export const AppointmentResponseCountsSchema: z.ZodType<AppointmentResponseCounts, unknown> = z.object({
+export const AppointmentResponseCountsSchema: z.ZodType<AppointmentResponseCounts, unknown> = object<AppointmentResponseCounts>({
   accepted: safeInt,
   declined: safeInt,
   pending: safeInt,
@@ -57,7 +58,7 @@ export interface AppointmentAttendee {
   responded_at?: string;
 }
 
-export const AppointmentAttendeeSchema: z.ZodType<AppointmentAttendee, unknown> = z.object({
+export const AppointmentAttendeeSchema: z.ZodType<AppointmentAttendee, unknown> = object<AppointmentAttendee>({
   recipient_id: z.string(),
   recipient_type: z.string(),
   name: z.string(),
@@ -75,7 +76,7 @@ export interface AppointmentOverview {
   attendees: AppointmentAttendee[] | null;
 }
 
-export const AppointmentOverviewSchema: z.ZodType<AppointmentOverview, unknown> = z.object({
+export const AppointmentOverviewSchema: z.ZodType<AppointmentOverview, unknown> = object<AppointmentOverview>({
   appointment_id: z.string(),
   occurrence_date: calendarDate.optional(),
   delivery_mode: z.string(),
@@ -90,7 +91,7 @@ export interface ParentCalendarFeedResponse {
   webcal_url: string;
 }
 
-export const ParentCalendarFeedResponseSchema: z.ZodType<ParentCalendarFeedResponse, unknown> = z.object({
+export const ParentCalendarFeedResponseSchema: z.ZodType<ParentCalendarFeedResponse, unknown> = object<ParentCalendarFeedResponse>({
   url: z.string(),
   webcal_url: z.string(),
 });
@@ -113,7 +114,7 @@ export interface EnrollablePhaseResponse {
   audience: OpenEnum<EnrollmentPhaseAudience>;
 }
 
-export const EnrollablePhaseResponseSchema: z.ZodType<EnrollablePhaseResponse, unknown> = z.object({
+export const EnrollablePhaseResponseSchema: z.ZodType<EnrollablePhaseResponse, unknown> = object<EnrollablePhaseResponse>({
   school_id: int64String,
   school_name: z.string(),
   school_slug: z.string(),
@@ -135,7 +136,7 @@ export interface ParentInvitationStatusResponse {
   status: string;
 }
 
-export const ParentInvitationStatusResponseSchema: z.ZodType<ParentInvitationStatusResponse, unknown> = z.object({
+export const ParentInvitationStatusResponseSchema: z.ZodType<ParentInvitationStatusResponse, unknown> = object<ParentInvitationStatusResponse>({
   status: z.string(),
 });
 

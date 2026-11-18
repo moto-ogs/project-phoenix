@@ -7,18 +7,18 @@ import (
 )
 
 // PushSubscriptionRepository defines operations for Web Push subscriptions.
-// All reads/writes are tenant-scoped (RLS); callers outside tenant middleware
-// must wrap calls in tenant.WithTenantTx.
+// Delivery reads are tenant-scoped (RLS). Account-level parent mutations and
+// cross-tenant session cleanup use an administrative transaction.
 type PushSubscriptionRepository interface {
 
-	// Upsert inserts or refreshes a subscription keyed by (tenant_id, portal,
-	// endpoint).
+	// RegisterSubscription upserts by school, portal and endpoint. With no
+	// school, a parent subscription is keyed by endpoint in an admin transaction.
 	RegisterSubscription(ctx context.Context, sub *subscriptions.PushSubscription) error
 	// DeleteByEndpoint removes the caller's staff-portal subscription for the
 	// current tenant.
 	DeleteByEndpoint(ctx context.Context, accountID int64, endpoint string) error
-	// DeleteParentByAccountEndpoint removes the caller's parent-portal
-	// subscription for the current tenant.
+	// DeleteParentByAccountEndpoint removes the caller's parent device,
+	// including legacy school bindings, in an admin transaction.
 	DeleteParentByAccountEndpoint(ctx context.Context, accountID int64, endpoint string) error
 	// DeleteSchoolByEndpoint removes only a school-portal subscription for the
 	// caller in the current tenant.
@@ -30,6 +30,9 @@ type PushSubscriptionRepository interface {
 	// DeleteExpiredIfUnchanged removes a subscription only if its persisted
 	// ownership, key material, and update timestamp still match the sent snapshot.
 	DeleteExpiredIfUnchanged(ctx context.Context, sub *subscriptions.PushSubscription) (bool, error)
+	// LockParentEndpoint serializes parent subscribe and unsubscribe. It holds
+	// the endpoint through the caller's administrative transaction.
+	LockParentEndpoint(ctx context.Context, endpoint string) error
 	// DeleteParentByEndpoint removes every parent-portal binding for an endpoint
 	// across tenants. Callers must use an admin transaction.
 	DeleteParentByEndpoint(ctx context.Context, endpoint string) error
@@ -55,7 +58,8 @@ type PushSubscriptionRepository interface {
 	// never bound to a token family. A positive tenantID selects the school. Callers must use an admin transaction.
 	DeleteStaffUnboundByAccount(ctx context.Context, accountID, tenantID int64) error
 	// DeleteParentUnboundByAccount removes parent-portal subscriptions that
-	// were never bound to a token family. A positive tenantID selects the school. Callers must use an admin transaction.
+	// were never bound to a token family, including the legacy school binding.
+	// Callers must use an admin transaction.
 	DeleteParentUnboundByAccount(ctx context.Context, accountID, tenantID int64) error
 	// DeleteSchoolUnboundByAccount is DeleteStaffUnboundByAccount for
 	// school-portal subscriptions (#2208).

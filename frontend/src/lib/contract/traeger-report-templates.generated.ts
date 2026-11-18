@@ -4,6 +4,7 @@ import {
   instant,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   safeInt,
   success,
@@ -15,7 +16,7 @@ export interface TraegerReportDistrict {
   district: string;
 }
 
-export const TraegerReportDistrictSchema: z.ZodType<TraegerReportDistrict, unknown> = z.object({
+export const TraegerReportDistrictSchema: z.ZodType<TraegerReportDistrict, unknown> = object<TraegerReportDistrict>({
   school_id: int64StringOrNumber,
   district: z.string(),
 });
@@ -31,7 +32,7 @@ export interface TraegerReportTemplate {
   updated_at: string;
 }
 
-export const TraegerReportTemplateSchema: z.ZodType<TraegerReportTemplate, unknown> = z.object({
+export const TraegerReportTemplateSchema: z.ZodType<TraegerReportTemplate, unknown> = object<TraegerReportTemplate>({
   id: int64StringOrNumber,
   name: z.string(),
   sections: z.array(z.string()).nullable(),

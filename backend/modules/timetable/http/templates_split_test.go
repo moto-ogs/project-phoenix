@@ -204,7 +204,7 @@ func TestTemplateSplitHandler_HappyPath(t *testing.T) {
 }
 
 // TestTemplateSplitHandler_RejectsOverlongNotes guards the #1837 follow-up:
-// the split note (nullableStr) shadows the embedded updateTemplateRequest.Notes,
+// the split note (NullableStr) shadows the embedded updateTemplateRequest.Notes,
 // so the split Bind must enforce the same 2000-char limit as create/update.
 func TestTemplateSplitHandler_RejectsOverlongNotes(t *testing.T) {
 	t.Parallel()

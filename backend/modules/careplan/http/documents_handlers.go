@@ -57,7 +57,7 @@ type StudentDocumentResponse struct {
 	Category      string    `json:"category"`
 	CategoryLabel string    `json:"category_label"`
 	Filename      string    `json:"filename"`
-	SizeBytes     int64     `json:"size_bytes"`
+	SizeBytes     int       `json:"size_bytes"`
 	ContentType   string    `json:"content_type"`
 	UploadedAt    time.Time `json:"uploaded_at"`
 	Sensitive     bool      `json:"sensitive"`
@@ -90,7 +90,7 @@ func newStudentDocumentResponse(doc careplan.CareDocument) StudentDocumentRespon
 		Category:      doc.Category,
 		CategoryLabel: studentDocumentLabel(doc.Category),
 		Filename:      doc.FilenameDisplay,
-		SizeBytes:     doc.SizeBytes,
+		SizeBytes:     int(doc.SizeBytes),
 		ContentType:   doc.ContentType,
 		UploadedAt:    doc.CreatedAt,
 		Sensitive:     careplan.IsSensitiveStudentDocumentCategory(doc.Category),
@@ -506,5 +506,5 @@ func (rs *Resource) deleteStudentDocument(w http.ResponseWriter, r *http.Request
 			coordinator.CleanupDocument(cleanupCtx, tenantID, id, documentID, storedName, "delete")
 		})
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int64{"student_id": id}, "Student document deleted successfully")
+	common.Respond(w, r, http.StatusOK, studentDocumentDeletedResponse{StudentID: id}, "Student document deleted successfully")
 }
