@@ -61,6 +61,7 @@ const school: SchoolSummary = {
   childQuotaBundles: 2,
   childQuotaBundleSize: 50,
   childQuotaCount: 80,
+  deviceSlots: null,
 };
 
 const unlimited: SchoolSummary = {

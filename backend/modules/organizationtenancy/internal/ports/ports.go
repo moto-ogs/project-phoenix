@@ -25,6 +25,11 @@ type Store interface {
 	LockSchoolChildQuota(context.Context, int64) (domain.OperationStats, error)
 	// SetSchoolChildQuota writes the Kinderkontingent; nil bundles remove it.
 	SetSchoolChildQuota(ctx context.Context, id int64, bundles *int, bundleSize int) (organizationtenancy.School, domain.OperationStats, error)
+	// LockSchoolDeviceSlots serializes a Geräteplatz change with the device
+	// registrations of the school (#2312).
+	LockSchoolDeviceSlots(context.Context, int64) (domain.OperationStats, error)
+	// SetSchoolDeviceSlots writes the Geräteplätze; nil removes the limit.
+	SetSchoolDeviceSlots(ctx context.Context, id int64, slots *int) (organizationtenancy.School, domain.OperationStats, error)
 	FindSchoolByID(context.Context, int64, string) (organizationtenancy.School, bool, domain.OperationStats, error)
 	FindSchoolBySlug(context.Context, string) (organizationtenancy.School, bool, domain.OperationStats, error)
 	FindSchoolByOrganizationAndSlug(context.Context, int64, string) (organizationtenancy.School, bool, domain.OperationStats, error)

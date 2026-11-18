@@ -866,6 +866,8 @@ export const ERROR_CATALOG = {
         "Diese Geräte-ID ist schon vergeben. Bitte gib eine andere ein.",
       "iot.device_in_active_session":
         "Auf diesem Gerät läuft gerade eine Sitzung. Beende sie zuerst am Gerät, dann kannst du es entfernen.",
+      "iot.device_slots_full":
+        "Alle Geräteplätze deiner Schule sind belegt. Entferne ein Gerät, das du nicht mehr brauchst, oder melde dich beim moto-Team für weitere Plätze.",
       "iot.invalid_staff_clock_request":
         "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
       "iot.invalid_staff_clock_state":
@@ -1232,6 +1234,10 @@ export const ERROR_CATALOG = {
         "Dieses Systemgerät kann nicht gelöscht werden.",
       "provisioning.device_same_school":
         "Das Gerät gehört schon zu dieser Schule. Bitte wähle eine andere Schule.",
+      "provisioning.device_slots_below_occupied":
+        "So wenige Geräteplätze gehen nicht: belegt sind schon {occupied}. Entferne erst Geräte der Schule.",
+      "provisioning.device_slots_full":
+        "Alle Geräteplätze der Schule sind belegt. Erhöhe zuerst ihre Geräteplätze.",
       "provisioning.device_transfer_protected":
         "Dieses Systemgerät kann nicht umgezogen werden.",
       "provisioning.organization_already_deleted":

@@ -71,6 +71,14 @@
       "legacy": "iot.device_pin_required"
     },
     {
+      "code": "iot.device_slots_full",
+      "class": "business_rejection",
+      "parameters": [
+        "device_slots"
+      ],
+      "legacy": "iot.device_slots_full"
+    },
+    {
       "code": "iot.invalid_rfid_tag",
       "class": "input",
       "parameters": [],

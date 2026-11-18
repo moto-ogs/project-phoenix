@@ -7745,6 +7745,18 @@
     },
     {
       "method": "PUT",
+      "pattern": "/operator/schools/{id}/device-slots",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "deviceSlotsRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
       "pattern": "/school/calendar/appointments/{appointmentId}",
       "portals": [
         "school"
@@ -41380,6 +41392,21 @@
           "name": "school_name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "deviceSlotsRequest",
+      "go_type": "operator.deviceSlotsRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "device_slots",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
           }
         }
       ]

@@ -112,6 +112,14 @@
     "action": "update"
   },
   {
+    "resource": "devices",
+    "action": "manage"
+  },
+  {
+    "resource": "devices",
+    "action": "read"
+  },
+  {
     "resource": "display",
     "action": "manage"
   },
@@ -198,18 +206,6 @@
   {
     "resource": "guardians",
     "action": "financial"
-  },
-  {
-    "resource": "iot",
-    "action": "manage"
-  },
-  {
-    "resource": "iot",
-    "action": "read"
-  },
-  {
-    "resource": "iot",
-    "action": "update"
   },
   {
     "resource": "meals",

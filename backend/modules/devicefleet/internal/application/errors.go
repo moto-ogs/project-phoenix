@@ -18,6 +18,10 @@ func publicError(err error) error {
 			return sentinel
 		}
 	}
+	var slotsFull *devicefleet.DeviceSlotsFullError
+	if errors.As(err, &slotsFull) {
+		return &devicefleet.DeviceSlotsFullError{DeviceSlots: slotsFull.DeviceSlots}
+	}
 	if errors.Is(err, devicefleet.ErrInvalidDisplayInput) {
 		var invalid *devicefleet.InvalidDisplayError
 		if errors.As(err, &invalid) {

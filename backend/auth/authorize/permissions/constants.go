@@ -31,7 +31,7 @@ const (
 	ResourceFeedback      = "feedback"
 	ResourceConfig        = "config"
 	ResourceAuth          = "auth"
-	ResourceIOT           = "iot"
+	ResourceDevices       = "devices"
 	ResourceSchedules     = "schedules"
 	ResourceCalendar      = "calendar"
 	ResourceDisplay       = "display"
@@ -153,11 +153,11 @@ const (
 	MealsRegister = ResourceMeals + ":register"
 )
 
-// IOT permissions
+// Device permissions (#2312): DevicesRead shows a school's devices and its
+// Geräteplätze, DevicesManage registers, edits, blocks and removes them.
 const (
-	IOTRead   = ResourceIOT + ":" + ActionRead
-	IOTUpdate = ResourceIOT + ":" + ActionUpdate
-	IOTManage = ResourceIOT + ":" + ActionManage
+	DevicesRead   = ResourceDevices + ":" + ActionRead
+	DevicesManage = ResourceDevices + ":" + ActionManage
 )
 
 // Display permissions (info-point dashboards, issue #1325)

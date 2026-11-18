@@ -138,6 +138,7 @@ func contractMounts() []contractMount {
 		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
 		{"/operator/devices", provisioningOperatorAPI.DeviceRouteContracts()},
+		{"/operator/schools", provisioningOperatorAPI.SchoolDeviceSlotRouteContracts()},
 		{"/traeger/master-data", organizationTenancyTraeger.MasterDataRouteContracts()},
 		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
 		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},

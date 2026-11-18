@@ -274,5 +274,6 @@ func newProvisioningConfig(provisioning organizationtenancy.OperatorProvisioning
 		TraegerStaffReleaseAudit: staffRelease, ErasureOrderRecords: provisioning.ErasureOrderRecords,
 		RequiredDetails: provisioning.RequiredDetails, DeviceBlocking: provisioning.DeviceBlocking,
 		DeviceHistory: provisioning.DeviceHistory,
+		DeviceSlots:   provisioning.DeviceSlots,
 	}, nil
 }

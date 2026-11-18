@@ -146,6 +146,7 @@ const school: SchoolSummary = {
   childQuotaBundles: null,
   childQuotaBundleSize: 50,
   childQuotaCount: 1,
+  deviceSlots: null,
 };
 function deferred<T>() {
   let resolve!: (value: T) => void;

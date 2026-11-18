@@ -5,6 +5,7 @@ import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as notifications } from "./notifications.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
 import { routes as operatorDevices } from "./operator-devices.generated";
+import { routes as operatorSchools } from "./operator-schools.generated";
 import { routes as parentAnnouncements } from "./parent-announcements.generated";
 import { routes as parentMe } from "./parent-me.generated";
 import { routes as schoolCalendar } from "./school-calendar.generated";
@@ -229,6 +230,7 @@ export const portalRoutes = {
     operatorDevices["GET /operator/devices/{id}/history"],
     operatorDevices["POST /operator/devices/{id}/block"],
     operatorDevices["POST /operator/devices/{id}/unblock"],
+    operatorSchools["PUT /operator/schools/{id}/device-slots"],
   ],
   school: [
     schoolCalendar["DELETE /school/calendar/appointments/{appointmentId}"],
