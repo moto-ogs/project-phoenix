@@ -1,4 +1,5 @@
-import { ApiError } from "~/lib/api-error";
+import { isRefusal } from "~/lib/access-refusal";
+import type { ApiError } from "~/lib/api-error";
 
 // renderParentCareWriteError: unrelated business refusals must not evict a child.
 export const PARENT_ACCESS_REFUSAL_CODES = [
@@ -15,8 +16,7 @@ export function isParentAccessRefusal(
   checksPortalAccess = false,
 ): error is ApiError {
   return (
-    error instanceof ApiError &&
-    (error.status === 401 || error.status === 403 || error.status === 404) &&
+    isRefusal(error) &&
     (error.code === "care.child_not_linked" ||
       (checksPortalAccess &&
         method === "GET" &&

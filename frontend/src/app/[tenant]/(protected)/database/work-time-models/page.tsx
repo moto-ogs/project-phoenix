@@ -6,6 +6,7 @@
 // derselbe Editor wie im Reiter „Arbeitszeitmodell“. Im Reiter „Personen“
 // ordnet sie eine Vorlage mehreren Personen auf einmal zu (#6921).
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { Suspense, useCallback, useLayoutEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -217,8 +218,7 @@ function WorkTimeModelsPageContent() {
     workTimeModelService.listWithUsage(),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;

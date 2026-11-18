@@ -5,6 +5,7 @@
 // Anmeldung läuft durch dieselbe Bestätigung wie auf ihrer Seite, mit eigener
 // Prüfung, eigenem Protokoll und eigener Annahme-Mail.
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import type { HolidayRegistrationSummary } from "~/lib/traeger-holiday-registrations-api";
@@ -159,7 +160,7 @@ export function bulkConfirmOutcome(error: unknown): {
   if (error.noResponse || error.code === "general.unavailable") {
     return { reason: "unclear", stop: true };
   }
-  if (error.status === 401 || error.status === 403) {
+  if (isAccessRefusal(error)) {
     return { reason: "interrupted", stop: true };
   }
   return {
