@@ -26,7 +26,9 @@ const fixtureBucket = "fixture-uploads"
 func fixtureServer(t *testing.T, versioning func() string, objects http.HandlerFunc) string {
 	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.True(t, strings.HasPrefix(r.Header.Get("Authorization"), "AWS4-HMAC-SHA256 "))
+		// A conditional replacement is presigned. Its signature is in the query.
+		assert.True(t, strings.HasPrefix(r.Header.Get("Authorization"), "AWS4-HMAC-SHA256 ") ||
+			r.URL.Query().Get("X-Amz-Algorithm") == "AWS4-HMAC-SHA256")
 		if r.Method == http.MethodGet && r.URL.Query().Has("versioning") {
 			assert.Equal(t, "/"+fixtureBucket+"/", r.URL.Path)
 			_, _ = io.WriteString(w, "<VersioningConfiguration><Status>"+versioning()+"</Status></VersioningConfiguration>")
@@ -126,7 +128,10 @@ func TestReplacementDoesNotRecreateAnObjectDeletedAfterStat(t *testing.T) {
 			w.Header().Set("Content-Length", "7")
 		case http.MethodPut:
 			attempts.Add(1)
-			if !assert.Equal(t, `"original-etag"`, r.Header.Get("If-Match")) {
+			// Hetzner's gateway matches only the unquoted ETag, and the
+			// condition must be part of the signature.
+			if !assert.Equal(t, "original-etag", r.Header.Get("If-Match")) ||
+				!assert.Contains(t, r.URL.Query().Get("X-Amz-SignedHeaders"), "if-match") {
 				w.WriteHeader(http.StatusOK)
 				return
 			}

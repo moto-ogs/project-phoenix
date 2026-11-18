@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ import (
 // only by the app's existing public routes.
 type Backend struct {
 	client *minio.Client
+	http   *http.Client
 	bucket string
 }
 
@@ -31,14 +33,19 @@ func New(ctx context.Context, endpoint, region, bucket, accessKey, secretKey str
 	if address.Scheme != "https" && (address.Scheme != "http" || !isLoopback(address.Hostname())) {
 		return nil, errors.New("storage: UPLOADS_S3_ENDPOINT requires HTTPS outside loopback")
 	}
+	secure := address.Scheme == "https"
+	transport, err := minio.DefaultTransport(secure)
+	if err != nil {
+		return nil, errors.New("storage: invalid S3 client configuration")
+	}
 	client, err := minio.New(address.Host, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
-		Secure: address.Scheme == "https", Region: region, BucketLookup: minio.BucketLookupPath,
+		Secure: secure, Region: region, BucketLookup: minio.BucketLookupPath, Transport: transport,
 	})
 	if err != nil {
 		return nil, errors.New("storage: invalid S3 client configuration")
 	}
-	backend := &Backend{client: client, bucket: bucket}
+	backend := &Backend{client: client, http: &http.Client{Transport: transport}, bucket: bucket}
 	check, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	if err := backend.requireUnversionedBucket(check); err != nil {
@@ -78,7 +85,7 @@ func (s *Backend) WriteObject(ctx context.Context, key string, r io.Reader, _ co
 	if err != nil {
 		return 0, err
 	}
-	if err := s.put(ctx, key, content, ""); err != nil {
+	if err := s.put(ctx, key, content); err != nil {
 		return 0, err
 	}
 	return int64(len(content)), nil
@@ -96,20 +103,51 @@ func (r *cancelableReader) Read(p []byte) (int, error) {
 	return r.source.Read(p)
 }
 
-func (s *Backend) put(ctx context.Context, key string, content []byte, etag string) error {
-	opts := minio.PutObjectOptions{ContentType: "application/octet-stream", DisableMultipart: true}
-	if etag != "" {
-		opts.SetMatchETag(etag)
-	}
+const objectContentType = "application/octet-stream"
+
+func (s *Backend) put(ctx context.Context, key string, content []byte) error {
+	opts := minio.PutObjectOptions{ContentType: objectContentType, DisableMultipart: true}
 	_, err := s.client.PutObject(ctx, s.bucket, key, bytes.NewReader(content), int64(len(content)), opts)
-	if etag != "" && minio.ToErrorResponse(err).StatusCode == 412 {
+	return objectError(ctx, "write", err)
+}
+
+// replace writes only while the object still has the given ETag. The ETag
+// travels without quotes: Hetzner's Ceph gateway compares the header bytes
+// with the stored ETag and answers 412 to the quoted form that minio-go's
+// SetMatchETag sends. The SDK offers no other way to set the header, so the
+// request is presigned with If-Match as a signed header and sent directly.
+func (s *Backend) replace(ctx context.Context, key string, content []byte, etag string) error {
+	condition := http.Header{"If-Match": {etag}}
+	target, err := s.client.PresignHeader(ctx, http.MethodPut, s.bucket, key, time.Minute, nil, condition)
+	if err != nil {
+		return objectError(ctx, "write", err)
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPut, target.String(), bytes.NewReader(content))
+	if err != nil {
+		return objectError(ctx, "write", err)
+	}
+	request.Header = condition
+	request.Header.Set("Content-Type", objectContentType)
+	response, err := s.http.Do(request)
+	if err != nil {
+		return objectError(ctx, "write", err)
+	}
+	defer func() { _ = response.Body.Close() }()
+	_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 64<<10))
+	switch response.StatusCode {
+	case http.StatusOK:
+		return nil
+	case http.StatusNotFound:
+		return contract.ErrNotFound
+	case http.StatusPreconditionFailed:
 		// Some providers return 412 for a condition on a deleted key.
 		if _, statErr := s.stat(ctx, key); statErr != nil {
 			return statErr
 		}
 		return contract.ErrObjectChanged
+	default:
+		return objectError(ctx, "write", errors.New(response.Status))
 	}
-	return objectError(ctx, "write", err)
 }
 
 func (s *Backend) OpenObject(ctx context.Context, key string) (*contract.Object, error) {
@@ -149,7 +187,7 @@ func (s *Backend) ReplaceObject(ctx context.Context, key string, content []byte)
 	if info.ETag == "" {
 		return errors.New("storage: missing ETag for conditional replacement")
 	}
-	return s.put(ctx, key, content, info.ETag)
+	return s.replace(ctx, key, content, info.ETag)
 }
 
 func (s *Backend) RemoveObject(ctx context.Context, key string) error {
