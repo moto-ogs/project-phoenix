@@ -61,7 +61,7 @@ vi.mock("~/lib/session-cache", () => ({
   },
 }));
 
-vi.mock("~/components/notifications/service-worker-registrar", () => ({
+vi.mock("~/components/notifications/push-subscription-sync", () => ({
   PushSubscriptionSync: () => null,
 }));
 
