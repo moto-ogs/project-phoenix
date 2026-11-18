@@ -186,7 +186,13 @@ func TestCareDocumentRecords_CleanupIntentLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, careDocumentCleanupNames(queued), name)
 
+	before := testpkg.DatabaseNow(t, db)
 	require.NoError(t, records.CompleteCareDocumentCleanupByFilename(ctx, name))
+	var cleanedAt time.Time
+	require.NoError(t, db.NewRaw(`SELECT cleaned_at FROM users.student_document_file_cleanup WHERE id = ?`, cleanup.ID).
+		Scan(t.Context(), &cleanedAt))
+	assert.False(t, cleanedAt.Before(before), "the cleanup uses the database retention clock")
+	assert.False(t, cleanedAt.After(testpkg.DatabaseNow(t, db)), "the cleanup stamp is not in the future")
 	queued, err = records.ListCareDocumentCleanups(ctx, nil)
 	require.NoError(t, err)
 	assert.NotContains(t, careDocumentCleanupNames(queued), name, "a settled intent must not come back")
