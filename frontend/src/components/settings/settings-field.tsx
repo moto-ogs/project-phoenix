@@ -51,6 +51,7 @@ import {
 } from "~/lib/traeger-payment-text";
 import { textTooLong } from "~/lib/text-length";
 import { Switch } from "~/components/ui/switch";
+import { ENROLLMENT_ENABLED_KEY } from "~/lib/enrollment-privacy-notice";
 import { NumberField } from "./fields/number-field";
 import { SettingsTimeField } from "./fields/time-field";
 import { DateField } from "./fields/date-field";
@@ -461,6 +462,12 @@ interface SettingsFieldProps {
   readonly onReset: (key: string) => Promise<void>;
   readonly onSchemaRefresh?: () => void;
   readonly onBookingAuthorityEnable?: () => Promise<void>;
+  /**
+   * Switching the online enrollment on opens the page's activation dialog
+   * instead of saving at once (#7176): it checks the privacy notice and asks
+   * for the notification recipients.
+   */
+  readonly onEnrollmentEnable?: () => void;
   // audience controls the "auch von {other side} änderbar" hint shown
   // on shared settings and the origin of a value (default, Träger, school).
   // Defaults to "admin" (tenant settings page); "traeger" is the Träger
@@ -513,6 +520,7 @@ export function SettingsField({
   onReset,
   onSchemaRefresh,
   onBookingAuthorityEnable,
+  onEnrollmentEnable,
   audience = "admin",
   revealFn,
   labelLevel = 4,
@@ -905,6 +913,14 @@ export function SettingsField({
         await onBookingAuthorityEnable();
         return;
       }
+      if (
+        setting.key === ENROLLMENT_ENABLED_KEY &&
+        value === true &&
+        onEnrollmentEnable
+      ) {
+        onEnrollmentEnable();
+        return;
+      }
       await saveOrConfirm(value);
     },
     [
@@ -920,6 +936,7 @@ export function SettingsField({
       legalActivationTextKey,
       legalActivationTextSetting?.value,
       onBookingAuthorityEnable,
+      onEnrollmentEnable,
       setting.key,
     ],
   );

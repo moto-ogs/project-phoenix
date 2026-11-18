@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 )
 
@@ -356,6 +357,11 @@ func sortedProfileSettingKeys(settings map[string]SeedSetting) []string {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
+	// The public enrollment form switches on only once its privacy notice
+	// is set (#7176), so enrollment.enabled goes after the legal texts.
+	if index := slices.Index(keys, profileSettingEnrollmentEnabled); index >= 0 {
+		keys = append(slices.Delete(keys, index, index+1), profileSettingEnrollmentEnabled)
+	}
 	// A rerun may start from any valid scope set. Expanding visibility first
 	// and restricting it last keeps every intermediate set valid; the sorted
 	// order already puts the overview scope after every action scope.

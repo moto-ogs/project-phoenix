@@ -134,10 +134,11 @@ func documentReference(number, debtorNumber, documentKind string) string {
 }
 
 // transferCodeOf is the code of a document the family pays by transfer;
-// nil for a direct debit or without an amount to transfer. An invoice
-// issued before #4689 has no payment and is paid by transfer.
+// nil for a direct debit, without an amount to transfer or when the Träger
+// switched the code off (#5624). An invoice issued before #4689 has no
+// payment and is paid by transfer.
 func transferCodeOf(head parentbilling.Letterhead, payment *parentbilling.InvoicePayment, cents int64, reference string) *PaymentCode {
-	if isDirectDebit(payment) {
+	if head.WithoutTransferCode || isDirectDebit(payment) {
 		return nil
 	}
 	code, ok := transferCode(head.BankAccount, firstLine(textLines(head.SenderText)), cents, reference)

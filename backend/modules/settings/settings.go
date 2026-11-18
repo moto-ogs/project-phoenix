@@ -197,6 +197,10 @@ type (
 // attendance retention window (#3957).
 type AttendanceWindowError = configModel.AttendanceWindowError
 
+// EnrollmentPrivacyNoticeError rejects switching the public enrollment form
+// on without a privacy notice (#7176).
+type EnrollmentPrivacyNoticeError = configModel.EnrollmentPrivacyNoticeError
+
 // ErrPresenceModeSwitchBlocked reports a presence-mode switch while
 // attendance of the day is still open.
 var ErrPresenceModeSwitchBlocked = configModel.ErrPresenceModeSwitchBlocked

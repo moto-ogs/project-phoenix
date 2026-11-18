@@ -384,7 +384,7 @@ func (rs *Resource) storeStudentDocumentObject(
 // saveStudentDocumentObject writes the upload's bytes. A failed write
 // activates the queued cleanup intent instead of settling it.
 func (rs *Resource) saveStudentDocumentObject(w http.ResponseWriter, r *http.Request, uploadCtx context.Context, upload *studentDocumentUpload) (int64, bool) {
-	size, err := upload.coordinator.Save(uploadCtx, upload.tenantID, upload.storedName, upload.uploaded.File)
+	size, err := upload.coordinator.SaveSealed(uploadCtx, upload.tenantID, upload.storedName, upload.uploaded.File, careplan.StudentDocumentKeyRing(upload.category))
 	if err != nil {
 		// The intent is activated, not settled. A failed write removes its own
 		// partial object only best-effort, so declaring the bytes gone here

@@ -8,5 +8,6 @@
   "attendance_visible_exceeds_retention": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "attendance_retention_below_visible": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "module_requires": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
-  "module_required_by": "Nuk u ruajt: {object}. Kontrolloni të dhënat."
+  "module_required_by": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "enrollment_privacy_notice_missing": "Nuk u ruajt: {object}. Kontrolloni të dhënat."
 }

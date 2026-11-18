@@ -61,6 +61,8 @@ export const categoryLabels: Record<string, string> = {
   betreuungstage: "Betreuungstage",
   betreuungszeiten: "Ankunfts- und Abholzeiten",
   briefkopf: "Absender, Farbe und Fußzeile",
+  // GiroCode auf den Schreiben des Trägers (#5624); Schalter des Trägers.
+  "qr-code": "QR-Code zum Überweisen",
   "bestellung-essen": "Bestellung",
   bewegungsdaten: "Anwesenheit und Aufbewahrung",
   caterer: "Caterer",

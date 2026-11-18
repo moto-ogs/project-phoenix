@@ -748,6 +748,17 @@
       "target_owner": "delivery-platform"
     },
     {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Objects.SaveSealed",
+      "reason": "Platform protocol participation (mutation): file-storage reaches modules/delivery/objects.PrivateUploads.SaveSealed (delivery-platform) through modules/filestorage/internal/adapters/documents.Objects.SaveSealed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Sealed write of #3840.",
+      "source_owner": "file-storage",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
+      "target_owner": "delivery-platform"
+    },
+    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.StudentDocuments.ActivateQueuedCleanup",
       "classification": "leaf",

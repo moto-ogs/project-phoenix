@@ -2912,8 +2912,13 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
       },
       {
         title: "Die Anmeldung öffnen",
+        description:
+          "Die Online-Anmeldung lässt sich nur mit einer Datenschutzinformation einschalten. Eltern lesen sie im Formular.",
         steps: [
-          "Schalten Sie unter `Einstellungen` > `Anmeldung` die `Online-Anmeldung` ein.",
+          "Öffnen Sie `Einstellungen` > `Anmeldung` und dort den Bereich `Rechtstexte`.",
+          "Schalten Sie `Datenschutzinformation im Anmeldeformular anzeigen` ein und tragen Sie Ihren Text ein.",
+          "Schalten Sie im Bereich `Allgemein` die `Online-Anmeldung` ein.",
+          "Prüfen Sie im Fenster die `Empfänger für neue Anmeldungen`. Dort steht schon die Kontaktadresse Ihrer Schule. Sie können sie ändern oder das Feld leer lassen. Wählen Sie `Einschalten`.",
           "Öffnen Sie `Anmeldephasen`.",
           "Öffnen Sie bei der Phase das Menü mit den drei Punkten.",
           "Wählen Sie `Aktivieren`.",
@@ -2963,6 +2968,8 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
       "Gilt die Phase nur für `Nur bereits angemeldete Kinder` oder `Nur Eltern mit Konto an der Schule`, fehlen `Formular ansehen`, `Elternansicht öffnen`, der Link zum Kopieren und der QR-Code. Diese Eltern melden sich im Elternportal an.",
     ],
     troubleshootingDetails: [
+      "Beim Einschalten steht `Zuerst die Datenschutzinformation eintragen`? Dann fehlt der Text oder sein Schalter ist aus. Wählen Sie `Zur Datenschutzinformation`. Den Text darf nur eintragen, wer alle Einstellungen der Schule ändern darf.",
+      "Oben steht `Datenschutzinformation fehlt`? Ihre Online-Anmeldung läuft schon, aber Eltern sehen keine Datenschutzinformation. Das Formular bleibt erreichbar. Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein. Dann verschwindet der Hinweis.",
       "Beim Beenden nennt moto Kinder, deren Betreuung nicht beendet werden kann? Wählen Sie unter diesen Kindern `Aus Auswahl nehmen`. Danach können Sie die Betreuung der übrigen Kinder erneut prüfen und beenden.",
       "Der Überblick sagt `Noch keine Anmeldephase`? Dann legen Sie zuerst eine Phase an.",
       "Auf `Betreuungsangebote` steht `Erst eine Anmeldephase anlegen`? Dann fehlt die Phase noch. Angebote gibt es nur innerhalb einer Phase.",
@@ -8449,7 +8456,7 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
         description: "Wie Eltern ihr Kind bei Ihnen anmelden.",
         ordered: false,
         steps: [
-          "`Online-Anmeldung`: Eltern melden ihr Kind über ein Formular im Internet an.",
+          "`Online-Anmeldung`: Eltern melden ihr Kind über ein Formular im Internet an. Einschalten lässt sie sich erst mit einer Datenschutzinformation unter `Rechtstexte`.",
           "`Name der Betreuung in Texten für Eltern`: So heißt Ihre Betreuung in den festen Texten der Anmeldung, der Eltern-App und in den E-Mails dazu. Wählen Sie `OGS`, `GTS` oder `Eigener Name`. Ihre eigenen Texte im Formular ändern sich nicht.",
           "`Empfänger für neue Anmeldungen`: Diese Adressen bekommen bei jeder neuen Anmeldung eine E-Mail.",
           "`Rechtstexte`: Was Eltern im Formular lesen und bestätigen, zum Beispiel die Datenschutzinformation.",
@@ -11494,6 +11501,7 @@ export const traegerBillingTermsTopic =
         "Die Ferienbetreuung hat immer eine eigene Rechnung. Sie steht nie auf der Rechnung der Betreuung.",
         "Bei `Lastschrift` buchen Sie den Betrag selbst ab. Dafür braucht die Familie ein SEPA-Mandat bei Ihnen, und Sie brauchen eine Gläubiger-ID. Ohne Mandat geht die Rechnung als Überweisung. moto bucht kein Geld ab.",
         "Bei `Überweisung` steht auf jedem Schreiben eines Abrechnungslaufs ein QR-Code: auf Rechnung, Gebührenbescheid und Bestätigungsschreiben. Die Familie scannt ihn mit der Banking-App. Empfänger, IBAN, Betrag und Verwendungszweck sind dann schon ausgefüllt.",
+        "Den QR-Code schalten Sie unter `Briefkopf und Vorlagen` bei `GiroCode drucken` aus. Dann steht er auf keinem neuen Schreiben.",
         "Der Verwendungszweck im QR-Code ist die Nummer der Rechnung. Hat die Familie eine Debitorennummer, steht sie dahinter. Bei einem Bescheid heißt sie Buchungszeichen.",
         "Keinen QR-Code haben: Schreiben mit `Lastschrift`, Schreiben mit 0 €, Storno, Gutschrift und Jahresbescheide. Ein Jahresbescheid wird in Raten bezahlt.",
         "Unter `Familien und Zahlung` sehen Sie bei jeder Familie den Zahlungsweg ihrer Rechnungen.",
@@ -11513,11 +11521,12 @@ export const traegerBillingTermsTopic =
         HELP_TOPICS.traegerSepaMandates,
         HELP_TOPICS.traegerCareMonths,
         HELP_TOPICS.traegerBillingRun,
+        HELP_TOPICS.traegerBriefkopf,
       ],
     };
   } satisfies typeof authored_traegerBillingTermsTopic;
 
-/** `/traeger/einstellungen/briefkopf` (#4653, #5685): Logo, Absender und Fußzeile; dazu Ansprechperson und Bankverbindungen. */
+/** `/traeger/einstellungen/briefkopf` (#4653, #5685, #5624): Logo, Absender, Fußzeile und QR-Code zum Überweisen; dazu Ansprechperson und Bankverbindungen. */
 export const traegerBriefkopfTopic =
   function traegerBriefkopfTopic(): HelpTopic {
     return {
@@ -11552,6 +11561,16 @@ export const traegerBriefkopfTopic =
           ],
         },
         {
+          title: "QR-Code zum Überweisen ein- oder ausschalten",
+          description:
+            "Der QR-Code steht auf Rechnung, Gebührenbescheid und Bestätigungsschreiben, wenn die Familie überweist. Er ist von Anfang an eingeschaltet.",
+          steps: [
+            "Wählen Sie in den Einstellungen `Briefkopf und Vorlagen`.",
+            "Schalten Sie bei `GiroCode drucken` den Schalter aus oder ein. Der GiroCode ist der QR-Code zum Überweisen.",
+            "moto speichert die Änderung sofort. Sie gilt für alle Schreiben, die Sie danach erstellen.",
+          ],
+        },
+        {
           title: "Ansprechperson eintragen",
           steps: [
             "Wählen Sie in den Einstellungen `Allgemein` und dann den Bereich `Kontakt`.",
@@ -11578,6 +11597,7 @@ export const traegerBriefkopfTopic =
         "Eine Bankverbindung ist der `Standard`. Sie steht auf allen Briefen und Rechnungen. Auch der QR-Code zum Überweisen nimmt diese Bankverbindung.",
         "Eine andere Bankverbindung machen Sie im Menü der Zeile mit `Als Standard festlegen` zum Standard.",
         "Löschen Sie den Standard, wird die älteste andere Bankverbindung der Standard.",
+        "Schreiben, die schon erstellt sind, ändern sich nicht. Sie behalten ihren QR-Code oder bleiben ohne.",
         "Jedes Ansehen und jede Änderung von Ansprechperson und Bankverbindungen steht im Protokoll des Trägers.",
       ],
       differences: [
