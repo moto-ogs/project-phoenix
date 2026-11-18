@@ -1,0 +1,93 @@
+package migrations
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/uptrace/bun"
+)
+
+const accountParentPushSubscriptionsVersion = "20261118201328"
+
+func init() {
+	MigrationRegistry.Register(&Migration{
+		Version:     accountParentPushSubscriptionsVersion,
+		Description: "Geräte für Elternbenachrichtigungen am Konto speichern",
+		DependsOn:   []string{deliveryPushViewWithoutSessionClockVersion},
+	})
+	Migrations.MustRegister(accountParentPushSubscriptionsUp, accountParentPushSubscriptionsDown)
+}
+
+// Only a parent device can have no school. Existing school-bound parent
+// registrations remain readable and are replaced when the device next syncs.
+// The projection assigns a school for delivery, not for device ownership.
+func accountParentPushSubscriptionsUp(ctx context.Context, db *bun.DB) error {
+	_, err := db.ExecContext(ctx, `
+		ALTER TABLE iot.push_subscriptions
+			ALTER COLUMN tenant_id DROP NOT NULL,
+			ADD CONSTRAINT push_subscription_school_required CHECK (tenant_id IS NOT NULL OR portal = 'parent');
+		CREATE UNIQUE INDEX push_subscription_parent_device
+			ON iot.push_subscriptions (endpoint) WHERE portal = 'parent' AND tenant_id IS NULL;
+
+		CREATE POLICY tenant_read_account_parent_push ON iot.push_subscriptions
+			FOR SELECT TO phoenix_tenant
+			USING (tenant_id IS NULL AND portal = 'parent' AND EXISTS (
+				SELECT 1 FROM auth.account_tenants AS membership
+				JOIN auth.account_roles AS assignment USING (tenant_id, account_id)
+				JOIN auth.roles AS role ON role.id = assignment.role_id
+				WHERE membership.account_id = push_subscriptions.account_id
+				  AND membership.tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::bigint
+				  AND membership.status = 'active'
+				  AND LOWER(role.name) = 'guardian'
+			));
+
+		CREATE OR REPLACE VIEW platform.delivery_push_subscriptions
+		WITH (security_invoker = true, security_barrier = true) AS
+		SELECT device.id, "push_subscription".tenant_id, "push_subscription".account_id, device.portal, device.endpoint,
+			device.p256dh, device.auth, device.user_agent, device.created_at, device.updated_at, device.token_family_id
+	`+deliveryPushViewEligibility+`
+		FROM iot.push_subscriptions AS device
+		LEFT JOIN auth.account_tenants AS "account_tenant"
+			ON "account_tenant".account_id = device.account_id
+			AND (device.tenant_id IS NULL OR "account_tenant".tenant_id = device.tenant_id)
+		CROSS JOIN LATERAL (
+			SELECT device.account_id, COALESCE(device.tenant_id, "account_tenant".tenant_id) AS tenant_id
+		) AS "push_subscription"
+		LEFT JOIN auth.accounts AS "account" ON "account".id = device.account_id;
+	`)
+	if err != nil {
+		return fmt.Errorf("enable account-level parent push subscriptions: %w", err)
+	}
+	return nil
+}
+
+func accountParentPushSubscriptionsDown(ctx context.Context, db *bun.DB) error {
+	// Restore school-bound devices where the old model can represent them.
+	// Accounts without an active guardian school cannot be restored by it.
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO iot.push_subscriptions
+			(tenant_id, account_id, portal, endpoint, p256dh, auth, user_agent, created_at, updated_at, token_family_id)
+		SELECT membership.tenant_id, device.account_id, device.portal, device.endpoint,
+			device.p256dh, device.auth, device.user_agent, device.created_at, device.updated_at, device.token_family_id
+		FROM iot.push_subscriptions AS device
+		JOIN auth.account_tenants AS membership ON membership.account_id = device.account_id AND membership.status = 'active'
+		WHERE device.tenant_id IS NULL AND EXISTS (
+			SELECT 1 FROM auth.account_roles AS assignment
+			JOIN auth.roles AS role ON role.id = assignment.role_id
+			WHERE assignment.account_id = membership.account_id
+			  AND assignment.tenant_id = membership.tenant_id
+			  AND LOWER(role.name) = 'guardian'
+		)
+		ON CONFLICT (tenant_id, portal, endpoint) DO NOTHING;
+		DELETE FROM iot.push_subscriptions WHERE tenant_id IS NULL;
+		DROP POLICY tenant_read_account_parent_push ON iot.push_subscriptions;
+		DROP INDEX iot.push_subscription_parent_device;
+		ALTER TABLE iot.push_subscriptions
+			DROP CONSTRAINT push_subscription_school_required,
+			ALTER COLUMN tenant_id SET NOT NULL;
+	`+deliveryPushViewColumns+deliveryPushViewSources)
+	if err != nil {
+		return fmt.Errorf("restore school-level parent push subscriptions: %w", err)
+	}
+	return nil
+}

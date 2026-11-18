@@ -37,11 +37,10 @@ func newMockPushSubscriptionService(
 	t testing.TB,
 	db *bun.DB,
 	repo deliveryPorts.PushSubscriptionRepository,
-	accountTenants GuardianSchools,
 	vapid VAPIDConfig,
 	logger *slog.Logger,
 ) PushSubscriptionService {
-	service := NewPushSubscriptionService(db, repo, accountTenants, vapid, logger)
+	service := NewPushSubscriptionService(db, repo, vapid, logger)
 	service.(*pushSubscriptionService).tenantRuntime = new(newMockTenantRuntime(t, db))
 	return service
 }

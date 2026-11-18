@@ -22,7 +22,9 @@ const deliveryPushViewColumns = `
 	CREATE OR REPLACE VIEW platform.delivery_push_subscriptions
 	WITH (security_invoker = true, security_barrier = true) AS
 	SELECT
-		"push_subscription".*,
+		"push_subscription".*` + deliveryPushViewEligibility
+
+const deliveryPushViewEligibility = `,
 		COALESCE("account".active, FALSE) AS account_active,
 		COALESCE("account_tenant".status = 'active', FALSE) AS tenant_active,
 		EXISTS (
