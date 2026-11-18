@@ -10,6 +10,7 @@ import {
   OVERLAY_BACKDROP_TINT_CLASS,
   Z_LAYER,
 } from "./overlay-styles";
+import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 type DrawerDirection = "bottom" | "left";
 
@@ -68,8 +69,7 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 // outer edge is flush against the viewport so nothing's there to round.
 // Width caps live in className overrides at the call site.
 const directionContentClasses: Record<DrawerDirection, string> = {
-  bottom:
-    "fixed inset-x-0 bottom-0 mt-24 flex h-auto max-h-[90vh] flex-col rounded-t-2xl",
+  bottom: `fixed inset-x-0 bottom-0 mt-24 flex h-auto max-h-[90vh] flex-col rounded-t-2xl ${FIXED_LAYER_SHIFT}`,
   left: "fixed inset-y-0 left-0 flex h-full w-full max-w-lg flex-col",
 };
 

@@ -11,6 +11,7 @@ import {
   type RefObject,
 } from "react";
 import { Z_LAYER } from "./overlay-styles";
+import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 import { MotoNavIcon } from "~/components/ui/moto-nav-icon";
 import NavigationLink, {
   type NavigationLinkProps,
@@ -248,7 +249,7 @@ export function PortalBottomNav({
   return (
     <nav
       aria-label={label}
-      className={`fixed inset-x-0 bottom-0 ${Z_LAYER.nav} lg:hidden print:hidden ${className}`}
+      className={`fixed inset-x-0 bottom-0 ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT} lg:hidden print:hidden ${className}`}
     >
       {/* Die Leiste schwebt, ihr Rand ist also durchsichtig — ohne diesen
           Verlauf laeuft der Inhalt daneben und darunter sichtbar weiter und

@@ -19,6 +19,7 @@ import {
   subscribeInstallPrompt,
   triggerInstallPrompt,
 } from "~/lib/pwa-install-prompt";
+import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 export {
   isAndroidDevice,
@@ -187,7 +188,7 @@ export function PwaInstallHint({
     // oxlint-disable-next-line ui-kit/no-hand-rolled-surface -- schwebender Installationshinweis in Markengrün über der Seite, keine Inhaltskarte
     <section
       aria-labelledby="pwa-install-hint-title"
-      className="fixed bottom-[calc(5.75rem+var(--moto-floating-fab-offset,0rem)+var(--moto-checkin-bar-offset,0rem)+env(safe-area-inset-bottom))] left-1/2 z-40 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border-2 p-4 shadow-lg lg:bottom-8"
+      className={`fixed bottom-[calc(5.75rem+var(--moto-floating-fab-offset,0rem)+var(--moto-checkin-bar-offset,0rem)+env(safe-area-inset-bottom))] left-1/2 z-40 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border-2 p-4 shadow-lg lg:bottom-8 ${FIXED_LAYER_SHIFT}`}
       style={{
         borderColor: GROUP_ROOM_SHADES.base,
         backgroundColor: GROUP_ROOM_SHADES.bgHover,
