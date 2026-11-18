@@ -4496,7 +4496,17 @@ function rowColumnCandidates(child) {
 
 function expressionCandidates(expression) {
   if (expression.type === "JSXEmptyExpression") return [];
-  if (expression.type === "Literal" && expression.value === null) return [];
+  if (
+    expression.type === "Literal" &&
+    (expression.value === null ||
+      expression.value === false ||
+      expression.value === "")
+  ) {
+    return [];
+  }
+  if (expression.type === "Identifier" && expression.name === "undefined") {
+    return [];
+  }
   if (expression.type === "JSXElement" || expression.type === "JSXFragment") {
     return [expression];
   }
@@ -4509,8 +4519,32 @@ function expressionCandidates(expression) {
   if (expression.type === "LogicalExpression") {
     return expressionCandidates(expression.right);
   }
-  // `{children}`, `{actions(hint)}`: der Aufrufer liefert die Spalte.
-  return null;
+  // `{children}` / `{props.children}`: der Aufrufer der Zeile liefert die
+  // Spalte und wird selbst geprüft. Jede andere Variable oder jeder Aufruf
+  // (`{actions}`, `{renderActions()}`) verbirgt eine Spalte: Fund.
+  if (isChildrenReference(expression)) return [];
+  return [expression];
+}
+
+function isChildrenReference(expression) {
+  if (expression.type === "Identifier") return expression.name === "children";
+  return (
+    expression.type === "MemberExpression" &&
+    !expression.computed &&
+    expression.property.type === "Identifier" &&
+    expression.property.name === "children"
+  );
+}
+
+// Breite und Selbstausrichtung einer Aktion im Slot entscheidet der Slot.
+const SLOT_CHILD_LAYOUT_RE =
+  /^(?:w-|min-w-|max-w-|self-|basis-|flex-(?:1|auto|initial|none)$|grow|shrink(?!-0$))/;
+
+function slotChildSetsLayout(text) {
+  return text
+    .split(/\s+/)
+    .filter(Boolean)
+    .some((token) => SLOT_CHILD_LAYOUT_RE.test(bareUtility(token)));
 }
 
 const rowActionsSlot = {
@@ -4523,6 +4557,8 @@ const rowActionsSlot = {
     messages: {
       ownColumn:
         "Die Aktionsspalte einer ResponsiveActionRow ist ResponsiveRowActions (~/components/ui/responsive-action-list): Knöpfe als Kinder, Kebab-Menü in `menu`, Feld mit `field`, Symbol vorn mit `leading` (#7456).",
+      childLayout:
+        "Breite und Ausrichtung einer Aktion in ResponsiveRowActions setzt der Slot; nur Abstand und Inhalt am Knopf (#7456).",
     },
     schema: [],
   },
@@ -4553,6 +4589,29 @@ const rowActionsSlot = {
           if (name !== ROW_ACTIONS_SLOT) {
             context.report({ node: element, messageId: "ownColumn" });
           }
+        }
+      },
+      JSXOpeningElement(node) {
+        let parent = node.parent?.parent;
+        while (
+          parent?.type === "JSXExpressionContainer" ||
+          parent?.type === "ConditionalExpression" ||
+          parent?.type === "LogicalExpression"
+        ) {
+          parent = parent.parent;
+        }
+        if (
+          parent?.type !== "JSXElement" ||
+          jsxName(parent.openingElement.name) !== ROW_ACTIONS_SLOT
+        ) {
+          return;
+        }
+        const className = jsxAttribute(node, "className");
+        if (!className?.value) return;
+        const chunks = [];
+        collectStaticStrings(className.value, chunks);
+        if (chunks.some(slotChildSetsLayout)) {
+          context.report({ node: className, messageId: "childLayout" });
         }
       },
     };
@@ -6726,7 +6785,8 @@ const GRAY_400_TEXT_RE =
 const GRAY_400_RING_RE =
   /(?<![\w:/-])((?:[\w-]+:)*)!?ring-gray-400(?:\/[\w.[\]]+)?!?(?![\w/-])/g;
 const ICON_ELEMENT_RE = /(?:Icon|^svg)$/;
-const FOCUS_RING_WIDTH_RE = /(?<![\w-])(?:[\w-]+:)*focus[\w-]*:ring(?:-\d+)?(?![\w/-])/;
+const FOCUS_RING_WIDTH_RE =
+  /(?<![\w-])(?:[\w-]+:)*focus[\w-]*:ring(?:-\d+)?(?![\w/-])/;
 
 function classOfIconElement(node) {
   let current = node.parent;

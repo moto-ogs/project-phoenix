@@ -4797,6 +4797,38 @@ describe.concurrent("ui-kit row actions slot (#7456)", () => {
     expect(menu).toContain(rule);
   });
 
+  it("reports a column hidden in a variable or call, and width set on an action in the slot", async () => {
+    const [variable, call, width, conditionalWidth, undef] = await Promise.all([
+      outputOf(
+        `<ResponsiveActionRow><p>Text</p>{actions}</ResponsiveActionRow>`,
+      ),
+      outputOf(
+        `<ResponsiveActionRow><p>Text</p>{renderActions()}</ResponsiveActionRow>`,
+      ),
+      outputOf(
+        `<ResponsiveRowActions><Button className="w-full sm:w-auto" /></ResponsiveRowActions>`,
+      ),
+      outputOf(
+        `<ResponsiveRowActions>{ok ? <Button className="max-sm:w-full" /> : null}</ResponsiveRowActions>`,
+      ),
+      outputOf(
+        `<ResponsiveActionRow><p>Text</p>{ok ? <div className="flex" /> : undefined}{ok ? "" : false}</ResponsiveActionRow>`,
+      ),
+    ]);
+    expect(variable).toContain(rule);
+    expect(call).toContain(rule);
+    expect(width).toContain(rule);
+    expect(conditionalWidth).toContain(rule);
+    expect(undef).toContain(rule);
+  });
+
+  it("allows spacing and content classes on an action in the slot", async () => {
+    const output = await outputOf(
+      `<ResponsiveRowActions menu={<span className="size-8 shrink-0" />}><Button className="gap-1.5 whitespace-nowrap" /></ResponsiveRowActions>`,
+    );
+    expect(output).not.toContain(rule);
+  });
+
   it("allows the slot, rows without actions, passed-in children and the kit", async () => {
     const [slot, conditional, textOnly, passed, extraRows, kit] =
       await Promise.all([
@@ -4808,7 +4840,7 @@ describe.concurrent("ui-kit row actions slot (#7456)", () => {
         ),
         outputOf(`<ResponsiveActionRow><p>Text</p></ResponsiveActionRow>`),
         outputOf(
-          `<ResponsiveActionRow><p>Text</p>{children}</ResponsiveActionRow>`,
+          `<ResponsiveActionRow><p>Text</p>{children}{props.children}</ResponsiveActionRow>`,
         ),
         outputOf(
           `<ResponsiveActionRow><p>Text</p><ResponsiveRowActions><Button /></ResponsiveRowActions><div className="sm:col-span-2">Form</div></ResponsiveActionRow>`,

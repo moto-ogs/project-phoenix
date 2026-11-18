@@ -200,7 +200,7 @@ function RegisterLink({ offer }: Readonly<{ offer: HolidayOffer }>) {
       href={holidayRegistrationPath(offer.token)}
       variant="primary"
       size="md"
-      className="shrink-0 gap-2 max-sm:w-full"
+      className="shrink-0 gap-2"
       aria-label={t("holiday.registerLabel", { name: offer.name })}
       tooltip={t("holiday.registerTooltip")}
     >
