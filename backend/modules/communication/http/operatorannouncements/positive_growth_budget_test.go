@@ -123,7 +123,7 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 			switch entry.name {
 			case "unread":
 				var out struct {
-					Data []platformHTTP.AnnouncementResponse
+					Data []platformHTTP.PlatformAnnouncementResponse
 				}
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data, n)
@@ -165,5 +165,23 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 				querybudgets.AssertQueryBudget(t, "communication.platform_announcements.views.positive_growth", counter.Measurement(counter.Queries()))
 			}
 		}
+	}
+
+	// The viewer dismisses one announcement; it leaves their unread list.
+	platform := testpkg.MountedQueryBudgetRouter("/api/platform", platformRouter)
+	send := func(method, path string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, path, nil).WithContext(ctx)
+		req.Header.Set("Authorization", "Bearer "+token)
+		return testutil.ExecuteRequestForTest(t, platform, req)
+	}
+	rec := send("POST", fmt.Sprintf("/announcements/%d/dismiss", viewedID))
+	require.Equal(t, 200, rec.Code, rec.Body.String())
+	rec = send("GET", "/announcements/unread")
+	require.Equal(t, 200, rec.Code, rec.Body.String())
+	var unread struct{ Data []platformHTTP.PlatformAnnouncementResponse }
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &unread))
+	require.Len(t, unread.Data, len(expectedTitles)-1)
+	for _, row := range unread.Data {
+		require.NotEqual(t, viewedID, row.ID)
 	}
 }

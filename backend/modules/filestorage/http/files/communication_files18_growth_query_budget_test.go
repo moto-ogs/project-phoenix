@@ -95,7 +95,7 @@ func TestCommunicationFiles18PositiveGrowthQueryBudget(t *testing.T) {
 			require.False(t, file.UploadedAt.IsZero())
 			files = append([]filesHTTP.FileResponse{file}, files...)
 		}
-		folders[0].FileCount = int64(n)
+		folders[0].FileCount = n
 		slices.SortFunc(roles, func(a, b filesHTTP.AudienceRoleResponse) int {
 			return collation.CompareGerman(a.Name, b.Name)
 		})
@@ -131,8 +131,8 @@ func TestCommunicationFiles18PositiveGrowthQueryBudget(t *testing.T) {
 				require.True(t, got.CanManage)
 				require.True(t, got.CanUpload)
 				require.False(t, got.StaffUploadEnabled)
-				require.Equal(t, int64(n*len(fakePDF)), got.UsedBytes)
-				require.Equal(t, int64(1<<30), got.MaxBytes)
+				require.Equal(t, n*len(fakePDF), got.UsedBytes)
+				require.Equal(t, 1<<30, got.MaxBytes)
 				if n == 3 {
 					querybudgets.AssertQueryBudget(t, "api.files.folders.communication18.n3", counter.Measurement(counter.Queries()))
 				} else {

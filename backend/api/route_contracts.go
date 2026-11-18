@@ -2,6 +2,15 @@ package api
 
 import (
 	"fmt"
+	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
+	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
+	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
+	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
+	mealplanHTTP "github.com/moto-ogs/project-phoenix/modules/mealplan/http"
+	guardiansHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
+	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
+	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
+	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
 	"reflect"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -94,6 +103,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts := append(contractMounts(), traegerBillingContractMounts()...)
 	mounts = append(mounts, operatorContractMounts()...)
 	mounts = append(mounts, traegerContractMounts()...)
+	mounts = append(mounts, staffPortalContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err
@@ -355,4 +365,124 @@ func parentPortalRouteContracts() []common.RouteContract {
 		EnrollmentSubmit:        enrollmentHTTP.SubmitEnrollmentResponse{},
 		ContractSigning:         carecontract.SigningView{},
 	})
+}
+
+// staffPortalContractMounts lists the staff portal's routes that left their
+// pass-through route files in #2352.
+func staffPortalContractMounts() []contractMount {
+	return []contractMount{
+		{"/api/surveys", announcementAPI.SurveyRouteContracts()},
+		{"/api/messages", parentMessagingAPI.RouteContracts()},
+		{"/api/guardians", guardianRouteContracts()},
+		{"/api/files", filestoreAPI.RouteContracts()},
+		{"/api/enrollment/phases", enrollmentHTTP.PhaseRouteContracts()},
+		{"/api/holiday-closure-notices", holidayClosureHTTP.SchoolRouteContracts()},
+		{"/api/rooms", roomsHTTP.RouteContracts()},
+		{"/api/traeger-documents", organizationTenancyTraeger.SchoolDocumentRouteContracts()},
+		{"/api/meal-caterer", catererPortalHTTP.SchoolRouteContracts()},
+		{"/api/class-list-entries", classListEntryRouteContracts()},
+		{"/api", schoolSetupRouteContracts()},
+		{"/api/staff-pool", workforceTraegerStaff.SchoolPoolRouteContracts()},
+		{"/api", mealPlanRouteContracts()},
+		{"/api/settings", settingsRouteContracts()},
+		// The platform announcements' http role may not import the contract
+		// types; the root names their answer.
+		{"/api/platform", []common.RouteContract{
+			{Method: "GET", Pattern: "/announcements/unread", Portals: []common.PortalScope{common.PortalTenant}, Response: []platformAnnouncementsHTTP.PlatformAnnouncementResponse{}},
+			{Method: "POST", Pattern: "/announcements/{id}/dismiss", Portals: []common.PortalScope{common.PortalTenant}, NoData: true},
+		}},
+		// Delivery's http role may not import the contract types; the report
+		// answers no data.
+		{"/api/pwa", []common.RouteContract{{Method: "POST", Pattern: "/usage", Portals: []common.PortalScope{common.PortalTenant}, NoData: true}}},
+		{"/api/announcement-attachments", filestoreAPI.AnnouncementAttachmentRouteContracts()},
+	}
+}
+
+// guardianRouteContracts registers the guardian routes of the staff portal,
+// with patterns relative to /api/guardians. People Directory's http role may
+// not import the contract types, so it hands over the body types only.
+func guardianRouteContracts() []common.RouteContract {
+	types := guardiansHTTP.RouteContractTypes()
+	portals := []common.PortalScope{common.PortalTenant}
+	search := []common.QueryParam{{Name: "q", Kind: common.QueryString}, {Name: "page", Kind: common.QueryInt}, {Name: "page_size", Kind: common.QueryInt}}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/search", Portals: portals, Query: search, Paginated: true, Response: types.Pickers},
+		{Method: "GET", Pattern: "/{id}/delete-preview", Portals: portals, Response: types.DeletePreview},
+		{Method: "POST", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
+		{Method: "DELETE", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
+		{Method: "DELETE", Pattern: "/{id}/email-block", Portals: portals, NoData: true},
+		{Method: "GET", Pattern: "/{id}/payment", Portals: portals, Response: types.PaymentMasked},
+		{Method: "PUT", Pattern: "/{id}/payment", Portals: portals, Request: types.PaymentRequest, NoData: true},
+		{Method: "POST", Pattern: "/{id}/payment/reveal", Portals: portals, Response: types.PaymentReveal},
+		{Method: "GET", Pattern: "/{id}/phone-numbers/", Portals: portals, Response: types.Phones},
+		{Method: "POST", Pattern: "/{id}/phone-numbers/", Portals: portals, Request: types.PhoneCreate, Response: types.Phone},
+		{Method: "PUT", Pattern: "/{id}/phone-numbers/{phoneId}", Portals: portals, Request: types.PhoneUpdate, Response: types.Phone},
+		{Method: "DELETE", Pattern: "/{id}/phone-numbers/{phoneId}", Portals: portals, NoData: true},
+		{Method: "POST", Pattern: "/{id}/phone-numbers/{phoneId}/set-primary", Portals: portals, Response: types.Phone},
+		{Method: "POST", Pattern: "/bulk-invite", Portals: portals, Request: types.BulkInviteRequest, Response: types.BulkInvite},
+		{Method: "GET", Pattern: "/invitations/pending-approval", Portals: portals, Response: types.Approvals},
+		{Method: "GET", Pattern: "/payment-overview", Portals: portals, Response: types.Overview},
+		{Method: "PUT", Pattern: "/relationships/{relationshipId}", Portals: portals, Request: types.LinkUpdate, NoData: true},
+		{Method: "GET", Pattern: "/students/{studentId}/guardians", Portals: portals, Response: types.WithRelationships},
+		{Method: "POST", Pattern: "/students/{studentId}/guardians", Portals: portals, Request: types.LinkRequest, Response: types.Link},
+		{Method: "POST", Pattern: "/students/{studentId}/guardians/batch", Portals: portals, Request: types.BatchRequest, NoData: true},
+		{Method: "DELETE", Pattern: "/students/{studentId}/guardians/{guardianId}", Portals: portals, NoData: true},
+		{Method: "GET", Pattern: "/students/{studentId}/email-status", Portals: portals, Response: types.EmailStatuses},
+		{Method: "POST", Pattern: "/students/{studentId}/invite", Portals: portals, Request: types.InviteRequest, Response: types.Invite},
+		{Method: "PUT", Pattern: "/students/{studentId}/payer", Portals: portals, Request: types.PayerRequest, NoData: true},
+	}
+}
+
+// classListEntryRouteContracts registers the class list entries (#2352),
+// with patterns relative to /api/class-list-entries. School Membership's
+// http role may not import the contract types.
+func classListEntryRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Response: []classListHTTP.ClassListEntryResponse{}},
+		{Method: "POST", Pattern: "/", Portals: portals, Request: classListHTTP.ClassListEntryRequest{}, Response: classListHTTP.ClassListEntryResponse{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: classListHTTP.ClassListEntryRequest{}, Response: classListHTTP.ClassListEntryResponse{}},
+		{Method: "DELETE", Pattern: "/{id}", Portals: portals, NoData: true},
+		{Method: "POST", Pattern: "/{id}/assign", Portals: portals, Request: classListHTTP.ClassListAssignRequest{}, NoData: true},
+	}
+}
+
+// schoolSetupRouteContracts registers the onboarding wizard of a school
+// (#2832) and the first steps of a care worker (#3748), with patterns
+// relative to /api. Every write answers the fresh state.
+func schoolSetupRouteContracts() []common.RouteContract {
+	types := schoolSetupHTTP.RouteContractTypes()
+	portals := []common.PortalScope{common.PortalTenant}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/school-setup/", Portals: portals, Response: schoolsetup.Status{}},
+		{Method: "PUT", Pattern: "/school-setup/steps/{step}", Portals: portals, Request: types.Skip, Response: schoolsetup.Status{}},
+		{Method: "POST", Pattern: "/school-setup/complete", Portals: portals, Response: schoolsetup.Status{}},
+		{Method: "PUT", Pattern: "/school-setup/dismissal", Portals: portals, Request: types.Dismissal, Response: schoolsetup.Status{}},
+		{Method: "GET", Pattern: "/staff-onboarding/", Portals: portals, Response: schoolsetup.StaffStatus{}},
+		{Method: "PUT", Pattern: "/staff-onboarding/steps/{step}", Portals: portals, Request: types.StepState, Response: schoolsetup.StaffStatus{}},
+		{Method: "PUT", Pattern: "/staff-onboarding/dismissal", Portals: portals, Request: types.Dismissal, Response: schoolsetup.StaffStatus{}},
+	}
+}
+
+// mealPlanRouteContracts registers the meal plan reads and registrations of
+// the staff portal and the Mensa months (#2352), with patterns relative to
+// /api. The meal plan's http role may not import the contract types.
+func mealPlanRouteContracts() []common.RouteContract {
+	types := mealplanHTTP.RouteContractTypes()
+	portals := []common.PortalScope{common.PortalTenant}
+	window := []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate}}
+	daily := []common.QueryParam{{Name: "date", Kind: common.QueryDate}, {Name: "include", Kind: common.QueryString}}
+	week := []common.QueryParam{{Name: "week_start", Kind: common.QueryDate}}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/meal-plan/orders", Portals: portals, Query: window, Response: types.Orders},
+		{Method: "GET", Pattern: "/meal-plan/participants", Portals: portals, Query: daily, Response: types.DailyList},
+		{Method: "GET", Pattern: "/meal-plan/participants/week", Portals: portals, Query: week, Response: types.WeeklyList},
+		{Method: "GET", Pattern: "/meal-plan/participation/{studentId}", Portals: portals, Query: window, Response: types.ChildParticipation},
+		{Method: "PUT", Pattern: "/meal-plan/participation/{studentId}/days/{date}", Portals: portals, Request: types.ChildDay, NoData: true},
+		{Method: "DELETE", Pattern: "/meal-plan/participation/{studentId}/days/{date}", Portals: portals, NoData: true},
+		{Method: "PUT", Pattern: "/meal-plan/participation/{studentId}/schedule", Portals: portals, Request: types.ChildSchedule, Response: types.ScheduleChanged},
+		{Method: "GET", Pattern: "/meal-billing-months/", Portals: portals, Response: types.BillingMonths},
+		{Method: "GET", Pattern: "/meal-billing-months/{month}", Portals: portals, Response: types.BillingMonth},
+		{Method: "POST", Pattern: "/meal-billing-months/{month}/release", Portals: portals, Request: types.BillingMonthRelease, Response: types.BillingMonth},
+	}
 }

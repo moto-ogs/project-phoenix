@@ -1,5 +1,0 @@
-{
-  "api/pwa/usage": [
-    "POST tenant /api/pwa/usage"
-  ]
-}

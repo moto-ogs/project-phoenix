@@ -7,7 +7,17 @@ import {
   int64StringOrNumber,
   object,
   safeInt,
+  type OpenEnum,
 } from "./runtime";
+
+export const GUARDIAN_CONTACT_METHOD_VALUES = ["email", "mobile", "phone", "sms"] as const;
+export type GuardianContactMethod = (typeof GUARDIAN_CONTACT_METHOD_VALUES)[number];
+
+export const GUARDIAN_PHONE_TYPE_VALUES = ["home", "mobile", "other", "work"] as const;
+export type GuardianPhoneType = (typeof GUARDIAN_PHONE_TYPE_VALUES)[number];
+
+export const GUARDIAN_RELATIONSHIP_TYPE_VALUES = ["guardian", "other", "parent", "relative"] as const;
+export type GuardianRelationshipType = (typeof GUARDIAN_RELATIONSHIP_TYPE_VALUES)[number];
 
 /** Go: absencetypes.AllowanceCarryResponse */
 export interface AllowanceCarryResponse {
@@ -72,6 +82,53 @@ export interface feedCountResponse {
 export const feedCountResponseSchema: z.ZodType<feedCountResponse, unknown> = object<feedCountResponse>({
   unread_count: safeInt,
 });
+
+/** Go: peopledirectory.NewGuardianPhone */
+export interface NewGuardianPhone {
+  phone_number?: string;
+  phone_type?: OpenEnum<GuardianPhoneType>;
+  label?: string;
+  is_primary?: boolean;
+}
+
+/** Go: peopledirectory.NewStudentGuardian */
+export interface NewStudentGuardian {
+  guardian_profile_id?: number | null;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  address_street?: string;
+  address_city?: string;
+  address_postal_code?: string;
+  preferred_contact_method?: OpenEnum<GuardianContactMethod>;
+  language_preference?: string;
+  notes?: string;
+  relationship_type?: OpenEnum<GuardianRelationshipType>;
+  guardian_role?: string;
+  is_primary?: boolean;
+  is_emergency_contact?: boolean;
+  can_pickup?: boolean;
+  pickup_notes?: string;
+  emergency_priority?: number;
+  phone_numbers?: NewGuardianPhone[] | null;
+}
+
+/** Go: holidayclosurenotification.Range */
+export interface Range {
+  start_date: string | null;
+  end_date: string | null;
+}
+
+export const RangeSchema: z.ZodType<Range, unknown> = object<Range>({
+  start_date: calendarDate.nullable(),
+  end_date: calendarDate.nullable(),
+});
+
+/** Go: http.NotifyRequest */
+export interface NotifyRequest {
+  token?: string;
+  revision?: number;
+}
 
 /** Go: notifications.feedEntryResponse */
 export interface feedEntryResponse {
@@ -1031,6 +1088,11 @@ export interface InvitationAnswer {
   occurrence_date?: string | null;
 }
 
+/** Go: schoolsetuphttp.dismissalRequest */
+export interface dismissalRequest {
+  dismissed?: boolean;
+}
+
 /** Go: staffmessaging.InboxThreadResponse */
 export interface InboxThreadResponse {
   thread_id: string;
@@ -1798,6 +1860,78 @@ export interface SessionUpdateRequest {
   notes?: string | null;
   breaks?: BreakDurationUpdate[] | null;
 }
+
+/** Go: workforce.PoolProofStatus */
+export interface PoolProofStatus {
+  type_name: string;
+  status: string;
+  expires_on?: string;
+}
+
+export const PoolProofStatusSchema: z.ZodType<PoolProofStatus, unknown> = object<PoolProofStatus>({
+  type_name: z.string(),
+  status: z.string(),
+  expires_on: calendarDate.optional(),
+});
+
+/** Go: workforce.PoolBlock */
+export interface PoolBlock {
+  id?: string;
+  school_id: string;
+  school_name: string;
+  own: boolean;
+  date: string | null;
+  start_time: string;
+  end_time: string;
+  lifted: boolean;
+}
+
+export const PoolBlockSchema: z.ZodType<PoolBlock, unknown> = object<PoolBlock>({
+  id: int64StringOrNumber.optional(),
+  school_id: int64StringOrNumber,
+  school_name: z.string(),
+  own: z.boolean(),
+  date: calendarDate.nullable(),
+  start_time: z.string(),
+  end_time: z.string(),
+  lifted: z.boolean(),
+});
+
+/** Go: workforce.PoolSpringer */
+export interface PoolSpringer {
+  staff_record_id: string;
+  first_name: string;
+  last_name: string;
+  pool_from: string | null;
+  pool_until: string | null;
+  proofs: PoolProofStatus[] | null;
+  blocks: PoolBlock[] | null;
+}
+
+export const PoolSpringerSchema: z.ZodType<PoolSpringer, unknown> = object<PoolSpringer>({
+  staff_record_id: int64StringOrNumber,
+  first_name: z.string(),
+  last_name: z.string(),
+  pool_from: calendarDate.nullable(),
+  pool_until: calendarDate.nullable(),
+  proofs: z.array(PoolProofStatusSchema).nullable(),
+  blocks: z.array(PoolBlockSchema).nullable(),
+});
+
+/** Go: workforce.PoolWeek */
+export interface PoolWeek {
+  week_start: string | null;
+  today: string | null;
+  available: boolean;
+  springers: PoolSpringer[] | null;
+}
+
+export const PoolWeekSchema: z.ZodType<PoolWeek, unknown> = object<PoolWeek>({
+  week_start: calendarDate.nullable(),
+  today: calendarDate.nullable(),
+  available: z.boolean(),
+  springers: z.array(PoolSpringerSchema).nullable(),
+});
 
 /** Go: staffshifts.ShiftResponse */
 export interface ShiftResponse {

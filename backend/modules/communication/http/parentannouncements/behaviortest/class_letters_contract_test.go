@@ -69,6 +69,28 @@ func (s *classLetterContract) PublishParentAnnouncement(ctx context.Context, id 
 	return &letter, nil
 }
 
+func (s *classLetterContract) UnpublishParentAnnouncement(ctx context.Context, id int64) (*communication.ParentAnnouncement, error) {
+	s.record(ctx, "unpublish")
+	letter := s.letters[id]
+	return &letter, nil
+}
+
+func (s *classLetterContract) DeleteParentAnnouncement(ctx context.Context, id int64) error {
+	s.record(ctx, "delete")
+	delete(s.letters, id)
+	return nil
+}
+
+func (s *classLetterContract) RemindParentAnnouncement(ctx context.Context, _ int64) (int, error) {
+	s.record(ctx, "remind")
+	return 2, nil
+}
+
+func (s *classLetterContract) ResendParentAnnouncementEmails(ctx context.Context, _ int64) (int, error) {
+	s.record(ctx, "resend-failed")
+	return 1, nil
+}
+
 func (s *classLetterContract) ParentAnnouncementLetterStatus(ctx context.Context, _ int64) (*communication.ParentAnnouncementLetterStatus, error) {
 	s.record(ctx, "letter-status")
 	return &communication.ParentAnnouncementLetterStatus{}, nil
@@ -100,7 +122,7 @@ func newClassLetterRoute(t *testing.T) *classLetterRoute {
 	resource.Classes = classReach{classes: []string{"3b"}}
 	return &classLetterRoute{
 		contract: contract,
-		router:   resource.SchoolRouter(rootAPI.ProtectedSchoolRoutes),
+		router:   mounted(schoolMount, resource.SchoolRouter(rootAPI.ProtectedSchoolRoutes)),
 		claims: sessiontoken.AppClaims{ID: int(account.ID), Sub: account.Email, Roles: []string{"lehrkraft"},
 			TenantID: testpkg.Tenant(t), Scope: tenant.ScopeSchool},
 	}
@@ -108,7 +130,7 @@ func newClassLetterRoute(t *testing.T) *classLetterRoute {
 
 func (r *classLetterRoute) do(t *testing.T, method, path, body string, perms ...string) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req := httptest.NewRequest(method, schoolMount+path, strings.NewReader(body))
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -178,6 +200,42 @@ func TestClassLetterRoutesReachOnlyTheOwnLetters(t *testing.T) {
 	out = route.do(t, "GET", "/11/letter-status", "", writePermission)
 	require.Equal(t, 200, out.Code, "the own letter stays readable")
 
+	for _, author := range route.contract.authors {
+		assert.Equal(t, int64(route.claims.ID), author)
+	}
+}
+
+// TestClassLetterRoutesManageTheOwnLetter pins the writes of moto schule on
+// a sent letter: the Lehrkraft reminds, resends, withdraws and deletes her
+// own letter, never another one's.
+func TestClassLetterRoutesManageTheOwnLetter(t *testing.T) {
+	t.Parallel()
+	route := newClassLetterRoute(t)
+
+	for _, tc := range []struct{ method, path, call, fragment string }{
+		{"POST", "/11/remind", "remind", `"reminded_count":2`},
+		{"POST", "/11/resend-failed", "resend-failed", `"resent_count":1`},
+		{"POST", "/11/unpublish", "unpublish", `"title":"Wandertag"`},
+		{"DELETE", "/11", "delete", `"deleted":true`},
+	} {
+		before := len(route.contract.calls)
+		out := route.do(t, tc.method, tc.path, "", writePermission)
+		require.Equal(t, 200, out.Code, out.Body.String())
+		assert.Contains(t, out.Body.String(), tc.fragment)
+		assert.Equal(t, []string{"get", tc.call}, route.contract.calls[before:], "%s checks the own letter first", tc.call)
+	}
+	_, kept := route.contract.letters[11]
+	assert.False(t, kept, "the delete reached the owner")
+
+	before := len(route.contract.calls)
+	for _, path := range []string{"/12/remind", "/12/resend-failed", "/12/unpublish", "/12"} {
+		method := "POST"
+		if path == "/12" {
+			method = "DELETE"
+		}
+		assert.Equal(t, 404, route.do(t, method, path, "", writePermission).Code, "%s %s is another Lehrkraft's letter", method, path)
+	}
+	assert.Equal(t, []string{"get", "get", "get", "get"}, route.contract.calls[before:], "another letter never reaches a write")
 	for _, author := range route.contract.authors {
 		assert.Equal(t, int64(route.claims.ID), author)
 	}
@@ -287,7 +345,7 @@ func TestOGSRelatedReadsHideClassLetterDrafts(t *testing.T) {
 	schoolClaims.Scope = tenant.ScopeSchool
 	schoolClaims.TenantID = s.tenantID
 	schoolClaims.Permissions = []string{writePermission}
-	schoolRouter := resource.SchoolRouter(rootAPI.ProtectedSchoolRoutes)
+	schoolRouter := mounted(schoolMount, resource.SchoolRouter(rootAPI.ProtectedSchoolRoutes))
 	s.row.CreatedBy = int64(schoolClaims.ID)
 	id := strconv.FormatInt(s.id, 10)
 	sent := time.Date(2026, 10, 27, 8, 0, 0, 0, time.UTC)
@@ -310,7 +368,7 @@ func TestOGSRelatedReadsHideClassLetterDrafts(t *testing.T) {
 			require.NotContains(t, body, s.row.Title)
 			if endpoint.call != "poll-results" && endpoint.call != "poll-children" {
 				s.calls = nil
-				req := routetest.NewAuthenticatedRequest(t, "GET", "/"+id+"/"+endpoint.path, nil, routetest.WithJWTBearer(routetest.MintTestJWT(t, schoolClaims)))
+				req := routetest.NewAuthenticatedRequest(t, "GET", schoolMount+"/"+id+"/"+endpoint.path, nil, routetest.WithJWTBearer(routetest.MintTestJWT(t, schoolClaims)))
 				out := routetest.ExecuteRequest(schoolRouter, req)
 				require.Equal(t, 200, out.Code, "the author keeps access in moto schule: %s", out.Body.String())
 				require.Equal(t, []string{"get", endpoint.call}, s.calls)

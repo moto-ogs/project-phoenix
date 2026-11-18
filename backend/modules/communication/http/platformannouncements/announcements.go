@@ -21,8 +21,8 @@ func NewAnnouncementsResource(announcementService communication.Capability, runt
 	}
 }
 
-// AnnouncementResponse represents an announcement in the user-facing response
-type AnnouncementResponse struct {
+// PlatformAnnouncementResponse represents an announcement in the user-facing response
+type PlatformAnnouncementResponse struct {
 	ID          int64   `json:"id"`
 	Title       string  `json:"title"`
 	Content     string  `json:"content"`
@@ -50,13 +50,13 @@ func (rs *AnnouncementsResource) GetUnread(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	responses := make([]AnnouncementResponse, 0, len(announcements))
+	responses := make([]PlatformAnnouncementResponse, 0, len(announcements))
 	for _, a := range announcements {
 		publishedAt := ""
 		if a.PublishedAt != nil {
 			publishedAt = a.PublishedAt.Format(time.RFC3339)
 		}
-		responses = append(responses, AnnouncementResponse{
+		responses = append(responses, PlatformAnnouncementResponse{
 			ID:          a.ID,
 			Title:       a.Title,
 			Content:     a.Content,

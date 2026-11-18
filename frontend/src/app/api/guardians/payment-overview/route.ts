@@ -1,4 +1,14 @@
-import { proxyGet } from "~/lib/route-wrapper.server";
+import type { NextRequest } from "next/server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { catalogProxy } from "~/lib/route-wrapper.server";
 
-// GET /api/guardians/payment-overview - the Bankverbindungen list, masked
-export const GET = proxyGet(() => `/api/guardians/payment-overview`);
+const get = catalogProxy(portalRoutes.tenant, "GET");
+
+// Without this literal route, Next selects guardians/[id], not the portal's
+// catch-all. Delegate with the path that the catch-all would receive.
+export const GET = withPrivateNoStore((request: NextRequest) =>
+  get(request, {
+    params: Promise.resolve({ path: ["guardians", "payment-overview"] }),
+  }),
+);

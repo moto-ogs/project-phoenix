@@ -38,7 +38,7 @@ interface BackendOrderDay {
 }
 
 /** Wire shape of GET /caterer/schools/{schoolId}/orders. */
-export interface BackendCatererOrders {
+interface BackendCatererOrders {
   school: { id: string; name: string };
   delivery_address: string;
   format_version: number;

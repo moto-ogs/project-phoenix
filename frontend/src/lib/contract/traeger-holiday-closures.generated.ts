@@ -9,6 +9,11 @@ import {
   safeInt,
   success,
 } from "./runtime";
+import {
+  RangeSchema,
+  type NotifyRequest,
+  type Range,
+} from "./shared.generated";
 
 /** Go: enrollment.HolidayClosedDay */
 export interface HolidayClosedDay {
@@ -48,17 +53,6 @@ export const HolidayClosureWeekSchema: z.ZodType<HolidayClosureWeek, unknown> = 
   children: safeInt,
   waitlisted: safeInt,
   families: safeInt,
-});
-
-/** Go: holidayclosurenotification.Range */
-export interface Range {
-  start_date: string | null;
-  end_date: string | null;
-}
-
-export const RangeSchema: z.ZodType<Range, unknown> = object<Range>({
-  start_date: calendarDate.nullable(),
-  end_date: calendarDate.nullable(),
 });
 
 /** Go: holidayclosurenotification.TraegerNotice */
@@ -142,12 +136,6 @@ export const NotifiedPendingSchema: z.ZodType<NotifiedPending, unknown> = object
   notices: safeInt,
   families: safeInt,
 });
-
-/** Go: http.NotifyRequest */
-export interface NotifyRequest {
-  token?: string;
-  revision?: number;
-}
 
 /** Go: holidayclosurenotification.ClosureNotice */
 export interface ClosureNotice {

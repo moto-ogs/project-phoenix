@@ -179,12 +179,12 @@ type ReachableStudentsResponse struct {
 	StudentIDs []string `json:"student_ids"`
 }
 
-// GuardianResponse is one recipient for a new conversation. readers says
+// MessageableGuardianResponse is one recipient for a new conversation. readers says
 // who would read the conversation with this guardian in the requested
 // audience (?audience=team|leadership, default team, #5200);
 // leadership_available tells a leadership member whether a new leadership
 // conversation may begin and is false for every other caller.
-type GuardianResponse struct {
+type MessageableGuardianResponse struct {
 	AccountID           string          `json:"account_id"`
 	Name                string          `json:"name"`
 	RelationshipType    string          `json:"relationship_type,omitempty"`
@@ -535,9 +535,9 @@ func (rs *Resource) listGuardians(w http.ResponseWriter, r *http.Request) {
 		renderMessagingError(w, r, err)
 		return
 	}
-	out := make([]GuardianResponse, 0, len(guardians))
+	out := make([]MessageableGuardianResponse, 0, len(guardians))
 	for _, g := range guardians {
-		out = append(out, GuardianResponse{
+		out = append(out, MessageableGuardianResponse{
 			AccountID:           strconv.FormatInt(g.AccountID, 10),
 			Name:                g.Name,
 			RelationshipType:    g.RelationshipType,

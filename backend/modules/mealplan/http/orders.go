@@ -20,22 +20,22 @@ type OrderChangeResponse struct {
 	DetectedAt  time.Time `json:"detected_at"`
 }
 
-// ClassCountResponse is the number of meals of a class.
-type ClassCountResponse struct {
+// OrderClassCountResponse is the number of meals of a class.
+type OrderClassCountResponse struct {
 	SchoolClass string `json:"school_class"`
 	Count       int    `json:"count"`
 }
 
 // OrderDayResponse is one weekday of the orders.
 type OrderDayResponse struct {
-	Date        string                `json:"date"`
+	Date        string                `json:"date" contract:"date"`
 	Closed      bool                  `json:"closed"`
 	Deadline    time.Time             `json:"deadline"`
 	Status      string                `json:"status"`
 	OrderID     string                `json:"order_id,omitempty"`
 	ConfirmedAt *time.Time            `json:"confirmed_at,omitempty"`
 	Total       int                   `json:"total"`
-	Classes     []ClassCountResponse  `json:"classes"`
+	Classes     []OrderClassCountResponse  `json:"classes"`
 	Changes     []OrderChangeResponse `json:"changes"`
 }
 
@@ -54,13 +54,13 @@ func OrderDays(week mealplanModule.OrderWeek) []OrderDayResponse {
 		response := OrderDayResponse{
 			Date: string(day.Date), Closed: day.Closed, Deadline: day.Deadline, Status: string(day.Status),
 			ConfirmedAt: day.ConfirmedAt, Total: day.Total,
-			Classes: make([]ClassCountResponse, 0, len(day.Classes)), Changes: make([]OrderChangeResponse, 0, len(day.Changes)),
+			Classes: make([]OrderClassCountResponse, 0, len(day.Classes)), Changes: make([]OrderChangeResponse, 0, len(day.Changes)),
 		}
 		if day.OrderID > 0 {
 			response.OrderID = strconv.FormatInt(day.OrderID, 10)
 		}
 		for _, count := range day.Classes {
-			response.Classes = append(response.Classes, ClassCountResponse(count))
+			response.Classes = append(response.Classes, OrderClassCountResponse(count))
 		}
 		for _, change := range day.Changes {
 			response.Changes = append(response.Changes, OrderChangeResponse{Sequence: change.Sequence, SchoolClass: change.Child.SchoolClass, Delta: change.Delta, DetectedAt: change.DetectedAt})

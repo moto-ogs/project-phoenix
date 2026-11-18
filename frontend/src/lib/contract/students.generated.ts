@@ -14,6 +14,9 @@ import {
   success,
   type OpenEnum,
 } from "./runtime";
+import {
+  type NewStudentGuardian,
+} from "./shared.generated";
 
 export const ATTENDANCE_ACTOR_KIND_VALUES = ["automatic", "device", "former_staff", "staff"] as const;
 export type AttendanceActorKind = (typeof ATTENDANCE_ACTOR_KIND_VALUES)[number];
@@ -26,15 +29,6 @@ export type DayPlanningStatus = (typeof DAY_PLANNING_STATUS_VALUES)[number];
 
 export const DEPARTURE_MODE_VALUES = ["accompanied", "alone", "bus", "pickup"] as const;
 export type DepartureMode = (typeof DEPARTURE_MODE_VALUES)[number];
-
-export const GUARDIAN_CONTACT_METHOD_VALUES = ["email", "mobile", "phone", "sms"] as const;
-export type GuardianContactMethod = (typeof GUARDIAN_CONTACT_METHOD_VALUES)[number];
-
-export const GUARDIAN_PHONE_TYPE_VALUES = ["home", "mobile", "other", "work"] as const;
-export type GuardianPhoneType = (typeof GUARDIAN_PHONE_TYPE_VALUES)[number];
-
-export const GUARDIAN_RELATIONSHIP_TYPE_VALUES = ["guardian", "other", "parent", "relative"] as const;
-export type GuardianRelationshipType = (typeof GUARDIAN_RELATIONSHIP_TYPE_VALUES)[number];
 
 export const PICKUP_STATUS_VALUES = ["Geht alleine nach Hause", "Geht mit anderem Kind", "Wird abgeholt"] as const;
 export type PickupStatus = (typeof PICKUP_STATUS_VALUES)[number];
@@ -1764,36 +1758,6 @@ export const StudentStatusDayResponseSchema: z.ZodType<StudentStatusDayResponse,
   created_at: instant,
   updated_at: instant,
 });
-
-/** Go: peopledirectory.NewGuardianPhone */
-export interface NewGuardianPhone {
-  phone_number?: string;
-  phone_type?: OpenEnum<GuardianPhoneType>;
-  label?: string;
-  is_primary?: boolean;
-}
-
-/** Go: peopledirectory.NewStudentGuardian */
-export interface NewStudentGuardian {
-  guardian_profile_id?: number | null;
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  address_street?: string;
-  address_city?: string;
-  address_postal_code?: string;
-  preferred_contact_method?: OpenEnum<GuardianContactMethod>;
-  language_preference?: string;
-  notes?: string;
-  relationship_type?: OpenEnum<GuardianRelationshipType>;
-  guardian_role?: string;
-  is_primary?: boolean;
-  is_emergency_contact?: boolean;
-  can_pickup?: boolean;
-  pickup_notes?: string;
-  emergency_priority?: number;
-  phone_numbers?: NewGuardianPhone[] | null;
-}
 
 /** Go: careplanhttp.ArrivalScheduleRequestItem */
 export interface ArrivalScheduleRequestItem {

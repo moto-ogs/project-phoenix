@@ -223,7 +223,7 @@ func (rs *Resource) deleteAnnouncementAttachment(w http.ResponseWriter, r *http.
 		renderAttachmentError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"announcement_id": idString(announcementID)}, "Attachment deleted successfully")
+	common.Respond(w, r, http.StatusOK, AttachmentRemovedResponse{AnnouncementID: idString(announcementID)}, "Attachment deleted successfully")
 }
 
 // --- parent handlers ----------------------------------------------------------

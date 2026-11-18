@@ -96,7 +96,7 @@ func setupGuardiansCompositionRoute(t *testing.T, appEnvs ...string) *guardianCo
 
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
-	router.Mount("/guardians", resource.Router())
+	router.Mount("/api/guardians", resource.Router())
 
 	ctx := testpkg.Ctx(t)
 	tenantID := testpkg.Tenant(t)
@@ -255,7 +255,7 @@ func guardianStaffClaims(accountID int64, accountPermissions ...string) sessiont
 }
 
 func guardiansPath(format string, args ...any) string {
-	return "/guardians" + fmt.Sprintf(format, args...)
+	return "/api/guardians" + fmt.Sprintf(format, args...)
 }
 
 func (c *guardianCompositionContext) do(t *testing.T, claims sessiontoken.AppClaims, method, path string, body any) *httptest.ResponseRecorder {

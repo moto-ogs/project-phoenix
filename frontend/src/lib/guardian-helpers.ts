@@ -13,7 +13,7 @@ export interface PhoneNumber {
 }
 
 export interface BackendPhoneNumber {
-  id: number;
+  id: number | string;
   phone_number: string;
   phone_type: PhoneType;
   label?: string;
@@ -81,7 +81,7 @@ export interface Guardian {
 
 // Backend Guardian Profile Response
 export interface BackendGuardianProfile {
-  id: number;
+  id: number | string;
   first_name: string;
   last_name: string;
   email?: string;
@@ -93,7 +93,7 @@ export interface BackendGuardianProfile {
   language_preference: string;
   notes?: string;
   has_account: boolean;
-  account_id?: number;
+  account_id?: number | string;
 }
 
 // Backend Guardian Picker Response (GET /guardians/search). This is the
@@ -104,7 +104,7 @@ export interface BackendGuardianProfile {
 // minimization). Kept separate from BackendGuardianProfile so callers can't
 // accidentally read fields the picker never sends.
 export interface BackendGuardianPickerResponse {
-  id: number;
+  id: number | string;
   first_name: string;
   last_name: string;
   email?: string;
@@ -152,7 +152,7 @@ export interface GuardianWithRelationship extends Guardian {
 // Backend Guardian with Relationship
 export interface BackendGuardianWithRelationship {
   guardian: BackendGuardianProfile;
-  relationship_id: number;
+  relationship_id: number | string;
   relationship_type: string;
   guardian_role?: string;
   is_primary: boolean;

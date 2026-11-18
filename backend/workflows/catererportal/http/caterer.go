@@ -37,9 +37,9 @@ type SchoolsResponse struct {
 	Schools     []SchoolResponse `json:"schools"`
 }
 
-// ChildResponse is a child in an order; names reach the caterer only while
+// OrderChildResponse is a child in an order; names reach the caterer only while
 // the school shows them.
-type ChildResponse struct {
+type OrderChildResponse struct {
 	FirstName   string `json:"first_name,omitempty"`
 	LastName    string `json:"last_name,omitempty"`
 	SchoolClass string `json:"school_class,omitempty"`
@@ -48,7 +48,7 @@ type ChildResponse struct {
 // ChangeResponse is a numbered change after the deadline.
 type ChangeResponse struct {
 	Sequence   int           `json:"sequence"`
-	Child      ChildResponse `json:"child"`
+	Child      OrderChildResponse `json:"child"`
 	Delta      int           `json:"delta"`
 	DetectedAt time.Time     `json:"detected_at"`
 }
@@ -61,7 +61,7 @@ type ClassCountResponse struct {
 
 // DayResponse is one weekday of a school's orders.
 type DayResponse struct {
-	Date        string               `json:"date"`
+	Date        string               `json:"date" contract:"date"`
 	Closed      bool                 `json:"closed"`
 	Deadline    time.Time            `json:"deadline"`
 	Status      string               `json:"status"`
@@ -69,7 +69,7 @@ type DayResponse struct {
 	ConfirmedAt *time.Time           `json:"confirmed_at,omitempty"`
 	Total       int                  `json:"total"`
 	Classes     []ClassCountResponse `json:"classes"`
-	Children    []ChildResponse      `json:"children"`
+	Children    []OrderChildResponse      `json:"children"`
 	Changes     []ChangeResponse     `json:"changes"`
 }
 
@@ -92,15 +92,15 @@ func schoolResponse(school catererportal.School) SchoolResponse {
 	return SchoolResponse{ID: strconv.FormatInt(school.ID, 10), Name: school.Name}
 }
 
-func childResponse(child mealplan.OrderChild) ChildResponse {
-	return ChildResponse{FirstName: child.FirstName, LastName: child.LastName, SchoolClass: child.SchoolClass}
+func childResponse(child mealplan.OrderChild) OrderChildResponse {
+	return OrderChildResponse{FirstName: child.FirstName, LastName: child.LastName, SchoolClass: child.SchoolClass}
 }
 
 func dayResponse(day mealplan.OrderDay) DayResponse {
 	response := DayResponse{
 		Date: string(day.Date), Closed: day.Closed, Deadline: day.Deadline, Status: string(day.Status),
 		ConfirmedAt: day.ConfirmedAt, Total: day.Total, Classes: make([]ClassCountResponse, 0, len(day.Classes)),
-		Children: make([]ChildResponse, 0, len(day.Children)), Changes: make([]ChangeResponse, 0, len(day.Changes)),
+		Children: make([]OrderChildResponse, 0, len(day.Children)), Changes: make([]ChangeResponse, 0, len(day.Changes)),
 	}
 	if day.OrderID > 0 {
 		response.OrderID = strconv.FormatInt(day.OrderID, 10)

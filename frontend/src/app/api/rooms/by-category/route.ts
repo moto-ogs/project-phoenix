@@ -1,12 +1,14 @@
-// app/api/rooms/by-category/route.ts
-import { proxyGet } from "~/lib/route-wrapper.server";
-import type { BackendRoom } from "~/lib/room-helpers";
+import type { NextRequest } from "next/server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { catalogProxy } from "~/lib/route-wrapper.server";
 
-/**
- * Handler for GET /api/rooms/by-category
- * Returns rooms grouped by their category
- */
-export const GET = proxyGet<Record<string, BackendRoom[]>>(
-  "/api/rooms/by-category",
-  { raw: true },
+const get = catalogProxy(portalRoutes.tenant, "GET");
+
+// Without this literal route, Next selects rooms/[id], not the portal's
+// catch-all. Delegate with the path that the catch-all would receive.
+export const GET = withPrivateNoStore((request: NextRequest) =>
+  get(request, {
+    params: Promise.resolve({ path: ["rooms", "by-category"] }),
+  }),
 );

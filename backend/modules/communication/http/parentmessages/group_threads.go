@@ -63,7 +63,7 @@ type GroupThreadResponse struct {
 	CreatedAt     time.Time  `json:"created_at"`
 }
 
-type GroupThreadSummaryResponse struct {
+type StaffGroupThreadSummaryResponse struct {
 	GroupThreadResponse
 	LastMessageBody string               `json:"last_message_body"`
 	MessageCount    int                  `json:"message_count"`
@@ -85,14 +85,38 @@ func toGroupReaders(thread communication.ParentGroupThread, familyCount int) Gro
 	return GroupReadersResponse{TargetType: thread.Target.Type, TargetLabel: thread.Target.Label, RecipientCount: familyCount}
 }
 
-type GroupMessageResponse struct {
+type StaffGroupMessageResponse struct {
 	ClientMessageID string    `json:"client_message_id,omitempty"`
 	ID              string    `json:"id"`
 	SenderName      string    `json:"sender_name"`
 	Body            string    `json:"body"`
 	CreatedAt       time.Time `json:"created_at"`
 	// Attachments are the photos and files of the message (#6685).
-	Attachments json.RawMessage `json:"attachments,omitempty"`
+	Attachments []ParentMessageAttachmentResponse `json:"attachments,omitempty"`
+}
+
+// ParentMessageAttachmentResponse is one file of a message: the stored snapshot
+// (communication.MessageAttachment) as the conversation shows it.
+type ParentMessageAttachmentResponse struct {
+	ID          string `json:"id"`
+	Filename    string `json:"filename"`
+	SizeBytes   int    `json:"size_bytes"`
+	ContentType string `json:"content_type"`
+	Width       int    `json:"width,omitempty"`
+	Height      int    `json:"height,omitempty"`
+}
+
+// toAttachmentResponses reads the snapshot a message stores. The store
+// writes and checks its shape; a message without files has none.
+func toAttachmentResponses(snapshot json.RawMessage) []ParentMessageAttachmentResponse {
+	if len(snapshot) == 0 {
+		return nil
+	}
+	var out []ParentMessageAttachmentResponse
+	if err := json.Unmarshal(snapshot, &out); err != nil || len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 type GroupChildResponse struct {
@@ -106,7 +130,7 @@ type GroupChildResponse struct {
 
 type GroupThreadDetailResponse struct {
 	Thread      GroupThreadResponse    `json:"thread"`
-	Messages    []GroupMessageResponse `json:"messages"`
+	Messages    []StaffGroupMessageResponse `json:"messages"`
 	Children    []GroupChildResponse   `json:"children"`
 	FamilyCount int                    `json:"family_count"`
 	ReadCount   int                    `json:"read_count"`
@@ -119,9 +143,9 @@ func (rs *Resource) listGroupThreads(w http.ResponseWriter, r *http.Request) {
 		renderGroupThreadError(w, r, err)
 		return
 	}
-	out := make([]GroupThreadSummaryResponse, 0, len(rows))
+	out := make([]StaffGroupThreadSummaryResponse, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, GroupThreadSummaryResponse{
+		out = append(out, StaffGroupThreadSummaryResponse{
 			GroupThreadResponse: toGroupThreadResponse(row.Thread), LastMessageBody: row.LastMessageBody,
 			MessageCount: row.MessageCount, FamilyCount: row.FamilyCount, ReadCount: row.ReadCount,
 			Readers: toGroupReaders(row.Thread, row.FamilyCount),
@@ -294,12 +318,12 @@ func toGroupChildResponses(children []communication.ParentGroupChild) []GroupChi
 }
 
 func toGroupThreadDetail(detail *communication.ParentGroupThreadDetail, viewer ...int64) GroupThreadDetailResponse {
-	messages := make([]GroupMessageResponse, 0, len(detail.Messages))
+	messages := make([]StaffGroupMessageResponse, 0, len(detail.Messages))
 	for _, message := range detail.Messages {
-		messages = append(messages, GroupMessageResponse{
+		messages = append(messages, StaffGroupMessageResponse{
 			ID: strconv.FormatInt(message.ID, 10), SenderName: message.SenderName,
 			ClientMessageID: clientMessageIDForViewer(message.ClientMessageID, message.SenderAccountID, viewer), Body: message.Body, CreatedAt: message.CreatedAt,
-			Attachments: message.Attachments,
+			Attachments: toAttachmentResponses(message.Attachments),
 		})
 	}
 	return GroupThreadDetailResponse{
