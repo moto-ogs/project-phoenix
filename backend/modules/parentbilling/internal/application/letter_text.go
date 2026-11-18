@@ -72,12 +72,13 @@ type LetterRenderer interface {
 // cancellation or a credit also names its invoice and what the invoice
 // still asks for after it (#4690).
 type letterContent struct {
-	run        parentbilling.BillingRun
-	document   parentbilling.BillingDocument
-	input      parentbilling.BillingLetterInput
-	letterhead parentbilling.Letterhead
-	invoice    *parentbilling.BillingDocument
-	leftCents  int64
+	run           parentbilling.BillingRun
+	document      parentbilling.BillingDocument
+	input         parentbilling.BillingLetterInput
+	letterhead    parentbilling.Letterhead
+	invoice       *parentbilling.BillingDocument
+	leftCents     int64
+	accountHolder string
 }
 
 // confirmationLetter writes the letter of one issued invoice in the kind of
@@ -92,8 +93,10 @@ func confirmationLetter(content letterContent) Letter {
 	document, head := content.document, content.letterhead
 	kind := templateKindOf(document.DocumentKind)
 	filled := templates.Fill(letterTemplate(head.Template, kind), letterValues(content))
-	blocks := withTransferCode(letterBlocks(filled.Blocks), paymentText(content), transferCodeOf(head, document.Payment,
+	payment := paymentText(content)
+	blocks := withTransferCode(letterBlocks(filled.Blocks), payment, transferCodeOf(head, document.Payment,
 		document.TotalCents, documentReference(document.Number, document.DebtorNumber, document.DocumentKind)))
+	blocks = withDirectDebitNotice(blocks, payment, document.Payment, document.TotalCents)
 	if kind != templates.KindConfirmation {
 		if notes := strings.TrimSpace(content.input.Notes); notes != "" {
 			blocks = append(blocks, LetterBlock{Heading: "Hinweise", Text: notes})
@@ -104,7 +107,7 @@ func confirmationLetter(content letterContent) Letter {
 				facts = append(facts, LetterFact{Label: contact.Name, Value: contact.Phone})
 			}
 			blocks = append(blocks, LetterBlock{Heading: "Notfallnummern",
-				Text: "In dringenden Fällen und wenn Ihr Kind krank ist, erreichen Sie die Betreuung hier:", Facts: facts})
+				Text: "In dringenden Fällen und wenn euer Kind krank ist, erreicht ihr die Betreuung hier:", Facts: facts})
 		}
 	}
 	blocks = append(blocks, legalRemedyBlocks(filled.LegalRemedy)...)
@@ -376,9 +379,9 @@ const (
 func paymentText(content letterContent) string {
 	if content.document.TotalCents == 0 {
 		if bearer := costBearerName(content.document); bearer != "" {
-			return "Sie müssen nichts bezahlen. Die Kosten übernimmt: " + bearer + "."
+			return "Ihr müsst nichts bezahlen. Die Kosten übernimmt: " + bearer + "."
 		}
-		return "Sie müssen für diese Betreuung nichts bezahlen."
+		return "Ihr müsst für diese Betreuung nichts bezahlen."
 	}
 	due := dueOnOf(content.document.Payment, content.input.PaymentDueOn)
 	reference := "die Rechnungsnummer " + content.document.Number
@@ -387,14 +390,16 @@ func paymentText(content letterContent) string {
 		reference = "die Bescheidnummer " + content.document.Number
 	}
 	if number := strings.TrimSpace(content.document.DebtorNumber); number != "" {
-		reference = "Ihre Debitorennummer " + number
+		reference = "eure Debitorennummer " + number
 		if content.document.DocumentKind == parentbilling.DocumentKindFeeNotice {
-			reference = "Ihr Buchungszeichen " + number
+			reference = "euer Buchungszeichen " + number
 		}
 	}
 	if isDirectDebit(content.document.Payment) {
-		return directDebitText(content.document.TotalCents, due, strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(reference, "die "), "Ihre "), "Ihr "),
-			paymentMandate(content.document.Payment))
+		return directDebitText(content.document.TotalCents, due, strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(reference, "die "), "eure "), "euer "),
+			paymentMandate(content.document.Payment), content.accountHolder,
+			fullName(content.document.RecipientFirstName, content.document.RecipientLastName),
+			secondLetterRecipient(content.document.RecipientKind, content.document.RecipientSecondName))
 	}
 	if text := strings.TrimSpace(content.letterhead.PaymentText); text != "" {
 		return strings.NewReplacer(
@@ -404,7 +409,7 @@ func paymentText(content letterContent) string {
 			placeholderDebtorNumber, strings.TrimSpace(content.document.DebtorNumber),
 		).Replace(text)
 	}
-	return fmt.Sprintf("Bitte überweisen Sie %s bis zum %s auf das Konto unten. Geben Sie als Verwendungszweck %s an.",
+	return fmt.Sprintf("Bitte überweist %s bis zum %s auf das Konto unten. Gebt als Verwendungszweck %s an.",
 		formatEuro(content.document.TotalCents), germanDate(due), reference)
 }
 
@@ -428,11 +433,11 @@ func questionText(head parentbilling.Letterhead) string {
 	case name == "" && len(ways) == 0:
 		return ""
 	case name == "":
-		return "Bei Fragen erreichen Sie uns unter " + strings.Join(ways, " oder ") + "."
+		return "Bei Fragen erreicht ihr uns unter " + strings.Join(ways, " oder ") + "."
 	case len(ways) == 0:
-		return "Bei Fragen hilft Ihnen " + name + "."
+		return "Bei Fragen hilft euch " + name + "."
 	}
-	return "Bei Fragen erreichen Sie " + name + " unter " + strings.Join(ways, " oder ") + "."
+	return "Bei Fragen erreicht ihr " + name + " unter " + strings.Join(ways, " oder ") + "."
 }
 
 func bankLine(account *parentbilling.LetterheadBankAccount) string {

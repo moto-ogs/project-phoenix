@@ -49,7 +49,7 @@ export function PhaseExtensionHint({
       size="compact"
       announce="polite"
       className="mt-3"
-      message={`${CARE_END_STAYS} Soll die Betreuung weiterlaufen und Eltern sollen umbuchen können? Dann erstellen Sie eine Anschlussphase.`}
+      message={`${CARE_END_STAYS} Soll die Betreuung weiterlaufen und Eltern sollen umbuchen können? Dann erstelle eine Anschlussphase.`}
       actionLayout="stacked"
       action={
         <Button
@@ -58,7 +58,7 @@ export function PhaseExtensionHint({
           size="compact"
           onClick={onCreateSuccessor}
           disabled={saving}
-          tooltip="Öffnet das Formular für die Anschlussphase. Ihre Änderungen hier werden nicht gespeichert."
+          tooltip="Öffnet das Formular für die Anschlussphase. Deine Änderungen hier werden nicht gespeichert."
         >
           Anschlussphase erstellen
         </Button>

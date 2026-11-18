@@ -338,8 +338,8 @@ function DevicesPageContent() {
                 ? "Keine Geräte gefunden"
                 : "Keine Geräte vorhanden",
               description: searchTerm
-                ? "Versuchen Sie einen anderen Suchbegriff."
-                : "Registrieren Sie das erste Gerät, um Karten zu lesen.",
+                ? "Versuche einen anderen Suchbegriff."
+                : "Registriere das erste Gerät, um Karten zu lesen.",
               icon: (
                 <MotoDuotoneIcon
                   icon={devicesConcept.icon}
@@ -370,7 +370,7 @@ function DevicesPageContent() {
               title="Gerät löschen?"
               description={
                 <>
-                  Möchten Sie das Gerät{" "}
+                  Möchtest du das Gerät{" "}
                   <span className="font-medium">
                     {selectedDevice.name ?? selectedDevice.device_id}
                   </span>{" "}

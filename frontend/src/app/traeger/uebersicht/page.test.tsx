@@ -183,7 +183,7 @@ describe("TraegerDashboardPage", () => {
     expect(await screen.findByText("1 : 13,3")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     for (const [label, sentence] of [
-      ["Kinder gesamt", "Alle betreuten Kinder in Ihren 2 Schulen."],
+      ["Kinder gesamt", "Alle betreuten Kinder in deinen 2 Schulen."],
       ["Jetzt anwesend", /^40\s%\saller Kinder sind da\.$/],
       ["Heute krank", "Kinder mit Krankmeldung für heute."],
       [
@@ -370,12 +370,12 @@ describe("TraegerDashboardPage", () => {
       .closest("tr") as HTMLElement;
     // Wenig Personal und wartende Kinder: zwei markierte Zahlen.
     expect(
-      within(lindenweg).getAllByText(", erreicht Ihre Grenze"),
+      within(lindenweg).getAllByText(", erreicht deine Grenze"),
     ).toHaveLength(2);
     expect(within(lindenweg).getByText("4")).toBeInTheDocument();
     expect(within(amBach).getByText("1 : 8,5")).toBeInTheDocument();
     expect(
-      within(amBach).queryByText(", erreicht Ihre Grenze"),
+      within(amBach).queryByText(", erreicht deine Grenze"),
     ).not.toBeInTheDocument();
   });
 
@@ -409,7 +409,7 @@ describe("TraegerDashboardPage", () => {
       }),
     ).toBeInTheDocument();
     expect(within(amBach).getByText("8")).toBeInTheDocument();
-    expect(within(amBach).getAllByText(", erreicht Ihre Grenze")).toHaveLength(
+    expect(within(amBach).getAllByText(", erreicht deine Grenze")).toHaveLength(
       3,
     );
 
@@ -419,7 +419,7 @@ describe("TraegerDashboardPage", () => {
     // Anker: Der angezeigte Schlüssel gehört zu den bestätigten Hinweisen.
     expect(within(lindenweg).getByText("1 : 10")).toBeInTheDocument();
     expect(
-      within(lindenweg).getAllByText(", erreicht Ihre Grenze"),
+      within(lindenweg).getAllByText(", erreicht deine Grenze"),
     ).toHaveLength(1);
     expect(screen.getByText("120")).toBeInTheDocument();
     expect(screen.getByText("50")).toBeInTheDocument();
@@ -456,7 +456,9 @@ function renderAlerts(
   return options.error
     ? screen.findByRole("alert")
     : alerts?.schools.length === 0
-      ? screen.findAllByText("Ihrem Träger sind noch keine Schulen zugeordnet.")
+      ? screen.findAllByText(
+          "Deinem Träger sind noch keine Schulen zugeordnet.",
+        )
       : screen.findByRole("link", {
           name: options.canChange ? "Grenzen ändern" : "Grenzen ansehen",
         });
@@ -475,7 +477,7 @@ describe("school alerts", () => {
     const card = screen.getByTestId("traeger-school-alerts");
     expect(within(card).getByText("2 Schulen")).toBeInTheDocument();
     expect(
-      within(card).getAllByText(/^Ihre Grenzen: mehr als 20 Kinder/),
+      within(card).getAllByText(/^Deine Grenzen: mehr als 20 Kinder/),
     ).toHaveLength(1);
     expect(within(card).getByText("Zu wenig Personal:")).toBeInTheDocument();
     expect(

@@ -33,6 +33,9 @@ type TraegerMasterData struct {
 	// TraegerNames is the store's read of the Träger's own name (#6437):
 	// no person reads it, so it writes no log.
 	organizationtenancy.TraegerNames
+	// TraegerBankAccountPresence is the store's check for a bank account
+	// (#7177): it reads no account data, so it writes no log.
+	organizationtenancy.TraegerBankAccountPresence
 	store ports.TraegerMasterDataStore
 }
 
@@ -41,7 +44,7 @@ func NewTraegerMasterData(store ports.TraegerMasterDataStore) *TraegerMasterData
 	if store == nil {
 		panic("organization tenancy: the master data store is required")
 	}
-	return &TraegerMasterData{TraegerNames: store, store: store}
+	return &TraegerMasterData{TraegerNames: store, TraegerBankAccountPresence: store, store: store}
 }
 
 var _ organizationtenancy.TraegerMasterData = (*TraegerMasterData)(nil)

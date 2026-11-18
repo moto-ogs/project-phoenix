@@ -360,7 +360,7 @@ function ClassArrivalExceptionPanelBody({
     setReason(CLASS_ARRIVAL_CANCELLED_REASON);
     formErrors.clear();
     if (!isoDate) {
-      formErrors.invalid("Bitte wählen Sie zuerst ein Datum.");
+      formErrors.invalid("Bitte wähle zuerst ein Datum.");
       return;
     }
     setPresetPending(true);
@@ -370,8 +370,8 @@ function ClassArrivalExceptionPanelBody({
         setTime(start);
       } else {
         formErrors.invalid(
-          "Für diesen Tag ist kein Betreuungsblock geplant. Bitte tragen Sie die Uhrzeit selbst ein.",
-          { arrival_time: "Bitte tragen Sie die Uhrzeit ein." },
+          "Für diesen Tag ist kein Betreuungsblock geplant. Bitte trage die Uhrzeit selbst ein.",
+          { arrival_time: "Bitte trage die Uhrzeit ein." },
         );
       }
     } catch (err) {
@@ -381,8 +381,8 @@ function ClassArrivalExceptionPanelBody({
       // Der Vorschlag ist nur eine Abkürzung. Scheitert er, hilft der
       // Hinweis aufs Eintippen mehr als die Fehlerklasse des Abrufs.
       formErrors.invalid(
-        "Der Blockbeginn konnte nicht geladen werden. Bitte tragen Sie die Uhrzeit selbst ein.",
-        { arrival_time: "Bitte tragen Sie die Uhrzeit ein." },
+        "Der Blockbeginn konnte nicht geladen werden. Bitte trage die Uhrzeit selbst ein.",
+        { arrival_time: "Bitte trage die Uhrzeit ein." },
       );
     } finally {
       setPresetPending(false);
@@ -533,9 +533,9 @@ function ClassArrivalExceptionPanelBody({
                   presetPending || saving
                     ? undefined
                     : isoDate === null
-                      ? "Wählen Sie zuerst ein Datum."
+                      ? "Wähle zuerst ein Datum."
                       : !isValidTime(time)
-                        ? "Tragen Sie zuerst eine gültige Uhrzeit ein."
+                        ? "Trage zuerst eine gültige Uhrzeit ein."
                         : undefined
                 }
               >
@@ -544,7 +544,7 @@ function ClassArrivalExceptionPanelBody({
             </div>
             <p className="text-xs text-gray-500">
               „Unterricht fällt aus“ setzt die Uhrzeit auf den Beginn des ersten
-              Betreuungsblocks an diesem Tag. Sie können sie danach ändern.
+              Betreuungsblocks an diesem Tag. Du kannst sie danach ändern.
             </p>
           </InsetPanel>
         </div>

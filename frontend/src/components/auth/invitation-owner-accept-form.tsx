@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Alert } from "~/components/ui/alert";
@@ -17,10 +17,13 @@ import { listAllTenants } from "~/lib/tenant-api";
 import type { TenantSummary } from "~/lib/tenant-api";
 import { schoolPortalLoginUrl } from "~/lib/school-url";
 import { parentsPortalLoginUrl } from "~/lib/parent-url";
+import { portalOfHost } from "~/lib/portal-paths";
 import { clientEnv } from "~/env.client";
 import { credentialError, INVITATION_REFUSALS } from "./credential-error";
 
 const logger = createLogger({ component: "InvitationOwnerAccept" });
+const neverChanges = () => () => undefined;
+const browserPortal = () => portalOfHost(window.location.host);
 
 export function InvitationOwnerAcceptForm({
   token,
@@ -47,6 +50,13 @@ export function InvitationOwnerAcceptForm({
   const [addressStatus, setAddressStatus] = useState<
     "idle" | "loading" | "error" | "ready"
   >("idle");
+  // A choice that leads back to this portal would only reload the page
+  // (#7369). The host is known in the browser only.
+  const currentPortal = useSyncExternalStore(
+    neverChanges,
+    browserPortal,
+    () => null,
+  );
 
   function openInvitationAt(url: URL) {
     url.pathname = "/invite";
@@ -115,7 +125,7 @@ export function InvitationOwnerAcceptForm({
         <Alert
           type="success"
           title="Einladung angenommen"
-          message="Sie haben jetzt Zugang zur neuen Schule. Ihr Passwort bleibt unverändert. Ihre bisherigen Zugänge bleiben bestehen."
+          message="Du hast jetzt Zugang zur neuen Schule. Dein Passwort bleibt unverändert. Deine bisherigen Zugänge bleiben bestehen."
         />
         {destination ? (
           <ButtonLink href={destination} size="md">
@@ -133,10 +143,17 @@ export function InvitationOwnerAcceptForm({
         Einladung für <strong>{invitation.email}</strong>.
       </p>
       <ol className="list-decimal space-y-2 pl-5 text-sm text-gray-700">
-        <li>Melden Sie sich mit dieser E-Mail-Adresse bei moto an.</li>
-        <li>Kehren Sie danach zu dieser Einladung zurück.</li>
-        <li>Prüfen Sie Ihren Namen und nehmen Sie die Einladung an.</li>
+        <li>Melde dich mit dieser E-Mail-Adresse bei moto an.</li>
+        <li>Kehre danach zu dieser Einladung zurück.</li>
+        <li>Prüfe deinen Namen und nimm die Einladung an.</li>
       </ol>
+      {currentPortal === "school" ? (
+        // Hier meldet sich nur an, wer schon Lehrkraft ist (#7369).
+        <p className="text-sm text-gray-700">
+          Du meldest dich bisher nicht als Lehrkraft an? Dann wählst du unten
+          „Andere moto-Adresse wählen“ und nimmst die Einladung dort an.
+        </p>
+      ) : null}
       <ButtonLink
         href={redirectToPath ?? "/"}
         target="_blank"
@@ -159,29 +176,33 @@ export function InvitationOwnerAcceptForm({
         {showAddresses ? (
           <div className="mt-3 space-y-3">
             <p className="text-sm text-gray-600">
-              Wählen Sie den Bereich, in dem Sie moto bisher nutzen.
+              Wähle den Bereich, in dem du moto bisher nutzt.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                onClick={() =>
-                  openInvitationAt(new URL(parentsPortalLoginUrl()))
-                }
-              >
-                Für Eltern
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                onClick={() =>
-                  openInvitationAt(new URL(schoolPortalLoginUrl()))
-                }
-              >
-                Für Lehrkräfte
-              </Button>
+              {currentPortal === "parent" ? null : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={() =>
+                    openInvitationAt(new URL(parentsPortalLoginUrl()))
+                  }
+                >
+                  Für Eltern
+                </Button>
+              )}
+              {currentPortal === "school" ? null : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={() =>
+                    openInvitationAt(new URL(schoolPortalLoginUrl()))
+                  }
+                >
+                  Für Lehrkräfte
+                </Button>
+              )}
             </div>
             {addressStatus === "loading" ? (
               <p role="status" className="text-sm text-gray-600">
@@ -192,7 +213,7 @@ export function InvitationOwnerAcceptForm({
               // listAllTenants gibt nur "error" zurück, kein Fehlerobjekt:
               // ein fester Satz, Wiederholen über den Knopf darunter.
               <div className="space-y-2">
-                <LoadErrorAlert error="Die Liste der Schulen ist gerade nicht erreichbar. Bitte versuchen Sie es erneut." />
+                <LoadErrorAlert error="Die Liste der Schulen ist gerade nicht erreichbar. Bitte versuche es erneut." />
                 <Button
                   type="button"
                   variant="outline"

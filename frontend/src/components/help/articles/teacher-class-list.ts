@@ -19,14 +19,14 @@ export function teacherClassListTopic(): HelpTopic {
       {
         title: "Die Liste öffnen",
         steps: [
-          "Wählen Sie in der `Klassenansicht` eine Klasse.",
-          "Lesen Sie die Abschnitte von oben nach unten.",
+          "Wähle in der `Klassenansicht` eine Klasse.",
+          "Lies die Abschnitte von oben nach unten.",
         ],
       },
       {
         title: "Was die Abschnitte bedeuten",
         steps: [
-          "`Bleiben in der Betreuung`: diese Kinder übergeben Sie an die OGS.",
+          "`Bleiben in der Betreuung`: diese Kinder übergibst du an die OGS.",
           "`Gehen nach Hause`: diese Kinder gehen nach dem Unterricht.",
           "`Abgemeldet`: für heute wurde die Betreuung abgesagt.",
           "`Keine Betreuung`: diese Kinder sind gar nicht in der OGS.",
@@ -45,17 +45,17 @@ export function teacherClassListTopic(): HelpTopic {
       },
     ],
     result:
-      "Sie sehen ohne Rückfrage, welches Kind nach dem Unterricht wohin geht.",
+      "Du siehst ohne Rückfrage, welches Kind nach dem Unterricht wohin geht.",
     notes: [
       "Bei einer anderen Abholzeit steht darunter die übliche Zeit mit `sonst`.",
       "Kam die Meldung heute herein, steht die Uhrzeit dabei.",
-      "Eine neue Krankmeldung erscheint von selbst. Sie müssen die Seite nicht neu laden.",
+      "Eine neue Krankmeldung erscheint von selbst. Du musst die Seite nicht neu laden.",
     ],
     differences: [
       "Abschnitte und Kennzeichen ändert das OGS-Team, nicht moto schule.",
     ],
     troubleshootingDetails: [
-      "Ein Kind fehlt in der Liste? Dann ist es nicht in dieser Klasse eingetragen. Schreiben Sie der OGS.",
+      "Ein Kind fehlt in der Liste? Dann ist es nicht in dieser Klasse eingetragen. Schreibe der OGS.",
     ],
     related: [
       HELP_TOPICS.teacherClassDay,

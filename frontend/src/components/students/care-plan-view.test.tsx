@@ -104,7 +104,7 @@ describe("CarePlanView", () => {
     render(<CarePlanView studentId="1" statusDays={[]} />);
     expect(
       await screen.findByText(
-        "Die Ansicht des Betreuungsplans ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Ansicht des Betreuungsplans ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("Boom")).not.toBeInTheDocument();

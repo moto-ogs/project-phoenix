@@ -89,7 +89,7 @@ export default function TraegerMensaPage() {
   return (
     <TenantPage
       title={billingAreaTitle("mensa")}
-      info="Hier legen Sie fest, wie die Mensa jeder Schule abgerechnet wird: je Essen oder als feste Pauschale je Kind und Monat. Gezählt wird nur ein Monat, den die OGS-Leitung freigegeben hat. Der Monatslauf setzt die Mensa auf die Rechnung des Kindes."
+      info="Hier legst du fest, wie die Mensa jeder Schule abgerechnet wird: je Essen oder als feste Pauschale je Kind und Monat. Gezählt wird nur ein Monat, den die OGS-Leitung freigegeben hat. Der Monatslauf setzt die Mensa auf die Rechnung des Kindes."
       stats={
         data && schools.length > 0 ? (
           <TenantPageStats
@@ -147,7 +147,7 @@ export default function TraegerMensaPage() {
         <EmptyState
           icon={<ForkKnifeIcon className="h-12 w-12" aria-hidden="true" />}
           title="Noch keine Schule."
-          description="Mensa-Preise gibt es für die Schulen Ihres Trägers."
+          description="Mensa-Preise gibt es für die Schulen deines Trägers."
         />
       ) : null}
       {/* Equal school cards in a grid: grids do not grow (TenantPage body

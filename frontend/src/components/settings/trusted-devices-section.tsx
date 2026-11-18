@@ -75,10 +75,10 @@ export interface TrustedDevicesCopy {
 const GERMAN_TRUSTED_DEVICES_COPY: TrustedDevicesCopy = {
   title: "Meine vertrauten Geräte",
   description:
-    "Gemerkte Geräte überspringen den 2FA-Code. Entfernen Sie Geräte, die Sie nicht mehr nutzen.",
-  emptyTitle: "Sie haben aktuell keine vertrauten Geräte gespeichert.",
+    "Gemerkte Geräte überspringen den 2FA-Code. Entferne Geräte, die du nicht mehr nutzt.",
+  emptyTitle: "Du hast aktuell keine vertrauten Geräte gespeichert.",
   emptyDescription:
-    "Wenn moto beim Anmelden nach einem Code fragt, können Sie Ihr Gerät dort merken.",
+    "Wenn moto beim Anmelden nach einem Code fragt, kannst du dein Gerät dort merken.",
   added: "Hinzugefügt",
   validUntil: "Gültig bis",
   lastUsed: "Zuletzt benutzt",

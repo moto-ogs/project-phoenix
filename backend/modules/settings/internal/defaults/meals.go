@@ -261,7 +261,7 @@ var mealDefinitions = []config.Definition{
 		Key:   config.KeyMealCatererNamesEnabled,
 		Label: "Namen der Kinder für den Caterer",
 		Description: "Aus: Der Caterer sieht nur Zahlen. An: Er sieht auch die Namen der angemeldeten Kinder. " +
-			"Schalten Sie das nur ein, wenn Sie mit dem Caterer einen Vertrag zur Auftragsverarbeitung haben.",
+			"Schalte das nur ein, wenn du mit dem Caterer einen Vertrag zur Auftragsverarbeitung hast.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:manage",

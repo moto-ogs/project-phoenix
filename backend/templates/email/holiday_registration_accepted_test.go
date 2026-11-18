@@ -37,7 +37,7 @@ func TestHolidayRegistrationAcceptedTemplate_Renders(t *testing.T) {
 	var out bytes.Buffer
 	require.NoError(t, tpl.ExecuteTemplate(&out, "holiday-registration-accepted.html", content))
 	body := out.String()
-	for _, want := range []string{"Ihre Ferienanmeldung ist bestätigt", "Eva Muster", "Gemeinde Bissendorf", "Weihnachtsferien 2026/27",
+	for _, want := range []string{"Deine Ferienanmeldung ist bestätigt", "Eva Muster", "Gemeinde Bissendorf", "Weihnachtsferien 2026/27",
 		"Lia Muster", "bis 16 Uhr (08:00 bis 16:00 Uhr)", "(Feriengast)", "Auf der Warteliste:", "Hinweise vom Träger",
 		"Bitte Mittagessen mitgeben.", "Die Anmeldung ist verbindlich.", "In der Eltern-App ansehen"} {
 		assert.Contains(t, body, template.HTMLEscapeString(want))
@@ -69,7 +69,7 @@ func TestHolidayRegistrationAcceptedTemplate_OffersAParentAccount(t *testing.T) 
 	var out bytes.Buffer
 	require.NoError(t, tpl.ExecuteTemplate(&out, "holiday-registration-accepted.html", content))
 	body := out.String()
-	for _, want := range []string{"Elternkonto einrichten", "Der Link gilt 30 Tage.", "Mit einem Elternkonto sehen Sie den Stand Ihrer Anmeldung in der Eltern-App."} {
+	for _, want := range []string{"Elternkonto einrichten", "Der Link gilt 30 Tage.", "Mit einem Elternkonto siehst du den Stand deiner Anmeldung in der Eltern-App."} {
 		assert.Contains(t, body, template.HTMLEscapeString(want))
 	}
 	assert.Contains(t, body, `href="https://eltern.example.org/ferienkonto/setup-token"`)

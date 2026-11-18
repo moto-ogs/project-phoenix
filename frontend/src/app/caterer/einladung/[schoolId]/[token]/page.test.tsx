@@ -87,7 +87,7 @@ describe("CatererInvitationPage", () => {
       screen.getByRole("heading", { name: "Konto einrichten" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("OGS Nord lädt Sie ein. Wählen Sie Ihr Passwort."),
+      screen.getByText("OGS Nord lädt dich ein. Wähle dein Passwort."),
     ).toBeInTheDocument();
     expect(screen.getByText("kueche@example.test")).toBeInTheDocument();
     expect(screen.getByText("Passwortanforderungen")).toBeInTheDocument();
@@ -166,7 +166,7 @@ describe("CatererInvitationPage", () => {
 
     const screenStatus = await screen.findByRole("status");
     expect(screenStatus).toHaveTextContent("Konto erstellt");
-    expect(screenStatus).toHaveTextContent("Sie werden gleich weitergeleitet.");
+    expect(screenStatus).toHaveTextContent("Du wirst gleich weitergeleitet.");
     expect(screenStatus).not.toHaveTextContent("angemeldet");
     await waitFor(() => expect(mocks.portalPasswordLogin).toHaveBeenCalled());
     await vi.advanceTimersByTimeAsync(1600);
@@ -217,7 +217,7 @@ describe("CatererInvitationPage", () => {
 
     fireEvent.click(submit);
     expect(
-      await screen.findByText("Bitte geben Sie Ihr Passwort ein."),
+      await screen.findByText("Bitte gib dein Passwort ein."),
     ).toBeInTheDocument();
     expect(mocks.acceptCatererInvitation).not.toHaveBeenCalled();
   });

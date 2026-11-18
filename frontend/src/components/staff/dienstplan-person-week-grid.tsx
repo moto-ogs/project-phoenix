@@ -447,7 +447,7 @@ export function DienstplanPersonWeekGrid({
             // Die Leseansicht nennt Person und Wochensummen schon im
             // Seitenkopf; hier steht nur, wer den Plan ändert.
             <p className="w-full text-xs text-gray-500">
-              Nur zur Information. Ihre Schichten plant die Leitung im
+              Nur zur Information. Deine Schichten plant die Leitung im
               Dienstplan.
             </p>
           ) : (
@@ -465,13 +465,13 @@ export function DienstplanPersonWeekGrid({
                 {targetLabel ? ` · Soll ${targetLabel}` : ""}
               </p>
               <p className="w-full text-xs text-gray-500">
-                Ziehen Sie über die Viertelstunden, um eine Schicht anzulegen.
-                Klicken Sie auf eine Schicht, um sie zu ändern.
+                Ziehe über die Viertelstunden, um eine Schicht anzulegen. Klicke
+                auf eine Schicht, um sie zu ändern.
               </p>
             </>
           )}
           <p className="w-full text-xs text-gray-500 sm:hidden">
-            Wischen Sie zur Seite, um weitere Tage zu sehen.
+            Wische zur Seite, um weitere Tage zu sehen.
           </p>
         </div>
 

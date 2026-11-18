@@ -27,7 +27,7 @@ export function roomsCatalogTopic(presenceMode: HelpPresenceMode): HelpTopic {
     id: HELP_TOPICS.leadRooms,
     title: "Räume anlegen",
     question: "Wie lege ich die Räume der OGS an?",
-    summary: "Legen Sie jeden Raum einmal an. Gruppen brauchen einen Raum.",
+    summary: "Lege jeden Raum einmal an. Gruppen brauchen einen Raum.",
     group: "einrichten",
     audience: "lead",
     icon: "Building2",
@@ -39,22 +39,22 @@ export function roomsCatalogTopic(presenceMode: HelpPresenceMode): HelpTopic {
       {
         title: "Einen Raum anlegen",
         steps: [
-          "Klappen Sie in der Seitenleiste `Verwaltung` auf.",
-          "Öffnen Sie `Datenverwaltung` und danach `Räume`.",
-          "Wählen Sie oben rechts `+ Raum`.",
-          "Tragen Sie bei `Raumname` den Namen des Raums ein.",
-          "Wählen Sie eine `Kategorie`.",
-          "Tragen Sie bei Bedarf `Gebäude` und `Etage` ein.",
-          "Wählen Sie bei Bedarf eine `Farbe`.",
-          "Wählen Sie `Erstellen`.",
+          "Klappe in der Seitenleiste `Verwaltung` auf.",
+          "Öffne `Datenverwaltung` und danach `Räume`.",
+          "Wähle oben rechts `+ Raum`.",
+          "Trage bei `Raumname` den Namen des Raums ein.",
+          "Wähle eine `Kategorie`.",
+          "Trage bei Bedarf `Gebäude` und `Etage` ein.",
+          "Wähle bei Bedarf eine `Farbe`.",
+          "Wähle `Erstellen`.",
         ],
       },
       {
         title: "Einen Raum ändern",
         steps: [
-          "Öffnen Sie `Räume` und wählen Sie den Raum aus der Liste.",
-          "Ändern Sie die Angaben unter `Stammdaten`.",
-          "Wählen Sie `Speichern`.",
+          "Öffne `Räume` und wähle den Raum aus der Liste.",
+          "Ändere die Angaben unter `Stammdaten`.",
+          "Wähle `Speichern`.",
         ],
       },
       {
@@ -62,25 +62,25 @@ export function roomsCatalogTopic(presenceMode: HelpPresenceMode): HelpTopic {
         description:
           "moto zeigt vorher, wo der Raum noch genutzt wird. Hat der Raum schon Termine oder Anwesenheiten, archiviert moto ihn. Der Verlauf behält dann den Raum.",
         steps: [
-          "Öffnen Sie `Räume` und wählen Sie den Raum aus der Liste.",
-          "Wählen Sie oben rechts `Löschen`.",
-          "Lesen Sie, was mit dem Raum passiert.",
-          "Bestätigen Sie mit `Ja, löschen` oder `Ja, archivieren`.",
+          "Öffne `Räume` und wähle den Raum aus der Liste.",
+          "Wähle oben rechts `Löschen`.",
+          "Lies, was mit dem Raum passiert.",
+          "Bestätige mit `Ja, löschen` oder `Ja, archivieren`.",
         ],
       },
     ],
     result:
-      "Der Raum steht sofort zur Auswahl. Sie können ihn einer Gruppe zuweisen.",
+      "Der Raum steht sofort zur Auswahl. Du kannst ihn einer Gruppe zuweisen.",
     notes: [
       "Die Farbe erscheint später an jedem Ort-Schild dieses Raums.",
-      "Oben rechts fassen Sie die Liste unter `Gruppieren` nach `Gebäude`, `Etage` oder `Keine` zusammen.",
+      "Oben rechts fasst du die Liste unter `Gruppieren` nach `Gebäude`, `Etage` oder `Keine` zusammen.",
       ...(tracksRooms
         ? [
             "`Maximale Belegung` begrenzt, wie viele Kinder gleichzeitig im Raum sind.",
             "Mit `Offener Raum` dürfen Kinder den Raum jederzeit als Ziel wählen. Eine Aufsicht ersetzt das nicht.",
           ]
         : [
-            "`Maximale Belegung` und `Offener Raum` wirken bei Ihnen nicht. Ihre OGS hält nur fest, ob ein Kind da ist.",
+            "`Maximale Belegung` und `Offener Raum` wirken bei dir nicht. Deine OGS hält nur fest, ob ein Kind da ist.",
           ]),
     ],
     differences: [
@@ -89,11 +89,11 @@ export function roomsCatalogTopic(presenceMode: HelpPresenceMode): HelpTopic {
       "Beim `WC` und bei der `Toilette` fehlen zusätzlich `Farbe` und `Offener Raum`.",
     ],
     troubleshootingDetails: [
-      "Fehlt `Datenverwaltung` in der Seitenleiste? Dann fehlen Ihnen die Leitungsrechte. Fragen Sie Ihre Leitung.",
-      "Lässt sich ein Raum nicht löschen? Dann wird er noch genutzt. Der Dialog nennt Aktivitäten, Termine, Gruppen und Geräte. Wählen Sie dort zuerst einen anderen Raum.",
+      "Fehlt `Datenverwaltung` in der Seitenleiste? Dann fehlen dir die Leitungsrechte. Frage deine Leitung.",
+      "Lässt sich ein Raum nicht löschen? Dann wird er noch genutzt. Der Dialog nennt Aktivitäten, Termine, Gruppen und Geräte. Wähle dort zuerst einen anderen Raum.",
       ...(tracksRooms
         ? [
-            "Meldet moto oder das Tablet, der Raum ist voll? Dann ist `Maximale Belegung` erreicht. Erhöhen Sie die Zahl hier. Ist dagegen die Aktivität voll, ändern Sie `Maximale Teilnehmer` unter `Aktivitäten`.",
+            "Meldet moto oder das Tablet, der Raum ist voll? Dann ist `Maximale Belegung` erreicht. Erhöhe die Zahl hier. Ist dagegen die Aktivität voll, ändere `Maximale Teilnehmer` unter `Aktivitäten`.",
           ]
         : []),
     ],

@@ -6,7 +6,6 @@
 // Der Offen-Zustand liegt deshalb in einem kleinen Speicher dieses Moduls,
 // das Blatt rendert genau ein Ort (die untere Leiste, `NotificationsSheet`).
 
-import dynamic from "next/dynamic";
 import { X } from "lucide-react";
 
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -18,7 +17,6 @@ import {
 } from "~/components/ui/drawer";
 import { EmptyState } from "~/components/ui/empty-state";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
-import { Loading } from "~/components/ui/loading";
 import { useNotificationFeedUnread } from "~/lib/hooks/use-notification-feed";
 import { useReminders } from "~/lib/hooks/use-reminders";
 import type { Reminder } from "~/lib/reminders-api";
@@ -31,6 +29,10 @@ import {
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
 import {
+  NotificationFeedPanelContent,
+  NotificationFeedSection,
+} from "./notification-feed-panel-content";
+import {
   closeNotificationsSheet,
   useAnalyticsSchoolId,
   useNotificationsSheetOpen,
@@ -38,19 +40,6 @@ import {
 
 // How many reminders to preview inline before linking out to the full page.
 const PREVIEW_LIMIT = 5;
-
-// The feed list, its hooks and the infinite scroll load only when the panel
-// opens: the bell itself is mounted on every staff page.
-const NotificationFeedSection = dynamic(
-  () =>
-    import("./notification-feed-section").then(
-      (module) => module.NotificationFeedSection,
-    ),
-  {
-    ssr: false,
-    loading: () => <Loading compact message="Hinweise werden geladen." />,
-  },
-);
 
 // --- Inhalt -----------------------------------------------------------------
 
@@ -160,25 +149,6 @@ export function NotificationsPanelContent({
 }
 
 /**
- * Nur die Hinweise, ohne Erinnerungen: moto schule (#7139) hat keine
- * Erinnerungen der Aufsicht.
- */
-export function NotificationFeedPanelContent({
-  onNavigate,
-}: Readonly<{ onNavigate: () => void }>) {
-  const { unreadCount, setUnreadCount } = useNotificationFeedUnread();
-  const schoolId = useAnalyticsSchoolId();
-  return (
-    <NotificationFeedSection
-      schoolId={schoolId}
-      unreadCount={unreadCount}
-      onUnreadCount={setUnreadCount}
-      onNavigate={onNavigate}
-    />
-  );
-}
-
-/**
  * Das Blatt über den ganzen Telefonbildschirm. Einmal gerendert (untere
  * Leiste des Staff-Portals, Hülle von moto schule); Glocke und Menüzeile
  * öffnen es über `useOpenNotificationsSheet`. `feedOnly` zeigt nur die
@@ -203,8 +173,8 @@ export function NotificationsSheet({
           <DrawerTitle>Benachrichtigungen</DrawerTitle>
           <DrawerDescription className="sr-only">
             {feedOnly
-              ? "Hinweise für Sie."
-              : "Erinnerungen und Hinweise für Sie."}
+              ? "Hinweise für dich."
+              : "Erinnerungen und Hinweise für dich."}
           </DrawerDescription>
           <Button
             type="button"

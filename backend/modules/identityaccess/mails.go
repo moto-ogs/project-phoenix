@@ -201,7 +201,7 @@ func MFACodeMailContent(message MFACodeMail, origin string) Mail {
 		return parentMFACodeMail(message, origin)
 	}
 	return Mail{
-		Subject:  "Ihr moto-Anmeldecode",
+		Subject:  "Dein moto-Anmeldecode",
 		Template: "mfa-email-code.html",
 		Content: map[string]any{
 			"LogoURL":              trimmedLogoURL(origin),
@@ -220,7 +220,7 @@ func TrustedDeviceAddedMailContent(message TrustedDeviceMail, origin string) Mai
 		return parentTrustedDeviceMail(message, origin)
 	}
 	return Mail{
-		Subject:  "Neues vertrautes Gerät zu Ihrem moto-Konto hinzugefügt",
+		Subject:  "Neues vertrautes Gerät zu deinem moto-Konto hinzugefügt",
 		Template: "trusted-device-added.html",
 		Content: map[string]any{
 			"LogoURL":     trimmedLogoURL(origin),
@@ -239,7 +239,7 @@ func TrustedDeviceAddedMailContent(message TrustedDeviceMail, origin string) Mai
 // and may switch the factor on again in its account.
 func CatererMFAResetMailContent(message CatererMFAResetMail, origin string) Mail {
 	return Mail{
-		Subject:  "Ihre Zwei-Faktor-Anmeldung bei moto wurde zurückgesetzt",
+		Subject:  "Deine Zwei-Faktor-Anmeldung bei moto wurde zurückgesetzt",
 		Template: "caterer-mfa-reset.html",
 		Content: map[string]any{
 			"LogoURL": trimmedLogoURL(origin),
@@ -253,7 +253,7 @@ func adminActor(byOperator bool) string {
 	if byOperator {
 		return "Das moto-Team"
 	}
-	return "Die Verwaltung Ihrer Schule"
+	return "Die Verwaltung deiner Schule"
 }
 
 // MFAResetByAdminMailContent tells an account holder that an administrator
@@ -263,7 +263,7 @@ func MFAResetByAdminMailContent(message MFAResetByAdminMail, origin string) Mail
 		return parentMFAResetMail(message, origin)
 	}
 	return Mail{
-		Subject:  "Ihre Zwei-Faktor-Anmeldung bei moto wurde zurückgesetzt",
+		Subject:  "Deine Zwei-Faktor-Anmeldung bei moto wurde zurückgesetzt",
 		Template: "account-mfa-reset.html",
 		Content: map[string]any{
 			"LogoURL":    trimmedLogoURL(origin),
@@ -279,7 +279,7 @@ func MFAResetByAdminMailContent(message MFAResetByAdminMail, origin string) Mail
 // new address nor a link.
 func LoginAddressChangedMailContent(message LoginAddressChangedMail, origin string) Mail {
 	return Mail{
-		Subject:  "Die E-Mail-Adresse Ihres moto-Kontos wurde geändert",
+		Subject:  "Die E-Mail-Adresse deines moto-Kontos wurde geändert",
 		Template: "account-login-address-changed.html",
 		Content: map[string]any{
 			"LogoURL":    trimmedLogoURL(origin),
@@ -384,9 +384,9 @@ func TraegerInvitationMail(invitation TraegerInvitation, traegerName, origin, tr
 // have been them.
 func TraegerAccountChangeMail(notice TraegerAccountChangeNotice, origin string) Mail {
 	removed := notice.Action == TraegerAccountMemberRemoved
-	subject := "Ihre Rollen im Träger-Büro haben sich geändert"
+	subject := "Deine Rollen im Träger-Büro haben sich geändert"
 	if removed {
-		subject = "Sie sind nicht mehr im Träger-Büro"
+		subject = "Du bist nicht mehr im Träger-Büro"
 	}
 	occurred := notice.OccurredAt.In(calendar.Berlin)
 	return Mail{
@@ -443,7 +443,7 @@ func (m DemoAccessMessage) PersonName() string {
 // form carried reaches this mail: no name, no school.
 func DemoAccessLinkMail(entryURL, origin string) Mail {
 	return Mail{
-		Subject:  "Ihr Link zur moto-Demo",
+		Subject:  "Dein Link zur moto-Demo",
 		Template: DemoAccessTemplate,
 		Content: map[string]any{
 			"EntryURL": entryURL,

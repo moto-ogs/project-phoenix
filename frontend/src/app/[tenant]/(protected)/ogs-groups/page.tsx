@@ -652,7 +652,7 @@ function OGSGroupPageContent() {
     wireErrorCode(liveError.code) === "general.permission";
   const error = useSwrLoadError(
     liveNoAccess ? null : liveError,
-    "die Liste Ihrer OGS-Gruppe",
+    "die Liste deiner OGS-Gruppe",
     () => reloadLive(),
   );
   useEffect(() => {
@@ -1080,7 +1080,7 @@ function OGSGroupPageContent() {
           icon: <MotoConceptIcon concept={groupsConcept} size={48} />,
           title: "Keine OGS-Gruppe zugeordnet",
           description:
-            "Sie sind keiner OGS-Gruppe als Leitung zugeordnet. Wenden Sie sich an Ihre Verwaltung, um einer Gruppe zugewiesen zu werden.",
+            "Du bist keiner OGS-Gruppe als Leitung zugeordnet. Wende dich an deine Verwaltung, um einer Gruppe zugewiesen zu werden.",
         }}
       />
     );
@@ -1388,7 +1388,7 @@ function OGSGroupPageContent() {
   ) : undefined;
   const holidayGroupExplanation = canOpenHolidayWeeks
     ? "Feriengäste stehen erst ab dem ersten Tag der Ferienwoche in der Gruppe. Wer kommt, steht unter Ferienwochen."
-    : "Feriengäste stehen erst ab dem ersten Tag der Ferienwoche in der Gruppe. Wer kommt, weiß Ihre Leitung.";
+    : "Feriengäste stehen erst ab dem ersten Tag der Ferienwoche in der Gruppe. Wer kommt, weiß deine Leitung.";
 
   // Statuszeile aus den bereits geladenen Gruppendaten. Der Gruppenname
   // steht im Titel und wiederholt sich hier nicht.

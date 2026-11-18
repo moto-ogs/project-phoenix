@@ -275,7 +275,7 @@ export function HolidayAllocationWeekCard({
           <p className="text-sm text-gray-600">
             {week.bookingUnit === "day"
               ? "An mindestens einem Tag ist kein Platz frei. Andere Tage können noch Plätze haben."
-              : "Es ist kein Platz frei. Für mehr Kinder erhöhen Sie zuerst im Reiter „Plätze“ die Zahl der Plätze."}
+              : "Es ist kein Platz frei. Für mehr Kinder erhöhe zuerst im Reiter „Plätze“ die Zahl der Plätze."}
           </p>
         ) : null}
         <ResponsiveActionList>

@@ -135,7 +135,7 @@ func (s *Service) reachablePushRecipients(ctx context.Context, thread *StaffMess
 }
 
 func (s *Service) sendStaffMessagePush(ctx context.Context, thread *StaffMessageThread, messageID int64, optedIn []int64) {
-	title, body := "Neue Nachricht aus dem Team", "Jemand aus dem Team hat Ihnen geschrieben."
+	title, body := "Neue Nachricht aus dem Team", "Jemand aus dem Team hat dir geschrieben."
 	if thread.Kind == groupKind {
 		// Not even the group name: it can say more than the lock screen should.
 		title, body = "Neue Nachricht im Gruppenchat", "Jemand hat in einer Gruppe des Teams geschrieben."

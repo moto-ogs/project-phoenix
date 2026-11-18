@@ -131,7 +131,7 @@ describe("useSchoolCheckinMode with a check-in target", () => {
     });
 
     expect(mocks.showMessage).toHaveBeenCalledWith(
-      "Das Kind wurde nicht in Mensa angemeldet. Prüfen Sie die Angaben des Kindes.",
+      "Das Kind wurde nicht in Mensa angemeldet. Prüfe die Angaben des Kindes.",
     );
     expect(result.current.successCount).toBe(0);
   });

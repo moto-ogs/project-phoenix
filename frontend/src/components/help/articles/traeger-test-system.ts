@@ -8,26 +8,26 @@ export function traegerTestSystemTopic(): HelpTopic {
     title: "Mit dem Testsystem ausprobieren",
     question: "Was ist das Testsystem?",
     summary:
-      "Im Testsystem probieren Sie moto mit erfundenen Kindern aus. Echte Daten gehören nicht hinein.",
+      "Im Testsystem probierst du moto mit erfundenen Kindern aus. Echte Daten gehören nicht hinein.",
     group: "einstieg",
     audience: "traeger",
     icon: "PuzzlePiece",
     requirements: [
-      "Das moto-Team hat für Ihren Träger ein Testsystem angelegt.",
+      "Das moto-Team hat für deinen Träger ein Testsystem angelegt.",
     ],
     steps: [
-      "Melden Sie sich im Träger-Portal an.",
-      "Gehören Sie auch zum echten Träger? Wählen Sie den Test-Träger aus.",
-      "Oben steht der Hinweis `Testsystem`. So erkennen Sie das Testsystem.",
-      "Die Seite `Schulen` zeigt die Test-Schulen. Probieren Sie alles aus.",
+      "Melde dich im Träger-Portal an.",
+      "Gehörst du auch zum echten Träger? Wähle den Test-Träger aus.",
+      "Oben steht der Hinweis `Testsystem`. So erkennst du das Testsystem.",
+      "Die Seite `Schulen` zeigt die Test-Schulen. Probiere alles aus.",
     ],
     result:
-      "Wenn Sie fertig sind, löscht das moto-Team das Testsystem mit allen Test-Schulen.",
+      "Wenn du fertig bist, löscht das moto-Team das Testsystem mit allen Test-Schulen.",
     notes: [
-      "Alle Kinder im Testsystem sind erfunden. Tragen Sie keine echten Kinder ein.",
+      "Alle Kinder im Testsystem sind erfunden. Trage keine echten Kinder ein.",
     ],
     troubleshootingDetails: [
-      "Sie sehen den Hinweis `Testsystem` nicht? Dann sind Sie beim echten Träger. Melden Sie sich ab und wählen Sie den Test-Träger.",
+      "Du siehst den Hinweis `Testsystem` nicht? Dann bist du beim echten Träger. Melde dich ab und wähle den Test-Träger.",
     ],
     related: [HELP_TOPICS.traegerLogin],
   };

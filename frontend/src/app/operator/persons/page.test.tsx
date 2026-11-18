@@ -162,9 +162,7 @@ describe("OperatorPersonsPage", () => {
 
     expect(screen.getByText("Keine Schule ausgewählt")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Wählen Sie eine Schule aus, um deren Personen anzuzeigen.",
-      ),
+      screen.getByText("Wähle eine Schule aus, um deren Personen anzuzeigen."),
     ).toBeInTheDocument();
   });
 
@@ -407,7 +405,7 @@ describe("OperatorPersonsPage", () => {
       expect(screen.getByText("Person löschen")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Möchten Sie/)).toBeInTheDocument();
+    expect(screen.getByText(/Möchtest du/)).toBeInTheDocument();
     expect(screen.getByText(/wirklich löschen/)).toBeInTheDocument();
   });
 

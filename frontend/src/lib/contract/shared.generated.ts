@@ -2,9 +2,59 @@
 import { z } from "zod";
 import {
   instant,
+  int64String,
   int64StringOrNumber,
   safeInt,
 } from "./runtime";
+
+/** Go: notifications.schoolFeedEntryResponse */
+export interface schoolFeedEntryResponse {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  deep_link: string;
+  created_at: string;
+  updated_at: string;
+  read_at: string | null;
+  school_id: string;
+  school_name: string;
+}
+
+export const schoolFeedEntryResponseSchema: z.ZodType<schoolFeedEntryResponse, unknown> = z.object({
+  id: int64StringOrNumber,
+  type: z.string(),
+  title: z.string(),
+  body: z.string(),
+  deep_link: z.string(),
+  created_at: instant,
+  updated_at: instant,
+  read_at: instant.nullable(),
+  school_id: int64String,
+  school_name: z.string(),
+});
+
+/** Go: notifications.schoolFeedPageResponse */
+export interface schoolFeedPageResponse {
+  entries: schoolFeedEntryResponse[] | null;
+  next_cursor: string | null;
+  unread_count: number;
+}
+
+export const schoolFeedPageResponseSchema: z.ZodType<schoolFeedPageResponse, unknown> = z.object({
+  entries: z.array(schoolFeedEntryResponseSchema).nullable(),
+  next_cursor: z.string().nullable(),
+  unread_count: safeInt,
+});
+
+/** Go: notifications.feedCountResponse */
+export interface feedCountResponse {
+  unread_count: number;
+}
+
+export const feedCountResponseSchema: z.ZodType<feedCountResponse, unknown> = z.object({
+  unread_count: safeInt,
+});
 
 /** Go: notifications.feedEntryResponse */
 export interface feedEntryResponse {
@@ -39,15 +89,6 @@ export interface feedPageResponse {
 export const feedPageResponseSchema: z.ZodType<feedPageResponse, unknown> = z.object({
   entries: z.array(feedEntryResponseSchema).nullable(),
   next_cursor: z.string().nullable(),
-  unread_count: safeInt,
-});
-
-/** Go: notifications.feedCountResponse */
-export interface feedCountResponse {
-  unread_count: number;
-}
-
-export const feedCountResponseSchema: z.ZodType<feedCountResponse, unknown> = z.object({
   unread_count: safeInt,
 });
 

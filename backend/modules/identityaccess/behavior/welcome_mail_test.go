@@ -498,8 +498,8 @@ func TestStaffWelcomeTemplateRendersHelpLink(t *testing.T) {
 	assert.Contains(t, body, "Guten Tag Ada,")
 	assert.Contains(t, body, "OGS Am Berg")
 	assert.Contains(t, body, `href="https://moto.test/help/einladung-annehmen-und-konto-einrichten?role=caregiver"`)
-	assert.Contains(t, body, "Ihre Einladung kommt in einer eigenen E-Mail.")
-	assert.Contains(t, body, "Haben Sie eine Frage? Antworten Sie einfach auf diese E-Mail.")
+	assert.Contains(t, body, "Deine Einladung kommt in einer eigenen E-Mail.")
+	assert.Contains(t, body, "Hast du eine Frage? Antworte einfach auf diese E-Mail.")
 	assert.Contains(t, body, "Die Antwort geht an OGS Am Berg.", "the reply goes to the school the Reply-To names")
 
 	withoutReplyTo := renderWelcomeTemplate(t, &testpkg.EmailMessage{
@@ -508,7 +508,7 @@ func TestStaffWelcomeTemplateRendersHelpLink(t *testing.T) {
 			"HelpURL": "https://moto.test/help/einladung-annehmen-und-konto-einrichten?role=caregiver", "SchoolName": "OGS Am Berg",
 		},
 	})
-	assert.NotContains(t, withoutReplyTo, "Haben Sie eine Frage?", "without a school reply address a reply would reach no one at the school")
+	assert.NotContains(t, withoutReplyTo, "Hast du eine Frage?", "without a school reply address a reply would reach no one at the school")
 }
 
 func renderWelcomeTemplate(t *testing.T, msg *testpkg.EmailMessage) string {

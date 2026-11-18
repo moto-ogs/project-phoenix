@@ -123,7 +123,7 @@ describe("StaffPoolPage", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: /^08:00–13:00 Ihre Schule ?, von Ihrer Schule geblockt\. Blockung aufheben$/,
+        name: /^08:00–13:00 Deine Schule ?, von deiner Schule geblockt\. Blockung aufheben$/,
       }),
     ).toBeVisible();
   });
@@ -183,7 +183,7 @@ describe("StaffPoolPage", () => {
     renderPage();
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /^08:00–13:00 Ihre Schule ?, von Ihrer Schule geblockt\. Blockung aufheben$/,
+        name: /^08:00–13:00 Deine Schule ?, von deiner Schule geblockt\. Blockung aufheben$/,
       }),
     );
     const dialog = await screen.findByRole("dialog", {
@@ -222,7 +222,7 @@ describe("StaffPoolPage", () => {
     // stünde wieder das Ladegerüst da.
     expect(screen.getAllByText("Springer, Lena").length).toBeGreaterThan(0);
     expect(
-      screen.queryByRole("button", { name: /von Ihrer Schule geblockt/ }),
+      screen.queryByRole("button", { name: /von deiner Schule geblockt/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -234,7 +234,7 @@ describe("StaffPoolPage", () => {
     });
     renderPage();
     expect(
-      await screen.findByText("Ihr Träger führt sein Personal nicht in moto."),
+      await screen.findByText("Dein Träger führt sein Personal nicht in moto."),
     ).toBeVisible();
     expect(
       screen.queryByRole("button", { name: "Vorherige Woche" }),

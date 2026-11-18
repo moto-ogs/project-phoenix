@@ -119,7 +119,7 @@ describe("ChildConsentsSection", () => {
     expect(screen.queryByText("Nicht hinterlegt")).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        "Hier sehen Sie, was für Ihr Kind gespeichert ist. Die Foto-Einwilligung können Sie hier ändern.",
+        "Hier siehst du, was für dein Kind gespeichert ist. Die Foto-Einwilligung kannst du hier ändern.",
       ),
     ).toBeInTheDocument();
     const withdrawButton = screen.getByRole("button", {
@@ -141,11 +141,11 @@ describe("ChildConsentsSection", () => {
 
     expect(
       await screen.findByText(
-        "Hier sehen Sie, was für Ihr Kind gespeichert ist.",
+        "Hier siehst du, was für dein Kind gespeichert ist.",
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("Die Foto-Einwilligung können Sie hier ändern."),
+      screen.queryByText("Die Foto-Einwilligung kannst du hier ändern."),
     ).not.toBeInTheDocument();
   });
 
@@ -159,7 +159,7 @@ describe("ChildConsentsSection", () => {
 
     expect(
       await screen.findByText(
-        /^Hier sehen Sie, was für Ihr Kind gespeichert ist\. Die Foto-Einwilligung widerrufen Sie bei der [^\s{}]+\.$/,
+        /^Hier siehst du, was für dein Kind gespeichert ist\. Die Foto-Einwilligung widerrufst du bei der [^\s{}]+\.$/,
       ),
     ).toBeInTheDocument();
     expect(

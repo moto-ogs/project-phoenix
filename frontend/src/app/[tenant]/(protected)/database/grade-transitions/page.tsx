@@ -62,7 +62,7 @@ export default function GradeTransitionsPage() {
       loading={status === "loading"}
       back
     >
-      <DesktopOnlyNotice description="Der Schuljahreswechsel ist für die Arbeit am Computer optimiert. Bitte öffnen Sie diese Seite auf einem Laptop oder Desktop-Rechner." />
+      <DesktopOnlyNotice description="Der Schuljahreswechsel ist für die Arbeit am Computer optimiert. Bitte öffne diese Seite auf einem Laptop oder Desktop-Rechner." />
 
       {/* Flex-Spalte, damit die Liste als letzte Fläche bis zur Unterkante
           wächst (`.moto-tenant-body`). */}
@@ -75,7 +75,7 @@ export default function GradeTransitionsPage() {
         ) : (
           <ForbiddenPage
             embedded
-            message="Sie haben nicht die nötige Berechtigung, um Schuljahreswechsel anzusehen."
+            message="Du hast nicht die nötige Berechtigung, um Schuljahreswechsel anzusehen."
           />
         )}
       </div>

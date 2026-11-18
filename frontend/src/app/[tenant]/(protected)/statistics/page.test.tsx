@@ -190,7 +190,7 @@ describe("Statistik — Bereich Kurse (#2891)", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          "Ihr Konto darf die Statistik nicht sehen. Bitte wenden Sie sich an Ihre Administration.",
+          "Dein Konto darf die Statistik nicht sehen. Bitte wende dich an deine Administration.",
         ),
       ).toBeVisible(),
     );
@@ -350,13 +350,13 @@ describe("Statistik — ausgeschaltete Raumhistorie (#3844)", () => {
           /Raumstatistiken brauchen das eingeschaltete Anwesenheitsprotokoll/,
         ),
       ).toHaveTextContent(
-        "Ihre Administration kann es unter Einstellungen > Datenschutz einschalten.",
+        "Deine Administration kann es unter Einstellungen > Datenschutz einschalten.",
       );
       expect(
         screen.queryByText("Es sind keine Räume angelegt."),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByText(/Wählen Sie einen Zeitraum ab/),
+        screen.queryByText(/Wähle einen Zeitraum ab/),
       ).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: "Einschalten" }),

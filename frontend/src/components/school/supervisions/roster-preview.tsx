@@ -157,7 +157,7 @@ export function SupervisionRosterPreview({
       ) : null}
       <Section
         title="Diese Kinder werden erwartet"
-        hint="Tippen Sie auf einen Namen. Sie sehen dann, wann das Kind geht, wer es abholen darf und wen Sie im Notfall anrufen."
+        hint="Tippe auf einen Namen. Du siehst dann, wann das Kind geht, wer es abholen darf und wen du im Notfall anrufst."
         rows={expected}
         pickupTimesLoaded={pickupTimesLoaded}
         pickupTimesRedacted={pickupTimesRedacted}
@@ -165,7 +165,7 @@ export function SupervisionRosterPreview({
       />
       <Section
         title="Heute nicht eingeplant"
-        hint="Diese Kinder sind heute nicht für die Betreuung gebucht. Kommen sie trotzdem, können Sie sie nach dem Start eintragen."
+        hint="Diese Kinder sind heute nicht für die Betreuung gebucht. Kommen sie trotzdem, kannst du sie nach dem Start eintragen."
         rows={notScheduled}
         pickupTimesLoaded={pickupTimesLoaded}
         pickupTimesRedacted={pickupTimesRedacted}

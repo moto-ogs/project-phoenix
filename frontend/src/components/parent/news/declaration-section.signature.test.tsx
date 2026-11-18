@@ -123,7 +123,7 @@ describe("Einverständnis mit Unterschrift (#4785)", () => {
     );
     expect(
       screen.getByText(
-        "Zum Zustimmen unterschreiben Sie mit dem Finger oder der Maus.",
+        "Zum Zustimmen unterschreibst du mit dem Finger oder der Maus.",
       ),
     ).toBeInTheDocument();
   });
@@ -138,21 +138,21 @@ describe("Einverständnis mit Unterschrift (#4785)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Zustimmen" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Ihre Antwort prüfen",
+      name: "Deine Antwort prüfen",
     });
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Zustimmen" }));
     expect(
       (
         await within(dialog).findAllByText(
-          "Bitte unterschreiben Sie und tippen Sie auf „Unterschrift bestätigen“.",
+          "Bitte unterschreibe und tippe auf „Unterschrift bestätigen“.",
         )
       ).length,
     ).toBeGreaterThan(0);
     expect(submit).not.toHaveBeenCalled();
 
     sign(dialog);
-    expect(within(dialog).getByAltText("Ihre Unterschrift")).toHaveAttribute(
+    expect(within(dialog).getByAltText("Deine Unterschrift")).toHaveAttribute(
       "src",
       PNG_DATA_URL,
     );
@@ -179,14 +179,14 @@ describe("Einverständnis mit Unterschrift (#4785)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Ablehnen" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Ihre Antwort prüfen",
+      name: "Deine Antwort prüfen",
     });
     expect(
       within(dialog).queryByRole("img", { name: "Feld zum Unterschreiben" }),
     ).not.toBeInTheDocument();
     expect(
       within(dialog).getByText(
-        "moto speichert Ihre Antwort mit Datum und Uhrzeit. Die Schule sieht sie.",
+        "moto speichert deine Antwort mit Datum und Uhrzeit. Die Schule sieht sie.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Ablehnen" }));
@@ -210,7 +210,7 @@ describe("Einverständnis mit Unterschrift (#4785)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Zustimmen" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Ihre Antwort prüfen",
+      name: "Deine Antwort prüfen",
     });
     sign(dialog);
     fireEvent.click(within(dialog).getByRole("button", { name: "Zustimmen" }));

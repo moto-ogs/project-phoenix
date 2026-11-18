@@ -796,7 +796,7 @@ describe("OperatorOrganizationDetailPage", () => {
     fireEvent.click(orgDeleteButtons[0]!);
 
     expect(await screen.findByText("Träger löschen")).toBeInTheDocument();
-    expect(screen.getByText(/Möchten Sie den Träger/)).toBeInTheDocument();
+    expect(screen.getByText(/Möchtest du den Träger/)).toBeInTheDocument();
   });
 
   // --- Trash + restore for schools ---
@@ -1084,7 +1084,7 @@ describe("OperatorOrganizationDetailPage", () => {
 
       expect(
         await screen.findByText(
-          "Noch niemand hat Zugang zum Träger-Portal dieses Trägers. Laden Sie die erste Person oben mit „Person einladen“ ein.",
+          "Noch niemand hat Zugang zum Träger-Portal dieses Trägers. Lade die erste Person oben mit „Person einladen“ ein.",
         ),
       ).toBeInTheDocument();
     });
@@ -1345,7 +1345,7 @@ describe("OperatorOrganizationDetailPage", () => {
 
       expect(
         await within(dialog).findAllByText(
-          "Bitte wählen Sie mindestens eine Rolle.",
+          "Bitte wähle mindestens eine Rolle.",
         ),
       ).not.toHaveLength(0);
       expect(mockInviteTraegerMember).not.toHaveBeenCalled();

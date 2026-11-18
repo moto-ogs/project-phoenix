@@ -8,43 +8,43 @@ export function dayLogTopic(groupMode: HelpGroupMode): HelpTopic {
     id: HELP_TOPICS.dayLog,
     title: "Den heutigen Betreuungstag prüfen",
     question: "Wie prüfe ich den heutigen Betreuungstag?",
-    summary: "Prüfen Sie für heute, welche Kinder anwesend oder abwesend sind.",
+    summary: "Prüfe für heute, welche Kinder anwesend oder abwesend sind.",
     group: "kinder",
     audience: ["caregiver", "lead"],
     icon: "CalendarCheck",
-    requirements: ["Ihre OGS hat das `Anwesenheitsprotokoll` eingeschaltet."],
+    requirements: ["Deine OGS hat das `Anwesenheitsprotokoll` eingeschaltet."],
     steps: [],
     instructionGroups: [
       {
         title: "Den Betreuungstag prüfen",
         steps: [
-          "Klappen Sie in der Seitenleiste `Verwaltung` auf und öffnen Sie `Tagesauswertung`.",
+          "Klappe in der Seitenleiste `Verwaltung` auf und öffne `Tagesauswertung`.",
           openCare
-            ? "Prüfen Sie oben die Zahlen für alle Kinder."
-            : "Prüfen Sie oben die Zahlen für alle Gruppen.",
-          ...(openCare ? [] : ["Wählen Sie bei einer Gruppe `Details`."]),
-          "Prüfen Sie die Kinder in den einzelnen Bereichen.",
-          "Wählen Sie ein Kind, um seine Angaben zu öffnen.",
+            ? "Prüfe oben die Zahlen für alle Kinder."
+            : "Prüfe oben die Zahlen für alle Gruppen.",
+          ...(openCare ? [] : ["Wähle bei einer Gruppe `Details`."]),
+          "Prüfe die Kinder in den einzelnen Bereichen.",
+          "Wähle ein Kind, um seine Angaben zu öffnen.",
         ],
       },
       {
         title: "Die Auswertung ausgeben",
         steps: [
           ...(openCare
-            ? ["Bleiben Sie für alle Kinder in der Übersicht."]
+            ? ["Bleibe für alle Kinder in der Übersicht."]
             : [
-                "Bleiben Sie für alle Gruppen in der Übersicht.",
-                "Für eine einzelne Gruppe öffnen Sie deren `Details`.",
+                "Bleibe für alle Gruppen in der Übersicht.",
+                "Für eine einzelne Gruppe öffne deren `Details`.",
               ]),
-          "Wählen Sie `Drucken`, `PDF`, `Word` oder `Excel`.",
+          "Wähle `Drucken`, `PDF`, `Word` oder `Excel`.",
         ],
       },
     ],
     result:
-      "Sie sehen für heute, welches Kind da ist. Die Liste ist danach geordnet. Kinder ohne Meldung stehen unter `Unentschuldigt abwesend`. Vergangene Tage können Sie hier nicht auswählen.",
+      "Du siehst für heute, welches Kind da ist. Die Liste ist danach geordnet. Kinder ohne Meldung stehen unter `Unentschuldigt abwesend`. Vergangene Tage kannst du hier nicht auswählen.",
     differences: [
-      "Fehlt `Tagesauswertung`? Fragen Sie Ihre Leitung nach dem `Anwesenheitsprotokoll`. Sie finden es unter `Einstellungen` und `Datenschutz`.",
-      "Steht dort `Anwesenheitsprotokoll ist ausgeschaltet`? Dann ist es für Ihre Schule nicht eingeschaltet.",
+      "Fehlt `Tagesauswertung`? Frage deine Leitung nach dem `Anwesenheitsprotokoll`. Du findest es unter `Einstellungen` und `Datenschutz`.",
+      "Steht dort `Anwesenheitsprotokoll ist ausgeschaltet`? Dann ist es für deine Schule nicht eingeschaltet.",
     ],
     notes: [
       "Ist ein Kind früher gegangen, steht der Grund hinter `gegangen`. Er steht auch im `PDF`, in `Word` und in `Excel`.",

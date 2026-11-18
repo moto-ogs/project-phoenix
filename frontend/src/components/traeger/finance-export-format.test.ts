@@ -103,7 +103,7 @@ describe("finance export format", () => {
     ];
     expect(sollMappingErrors({ ...MAPPING, columns })).toEqual({
       "columns.0.value":
-        "{Name} kennt moto nicht. Wählen Sie einen Platzhalter darunter.",
+        "{Name} kennt moto nicht. Wähle einen Platzhalter darunter.",
     });
     expect(
       sollMappingErrors({
@@ -121,7 +121,7 @@ describe("finance export format", () => {
       "csv-export-bewegungsdaten-110.csv",
     );
     // #4693: the name of the account, never its e-mail address.
-    expect(byLabel(true, true, "Eva Müller")).toBe("von Ihnen");
+    expect(byLabel(true, true, "Eva Müller")).toBe("von dir");
     expect(byLabel(false, true, "Eva Müller")).toBe("von Eva Müller");
     expect(byLabel(false, true, "")).toBe("von einem Konto ohne Namen");
     expect(byLabel(false, true, "  ")).toBe("von einem Konto ohne Namen");

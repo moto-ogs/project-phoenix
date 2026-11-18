@@ -4094,7 +4094,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.UploadObjectSweep.SweepUploadObjects",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/filestorage/internal/adapters/documents.Coordinator.Remove; modules/filestorage/internal/adapters/documents/coordinator.go:156.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/filestorage/internal/adapters/documents.Coordinator.Remove; modules/filestorage/internal/adapters/documents/coordinator.go:156. Reviewed for #7225: the coordinator now binds the configured upload backend. It retains the existing sweep, tenant scope and failure handling.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/documents.Coordinator.Remove",
       "target_owner": "file-storage"
@@ -4104,9 +4104,9 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.UploadObjectSweep.SweepUploadObjects",
-      "reason": "Reviewed construction helper: enrollment reaches modules/delivery/objects.PrivateUploadsBackend (delivery-platform) while binding the upload-object sweep. It resolves the existing private uploads backend but performs no object mutation, lock or scope effect.",
+      "reason": "Bind the existing upload backend for a cleanup pass; no object is changed by construction.",
       "source_owner": "enrollment",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploadsBackend",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.UploadFiles.Private",
       "target_owner": "delivery-platform"
     },
     {
@@ -4114,7 +4114,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.UploadObjectSweep.SweepUploadObjects",
-      "reason": "Reviewed construction helper: enrollment reaches modules/filestorage/compose.NewDocumentCoordinator (file-storage) while binding the upload-object sweep. It constructs the existing coordinator but performs no object mutation, lock or scope effect.",
+      "reason": "Reviewed construction helper: enrollment reaches modules/filestorage/compose.NewDocumentCoordinator (file-storage) while binding the upload-object sweep. It constructs the existing coordinator but performs no object mutation, lock or scope effect. Reviewed for #7225: the coordinator now binds the configured upload backend. It retains the existing sweep, tenant scope and failure handling.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/filestorage/compose.NewDocumentCoordinator",
       "target_owner": "file-storage"

@@ -33,13 +33,17 @@ const (
 // the change. A push follows for whoever did not switch the type off while a
 // day of the change lies within the push window School Calendar decided. The
 // members of the school's Träger read the same notice in the bell of the
-// Träger-Portal, without push (#7146).
+// Träger-Portal, and the caterer that supplies the school in the bell of the
+// caterer portal, both without push (#7146, #7147).
 type schoolCalendarClosingDayNotices struct {
 	audience deliveryContract.SchoolAudience
 	notifier staffPushRouter
 	// traeger writes the entry of the bell of the Träger-Portal (#7146); nil
 	// leaves the Träger-Büro out.
-	traeger     deliveryContract.TraegerFeedNotifier
+	traeger deliveryContract.TraegerFeedNotifier
+	// caterer writes the entry of the bell of the caterer portal (#7147);
+	// nil leaves the caterer out.
+	caterer     deliveryContract.CatererFeedNotifier
 	preferences closingDayPreferences
 	actor       func(context.Context) int64
 	now         func() time.Time
@@ -62,7 +66,7 @@ func NewSchoolCalendarClosingDayNotices(notifications DeliveryNotifications, act
 	}
 	return schoolCalendarClosingDayNotices{
 		audience: notifications.SchoolAudience, notifier: notifications.Notifier, preferences: notifications.Preferences,
-		traeger: notifications.TraegerNotices, actor: actor, now: time.Now,
+		traeger: notifications.TraegerNotices, caterer: notifications.CatererNotices, actor: actor, now: time.Now,
 	}
 }
 
@@ -99,6 +103,12 @@ func (n schoolCalendarClosingDayNotices) NotifyClosingDayChanged(ctx context.Con
 	}
 	if err := n.notifyTraeger(ctx, tenantID, notice.ClosingDayID, title, body, withoutAccount(audience.TraegerAccountIDs, actor)); err != nil {
 		return err
+	}
+	if err := notifyCaterer(ctx, n.caterer, catererFeedNotice{
+		Type: deliveryContract.NotificationCatererSchoolClosingDayChanged, TenantID: tenantID, ActorID: actor,
+		Title: title, Body: body, RelatedType: "closing_day", RelatedID: notice.ClosingDayID,
+	}); err != nil {
+		return fmt.Errorf("closing day notice: %w", err)
 	}
 	guardians := withoutAccount(audience.GuardianAccountIDs, actor)
 	if len(guardians) == 0 || len(audience.StudentIDs) == 0 {

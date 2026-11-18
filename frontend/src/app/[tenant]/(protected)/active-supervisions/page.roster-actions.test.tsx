@@ -673,7 +673,7 @@ describe("MeinRaumPage roster actions", () => {
       );
       expect(
         await screen.findByText(
-          `${crash.charAt(0).toUpperCase()}${crash.slice(1)} Ihre Änderung ist gespeichert.`,
+          `${crash.charAt(0).toUpperCase()}${crash.slice(1)} Deine Änderung ist gespeichert.`,
         ),
       ).toBeInTheDocument();
       expect(reload).not.toHaveBeenCalled();
@@ -832,7 +832,7 @@ describe("MeinRaumPage roster actions", () => {
       render(<MeinRaumPage />);
       expect(
         await screen.findByText(
-          `„Sport AG“ wurde beendet. Sie können das bis ${until} Uhr rückgängig machen.`,
+          `„Sport AG“ wurde beendet. Du kannst das bis ${until} Uhr rückgängig machen.`,
         ),
       ).toBeInTheDocument();
 

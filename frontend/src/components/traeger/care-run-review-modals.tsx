@@ -74,8 +74,8 @@ export function CareExcludeModal({
     if (!invoice) return;
     formErrors.clear();
     if (!reason.trim()) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", {
-        reason: "Bitte nennen Sie einen Grund.",
+      formErrors.invalid("Bitte prüfe deine Angaben.", {
+        reason: "Bitte nenne einen Grund.",
       });
       return;
     }
@@ -204,8 +204,8 @@ export function CareInvoiceDateModal({
   const submit = async () => {
     formErrors.clear();
     if (choice === "date" && !date) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", {
-        invoice_date: "Bitte wählen Sie ein Datum.",
+      formErrors.invalid("Bitte prüfe deine Angaben.", {
+        invoice_date: "Bitte wähle ein Datum.",
       });
       return;
     }

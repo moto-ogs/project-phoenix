@@ -213,7 +213,7 @@ describe("AddSupervisorModal", () => {
 
     expect(
       await screen.findByText(
-        "Sie beaufsichtigen diese Betreuung nicht mehr. Deshalb können Sie niemanden hinzufügen.",
+        "Du beaufsichtigst diese Betreuung nicht mehr. Deshalb kannst du niemanden hinzufügen.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Hinzufügen" })).toHaveAttribute(

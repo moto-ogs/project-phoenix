@@ -54,7 +54,7 @@ const KEEPS_TEXT = "Die Schule hat geändert – bleibt so";
  */
 function careBeyondEndText(count: number): string {
   const children = count === 1 ? "1 Kind wird" : `${count} Kinder werden`;
-  return `${children} länger betreut, als die Anmeldephase dauert. moto beendet keine Betreuung. Sagen Sie der Schule Bescheid.`;
+  return `${children} länger betreut, als die Anmeldephase dauert. moto beendet keine Betreuung. Sage der Schule Bescheid.`;
 }
 
 function schoolName(
@@ -240,7 +240,7 @@ export function RolloutResultCard({
           return refusalText(row.errorCode) ?? "Die Schule hat abgelehnt.";
         }
         if (row.outcome === "stale") {
-          return "Die Schule hat seit der Vorschau etwas geändert. Sehen Sie sich die Vorschau noch einmal an.";
+          return "Die Schule hat seit der Vorschau etwas geändert. Sieh dir die Vorschau noch einmal an.";
         }
         if (row.careBeyondEnd > 0) return careBeyondEndText(row.careBeyondEnd);
         return "–";
@@ -251,7 +251,7 @@ export function RolloutResultCard({
   return (
     <SectionCard
       title="Ergebnis"
-      description="Ihre Angaben sind freigegeben. So haben die Schulen sie übernommen."
+      description="Deine Angaben sind freigegeben. So haben die Schulen sie übernommen."
     >
       <DataTable
         columns={columns}

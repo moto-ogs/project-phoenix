@@ -454,7 +454,7 @@ export function StaffTimeAccountsTable({
               variant="outline"
               onClick={onCloseMonth}
               disabled={!monthIsOver}
-              disabledReason="Den laufenden Monat können Sie erst ab dem 1. des Folgemonats abschließen."
+              disabledReason="Den laufenden Monat kannst du erst ab dem 1. des Folgemonats abschließen."
               tooltip="Öffnet ein Fenster, um die Konten aller Personen zum Monatsende festzuschreiben."
             >
               <Lock className="mr-1 h-3 w-3" />

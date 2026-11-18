@@ -35,7 +35,7 @@ function SessionExpiryWarningDesktop() {
       type="warning"
       size="compact"
       announce="off"
-      message="Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
+      message="Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."
     />
   );
 }

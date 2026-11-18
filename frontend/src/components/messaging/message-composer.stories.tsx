@@ -37,7 +37,7 @@ export const Empty: Story = {
 };
 
 export const WithText: Story = {
-  render: () => <ControlledComposer initialValue="Hallo, wie geht es Ihnen?" />,
+  render: () => <ControlledComposer initialValue="Hallo, wie geht es dir?" />,
 };
 
 export const Sending: Story = {

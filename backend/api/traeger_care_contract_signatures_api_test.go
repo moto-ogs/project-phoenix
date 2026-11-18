@@ -340,7 +340,13 @@ func (r reminderDays) SignatureReminderDays(context.Context, int64) (int, error)
 type reminderSender struct{}
 
 func (reminderSender) TraegerLetterhead(context.Context, int64) (string, error) {
-	return "Träger e.V.", nil
+	return "Träger e.V.\nMusterweg 1", nil
+}
+
+type missingReminderSender struct{}
+
+func (missingReminderSender) TraegerLetterhead(context.Context, int64) (string, error) {
+	return " \n", nil
 }
 
 // TestCareContractRemindersFollowTheTraegersDays pins the reminders
@@ -397,6 +403,27 @@ func TestCareContractRemindersFollowTheTraegersDays(t *testing.T) {
 
 	assert.Equal(t, "aktiv", signedDetail(t, f, signed).Status)
 	assert.Equal(t, "versendet", signedDetail(t, f, waiting).Status)
+}
+
+// TestCareContractReminderWithoutALetterheadIsNotSent keeps the current
+// sender check at the outbox boundary: a contract that was sent before its
+// letterhead was cleared gets neither a new link nor a reminder mail.
+func TestCareContractReminderWithoutALetterheadIsNotSent(t *testing.T) {
+	t.Parallel()
+	f := newCareContractFixture(t, "Träger Vertrag Erinnerung ohne Briefkopf")
+	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	contract, _ := sentCareContract(t, f, f.child)
+	ctx := testpkg.WithPackageTenantRuntime(context.Background())
+	_, err := f.db.ExecContext(ctx, `UPDATE care_contract.contract_mailings SET sent_at = ? WHERE contract_id = ?`, holidayFixtureNow().Add(-8*24*time.Hour), contract)
+	require.NoError(t, err)
+	mails := &owners.CareContractTestMails{}
+	reminders := careContractCompose.NewReminders(careContractCompose.ReminderPorts{
+		Organizations: reminderTraeger{id: f.office.organization}, Settings: reminderDays{days: 7}, Sender: missingReminderSender{},
+		Post: mails, Runtime: owners.CareContractRuntime{}, Links: owners.CareContractLinks("http://parents.localhost:3000"),
+	}, holidayFixtureNow)
+	require.ErrorIs(t, reminders.RemindDue(ctx), carecontract.ErrLetterheadMissing)
+	assert.Empty(t, mails.Purposes())
+	assert.Empty(t, signedDetail(t, f, contract).Reminders)
 }
 
 // concludedRow is a contract as the conclusion of #4680 leaves it.
@@ -516,7 +543,7 @@ type reminderResendSender struct{ resend func() }
 
 func (s reminderResendSender) TraegerLetterhead(context.Context, int64) (string, error) {
 	s.resend()
-	return "Träger e.V.", nil
+	return "Träger e.V.\nMusterweg 1", nil
 }
 
 func TestCareContractRemindersRecheckMailingsAfterCandidateSelection(t *testing.T) {
@@ -625,4 +652,23 @@ func TestCareContractChangedAfterTheSendIsNotSigned(t *testing.T) {
 			assert.Zero(t, signatures, "a changed contract is not signed")
 		})
 	}
+}
+
+// TestCareContractSigningWithoutALetterheadIsNotSent keeps a later removal
+// of the letterhead from producing a signed confirmation mail.
+func TestCareContractSigningWithoutALetterheadIsNotSent(t *testing.T) {
+	t.Parallel()
+	f := newCareContractFixture(t, "Träger Vertrag Signatur ohne Briefkopf")
+	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	contract, link := sentCareContract(t, f, f.child)
+	setTraegerLetterhead(t, f.reviewFixture, " \n")
+
+	rec := publicSigning(t, f.traeger, http.MethodPost, link+"/sign",
+		map[string]any{"method": "drawn", "image_png": signatureImage(t), "withdrawal_notice_acknowledged": true})
+	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), "care_contract.signing_letterhead_missing",
+		"the parents read that the Träger has to act, not the office's settings page")
+	status, signatures := signingStatus(t, f, contract)
+	assert.Equal(t, "versendet", status)
+	assert.Zero(t, signatures)
 }

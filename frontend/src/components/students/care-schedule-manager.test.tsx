@@ -1451,7 +1451,7 @@ describe("CareScheduleManager", () => {
 
     expect(
       await screen.findByText(
-        "Für die geplante Abwesenheit fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+        "Für die geplante Abwesenheit fehlt dir die Berechtigung. Bitte frage die Schule.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -1471,7 +1471,7 @@ describe("CareScheduleManager", () => {
 
     expect(
       await screen.findByText(
-        "Die Übersicht der Betreuungszeiten konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Übersicht der Betreuungszeiten konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("Netzwerkfehler")).not.toBeInTheDocument();

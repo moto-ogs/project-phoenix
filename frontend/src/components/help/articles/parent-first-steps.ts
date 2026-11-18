@@ -11,29 +11,29 @@ export function parentFirstStepsTopic(): HelpTopic {
     title: "Erste Schritte im Elternportal",
     question: "Wie zeigt mir moto die wichtigsten Bereiche?",
     summary:
-      "Eine kurze Checkliste führt Sie durch die wichtigsten Bereiche im Elternportal.",
+      "Eine kurze Checkliste führt dich durch die wichtigsten Bereiche im Elternportal.",
     group: "einstieg",
     audience: "parent",
     icon: "ListChecks",
     steps: [
       "Nach der Anmeldung öffnet sich die Checkliste `Erste Schritte`.",
-      "Klappen Sie einen Punkt auf und wählen Sie `Tour starten`.",
-      "moto markiert den passenden Bereich. Tippen Sie auf die markierte Stelle oder wählen Sie `Weiter`.",
-      "Nach der Tour bekommt der Punkt einen Haken. Sie können danach mit einem anderen Punkt weitermachen.",
-      "Sind alle Punkte erledigt, wählen Sie `Erste Schritte abschließen`.",
+      "Klappe einen Punkt auf und wähle `Tour starten`.",
+      "moto markiert den passenden Bereich. Tippe auf die markierte Stelle oder wähle `Weiter`.",
+      "Nach der Tour bekommt der Punkt einen Haken. Du kannst danach mit einem anderen Punkt weitermachen.",
+      "Sind alle Punkte erledigt, wähle `Erste Schritte abschließen`.",
     ],
     result:
       "Die Checkliste verschwindet. Alle ausführlichen Anleitungen bleiben in der Hilfe verfügbar.",
     notes: [
-      "Auf dem Handy steht die Checkliste über der unteren Navigation. Sie können sie einklappen und später wieder öffnen.",
-      "Mit `Noch einmal zeigen` können Sie eine erledigte Tour wiederholen.",
+      "Auf dem Handy steht die Checkliste über der unteren Navigation. Du kannst sie einklappen und später wieder öffnen.",
+      "Mit `Noch einmal zeigen` kannst du eine erledigte Tour wiederholen.",
       "`Angaben zu meinem Kind ändern` zeigt Angaben, Betreuungszeiten, den Heimweg und Kontakte.",
       "`moto als App auf dem Handy hinzufügen` und `Benachrichtigungen einschalten` sind zwei getrennte Touren.",
       "Der Stand gilt für dieses Elternkonto auf diesem Gerät.",
     ],
     troubleshootingDetails: [
-      "Sie haben `Erste Schritte ausblenden` gewählt? Dann erscheint die Checkliste auf diesem Gerät nicht mehr. Die einzelnen Anleitungen finden Sie weiterhin in der Hilfe.",
-      "Ein Bereich fehlt? Manche Bereiche zeigt moto nur, wenn Ihre OGS sie nutzt.",
+      "Du hast `Erste Schritte ausblenden` gewählt? Dann erscheint die Checkliste auf diesem Gerät nicht mehr. Die einzelnen Anleitungen findest du weiterhin in der Hilfe.",
+      "Ein Bereich fehlt? Manche Bereiche zeigt moto nur, wenn deine OGS sie nutzt.",
     ],
     related: [
       HELP_TOPICS.parentChildOverview,

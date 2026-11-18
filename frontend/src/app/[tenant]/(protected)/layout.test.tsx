@@ -68,12 +68,12 @@ vi.mock("~/components/staff-onboarding/staff-onboarding-wizard", () => ({
   StaffOnboardingWizard: () => null,
 }));
 
-// Die geführte Einrichtung prüft vor dem ersten Schritt die Push-
-// Konfiguration der Schule beim Server.
-vi.mock("~/lib/push-api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/push-api")>()),
-  verifyPushConfiguration: vi.fn().mockResolvedValue(undefined),
-}));
+// Die geführte Einrichtung liest vor dem ersten Schritt den Push-Schlüssel
+// des Servers; hier ist er vorhanden.
+vi.mock(
+  "~/lib/hooks/use-push-public-key",
+  async () => (await import("~/test/push-public-key-mock")).pushPublicKeyModule,
+);
 
 vi.mock("~/lib/hooks/use-settings-cache-bridge", () => ({
   useSettingsCacheBridge: vi.fn(),

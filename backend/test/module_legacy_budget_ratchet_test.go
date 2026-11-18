@@ -354,6 +354,7 @@ var moduleLegacyFileBudgets = map[string]int{
 
 // ADR 0289: the maintenance seal constructors of the sealed document files in
 // modules/careplan/compose (+13) and modules/workforce/compose (+6).
+// ADR 0293: bind the storage backend in the API, worker and demo roots (+12).
 const moduleComposeBudgetTotal = 13666
 
 // moduleComposeBudgets maps every owner composition package to its production
@@ -381,6 +382,7 @@ const moduleComposeBudgetTotal = 13666
 // ADR 0275 raised modules/parentbilling/compose for the root clock (+2).
 // ADR 0276 raised modules/workforce/compose for the sick note retention clock (+1)
 // and workflows/staffoffboarding/compose for the offboarding clock (+2).
+// ADR 0293 counts the 12-line upload storage selector.
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
@@ -412,7 +414,8 @@ var moduleComposeBudgets = map[string]int{
 	"modules/dataimport/compose/imports": 31,
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.
 	// ADR 0267: +8, the clock fields.
-	"modules/delivery/compose": 399,
+	"modules/delivery/compose":         399,
+	"modules/delivery/objects/compose": 12, // ADR 0293
 	// ADR 0268: the clock of the administration and the IoT service (+6).
 	"modules/devicefleet/compose":                   209,
 	"modules/devicefleet/compose/repositoryadapter": 10,
@@ -453,7 +456,7 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0106: the Träger-Büro account management (+24).
 	// Raised by ADR 0187: the operator directory of the Träger export CLI (+11).
 	// Raised by ADR 0261: the owner's clock, its nil default and imports (+16).
-	"modules/identityaccess/compose": 1388, // raised by ADR 0077
+	"modules/identityaccess/compose": 1382, // raised by ADR 0077
 	// ADR 0269: the clock of the participation history (+2).
 	"modules/mealplan/compose": 104, // raised by ADR 0078 and ADR 0168
 	// ADR 0097: the isolated tenant return constructor, no retained logic moved.
@@ -519,7 +522,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0269: the default day of the real clock (+4).
 	// ADR 0278: the calendar import of the notices' day clock (+1) and the
 	// root's clock of the Records (+6).
-	"modules/schoolcalendar/compose":        169,
+	"modules/schoolcalendar/compose":        166,
 	"modules/schoolcalendar/portal/compose": 112,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0151: the school figure constructor (+6).
@@ -547,7 +550,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0151: the school figure constructor (+13).
 	// ADR 0156: the contract Soll port (+4).
 	// ADR 0241: the presence series of the utilization (+7).
-	"modules/studentpresence/compose":                 273,
+	"modules/studentpresence/compose":                 270,
 	"modules/studentpresence/compose/presenceservice": 110,
 	"modules/supervisiondashboard/compose":            11,
 	// Raised by ADR 0128: the student template days constructor (+5), by

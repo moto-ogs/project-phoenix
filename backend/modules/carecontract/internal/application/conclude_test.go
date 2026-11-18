@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -178,6 +179,8 @@ func TestAcceptanceIssueComparesTheTickedTextWithTheSavedVersions(t *testing.T) 
 		"a recorded version counts in an incomplete history as well")
 	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(current), legacyHistory(submitted.Add(-time.Hour))),
 		"an incomplete history keeps the earlier guard on the template row")
+	assert.Equal(t, carecontract.SkipAcceptanceMissing, acceptanceIssue(draft(current), legacyHistory(submitted)),
+		"the old guard requires a template write strictly after the submission")
 	assert.Equal(t, carecontract.SkipAcceptanceChanged, acceptanceIssue(draft(current), legacyHistory(submitted.Add(time.Hour))),
 		"an incomplete history keeps the earlier guard on the template row")
 }
@@ -247,4 +250,14 @@ func TestManualDraftKeepsEarlyStartConsent(t *testing.T) {
 	require.Empty(t, reason)
 	assert.True(t, draft.EarlyStart, "manual drafts retain the parents' voluntary consent")
 	assert.Contains(t, withdrawalBlocks(ContractRecord{EarlyStart: draft.EarlyStart}, withdrawalContact{Partner: "Träger"})[1].Text, "ausdrücklich verlangt")
+}
+
+// TestConclusionHoldsBackAContractWithoutLetterhead pins #7177: a Träger
+// without a letterhead sends no contract, so the conclusion at the
+// acceptance holds the contract back for the next run instead of failing
+// the run of the whole Träger.
+func TestConclusionHoldsBackAContractWithoutLetterhead(t *testing.T) {
+	t.Parallel()
+	err := sendHoldBack(fmt.Errorf("care contract: %w", carecontract.ErrLetterheadMissing))
+	assert.Equal(t, carecontract.SkipLetterheadMissing, holdBackReason(err))
 }

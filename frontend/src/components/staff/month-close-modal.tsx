@@ -97,7 +97,7 @@ export function MonthCloseReasonModal({
             size="md"
             onClick={handleSubmit}
             disabled={submitting || !canSubmit}
-            disabledReason="Geben Sie zuerst eine Begründung ein."
+            disabledReason="Gib zuerst eine Begründung ein."
             tooltip={submitTooltip}
             isLoading={submitting}
             loadingText="Bitte warten…"

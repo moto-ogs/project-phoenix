@@ -86,7 +86,7 @@ interface BreadcrumbNavProps {
 function BreadcrumbNav({ children }: BreadcrumbNavProps) {
   return (
     <nav
-      aria-label="Sie sind hier"
+      aria-label="Du bist hier"
       className="hidden items-center space-x-2 text-sm md:flex"
     >
       {children}

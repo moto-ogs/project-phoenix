@@ -287,7 +287,7 @@ describe("EnrollmentFormEditor", () => {
 
     expect(screen.getByLabelText("Frage im Elternformular")).toHaveAttribute(
       "placeholder",
-      "z. B. Wie haben Sie von uns erfahren?",
+      "z. B. Wie hast du von uns erfahren?",
     );
     expect(
       screen.getByText(
@@ -333,7 +333,7 @@ describe("EnrollmentFormEditor", () => {
 
     const error = await screen.findByRole("alert");
     expect(error).toHaveTextContent(
-      "Bitte geben Sie zuerst einen Namen für die Vorlage ein.",
+      "Bitte gib zuerst einen Namen für die Vorlage ein.",
     );
     expect(error).toHaveClass("bg-moto-red-soft");
     expect(
@@ -2097,14 +2097,12 @@ describe("EnrollmentFormEditor", () => {
     );
 
     expect(
-      await screen.findByText(
-        "Bitte geben Sie für Frage 1 einen Fragetext ein.",
-      ),
+      await screen.findByText("Bitte gib für Frage 1 einen Fragetext ein."),
     ).toBeInTheDocument();
     const question = screen.getByLabelText("Frage im Elternformular");
     expect(question).toHaveAttribute("aria-invalid", "true");
     expect(question).toHaveAccessibleDescription(
-      "Bitte füllen Sie dieses Feld aus.",
+      "Bitte fülle dieses Feld aus.",
     );
     await waitFor(() => {
       expect(question).toHaveFocus();
@@ -2202,7 +2200,7 @@ describe("EnrollmentFormEditor", () => {
     );
     expect(
       screen.getByText(
-        "Die Angebote legen Sie in der Anmeldephase fest. Eltern sehen sie über den Link der Phase.",
+        "Die Angebote legst du in der Anmeldephase fest. Eltern sehen sie über den Link der Phase.",
       ),
     ).toBeVisible();
 
@@ -2214,7 +2212,7 @@ describe("EnrollmentFormEditor", () => {
 
     expect(
       screen.getByText(
-        "Haben Ihre Betreuungsangebote eine Gehzeit? Dann brauchen Sie diese Frage nicht. Eine Antwort hier ersetzt die Gehzeit des Angebots.",
+        "Haben deine Betreuungsangebote eine Gehzeit? Dann brauchst du diese Frage nicht. Eine Antwort hier ersetzt die Gehzeit des Angebots.",
       ),
     ).toBeVisible();
   });
@@ -2600,7 +2598,7 @@ describe("information PDF validation", () => {
       },
     });
     expect(mocks.showActionMessage).toHaveBeenLastCalledWith(
-      "Bitte wählen Sie nur PDF-Dateien aus.",
+      "Bitte wähle nur PDF-Dateien aus.",
     );
     const oversized = new File(["%PDF"], "large.pdf", {
       type: "application/pdf",
@@ -2608,7 +2606,7 @@ describe("information PDF validation", () => {
     Object.defineProperty(oversized, "size", { value: 10 * 1024 * 1024 + 1 });
     fireEvent.change(picker, { target: { files: [oversized] } });
     expect(mocks.showActionMessage).toHaveBeenLastCalledWith(
-      "Eine Datei ist größer als 10 MB. Bitte wählen Sie kleinere Dateien.",
+      "Eine Datei ist größer als 10 MB. Bitte wähle kleinere Dateien.",
     );
     expect(mocks.uploadEnrollmentLegalDocument).not.toHaveBeenCalled();
     expect(

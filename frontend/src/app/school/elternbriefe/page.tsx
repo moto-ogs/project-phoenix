@@ -132,7 +132,9 @@ export default function SchoolParentLettersPage() {
     session ? schoolPortalKeys.parentLetters() : null,
     () => fetchAnnouncements(false, SCHOOL_PARENT_LETTERS_BASE),
   );
-  const loadError = useSwrLoadError(error, "Ihre Elternbriefe", () => mutate());
+  const loadError = useSwrLoadError(error, "Deine Elternbriefe", () =>
+    mutate(),
+  );
   const {
     data: classInfo,
     error: classesError,
@@ -142,7 +144,7 @@ export default function SchoolParentLettersPage() {
     fetchClassDayClassesSchool,
     { revalidateOnFocus: false },
   );
-  const classesLoadError = useSwrLoadError(classesError, "Ihre Klassen", () =>
+  const classesLoadError = useSwrLoadError(classesError, "Deine Klassen", () =>
     reloadClasses(),
   );
   const classes = classInfo?.classes ?? [];
@@ -194,7 +196,7 @@ export default function SchoolParentLettersPage() {
     if (save.pending) return;
     const fields = schoolParentLetterFieldErrors(draft);
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
     formErrors.clear();
@@ -246,7 +248,7 @@ export default function SchoolParentLettersPage() {
     <TenantPage
       title="Elternbriefe"
       info={
-        <p>Briefe an die Eltern Ihrer Klasse. Die Eltern lesen sie in moto.</p>
+        <p>Briefe an die Eltern deiner Klasse. Die Eltern lesen sie in moto.</p>
       }
       actions={
         <Button
@@ -257,7 +259,7 @@ export default function SchoolParentLettersPage() {
           onClick={openCreate}
           disabled={!!classesError || classes.length === 0}
           disabledReason={noClasses ? NO_OWN_CLASS_REASON : undefined}
-          tooltip="Öffnet einen neuen Brief an die Eltern Ihrer Klasse."
+          tooltip="Öffnet einen neuen Brief an die Eltern deiner Klasse."
         >
           <Plus className="h-4 w-4" aria-hidden />
           Neuer Elternbrief
@@ -286,7 +288,7 @@ export default function SchoolParentLettersPage() {
                   <div className="space-y-5">
                     {createdLetter ? (
                       <p className="text-sm text-gray-600">
-                        Der Brief ist gespeichert. Sie können das Senden erneut
+                        Der Brief ist gespeichert. Du kannst das Senden erneut
                         versuchen.
                       </p>
                     ) : null}
@@ -378,8 +380,8 @@ export default function SchoolParentLettersPage() {
 
                     <p className="text-sm text-gray-600">
                       Die Eltern der Klasse bekommen den Brief in moto und eine
-                      E-Mail. Als Absender sehen sie Ihren Namen, die Klasse und
-                      die Schule. Die OGS kann den Brief lesen.
+                      E-Mail. Als Absender sehen sie deinen Namen, die Klasse
+                      und die Schule. Die OGS kann den Brief lesen.
                     </p>
                   </div>
                 </div>
@@ -403,7 +405,7 @@ export default function SchoolParentLettersPage() {
 
       {noClasses ? (
         <p className="text-sm text-gray-600">
-          Ihnen ist keine Klasse zugeordnet. Bitte fragen Sie die OGS-Leitung.
+          Dir ist keine Klasse zugeordnet. Bitte frage die OGS-Leitung.
         </p>
       ) : null}
 
@@ -429,7 +431,7 @@ export default function SchoolParentLettersPage() {
             emptyState={
               <EmptyState
                 title="Noch keine Elternbriefe"
-                description="Ihre gesendeten Briefe stehen hier, mit dem Stand, wer sie gelesen hat."
+                description="Deine gesendeten Briefe stehen hier, mit dem Stand, wer sie gelesen hat."
               />
             }
           />

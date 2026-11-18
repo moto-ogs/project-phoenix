@@ -139,7 +139,7 @@ function AllowanceForm({
         ? "Bitte kurz sagen, warum sich der Anspruch ändert."
         : undefined;
     if (daysError || reasonError || parsed === null) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", {
+      errors.invalid("Bitte prüfe die markierten Felder.", {
         ...(daysError ? { entitled_days: daysError } : {}),
         ...(reasonError ? { reason: reasonError } : {}),
       });
@@ -274,13 +274,13 @@ export function StaffAbsenceAccountsCard({
         <EmptyState
           variant="compact"
           title="Keine Abwesenheitsart mit Kontingent."
-          description="Legen Sie unter Abwesenheitsarten eine Art mit Kontingent an, zum Beispiel Regenerationstag."
+          description="Lege unter Abwesenheitsarten eine Art mit Kontingent an, zum Beispiel Regenerationstag."
           action={
             <ButtonLink
               href={traegerPath("/traeger/personal/abwesenheitsarten")}
               variant="outline"
               size="md"
-              tooltip="Öffnet die Abwesenheitsarten Ihres Trägers."
+              tooltip="Öffnet die Abwesenheitsarten deines Trägers."
             >
               Zu den Abwesenheitsarten
             </ButtonLink>

@@ -23,6 +23,7 @@ import (
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -120,7 +121,22 @@ type careContractFixture struct {
 	child    int64
 }
 
+// newCareContractFixture gives the Träger a letterhead: a contract is sent
+// only with the Träger's address for the withdrawal notice (#7177).
 func newCareContractFixture(t *testing.T, name string) careContractFixture {
+	t.Helper()
+	f := newCareContractFixtureWithoutLetterhead(t, name)
+	setTraegerLetterhead(t, f.reviewFixture, traegerTestLetterhead)
+	return f
+}
+
+func setTraegerLetterhead(t *testing.T, f reviewFixture, text string) {
+	t.Helper()
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, "/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": text})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+}
+
+func newCareContractFixtureWithoutLetterhead(t *testing.T, name string) careContractFixture {
 	t.Helper()
 	f := newReviewFixture(t, name)
 	f.db = testpkg.SetupTestDB(t)
@@ -809,9 +825,12 @@ func TestCareContractMailNamesAHoldOfTheSchool(t *testing.T) {
 	assert.Empty(t, detail().Mailings[0].SendBlock, "the lift ends the hold at once")
 }
 
-func TestCareContractWithoutAPartnerCannotFreezeOrSendItsPDF(t *testing.T) {
+// TestCareContractWithoutALetterheadIsNotSent pins #7177: the withdrawal
+// notice takes the Träger's address from its letterhead, so without one no
+// contract is frozen or sent, and the refusal names the letterhead.
+func TestCareContractWithoutALetterheadIsNotSent(t *testing.T) {
 	t.Parallel()
-	f := newCareContractFixture(t, "Träger Vertrag ohne Namen")
+	f := newCareContractFixtureWithoutLetterhead(t, "Träger Vertrag ohne Briefkopf")
 	terms := map[string]any{"term_kind": "school_year", "notice_months": 1, "notice_to": "month_end"}
 	token := f.office.token
 	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), terms).Code)
@@ -820,9 +839,14 @@ func TestCareContractWithoutAPartnerCannotFreezeOrSendItsPDF(t *testing.T) {
 	created := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created
 	require.Len(t, created, 1)
 	id := created[0].ID
-	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{id}})
-	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
-	assert.Contains(t, rec.Body.String(), `"reason":"partner_missing"`)
+	// A letterhead of blanks or without an address is incomplete.
+	for _, text := range []string{"  \n ", "Träger ohne Anschrift"} {
+		setTraegerLetterhead(t, f.reviewFixture, text)
+		rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{id}})
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		code, _ := registrationRefusalOf(t, rec)
+		assert.Equal(t, "care_contract.letterhead_missing", code)
+	}
 	detail := decodeSchoolPortalData[careContractDetailBody](t, traegerJSON(t, f.traeger, token, http.MethodGet, contractPath(id, ""), nil).Body.Bytes())
 	assert.Equal(t, "entwurf", detail.Status)
 	assert.False(t, detail.DocumentFrozen)

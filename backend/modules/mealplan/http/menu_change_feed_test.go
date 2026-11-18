@@ -26,6 +26,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
+	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -64,7 +65,9 @@ func newMenuChangeFixture(t *testing.T) *menuChangeFixture {
 	require.NoError(t, err)
 	people := api.NewPeopleRepositorySuiteFactory(database)
 	directory := owners.MustNewPeopleDirectory(database)
-	notices := owners.NewMealPlanChangeNotices(directory, owners.DeliveryNotifications{Notifier: notifier, Preferences: module.NotificationPreferences})
+	caterer, ok := notifier.(deliveryContract.CatererFeedNotifier)
+	require.True(t, ok)
+	notices := owners.NewMealPlanChangeNotices(directory, owners.DeliveryNotifications{Notifier: notifier, Preferences: module.NotificationPreferences, CatererNotices: caterer})
 	require.NotNil(t, notices)
 	now := func() time.Time { return menuChangeToday.BerlinMidnight().Add(10 * time.Hour) }
 	meals, err := owners.BuildMealPlanAtForTests(database, settings.Settings, owners.NewStudentRootReads(people.Student), directory, notices, now)
@@ -224,7 +227,7 @@ func TestMenuChangeReachesGuardiansWithABookingAndRights(t *testing.T) {
 		require.Len(t, entries, 1)
 		assert.Equal(t, menuChangeType, entries[0].Type)
 		assert.Equal(t, "Speiseplan geändert", entries[0].Title)
-		assert.Equal(t, "Der Speiseplan für die Woche vom 10.06. bis 14.06.2030 hat sich geändert. Bitte prüfen Sie, ob die Essensbuchung Ihres Kindes noch passt.", entries[0].Body)
+		assert.Equal(t, "Der Speiseplan für die Woche vom 10.06. bis 14.06.2030 hat sich geändert. Bitte prüfe, ob die Essensbuchung deines Kindes noch passt.", entries[0].Body)
 		assert.Equal(t, fmt.Sprintf("/meal-plan?week=2030-06-10&school=%d", f.tenantID), entries[0].DeepLink)
 		assert.Nil(t, entries[0].ReadAt)
 	}
@@ -241,7 +244,7 @@ func TestMenuChangeReachesGuardiansWithABookingAndRights(t *testing.T) {
 	assert.Empty(t, f.pushes(t, booked.AccountID), "the push is off by default")
 	pushes := f.pushes(t, pushed.AccountID)
 	require.Len(t, pushes, 1)
-	assert.Equal(t, "Speiseplan geändert | Der Speiseplan hat sich geändert. Bitte prüfen Sie die Essensbuchung im Elternportal.", pushes[0])
+	assert.Equal(t, "Speiseplan geändert | Der Speiseplan hat sich geändert. Bitte prüfe die Essensbuchung im Elternportal.", pushes[0])
 	for _, leak := range []string{"Felix", "Schneider", "Reis"} {
 		assert.NotContains(t, pushes[0], leak)
 	}

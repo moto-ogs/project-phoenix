@@ -37,7 +37,7 @@ const steps = [
     icon: KeyRound,
     text: "Auf dem Startbildschirm auf Anmelden tippen und die 4-stellige PIN eingeben. Nach der vierten Ziffer prüft das Tablet automatisch.",
     detail:
-      "Die PIN legt die Leitung Ihrer OGS fest: unter Einstellungen, Geräte, Geräte-PIN. Ohne diese PIN geht die Anmeldung nicht.",
+      "Die PIN legt die Leitung deiner OGS fest: unter Einstellungen, Geräte, Geräte-PIN. Ohne diese PIN geht die Anmeldung nicht.",
   },
   {
     id: "armbaender-zuweisen",
@@ -265,7 +265,7 @@ export default function NfcQuickstartPage() {
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Link>
                   <p className="mt-2 hidden text-[12px] leading-5 font-medium text-gray-700 print:mt-2 print:block">
-                    So finden Sie es: moto im Browser öffnen, unten links auf
+                    So findest du es: moto im Browser öffnen, unten links auf
                     Hilfe klicken und die Anleitungen zum NFC-Tablet wählen.
                   </p>
                 </div>

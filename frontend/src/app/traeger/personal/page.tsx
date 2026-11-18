@@ -12,9 +12,14 @@ import {
   UploadSimpleIcon,
   UserPlusIcon,
 } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
 import { StaffLinkModal } from "~/components/traeger/staff/staff-link-modal";
+import {
+  parseStaffOverviewTab,
+  staffSubpageHref,
+  type StaffOverviewTab,
+} from "~/components/traeger/staff/staff-overview-tab";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import {
@@ -42,12 +47,9 @@ import {
   type StaffRecordSummary,
   type StaffSuggestion,
 } from "~/lib/traeger-staff-api";
-import { traegerPath } from "~/lib/traeger-url";
-
-type Tab = "vorschlaege" | "akten" | "ohne-akte";
 
 const INFO =
-  "Hier führen Sie jede Person, die Ihr Träger beschäftigt, mit einer Akte über alle Schulen. moto schlägt vor, welche Beschäftigungen an verschiedenen Schulen dieselbe Person sind. Sie prüfen jeden Vorschlag und verknüpfen ihn. Die Akte führt die Personalnummer des Trägers und die Bank- und Steuerdaten. Die Schulen arbeiten weiter mit ihrem Personal wie bisher. Lehrkräfte des Landes und Kräfte anderer Träger bekommen keine Akte.";
+  "Hier führst du jede Person, die dein Träger beschäftigt, mit einer Akte über alle Schulen. moto schlägt vor, welche Beschäftigungen an verschiedenen Schulen dieselbe Person sind. Du prüfst jeden Vorschlag und verknüpfst ihn. Die Akte führt die Personalnummer des Trägers und die Bank- und Steuerdaten. Die Schulen arbeiten weiter mit ihrem Personal wie bisher. Lehrkräfte des Landes und Kräfte anderer Träger bekommen keine Akte.";
 
 const RECORD_COLUMNS: DataTableColumn<StaffRecordSummary>[] = [
   {
@@ -214,7 +216,17 @@ const linkRequestOf = (suggestion: StaffSuggestion) => ({
 });
 
 export default function TraegerStaffRecordsPage() {
+  // `useSearchParams` braucht eine Suspense-Grenze.
+  return (
+    <Suspense fallback={<TenantPage title="Personalakten" loading />}>
+      <StaffRecordsContent />
+    </Suspense>
+  );
+}
+
+function StaffRecordsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { success } = useToast();
   const {
     data: overview,
@@ -226,7 +238,10 @@ export default function TraegerStaffRecordsPage() {
     fetchStaffOverview,
     "die Personalakten",
   );
-  const [tab, setTab] = useState<Tab | null>(null);
+  // Der Reiter steht in der Adresse (#7377): Abbrechen und Zurück einer
+  // Unterseite führen so auf ihn zurück, und der Zurück-Knopf des Browsers
+  // auch.
+  const tab = parseStaffOverviewTab(searchParams?.get("tab"));
   const [linking, setLinking] = useState<Omit<
     StaffLinkInput,
     "choices"
@@ -257,7 +272,18 @@ export default function TraegerStaffRecordsPage() {
   );
   const columns = useMemo(() => suggestionColumns(records), [records]);
   const released = overview?.release != null;
-  const active: Tab = tab ?? (proposals.length > 0 ? "vorschlaege" : "akten");
+  const active: StaffOverviewTab =
+    tab ?? (proposals.length > 0 ? "vorschlaege" : "akten");
+  const changeTab = (next: string) => {
+    const params = new URLSearchParams(searchParams?.toString());
+    params.set("tab", next);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+  // Unterseiten merken sich auch den aufgelösten Standard-Reiter. Ein Import
+  // kann Vorschläge erzeugen; der Rückweg bleibt trotzdem auf dem Reiter,
+  // von dem das Träger-Büro kam.
+  const recordHref = (id: string) =>
+    staffSubpageHref(`/traeger/personal/${id}`, active);
 
   return (
     <TenantPage
@@ -297,7 +323,7 @@ export default function TraegerStaffRecordsPage() {
               unavailable={overview.records.length === 0}
             />
             <ButtonLink
-              href={traegerPath("/traeger/personal/import")}
+              href={staffSubpageHref("/traeger/personal/import", active)}
               className="gap-2"
               variant="outline"
               size="md"
@@ -307,7 +333,7 @@ export default function TraegerStaffRecordsPage() {
               Personal importieren
             </ButtonLink>
             <ButtonLink
-              href={traegerPath("/traeger/personal/einstellen")}
+              href={staffSubpageHref("/traeger/personal/einstellen", active)}
               className="gap-2"
               variant="primary"
               size="md"
@@ -325,8 +351,9 @@ export default function TraegerStaffRecordsPage() {
         released
           ? {
               value: active,
-              onChange: (value) => setTab(value as Tab),
+              onChange: changeTab,
               label: "Bereiche der Personalakten",
+              inUrl: true,
               items: [
                 {
                   value: "vorschlaege",
@@ -347,7 +374,7 @@ export default function TraegerStaffRecordsPage() {
             setLinking(null);
             success(`Die Akte von ${staffName(record)} ist verknüpft.`);
             reload();
-            router.push(traegerPath(`/traeger/personal/${record.id}`));
+            router.push(recordHref(record.id));
           }}
         />
       }
@@ -357,7 +384,7 @@ export default function TraegerStaffRecordsPage() {
           <EmptyState
             icon={<LockKeyIcon className="h-12 w-12" aria-hidden="true" />}
             title="Personal beim Träger ist noch nicht freigeschaltet."
-            description="Das moto-Team schaltet es frei, sobald Ihr Träger bestätigt hat: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung. Bis dahin führt jede Schule ihr Personal selbst."
+            description="Das moto-Team schaltet es frei, sobald dein Träger bestätigt hat: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung. Bis dahin führt jede Schule ihr Personal selbst."
           />
         </SectionCard>
       ) : null}
@@ -372,7 +399,7 @@ export default function TraegerStaffRecordsPage() {
             />
           }
           title="Vorschläge zum Verknüpfen"
-          description="moto hat diese Beschäftigungen gefunden, die wohl dieselbe Person sind. Öffnen Sie einen Vorschlag, prüfen Sie die Werte und legen Sie die Akte an."
+          description="moto hat diese Beschäftigungen gefunden, die wohl dieselbe Person sind. Öffne einen Vorschlag, prüfe die Werte und lege die Akte an."
         >
           <DataTable
             columns={columns}
@@ -401,16 +428,14 @@ export default function TraegerStaffRecordsPage() {
         <SectionCard
           concept={staffConcept}
           title="Akten"
-          description="Jede Akte gilt für alle Schulen. Öffnen Sie eine Akte für Personalnummer, Bank und Steuer und den Verlauf."
+          description="Jede Akte gilt für alle Schulen. Öffne eine Akte für Personalnummer, Bank und Steuer und den Verlauf."
         >
           <DataTable
             columns={RECORD_COLUMNS}
             rows={[...overview.records]}
             getRowKey={(record) => record.id}
             stackedOnMobile
-            onRowClick={(record) =>
-              router.push(traegerPath(`/traeger/personal/${record.id}`))
-            }
+            onRowClick={(record) => router.push(recordHref(record.id))}
             emptyState={
               <EmptyState
                 icon={
@@ -420,7 +445,7 @@ export default function TraegerStaffRecordsPage() {
                   />
                 }
                 title="Noch keine Akte."
-                description="Stellen Sie oben mit „Person einstellen“ eine neue Person ein. Für Personal, das schon an einer Schule arbeitet: Verknüpfen Sie einen Vorschlag, legen Sie unter „Ohne Akte“ eine Akte an, oder nutzen Sie „Personal importieren“."
+                description="Stelle oben mit „Person einstellen“ eine neue Person ein. Für Personal, das schon an einer Schule arbeitet: Verknüpfe einen Vorschlag, lege unter „Ohne Akte“ eine Akte an, oder nutze „Personal importieren“."
               />
             }
           />
@@ -431,7 +456,7 @@ export default function TraegerStaffRecordsPage() {
         <SectionCard
           concept={peopleConcept}
           title="Personal ohne Akte"
-          description="Diese Personen arbeiten an einer Schule und haben noch keine Akte. Öffnen Sie eine Person, um ihre Akte anzulegen."
+          description="Diese Personen arbeiten an einer Schule und haben noch keine Akte. Öffne eine Person, um ihre Akte anzulegen."
         >
           <DataTable
             columns={CANDIDATE_COLUMNS}

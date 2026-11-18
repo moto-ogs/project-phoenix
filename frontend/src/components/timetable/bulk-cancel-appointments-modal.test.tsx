@@ -176,7 +176,7 @@ describe("BulkCancelAppointmentsModal", () => {
 
     expect(
       await screen.findByText(
-        "Im Zeitraum 12.10.2026 – 25.10.2026 sind nur noch Serien geplant, die auch an Schließtagen stattfinden: Ferienbetreuung (5 Termine), Ferienspiele (1 Termin). Zum Absagen setzen Sie unten das Häkchen.",
+        "Im Zeitraum 12.10.2026 – 25.10.2026 sind nur noch Serien geplant, die auch an Schließtagen stattfinden: Ferienbetreuung (5 Termine), Ferienspiele (1 Termin). Zum Absagen setzt du unten das Häkchen.",
       ),
     ).toBeInTheDocument();
     expect(

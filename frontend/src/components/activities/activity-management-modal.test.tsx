@@ -335,7 +335,7 @@ describe("ActivityManagementModal", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Sie können nur Aktivitäten bearbeiten/),
+        screen.getByText(/Du kannst nur Aktivitäten bearbeiten/),
       ).toBeInTheDocument();
     });
   });

@@ -112,7 +112,7 @@ var timetable_init_stundenplan_0Definitions = []config.Definition{
 	{
 		Key:             config.KeyTimetableAutoStartPlanned,
 		Label:           "Geplante Aktivitäten automatisch starten",
-		Description:     "Startet geplante Aktivitäten zur eingetragenen Uhrzeit. Ausgeschaltet erscheint ein Hinweis, und Ihr Team startet sie selbst.",
+		Description:     "Startet geplante Aktivitäten zur eingetragenen Uhrzeit. Ausgeschaltet erscheint ein Hinweis, und dein Team startet sie selbst.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:read",
@@ -152,7 +152,7 @@ var timetable_init_stundenplan_0Definitions = []config.Definition{
 	{
 		Key:             config.KeyTimetableStartLeadMinutes,
 		Label:           "Start vor Planbeginn erlaubt (Minuten)",
-		Description:     "So viele Minuten vor der geplanten Startzeit kann Ihr Team eine Aktivität starten.",
+		Description:     "So viele Minuten vor der geplanten Startzeit kann dein Team eine Aktivität starten.",
 		Type:            config.FieldNumber,
 		Default:         15,
 		ReadPermission:  "config:read",
@@ -166,7 +166,7 @@ var timetable_init_stundenplan_0Definitions = []config.Definition{
 	{
 		Key:             config.KeyTimetableEnforcePlannedEnd,
 		Label:           "Beenden erst ab geplanter Endzeit",
-		Description:     "Eine geplante Aktivität lässt sich erst ab ihrer eingetragenen Endzeit beenden. Darunter können Sie einige Minuten früher erlauben. Spontane Aktivitäten sind ausgenommen.",
+		Description:     "Eine geplante Aktivität lässt sich erst ab ihrer eingetragenen Endzeit beenden. Darunter kannst du einige Minuten früher erlauben. Spontane Aktivitäten sind ausgenommen.",
 		Type:            config.FieldBoolean,
 		Default:         true,
 		ReadPermission:  "config:read",
@@ -179,7 +179,7 @@ var timetable_init_stundenplan_0Definitions = []config.Definition{
 	{
 		Key:             config.KeyTimetableCompleteLeadMinutes,
 		Label:           "Beenden vor Planende erlaubt (Minuten)",
-		Description:     "So viele Minuten vor der geplanten Endzeit kann Ihr Team eine Aktivität beenden.",
+		Description:     "So viele Minuten vor der geplanten Endzeit kann dein Team eine Aktivität beenden.",
 		Type:            config.FieldNumber,
 		Default:         0,
 		ReadPermission:  "config:read",
@@ -251,7 +251,7 @@ var timetable_init_stundenplan_0Definitions = []config.Definition{
 	{
 		Key:             config.KeyTimetableDayStartTime,
 		Label:           "Beginn der Wochenansicht",
-		Description:     "Ab dieser Uhrzeit zeigt die Wochenansicht den Tag. Frühere Termine erreichen Sie durch Scrollen.",
+		Description:     "Ab dieser Uhrzeit zeigt die Wochenansicht den Tag. Frühere Termine erreichst du durch Scrollen.",
 		Type:            config.FieldTime,
 		Default:         "09:00",
 		ReadPermission:  "config:read",
@@ -264,7 +264,7 @@ var timetable_init_stundenplan_0Definitions = []config.Definition{
 	{
 		Key:             config.KeyTimetableDayEndTime,
 		Label:           "Ende der Wochenansicht",
-		Description:     "Bis zu dieser Uhrzeit zeigt die Wochenansicht den Tag. Spätere Termine erreichen Sie durch Scrollen.",
+		Description:     "Bis zu dieser Uhrzeit zeigt die Wochenansicht den Tag. Spätere Termine erreichst du durch Scrollen.",
 		Type:            config.FieldTime,
 		Default:         "17:00",
 		ReadPermission:  "config:read",

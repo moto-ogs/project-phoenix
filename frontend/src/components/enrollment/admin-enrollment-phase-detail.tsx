@@ -1,5 +1,6 @@
 "use client";
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { phaseHasPublicForm } from "~/lib/enrollment-phase-rules";
 import {
   APPROVAL_WITHOUT_OFFERING_COPY,
@@ -299,10 +300,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
           error: err instanceof Error ? err.message : "unknown",
           phase_id: phaseId,
         });
-        if (
-          err instanceof ApiError &&
-          (err.status === 401 || err.status === 403)
-        ) {
+        if (err instanceof ApiError && isAccessRefusal(err)) {
           setDefaultOfferingIds([]);
           setExplicitOfferingIds(null);
           setClassRosterSchoolClass(ALL_VALUE);
@@ -1090,7 +1088,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
                     <p className="mt-1 text-sm text-gray-500">
                       {requests.length === 0 && !reportLoading
                         ? "Sobald Eltern das Formular absenden, erscheinen die Eingänge hier."
-                        : "Passen Sie Status, Angebot, Betreuungstage, Zielklasse oder Suche an."}
+                        : "Passe Status, Angebot, Betreuungstage, Zielklasse oder Suche an."}
                     </p>
                   </div>
                 }
@@ -1489,7 +1487,7 @@ function PhaseChildActions({
                 ? "Als gelesen markieren"
                 : "Als ungelesen markieren",
               description:
-                "Ändert die Markierung nur für Sie, nicht für andere.",
+                "Ändert die Markierung nur für dich, nicht für andere.",
               onClick: () => onToggleRead(unread),
             },
           ]}

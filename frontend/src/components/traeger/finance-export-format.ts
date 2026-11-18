@@ -83,10 +83,7 @@ export function bookingTextSample(
     "{Empfänger}": SAMPLE_ROWS.recipient_name[document],
     "{Rechnungsnummer}": SAMPLE_ROWS.invoice_number[document],
   };
-  return pattern.replaceAll(
-    /\{[^{}]*\}/g,
-    (named) => values[named] ?? named,
-  );
+  return pattern.replaceAll(/\{[^{}]*\}/g, (named) => values[named] ?? named);
 }
 
 export const SOLL_FIELDS = Object.keys(SOLL_FIELD_LABELS) as SollField[];
@@ -134,7 +131,7 @@ export function byLabel(
   byAccount: boolean,
   name: string,
 ): string {
-  if (byYou) return "von Ihnen";
+  if (byYou) return "von dir";
   if (!byAccount) return "von einem gelöschten Konto";
   const trimmed = name.trim();
   return trimmed ? `von ${trimmed}` : "von einem Konto ohne Namen";

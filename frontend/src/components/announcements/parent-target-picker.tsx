@@ -199,7 +199,7 @@ export function ParentTargetPicker({
           {heading ?? `Wer soll ${kindLabel} erhalten?`}
         </h4>
         <p className="mt-0.5 text-xs text-gray-500">
-          Sie können mehrere Zielgruppen wählen. Jedes Elternteil erhält{" "}
+          Du kannst mehrere Zielgruppen wählen. Jedes Elternteil erhält{" "}
           {kindLabel} höchstens einmal.
         </p>
       </div>

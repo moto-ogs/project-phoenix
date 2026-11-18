@@ -429,7 +429,9 @@ export function SectionCard({
     ? cn(
         !flush && ZONE_PADDING_X,
         !flush && !hasHeader && ZONE_PADDING_TOP,
-        !flush && !showFooter && ZONE_PADDING_BOTTOM,
+        // Also above the footer: its divider is an edge like the card's
+        // own, so the last field or line keeps the card's distance to it.
+        !flush && ZONE_PADDING_BOTTOM,
         bodySpacing,
       )
     : bodySpacing;

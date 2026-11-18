@@ -32,7 +32,7 @@ export const Success: Story = {
 export const Warning: Story = {
   args: {
     type: "warning",
-    message: "Bitte überprüfen Sie Ihre Eingaben.",
+    message: "Bitte überprüfe deine Eingaben.",
   },
 };
 

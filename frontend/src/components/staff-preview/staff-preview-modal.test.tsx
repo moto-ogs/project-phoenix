@@ -72,13 +72,13 @@ describe("StaffPreviewModal", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/kaputt/)).not.toBeInTheDocument();
     expect(
-      screen.queryByText("Keine Person gefunden, die Sie ansehen können."),
+      screen.queryByText("Keine Person gefunden, die du ansehen kannst."),
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
 
     expect(
-      await screen.findByText("Keine Person gefunden, die Sie ansehen können."),
+      await screen.findByText("Keine Person gefunden, die du ansehen kannst."),
     ).toBeInTheDocument();
     expect(mockFetchCandidates).toHaveBeenCalledTimes(2);
   });

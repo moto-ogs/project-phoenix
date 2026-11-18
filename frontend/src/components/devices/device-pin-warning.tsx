@@ -20,12 +20,12 @@ const COPY: Record<DevicePinSetupReason, { title: string; message: string }> = {
   missing: {
     title: "Geräte-PIN fehlt",
     message:
-      "Ohne Geräte-PIN kann sich Ihr Team nicht am Tablet anmelden. Bitte legen Sie jetzt eine PIN fest.",
+      "Ohne Geräte-PIN kann sich dein Team nicht am Tablet anmelden. Bitte lege jetzt eine PIN fest.",
   },
   too_simple: {
     title: "Geräte-PIN ändern",
     message:
-      "Die Geräte-PIN ist leicht zu erraten. Bitte legen Sie eine eigene PIN fest. Danach meldet sich Ihr Team am Tablet mit der neuen PIN an.",
+      "Die Geräte-PIN ist leicht zu erraten. Bitte lege eine eigene PIN fest. Danach meldet sich dein Team am Tablet mit der neuen PIN an.",
   },
 };
 

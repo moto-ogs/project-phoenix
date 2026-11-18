@@ -378,11 +378,11 @@ func germanMessageEmailCopy(greeting, school, child, term string) parentMessageE
 	return parentMessageEmailCopy{
 		Subject: "Neue Nachricht von der " + term, Kicker: "Neue Nachricht",
 		Greeting: greeting,
-		Intro:    localizedMessageIntro("Die "+term, school, "hat Ihnen eine Nachricht geschrieben", "zu", child),
-		Reply:    "Antworten", FallbackHint: "Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:",
-		PreferenceHint: "Sie erhalten diese E-Mail, weil Sie in moto als sorgeberechtigte Person hinterlegt sind. In der App können Sie unter „Benachrichtigungen“ einstellen, worüber wir Sie informieren.",
+		Intro:    localizedMessageIntro("Die "+term, school, "hat dir eine Nachricht geschrieben", "zu", child),
+		Reply:    "Antworten", FallbackHint: "Falls der Button nicht funktioniert, kopiere bitte diesen Link:",
+		PreferenceHint: "Du erhältst diese E-Mail, weil du in moto als sorgeberechtigte Person hinterlegt bist. In der App kannst du unter „Benachrichtigungen“ einstellen, worüber wir dich informieren.",
 		FooterText:     localizedEmailFooter("Diese E-Mail wurde im Auftrag von", school, "Diese E-Mail wurde automatisch versendet."),
 		PoweredByLabel: "Unterstützt von", SchoolLogoAlt: "Logo der Schule",
-		DefaultBrandKicker: "Elternportal", DefaultSchoolName: "Ihre " + term,
+		DefaultBrandKicker: "Elternportal", DefaultSchoolName: "Deine " + term,
 	}
 }

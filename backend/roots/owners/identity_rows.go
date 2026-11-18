@@ -73,6 +73,6 @@ type pushSubscriptionRows interface {
 	DeleteSchoolByAccountID(ctx context.Context, accountID int64) error
 	DeleteByTokenFamilyID(ctx context.Context, accountID int64, familyID string) error
 	DeleteUnboundByAccountForPortal(ctx context.Context, accountID, tenantID int64, portal string) error
-	ListSessionLinks(ctx context.Context) ([]deliveryModels.SessionLink, error)
+	ListSessionLinks(ctx context.Context, afterID int64, limit int) ([]deliveryModels.SessionLink, error)
 	DeleteSessionLinks(ctx context.Context, links []deliveryModels.SessionLink) error
 }

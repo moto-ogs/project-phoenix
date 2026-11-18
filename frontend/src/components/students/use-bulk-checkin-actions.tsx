@@ -221,7 +221,7 @@ export function useBulkCheckinActions(
           davon {pendingBulkCheckout?.roomCount === 1 ? "ist" : "sind"} gerade
           in einem Raum. Beim Abmelden werden laufende Raumbesuche beendet.
           {(pendingBulkCheckout?.students.length ?? 0) > 1
-            ? " Ihre Wahl gilt für alle ausgewählten Kinder, auch ohne Raum."
+            ? " Deine Wahl gilt für alle ausgewählten Kinder, auch ohne Raum."
             : null}
         </p>
       </Modal>
@@ -256,7 +256,7 @@ export function useBulkCheckinActions(
             ))}
           </ul>
           <p className="text-sm text-gray-600">
-            Diese Kinder bleiben ausgewählt. Mit „Erneut versuchen“ führen Sie
+            Diese Kinder bleiben ausgewählt. Mit „Erneut versuchen“ führst du
             die Aktion für diese Kinder noch einmal aus. Geänderte Filter
             blenden sie dabei nicht aus.
           </p>

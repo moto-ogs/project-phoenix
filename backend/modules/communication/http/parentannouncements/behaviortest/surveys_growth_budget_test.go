@@ -35,7 +35,7 @@ func TestSurveyPositiveGrowthQueryBudget(t *testing.T) {
 	repos := api.NewParentMessagingSuiteRepositories(database).WithSchoolProjections(organizations)
 	settings, err := owners.NewSettingsTestModule(database, testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
-	objectBackend, err := objects.PrivateUploadsBackend()
+	objectBackend, err := objects.SealedPrivateUploadsBackend(objects.FileKeys{})
 	require.NoError(t, err)
 	files, _, err := api.NewFileStoreTestModule(database, testpkg.TenantRuntime(t, db), objectBackend)
 	require.NoError(t, err)

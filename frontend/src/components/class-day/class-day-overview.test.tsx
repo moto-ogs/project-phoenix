@@ -98,6 +98,20 @@ describe("ClassDayOverview on the weekend", () => {
     expect(fetchClassDay).not.toHaveBeenCalled();
   });
 
+  // Ohne Namen grüßt der Klassentag ohne Anrede, nie mit „User“ (#7305).
+  it("greets without a name when the session carries none", async () => {
+    render(
+      <ClassDayOverview
+        fetchClasses={() => Promise.resolve(classList(false))}
+        fetchClassDay={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
+      /^Guten (Morgen|Tag|Abend)$/,
+    );
+  });
+
   it("loads the classes when the weekend follows Friday's plan", async () => {
     const fetchClassDay = vi.fn((_: string, date: string) =>
       Promise.resolve(report(date)),
@@ -326,7 +340,7 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
     await waitFor(() =>
       expect(fetchClassDay).toHaveBeenCalledWith("4a", "2026-09-09"),
     );
-    expect(screen.getByText("Ihre Klassen")).toBeVisible();
+    expect(screen.getByText("Deine Klassen")).toBeVisible();
     expect(fetchSchoolDay).not.toHaveBeenCalled();
   });
 });

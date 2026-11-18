@@ -50,16 +50,16 @@ const REASONS: Record<string, string> = {
   address_denied:
     "Diese Adresse ist nicht erlaubt. Möglich sind nur Adressen im Internet, nicht im eigenen Netz.",
   host_key_mismatch:
-    "Der Empfänger konnte nicht sicher erkannt werden. Bitte prüfen Sie den Fingerabdruck beim Empfänger.",
+    "Der Empfänger konnte nicht sicher erkannt werden. Bitte prüfe den Fingerabdruck beim Empfänger.",
   authentication_rejected:
-    "Die Anmeldung wurde abgelehnt. Bitte prüfen Sie Benutzername und Passwort beim Empfänger.",
+    "Die Anmeldung wurde abgelehnt. Bitte prüfe Benutzername und Passwort beim Empfänger.",
   connection_failed:
-    "Der Empfänger war nicht erreichbar. Bitte versuchen Sie es später noch einmal.",
+    "Der Empfänger war nicht erreichbar. Bitte versuche es später noch einmal.",
   upload_failed:
-    "Die Datei konnte nicht abgelegt werden. Bitte prüfen Sie den Zielordner beim Empfänger.",
+    "Die Datei konnte nicht abgelegt werden. Bitte prüfe den Zielordner beim Empfänger.",
   file_too_large: "Die Datei ist zu groß für die Übergabe.",
   internal_error:
-    "Das hat leider nicht geklappt. Bitte versuchen Sie es noch einmal.",
+    "Das hat leider nicht geklappt. Bitte versuche es noch einmal.",
 };
 
 /** A sentence for a reason code; an unknown code reads as a failure. */
@@ -69,7 +69,7 @@ export function handoverReasonText(reason: string): string {
 
 /** The sentence of an unknown outcome: nothing retries it on its own. */
 export const HANDOVER_UNKNOWN_TEXT =
-  "Ob die Datei angekommen ist, ist unklar. Fragen Sie beim Empfänger nach, bevor Sie sie noch einmal übergeben.";
+  "Ob die Datei angekommen ist, ist unklar. Frage beim Empfänger nach, bevor du sie noch einmal übergibst.";
 
 const RECIPIENT_FIELD_LABELS: Record<RecipientField, string> = {
   name: "Name",

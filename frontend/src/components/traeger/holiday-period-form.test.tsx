@@ -185,13 +185,11 @@ describe("HolidayPeriodForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Felder."),
+      await screen.findByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
+    expect(screen.getAllByText("Bitte gib einen Namen ein.")).toHaveLength(2);
     expect(
-      screen.getAllByText("Bitte geben Sie einen Namen ein."),
-    ).toHaveLength(2);
-    expect(
-      screen.getByText("Bitte wählen Sie die ausrichtende OGS."),
+      screen.getByText("Bitte wähle die ausrichtende OGS."),
     ).toBeInTheDocument();
     expect(mockCreate).not.toHaveBeenCalled();
   });
@@ -345,7 +343,7 @@ describe("HolidayPeriodForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Felder."),
+      await screen.findByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
     expect(mockUpdate).not.toHaveBeenCalled();
   });
@@ -393,9 +391,7 @@ describe("HolidayPeriodForm", () => {
     fireEvent.change(start, { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(start).toHaveFocus());
-    expect(
-      screen.getByText("Bitte tragen Sie den Beginn ein."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Bitte trage den Beginn ein.")).toBeInTheDocument();
 
     fireEvent.change(start, { target: { value: "08:00" } });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));

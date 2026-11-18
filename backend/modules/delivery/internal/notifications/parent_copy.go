@@ -78,17 +78,17 @@ func ParentRequestDecisionCopy(locale, requestType, requestStatus string) (strin
 func parentRequestSubjectDE(requestType string) string {
 	switch requestType {
 	case "care_schedule":
-		return "Ihre Anfrage zu den Betreuungszeiten"
+		return "Deine Anfrage zu den Betreuungszeiten"
 	case "pickup_change":
-		return "Ihre Anfrage zur Abholung"
+		return "Deine Anfrage zur Abholung"
 	case "master_data":
-		return "Ihre Anfrage zu den Stammdaten"
+		return "Deine Anfrage zu den Stammdaten"
 	case "excused_absence":
-		return "Ihre Abmeldung"
+		return "Deine Abmeldung"
 	case "sick_absence":
-		return "Ihre Krankmeldung"
+		return "Deine Krankmeldung"
 	default:
-		return "Ihre Anfrage"
+		return "Deine Anfrage"
 	}
 }
 
@@ -255,13 +255,13 @@ func parentAppointmentCopyUK(kind string) (string, string) {
 func parentAppointmentCopyDE(kind string) (string, string) {
 	switch kind {
 	case ParentAppointmentUpdated:
-		return "Termin geändert", "Ein Termin für Sie wurde geändert."
+		return "Termin geändert", "Ein Termin für dich wurde geändert."
 	case ParentAppointmentCancelled:
-		return "Termin abgesagt", "Ein Termin für Sie wurde abgesagt."
+		return "Termin abgesagt", "Ein Termin für dich wurde abgesagt."
 	case ParentAppointmentReminder:
-		return "Terminerinnerung", "Ein Termin für Sie steht bald an."
+		return "Terminerinnerung", "Ein Termin für dich steht bald an."
 	default:
-		return "Neuer Termin", "Für Sie wurde ein neuer Termin eingetragen."
+		return "Neuer Termin", "Für dich wurde ein neuer Termin eingetragen."
 	}
 }
 

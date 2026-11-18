@@ -335,7 +335,7 @@ describe("OperatorLoginPage", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.",
+        "Zu viele Anmeldeversuche. Bitte versuche es später erneut.",
       );
     });
   });
@@ -434,7 +434,7 @@ describe("OperatorLoginPage", () => {
     render(<OperatorLoginPage />);
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+      "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
     );
     expect(window.location.search).toBe("");
   });

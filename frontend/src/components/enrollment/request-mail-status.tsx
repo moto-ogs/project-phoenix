@@ -86,7 +86,7 @@ export function RequestMailStatus({
         <SectionCard
           title={title}
           leading={leading}
-          description="Hier sehen Sie, ob die Mails zu dieser Anmeldung angekommen sind."
+          description="Hier siehst du, ob die Mails zu dieser Anmeldung angekommen sind."
           className="mb-4"
         >
           <ul className="divide-y divide-gray-100">
@@ -119,13 +119,13 @@ export function RequestMailStatus({
           </ul>
           {mails.some((mail) => mail.address_mark) && (
             <p className="mt-2 text-sm text-gray-600">
-              An die Adresse dieser Anmeldung geht keine Mail raus. Bitte
-              sprechen Sie die Familie direkt an. {CHECK_REQUEST_ADDRESS}
+              An die Adresse dieser Anmeldung geht keine Mail raus. Bitte sprich
+              die Familie direkt an. {CHECK_REQUEST_ADDRESS}
             </p>
           )}
           {mails.some((mail) => mail.stopped && !mail.address_mark) && (
             <p className="mt-2 text-sm text-gray-600">
-              {GUARDIAN_STOPPED_COPY.explanation} Bitte sprechen Sie die Familie
+              {GUARDIAN_STOPPED_COPY.explanation} Bitte sprich die Familie
               direkt an.
             </p>
           )}

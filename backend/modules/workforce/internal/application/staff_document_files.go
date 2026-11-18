@@ -5,50 +5,28 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// staffDocumentFiles removes the stored bytes of staff documents below the
-// public upload directory.
+// staffDocumentFiles removes the stored bytes of staff documents with the configured storage backend.
 type staffDocumentFiles struct {
 	documents workforce.StaffDocumentFileCleanups
 	queue     workforce.DocumentCleanupQueue
-	uploads   workforce.StaffDocumentUploads
+	objects   workforce.StaffDocumentObjectRemover
 	logger    *slog.Logger
 }
 
 // NewStaffDocumentFileRecovery builds the staff document file removal over
 // the document service, the offboarding cleanup queue and the upload
 // directory. Every dependency is required.
-func NewStaffDocumentFileRecovery(documents workforce.StaffDocumentFileCleanups, queue workforce.DocumentCleanupQueue, uploads workforce.StaffDocumentUploads, logger *slog.Logger) (workforce.StaffDocumentFileRecovery, error) {
-	if documents == nil || queue == nil || uploads == nil || logger == nil {
+func NewStaffDocumentFileRecovery(documents workforce.StaffDocumentFileCleanups, queue workforce.DocumentCleanupQueue, objects workforce.StaffDocumentObjectRemover, logger *slog.Logger) (workforce.StaffDocumentFileRecovery, error) {
+	if documents == nil || queue == nil || objects == nil || logger == nil {
 		return nil, errors.New("workforce staff document files: all dependencies are required")
 	}
-	return &staffDocumentFiles{documents: documents, queue: queue, uploads: uploads, logger: logger}, nil
-}
-
-// RemoveStoredDocument deletes one stored file of the tenant.
-func (f *staffDocumentFiles) RemoveStoredDocument(tenantID int64, storedName string) error {
-	if !validStoredDocumentName(storedName) {
-		return errors.New("stored document filename failed validation on delete")
-	}
-	dir := workforce.StaffDocumentsDir(tenantID, f.uploads)
-	if err := os.Remove(filepath.Join(dir, storedName)); err != nil && !os.IsNotExist(err) {
-		return errors.New("failed to remove stored document")
-	}
-	return nil
-}
-
-// validStoredDocumentName accepts a plain file name: not empty, no "..", no
-// directory part.
-func validStoredDocumentName(name string) bool {
-	return name != "" && !strings.Contains(name, "..") && filepath.Base(name) == name
+	return &staffDocumentFiles{documents: documents, queue: queue, objects: objects, logger: logger}, nil
 }
 
 // CleanupOrphanedStaffDocumentFiles retries file removal independently of
@@ -121,7 +99,7 @@ func (f *staffDocumentFiles) cleanupQueuedUploads(ctx context.Context, cleanups 
 	removed := 0
 	var cleanupErr error
 	for _, cleanup := range cleanups {
-		if err := f.RemoveStoredDocument(cleanup.TenantID, cleanup.FilenameStored); err != nil {
+		if err := workforce.RemoveStoredDocument(ctx, f.objects, cleanup.TenantID, cleanup.FilenameStored); err != nil {
 			f.logger.Warn("staff document orphan cleanup failed",
 				"staff_id", cleanup.StaffID,
 				"cleanup_id", cleanup.ID,
@@ -152,7 +130,7 @@ func (f *staffDocumentFiles) cleanupPendingDocumentFiles(ctx context.Context, do
 	removed := 0
 	var cleanupErr error
 	for _, document := range documents {
-		if err := f.RemoveStoredDocument(document.TenantID, document.FilenameStored); err != nil {
+		if err := workforce.RemoveStoredDocument(ctx, f.objects, document.TenantID, document.FilenameStored); err != nil {
 			f.logger.Warn("staff document cleanup failed",
 				"staff_id", document.StaffID,
 				"document_id", document.ID,
@@ -245,7 +223,7 @@ func (f *staffDocumentFiles) cleanupClaimedStaffDocuments(ctx context.Context, s
 	removed := 0
 	var failures error
 	for _, document := range documents {
-		if err := f.RemoveStoredDocument(document.TenantID, document.FilenameStored); err != nil {
+		if err := workforce.RemoveStoredDocument(ctx, f.objects, document.TenantID, document.FilenameStored); err != nil {
 			failures = errors.Join(failures, err)
 			continue
 		}
@@ -258,7 +236,7 @@ func (f *staffDocumentFiles) cleanupClaimedStaffDocuments(ctx context.Context, s
 		removed++
 	}
 	for _, upload := range uploads {
-		if err := f.RemoveStoredDocument(upload.TenantID, upload.FilenameStored); err != nil {
+		if err := workforce.RemoveStoredDocument(ctx, f.objects, upload.TenantID, upload.FilenameStored); err != nil {
 			failures = errors.Join(failures, err)
 			continue
 		}

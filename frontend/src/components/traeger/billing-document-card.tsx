@@ -108,7 +108,7 @@ function DocumentHistory({
       {isCancelled(document) && !reissued ? (
         <div className="space-y-2">
           <p className="text-sm text-gray-700">
-            Die Rechnung ist storniert. Die neue Rechnung stellen Sie in einem
+            Die Rechnung ist storniert. Die neue Rechnung stellst du in einem
             neuen Lauf aus. Dort steht die Familie in der Vorschau.
           </p>
           {onReissue ? (

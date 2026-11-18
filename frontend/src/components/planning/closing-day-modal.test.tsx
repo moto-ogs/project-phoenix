@@ -257,16 +257,14 @@ describe("ClosingDayModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Felder."),
+      await screen.findByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
     // Der Hinweis steht am Feld, das Feld ist markiert.
     expect(screen.getByLabelText("Grund")).toHaveAttribute(
       "aria-invalid",
       "true",
     );
-    expect(
-      screen.getByText("Bitte geben Sie einen Grund an."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Bitte gib einen Grund an.")).toBeInTheDocument();
     expect(mockCreate).not.toHaveBeenCalled();
     expect(mockUpdate).not.toHaveBeenCalled();
   });

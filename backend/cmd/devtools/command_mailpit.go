@@ -50,7 +50,7 @@ type mailpitMessageDetail struct {
 
 var sixDigitCode = regexp.MustCompile(`\b(\d{6})\b`)
 
-const mfaEmailSubject = "Ihr moto-Anmeldecode"
+const mfaEmailSubject = "Dein moto-Anmeldecode"
 
 // mailLink matches a link in a mail body, up to the quote or tag around it.
 var mailLink = regexp.MustCompile(`https?://[^\s"'<>]+`)

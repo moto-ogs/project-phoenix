@@ -27,7 +27,7 @@ export function absenceTypeDraftErrors(
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   if (draft.name.trim() === "") {
-    errors.name = "Bitte geben Sie einen Namen ein.";
+    errors.name = "Bitte gib einen Namen ein.";
   }
   const days = draft.standardDays;
   if (
@@ -101,7 +101,7 @@ export function AbsenceTypeFields({
             max={366}
             step={0.5}
             label="Tage je Jahr"
-            hint="Gilt für jede Person. In der Personalakte setzen Sie für einzelne Personen einen anderen Wert."
+            hint="Gilt für jede Person. In der Personalakte setzt du für einzelne Personen einen anderen Wert."
             value={
               Number.isFinite(draft.standardDays)
                 ? String(draft.standardDays)

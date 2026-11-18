@@ -16,6 +16,7 @@
  * (nur Wochen, die noch nicht vorbei sind), ein Wochenwechsel lädt nichts.
  */
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { useSession } from "next-auth/react";
 
 import { ApiError } from "~/lib/api-error";
@@ -36,9 +37,7 @@ const OPTIONS = {
 const EMPTY: readonly HostedHolidayWeek[] = [];
 
 function isMissingPermission(error: unknown): boolean {
-  return (
-    error instanceof ApiError && (error.status === 401 || error.status === 403)
-  );
+  return error instanceof ApiError && isAccessRefusal(error);
 }
 
 export interface PlanningHolidayWeeks {

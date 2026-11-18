@@ -199,7 +199,7 @@ describe("StepTermin — Typ Dienst (#3822)", () => {
 describe("StepTermin — Beschreibungen der Datumsfelder", () => {
   it("verknüpft beim Datum Hinweis und Fehler", () => {
     renderStep({
-      fieldErrors: { date: "Bitte wählen Sie ein Datum." },
+      fieldErrors: { date: "Bitte wähle ein Datum." },
     });
 
     expect(document.getElementById("event_date")).toHaveAttribute(

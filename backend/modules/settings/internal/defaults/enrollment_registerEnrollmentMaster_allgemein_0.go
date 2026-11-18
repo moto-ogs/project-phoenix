@@ -6,7 +6,7 @@ var enrollment_registerEnrollmentMaster_allgemein_0Definitions = []config.Defini
 	{
 		Key:             config.KeyEnrollmentEnabled,
 		Label:           "Online-Anmeldung",
-		Description:     "Eltern melden ihr Kind über ein Formular im Internet an. Ausgeschaltet ist die Anmeldeseite nicht erreichbar. Zum Einschalten brauchen Sie eine Datenschutzinformation unter „Rechtstexte“.",
+		Description:     "Eltern melden ihr Kind über ein Formular im Internet an. Ausgeschaltet ist die Anmeldeseite nicht erreichbar. Zum Einschalten brauchst du eine Datenschutzinformation unter „Rechtstexte“.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:read",

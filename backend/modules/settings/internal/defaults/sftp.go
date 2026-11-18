@@ -51,7 +51,7 @@ var sftp_init_zeitkonten_export_0Definitions = []config.Definition{
 	{
 		Key:             config.KeySFTPHost,
 		Label:           "Adresse der Gegenstelle",
-		Description:     "Adresse der Stelle, die die Datei entgegennimmt, zum Beispiel dateien.beispiel.de. Diese Angabe erhalten Sie von dort. Adressen im eigenen Netz sind nicht möglich.",
+		Description:     "Adresse der Stelle, die die Datei entgegennimmt, zum Beispiel dateien.beispiel.de. Diese Angabe erhältst du von dort. Adressen im eigenen Netz sind nicht möglich.",
 		Type:            config.FieldText,
 		Default:         "",
 		ReadPermission:  "config:read",
@@ -66,7 +66,7 @@ var sftp_init_zeitkonten_export_0Definitions = []config.Definition{
 	{
 		Key:             config.KeySFTPPort,
 		Label:           "Port",
-		Description:     "Üblich ist 22. Ändern Sie die Zahl nur, wenn die Gegenstelle eine andere nennt.",
+		Description:     "Üblich ist 22. Ändere die Zahl nur, wenn die Gegenstelle eine andere nennt.",
 		Type:            config.FieldNumber,
 		Default:         22,
 		ReadPermission:  "config:read",
@@ -81,7 +81,7 @@ var sftp_init_zeitkonten_export_0Definitions = []config.Definition{
 	{
 		Key:             config.KeySFTPUsername,
 		Label:           "Benutzername",
-		Description:     "Benutzername für die Anmeldung bei der Gegenstelle. Auch diese Angabe erhalten Sie von dort.",
+		Description:     "Benutzername für die Anmeldung bei der Gegenstelle. Auch diese Angabe erhältst du von dort.",
 		Type:            config.FieldText,
 		Default:         "",
 		ReadPermission:  "config:read",
@@ -126,7 +126,7 @@ var sftp_init_zeitkonten_export_0Definitions = []config.Definition{
 	{
 		Key:             config.KeySFTPHostKeyFingerprint,
 		Label:           "Fingerabdruck der Gegenstelle",
-		Description:     "Pflichtangabe. Der Fingerabdruck beginnt mit SHA256: und wird Ihnen von der Gegenstelle genannt. Er stellt sicher, dass die Datei wirklich dort ankommt. Passt er nicht, wird nichts übertragen. Wichtig: Eine Gegenstelle hat oft mehrere Schlüssel. Fragen Sie nach dem Fingerabdruck für den RSA-Schlüssel.",
+		Description:     "Pflichtangabe. Der Fingerabdruck beginnt mit SHA256: und wird dir von der Gegenstelle genannt. Er stellt sicher, dass die Datei wirklich dort ankommt. Passt er nicht, wird nichts übertragen. Wichtig: Eine Gegenstelle hat oft mehrere Schlüssel. Frage nach dem Fingerabdruck für den RSA-Schlüssel.",
 		Type:            config.FieldText,
 		Default:         "",
 		ReadPermission:  "config:read",

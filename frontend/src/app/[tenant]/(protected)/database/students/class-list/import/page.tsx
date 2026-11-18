@@ -321,7 +321,7 @@ export default function ClassListImportPage() {
       void handleFileUpload(file);
     } else {
       importErrors.invalid(
-        "Diese Datei passt nicht. Bitte laden Sie eine CSV- oder Excel-Datei hoch.",
+        "Diese Datei passt nicht. Bitte lade eine CSV- oder Excel-Datei hoch.",
       );
     }
   };
@@ -377,17 +377,17 @@ export default function ClassListImportPage() {
       {/* Info Section */}
       <SectionCard title="Sammelimport für Klassenlisteneinträge" icon={Info}>
         <ul className="list-inside list-disc space-y-1 text-sm text-gray-600">
-          <li>Laden Sie die Vorlage herunter (siehe unten)</li>
+          <li>Lade die Vorlage herunter (siehe unten)</li>
           <li>
-            Tragen Sie ab Zeile 2 pro Kind nur Vorname, Nachname und Klasse ein.
-            Mehr braucht ein Klassenlisteneintrag nicht
+            Trage ab Zeile 2 pro Kind nur Vorname, Nachname und Klasse ein. Mehr
+            braucht ein Klassenlisteneintrag nicht
           </li>
           <li>
             Kinder, die bereits in moto angelegt sind, werden übersprungen, sie
             stehen schon auf der Klassenliste
           </li>
-          <li>Laden Sie die Datei hier hoch und überprüfen Sie die Vorschau</li>
-          <li>Bestätigen Sie den Import</li>
+          <li>Lade die Datei hier hoch und überprüfe die Vorschau</li>
+          <li>Bestätige den Import</li>
         </ul>
       </SectionCard>
 

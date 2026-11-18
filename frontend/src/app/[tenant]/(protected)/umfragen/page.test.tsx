@@ -186,6 +186,6 @@ describe("Umfragen (#4781)", () => {
     expect(screen.getAllByText("Eltern: Ganze Schule").length).toBeGreaterThan(
       0,
     );
-    expect(screen.getByRole("tab", { name: /Für Sie/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Für dich/ })).toBeInTheDocument();
   });
 });

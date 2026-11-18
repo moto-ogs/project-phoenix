@@ -7665,6 +7665,14 @@
       "target_owner": ""
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.DemoCareDays",
+      "binding_digest": "b0fa57fc80df16aacc665df9e9c1533a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.DemoCareDays.DemoCareDays",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.EnrolledOn",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RequireAbsentMorningAttendance",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.MorningAbsenceGuard.RequireAbsentMorningAttendance",
@@ -11647,6 +11655,14 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.DemoCareDays",
+      "binding_digest": "b0fa57fc80df16aacc665df9e9c1533a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.DemoCareDays",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.EnrolledOn",
+      "target_owner": "people-directory"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.Report",
@@ -19121,14 +19137,6 @@
       "target_owner": "care-plan"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.TenantClosingDays.ClosingDayDates",
-      "binding_digest": "5b6ac91cc00029c31fc7c70dd20c3d3f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.ClosingDayDates.ClosingDayDates",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.TenantClosingDays.ClosingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsContractCareDays.ContractCareDays",
       "binding_digest": "fe7d9526d164a6967c2e32e4c9447a86",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.ContractCareDays.ContractCareDays",
@@ -19702,30 +19710,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.HolidayDates.HolidayDates",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.TenantHolidays.HolidayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsReportPeriods.StatisticsHolidayPeriods",
-      "binding_digest": "cf9038b5071253cd4961e53640d86230",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.HolidayPeriods.StatisticsHolidayPeriods",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ListCalendarPeriods",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsReportPeriods.StatisticsHolidayPeriods",
-      "binding_digest": "f49d36940ef336ed7b06bdc468e3eb83",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.HolidayPeriods.StatisticsHolidayPeriods",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsReportPeriods.StatisticsHolidayPeriods",
-      "binding_digest": "9d5b5c092965b4c68047d5f9c0d5647e",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.HolidayPeriods.StatisticsHolidayPeriods",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
       "target_owner": "school-calendar"
     },
     {

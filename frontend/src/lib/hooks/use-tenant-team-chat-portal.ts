@@ -33,9 +33,9 @@ export function useTenantTeamChatPortal(): TeamChatPortal {
       flagSaysEnabled,
       title: "Team-Chat",
       emptyDescription:
-        "Hier stehen Ihre Unterhaltungen mit dem Team. Sie schreiben nur an Personen Ihrer Schule, auch an Lehrkräfte. Eltern sehen davon nichts.",
+        "Hier stehen deine Unterhaltungen mit dem Team. Du schreibst nur an Personen deiner Schule, auch an Lehrkräfte. Eltern sehen davon nichts.",
       recipientHint:
-        "Sie schreiben nur an Personen Ihrer Schule. Lehrkräfte lesen im Portal „moto schule“ mit.",
+        "Du schreibst nur an Personen deiner Schule. Lehrkräfte lesen im Portal „moto schule“ mit.",
     }),
     [router, tenantSlug, flagSaysEnabled],
   );

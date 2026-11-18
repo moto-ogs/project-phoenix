@@ -255,9 +255,9 @@ func TestAbsenceNotifierPartitionsCountsByRecipientScope(t *testing.T) {
 		byRecipient[event.Audience.StaffAccountIDs[0]] = event
 	}
 
-	assert.Equal(t, "Eine Familie hat ein Kind aus Ihrer Gruppe für heute krankgemeldet.", byRecipient[absenceAccountA].Body)
+	assert.Equal(t, "Eine Familie hat ein Kind aus deiner Gruppe für heute krankgemeldet.", byRecipient[absenceAccountA].Body)
 	assert.Equal(t, "/students/71", byRecipient[absenceAccountA].DeepLink)
-	assert.Equal(t, "Eine Familie hat ein Kind aus Ihrer Gruppe für heute krankgemeldet.", byRecipient[absenceAccountB].Body)
+	assert.Equal(t, "Eine Familie hat ein Kind aus deiner Gruppe für heute krankgemeldet.", byRecipient[absenceAccountB].Body)
 	assert.Equal(t, "/students/72", byRecipient[absenceAccountB].DeepLink)
 	assert.Equal(t, "2 Kinder wurden für heute krankgemeldet.", byRecipient[absenceAdmin].Body)
 	assert.Equal(t, "/students", byRecipient[absenceAdmin].DeepLink)
@@ -279,7 +279,7 @@ func TestAbsenceNotifierWording(t *testing.T) {
 				r.FromParent = false
 				return r
 			},
-			wantBody: "Für ein Kind aus Ihrer Gruppe wurde heute eine Krankmeldung eingetragen.",
+			wantBody: "Für ein Kind aus deiner Gruppe wurde heute eine Krankmeldung eingetragen.",
 			wantLink: "/students/71",
 		},
 		{
@@ -289,7 +289,7 @@ func TestAbsenceNotifierWording(t *testing.T) {
 				r.Status = notifications.AbsenceStatusExcused
 				return r
 			},
-			wantBody: "Für ein Kind aus Ihrer Gruppe wurde heute eine Entschuldigung eingetragen.",
+			wantBody: "Für ein Kind aus deiner Gruppe wurde heute eine Entschuldigung eingetragen.",
 			wantLink: "/students/71",
 		},
 		{

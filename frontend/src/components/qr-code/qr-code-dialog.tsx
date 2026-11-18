@@ -104,13 +104,11 @@ export function QrCodeDialog({
   const chooseImage = (file: File) => {
     errors.clear();
     if (!IMAGE_TYPES.includes(file.type)) {
-      errors.invalid("Bitte wählen Sie ein Bild im Format PNG, JPG oder WebP.");
+      errors.invalid("Bitte wähle ein Bild im Format PNG, JPG oder WebP.");
       return;
     }
     if (file.size > IMAGE_MAX_BYTES) {
-      errors.invalid(
-        "Das Bild ist zu groß. Bitte wählen Sie ein Bild bis 5 MB.",
-      );
+      errors.invalid("Das Bild ist zu groß. Bitte wähle ein Bild bis 5 MB.");
       return;
     }
     setCustomImage(file);
@@ -135,7 +133,7 @@ export function QrCodeDialog({
         error: err instanceof Error ? err.message : String(err),
       });
       errors.invalid(
-        "Der QR-Code konnte nicht gespeichert werden. Bitte versuchen Sie es noch einmal.",
+        "Der QR-Code konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
       );
     } finally {
       setSaving(null);
@@ -188,7 +186,7 @@ export function QrCodeDialog({
             isLoading={saving === "png"}
             loadingText="Wird gespeichert…"
             onClick={() => void save("png")}
-            tooltip="Speichert den QR-Code als Bild auf Ihrem Gerät."
+            tooltip="Speichert den QR-Code als Bild auf deinem Gerät."
           >
             <Download className="mr-2 h-4 w-4" aria-hidden="true" />
             Bild speichern
@@ -235,7 +233,7 @@ export function QrCodeDialog({
               buttonLabel={
                 customImage ? "Anderes Bild wählen" : "Bild auswählen"
               }
-              hint="PNG, JPG oder WebP, bis 5 MB. Das Bild bleibt auf Ihrem Gerät."
+              hint="PNG, JPG oder WebP, bis 5 MB. Das Bild bleibt auf deinem Gerät."
               onFile={chooseImage}
             />
           ) : null}
@@ -252,7 +250,7 @@ export function QrCodeDialog({
             message={
               errors.error ??
               (unreadable
-                ? "Das Bild konnte nicht gelesen werden. Bitte wählen Sie ein anderes Bild."
+                ? "Das Bild konnte nicht gelesen werden. Bitte wähle ein anderes Bild."
                 : null)
             }
           />

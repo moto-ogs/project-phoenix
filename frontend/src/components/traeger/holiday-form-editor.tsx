@@ -83,7 +83,7 @@ const logger = createLogger({ component: "HolidayFormEditor" });
 const HOLIDAY_CONDITION_SOURCES: readonly ConditionSource[] = ["field"];
 
 const HOLIDAY_FREE_QUESTION_NOTE = {
-  text: "Die Antworten sehen Sie in der Anmeldung. Ohne Gesundheitsangabe stehen sie auch im Export.",
+  text: "Die Antworten siehst du in der Anmeldung. Ohne Gesundheitsangabe stehen sie auch im Export.",
 } as const;
 
 /** Marks a health question and a question the hosting OGS sees in the preview. */
@@ -201,7 +201,7 @@ export function HolidayFormEditor({
         fields.filter((_, index) => marked.has(String(index))).map(fieldKey),
         true,
       );
-      errorPath.invalid("Bitte prüfen Sie die markierten Fragen.", errors);
+      errorPath.invalid("Bitte prüfe die markierten Fragen.", errors);
       return;
     }
     setSaving(true);
@@ -343,7 +343,7 @@ export function HolidayFormEditor({
                   <EmptyState
                     variant="compact"
                     title="Noch keine Fragen"
-                    description="Eltern sehen nur die festen Angaben. Fügen Sie eine Frage oder die Standardvorlage hinzu."
+                    description="Eltern sehen nur die festen Angaben. Füge eine Frage oder die Standardvorlage hinzu."
                   />
                 ) : (
                   <div className="space-y-3">
@@ -456,7 +456,7 @@ export function HolidayFormEditor({
                       .map((field) => `„${field.label}“`)
                       .join(
                         ", ",
-                      )}. Entfernen Sie sie, sonst antworten Eltern doppelt.`}
+                      )}. Entferne sie, sonst antworten Eltern doppelt.`}
                   />
                 ) : null}
               </section>

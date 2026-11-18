@@ -68,8 +68,8 @@ function AbsenceNoteModal({
   const handleSubmit = async () => {
     formErrors.clear();
     if (note.trim().length < 3) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", {
-        decision_note: "Bitte geben Sie eine kurze Begründung ein.",
+      formErrors.invalid("Bitte prüfe die markierten Felder.", {
+        decision_note: "Bitte gib eine kurze Begründung ein.",
       });
       return;
     }

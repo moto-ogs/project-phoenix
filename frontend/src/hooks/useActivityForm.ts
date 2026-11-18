@@ -123,13 +123,13 @@ export function useActivityForm(
   const validateForm = useCallback((): ActivityFormProblem | null => {
     if (!form.name.trim()) {
       return {
-        message: "Bitte geben Sie einen Namen für die Aktivität ein.",
+        message: "Bitte gib einen Namen für die Aktivität ein.",
         field: "name",
       };
     }
     if (!form.category_id) {
       return {
-        message: "Bitte wählen Sie eine Kategorie.",
+        message: "Bitte wähle eine Kategorie.",
         field: "category_id",
       };
     }

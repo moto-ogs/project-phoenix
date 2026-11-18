@@ -215,7 +215,7 @@ describe("HolidayFormEditor (#5198)", () => {
     expect(block.getByText(/Eltern können Allergien/)).toBeInTheDocument();
     fireEvent.click(block.getByRole("button", { name: "Pflicht" }));
     expect(block.getByRole("alert")).toHaveTextContent(
-      "Allergien und Medikamente fragt das Formular schon ab. Diese eigenen Fragen fragen es noch einmal: „Lebensmittelunverträglichkeiten“. Entfernen Sie sie, sonst antworten Eltern doppelt.",
+      "Allergien und Medikamente fragt das Formular schon ab. Diese eigenen Fragen fragen es noch einmal: „Lebensmittelunverträglichkeiten“. Entferne sie, sonst antworten Eltern doppelt.",
     );
   });
 
@@ -309,7 +309,7 @@ describe("HolidayFormEditor (#5198)", () => {
 
     expect(
       screen.getByText(
-        "Legen Sie zuerst eine andere Ja/Nein- oder Auswahlfrage mit Fragetext an. Diese Frage kann dann von deren Antwort abhängen.",
+        "Lege zuerst eine andere Ja/Nein- oder Auswahlfrage mit Fragetext an. Diese Frage kann dann von deren Antwort abhängen.",
       ),
     ).toBeInTheDocument();
   });
@@ -324,7 +324,7 @@ describe("HolidayFormEditor (#5198)", () => {
 
     expect(
       screen.getByText(
-        "Eine allgemeine Frage kann nicht von einer Frage pro Kind abhängen. Legen Sie eine andere allgemeine Ja/Nein- oder Auswahlfrage an. Schreiben Sie auch den Fragetext dazu.",
+        "Eine allgemeine Frage kann nicht von einer Frage pro Kind abhängen. Lege eine andere allgemeine Ja/Nein- oder Auswahlfrage an. Schreibe auch den Fragetext dazu.",
       ),
     ).toBeInTheDocument();
   });
@@ -341,7 +341,7 @@ describe("HolidayFormEditor (#5198)", () => {
     const familyQuestion = within(screen.getAllByRole("article")[0]!);
     expect(
       familyQuestion.getByText(
-        "Schreiben Sie zuerst den Fragetext der anderen Ja/Nein- oder Auswahlfrage. Diese Frage kann dann von deren Antwort abhängen.",
+        "Schreibe zuerst den Fragetext der anderen Ja/Nein- oder Auswahlfrage. Diese Frage kann dann von deren Antwort abhängen.",
       ),
     ).toBeInTheDocument();
   });
@@ -354,7 +354,7 @@ describe("HolidayFormEditor (#5198)", () => {
       ]),
     );
     expect(
-      screen.getByText(/Schreiben Sie zuerst den Fragetext/),
+      screen.getByText(/Schreibe zuerst den Fragetext/),
     ).toBeInTheDocument();
 
     fireEvent.change(questionInputs()[1]!, {
@@ -609,7 +609,7 @@ describe("HolidayFormEditor (#5198)", () => {
     );
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Fragen."),
+      await screen.findByText("Bitte prüfe die markierten Fragen."),
     ).toBeInTheDocument();
     expect(questionInputs()[0]).toHaveAttribute("aria-invalid", "true");
     expect(mockSave).not.toHaveBeenCalled();

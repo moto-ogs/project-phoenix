@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -367,6 +368,13 @@ func TestTraegerAccessLogPagesEndAtTheirAsOfInstant(t *testing.T) {
 	assert.Len(t, seen, 51)
 }
 
+func TestTraegerAccessLogRejectsOverflowingPage(t *testing.T) {
+	t.Parallel()
+	f := newTraegerAccessLogFixture(t, identityaccess.TraegerRoleAdministration)
+	rec := accessLogRequest(t, f.router, f.token, "/traeger/access-log/", accessLogWindow(map[string]string{"page": fmt.Sprint(math.MaxInt)}))
+	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+}
+
 // An automated change stores the system actor 0: the log shows the stored
 // name without an account, and the person filter does not offer it.
 func TestTraegerAccessLogShowsTheSystemActorWithoutAnAccount(t *testing.T) {
@@ -572,13 +580,16 @@ func TestTraegerAccessLogWithoutSchoolsEndsAtTheDatabaseTime(t *testing.T) {
 		successor, office.schools[0], office.schools[1])
 	require.NoError(t, err)
 	member, _ := traegerOfficeAccount(t, db, office.organization)
-	var databaseNow time.Time
-	require.NoError(t, db.NewRaw(`SELECT clock_timestamp()`).Scan(context.Background(), &databaseNow))
+	databaseNow := testpkg.DatabaseNow(t, db)
 	for i := 1; i <= 51; i++ {
 		recordHolidayAccess(t, db, office.organization, period.ID, nil, "list", member, databaseNow.Add(-time.Duration(i)*time.Second))
 	}
 	day := calendar.DateFromTime(databaseNow)
-	window := url.Values{"from": {day.AddDays(-1).String()}, "to": {day.String()}}
+	// Entries beyond the database bound must not use up the SQL page limit.
+	for i := 1; i <= 51; i++ {
+		recordHolidayAccess(t, db, office.organization, period.ID, nil, "export", member, databaseNow.Add(time.Hour+time.Duration(i)*time.Second))
+	}
+	window := url.Values{"from": {day.AddDays(-1).String()}, "to": {day.AddDays(1).String()}}
 
 	rec := accessLogRequest(t, router, office.token, "/traeger/access-log/", window)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

@@ -173,7 +173,7 @@ export function PasswordField({
               setRevealedValue(null);
             }}
             aria-label="Wert ändern"
-            tooltip="Öffnet ein Feld, in dem Sie einen neuen Wert eingeben."
+            tooltip="Öffnet ein Feld, in dem du einen neuen Wert eingibst."
           >
             <Pencil className="h-4 w-4" aria-hidden="true" />
           </Button>
@@ -223,8 +223,8 @@ export function PasswordField({
             aria-label={showValue ? "Wert verbergen" : "Wert anzeigen"}
             tooltip={
               showValue
-                ? "Zeigt Ihre Eingabe wieder als Punkte, damit niemand mitliest."
-                : "Zeigt Ihre Eingabe lesbar an."
+                ? "Zeigt deine Eingabe wieder als Punkte, damit niemand mitliest."
+                : "Zeigt deine Eingabe lesbar an."
             }
           >
             {showValue ? (

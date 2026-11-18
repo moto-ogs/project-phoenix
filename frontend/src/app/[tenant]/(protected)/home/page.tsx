@@ -31,7 +31,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { leadsSchool } from "~/lib/auth-utils";
+import { getGreetingName, leadsSchool } from "~/lib/auth-utils";
 import { fetchBirthdayOverviewClient } from "~/lib/birthdays-api";
 import type { BirthdayOverview } from "~/lib/birthdays-api";
 import { fetchDashboardAnalyticsClient } from "~/lib/dashboard-api";
@@ -421,7 +421,7 @@ function HomeContent() {
   }
 
   const editing = draft !== null;
-  const firstName = session?.user?.name?.trim().split(/\s+/)[0];
+  const firstName = getGreetingName(session);
   const greeting = useTimeBasedGreeting();
   // Die Hinweise zum Phasenende (#3469) und zur Geräte-PIN (#7175) verlangen
   // config:manage; die Leitung der Schule hält es, ob Admin oder eigene
@@ -478,7 +478,7 @@ function HomeContent() {
               size="md"
               disabled={saving}
               onClick={cancelEditing}
-              tooltip="Verwirft Ihre Änderungen an der Startseite."
+              tooltip="Verwirft deine Änderungen an der Startseite."
             >
               Abbrechen
             </Button>
@@ -488,7 +488,7 @@ function HomeContent() {
               size="md"
               disabled={saving}
               onClick={save}
-              tooltip="Speichert die neue Anordnung Ihrer Startseite."
+              tooltip="Speichert die neue Anordnung deiner Startseite."
             >
               Fertig
             </Button>
@@ -564,11 +564,11 @@ function HomeContent() {
 
       {placements.length === 0 && !editing ? (
         <EmptyState
-          title="Ihre Startseite ist leer"
+          title="Deine Startseite ist leer"
           description={
             saved.available.length === 0
-              ? "Für Ihre Berechtigungen gibt es hier noch keine Bausteine. Ihre Leitung kann Ihnen weitere Bereiche freischalten."
-              : "Sie haben alle Bausteine entfernt."
+              ? "Für deine Berechtigungen gibt es hier noch keine Bausteine. Deine Leitung kann dir weitere Bereiche freischalten."
+              : "Du hast alle Bausteine entfernt."
           }
           action={
             saved.available.length > 0 ? (

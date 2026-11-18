@@ -164,12 +164,12 @@ export function parentConferenceFieldErrors(
   today: string,
 ): Record<string, string> {
   const errors: Record<string, string> = {};
-  if (!draft.schoolClass) errors.school_class = "Bitte wählen Sie eine Klasse.";
-  if (!draft.date) errors.date = "Bitte wählen Sie einen Tag.";
+  if (!draft.schoolClass) errors.school_class = "Bitte wähle eine Klasse.";
+  if (!draft.date) errors.date = "Bitte wähle einen Tag.";
   else if (draft.date < today)
     errors.date = "Der Tag liegt in der Vergangenheit.";
-  if (!draft.startTime) errors.start_time = "Bitte geben Sie den Beginn an.";
-  if (!draft.endTime) errors.end_time = "Bitte geben Sie das Ende an.";
+  if (!draft.startTime) errors.start_time = "Bitte gib den Beginn an.";
+  if (!draft.endTime) errors.end_time = "Bitte gib das Ende an.";
   else if (draft.startTime && draft.endTime <= draft.startTime)
     errors.end_time = "Das Ende muss nach dem Beginn liegen.";
   const hasBreak = draft.breakStart !== "" || draft.breakEnd !== "";

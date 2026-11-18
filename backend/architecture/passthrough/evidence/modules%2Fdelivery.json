@@ -2,6 +2,13 @@
   "sites": [
     {
       "build": "production",
+      "evidence": "func (rs *CatererFeedResource) Router() chi.Router {\n\tr := chi.NewRouter()\n\tr.Use(render.SetContentType(render.ContentTypeJSON))\n\trs.Runtime.ProtectedCaterer(r, func(r chi.Router) {\n\t\tschoolFeedRoutes(r, rs.Runtime, rs.session)\n\t})\n\treturn r\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/delivery/http/notifications/CatererFeedResource.Router",
+      "owner": "modules/delivery"
+    },
+    {
+      "build": "production",
       "evidence": "func (rs *Resource) SchoolRouter() chi.Router {\n\tr := chi.NewRouter()\n\tr.Use(render.SetContentType(render.ContentTypeJSON))\n\tr.Use(withPortal(PortalSchool))\n\trs.Runtime.ProtectedSchool(r, func(r chi.Router, withTx Middleware) {\n\t\trs.registerRoutes(r, withTx)\n\t\trs.registerFeedRoutes(r, withTx)\n\t})\n\treturn r\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/http/notifications/Resource.SchoolRouter",
@@ -9,7 +16,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *TraegerFeedResource) Router() chi.Router {\n\tr := chi.NewRouter()\n\tr.Use(render.SetContentType(render.ContentTypeJSON))\n\trs.Runtime.ProtectedTraeger(r, func(r chi.Router) {\n\t\tr.Route(\"/feed\", func(r chi.Router) {\n\t\t\tr.Get(\"/\", rs.list)\n\t\t\tr.Get(\"/unread-count\", rs.unreadCount)\n\t\t\tr.Post(\"/read-all\", rs.markAllRead)\n\t\t\tr.Post(\"/{id}/read\", rs.markRead)\n\t\t})\n\t})\n\treturn r\n}",
+      "evidence": "func (rs *TraegerFeedResource) Router() chi.Router {\n\tr := chi.NewRouter()\n\tr.Use(render.SetContentType(render.ContentTypeJSON))\n\trs.Runtime.ProtectedTraeger(r, func(r chi.Router) {\n\t\tschoolFeedRoutes(r, rs.Runtime, rs.session)\n\t})\n\treturn r\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/http/notifications/TraegerFeedResource.Router",
       "owner": "modules/delivery"
@@ -26,6 +33,20 @@
       "evidence": "func (s *MockMailer) Send(m mailcontract.Message) error {\n\ts.SendInvoked.Store(true)\n\treturn s.SendFn(m)\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/internal/adapters/email/MockMailer.Send",
+      "owner": "modules/delivery"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s *Backend) RemoveObject(ctx context.Context, key string) error {\n\tif err := validateKey(key); err != nil {\n\t\treturn err\n\t}\n\terr := objectError(ctx, \"remove\", s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{}))\n\tif errors.Is(err, contract.ErrNotFound) {\n\t\treturn nil\n\t}\n\treturn err\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/delivery/internal/adapters/s3objects/Backend.RemoveObject",
+      "owner": "modules/delivery"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s *Backend) TenantObjects(ctx context.Context, kind, layout string, tenantID int64, remove bool) (int64, error) {\n\tprefix, err := contract.TenantObjectPrefix(kind, layout, tenantID)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif err := s.requireUnversionedBucket(ctx); err != nil {\n\t\treturn 0, err\n\t}\n\tlist := s.client.ListObjectsIter(ctx, s.bucket, minio.ListObjectsOptions{Prefix: prefix, Recursive: true})\n\tif !remove {\n\t\treturn countObjects(ctx, list)\n\t}\n\treturn s.removeObjects(ctx, list)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/delivery/internal/adapters/s3objects/Backend.TenantObjects",
       "owner": "modules/delivery"
     },
     {
@@ -159,6 +180,13 @@
       "evidence": "func (s *pushSubscriptionService) UnsubscribeSchool(ctx context.Context, accountID int64, endpoint string) error {\n\tctx = s.withTenantRuntime(ctx)\n\treturn tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {\n\t\treturn s.repo.DeleteSchoolByEndpoint(txCtx, accountID, endpoint)\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/internal/notifications/pushSubscriptionService.UnsubscribeSchool",
+      "owner": "modules/delivery"
+    },
+    {
+      "build": "production",
+      "evidence": "func (r *router) CatererAudience(ctx context.Context, tenantID int64) ([]int64, error) {\n\tif r.feedReader == nil || r.store == nil {\n\t\treturn nil, errors.New(\"notification feed is not configured\")\n\t}\n\tif tenantID \u003c= 0 {\n\t\treturn nil, errors.New(\"caterer audience requires the school\")\n\t}\n\taccountIDs, err := r.store.CatererFeedAudience(ctx, tenantID)\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"caterer audience: %w\", err)\n\t}\n\treturn accountIDs, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/delivery/internal/notifications/router.CatererAudience",
       "owner": "modules/delivery"
     },
     {

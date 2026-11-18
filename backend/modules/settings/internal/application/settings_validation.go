@@ -194,7 +194,7 @@ func (s *settingsService) validateGradeLevelCapGuard(ctx context.Context, key st
 		return &config.InvalidValueError{
 			Key: key,
 			Reason: fmt.Sprintf(
-				"Die höchste Klassenstufe kann nicht auf %d gesenkt werden, solange eine aktive Anmeldephase auf Klassenstufe %d beschränkt ist. Entfernen Sie zuerst die Klassenstufenbeschränkung der betroffenen Phase.",
+				"Die höchste Klassenstufe kann nicht auf %d gesenkt werden, solange eine aktive Anmeldephase auf Klassenstufe %d beschränkt ist. Entferne zuerst die Klassenstufenbeschränkung der betroffenen Phase.",
 				newMax,
 				highest,
 			),
@@ -272,7 +272,7 @@ func (s *settingsService) validateClassCollectionGuard(ctx context.Context, key 
 	if restricted {
 		return &config.InvalidValueError{
 			Key:    key,
-			Reason: "Die Klassen-Abfrage kann nicht deaktiviert werden, solange eine aktive Anmeldephase auf bestimmte Klassen beschränkt ist. Entfernen Sie zuerst die Klassenbeschränkung der betroffenen Phase.",
+			Reason: "Die Klassen-Abfrage kann nicht deaktiviert werden, solange eine aktive Anmeldephase auf bestimmte Klassen beschränkt ist. Entferne zuerst die Klassenbeschränkung der betroffenen Phase.",
 		}
 	}
 	return nil
@@ -411,7 +411,7 @@ func (s *settingsService) validateGradeCollectionDisabled(ctx context.Context, k
 		if restricted {
 			return &config.InvalidValueError{
 				Key:    key,
-				Reason: "Die Klassenstufen-Abfrage kann nicht deaktiviert werden, solange eine aktive Anmeldephase auf bestimmte Klassenstufen beschränkt ist. Entfernen Sie zuerst die Klassenstufenbeschränkung der betroffenen Phase.",
+				Reason: "Die Klassenstufen-Abfrage kann nicht deaktiviert werden, solange eine aktive Anmeldephase auf bestimmte Klassenstufen beschränkt ist. Entferne zuerst die Klassenstufenbeschränkung der betroffenen Phase.",
 			}
 		}
 	}

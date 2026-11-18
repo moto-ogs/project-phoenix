@@ -312,7 +312,7 @@ function GroupMessageContent() {
           loadingText="Wird geschlossen…"
         >
           <p className="text-sm text-gray-700">
-            Danach können Eltern nicht mehr antworten. Sie selbst können auch
+            Danach können Eltern nicht mehr antworten. Du selbst kannst auch
             nichts mehr dazuschreiben.
           </p>
         </ConfirmationModal>
@@ -340,7 +340,7 @@ function GroupMessageContent() {
         <LoadErrorAlert error={groupMails.loadError} className="mt-3" />
         <p className="mt-4 text-sm text-gray-500" data-testid="group-readers">
           {data?.readers ? `${groupRecipientsLabel(data.readers)} ` : null}
-          Eltern antworten nur der OGS. Ihre Antworten finden Sie in der
+          Eltern antworten nur der OGS. Ihre Antworten findest du in der
           Unterhaltung mit der Familie.
         </p>
         <FormErrorAlert message={sendError.error} className="mt-3" />
@@ -372,7 +372,7 @@ function GroupMessageContent() {
           ) : (
             <Alert
               type="info"
-              message="Die Eltern-Nachrichten sind für diese Schule ausgeschaltet. Sie können den Verlauf weiterhin lesen."
+              message="Die Eltern-Nachrichten sind für diese Schule ausgeschaltet. Du kannst den Verlauf weiterhin lesen."
             />
           )}
         </div>

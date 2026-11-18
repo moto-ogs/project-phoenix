@@ -265,7 +265,7 @@ describe("TraegerCareInvoiceAmendPage", () => {
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Hinzufügen" }));
     expect(
-      await within(dialog).findByText("Bitte nennen Sie einen Grund."),
+      await within(dialog).findByText("Bitte nenne einen Grund."),
     ).toBeInTheDocument();
     expect(amend.amendCareInvoice).not.toHaveBeenCalled();
 

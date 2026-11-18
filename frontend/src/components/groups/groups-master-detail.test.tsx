@@ -263,7 +263,7 @@ describe("GroupsMasterDetail Feriengruppe", () => {
     expect(screen.getByText("Feriengruppe 04.–08.01.2027")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "3 Feriengäste kommen am 04.01. in die Gruppe. Bis zum 04.01. steht die Gruppe nicht unter „Gruppen“. Raum und Gruppenleitung können Sie schon jetzt festlegen.",
+        "3 Feriengäste kommen am 04.01. in die Gruppe. Bis zum 04.01. steht die Gruppe nicht unter „Gruppen“. Raum und Gruppenleitung kannst du schon jetzt festlegen.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Raum 101")).toBeInTheDocument();

@@ -268,16 +268,16 @@ export function SpontaneousActivityStart({
     event.preventDefault();
     if (isSelectedRoomOccupied) {
       formErrors.invalid(
-        "Der Raum ist schon belegt. Bitte wählen Sie einen anderen Raum.",
+        "Der Raum ist schon belegt. Bitte wähle einen anderen Raum.",
       );
       return;
     }
     if (!canSubmit) {
       formErrors.invalid(
-        "Bitte wählen Sie eine Aktivität und einen Raum.",
+        "Bitte wähle eine Aktivität und einen Raum.",
         title.length > 0
           ? {}
-          : { activity: "Bitte wählen oder schreiben Sie eine Aktivität." },
+          : { activity: "Bitte wähle oder schreibe eine Aktivität." },
       );
       return;
     }
@@ -481,9 +481,9 @@ function startBlockedReason(input: {
   isSelectedRoomOccupied: boolean;
 }): string | undefined {
   if (input.title.length === 0)
-    return "Wählen oder schreiben Sie zuerst eine Aktivität.";
-  if (input.roomId.length === 0) return "Wählen Sie zuerst einen Raum aus.";
+    return "Wähle oder schreibe zuerst eine Aktivität.";
+  if (input.roomId.length === 0) return "Wähle zuerst einen Raum aus.";
   if (input.isSelectedRoomOccupied)
-    return "Wählen Sie einen freien Raum, dieser ist belegt.";
+    return "Wähle einen freien Raum, dieser ist belegt.";
   return undefined;
 }

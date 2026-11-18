@@ -136,7 +136,7 @@ func mountModuleRoutes(tenant chi.Router, settings settingsCompose.SettingsServi
 // birthdays, the caller's own context, the emergency snapshot, feedback and
 // the meal plan under /api.
 func mountPeopleRoutes(
-	tenant chi.Router, db transactionruntime.Database, logger *slog.Logger, reports owners.PresenceReports, renderer *lists.RendererService,
+	tenant chi.Router, db transactionruntime.Database, logger *slog.Logger, uploads nativeUploads.UploadFiles, reports owners.PresenceReports, renderer *lists.RendererService,
 	persons *peopleCompose.Directory, guardians peoplePorts.GuardianService, identity identityaccess.Owner, caller *owners.CallerRows,
 	feedback feedbackModule.Capability, mealPlan mealplanModule.Capability, birthdays birthdaysAPI.Service,
 	emergency emergencysnapshot.Query, settings settingsCompose.SettingsService, guardianEmail GuardianEmailDelivery, guardianEmailLog guardianEmailAudit,
@@ -152,14 +152,14 @@ func mountPeopleRoutes(
 	}).Router())
 	// Birthday display and staff birthday list (#1542).
 	tenant.Mount("/birthdays", birthdaysAPI.NewResource(birthdays, renderer, caller, logger.With("handler", "birthdays"), now).Router(ProtectedTenantRoutes))
-	tenant.Mount("/me", meAPI.NewResource(caller.Caller(), caller, TenantSessionChain, nativeUploads.UploadFiles{}, settings).Router())
+	tenant.Mount("/me", meAPI.NewResource(caller.Caller(), caller, TenantSessionChain, uploads, settings).Router())
 	tenant.Mount("/emergency", emergencyAPI.NewResource(emergency).Router(ProtectedTenantRoutes))
 }
 
 // mountCommunicationRoutes serves parent messages, announcements and surveys,
 // staff reminders, the PWA usage report and the platform announcements under /api.
 func mountCommunicationRoutes(
-	tenant chi.Router, logger *slog.Logger, chat owners.CommunicationMessaging, announcements communicationModule.ParentAnnouncementCapability,
+	tenant chi.Router, logger *slog.Logger, uploads nativeUploads.UploadFiles, chat owners.CommunicationMessaging, announcements communicationModule.ParentAnnouncementCapability,
 	reminders reminder.Capability, devices owners.DeliveryDevices, communication communicationModule.Capability,
 ) error {
 	surveys, err := communicationModule.SurveysOf(announcements)
@@ -167,7 +167,7 @@ func mountCommunicationRoutes(
 		return err
 	}
 	// Fotos und Dateien in den Nachrichten an Eltern (#6685), hinter demselben Recht wie die Nachrichten.
-	attachments := newMessageAttachmentRoutes(chat.ParentAttachments, logger.With("handler", "message-attachments"), apiCommon.RequiresPermission(permissions.UsersRead))
+	attachments := newMessageAttachmentRoutes(chat.ParentAttachments, logger.With("handler", "message-attachments"), uploads, apiCommon.RequiresPermission(permissions.UsersRead))
 	tenant.Mount("/messages", messagingAPI.NewResource(chat.Messaging, chat.GroupThreads, chat.TeamHandling, chat.MessageMails).Router(ProtectedTenantRoutesWith(attachments.Register)))
 	announcementRoutes := announcementAPI.NewResource(announcements, newDeclarationReports(), time.Now)
 	announcementRoutes.Letters = owners.NewParentLetterPrinter()

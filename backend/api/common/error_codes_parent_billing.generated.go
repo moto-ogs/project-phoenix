@@ -101,9 +101,12 @@ const CodeParentBillingLetterMailBlockUnreadable = "parent_billing.letter_mail_b
 const CodeParentBillingLetterMailBlocked = "parent_billing.letter_mail_blocked"
 const CodeParentBillingLetterMailDelayed = "parent_billing.letter_mail_delayed"
 const CodeParentBillingLetterMailPending = "parent_billing.letter_mail_pending"
+const CodeParentBillingLetterheadMissing = "parent_billing.letterhead_missing"
 const CodeParentBillingLetterheadTooLong = "parent_billing.letterhead_too_long"
 const CodeParentBillingNumberRangeInvalid = "parent_billing.number_range_invalid"
 const CodeParentBillingNumberRangeMissing = "parent_billing.number_range_missing"
+const CodeParentBillingNumberRangeStartInvalid = "parent_billing.number_range_start_invalid"
+const CodeParentBillingNumberRangeStartTaken = "parent_billing.number_range_start_taken"
 const CodeParentBillingOnlineMandateDisabled = "parent_billing.online_mandate_disabled"
 const CodeParentBillingParentDocumentNotFound = "parent_billing.parent_document_not_found"
 const CodeParentBillingPaymentTextDebtorNumberMissing = "parent_billing.payment_text_debtor_number_missing"
@@ -232,9 +235,12 @@ var errorCodeClassesParentBilling = []errorCodeClass{
 	{CodeParentBillingLetterMailBlocked, "business_rejection"},
 	{CodeParentBillingLetterMailDelayed, "business_rejection"},
 	{CodeParentBillingLetterMailPending, "business_rejection"},
+	{CodeParentBillingLetterheadMissing, "business_rejection"},
 	{CodeParentBillingLetterheadTooLong, "business_rejection"},
 	{CodeParentBillingNumberRangeInvalid, "input"},
 	{CodeParentBillingNumberRangeMissing, "business_rejection"},
+	{CodeParentBillingNumberRangeStartInvalid, "input"},
+	{CodeParentBillingNumberRangeStartTaken, "business_rejection"},
 	{CodeParentBillingOnlineMandateDisabled, "permission"},
 	{CodeParentBillingParentDocumentNotFound, "business_rejection"},
 	{CodeParentBillingPaymentTextDebtorNumberMissing, "business_rejection"},

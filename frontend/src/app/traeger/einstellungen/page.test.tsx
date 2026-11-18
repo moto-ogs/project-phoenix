@@ -251,7 +251,7 @@ describe("TraegerSettingsPage", () => {
     expect(
       screen.getByRole("dialog", { name: "Erklärung zu Allgemein" }),
     ).toHaveTextContent(
-      "Hier legen Sie Werte für alle Schulen Ihres Trägers fest. Wo es erlaubt ist, kann eine Schule einen eigenen Wert eintragen.",
+      "Hier legst du Werte für alle Schulen deines Trägers fest. Wo es erlaubt ist, kann eine Schule einen eigenen Wert eintragen.",
     );
     // Tab and category carry the names of the school settings page; the
     // tab is a page tab of the scaffold (#5146).
@@ -307,7 +307,7 @@ describe("TraegerSettingsPage", () => {
 
     expect(
       await screen.findByText(
-        "Sie können die Werte nur ansehen. Ändern kann, wer im Träger-Büro das Recht dazu hat.",
+        "Du kannst die Werte nur ansehen. Ändern kann, wer im Träger-Büro das Recht dazu hat.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Nur Lesen")).toBeInTheDocument();
@@ -433,7 +433,7 @@ describe("TraegerSettingsPage", () => {
       fireEvent.blur(to);
 
       expect(
-        await screen.findByText("Bitte geben Sie eine Zahl von 1 bis 35 ein."),
+        await screen.findByText("Bitte gib eine Zahl von 1 bis 35 ein."),
       ).toBeInTheDocument();
       expect(mockSave).not.toHaveBeenCalled();
     });
@@ -531,7 +531,7 @@ describe("TraegerSettingsPage", () => {
       });
       expect(field).toHaveAttribute(
         "placeholder",
-        "Bitte überweisen Sie {Betrag} bis zum {Zahlungsfrist} auf das Konto unten. Geben Sie als Verwendungszweck die Rechnungsnummer {Rechnungsnummer} an.",
+        "Bitte überweist {Betrag} bis zum {Zahlungsfrist} auf das Konto unten. Gebt als Verwendungszweck die Rechnungsnummer {Rechnungsnummer} an.",
       );
       // The limit counts characters like the backend, not UTF-16 units.
       expect(field).not.toHaveAttribute("maxlength");
@@ -541,7 +541,7 @@ describe("TraegerSettingsPage", () => {
       expect(
         screen.getByRole("figure", { name: "Vorschau des Zahlungstexts" }),
       ).toHaveTextContent(
-        "Bitte überweisen Sie 124,00 € bis zum 15.12.2026 auf das Konto unten. Geben Sie als Verwendungszweck Ihre Debitorennummer 10 4711 an.",
+        "Bitte überweist 124,00 € bis zum 15.12.2026 auf das Konto unten. Gebt als Verwendungszweck eure Debitorennummer 10 4711 an.",
       );
     });
 

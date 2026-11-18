@@ -777,7 +777,7 @@ function SupervisorItem({
               size="md"
               className="mt-3"
               onClick={handleEmailClick}
-              tooltip="Öffnet Ihr Mailprogramm mit einer neuen Mail an diese Person."
+              tooltip="Öffnet dein Mailprogramm mit einer neuen Mail an diese Person."
             >
               <EmailIcon />
               Kontakt aufnehmen
@@ -1171,7 +1171,7 @@ export function StudentHistorySection({
               ? "Nur für Gruppenbetreuer"
               : attendanceLogEnabled
                 ? "Anwesenheit je Betreuungsangebot und besuchte Räume"
-                : "Für Ihre Schule deaktiviert"
+                : "Für deine Schule deaktiviert"
           }
           disabled={attendanceDisabled}
           onClick={
@@ -1188,7 +1188,7 @@ export function StudentHistorySection({
               ? "Nur für Gruppenbetreuer"
               : feedbackEnabled
                 ? "Feedback und Bewertungen"
-                : "Für Ihre Schule deaktiviert"
+                : "Für deine Schule deaktiviert"
           }
           disabled={feedbackDisabled}
           onClick={

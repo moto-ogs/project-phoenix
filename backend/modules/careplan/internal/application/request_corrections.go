@@ -107,7 +107,7 @@ func (s *RequestCorrections) revertPickup(ctx context.Context, request *carerequ
 	}
 	applied, found := latestPickupRows(events)
 	if !found {
-		return fmt.Errorf("%w: zu dieser Entscheidung ist kein Eintrag gespeichert, der zurückgenommen werden kann. Bitte ändern Sie die Abholung direkt", careplan.ErrParentRequestCorrectionUnsupported)
+		return fmt.Errorf("%w: zu dieser Entscheidung ist kein Eintrag gespeichert, der zurückgenommen werden kann. Bitte ändere die Abholung direkt", careplan.ErrParentRequestCorrectionUnsupported)
 	}
 	if applied.PickupExceptionID > 0 {
 		if err := s.revertPickupException(ctx, request, applied); err != nil {
@@ -241,7 +241,7 @@ func validateCareCorrection(request carerequests.Request, version string) error 
 		return careplan.ErrParentRequestStale
 	}
 	if request.RequestKind != "pickup_change" && request.RequestKind != carerequests.KindPickupPermission {
-		return fmt.Errorf("%w: Betreuungszeiten speichern keinen Stand von vor der Entscheidung. Bitte ändern Sie den Wochenplan des Kindes direkt", careplan.ErrParentRequestCorrectionUnsupported)
+		return fmt.Errorf("%w: Betreuungszeiten speichern keinen Stand von vor der Entscheidung. Bitte ändere den Wochenplan des Kindes direkt", careplan.ErrParentRequestCorrectionUnsupported)
 	}
 	return nil
 }

@@ -62,7 +62,7 @@ function NameCard({
       logger.error("traeger_profile_name_save_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void formErrors.show(err, { object: "Ihr Name" });
+      void formErrors.show(err, { object: "Dein Name" });
       setSaving(false);
       return;
     }
@@ -70,7 +70,7 @@ function NameCard({
     // The field shows what the backend keeps (trimmed).
     setDraft(saved.name);
     onSaved(saved);
-    success("Ihr Name ist gespeichert.");
+    success("Dein Name ist gespeichert.");
   };
 
   return (
@@ -88,7 +88,7 @@ function NameCard({
         <Input
           controlSize="compact"
           id="traeger-profile-name"
-          label="Ihr Name"
+          label="Dein Name"
           name="name"
           autoComplete="name"
           value={draft}
@@ -123,7 +123,7 @@ export default function TraegerAccountPage() {
   } = useTraegerResource(
     traegerKeys.profile(),
     fetchTraegerProfile,
-    "Ihr Konto",
+    "Dein Konto",
   );
   const invalidateFamily = useInvalidateFamily();
 
@@ -133,7 +133,7 @@ export default function TraegerAccountPage() {
         <>
           <SectionCard
             title="Anmeldung"
-            description="Mit dieser E-Mail-Adresse melden Sie sich an."
+            description="Mit dieser E-Mail-Adresse meldest du dich an."
           >
             <DataGrid>
               <DataField label="E-Mail" fullWidth>

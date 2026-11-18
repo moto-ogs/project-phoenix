@@ -19,6 +19,7 @@
   "school_outside_traeger": "This school does not belong to your provider.",
   "selection_invalid": "This selection is not possible. Please change your selection.",
   "signature_invalid": "The signature is missing or empty. Please sign again.",
+  "signing_letterhead_missing": "Your signature has not been saved yet. The provider is still missing some details. Please try again later or contact the provider.",
   "signing_link_invalid": "This link is no longer valid. It was already used or has expired. You can find the contract in the parent app under “Documents”, or ask the provider for a new link.",
   "special_termination_closed": "This contract has no special termination. Please choose the regular termination.",
   "template_invalid": "Please check the marked fields.",
@@ -26,5 +27,6 @@
   "withdrawal_notice_required": "Please confirm that you have read the cancellation policy.",
   "import_file_invalid": "{object} could not be saved. Please check your entries.",
   "import_file_too_large": "{object} could not be saved. Please check your entries.",
-  "import_changed": "{object} could not be changed. Please check its current status."
+  "import_changed": "{object} could not be changed. Please check its current status.",
+  "letterhead_missing": "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”."
 }

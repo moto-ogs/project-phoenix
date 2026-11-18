@@ -12,7 +12,7 @@ import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "AssignTraegerMemberModal" });
 
-const ROLES_REQUIRED = "Bitte wählen Sie mindestens eine Rolle.";
+const ROLES_REQUIRED = "Bitte wähle mindestens eine Rolle.";
 
 /**
  * Assigns an existing account to the Träger-Büro with one or more Träger

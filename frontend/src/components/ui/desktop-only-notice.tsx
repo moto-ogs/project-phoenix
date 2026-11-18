@@ -15,7 +15,7 @@ interface DesktopOnlyNoticeProps {
 
 export function DesktopOnlyNotice({
   title = "Bitte am Computer öffnen",
-  description = "Diese Seite ist für die Arbeit am Computer optimiert. Bitte öffnen Sie sie auf einem Laptop oder Desktop-Rechner.",
+  description = "Diese Seite ist für die Arbeit am Computer optimiert. Bitte öffne sie auf einem Laptop oder Desktop-Rechner.",
 }: DesktopOnlyNoticeProps) {
   return (
     // Auf einer Fläche, nicht auf dem gemusterten Grund: dort steht kein Text

@@ -11,7 +11,7 @@ export default function TenantNotFound() {
         Die angegebene Schule existiert nicht oder ist nicht aktiv.
       </p>
       <p className="text-sm text-gray-500">
-        Bitte überprüfen Sie die Subdomain in der Adressleiste.
+        Bitte überprüfe die Subdomain in der Adressleiste.
       </p>
     </div>
   );

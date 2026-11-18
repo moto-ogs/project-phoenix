@@ -6,9 +6,14 @@ import { acceptInvitation } from "~/lib/invitation-api";
 import { ApiError } from "~/lib/api-error";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { catalogText } from "~/test/error-catalog-text";
+import { portalOfHost } from "~/lib/portal-paths";
 
 vi.mock("~/lib/invitation-api", () => ({ acceptInvitation: vi.fn() }));
 vi.mock("~/lib/tenant-api", () => ({ listAllTenants: vi.fn() }));
+vi.mock("~/lib/portal-paths", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/portal-paths")>()),
+  portalOfHost: vi.fn(() => "tenant"),
+}));
 
 const invitation = {
   email: "owner@example.com",
@@ -20,7 +25,56 @@ const invitation = {
 };
 
 describe("existing-account invitation acceptance", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(portalOfHost).mockReturnValue("tenant");
+    vi.mocked(listAllTenants).mockResolvedValue({
+      tenants: [
+        {
+          tenantId: 1,
+          organizationId: 1,
+          slug: "school",
+          name: "School",
+          subdomain: "school",
+          organizationName: "Org",
+        },
+      ],
+      status: "ok",
+    });
+  });
+
+  // #7369: no choice leads back to the page the person is already on, and
+  // the school portal names the way for an account without a school login.
+  it.each([
+    ["tenant", ["Für Eltern", "Für Lehrkräfte"], false],
+    ["school", ["Für Eltern"], true],
+    ["parent", ["Für Lehrkräfte"], false],
+  ] as const)(
+    "on the %s portal offers only the other portals",
+    async (portal, offered, hint) => {
+      vi.mocked(portalOfHost).mockReturnValue(portal);
+      render(
+        <InvitationOwnerAcceptForm
+          token="membership-offer"
+          invitation={invitation}
+        />,
+      );
+      expect(
+        screen.queryByText(/nicht als Lehrkraft/) !== null,
+        "hint for accounts without a school login",
+      ).toBe(hint);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Andere moto-Adresse wählen" }),
+      );
+      await screen.findByRole("combobox", {
+        name: "Für Betreuungskräfte: bisherige Schule",
+      });
+      const choices = ["Für Eltern", "Für Lehrkräfte"].filter(
+        (name) => screen.queryByRole("button", { name }) !== null,
+      );
+      expect(choices).toEqual(offered);
+    },
+  );
 
   it("joins with the current session without requesting or changing a password", async () => {
     vi.mocked(acceptInvitation).mockResolvedValue({});
@@ -44,7 +98,7 @@ describe("existing-account invitation acceptance", () => {
       confirmPassword: "",
     });
     expect(
-      screen.getByText(/Ihre bisherigen Zugänge bleiben bestehen/),
+      screen.getByText(/Deine bisherigen Zugänge bleiben bestehen/),
     ).toBeInTheDocument();
   });
 

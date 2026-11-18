@@ -9,6 +9,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
+const staffDocumentRetentionClock = `clock_timestamp()`
+
 // DatabaseTime reads the clock that guards the cutoffs of the staff
 // document retentions: users.delete_expired_staff_sick_notes (1.15.453) and
 // users.delete_finished_staff_document_file_cleanups (1.15.449) refuse a
@@ -20,7 +22,7 @@ func (s *Store) DatabaseTime(ctx context.Context) (time.Time, error) {
 		return time.Time{}, err
 	}
 	var now time.Time
-	if err := db.NewRaw(`SELECT clock_timestamp()`).Scan(ctx, &now); err != nil {
+	if err := db.NewRaw(`SELECT `+staffDocumentRetentionClock).Scan(ctx, &now); err != nil {
 		return time.Time{}, fmt.Errorf("workforce postgres: read the database time: %w", err)
 	}
 	return now, nil

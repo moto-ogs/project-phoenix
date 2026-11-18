@@ -122,7 +122,7 @@ export function TodayNoticeList({
                 variant="outline"
                 size="md"
                 disabled={pending === notice.id}
-                tooltip="Bestätigt sofort, dass Sie die Information gelesen haben."
+                tooltip="Bestätigt sofort, dass du die Information gelesen hast."
                 onClick={() => void confirm(notice)}
               >
                 {pending === notice.id

@@ -80,7 +80,7 @@ describe("StudentDokumenteTab", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste der Dokumente ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Liste der Dokumente ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
@@ -97,7 +97,7 @@ describe("StudentDokumenteTab", () => {
 
     expect(
       await screen.findByText(
-        "Für das Dokument fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+        "Für das Dokument fehlt dir die Berechtigung. Bitte frage die Schule.",
       ),
     ).toBeInTheDocument();
   });
@@ -111,7 +111,7 @@ describe("StudentDokumenteTab", () => {
 
     expect(
       await screen.findByText(
-        "Die Datei ist größer als 10 MB. Bitte wählen Sie eine kleinere Datei.",
+        "Die Datei ist größer als 10 MB. Bitte wähle eine kleinere Datei.",
       ),
     ).toBeInTheDocument();
     expect(upload).not.toHaveBeenCalled();

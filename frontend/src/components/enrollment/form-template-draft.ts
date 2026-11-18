@@ -129,7 +129,7 @@ export interface SchemaDraftProblem {
   readonly hint?: string;
 }
 
-const FILL_IN_HINT = "Bitte füllen Sie dieses Feld aus.";
+const FILL_IN_HINT = "Bitte fülle dieses Feld aus.";
 
 export function getSchemaDraftValidationMessage({
   fields,
@@ -142,7 +142,7 @@ export function getSchemaDraftValidationMessage({
 }>): SchemaDraftProblem | null {
   if (name.trim() === "") {
     return {
-      message: "Bitte geben Sie zuerst einen Namen für die Vorlage ein.",
+      message: "Bitte gib zuerst einen Namen für die Vorlage ein.",
       field: "name",
       hint: FILL_IN_HINT,
     };
@@ -157,7 +157,7 @@ export function getSchemaDraftValidationMessage({
         entry.attachments?.findIndex((a) => a.label.trim() === "") ?? -1;
       if (attachmentIndex >= 0)
         return {
-          message: "Bitte geben Sie jeder PDF-Datei eine Bezeichnung.",
+          message: "Bitte gib jeder PDF-Datei eine Bezeichnung.",
           field: `${prefix}.${index}.attachments.${attachmentIndex}.label`,
           hint: FILL_IN_HINT,
         };
@@ -172,16 +172,16 @@ export function getSchemaDraftValidationMessage({
     if (field.type === "information") {
       if ((field.content ?? "").trim() === "") {
         return {
-          message: `Bitte geben Sie für den Infotext ${position} einen Text ein.`,
+          message: `Bitte gib für den Infotext ${position} einen Text ein.`,
           field: `fields.${index}.content`,
           hint: FILL_IN_HINT,
         };
       }
       if (seenKeys.has(key)) {
         return {
-          message: `Bitte ändern Sie den Titel von Infotext ${position}. Ein anderer Eintrag hat schon denselben Titel.`,
+          message: `Bitte ändere den Titel von Infotext ${position}. Ein anderer Eintrag hat schon denselben Titel.`,
           field: `fields.${index}.label`,
-          hint: "Bitte wählen Sie einen anderen Titel.",
+          hint: "Bitte wähle einen anderen Titel.",
         };
       }
       seenKeys.add(key);
@@ -190,7 +190,7 @@ export function getSchemaDraftValidationMessage({
 
     if (field.label.trim() === "") {
       return {
-        message: `Bitte geben Sie für Frage ${position} einen Fragetext ein.`,
+        message: `Bitte gib für Frage ${position} einen Fragetext ein.`,
         field: `fields.${index}.label`,
         hint: FILL_IN_HINT,
       };
@@ -198,23 +198,23 @@ export function getSchemaDraftValidationMessage({
 
     if (key === "") {
       return {
-        message: `Bitte ändern Sie den Fragetext von Frage ${position}. Er braucht mindestens einen Buchstaben oder eine Zahl.`,
+        message: `Bitte ändere den Fragetext von Frage ${position}. Er braucht mindestens einen Buchstaben oder eine Zahl.`,
         field: `fields.${index}.label`,
-        hint: "Bitte verwenden Sie Buchstaben oder Zahlen.",
+        hint: "Bitte verwende Buchstaben oder Zahlen.",
       };
     }
     if (seenKeys.has(key)) {
       return {
-        message: `Bitte ändern Sie den Fragetext von Frage ${position}. Eine andere Zusatzfrage hat denselben oder einen sehr ähnlichen Text.`,
+        message: `Bitte ändere den Fragetext von Frage ${position}. Eine andere Zusatzfrage hat denselben oder einen sehr ähnlichen Text.`,
         field: `fields.${index}.label`,
-        hint: "Bitte wählen Sie einen anderen Fragetext.",
+        hint: "Bitte wähle einen anderen Fragetext.",
       };
     }
     seenKeys.add(key);
 
     if (!field.target && isStructuredFieldType(field.type)) {
       return {
-        message: `Bitte wählen Sie für Frage ${position} einen einfachen Typ. Telefonlisten, Wochenzeiten und Kontaktlisten gibt es nur als feste Vorschläge.`,
+        message: `Bitte wähle für Frage ${position} einen einfachen Typ. Telefonlisten, Wochenzeiten und Kontaktlisten gibt es nur als feste Vorschläge.`,
       };
     }
 
@@ -223,9 +223,9 @@ export function getSchemaDraftValidationMessage({
 
     if (field.type === "select" && (field.options ?? []).length === 0) {
       return {
-        message: `Bitte ergänzen Sie für Frage ${position} mindestens eine Auswahloption.`,
+        message: `Bitte ergänze für Frage ${position} mindestens eine Auswahloption.`,
         field: `fields.${index}.options`,
-        hint: "Bitte tragen Sie mindestens eine Option ein.",
+        hint: "Bitte trage mindestens eine Option ein.",
       };
     }
   }
@@ -238,21 +238,21 @@ export function getSchemaDraftValidationMessage({
     if (seenLegalKeys.has(block.key)) {
       // The key is never shown; only removing the duplicate helps.
       return {
-        message: `Bitte entfernen Sie Zustimmung ${position} und legen Sie sie neu an. Sie ist doppelt vorhanden.`,
+        message: `Bitte entferne Zustimmung ${position} und lege sie neu an. Sie ist doppelt vorhanden.`,
       };
     }
     seenLegalKeys.add(block.key);
     if (!block.enabled) continue;
     if (block.title === "") {
       return {
-        message: `Bitte geben Sie für Zustimmung ${position} einen Titel ein.`,
+        message: `Bitte gib für Zustimmung ${position} einen Titel ein.`,
         field: `legal_blocks.${index}.title`,
         hint: FILL_IN_HINT,
       };
     }
     if (block.label === "") {
       return {
-        message: `Bitte geben Sie für Zustimmung ${position} einen Text neben der Checkbox ein.`,
+        message: `Bitte gib für Zustimmung ${position} einen Text neben der Checkbox ein.`,
         field: `legal_blocks.${index}.label`,
         hint: FILL_IN_HINT,
       };
@@ -264,7 +264,7 @@ export function getSchemaDraftValidationMessage({
     ) {
       return {
         message:
-          "Bitte laden Sie für die AGB eine PDF-Datei hoch. Oder wählen Sie wieder „Text eingeben“.",
+          "Bitte lade für die AGB eine PDF-Datei hoch. Oder wähle wieder „Text eingeben“.",
       };
     }
   }

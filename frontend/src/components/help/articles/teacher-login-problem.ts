@@ -12,23 +12,23 @@ export function teacherLoginProblemTopic(): HelpTopic {
     audience: "teacher",
     icon: "ShieldAlert",
     steps: [
-      "Prüfen Sie, ob oben `Willkommen im Schulportal` steht.",
-      "Steht dort etwas anderes, nutzen Sie die Adresse von moto schule.",
-      "Prüfen Sie E-Mail-Adresse und Passwort.",
-      "Nutzen Sie sonst `Passwort vergessen?`.",
+      "Prüfe, ob oben `Willkommen im Schulportal` steht.",
+      "Steht dort etwas anderes, nutze die Adresse von moto schule.",
+      "Prüfe E-Mail-Adresse und Passwort.",
+      "Nutze sonst `Passwort vergessen?`.",
     ],
-    result: "Nach der Anmeldung landen Sie in der `Klassenansicht`.",
+    result: "Nach der Anmeldung landest du in der `Klassenansicht`.",
     notes: [
       "Der Link aus der Einladungs-E-Mail führt immer zur richtigen Adresse.",
     ],
     differences: [
-      "`Dieses Konto hat keinen Zugang zum Schul-Portal.` Dann fehlt Ihrem Konto die Rolle. Wenden Sie sich an die OGS-Verwaltung.",
-      "`Die E-Mail-Adresse oder das Passwort stimmt nicht.` Prüfen Sie beides.",
+      "`Dieses Konto hat keinen Zugang zum Schul-Portal.` Dann fehlt deinem Konto die Rolle. Wende dich an die OGS-Verwaltung.",
+      "`Die E-Mail-Adresse oder das Passwort stimmt nicht.` Prüfe beides.",
     ],
     troubleshootingDetails: [
-      "Nach mehreren falschen Passwörtern warten Sie bitte 15 Minuten.",
+      "Nach mehreren falschen Passwörtern warte bitte 15 Minuten.",
       "Ein Passwortwechsel verkürzt diese Wartezeit nicht.",
-      "Sie werden immer wieder abgemeldet? Melden Sie sich einmal neu an.",
+      "Du wirst immer wieder abgemeldet? Melde dich einmal neu an.",
     ],
     related: [
       HELP_TOPICS.teacherLogin,

@@ -212,14 +212,14 @@ describe("ClosingDaysEditor", () => {
     );
     expect(
       await screen.findByText(
-        "In dieser Zeit sind Ferienwochen bei Ihnen gebucht",
+        "In dieser Zeit sind Ferienwochen bei dir gebucht",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/12 Kinder/)).toBeInTheDocument();
     expect(screen.getByText(/4 Kinder/)).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Die Buchungen bleiben bestehen. Nach dem Speichern können Sie die Eltern auf dieser Seite informieren.",
+        "Die Buchungen bleiben bestehen. Nach dem Speichern kannst du die Eltern auf dieser Seite informieren.",
       ),
     ).toBeInTheDocument();
   });

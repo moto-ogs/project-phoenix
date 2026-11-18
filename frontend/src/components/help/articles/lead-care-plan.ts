@@ -16,49 +16,49 @@ export function leadCarePlanTopic(): HelpTopic {
     audience: "lead",
     icon: "Table",
     steps: [
-      "Klappen Sie in der Seitenleiste `Planung` auf.",
-      "Öffnen Sie `Betreuungsplan`.",
-      "Wählen Sie oben die Ansicht `Tag`, `Woche`, `Monat` oder `Serien`.",
-      "Blättern Sie mit den Pfeilen zur gewünschten Woche.",
-      "Legen Sie die Termine der Woche an.",
-      "Prüfen Sie zum Schluss die gemeldeten Konflikte.",
+      "Klappe in der Seitenleiste `Planung` auf.",
+      "Öffne `Betreuungsplan`.",
+      "Wähle oben die Ansicht `Tag`, `Woche`, `Monat` oder `Serien`.",
+      "Blättere mit den Pfeilen zur gewünschten Woche.",
+      "Lege die Termine der Woche an.",
+      "Prüfe zum Schluss die gemeldeten Konflikte.",
     ],
-    result: "Ihr Team sieht den Plan unter `Heute` und unter `Mein Kalender`.",
+    result: "Dein Team sieht den Plan unter `Heute` und unter `Mein Kalender`.",
     notes: [
       "Ein Regeltermin wiederholt sich. Die Ansicht `Serien` zeigt alle Regeltermine.",
       // #5102: Hand-Kinderlisten folgen keiner Abmeldung; #5137: Klassen-
       // Regeltermine führen zu „Mit Angebot verbinden“.
-      "Wählen Sie die Kinder eines Regeltermins von Hand oder über Klasse, Jahrgang oder Gruppe aus, folgt er keiner Abmeldung. Nach einer Abmeldung nennt moto diese Regeltermine. Bei einer Liste von Hand wählen Sie dort `Dort auch entfernen`, bei Klasse, Jahrgang oder Gruppe `Mit Angebot verbinden`.",
+      "Wählst du die Kinder eines Regeltermins von Hand oder über Klasse, Jahrgang oder Gruppe aus, folgt er keiner Abmeldung. Nach einer Abmeldung nennt moto diese Regeltermine. Bei einer Liste von Hand wählst du dort `Dort auch entfernen`, bei Klasse, Jahrgang oder Gruppe `Mit Angebot verbinden`.",
       // #5102: der Hinweis bleibt nach dem Neuladen im Betreuungsplan.
-      "Haben Sie dort nichts gewählt, steht das Kind in der Ansicht `Serien` unter `Ohne passende Buchung eingeplant`. Wählen Sie `Entfernen` oder `Bleibt so`. Die Startseite zeigt dazu `Kinder ohne passende Buchung`.",
+      "Hast du dort nichts gewählt, steht das Kind in der Ansicht `Serien` unter `Ohne passende Buchung eingeplant`. Wähle `Entfernen` oder `Bleibt so`. Die Startseite zeigt dazu `Kinder ohne passende Buchung`.",
       // #5497: eine spätere Buchung beendet die Lücke.
       "Gibt es später wieder eine passende Buchung, nennt moto den Zeitraum bis dahin. `Entfernen` gilt dann nur für diesen Zeitraum. Ab der neuen Buchung bleibt das Kind eingeplant.",
-      "Aufgaben ohne Kinder, etwa Busaufsicht oder Essensausgabe, legen Sie mit dem `Typ` `Dienst` an. Ein Dienst hat keine Kinderliste und wird nicht gestartet. Der Raum ist freiwillig.",
+      "Aufgaben ohne Kinder, etwa Busaufsicht oder Essensausgabe, legst du mit dem `Typ` `Dienst` an. Ein Dienst hat keine Kinderliste und wird nicht gestartet. Der Raum ist freiwillig.",
       // #4573, ADR 0091: Externe in Regelterminen, auch allein und zuständig.
-      "Externe Personen wählen Sie im Schritt `Personal und Kinder` unter `Personal` wie alle anderen, auch mit `Kein Zugang`. Fehlt jemand, wählen Sie darunter `Externe Person eintragen`.",
+      "Externe Personen wählst du im Schritt `Personal und Kinder` unter `Personal` wie alle anderen, auch mit `Kein Zugang`. Fehlt jemand, wähle darunter `Externe Person eintragen`.",
       "Hat die externe Person `Kein Zugang`, startet eine OGS-Kraft den Termin. Mit `Eigene Termine betreuen` startet sie ihn selbst.",
       // #5104: was die Zielgruppe wirklich bedeutet.
       "Die `Zielgruppe` `Klasse`, `Jahrgang` oder `Gruppe` bringt alle Kinder dieser Klasse, Jahrgangsstufe oder Gruppe. Ob sie angemeldet sind, spielt keine Rolle. Spätere An- und Abmeldungen kommen dort nicht an.",
-      "Sollen nur angemeldete Kinder kommen? Passt Ihre Auswahl zu einem Angebot, schlägt moto es im Schritt `Personal und Kinder` vor. Wählen Sie `Angebot übernehmen`. Passen mehrere Angebote, wählt moto keins vor. Dann wählen Sie das passende, etwa `„Randstunde“ übernehmen`. Die Vorschau zeigt pro Wochentag, wer dazukommt und wer wegfällt.",
+      "Sollen nur angemeldete Kinder kommen? Passt deine Auswahl zu einem Angebot, schlägt moto es im Schritt `Personal und Kinder` vor. Wähle `Angebot übernehmen`. Passen mehrere Angebote, wählt moto keins vor. Dann wähle das passende, etwa `„Randstunde“ übernehmen`. Die Vorschau zeigt pro Wochentag, wer dazukommt und wer wegfällt.",
       "Eine externe Person kann einen Termin allein betreuen. Sie kann auch die `Zuständige Person` sein.",
-      "Wählen Sie im Drei-Punkte-Menü `Drucken oder exportieren`. Wählen Sie Vorlage, Fassung und Zeitraum. `Drucken` öffnet die Druckansicht. Für eine Datei wählen Sie das Format und `Herunterladen`.",
+      "Wähle im Drei-Punkte-Menü `Drucken oder exportieren`. Wähle Vorlage, Fassung und Zeitraum. `Drucken` öffnet die Druckansicht. Für eine Datei wähle das Format und `Herunterladen`.",
       // #4766: Filter Gruppe und Person in Tag, Woche und Monat.
-      "Nur eine Gruppe oder eine Person planen? Wählen Sie oben bei `Alle Gruppen` eine OGS-Gruppe oder bei `Alle Personen` eine Person. Die Gruppe zeigt Termine mit Kindern der Gruppe oder mit der Gruppe als Teilnehmer. Die Person zeigt auch ihre Vertretungen.",
+      "Nur eine Gruppe oder eine Person planen? Wähle oben bei `Alle Gruppen` eine OGS-Gruppe oder bei `Alle Personen` eine Person. Die Gruppe zeigt Termine mit Kindern der Gruppe oder mit der Gruppe als Teilnehmer. Die Person zeigt auch ihre Vertretungen.",
       // #4768: Raumfilter.
-      "Einen Raum für eine neue AG suchen? Wählen Sie oben bei `Alle Räume` den Raum. Dann sehen Sie, wann er belegt ist.",
+      "Einen Raum für eine neue AG suchen? Wähle oben bei `Alle Räume` den Raum. Dann siehst du, wann er belegt ist.",
       "Ist ein Filter gewählt, druckt `Drucken oder exportieren` nur die gefilterten Termine.",
       // ADR 0116: die ausgerichtete Ferienwoche im Plan.
-      "Richtet Ihre OGS eine Ferienwoche für den Träger aus, steht im Kopf jedes Tages `Ferienbetreuung` mit der Zahl der Kinder. Die Betreuungszeit ist in der Spalte orange hinterlegt. Planen Sie dafür Personal ein. An einem Schließtag gibt es keine Ferienbetreuung.",
+      "Richtet deine OGS eine Ferienwoche für den Träger aus, steht im Kopf jedes Tages `Ferienbetreuung` mit der Zahl der Kinder. Die Betreuungszeit ist in der Spalte orange hinterlegt. Plane dafür Personal ein. An einem Schließtag gibt es keine Ferienbetreuung.",
       // #5028: Sa/So nur in der Woche des heutigen Wochenendes.
-      "Betreut Ihre OGS am Wochenende? Dann gilt dort der Freitagsplan. Am Wochenende zeigt die Wochenansicht dieser Woche auch Samstag und Sonntag.",
+      "Betreut deine OGS am Wochenende? Dann gilt dort der Freitagsplan. Am Wochenende zeigt die Wochenansicht dieser Woche auch Samstag und Sonntag.",
     ],
     differences: [
-      "Steht oben `Nur ansehen`? Dann dürfen Sie den Plan lesen, aber nicht ändern.",
+      "Steht oben `Nur ansehen`? Dann darfst du den Plan lesen, aber nicht ändern.",
       "`Monat` und `Serien` stehen nicht in jeder Ansicht zur Wahl.",
     ],
     troubleshootingDetails: [
-      "Die Woche sagt `Noch kein Planungszeitraum`? Wählen Sie `Planungszeitraum anlegen` oder tragen Sie zuerst unter `Schuljahr und Kalender` einen Zeitraum ein.",
-      "Ein Regeltermin lässt sich nur ab heute beenden. Vergangene Termine löschen Sie einzeln.",
+      "Die Woche sagt `Noch kein Planungszeitraum`? Wähle `Planungszeitraum anlegen` oder trage zuerst unter `Schuljahr und Kalender` einen Zeitraum ein.",
+      "Ein Regeltermin lässt sich nur ab heute beenden. Vergangene Termine löschst du einzeln.",
     ],
     related: [
       HELP_TOPICS.leadCalendarPeriods,

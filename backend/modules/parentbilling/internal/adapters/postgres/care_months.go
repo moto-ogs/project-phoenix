@@ -140,6 +140,7 @@ type careInvoiceRow struct {
 	MandateReference    *string        `bun:"mandate_reference"`
 	MandateSignedOn     *calendar.Date `bun:"mandate_signed_on,type:date"`
 	CreditorID          *string        `bun:"creditor_id"`
+	HolderSealed        []byte         `bun:"account_holder_sealed,nullzero" json:"-"`
 	DebtorIBANMasked    *string        `bun:"debtor_iban_masked"`
 	SequenceType        *string        `bun:"sequence_type"`
 	DebitGap            *string        `bun:"debit_gap"`
@@ -751,7 +752,7 @@ func careDocumentKind(kind string) string {
 func (r careInvoiceRow) snapshot() paymentSnapshot {
 	return paymentSnapshot{PaymentMethod: r.PaymentMethod, DueOn: r.DueOn, DueSource: r.DueSource, MandateID: r.MandateID,
 		MandateReference: r.MandateReference, MandateSignedOn: r.MandateSignedOn, CreditorID: r.CreditorID,
-		DebtorIBANMasked: r.DebtorIBANMasked, SequenceType: r.SequenceType, DebitGap: r.DebitGap}
+		DebtorIBANMasked: r.DebtorIBANMasked, SequenceType: r.SequenceType, HolderSealed: r.HolderSealed, DebitGap: r.DebitGap}
 }
 
 // setPayment copies a payment onto the row.
@@ -759,4 +760,5 @@ func (r *careInvoiceRow) setPayment(s paymentSnapshot) {
 	r.PaymentMethod, r.DueOn, r.DueSource, r.MandateID = s.PaymentMethod, s.DueOn, s.DueSource, s.MandateID
 	r.MandateReference, r.MandateSignedOn, r.CreditorID = s.MandateReference, s.MandateSignedOn, s.CreditorID
 	r.DebtorIBANMasked, r.SequenceType, r.DebitGap = s.DebtorIBANMasked, s.SequenceType, s.DebitGap
+	r.HolderSealed = s.HolderSealed
 }

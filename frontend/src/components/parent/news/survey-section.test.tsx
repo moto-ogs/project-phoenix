@@ -131,7 +131,7 @@ describe("Umfrage im Elternportal", () => {
 
     expect(
       await screen.findByText(
-        /Die Schule sieht nicht, wer was geantwortet hat\..*Sie antworten einmal für Ihr Elternkonto, nicht für jedes Kind\./,
+        /Die Schule sieht nicht, wer was geantwortet hat\..*Du antwortest einmal für dein Elternkonto, nicht für jedes Kind\./,
       ),
     ).toBeInTheDocument();
 
@@ -139,7 +139,7 @@ describe("Umfrage im Elternportal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Antwort absenden" }));
 
     expect(
-      await screen.findByText("Danke, Ihre Antwort ist gespeichert."),
+      await screen.findByText("Danke, deine Antwort ist gespeichert."),
     ).toBeInTheDocument();
     expect(submit).toHaveBeenCalledWith("42", {
       answers: [{ question_id: "q1", option_ids: ["o2"] }],

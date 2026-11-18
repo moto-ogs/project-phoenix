@@ -224,7 +224,7 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
 
     fireEvent.click(screen.getByText("Speichern"));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Die Laufgemeinschaft wurde inzwischen geändert. Bitte laden Sie sie neu.",
+      "Die Laufgemeinschaft wurde inzwischen geändert. Bitte lade sie neu.",
     );
     expect(toastErrorMock).not.toHaveBeenCalled();
     expect(onSave).not.toHaveBeenCalled();
@@ -325,7 +325,7 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
 
     fireEvent.click(screen.getByText("Speichern"));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Die Laufgemeinschaft wurde inzwischen geändert. Bitte laden Sie sie neu.",
+      "Die Laufgemeinschaft wurde inzwischen geändert. Bitte lade sie neu.",
     );
     expect(toastErrorMock).not.toHaveBeenCalled();
     expect(onSave).not.toHaveBeenCalled();

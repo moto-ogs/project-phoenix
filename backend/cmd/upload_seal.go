@@ -10,11 +10,13 @@ import (
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
+	uploadCompose "github.com/moto-ogs/project-phoenix/modules/delivery/objects/compose"
 	transactionRuntimeCompose "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func init() { RootCmd.AddCommand(newUploadSealCommand()) }
@@ -26,7 +28,7 @@ func newUploadSealCommand() *cobra.Command {
 		SilenceUsage: true, RunE: runUploadSeal,
 	}
 	cmd.Flags().Int64("school", 0, "School ID")
-	cmd.Flags().String("uploads", "", "Uploads root of this installation (the directory holding staff-documents/ and student-documents/)")
+	cmd.Flags().String("uploads", "", "Uploads root for local storage (holds staff-documents/ and student-documents/)")
 	cmd.Flags().Int("batch-size", 100, "Documents per transaction (1..1000)")
 	return cmd
 }
@@ -35,11 +37,18 @@ func runUploadSeal(cmd *cobra.Command, _ []string) error {
 	schoolID, _ := cmd.Flags().GetInt64("school")
 	uploads, _ := cmd.Flags().GetString("uploads")
 	batchSize, _ := cmd.Flags().GetInt("batch-size")
-	if schoolID <= 0 || uploads == "" || batchSize < 1 || batchSize > 1000 {
-		return errors.New("school, uploads and batch-size 1..1000 are required")
+	if schoolID <= 0 || batchSize < 1 || batchSize > 1000 {
+		return errors.New("school and batch-size 1..1000 are required")
 	}
-	if info, err := os.Stat(uploads); err != nil || !info.IsDir() {
-		return errors.New("upload seal: the uploads root is not a directory")
+	config := objects.UploadStorageConfigFrom(viper.GetString)
+	if config.IsLocal() {
+		if info, err := os.Stat(uploads); err != nil || !info.IsDir() {
+			return errors.New("upload seal: --uploads must name the local uploads directory")
+		}
+	}
+	backend, err := uploadCompose.NewBackend(cmd.Context(), config, uploads)
+	if err != nil {
+		return err
 	}
 	health, bank, err := uploadFileCiphers()
 	if err != nil {
@@ -50,7 +59,7 @@ func runUploadSeal(cmd *cobra.Command, _ []string) error {
 		return errors.New("upload seal: maintenance database unavailable")
 	}
 	defer func() { _ = db.Close() }()
-	store := objects.NewPrivateUploads(objects.NewLocal(uploads), objects.FileKeys{Health: health, Bank: bank})
+	store := objects.NewPrivateUploads(backend, objects.FileKeys{Health: health, Bank: bank})
 	ctx := tenant.WithUnitOfWork(cmd.Context(), db.UnitOfWork())
 	return runUploadSealJob(ctx, workforceCompose.NewStaffDocumentFileSeal(), carePlanCompose.NewStudentDocumentFileSeal(), store, schoolID, batchSize, cmd.OutOrStdout())
 }

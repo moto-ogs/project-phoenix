@@ -13,11 +13,13 @@ import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
 const {
+  mockFetchRequiredDetails,
   mockFetchSchools,
   mockRouterPush,
   mockStartSchoolSession,
   mockUseSession,
 } = vi.hoisted(() => ({
+  mockFetchRequiredDetails: vi.fn(),
   mockFetchSchools: vi.fn(),
   mockRouterPush: vi.fn(),
   mockStartSchoolSession: vi.fn(),
@@ -33,6 +35,10 @@ vi.mock("~/lib/traeger-api", () => ({
   fetchTraegerSchools: () => mockFetchSchools(),
   startTraegerSchoolSession: (schoolId: string) =>
     mockStartSchoolSession(schoolId),
+}));
+
+vi.mock("~/lib/traeger-required-details-api", () => ({
+  fetchTraegerRequiredDetails: () => mockFetchRequiredDetails(),
 }));
 
 vi.mock("~/lib/traeger-url", () => ({
@@ -79,7 +85,71 @@ describe("TraegerSchoolsPage", () => {
     mockFetchSchools.mockReset();
     mockRouterPush.mockReset();
     mockStartSchoolSession.mockReset();
+    mockFetchRequiredDetails.mockReset();
+    mockFetchRequiredDetails.mockResolvedValue([]);
     mockUseSession.mockReturnValue(sessionWith(["traeger_overview:read"]));
+  });
+
+  it("names the missing details and links only to what the viewer may enter (#7177)", async () => {
+    mockFetchSchools.mockResolvedValue([AM_BACH]);
+    mockFetchRequiredDetails.mockResolvedValue(["letterhead", "sepa_creditor"]);
+    mockUseSession.mockReturnValue(
+      sessionWith(["traeger_overview:read", "traeger_settings:manage"]),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText("Es fehlen noch Pflichtangaben"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Absender im Briefkopf (Name und Anschrift des Trägers)",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Gläubiger-ID für die Lastschrift – trägt die Rolle „Abrechnung“ ein",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Briefkopf öffnen" }),
+    ).toHaveAttribute("href", "/traeger/einstellungen/briefkopf");
+    // The creditor needs the right "Abrechnung": no link the viewer cannot use.
+    expect(
+      screen.queryByRole("link", { name: "Abrechnungsvorgaben öffnen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows no hint once nothing is missing", async () => {
+    mockFetchSchools.mockResolvedValue([AM_BACH]);
+    renderPage();
+
+    expect(await screen.findByText("OGS Am Bach")).toBeInTheDocument();
+    await waitFor(() => expect(mockFetchRequiredDetails).toHaveBeenCalled());
+    expect(
+      screen.queryByText("Es fehlen noch Pflichtangaben"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a failed required-details check and retries it", async () => {
+    mockFetchSchools.mockResolvedValue([AM_BACH]);
+    mockFetchRequiredDetails
+      .mockRejectedValueOnce(
+        new ApiError("unavailable", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValueOnce([]);
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Pflichtangaben"),
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+
+    await waitFor(() =>
+      expect(mockFetchRequiredDetails).toHaveBeenCalledTimes(2),
+    );
   });
 
   it("lists every school of the Träger as a read-only table", async () => {
@@ -113,7 +183,7 @@ describe("TraegerSchoolsPage", () => {
     expect(
       screen.getByRole("dialog", { name: "Erklärung zu Schulen" }),
     ).toHaveTextContent(
-      "Alle Schulen Ihres Trägers. Neue Schulen ordnet das moto-Team zu.",
+      "Alle Schulen deines Trägers. Neue Schulen ordnet das moto-Team zu.",
     );
     expect(within(table).getByText("OGS Lindenweg")).toBeInTheDocument();
   });
@@ -136,12 +206,12 @@ describe("TraegerSchoolsPage", () => {
 
     // Table and phone layout share the empty state.
     const empty = await screen.findAllByText(
-      "Ihrem Träger sind noch keine Schulen zugeordnet.",
+      "Deinem Träger sind noch keine Schulen zugeordnet.",
     );
     expect(empty[0]).toBeInTheDocument();
     expect(
       screen.getAllByText(
-        "Das moto-Team ordnet die Schulen Ihrem Träger zu.",
+        "Das moto-Team ordnet die Schulen deinem Träger zu.",
       )[0],
     ).toBeInTheDocument();
   });
@@ -180,7 +250,7 @@ describe("TraegerSchoolsPage", () => {
     const table = await screen.findByRole("table");
     expect(
       screen.getByText(
-        "Die Schul-App öffnen Sie nur mit der Rolle „Schulzugang“. Diese Rolle gibt Ihnen eine Person mit der Rolle „Leitung“.",
+        "Die Schul-App öffnest du nur mit der Rolle „Schulzugang“. Diese Rolle gibt dir eine Person mit der Rolle „Leitung“.",
       ),
     ).toBeInTheDocument();
     expect(within(table).queryAllByRole("button", { name: /öffnen/ })).toEqual(

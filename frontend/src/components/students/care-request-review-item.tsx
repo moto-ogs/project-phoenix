@@ -276,7 +276,7 @@ function decisionInputReady(
     !row.impact_available
   ) {
     setError(
-      "Die Anfrage kann nicht freigegeben werden. Bitte laden Sie die Seite neu.",
+      "Die Anfrage kann nicht freigegeben werden. Bitte lade die Seite neu.",
     );
     return false;
   }
@@ -345,7 +345,7 @@ function CareRequestProofButton({
         type="button"
         variant="outline"
         size="compact"
-        tooltip="Speichert die Unterschrift der Eltern als PDF auf Ihrem Gerät."
+        tooltip="Speichert die Unterschrift der Eltern als PDF auf deinem Gerät."
         disabled={busy}
         onClick={() => {
           setBusy(true);

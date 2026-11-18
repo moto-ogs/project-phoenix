@@ -171,7 +171,7 @@ describe("ExcusedRequestReviewItem", () => {
     // entscheidet nichts, und der Knopf nennt, was zuerst fehlt.
     expect(approve).toHaveAttribute("aria-disabled", "true");
     expect(approve).toHaveAccessibleDescription(
-      "Bestätigen Sie zuerst unten, dass die Teilentschuldigung ersetzt wird.",
+      "Bestätige zuerst unten, dass die Teilentschuldigung ersetzt wird.",
     );
     fireEvent.click(approve);
     expect(mockDecide).not.toHaveBeenCalled();

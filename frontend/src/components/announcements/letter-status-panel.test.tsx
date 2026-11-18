@@ -182,7 +182,7 @@ describe("LetterStatusPanel mail state (#5934)", () => {
       ]),
     );
     renderPanel();
-    expect(await screen.findByText(/Sprechen Sie sie direkt an/)).toBeVisible();
+    expect(await screen.findByText(/Sprich sie direkt an/)).toBeVisible();
     expect(screen.getAllByText("Abgemeldet").length).toBeGreaterThan(0);
     expect(screen.queryByText(/neue Adresse/)).toBeNull();
     await waitFor(() =>
@@ -318,9 +318,7 @@ describe("LetterStatusPanel mail state (#5934)", () => {
           outcome === "send_failed" ? "Fehlgeschlagen" : "Zugestellt",
         ),
       ).toBeVisible();
-      expect(
-        screen.queryByText(/Bitte senden Sie neu/),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/Bitte sende neu/)).not.toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Fehlgeschlagene erneut senden" }),
       ).toHaveAttribute("aria-disabled", "true");

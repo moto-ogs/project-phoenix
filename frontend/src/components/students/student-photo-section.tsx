@@ -43,7 +43,7 @@ interface StudentPhotoSectionProps {
 }
 
 const PHOTO_PROCESSING_FAILED =
-  "Dieses Foto lässt sich nicht verwenden. Bitte wählen Sie ein anderes Foto.";
+  "Dieses Foto lässt sich nicht verwenden. Bitte wähle ein anderes Foto.";
 
 const ACCEPTED_TYPES = "image/jpeg,image/jpg,image/png,image/webp";
 
@@ -196,7 +196,7 @@ export function StudentPhotoSection({
       ) : (
         <p className="text-xs text-gray-600">
           Kinderfotos sind ausgeschaltet. Widerrufen Eltern die Einwilligung,
-          entfernen Sie hier den Haken.
+          entferne hier den Haken.
         </p>
       )}
 

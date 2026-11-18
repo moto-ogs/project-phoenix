@@ -76,8 +76,8 @@ export function TodayNoticesCard() {
           {pending > 0 && (
             <p className="mt-3 text-sm text-gray-500">
               {pending === 1
-                ? "Ein Hinweis wartet auf Ihre Kenntnisnahme."
-                : `${pending} Hinweise warten auf Ihre Kenntnisnahme.`}
+                ? "Ein Hinweis wartet auf deine Kenntnisnahme."
+                : `${pending} Hinweise warten auf deine Kenntnisnahme.`}
             </p>
           )}
         </>

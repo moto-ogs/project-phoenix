@@ -247,7 +247,7 @@ describe("HolidayRegistrationChildCard", () => {
       fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        `Am 04.01.2027 gibt es keine Betreuung (${name}). Diese Woche kann man nicht buchen. Wählen Sie eine andere Woche.`,
+        `Am 04.01.2027 gibt es keine Betreuung (${name}). Diese Woche kann man nicht buchen. Wähle eine andere Woche.`,
       );
       expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled();
       expect(onChanged).not.toHaveBeenCalled();
@@ -302,7 +302,7 @@ describe("HolidayRegistrationChildCard", () => {
 
     expect(
       screen.getByText(
-        "Zwei dieser Wochen überschneiden sich. Bitte wählen Sie nur eine davon.",
+        "Zwei dieser Wochen überschneiden sich. Bitte wähle nur eine davon.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
@@ -312,7 +312,7 @@ describe("HolidayRegistrationChildCard", () => {
     renderCard({ ...HOLIDAY_REGISTRATION, frozen: true }, 0);
 
     expect(
-      screen.getByText("Zum Umbuchen öffnen Sie die Anmeldung zuerst wieder."),
+      screen.getByText("Zum Umbuchen öffnest du die Anmeldung zuerst wieder."),
     ).toBeInTheDocument();
     expect(screen.getByText("Lia Muster")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Umbuchen" })).toBeNull();

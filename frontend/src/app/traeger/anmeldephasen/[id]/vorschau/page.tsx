@@ -142,7 +142,7 @@ export default function TraegerCatalogPreviewPage() {
               disabled={!preview || loading || preview.schools.length === 0}
               disabledReason={
                 preview && !loading && preview.schools.length === 0
-                  ? "Wählen Sie zuerst in der Anmeldephase die Schulen aus."
+                  ? "Wähle zuerst in der Anmeldephase die Schulen aus."
                   : undefined
               }
               tooltip="Überträgt die Anmeldephase sofort an die Schulen der Vorschau."
@@ -165,7 +165,7 @@ export default function TraegerCatalogPreviewPage() {
           <SectionCard>
             <EmptyState
               title="Keine Schule bekommt etwas."
-              description="Wählen Sie in der Anmeldephase bei „Schulen“ aus, wer sie bekommt."
+              description="Wähle in der Anmeldephase bei „Schulen“ aus, wer sie bekommt."
             />
           </SectionCard>
         ) : (

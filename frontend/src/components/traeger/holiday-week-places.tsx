@@ -415,7 +415,7 @@ function HolidayCapacityEditor({
 
   async function submit() {
     if (!valid) {
-      formErrors.invalid("Bitte geben Sie eine Zahl von 0 bis 10.000 ein.", {
+      formErrors.invalid("Bitte gib eine Zahl von 0 bis 10.000 ein.", {
         capacity: "Bitte eine Zahl von 0 bis 10.000.",
       });
       return;

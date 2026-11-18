@@ -35,56 +35,84 @@ func (s *AccountAuthentication) cleanupExpiredTokens(ctx context.Context) (int, 
 	return count, nil
 }
 
-// reconcileRevokedSessions wipes deactivated accounts that still hold live
-// sessions, completes recorded account-wide wipes and drops orphaned push
-// subscriptions, in one administrative transaction.
+// reconcileRevokedSessions finishes account-wide wipes, then scans orphaned
+// push subscriptions in bounded administrative transactions. The first
+// transaction preserves the existing reconciliation of pending wipes.
 func (s *AccountAuthentication) reconcileRevokedSessions(ctx context.Context) error {
-	return s.runtime.WithAdminTx(s.runtime.WithoutTransaction(ctx), func(adminCtx context.Context) error {
-		seen, err := s.reconcileInactiveSessions(adminCtx)
-		if err != nil {
+	ctx = s.runtime.WithoutTransaction(ctx)
+	var afterID int64
+	for {
+		var nextID int64
+		err := s.runtime.WithAdminTx(ctx, func(adminCtx context.Context) error {
+			if afterID == 0 {
+				if err := s.reconcileAccountWideWipes(adminCtx); err != nil {
+					return err
+				}
+			}
+			var err error
+			nextID, err = s.deleteOrphanedPush(adminCtx, afterID)
+			return err
+		})
+		if err != nil || nextID == 0 {
 			return err
 		}
-		pending, err := s.audit.ListPendingAccountWideWipes(adminCtx)
-		if err != nil {
-			return err
-		}
-		for _, wipe := range pending {
-			if _, already := seen[wipe.AccountID]; already {
-				continue
-			}
-			reason := wipe.Reason
-			if !domain.IsAccountWideRevocation(reason) {
-				reason = "administrative_revoke"
-			}
-			if err := s.finishScheduledAccountWideWipe(adminCtx, wipe.AccountID, reason, "", "", true); err != nil {
-				return err
-			}
-		}
-		return s.deleteOrphanedPush(adminCtx)
-	})
+		afterID = nextID
+	}
 }
 
-// deleteOrphanedPush removes the push subscriptions no live session backs
-// any more. Delivery names its subscriptions with their session facts;
-// Identity & Access decides liveness on its own session clock, the clock
-// that stamps the session expiry, and Delivery deletes only the links named
-// dead. A failed or incomplete answer deletes nothing.
-func (s *AccountAuthentication) deleteOrphanedPush(adminCtx context.Context) error {
-	links, err := s.push.ListLinks(adminCtx)
-	if err != nil || len(links) == 0 {
+func (s *AccountAuthentication) reconcileAccountWideWipes(adminCtx context.Context) error {
+	seen, err := s.reconcileInactiveSessions(adminCtx)
+	if err != nil {
 		return err
 	}
+	pending, err := s.audit.ListPendingAccountWideWipes(adminCtx)
+	if err != nil {
+		return err
+	}
+	for _, wipe := range pending {
+		if _, already := seen[wipe.AccountID]; already {
+			continue
+		}
+		reason := wipe.Reason
+		if !domain.IsAccountWideRevocation(reason) {
+			reason = "administrative_revoke"
+		}
+		if err := s.finishScheduledAccountWideWipe(adminCtx, wipe.AccountID, reason, "", "", true); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// deleteOrphanedPush sweeps one page inside the caller's admin transaction
+// and returns the last subscription ID if another page may exist.
+func (s *AccountAuthentication) deleteOrphanedPush(adminCtx context.Context, afterID int64) (int64, error) {
+	const batchSize = 250
+	links, err := s.push.ListLinks(adminCtx, afterID, batchSize)
+	if err != nil || len(links) == 0 {
+		return 0, err
+	}
+	if err := s.deleteOrphanedPushBatch(adminCtx, links); err != nil {
+		return 0, err
+	}
+	if len(links) < batchSize {
+		return 0, nil
+	}
+	return links[len(links)-1].SubscriptionID, nil
+}
+
+func (s *AccountAuthentication) deleteOrphanedPushBatch(adminCtx context.Context, links []identityaccess.PushSubscriptionLink) error {
 	sessionLinks := make([]domain.PushSubscriptionLink, len(links))
 	for i, link := range links {
 		sessionLinks[i] = domain.PushSubscriptionLink(link)
 	}
-	live, err := s.sessions.livePushSubscriptionLinks(adminCtx, sessionLinks)
+	protected, err := s.sessions.protectedPushSubscriptionLinks(adminCtx, sessionLinks)
 	if err != nil {
 		return err
 	}
 	orphaned := make([]identityaccess.PushSubscriptionLink, 0, len(links))
 	for _, link := range links {
-		if !live[link.SubscriptionID] {
+		if !protected[link.SubscriptionID] {
 			orphaned = append(orphaned, link)
 		}
 	}

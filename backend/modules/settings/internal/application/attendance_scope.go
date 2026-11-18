@@ -10,9 +10,9 @@ import (
 // schoolWideActionScopes are the action scopes whose all_staff value needs
 // the all_staff overview, with the reason a rejected write shows.
 var schoolWideActionScopes = []struct{ key, reason string }{
-	{config.KeyAttendanceEditScope, "Überall an- und abmelden geht nur mit Sicht auf alle Gruppen und Blöcke. Erweitern Sie zuerst den Sichtbereich. Oder beschränken Sie zuerst das An- und Abmelden auf eigene Zuständigkeiten."},
-	{config.KeyBlockStartScope, "Das ganze Team darf nur starten, wenn es alle Gruppen und Blöcke sieht. Erweitern Sie zuerst den Sichtbereich. Oder erlauben Sie das Starten zuerst nur eingeplanten Kräften."},
-	{config.KeyBlockCompleteScope, "Das ganze Team darf nur beenden, wenn es alle Gruppen und Blöcke sieht. Erweitern Sie zuerst den Sichtbereich. Oder erlauben Sie das Beenden zuerst nur eingeplanten Kräften."},
+	{config.KeyAttendanceEditScope, "Überall an- und abmelden geht nur mit Sicht auf alle Gruppen und Blöcke. Erweitere zuerst den Sichtbereich. Oder beschränke zuerst das An- und Abmelden auf eigene Zuständigkeiten."},
+	{config.KeyBlockStartScope, "Das ganze Team darf nur starten, wenn es alle Gruppen und Blöcke sieht. Erweitere zuerst den Sichtbereich. Oder erlaube das Starten zuerst nur eingeplanten Kräften."},
+	{config.KeyBlockCompleteScope, "Das ganze Team darf nur beenden, wenn es alle Gruppen und Blöcke sieht. Erweitere zuerst den Sichtbereich. Oder erlaube das Beenden zuerst nur eingeplanten Kräften."},
 }
 
 // Both write directions hold the same lock until commit. Direct service

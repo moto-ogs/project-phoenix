@@ -280,7 +280,7 @@ describe("StudentDeletionModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Vorschau der Löschung ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Vorschau der Löschung ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Ja, löschen" })).toBeDisabled();
@@ -305,7 +305,7 @@ describe("StudentDeletionModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Löschung konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Löschung konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeVisible();
     expect(

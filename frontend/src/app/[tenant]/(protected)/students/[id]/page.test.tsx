@@ -846,7 +846,7 @@ describe("StudentDetailPage", () => {
       render(<StudentDetailPage />);
 
       expect(await screen.findByTestId("alert-error")).toHaveTextContent(
-        "Die Kindakte konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Kindakte konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       );
     });
 

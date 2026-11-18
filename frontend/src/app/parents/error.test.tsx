@@ -19,7 +19,7 @@ describe("parents error boundary", () => {
 
     expect(
       screen.getByText(
-        "Die Seite konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Seite konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Support/)).not.toBeInTheDocument();

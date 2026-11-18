@@ -46,7 +46,7 @@ func TestSessionStartWithRoomConflict(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, session1)
 		defer func() {
-			_ = service.EndActivitySession(ctx, session1.ID)
+			_, _ = service.EndActivitySession(ctx, session1.ID)
 		}()
 
 		// ACT: Try to start second session in same room
@@ -125,7 +125,7 @@ func TestForceStartWithSupervisors(t *testing.T) {
 		assert.Equal(t, room.ID, session.RoomID)
 
 		// Cleanup
-		_ = service.EndActivitySession(ctx, session.ID)
+		_, _ = service.EndActivitySession(ctx, session.ID)
 	})
 
 	t.Run("force start fails with invalid supervisor IDs", func(t *testing.T) {
@@ -166,7 +166,7 @@ func TestUpdateActiveGroupSupervisors(t *testing.T) {
 		session, err := service.StartActivitySessionWithSupervisors(ctx, activity.ID, device.ID, []int64{staff1.ID}, &room.ID)
 		require.NoError(t, err)
 		defer func() {
-			_ = service.EndActivitySession(ctx, session.ID)
+			_, _ = service.EndActivitySession(ctx, session.ID)
 		}()
 
 		// ACT: Update supervisors
@@ -198,7 +198,7 @@ func TestUpdateActiveGroupSupervisors(t *testing.T) {
 		// Start and end session
 		session, err := service.StartActivitySessionWithSupervisors(ctx, activity.ID, device.ID, []int64{staff.ID}, &room.ID)
 		require.NoError(t, err)
-		err = service.EndActivitySession(ctx, session.ID)
+		_, err = service.EndActivitySession(ctx, session.ID)
 		require.NoError(t, err)
 
 		// ACT: Try to update ended session
@@ -220,7 +220,7 @@ func TestUpdateActiveGroupSupervisors(t *testing.T) {
 		session, err := service.StartActivitySessionWithSupervisors(ctx, activity.ID, device.ID, []int64{staff.ID}, &room.ID)
 		require.NoError(t, err)
 		defer func() {
-			_ = service.EndActivitySession(ctx, session.ID)
+			_, _ = service.EndActivitySession(ctx, session.ID)
 		}()
 
 		// ACT: Try to update with empty list
@@ -258,7 +258,7 @@ func TestStartActivitySessionWithSupervisors_EdgeCases(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, session)
 		defer func() {
-			_ = service.EndActivitySession(ctx, session.ID)
+			_, _ = service.EndActivitySession(ctx, session.ID)
 		}()
 	})
 
@@ -276,7 +276,7 @@ func TestStartActivitySessionWithSupervisors_EdgeCases(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, session)
 		defer func() {
-			_ = service.EndActivitySession(ctx, session.ID)
+			_, _ = service.EndActivitySession(ctx, session.ID)
 		}()
 	})
 
@@ -330,7 +330,7 @@ func TestCheckActivityConflict(t *testing.T) {
 		session, err := service.StartActivitySessionWithSupervisors(ctx, activity.ID, device.ID, []int64{staff.ID}, &room.ID)
 		require.NoError(t, err)
 		defer func() {
-			_ = service.EndActivitySession(ctx, session.ID)
+			_, _ = service.EndActivitySession(ctx, session.ID)
 		}()
 
 		// ACT: Check for conflict

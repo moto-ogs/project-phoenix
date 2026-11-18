@@ -279,7 +279,7 @@ describe("AbsenceBookingModal", () => {
 
     expect(
       await screen.findByText(
-        "Nicht genug Tage: Regenerationstag hat noch 1 Tag, diese Eintragung braucht 2 Tage. Ändern Sie zuerst den Anspruch oder wählen Sie eine andere Art.",
+        "Nicht genug Tage: Regenerationstag hat noch 1 Tag, diese Eintragung braucht 2 Tage. Ändere zuerst den Anspruch oder wähle eine andere Art.",
       ),
     ).toBeInTheDocument();
     expect(submit()).toHaveAttribute("aria-disabled", "true");

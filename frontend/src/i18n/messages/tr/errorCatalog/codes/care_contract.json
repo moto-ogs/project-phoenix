@@ -19,6 +19,7 @@
   "school_outside_traeger": "This school does not belong to your provider.",
   "selection_invalid": "Bu seçim mümkün değil. Lütfen seçiminizi değiştirin.",
   "signature_invalid": "İmza eksik veya boş. Lütfen tekrar imzalayın.",
+  "signing_letterhead_missing": "İmzanız henüz kaydedilmedi. Kurumun bazı bilgileri hâlâ eksik. Lütfen daha sonra tekrar deneyin veya kurumla iletişime geçin.",
   "signing_link_invalid": "Bu bağlantı artık geçerli değil. Daha önce kullanıldı veya süresi doldu. Sözleşmeyi veli uygulamasında „Belgeler“ altında bulabilirsiniz. Ya da kurumdan yeni bir bağlantı isteyin.",
   "special_termination_closed": "Bu sözleşmede özel fesih yok. Lütfen normal feshi seçin.",
   "template_invalid": "Please check the marked fields.",
@@ -26,5 +27,6 @@
   "withdrawal_notice_required": "Lütfen cayma hakkı bilgilendirmesini okuduğunuzu onaylayın.",
   "import_file_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "import_file_too_large": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
-  "import_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin."
+  "import_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "letterhead_missing": "Antette gönderen bilgileri eksik. Kurumun adı ve adresi olmadan sözleşme gönderilmez. Bunları „Antet ve şablonlar” bölümüne ekleyin."
 }

@@ -134,13 +134,13 @@ function checkCardText(
   );
   return [
     stillValid
-      ? "Bei geänderten oder bald ablaufenden Zahlen zählt der Monatslauf bis zu Ihrer Prüfung die bisher bestätigte Zahl."
+      ? "Bei geänderten oder bald ablaufenden Zahlen zählt der Monatslauf bis zu deiner Prüfung die bisher bestätigte Zahl."
       : null,
     expired
-      ? "Eine abgelaufene Kinderzahl gilt nicht mehr. Bis Sie neu prüfen, zählen nur die Kinder mit Vertrag."
+      ? "Eine abgelaufene Kinderzahl gilt nicht mehr. Bis du neu prüfst, zählen nur die Kinder mit Vertrag."
       : null,
     toCheck.some((family) => family.status === "stated")
-      ? "Eine neue Angabe der Eltern zählt erst, wenn Sie sie bestätigen."
+      ? "Eine neue Angabe der Eltern zählt erst, wenn du sie bestätigst."
       : null,
     missing > 0
       ? expired
@@ -305,7 +305,7 @@ export default function TraegerKinderzahlPage() {
   return (
     <TenantPage
       title={billingAreaTitle("kinderzahl")}
-      info="Hier steht, wie viele Kinder eine Familie hat, auch Geschwister ohne Betreuungsvertrag. Eltern geben die Zahl im Vertrag an. Sie bestätigen oder ändern sie. Eine Geschwisterregel nutzt die Zahl nur, wenn Sie das unter „Ermäßigungen“ einschalten. moto speichert nur die Zahl, keine Namen der Geschwister. Jedes Öffnen dieser Seite steht im Zugriffsprotokoll."
+      info="Hier steht, wie viele Kinder eine Familie hat, auch Geschwister ohne Betreuungsvertrag. Eltern geben die Zahl im Vertrag an. Du bestätigst oder änderst sie. Eine Geschwisterregel nutzt die Zahl nur, wenn du das unter „Ermäßigungen“ einschaltest. moto speichert nur die Zahl, keine Namen der Geschwister. Jedes Öffnen dieser Seite steht im Zugriffsprotokoll."
       stats={
         families.length > 0 ? (
           <TenantPageStats
@@ -399,7 +399,7 @@ export default function TraegerKinderzahlPage() {
       {data && families.length > 0 && data.rules.length === 0 ? (
         <Alert
           type="info"
-          message="Noch keine Geschwisterregel zählt diese Zahl. Schalten Sie das bei der Regel unter „Ermäßigungen“ ein."
+          message="Noch keine Geschwisterregel zählt diese Zahl. Schalte das bei der Regel unter „Ermäßigungen“ ein."
           action={
             <ButtonLink
               href={traegerPath("/traeger/abrechnung/ermaessigungen")}
@@ -468,7 +468,7 @@ export default function TraegerKinderzahlPage() {
               tooltip={
                 checksExpanded
                   ? "Zeigt wieder nur die ersten Familien der Liste."
-                  : "Zeigt alle Familien, deren Kinderzahl Sie prüfen müssen."
+                  : "Zeigt alle Familien, deren Kinderzahl du prüfen musst."
               }
               onClick={() => setChecksExpanded((open) => !open)}
             >
@@ -499,7 +499,7 @@ export default function TraegerKinderzahlPage() {
           emptyState={
             <EmptyState
               title="Keine Familie passt zur Suche."
-              description="Ändern Sie die Suche."
+              description="Ändere die Suche."
             />
           }
         />

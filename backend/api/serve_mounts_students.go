@@ -189,7 +189,7 @@ func mountStudentRoutes(
 	statusDays studentpresence.StatusDays, absences deliveryCompose.AbsenceNotifier, deletion *studentdeletion.Workflow,
 	groupLive grouplive.Query, decisions enrollmentOwner.Decisions, active studentpresence.Presence, resumption careStudentsHTTP.CareResumption,
 	noteTeam peopledirectory.StudentNoteTeamNotices, noteTeamReach studentsAPI.StudentNoteTeamReach, cohorts timetableModule.CohortRosters,
-	answers enrollmentOwner.StudentAnswers, files nativeUploads.FileKeys, now func() time.Time,
+	answers enrollmentOwner.StudentAnswers, files nativeUploads.FileKeys, uploads nativeUploads.UploadFiles, now func() time.Time,
 ) error {
 	// A direct school_class edit must resync Jahrgang-filtered offering-sourced
 	// Regeltermine like a grade transition does (#2147 review round 10); Care
@@ -214,7 +214,7 @@ func mountStudentRoutes(
 			StudentDocumentService: requests.Documents,
 			StudentNotes:           persons, StudentNoteTeam: noteTeam, NoteTeamReach: noteTeamReach, Now: now,
 			StudentPhotos:      persons,
-			Uploads:            nativeUploads.UploadFiles{},
+			Uploads:            uploads,
 			UserContextService: caller,
 		},
 		careStudentsHTTP.ResourceConfig{
@@ -224,7 +224,7 @@ func mountStudentRoutes(
 			CareRequestReviews: careReviews,
 			CareRequestService: requests.CareRequests, FollowCohortChanges: studentCohortChanges(cohorts),
 			CompanionService:        companions,
-			DocumentStorage:         NewStudentDocumentStorage(files),
+			DocumentStorage:         NewStudentDocumentStorage(files, uploads),
 			ExcusedRequestService:   requests.Excused,
 			LockTemplateRecurrence:  planning.Planning.RecurrenceLock.LockRecurrenceWrites,
 			Logger:                  logger.With("handler", "students"),
@@ -312,7 +312,7 @@ func mountStudentRoutes(
 // root builds the form schemas, the captcha and the phase expiry warnings
 // here, over the settings and the owners it composed (#4012).
 func newEnrollmentResource(
-	logger *slog.Logger, settings settingsCompose.SettingsService, turnstile TurnstileKeys, careOfferings carePlanModule.CareOfferingCapability,
+	logger *slog.Logger, uploads nativeUploads.UploadFiles, settings settingsCompose.SettingsService, turnstile TurnstileKeys, careOfferings carePlanModule.CareOfferingCapability,
 	flows owners.EnrollmentFlows, phases enrollmentOwner.PhaseAdministration, decisions enrollmentOwner.Decisions,
 	deletions enrollmentOwner.EnrollmentDeletions,
 	guardianProfiles *peopleCompose.GuardianProfileLoader, organizations organizationtenancy.Query,
@@ -331,7 +331,7 @@ func newEnrollmentResource(
 		deletions,
 		NewEnrollmentGuardianAutofill(guardianProfiles),
 		enrollmentSchoolDirectory{schools: organizations},
-		nativeUploads.UploadFiles{},
+		uploads,
 		enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation,
 			SavepointRollback: func(err error) bool { return errors.Is(err, tenant.ErrSavepointRollback) }},
 		now,
@@ -341,7 +341,7 @@ func newEnrollmentResource(
 	resource.Uploads = enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(now), reads: flows.Uploads}
 	resource.UploadList = flows.Uploads
 	resource.FamilyChildren = flows.Intake
-	resource.UploadFiles = NewEnrollmentUploadStorage(logger.With("handler", "enrollment-uploads"))
+	resource.UploadFiles = NewEnrollmentUploadStorage(logger.With("handler", "enrollment-uploads"), uploads)
 	resource.PhaseExpiryService = newEnrollmentPhaseExpiry(persons, carePlan, now)
 	return resource
 }

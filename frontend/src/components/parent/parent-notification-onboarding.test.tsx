@@ -7,8 +7,16 @@ import {
 } from "@testing-library/react";
 import { SessionProvider } from "next-auth/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  currentPushPublicKey,
+  setPushPublicKey,
+} from "~/test/push-public-key-mock";
 import { ModalProvider } from "~/components/ui/modal-context";
 import { ParentNotificationOnboarding } from "./parent-notification-onboarding";
+import { resetSWRScope } from "~/lib/swr/scope";
+
+// The dialog reads the preferences through the shared cache: real SWR.
+vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   fetchPreferences: vi.fn(),
@@ -17,7 +25,6 @@ const mocks = vi.hoisted(() => ({
   isPushSupported: vi.fn(),
   syncSubscription: vi.fn(),
   subscribePush: vi.fn(),
-  verifyPushConfiguration: vi.fn(),
   isStandaloneApp: vi.fn(),
   isAndroidDevice: vi.fn(),
   isSamsungInternet: vi.fn(),
@@ -37,10 +44,13 @@ vi.mock("~/lib/push-api", () => ({
   isPushSupported: mocks.isPushSupported,
   syncExistingPushSubscription: mocks.syncSubscription,
   subscribePush: mocks.subscribePush,
-  verifyPushConfiguration: mocks.verifyPushConfiguration,
   isStandaloneApp: mocks.isStandaloneApp,
 }));
 
+vi.mock(
+  "~/lib/hooks/use-push-public-key",
+  async () => (await import("~/test/push-public-key-mock")).pushPublicKeyModule,
+);
 vi.mock("~/lib/pwa-install-prompt", () => ({
   isAndroidDevice: mocks.isAndroidDevice,
   isSamsungInternet: mocks.isSamsungInternet,
@@ -85,13 +95,14 @@ const ENABLED_PREFERENCES = {
 describe("ParentNotificationOnboarding", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSWRScope({ revalidate: false });
     localStorage.clear();
     vi.stubGlobal("Notification", { permission: "default" });
     mocks.needsIOSInstall.mockReturnValue(false);
     mocks.isPushSupported.mockReturnValue(true);
     mocks.syncSubscription.mockResolvedValue(null);
     mocks.subscribePush.mockResolvedValue(undefined);
-    mocks.verifyPushConfiguration.mockResolvedValue(undefined);
+    setPushPublicKey("ready");
     mocks.isStandaloneApp.mockReturnValue(false);
     mocks.isAndroidDevice.mockReturnValue(false);
     mocks.isSamsungInternet.mockReturnValue(false);
@@ -112,7 +123,10 @@ describe("ParentNotificationOnboarding", () => {
     );
 
     await waitFor(() => {
-      expect(mocks.subscribePush).toHaveBeenCalledWith("parent");
+      expect(mocks.subscribePush).toHaveBeenCalledWith(
+        "parent",
+        currentPushPublicKey().load,
+      );
       expect(mocks.setPreference).toHaveBeenCalledWith(
         "parent_message",
         true,
@@ -171,7 +185,10 @@ describe("ParentNotificationOnboarding", () => {
     fireEvent.click(enableButton);
 
     await waitFor(() => {
-      expect(mocks.subscribePush).toHaveBeenCalledWith("parent");
+      expect(mocks.subscribePush).toHaveBeenCalledWith(
+        "parent",
+        currentPushPublicKey().load,
+      );
       expect(mocks.triggerInstallPrompt).not.toHaveBeenCalled();
     });
   });
@@ -183,7 +200,7 @@ describe("ParentNotificationOnboarding", () => {
     // Seit #2831 dieselben nummerierten Schritte wie auf iPhone und iPad
     // statt eines Fließtextes.
     expect(
-      await screen.findByText(/Tippen Sie oben rechts im Browser/),
+      await screen.findByText(/Tippe oben rechts im Browser/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Zum Startbildschirm hinzufügen/),
@@ -291,6 +308,8 @@ describe("ParentNotificationOnboarding", () => {
     expect(mocks.subscribePush).not.toHaveBeenCalled();
     unmount();
 
+    // A new page load: the cache of the first one is gone.
+    resetSWRScope({ revalidate: false });
     mocks.fetchPreferences.mockResolvedValue(ENABLED_PREFERENCES);
     renderOnboarding();
     // Anker: mit eingeschalteten Benachrichtigungen erscheint derselbe Knopf.

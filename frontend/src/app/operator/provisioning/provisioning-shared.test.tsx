@@ -17,7 +17,7 @@ describe("FormField", () => {
       <FormField
         label="Slug"
         htmlFor="org-slug"
-        error="Bitte prüfen Sie dieses Feld."
+        error="Bitte prüfe dieses Feld."
       >
         <input id="org-slug" name="slug" />
       </FormField>,
@@ -26,7 +26,7 @@ describe("FormField", () => {
     const input = screen.getByLabelText("Slug");
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(input).toHaveAttribute("aria-describedby", "org-slug-error");
-    expect(screen.getByText("Bitte prüfen Sie dieses Feld.")).toHaveAttribute(
+    expect(screen.getByText("Bitte prüfe dieses Feld.")).toHaveAttribute(
       "id",
       "org-slug-error",
     );

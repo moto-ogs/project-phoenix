@@ -265,7 +265,7 @@ func (s *InstanceLifecycleService) validateReopenSupervisorsUnchanged(ctx contex
 		return err
 	}
 	for _, supervisorID := range snapshot.SupervisorIDs {
-		if err := reopenSupervisorConflict(instance, byID[supervisorID], activeByStaff); err != nil {
+		if err := reopenSupervisorConflict(instance, byID[supervisorID], snapshot.SupervisorVersions, activeByStaff); err != nil {
 			return err
 		}
 	}
@@ -289,12 +289,20 @@ func (s *InstanceLifecycleService) activeSupervisionsByStaff(ctx context.Context
 }
 
 func reopenSupervisorConflict(
-	instance *scheduleModel.ActivityInstance, row *studentpresence.StaffedSupervision, activeByStaff map[int64][]studentpresence.GroupSupervision,
+	instance *scheduleModel.ActivityInstance, row *studentpresence.StaffedSupervision,
+	versions map[int64]scheduleModel.CompletionSupervisorVersion, activeByStaff map[int64][]studentpresence.GroupSupervision,
 ) error {
 	if row == nil {
 		return timetable.WithCode(fmt.Errorf("%w: supervisor snapshot missing", timetable.ErrTimetableOperationConflict), timetable.CodeReopenSupervisionChanged)
 	}
-	if instance.CompletedAt != nil && row.UpdatedAt.After(*instance.CompletedAt) {
+	var changed bool
+	if versions != nil {
+		expected, exists := versions[row.ID]
+		changed = !exists || expected != completionSupervisorVersion(row)
+	} else {
+		changed = instance.CompletedAt != nil && row.UpdatedAt.After(*instance.CompletedAt)
+	}
+	if changed {
 		return timetable.WithCode(fmt.Errorf("%w: supervisor changed after completion", timetable.ErrTimetableOperationConflict), timetable.CodeReopenSupervisionChanged)
 	}
 	for _, other := range activeByStaff[row.StaffID] {

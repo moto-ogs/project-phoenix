@@ -298,7 +298,7 @@ function MonthFigures({
           changeHint(
             keyDateChange(month.activeStudents, previous?.activeStudents),
             previous,
-          ) ?? "Kinder, die Ihre Schulen am Stichtag betreut haben."
+          ) ?? "Kinder, die deine Schulen am Stichtag betreut haben."
         }
         icon={<MotoConceptIcon concept={childrenConcept} />}
         tone="neutral"
@@ -392,8 +392,8 @@ export default function TraegerKeyDateCountsPage() {
           Nach diesen Zahlen berechnet moto jede Schule im Monat. moto hält sie
           am Stichtag einmal fest. Danach ändern sie sich nicht mehr. Das
           moto-Team sieht in seinem Bericht genau dieselben Zahlen. Ein Klick
-          auf einen Monat unten zeigt seine Zahlen. Mit „Herunterladen“ bekommen
-          Sie alle Monate als PDF, Excel oder CSV, für alle Schulen oder die
+          auf einen Monat unten zeigt seine Zahlen. Mit „Herunterladen“ bekommst
+          du alle Monate als PDF, Excel oder CSV, für alle Schulen oder die
           gewählte Schule.
         </>
       }
@@ -518,8 +518,8 @@ export default function TraegerKeyDateCountsPage() {
             emptyState={
               <EmptyState
                 icon={<School className="h-12 w-12" aria-hidden="true" />}
-                title="Keine Schule passt zu Ihrer Suche."
-                description="Prüfen Sie den Namen oder suchen Sie nach dem Ort."
+                title="Keine Schule passt zu deiner Suche."
+                description="Prüfe den Namen oder suche nach dem Ort."
               />
             }
           />

@@ -35,6 +35,6 @@ export function importChildQuotaNotice(
   if (quota.fits) return { type: "info", message: `${added} ${free}` };
   return {
     type: "error",
-    message: `${added} ${free} Der Import startet darum nicht. Nehmen Sie Kinder aus der Datei heraus oder melden Sie sich beim moto-Team.`,
+    message: `${added} ${free} Der Import startet darum nicht. Nimm Kinder aus der Datei heraus oder melde dich beim moto-Team.`,
   };
 }

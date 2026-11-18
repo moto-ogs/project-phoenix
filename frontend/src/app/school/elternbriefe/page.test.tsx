@@ -299,7 +299,7 @@ describe("Elternbriefe in moto schule (#4800)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Senden" }));
 
     expect(
-      await screen.findByText("Bitte wählen Sie eine Klasse."),
+      await screen.findByText("Bitte wähle eine Klasse."),
     ).toBeInTheDocument();
     expect(mockCreate).not.toHaveBeenCalled();
   });
@@ -309,14 +309,14 @@ describe("Elternbriefe in moto schule (#4800)", () => {
     renderPage();
 
     expect(
-      screen.getByText(/Ihnen ist keine Klasse zugeordnet/),
+      screen.getByText(/Dir ist keine Klasse zugeordnet/),
     ).toBeInTheDocument();
     // Gesperrt mit Grund (#6757): aria-disabled, der Knopf nennt den Grund,
     // und ein Klick öffnet kein Formular.
     const create = screen.getByRole("button", { name: /Neuer Elternbrief/ });
     expect(create).toHaveAttribute("aria-disabled", "true");
     expect(create).toHaveAccessibleDescription(
-      "Dafür brauchen Sie eine eigene Klasse, die OGS-Leitung ordnet sie zu.",
+      "Dafür brauchst du eine eigene Klasse, die OGS-Leitung ordnet sie zu.",
     );
     fireEvent.click(create);
     expect(screen.queryByLabelText(/Betreff/)).toBeNull();

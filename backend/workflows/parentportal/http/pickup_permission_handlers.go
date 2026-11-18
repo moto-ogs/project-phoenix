@@ -283,7 +283,7 @@ var pickupProofStatusLabels = map[string]string{
 func pickupProofReport(proof *parentService.PickupProof, now time.Time) ReportDocument {
 	integrity := "Unterschrift und Text sind unverändert."
 	if !proof.Intact {
-		integrity = "Achtung: Ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wenden Sie sich an die OGS."
+		integrity = "Achtung: Ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wende dich an die OGS."
 	}
 	overview := ReportCard{Title: "Erlaubnis", Fields: []ReportField{
 		{Label: "Kind", Value: proof.ChildName},
@@ -312,7 +312,7 @@ func pickupProofReport(proof *parentService.PickupProof, now time.Time) ReportDo
 		}})
 	}
 	return ReportDocument{
-		Title: "Nachweis Ihrer Erlaubnis", Subtitle: proof.ChildName, GeneratedAt: now,
+		Title: "Nachweis deiner Erlaubnis", Subtitle: proof.ChildName, GeneratedAt: now,
 		Filters:  []string{proof.ChildName, proof.SchoolName},
 		Footer:   "Vertraulich: enthält personenbezogene Daten",
 		Sections: []ReportSection{{Title: "Überblick", Cards: cards}},

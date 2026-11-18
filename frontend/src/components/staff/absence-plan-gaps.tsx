@@ -31,7 +31,7 @@ const INITIAL_GAP_COUNT = 5;
 
 const SYNC_TOOLTIP =
   "Streicht die Schichten und trägt die Abwesenheit in den Blöcken ein.";
-const BUSY_REASON = "Warten Sie, bis die laufende Übernahme fertig ist.";
+const BUSY_REASON = "Warte, bis die laufende Übernahme fertig ist.";
 
 interface GapPerson {
   readonly firstName: string;
@@ -246,8 +246,8 @@ export function AbsencePlanGaps({
           {/* Einmal über der Liste: gilt für jede Zeile. */}
           <p className="mb-3 max-w-2xl text-sm text-gray-600">
             Abgesagte Schichten und Vertretungen bleiben, wie sie sind. Soll
-            eine Person an diesen Tagen doch arbeiten, blenden Sie die
-            Abwesenheit aus.
+            eine Person an diesen Tagen doch arbeiten, blende die Abwesenheit
+            aus.
           </p>
           <ResponsiveActionList id={listId}>
             {visible.map((gap) => {

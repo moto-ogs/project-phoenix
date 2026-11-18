@@ -29,7 +29,7 @@ func TestBillingCareLetterTemplate_Renders(t *testing.T) {
 	}))
 	body := out.String()
 	for _, want := range []string{"Guten Tag Eva Muster,", "Monatsbeitrag Januar 2027", "MB-2027-0001", "SJR Pforzheim",
-		"Ihre Rechnung für die Betreuung", "Öffnen Sie die Rechnung im Anhang.", "Die Kontaktdaten stehen in der Rechnung."} {
+		"Deine Rechnung für die Betreuung", "Öffne die Rechnung im Anhang.", "Die Kontaktdaten stehen in der Rechnung."} {
 		assert.Contains(t, body, template.HTMLEscapeString(want))
 	}
 }

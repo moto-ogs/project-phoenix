@@ -95,7 +95,7 @@ export const Loading: Story = {
 export const WithError: Story = {
   args: {
     errorPath: staticErrorPath(
-      "Die Änderung konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",
+      "Die Änderung konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
     ),
   },
 };

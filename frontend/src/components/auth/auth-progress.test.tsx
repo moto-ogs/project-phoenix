@@ -9,7 +9,7 @@ describe("AuthProgress", () => {
       <AuthProgress
         state="checking"
         title="Einen Moment bitte"
-        description="moto prüft Ihre Anmeldung."
+        description="moto prüft deine Anmeldung."
       />,
     );
 
@@ -24,7 +24,7 @@ describe("AuthProgress", () => {
       <AuthProgress
         state="redirecting"
         title="Anmeldung erfolgreich"
-        description="moto öffnet jetzt Ihre Startseite …"
+        description="moto öffnet jetzt deine Startseite …"
       />,
     );
 

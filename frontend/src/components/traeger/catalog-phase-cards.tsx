@@ -59,7 +59,7 @@ function standingDetail(standing: SchoolStanding): string {
     return refusalText(row.errorCode) ?? "Die Schule hat abgelehnt.";
   }
   if (row?.outcome === "stale") {
-    return "Die Schule hat seit der Vorschau etwas geändert. Bitte übertragen Sie noch einmal.";
+    return "Die Schule hat seit der Vorschau etwas geändert. Bitte übertrage noch einmal.";
   }
   if (row?.outcome === "applied" && row.recordedAt) {
     return `Am ${formatBerlinDate(row.recordedAt)} übernommen`;
@@ -123,7 +123,7 @@ export function CatalogSchoolsCard({
           <EmptyState
             variant="compact"
             title="Keine Schule ausgewählt."
-            description="Wählen Sie unten bei „Schulen“ aus, wer die Anmeldephase bekommt."
+            description="Wähle unten bei „Schulen“ aus, wer die Anmeldephase bekommt."
           />
         }
       />
@@ -182,7 +182,7 @@ export function CatalogOfferingsCard({
       onWithdrawn(withdrawn);
       setTarget(null);
       success(
-        `„${withdrawn.draft.fields.name}“ ist zurückgezogen. Übertragen Sie jetzt, damit es aus den Schulen verschwindet.`,
+        `„${withdrawn.draft.fields.name}“ ist zurückgezogen. Übertrage jetzt, damit es aus den Schulen verschwindet.`,
       );
     } catch (err) {
       logger.error("traeger_catalog_offering_withdraw_failed", {
@@ -290,7 +290,7 @@ export function CatalogOfferingsCard({
           <EmptyState
             variant="compact"
             title="Noch kein Angebot."
-            description="Legen Sie oben ein Angebot an, zum Beispiel die Frühbetreuung."
+            description="Lege oben ein Angebot an, zum Beispiel die Frühbetreuung."
           />
         }
       />
@@ -305,8 +305,8 @@ export function CatalogOfferingsCard({
         loadingText="Wird zurückgezogen…"
       >
         <p className="text-sm text-gray-700">
-          „{target?.draft.fields.name}“ verschwindet aus den Schulen, sobald Sie
-          das nächste Mal übertragen. Hat ein Kind das Angebot schon gebucht,
+          „{target?.draft.fields.name}“ verschwindet aus den Schulen, sobald du
+          das nächste Mal überträgst. Hat ein Kind das Angebot schon gebucht,
           schaltet moto es dort nur aus. Das lässt sich nicht rückgängig machen.
         </p>
       </ConfirmationModal>

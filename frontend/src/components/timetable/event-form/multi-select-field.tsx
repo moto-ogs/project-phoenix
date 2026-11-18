@@ -214,7 +214,7 @@ export function MultiSelectField({
           size="compact"
           onClick={allVisibleSelected ? clearVisible : selectVisible}
           disabled={visibleIds.length === 0}
-          disabledReason="Die Liste zeigt gerade niemanden, den Sie wählen können."
+          disabledReason="Die Liste zeigt gerade niemanden, den du wählen kannst."
           tooltip={
             allVisibleSelected
               ? "Nimmt alle gerade gezeigten Einträge aus der Auswahl."

@@ -316,7 +316,7 @@ describe("InviteContent", () => {
 
     await waitFor(() => {
       expect(
-        screen.getAllByText("Bitte geben Sie einen Anzeigenamen ein.").length,
+        screen.getAllByText("Bitte gib einen Anzeigenamen ein.").length,
       ).toBeGreaterThan(0);
     });
     expect(screen.getByLabelText("Anzeigename")).toHaveAttribute(

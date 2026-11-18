@@ -90,22 +90,21 @@ func (s *service) fillOccupancySection(ctx context.Context, report *studentprese
 		students:   students,
 		careDays:   inputs.careDays,
 		statusDays: inputs.statusDays,
+		planned:    inputs.planned,
 		planFrom:   today.AddDays(-planDays),
 		actualFrom: today.AddDays(-actualDays),
 		today:      today,
 		now:        now,
 		singleDay:  filters.From == filters.To,
 	}
-	ids := make([]int64, 0, len(students))
-	for _, st := range students {
-		if st != nil && st.EnrolledOn != nil {
-			ids = append(ids, st.ID)
+	ids := reportStudentIDs(students)
+	if in.planned == nil {
+		in.planned, err = s.loadPlannedCareDays(ctx, ids, filters.From, filters.To)
+		if err != nil {
+			return err
 		}
 	}
 	if len(ids) > 0 {
-		if in.planned, err = s.cfg.PlannedCareDays.PlannedCareDays(ctx, ids, filters.From, filters.To); err != nil {
-			return fmt.Errorf("load planned care days: %w", err)
-		}
 		if in.attendance, err = s.loadAttendanceRows(ctx, ids, filters.From, filters.To, in.actualFrom); err != nil {
 			return err
 		}
@@ -115,6 +114,27 @@ func (s *service) fillOccupancySection(ctx context.Context, report *studentprese
 	occupancy.ActualDataDays, occupancy.ActualDataFrom = actualDays, in.actualFrom
 	report.Occupancy = &occupancy
 	return nil
+}
+
+func reportStudentIDs(students []*ports.StatisticsStudent) []int64 {
+	ids := make([]int64, 0, len(students))
+	for _, st := range students {
+		if st != nil && st.EnrolledOn != nil {
+			ids = append(ids, st.ID)
+		}
+	}
+	return ids
+}
+
+func (s *service) loadPlannedCareDays(ctx context.Context, ids []int64, from, to calendar.Date) (map[int64]map[calendar.Date]ports.PlannedCareDay, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	planned, err := s.cfg.PlannedCareDays.PlannedCareDays(ctx, ids, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("load planned care days: %w", err)
+	}
+	return planned, nil
 }
 
 // occupancyRetention resolves how far back the status days and the

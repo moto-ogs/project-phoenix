@@ -98,7 +98,7 @@ describe("DemoWaitingRoomPage", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Wir richten OGS Nord für Sie ein",
+        name: "Wir richten OGS Nord für dich ein",
       }),
     ).toBeInTheDocument();
     const lines = within(screen.getByRole("list")).getAllByRole("listitem");
@@ -122,7 +122,7 @@ describe("DemoWaitingRoomPage", () => {
     const first = open("#token=secret-token&role=lead");
     expect(
       await screen.findByRole("heading", {
-        name: "Wir richten OGS Nord für Sie ein",
+        name: "Wir richten OGS Nord für dich ein",
       }),
     ).toBeInTheDocument();
     expect(document.URL).not.toContain("secret-token");
@@ -191,7 +191,7 @@ describe("DemoWaitingRoomPage", () => {
 
     expect(
       await screen.findByText(
-        "Die Demo konnte nicht vorbereitet werden. Auf unserer Website bekommen Sie sofort einen neuen Link.",
+        "Die Demo konnte nicht vorbereitet werden. Auf unserer Website bekommst du sofort einen neuen Link.",
       ),
     ).toBeInTheDocument();
     expect(

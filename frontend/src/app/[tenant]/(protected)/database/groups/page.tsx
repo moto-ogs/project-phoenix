@@ -1,5 +1,6 @@
 "use client";
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { groups as groupsKeys } from "~/lib/swr/groups";
@@ -122,8 +123,7 @@ function GroupsPageContent() {
   }, [holidayGroupList]);
 
   const accessRefused =
-    groupsError instanceof ApiError &&
-    (groupsError.status === 401 || groupsError.status === 403);
+    groupsError instanceof ApiError && isAccessRefusal(groupsError);
   const groupsData = accessRefused ? undefined : cachedGroups;
   const discardRefused = useDiscardRefusedEntity();
   useLayoutEffect(() => {
@@ -328,8 +328,8 @@ function GroupsPageContent() {
                   : "Keine Gruppen vorhanden",
               description:
                 searchTerm || roomFilter !== "all"
-                  ? "Versuchen Sie andere Suchkriterien oder Filter."
-                  : "Legen Sie die erste Gruppe an, um Kinder zuzuordnen.",
+                  ? "Versuche andere Suchkriterien oder Filter."
+                  : "Lege die erste Gruppe an, um Kinder zuzuordnen.",
               icon: (
                 <MotoDuotoneIcon
                   icon={groupsConcept.icon}
@@ -363,7 +363,7 @@ function GroupsPageContent() {
               title="Gruppe löschen?"
               description={
                 <>
-                  Möchten Sie die Gruppe{" "}
+                  Möchtest du die Gruppe{" "}
                   <span className="font-medium">{selectedGroup.name}</span>{" "}
                   wirklich löschen? Diese Aktion kann nicht rückgängig gemacht
                   werden.

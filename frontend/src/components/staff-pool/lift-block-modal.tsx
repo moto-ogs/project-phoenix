@@ -67,7 +67,7 @@ export function LiftBlockModal({
       confirmVariant="warning"
       confirmTooltip={
         mode === "traeger"
-          ? "Gibt die Zeit sofort frei. Die Schule sieht, dass Sie aufgehoben haben."
+          ? "Gibt die Zeit sofort frei. Die Schule sieht, dass du aufgehoben hast."
           : "Gibt die Zeit sofort für alle Schulen frei."
       }
       isConfirmLoading={pending.pending}

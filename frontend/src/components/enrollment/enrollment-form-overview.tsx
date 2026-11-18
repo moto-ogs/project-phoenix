@@ -89,8 +89,8 @@ export function EnrollmentFormsOverview({
                   Anmeldeformulare verwalten
                 </h2>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
-                  Das Basisformular ist immer vorhanden. Eigene Vorlagen nutzen
-                  Sie, wenn eine Anmeldephase abweichende Pflichtangaben oder
+                  Das Basisformular ist immer vorhanden. Eigene Vorlagen nutzt
+                  du, wenn eine Anmeldephase abweichende Pflichtangaben oder
                   Zusatzfragen braucht.
                 </p>
               </div>
@@ -355,8 +355,8 @@ function OverviewGuide({
           Erst prüfen, dann erweitern
         </h2>
         <p className="mt-2 text-sm leading-6 text-gray-600">
-          Legen Sie nur dann eine eigene Vorlage an, wenn das Basisformular
-          nicht reicht. So bleibt die Elternansicht kurz und verständlich.
+          Lege nur dann eine eigene Vorlage an, wenn das Basisformular nicht
+          reicht. So bleibt die Elternansicht kurz und verständlich.
         </p>
       </div>
 
@@ -364,7 +364,7 @@ function OverviewGuide({
           ihre description. */}
       <SectionCard
         title="Nächste Schritte"
-        description="Für eine neue Halbjahresanmeldung brauchen Sie oft keine eigene Formularvorlage. Anmeldephase und Betreuungsangebote steuern den eigentlichen Ablauf."
+        description="Für eine neue Halbjahresanmeldung brauchst du oft keine eigene Formularvorlage. Anmeldephase und Betreuungsangebote steuern den eigentlichen Ablauf."
         headingLevel={3}
       >
         <div className="space-y-3">
@@ -542,8 +542,8 @@ export function RenameSchemaDialog({
             disabled={!canSubmit}
             disabledReason={
               trimmed
-                ? "Geben Sie einen anderen Namen als den bisherigen ein."
-                : "Geben Sie zuerst einen Namen ein."
+                ? "Gib einen anderen Namen als den bisherigen ein."
+                : "Gib zuerst einen Namen ein."
             }
             isLoading={submitting}
             tooltip="Speichert den neuen Namen, Fragen und Anmeldephasen bleiben unverändert."

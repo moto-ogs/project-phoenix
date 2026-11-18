@@ -86,7 +86,7 @@ describe("ParentNewsPage", () => {
     expect(screen.getByText("Post von der OGS")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Mitteilungen, Umfragen und wichtige Informationen Ihrer OGS.",
+        "Mitteilungen, Umfragen und wichtige Informationen deiner OGS.",
       ),
     ).toBeInTheDocument();
   });

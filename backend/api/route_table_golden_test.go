@@ -390,6 +390,11 @@ func TestFullProductionRouterGolden(t *testing.T) {
 	sentryFake := newFakeSentry(t)
 	newKiosk := func(t *testing.T, name string) (string, string, int64) {
 		kiosk := testpkg.CreateTestDevice(t, db, name)
+		key := requestRateLimitFingerprint(CurrentServiceConfig().JWTSecret)(deviceErrorReportRateKey(kiosk.ID))
+		t.Cleanup(func() {
+			_, err := db.ExecContext(context.Background(), `DELETE FROM auth.request_rate_limits WHERE bucket_key = ?`, key)
+			require.NoError(t, err)
+		})
 		return *kiosk.APIKey, kiosk.DeviceID, kiosk.TenantID
 	}
 	called := false

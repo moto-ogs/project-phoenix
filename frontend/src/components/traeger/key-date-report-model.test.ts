@@ -208,7 +208,7 @@ describe("templates", () => {
       ),
     ).toEqual({
       name: "Eine Vorlage mit diesem Namen gibt es schon.",
-      sections: "Bitte wählen Sie mindestens einen Abschnitt.",
+      sections: "Bitte wähle mindestens einen Abschnitt.",
       key_date_day: "Diesen Tag gibt es im gewählten Monat nicht.",
     });
     expect(

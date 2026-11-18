@@ -38,11 +38,11 @@ const DEFAULT_RESEND_COOLDOWN_SECONDS = 60;
  * two answers names it. The words are the portal's own navigation labels.
  */
 const DEVICE_LIST_PLACE: Record<LoginScope, string> = {
-  tenant: "in Ihrem Profil",
+  tenant: "in deinem Profil",
   school: "in den Einstellungen",
   traeger: "unter „Konto“",
   caterer: "unter „Konto“",
-  operator: "in Ihrem Profil",
+  operator: "in deinem Profil",
   parent: "unter „Einstellungen → Anmeldung“",
 };
 
@@ -88,15 +88,15 @@ export function germanMFAChallengeCopy(scope: LoginScope): MFAChallengeCopy {
     digitLabel: (position) => `Stelle ${position}`,
     checking: "Code wird geprüft…",
     autoCheck:
-      "Der Code wird automatisch geprüft, sobald Sie alle 6 Stellen eingegeben haben.",
+      "Der Code wird automatisch geprüft, sobald du alle 6 Stellen eingegeben hast.",
     question: "Soll moto dieses Gerät merken?",
     remember: "Ja, merken und anmelden",
     rememberHint: (days) =>
-      `${days} Tage kein Code auf diesem Gerät. Nur für Ihr eigenes Gerät.`,
+      `${days} Tage kein Code auf diesem Gerät. Nur für dein eigenes Gerät.`,
     once: "Nein, nur anmelden",
     onceHint: "Für Geräte, die mehrere Personen nutzen.",
-    enterCodeFirst: "Geben Sie zuerst den Code ein.",
-    removeDevicesHint: `Gemerkte Geräte entfernen Sie ${DEVICE_LIST_PLACE[scope]}.`,
+    enterCodeFirst: "Gib zuerst den Code ein.",
+    removeDevicesHint: `Gemerkte Geräte entfernst du ${DEVICE_LIST_PLACE[scope]}.`,
     resend: "Neuen Code anfordern",
     resendIn: (seconds) => `Neuen Code anfordern (${seconds}s)`,
     resending: "Code wird gesendet…",

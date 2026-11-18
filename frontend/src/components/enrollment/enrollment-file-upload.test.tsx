@@ -317,7 +317,7 @@ describe("FileUploadInput", () => {
     expect(input).toHaveAttribute("multiple");
     expect(
       screen.getByText(
-        "Erlaubt: PDF, PNG, höchstens 1 MB je Datei. Bis zu 5 Dateien. Auf dem Handy können Sie auch ein Foto machen.",
+        "Erlaubt: PDF, PNG, höchstens 1 MB je Datei. Bis zu 5 Dateien. Auf dem Handy kannst du auch ein Foto machen.",
       ),
     ).toBeInTheDocument();
   });
@@ -352,7 +352,7 @@ describe("FileUploadInput", () => {
       screen.getByRole("button", { name: "Datei auswählen" }),
     ).toBeDisabled();
     expect(
-      screen.getByText("In der Vorschau können Sie keine Dateien hochladen."),
+      screen.getByText("In der Vorschau kannst du keine Dateien hochladen."),
     ).toBeInTheDocument();
   });
 });

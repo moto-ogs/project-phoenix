@@ -110,7 +110,7 @@ export function TraegerBelegRetentionSection({
       <LoadErrorAlert error={savedRefresh.error} />
       <SectionCard
         title="Klärungsliste"
-        description="Belege ohne Weisung oder ohne berechenbares Datum. moto löscht sie nicht. Klären Sie sie bis zum Prüfdatum mit dem Träger und erfassen Sie jede Prüfung."
+        description="Belege ohne Weisung oder ohne berechenbares Datum. moto löscht sie nicht. Kläre sie bis zum Prüfdatum mit dem Träger und erfasse jede Prüfung."
       >
         <DataTable
           columns={clarificationColumns(today, setReviewing)}

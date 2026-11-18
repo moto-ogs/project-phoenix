@@ -474,9 +474,9 @@ func publishMailSpec(a *StaffParentAnnouncement) mailSpec {
 	spec = surveyMailSpec(a, spec)
 	if a.IsPoll() {
 		spec.kicker = pollEmailKicker
-		intro := "wir bitten Sie um eine kurze Rückmeldung. Die Umfrage finden Sie im Eltern-Portal."
+		intro := "wir bitten dich um eine kurze Rückmeldung. Die Umfrage findest du im Eltern-Portal."
 		if a.ResponseDeadline != nil {
-			intro = fmt.Sprintf("wir bitten Sie um eine kurze Rückmeldung bis zum %s. Die Umfrage finden Sie im Eltern-Portal.",
+			intro = fmt.Sprintf("wir bitten dich um eine kurze Rückmeldung bis zum %s. Die Umfrage findest du im Eltern-Portal.",
 				a.ResponseDeadline.Format("02.01.2006"))
 		}
 		spec.intro = func(string) string { return intro }

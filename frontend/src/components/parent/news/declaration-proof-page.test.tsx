@@ -101,7 +101,7 @@ describe("Nachweis eines Einverständnisses im Eltern-Portal (#3430)", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Nachweis Ihrer Antwort",
+        name: "Nachweis deiner Antwort",
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Mia Muster")).toBeInTheDocument();
@@ -153,7 +153,7 @@ describe("Nachweis eines Einverständnisses im Eltern-Portal (#3430)", () => {
 
     expect(
       await screen.findByText(
-        "Achtung: Ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wenden Sie sich an die OGS.",
+        "Achtung: Ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wende dich an die OGS.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -198,7 +198,7 @@ describe("Nachweis eines Einverständnisses im Eltern-Portal (#3430)", () => {
 
     expect(
       await screen.findByText(
-        "Für dieses Kind gibt es noch keinen Nachweis. Er entsteht, sobald Sie auf ein Einverständnis geantwortet haben.",
+        "Für dieses Kind gibt es noch keinen Nachweis. Er entsteht, sobald du auf ein Einverständnis geantwortet hast.",
       ),
     ).toBeInTheDocument();
     expect(

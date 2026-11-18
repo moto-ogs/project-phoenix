@@ -67,9 +67,7 @@ describe("TraegerStaffReleaseSection", () => {
       within(dialog).getByRole("button", { name: "Freischalten" }),
     );
     expect(
-      await within(dialog).findByText(
-        "Bitte wählen Sie die Erklärung des Trägers.",
-      ),
+      await within(dialog).findByText("Bitte wähle die Erklärung des Trägers."),
     ).toBeInTheDocument();
     expect(service.grant).not.toHaveBeenCalled();
 

@@ -209,7 +209,7 @@ function TraegerSettingsContent() {
   return (
     <TenantPage
       title="Allgemein"
-      info="Hier legen Sie Werte für alle Schulen Ihres Trägers fest. Wo es erlaubt ist, kann eine Schule einen eigenen Wert eintragen."
+      info="Hier legst du Werte für alle Schulen deines Trägers fest. Wo es erlaubt ist, kann eine Schule einen eigenen Wert eintragen."
       stats={
         tabs.length > 0 ? (
           <TenantPageStats
@@ -248,7 +248,7 @@ function TraegerSettingsContent() {
       {schema && activeTab && !hasWritableSetting(schema) ? (
         <Alert
           type="info"
-          message="Sie können die Werte nur ansehen. Ändern kann, wer im Träger-Büro das Recht dazu hat."
+          message="Du kannst die Werte nur ansehen. Ändern kann, wer im Träger-Büro das Recht dazu hat."
         />
       ) : null}
       {schema && contact.loaded ? (
@@ -306,7 +306,7 @@ function TraegerSettingsContent() {
         // prints it; a display only, the text changes in the field above.
         <SectionCard
           title="Vorschau des Zahlungstexts"
-          description="So steht der Text im Schreiben, mit Beispielwerten. Bei 0 € steht dort: „Sie müssen für diese Betreuung nichts bezahlen.“"
+          description="So steht der Text im Schreiben, mit Beispielwerten. Bei 0 € steht dort: „Ihr müsst für diese Betreuung nichts bezahlen.“"
         >
           <figure aria-label="Vorschau des Zahlungstexts">
             <p className="font-semibold wrap-anywhere whitespace-pre-line text-gray-900">

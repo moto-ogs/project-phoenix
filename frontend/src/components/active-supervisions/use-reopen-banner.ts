@@ -83,8 +83,8 @@ export function reopenBannerMessage(
     : "Die Aktivität wurde beendet.";
   const until = berlinClockFromISO(new Date(expiresAt).toISOString());
   return until
-    ? `${ended} Sie können das bis ${until} Uhr rückgängig machen.`
-    : `${ended} Sie können das kurz rückgängig machen.`;
+    ? `${ended} Du kannst das bis ${until} Uhr rückgängig machen.`
+    : `${ended} Du kannst das kurz rückgängig machen.`;
 }
 
 /**

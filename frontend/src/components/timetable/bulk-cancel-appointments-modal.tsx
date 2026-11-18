@@ -230,7 +230,7 @@ export function BulkCancelAppointmentsModal({
           {ready && ready.count === 0 && keptSeries.length > 0 && (
             <p>
               {rangeText} sind nur noch Serien geplant, die auch an Schließtagen
-              stattfinden: {keptSeriesLabel(keptSeries)}. Zum Absagen setzen Sie
+              stattfinden: {keptSeriesLabel(keptSeries)}. Zum Absagen setzt du
               unten das Häkchen.
             </p>
           )}

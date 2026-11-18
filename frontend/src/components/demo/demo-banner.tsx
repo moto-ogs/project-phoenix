@@ -47,7 +47,7 @@ const logger = createLogger({ component: "DemoBanner" });
 // in diesem Browser (abgelaufen oder nie geöffnet) hilft nur der Link aus der
 // E-Mail.
 const OPEN_MAILED_LINK =
-  "Bitte öffnen Sie die Demo noch einmal über den Link aus Ihrer E-Mail.";
+  "Bitte öffne die Demo noch einmal über den Link aus deiner E-Mail.";
 
 /**
  * Schmaler Streifen über jeder Seite der öffentlichen Demo (#3467): links

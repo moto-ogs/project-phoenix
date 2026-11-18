@@ -148,7 +148,7 @@ export function TraegerHolidayClosureNotices({
   } = useNoticeList(rows, isSending);
   const title = "Eltern noch nicht informiert";
   const description =
-    "Schulhinweise brauchen einen Klick von Ihnen oder der Schule. Fehlgeschlagene E-Mails können Sie erneut senden.";
+    "Schulhinweise brauchen einen Klick von dir oder der Schule. Fehlgeschlagene E-Mails kannst du erneut senden.";
   const intro =
     suggested.length > 0 || retryableMails > 0 || unknownMails > 0 ? (
       <div className="space-y-2 text-sm">
@@ -163,8 +163,7 @@ export function TraegerHolidayClosureNotices({
         {unknownMails > 0 ? (
           <p>
             Bei {unknownMails} E-Mail{unknownMails === 1 ? "" : "s"} ist das
-            Ergebnis unbekannt. Bitte lassen Sie den Versand vom moto-Team
-            prüfen.
+            Ergebnis unbekannt. Bitte lass den Versand vom moto-Team prüfen.
           </p>
         ) : null}
         {suggested.length > 0 ? (

@@ -455,7 +455,7 @@ export async function setAdminRequestRead(
   if (!response.ok) {
     throw await readError(
       response,
-      "Das hat leider nicht geklappt. Bitte versuchen Sie es noch einmal.",
+      "Das hat leider nicht geklappt. Bitte versuche es noch einmal.",
     );
   }
   announceEnrollmentReadChange();
@@ -469,7 +469,7 @@ export async function markAllAdminRequestsRead(): Promise<void> {
   if (!response.ok) {
     throw await readError(
       response,
-      "Das hat leider nicht geklappt. Bitte versuchen Sie es noch einmal.",
+      "Das hat leider nicht geklappt. Bitte versuche es noch einmal.",
     );
   }
   announceEnrollmentReadChange();

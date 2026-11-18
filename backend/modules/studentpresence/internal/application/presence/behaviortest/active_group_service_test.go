@@ -864,7 +864,7 @@ func TestActiveService_EndActivitySession_WithActiveVisits(t *testing.T) {
 		assert.Equal(t, 2, activeCount, "Should have 2 active visits before ending")
 
 		// ACT - End the activity session
-		err = testpkg.TenantCommand1(t, ctx, db, service.EndActivitySession, session.ID)
+		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID)
 
 		// ASSERT
 		require.NoError(t, err)
@@ -896,7 +896,7 @@ func TestActiveService_EndActivitySession_WithActiveVisits(t *testing.T) {
 		require.NoError(t, err)
 
 		// ACT - End session without any visits
-		err = testpkg.TenantCommand1(t, ctx, db, service.EndActivitySession, session.ID)
+		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID)
 
 		// ASSERT
 		require.NoError(t, err)
@@ -920,11 +920,11 @@ func TestActiveService_EndActivitySession_WithActiveVisits(t *testing.T) {
 		session, err := testpkg.TenantQuery4(t, ctx, db, service.StartActivitySessionWithSupervisors, activity.ID, iotDevice.ID, []int64{staff.ID}, &roomID)
 		require.NoError(t, err)
 
-		err = testpkg.TenantCommand1(t, ctx, db, service.EndActivitySession, session.ID)
+		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID)
 		require.NoError(t, err)
 
 		// ACT - Try to end again
-		err = testpkg.TenantCommand1(t, ctx, db, service.EndActivitySession, session.ID)
+		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID)
 
 		// ASSERT
 		require.Error(t, err)
@@ -958,7 +958,7 @@ func TestActiveService_EndActivitySession_WithActiveVisits(t *testing.T) {
 		assert.Equal(t, 2, activeCount, "Should have 2 active supervisors")
 
 		// ACT
-		err = testpkg.TenantCommand1(t, ctx, db, service.EndActivitySession, session.ID)
+		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID)
 
 		// ASSERT
 		require.NoError(t, err)

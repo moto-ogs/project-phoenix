@@ -238,13 +238,13 @@ describe("InvitationAcceptForm", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Bitte prüfen Sie die markierten Felder."),
+        screen.getByText("Bitte prüfe die markierten Felder."),
       ).toBeInTheDocument();
       expect(
-        screen.getByText("Bitte geben Sie Ihren Vornamen an."),
+        screen.getByText("Bitte gib deinen Vornamen an."),
       ).toBeInTheDocument();
       expect(
-        screen.getByText("Bitte geben Sie Ihren Nachnamen an."),
+        screen.getByText("Bitte gib deinen Nachnamen an."),
       ).toBeInTheDocument();
     });
     expect(mockAcceptInvitation).not.toHaveBeenCalled();
@@ -313,9 +313,7 @@ describe("InvitationAcceptForm", () => {
     await waitFor(() => {
       expect(screen.getByText(/Konto erstellt/i)).toBeInTheDocument();
       expect(
-        screen.getByText(
-          /Bitte melden Sie sich mit Ihren neuen Zugangsdaten an/i,
-        ),
+        screen.getByText(/Bitte melde dich mit deinen neuen Zugangsdaten an/i),
       ).toBeInTheDocument();
     });
   });
@@ -625,7 +623,7 @@ describe("InvitationAcceptForm", () => {
       await waitFor(() => {
         // Should show the final fallback message, not redirect
         expect(
-          screen.getByText(/löschen Sie die Websitedaten/i),
+          screen.getByText(/lösche die Websitedaten/i),
         ).toBeInTheDocument();
         // Button should be gone
         expect(
@@ -753,7 +751,7 @@ describe("InvitationAcceptForm", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText("Bitte prüfen Sie die markierten Felder."),
+          screen.getByText("Bitte prüfe die markierten Felder."),
         ).toBeInTheDocument();
         expect(scrollIntoViewMock).toHaveBeenCalledWith({
           behavior: "smooth",

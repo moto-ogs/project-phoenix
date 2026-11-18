@@ -10276,6 +10276,16 @@
       "target_owner": ""
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.DemoCareDays",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.DemoCareDays.DemoCareDays",
+      "reason": "Demo presence history reuses the existing enrollment date predicate in the school transaction. EnrolledOn evaluates dates from the loaded roster and takes no locks or writes.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.EnrolledOn",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RequireAbsentMorningAttendance",
       "classification": "query",
       "effect": "query",
@@ -15736,6 +15746,16 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.DemoCareDays",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.DemoCareDays",
+      "reason": "Demo presence history reuses the existing enrollment date predicate in the school transaction. EnrolledOn evaluates dates from the loaded roster and takes no locks or writes.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.EnrolledOn",
+      "target_owner": "people-directory"
     },
     {
       "adr": "0098",
@@ -25776,16 +25796,6 @@
       "target_owner": "care-plan"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.TenantClosingDays.ClosingDayDates",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.ClosingDayDates.ClosingDayDates",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolcalendar/internal/application.TenantClosingDays.ClosingDayDates; modules/schoolcalendar/internal/application/non_working_days.go:38. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.TenantClosingDays.ClosingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsContractCareDays.ContractCareDays",
       "classification": "query",
       "effect": "query",
@@ -26557,36 +26567,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolcalendar/internal/application.TenantHolidays.HolidayDates; modules/schoolcalendar/internal/application/non_working_days.go:29. May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.TenantHolidays.HolidayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsReportPeriods.StatisticsHolidayPeriods",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.HolidayPeriods.StatisticsHolidayPeriods",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolcalendar.Calendar.ListCalendarPeriods; modules/schoolcalendar.Calendar (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ListCalendarPeriods",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsReportPeriods.StatisticsHolidayPeriods",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.HolidayPeriods.StatisticsHolidayPeriods",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolcalendar.Days.ListCalendarPeriods; modules/schoolcalendar.Days (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StatisticsReportPeriods.StatisticsHolidayPeriods",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.HolidayPeriods.StatisticsHolidayPeriods",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolcalendar.HolidaysOverlapping; modules/schoolcalendar/schoolcalendar.go:156. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
       "target_owner": "school-calendar"
     },
     {

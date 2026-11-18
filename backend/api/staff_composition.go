@@ -122,7 +122,7 @@ func newStaffComposition(
 	module schoolMembershipModule.Capability, workforce workforceModule.Capability, users peoplePorts.PersonDirectory,
 	documents *workforceModule.StaffAdmin, timeTracking *workforceCompose.TimeTracking, payroll workforceModule.PayrollDispatch, absenceWrites timeTrackingHTTP.AdminAbsenceWrites, education schoolstructure.GroupManagement,
 	people peopleModule.Capability, settings settingsCompose.SettingsService, hub *realtime.Hub,
-	identity identityaccess.Owner, appEnv string, db transactionruntime.Database, logger *slog.Logger, files nativeUploads.FileKeys, now func() time.Time,
+	identity identityaccess.Owner, appEnv string, db transactionruntime.Database, logger *slog.Logger, files nativeUploads.FileKeys, uploads nativeUploads.UploadFiles, now func() time.Time,
 ) (*staffHTTP.Resource, *timeTrackingHTTP.StaffAdminResource, error) {
 	exportTransfer, err := owners.BuildExportTransfer(settings, db, logger)
 	if err != nil {
@@ -133,10 +133,10 @@ func newStaffComposition(
 		return nil, nil, err
 	}
 	capabilities := owners.NewWorkforceAdminCapabilities(users, documents, timeTracking)
-	staffAdmin := newStaffAdminResource(capabilities, absenceWrites, workforce, staffTimeTrackingNotifier(hub), exportTransfer, payroll, timeTracking.AbsenceMails, payrollRules, users.StaffRows(), db, files, logger)
+	staffAdmin := newStaffAdminResource(capabilities, absenceWrites, workforce, staffTimeTrackingNotifier(hub), exportTransfer, payroll, timeTracking.AbsenceMails, payrollRules, users.StaffRows(), db, files, uploads, logger)
 	resource, err := newStaffResource(module, people, identity, appEnv, func(hooks StaffMembershipHooks) StaffMembershipRuntime {
 		return NewStaffMembershipRuntime(users, education, timeTracking.StaffDay, hub, db, identity, logger, hooks, now)
-	}, staffAdmin, logger)
+	}, staffAdmin, logger, uploads)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,7 +149,7 @@ func newStaffComposition(
 // gates the seed-only invitation token.
 func newStaffResource(
 	module schoolMembershipModule.Capability, people peopleModule.Capability, identity identityaccess.Owner, appEnv string,
-	buildRuntime func(StaffMembershipHooks) StaffMembershipRuntime, staffAdmin *timeTrackingHTTP.StaffAdminResource, logger *slog.Logger,
+	buildRuntime func(StaffMembershipHooks) StaffMembershipRuntime, staffAdmin *timeTrackingHTTP.StaffAdminResource, logger *slog.Logger, uploads nativeUploads.UploadFiles,
 ) (*staffHTTP.Resource, error) {
 	externals, err := newExternalCaregiverBindings(module, people, identity, appEnv)
 	if err != nil {
@@ -163,7 +163,7 @@ func newStaffResource(
 		Failure:            renderStaffFailure,
 		ObserveResponse:    observability.ObserveSchoolMembershipHTTPResponse,
 		ParseIDParam:       apiCommon.ParseIDParam,
-		ServeAvatar:        filesHTTP.NewStaffAvatarHandler(nativeUploads.ResolveStoredPath, nativeUploads.UploadFiles{}),
+		ServeAvatar:        filesHTTP.NewStaffAvatarHandler(uploads.StoredPath, uploads),
 		WriteFailure:       renderStaffWriteFailure,
 		SchoolClassFailure: delegatedStaffFailure(ClassifyStaffSchoolClassFailure),
 

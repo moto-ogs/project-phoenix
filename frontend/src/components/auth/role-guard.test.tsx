@@ -99,9 +99,7 @@ describe("RoleGuard", () => {
     expect(
       screen.queryByRole("heading", { name: "Kein Zugriff" }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByText("Ihnen fehlt eine Berechtigung"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Dir fehlt eine Berechtigung")).toBeInTheDocument();
   });
 
   it("renders children for caregiver on staffOnly", () => {

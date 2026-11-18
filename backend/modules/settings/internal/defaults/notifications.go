@@ -95,7 +95,7 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 	{
 		Key:             config.KeyNotificationsOnDutyOnly,
 		Label:           "Nur im Dienst benachrichtigen",
-		Description:     "Persönliche Hinweise erreichen nur Personen, die gerade eingestempelt sind. Nutzen Sie das nur, wenn Ihr Team die Zeiterfassung verwendet.",
+		Description:     "Persönliche Hinweise erreichen nur Personen, die gerade eingestempelt sind. Nutze das nur, wenn dein Team die Zeiterfassung verwendet.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:read",
@@ -168,7 +168,7 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 	{
 		Key:             config.KeyNotificationsSchoolClosingDayEnabled,
 		Label:           "Benachrichtigung bei Schließtagen",
-		Description:     "Wird ein Schließtag eingetragen, geändert oder gelöscht, steht das bei den Benachrichtigungen aller Mitarbeitenden, Lehrkräfte, Eltern und im Träger-Büro. Liegt der Tag in den nächsten 14 Tagen, bekommen Mitarbeitende, Lehrkräfte und Eltern auch eine Mitteilung aufs Handy. Jede Person kann sie selbst ausschalten.",
+		Description:     "Wird ein Schließtag eingetragen, geändert oder gelöscht, steht das bei den Benachrichtigungen aller Mitarbeitenden, Lehrkräfte, Eltern, im Träger-Büro und beim Caterer. Liegt der Tag in den nächsten 14 Tagen, bekommen Mitarbeitende, Lehrkräfte und Eltern auch eine Mitteilung aufs Handy. Jede Person kann sie selbst ausschalten.",
 		Type:            config.FieldBoolean,
 		Default:         true,
 		ReadPermission:  "config:read",
@@ -179,8 +179,8 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 	},
 	{
 		Key:             config.KeyNotificationsMealPlanChangedEnabled,
-		Label:           "Hinweis an Eltern bei geändertem Speiseplan",
-		Description:     "Ändert sich der Speiseplan für einen Tag, bekommen die Eltern einen Hinweis im Elternportal, wenn ihr Kind an dem Tag ein Essen gebucht hat. Eine Mitteilung aufs Handy bekommt nur, wer sie selbst einschaltet.",
+		Label:           "Hinweis bei geändertem Speiseplan",
+		Description:     "Ändert sich der Speiseplan für einen Tag, bekommen die Eltern einen Hinweis im Elternportal, wenn ihr Kind an dem Tag ein Essen gebucht hat. Dein Caterer sieht den Hinweis auch. Eine Mitteilung aufs Handy bekommt nur, wer sie selbst einschaltet.",
 		Type:            config.FieldBoolean,
 		Default:         true,
 		ReadPermission:  "config:read",

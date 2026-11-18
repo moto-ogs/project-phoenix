@@ -2,30 +2,13 @@ package workforce
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
-	"strconv"
+	"strings"
 )
 
-// staffDocumentsBaseDir is the relative fallback of the staff document files
-// when no public directory exists at all.
-const staffDocumentsBaseDir = "public/uploads/staff-documents"
-
-// StaffDocumentUploads resolves the public upload directory the staff
-// document files live below. The root binds the Delivery Platform's upload
-// files.
-type StaffDocumentUploads interface {
-	PublicDir() (string, error)
-}
-
-// StaffDocumentsDir is the per-tenant staff document directory. Save, serve
-// and remove all derive it from the same public directory resolution so the
-// three operations can never disagree about where the bytes live.
-func StaffDocumentsDir(tenantID int64, uploads StaffDocumentUploads) string {
-	base := staffDocumentsBaseDir
-	if pubDir, err := uploads.PublicDir(); err == nil {
-		base = filepath.Join(pubDir, "uploads", "staff-documents")
-	}
-	return filepath.Join(base, strconv.FormatInt(tenantID, 10))
+type StaffDocumentObjectRemover interface {
+	RemovePrivate(ctx context.Context, kind string, tenantID int64, storedName string) error
 }
 
 // StaffDocumentFileRecovery removes the stored bytes of staff documents: the
@@ -41,7 +24,15 @@ type StaffDocumentFileRecovery interface {
 	// WakeOffboardingDocumentCleanup runs the offboarding cleanup after the
 	// transaction of ctx commits.
 	WakeOffboardingDocumentCleanup(ctx context.Context)
-	// RemoveStoredDocument deletes one stored file of the tenant; a missing
-	// file is no error.
-	RemoveStoredDocument(tenantID int64, storedName string) error
+}
+
+// RemoveStoredDocument deletes one stored file of the tenant. The file may already be absent.
+func RemoveStoredDocument(ctx context.Context, objects StaffDocumentObjectRemover, tenantID int64, storedName string) error {
+	if storedName == "" || strings.Contains(storedName, "..") || filepath.Base(storedName) != storedName {
+		return errors.New("stored document filename failed validation on delete")
+	}
+	if err := objects.RemovePrivate(ctx, StaffDocumentStorageKind, tenantID, storedName); err != nil {
+		return errors.New("failed to remove stored document")
+	}
+	return nil
 }

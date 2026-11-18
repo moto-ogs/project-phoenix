@@ -41,6 +41,8 @@
   "letterhead_too_long": "{object} could not be changed. Please check its current status.",
   "number_range_invalid": "{object} could not be saved. Please check your entries.",
   "number_range_missing": "{object} could not be changed. Please check its current status.",
+  "number_range_start_invalid": "{object} could not be saved. Please check your entries.",
+  "number_range_start_taken": "{object} could not be changed. Please check its current status.",
   "parent_document_not_found": "This document is no longer available. Please reload the page.",
   "payment_text_debtor_number_missing": "{object} could not be changed. Please check its current status.",
   "recipient_email_missing": "{object} could not be changed. Please check its current status.",
@@ -127,5 +129,6 @@
   "export_recipient_invalid": "The recipient was not saved. Please check the marked fields.",
   "export_recipient_not_found": "This recipient no longer exists. Please reload the page.",
   "export_recipient_name_taken": "A recipient with this name already exists. Please choose another name.",
-  "export_formats_invalid": "The assignment was not saved. Please reload the page and try again."
+  "export_formats_invalid": "The assignment was not saved. Please reload the page and try again.",
+  "letterhead_missing": "The sender in the letterhead is missing. No invoices or notices are created without the provider's name and address. Please add it under “Letterhead and templates”."
 }

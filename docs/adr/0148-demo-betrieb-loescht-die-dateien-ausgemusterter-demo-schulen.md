@@ -126,3 +126,13 @@ Ledger.
 - Der Sidecar kann jetzt Dateien des Demo-Servers löschen. Das ist seine
   einzige Schreibmöglichkeit auf dem Volume; Staging und Produktion haben
   keinen Sidecar.
+
+## Nachtrag zu #7225
+
+Server, Worker, Wartungsbefehle und Demo-Prozess wählen denselben
+Dateispeicher beim Start. Der Demo-Prozess darf zusätzlich genau
+`modules/delivery/objects/compose` binden. Dieser Einstieg wählt den lokalen
+Speicher oder den S3-Adapter. Die Freigabe umfasst weder andere
+Delivery-Kompositionen noch den SDK-Client. Die neue Komposition baut nur
+den Dateispeicher. Die Erasure-Workflows behalten ihre bestehenden
+Löschaufträge und Grenzen.

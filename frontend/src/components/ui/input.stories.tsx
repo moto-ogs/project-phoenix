@@ -50,7 +50,7 @@ export const RequiredWithHintAndError: Story = {
   args: {
     required: true,
     hint: "So, wie er im Ausweis steht.",
-    error: "Bitte geben Sie einen Namen ein.",
+    error: "Bitte gib einen Namen ein.",
   },
 };
 

@@ -74,3 +74,9 @@ func (s traegerMembershipsStub) HasRetainedTraegerMembership(context.Context, in
 func (s traegerMembershipsStub) LiveTraegers(context.Context, []int64, bool) ([]identityaccess.TraegerOrganization, error) {
 	return nil, nil
 }
+
+// The stub's memberships carry no name (#7305); the named session is
+// covered against the real store.
+func (s traegerMembershipsStub) TraegerMemberName(context.Context, int64, int64) (string, error) {
+	return "", nil
+}

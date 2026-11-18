@@ -5,7 +5,10 @@ package owners
 import (
 	"context"
 	"log/slog"
+	"path/filepath"
 	"time"
+
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 
 	securityRuntimeCompose "github.com/moto-ogs/project-phoenix/modules/securityruntime/compose"
 	"github.com/spf13/viper"
@@ -115,13 +118,9 @@ func NewSchedulerFileRetentionTestDependencies(db transactionruntime.Database, u
 	if err != nil {
 		return deps, err
 	}
-	deps.StaffDocumentCleaner, err = workforceCompose.NewStaffDocumentFileRecovery(documents, queue, cleanupTestUploads{dir: publicDir}, deps.Logger)
+	deps.StaffDocumentCleaner, err = workforceCompose.NewStaffDocumentFileRecovery(documents, queue, nativeUploads.NewPrivateUploads(nativeUploads.NewLocal(filepath.Join(publicDir, "uploads")), nativeUploads.FileKeys{}), deps.Logger)
 	return deps, err
 }
-
-type cleanupTestUploads struct{ dir string }
-
-func (u cleanupTestUploads) PublicDir() (string, error) { return u.dir, nil }
 
 // auditTestClock is now, or the real clock for callers that pass none.
 func auditTestClock(now func() time.Time) func() time.Time {

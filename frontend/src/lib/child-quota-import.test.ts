@@ -22,13 +22,13 @@ describe("importChildQuotaNotice", () => {
     expect(importChildQuotaNotice(quota(80, 12, false))).toEqual({
       type: "error",
       message:
-        "Der Import würde 80 Kinder hinzufügen. Im Kinderkontingent sind nur noch 12 frei. Der Import startet darum nicht. Nehmen Sie Kinder aus der Datei heraus oder melden Sie sich beim moto-Team.",
+        "Der Import würde 80 Kinder hinzufügen. Im Kinderkontingent sind nur noch 12 frei. Der Import startet darum nicht. Nimm Kinder aus der Datei heraus oder melde dich beim moto-Team.",
     });
   });
 
   it("uses the singular for one child and a full Kinderkontingent", () => {
     expect(importChildQuotaNotice(quota(1, 0, false))?.message).toBe(
-      "Der Import würde 1 Kind hinzufügen. Das Kinderkontingent ist voll. Der Import startet darum nicht. Nehmen Sie Kinder aus der Datei heraus oder melden Sie sich beim moto-Team.",
+      "Der Import würde 1 Kind hinzufügen. Das Kinderkontingent ist voll. Der Import startet darum nicht. Nimm Kinder aus der Datei heraus oder melde dich beim moto-Team.",
     );
     expect(importChildQuotaNotice(quota(1, 1, true))?.message).toBe(
       "Der Import würde 1 Kind hinzufügen. Im Kinderkontingent ist noch 1 frei.",

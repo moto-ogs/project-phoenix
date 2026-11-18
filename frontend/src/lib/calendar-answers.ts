@@ -112,6 +112,6 @@ export function answerSavedMessage(
 ): string {
   const kind = status === "accepted" ? "Zusage" : "Absage";
   return occurrenceDate
-    ? `Ihre ${kind} für ${formatOccurrenceDay(occurrenceDate)} ist gespeichert.`
-    : `Ihre ${kind} ist gespeichert.`;
+    ? `Deine ${kind} für ${formatOccurrenceDay(occurrenceDate)} ist gespeichert.`
+    : `Deine ${kind} ist gespeichert.`;
 }

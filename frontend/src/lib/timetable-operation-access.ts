@@ -7,7 +7,7 @@ import { ApiError, wireErrorCode } from "~/lib/api-error";
  * `timetable.operation_not_planned` (Katalogtext).
  */
 export const TIMETABLE_VIEW_ONLY_NOTICE =
-  "Sie sind für diese Aktivität nicht eingeplant. Nur eingeplante Betreuungskräfte können hier etwas eintragen oder ändern.";
+  "Du bist für diese Aktivität nicht eingeplant. Nur eingeplante Betreuungskräfte können hier etwas eintragen oder ändern.";
 
 /**
  * Erkennt die Ablehnung einer nicht eingeplanten Person an ihrem Code

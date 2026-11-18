@@ -1,9 +1,21 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PushNotificationSection } from "./push-notification-section";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import {
+  currentPushPublicKey,
+  pushPublicKeyModule,
+  setPushPublicKey,
+  TEST_PUSH_PUBLIC_KEY,
+} from "~/test/push-public-key-mock";
 
 // The shared error path shows failures through the toast provider (#2517).
 function renderWithToast(
@@ -21,7 +33,6 @@ const pushApi = vi.hoisted(() => ({
   syncExistingPushSubscription: vi.fn(),
   subscribePush: vi.fn(),
   unsubscribePush: vi.fn(),
-  verifyPushConfiguration: vi.fn(),
 }));
 const pwaInstall = vi.hoisted(() => ({
   canPromptInstall: vi.fn(),
@@ -38,6 +49,10 @@ const notificationApi = vi.hoisted(() => ({
 const shellAuth = vi.hoisted(() => ({ useShellAuthSafe: vi.fn() }));
 
 vi.mock("~/lib/push-api", () => pushApi);
+vi.mock(
+  "~/lib/hooks/use-push-public-key",
+  async () => (await import("~/test/push-public-key-mock")).pushPublicKeyModule,
+);
 vi.mock("~/lib/pwa-install-prompt", () => pwaInstall);
 vi.mock("~/lib/notification-api", () => notificationApi);
 vi.mock("~/components/notifications/notification-setup-dialog", () => ({
@@ -66,7 +81,7 @@ describe("PushNotificationSection", () => {
     pushApi.isPushSupported.mockReturnValue(true);
     pushApi.isStandaloneApp.mockReturnValue(false);
     pushApi.syncExistingPushSubscription.mockResolvedValue(null);
-    pushApi.verifyPushConfiguration.mockResolvedValue(undefined);
+    setPushPublicKey("ready");
     pwaInstall.canPromptInstall.mockReturnValue(false);
     pwaInstall.isAndroidDevice.mockReturnValue(false);
     pwaInstall.isDesktopDevice.mockReturnValue(false);
@@ -99,7 +114,7 @@ describe("PushNotificationSection", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/moto informiert Sie über wichtige Neuigkeiten/),
+      screen.getByText(/moto informiert dich über wichtige Neuigkeiten/),
     ).toHaveClass("text-sm", "leading-6");
   });
 
@@ -112,7 +127,7 @@ describe("PushNotificationSection", () => {
       "text-sm",
       "leading-6",
     );
-    expect(pushApi.verifyPushConfiguration).toHaveBeenCalledWith("tenant");
+    expect(pushPublicKeyModule.usePushPublicKey).toHaveBeenCalledWith("tenant");
     expect(
       screen.queryByRole("button", {
         name: "Aktivieren",
@@ -125,12 +140,12 @@ describe("PushNotificationSection", () => {
     renderWithToast(<PushNotificationSection />);
     expect(
       await screen.findByText(
-        "Öffnen Sie moto in Safari, Chrome, Edge oder Firefox und versuchen Sie es dort erneut.",
+        "Öffne moto in Safari, Chrome, Edge oder Firefox und versuche es dort erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("moto als App geöffnet")).not.toBeInTheDocument();
     expect(
-      screen.queryByText("moto darf Sie benachrichtigen"),
+      screen.queryByText("moto darf dich benachrichtigen"),
     ).not.toBeInTheDocument();
   });
 
@@ -179,7 +194,7 @@ describe("PushNotificationSection", () => {
     // Seit #2831 dieselben nummerierten Schritte wie auf iPhone und iPad
     // statt eines Fließtextes.
     expect(
-      await screen.findByText(/Tippen Sie oben rechts im Browser/),
+      await screen.findByText(/Tippe oben rechts im Browser/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Zum Startbildschirm hinzufügen/),
@@ -253,20 +268,20 @@ describe("PushNotificationSection", () => {
 
   it("hides the iOS guide when VAPID is not configured", async () => {
     pushApi.needsIOSInstall.mockReturnValue(true);
-    pushApi.verifyPushConfiguration.mockRejectedValue(
-      new Error("web push is not configured"),
-    );
+    setPushPublicKey("missing");
     pushApi.isPushConfigurationMissing.mockReturnValue(true);
 
     const { unmount } = renderWithToast(<PushNotificationSection />);
 
     await waitFor(() =>
-      expect(pushApi.verifyPushConfiguration).toHaveBeenCalledWith("tenant"),
+      expect(pushPublicKeyModule.usePushPublicKey).toHaveBeenCalledWith(
+        "tenant",
+      ),
     );
     expect(screen.queryByText(/Zum Home-Bildschirm/)).not.toBeInTheDocument();
     unmount();
 
-    pushApi.verifyPushConfiguration.mockResolvedValue(undefined);
+    setPushPublicKey("ready");
     pushApi.isPushConfigurationMissing.mockReturnValue(false);
     renderWithToast(<PushNotificationSection />);
     // Anker: mit Server-Konfiguration erscheint die iOS-Anleitung im selben Aufbau.
@@ -277,7 +292,7 @@ describe("PushNotificationSection", () => {
     stubNotificationPermission("denied");
     renderWithToast(<PushNotificationSection />);
     expect(
-      await screen.findByText(/Öffnen Sie die Einstellungen Ihres Geräts/),
+      await screen.findByText(/Öffne die Einstellungen deines Geräts/),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Status erneut prüfen" }),
@@ -300,7 +315,10 @@ describe("PushNotificationSection", () => {
     );
 
     await waitFor(() =>
-      expect(pushApi.subscribePush).toHaveBeenCalledWith("tenant"),
+      expect(pushApi.subscribePush).toHaveBeenCalledWith(
+        "tenant",
+        currentPushPublicKey().load,
+      ),
     );
     expect(
       await screen.findByText(
@@ -314,6 +332,53 @@ describe("PushNotificationSection", () => {
     ).toBeInTheDocument();
   });
 
+  it("refreshes with the recovered key after subscription creation finishes", async () => {
+    setPushPublicKey("failed", new ApiError("temporarily unavailable", 500));
+    vi.spyOn(currentPushPublicKey(), "load").mockImplementation(async () => {
+      setPushPublicKey("ready");
+      return TEST_PUSH_PUBLIC_KEY;
+    });
+    let finishEnrollment: () => void = () => undefined;
+    const enrollment = new Promise<void>((resolve) => {
+      finishEnrollment = resolve;
+    });
+    pushApi.subscribePush.mockImplementation(
+      async (_portal, load: () => Promise<Uint8Array>) => {
+        await load();
+        await enrollment;
+      },
+    );
+
+    const { rerender } = renderWithToast(<PushNotificationSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "Aktivieren" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    rerender(<PushNotificationSection />);
+    // The ready-state effect finishes while no subscription exists yet.
+    await waitFor(() =>
+      expect(pushApi.syncExistingPushSubscription).toHaveBeenCalledWith(
+        "tenant",
+        TEST_PUSH_PUBLIC_KEY,
+      ),
+    );
+    expect(
+      screen.getByRole("button", { name: "Wird eingeschaltet …" }),
+    ).toBeDisabled();
+
+    pushApi.syncExistingPushSubscription.mockResolvedValue({
+      endpoint: "https://push.example/e",
+    });
+    await act(async () => {
+      finishEnrollment();
+      await enrollment;
+    });
+
+    expect(
+      await screen.findByRole("button", { name: "Deaktivieren" }),
+    ).toBeEnabled();
+  });
+
   it("passes the parent portal through to the push API", async () => {
     renderWithToast(<PushNotificationSection portal="parent" />);
     const enableButton = await screen.findByRole("button", {
@@ -325,7 +390,10 @@ describe("PushNotificationSection", () => {
 
     fireEvent.click(enableButton);
     await waitFor(() =>
-      expect(pushApi.subscribePush).toHaveBeenCalledWith("parent"),
+      expect(pushApi.subscribePush).toHaveBeenCalledWith(
+        "parent",
+        currentPushPublicKey().load,
+      ),
     );
   });
 
@@ -341,7 +409,7 @@ describe("PushNotificationSection", () => {
     );
     expect(
       await screen.findByText(
-        "Die Benachrichtigungen konnten nicht eingeschaltet werden. Bitte versuchen Sie es erneut.",
+        "Die Benachrichtigungen konnten nicht eingeschaltet werden. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
   });
@@ -535,7 +603,7 @@ describe("PushNotificationSection", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Nein")).toBeInTheDocument();
     expect(
-      screen.getByText("moto darf Sie benachrichtigen"),
+      screen.getByText("moto darf dich benachrichtigen"),
     ).toBeInTheDocument();
     expect(screen.getByText("Ja")).toBeInTheDocument();
   });

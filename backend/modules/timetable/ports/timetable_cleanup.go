@@ -56,7 +56,8 @@ type DeviationEventRetention interface {
 
 // TimetableCleanupDependencies wires the retention. Timetable and Audit are
 // required, as are Settings. DeviationEvents skips the protocol step when nil.
-// Clock defaults to the wall clock.
+// DatabaseCutoff supplies the date whenever the database guards retention.
+// Clock is for compositions without that guard and defaults to the wall clock.
 type TimetableCleanupDependencies struct {
 	Timetable       CleanupTimetable
 	Audit           DeletionAudit
@@ -64,4 +65,5 @@ type TimetableCleanupDependencies struct {
 	Settings        RetentionSettings
 	Logger          *slog.Logger
 	Clock           func() time.Time
+	DatabaseCutoff  func(context.Context, int) (calendar.Date, error)
 }

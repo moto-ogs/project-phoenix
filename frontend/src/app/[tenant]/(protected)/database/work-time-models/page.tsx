@@ -6,6 +6,7 @@
 // derselbe Editor wie im Reiter „Arbeitszeitmodell“. Im Reiter „Personen“
 // ordnet sie eine Vorlage mehreren Personen auf einmal zu (#6921).
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { Suspense, useCallback, useLayoutEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -141,10 +142,10 @@ const config: CatalogConfig<WorkTimeModel> = {
   title: "Arbeitszeitmodelle",
   singular: "Vorlage",
   purpose:
-    "Vorlagen legen die Soll-Stunden für viele Personen auf einmal fest. Zuordnen können Sie eine Vorlage im Reiter „Personen“.",
+    "Vorlagen legen die Soll-Stunden für viele Personen auf einmal fest. Zuordnen kannst du eine Vorlage im Reiter „Personen“.",
   searchPlaceholder: "Vorlage suchen…",
   emptyDescription:
-    "Legen Sie eine Vorlage an, zum Beispiel für Vollzeit oder Teilzeit. Danach ordnen Sie ihr im Reiter „Personen“ alle zu, für die sie gilt.",
+    "Lege eine Vorlage an, zum Beispiel für Vollzeit oder Teilzeit. Danach ordnest du ihr im Reiter „Personen“ alle zu, für die sie gilt.",
   stats: (models) => {
     const archived = models.filter((model) => model.archivedAt).length;
     const offered = models.length - archived;
@@ -195,7 +196,7 @@ const config: CatalogConfig<WorkTimeModel> = {
     describe: (model) => (
       <>
         Die Vorlage <strong>{model.name}</strong> wird gelöscht. Das geht nur,
-        wenn niemand sie nutzt. Sonst nehmen Sie sie aus der Auswahl.
+        wenn niemand sie nutzt. Sonst nimm sie aus der Auswahl.
       </>
     ),
     run: (model) => workTimeModelService.remove(model.id),
@@ -217,8 +218,7 @@ function WorkTimeModelsPageContent() {
     workTimeModelService.listWithUsage(),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;

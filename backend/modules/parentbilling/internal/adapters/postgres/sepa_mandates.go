@@ -344,7 +344,8 @@ const invoiceDebitTermsSQL = `SELECT
 		FROM parent_billing.sepa_creditors WHERE organization_id = ?0) AS creditor) AS creditor,
 	(SELECT COALESCE(jsonb_agg(to_jsonb(mandate) ORDER BY mandate.id), '[]'::jsonb)
 		FROM (SELECT id, family_email, care_contract_id, reference, signed_on, kind, sequence, creditor_id, last_collected_on,
-				iban_masked, bic, source, revoked_on, revoked_at, created_at, updated_at
+				iban_masked, bic, source, revoked_on, revoked_at, created_at, updated_at,
+				encode(account_holder_sealed, 'base64') AS sealed_holder
 			FROM parent_billing.sepa_mandates WHERE organization_id = ?0 AND revoked_on IS NULL) AS mandate) AS mandates`
 
 // InvoiceDebitTerms reads the creditor of the Träger (nil without one) and
@@ -370,13 +371,17 @@ func (s *Store) InvoiceDebitTerms(ctx context.Context, organizationID int64) (*p
 		value := row.creditor()
 		creditor = &value
 	}
-	var rows []sepaMandateRow
+	var rows []struct {
+		sepaMandateRow
+		SealedHolder []byte `json:"sealed_holder"`
+	}
 	if err := json.Unmarshal(raw.Mandates, &rows); err != nil {
 		return nil, nil, fmt.Errorf("read SEPA mandates: %w", err)
 	}
 	mandates := make([]parentbilling.SEPAMandate, len(rows))
 	for i, row := range rows {
 		mandates[i] = row.mandate()
+		mandates[i].HolderSealed = row.SealedHolder
 	}
 	return creditor, mandates, nil
 }

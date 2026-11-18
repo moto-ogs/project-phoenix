@@ -350,7 +350,9 @@ func TestStaffDocumentsAPI_OffboardingCleanupLeaseRetriesFileFailure(t *testing.
 		queue, err = workforceCompose.NewDocumentCleanup(db, func() time.Time { return now })
 		require.NoError(t, err)
 		deps.OffboardingCleanup = queue
-		deps.DocumentFiles, err = workforceCompose.NewStaffDocumentFileRecovery(deps.Documents, queue, deps.Uploads, deps.Logger)
+		objects, err := nativeUploads.SealedPrivateUploadsBackend(testUploadFileKeys())
+		require.NoError(t, err)
+		deps.DocumentFiles, err = workforceCompose.NewStaffDocumentFileRecovery(deps.Documents, queue, objects, deps.Logger)
 		require.NoError(t, err)
 	})
 	rec := c.upload(t, "zeugnis", "retry.pdf", fakePDF, "staff:documents")

@@ -99,9 +99,9 @@ function DecisionForm({
   const submit = async () => {
     if (deviates && reason.trim() === "") {
       formErrors.invalid(
-        "Sie weichen vom Vorschlag ab. Bitte schreiben Sie kurz, warum.",
+        "Du weichst vom Vorschlag ab. Bitte schreibe kurz, warum.",
         {
-          reason: "Bitte geben Sie eine Begründung ein.",
+          reason: "Bitte gib eine Begründung ein.",
         },
       );
       return;
@@ -200,7 +200,7 @@ function DecisionForm({
             rows={3}
             autoGrow
             maxLength={MAX_ALLOCATION_REASON}
-            hint={`Sie weichen vom Vorschlag ab. Die Begründung steht im Verlauf. Noch ${MAX_ALLOCATION_REASON - reason.length} Zeichen.`}
+            hint={`Du weichst vom Vorschlag ab. Die Begründung steht im Verlauf. Noch ${MAX_ALLOCATION_REASON - reason.length} Zeichen.`}
             placeholder="Zum Beispiel: Härtefall nach Gespräch mit der Familie."
             value={reason}
             error={formErrors.fieldError("reason") ?? undefined}

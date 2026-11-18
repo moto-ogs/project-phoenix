@@ -64,7 +64,7 @@ type ReportRenderer interface {
 const (
 	reportFooter          = "Vertraulich: enthält personenbezogene Daten von Kindern und Eltern"
 	reportIntegrityOK     = "Text und Antworten sind seit der Veröffentlichung unverändert."
-	reportIntegrityBroken = "Achtung: Mindestens ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wenden Sie sich an den moto-Support."
+	reportIntegrityBroken = "Achtung: Mindestens ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wende dich an den moto-Support."
 )
 
 var declarationStateLabels = map[string]string{

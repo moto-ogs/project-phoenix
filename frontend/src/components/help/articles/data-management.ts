@@ -12,30 +12,30 @@ export function dataManagementTopic(): HelpTopic {
     title: "Die Datenverwaltung im Überblick",
     question: "Wo pflege ich die Stammdaten der OGS?",
     summary:
-      "In der `Datenverwaltung` legen Sie an, was die OGS dauerhaft braucht.",
+      "In der `Datenverwaltung` legst du an, was die OGS dauerhaft braucht.",
     group: "einrichten",
     audience: "lead",
     icon: "Database",
     steps: [
-      "Klappen Sie in der Seitenleiste `Verwaltung` auf.",
-      "Wählen Sie `Datenverwaltung`.",
-      "Wählen Sie die Kachel des Bereichs, den Sie pflegen möchten.",
+      "Klappe in der Seitenleiste `Verwaltung` auf.",
+      "Wähle `Datenverwaltung`.",
+      "Wähle die Kachel des Bereichs, den du pflegen möchtest.",
     ],
     result:
       "Jede Kachel führt in ihren Bereich. Auf manchen Kacheln steht, wie viele Einträge es gibt.",
     notes: [
-      "In der Seitenleiste erreichen Sie jeden Bereich auch direkt unter `Datenverwaltung`.",
+      "In der Seitenleiste erreichst du jeden Bereich auch direkt unter `Datenverwaltung`.",
       "Der Info-Knopf neben dem Seitennamen erklärt kurz, was hierher gehört.",
       "Die Kacheln `Terminkategorien`, `Planungsspuren`, `Dienstarten` und `Abwesenheitsarten` sind kurze Stammdaten-Listen.",
-      "Unter `Abwesenheitsarten` stehen Arten mit `Vom Träger`. Name, Kontingent und Verfall legt Ihr Träger fest. Ihre Schule kann so eine Art mit `Nicht mehr anbieten` ausschalten. Oder sie erlaubt hier weniger Tage je Person und Jahr.",
+      "Unter `Abwesenheitsarten` stehen Arten mit `Vom Träger`. Name, Kontingent und Verfall legt dein Träger fest. Deine Schule kann so eine Art mit `Nicht mehr anbieten` ausschalten. Oder sie erlaubt hier weniger Tage je Person und Jahr.",
     ],
     differences: [
-      "Sie sehen weniger Kacheln als eine Kollegin? Jede Kachel hängt an einem eigenen Recht.",
+      "Du siehst weniger Kacheln als eine Kollegin? Jede Kachel hängt an einem eigenen Recht.",
       "Ohne NFC fehlen `Aktivitäten` und `Geräte`.",
       "Ohne Planungsbereich fehlen `Planungsspuren` und `Dienstarten`.",
     ],
     troubleshootingDetails: [
-      "Suchen Sie ein Kind für heute? Das steht nicht hier, sondern unter `Alle Kinder` im `Tagesbetrieb`.",
+      "Suche ein Kind für heute? Das steht nicht hier, sondern unter `Alle Kinder` im `Tagesbetrieb`.",
     ],
     related: [
       HELP_TOPICS.leadRooms,

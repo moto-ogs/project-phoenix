@@ -68,7 +68,7 @@ describe("ResetPasswordPage", () => {
 
     expect(screen.getByText("Neues Passwort festlegen")).toBeInTheDocument();
     expect(
-      screen.getByText("Wählen Sie ein starkes Passwort für Ihr Konto."),
+      screen.getByText("Wähle ein starkes Passwort für dein Konto."),
     ).toBeInTheDocument();
   });
 
@@ -92,7 +92,7 @@ describe("ResetPasswordPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Der Link ist unvollständig. Bitte fordern Sie einen neuen Link an.",
+          "Der Link ist unvollständig. Bitte fordere einen neuen Link an.",
         ),
       ).toBeInTheDocument();
     });
@@ -254,7 +254,7 @@ describe("ResetPasswordPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Sie werden automatisch zur Anmeldeseite weitergeleitet.",
+          "Du wirst automatisch zur Anmeldeseite weitergeleitet.",
         ),
       ).toBeInTheDocument();
     });

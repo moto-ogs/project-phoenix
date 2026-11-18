@@ -45,7 +45,7 @@ export function OwnAllowancesCard() {
   return (
     <SectionCard
       title="Kontingente"
-      description="Ihre Tage je Abwesenheitsart. Den Anspruch trägt Ihre Leitung ein."
+      description="Deine Tage je Abwesenheitsart. Den Anspruch trägt deine Leitung ein."
       // Wie die Urlaubskarte darüber: ohne shrink-0 staucht die Flex-Spalte
       // der Seite die Karte auf die Kopfhöhe (#4363).
       className="shrink-0"

@@ -92,7 +92,7 @@ describe("mailStatusCopy", () => {
     ).toMatch(/später noch einmal/);
     expect(
       mailStatusCopy("provider_blocked", "", false, "none")?.explanation,
-    ).toMatch(/Sie können neu senden/);
+    ).toMatch(/Du kannst neu senden/);
     expect(mailStatusCopy("provider_blocked")?.explanation).not.toMatch(
       /neu senden/,
     );

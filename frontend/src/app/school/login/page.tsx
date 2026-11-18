@@ -32,7 +32,7 @@ function openSchoolPortal() {
 
 const SHELL_COPY = {
   title: "Willkommen im Schulportal",
-  subtitle: "Melden Sie sich mit Ihrem Konto für moto schule an.",
+  subtitle: "Melde dich mit deinem Konto für moto schule an.",
 } as const;
 
 interface MFAEnrollmentStep {
@@ -114,7 +114,7 @@ function LoginForm() {
         <AuthProgress
           state="checking"
           title="Einen Moment bitte"
-          description="moto prüft Ihre Anmeldung."
+          description="moto prüft deine Anmeldung."
         />
       ) : mfaStep ? (
         <MFAChallengeForm
@@ -152,7 +152,7 @@ function LoginForm() {
             ) : refusal === "no_portal_role" ? (
               <Alert
                 type="info"
-                message="Dieses Konto hat keinen Zugang zum Schul-Portal. Bitte wenden Sie sich an Ihre OGS-Verwaltung."
+                message="Dieses Konto hat keinen Zugang zum Schul-Portal. Bitte wende dich an deine OGS-Verwaltung."
               />
             ) : undefined
           }
@@ -174,7 +174,7 @@ export default function SchoolLoginPage() {
           <AuthProgress
             state="checking"
             title="Einen Moment bitte"
-            description="moto prüft Ihre Anmeldung."
+            description="moto prüft deine Anmeldung."
           />
         </AuthShell>
       }

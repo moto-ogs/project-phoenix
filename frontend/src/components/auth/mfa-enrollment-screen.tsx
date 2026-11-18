@@ -193,7 +193,7 @@ export function MFAEnrollmentScreen({
             icon={<Check aria-hidden="true" />}
             titleAs="h2"
             title="2FA erfolgreich aktiviert"
-            description="Beim nächsten Login erhalten Sie zusätzlich zu Ihrem Passwort einen Code per E-Mail."
+            description="Beim nächsten Login erhältst du zusätzlich zu deinem Passwort einen Code per E-Mail."
             className="py-0"
           />
           <FormErrorAlert message={formErrors.error} />
@@ -209,7 +209,7 @@ export function MFAEnrollmentScreen({
                 // creates the BFF session and sets resultRef. Otherwise show
                 // an error instead of continuing with a broken session.
                 formErrors.invalid(
-                  "Das hat leider nicht geklappt. Bitte melden Sie sich erneut an.",
+                  "Das hat leider nicht geklappt. Bitte melde dich erneut an.",
                 );
                 return;
               }
@@ -237,8 +237,8 @@ export function MFAEnrollmentScreen({
             <p className="text-sm leading-relaxed text-gray-600">
               {step === "intro" ? (
                 <>
-                  Sie brauchen zusätzlich einen Code per E-Mail. Wir senden
-                  dafür einen 6-stelligen Code an{" "}
+                  Du brauchst zusätzlich einen Code per E-Mail. Wir senden dafür
+                  einen 6-stelligen Code an{" "}
                   <span className="font-medium text-gray-800">{userEmail}</span>
                   {"."}
                 </>
@@ -246,7 +246,7 @@ export function MFAEnrollmentScreen({
                 <>
                   Wir haben einen Code an{" "}
                   <span className="font-medium text-gray-800">{userEmail}</span>{" "}
-                  gesendet. Geben Sie ihn unten ein.
+                  gesendet. Gib ihn unten ein.
                 </>
               )}
             </p>
@@ -260,8 +260,8 @@ export function MFAEnrollmentScreen({
                 type="info"
                 message={
                   scope === "traeger"
-                    ? "Kein Zugriff auf Ihre E-Mails? Wenden Sie sich an das moto-Team. Im Träger-Portal ist der Code immer Pflicht."
-                    : "Kein Zugriff auf Ihre E-Mails? Wenden Sie sich an Ihre Schulverwaltung. Der zusätzliche Nachweis bleibt bei besonderen Zugriffsrechten Pflicht."
+                    ? "Kein Zugriff auf deine E-Mails? Wende dich an das moto-Team. Im Träger-Portal ist der Code immer Pflicht."
+                    : "Kein Zugriff auf deine E-Mails? Wende dich an deine Schulverwaltung. Der zusätzliche Nachweis bleibt bei besonderen Zugriffsrechten Pflicht."
                 }
               />
               <Button

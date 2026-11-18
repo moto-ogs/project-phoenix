@@ -454,28 +454,28 @@ export function PhasesEditor() {
       form_schema_id: schemaSource === "base" ? null : draft.form_schema_id,
     };
     if (!payload.name) {
-      formErrors.invalid("Bitte geben Sie der Anmeldephase einen Namen.", {
-        name: "Bitte geben Sie einen Namen ein.",
+      formErrors.invalid("Bitte gib der Anmeldephase einen Namen.", {
+        name: "Bitte gib einen Namen ein.",
       });
       return;
     }
     if (schemaSource === "reuse" && !payload.form_schema_id) {
       formErrors.invalid(
-        "Bitte wählen Sie eine Formularvorlage oder das Basisformular.",
-        { form_schema_id: "Bitte wählen Sie eine Vorlage." },
+        "Bitte wähle eine Formularvorlage oder das Basisformular.",
+        { form_schema_id: "Bitte wähle eine Vorlage." },
       );
       return;
     }
     if (!payload.service_start_date || !payload.service_end_date) {
       formErrors.invalid(
-        "Bitte geben Sie Beginn und Ende des Betreuungszeitraums an.",
+        "Bitte gib Beginn und Ende des Betreuungszeitraums an.",
         {
           ...(payload.service_start_date
             ? {}
-            : { service_start_date: "Bitte wählen Sie den Beginn." }),
+            : { service_start_date: "Bitte wähle den Beginn." }),
           ...(payload.service_end_date
             ? {}
-            : { service_end_date: "Bitte wählen Sie das Ende." }),
+            : { service_end_date: "Bitte wähle das Ende." }),
         },
       );
       return;
@@ -483,7 +483,7 @@ export function PhasesEditor() {
     if (payload.service_end_date < payload.service_start_date) {
       formErrors.invalid(
         "Das Ende des Betreuungszeitraums liegt vor dem Beginn.",
-        { service_end_date: "Bitte wählen Sie ein späteres Ende." },
+        { service_end_date: "Bitte wähle ein späteres Ende." },
       );
       return;
     }
@@ -495,7 +495,7 @@ export function PhasesEditor() {
     ) {
       formErrors.invalid(
         "Die Schließung des Anmeldefensters muss nach der Öffnung liegen.",
-        { enrollment_close_at: "Bitte wählen Sie eine spätere Schließung." },
+        { enrollment_close_at: "Bitte wähle eine spätere Schließung." },
       );
       return;
     }
@@ -537,7 +537,7 @@ export function PhasesEditor() {
       });
       if (conflicting) {
         formErrors.invalid(
-          `Die ${schoolClassLabel(conflicting)} passt nicht zu den gewählten Klassenstufen. Entfernen Sie die Klasse oder ergänzen Sie ihre Klassenstufe.`,
+          `Die ${schoolClassLabel(conflicting)} passt nicht zu den gewählten Klassenstufen. Entferne die Klasse oder ergänze ihre Klassenstufe.`,
         );
         return;
       }
@@ -684,7 +684,7 @@ export function PhasesEditor() {
       if (!source) {
         // Folge eines Klicks (Hinweis oder Link): eine Meldung ohne Formular.
         showMessage(
-          "Die Anmeldephase wurde nicht gefunden. Bitte laden Sie die Seite neu.",
+          "Die Anmeldephase wurde nicht gefunden. Bitte lade die Seite neu.",
         );
         return;
       }
@@ -924,7 +924,7 @@ export function PhasesEditor() {
   const careBeyondEndContent = careBeyondEnd ? (
     <div className="space-y-4">
       <p className="text-sm leading-6 text-gray-600">
-        {`Die Anmeldephase „${careBeyondEnd.phaseName}“ endet jetzt am ${formatDate(careBeyondEnd.phaseEnd)}. Bei ${careBeyondEnd.students.length === 1 ? "1 Kind" : `${careBeyondEnd.students.length} Kindern`} ist die Betreuung länger eingetragen. moto beendet sie nicht von selbst. Diese Liste sehen Sie nur jetzt.`}
+        {`Die Anmeldephase „${careBeyondEnd.phaseName}“ endet jetzt am ${formatDate(careBeyondEnd.phaseEnd)}. Bei ${careBeyondEnd.students.length === 1 ? "1 Kind" : `${careBeyondEnd.students.length} Kindern`} ist die Betreuung länger eingetragen. moto beendet sie nicht von selbst. Diese Liste siehst du nur jetzt.`}
       </p>
       <FramedList maxHeight="md">
         {careBeyondEnd.students.map((child) => (
@@ -953,11 +953,11 @@ export function PhasesEditor() {
           <p className="text-sm leading-6 text-gray-600">
             {careBeyondEnd.phaseEnd < berlinTodayISO()
               ? "Soll die Betreuung mit der Phase enden? Das neue Ende ist schon vorbei. Die Betreuung kann frühestens heute enden."
-              : `Soll die Betreuung mit der Phase enden? Dann beenden Sie sie zum ${formatDate(careBeyondEnd.phaseEnd)}.`}
+              : `Soll die Betreuung mit der Phase enden? Dann beende sie zum ${formatDate(careBeyondEnd.phaseEnd)}.`}
           </p>
           {careBeyondEnd.students.length > CARE_EXIT_BATCH_SIZE ? (
             <p className="text-sm leading-6 text-gray-600">
-              Sie beenden zuerst die Betreuung der ersten 500 Kinder. Danach
+              Du beendest zuerst die Betreuung der ersten 500 Kinder. Danach
               bleiben die übrigen Kinder in dieser Liste.
             </p>
           ) : null}
@@ -966,7 +966,7 @@ export function PhasesEditor() {
         <Alert
           type="warning"
           announce="off"
-          message="Die Betreuung beenden darf nur, wer Kinder verwalten darf. Notieren Sie die Namen und geben Sie sie an diese Person weiter."
+          message="Die Betreuung beenden darf nur, wer Kinder verwalten darf. Notiere die Namen und gib sie an diese Person weiter."
         />
       )}
     </div>
@@ -1010,7 +1010,7 @@ export function PhasesEditor() {
           ? {
               title: "Noch keine Anmeldephase angelegt",
               description:
-                "Legen Sie zuerst fest, für welchen Zeitraum Eltern anmelden können, zum Beispiel für ein Halbjahr, ein Schuljahr oder eine Ferienbetreuung.",
+                "Lege zuerst fest, für welchen Zeitraum Eltern anmelden können, zum Beispiel für ein Halbjahr, ein Schuljahr oder eine Ferienbetreuung.",
               icon: (
                 <ConceptIconTile concept={calendarPeriodsConcept} size="page" />
               ),
@@ -1155,7 +1155,7 @@ export function PhasesEditor() {
               title="Anmeldephase löschen"
               description={
                 <p>
-                  Möchten Sie die Anmeldephase{" "}
+                  Möchtest du die Anmeldephase{" "}
                   <span className="font-medium">„{deleteTarget.name}“</span>{" "}
                   wirklich endgültig löschen?
                 </p>
@@ -1284,7 +1284,7 @@ function PhaseDeleteImpactAlert({
           impact.requests === 1
             ? "Zu ihr gibt es 1 Anmeldung"
             : `Zu ihr gibt es ${impact.requests} Anmeldungen`
-        }. Wählen Sie stattdessen „Deaktivieren“.`}
+        }. Wähle stattdessen „Deaktivieren“.`}
       />
     );
   }
@@ -1405,7 +1405,7 @@ function PhaseActions({
       toast.success("Der Elternlink ist kopiert.");
     } else {
       showMessage(
-        "Der Link konnte nicht kopiert werden. Bitte versuchen Sie es noch einmal.",
+        "Der Link konnte nicht kopiert werden. Bitte versuche es noch einmal.",
       );
     }
   };
@@ -1457,7 +1457,7 @@ function PhaseActions({
                   label: "Elternlink kopieren",
                   icon: <Copy className="h-4 w-4" aria-hidden />,
                   description:
-                    "Kopiert den Link, damit Sie ihn an Eltern weitergeben können",
+                    "Kopiert den Link, damit du ihn an Eltern weitergeben kannst",
                   onClick: () => void copyPhaseUrl(phaseUrl),
                 },
                 {
@@ -1518,7 +1518,7 @@ function PhaseActions({
             icon: <Check className="h-4 w-4" aria-hidden />,
             href: `/enrollment-phases/${encodeURIComponent(phase.id)}/review`,
             description:
-              "Öffnet die Kinder, über die Sie noch entscheiden müssen",
+              "Öffnet die Kinder, über die du noch entscheiden musst",
             onClick: () => undefined,
           },
         ]
@@ -1792,9 +1792,9 @@ function PhaseForm(props: PhaseFormProps) {
 
       <FormFieldset legend="Anmeldefenster (optional)">
         <p className="mt-1 mb-2 text-sm leading-6 text-gray-600">
-          Lassen Sie beide Felder leer, wenn das Anmeldeformular jederzeit
-          erreichbar sein soll. Sonst kann die Anmeldung nur in diesem Zeitraum
-          eingereicht werden.
+          Lasse beide Felder leer, wenn das Anmeldeformular jederzeit erreichbar
+          sein soll. Sonst kann die Anmeldung nur in diesem Zeitraum eingereicht
+          werden.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>

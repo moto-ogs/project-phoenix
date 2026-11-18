@@ -139,9 +139,11 @@ describe("applyAnswer", () => {
 describe("answerSavedMessage", () => {
   it("names the day of an answer for one date", () => {
     expect(answerSavedMessage("declined", "2026-11-25")).toBe(
-      "Ihre Absage für Mittwoch, 25.11. ist gespeichert.",
+      "Deine Absage für Mittwoch, 25.11. ist gespeichert.",
     );
-    expect(answerSavedMessage("accepted")).toBe("Ihre Zusage ist gespeichert.");
+    expect(answerSavedMessage("accepted")).toBe(
+      "Deine Zusage ist gespeichert.",
+    );
   });
 });
 

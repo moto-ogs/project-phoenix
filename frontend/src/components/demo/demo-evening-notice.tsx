@@ -72,7 +72,7 @@ export function DemoEveningRow({
         Uhrzeiten heute verschoben.
       </span>
       <span className="hidden min-w-0 truncate font-medium sm:inline">
-        Die Demo läuft zu Ihrer Uhrzeit. Blöcke und Abholzeiten sind deshalb
+        Die Demo läuft zu deiner Uhrzeit. Blöcke und Abholzeiten sind deshalb
         verschoben.
       </span>
       <Button
@@ -87,7 +87,7 @@ export function DemoEveningRow({
       <Modal
         isOpen={open}
         onClose={close}
-        title="Der Demo-Tag läuft zu Ihrer Uhrzeit"
+        title="Der Demo-Tag läuft zu deiner Uhrzeit"
         footer={
           <Button type="button" variant="primary" size="md" onClick={close}>
             Verstanden
@@ -97,18 +97,18 @@ export function DemoEveningRow({
         <div className="flex flex-col gap-3 text-sm text-gray-700">
           <p>Um diese Zeit ist in einer echten OGS niemand mehr da.</p>
           <p>
-            Damit Sie trotzdem etwas sehen, legt die Demo den Nachmittag auf
+            Damit du trotzdem etwas siehst, legt die Demo den Nachmittag auf
             jetzt.
           </p>
           {inParentsApp ? (
-            <p>Deshalb hat Ihr Kind heute ungewohnte Abholzeiten.</p>
+            <p>Deshalb hat dein Kind heute ungewohnte Abholzeiten.</p>
           ) : (
             <p>
               Deshalb stehen Blöcke und Abholzeiten heute zu ungewohnten
               Uhrzeiten.
             </p>
           )}
-          <p>Tagsüber sehen Sie die Demo wie im echten Alltag.</p>
+          <p>Tagsüber siehst du die Demo wie im echten Alltag.</p>
         </div>
       </Modal>
     </div>

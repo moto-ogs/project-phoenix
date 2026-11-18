@@ -80,8 +80,8 @@ func NewStatisticsTestModule(db transactionruntime.Database, unit tenant.UnitOfW
 		HolidayCareDays:  owners.StatisticsHolidayCareDays{Bookings: enrollmentCompose.NewHolidayGuestBookedCare(owners.StatisticsHolidayStudents{Students: students})},
 		DB:               db.Pool(),
 		StatusDays:       owners.StatisticsStatusDays{Query: r.CarePlan}, Courses: owners.NewCourseStatistics(db),
-		Holidays:    schoolCalendarCompose.NewTenantHolidays(calendar),
-		ClosingDays: schoolCalendarCompose.NewTenantClosingDays(calendar), Periods: owners.StatisticsReportPeriods{Periods: calendar}, CalendarDays: calendar, Students: owners.StatisticsReportStudents{Students: students}, Rooms: owners.StatisticsReportRooms{Rooms: rooms},
+		Holidays:     schoolCalendarCompose.NewTenantHolidays(calendar),
+		CalendarDays: calendar, Students: owners.StatisticsReportStudents{Students: students}, Rooms: owners.StatisticsReportRooms{Rooms: rooms},
 		AccessLog: owners.StatisticsAuditLog{Log: owners.NewTestAuditPersistence(db, command).DataAccessLog}, Retention: settingsModule.NewStatisticsRetention(settings.Settings), Logger: slog.Default(), Now: OptionalClock(clocks),
 	})
 	createClosingDay := func(ctx context.Context, start, end timezone.Date, reason string) error {

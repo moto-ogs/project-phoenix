@@ -140,9 +140,9 @@ const MAX_SUPPORTED_TARGET_GRADE_LEVEL = 13;
  * can still save, and the sentence says so.
  */
 export const COVERAGE_CHECK_FAILED_HINT =
-  "Der Dienstplan konnte nicht geprüft werden. Sie können trotzdem speichern.";
+  "Der Dienstplan konnte nicht geprüft werden. Du kannst trotzdem speichern.";
 export const CONFLICT_CHECK_FAILED_HINT =
-  "Doppelte Einplanungen konnten nicht geprüft werden. Sie können trotzdem speichern.";
+  "Doppelte Einplanungen konnten nicht geprüft werden. Du kannst trotzdem speichern.";
 const COVERAGE_CHECK_TIMEOUT_MS = 5_000;
 
 /**
@@ -1469,7 +1469,7 @@ export function useEventForm({
       planningPeriods !== null &&
       findPeriodForDate(planningPeriods, form.date) === null
     ) {
-      errors.date = "Wählen Sie ein Datum in einem Planungszeitraum.";
+      errors.date = "Wähle ein Datum in einem Planungszeitraum.";
     }
     if (form.startTime === "") {
       errors.startTime = "Bitte eine Startzeit angeben.";
@@ -3234,12 +3234,12 @@ export function useEventForm({
     if (!initialSeries || !onDeleteSeries || deletingSeries) return;
     const minDate = berlinTodayISO();
     if (!deleteEffectiveDate) {
-      const message = "Bitte wählen Sie ein Datum aus.";
+      const message = "Bitte wähle ein Datum aus.";
       deleteErrors.invalid(message, { effective_date: message });
       return;
     }
     if (deleteEffectiveDate < minDate) {
-      const message = "Bitte wählen Sie heute oder einen späteren Tag.";
+      const message = "Bitte wähle heute oder einen späteren Tag.";
       deleteErrors.invalid(message, { effective_date: message });
       return;
     }

@@ -581,9 +581,7 @@ describe("TimetableEventModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
 
     expect(
-      await screen.findByText(
-        "Wählen Sie ein Datum in einem Planungszeitraum.",
-      ),
+      await screen.findByText("Wähle ein Datum in einem Planungszeitraum."),
     ).toBeInTheDocument();
     expect(mockCreate).not.toHaveBeenCalled();
   });
@@ -599,9 +597,7 @@ describe("TimetableEventModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
 
     expect(
-      await screen.findByText(
-        "Wählen Sie ein Datum in einem Planungszeitraum.",
-      ),
+      await screen.findByText("Wähle ein Datum in einem Planungszeitraum."),
     ).toBeInTheDocument();
     expect(mockCreate).not.toHaveBeenCalled();
   });
@@ -616,9 +612,7 @@ describe("TimetableEventModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
 
     expect(
-      await screen.findByText(
-        "Wählen Sie ein Datum in einem Planungszeitraum.",
-      ),
+      await screen.findByText("Wähle ein Datum in einem Planungszeitraum."),
     ).toBeInTheDocument();
     expect(mockUpdate).not.toHaveBeenCalled();
   });
@@ -2639,20 +2633,20 @@ describe("TimetableEventModal", () => {
     );
     // Im Fehlerbereich des Dialogs und am Feld (#2516).
     expect(
-      await within(dialog).findAllByText("Bitte wählen Sie ein Datum aus."),
+      await within(dialog).findAllByText("Bitte wähle ein Datum aus."),
     ).toHaveLength(2);
     expect(onDeleteSeries).not.toHaveBeenCalled();
 
     fireEvent.change(dateInput, { target: { value: "2026-05-05" } });
     expect(
-      within(dialog).queryByText("Bitte wählen Sie ein Datum aus."),
+      within(dialog).queryByText("Bitte wähle ein Datum aus."),
     ).not.toBeInTheDocument();
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Endgültig löschen" }),
     );
     expect(
       await within(dialog).findAllByText(
-        "Bitte wählen Sie heute oder einen späteren Tag.",
+        "Bitte wähle heute oder einen späteren Tag.",
       ),
     ).toHaveLength(2);
     expect(onDeleteSeries).not.toHaveBeenCalled();
@@ -4488,7 +4482,7 @@ describe("TimetableEventModal", () => {
     // not run, and saving stays possible.
     expect(
       await screen.findByText(
-        "Hinweis: Doppelte Einplanungen konnten nicht geprüft werden. Sie können trotzdem speichern.",
+        "Hinweis: Doppelte Einplanungen konnten nicht geprüft werden. Du kannst trotzdem speichern.",
         undefined,
         { timeout: 2000 },
       ),
@@ -5146,7 +5140,7 @@ describe("TimetableEventModal", () => {
     });
     expect(
       await screen.findByText(
-        "Hinweis: Der Dienstplan konnte nicht geprüft werden. Sie können trotzdem speichern.",
+        "Hinweis: Der Dienstplan konnte nicht geprüft werden. Du kannst trotzdem speichern.",
       ),
     ).toBeInTheDocument();
     await expectSaveEnabled();
@@ -5173,7 +5167,7 @@ describe("TimetableEventModal", () => {
 
     await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
     expect(mockToastWarning).toHaveBeenCalledWith(
-      "Der Dienstplan konnte nicht geprüft werden. Sie können trotzdem speichern.",
+      "Der Dienstplan konnte nicht geprüft werden. Du kannst trotzdem speichern.",
       { duration: 10_000 },
     );
   });

@@ -164,7 +164,7 @@ describe("ParentGroupThreadView (#4784)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Ihre Antwort geht nur an die OGS. Andere Eltern sehen sie nicht.",
+        "Deine Antwort geht nur an die OGS. Andere Eltern sehen sie nicht.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -198,7 +198,7 @@ describe("ParentGroupThreadView (#4784)", () => {
       ),
     );
     expect(
-      await screen.findByText("Ihre Antwort ist bei der OGS."),
+      await screen.findByText("Deine Antwort ist bei der OGS."),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Zum Chat mit der OGS" }),
@@ -212,7 +212,7 @@ describe("ParentGroupThreadView (#4784)", () => {
 
     expect(
       await screen.findByText(
-        "Diese Gruppennachricht ist geschlossen. Sie können der OGS weiter im Chat zu Ihrem Kind schreiben.",
+        "Diese Gruppennachricht ist geschlossen. Du kannst der OGS weiter im Chat zu deinem Kind schreiben.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -259,7 +259,7 @@ describe("ParentGroupThreadView (#4784)", () => {
 
     expect(
       await screen.findByText(
-        "Sie können auf diese Nachricht nicht antworten. Lesen können Sie sie weiterhin.",
+        "Du kannst auf diese Nachricht nicht antworten. Lesen kannst du sie weiterhin.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Antwort")).not.toBeInTheDocument();
@@ -317,7 +317,7 @@ it("confirms the retried private answer when the group closed after response los
   } as Awaited<ReturnType<typeof postChildMessage>>);
   fireEvent.click(screen.getByRole("button", { name: "Senden" }));
   expect(
-    await screen.findByText("Ihre Antwort ist bei der OGS."),
+    await screen.findByText("Deine Antwort ist bei der OGS."),
   ).toBeInTheDocument();
   expect(mockedPost.mock.calls[1]?.[4]).toBe(key);
   expect(
@@ -331,7 +331,7 @@ it("confirms the retried private answer when the group closed after response los
     window.dispatchEvent(new Event("focus"));
   });
   expect(
-    await screen.findByText("Ihre Antwort ist bei der OGS."),
+    await screen.findByText("Deine Antwort ist bei der OGS."),
   ).toBeInTheDocument();
 });
 
@@ -399,7 +399,7 @@ it("lässt den Chat des Kindes nach einer Antwort neu laden", async () => {
   });
   fireEvent.click(screen.getByRole("button", { name: "Senden" }));
   expect(
-    await screen.findByText("Ihre Antwort ist bei der OGS."),
+    await screen.findByText("Deine Antwort ist bei der OGS."),
   ).toBeInTheDocument();
   view.rerender(<Fixture chat />);
   expect(screen.queryByText("Alter Stand")).not.toBeInTheDocument();

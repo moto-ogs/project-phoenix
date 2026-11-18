@@ -437,7 +437,7 @@ describe("StudentsPage", () => {
 
     const intro = screen.getByTestId("page-intro");
     expect(intro).toHaveTextContent("Kinderkontingent: 48 von 50 belegt");
-    expect(intro).toHaveTextContent("Ihr Vertrag erlaubt bis zu 50 Kinder.");
+    expect(intro).toHaveTextContent("Dein Vertrag erlaubt bis zu 50 Kinder.");
   });
 
   it("shows no Kinderkontingent when the school has none", () => {

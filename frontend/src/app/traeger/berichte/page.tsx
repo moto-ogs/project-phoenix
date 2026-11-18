@@ -414,7 +414,7 @@ function TemplatesBody({
           title="Noch keine Vorlage"
           description={
             canManage
-              ? "Eine Vorlage merkt sich Abschnitte, Stichtag und Sozialräume. Legen Sie oben mit „Neue Vorlage“ die erste an."
+              ? "Eine Vorlage merkt sich Abschnitte, Stichtag und Sozialräume. Lege oben mit „Neue Vorlage“ die erste an."
               : "Eine Vorlage merkt sich Abschnitte, Stichtag und Sozialräume. Vorlagen legt die Verwaltung des Trägers an."
           }
         />
@@ -545,8 +545,8 @@ function TraegerReportsContent() {
       title="Berichte"
       info={
         <>
-          Hier erstellen Sie Berichte für Jugendamt und Kommune. moto zählt alle
-          Schulen Ihres Trägers an einem Stichtag. Üblich ist der 15. Oktober.
+          Hier erstellst du Berichte für Jugendamt und Kommune. moto zählt alle
+          Schulen deines Trägers an einem Stichtag. Üblich ist der 15. Oktober.
           Eine Vorlage legt fest, welche Abschnitte der Bericht hat und welche
           Schule zu welchem Sozialraum gehört. Offene Anmeldungen und Warteliste
           zeigen immer den Stand von heute. Der Bericht enthält nur Zahlen,
@@ -606,7 +606,7 @@ function TraegerReportsContent() {
           ? {
               title: "Noch keine Schulen",
               description:
-                "Sobald das moto-Team Ihrem Träger Schulen zuordnet, steht hier ihr Bericht.",
+                "Sobald das moto-Team deinem Träger Schulen zuordnet, steht hier ihr Bericht.",
               icon: <School className="h-12 w-12" aria-hidden="true" />,
             }
           : null
@@ -691,8 +691,8 @@ function TraegerReportsContent() {
           description={
             <>
               <span className="font-medium">{deleting?.name}</span> steht danach
-              nicht mehr zur Auswahl. Berichte, die Sie schon heruntergeladen
-              haben, bleiben, wie sie sind.
+              nicht mehr zur Auswahl. Berichte, die du schon heruntergeladen
+              hast, bleiben, wie sie sind.
             </>
           }
           confirmLabel="Löschen"

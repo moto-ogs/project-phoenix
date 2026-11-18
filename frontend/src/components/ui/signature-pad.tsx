@@ -56,19 +56,19 @@ export interface SignaturePadLabels {
 
 const SIGNATURE_PAD_LABELS_DE: SignaturePadLabels = {
   label: "Unterschrift",
-  hint: "Unterschreiben Sie mit dem Finger, dem Stift oder der Maus.",
+  hint: "Unterschreibe mit dem Finger, dem Stift oder der Maus.",
   canvas: "Feld zum Unterschreiben",
   clear: "Feld leeren",
   typeInstead: "Namen tippen",
   drawInstead: "Lieber zeichnen",
-  typedName: "Ihr Name",
+  typedName: "Dein Name",
   confirm: "Unterschrift bestätigen",
-  confirmed: "Ihre Unterschrift ist bereit.",
-  confirmedTyped: "Ihr getippter Name ist bereit.",
+  confirmed: "Deine Unterschrift ist bereit.",
+  confirmedTyped: "Dein getippter Name ist bereit.",
   change: "Neu unterschreiben",
-  preview: "Ihre Unterschrift",
-  emptyDrawing: "Bitte unterschreiben Sie im Feld.",
-  nameTooShort: "Bitte tippen Sie Ihren Namen.",
+  preview: "Deine Unterschrift",
+  emptyDrawing: "Bitte unterschreibe im Feld.",
+  nameTooShort: "Bitte tippe deinen Namen.",
 };
 
 /** Upper bounds the backend enforces; the canvas stays below them. */

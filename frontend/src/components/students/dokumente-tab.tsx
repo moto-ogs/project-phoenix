@@ -180,7 +180,7 @@ export function StudentDokumenteTab({
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
       uploadErrors.showMessage(
-        "Die Datei ist größer als 10 MB. Bitte wählen Sie eine kleinere Datei.",
+        "Die Datei ist größer als 10 MB. Bitte wähle eine kleinere Datei.",
       );
       return;
     }
@@ -334,7 +334,7 @@ export function StudentDokumenteTab({
       return [
         {
           label: "Herunterladen",
-          description: "Speichert die Datei auf Ihrem Gerät.",
+          description: "Speichert die Datei auf deinem Gerät.",
           href: studentDocumentsService.downloadUrl(studentId, doc.id),
           external: true,
           onClick: () => undefined,
@@ -352,7 +352,7 @@ export function StudentDokumenteTab({
       },
       {
         label: "PDF herunterladen",
-        description: "Speichert die Unfallanzeige als PDF auf Ihrem Gerät.",
+        description: "Speichert die Unfallanzeige als PDF auf deinem Gerät.",
         href: studentAccidentReportsService.pdfUrl(studentId, doc.id),
         external: true,
         onClick: () => undefined,

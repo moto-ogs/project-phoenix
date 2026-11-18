@@ -399,13 +399,13 @@ function TraegerUtilizationContent() {
       title="Auslastung"
       info={
         <>
-          Hier sehen Sie, wie voll die Plätze Ihrer Schulen über die Zeit waren.
-          moto zählt die Wochentage im gewählten Zeitraum und zeigt den
+          Hier siehst du, wie voll die Plätze deiner Schulen über die Zeit
+          waren. moto zählt die Wochentage im gewählten Zeitraum und zeigt den
           Durchschnitt je Tag, Woche oder Monat. „Belegt“ sind die gebuchten
           Kinder der Betreuungsformen mit Platzgrenze. „Anwesend“ sind die
           Kinder mit Check-in. Ein Tag ohne Check-in, etwa in den Ferien, hat
           keine Zahl. Heute zählt erst, wenn der Tag vorbei ist. Die Kinder von
-          heute stehen unter „Belegung“. Mit „Herunterladen“ bekommen Sie alle
+          heute stehen unter „Belegung“. Mit „Herunterladen“ bekommst du alle
           Zahlen je Tag als PDF, Excel oder CSV.
         </>
       }
@@ -449,7 +449,7 @@ function TraegerUtilizationContent() {
           ? {
               title: "Noch keine Schulen",
               description:
-                "Sobald das moto-Team Ihrem Träger Schulen zuordnet, steht hier ihre Auslastung.",
+                "Sobald das moto-Team deinem Träger Schulen zuordnet, steht hier ihre Auslastung.",
               icon: <School className="h-12 w-12" aria-hidden="true" />,
             }
           : null
@@ -523,10 +523,10 @@ function TraegerUtilizationContent() {
         concept={view === "raeume" ? roomsConcept : utilizationConcept}
         description={
           view === "schulen"
-            ? "Wählen Sie eine Zeile, um den Verlauf einer Schule zu sehen."
+            ? "Wähle eine Zeile, um den Verlauf einer Schule zu sehen."
             : view === "betreuungsformen"
-              ? "Wählen Sie eine Zeile, um den Verlauf einer Betreuungsform zu sehen."
-              : "Wählen Sie eine Zeile, um den Verlauf eines Raums zu sehen."
+              ? "Wähle eine Zeile, um den Verlauf einer Betreuungsform zu sehen."
+              : "Wähle eine Zeile, um den Verlauf eines Raums zu sehen."
         }
         action={
           <SegmentedControl
@@ -581,7 +581,7 @@ function TraegerUtilizationContent() {
             description={
               view === "raeume"
                 ? "moto zählt Besuche von Kindern, deren Eltern dem Speichern zugestimmt haben."
-                : "Wählen Sie einen anderen Zeitraum oder eine andere Schule."
+                : "Wähle einen anderen Zeitraum oder eine andere Schule."
             }
           />
         ) : (
