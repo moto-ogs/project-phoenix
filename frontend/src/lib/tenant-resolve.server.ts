@@ -57,8 +57,11 @@ const TENANT_CACHE_TTL_MS = 60_000;
 const TENANT_CACHE_LIMIT = 1_000;
 const CACHE = Symbol.for("moto.tenant-resolve-cache");
 
+type TenantLookup =
+  { ok: true; data: TenantResolveResponse } | { ok: false; status: number };
+
 interface TenantCacheEntry {
-  lookup: Promise<TenantResolveResponse>;
+  lookup: Promise<TenantLookup>;
   expiresAt: number;
 }
 
@@ -73,15 +76,15 @@ function tenantCache(): Map<string, TenantCacheEntry> {
 async function loadTenant(
   slug: string,
   forwardHeaders: Record<string, string>,
-): Promise<TenantResolveResponse> {
+): Promise<TenantLookup> {
   const { getServerApiUrl } = await import("~/lib/server-api-url");
   const res = await fetch(
     `${getServerApiUrl()}/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
     { headers: forwardHeaders, cache: "no-store" },
   );
-  if (!res.ok) throw new TenantResolveStatusError(res.status);
+  if (!res.ok) return { ok: false, status: res.status };
   const { data } = (await res.json()) as { data: TenantResolveResponse };
-  return data;
+  return { ok: true, data };
 }
 
 export function invalidateTenantResolve(slug: string): void {
@@ -93,10 +96,20 @@ export function invalidateTenantResolve(slug: string): void {
  * Each replica caches successful lookups by school slug. The visitor who
  * starts the lookup supplies the forwarding headers. Other visitors reuse it.
  */
-export function resolveTenantCached(
+export async function resolveTenantCached(
   slug: string,
   forwardHeaders: Record<string, string>,
 ): Promise<TenantResolveResponse> {
+  const result = await lookupTenant(slug, forwardHeaders);
+  // Route bundles have separate error classes even though they share data.
+  if (!result.ok) throw new TenantResolveStatusError(result.status);
+  return result.data;
+}
+
+function lookupTenant(
+  slug: string,
+  forwardHeaders: Record<string, string>,
+): Promise<TenantLookup> {
   const cache = tenantCache();
   const now = Date.now();
   const cached = cache.get(slug);
@@ -105,11 +118,14 @@ export function resolveTenantCached(
   const entry: TenantCacheEntry = {
     expiresAt: Infinity,
     lookup: loadTenant(slug, forwardHeaders).then(
-      (data) => {
-        // This entry may have been invalidated during the lookup. Updating
-        // the entry in place cannot restore a removed entry to the cache.
-        entry.expiresAt = now + TENANT_CACHE_TTL_MS;
-        return data;
+      (result) => {
+        if (result.ok) {
+          // Updating the entry in place cannot restore it after invalidation.
+          entry.expiresAt = now + TENANT_CACHE_TTL_MS;
+        } else if (cache.get(slug) === entry) {
+          cache.delete(slug);
+        }
+        return result;
       },
       (error: unknown) => {
         if (cache.get(slug) === entry) cache.delete(slug);

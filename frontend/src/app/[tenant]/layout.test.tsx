@@ -55,8 +55,11 @@ vi.mock("~/env", () => ({
 }));
 
 const { bareTenantHost, default: TenantLayout } = await import("./layout");
-const { invalidateTenantResolve, resolveTenantCached } =
-  await import("~/lib/tenant-resolve.server");
+const {
+  invalidateTenantResolve,
+  resolveTenantCached,
+  TenantResolveStatusError,
+} = await import("~/lib/tenant-resolve.server");
 const { setTestClock, TEST_CLOCK_INSTANT } = await import("~/test/clock");
 const navigation = await import("next/navigation");
 
@@ -303,6 +306,26 @@ describe("TenantLayout", () => {
       expire: 0,
     });
   });
+
+  it.each([404, 429])(
+    "preserves HTTP %s across bundles sharing a lookup",
+    async (status) => {
+      vi.resetModules();
+      const other = await import("~/lib/tenant-resolve.server");
+      expect(other.TenantResolveStatusError).not.toBe(TenantResolveStatusError);
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(new Response(null, { status }));
+
+      const first = resolveTenantCached("school-a", {});
+      const second = other.resolveTenantCached("school-a", {});
+      await Promise.all([
+        expect(first).rejects.toBeInstanceOf(TenantResolveStatusError),
+        expect(second).rejects.toBeInstanceOf(other.TenantResolveStatusError),
+      ]);
+      expect(fetchSpy).toHaveBeenCalledOnce();
+    },
+  );
 
   // #4803: the switch hides the single class list entry and the OGS areas
   // of a child; a mapping without it left the switch off in every page.
