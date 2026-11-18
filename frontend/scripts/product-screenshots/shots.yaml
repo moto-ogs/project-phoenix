@@ -660,7 +660,7 @@ shots:
     rolle: eltern
     pfad: /settings?tab=language
     vorbereitung:
-      # Die Auswahl heißt nach ihrem sichtbaren Text („Deutsch, Sprache“,
+      # Die Auswahl heißt nach ihrem sichtbaren Text („Sprache Deutsch“,
       # #7112); die untere Leiste hat einen eigenen Knopf „Sprache“.
       - klicken: '[aria-haspopup="listbox"]:has-text("Sprache")'
       - warten_auf: 'role=listbox'
