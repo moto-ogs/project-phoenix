@@ -251,13 +251,8 @@ func (rs *StaffAdminResource) uploadStaffDocument(w http.ResponseWriter, r *http
 	}
 	defer common.CloseFile(uploaded.File)
 
-	storedName, err := newStoredDocumentName(uploaded.ContentType)
+	storedName, err := rs.reserveStoredDocument(r.Context(), id, uploaded.ContentType)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	if err := rs.queueUploadFileCleanup(r.Context(), id, storedName); err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
@@ -293,6 +288,19 @@ func (rs *StaffAdminResource) uploadStaffDocument(w http.ResponseWriter, r *http
 
 	resp := newStaffDocumentResponse(*info)
 	common.Respond(w, r, http.StatusCreated, &resp, "Staff document uploaded successfully")
+}
+
+// reserveStoredDocument names the file about to be written and queues its
+// cleanup intent before any byte lands.
+func (rs *StaffAdminResource) reserveStoredDocument(ctx context.Context, staffID int64, contentType string) (string, error) {
+	storedName, err := newStoredDocumentName(contentType)
+	if err != nil {
+		return "", err
+	}
+	if err := rs.queueUploadFileCleanup(ctx, staffID, storedName); err != nil {
+		return "", err
+	}
+	return storedName, nil
 }
 
 // queueUploadFileCleanup queues the cleanup intent for the file about to be

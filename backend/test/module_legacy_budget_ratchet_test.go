@@ -348,7 +348,10 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0276: the time import of the sick note retention clock in
 // modules/workforce/compose (+1) and the clock field of the staff offboarding
 // with its time import in workflows/staffoffboarding/compose (+2).
-const moduleComposeBudgetTotal = 13645
+
+// ADR 0289: the maintenance seal constructors of the sealed document files in
+// modules/careplan/compose (+13) and modules/workforce/compose (+6).
+const moduleComposeBudgetTotal = 13664
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -391,7 +394,8 @@ var moduleComposeBudgets = map[string]int{
 	// Lowered by #7104: the injected clocks fit in shortened comments (-3).
 	// ADR 0241: the booking intervals of the utilization (+7).
 	// ADR 0240: +8, the clock fields of its dependencies.
-	"modules/careplan/compose":             1703, // ADR 0220: +13, the pickup change team constructor
+	// ADR 0289: +13, the seal constructor of the child health document files.
+	"modules/careplan/compose":             1716, // ADR 0220: +13, the pickup change team constructor
 	"modules/careplan/requestfeed/compose": 53,
 	// Raised by ADR 0102: the class-trip status-day seam (#4799).
 	"modules/classday/compose": 210,
@@ -561,7 +565,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0242: the working-time check and the Einsatzplanung sites (+11).
 	// ADR 0264: the clock field of the time-tracking cleanup (+2).
 	// ADR 0253: the Springer exits after the last block (+6).
-	"modules/workforce/compose":       937,
+	// ADR 0289: the seal constructor of the sick note and payslip files (+6).
+	"modules/workforce/compose":       943,
 	"workflows/catererportal/compose": 37, // added by ADR 0077
 	// Raised by ADR 0224: the class follow-up port (+2).
 	"workflows/gradetransition/compose": 51,

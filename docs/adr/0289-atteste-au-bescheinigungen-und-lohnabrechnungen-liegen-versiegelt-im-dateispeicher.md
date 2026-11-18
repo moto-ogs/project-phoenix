@@ -142,6 +142,10 @@ Migration, kein neuer Owner, keine neue Env-Var.
 idempotent wie `BankCipher.Rewrap` (ADR 0183). Die Methoden-Evidenz unter
 dieser ADR umfasst `Coordinator.SaveSealed`,
 `StaffDocumentFileSeal.Batch` und den geänderten `PrivateUploads.OpenPrivate`.
+Die Konstruktoren der beiden Batches erhöhen die Compose-Fläche von Care Plan
+um 13 Zeilen (1703 → 1716) und von Workforce um 6 (937 → 943); die Summe steigt
+13645 → 13664. Das Pass-through-Budget von Workforce steigt um eins (137 → 138,
+Summe 1394 → 1395).
 
 Verworfen:
 
