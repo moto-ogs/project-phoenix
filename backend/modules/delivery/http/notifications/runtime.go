@@ -20,6 +20,12 @@ type Caller struct {
 type Runtime struct {
 	ProtectedTenant func(chi.Router, func(chi.Router, Middleware))
 	ProtectedSchool func(chi.Router, func(chi.Router, Middleware))
+	// ProtectedTraeger registers routes behind the Träger session and the
+	// right to read the overview of the Träger (#7146); it opens no
+	// transaction, the Träger bell opens its own.
+	ProtectedTraeger func(chi.Router, func(chi.Router))
+	// OrganizationID is the Träger of a Träger session.
+	OrganizationID  func(context.Context) int64
 	TenantOperation Middleware
 	TenantID        func(context.Context) int64
 	ActorID         func(context.Context) *int64

@@ -14,7 +14,8 @@ var _ contract.SchoolAudience = (*router)(nil)
 // (#7144), in the caller's tenant transaction of the school. The staff
 // accounts read the entry in the OGS portal or in moto schule; the guardians
 // read it through the children they hold parent_portal.access for, which
-// the feed checks again on every read.
+// the feed checks again on every read. The members of the school's Träger
+// read it in the bell of the Träger-Portal (#7146).
 func (r *router) SchoolAudience(ctx context.Context, tenantID int64) (contract.SchoolAudienceMembers, error) {
 	if r.feedReader == nil || r.store == nil {
 		return contract.SchoolAudienceMembers{}, errors.New("notification feed is not configured")
@@ -33,6 +34,9 @@ func (r *router) SchoolAudience(ctx context.Context, tenantID int64) (contract.S
 		}
 		if member.School {
 			audience.SchoolAccountIDs = append(audience.SchoolAccountIDs, member.AccountID)
+		}
+		if member.Traeger {
+			audience.TraegerAccountIDs = append(audience.TraegerAccountIDs, member.AccountID)
 		}
 		if len(member.StudentIDs) > 0 {
 			audience.GuardianAccountIDs = append(audience.GuardianAccountIDs, member.AccountID)

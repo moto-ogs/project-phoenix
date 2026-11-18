@@ -3,6 +3,7 @@
   "title": "Wiadomości",
   "description": "Tu mogą Państwo czytać wiadomości i pisać bezpośrednio do {careTerm}.",
   "noChildren": "Z Państwa kontem nie jest jeszcze powiązane żadne dziecko. Gdy dziecko zostanie powiązane, będą Państwo mogli tu pisać do {careTerm}.",
+  "withoutCarePlace": "Wiadomości do {careTerm} są dostępne tylko dla dzieci, które mają miejsce w {careTerm}.",
   "noMessagesYet": "Proszę dotknąć, aby napisać.",
   "previewFromOgs": "Od {careTerm}: {text}",
   "previewFromYou": "Ja: {text}",

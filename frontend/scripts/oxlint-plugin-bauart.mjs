@@ -1595,7 +1595,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Träger bearbeiten@86",
     ],
     "src/app/operator/provisioning/edit-school-modal.tsx": [
-      "Schule bearbeiten@154",
+      "Schule bearbeiten@166",
     ],
     "src/app/school/kalender/page.tsx": [
       "Schultermin anlegen Schultermin bearbeiten@335",

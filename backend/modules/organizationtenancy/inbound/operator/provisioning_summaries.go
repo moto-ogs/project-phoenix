@@ -45,6 +45,22 @@ func (rs *ProvisioningResource) ListSchoolSummaries(w http.ResponseWriter, r *ht
 	common.Respond(w, r, http.StatusOK, summaries, "School summaries retrieved successfully")
 }
 
+// ListSchoolRequiredDetails returns, per undeleted school, whether parent
+// replies lack an address (#7174).
+// GET /api/operator/schools/required-details.
+func (rs *ProvisioningResource) ListSchoolRequiredDetails(w http.ResponseWriter, r *http.Request) {
+	if rs.requiredDetails == nil {
+		common.RenderError(w, r, common.OperatorInternal(internalErrorMessage))
+		return
+	}
+	details, err := rs.requiredDetails.ListSchoolRequiredDetails(r.Context())
+	if err != nil {
+		common.RenderError(w, r, ProvisioningErrorRenderer(err))
+		return
+	}
+	common.Respond(w, r, http.StatusOK, details, "School required details retrieved successfully")
+}
+
 // ListOrganizationSchoolSummaries returns schools under a specific organization
 // with per-row counts. GET /api/operator/organizations/{id}/schools.
 func (rs *ProvisioningResource) ListOrganizationSchoolSummaries(w http.ResponseWriter, r *http.Request) {

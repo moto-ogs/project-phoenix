@@ -108,6 +108,8 @@ export const ERROR_CATALOG = {
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.child_care_ended":
         "Die Betreuung dieses Kindes ist beendet. Änderungen sind nicht mehr möglich. Bei Fragen wenden Sie sich bitte an die OGS.",
+      "care.child_without_care_place":
+        "Ihr Kind hat keinen Platz in der OGS. Diese Funktion gibt es für Ihr Kind deshalb nicht.",
       "care.course_request_invalid":
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.course_requests_disabled":
@@ -604,8 +606,12 @@ export const ERROR_CATALOG = {
         "Der neue Zeitraum passt nicht zu einem vorgemerkten Kind. Bitte prüfen Sie zuerst dessen Betreuungszeitraum.",
       "enrollment.phase_school_classes_invalid":
         "Die angebotenen und die zugelassenen Klassen passen nicht zusammen. Bitte prüfen Sie die Klassen.",
+      "enrollment.phase_service_end_too_far":
+        "Das Ende darf höchstens 5 Jahre in der Zukunft liegen. Bitte wählen Sie ein früheres Ende.",
       "enrollment.phase_service_period_invalid":
         "Der Betreuungszeitraum ist unvollständig oder endet vor dem Beginn. Bitte prüfen Sie Beginn und Ende.",
+      "enrollment.phase_service_period_too_long":
+        "Der Betreuungszeitraum darf höchstens 2 Jahre lang sein. Bitte wählen Sie ein früheres Ende.",
       "enrollment.phase_window_invalid":
         "Das Anmeldefenster endet vor seinem Start. Bitte prüfen Sie Öffnung und Schließung.",
       "enrollment.pickup_time_not_allowed":
@@ -2217,6 +2223,8 @@ export const ERROR_CATALOG = {
         "{object} is not available here at the moment. Please ask your contact person.",
       "care.child_care_ended":
         "Care for this child has ended. Changes are no longer possible. If you have questions, please contact the OGS.",
+      "care.child_without_care_place":
+        "Your child does not have a place in the OGS. This function is therefore not available for your child.",
       "care.course_request_invalid":
         "{object} contains invalid details. Please check your entries.",
       "care.course_requests_disabled":
@@ -2975,6 +2983,8 @@ export const ERROR_CATALOG = {
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "care.child_care_ended":
         "Присмотр за этим ребёнком завершён. Изменения больше невозможны. По вопросам обращайтесь в OGS.",
+      "care.child_without_care_place":
+        "У вашего ребёнка нет места в OGS. Поэтому эта функция для ребёнка недоступна.",
       "care.course_request_invalid":
         "Указаны неверные данные: {object}. Проверьте введённые данные.",
       "care.course_requests_disabled":
@@ -3597,6 +3607,8 @@ export const ERROR_CATALOG = {
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.child_care_ended":
         "Kujdesi për këtë fëmijë ka përfunduar. Ndryshimet nuk janë më të mundshme. Për pyetje kontaktoni OGS-në.",
+      "care.child_without_care_place":
+        "Fëmija juaj nuk ka vend në OGS. Prandaj ky funksion nuk është i disponueshëm për fëmijën tuaj.",
       "care.course_request_invalid":
         "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
       "care.course_requests_disabled":
@@ -4235,6 +4247,8 @@ export const ERROR_CATALOG = {
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "care.child_care_ended":
         "Opieka nad tym dzieckiem zakończyła się. Zmiany nie są już możliwe. W razie pytań skontaktuj się z OGS.",
+      "care.child_without_care_place":
+        "Państwa dziecko nie ma miejsca w OGS. Dlatego ta funkcja nie jest dostępna dla dziecka.",
       "care.course_request_invalid":
         "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
       "care.course_requests_disabled":
@@ -4858,6 +4872,8 @@ export const ERROR_CATALOG = {
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "care.child_care_ended":
         "Bu çocuğun bakımı sona erdi. Artık değişiklik yapılamaz. Sorularınız için OGS ile iletişime geçin.",
+      "care.child_without_care_place":
+        "Çocuğunuzun OGS'de yeri yok. Bu nedenle bu işlev çocuğunuz için kullanılamaz.",
       "care.course_request_invalid":
         "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
       "care.course_requests_disabled":
@@ -5488,6 +5504,8 @@ export const ERROR_CATALOG = {
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "care.child_care_ended":
         "Догляд за цією дитиною завершено. Зміни більше неможливі. З питаннями звертайтеся до OGS.",
+      "care.child_without_care_place":
+        "Ваша дитина не має місця в OGS. Тому ця функція для дитини недоступна.",
       "care.course_request_invalid":
         "Указано неправильні дані: {object}. Перевірте введені дані.",
       "care.course_requests_disabled":

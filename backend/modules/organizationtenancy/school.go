@@ -167,6 +167,16 @@ func ValidateSchoolContactEmail(email string) error {
 	return nil
 }
 
+// UsableReplyAddress reports whether value is an address the mail identity
+// writes as Reply-To: a bare mailbox after trimming (#1936). Contact data and
+// the reply setting can predate the current validation, so the school list
+// applies the same rule to mark a school whose replies bounce (#7174).
+func UsableReplyAddress(value string) bool {
+	value = strings.TrimSpace(value)
+	parsed, err := mail.ParseAddress(value)
+	return err == nil && parsed.Address == value
+}
+
 // ValidateSchool checks the shared school fields after normalization.
 func ValidateSchool(organizationID int64, name, slug, subdomain, email string) error {
 	if organizationID <= 0 {

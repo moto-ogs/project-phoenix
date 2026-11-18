@@ -34,6 +34,13 @@ describe("notification feed mapping", () => {
     ).toBe("2026-11-15T10:00:00Z");
   });
 
+  it("names the school of an entry in the Träger-Portal (#7146)", () => {
+    expect(
+      mapNotificationFeedEntry({ ...wire, school_name: "OGS Sonnenhof" })
+        .schoolName,
+    ).toBe("OGS Sonnenhof");
+  });
+
   it("maps a page; an empty cursor means no further page", () => {
     expect(
       mapNotificationFeedPage({

@@ -33,6 +33,8 @@ export function parentReportAbsenceTopic(): HelpTopic {
       "Manche OGS bestätigen jede Meldung erst. Dann steht `Freigabe ausstehend`, und Ihr Kind gilt bis dahin als erwartet.",
       "Am Kind steht danach `Krank` oder `Entschuldigt` mit den Tagen.",
       "Wurde eine Anfrage abgelehnt, steht dort `Abgelehnt`.",
+      // #4803: die Meldung für ein Kind ohne OGS-Platz geht an die Schule.
+      "Ihr Kind hat keinen Platz in der OGS? Dann heißen das Feld `Grund / Hinweis` und der Knopf `Krankmeldung senden` oder `Entschuldigung senden`. Die Schule sieht die Meldung.",
       // #5698: Schuleinträge überschreibt keine Elternmeldung.
       "Hat die OGS einen Tag schon eingetragen, etwa ab einer Uhrzeit entschuldigt? Dann geht für diesen Tag eine Anfrage an die OGS. Sie entscheidet. Bis dahin gilt ihr Eintrag. Die anderen Tage meldet moto direkt.",
     ],

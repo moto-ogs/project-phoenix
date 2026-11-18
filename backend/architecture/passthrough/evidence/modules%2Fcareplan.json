@@ -156,7 +156,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (d ParentStudentDirectory) ListStudentsByID(ctx context.Context, ids []int64) ([]DirectoryStudent, error) {\n\tstudents, err := d.Directory.ListParentPortalStudents(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]DirectoryStudent, 0, len(students))\n\tfor _, student := range students {\n\t\tresult = append(result, DirectoryStudent{ID: student.ID, TenantID: student.TenantID, PersonID: student.PersonID, SchoolClass: student.SchoolClass, Status: student.Status, EnrolledFrom: student.EnrolledFrom.String(), EnrolledUntil: student.EnrolledUntil.String()})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (d ParentStudentDirectory) ListStudentsByID(ctx context.Context, ids []int64) ([]DirectoryStudent, error) {\n\tstudents, err := d.Directory.ListParentPortalStudents(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]DirectoryStudent, 0, len(students))\n\tfor _, student := range students {\n\t\tresult = append(result, DirectoryStudent{ID: student.ID, TenantID: student.TenantID, PersonID: student.PersonID, SchoolClass: student.SchoolClass, Status: student.Status, EnrolledFrom: student.EnrolledFrom.String(), EnrolledUntil: student.EnrolledUntil.String(), WithoutCarePlace: student.WithoutCarePlace})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/adapters/parentpostgres/ParentStudentDirectory.ListStudentsByID",
       "owner": "modules/careplan"

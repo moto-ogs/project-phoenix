@@ -25,7 +25,9 @@ Bestätigung und „Löschen frühestens am“. Der Träger muss deaktiviert sei
 Schonfrist muss abgelaufen sein. Sonst endet der Lauf vor der ersten Schule mit
 Fehlerstatus. Danach löscht er jede Schule wie unten und zuletzt die Wurzel mit
 Mitgliedschaften, Träger-Rollen und Träger-Sitzungen
-(`platform.erase_organization`). Die Löschungsliste enthält weiterhin nur
+(`platform.erase_organization`). Die Wurzel nimmt auch die Belege des Trägers
+mit, darunter die Nachweise zum Monatsbeitrag mit ihren Verträgen (#7248). Die
+Löschungsliste enthält weiterhin nur
 Schulen; nach einem Restore den Trägerauftrag mit derselben Referenz erneut
 ausführen. Restore-Verfahren: siehe [Restore-Prüfung](daily-backup.md).
 Nebensystemfristen und deren produktive Nachweise: 3837-f.
