@@ -231,12 +231,12 @@ export interface AttendancePatchBody {
 }
 
 interface BackendPlannedTimetableInstance {
-  id: number;
+  id: string | number;
   title: string;
   date: string;
   start_time: string;
   end_time: string;
-  room_id: number;
+  room_id: string | number;
   room_name?: string | null;
   activity_type?: string;
   status: PlannedTimetableInstance["status"];
@@ -248,7 +248,7 @@ interface BackendPlannedTimetableInstance {
   current_students_count?: number;
   planned_students_count?: number;
   is_spontaneous?: boolean;
-  assigned_staff_ids: number[];
+  assigned_staff_ids: (string | number)[];
   is_assigned?: boolean;
   is_primary?: boolean;
   is_substitute?: boolean;
@@ -261,25 +261,25 @@ interface BackendPlannedTimetableInstance {
   start_expires_at?: string;
   can_reopen?: boolean;
   reopen_until?: string;
-  active_group_id?: number | null;
+  active_group_id?: string | number | null;
   cancel_reason?: string | null;
   planning_track_name?: string | null;
   planning_track_color?: string | null;
   group_name?: string | null;
   staff_names?: {
-    staff_id: number;
+    staff_id: string | number;
     display_name: string;
     is_substitute?: boolean;
   }[];
 }
 
 interface BackendRosterInstance {
-  id: number;
+  id: string | number;
   title: string;
   status: TimetableRosterInstance["status"];
   is_spontaneous?: boolean;
-  active_group_id?: number | null;
-  room_id: number;
+  active_group_id?: string | number | null;
+  room_id: string | number;
   room_name?: string | null;
   date?: string;
   start_time?: string;
@@ -289,14 +289,14 @@ interface BackendRosterInstance {
 }
 
 interface BackendRosterRow {
-  student_id: number;
+  student_id: string | number;
   student_name: string;
   school_class: string;
   group_name: string;
   planned: boolean;
   is_unplanned: boolean;
   currently_present: boolean;
-  visit_id?: number | null;
+  visit_id?: string | number | null;
   status: TimetableRosterRow["status"];
   substatus?: TimetableRosterRow["substatus"];
   note?: string | null;
@@ -308,7 +308,7 @@ interface BackendRosterRow {
   care_day_status?: TimetableRosterRow["careDayStatus"];
   teacher_hints?: TeacherHint[];
   parallel_present_in?: {
-    instance_id: number;
+    instance_id: string | number;
     title: string;
     start_time: string;
     end_time: string;
@@ -325,9 +325,9 @@ interface BackendRosterWarning {
   message: string;
   expected_arrival?: string | null;
   slot_start?: string | null;
-  expected_group_id?: number | null;
+  expected_group_id?: string | number | null;
   expected_group_name?: string | null;
-  current_education_group_id?: number | null;
+  current_education_group_id?: string | number | null;
 }
 
 export interface BackendTimetableRoster {
@@ -345,9 +345,9 @@ export interface BackendTimetableRoster {
 }
 
 export interface BackendStartOperationResult {
-  instance_id: number;
+  instance_id: string | number;
   status: string;
-  active_group_id: number;
+  active_group_id: string | number;
 }
 
 export function mapPlannedInstance(

@@ -41,6 +41,8 @@
   "letterhead_too_long": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "number_range_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "number_range_missing": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "number_range_start_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "number_range_start_taken": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "parent_document_not_found": "Bu belge artık mevcut değil. Lütfen sayfayı yenileyin.",
   "payment_text_debtor_number_missing": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "recipient_email_missing": "{object} değiştirilemedi. Güncel durumu kontrol edin.",

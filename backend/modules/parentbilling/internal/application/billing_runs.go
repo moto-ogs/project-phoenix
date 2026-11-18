@@ -61,9 +61,13 @@ type RunStore interface {
 	InsertRunEvent(ctx context.Context, organizationID, runID, accountID int64, action string, details map[string]any) error
 	ListNumberRanges(ctx context.Context, organizationID int64) ([]parentbilling.NumberRange, error)
 	SetNumberRange(ctx context.Context, organizationID int64, service, pattern string) (parentbilling.NumberRange, error)
+	// The counters and start values of the number ranges (#7358).
+	numberRangeStartStore
 	// ReserveNumbers raises the counter of the service and year by count
-	// and returns the first of the reserved numbers. It holds the counter
-	// until the transaction ends, so a parallel release waits.
+	// and returns the first of the reserved numbers: the number after the
+	// last issued one, or the start value of the counter when that is
+	// larger (#7358). It holds the counter until the transaction ends, so a
+	// parallel release waits.
 	ReserveNumbers(ctx context.Context, organizationID int64, service string, year, count int) (int64, error)
 	// IssueDocuments stores the numbered invoices with their positions; the
 	// i-th invoice has the sequence first+i of the counter of year. A
@@ -102,22 +106,27 @@ type BillingRuns struct {
 	settings      parentbilling.HolidayBillingSettings
 	renderer      TableRenderer
 	kinds         documentKindGate
+	names         parentbilling.ExportActorNames
 	today         func() calendar.Date
 }
 
-var _ parentbilling.BillingRuns = (*BillingRuns)(nil)
+var (
+	_ parentbilling.BillingRuns       = (*BillingRuns)(nil)
+	_ parentbilling.NumberRangeStarts = (*BillingRuns)(nil)
+)
 
 // NewBillingRuns builds the billing runs. renderer renders the overview of
 // a released run; templates tell whether a fee notice has its legal remedy
-// (#4688); today is the issue date of a release.
+// (#4688); names names who set a start value of a number range (#7358);
+// today is the issue date of a release.
 func NewBillingRuns(store RunStore, registrations parentbilling.HolidayBillingRegistrations, settings parentbilling.HolidayBillingSettings,
-	renderer TableRenderer, templates parentbilling.BillingDocumentTemplates, today func() calendar.Date,
+	renderer TableRenderer, templates parentbilling.BillingDocumentTemplates, names parentbilling.ExportActorNames, today func() calendar.Date,
 ) *BillingRuns {
-	if store == nil || registrations == nil || settings == nil || renderer == nil || today == nil {
-		panic("parent billing: the store, the holiday registrations, the settings, the renderer and the clock are required")
+	if store == nil || registrations == nil || settings == nil || renderer == nil || names == nil || today == nil {
+		panic("parent billing: the store, the holiday registrations, the settings, the renderer, the names and the clock are required")
 	}
 	return &BillingRuns{store: store, registrations: registrations, settings: settings, renderer: renderer,
-		kinds: newDocumentKindGate(store, templates), today: today}
+		kinds: newDocumentKindGate(store, templates), names: names, today: today}
 }
 
 // checkRelease refuses a release of nothing, of a preview whose count, sum
@@ -385,60 +394,6 @@ func (b *BillingRuns) releasedKind(ctx context.Context, organizationID int64, se
 		return "", parentbilling.ErrBillingRunChanged
 	}
 	return documentKind, nil
-}
-
-// ListNumberRanges lists the number range of every service, with the
-// number the next invoice would get today. A service without a pattern
-// shows an empty one.
-func (b *BillingRuns) ListNumberRanges(ctx context.Context, organizationID int64) ([]parentbilling.NumberRange, error) {
-	if organizationID <= 0 {
-		return nil, errTraegerRequired
-	}
-	ranges, err := b.store.ListNumberRanges(ctx, organizationID)
-	if err != nil {
-		return nil, fmt.Errorf("parent billing: list number ranges: %w", err)
-	}
-	// Every service shows its range, an empty one until it is set; the
-	// monthly care has its own (#4684).
-	for _, service := range []string{parentbilling.ServiceHoliday, parentbilling.ServiceCare} {
-		if !slices.ContainsFunc(ranges, func(numberRange parentbilling.NumberRange) bool { return numberRange.Service == service }) {
-			ranges = append(ranges, parentbilling.NumberRange{Service: service})
-		}
-	}
-	return b.withExamples(ranges), nil
-}
-
-// SetNumberRange sets the pattern of a service. Issued invoices keep their
-// numbers; the counter goes on.
-func (b *BillingRuns) SetNumberRange(ctx context.Context, organizationID int64, service, pattern string) (parentbilling.NumberRange, error) {
-	if organizationID <= 0 {
-		return parentbilling.NumberRange{}, errTraegerRequired
-	}
-	service = strings.TrimSpace(service)
-	if service != parentbilling.ServiceHoliday && service != parentbilling.ServiceCare {
-		return parentbilling.NumberRange{}, validation.Errors{"service": errors.New("unknown service")}
-	}
-	pattern, err := normalizeNumberPattern(pattern)
-	if err != nil {
-		return parentbilling.NumberRange{}, err
-	}
-	numberRange, err := b.store.SetNumberRange(ctx, organizationID, service, pattern)
-	if err != nil {
-		return parentbilling.NumberRange{}, fmt.Errorf("parent billing: set number range: %w", err)
-	}
-	return b.withExamples([]parentbilling.NumberRange{numberRange})[0], nil
-}
-
-// withExamples names the first number of this year for every pattern. It
-// shows the form of a number, not the next number of the counter.
-func (b *BillingRuns) withExamples(ranges []parentbilling.NumberRange) []parentbilling.NumberRange {
-	year := b.today().Year()
-	for i := range ranges {
-		if ranges[i].Pattern != "" {
-			ranges[i].Example = formatInvoiceNumber(ranges[i].Pattern, year, 1)
-		}
-	}
-	return ranges
 }
 
 // lockCalculated holds a calculated run until the transaction ends, so

@@ -84,7 +84,7 @@ func (rs *Resource) schoolMySupervisions(w http.ResponseWriter, r *http.Request)
 		rs.renderOperationsError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{"instances": result}, "Eigene Aufsichten des Tages")
+	common.Respond(w, r, http.StatusOK, SchoolSupervisionsResponse{Instances: result}, "Eigene Aufsichten des Tages")
 }
 
 // schoolStudentSheet serves the pickup and emergency information of ONE child
