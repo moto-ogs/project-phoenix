@@ -2,10 +2,11 @@
 
 // Konten und Kostenstellen (#4821): auf welches Erlöskonto moto die Beiträge
 // jeder Leistung und jedes Angebots bucht, welche Kostenstelle (KOST1) eine
-// Schule und die Ferienbetreuung haben und welche zweite Kostenstelle (KOST2)
-// ein Angebot hat, jeweils ab einem Tag. Beim Ausstellen hält jede
-// Rechnungsposition ihre Werte fest; DATEV-Datei und Sollstellung buchen
-// damit. Nur das Recht „Finanz-Export“ sieht die Seite.
+// Schule, ihre Ferienbetreuung (#7357) und die Ferienbetreuung ohne Schule
+// haben und welche zweite Kostenstelle (KOST2) ein Angebot hat, jeweils ab
+// einem Tag. Beim Ausstellen hält jede Rechnungsposition ihre Werte fest;
+// DATEV-Datei und Sollstellung buchen damit. Nur das Recht „Finanz-Export“
+// sieht die Seite.
 
 import {
   CostCentersCard,

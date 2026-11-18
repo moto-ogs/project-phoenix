@@ -155,6 +155,7 @@ jobs:
       TENANT_DOMAIN: localhost
       METRICS_BEARER_TOKEN: ci-metrics-token
       # Seeder input for security.ogs_device_pin only; no runtime fallback.
+      # The settings write rejects trivial PINs such as 1234 (#7175).
       OGS_DEVICE_PIN: "4711"
       EMAIL_SMTP_HOST: localhost
       EMAIL_SMTP_PORT: 1025

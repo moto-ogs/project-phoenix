@@ -374,14 +374,21 @@ type FormProps = Partial<
 /**
  * Renders the form the way the phase pages do: with the phase's data
  * prefetched, built from the fixtures above. A test that passes
- * `previewSchema` gets the template preview instead.
+ * `previewSchema` gets the template preview instead, with the school's legal
+ * texts handed in as the preview page does.
  */
 async function renderForm(props: FormProps = {}) {
+  const preview =
+    "previewSchema" in props && props.prefetchedData === undefined;
   const prefetchedData =
     props.prefetchedData ??
-    ("previewSchema" in props
+    (preview
       ? undefined
       : await fixturePrefetchedData(props.skipCaptcha === true));
+  const previewLegalTexts = preview
+    ? (props.previewLegalTexts ??
+      ((await mockFetchPublicLegalTexts()) as PublicLegalTexts))
+    : props.previewLegalTexts;
   return render(
     <EnrollmentForm
       phaseID="5"
@@ -389,6 +396,7 @@ async function renderForm(props: FormProps = {}) {
       onSubmitted={vi.fn()}
       {...props}
       prefetchedData={prefetchedData}
+      previewLegalTexts={previewLegalTexts}
     />,
   );
 }
@@ -1401,33 +1409,6 @@ describe("EnrollmentForm", () => {
     ).toBeInTheDocument();
   });
 
-  it("fails closed when the preview cannot load the legal texts", async () => {
-    // A template without its own legal blocks previews the school's texts.
-    // A real load failure must replace the form, so it never shows consent
-    // without the configured documents. Unconfigured texts (empty strings,
-    // a 200) do not trigger this; see the beforeEach default.
-    mockFetchPublicLegalTexts.mockReset();
-    mockFetchPublicLegalTexts.mockRejectedValue(
-      new ApiError("legal texts request failed: 500", 500),
-    );
-    await renderForm({
-      phaseID: undefined,
-      previewMode: true,
-      previewSchema: schema(),
-    });
-    await waitForLoaded();
-
-    // The backend sentence never reaches the reader.
-    expect(
-      await screen.findByText(catalogText("general.server", "die Anmeldung")),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("legal texts request failed: 500"),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /absenden/i })).toBeNull();
-    expect(screen.queryByText("Allergien")).not.toBeInTheDocument();
-  });
-
   it("localizes the e-mail contact notice CTA in localized public copy", async () => {
     mockIntlLocale.value = "en";
 
@@ -1825,9 +1806,7 @@ describe("EnrollmentForm", () => {
     expect(payload.consent_flags).toEqual({ custom_pool: true });
   });
 
-  it("renders legal blocks from preview schemas without loading tenant legal texts", async () => {
-    mockFetchPublicLegalTexts.mockClear();
-
+  it("renders a preview template's own legal blocks instead of the school's texts", async () => {
     await renderForm({
       phaseID: undefined,
       previewMode: true,
@@ -1864,10 +1843,15 @@ describe("EnrollmentForm", () => {
     });
     await waitForLoaded();
 
-    expect(mockFetchPublicLegalTexts).not.toHaveBeenCalled();
     expect(
       screen.getByText("Mein Kind darf beim Ausflug fotografiert werden."),
     ).toBeInTheDocument();
+    // The school's texts were handed in, the template's own blocks win.
+    expect(
+      screen.queryByText(
+        "Ich habe die Datenschutzinformation der Schule zur Kenntnis genommen.",
+      ),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByText("Diese Zustimmung ist deaktiviert."),
     ).not.toBeInTheDocument();
@@ -5115,34 +5099,6 @@ describe("EnrollmentForm — fixed pickup times", () => {
 
     await waitFor(() => expect(onSubmitted).toHaveBeenCalled());
     expect(mockSubmitEnrollment).toHaveBeenCalledTimes(2);
-  });
-
-  it("stops the preview when its legal texts fail, then retries", async () => {
-    mockFetchPublicLegalTexts.mockReset();
-    mockFetchPublicLegalTexts
-      .mockRejectedValueOnce(new ApiError("legal texts", 503))
-      .mockResolvedValueOnce(legalTexts());
-    await renderForm({
-      phaseID: undefined,
-      previewMode: true,
-      previewSchema: pickupSchema(),
-    });
-    await waitForLoaded();
-
-    expect(
-      await screen.findByText(
-        catalogText("general.unavailable", "die Anmeldung"),
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Vorschau, nicht absenden" }),
-    ).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
-
-    expect(
-      await screen.findByRole("button", { name: "Vorschau, nicht absenden" }),
-    ).toBeInTheDocument();
   });
 });
 

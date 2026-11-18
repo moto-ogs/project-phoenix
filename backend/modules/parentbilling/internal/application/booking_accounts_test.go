@@ -327,6 +327,17 @@ func TestBookingAccountsChecksTheScopeOfTheTraeger(t *testing.T) {
 	_, err = accounts.AddCostCenter(ctx, sjrReviewer, parentbilling.CostCenter{Scope: parentbilling.BookingScopeCare,
 		ValidFrom: onDay(2026, time.October, 1), Code: "X"})
 	assert.ErrorIs(t, err, parentbilling.ErrBookingScopeNotFound, "KOST1 belongs to a school or the holiday care")
+	for scopeID, name := range map[int64]string{99: "the holiday KOST1 of a school of another Träger", 0: "the holiday KOST1 names its school"} {
+		_, err = accounts.AddCostCenter(ctx, sjrReviewer, parentbilling.CostCenter{Scope: parentbilling.BookingScopeSchoolHoliday, ScopeID: scopeID,
+			ValidFrom: onDay(2026, time.October, 1), Code: "X"})
+		assert.ErrorIs(t, err, parentbilling.ErrBookingScopeNotFound, name)
+	}
+	_, err = accounts.SetRevenueAccount(ctx, sjrReviewer, parentbilling.BookingScopeSchoolHoliday, 11, "4410")
+	assert.ErrorIs(t, err, parentbilling.ErrBookingScopeNotFound, "the holiday care of a school has a cost center, no revenue account")
+	_, err = accounts.AddCostCenter(ctx, sjrReviewer, parentbilling.CostCenter{Scope: parentbilling.BookingScopeSchoolHoliday, ScopeID: 11,
+		ValidFrom: onDay(2026, time.October, 1), Code: "5469"})
+	require.NoError(t, err, "the holiday KOST1 of a school of the Träger (#7357)")
+	store.assignments.CostCenters = nil
 	page, err := accounts.AddCostCenter(ctx, sjrReviewer, parentbilling.CostCenter{Scope: parentbilling.BookingScopeHoliday,
 		ValidFrom: onDay(2026, time.October, 1), Code: "FER"})
 	require.NoError(t, err)

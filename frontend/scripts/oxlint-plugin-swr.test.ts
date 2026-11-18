@@ -503,12 +503,24 @@ describe.concurrent("swr/no-effect-load", () => {
       "const [rows, setRows] = useState([]); const read = async () => { setRows(await fetchRows()); }; const latest = useRef(read); useEffect(() => { void latest.current(); }, []); return rows;",
     ],
     [
-      "a promise chain with only catch",
-      "const [failed, setFailed] = useState(false); useEffect(() => { fetchRows().catch(() => setFailed(true)); }, []); return failed;",
+      "an answer handed to a component function that sets state",
+      "const [rows, setRows] = useState([]); const apply = (next) => { setRows(next); }; useEffect(() => { void fetchRows().then((next) => apply(next)); }, []); return rows;",
     ],
     [
-      "a promise chain with only finally",
-      "const [busy, setBusy] = useState(true); useEffect(() => { void fetchRows().finally(() => setBusy(false)); }, []); return busy;",
+      "a value derived from the answer",
+      "const [count, setCount] = useState(0); useEffect(() => { void (async () => { const rows = await fetchRows(); const size = rows.length; setCount(size); })(); }, []); return count;",
+    ],
+    [
+      "an answer destructured before it reaches state",
+      "const [rows, setRows] = useState([]); useEffect(() => { void fetchRows().then(({ items }) => setRows(items)); }, []); return rows;",
+    ],
+    [
+      "an answer beside a loading flag",
+      "const [rows, setRows] = useState([]); const [busy, setBusy] = useState(true); useEffect(() => { void fetchRows().then(setRows).finally(() => setBusy(false)); }, []); return { rows, busy };",
+    ],
+    [
+      "a chunk import behind a local loader, whose module is kept",
+      "const [mod, setMod] = useState(null); const loadChunk = () => import('./chunk'); useEffect(() => { void loadChunk().then((m) => setMod(m)); }, []); return mod;",
     ],
   ])("rejects %s", async (_name, body) => {
     const result = await lintSource(
@@ -559,6 +571,32 @@ describe.concurrent("swr/no-effect-load", () => {
       "an effect function that is not a local function",
       "const [rows] = useState([]); const run = useCallback; useEffect(run, []); return rows;",
     ],
+    // No answer is kept: the effect only notes that something finished. A
+    // write, a sign-out or a guard reads nothing a page could share.
+    [
+      "a write that only notes it finished",
+      "const [done, setDone] = useState(false); useEffect(() => { void (async () => { await fetchRows(); setDone(true); })(); }, []); return done;",
+    ],
+    [
+      "a promise chain that only notes a failure",
+      "const [failed, setFailed] = useState(false); useEffect(() => { fetchRows().catch(() => setFailed(true)); }, []); return failed;",
+    ],
+    [
+      "a promise chain that only clears a busy flag",
+      "const [busy, setBusy] = useState(true); useEffect(() => { void fetchRows().finally(() => setBusy(false)); }, []); return busy;",
+    ],
+    [
+      "a then that ignores its answer",
+      "const [ready, setReady] = useState(false); useEffect(() => { void fetchRows().then(() => setReady(true)); }, []); return ready;",
+    ],
+    [
+      "a code chunk loaded with import()",
+      "const [Dialog, setDialog] = useState(null); useEffect(() => { void import('./dialog').then(({ Dialog: Loaded }) => setDialog(() => Loaded)); }, []); return Dialog;",
+    ],
+    [
+      "an awaited code chunk",
+      "const [Dialog, setDialog] = useState(null); useEffect(() => { void (async () => { const loaded = await import('./dialog'); setDialog(() => loaded.Dialog); })(); }, []); return Dialog;",
+    ],
   ])("accepts %s", async (_name, body) => {
     const result = await lintSource(
       `${HEAD} export function useProbe() { ${body} }`,
@@ -606,6 +644,29 @@ describe("swr/no-effect-load disable comments", () => {
     expect(
       missingReason("// oxlint-disable-next-line ui-kit/no-raw-input"),
     ).toBe(false);
+  });
+
+  // A line the rule no longer needs would hide the next real load under it.
+  it("finds no exception the rule does not need", async () => {
+    const root = resolve(__dirname, "../src");
+    const stale = await Promise.all(
+      (readdirSync(root, { recursive: true }) as string[])
+        .filter((file) => /\.[cm]?[jt]sx?$/.test(file))
+        .map(async (file) => {
+          const lines = readFileSync(join(root, file), "utf8").split("\n");
+          const kept = lines.filter(
+            (line) => !DISABLE.exec(line)?.[1]?.includes("swr/no-effect-load"),
+          );
+          const exceptions = lines.length - kept.length;
+          if (exceptions === 0) return [];
+          const result = await lintSource(kept.join("\n"), `src/${file}`);
+          const flagged = result.output.split("swr(no-effect-load)").length - 1;
+          return flagged === exceptions
+            ? []
+            : [`src/${file}: ${exceptions} exceptions, ${flagged} needed`];
+        }),
+    );
+    expect(stale.flat()).toEqual([]);
   });
 
   it("finds no bare disable under src", () => {
