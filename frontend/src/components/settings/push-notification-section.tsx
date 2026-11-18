@@ -98,6 +98,7 @@ export function PushNotificationSection({
   const latestEnableRef = useRef<() => void>(() => undefined);
   const latestDisableRef = useRef<() => void>(() => undefined);
   const latestTestRef = useRef<() => void>(() => undefined);
+  const latestRefreshRef = useRef<() => Promise<void>>(async () => undefined);
   const [installAccepted, setInstallAccepted] = useState(false);
   const [installed, setInstalled] = useState<boolean | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | null>(
@@ -223,13 +224,13 @@ export function PushNotificationSection({
           retry: () => latestEnableRef.current(),
         });
       }
-      await refresh();
+      await latestRefreshRef.current();
       setBusy(false);
       return;
     }
     setBusy(false);
     toast.success(t("enabledMessage"));
-    await refresh();
+    await latestRefreshRef.current();
   };
 
   const install = async () => {
@@ -267,7 +268,7 @@ export function PushNotificationSection({
     }
     setBusy(false);
     toast.success(t("disabledMessage"));
-    await refresh();
+    await latestRefreshRef.current();
   };
 
   const sendTest = async () => {
@@ -291,6 +292,8 @@ export function PushNotificationSection({
   };
 
   useLayoutEffect(() => {
+    // Enrollment can recover the key while its click handler is still running.
+    latestRefreshRef.current = refresh;
     latestEnableRef.current = () => void enable();
     latestDisableRef.current = () => void disable();
     latestTestRef.current = () => void sendTest();

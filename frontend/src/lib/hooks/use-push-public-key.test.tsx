@@ -120,4 +120,57 @@ describe("usePushPublicKey", () => {
     expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/parent/me/push/public-key");
     await waitFor(() => expect(result.current.state).toBe("ready"));
   });
+
+  it.each(["ready", "missing"] as const)(
+    "recovers a transient failure without a click and caches the %s answer",
+    async (state) => {
+      vi.useFakeTimers();
+      fetchMock
+        .mockImplementationOnce(() =>
+          Promise.resolve(answer({ code: "general.server" }, 500)),
+        )
+        .mockImplementation(() =>
+          Promise.resolve(
+            state === "ready"
+              ? answer({ data: { public_key: VAPID_PUBLIC_KEY } })
+              : answer({ code: "general.input" }, 404),
+          ),
+        );
+
+      const { result, unmount } = renderHook(usePageReaders);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.map((read) => read.state)).toEqual([
+        "failed",
+        "failed",
+        "failed",
+      ]);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(result.current.map((read) => read.state)).toEqual([
+        state,
+        state,
+        state,
+      ]);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+      unmount();
+      const next = renderHook(usePageReaders);
+      expect(next.result.current.map((read) => read.state)).toEqual([
+        state,
+        state,
+        state,
+      ]);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    },
+  );
 });

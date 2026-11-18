@@ -36,10 +36,10 @@ export function usePushPublicKey(portal: PushPortal): PushPublicKeyRead {
     async () => ({ key: await fetchPushPublicKey(portal) }),
     {
       // The key changes with a server deployment, not within a tab.
+      // Failed reads still use the shared bounded retries.
       revalidateIfStale: false,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      shouldRetryOnError: false,
     },
   );
   return useMemo(() => {
