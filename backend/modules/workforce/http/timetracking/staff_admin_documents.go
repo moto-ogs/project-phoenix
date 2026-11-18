@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -31,6 +32,18 @@ const (
 	maxStaffDocumentFile = 10 * 1024 * 1024
 	maxStaffDocumentBody = maxStaffDocumentFile + 4096
 )
+
+// StaffDocumentObjects writes the staff document files, sealed with the ring
+// their category names (workforce.StaffDocumentKeyRing, #3840), and opens
+// them for download, sealed or legacy plaintext. The root binds the uploads
+// backend with the health and bank rings.
+type StaffDocumentObjects interface {
+	SaveSealed(ctx context.Context, kind string, tenantID int64, storedName string, source io.Reader, ring string) (int64, error)
+	OpenPrivate(ctx context.Context, kind string, tenantID int64, storedName string) (interface {
+		io.ReadSeekCloser
+		ModTime() time.Time
+	}, error)
+}
 
 // staffDocumentsDir is the per-tenant document directory
 // (workforce.StaffDocumentsDir).
@@ -258,17 +271,18 @@ func (rs *StaffAdminResource) uploadStaffDocument(w http.ResponseWriter, r *http
 	uploadCtx, cancelUpload := context.WithTimeout(r.Context(), workforce.StaffDocumentUploadDeadline)
 	defer cancelUpload()
 
-	filePath, err := rs.writeUploadedDocumentFile(r.Context(), id, uploaded.File, storedName)
+	category := r.FormValue("category")
+	filePath, size, err := rs.writeUploadedDocumentFile(r.Context(), id, uploaded.File, storedName, category)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
 	info, err := rs.StaffDocumentService.CreateStaffDocument(uploadCtx, workforce.CreateStaffDocumentInput{
 		StaffID:         id,
-		Category:        r.FormValue("category"),
+		Category:        category,
 		FilenameDisplay: uploaded.Filename,
 		FilenameStored:  storedName,
-		SizeBytes:       fileSizeOnDisk(filePath),
+		SizeBytes:       size,
 		ContentType:     uploaded.ContentType,
 	}, actor)
 	if err != nil {
@@ -295,11 +309,13 @@ func (rs *StaffAdminResource) queueUploadFileCleanup(ctx context.Context, staffI
 }
 
 // writeUploadedDocumentFile stores the upload in the tenant's document
-// directory. When the write fails nothing is left to clean up, so the queued
-// intent is completed right away.
-func (rs *StaffAdminResource) writeUploadedDocumentFile(ctx context.Context, staffID int64, file io.Reader, storedName string) (string, error) {
-	dir := staffDocumentsDir(tenant.FromContext(ctx), rs.uploads)
-	filePath, err := common.SavePrivateNamedFile(file, dir, storedName, rs.uploads)
+// directory, sealed when the category asks for it, and returns its path and
+// plaintext size. When the write fails nothing is left to clean up, so the
+// queued intent is completed right away.
+func (rs *StaffAdminResource) writeUploadedDocumentFile(ctx context.Context, staffID int64, file io.Reader, storedName, category string) (string, int64, error) {
+	tenantID := tenant.FromContext(ctx)
+	filePath := filepath.Join(staffDocumentsDir(tenantID, rs.uploads), storedName)
+	size, err := rs.documentObjects.SaveSealed(ctx, workforce.StaffDocumentStorageKind, tenantID, storedName, file, workforce.StaffDocumentKeyRing(category))
 	if err != nil {
 		if completeErr := rs.StaffDocumentService.MarkQueuedStaffDocumentFileCleanupCompleteByFilename(ctx, storedName); completeErr != nil {
 			rs.logger.Warn("staff document cleanup intent completion failed after upload write error",
@@ -307,9 +323,9 @@ func (rs *StaffAdminResource) writeUploadedDocumentFile(ctx context.Context, sta
 				"error", completeErr,
 			)
 		}
-		return "", err
+		return "", 0, err
 	}
-	return filePath, nil
+	return filePath, size, nil
 }
 
 // downloadStaffDocument serves GET /{id}/documents/{documentId}/download.
@@ -334,9 +350,20 @@ func (rs *StaffAdminResource) downloadStaffDocument(w http.ResponseWriter, r *ht
 		return
 	}
 
+	object, err := rs.documentObjects.OpenPrivate(r.Context(), workforce.StaffDocumentStorageKind, tenant.FromContext(r.Context()), doc.FilenameStored)
+	if err != nil {
+		common.RenderStatus(w, r, http.StatusNotFound, "")
+		return
+	}
+	defer func() {
+		if err := object.Close(); err != nil {
+			rs.logger.Error("staff document close error", "error", err)
+		}
+	}()
 	w.Header().Set("Content-Disposition", textnorm.ContentDisposition("attachment", doc.FilenameDisplay))
 	w.Header().Set("Content-Type", doc.ContentType)
-	common.ServeFile(w, r, staffDocumentsDir(tenant.FromContext(r.Context()), rs.uploads), doc.FilenameStored, "private, no-store", rs.uploads)
+	w.Header().Set("Cache-Control", "private, no-store")
+	http.ServeContent(w, r, doc.FilenameStored, object.ModTime(), object)
 }
 
 // deleteStaffDocument serves DELETE /{id}/documents/{documentId}: audited
@@ -436,16 +463,6 @@ func (rs *StaffAdminResource) releaseFailedDocumentUpload(ctx context.Context, s
 			"error", completeErr,
 		)
 	}
-}
-
-// fileSizeOnDisk returns the stored file's size; 0 on stat errors (the
-// metadata row still records the upload — size is display data only).
-func fileSizeOnDisk(path string) int64 {
-	info, err := os.Stat(path)
-	if err != nil {
-		return 0
-	}
-	return info.Size()
 }
 
 func (rs *StaffAdminResource) cleanupStaffDocumentFile(ctx context.Context, staffID, documentID int64, storedName, source string) {

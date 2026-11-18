@@ -583,6 +583,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (s *StaffDocumentFileSeal) Batch(ctx context.Context, schoolID, afterID int64, limit int, reseal workforce.StaffDocumentFileReseal) (workforce.StaffDocumentFileSealResult, error) {\n\tif schoolID \u003c= 0 || afterID \u003c 0 || limit \u003c 1 || limit \u003e 1000 || reseal == nil {\n\t\treturn workforce.StaffDocumentFileSealResult{}, errors.New(\"staff document file seal requires school, nonnegative cursor, batch size 1..1000 and the object store\")\n\t}\n\tcategories := []string{workforce.StaffDocumentCategoryAUBescheinigung, workforce.StaffDocumentCategoryLohnabrechnung}\n\treturn s.store.LockSealableStaffDocuments(ctx, schoolID, afterID, limit, categories, func(storedName, category string) (bool, error) {\n\t\tchanged, err := reseal(ctx, storedName, workforce.StaffDocumentKeyRing(category))\n\t\tif err != nil {\n\t\t\treturn false, errors.New(\"staff document file seal: a stored file could not be sealed\")\n\t\t}\n\t\treturn changed, nil\n\t})\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/internal/application/StaffDocumentFileSeal.Batch",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
       "evidence": "func (e missingRecord) Is(target error) bool {\n\treturn target == transactionruntime.ErrNoRows || e.RecordNotFoundError.Is(target) || target == workforce.ErrStaffDocumentNotFound\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/missingRecord.Is",

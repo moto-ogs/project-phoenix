@@ -55,4 +55,7 @@ type Backend interface {
 	RemoveObject(ctx context.Context, key string) error
 	// Stat returns the stored size in bytes.
 	ObjectSize(ctx context.Context, key string) (int64, error)
+	// ReplaceObject atomically replaces an existing private object with
+	// content: readers see either the old or the new bytes, never a mix.
+	ReplaceObject(ctx context.Context, key string, content []byte) error
 }

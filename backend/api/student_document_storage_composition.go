@@ -13,9 +13,10 @@ import (
 
 // NewStudentDocumentStorage keeps backend lookup lazy, so constructing a
 // resource neither opens storage nor fixes a process-global backend snapshot.
-func NewStudentDocumentStorage() careplanOwnerHTTP.StudentDocumentStorage {
+// The file rings seal and open the child health documents (#3840).
+func NewStudentDocumentStorage(files nativeUploads.FileKeys) careplanOwnerHTTP.StudentDocumentStorage {
 	return func(kind string, store careplanOwnerHTTP.StudentDocumentFileStore, logger *slog.Logger) (careplanOwnerHTTP.StudentDocumentFiles, error) {
-		backend, err := nativeUploads.PrivateUploadsBackend()
+		backend, err := nativeUploads.SealedPrivateUploadsBackend(files)
 		if err != nil {
 			return nil, err
 		}

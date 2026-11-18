@@ -283,6 +283,29 @@ services:
     networks:
       - demo
 
+  # Seals the stored sick notes, payslips and child health documents of one
+  # school and moves sealed ones onto the active keys (#3840). Run by hand per
+  # school; see docs/adr for the rollout.
+  upload-seal:
+    image: ghcr.io/moto-ogs/phoenix-server:demo
+    profiles: ["maintenance"]
+    command: ["./main", "upload-seal", "--uploads", "/app/public/uploads"]
+    volumes:
+      - demo-avatar-uploads:/app/public/uploads
+    environment:
+      TZ: ${TZ:?TZ is required}
+      APP_ENV: ${APP_ENV:?APP_ENV is required}
+      DB_DSN: ${DB_DSN:?DB_DSN is required}
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:?DB_MAX_OPEN_CONNS is required}
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:?DB_MAX_IDLE_CONNS is required}
+      DB_CONN_MAX_LIFETIME: ${DB_CONN_MAX_LIFETIME:?DB_CONN_MAX_LIFETIME is required}
+      DB_CONN_MAX_IDLE_TIME: ${DB_CONN_MAX_IDLE_TIME:?DB_CONN_MAX_IDLE_TIME is required}
+      HEALTH_DATA_KEYS: ${HEALTH_DATA_KEYS:?HEALTH_DATA_KEYS is required}
+      BANK_DATA_KEYS: ${BANK_DATA_KEYS:?BANK_DATA_KEYS is required}
+      BANK_DATA_LEGACY_KEYS: ${BANK_DATA_LEGACY_KEYS?BANK_DATA_LEGACY_KEYS is required}
+    networks:
+      - demo
+
 networks:
   demo:
     driver: bridge

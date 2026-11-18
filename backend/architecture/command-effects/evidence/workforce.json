@@ -12401,6 +12401,38 @@
       "target_owner": "shift-plan-sync"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
+      "binding_digest": "a7f79a17ef6a8297645b965f4660e831",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.OpenPrivate",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
+      "binding_digest": "78b1a3796dffb15c22cc96be2ef2d33c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
+      "binding_digest": "8d25ca4dce6a671a9053e22112a60a10",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
+      "binding_digest": "ae9f51937676866baaea51b5d52a8609",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.Query.CurrentStaffSchedule",
       "binding_digest": "7a6c8ff404e55844be841dd54eba4baf",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.scheduleReader.CurrentStaffSchedule",

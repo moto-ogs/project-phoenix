@@ -71,10 +71,20 @@ type TenantExportDependencies struct {
 	Fingerprints   ExportFingerprints
 	Sealed         TenantExportSealedFields
 	Projected      TenantExportProjectedFields
+	Objects        TenantExportObjects
 	SEPADebitFiles TenantExportSEPADebitFiles
 	Audit          TenantExportAudit
 	// Now is the root's clock the audit stamps each attempt with.
 	Now func() time.Time
+}
+
+// TenantExportObjects opens the stored originals for the package (#3840):
+// an object the source installation sealed (sick notes, payslips, child
+// health documents) is returned opened, any other object streamed as it is.
+// The root binds the object store with HEALTH_DATA_KEYS and BANK_DATA_KEYS;
+// a sealed object that does not open stops the export.
+type TenantExportObjects interface {
+	OpenStoredObject(key string, stored io.Reader) (io.Reader, error)
 }
 
 // TenantExportSEPADebitFiles hands the PAIN.008 file of each submitted

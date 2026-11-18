@@ -176,3 +176,49 @@ func (l *Local) ObjectSize(_ context.Context, key string) (int64, error) {
 	}
 	return info.Size(), nil
 }
+
+// ReplaceObject writes content to a private temporary file next to the
+// existing object, syncs it and renames it over the object. A missing object
+// reports ErrNotFound, so a removed document is never re-created.
+func (l *Local) ReplaceObject(ctx context.Context, key string, content []byte) error {
+	full, err := l.resolve(key)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(full); err != nil {
+		if os.IsNotExist(err) {
+			return ErrNotFound
+		}
+		return errors.New("storage: failed to stat object")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(full), ".replace-*")
+	if err != nil {
+		return errors.New("storage: failed to create object")
+	}
+	tmpName := tmp.Name()
+	cleanup := func() { _ = tmp.Close(); _ = os.Remove(tmpName) }
+	if err := tmp.Chmod(privateFileMode); err != nil {
+		cleanup()
+		return errors.New("storage: failed to secure object")
+	}
+	if _, err := tmp.Write(content); err != nil {
+		cleanup()
+		return errors.New("storage: failed to write object")
+	}
+	if err := tmp.Sync(); err != nil {
+		cleanup()
+		return errors.New("storage: failed to write object")
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpName)
+		return errors.New("storage: failed to write object")
+	}
+	if err := os.Rename(tmpName, full); err != nil {
+		_ = os.Remove(tmpName)
+		return errors.New("storage: failed to replace object")
+	}
+	return nil
+}

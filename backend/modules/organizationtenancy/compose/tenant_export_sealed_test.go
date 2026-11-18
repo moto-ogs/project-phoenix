@@ -3,6 +3,7 @@ package compose_test
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"path/filepath"
 	"testing"
 
@@ -64,7 +65,7 @@ func TestTenantExportRefusesSealedValuesItCannotOpen(t *testing.T) {
 		"wrong key":            {refusingSealedFields{}, `(parent_billing\.sepa_|enrollment\.holiday_|users\.student_care_profiles)`},
 		"without health owner": {bankOnly, `cannot open a sealed value of (enrollment\.holiday_|users\.student_care_profiles)`},
 	} {
-		exporter, err := compose.NewTenantExporter(db, organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint}, tt.sealed, projectedFields{}, &exportAuditFake{})
+		exporter, err := compose.NewTenantExporter(db, organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint}, tt.sealed, projectedFields{}, plainExportObjects{}, &exportAuditFake{})
 		require.NoError(t, err)
 		out := filepath.Join(t.TempDir(), "export")
 		err = exporter.Export(t.Context(), organizationtenancy.TenantExportOptions{SchoolID: a, OperatorID: 42, Output: out, Uploads: uploads})
@@ -82,7 +83,7 @@ func TestTenantExportRefusesContainersWithoutTheirOwner(t *testing.T) {
 	uploads := fixtureUploads(t, db, catalog, a, b)
 	settingsOnly := organizationtenancy.TenantExportProjectedFieldsByTable{"config.setting_values": projectedFields{}}
 	for name, projected := range map[string]organizationtenancy.TenantExportProjectedFields{"without owners": nil, "without the school owner": settingsOnly} {
-		exporter, err := compose.NewTenantExporter(db, organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint}, openedSealedFields{}, projected, &exportAuditFake{})
+		exporter, err := compose.NewTenantExporter(db, organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint}, openedSealedFields{}, projected, plainExportObjects{}, &exportAuditFake{})
 		require.NoError(t, err)
 		out := filepath.Join(t.TempDir(), "export")
 		err = exporter.Export(t.Context(), organizationtenancy.TenantExportOptions{SchoolID: a, OperatorID: 42, Output: out, Uploads: uploads})
@@ -90,4 +91,12 @@ func TestTenantExportRefusesContainersWithoutTheirOwner(t *testing.T) {
 		require.Regexp(t, `(config\.|platform\.schools)`, err.Error(), name)
 		require.NoFileExists(t, filepath.Join(out, "COMPLETE"), name)
 	}
+}
+
+// plainExportObjects hands every stored original out as it is stored; the
+// opening of sealed originals is covered in cmd (#3840).
+type plainExportObjects struct{}
+
+func (plainExportObjects) OpenStoredObject(_ string, stored io.Reader) (io.Reader, error) {
+	return stored, nil
 }

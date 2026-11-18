@@ -17265,6 +17265,47 @@
       "target_owner": "shift-plan-sync"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
+      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.PrivateUploads.OpenPrivate (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.OpenPrivate",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.OpenPrivate",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
+      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.SealedPrivateUploadsBackend (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/delivery/objects.PrivateUploads.SaveSealed (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Sealed write of #3840.",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.SaveSealed",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.sealedUploads.SaveSealed",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed",
+      "reason": "Read-only newly exposed target: workforce reaches modules/delivery/objects.SealedPrivateUploadsBackend (delivery-platform) through modules/workforce/http/timetracking.StaffDocumentObjects.SaveSealed. No persistent, lock or scope effect; opens sealed objects of #3840 (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.SealedPrivateUploadsBackend",
+      "target_owner": "delivery-platform"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.Query.CurrentStaffSchedule",
       "classification": "platform",

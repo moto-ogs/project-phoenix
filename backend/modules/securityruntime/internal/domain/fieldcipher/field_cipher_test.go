@@ -110,3 +110,35 @@ func TestFieldCipherRefusesAValueOfAnUnknownKey(t *testing.T) {
 		t.Fatal("garbage opens")
 	}
 }
+
+func TestFieldCipherRewrapMovesOntoTheActiveKeyAndConverges(t *testing.T) {
+	t.Parallel()
+	old, err := Parse("k1:" + testFieldKey(1))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	sealed, err := old.Seal([]byte("Attest"), []byte("ctx"))
+	if err != nil {
+		t.Fatalf("seal: %v", err)
+	}
+	if same, err := old.Rewrap(sealed, []byte("ctx")); err != nil || !bytes.Equal(same, sealed) {
+		t.Fatalf("a value on the active key must stay byte-identical: %v", err)
+	}
+	ring, err := Parse("k2:" + testFieldKey(2) + ",k1:" + testFieldKey(1))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	moved, err := ring.Rewrap(sealed, []byte("ctx"))
+	if err != nil || bytes.Equal(moved, sealed) {
+		t.Fatalf("rewrap onto k2: %v", err)
+	}
+	if id, _, _ := splitSealedField(moved); id != "k2" {
+		t.Fatalf("rewrapped onto %q", id)
+	}
+	if again, err := ring.Rewrap(moved, []byte("ctx")); err != nil || !bytes.Equal(again, moved) {
+		t.Fatalf("second rewrap must converge: %v", err)
+	}
+	if _, err := ring.Rewrap(sealed, []byte("other")); err != ErrOpen {
+		t.Fatalf("a value of another context must not rewrap: %v", err)
+	}
+}

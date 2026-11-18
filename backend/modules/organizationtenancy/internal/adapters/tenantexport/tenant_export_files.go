@@ -200,12 +200,22 @@ func (r *exportRun) copyObject(ctx context.Context, root *os.Root, key string, m
 		return errors.New("tenant export: cannot create original copy")
 	}
 	defer func() { _ = dst.Close() }()
-	digest, size, err := r.fingerprints.Reader(io.TeeReader(exportContextReader{ctx: ctx, reader: src}, dst))
+	read := &countingWriter{}
+	if r.objects == nil {
+		return errors.New("tenant export: object store unavailable")
+	}
+	// A sealed original (#3840) is handed out opened; the size check stays on
+	// the stored bytes.
+	original, err := r.objects.OpenStoredObject(key, io.TeeReader(exportContextReader{ctx: ctx, reader: src}, read))
+	if err != nil {
+		return errors.New("tenant export: sealed original does not open")
+	}
+	digest, size, err := r.fingerprints.Reader(io.TeeReader(original, dst))
 	if err != nil {
 		return errors.New("tenant export: cannot copy original")
 	}
 	after, err := src.Stat()
-	if err != nil || size != before.Size() || before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) {
+	if err != nil || read.n != before.Size() || before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) {
 		return errors.New("tenant export: original changed during copy")
 	}
 	if syncFile(dst) != nil || dst.Close() != nil {
@@ -216,6 +226,14 @@ func (r *exportRun) copyObject(ctx context.Context, root *os.Root, key string, m
 		return errors.New("tenant export: cannot write object mapping")
 	}
 	return nil
+}
+
+// countingWriter counts the stored bytes the copy consumed.
+type countingWriter struct{ n int64 }
+
+func (c *countingWriter) Write(p []byte) (int, error) {
+	c.n += int64(len(p))
+	return len(p), nil
 }
 
 type exportContextReader struct {

@@ -233,7 +233,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *PrivateUploads) OpenPrivate(ctx context.Context, kind string, tenantID int64, storedName string) (interface {\n\tio.ReadSeekCloser\n\tModTime() time.Time\n}, error) {\n\tkey, err := TenantKey(kind, tenantID, storedName)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tobject, err := s.backend.OpenObject(ctx, key)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026privateUploadObject{ReadSeekCloser: object.Content, modifiedAt: object.ModifiedAt}, nil\n}",
+      "evidence": "func (s *PrivateUploads) OpenPrivate(ctx context.Context, kind string, tenantID int64, storedName string) (interface {\n\tio.ReadSeekCloser\n\tModTime() time.Time\n}, error) {\n\tkey, err := TenantKey(kind, tenantID, storedName)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tobject, err := s.keys.openContent(ctx, s.backend, key)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026privateUploadObject{ReadSeekCloser: object.Content, modifiedAt: object.ModifiedAt}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/objects/PrivateUploads.OpenPrivate",
       "owner": "modules/delivery"
@@ -243,13 +243,6 @@
       "evidence": "func (s *PrivateUploads) RemovePrivate(ctx context.Context, kind string, tenantID int64, storedName string) error {\n\tkey, err := TenantKey(kind, tenantID, storedName)\n\tif err != nil {\n\t\treturn err\n\t}\n\treturn s.backend.RemoveObject(ctx, key)\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/objects/PrivateUploads.RemovePrivate",
-      "owner": "modules/delivery"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *PrivateUploads) SavePrivate(ctx context.Context, kind string, tenantID int64, storedName string, source io.Reader) (int64, error) {\n\tkey, err := TenantKey(kind, tenantID, storedName)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\treturn s.backend.WriteObject(ctx, key, source, SaveOptions{Private: true})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/delivery/objects/PrivateUploads.SavePrivate",
       "owner": "modules/delivery"
     },
     {
