@@ -48,6 +48,18 @@ func TestSettingsInputErrorNamesTheBlockingAttendanceWindow(t *testing.T) {
 	assert.Equal(t, apiCommon.CodeGeneralInput, body["code"], "any other rejected value keeps the general input code")
 }
 
+// A device PIN that is easy to guess gets its own code (#7175), so the school
+// reads why the PIN was refused instead of a general input error.
+func TestSettingsInputErrorNamesTheTrivialDevicePIN(t *testing.T) {
+	t.Parallel()
+
+	status, body := renderSettingsInputError(t, &settingsModule.SettingsError{Op: "set_value",
+		Err: &settingsModule.DevicePINTooSimpleError{Key: settingsModule.KeyOGSDevicePIN}})
+	assert.Equal(t, http.StatusBadRequest, status)
+	assert.Equal(t, apiCommon.CodeSettingsDevicePinTooSimple, body["code"])
+	assert.NotContains(t, body, "details", "the code takes no values")
+}
+
 // Switching the public enrollment form on without a privacy notice answers
 // with its own code, so the school reads what is missing (#7176).
 func TestSettingsInputErrorNamesTheMissingEnrollmentPrivacyNotice(t *testing.T) {

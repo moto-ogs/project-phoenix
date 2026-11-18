@@ -74,7 +74,7 @@ devbox run bootstrap      # installs development tools and frontend dependencies
 scripts/dev-native.sh up  # postgres+mailpit in Docker, backend+frontend native; migrates first
 
 # seed demo data (the setup script prints this command with your credentials)
-scripts/dev-native.sh backend go run ./cmd/devtools seed --email <op-email> --password '<pw>' --pin 1234 --url http://localhost:8080
+scripts/dev-native.sh backend go run ./cmd/devtools seed --email <op-email> --password '<pw>' --pin 4729 --url http://localhost:8080
 
 # create attendance and room data for the statistics demo
 scripts/dev-native.sh backend go run ./cmd/devtools simulate full-day --profile vollbetrieb --close

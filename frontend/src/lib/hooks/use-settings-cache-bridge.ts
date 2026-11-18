@@ -4,14 +4,18 @@ import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { subscribeSettingsChanged } from "~/lib/settings-broadcast";
 import { useTenantMutate, useTenantMutateMatching } from "~/lib/swr";
-import { homeKeys, STUDENT_KEY_FAMILIES } from "~/lib/swr/portal-keys";
+import {
+  devicePinKeys,
+  homeKeys,
+  STUDENT_KEY_FAMILIES,
+} from "~/lib/swr/portal-keys";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";
 import { announceChangeRequestsChanged } from "~/lib/change-requests-refresh";
 
 /**
  * Bridges cross-tab/cross-origin settings-change broadcasts to the active
- * tenant's SWR cache entry for SETTINGS_SCHEMA_SWR_KEY. Mount once in the
- * protected layout —
+ * tenant's SWR cache entries for the settings schema and device-PIN status.
+ * Mount once in the protected layout —
  * every SWR consumer (sidebar, mobile bottom nav, settings page, timetable
  * day hours) then refreshes automatically when:
  *   1. another same-origin tab calls notifySettingsChanged()  → BroadcastChannel
@@ -36,6 +40,7 @@ export function useSettingsCacheBridge(): void {
   useEffect(() => {
     const invalidate = () => {
       void tenantMutate(shellResourceKeys.settingsSchema());
+      void tenantMutate(devicePinKeys.status());
       // The navigation context carries the school switches the app shell
       // reads outside the settings page (#4996).
       void tenantMutate(shellResourceKeys.userContext());

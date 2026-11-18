@@ -328,7 +328,7 @@ func setupSettingsCallbackRoute(t *testing.T) *settingsCallbackRoute {
 	require.True(t, ok)
 	schools, err := owners.BuildServeOrganizations(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err)
-	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, repos.Enrollment().SchemaReferencesLegalDocument, time.Now, schools).SettingsRouter(), hub: hub}
+	return &settingsCallbackRoute{router: newSettingsResource(testpkg.NewDatabase(t, db), module.TenantSettings, homeLayouts, requireDevicePINOperations(module.Settings), repos.Enrollment().SchemaReferencesLegalDocument, time.Now, schools).SettingsRouter(), hub: hub}
 }
 
 func setupOperatorInvitationRoute(t *testing.T, graph *goldenRuntime) chi.Router {

@@ -717,8 +717,9 @@ func checkServerRejectedCommit(t *testing.T, super *bun.DB) {
 
 // holdLockWhileWaiting holds the lock probe row of tenantID until the worker
 // that reports its backend pid on pids waits on it (pg_blocking_pids of that
-// pid), then for hold more: the wait the sampler measures.
-func holdLockWhileWaiting(t *testing.T, super *bun.DB, tenantID int64, pids <-chan int, hold time.Duration) <-chan error {
+// pid), then waits for the sampler to observe that wait before holding for
+// hold more: the wait the sampler measures.
+func holdLockWhileWaiting(t *testing.T, super *bun.DB, tenantID int64, pids <-chan int, waitForSample func() error, hold time.Duration) <-chan error {
 	t.Helper()
 	ctx := t.Context()
 	_, err := super.ExecContext(ctx, `INSERT INTO public.lock_probe (id) VALUES (?)`, tenantID)
@@ -753,10 +754,36 @@ func holdLockWhileWaiting(t *testing.T, super *bun.DB, tenantID int64, pids <-ch
 			}
 			time.Sleep(5 * time.Millisecond)
 		}
+		if err := waitForSample(); err != nil {
+			done <- err
+			return
+		}
 		time.Sleep(hold) // the measured wait
 		done <- nil
 	}()
 	return done
+}
+
+func monitorSampleCount(counter *testpkg.QueryCounter) int {
+	count := 0
+	for _, q := range counter.Queries() {
+		if strings.HasPrefix(strings.TrimSpace(q), monitorSamplePrefix) {
+			count++
+		}
+	}
+	return count
+}
+
+func waitForMonitorSample(counter *testpkg.QueryCounter) error {
+	before := monitorSampleCount(counter)
+	deadline := time.Now().Add(2 * time.Second)
+	for monitorSampleCount(counter) <= before {
+		if time.Now().After(deadline) {
+			return fmt.Errorf("lock sampler did not observe the blocked worker")
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	return nil
 }
 
 // A COMMIT with unknown outcome is never replayed and never books the
@@ -771,8 +798,11 @@ func checkUnknownCommit(t *testing.T, super *bun.DB) {
 				t.Parallel()
 				// The unknown COMMIT is driver.ErrBadConn: a pool of its own.
 				pool, faults, tenantID := newBatch(t, super, d, true)
+				counter := testpkg.CaptureQueries(t, pool)
 				pids := make(chan int, 1)
-				held := holdLockWhileWaiting(t, super, tenantID, pids, hold)
+				held := holdLockWhileWaiting(t, super, tenantID, pids, func() error {
+					return waitForMonitorSample(counter)
+				}, hold)
 				codes := []string{"40P01", "40001", "55P03"}
 				result := d.run(t, pool, super, tenantID, driverSeams{copy: func(ctx context.Context, tx bun.Tx, call int) error {
 					if call == 1 {

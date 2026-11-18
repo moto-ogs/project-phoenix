@@ -330,6 +330,34 @@ export async function revealSettingValue(key: string): Promise<string | null> {
 }
 
 /**
+ * Why the school's tablets still need a device PIN of the school's own
+ * (#7175): "missing" locks every sign-in at the tablet, "too_simple" is a PIN
+ * that is easy to guess, such as the former default 1234. Null: nothing to do.
+ */
+export type DevicePinSetupReason = "missing" | "too_simple";
+
+/**
+ * Reads whether the school still needs a device PIN of its own while
+ * NFC-Anwesenheit is booked. The backend answers only with config:manage and
+ * never sends the PIN itself.
+ */
+export async function fetchDevicePinSetupReason(): Promise<DevicePinSetupReason | null> {
+  const response = await sessionFetch("/api/settings/device-pin-status");
+  if (!response.ok) {
+    throw await apiErrorFromResponse(
+      response,
+      `Failed to fetch device PIN status: ${response.statusText}`,
+    );
+  }
+  const json = (await response.json()) as {
+    data?: { setup_required?: boolean; reason?: string };
+  };
+  if (json.data?.setup_required !== true) return null;
+  // An unknown reason from a newer backend still asks for a PIN.
+  return json.data.reason === "too_simple" ? "too_simple" : "missing";
+}
+
+/**
  * The school's contact address (#7176). Switching the online enrollment on
  * offers it as the recipient of new-enrollment e-mails. Empty when the school
  * has none. A failed request throws an ApiError.

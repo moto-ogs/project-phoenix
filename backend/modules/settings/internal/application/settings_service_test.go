@@ -1701,8 +1701,38 @@ func TestSetValue_PINAccepts4Digits(t *testing.T) {
 
 	svc := createService(registry, newMockValueRepo(), &mockAuditRepo{})
 
-	err := svc.SetValue(tenantCtx(1), "security.ogs_device_pin", "1234", nil, nil)
+	err := svc.SetValue(tenantCtx(1), "security.ogs_device_pin", "4729", nil, nil)
 	require.NoError(t, err)
+}
+
+// The former default 1234 and other easy guesses are no PIN of the school's
+// own (#7175); the rejection is an invalid value with its own error type.
+func TestSetValue_PINRejectsTrivial(t *testing.T) {
+	t.Parallel()
+	registry := setupTest(t)
+	pinPattern := `^\d{4}$`
+	registry.Register(config.Definition{
+		Key:        config.KeyOGSDevicePIN,
+		Label:      "PIN",
+		Type:       config.FieldPassword,
+		Default:    "",
+		Tab:        "security",
+		Category:   "auth",
+		Validation: &config.ValidationRules{Pattern: &pinPattern},
+	})
+
+	repo := newMockValueRepo()
+	svc := createService(registry, repo, &mockAuditRepo{})
+
+	for _, pin := range []string{"1234", "0000", "4321", "1212"} {
+		err := svc.SetValue(tenantCtx(1), config.KeyOGSDevicePIN, pin, nil, nil)
+		var tooSimple *config.DevicePINTooSimpleError
+		require.ErrorAs(t, err, &tooSimple, pin)
+		require.ErrorIs(t, err, config.ErrInvalidValue, pin)
+	}
+	stored, err := repo.FindByTenantAndKey(context.Background(), 1, config.KeyOGSDevicePIN)
+	require.NoError(t, err)
+	assert.Nil(t, stored, "a rejected PIN is never stored")
 }
 
 func TestSetValue_PINRejectsEmpty(t *testing.T) {

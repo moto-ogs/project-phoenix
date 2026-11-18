@@ -2063,7 +2063,7 @@ func TestDefaults_HaveReasonableValues(t *testing.T) {
 		{"gdpr.room_detail_visible_days", 7},
 		{"feedback.enabled", false},
 		{"feedback.data_retention_days", 90},
-		{"security.ogs_device_pin", "1234"},
+		{"security.ogs_device_pin", ""},
 		{"checkout.raumwechsel_enabled", true},
 		{"checkout.schulhof_enabled", false},
 		{"checkout.wc_enabled", false},

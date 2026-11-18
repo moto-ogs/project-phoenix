@@ -1,6 +1,6 @@
 /**
- * Tests for useSettingsCacheBridge: invalidates the SETTINGS_SCHEMA_SWR_KEY
- * SWR cache when either signal fires:
+ * Tests for useSettingsCacheBridge: invalidates the settings schema and
+ * device-PIN-status SWR caches when either signal fires:
  *   1. same-origin BroadcastChannel ping (notifySettingsChanged)
  *   2. phoenix:tenant-settings-stale window event (cross-origin SSE)
  */
@@ -63,6 +63,9 @@ describe("useSettingsCacheBridge", () => {
 
     expect(mockMutate).toHaveBeenCalledWith(
       "test-tenant:account-7:settings-schema",
+    );
+    expect(mockMutate).toHaveBeenCalledWith(
+      "test-tenant:account-7:settings-device-pin-status",
     );
   });
 
@@ -130,6 +133,9 @@ describe("useSettingsCacheBridge", () => {
 
     expect(mockMutate).toHaveBeenCalledWith(
       "test-tenant:account-7:settings-schema",
+    );
+    expect(mockMutate).toHaveBeenCalledWith(
+      "test-tenant:account-7:settings-device-pin-status",
     );
   });
 

@@ -32,6 +32,7 @@ const (
 type SettingsResource struct {
 	operations    Operations
 	homeLayouts   HomeLayoutOperations
+	devicePIN     DevicePINOperations
 	runtime       Runtime
 	schoolContact SchoolContactEmail
 }
@@ -73,8 +74,15 @@ const (
 	settingsErrorForbidden = "forbidden"
 )
 
-func NewSettingsResource(operations Operations, homeLayouts HomeLayoutOperations, runtime Runtime, schoolContact SchoolContactEmail) *SettingsResource {
-	return &SettingsResource{operations: operations, homeLayouts: homeLayouts, runtime: runtime, schoolContact: schoolContact}
+// DevicePINOperations reports whether the school still needs a device PIN of
+// its own (#7175). Like HomeLayoutOperations it stays apart from the legacy
+// operations graph.
+type DevicePINOperations interface {
+	DevicePINStatus(context.Context) (any, error)
+}
+
+func NewSettingsResource(operations Operations, homeLayouts HomeLayoutOperations, devicePIN DevicePINOperations, runtime Runtime, schoolContact SchoolContactEmail) *SettingsResource {
+	return &SettingsResource{operations: operations, homeLayouts: homeLayouts, devicePIN: devicePIN, runtime: runtime, schoolContact: schoolContact}
 }
 
 // SettingsRouter returns a configured router for settings endpoints.
@@ -93,6 +101,9 @@ func (rs *SettingsResource) SettingsRouter() chi.Router {
 		// same tier that writes the payroll settings; carries a per-tenant
 		// staff-without-Personalnummer count (count only, no names).
 		r.With(rs.runtime.Require(AccessManage), withTx).Get("/payroll-status", rs.getPayrollStatus)
+		// Device PIN notice (#7175): config:manage only — the tier that
+		// writes security.ogs_device_pin. A flag only, never the PIN.
+		r.With(rs.runtime.Require(AccessManage), withTx).Get("/device-pin-status", rs.getDevicePINStatus)
 
 		r.With(settingsWrite, withTx).Get("/values/{key}/reveal", rs.revealValue)
 		r.With(settingsWrite, withTx).Put("/values/{key}", rs.setValue)

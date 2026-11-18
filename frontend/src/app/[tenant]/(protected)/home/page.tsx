@@ -24,6 +24,7 @@ import { BookingLeftoverTodos } from "~/components/home/booking-leftover-todos";
 import { RosterDeviationTodos } from "~/components/home/roster-deviation-todos";
 import { SchoolVacationHintsCore } from "~/components/timetable/school-vacation-hints-core";
 import { PhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
+import { DevicePinWarning } from "~/components/devices/device-pin-warning";
 import { Button } from "~/components/ui/button";
 import { ICON_ONLY } from "~/components/ui/control-geometry";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -422,9 +423,10 @@ function HomeContent() {
   const editing = draft !== null;
   const firstName = session?.user?.name?.trim().split(/\s+/)[0];
   const greeting = useTimeBasedGreeting();
-  // Die Route der Hinweise verlangt config:manage; die Leitung der Schule
-  // hält es, ob Admin oder eigene Leitungsrolle (#3469).
-  const canReadPhaseExpiryWarnings = leadsSchool(session);
+  // Die Hinweise zum Phasenende (#3469) und zur Geräte-PIN (#7175) verlangen
+  // config:manage; die Leitung der Schule hält es, ob Admin oder eigene
+  // Leitungsrolle.
+  const showsLeadershipNotices = leadsSchool(session);
   // Nur das Datum: die Zahlen des Tages trägt die Jetzt-Zone darunter, und
   // die Kennzahlen stehen als Kacheln auf der Fläche. Dieselbe Zahl dreimal
   // auf einem Bildschirm sagt nicht mehr als einmal.
@@ -522,7 +524,11 @@ function HomeContent() {
         )
       }
     >
-      {canReadPhaseExpiryWarnings && !editing ? <PhaseExpiryWarnings /> : null}
+      {showsLeadershipNotices && !editing ? <PhaseExpiryWarnings /> : null}
+
+      {/* Geräte-PIN (#7175): ohne eigene PIN fallen die Tablets aus oder
+          bleiben leicht zu öffnen. Der Hinweis bleibt, bis die PIN steht. */}
+      {showsLeadershipNotices && !editing ? <DevicePinWarning /> : null}
 
       {/* Spätere Abholzeit ohne Termin (#3261): eine Aufgabe, keine
           Kennzahl, deshalb fest über dem Brett wie die Hinweise davor. */}
