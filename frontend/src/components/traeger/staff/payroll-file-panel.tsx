@@ -21,6 +21,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { payrollConcept } from "~/lib/concepts/payroll";
 import type { StaffContractKind } from "~/lib/traeger-staff-api";
@@ -133,7 +134,7 @@ function BlockerList({ blockers }: Readonly<{ blockers: readonly Blocker[] }>) {
         {shown.map((blocker) => (
           <ResponsiveActionRow key={blocker.key}>
             <p className="min-w-0 text-sm text-gray-800">{blocker.text}</p>
-            <div className="flex shrink-0 gap-2">{blocker.action}</div>
+            <ResponsiveRowActions>{blocker.action}</ResponsiveRowActions>
           </ResponsiveActionRow>
         ))}
       </ResponsiveActionList>

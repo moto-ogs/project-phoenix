@@ -4765,6 +4765,68 @@ describe.concurrent("ui-kit action rows (#6571)", () => {
   });
 });
 
+describe.concurrent("ui-kit row actions slot (#7456)", () => {
+  const rule = "ui-kit(row-actions-slot)";
+
+  async function outputOf(jsx: string, path = "src/components/probe.tsx") {
+    const result = await lintSource(
+      `function Probe() { return ${jsx}; }\nvoid Probe;`,
+      path,
+    );
+    return result.output;
+  }
+
+  it("reports an own action column, also behind a condition or a kit component", async () => {
+    const [div, conditional, logical, menu] = await Promise.all([
+      outputOf(
+        `<ResponsiveActionRow><p>Text</p><div className="flex sm:justify-end"><Button /></div></ResponsiveActionRow>`,
+      ),
+      outputOf(
+        `<ResponsiveActionRow><p>Text</p>{ok ? <div className="flex"><Button /></div> : null}</ResponsiveActionRow>`,
+      ),
+      outputOf(
+        `<ResponsiveActionRow><p>Text</p>{ok && <div><Button /></div>}</ResponsiveActionRow>`,
+      ),
+      outputOf(
+        `<ResponsiveActionRow><p>Text</p><OverflowMenu items={[]} /></ResponsiveActionRow>`,
+      ),
+    ]);
+    expect(div).toContain(rule);
+    expect(conditional).toContain(rule);
+    expect(logical).toContain(rule);
+    expect(menu).toContain(rule);
+  });
+
+  it("allows the slot, rows without actions, passed-in children and the kit", async () => {
+    const [slot, conditional, textOnly, passed, extraRows, kit] =
+      await Promise.all([
+        outputOf(
+          `<ResponsiveActionRow><p>Text</p><ResponsiveRowActions leading={20}><Button /></ResponsiveRowActions></ResponsiveActionRow>`,
+        ),
+        outputOf(
+          `<ResponsiveActionRow><p>Text</p>{/* Hinweis */}{ok ? <ResponsiveRowActions><Button /></ResponsiveRowActions> : null}</ResponsiveActionRow>`,
+        ),
+        outputOf(`<ResponsiveActionRow><p>Text</p></ResponsiveActionRow>`),
+        outputOf(
+          `<ResponsiveActionRow><p>Text</p>{children}</ResponsiveActionRow>`,
+        ),
+        outputOf(
+          `<ResponsiveActionRow><p>Text</p><ResponsiveRowActions><Button /></ResponsiveRowActions><div className="sm:col-span-2">Form</div></ResponsiveActionRow>`,
+        ),
+        outputOf(
+          `<ResponsiveActionRow><p>Text</p><div><Button /></div></ResponsiveActionRow>`,
+          "src/components/ui/probe.tsx",
+        ),
+      ]);
+    expect(slot).not.toContain(rule);
+    expect(conditional).not.toContain(rule);
+    expect(textOnly).not.toContain(rule);
+    expect(passed).not.toContain(rule);
+    expect(extraRows).not.toContain(rule);
+    expect(kit).not.toContain(rule);
+  });
+});
+
 describe.concurrent("ui-kit sticky bars and slide-over layout (#5602)", () => {
   async function outputOf(jsx: string, path = "src/probe.tsx") {
     const result = await lintSource(

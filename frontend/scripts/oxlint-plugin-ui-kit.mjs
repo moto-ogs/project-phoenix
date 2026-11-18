@@ -4477,6 +4477,88 @@ const noHandRolledActionRow = {
   },
 };
 
+// ui-kit/row-actions-slot (#7456, hard-zero) — die Aktionsspalte einer
+// `ResponsiveActionRow` ist `ResponsiveRowActions`: Breite, Richtung und
+// Ausrichtung der Aktionen auf dem Handy entscheidet das Kit, nicht eine
+// abgeschriebene Klassenkette. Fund: das zweite Kind der Zeile (die Spalte
+// des Rasters), auch hinter `cond ? … : null` oder `cond && …`, ist ein
+// anderes Element. Weitergereichte Kinder (`{children}`) prüft der Aufrufer.
+const ROW_ACTIONS_SLOT = "ResponsiveRowActions";
+
+function rowColumnCandidates(child) {
+  if (child.type === "JSXText") return child.value.trim() === "" ? [] : null;
+  if (child.type === "JSXElement" || child.type === "JSXFragment") {
+    return [child];
+  }
+  if (child.type !== "JSXExpressionContainer") return null;
+  return expressionCandidates(child.expression);
+}
+
+function expressionCandidates(expression) {
+  if (expression.type === "JSXEmptyExpression") return [];
+  if (expression.type === "Literal" && expression.value === null) return [];
+  if (expression.type === "JSXElement" || expression.type === "JSXFragment") {
+    return [expression];
+  }
+  if (expression.type === "ConditionalExpression") {
+    const consequent = expressionCandidates(expression.consequent);
+    const alternate = expressionCandidates(expression.alternate);
+    if (consequent === null || alternate === null) return null;
+    return [...consequent, ...alternate];
+  }
+  if (expression.type === "LogicalExpression") {
+    return expressionCandidates(expression.right);
+  }
+  // `{children}`, `{actions(hint)}`: der Aufrufer liefert die Spalte.
+  return null;
+}
+
+const rowActionsSlot = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Require ResponsiveRowActions as the action column of a ResponsiveActionRow.",
+    },
+    messages: {
+      ownColumn:
+        "Die Aktionsspalte einer ResponsiveActionRow ist ResponsiveRowActions (~/components/ui/responsive-action-list): Knöpfe als Kinder, Kebab-Menü in `menu`, Feld mit `field`, Symbol vorn mit `leading` (#7456).",
+    },
+    schema: [],
+  },
+  create(context) {
+    const key = fileKey(context);
+    if (!key.startsWith("src/")) return {};
+    if (EXEMPT_FILE_RE.test(key) || key.startsWith(UI_KIT_DIR)) return {};
+    return {
+      JSXElement(node) {
+        if (jsxName(node.openingElement.name) !== "ResponsiveActionRow") return;
+        const columns = [];
+        for (const child of node.children) {
+          const candidates = rowColumnCandidates(child);
+          if (candidates === null) {
+            columns.push(null);
+          } else if (candidates.length > 0) {
+            columns.push(candidates);
+          }
+          if (columns.length === 2) break;
+        }
+        const actions = columns[1];
+        if (!actions) return;
+        for (const element of actions) {
+          const name =
+            element.type === "JSXElement"
+              ? jsxName(element.openingElement.name)
+              : null;
+          if (name !== ROW_ACTIONS_SLOT) {
+            context.report({ node: element, messageId: "ownColumn" });
+          }
+        }
+      },
+    };
+  },
+};
+
 // ui-kit/no-hand-rolled-field-label (#5589) — die Beschriftung eines Felds kommt
 // aus `FieldLabel` oder der `label`-Prop. Fund: `<label>` mit text-xs/text-sm und
 // font-medium/font-semibold, ein `<span>` dieser Art mit `block` und `mb-*` über
@@ -6773,6 +6855,7 @@ export default {
     "no-arbitrary-slide-over-width": noArbitrarySlideOverWidth,
     "no-hand-rolled-sticky-bar": noHandRolledStickyBar,
     "no-hand-rolled-action-row": noHandRolledActionRow,
+    "row-actions-slot": rowActionsSlot,
     "no-slide-over-row-override": noSlideOverRowOverride,
     "no-hand-rolled-surface": noHandRolledSurface,
     "no-hand-rolled-weekday-toggle": noHandRolledWeekdayToggle,

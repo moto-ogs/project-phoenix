@@ -10,6 +10,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -171,27 +172,29 @@ export function CareRulesCard({
                   </p>
                   <RuleDetails rule={rule} data={data} />
                 </div>
-                <div className="flex justify-end">
-                  <OverflowMenu
-                    ariaLabel={`Aktionen: ${rule.name}`}
-                    items={[
-                      {
-                        icon: <Pencil className="size-4" aria-hidden />,
-                        label: "Ändern",
-                        description: "Monate, Schulen und Wirkung der Regel",
-                        onClick: () => onEdit(rule),
-                      },
-                      {
-                        label: "Löschen",
-                        icon: <Trash2 className="size-4" aria-hidden />,
-                        description:
-                          "Gilt ab dem nächsten Lauf nicht mehr, moto fragt vorher nach",
-                        destructive: true,
-                        onClick: () => onDelete(rule),
-                      },
-                    ]}
-                  />
-                </div>
+                <ResponsiveRowActions
+                  menu={
+                    <OverflowMenu
+                      ariaLabel={`Aktionen: ${rule.name}`}
+                      items={[
+                        {
+                          icon: <Pencil className="size-4" aria-hidden />,
+                          label: "Ändern",
+                          description: "Monate, Schulen und Wirkung der Regel",
+                          onClick: () => onEdit(rule),
+                        },
+                        {
+                          label: "Löschen",
+                          icon: <Trash2 className="size-4" aria-hidden />,
+                          description:
+                            "Gilt ab dem nächsten Lauf nicht mehr, moto fragt vorher nach",
+                          destructive: true,
+                          onClick: () => onDelete(rule),
+                        },
+                      ]}
+                    />
+                  }
+                />
               </ResponsiveActionRow>
             );
           })}

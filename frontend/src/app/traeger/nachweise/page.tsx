@@ -25,6 +25,7 @@ import type {
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -500,7 +501,7 @@ function SchoolKinds({
                   {kind.name}
                 </p>
               </div>
-              <div className="sm:w-72">
+              <ResponsiveRowActions field>
                 <CustomSelect
                   ariaLabel={`Art des Trägers für ${kind.name}`}
                   value={draft[kind.schoolTypeId] ?? NO_MAPPING}
@@ -513,7 +514,7 @@ function SchoolKinds({
                   }
                   controlSize="dense"
                 />
-              </div>
+              </ResponsiveRowActions>
             </ResponsiveActionRow>
           ))}
         </ResponsiveActionList>

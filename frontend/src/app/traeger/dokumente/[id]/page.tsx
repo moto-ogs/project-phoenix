@@ -34,6 +34,7 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -416,7 +417,7 @@ export default function TraegerDocumentPage() {
                     </div>
                   </div>
                   {canManage ? (
-                    <div className="flex w-full flex-col gap-2 min-[480px]:w-auto min-[480px]:flex-row sm:justify-end">
+                    <ResponsiveRowActions leading={20}>
                       <Button
                         type="button"
                         variant="outline_danger"
@@ -430,7 +431,7 @@ export default function TraegerDocumentPage() {
                       >
                         Zurücknehmen
                       </Button>
-                    </div>
+                    </ResponsiveRowActions>
                   ) : null}
                 </ResponsiveActionRow>
               ))}

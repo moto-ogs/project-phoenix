@@ -8,6 +8,7 @@ import { DataField } from "~/components/ui/data-field";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
+  ResponsiveRowActions,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -119,7 +120,7 @@ function HolidayOfferList({
         {offers.map((offer) => (
           <ResponsiveActionRow
             key={offer.token}
-            className="block gap-[normal] py-3.5"
+            className="gap-3 py-3.5 sm:gap-[normal]"
           >
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -136,9 +137,9 @@ function HolidayOfferList({
               />
             </div>
             {isOpen(offer, today) ? (
-              <div className="max-sm:mt-3">
+              <ResponsiveRowActions>
                 <RegisterLink offer={offer} />
-              </div>
+              </ResponsiveRowActions>
             ) : null}
           </ResponsiveActionRow>
         ))}
