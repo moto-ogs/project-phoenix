@@ -13,7 +13,6 @@ const postgres = 'postgres:17.12-alpine3.24@sha256:34261f594522cf41dfcb76aefd42b
 
 test('release snapshot in S3 mode captures the bucket and a rollback returns it to the snapshot', { timeout: 300000 }, async t => {
   const root = mkdtempSync(join(tmpdir(), 'moto-release-s3-'));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
   const buckets = join(root, 's3');
   const s3 = await s3Server(t, buckets, ['uploads']);
   const cwd = join(root, 'staging'); mkdirSync(cwd);
@@ -64,7 +63,11 @@ services:
 volumes:
   database:
 `);
-  t.after(() => spawnSync('docker', ['compose', 'down', '-v', '--remove-orphans'], { cwd, env, encoding: 'utf8' }));
+  // One hook: after hooks run in order, and Compose needs cwd to still exist.
+  t.after(() => {
+    spawnSync('docker', ['compose', 'down', '-v', '--remove-orphans'], { cwd, env, encoding: 'utf8' });
+    rmSync(root, { recursive: true, force: true });
+  });
   run('docker', ['compose', 'up', '-d', '--wait', 'postgres', 'server', 'frontend']);
   // The privileges restore asserts for the application login.
   sql(`CREATE ROLE phoenix_auth LOGIN NOINHERIT;
