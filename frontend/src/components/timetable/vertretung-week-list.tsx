@@ -259,15 +259,18 @@ export function VertretungWeekList({
                 rowList(visibleRows)
               ) : (
                 <>
-                  {rowList(open)}
-                  {/* Ohne offene Lücke ist das Geregelte alles, was der Tag
-                      zeigt: dann steht es ohne Klappe da. */}
-                  {open.length === 0 && rowList(settled)}
-                  {open.length > 0 && settled.length > 0 && (
+                  {open.length > 0 && rowList(open)}
+                  {settled.length > 0 && (
                     <>
                       <ListGroupHeader
                         as="h4"
-                        title="Schon geregelt"
+                        // Ohne Lückendaten weiß die Liste nicht, ob es
+                        // geregelt ist: sie nennt, was die Termine sagen.
+                        title={
+                          gapsAvailable
+                            ? "Schon geregelt"
+                            : "Abwesend oder abgesagt"
+                        }
                         meta={settled.length}
                         collapsible={{
                           expanded: settledExpanded,

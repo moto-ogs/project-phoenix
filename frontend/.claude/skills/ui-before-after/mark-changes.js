@@ -35,14 +35,14 @@ globalThis.markChanges = (marks) => {
     };
     // A viewport screenshot shows only what the window shows: a region
     // beside, above or below it carries a mark nobody sees.
-    if (
-      r.top >= window.innerHeight ||
-      r.bottom <= 0 ||
-      r.left >= window.innerWidth ||
-      r.right <= 0
-    ) {
-      outside.push(number);
-    }
+    // Checked per target: two targets on opposite sides of the window give
+    // an outline that crosses it although neither is in it.
+    const hidden = (rect) =>
+      rect.top >= window.innerHeight ||
+      rect.bottom <= 0 ||
+      rect.left >= window.innerWidth ||
+      rect.right <= 0;
+    if (rects.some(hidden)) outside.push(number);
     const left = Math.max(r.left + window.scrollX - PAD, 2);
     const top = Math.max(r.top + window.scrollY - PAD, 2);
     const right = Math.min(r.right + window.scrollX + PAD, pageWidth - 2);

@@ -487,24 +487,6 @@ describe("VertretungDayList", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("zeigt einen schlichten Empty-State ohne Instanzen", () => {
-    render(
-      <VertretungDayList
-        title="Termine am Mi 09.09."
-        instances={[]}
-        gaps={[]}
-        acknowledged={[]}
-        gapsAvailable
-        staffNames={staffNames}
-        mode="stoerungen"
-        canManage={false}
-        onEdit={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText("Keine Termine an diesem Tag")).toBeInTheDocument();
-  });
-
   it("zeigt Ersatzkräfte blockweit statt sie abwesenden Personen zuzuordnen", () => {
     const multipleAbsences = makeInstance({
       id: "60",
@@ -640,6 +622,59 @@ describe("VertretungDayList", () => {
       />,
     );
     expect(screen.queryByText(hint)).not.toBeInTheDocument();
+  });
+
+  it("führt bei einem Dienst unter Mindestbesetzung in den Betreuungsplan statt zu 'Besetzen'", () => {
+    // Eine Person geplant und da, drei gebraucht: niemand fehlt, den man
+    // vertreten könnte, und trotzdem ist es eine offene Lücke (#3822).
+    const duty = makeInstance({
+      id: "80",
+      title: "Busaufsicht",
+      startTime: "16:00",
+      endTime: "16:30",
+      requiredStaffCount: 3,
+      staff: [
+        { staffId: "1", isPrimary: true, isAbsent: false, isSubstitute: false },
+      ],
+    });
+    render(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={[duty]}
+        gaps={[
+          makeGap({
+            instanceId: "80",
+            title: "Busaufsicht",
+            startTime: "16:00",
+            endTime: "16:30",
+            assignedStaffCount: 1,
+            absentStaffCount: 0,
+            presentStaffCount: 1,
+            plannedStaffCount: 1,
+          }),
+        ]}
+        acknowledged={[]}
+        gapsAvailable
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage
+        onEdit={vi.fn()}
+        carePlanHrefFor={(dateISO) => `/acme/betreuungsplan?d=${dateISO}`}
+      />,
+    );
+
+    const row = screen.getByTestId("vertretung-day-list-row-80");
+    expect(within(row).getByText("1 von 3 da")).toBeInTheDocument();
+    expect(within(row).getByText("2 Personen fehlen")).toBeInTheDocument();
+    expect(
+      within(row).getByRole("link", { name: "Im Betreuungsplan einteilen" }),
+    ).toBeInTheDocument();
+    expect(
+      within(row).getByRole("button", { name: /^Bearbeiten: Busaufsicht/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Besetzen/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("nennt den Knopf eines vergangenen oder abgesagten Termins 'Details', wie der Editor ihn zeigt", () => {

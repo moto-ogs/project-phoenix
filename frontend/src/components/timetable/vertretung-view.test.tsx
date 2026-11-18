@@ -968,6 +968,57 @@ describe("VertretungView", () => {
     );
   });
 
+  it("nennt im Erfolgs-Toast, wer wen vertritt, und zählt nur die vertretenen Termine", async () => {
+    setupSWR({
+      staffData: [
+        { id: "11", name: "Anna Alt" },
+        { id: "12", name: "Bea Neu" },
+      ],
+    });
+    mockSearch.value = "d=2026-07-15&block=42";
+    window.history.replaceState(
+      null,
+      "",
+      "/acme/vertretung?d=2026-07-15&block=42",
+    );
+    // Das Speichern berührt drei Termine, vertreten werden zwei.
+    mockApplyScheduleSubstitution.mockResolvedValueOnce({
+      instanceId: "42",
+      cancelled: false,
+      understaffedAck: false,
+      affectedInstances: [
+        {
+          instanceId: "42",
+          title: "Mensa",
+          startTime: "12:00",
+          action: "substituted",
+        },
+        {
+          instanceId: "43",
+          title: "Lernzeit",
+          startTime: "14:00",
+          action: "substituted",
+        },
+        {
+          instanceId: "44",
+          title: "Bus",
+          startTime: "16:00",
+          action: "absent",
+        },
+      ],
+      warnings: [],
+    });
+    render(<VertretungView />);
+
+    fireEvent.click(screen.getByText("editor-save"));
+
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        "Bea Neu vertritt Anna Alt in 2 Terminen.",
+      ),
+    );
+  });
+
   it("gibt einen Speicherfehler an den offenen Editor zurück statt eines Toasts", async () => {
     mockSearch.value = "d=2026-07-15&block=42";
     window.history.replaceState(

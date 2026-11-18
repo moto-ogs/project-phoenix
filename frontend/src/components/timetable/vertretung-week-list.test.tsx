@@ -151,6 +151,10 @@ describe("VertretungWeekList", () => {
     expect(
       within(daySection(MON)).getByTestId("vertretung-day-list-row-10"),
     ).toBeInTheDocument();
+    // Der abgesagte Termin ist geregelt und steht eingeklappt unter dem Tag.
+    fireEvent.click(
+      within(daySection(THU)).getByRole("button", { name: "Schon geregelt" }),
+    );
     expect(
       within(daySection(THU)).getByTestId("vertretung-day-list-row-30"),
     ).toBeInTheDocument();
@@ -196,14 +200,13 @@ describe("VertretungWeekList", () => {
     fireEvent.click(settled);
     expect(settled).toHaveAttribute("aria-expanded", "true");
     expect(ids()).toEqual(["10", "5"]);
-    // Ein Tag ohne offene Lücke zeigt das Geregelte ohne Klappe.
+    // Auch ein Tag ohne offene Lücke klappt das Geregelte ein: eine
+    // erledigte Woche füllt die Liste nicht mit erledigter Arbeit.
     expect(
-      within(daySection(THU)).getByTestId("vertretung-day-list-row-30"),
-    ).toBeInTheDocument();
+      within(daySection(THU)).getByRole("button", { name: "Schon geregelt" }),
+    ).toHaveAttribute("aria-expanded", "false");
     expect(
-      within(daySection(THU)).queryByRole("button", {
-        name: "Schon geregelt",
-      }),
+      within(daySection(THU)).queryByTestId("vertretung-day-list-row-30"),
     ).not.toBeInTheDocument();
   });
 
@@ -244,7 +247,13 @@ describe("VertretungWeekList", () => {
     expect(
       within(daySection(WED)).getByText("keine Lücke offen"),
     ).toBeInTheDocument();
-    // Die Abwesenheit steht im Termin selbst und bleibt sichtbar.
+    // Die Abwesenheit steht im Termin selbst und bleibt erreichbar. Ohne
+    // Lückendaten heißt die Gruppe nicht „Schon geregelt“.
+    fireEvent.click(
+      within(daySection(MON)).getByRole("button", {
+        name: "Abwesend oder abgesagt",
+      }),
+    );
     expect(
       within(daySection(MON)).getByTestId("vertretung-day-list-row-10"),
     ).toBeInTheDocument();

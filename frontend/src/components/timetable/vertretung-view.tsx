@@ -25,7 +25,7 @@
  * Wochenansicht (jeder andere Wert, auch ein fehlender, ist die Tagesansicht),
  * `block` öffnet den Editor für die materialisierte Instanz mit dieser ID,
  * `verlauf=1` schaltet den Editor auf den Verlaufs-Reiter. Der Filterzustand
- * "Nur Störungen | Ganzer Tag" ist lokaler State, kein URL-Parameter.
+ * "Lücken | Ganzer Tag" ist lokaler State, kein URL-Parameter.
  *
  * Das Ladeverhalten übernimmt die Orchestrierung der früheren
  * vertretungsplan-view.tsx als Verhaltensvertrag (Abschnitt 2.4): Woche laden,
@@ -67,6 +67,7 @@ import { VertretungCoverageNotice } from "~/components/timetable/vertretung-cove
 import type { BlockStaffing } from "~/components/timetable/instance-block";
 import {
   classifyInstances,
+  rowStaffing,
   VertretungDayList,
   type VertretungDayListMode,
 } from "~/components/timetable/vertretung-day-list";
@@ -166,15 +167,26 @@ function deviationSuccessMessage(
   );
 
   // Eine neue Vertretung nennt ihr Ergebnis: wer wen vertritt (#7493).
+  // Gezählt werden die Termine der Vertretung selbst, nicht jeder Termin,
+  // den das Speichern berührt hat (eine Abwesenheit ohne Ersatz zählt nicht
+  // als vertreten). Kommt etwas anderes dazu, bleibt es beim allgemeinen
+  // Satz.
   const substitution =
     input.substitutions?.length === 1 ? input.substitutions[0] : undefined;
-  if (substitution && staffIds.size === 1) {
+  const substitutedCount = substitution?.instanceIds?.length ?? 0;
+  if (
+    substitution &&
+    substitutedCount > 0 &&
+    staffIds.size === 1 &&
+    !input.presences?.length &&
+    !input.substitutionRemovals?.length
+  ) {
     const substitute = staffNames.get(substitution.substituteStaffId);
     const absent = staffNames.get(substitution.absentStaffId);
     if (substitute && absent) {
-      return appointmentCount === 1
+      return substitutedCount === 1
         ? `${substitute} vertritt ${absent} in 1 Termin.`
-        : `${substitute} vertritt ${absent} in ${appointmentCount} Terminen.`;
+        : `${substitute} vertritt ${absent} in ${substitutedCount} Terminen.`;
     }
   }
 
@@ -552,10 +564,11 @@ function VertretungContent() {
       weekAcknowledged,
       gapsLoaded,
     )) {
+      const { current, total } = rowStaffing(row);
       staffing.set(row.instance.id, {
         state: row.coverageState,
-        current: row.triple.present,
-        total: row.triple.planned,
+        current,
+        total,
       });
     }
     return staffing;
@@ -583,7 +596,7 @@ function VertretungContent() {
   );
 
   // Filterzustand ist LOKAL, kein URL-Parameter (verbindliches
-  // Drei-Parameter-Vokabular). Standard "Nur Störungen" (aus K2).
+  // Drei-Parameter-Vokabular). Standard "Lücken" (aus K2).
   const [mode, setMode] = useState<VertretungDayListMode>("stoerungen");
 
   // Sammel-Vertretung (#2284): Modalzustand ist lokal, kein URL-Parameter —

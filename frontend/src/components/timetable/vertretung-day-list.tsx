@@ -4,7 +4,7 @@
  * VertretungDayList: die Störungsliste des Vertretungsbereichs.
  *
  * Reine Präsentationskomponente: kein Datenabruf, kein URL-Zugriff. Welcher
- * Tag angezeigt wird und der Umschalter "Nur Störungen"/"Ganzer Tag" leben im
+ * Tag angezeigt wird und der Umschalter "Lücken"/"Ganzer Tag" leben im
  * Parent (vertretung-view.tsx); der Filterzustand kommt hier nur als Prop an.
  *
  * Die Klassifikation (`classifyInstances`) und die Zeilendarstellung
@@ -243,6 +243,41 @@ export function classifyInstances(
     .sort(compareRows);
 }
 
+/**
+ * Besetzung einer Zeile, wie Liste und Raster sie zeigen: „da von gebraucht“.
+ * Eine offene Lücke hat zwei Ursachen. Fehlt eine geplante Person, lässt sie
+ * sich hier besetzen (`canFill`). Ist niemand oder für einen Dienst zu wenig
+ * Personal eingeteilt (Mindestbesetzung, #3822), gibt es niemanden zu
+ * vertreten: das behebt der Betreuungsplan. `missing` ist `null`, wenn die
+ * Lücke gemeldet ist, die Termindaten aber keine fehlende Zahl hergeben.
+ */
+export function rowStaffing(row: ClassifiedRow): {
+  current: number;
+  total: number;
+  missing: number | null;
+  canFill: boolean;
+} {
+  const { planned, present } = row.triple;
+  if (row.coverageState !== "gap") {
+    return { current: present, total: planned, missing: 0, canFill: false };
+  }
+  if (present < planned) {
+    return {
+      current: present,
+      total: planned,
+      missing: planned - present,
+      canFill: true,
+    };
+  }
+  const total = Math.max(row.instance.requiredStaffCount, planned);
+  return {
+    current: present,
+    total,
+    missing: total > present ? total - present : null,
+    canFill: false,
+  };
+}
+
 /** Die Zeilenliste ohne Kartenrahmen — beide Ansichten rendern dieselben Zeilen. */
 export function VertretungRowList({
   rows,
@@ -367,15 +402,9 @@ export function VertretungDayList({
   );
 
   let body: ReactNode;
-  if (instances.length === 0) {
-    body = (
-      <div className={`${LIST_INSET} pb-3`}>
-        <EmptyState variant="compact" title="Keine Termine an diesem Tag" />
-      </div>
-    );
-  } else if (wholeDay) {
+  if (wholeDay) {
     // „Ganzer Tag“ ist der Tag in seiner Reihenfolge: nach Uhrzeit, ohne
-    // Gruppen. Die Arbeitssicht mit den Gruppen ist „Nur Störungen“.
+    // Gruppen. Die Arbeitssicht mit den Gruppen ist „Lücken“.
     body = (
       <>
         {!gapsAvailable && gapsUnavailableNotice}
@@ -453,8 +482,8 @@ export function VertretungDayList({
       }
       action={filter}
       // Die Platzhalter des Ladezustands behalten den Innenrand der Karte.
-      flush={!(gapsLoading && instances.length > 0)}
-      loading={gapsLoading && instances.length > 0}
+      flush={!gapsLoading}
+      loading={gapsLoading}
       className={className}
     >
       {body}
@@ -490,12 +519,21 @@ function VertretungDayListRow({
   // ohnehin aus, weil ihre Bedingungen für eine ungestörte Zeile nie zutreffen.
   const titleClass = isDisturbed ? "text-gray-900" : "text-gray-500";
   const isOpenGap = coverageState === "gap";
-  // Eine Lücke ohne eingeteilte Person lässt sich hier nicht besetzen: es
-  // gibt niemanden zu vertreten. Die Zeile sagt das, statt „0/0“ zu zeigen,
-  // und verspricht kein „Besetzen“.
+  // Eine Lücke ohne abwesende Person lässt sich hier nicht besetzen: es gibt
+  // niemanden zu vertreten. Die Zeile sagt das und verspricht kein
+  // „Besetzen“.
+  const staffing = rowStaffing(row);
   const nobodyPlanned = isOpenGap && triple.planned === 0;
-  const canFill = isOpenGap && !nobodyPlanned;
-  const missing = Math.max(triple.planned - triple.present, 1);
+  const canFill = staffing.canFill;
+  // Zu wenig eingeteilt statt jemand abwesend: der Weg führt in den
+  // Betreuungsplan, nicht zu einer Ersatzperson.
+  const needsAssignment = isOpenGap && !canFill;
+  const missingText =
+    staffing.missing === null
+      ? "Zu wenig Personal eingeteilt"
+      : staffing.missing === 1
+        ? "1 Person fehlt"
+        : `${staffing.missing} Personen fehlen`;
   const rowAction = !canManage
     ? "Details"
     : canFill
@@ -569,47 +607,48 @@ function VertretungDayListRow({
         </Button>
       </div>
 
-      {nobodyPlanned ? (
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        {nobodyPlanned ? (
           <CoverageIndicator
             state="gap"
             label="Niemand eingeteilt"
             title="Für diesen Termin ist niemand eingeteilt"
           />
-          {/* Der Hinweis nennt einen anderen Ort, also führt er dorthin
-              (#7054). */}
-          {carePlanHref !== undefined && (
-            <ButtonLink
-              href={carePlanHref}
-              variant="surface"
-              size="compact"
-              tooltip="Öffnet den Betreuungsplan an diesem Tag, um Personal einzuteilen."
-            >
-              Im Betreuungsplan einteilen
-            </ButtonLink>
-          )}
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          {/* In Worten statt als nackter Bruch: „3 von 4 da“. */}
-          <CoverageIndicator
-            state={coverageState}
-            label={`${triple.present} von ${triple.planned} da`}
-            title={`${triple.present} von ${triple.planned} Personen da`}
-            note={
-              coverageState === "acknowledged" ? "bewusst unbesetzt" : undefined
-            }
-          />
-          {/* Eine Zahl je Zeile (#7493): der Bruch sagt „da von geplant“,
-              die Worte daneben, was bei einer Lücke fehlt. Wer fehlt, steht
-              darunter mit Namen. */}
-          {isOpenGap && (
-            <span className="text-xs font-medium text-gray-700">
-              {missing === 1 ? "1 Person fehlt" : `${missing} Personen fehlen`}
-            </span>
-          )}
-        </div>
-      )}
+        ) : (
+          <>
+            {/* In Worten statt als nackter Bruch: „3 von 4 da“. Eine Zahl je
+                Zeile (#7493); die Worte daneben sagen, was bei einer Lücke
+                fehlt. Wer fehlt, steht darunter mit Namen. */}
+            <CoverageIndicator
+              state={coverageState}
+              label={`${staffing.current} von ${staffing.total} da`}
+              title={`${staffing.current} von ${staffing.total} Personen da`}
+              note={
+                coverageState === "acknowledged"
+                  ? "bewusst unbesetzt"
+                  : undefined
+              }
+            />
+            {isOpenGap && (
+              <span className="text-xs font-medium text-gray-700">
+                {missingText}
+              </span>
+            )}
+          </>
+        )}
+        {/* Der Hinweis nennt einen anderen Ort, also führt er dorthin
+            (#7054). */}
+        {needsAssignment && carePlanHref !== undefined && (
+          <ButtonLink
+            href={carePlanHref}
+            variant="surface"
+            size="compact"
+            tooltip="Öffnet den Betreuungsplan an diesem Tag, um Personal einzuteilen."
+          >
+            Im Betreuungsplan einteilen
+          </ButtonLink>
+        )}
+      </div>
 
       {hasAbsence && (
         <div className="flex flex-col gap-1 text-xs text-gray-600">

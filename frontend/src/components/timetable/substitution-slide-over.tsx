@@ -467,6 +467,11 @@ export function SubstitutionSlideOver({
       )
       .map(([, p]) => p.substituteId),
   ).size;
+  // Für den Namen des Abschlusses: trägt das Formular irgendwo eine
+  // Ersatzperson ein, auch nur in einem anderen Termin des Tages?
+  const assignsSubstitute = Object.values(people).some(
+    (person) => person.absent && person.substituteId !== "",
+  );
   const projectedCoverage =
     presentPlanned + activeSubstitutes + newReplacements;
   const isUnderstaffed =
@@ -1025,7 +1030,7 @@ export function SubstitutionSlideOver({
                         benachrichtigen. */}
                     {cancel
                       ? "Jetzt absagen"
-                      : newReplacements > 0
+                      : assignsSubstitute
                         ? "Vertretung speichern"
                         : "Speichern"}
                   </Button>

@@ -12,7 +12,7 @@ import { SegmentedControl } from "~/components/ui/segmented-control";
 export type VertretungDayListMode = "stoerungen" | "ganzer-tag";
 
 /**
- * Der Filter "Nur Störungen | Ganzer Tag" als Kopfzeile DER Liste, die er
+ * Der Filter "Lücken | Ganzer Tag" als Kopfzeile DER Liste, die er
  * filtert (#2031). Vorher stand er in der Kopfleiste der Seite, optisch
  * identisch mit dem Ansichts-Umschalter "Tag | Woche" direkt darüber: zwei
  * gleich aussehende Pillenleisten mit völlig verschiedener Wirkung. Jetzt sitzt

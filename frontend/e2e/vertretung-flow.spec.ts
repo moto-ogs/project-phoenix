@@ -46,7 +46,7 @@ let cleanupStaffId: number | null = null;
 
 /**
  * URL-Vokabular-Invariante (Akzeptanzkriterium 3): der Bereich trägt nie mehr
- * als `d`, `view`, `block`, `verlauf`. Der Filterzustand ("Nur Störungen |
+ * als `d`, `view`, `block`, `verlauf`. Der Filterzustand ("Lücken |
  * Ganzer Tag") ist lokaler State und darf nie in der URL landen.
  */
 function assertUrlVocabulary(page: Page, context: string) {

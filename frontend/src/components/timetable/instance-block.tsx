@@ -158,14 +158,18 @@ export function InstanceBlock({
     (s) => s.isSubstitute && !s.isAbsent,
   );
   const absentCount = instance.absentStaffCount;
-  const hasCoverageGap =
-    instance.requiredStaffCount > 0 &&
-    instance.assignedStaffCount < instance.requiredStaffCount;
+  // Mit `staffing` zählt auch der kurze Block wie die aufrufende Fläche.
+  const coverageCurrent = staffing?.current ?? instance.assignedStaffCount;
+  const coverageTotal = staffing?.total ?? instance.requiredStaffCount;
+  const hasCoverageGap = staffing
+    ? staffing.state === "gap"
+    : instance.requiredStaffCount > 0 &&
+      instance.assignedStaffCount < instance.requiredStaffCount;
 
   const compactStatusDetails = [
     isUnderstaffedAck ? "bewusst unbesetzt" : null,
     !isUnderstaffedAck && hasCoverageGap
-      ? `${instance.assignedStaffCount} von ${instance.requiredStaffCount} Positionen besetzt`
+      ? `${coverageCurrent} von ${coverageTotal} Positionen besetzt`
       : null,
     isActive ? "läuft" : null,
     absentCount > 0 ? `${absentCount} abwesend` : null,
