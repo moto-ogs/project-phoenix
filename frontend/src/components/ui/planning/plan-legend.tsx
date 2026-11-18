@@ -19,7 +19,7 @@ import { StatusDot } from "../status-dot";
 
 /** Mirrors the PlanBlock statuses that need a distinct legend glyph. */
 type PlanLegendEntryVariant =
-  "bar" | "dot" | "square" | "hatched" | "cancelled";
+  "bar" | "dot" | "square" | "hatched" | "cancelled" | "suggested";
 
 export interface PlanLegendEntry {
   readonly key: string;
@@ -74,6 +74,30 @@ function LegendGlyph({
           x2="12"
           y2="4"
           stroke={PLANNING_COLORS.hatchStroke}
+        />
+      </svg>
+    );
+  }
+
+  if (variant === "suggested") {
+    // Gestrichelter Rahmen wie der PlanBlock-Vorschlag (#7381).
+    return (
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 12 12"
+        aria-hidden="true"
+        className="shrink-0"
+      >
+        <rect
+          x="0.5"
+          y="0.5"
+          width="11"
+          height="11"
+          rx="2"
+          fill="none"
+          stroke={PLANNING_COLORS.cancelled}
+          strokeDasharray="2 1.5"
         />
       </svg>
     );

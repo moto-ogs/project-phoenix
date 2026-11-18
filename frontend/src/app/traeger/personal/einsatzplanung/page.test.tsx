@@ -224,11 +224,14 @@ describe("TraegerStaffPlanningPage", () => {
     api.planTraegerShift.mockResolvedValueOnce(MIRA.shifts[0]);
     renderPage();
     const suggestion = await screen.findByRole("button", {
-      name: /^7 h Vorschlag OGS Nord · laut Vertrag ?, OGS Nord, aus dem Arbeitsvertrag, noch nicht geplant, Schicht planen$/,
+      name: /^7 h Vorschlag OGS Nord ?, OGS Nord, aus dem Arbeitsvertrag, noch nicht geplant, Schicht planen$/,
     });
     expect(
       screen.getAllByRole("button", { name: /aus dem Arbeitsvertrag/ }),
     ).toHaveLength(1);
+    expect(
+      screen.getByText("Vorschlag aus dem Arbeitsvertrag"),
+    ).toBeInTheDocument();
 
     fireEvent.click(suggestion);
     const dialog = await screen.findByRole("dialog", {

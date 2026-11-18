@@ -184,6 +184,15 @@ export function PlanningWeekGrid({
         label: school.name,
         color: colors.get(school.id),
       })),
+      ...(canPlan
+        ? [
+            {
+              key: "suggested",
+              label: "Vorschlag aus dem Arbeitsvertrag",
+              variant: "suggested" as const,
+            },
+          ]
+        : []),
       {
         key: "warning",
         label: "Hinweis zu Arbeitszeit",
@@ -191,7 +200,7 @@ export function PlanningWeekGrid({
         variant: "dot" as const,
       },
     ],
-    [colors, usedSchools],
+    [canPlan, colors, usedSchools],
   );
 
   const planLabel = (
@@ -274,7 +283,7 @@ export function PlanningWeekGrid({
       color={colors.get(suggestion.schoolId)}
       compactDetail={
         <span className="block truncate text-xs text-gray-600">
-          {suggestion.schoolName} · laut Vertrag
+          {suggestion.schoolName}
         </span>
       }
       title={`Laut Arbeitsvertrag ${formatPlannedHours(suggestion.minutes)} an ${suggestion.schoolName}. Öffnet „Schicht planen“ mit ${suggestion.startTime}–${suggestion.endTime}.`}
