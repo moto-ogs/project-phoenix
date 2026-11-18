@@ -543,3 +543,33 @@ func TestPresenceHistoryUsesDemoBookings(t *testing.T) {
 		}
 	}
 }
+
+func TestDemoPresencePatternsDifferAcrossSchools(t *testing.T) {
+	t.Parallel()
+	to := calendar.NewDate(2026, time.November, 18)
+	from := to.AddDays(-14)
+	start, end := 12*60+30, 15*60
+	presentByDay := func(firstStudentID int64) map[calendar.Date]int {
+		input := presenceHistoryInput{
+			today: to, from: from,
+			careDays: func(day calendar.Date) bool { return !calendar.IsWeekend(day) },
+			bookings: make(map[calendar.Date]map[int64]demoPresenceBooking),
+		}
+		for i := range 16 {
+			id := firstStudentID + int64(i)
+			input.students = append(input.students, presenceHistoryStudent{id: id})
+			for day := from; day.Before(to); day = day.AddDays(1) {
+				if input.bookings[day] == nil {
+					input.bookings[day] = make(map[int64]demoPresenceBooking)
+				}
+				input.bookings[day][id] = demoPresenceBooking{Expected: true, Arrival: &start, Pickup: &end}
+			}
+		}
+		counts := map[calendar.Date]int{}
+		for _, day := range planPresenceHistory(input).days {
+			counts[day.Date]++
+		}
+		return counts
+	}
+	assert.NotEqual(t, presentByDay(1000), presentByDay(2000))
+}

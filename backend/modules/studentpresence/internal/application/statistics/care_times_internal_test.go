@@ -404,3 +404,24 @@ func TestStudentCareTimesFailsWithoutItsAuditEntry(t *testing.T) {
 		})
 	}
 }
+
+func TestDemoWeekdayReportsSkipWeekendSimulation(t *testing.T) {
+	t.Parallel()
+	cfg, from, to := careTimeWeek()
+	cfg.WeekdaysOnly = true
+	ctx := calendar.WithWeekendPlan(t.Context(), func(context.Context) (bool, error) { return true, nil })
+	service := &service{cfg: cfg}
+	dates, _, err := service.careDays(ctx, from, to)
+	require.NoError(t, err)
+	assert.Len(t, dates, 5, "only weekdays, excluding the closing day")
+	assert.False(t, dates[from.AddDays(5)])
+	assert.False(t, dates[from.AddDays(6)])
+
+	result, err := service.StudentCareTimes(ctx, 7, from, to, careTimeActor)
+	require.NoError(t, err)
+	assert.Zero(t, result.Summary.UnbookedDays, "the weekend visit is for the live simulation")
+	assert.Equal(t, 30, result.Summary.ExtraMinutes)
+	for _, day := range result.Days {
+		assert.False(t, calendar.IsWeekend(day.Date))
+	}
+}

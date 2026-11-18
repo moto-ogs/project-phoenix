@@ -91,11 +91,11 @@ func historyPresenceTimes(input presenceHistoryInput, index int, studentID int64
 	}
 
 	window := pickup - arrival
-	roll := presenceRoll(index, day, "booked-overrun") % 1000
+	roll := presenceRoll(studentID, day, "booked-overrun") % 1000
 	// Most arrivals and departures fit the booking. A few children arrive
 	// early or leave late by 20–45 minutes, enough to show a real overrun.
-	arrivalJitter := min(window/4, int(presenceRoll(index, day, "booked-in")%10))
-	pickupJitter := min(window/4, int(presenceRoll(index, day, "booked-out")%13))
+	arrivalJitter := min(window/4, int(presenceRoll(studentID, day, "booked-in")%10))
+	pickupJitter := min(window/4, int(presenceRoll(studentID, day, "booked-out")%13))
 	if roll < 9 && booking.Arrival != nil {
 		return max(0, arrival-20-int(roll)*3), pickup - pickupJitter, true
 	}

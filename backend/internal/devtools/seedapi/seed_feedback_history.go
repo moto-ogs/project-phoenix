@@ -152,5 +152,5 @@ func feedbackHistoryValue(roll uint32) string {
 }
 
 func feedbackRoll(studentID int64, day calendar.Date, decision string) uint32 {
-	return presenceRoll(int(studentID), day, "feedback-"+decision)
+	return presenceRoll(studentID, day, "feedback-"+decision)
 }

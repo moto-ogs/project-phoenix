@@ -3628,13 +3628,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (a StatisticsReportPeriods) StatisticsHolidayPeriods(ctx context.Context, from, to timezone.Date) ([]presenceCompose.HolidayPeriod, error) {\n\tvalues, err := a.Periods.ListCalendarPeriods(ctx, schoolcalendar.HolidaysOverlapping(from.String(), to.String()))\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]presenceCompose.HolidayPeriod, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, presenceCompose.HolidayPeriod{StartDate: timezone.Date(value.StartDate), EndDate: timezone.Date(value.EndDate)})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/StatisticsReportPeriods.StatisticsHolidayPeriods",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (a StatisticsReportRooms) StatisticsRooms(ctx context.Context) ([]presenceCompose.StatisticsRoom, error) {\n\tvalues, err := a.Rooms.ListRooms(ctx, facilities.RoomFilter{})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]presenceCompose.StatisticsRoom, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, presenceCompose.StatisticsRoom{ID: value.ID, Name: value.Name, Capacity: value.Capacity})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/StatisticsReportRooms.StatisticsRooms",

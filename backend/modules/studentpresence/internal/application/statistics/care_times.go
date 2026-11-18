@@ -172,7 +172,8 @@ type comparedStudent struct {
 // careTimeInputs are the facts one comparison reads, each once for the
 // whole population.
 type careTimeInputs struct {
-	careDays map[calendar.Date]bool
+	careDays     map[calendar.Date]bool
+	weekdaysOnly bool
 	// vacationOnly are care weekdays only a holiday period excludes; on them
 	// a holiday booking keeps the day a care day (#5994).
 	vacationOnly map[calendar.Date]bool
@@ -258,7 +259,7 @@ func (s *service) DemoCareDays(ctx context.Context, from, to calendar.Date) ([]s
 func compareStudentDays(student *ports.StatisticsStudent, inputs careTimeInputs, from, to, today calendar.Date) comparedStudent {
 	var compared comparedStudent
 	for date := from; !date.After(to); date = date.AddDays(1) {
-		if !student.EnrolledOn(date, today) {
+		if (inputs.weekdaysOnly && calendar.IsWeekend(date)) || !student.EnrolledOn(date, today) {
 			continue
 		}
 		key := dayKey{student.ID, date}
@@ -303,7 +304,7 @@ func (s *service) loadCareTimeInputs(ctx context.Context, students []*ports.Stat
 	for _, student := range students {
 		ids = append(ids, student.ID)
 	}
-	var inputs careTimeInputs
+	inputs := careTimeInputs{weekdaysOnly: s.cfg.WeekdaysOnly}
 	var err error
 	if inputs.careDays, inputs.vacationOnly, _, err = s.careCalendar(ctx, from, to); err != nil {
 		return careTimeInputs{}, err

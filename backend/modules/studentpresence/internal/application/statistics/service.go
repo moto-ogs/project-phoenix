@@ -65,7 +65,9 @@ type Config struct {
 	// day (#4764).
 	PlannedCareDays     ports.PlannedCareDays
 	AttendanceIntervals ports.AttendanceIntervals
-	Logger              *slog.Logger
+	// WeekdaysOnly keeps the demo's weekend simulation out of its reports.
+	WeekdaysOnly bool
+	Logger       *slog.Logger
 	// Now is the composition's clock and is required.
 	Now func() time.Time
 }

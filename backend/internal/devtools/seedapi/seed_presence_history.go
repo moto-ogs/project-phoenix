@@ -590,7 +590,8 @@ func planPresenceHistoryDay(input presenceHistoryInput, berlin *time.Location, d
 		if !expected {
 			continue
 		}
-		absent, status := plannedAbsence(index, day)
+		rollKey := input.rollKey(index, student.id)
+		absent, status := plannedAbsence(index, rollKey, day)
 		if absent {
 			if status == "" {
 				unexplained++
@@ -599,7 +600,7 @@ func planPresenceHistoryDay(input presenceHistoryInput, berlin *time.Location, d
 			}
 			continue
 		}
-		session, _ := weightedAvailableSession(input.sessions, occupancy, presenceRoll(index, day, "room"))
+		session, _ := weightedAvailableSession(input.sessions, occupancy, presenceRoll(rollKey, day, "room"))
 		past := pastPresenceDay(input, berlin, student.id, day, arrival, pickup, session)
 		if past.Visit != nil {
 			occupancy[session.roomID]++
@@ -612,13 +613,22 @@ func planPresenceHistoryDay(input presenceHistoryInput, berlin *time.Location, d
 	return days, unexplained
 }
 
+// Booked histories use school-scoped student IDs so parallel rosters in
+// the same Träger have different attendance patterns.
+func (input presenceHistoryInput) rollKey(index int, studentID int64) int64 {
+	if input.bookings == nil {
+		return int64(index)
+	}
+	return studentID
+}
+
 // plannedAbsence decides whether a child stays away on a day and, if so,
 // how: sick, excused or unexplained (empty status).
-func plannedAbsence(index int, day calendar.Date) (bool, string) {
-	if presenceRoll(index, day, "absent")%100 >= uint32(4+(index*7)%11) {
+func plannedAbsence(index int, rollKey int64, day calendar.Date) (bool, string) {
+	if presenceRoll(rollKey, day, "absent")%100 >= uint32(4+(index*7)%11) {
 		return false, ""
 	}
-	return true, absenceStatus(presenceRoll(index, day, "kind") % 100)
+	return true, absenceStatus(presenceRoll(rollKey, day, "kind") % 100)
 }
 
 func addPresenceStatus(statuses map[int64]map[string][]calendar.Date, studentID int64, status string, day calendar.Date) {
@@ -681,7 +691,7 @@ func pastPresenceDay(input presenceHistoryInput, berlin *time.Location, studentI
 // every pickup between 13:30 and 16:45, so a visit fits its session.
 func presenceTimes(index int, day calendar.Date) (int, int) {
 	roll := func(decision string, spread int) int {
-		return int(presenceRoll(index, day, decision) % uint32(spread))
+		return int(presenceRoll(int64(index), day, decision) % uint32(spread))
 	}
 	weekday := day.Weekday()
 	var arrival int
@@ -749,8 +759,8 @@ func sortedPresenceStatuses(statuses map[int64]map[string][]calendar.Date) []pre
 
 // presenceRoll is a stable pseudo-random number for one decision about one
 // child on one day.
-func presenceRoll(index int, day calendar.Date, decision string) uint32 {
+func presenceRoll(key int64, day calendar.Date, decision string) uint32 {
 	hash := fnv.New32a()
-	_, _ = fmt.Fprintf(hash, "%d|%s|%s", index, day, decision)
+	_, _ = fmt.Fprintf(hash, "%d|%s|%s", key, day, decision)
 	return hash.Sum32()
 }

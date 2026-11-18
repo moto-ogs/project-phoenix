@@ -21,7 +21,7 @@ var demoNeighbourSchools = []demoNeighbourSchool{
 		surnames:   []string{"Aydin", "Dreyer", "Hagedorn", "Schiller"},
 		families:   []string{"Aida", "Fabian", "Inga", "Leonie"},
 		offerings: []seedCareOffering{
-			neighbourOffering("Ganztag bis 16:30 Uhr", 20, "16:30", demoWeekdays),
+			neighbourOffering("Ganztag bis 16:30 Uhr", 24, "16:30", demoWeekdays),
 			neighbourOffering("Kurzbetreuung bis 14 Uhr", 10, "14:00", demoWeekdays[:4]),
 		},
 	},
