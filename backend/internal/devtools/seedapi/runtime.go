@@ -25,6 +25,7 @@ type Runtime struct {
 	Enrollment     SeedEnrollmentState
 	// demoPresenceDays supply the feedback step with the visits just seeded.
 	demoPresenceDays    []PastPresenceDay
+	demoNeighbourIDs    []int64
 	DeferredSeedPending bool
 	Values              map[string]any
 	// TraegerLock is SeedOptions.TraegerLock.
