@@ -167,10 +167,9 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get existing device; an edit that names a status locks the live row
-	// with the same read, so the audit compares with the committed status
-	// and a block committed meanwhile is not overwritten unnoticed (#2317).
-	device, err := rs.deviceForEdit(r, id, req.Status != "")
+	// Lock the live row first: the audit and the history entry then describe
+	// the committed row (#2317, #2321); deviceForEdit says why.
+	device, err := rs.deviceForEdit(r, id)
 	if err != nil {
 		rs.renderError(w, r, err)
 		return
@@ -344,12 +343,11 @@ func (rs *Resource) lockDeviceByDeviceID(r *http.Request, deviceID string) (devi
 	return device, err
 }
 
-// deviceForEdit reads the device an edit changes. With a status it locks
-// the live row in the same statement.
-func (rs *Resource) deviceForEdit(r *http.Request, id int64, lock bool) (*devicefleet.Device, error) {
-	if !lock {
-		return rs.IoTService.GetDeviceByID(r.Context(), id)
-	}
+// deviceForEdit reads the device an edit changes and locks its live row in
+// the same statement. A block committed meanwhile is not overwritten
+// unnoticed (#2317), and a removal committed while the edit waited answers
+// 404 without a history entry from the snapshot before it (#2321).
+func (rs *Resource) deviceForEdit(r *http.Request, id int64) (*devicefleet.Device, error) {
 	device, err := rs.lockLiveDevice(r, "UpdateDevice", id)
 	if err != nil {
 		return nil, err

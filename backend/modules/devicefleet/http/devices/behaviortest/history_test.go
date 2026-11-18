@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -143,4 +144,46 @@ func (r *testutilResponse) data(t *testing.T, target any) {
 	}
 	require.NoError(t, json.Unmarshal(r.body, &envelope), string(r.body))
 	require.NoError(t, json.Unmarshal(envelope.Data, target), string(envelope.Data))
+}
+
+// TestDeviceHistoryEditRacingARemovalRecordsNothing pins the row lock of a
+// school edit (#2321): a removal holds the device row while the edit
+// arrives. The edit waits for the lock, finds the device removed and answers
+// 404. Read without the lock, the edit's history entry came from the
+// snapshot before the removal and committed although nothing changed.
+func TestDeviceHistoryEditRacingARemovalRecordsNothing(t *testing.T) {
+	t.Parallel()
+	ctx := setupDevicesModule(t)
+	hardwareID := fmt.Sprintf("history-race-%d", testpkg.Tenant(t))
+	device := testpkg.CreateTestDevice(t, ctx.db, hardwareID)
+	router := testutil.NewTenantRouter(ctx.db)
+	router.Mount("/devices", ctx.resource.Router())
+
+	removal, err := ctx.db.BeginTx(testpkg.Ctx(t), nil)
+	require.NoError(t, err)
+	defer func() { _ = removal.Rollback() }()
+	_, err = removal.ExecContext(testpkg.Ctx(t), `UPDATE iot.devices SET archived_at = NOW() WHERE id = ?`, device.ID)
+	require.NoError(t, err)
+	var removalPID int
+	require.NoError(t, removal.QueryRowContext(testpkg.Ctx(t), `SELECT pg_backend_pid()`).Scan(&removalPID))
+
+	done := make(chan int, 1)
+	go func() {
+		req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/devices/%d", device.ID),
+			map[string]any{"device_id": hardwareID, "device_type": "terminal", "name": "Nach dem Entfernen"},
+			testutil.WithClaims(t, testutil.DefaultTestClaims()), testutil.WithPermissions("iot:update"))
+		done <- testutil.ExecuteRequest(router, req).Code
+	}()
+	require.Eventually(t, func() bool {
+		var waiting int
+		err := ctx.db.NewRaw(`SELECT COUNT(*) FROM pg_stat_activity
+			WHERE ? = ANY(pg_blocking_pids(pid))`, removalPID).Scan(testpkg.Ctx(t), &waiting)
+		return err == nil && waiting > 0
+	}, 20*time.Second, 20*time.Millisecond, "the edit never waited on the device row")
+	require.NoError(t, removal.Commit())
+
+	assert.Equal(t, http.StatusNotFound, <-done)
+	var entries int
+	require.NoError(t, ctx.db.NewRaw(`SELECT COUNT(*) FROM audit.device_lifecycle_events WHERE device_id = ?`, device.ID).Scan(testpkg.Ctx(t), &entries))
+	assert.Zero(t, entries, "an edit that changed nothing records nothing")
 }
