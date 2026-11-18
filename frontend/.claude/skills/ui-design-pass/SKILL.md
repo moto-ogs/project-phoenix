@@ -1,10 +1,10 @@
 ---
 name: ui-design-pass
-description: Design pass over one new or existing screen, with a blind two-model review loop up to a score of 9.5. Runs when a person asks for it by name.
+description: Design pass over one new or existing screen, with a blind two-model review loop scored against a reference screen. Runs when a person asks for it by name.
 disable-model-invocation: true
 metadata:
   author: moto-ogs
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # UI design pass
@@ -33,6 +33,7 @@ Open the nearest reference screen the kit rule names and two or three recently
 merged UI PRs by `theitger` (`gh pr list --author theitger --state merged`).
 
 Done when you can name the reference screen and the PRs you compared against.
+The reference screen is also the yardstick in step 5.
 
 ## 2. Diagnose before editing
 
@@ -92,27 +93,47 @@ portal. Update them in the same PR.
 
 Done when every case above has been looked at in the running app.
 
-## 5. Climb to 9.5
+## 5. Climb to the reference score
 
 Reviewers are independent and blind: fresh each round, on two different models
-where the harness offers them (one Claude, one GPT/Codex), without your
-explanation and without earlier scores.
+where the harness offers them (one Claude, one GPT/Codex). They get the packet
+below and nothing else: no reasoning for your design, no earlier scores.
 
 **Rubric**, each criterion 1 to 10: task order · hierarchy and grouping · fits
 the kit and neighbouring screens · cannot be misread · finish and delight.
 
-1. Capture the running app at 1440×900 and 390×844, every state you designed.
-2. **Baseline.** Both reviewers score the current screen, or the nearest
-   reference screen when the UI is new. A baseline of 8 or more means the
-   rubric is too lenient for this screen: say so in the PR.
-3. **Round.** Give both reviewers the screenshots, the baseline images, the
-   two rule files and the rubric. Each scores every criterion, names the three
-   changes that would raise the score most, and names anything that got worse
-   or went missing.
-4. Apply the feedback. The kit rules outrank a reviewer; record why you
-   decline a point.
-5. Repeat from 3 until both reviewers average 9.5 or more and no criterion is
-   below 9. After two rounds without gain, stop and report the gap.
+**Target.** A blind reviewer's scale is not calibrated, so the target is
+measured: the score the same reviewer gives the reference screen from step 1 in
+the same round, capped at 9.5. Capture the reference screen in the running app
+like your own.
+
+**Packet** for every round:
+
+- Screenshots at 1440×900 and 390×844 of every state you designed, and the same
+  of the reference screen, labelled only by screen name.
+- For a rework, the images of the screen before your change.
+- The two rule files and the rubric.
+- **Scope:** one or two lines naming what this task may change. Everything else
+  visible in the images (shared components, other screens, behaviour a rework
+  must keep) is out of scope: reviewers list such findings separately and leave
+  them out of the score.
+- **Decided:** from round 2 on, every point you declined or settled, each with
+  its reason (kit rule, ADR, issue). A reviewer who reopens one names the rule
+  or the harm to the user that outweighs that reason.
+
+Each reviewer scores both screens on every criterion, names the three in-scope
+changes that would raise your screen's score most, and names anything that got
+worse or went missing.
+
+1. **Baseline**, rework only: both reviewers score the screen before your
+   change with the same packet. A baseline within one point of the reference
+   means the rubric cannot tell the two apart: say so in the PR.
+2. **Round.** Send the packet, then apply the feedback. Precedence: kit rules,
+   then the issue's acceptance criteria, then reviewers. A point you decline
+   goes on the Decided list.
+3. Repeat step 2 until each reviewer's average for your screen reaches the
+   target and no criterion sits more than one point below the reference's.
+   After two rounds without gain, stop and report the gap.
 
 ## 6. Hand over
 
@@ -121,6 +142,7 @@ the kit and neighbouring screens · cannot be misread · finish and delight.
 - Screenshots: for a rework, before/after pairs from the `ui-before-after`
   skill, desktop and phone, with the changed regions marked. For new UI, one
   image per designed state (empty, filled, error, success), desktop and phone.
-- The PR body carries the baseline, the scores per round, what you declined,
-  and what you folded, moved or removed with the reason you believe it is
-  rarely needed.
+- The PR body carries the baseline, both screens' scores per round, the
+  Decided list, the out-of-scope findings as follow-up candidates, and what
+  you folded, moved or removed with the reason you believe it is rarely
+  needed.
