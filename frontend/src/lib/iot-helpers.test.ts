@@ -146,7 +146,7 @@ describe("iot-helpers", () => {
   });
 
   describe("prepareDeviceForBackend", () => {
-    it("should prepare device data with all fields", () => {
+    it("never sends the status, so a save cannot undo a block (#2317)", () => {
       const device: Partial<Device> = {
         device_id: "RFID-001",
         device_type: "terminal",
@@ -161,7 +161,6 @@ describe("iot-helpers", () => {
         device_id: "RFID-001",
         device_type: "terminal",
         name: "Main Reader",
-        status: "active",
         registered_by_id: 456,
       });
     });
@@ -180,7 +179,6 @@ describe("iot-helpers", () => {
         device_id: "RFID-001",
         device_type: "terminal",
         name: "Main Reader",
-        status: "active",
         registered_by_id: undefined,
       });
     });
@@ -197,7 +195,6 @@ describe("iot-helpers", () => {
         device_id: "RFID-001",
         device_type: "terminal",
         name: undefined,
-        status: undefined,
         registered_by_id: undefined,
       });
     });
@@ -222,8 +219,8 @@ describe("iot-helpers", () => {
       expect(getDeviceStatusDisplayName("active")).toBe("Aktiv");
     });
 
-    it("should return German name for inactive status", () => {
-      expect(getDeviceStatusDisplayName("inactive")).toBe("Inaktiv");
+    it("names an inactive device blocked (#2317)", () => {
+      expect(getDeviceStatusDisplayName("inactive")).toBe("Gesperrt");
     });
 
     it("should return German name for maintenance status", () => {
@@ -250,16 +247,16 @@ describe("iot-helpers", () => {
       expect(getDeviceStatusColor("active")).toBe(LOCATION_COLORS.GROUP_ROOM);
     });
 
-    it("should return the neutral colour for inactive status", () => {
-      expect(getDeviceStatusColor("inactive")).toBe(LOCATION_COLORS.HOME);
+    it("should return the red colour for a blocked device", () => {
+      expect(getDeviceStatusColor("inactive")).toBe(LOCATION_COLORS.DANGER);
     });
 
     it("should return the amber colour for maintenance status", () => {
       expect(getDeviceStatusColor("maintenance")).toBe(LOCATION_COLORS.WARNING);
     });
 
-    it("should return the red colour for offline status", () => {
-      expect(getDeviceStatusColor("offline")).toBe(LOCATION_COLORS.DANGER);
+    it("keeps offline apart from blocked in the neutral colour", () => {
+      expect(getDeviceStatusColor("offline")).toBe(LOCATION_COLORS.HOME);
     });
 
     it("should return the neutral colour for unknown status", () => {

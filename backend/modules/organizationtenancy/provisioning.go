@@ -316,6 +316,13 @@ type SchoolSummary struct {
 	ChildQuotaCount      int  `json:"child_quota_count"`
 }
 
+// DeviceBlockingProvisioning blocks and unblocks a device for operators
+// (Gerätesperre, #2317). The operator provisioning serves it beside its
+// facade.
+type DeviceBlockingProvisioning interface {
+	SetDeviceBlocked(ctx context.Context, id int64, blocked bool, operatorID int64, clientIP net.IP) error
+}
+
 // SchoolRequiredDetailsProvisioning reports what each school still lacks
 // (#7174). The operator provisioning serves it beside its facade.
 type SchoolRequiredDetailsProvisioning interface {

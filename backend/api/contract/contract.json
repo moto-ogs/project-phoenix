@@ -1446,6 +1446,22 @@
     },
     {
       "method": "POST",
+      "pattern": "/operator/devices/{id}/block",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/devices/{id}/unblock",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/me/calendar/feed/rotate",
       "portals": [
         "parent"

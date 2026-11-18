@@ -7,11 +7,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/devicefleet/administration.GetDeviceByDeviceID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/devicefleet/administration.GetDeviceByID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

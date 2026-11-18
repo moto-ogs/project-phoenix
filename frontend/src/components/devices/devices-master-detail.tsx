@@ -1,7 +1,7 @@
 "use client";
 
 import { EmptyState } from "~/components/ui/empty-state";
-import { Pencil, MousePointer2 } from "lucide-react";
+import { Lock, LockOpen, Pencil, MousePointer2 } from "lucide-react";
 import { useState } from "react";
 import { DatabaseDetailHeader } from "~/components/database/database-detail-header";
 import { DatabaseListItem } from "~/components/database/database-list-item";
@@ -31,6 +31,7 @@ import {
   getDeviceStatusColor,
   getDeviceStatusDisplayName,
   getDeviceTypeDisplayName,
+  isDeviceBlocked,
   type Device,
 } from "@/lib/iot-helpers";
 import { useClipboardCopy } from "~/lib/use-clipboard-copy";
@@ -45,6 +46,10 @@ interface DevicesMasterDetailProps {
   /** Speichert die im Detailbereich bearbeiteten Stammdaten. */
   onSaveDevice: (data: Partial<Device>) => Promise<void>;
   onDeleteClick: () => void;
+  /** Sperrt (true) oder entsperrt (false) das gewählte Gerät (#2317). */
+  onSetBlocked: (blocked: boolean) => void;
+  /** Läuft gerade ein Sperren oder Entsperren. */
+  blockPending: boolean;
 }
 
 function keyForDevice(device: Device): string {
@@ -68,6 +73,8 @@ export function DevicesMasterDetail({
   onSelect,
   onSaveDevice,
   onDeleteClick,
+  onSetBlocked,
+  blockPending,
 }: DevicesMasterDetailProps) {
   const renderItem = (device: Device) => (
     <DatabaseListItem
@@ -75,13 +82,7 @@ export function DevicesMasterDetail({
       subtitle={buildDeviceSubtitle(device)}
       isSelected={selectedId === device.id}
       onSelect={() => onSelect(device.id)}
-      trailingAccessory={
-        <StatusBadge
-          size="xs"
-          tone={device.is_online ? "green" : "gray"}
-          label={device.is_online ? "Online" : "Offline"}
-        />
-      }
+      trailingAccessory={<DeviceListBadge device={device} />}
     />
   );
 
@@ -102,6 +103,8 @@ export function DevicesMasterDetail({
       device={selectedDevice}
       onSaveDevice={onSaveDevice}
       onDeleteClick={onDeleteClick}
+      onSetBlocked={onSetBlocked}
+      blockPending={blockPending}
     />
   ) : (
     <EmptyState
@@ -127,16 +130,34 @@ export function DevicesMasterDetail({
   );
 }
 
+/** A blocked device shows that first: its connection no longer matters. */
+function DeviceListBadge({ device }: Readonly<{ device: Device }>) {
+  if (isDeviceBlocked(device)) {
+    return <StatusBadge size="xs" tone="red" label="Gesperrt" />;
+  }
+  return (
+    <StatusBadge
+      size="xs"
+      tone={device.is_online ? "green" : "gray"}
+      label={device.is_online ? "Online" : "Offline"}
+    />
+  );
+}
+
 interface DeviceDetailContentProps {
   device: Device;
   onSaveDevice: (data: Partial<Device>) => Promise<void>;
   onDeleteClick: () => void;
+  onSetBlocked: (blocked: boolean) => void;
+  blockPending: boolean;
 }
 
 function DeviceDetailContent({
   device,
   onSaveDevice,
   onDeleteClick,
+  onSetBlocked,
+  blockPending,
 }: DeviceDetailContentProps) {
   const [activeTab, setActiveTab] = useState<string>("master-data");
   // Bearbeitet wird am Objekt, nicht in einem Modal daneben
@@ -178,6 +199,8 @@ function DeviceDetailContent({
           editing={editing}
           onSaveDevice={handleSaveDevice}
           onCancelEdit={() => setEditing(false)}
+          onSetBlocked={onSetBlocked}
+          blockPending={blockPending}
         />
       ),
     },
@@ -211,11 +234,15 @@ function DeviceStammdatenTab({
   editing,
   onSaveDevice,
   onCancelEdit,
+  onSetBlocked,
+  blockPending,
 }: {
   device: Device;
   editing: boolean;
   onSaveDevice: (data: Partial<Device>) => Promise<void>;
   onCancelEdit: () => void;
+  onSetBlocked: (blocked: boolean) => void;
+  blockPending: boolean;
 }) {
   // Speicherfehler im Formular, eine vergebene Geräte-ID am Feld (#2517).
   const saveErrors = useApiFormError();
@@ -236,6 +263,26 @@ function DeviceStammdatenTab({
 
   return (
     <div className="space-y-4">
+      {isDeviceBlocked(device) ? (
+        <Alert
+          type="warning"
+          message="Dieses Gerät ist gesperrt. Es kann sich nicht anmelden, bis du es entsperrst. Raum und bisherige Anwesenheiten bleiben erhalten."
+          action={
+            <Button
+              type="button"
+              variant="ghost_tone"
+              size="compact"
+              onClick={() => onSetBlocked(false)}
+              isLoading={blockPending}
+              loadingText="Wird entsperrt…"
+              tooltip="Gibt dem Gerät sofort wieder Zugang zu moto."
+            >
+              <LockOpen className="h-3.5 w-3.5" aria-hidden />
+              Entsperren
+            </Button>
+          }
+        />
+      ) : null}
       <InfoSection
         title="Gerätedetails"
         icon={
@@ -270,6 +317,38 @@ function DeviceStammdatenTab({
           </DataField>
         </DataGrid>
       </InfoSection>
+
+      {isDeviceBlocked(device) ? null : (
+        <InfoSection
+          title="Zugang"
+          icon={
+            <MotoDuotoneIcon
+              icon={permissionsConcept.icon}
+              tone={permissionsConcept.tone}
+              size={18}
+            />
+          }
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="min-w-48 flex-1 text-sm text-gray-600">
+              Sperrst du das Gerät, wird es sofort abgewiesen, bis du es wieder
+              entsperrst.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="compact"
+              onClick={() => onSetBlocked(true)}
+              isLoading={blockPending}
+              loadingText="Wird gesperrt…"
+              tooltip="Sperrt das Gerät sofort. Es kann sich dann nicht mehr anmelden."
+            >
+              <Lock className="h-3.5 w-3.5" aria-hidden />
+              Sperren
+            </Button>
+          </div>
+        </InfoSection>
+      )}
 
       {device.api_key ? <ApiKeySection apiKey={device.api_key} /> : null}
     </div>

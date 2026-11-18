@@ -151,7 +151,9 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					require.Zero(t, countDeviceWriteBudgetSelects(queries.Statements, "users.persons"), "valid registrar uses PostgreSQL FK checks, not an extra client read")
 					rooms := 0
 					if roomID != nil {
-						rooms = 4
+						// The edit names a status, so it reads the device under
+						// its row lock without the room (#2317).
+						rooms = 3
 					}
 					require.Equal(t, rooms, countDeviceWriteBudgetSelects(queries.Statements, "facilities.rooms"))
 					switch scenario {

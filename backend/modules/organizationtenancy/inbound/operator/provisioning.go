@@ -30,6 +30,7 @@ type ProvisioningResource struct {
 	belegRetentionAudit        organizationtenancy.BelegRetentionChangeAudit
 	traegerStaffReleaseAudit   organizationtenancy.TraegerStaffReleaseChangeAudit
 	requiredDetails            organizationtenancy.SchoolRequiredDetailsProvisioning
+	deviceBlocking             organizationtenancy.DeviceBlockingProvisioning
 }
 
 // ProvisioningConfig holds the provisioning routes' dependencies.
@@ -52,6 +53,9 @@ type ProvisioningConfig struct {
 	// RequiredDetails marks the schools that lack a required detail (#7174).
 	// Without it that route answers 500.
 	RequiredDetails organizationtenancy.SchoolRequiredDetailsProvisioning
+	// DeviceBlocking blocks and unblocks devices (#2317). Without it those
+	// routes answer 500.
+	DeviceBlocking organizationtenancy.DeviceBlockingProvisioning
 }
 
 // NewProvisioningResource creates a new provisioning resource.
@@ -63,6 +67,7 @@ func NewProvisioningResource(cfg ProvisioningConfig) *ProvisioningResource {
 		belegRetentionAudit:        cfg.BelegRetentionAudit,
 		traegerStaffReleaseAudit:   cfg.TraegerStaffReleaseAudit,
 		requiredDetails:            cfg.RequiredDetails,
+		deviceBlocking:             cfg.DeviceBlocking,
 	}
 }
 

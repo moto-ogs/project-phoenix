@@ -3,6 +3,7 @@ import { routes as catererNotifications } from "./caterer-notifications.generate
 import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as notifications } from "./notifications.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
+import { routes as operatorDevices } from "./operator-devices.generated";
 import { routes as parentAnnouncements } from "./parent-announcements.generated";
 import { routes as parentMe } from "./parent-me.generated";
 import { routes as schoolCalendar } from "./school-calendar.generated";
@@ -66,6 +67,8 @@ export const portalRoutes = {
   platform: [
     operatorBilling["GET /operator/billing/key-day"],
     operatorBilling["PUT /operator/billing/key-day"],
+    operatorDevices["POST /operator/devices/{id}/block"],
+    operatorDevices["POST /operator/devices/{id}/unblock"],
   ],
   school: [
     schoolCalendar["DELETE /school/calendar/appointments/{appointmentId}"],

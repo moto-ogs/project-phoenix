@@ -36,7 +36,12 @@ type deviceRemovalFixture struct {
 
 func newDeviceRemovalFixture(t *testing.T) deviceRemovalFixture {
 	t.Helper()
-	db := testpkg.SetupTestDB(t)
+	return deviceFixtureOn(t, testpkg.SetupTestDB(t))
+}
+
+// deviceFixtureOn builds the school device route over db.
+func deviceFixtureOn(t *testing.T, db *bun.DB) deviceRemovalFixture {
+	t.Helper()
 	devices, err := NewDeviceTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
 	presence := owners.NewUnloggedStudentPresence(testpkg.NewDatabase(t, db))
@@ -102,6 +107,12 @@ func (f deviceRemovalFixture) liveDevicesOfTenant(t *testing.T, tenantID int64) 
 
 func auditEntries(t *testing.T, buffer *bytes.Buffer) []map[string]any {
 	t.Helper()
+	return auditEntriesOf(t, buffer, "device_removal")
+}
+
+// auditEntriesOf reads the structured audit entries of one kind.
+func auditEntriesOf(t *testing.T, buffer *bytes.Buffer, kind string) []map[string]any {
+	t.Helper()
 	var entries []map[string]any
 	for _, line := range strings.Split(strings.TrimSpace(buffer.String()), "\n") {
 		if line == "" {
@@ -109,7 +120,7 @@ func auditEntries(t *testing.T, buffer *bytes.Buffer) []map[string]any {
 		}
 		var entry map[string]any
 		require.NoError(t, json.Unmarshal([]byte(line), &entry))
-		if entry["audit"] == "device_removal" {
+		if entry["audit"] == kind {
 			entries = append(entries, entry)
 		}
 	}
