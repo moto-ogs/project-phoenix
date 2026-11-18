@@ -96,6 +96,7 @@ INSERT INTO auth.accounts VALUES (41);`);
   const created = run('bash', [join(scripts, 'release-backup.sh'), 'create', bundle]);
   assert(!`${created.stdout}${created.stderr}`.includes(s3.secret));
   assert.equal(readFileSync(join(bundle, 'uploads-volume'), 'utf8'), 'bucket:uploads\n');
+  assert.equal(readFileSync(join(bundle, 'uploads-endpoint'), 'utf8'), `${s3.endpoint}\n`);
   assert(!existsSync(join(bundle, 'uploads-tree')));
 
   sql('UPDATE auth.accounts SET id=99;');
@@ -104,6 +105,25 @@ INSERT INTO auth.accounts VALUES (41);`);
   s3.put('uploads', 'kept.txt', 'origina1');
   s3.put('uploads', 'added.txt', 'new');
   assert.notDeepEqual(objects(bucket), expected);
+  // The same bucket name at a different endpoint must fail before database or
+  // object writes. Keep a distinct marker in that endpoint's bucket.
+  const otherBuckets = join(root, 'other-s3');
+  const other = await s3Server(t, otherBuckets, ['uploads']);
+  other.put('uploads', 'other.txt', 'untouched');
+  const otherExpected = objects(join(otherBuckets, 'uploads'));
+  const changed = objects(bucket);
+  const otherSettings = dotEnv(other.settings('uploads'));
+  writeFileSync(join(cwd, '.env'), otherSettings);
+  run('docker', ['compose', 'up', '-d', '--force-recreate', 'server']);
+  const wrongEndpoint = invoke('bash', [join(scripts, 'restore-db.sh'), bundle]);
+  assert.notEqual(wrongEndpoint.status, 0);
+  assert.match(wrongEndpoint.stderr, /Snapshot holds another upload endpoint than the server uses/);
+  assert.equal(sql('SELECT id FROM auth.accounts;'), '99');
+  assert.deepEqual(objects(bucket), changed);
+  assert.deepEqual(objects(join(otherBuckets, 'uploads')), otherExpected);
+  assert.equal(readFileSync(join(cwd, '.env'), 'utf8'), otherSettings);
+  writeFileSync(join(cwd, '.env'), dotEnv(s3.settings('uploads')));
+  run('docker', ['compose', 'up', '-d', '--force-recreate', 'server']);
   writeFileSync(join(cwd, '.deploy-state'), 'CURRENT_SHA=bbbbbbb\nBACKUP_ID=release-20260914T010000Z-bbbbbbb\n');
   const restored = run('bash', [join(scripts, 'rollback-remote.sh'), cwd]);
   assert(!`${restored.stdout}${restored.stderr}`.includes(s3.secret));

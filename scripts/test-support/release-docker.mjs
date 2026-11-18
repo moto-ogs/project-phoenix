@@ -39,7 +39,7 @@ else if (args[0] === 'inspect') {
   const format = args[2];
   // RELEASE_TEST_BUCKET puts the server in S3 mode with that bucket.
   if (format.includes('.Config.Env') && process.env.RELEASE_TEST_BUCKET) {
-    console.log(['UPLOADS_BACKEND=s3', 'UPLOADS_S3_ENDPOINT=https://s3.example.test', 'UPLOADS_S3_REGION=test',
+    console.log(['UPLOADS_BACKEND=s3', `UPLOADS_S3_ENDPOINT=${process.env.RELEASE_TEST_ENDPOINT || 'https://s3.example.test'}`, 'UPLOADS_S3_REGION=test',
       `UPLOADS_S3_BUCKET=${process.env.RELEASE_TEST_BUCKET}`, 'UPLOADS_S3_ACCESS_KEY=key', 'UPLOADS_S3_SECRET_KEY=secret'].join('\n'));
     process.exit(0);
   }

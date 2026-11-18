@@ -58,12 +58,12 @@ während des Archivierens können den Sicherungslauf abbrechen.
 ## Uploads im S3-Modus
 
 Die Sicherung erfasst die Upload-Ablage, die die App tatsächlich nutzt. Dazu
-liest sie `UPLOADS_BACKEND` und `UPLOADS_S3_*` aus der Compose-Konfiguration
-des Dienstes `server`, also aus derselben `.env` wie die App. Der
-Bucket-Schlüssel hat damit nur einen Ort; die Bucket-Regel lässt ohnehin nur
-den Schlüssel der Umgebung zu. `backup.env` darf keine `UPLOADS_*`-Werte
-enthalten, sonst bricht der Lauf mit `step=configuration` ab: Sie würden die
-`.env` beim Auflösen überschreiben.
+liest sie `UPLOADS_BACKEND` und `UPLOADS_S3_*` aus der Umgebung des bestehenden
+`server`-Containers, nachdem sie `.release-operation.lock` erworben hat.
+Noch nicht ausgerollte Änderungen in `.env` bestimmen die Sicherung nicht.
+Fehlt der Container oder lässt sich seine Umgebung nicht lesen, bricht der
+Lauf ab. Der Bucket-Schlüssel bleibt bei der App; `backup.env` darf keine
+`UPLOADS_*`-Werte enthalten, sonst bricht der Lauf mit `step=configuration` ab.
 
 - **Sicherung:** Bei `UPLOADS_BACKEND=s3` kopiert rclone den ganzen Bucket in
   den Klartextbereich (tmpfs) und packt ihn als `uploads.tar.gz` mit demselben

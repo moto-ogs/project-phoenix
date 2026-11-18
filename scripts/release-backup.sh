@@ -135,9 +135,13 @@ verify_files() {
   [ -d "$bundle" ] && [ ! -L "$bundle" ] || fail 'Backup directory is missing or a symlink'
   [ "$(cat "$bundle/environment")" = "$DEPLOY_DIR" ] || fail 'Backup belongs to another environment'
   local file expected actual line name
+  local files=("${required_files[@]}")
+  if [[ "$(cat "$bundle/uploads-volume")" =~ $bucket_pattern ]]; then
+    files+=(uploads-endpoint)
+  fi
   [ -f "$bundle/checksums.sha256" ] && [ ! -L "$bundle/checksums.sha256" ] || fail 'Missing checksums'
-  [ "$(wc -l < "$bundle/checksums.sha256" | tr -d ' ')" = "${#required_files[@]}" ] || fail 'Invalid checksum manifest'
-  for file in "${required_files[@]}"; do
+  [ "$(wc -l < "$bundle/checksums.sha256" | tr -d ' ')" = "${#files[@]}" ] || fail 'Invalid checksum manifest'
+  for file in "${files[@]}"; do
     [ -s "$bundle/$file" ] && [ ! -L "$bundle/$file" ] || fail "Missing backup component: $file"
     expected=$(awk -v name="$file" '$2 == name {print $1}' "$bundle/checksums.sha256")
     [[ "$expected" =~ ^[a-f0-9]{64}$ ]] || fail "Invalid checksum entry: $file"
@@ -156,7 +160,7 @@ verify_files() {
   docker compose --env-file "$bundle/.env" -f "$bundle/compose.yml" config -q
   local uploads
   uploads=$(cat "$bundle/uploads-volume")
-  # bucket:<name> in S3 mode; restore checks it against the server's settings.
+  # S3 snapshots also carry a checksummed endpoint; restore checks both.
   [[ "$uploads" =~ $bucket_pattern ]] && return 0
   [[ "$uploads" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]+$ ]] || fail 'Invalid uploads volume name'
   docker volume inspect "$uploads" >/dev/null
@@ -190,6 +194,8 @@ create() {
   if [ "$store" = s3 ]; then
     load_bucket
     uploads="bucket:$upload_bucket"
+    printf '%s\n' "$upload_endpoint" > "$bundle/uploads-endpoint"
+    required_files+=(uploads-endpoint)
   else
     uploads=$(volume)
   fi
@@ -273,15 +279,17 @@ restore() {
   verify
   dedicated_cluster
   # All preflight checks happen before stopping or deleting anything.
-  local uploads services tree='' snapshot_bucket
+  local uploads services tree='' snapshot_bucket snapshot_endpoint
   uploads=$(cat "$bundle/uploads-volume")
   if [[ "$uploads" =~ $bucket_pattern ]]; then
     snapshot_bucket=${BASH_REMATCH[1]}
-    # The restored .env names the same bucket only if the server does now.
+    snapshot_endpoint=$(cat "$bundle/uploads-endpoint")
+    # Keep current credentials (key rotation), but never sync another store.
     upload_store
     [ "$upload_kind" = s3 ] || fail 'Snapshot holds bucket uploads, but the server does not use S3'
     load_bucket
     [ "$upload_bucket" = "$snapshot_bucket" ] || fail 'Snapshot holds another bucket than the server uses'
+    [ "$upload_endpoint" = "$snapshot_endpoint" ] || fail 'Snapshot holds another upload endpoint than the server uses'
     tree=$(mktemp -d "$PWD/.uploads-restore.XXXXXX")
     trap '[ -z "$tree" ] || rm -rf -- "$tree"' EXIT
     bucket_rclone "$tree" lsf --max-depth 1 "uploads:$upload_bucket" || fail 'Upload bucket is not reachable; nothing was changed'

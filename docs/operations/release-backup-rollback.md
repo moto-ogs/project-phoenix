@@ -27,7 +27,8 @@ captures the previous state under `~/backups/<environment>/release-<timestamp>-<
   immutable image digests and deployment state.
 - `environment`, `created-at`, `uploads-volume`, `checksums.sha256`, `complete`:
   snapshot identity and verification data. `uploads-volume` names the volume,
-  or `bucket:<name>` in S3 mode.
+  or `bucket:<name>` in S3 mode. S3 snapshots also record the serving container's
+  endpoint in `uploads-endpoint`, covered by the checksums.
 
 The directory is owner-only (0700, files 0600). It is **not encrypted**: `.env`
 contains plaintext operating secrets and `roles.sql` contains password hashes.
@@ -64,7 +65,11 @@ discarded because it names objects.
   The copy needs free disk for the bucket twice until the archive replaces it.
   The legacy volume from before the switch is not part of the snapshot.
 - **Restore:** Before stopping anything, restore checks that the server still
-  uses the snapshot's bucket and that the bucket is reachable. After the
+  uses the snapshot's exact endpoint and bucket name and that the bucket is
+  reachable. Current container credentials allow key rotation. A different
+  endpoint is rejected even when its bucket has the same name. S3 snapshots
+  without checksummed endpoint metadata are rejected; old volume snapshots
+  remain supported. After the
   database, `rclone sync --checksum` returns the bucket to the snapshot:
   objects added since are deleted, changed or deleted ones come back. A
   `check --download` must then match, else the application stays stopped.

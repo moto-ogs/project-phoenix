@@ -41,7 +41,7 @@ export function dailyBackupRig(t, { dotEnv = '' } = {}) {
     image: postgres:17.12-alpine3.24@sha256:34261f594522cf41dfcb76aefd42b9d201098b0e6b23c9c68733f169e4218b6f
     network_mode: none
     entrypoint: [sleep, infinity]
-    # As in the deployed Compose files; the backup reads them from here.
+    # As in the deployed Compose files; the backup inspects the container.
     environment:
       UPLOADS_BACKEND: \${UPLOADS_BACKEND-}
       UPLOADS_S3_ENDPOINT: \${UPLOADS_S3_ENDPOINT-}
@@ -121,6 +121,9 @@ export function roleRestoreMatrix(t, rig, labels) {
   const { root, project, volume, restoredVolume, remote, work, marker, credential, compose, ledger, env, invoke, run, docker, dc, databaseSQL, sql, resetCluster, backup, restore } = rig;
   const reviewMarker = join(root, '.daily-restore-review-required');
   dc('up', '-d', '--wait', 'postgres');
+  // A stopped serving container retains the source upload settings. Restores
+  // still require postgres to be the only running service.
+  dc('create', 'server');
   // The uploads a restore of the main scenario leaves behind.
   docker('run', '--rm', '-v', `${restoredVolume}:/uploads`, 'postgres:17.12-alpine3.24@sha256:34261f594522cf41dfcb76aefd42b9d201098b0e6b23c9c68733f169e4218b6f', 'sh', '-c',
     'mkdir -p /uploads/documents/41 /uploads/documents/42; printf first > /uploads/documents/41/file; printf second > /uploads/documents/42/file; printf hidden > /uploads/.hidden');

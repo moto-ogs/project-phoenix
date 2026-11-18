@@ -28,8 +28,12 @@ test('daily backup in S3 mode backs up the bucket the server uses and restores i
   let result = backup({ UPLOADS_BACKEND: 's3' });
   assert.notEqual(result.status, 0);
   assert.equal(result.stdout, 'backup_result=failed step=configuration\n');
-  // No volume is needed: the bucket is the upload store.
+  // Pending local settings must not hide the active bucket from the backup.
+  const settings = readFileSync(join(root, '.env'), 'utf8');
+  writeFileSync(join(root, '.env'), settings.replace('UPLOADS_BACKEND=s3', 'UPLOADS_BACKEND=local'));
+  // No volume is needed: the serving container still uses the bucket.
   result = backup({ BACKUP_UPLOADS_VOLUME: '' });
+  writeFileSync(join(root, '.env'), settings);
   assert.equal(result.status, 0, result.stdout);
   assert.equal(result.stdout, 'backup_result=ok step=complete\n');
   assert(!result.stderr.includes(s3.secret));
@@ -38,10 +42,11 @@ test('daily backup in S3 mode backs up the bucket the server uses and restores i
   assert.equal(JSON.parse(run('tar', ['-xOf', join(root, 'bundle.tar'), 'manifest.json'])).uploads, 'bucket');
 
   // A missing or unknown setting on the server fails closed, naming only the key.
-  const settings = readFileSync(join(root, '.env'), 'utf8');
   writeFileSync(join(root, '.env'), settings.replace(/^UPLOADS_S3_BUCKET=.*\n/m, ''));
+  dc('up', '-d', '--force-recreate', 'server');
   assert.equal(backup().stdout, 'backup_result=failed step=configuration missing=UPLOADS_S3_BUCKET\n');
   writeFileSync(join(root, '.env'), settings.replace('UPLOADS_BACKEND=s3', 'UPLOADS_BACKEND=bucket'));
+  dc('up', '-d', '--force-recreate', 'server');
   assert.equal(backup().stdout, 'backup_result=failed step=configuration\n');
   writeFileSync(join(root, '.env'), settings);
 

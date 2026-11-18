@@ -186,7 +186,6 @@ class Recovery:
             self.rclone_env['RCLONE_CONFIG_MOTO_ENV_AUTH'] = 'false'
         else:
             require(self.transport == 'local' and Path(self.target).is_absolute())
-        self.configure_uploads()
         self.work_root = Path(required('BACKUP_WORK_DIR'))
         require(self.work_root.is_absolute() and self.work_root.is_dir())
         if self.transport == 's3':
@@ -217,12 +216,15 @@ class Recovery:
     def configure_uploads(self):
         """Choose the upload store: the app's for backup, the target's for restore."""
         if self.mode == 'backup':
-            # Read the configuration the server runs with, so a switch to S3
-            # never leaves the backup on a stale volume and the bucket key has
-            # a single home. Shell values would override the Compose .env.
+            # Called under the operation lock: inspect the serving container,
+            # not pending Compose settings that have not been deployed yet.
             require(not any(key.startswith('UPLOADS_') for key in os.environ))
-            config = json.loads(self.dc('config', '--format', 'json', 'server'))
-            values = config['services']['server'].get('environment') or {}
+            container = self.dc('ps', '-a', '-q', 'server').decode().strip()
+            require(container and '\n' not in container)
+            environment = json.loads(command(['docker', 'inspect', '--format',
+                                               '{{json .Config.Env}}', container]))
+            require(isinstance(environment, list) and environment)
+            values = dict(value.split('=', 1) for value in environment)
         else:
             # The restore machine runs no app: its environment names the target.
             values = os.environ
@@ -566,6 +568,8 @@ def main():
         lock_path = recovery.compose_file.parent / '.release-operation.lock'
         lock_path.mkdir(mode=0o700)
         lock = lock_path
+        step = 'configuration'
+        recovery.configure_uploads()
         if mode == 'verify-erasures':
             step = 'erasure_review'
             require((recovery.compose_file.parent / '.daily-restore-review-required').is_file())
