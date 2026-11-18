@@ -1,16 +1,23 @@
 package s3objects_test
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/xml"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/adapters/s3objects"
+	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
+	securityCompose "github.com/moto-ogs/project-phoenix/modules/securityruntime/compose"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,6 +42,68 @@ func fixtureServer(t *testing.T, versioning func() string, objects http.HandlerF
 func newFixtureBackend(t *testing.T, endpoint string) (contract.UploadBackend, error) {
 	t.Helper()
 	return s3objects.New(t.Context(), endpoint, "us-east-1", fixtureBucket, "fixture-access-key", "fixture-secret-key")
+}
+
+func TestSealedObjectsStayOpaqueAndBoundToTheirKey(t *testing.T) {
+	t.Parallel()
+	const kind, name = "staff-documents", "fixture.pdf"
+	modified := time.Date(2026, time.November, 18, 0, 0, 0, 0, time.UTC)
+	var mu sync.Mutex
+	var stored []byte
+	endpoint := fixtureServer(t, func() string { return "" }, func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		switch r.Method {
+		case http.MethodPut:
+			assert.Equal(t, "/"+fixtureBucket+"/"+kind+"/18/"+name, r.URL.Path)
+			assert.Empty(t, r.Header.Get("X-Amz-Acl"))
+			var body io.Reader = r.Body
+			if r.Header.Get("Content-Encoding") == "aws-chunked" {
+				body = httputil.NewChunkedReader(body)
+			}
+			data, err := io.ReadAll(body)
+			assert.NoError(t, err)
+			stored = data
+			w.Header().Set("ETag", `"fixture"`)
+		case http.MethodGet, http.MethodHead:
+			// Serve the same bytes under every key, as if an operator had copied
+			// the encrypted file to a different school during migration.
+			w.Header().Set("ETag", `"fixture"`)
+			http.ServeContent(w, r, name, modified, bytes.NewReader(stored))
+		default:
+			t.Errorf("unexpected S3 method %s", r.Method)
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	})
+	writer, err := newFixtureBackend(t, endpoint)
+	require.NoError(t, err)
+	reader, err := newFixtureBackend(t, endpoint)
+	require.NoError(t, err)
+	keys, err := securityCompose.NewFieldCipher("fixture:" + base64.StdEncoding.EncodeToString(make([]byte, 32)))
+	require.NoError(t, err)
+	fileKeys := objects.FileKeys{Health: keys}
+	const plaintext = "synthetic personnel file"
+	size, err := objects.NewPrivateUploads(writer, fileKeys).SaveSealed(t.Context(), kind, 18, name, strings.NewReader(plaintext), objects.FileRingHealth)
+	require.NoError(t, err)
+	require.EqualValues(t, len(plaintext), size)
+	mu.Lock()
+	raw := bytes.Clone(stored)
+	mu.Unlock()
+	require.True(t, bytes.HasPrefix(raw, []byte("MOTOSEAL")))
+	require.NotContains(t, string(raw), plaintext)
+
+	sealed := objects.NewPrivateUploads(reader, fileKeys)
+	body, err := sealed.OpenPrivate(t.Context(), kind, 18, name)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, body.Close()) }()
+	decoded, err := io.ReadAll(body)
+	require.NoError(t, err)
+	require.Equal(t, plaintext, string(decoded))
+
+	_, err = sealed.OpenPrivate(t.Context(), kind, 180, name)
+	require.ErrorIs(t, err, objects.ErrSealedUnavailable)
+	_, err = objects.NewPrivateUploads(reader, objects.FileKeys{}).OpenPrivate(t.Context(), kind, 18, name)
+	require.ErrorIs(t, err, objects.ErrSealedUnavailable)
 }
 
 func TestReplacementDoesNotRecreateAnObjectDeletedAfterStat(t *testing.T) {

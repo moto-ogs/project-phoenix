@@ -382,6 +382,7 @@ const moduleComposeBudgetTotal = 13672
 // ADR 0275 raised modules/parentbilling/compose for the root clock (+2).
 // ADR 0276 raised modules/workforce/compose for the sick note retention clock (+1)
 // and workflows/staffoffboarding/compose for the offboarding clock (+2).
+// ADR 0292 counts the 12-line upload storage selector.
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.

@@ -94,6 +94,8 @@ def check_upload(apis, next_ports, tenant, email, password):
     headers = {**next_headers(tenant, next_a), "Cookie": cookie}
     read_tenant_page(tenant, next_a)
     read_tenant_page(tenant, next_b)
+    # Age the warm cache slightly so the 60-second assertion includes HTTP time.
+    time.sleep(2)
 
     boundary = secrets.token_hex(16)
     form = (
