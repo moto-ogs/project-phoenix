@@ -15,10 +15,12 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { Loading } from "~/components/ui/loading";
 import { ConfirmationModal, Modal } from "~/components/ui/modal";
 import NavigationLink from "~/components/ui/navigation-link";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
+import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -182,7 +184,7 @@ function HistoryModal({
       {error ? (
         <LoadErrorAlert error={error} actionLayout="responsive" />
       ) : events === null ? (
-        <p className="text-sm text-gray-600">Wird geladen …</p>
+        <Loading compact message="Wird geladen …" />
       ) : events.length === 0 ? (
         <p className="text-sm text-gray-600">Noch keine Einträge.</p>
       ) : (
@@ -351,7 +353,7 @@ function FamilyMandates({
       ) : null}
       {earlier.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-gray-600">Frühere Mandate</p>
+          <SectionLabel>Frühere Mandate</SectionLabel>
           <ul className="divide-y divide-gray-100">
             {earlier.map((mandate) => (
               <li

@@ -144,6 +144,8 @@ const pages = collectPages(TRAEGER_DIR).map((file) => {
 function offersEveryFormat(source: string): boolean {
   return (
     source.includes("<TraegerListExportMenu") ||
+    // The same formats as entries of the page menu (#7403).
+    source.includes("useTraegerListExportItems(") ||
     source.includes("TRAEGER_LIST_FORMAT_OPTIONS") ||
     /exportFormatOptions\(\[\s*"pdf",\s*"xlsx",\s*"csv",?\s*\]\)/.test(source)
   );

@@ -455,7 +455,7 @@ export function SollMappingEditor({
             action={
               <ButtonLink
                 href={traegerPath(BOOKING_ACCOUNTS_PATH)}
-                variant="ghost_tone"
+                variant="surface"
                 size="compact"
                 tooltip={BOOKING_ACCOUNTS_HINT}
               >

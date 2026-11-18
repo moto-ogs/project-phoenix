@@ -7,7 +7,7 @@
 // ersten Lastschrift eines Mandats eine Folgelastschrift. Lastschriften, die
 // nicht in die Datei dürfen, stehen mit Grund darunter.
 
-import { DownloadIcon, LandmarkIcon } from "lucide-react";
+import { CheckCircle2, DownloadIcon, LandmarkIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import {
@@ -28,6 +28,7 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ConfirmationModal } from "~/components/ui/modal";
+import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
@@ -286,24 +287,7 @@ export function SepaDebitCard({
         }
         actions={
           pending ? (
-            <div className="flex w-full max-w-full flex-col flex-wrap gap-2 min-[480px]:w-auto min-[480px]:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                disabled={fileBlocked || !downloadedId || downloading}
-                disabledReason={
-                  fileBlocked
-                    ? ACCOUNT_MISSING_REASON
-                    : !downloadedId
-                      ? "Lade zuerst die Datei herunter."
-                      : undefined
-                }
-                tooltip="Vermerkt die Lastschriften als eingereicht. moto fragt vorher nach."
-                onClick={() => setConfirming(true)}
-              >
-                Bei der Bank eingereicht
-              </Button>
+            <>
               {fileBlocked ? null : (
                 <HandoverMenu
                   run={handoverRun}
@@ -333,7 +317,25 @@ export function SepaDebitCard({
                 <DownloadIcon aria-hidden className="size-4" />
                 Datei herunterladen
               </Button>
-            </div>
+              {fileBlocked ? null : (
+                // „Bei der Bank eingereicht“ is a step after the file, not an
+                // action of every visit (#7407): it waits in the card menu.
+                <OverflowMenu
+                  ariaLabel="Weitere Aktionen zur Lastschriftdatei"
+                  items={[
+                    {
+                      label: "Bei der Bank eingereicht",
+                      description: downloadedId
+                        ? "Vermerkt die Lastschriften als eingereicht. moto fragt vorher nach."
+                        : "Lade zuerst die Datei herunter.",
+                      icon: <CheckCircle2 className="h-4 w-4" aria-hidden />,
+                      disabled: !downloadedId || downloading,
+                      onClick: () => setConfirming(true),
+                    },
+                  ]}
+                />
+              )}
+            </>
           ) : undefined
         }
       >

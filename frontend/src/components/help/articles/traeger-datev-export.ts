@@ -25,7 +25,7 @@ export function traegerDatevExportTopic(): HelpTopic {
           "Das machst du nur einmal. Frage dein Steuerbüro nach den Werten.",
         steps: [
           "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-          "Wähle oben rechts `DATEV-Werte`. Die Einstellungen öffnen sich im Bereich `DATEV`.",
+          "Wähle oben rechts das Menü mit den drei Punkten und dann `DATEV-Werte`. Die Einstellungen öffnen sich im Bereich `DATEV`.",
           "Trage `Beraternummer` und `Mandantennummer` ein.",
           "Wähle die `Länge der Sachkonten`, den `Kontenrahmen` und den `Beginn des Wirtschaftsjahres`.",
           "Trage das `Standard-Erlöskonto` ein. Darauf bucht moto alles ohne eigenes Konto.",
@@ -52,7 +52,7 @@ export function traegerDatevExportTopic(): HelpTopic {
           "Die Spalte `DATEV-Datei` zeigt, wie viele neue Buchungen ein Lauf hat.",
         steps: [
           "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
-          "Wähle beim Lauf `DATEV`. Die Datei wird heruntergeladen. Sie enthält nur die neuen Buchungen.",
+          "Wähle beim Lauf das Menü mit den drei Punkten und unter `Herunterladen` `DATEV-Datei`. Die Datei wird heruntergeladen. Sie enthält nur die neuen Buchungen.",
           "Gib die Datei an dein Steuerbüro.",
         ],
       },
@@ -61,7 +61,7 @@ export function traegerDatevExportTopic(): HelpTopic {
         description:
           "Nur wenn dein Steuerbüro eine frühere Datei nicht hat oder nicht einlesen konnte.",
         steps: [
-          "Wähle beim Lauf das Menü mit den drei Punkten neben `DATEV`.",
+          "Wähle beim Lauf das Menü mit den drei Punkten.",
           "Wähle `Alle Buchungen erneut`.",
           "Lies den Hinweis. Hat der Lauf Buchungen in mehreren Wirtschaftsjahren, wähle das `Wirtschaftsjahr`.",
           "Wähle `Erneut herunterladen`.",
@@ -73,7 +73,7 @@ export function traegerDatevExportTopic(): HelpTopic {
     notes: [
       "Bei Monatsbeiträgen trägst du die Debitorennummer bei `Empfänger und Zahlung` der Familie ein. Bei Ferienbeiträgen gilt die Nummer der Ferienanmeldung. Hat die Anmeldung keine, gilt die Nummer der Familie. DATEV nimmt nur Ziffern an, eine mehr als bei den Sachkonten. Bei 4 Stellen ist das zum Beispiel `10001`.",
       "Jede Buchung kommt nur einmal in eine DATEV-Datei. Stornierst du später eine Rechnung, steht das Storno in der nächsten Datei des Laufs. Die Rechnung selbst steht dort nicht noch einmal.",
-      "Eine DATEV-Datei gilt für ein Wirtschaftsjahr. Liegt ein Storno im neuen Jahr, kommt es in eine eigene Datei. Lade dafür noch einmal `DATEV` herunter.",
+      "Eine DATEV-Datei gilt für ein Wirtschaftsjahr. Liegt ein Storno im neuen Jahr, kommt es in eine eigene Datei. Lade dafür noch einmal die `DATEV-Datei` herunter.",
       "Hat ein Lauf keine neuen Buchungen, lässt sich `DATEV` nicht wählen. Dann entsteht keine Datei und keine Nummer.",
       "Die DATEV-Datei und die Sollstellung zählen in derselben Reihe von Dateinummern.",
       "Eine Rechnung über 0 € steht nicht in der DATEV-Datei. Sie bewegt kein Geld.",

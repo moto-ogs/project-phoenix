@@ -82,7 +82,7 @@ export function DatevReadinessNotice({
       action={
         <ButtonLink
           href={traegerPath(DATEV_SETTINGS_PATH)}
-          variant="ghost_tone"
+          variant="surface"
           size="compact"
           tooltip="Öffnet die Einstellungen, in denen die DATEV-Werte stehen."
         >
@@ -183,7 +183,7 @@ export function DatevRefusedNotice({
         accounts ? (
           <ButtonLink
             href={traegerPath(BOOKING_ACCOUNTS_PATH)}
-            variant="ghost_tone"
+            variant="surface"
             size="compact"
             tooltip={BOOKING_ACCOUNTS_HINT}
           >
