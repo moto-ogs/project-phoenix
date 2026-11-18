@@ -42,6 +42,11 @@ interface ExportMenuItemsArgs {
   readonly unavailable?: boolean;
   /** Group heading above the entries; `null` for none. */
   readonly header?: string | null;
+  /**
+   * One line under the heading that holds for every format, such as which
+   * schools the file holds. Shown only with a heading.
+   */
+  readonly headerDescription?: string;
 }
 
 function optionIcon(option: ExportMenuOption) {
@@ -64,6 +69,7 @@ export function exportMenuItems({
   busyKey = null,
   unavailable = false,
   header = EXPORT_ACTION_LABELS.download,
+  headerDescription,
 }: ExportMenuItemsArgs): OverflowMenuEntry[] {
   const entries: OverflowMenuEntry[] = options.map((option) => ({
     label:
@@ -83,13 +89,24 @@ export function exportMenuItems({
     disabled: unavailable || busyKey !== null,
     onClick: () => onSelect(option),
   }));
-  return header ? [{ kind: "header", label: header }, ...entries] : entries;
+  return header
+    ? [
+        {
+          kind: "header",
+          label: header,
+          ...(headerDescription ? { description: headerDescription } : {}),
+        },
+        ...entries,
+      ]
+    : entries;
 }
 
 /**
  * An export without options on a card or panel that has no page menu of its
  * own: a „Herunterladen“ button that opens the same entries as
- * `exportMenuItems`.
+ * `exportMenuItems`. In a page head the export belongs in the page menu
+ * instead (`TenantPage` `overflowMenu`), under „Herunterladen“, built with
+ * `exportMenuItems` (TENANT-PAGE-SPEC Regel 4).
  */
 export function ExportMenu({
   label = EXPORT_ACTION_LABELS.download,

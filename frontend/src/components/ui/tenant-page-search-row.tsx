@@ -24,7 +24,7 @@ import type {
   FilterConfig,
   FilterPanelAnchor,
   FilterSection,
-  OverflowMenuItem,
+  OverflowMenuEntry,
   PageHeaderBadge,
   PageHeaderFilterPanel,
   PageHeaderSearch,
@@ -37,7 +37,11 @@ export interface TenantPageSearchRowProps {
   readonly filters?: readonly FilterConfig[];
   readonly activeFilters?: readonly ActiveFilter[];
   readonly onClearAllFilters?: () => void;
-  readonly overflowMenu?: readonly OverflowMenuItem[];
+  /**
+   * Das Kebab-Menü der Seite. Überschriften gliedern es, etwa „Herunterladen“
+   * über den Formaten (TENANT-PAGE-SPEC Regel 4).
+   */
+  readonly overflowMenu?: readonly OverflowMenuEntry[];
   /**
    * Zaehler-Plakette in der Such- und Filterzeile, z. B. die Zahl der
    * gefundenen Kinder. Nur fuer eine Zahl, die sich mit der Filterung aendert
@@ -279,7 +283,7 @@ interface MobileSearchSectionProps {
    * Neben der Suche: Die Kopfkarte hat auf dem Telefon keine andere Zeile,
    * die das Kebab trägt. Ohne es gäbe es das Menü erst ab der Desktop-Breite.
    */
-  readonly overflowMenu?: readonly OverflowMenuItem[];
+  readonly overflowMenu?: readonly OverflowMenuEntry[];
   /** Eigene Zeile unter der Suche; neben ihr wäre auf dem Telefon kein Platz. */
   readonly primaryAction?: React.ReactNode;
 }
@@ -403,7 +407,7 @@ interface DesktopSearchSectionProps {
   readonly badge?: PageHeaderBadge;
   readonly activeFilters: readonly ActiveFilter[];
   readonly onClearAllFilters?: () => void;
-  readonly overflowMenu?: readonly OverflowMenuItem[];
+  readonly overflowMenu?: readonly OverflowMenuEntry[];
   readonly primaryAction?: React.ReactNode;
   readonly activeFilterCount?: number;
   readonly showChipsRow: boolean;

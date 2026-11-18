@@ -1,7 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ExportMenu, exportFormatOptions } from "./export-menu";
+import { OverflowMenu } from "./page-header/OverflowMenu";
+import {
+  ExportMenu,
+  exportFormatOptions,
+  exportMenuItems,
+} from "./export-menu";
 
 describe("ExportMenu", () => {
   it("offers one entry per format under the format names", () => {
@@ -54,5 +59,22 @@ describe("ExportMenu", () => {
     expect(trigger).toBeDisabled();
     fireEvent.click(trigger);
     expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("puts a line that holds for every format under the heading of a page menu", () => {
+    render(
+      <OverflowMenu
+        items={exportMenuItems({
+          headerDescription: "Nur OGS Am Bach",
+          options: exportFormatOptions(["pdf"]),
+          onSelect: vi.fn(),
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Weitere Aktionen/ }));
+    expect(screen.getByText("Herunterladen")).toBeInTheDocument();
+    expect(screen.getByText("Nur OGS Am Bach")).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "PDF" })).toBeEnabled();
   });
 });
