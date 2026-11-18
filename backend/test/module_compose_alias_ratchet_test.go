@@ -37,8 +37,7 @@ import (
 // directory. A package without aliases has no entry.
 var moduleComposeAliasBudgets = map[string]int{}
 
-// moduleComposeAliasBudgetTotal is the sum of moduleComposeAliasBudgets.
-const moduleComposeAliasBudgetTotal = 0
+// ADR 0296 retired moduleComposeAliasBudgetTotal; the register sum replaces it.
 
 const backendModulePath = "github.com/moto-ogs/project-phoenix/"
 
@@ -81,22 +80,6 @@ func TestModuleComposeAliasRatchet(t *testing.T) {
 				"[compose alias] %s: budget %d, but no alias is left (deleted, moved or renamed?).\n"+
 					"  Remove the entry.", pkg, budget))
 		}
-	}
-	sum := 0
-	for _, budget := range moduleComposeAliasBudgets {
-		sum += budget
-	}
-	switch {
-	case sum > moduleComposeAliasBudgetTotal:
-		violations = append(violations, fmt.Sprintf(
-			"[compose alias] moduleComposeAliasBudgetTotal: the entries sum to %d, the total is %d.\n"+
-				"  An entry was raised. Never raise a budget; a raise needs an ADR (ADR 0057 point 5).",
-			sum, moduleComposeAliasBudgetTotal))
-	case sum < moduleComposeAliasBudgetTotal:
-		violations = append(violations, fmt.Sprintf(
-			"[compose alias] moduleComposeAliasBudgetTotal: the entries sum to %d, the total is %d.\n"+
-				"  Nice — lower moduleComposeAliasBudgetTotal to %d so the reduction cannot regress.",
-			sum, moduleComposeAliasBudgetTotal, sum))
 	}
 	if len(violations) > 0 {
 		sort.Strings(violations)

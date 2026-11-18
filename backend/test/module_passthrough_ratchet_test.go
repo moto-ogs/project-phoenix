@@ -96,12 +96,10 @@ import (
 // Since ADR 0061 (#4084) one register counts both trees per module:
 // modulePassthroughOwnerBudgets replaces the application register
 // modulePassthroughBudgets and the composition register
-// modulePassthroughComposeBudgets, and modulePassthroughOwnerBudgetTotal
-// replaces their totals modulePassthroughBudgetTotal and
-// modulePassthroughComposeBudgetTotal. #4084 moves code from the compositions
-// into the application layers; moving a method within one module must not
-// count as growth, so both trees share one entry. A method moved to another
-// module still raises that module's entry.
+// modulePassthroughComposeBudgets; their totals are gone (ADR 0296). #4084
+// moves code from the compositions into the application layers; moving a
+// method within one module must not count as growth, so both trees share one
+// entry. A method moved to another module still raises that module's entry.
 //
 // Form: a budget per module, like test/query-budgets/, not an allowlist per
 // method. The key is the module directory relative to the backend root
@@ -132,13 +130,12 @@ import (
 // A red run prints the measured count for every module, so the register can
 // always be rebuilt from the failure output. Numbers only ever go down.
 //
-// The register has a total (modulePassthroughOwnerBudgetTotal) that must
-// equal the sum of its entries. Raising an entry therefore means raising the
-// total as well, and a raise of either against the pull request's base fails
-// `scripts/backend-architecture.sh check` (ratchet budgets, #4071); a raise
-// needs an ADR added in the same change (ADR 0057 point 5). The application
-// register's total was 718 when the total was introduced; it had grown from
-// the 704 seeded below through the four raises recorded in the entries.
+// The register has no hand-kept total (ADR 0296 retired
+// modulePassthroughOwnerBudgetTotal): every entry is exact, and a raised entry
+// or register sum against the pull request's base fails
+// `scripts/backend-architecture.sh check` (ratchet budgets, #4071). A raise
+// needs an ADR added in the same change (ADR 0057 point 5), cited in the
+// comment on the raised entry.
 //
 // Known limitations — conditions 1-4 describe a shape, not an intent. Five
 // gaps survive this version and are recorded rather than patched, because a
@@ -225,71 +222,6 @@ var modulePassthroughMovedTrees = []struct{ path, owner string }{
 // depth.
 const modulePassthroughApplicationSegment = "/internal/application/"
 
-// modulePassthroughOwnerBudgetTotal is the sum of
-// modulePassthroughOwnerBudgets: 3109 under ADR 0061, the 717 of
-// modulePassthroughBudgetTotal and the 2392 of
-// modulePassthroughComposeBudgetTotal. Shrink-only, like every entry; raised
-// by ADR 0063 and by ADR 0064 (3,011 to 3,091), and by ADR 0073 (one each
-// for modules/communication and modules/schoolcalendar), by ADR 0077 (two
-// for modules/identityaccess) and by ADR 0078 (one for
-// workflows/parentportal), and by ADR 0079 (one for modules/communication).
-// Raised by ADR 0104: FindManageableAccount of modules/identityaccess (+1).
-// Raised by ADR 0105: the holiday period reads of modules/enrollment (+2).
-// Raised by ADR 0110: the holiday registration retention of modules/enrollment (+1).
-// Raised by ADR 0112: the Träger logo read of modules/organizationtenancy (+1).
-// Raised by ADR 0116: the hosted holiday weeks of modules/enrollment (+1).
-// Raised by ADR 0115: the new owner modules/parentbilling (+5).
-// Raised by ADR 0119: the billing run list of modules/parentbilling (+1).
-// Raised by ADR 0158: the monthly run list of modules/parentbilling (+1).
-// Lowered by ADR 0118: the holiday registration retention of modules/enrollment
-// also prunes its deletion log and is no pass-through any more (-1).
-// Raised by ADR 0131: the kiosk count revision read of modules/studentpresence (+1).
-// Raised by ADR 0133: the kiosk room count revision read of modules/studentpresence (+1).
-// Lowered by #4771: accident-report category visibility has permission logic
-// instead of forwarding directly to the access port (-1).
-// Raised by ADR 0141: the payroll dispatch overview of modules/workforce (+1).
-// Lowered by #4497: the caterer scope of CapabilityGate.StartChallenge in
-// modules/identityaccess makes it no pass-through any more (-1).
-// Lowered: AddGuardianPhone validates ambient create facts instead of merely forwarding.
-// Raised by ADR 0158: the monthly run list of modules/parentbilling (+1).
-// Raised by ADR 0167: the payment terms read of modules/parentbilling (+1).
-// Lowered by #6178: the operator login consults the operator MFA flows
-// directly instead of the four forwards of OperatorMFAGate; the portal lookup
-// of CapabilityGate.StartChallenge (no own switch any more) counts again (-3).
-// Raised by ADR 0168: the first complete attendance day of
-// modules/studentpresence (+1).
-// Raised by ADR 0172: the document contact read of modules/organizationtenancy (+1).
-// Raised by ADR 0182: the effective notice dues read of modules/parentbilling (+1).
-// Raised by ADR 0184: the suspensions of the Beleg retention of
-// modules/parentbilling, which validate and evaluate the Träger again (+2).
-// ADR 0198: the transaction-bound account-retention read adds one floor hit.
-// Lowered by #6583: offboarding locks the whole roster in two phases (-1).
-// Raised by ADR 0209: the billing lock command of the holiday allocation
-// workflow of modules/parentbilling (+1).
-// Lowered by ADR 0196: the holiday closure notices leave School Calendar two
-// pass-throughs fewer (-2).
-// Lowered by #6840: People Directory's DeletePerson checks for a live child or
-// staff profile before the soft delete (-1).
-// Lowered by #6847: approving and withdrawing an absence return their plan
-// cascade instead of forwarding the write (-2).
-// Raised by ADR 0230: Timetable's set-based assignment read of the absence
-// plan gaps (+1).
-// Lowered by #7081: Identity & Access keeps one name for the operator's
-// resend of a code (-1).
-// Lowered by #7058: the payroll dispatch overview reads its mails too (-1).
-// Raised by ADR 0243: the month close of the Träger in modules/workforce,
-// whose capability maps the close, the reopen and the staff read onto the
-// public failures (+3).
-// Lowered by #7104: People Directory's student rosters and guardian retention
-// read the day of the owner's clock instead of forwarding (-2); Device Fleet's
-// room move leaves updated_at to the database trigger (-1, ADR 0268).
-// Lowered by #4496: revoking a caterer invitation also stops its unsent
-// mail instead of forwarding (-1).
-// Raised by ADR 0283: Student Presence's mark transfer of the class-list
-// conversion, which validates the moves before its store call (+1).
-// Raised by ADR 0289: the file seal of modules/workforce (+1).
-const modulePassthroughOwnerBudgetTotal = 1395
-
 // modulePassthroughOwnerBudgets is the register: module directory →
 // pass-throughs measured in its application layer and its compositions
 // together (ADR 0061). Each entry started as the sum of the module's entries
@@ -298,9 +230,7 @@ const modulePassthroughOwnerBudgetTotal = 1395
 // c49b81c3a9 (2394 in 34 compositions). #4084 carries the compositions that
 // still hold more than construction. Sorted alphabetically so later diffs stay
 // readable. Shrink-only — an entry may fall or go, never rise, and no module
-// gets a new entry. Raised by ADR 0104: removing the former org branch leaves
-// FindManageableAccount of modules/identityaccess a plain transaction
-// wrapper (+1).
+// gets a new entry. A raise cites its ADR on the raised entry, never here.
 var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/appointments": 21,
 	"modules/auditlog":     1,
@@ -390,7 +320,6 @@ func TestModulePassthroughRatchet(t *testing.T) {
 	}
 
 	violations := modulePassthroughViolations(counts, modulePassthroughOwnerBudgets)
-	violations = append(violations, modulePassthroughTotalViolations("modulePassthroughOwnerBudgetTotal", modulePassthroughOwnerBudgets, modulePassthroughOwnerBudgetTotal)...)
 	if len(violations) > 0 {
 		sort.Strings(violations)
 		t.Errorf("Module-passthrough ratchet check failed (%d issue(s)):\n\n%s\n\n"+
@@ -438,28 +367,6 @@ func modulePassthroughViolations(counts, budgets map[string]int) []string {
 		}
 	}
 	return violations
-}
-
-// modulePassthroughTotalViolations pins a register's total to the sum of its
-// entries, so that raising an entry shows up as a raised constant as well.
-func modulePassthroughTotalViolations(name string, budgets map[string]int, total int) []string {
-	sum := 0
-	for _, budget := range budgets {
-		sum += budget
-	}
-	switch {
-	case sum > total:
-		return []string{fmt.Sprintf(
-			"[module passthrough] %s: the entries sum to %d, the total is %d.\n"+
-				"  An entry was raised. Never raise a budget; a raise needs an ADR (ADR 0057 point 5).",
-			name, sum, total)}
-	case sum < total:
-		return []string{fmt.Sprintf(
-			"[module passthrough] %s: the entries sum to %d, the total is %d.\n"+
-				"  Nice — lower %s to %d so the reduction cannot regress.",
-			name, sum, total, name, sum)}
-	}
-	return nil
 }
 
 // modulePassthroughScan counts pass-through methods per register key in
