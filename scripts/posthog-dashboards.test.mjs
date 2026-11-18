@@ -37,6 +37,14 @@ test('defines one dashboard per product surface plus the two across schools', ()
   assert.equal(new Set(names).size, names.length, 'insight names are the sync key and must be unique');
 });
 
+test('every insight description fits PostHog\'s limit of 400 characters', () => {
+  // The API rejects a longer insight description only on write; --check and
+  // --dry-run never send it, so the sync after a merge would fail.
+  for (const insight of insights) {
+    assert.ok((insight.description ?? '').length <= 400, `${insight.name}: ${(insight.description ?? "").length} characters`);
+  }
+});
+
 test('every insight filters on production or the demo, never staging', () => {
   for (const insight of insights) {
     const deployment = DEPLOYMENTS[insight.deployment];
