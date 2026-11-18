@@ -45,7 +45,7 @@ export function traegerCatalogPhasesTopic(): HelpTopic {
         description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
         steps: [
           "Wähle in der Navigation `Anmeldephasen`.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
           "Die Datei enthält alle Anmeldephasen mit Leistungszeitraum, Schulen und Stand.",
         ],
       },
