@@ -30,7 +30,7 @@ func (t *TraegerStaff) UpdatePerson(ctx context.Context, actor workforce.Traeger
 		if err != nil {
 			return err
 		}
-		changed := locked.PersonChanges(person)
+		corrected, changed := locked.ApplyPerson(person)
 		if len(changed) == 0 {
 			return nil
 		}
@@ -44,8 +44,7 @@ func (t *TraegerStaff) UpdatePerson(ctx context.Context, actor workforce.Traeger
 			}
 			trail = append(trail, entry)
 		}
-		locked.FirstName, locked.LastName, locked.Birthday = person.FirstName, person.LastName, person.Birthday
-		if _, err := t.store.SaveStaffRecord(ctx, locked); err != nil {
+		if _, err := t.store.SaveStaffRecord(ctx, corrected); err != nil {
 			return err
 		}
 		return t.store.AppendStaffChanges(ctx, actor.OrganizationID, trail)

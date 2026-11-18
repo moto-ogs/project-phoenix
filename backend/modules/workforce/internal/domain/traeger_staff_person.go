@@ -70,27 +70,35 @@ func invalidStaffName(firstName, lastName string, limit int) (string, bool) {
 	return "", false
 }
 
-// PersonChanges lists the fields of the record person differs in, in the
-// order of StaffRecordFields, each with the record's value before. A value
-// the correction empties (only the birthday may be empty) is removed, every
+// ApplyPerson returns the record with the corrected person and the fields
+// that changed, in the order of StaffRecordFields, each with the record's
+// value before. Names compare in NFC: a stored decomposed „Müller“ equals
+// the normalized one and stays as stored, without a trail entry. A value the
+// correction empties (only the birthday may be empty) is removed, every
 // other difference changed.
-func (r TraegerStaffRecord) PersonChanges(person StaffPerson) []StaffPersonChange {
+func (r TraegerStaffRecord) ApplyPerson(person StaffPerson) (TraegerStaffRecord, []StaffPersonChange) {
 	var changes []StaffPersonChange
-	for _, field := range []struct{ name, before, after string }{
-		{StaffFieldFirstName, r.FirstName, person.FirstName},
-		{StaffFieldLastName, r.LastName, person.LastName},
-		{StaffFieldBirthday, r.Birthday, person.Birthday},
+	for _, field := range []struct {
+		name   string
+		stored *string
+		after  string
+		same   bool
+	}{
+		{StaffFieldFirstName, &r.FirstName, person.FirstName, textnorm.Name(r.FirstName) == person.FirstName},
+		{StaffFieldLastName, &r.LastName, person.LastName, textnorm.Name(r.LastName) == person.LastName},
+		{StaffFieldBirthday, &r.Birthday, person.Birthday, r.Birthday == person.Birthday},
 	} {
-		if field.before == field.after {
+		if field.same {
 			continue
 		}
 		kind := StaffChangeChanged
 		if field.after == "" {
 			kind = StaffChangeRemoved
 		}
-		changes = append(changes, StaffPersonChange{Field: field.name, Kind: kind, Before: field.before})
+		changes = append(changes, StaffPersonChange{Field: field.name, Kind: kind, Before: *field.stored})
+		*field.stored = field.after
 	}
-	return changes
+	return r, changes
 }
 
 // StaffPersonChange is one field a correction changes or removes, with its

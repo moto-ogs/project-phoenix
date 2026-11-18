@@ -45,17 +45,33 @@ func TestNormalizeStaffPersonNamesTheRefusedField(t *testing.T) {
 	assert.Equal(t, StaffPerson{FirstName: "Jonas", LastName: "Keller", Birthday: "2026-09-09"}, person, "today is a birthday that has come")
 }
 
-func TestPersonChangesKeepTheOldValueOfEveryChangedField(t *testing.T) {
+func TestApplyPersonKeepsTheOldValueOfEveryChangedField(t *testing.T) {
 	t.Parallel()
 	record := TraegerStaffRecord{FirstName: "Mira", LastName: "Sommer", Birthday: ""}
-	assert.Empty(t, record.PersonChanges(StaffPerson{FirstName: "Mira", LastName: "Sommer"}))
+	_, changes := record.ApplyPerson(StaffPerson{FirstName: "Mira", LastName: "Sommer"})
+	assert.Empty(t, changes)
+
+	corrected, changes := record.ApplyPerson(StaffPerson{FirstName: "Myra", LastName: "Sommer", Birthday: "1990-04-12"})
 	assert.Equal(t, []StaffPersonChange{
 		{Field: StaffFieldFirstName, Kind: StaffChangeChanged, Before: "Mira"},
 		{Field: StaffFieldBirthday, Kind: StaffChangeChanged, Before: ""},
-	}, record.PersonChanges(StaffPerson{FirstName: "Myra", LastName: "Sommer", Birthday: "1990-04-12"}))
+	}, changes)
+	assert.Equal(t, TraegerStaffRecord{FirstName: "Myra", LastName: "Sommer", Birthday: "1990-04-12"}, corrected)
+
 	record.Birthday = "1990-04-12"
+	_, changes = record.ApplyPerson(StaffPerson{FirstName: "Mira", LastName: "Sommer"})
 	assert.Equal(t, []StaffPersonChange{{Field: StaffFieldBirthday, Kind: StaffChangeRemoved, Before: "1990-04-12"}},
-		record.PersonChanges(StaffPerson{FirstName: "Mira", LastName: "Sommer"}), "an emptied birthday is removed")
+		changes, "an emptied birthday is removed")
+}
+
+// A name an import stored decomposed is the same name: a birthday-only
+// correction neither rewrites it nor writes a trail entry for it.
+func TestApplyPersonKeepsAStoredDecomposedName(t *testing.T) {
+	t.Parallel()
+	record := TraegerStaffRecord{FirstName: "Jonas", LastName: "Mu\u0308ller"}
+	corrected, changes := record.ApplyPerson(StaffPerson{FirstName: "Jonas", LastName: "Müller", Birthday: "1990-04-12"})
+	assert.Equal(t, []StaffPersonChange{{Field: StaffFieldBirthday, Kind: StaffChangeChanged, Before: ""}}, changes)
+	assert.Equal(t, "Mu\u0308ller", corrected.LastName)
 }
 
 // A hire creates a person at every Einsatzort, whose names allow 200
