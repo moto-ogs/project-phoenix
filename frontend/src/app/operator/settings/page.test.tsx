@@ -216,6 +216,30 @@ describe("OperatorSettingsPage", () => {
     expect(screen.getByText("john@example.com")).toBeInTheDocument();
   });
 
+  it("does not show an address as the name when profile loading fails (#7305)", async () => {
+    mockUseSession.mockReturnValue({
+      data: {
+        user: {
+          id: "1",
+          scope: "platform",
+          name: "name@example.com",
+          email: "john@example.com",
+        },
+      },
+      status: "authenticated",
+      update: mockUpdateSession,
+    });
+    mockSessionFetch.mockRejectedValueOnce(new Error("Network error"));
+
+    renderPage();
+
+    expect(
+      await screen.findByText(crashText("das Profil")),
+    ).toBeInTheDocument();
+    expect(screen.getByText("john@example.com")).toBeInTheDocument();
+    expect(screen.queryByText("name@example.com")).not.toBeInTheDocument();
+  });
+
   // #2519: a failed profile load is visible with retry instead of silent.
   it("shows a failed profile load with retry", async () => {
     mockSessionFetch.mockResolvedValueOnce(
