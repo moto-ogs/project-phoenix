@@ -124,6 +124,10 @@ type Letterhead struct {
 	ContactEmail string
 	BankAccount  *LetterheadBankAccount
 	PaymentText  string
+	// WithoutTransferCode leaves the GiroCode off every letter: the Träger
+	// switched parent_billing.print_transfer_qr off (#5624). The zero value
+	// prints it, the registry default.
+	WithoutTransferCode bool
 	// Template is the Träger's current template of the confirmation letter
 	// (#4677).
 	Template LetterTemplate

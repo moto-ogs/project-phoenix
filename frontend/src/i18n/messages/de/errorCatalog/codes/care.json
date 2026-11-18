@@ -15,6 +15,7 @@
   "care_request_field_disabled": "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
   "child_care_ended": "Die Betreuung dieses Kindes ist beendet. Änderungen sind nicht mehr möglich. Bei Fragen wenden Sie sich bitte an die OGS.",
   "child_not_linked": "Für {object} fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+  "child_without_care_place": "Ihr Kind hat keinen Platz in der OGS. Diese Funktion gibt es für Ihr Kind deshalb nicht.",
   "course_already_booked": "{object} konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",
   "course_request_invalid": "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
   "course_request_not_own": "{object} konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",

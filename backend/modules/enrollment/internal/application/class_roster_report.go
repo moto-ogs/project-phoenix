@@ -233,6 +233,8 @@ func splitWithoutCarePlace(students []*RosterStudent, day calendar.Date) ([]*Ros
 	var withoutPlace []*RosterStudent
 	for _, student := range students {
 		switch {
+		case !student.WithoutCarePlace && student.inClassTimeBeforeCareOn(day):
+			withoutPlace = append(withoutPlace, student)
 		case !student.WithoutCarePlace:
 			care = append(care, student)
 		case student.inClassOn(day):
@@ -252,6 +254,13 @@ func (s *RosterStudent) inClassOn(day calendar.Date) bool {
 		return false
 	}
 	return s.MemberUntil == nil || !day.After(*s.MemberUntil)
+}
+
+// inClassTimeBeforeCareOn reports whether day lies in the class time a
+// child with an OGS place keeps from before its care started (#4803).
+func (s *RosterStudent) inClassTimeBeforeCareOn(day calendar.Date) bool {
+	return s.ClassTimeFrom != nil && s.ClassTimeUntil != nil &&
+		!day.Before(*s.ClassTimeFrom) && !day.After(*s.ClassTimeUntil)
 }
 
 func studentsInClass(students []*RosterStudent, schoolClass string) []*RosterStudent {

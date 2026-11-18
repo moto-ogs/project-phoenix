@@ -15,8 +15,8 @@
       "reason": "21 runs after #7038 (14.11.2026): 46-68 s on blacksmith-8vcpu, 65-72 s for the full suite on blacksmith-4vcpu, 34 s in a small selection there. Migration pull requests on blacksmith-4vcpu took 71-107 s before #7038 and are barely measured since, so the budget stays above 1.5 times the new maximum (110 s) until weekday runs exist. Runs every migration on fresh databases."
     },
     "modules/organizationtenancy/compose": {
-      "seconds": 100,
-      "reason": "20 runs after #7038 (14.11.2026): 37-61 s on blacksmith-8vcpu, 36-41 s for the full suite on blacksmith-4vcpu; budget is 1.5 times the maximum. Per-test tenants for school lifecycle and erasure (#6452)."
+      "seconds": 175,
+      "reason": "37 runs of 16.-17.11.2026 on blacksmith-16vcpu across 13 branches (100-599 packages per job): 60-117 s, the maximum in a #7295 branch that does not touch the package; budget is 1.5 times the maximum. Locally the package takes 35 s alone, unchanged against development, so the spread is load from the packages running beside it. Earlier: 37-61 s on blacksmith-8vcpu after #7038. Per-test tenants for school lifecycle and erasure (#6452)."
     },
     "cmd": {
       "seconds": 100,

@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
@@ -91,16 +90,9 @@ func rewriteStaffBankRows(ctx context.Context, tx bun.IDB, schoolID, afterID int
 // timestamps of a pure rewrap. Role, replica role and lock timeout die with
 // the transaction.
 func maintenanceSchoolTransaction(ctx context.Context, schoolID int64) (bun.IDB, error) {
-	if schoolID <= 0 || tenant.FromContext(ctx) != schoolID {
-		return nil, errors.New("workforce postgres: the school transaction of this school is required")
-	}
-	transaction, ok := tenant.TransactionFromContext(ctx)
-	if !ok {
-		return nil, errors.New("workforce postgres: transaction is required")
-	}
-	tx, ok := transaction.(bun.Tx)
-	if !ok {
-		return nil, fmt.Errorf("workforce postgres: unsupported transaction %T", transaction)
+	tx, err := schoolTransaction(ctx, schoolID)
+	if err != nil {
+		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx, "RESET ROLE; SET LOCAL lock_timeout = '5s'; SET LOCAL session_replication_role = replica"); err != nil {
 		tenant.MarkRollback(ctx)

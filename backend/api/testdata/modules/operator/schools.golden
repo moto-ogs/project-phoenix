@@ -3,6 +3,7 @@ DELETE /operator/schools/{id}/accounts/{accountId}/caregiver-capability/ -> basi
 DELETE /operator/schools/{id}/accounts/{accountId}/mfa/ -> basis
 DELETE /operator/schools/{id}/settings/values/{key} -> basis
 GET /operator/schools/ -> basis
+GET /operator/schools/required-details -> basis
 GET /operator/schools/summaries -> basis
 GET /operator/schools/{id}/accounts -> basis
 GET /operator/schools/{id}/accounts/{accountId}/caregiver-capability/ -> basis

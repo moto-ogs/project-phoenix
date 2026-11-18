@@ -32,7 +32,7 @@ func TestOperatorAuditSensitiveResponseRoutesFailClosed(t *testing.T) {
 	organizationID, schoolID := provisionTestSchool(t, db, service, operatorID, "audit-response")
 	module, lifecycle, err := NewOperatorSettingsTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
-	resource := provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service})
+	resource := provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, RequiredDetails: service.RequiredDetails})
 	router := chi.NewRouter()
 	mountOperatorProvisioningRoutes(router, resource, nil)
 	demoPresenceHistoryCalls := 0
@@ -74,6 +74,7 @@ func TestOperatorAuditSensitiveResponseRoutesFailClosed(t *testing.T) {
 	for _, tc := range []struct{ path, view string }{
 		{"/schools/", "schools"},
 		{"/schools/summaries", "school_summaries"},
+		{"/schools/required-details", "school_required_details"},
 		{fmt.Sprintf("/organizations/%d/schools", organizationID), "organization_schools"},
 		{school + "/settings/schema", "school_settings_schema"},
 		{school + "/settings/values/" + operatorBookingsAuthoritativeKey + "/reveal", "school_setting_reveal"},

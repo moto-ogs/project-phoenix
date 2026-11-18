@@ -2,7 +2,6 @@ package importpkg
 
 import (
 	"context"
-	"strings"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/classlist"
 	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
@@ -112,7 +111,7 @@ func (c *ClassListImportConfig) appendCreatedEntries(ctx context.Context, entrie
 	}
 	events := make([]any, len(entries))
 	for i, entry := range entries {
-		display := strings.TrimSpace(entry.FirstName) + " " + strings.TrimSpace(entry.LastName) + " (" + strings.TrimSpace(entry.SchoolClass) + ")"
+		display := classListEntryDisplay(entry.FirstName, entry.LastName, entry.SchoolClass)
 		events[i] = &auditModels.ClassListEntryChange{
 			EntryID: entry.ID, Action: auditModels.ClassListEntryActionCreated, OldValue: "", NewValue: display, ChangedBy: changedBy,
 		}

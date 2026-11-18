@@ -241,7 +241,18 @@ export function ParentGroupThreadView({
   const readersLine = thread.readers
     ? parentReadersLine(thread.readers, tm)
     : null;
-  const chatChild = sentFor ?? selected ?? thread.children[0]?.student_id;
+  // A child without an OGS place (#4803) has no chat with the OGS, so the
+  // link leads to the conversation of a child that has one, or is left out.
+  const withoutPlace = new Set(
+    (linked.data ?? [])
+      .filter((child) => child.without_care_place === true)
+      .map((child) => child.student_id),
+  );
+  const chatChild = [
+    sentFor,
+    selected,
+    ...thread.children.map((child) => child.student_id),
+  ].find((id): id is string => !!id && !withoutPlace.has(id));
   // Any of the guardian's children the thread reached opens its files.
   const firstChild = thread.children[0]?.student_id;
   const chatLink = chatChild ? (
@@ -310,7 +321,10 @@ export function ParentGroupThreadView({
           </div>
         ) : thread.closed ? (
           <div className="space-y-2">
-            <p className="text-sm leading-6 text-gray-600">{t("closedNote")}</p>
+            <p className="text-sm leading-6 text-gray-600">
+              {/* Ohne Kind mit OGS-Platz gibt es keinen Chat (#4803). */}
+              {chatLink ? t("closedNote") : t("closedNoteWithoutChat")}
+            </p>
             {chatLink}
           </div>
         ) : writable === null ? (

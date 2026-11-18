@@ -11,6 +11,7 @@ interface BackendChild {
   enrolled_until?: string;
   school_name: string;
   school_slug: string;
+  without_care_place?: boolean;
 }
 
 /**

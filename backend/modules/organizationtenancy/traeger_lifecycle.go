@@ -151,6 +151,8 @@ type TraegerLifecycleProvisioning interface {
 type OperatorProvisioning struct {
 	Provisioning
 	ErasureOrderRecords TraegerErasureOrderRecordsProvisioning
+	// RequiredDetails marks the schools that lack a required detail (#7174).
+	RequiredDetails SchoolRequiredDetailsProvisioning
 }
 
 // TraegerErasureOrderRecordsProvisioning lets the operator record the hint

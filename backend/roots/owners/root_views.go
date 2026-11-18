@@ -148,7 +148,7 @@ func BuildProvisioning(
 	db transactionruntime.Database, env RootEnvironment, organizations organizationtenancy.Capability, identity identityaccess.Owner,
 	persons peopledirectory.Capability, membership schoolmembership.Capability, people PeopleRows, devices devicefleet.Capability,
 	sessions presenceCompose.SessionRecords, supervisions studentpresence.SupervisionRecords, owner TimetableOwner,
-	operatorAuditLog OperatorAuditEntries, settings settingsCompose.SettingsService,
+	operatorAuditLog OperatorAuditEntries, settings settingsCompose.BatchSettingsService,
 ) (organizationtenancy.OperatorProvisioning, error) {
 	adapters, err := NewOperatorProvisioningAdapters(
 		operatorPersonStudentMembership(db), devices, persons, membership, people.Persons, people.Staff, identity,

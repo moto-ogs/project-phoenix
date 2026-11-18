@@ -322,6 +322,40 @@ describe("StudentsList", () => {
     expect(two).toHaveTextContent("keine Ankunft");
   });
 
+  it("marks a child without an OGS place and does not miss its arrival (#4803)", () => {
+    render(
+      <StudentsList
+        {...baseProps}
+        students={[
+          makeStudent("1", { school_class: "3a" }),
+          makeStudent("2", { school_class: "3a", without_care_place: true }),
+        ]}
+        grouping="class"
+        studentsWithArrival={new Set(["1"])}
+      />,
+    );
+
+    expect(screen.getByTestId("group-variant-3a")).toHaveTextContent("neutral");
+    expect(screen.getByText(/Ohne OGS-Platz/)).toBeInTheDocument();
+    expect(screen.queryByText(/keine Ankunft/)).not.toBeInTheDocument();
+  });
+
+  it("offers to invite the parents of a whole class (#4803)", () => {
+    render(
+      <StudentsList
+        {...baseProps}
+        canInviteGuardians
+        students={[makeStudent("1", { school_class: "3a" })]}
+        bulkStudents={[makeStudent("1", { school_class: "3a" })]}
+        grouping="class"
+        studentsWithArrival={new Set(["1"])}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Aktionen für 3a"));
+    expect(screen.getByText("Eltern einladen")).toBeInTheDocument();
+  });
+
   it("renders class actions menu only for known class groups", () => {
     render(
       <StudentsList

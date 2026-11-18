@@ -285,6 +285,37 @@ describe("TenantLayout", () => {
     );
   });
 
+  // #4803: the switch hides the single class list entry and the OGS areas
+  // of a child; a mapping without it left the switch off in every page.
+  it("hands the switch for children without an OGS place to the pages", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "success",
+          data: {
+            tenant_id: 1,
+            slug: "school-a",
+            name: "School A",
+            subdomain: "school-a",
+            organization_id: 2,
+            organization_name: "Organization",
+            settings: {},
+            grade_level_max: 4,
+            children_without_care_place: true,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const element = (await TenantLayout({
+      children: null,
+      params: Promise.resolve({ tenant: "school-a" }),
+    })) as ReactElement<{ tenant: { childrenWithoutCarePlace?: boolean } }>;
+
+    expect(element.props.tenant.childrenWithoutCarePlace).toBe(true);
+  });
+
   it("charges a cache miss to the visitor's IP", async () => {
     // Without the header the backend rate-limits the frontend container,
     // and all visitors share one bucket.

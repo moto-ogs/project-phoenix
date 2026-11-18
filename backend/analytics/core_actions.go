@@ -22,6 +22,10 @@ var coreActions = map[RouteKey]CoreAction{
 	// Period-owned PDFs have no school to count them for (#5199).
 	{http.MethodPost, "/traeger/holiday-periods/{id}/form/documents"}:                notCaptured,
 	{http.MethodDelete, "/traeger/holiday-periods/{id}/form/documents/{documentId}"}: notCaptured,
+	// The bell of the Träger-Portal (#7146): its read marks count in the
+	// frontend's bell events, not as core actions.
+	{http.MethodPost, "/traeger/notifications/feed/read-all"}:  notCaptured,
+	{http.MethodPost, "/traeger/notifications/feed/{id}/read"}: notCaptured,
 	// OGS portal (tenant API).
 	{http.MethodPost, "/api/absence-types/"}:                                                               notCaptured,
 	{http.MethodPut, "/api/absence-types/{id}"}:                                                            notCaptured,

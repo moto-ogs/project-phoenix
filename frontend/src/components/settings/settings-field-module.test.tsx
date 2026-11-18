@@ -74,3 +74,47 @@ describe("SettingsField for a module switch", () => {
     expect(queryByText(/Löschfrist/)).not.toBeInTheDocument();
   });
 });
+
+// #4803: an operator-managed switch that is neither a module nor a retention
+// window says only who decides it, never „Löschfrist“.
+describe("SettingsField for another operator-managed switch", () => {
+  it("names the moto team without calling it a deletion period", () => {
+    const { getByText, queryByText } = renderField(
+      moduleSetting({
+        key: "operations.children_without_care_place",
+        label: "Kinder ohne OGS-Platz in der Eltern-App",
+        default: false,
+        value: true,
+        writable: true,
+      }),
+      "operator",
+    );
+
+    expect(
+      getByText(
+        "Legt das moto-Team mit der Schule fest. Die Schule sieht es, kann es aber nicht ändern.",
+      ),
+    ).toBeInTheDocument();
+    expect(queryByText(/Löschfrist|Gebuchtes Modul/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the deletion period note for a retention window", () => {
+    const { getByText } = renderField(
+      moduleSetting({
+        key: "gdpr.status_day_retention_days",
+        label: "Krank- und Entschuldigt-Tage aufbewahren",
+        type: "number",
+        default: 30,
+        value: 30,
+        writable: true,
+      }),
+      "operator",
+    );
+
+    expect(
+      getByText(
+        "Löschfrist aus dem Vertrag. Die Schule sieht sie, kann sie aber nicht ändern.",
+      ),
+    ).toBeInTheDocument();
+  });
+});

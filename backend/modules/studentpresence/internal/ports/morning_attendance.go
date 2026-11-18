@@ -19,4 +19,7 @@ type MorningAttendanceStore interface {
 	// DeleteMorningAttendanceBefore deletes the tenant's marks dated before
 	// cutoff.
 	DeleteMorningAttendanceBefore(ctx context.Context, cutoff Date) (Stats, error)
+	// TransferClassListEntryMarks moves the marks of the entries onto their
+	// students; an entry mark on a date the student already has goes.
+	TransferClassListEntryMarks(ctx context.Context, moves []studentpresence.ClassListEntryMarkMove) (Stats, error)
 }

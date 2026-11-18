@@ -191,6 +191,10 @@ func newStudentWriteRow(record domain.StudentRecord, tenantID int64) studentWrit
 	row.AGBAcceptedAt = record.AGBAcceptedAt
 	row.DataProcessingAcceptedAt = record.DataProcessingAcceptedAt
 	row.EmailContactAcceptedAt = record.EmailContactAcceptedAt
+	// School Membership's mark (#4803) is no profile column. The row hands
+	// it back with the other membership facts, so the enrollment written
+	// after the profile keeps it instead of giving the child an OGS place.
+	row.WithoutCarePlace = record.WithoutCarePlace
 	return row
 }
 

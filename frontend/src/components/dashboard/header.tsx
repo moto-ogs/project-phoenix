@@ -542,7 +542,10 @@ export function Header({ notificationBell }: HeaderProps = {}) {
             </div>
 
             {mode === "teacher" ? <StaffNewsButton /> : null}
-            {mode === "teacher" || mode === "parent" || mode === "school"
+            {mode === "teacher" ||
+            mode === "parent" ||
+            mode === "school" ||
+            mode === "traeger"
               ? notificationBell
               : null}
             {/* User menu */}

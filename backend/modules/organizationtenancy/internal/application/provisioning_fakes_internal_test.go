@@ -1007,6 +1007,11 @@ type fakeSettings struct {
 	// federalStates and stateErr serve SetFederalState (#7174).
 	federalStates map[int64]string
 	stateErr      error
+	// replyTo* serve ReplyToAddresses (#7174).
+	replyTo        map[int64]string
+	replyToErr     error
+	replyToSchools []int64
+	replyToInAdmin bool
 }
 
 // RecordFederalState records the state per school like Settings: only in
@@ -1026,6 +1031,15 @@ func (f *fakeSettings) RecordFederalState(ctx context.Context, tenantID int64, r
 	}
 	f.federalStates[tenantID] = region
 	return true, nil
+}
+
+func (f *fakeSettings) ReplyToAddresses(ctx context.Context, schoolIDs []int64) (map[int64]string, error) {
+	f.replyToSchools = append(f.replyToSchools, schoolIDs...)
+	f.replyToInAdmin = isAdmin(ctx)
+	if f.replyToErr != nil {
+		return nil, f.replyToErr
+	}
+	return f.replyTo, nil
 }
 
 func (f *fakeSettings) DeviceOnlineWindowMinutes(ctx context.Context, tenantID int64) (int, error) {

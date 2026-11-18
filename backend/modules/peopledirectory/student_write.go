@@ -18,6 +18,9 @@ var (
 	// linked child with an accompanied weekday and no remaining "mit wem"
 	// detail — neither a free-text note nor another link on that day.
 	ErrCompanionWouldLoseDeparture = errors.New("companion would lose its departure detail")
+	// ErrWithoutCarePlaceGroup refuses a group for a child without an OGS
+	// place (#4803, ADR 0282).
+	ErrWithoutCarePlaceGroup = errors.New("a child without an OGS place has no group")
 	// ErrCompanionLockBusy reports a companion row another transaction holds.
 	// It is retriable: the alternative to refusing is a deadlock abort.
 	ErrCompanionLockBusy = errors.New("companion row is locked by another write")

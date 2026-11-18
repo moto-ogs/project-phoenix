@@ -120,7 +120,9 @@ func (d *Decisions) approvedChildTargetScope(ctx context.Context, run *approvedC
 	if author := d.weeklyPlanAuthor(ctx, run.input.ActorAccountID); author > 0 {
 		updated.AuthorStaffID = author
 	}
-	if !calendar.Date(planned.On).After(d.todayDate()) {
+	// A child whose place waits for the Kinderkontingent (#4803) keeps its
+	// plan due: it gets no OGS times or way home before the place.
+	if !calendar.Date(planned.On).After(d.todayDate()) && !run.student.WithoutCarePlace {
 		return withoutWeeklyPlan, d.applyPlannedWeeklyFields(ctx, run.request, run.child, run.student, run.input.ActorAccountID, updated)
 	}
 	if updated != *planned {
@@ -190,6 +192,11 @@ func (d *Decisions) applyWeeklyPlan(ctx context.Context, plan enrollmentNative.W
 	student, err := d.weeklyPlanStudent(ctx, child)
 	if err != nil || student == nil {
 		return false, d.finishWeeklyPlan(ctx, requestChildID, err)
+	}
+	if student.WithoutCarePlace {
+		// Its place waits for the Kinderkontingent (#4803): the plan stays
+		// due and applies with the place, never before it.
+		return false, nil
 	}
 	request, err := d.deps.Requests.RequestByID(ctx, child.RequestID, false)
 	if err != nil {

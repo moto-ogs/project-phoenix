@@ -232,9 +232,10 @@ func TestCareContractMailLinkSignsOnceOnlyItsContract(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, signedDetail(t, f, contract).Signature.Intact, "a tampered signature shows as broken")
 
-	// An expired link opens nothing.
+	// An expired link opens nothing. The owner clock stamps the link and
+	// checks its expiry: the router's holidayFixtureNow, not now().
 	_, err = f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_signing_links
-		SET created_at = NOW() - INTERVAL '40 days', expires_at = NOW() - INTERVAL '1 day' WHERE contract_id = ?`, other)
+		SET created_at = ?, expires_at = ? WHERE contract_id = ?`, holidayFixtureNow().Add(-40*24*time.Hour), holidayFixtureNow().Add(-24*time.Hour), other)
 	require.NoError(t, err)
 	rec = publicSigning(t, f.traeger, http.MethodPost, otherLink+"/sign", signature)
 	assert.Equal(t, http.StatusGone, rec.Code, rec.Body.String())

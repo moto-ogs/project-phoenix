@@ -1,6 +1,9 @@
 package api
 
 import (
+	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
+	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
+	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"time"
@@ -76,9 +79,9 @@ func mountStaffRoutes(
 	users peoplePorts.PersonDirectory, staffAdmin *workforceModule.StaffAdmin,
 	workforce owners.WorkforcePlanning, shifts *workforceCompose.ShiftPlanning, education schoolstructure.GroupManagement,
 	substitution SubstitutionOperations, persons peopledirectory.Capability, settings settingsCompose.SettingsService,
-	hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, calendar schoolcalendar.Calendar, now func() time.Time,
+	hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, calendar schoolcalendar.Calendar, files nativeUploads.FileKeys, now func() time.Time,
 ) error {
-	staff, _, err := newStaffComposition(membership, workTime, users, staffAdmin, workforce.TimeTracking, workforce.PayrollDispatch, workforce.SickReports, education, persons, settings, hub, identity, viper.GetString("app_env"), db, logger.With("handler", "staff"), now)
+	staff, _, err := newStaffComposition(membership, workTime, users, staffAdmin, workforce.TimeTracking, workforce.PayrollDispatch, workforce.SickReports, education, persons, settings, hub, identity, viper.GetString("app_env"), db, logger.With("handler", "staff"), files, now)
 	if err != nil {
 		return err
 	}
@@ -185,10 +188,18 @@ func mountSchoolPortalRoutes(
 	tenant.Mount("/staff-messages", staffMessaging.Router(ProtectedTenantRoutesWith(staffAttachments.Register)))
 	tenant.Mount("/staff-notices", staffNotices.Router(ProtectedTenantRoutes))
 	tenant.Mount("/timetable", timetableResource.Router(ProtectedTenantRoutesWith(classdayHTTP.NewSlotListResource(classDay.SlotLists).Register)))
-	tenant.Mount("/notifications", notificationRoutes.Router())
+	mountNotificationRoutes(root, tenant, notificationRoutes, notifications.TraegerFeed)
 	root.Mount("/school-staff-messages", schoolMessageAttachmentRouter(staffAttachments))
 	root.Mount("/school", school.RouterWithAuthRateLimiter(limiters.authMiddleware(), SchoolSessionChain, ProtectedSchoolRoutes))
 	return nil
+}
+
+// mountNotificationRoutes mounts the notification routes of the OGS portal
+// and the bell of the Träger-Portal (#7146), which reads the entries of every
+// school of the Träger across its schools.
+func mountNotificationRoutes(root, tenant chi.Router, staff *notificationsHTTP.Resource, traeger deliveryContract.TraegerNotificationFeed) {
+	tenant.Mount("/notifications", staff.Router())
+	root.Mount("/traeger/notifications", NewTraegerNotificationHTTP(traeger).Router())
 }
 
 // newTimetableResource composes the timetable routes. Dateframes belong to
@@ -289,7 +300,9 @@ func mountSchoolRoutes(
 	homeLayouts := requireHomeLayoutOperations(settings)
 	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now).SettingsRouter())
 	// Class-list-only entries (#2382).
-	tenant.Mount("/class-list-entries", newClassListEntriesResource(classListEntries, logger.With("handler", "class-list-entries")).Router())
+	tenant.Mount("/class-list-entries", newClassListEntriesResource(
+		classListEntriesWhileChildrenKept{ClassListEntries: classListEntries, settings: settings, lock: classListConversionLockOf(settings)},
+		logger.With("handler", "class-list-entries")).Router())
 	tenant.Mount("/database", newDatabaseStatsRouter(databaseStats, logger.With("handler", "database")))
 	// CSV/Excel import endpoints.
 	tenant.Mount("/import", importAPI.NewResource(importAPI.Dependencies{

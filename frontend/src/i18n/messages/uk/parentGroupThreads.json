@@ -15,5 +15,6 @@
   "answerTo": "Відповідь на: {title}",
   "errorObjectThread": "групове повідомлення",
   "errorObjectAnswer": "відповідь",
-  "errorObjectList": "групові повідомлення"
+  "errorObjectList": "групові повідомлення",
+  "closedNoteWithoutChat": "Це групове повідомлення закрито."
 }

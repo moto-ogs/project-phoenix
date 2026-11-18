@@ -385,6 +385,7 @@ func mountOperatorSchoolRoutes(
 	r.Route("/schools", func(r chi.Router) {
 		r.Get("/", provisioning.AuditReadAccess(organizationtenancy.ReadSchools, provisioning.ListSchools))
 		r.Get("/summaries", provisioning.AuditReadAccess(organizationtenancy.ReadSchoolSummaries, provisioning.ListSchoolSummaries))
+		r.Get("/required-details", provisioning.AuditReadAccess(organizationtenancy.ReadSchoolRequiredDetails, provisioning.ListSchoolRequiredDetails))
 		r.Post("/", provisioning.AuditReadAccess(organizationtenancy.ReadSchools, provisioning.CreateSchool))
 		r.Put("/{id}", provisioning.AuditReadAccess(organizationtenancy.ReadSchool, provisioning.UpdateSchool))
 		r.Delete("/{id}", provisioning.SoftDeleteSchool)

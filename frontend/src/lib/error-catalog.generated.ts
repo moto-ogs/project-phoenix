@@ -110,6 +110,8 @@ export const ERROR_CATALOG = {
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.child_care_ended":
         "Die Betreuung dieses Kindes ist beendet. Änderungen sind nicht mehr möglich. Bei Fragen wenden Sie sich bitte an die OGS.",
+      "care.child_without_care_place":
+        "Ihr Kind hat keinen Platz in der OGS. Diese Funktion gibt es für Ihr Kind deshalb nicht.",
       "care.course_request_invalid":
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.course_requests_disabled":
@@ -606,8 +608,12 @@ export const ERROR_CATALOG = {
         "Der neue Zeitraum passt nicht zu einem vorgemerkten Kind. Bitte prüfen Sie zuerst dessen Betreuungszeitraum.",
       "enrollment.phase_school_classes_invalid":
         "Die angebotenen und die zugelassenen Klassen passen nicht zusammen. Bitte prüfen Sie die Klassen.",
+      "enrollment.phase_service_end_too_far":
+        "Das Ende darf höchstens 5 Jahre in der Zukunft liegen. Bitte wählen Sie ein früheres Ende.",
       "enrollment.phase_service_period_invalid":
         "Der Betreuungszeitraum ist unvollständig oder endet vor dem Beginn. Bitte prüfen Sie Beginn und Ende.",
+      "enrollment.phase_service_period_too_long":
+        "Der Betreuungszeitraum darf höchstens 2 Jahre lang sein. Bitte wählen Sie ein früheres Ende.",
       "enrollment.phase_window_invalid":
         "Das Anmeldefenster endet vor seinem Start. Bitte prüfen Sie Öffnung und Schließung.",
       "enrollment.pickup_time_not_allowed":
@@ -687,6 +693,8 @@ export const ERROR_CATALOG = {
         "Die Anmeldefrist ist vorbei oder hat noch nicht begonnen. Bitte wenden Sie sich an die Schule.",
       "enrollment.withdraw_not_allowed":
         "Diese Anmeldung kann nicht mehr zurückgezogen werden. Bitte wenden Sie sich an die Schule.",
+      "enrollment.without_care_place_school_year_only":
+        "Ein Kind ohne OGS-Platz bekommt seinen Platz über eine Anmeldung für das Schuljahr.",
       "feedback.disabled": "Rückmeldungen sind an dieser Schule ausgeschaltet.",
       "files.announcement_published":
         "Die Mitteilung ist schon veröffentlicht. Ihre Anhänge lassen sich nicht mehr ändern.",
@@ -1397,6 +1405,8 @@ export const ERROR_CATALOG = {
         "Die Notiz ist zu lang. Bitte kürzen Sie sie.",
       "students.child_quota_reached":
         "Das Kinderkontingent Ihrer Schule ist voll ({occupied_places} von {booked_places} Kindern). Bitte melden Sie sich beim moto-Team.",
+      "students.class_list_entries_replaced":
+        "Ihre Schule legt Kinder ohne OGS-Platz als Kind an. Bitte nutzen Sie dafür „Ohne OGS-Platz“ in den Kinderdaten.",
       "students.class_list_entry_assign_mismatch":
         "Das gewählte Kind passt nicht zum Eintrag. Name und Klasse müssen gleich sein.",
       "students.class_list_entry_duplicate":
@@ -1499,6 +1509,12 @@ export const ERROR_CATALOG = {
         "An einigen Tagen gibt es schon einen Eintrag. Diese Tage wurden nicht geändert.",
       "students.status_day_occupied":
         "Für heute ist eine Klassenfahrt eingetragen. Heben Sie zuerst die Klassenfahrt auf.",
+      "students.without_care_place_care_data":
+        "Ein Kind ohne OGS-Platz hat keine Ankunfts- und Abholzeiten und keinen Heimweg der OGS.",
+      "students.without_care_place_group":
+        "Ein Kind ohne OGS-Platz ist in keiner Gruppe. Bitte lassen Sie die Gruppe leer.",
+      "students.without_care_place_off":
+        "Kinder ohne OGS-Platz kann Ihre Schule noch nicht anlegen. Das moto-Team schaltet das auf Wunsch ein.",
       "substitutions.invalid_period":
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "substitutions.invalid_target":
@@ -2209,6 +2225,8 @@ export const ERROR_CATALOG = {
         "{object} is not available here at the moment. Please ask your contact person.",
       "care.child_care_ended":
         "Care for this child has ended. Changes are no longer possible. If you have questions, please contact the OGS.",
+      "care.child_without_care_place":
+        "Your child does not have a place in the OGS. This function is therefore not available for your child.",
       "care.course_request_invalid":
         "{object} contains invalid details. Please check your entries.",
       "care.course_requests_disabled":
@@ -2568,6 +2586,8 @@ export const ERROR_CATALOG = {
         "The enrollment period has ended or has not started yet. Please contact the school.",
       "enrollment.withdraw_not_allowed":
         "This enrollment can no longer be withdrawn. Please contact the school.",
+      "enrollment.without_care_place_school_year_only":
+        "A child without an OGS place gets its place through an enrollment for the school year.",
       "files.file_name_invalid":
         "This file name is not allowed. Please choose the file again.",
       "general.request_too_large":
@@ -2792,6 +2812,8 @@ export const ERROR_CATALOG = {
         "Some days already have an entry. These days were not changed.",
       "students.status_day_occupied":
         "A class trip is entered for today. Remove the class trip first.",
+      "students.without_care_place_care_data":
+        "A child without an OGS place has no arrival or pickup times and no way home set by the OGS.",
       "substitutions.last_supervisor":
         "You are the only supervisor. Hand the supervision over to someone or end the activity.",
       "timetable.closing_day_notice_changed":
@@ -2963,6 +2985,8 @@ export const ERROR_CATALOG = {
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "care.child_care_ended":
         "Присмотр за этим ребёнком завершён. Изменения больше невозможны. По вопросам обращайтесь в OGS.",
+      "care.child_without_care_place":
+        "У вашего ребёнка нет места в OGS. Поэтому эта функция для ребёнка недоступна.",
       "care.course_request_invalid":
         "Указаны неверные данные: {object}. Проверьте введённые данные.",
       "care.course_requests_disabled":
@@ -3265,6 +3289,8 @@ export const ERROR_CATALOG = {
         "Срок записи истёк или ещё не начался. Обратитесь в школу.",
       "enrollment.withdraw_not_allowed":
         "Эту запись больше нельзя отозвать. Обратитесь в школу.",
+      "enrollment.without_care_place_school_year_only":
+        "Ребёнок без места в OGS получает место через запись на учебный год.",
       "files.file_name_invalid":
         "Имя файла недопустимо. Выберите файл ещё раз.",
       "general.request_too_large":
@@ -3466,6 +3492,8 @@ export const ERROR_CATALOG = {
         "На некоторые дни уже есть запись. Эти дни не изменены.",
       "students.status_day_occupied":
         "На сегодня внесена классная поездка. Сначала отмените классную поездку.",
+      "students.without_care_place_care_data":
+        "У ребёнка без места в OGS нет времени прихода и забора и нет пути домой, установленного OGS.",
       "substitutions.last_supervisor":
         "Вы единственный, кто ведёт присмотр. Передайте присмотр другому человеку или завершите занятие.",
       "timetable.closing_day_notice_not_found":
@@ -3581,6 +3609,8 @@ export const ERROR_CATALOG = {
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.child_care_ended":
         "Kujdesi për këtë fëmijë ka përfunduar. Ndryshimet nuk janë më të mundshme. Për pyetje kontaktoni OGS-në.",
+      "care.child_without_care_place":
+        "Fëmija juaj nuk ka vend në OGS. Prandaj ky funksion nuk është i disponueshëm për fëmijën tuaj.",
       "care.course_request_invalid":
         "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
       "care.course_requests_disabled":
@@ -3896,6 +3926,8 @@ export const ERROR_CATALOG = {
         "Afati i regjistrimit ka mbaruar ose nuk ka filluar ende. Ju lutemi kontaktoni shkollën.",
       "enrollment.withdraw_not_allowed":
         "Ky regjistrim nuk mund të tërhiqet më. Ju lutemi kontaktoni shkollën.",
+      "enrollment.without_care_place_school_year_only":
+        "Një fëmijë pa vend në OGS e merr vendin me një regjistrim për vitin shkollor.",
       "files.file_name_invalid":
         "Emri i skedarit nuk lejohet. Ju lutemi zgjidhni skedarin përsëri.",
       "general.request_too_large":
@@ -4099,6 +4131,8 @@ export const ERROR_CATALOG = {
         "Disa ditë kanë tashmë një regjistrim. Këto ditë nuk u ndryshuan.",
       "students.status_day_occupied":
         "Për sot është regjistruar një ekskursion klase. Hiqni fillimisht ekskursionin e klasës.",
+      "students.without_care_place_care_data":
+        "Një fëmijë pa vend në OGS nuk ka orare ardhjeje dhe marrjeje dhe as rrugë për në shtëpi nga OGS.",
       "substitutions.last_supervisor":
         "Jeni i vetmi mbikëqyrës. Ia dorëzoni mbikëqyrjen dikujt tjetër ose përfundoni aktivitetin.",
       "timetable.closing_day_notice_not_found":
@@ -4215,6 +4249,8 @@ export const ERROR_CATALOG = {
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "care.child_care_ended":
         "Opieka nad tym dzieckiem zakończyła się. Zmiany nie są już możliwe. W razie pytań skontaktuj się z OGS.",
+      "care.child_without_care_place":
+        "Państwa dziecko nie ma miejsca w OGS. Dlatego ta funkcja nie jest dostępna dla dziecka.",
       "care.course_request_invalid":
         "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
       "care.course_requests_disabled":
@@ -4517,6 +4553,8 @@ export const ERROR_CATALOG = {
         "Termin zapisów minął lub jeszcze się nie zaczął. Skontaktuj się ze szkołą.",
       "enrollment.withdraw_not_allowed":
         "Tego zapisu nie można już wycofać. Skontaktuj się ze szkołą.",
+      "enrollment.without_care_place_school_year_only":
+        "Dziecko bez miejsca w OGS otrzymuje miejsce poprzez zapis na rok szkolny.",
       "files.file_name_invalid":
         "Nazwa pliku jest niedozwolona. Wybierz plik ponownie.",
       "general.request_too_large":
@@ -4719,6 +4757,8 @@ export const ERROR_CATALOG = {
         "Niektóre dni mają już wpis. Tych dni nie zmieniono.",
       "students.status_day_occupied":
         "Na dziś wpisana jest wycieczka klasowa. Najpierw usuń wycieczkę klasową.",
+      "students.without_care_place_care_data":
+        "Dziecko bez miejsca w OGS nie ma godzin przyjścia i odbioru ani drogi do domu ustalanej przez OGS.",
       "substitutions.last_supervisor":
         "Jesteś jedyną osobą sprawującą opiekę. Przekaż opiekę innej osobie lub zakończ zajęcia.",
       "timetable.closing_day_notice_not_found":
@@ -4834,6 +4874,8 @@ export const ERROR_CATALOG = {
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "care.child_care_ended":
         "Bu çocuğun bakımı sona erdi. Artık değişiklik yapılamaz. Sorularınız için OGS ile iletişime geçin.",
+      "care.child_without_care_place":
+        "Çocuğunuzun OGS'de yeri yok. Bu nedenle bu işlev çocuğunuz için kullanılamaz.",
       "care.course_request_invalid":
         "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
       "care.course_requests_disabled":
@@ -5143,6 +5185,8 @@ export const ERROR_CATALOG = {
         "Kayıt süresi bitti veya henüz başlamadı. Lütfen okulla iletişime geçin.",
       "enrollment.withdraw_not_allowed":
         "Bu kayıt artık geri çekilemez. Lütfen okulla iletişime geçin.",
+      "enrollment.without_care_place_school_year_only":
+        "OGS yeri olmayan bir çocuk, yerini okul yılı kaydıyla alır.",
       "files.file_name_invalid":
         "Dosya adı kabul edilmiyor. Lütfen dosyayı yeniden seçin.",
       "general.request_too_large":
@@ -5345,6 +5389,8 @@ export const ERROR_CATALOG = {
         "Bazı günlerde zaten bir kayıt var. Bu günler değiştirilmedi.",
       "students.status_day_occupied":
         "Bugün için bir sınıf gezisi girilmiş. Önce sınıf gezisini kaldırın.",
+      "students.without_care_place_care_data":
+        "OGS yeri olmayan bir çocuğun OGS tarafından belirlenen geliş ve alınma saatleri ile eve dönüş şekli yoktur.",
       "substitutions.last_supervisor":
         "Gözetimi yapan tek kişi sizsiniz. Gözetimi başka birine devredin veya etkinliği bitirin.",
       "timetable.closing_day_notice_not_found":
@@ -5460,6 +5506,8 @@ export const ERROR_CATALOG = {
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "care.child_care_ended":
         "Догляд за цією дитиною завершено. Зміни більше неможливі. З питаннями звертайтеся до OGS.",
+      "care.child_without_care_place":
+        "Ваша дитина не має місця в OGS. Тому ця функція для дитини недоступна.",
       "care.course_request_invalid":
         "Указано неправильні дані: {object}. Перевірте введені дані.",
       "care.course_requests_disabled":
@@ -5762,6 +5810,8 @@ export const ERROR_CATALOG = {
         "Термін запису минув або ще не почався. Зверніться до школи.",
       "enrollment.withdraw_not_allowed":
         "Цей запис більше не можна відкликати. Зверніться до школи.",
+      "enrollment.without_care_place_school_year_only":
+        "Дитина без місця в OGS отримує місце через запис на навчальний рік.",
       "files.file_name_invalid":
         "Назва файлу не дозволена. Виберіть файл ще раз.",
       "general.request_too_large":
@@ -5963,6 +6013,8 @@ export const ERROR_CATALOG = {
         "На деякі дні вже є запис. Ці дні не змінено.",
       "students.status_day_occupied":
         "На сьогодні внесено класну поїздку. Спочатку скасуйте класну поїздку.",
+      "students.without_care_place_care_data":
+        "Дитина без місця в OGS не має часу приходу й забору та шляху додому, встановленого OGS.",
       "substitutions.last_supervisor":
         "Ви єдина особа, що здійснює нагляд. Передайте нагляд іншій особі або завершіть заняття.",
       "timetable.closing_day_notice_not_found":

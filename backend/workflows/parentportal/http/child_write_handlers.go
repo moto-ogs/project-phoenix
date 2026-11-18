@@ -256,7 +256,10 @@ type ChildFeaturesResponse struct {
 	ConferenceBookAllowed bool `json:"conference_book_allowed"`
 	// CareEnded is state, not a capability: the child has left the OGS, so
 	// every write flag below is false (#2487).
-	CareEnded               bool `json:"care_ended"`
+	CareEnded bool `json:"care_ended"`
+	// WithoutCarePlace is state as well: the child belongs to its class but has
+	// no OGS place, so every OGS flag is false (#4803, ADR 0282).
+	WithoutCarePlace        bool `json:"without_care_place,omitempty"`
 	SickNoteEnabled         bool `json:"sick_note_enabled"`
 	ExcusedNoteEnabled      bool `json:"excused_note_enabled"`
 	SickRequiresApproval    bool `json:"sick_requires_approval"`
@@ -274,17 +277,18 @@ type ChildFeaturesResponse struct {
 	PickupChangeTodayClosed bool   `json:"pickup_change_today_closed"`
 	// PickupChangeCareDayEnded is true once the school's care day is over:
 	// today's pickup is closed for guardians, later days are not (#5710).
-	PickupChangeCareDayEnded     bool `json:"pickup_change_care_day_ended"`
-	PickupManageAllowed          bool `json:"pickup_manage_allowed"`
-	GuardianContactManageAllowed bool `json:"guardian_contact_manage_allowed"`
-	AbsenceRequestEditEnabled    bool `json:"absence_request_edit_enabled"`
-	RelatedAccountsInviteEnabled bool `json:"related_accounts_invite_enabled"`
-	RelatedAccountsRemoveEnabled bool `json:"related_accounts_remove_enabled"`
-	MasterDataEditEnabled        bool `json:"master_data_edit_enabled"`
-	MasterDataContactEditEnabled bool `json:"master_data_contact_edit_enabled"`
-	MasterDataRequestEnabled     bool `json:"master_data_request_enabled"`
-	MealPlanEnabled              bool `json:"meal_plan_enabled"`
-	MealRegistrationEnabled      bool `json:"meal_registration_enabled"`
+	PickupChangeCareDayEnded      bool `json:"pickup_change_care_day_ended"`
+	PickupManageAllowed           bool `json:"pickup_manage_allowed"`
+	EmergencyContactManageAllowed bool `json:"emergency_contact_manage_allowed"`
+	GuardianContactManageAllowed  bool `json:"guardian_contact_manage_allowed"`
+	AbsenceRequestEditEnabled     bool `json:"absence_request_edit_enabled"`
+	RelatedAccountsInviteEnabled  bool `json:"related_accounts_invite_enabled"`
+	RelatedAccountsRemoveEnabled  bool `json:"related_accounts_remove_enabled"`
+	MasterDataEditEnabled         bool `json:"master_data_edit_enabled"`
+	MasterDataContactEditEnabled  bool `json:"master_data_contact_edit_enabled"`
+	MasterDataRequestEnabled      bool `json:"master_data_request_enabled"`
+	MealPlanEnabled               bool `json:"meal_plan_enabled"`
+	MealRegistrationEnabled       bool `json:"meal_registration_enabled"`
 	// HasOpenChangeRequest is STATE (not a capability): the child has a pending
 	// change request awaiting an OGS decision, so the overview can badge the
 	// Stammdaten entry.
@@ -317,33 +321,35 @@ func (rs *Resource) getChildFeatures(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.Respond(w, r, http.StatusOK, ChildFeaturesResponse{
-		ConferenceBookAllowed:        flags.ConferenceBookAllowed,
-		CareEnded:                    flags.CareEnded,
-		SickNoteEnabled:              flags.SickNoteEnabled,
-		ExcusedNoteEnabled:           flags.ExcusedNoteEnabled,
-		SickRequiresApproval:         flags.SickRequiresApproval,
-		ExcusedRequiresApproval:      flags.ExcusedRequiresApproval,
-		NotesEnabled:                 flags.NotesEnabled,
-		RequestSubmitEnabled:         flags.RequestSubmitEnabled,
-		PickupChangeEnabled:          flags.PickupChangeEnabled,
-		PickupChangeModeEnabled:      flags.PickupChangeModeEnabled,
-		PickupChangeCutoffTime:       flags.PickupChangeCutoffTime,
-		PickupChangeTodayClosed:      flags.PickupChangeTodayClosed,
-		PickupChangeCareDayEnded:     flags.PickupChangeCareDayEnded,
-		PickupManageAllowed:          flags.PickupManageAllowed,
-		GuardianContactManageAllowed: flags.GuardianContactManageAllowed,
-		AbsenceRequestEditEnabled:    flags.AbsenceRequestEditEnabled,
-		RelatedAccountsInviteEnabled: flags.RelatedAccountsInviteEnabled,
-		RelatedAccountsRemoveEnabled: flags.RelatedAccountsRemoveEnabled,
-		MasterDataEditEnabled:        flags.MasterDataEditEnabled,
-		MasterDataContactEditEnabled: flags.MasterDataContactEditEnabled,
-		MasterDataRequestEnabled:     flags.MasterDataRequestEnabled,
-		MealPlanEnabled:              flags.MealPlanEnabled,
-		MealRegistrationEnabled:      flags.MealRegistrationEnabled,
-		HasOpenChangeRequest:         flags.HasOpenChangeRequest,
-		NewsEnabled:                  flags.NewsEnabled,
-		ReasonRequired:               flags.ReasonRequired,
-		CareFacilityTerm:             flags.CareFacilityTerm,
+		ConferenceBookAllowed:         flags.ConferenceBookAllowed,
+		CareEnded:                     flags.CareEnded,
+		WithoutCarePlace:              flags.WithoutCarePlace,
+		SickNoteEnabled:               flags.SickNoteEnabled,
+		ExcusedNoteEnabled:            flags.ExcusedNoteEnabled,
+		SickRequiresApproval:          flags.SickRequiresApproval,
+		ExcusedRequiresApproval:       flags.ExcusedRequiresApproval,
+		NotesEnabled:                  flags.NotesEnabled,
+		RequestSubmitEnabled:          flags.RequestSubmitEnabled,
+		PickupChangeEnabled:           flags.PickupChangeEnabled,
+		PickupChangeModeEnabled:       flags.PickupChangeModeEnabled,
+		PickupChangeCutoffTime:        flags.PickupChangeCutoffTime,
+		PickupChangeTodayClosed:       flags.PickupChangeTodayClosed,
+		PickupChangeCareDayEnded:      flags.PickupChangeCareDayEnded,
+		PickupManageAllowed:           flags.PickupManageAllowed,
+		EmergencyContactManageAllowed: flags.EmergencyContactManageAllowed,
+		GuardianContactManageAllowed:  flags.GuardianContactManageAllowed,
+		AbsenceRequestEditEnabled:     flags.AbsenceRequestEditEnabled,
+		RelatedAccountsInviteEnabled:  flags.RelatedAccountsInviteEnabled,
+		RelatedAccountsRemoveEnabled:  flags.RelatedAccountsRemoveEnabled,
+		MasterDataEditEnabled:         flags.MasterDataEditEnabled,
+		MasterDataContactEditEnabled:  flags.MasterDataContactEditEnabled,
+		MasterDataRequestEnabled:      flags.MasterDataRequestEnabled,
+		MealPlanEnabled:               flags.MealPlanEnabled,
+		MealRegistrationEnabled:       flags.MealRegistrationEnabled,
+		HasOpenChangeRequest:          flags.HasOpenChangeRequest,
+		NewsEnabled:                   flags.NewsEnabled,
+		ReasonRequired:                flags.ReasonRequired,
+		CareFacilityTerm:              flags.CareFacilityTerm,
 	}, "Child features retrieved")
 }
 
