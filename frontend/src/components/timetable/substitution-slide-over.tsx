@@ -54,7 +54,6 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { ListSkeleton, SkeletonRegion } from "~/components/ui/page-skeletons";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { Radio } from "~/components/ui/radio";
 import {
   SlideOver,
   SlideOverContent,
@@ -88,7 +87,6 @@ import {
 } from "./guardian-notice-fields";
 import type { GuardianNoticeReach } from "~/lib/timetable-types";
 import { substitutionConcept } from "~/lib/concepts/substitution";
-import { ChoiceTile } from "~/components/ui/choice-tile";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
 interface StaffOption {
@@ -632,7 +630,11 @@ export function SubstitutionSlideOver({
                 variant="line"
                 className="mt-2 w-full justify-start border-b-0"
               >
-                <TabsTrigger value="bearbeiten">Bearbeiten</TabsTrigger>
+                {/* Wer nichts ändern kann, liest „Details“, nicht
+                    „Bearbeiten“ (#7493). */}
+                <TabsTrigger value="bearbeiten">
+                  {canEdit ? "Bearbeiten" : "Details"}
+                </TabsTrigger>
                 <TabsTrigger value="verlauf">Verlauf</TabsTrigger>
               </TabsList>
             </SlideOverHeader>
@@ -648,57 +650,55 @@ export function SubstitutionSlideOver({
                 className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4"
               >
                 <FormErrorAlert message={formErrors.error} />
-                {/* Aktion: "Besetzung bearbeiten" gegen "Block absagen" als
-                    Radiogruppe. Sie macht die Exklusivität sichtbar — Absage
-                    blendet die Besetzungs-Kontrollen aus (R3 Schwäche 8). */}
+                {/* Warum hier nichts zu ändern ist, steht vor dem Inhalt
+                    (#7493), nicht unter der letzten Karte. */}
+                {!canEdit &&
+                  (instance.status === "cancelled" ? (
+                    <InsetPanel
+                      framed
+                      className="space-y-1 text-sm text-gray-500"
+                    >
+                      <p className="font-medium text-gray-700">
+                        Dieser Block wurde abgesagt.
+                      </p>
+                      {instance.cancelReason && (
+                        <p>Grund: {instance.cancelReason}</p>
+                      )}
+                    </InsetPanel>
+                  ) : !canManage &&
+                    !isPast &&
+                    (instance.status === "planned" ||
+                      instance.status === "active") ? (
+                    // The block is editable in principle, but the user only holds
+                    // read access to the plan — surface that instead of the
+                    // "past/completed" message, which would be misleading (#1840).
+                    <InsetPanel as="p" framed className="text-sm text-gray-500">
+                      Nur zur Ansicht. Vertretungen trägt die Leitung ein.
+                    </InsetPanel>
+                  ) : (
+                    <InsetPanel as="p" framed className="text-sm text-gray-500">
+                      Vergangene oder abgeschlossene Termine können nicht mehr
+                      geändert werden.
+                    </InsetPanel>
+                  ))}
+                {/* Aktion: "Besetzung bearbeiten" gegen "Block absagen". Die
+                    Wahl macht die Exklusivität sichtbar — Absage blendet die
+                    Besetzungs-Kontrollen aus (R3 Schwäche 8). Sie ist eine
+                    Zeile hoch (#7493), damit das Personal, um das es fast
+                    immer geht, ohne Scrollen erreichbar ist. */}
                 {canEdit && (
-                  <fieldset className="space-y-2">
-                    <legend className="text-sm font-medium text-gray-700">
-                      Aktion
-                    </legend>
-                    <ChoiceTile
-                      htmlFor="vp-action-edit"
-                      selected={!cancel}
-                      className="items-start gap-2 p-3 font-normal"
-                    >
-                      <Radio
-                        id="vp-action-edit"
-                        name="vp-action"
-                        value="edit"
-                        checked={!cancel}
-                        onChange={() => setCancel(false)}
-                        className="mt-0.5"
-                      />
-                      <span className="text-sm text-gray-800">
-                        Besetzung bearbeiten
-                        <span className="block text-xs text-gray-500">
-                          Abwesenheit, Ersatz und bewusst unbesetzte Positionen
-                          pflegen.
-                        </span>
-                      </span>
-                    </ChoiceTile>
-                    <ChoiceTile
-                      htmlFor="vp-action-cancel"
-                      selected={cancel}
-                      className="items-start gap-2 p-3 font-normal"
-                    >
-                      <Radio
-                        id="vp-action-cancel"
-                        name="vp-action"
-                        value="cancel"
-                        checked={cancel}
-                        onChange={() => setCancel(true)}
-                        className="mt-0.5"
-                      />
-                      <span className="text-sm text-gray-800">
-                        Block absagen
-                        <span className="block text-xs text-gray-500">
-                          Sagt den Termin ab. Die Halbjahresvorlage bleibt
-                          unverändert.
-                        </span>
-                      </span>
-                    </ChoiceTile>
-                  </fieldset>
+                  <SegmentedControl
+                    fullWidth
+                    ariaLabel="Aktion"
+                    value={cancel ? "cancel" : "edit"}
+                    onChange={(next) => setCancel(next === "cancel")}
+                    items={[
+                      // Hauptwörter für die Wahl, damit der Abschluss
+                      // „Block absagen“ der einzige Knopf dieses Namens ist.
+                      { value: "edit", label: "Besetzung" },
+                      { value: "cancel", label: "Absage" },
+                    ]}
+                  />
                 )}
 
                 {/* Personal (Zweig A) — ausgeblendet, solange "Block absagen"
@@ -930,7 +930,9 @@ export function SubstitutionSlideOver({
                             Eine geplante Position bleibt absichtlich unbesetzt
                             und zählt nicht als offene Lücke.
                             {!isUnderstaffed && (
-                              <span className="text-moto-red-strong mt-0.5 block">
+                              // Eine Voraussetzung, kein Fehler: ruhig, nicht
+                              // rot (#7493).
+                              <span className="mt-0.5 block">
                                 Nur möglich, wenn mindestens eine geplante
                                 Position unbesetzt bleibt (weniger Personal als
                                 geplant).
@@ -957,8 +959,8 @@ export function SubstitutionSlideOver({
                   <section className="space-y-2">
                     <SectionLabel>Absage</SectionLabel>
                     <p className="text-xs leading-5 text-gray-500">
-                      Der Termin wird abgesagt. Abwesenheit, Ersatz und „bewusst
-                      unbesetzt“ sind dabei ohne Wirkung.
+                      Der Termin wird nur an diesem Tag abgesagt. Abwesenheit,
+                      Ersatz und „bewusst unbesetzt“ sind dabei ohne Wirkung.
                     </p>
                     <InsetPanel tone="white" className="space-y-2">
                       <Input
@@ -980,37 +982,6 @@ export function SubstitutionSlideOver({
                     </InsetPanel>
                   </section>
                 )}
-
-                {!canEdit &&
-                  (instance.status === "cancelled" ? (
-                    <InsetPanel
-                      framed
-                      className="space-y-1 text-sm text-gray-500"
-                    >
-                      <p className="font-medium text-gray-700">
-                        Dieser Block wurde abgesagt.
-                      </p>
-                      {instance.cancelReason && (
-                        <p>Grund: {instance.cancelReason}</p>
-                      )}
-                    </InsetPanel>
-                  ) : !canManage &&
-                    !isPast &&
-                    (instance.status === "planned" ||
-                      instance.status === "active") ? (
-                    // The block is editable in principle, but the user only holds
-                    // read access to the plan — surface that instead of the
-                    // "past/completed" message, which would be misleading (#1840).
-                    <InsetPanel as="p" framed className="text-sm text-gray-500">
-                      Du hast nur Leserechte für den Vertretungsplan. Änderungen
-                      können nur Personen mit Verwaltungsrechten vornehmen.
-                    </InsetPanel>
-                  ) : (
-                    <InsetPanel as="p" framed className="text-sm text-gray-500">
-                      Vergangene oder abgeschlossene Termine können nicht mehr
-                      geändert werden.
-                    </InsetPanel>
-                  ))}
               </form>
 
               {canEdit && (
@@ -1030,14 +1001,21 @@ export function SubstitutionSlideOver({
                     variant="primary"
                     size="md"
                     isLoading={saving}
-                    loadingText="Speichere …"
+                    loadingText={cancel ? "Sage ab …" : "Speichere …"}
                     tooltip={saveTooltip}
                     disabled={
                       saving || noticeLoading || saveBlockedReason !== undefined
                     }
                     disabledReason={saveBlockedReason}
                   >
-                    Speichern
+                    {/* Der Abschluss nennt sein Ergebnis (#7493): eine Absage
+                        ist mehr als ein Speichern, sie kann Eltern
+                        benachrichtigen. */}
+                    {cancel
+                      ? "Block absagen"
+                      : newReplacements > 0
+                        ? "Vertretung speichern"
+                        : "Speichern"}
                   </Button>
                 </SlideOverFooter>
               )}

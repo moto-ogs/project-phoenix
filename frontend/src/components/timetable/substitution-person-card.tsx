@@ -430,6 +430,16 @@ function ReasonControl({ person, onUpdate }: PersonCardProps) {
 }
 
 function AbsentDetails(props: PersonCardProps) {
+  // Lesezugriff (#7493): keine Auswahl, kein „Wähle vor dem Speichern“ und
+  // kein Hinweis darauf, was sich hier ändern lässt. Es bleibt der Grund;
+  // wer vertritt, steht darunter unter „Aktuelle Vertretung“.
+  if (!props.canEdit) {
+    return props.person.reason ? (
+      <p className="border-moto-red/15 rounded-b-xl border-t bg-white/60 p-3 text-xs text-gray-500">
+        Grund: {props.person.reason}
+      </p>
+    ) : null;
+  }
   return (
     <div className="border-moto-red/15 space-y-4 rounded-b-xl border-t bg-white/60 p-3">
       {props.person.sickLocked && (

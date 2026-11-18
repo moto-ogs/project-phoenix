@@ -192,6 +192,7 @@ describe("VertretungDayList", () => {
   it("zeigt bei 'Nur Störungen' genau die vier gestörten Positionen", () => {
     render(
       <VertretungDayList
+        title="Termine am Mi 09.09."
         instances={allInstances}
         gaps={gaps}
         acknowledged={acknowledged}
@@ -218,6 +219,7 @@ describe("VertretungDayList", () => {
     });
     render(
       <VertretungDayList
+        title="Termine am Mi 09.09."
         instances={[grouped]}
         gaps={gaps}
         acknowledged={[]}
@@ -236,9 +238,133 @@ describe("VertretungDayList", () => {
     );
   });
 
-  it("sortiert nach Startzeit, bei Gleichstand nach Schwere", () => {
+  it("stellt offene Lücken vor das, was schon geregelt ist (#7493)", () => {
+    // Die Abwesenheit mit Ersatz beginnt früher als die offene Lücke.
+    const earlyCovered = makeInstance({
+      id: "5",
+      title: "Frühdienst",
+      startTime: "06:30",
+      endTime: "07:00",
+      staff: [
+        { staffId: "1", isPrimary: true, isAbsent: true, isSubstitute: false },
+        { staffId: "3", isPrimary: false, isAbsent: false, isSubstitute: true },
+      ],
+    });
     render(
       <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={[earlyCovered, ...allInstances]}
+        gaps={gaps}
+        acknowledged={acknowledged}
+        gapsAvailable
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage={false}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    const headings = () =>
+      screen
+        .queryAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent);
+    const ids = () =>
+      screen
+        .getAllByTestId(/vertretung-day-list-row-/)
+        .map((row) =>
+          row.dataset.testid?.replace("vertretung-day-list-row-", ""),
+        );
+    expect(headings()).toEqual(["Offene Lücken", "Schon geregelt"]);
+    expect(ids()).toEqual(["10", "5", "20", "30", "40"]);
+  });
+
+  it("zeigt bei 'Ganzer Tag' den Tag nach Uhrzeit, ohne Gruppen", () => {
+    const earlyCovered = makeInstance({
+      id: "5",
+      title: "Frühdienst",
+      startTime: "06:30",
+      endTime: "07:00",
+      staff: [
+        { staffId: "1", isPrimary: true, isAbsent: true, isSubstitute: false },
+        { staffId: "3", isPrimary: false, isAbsent: false, isSubstitute: true },
+      ],
+    });
+    render(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={[...allInstances, earlyCovered]}
+        gaps={gaps}
+        acknowledged={acknowledged}
+        gapsAvailable
+        staffNames={staffNames}
+        mode="ganzer-tag"
+        canManage={false}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryAllByRole("heading", { level: 3 })).toEqual([]);
+    const ids = screen
+      .getAllByTestId(/vertretung-day-list-row-/)
+      .map((row) =>
+        row.dataset.testid?.replace("vertretung-day-list-row-", ""),
+      );
+    expect(ids).toEqual(["5", "10", "20", "30", "40", "50"]);
+  });
+
+  it("verspricht kein 'Besetzen', wenn für die Lücke niemand eingeteilt ist", () => {
+    const unstaffed = makeInstance({
+      id: "70",
+      title: "Fußball-AG",
+      startTime: "15:00",
+      endTime: "16:00",
+      staff: [],
+    });
+    render(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={[unstaffed]}
+        gaps={[
+          makeGap({
+            instanceId: "70",
+            title: "Fußball-AG",
+            startTime: "15:00",
+            endTime: "16:00",
+            assignedStaffCount: 0,
+            absentStaffCount: 0,
+            presentStaffCount: 0,
+            plannedStaffCount: 0,
+          }),
+        ]}
+        acknowledged={[]}
+        gapsAvailable
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage
+        onEdit={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByTestId("vertretung-day-list-row-70");
+    // Offen bleibt die Lücke, aber die Zeile sagt, was fehlt und wo man es
+    // behebt, statt „0/0“ und „Besetzen“.
+    expect(within(row).getByText("Niemand eingeteilt")).toBeInTheDocument();
+    expect(
+      within(row).getByText("Personal trägst du im Betreuungsplan ein."),
+    ).toBeInTheDocument();
+    expect(within(row).queryByText(/Soll 0/)).not.toBeInTheDocument();
+    expect(
+      within(row).getByRole("button", { name: /^Bearbeiten: Fußball-AG/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Besetzen/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sortiert in einer Gruppe nach Startzeit, bei Gleichstand nach Schwere", () => {
+    render(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
         instances={allInstances}
         gaps={gaps}
         acknowledged={acknowledged}
@@ -260,6 +386,7 @@ describe("VertretungDayList", () => {
   it("fällt bei einem störungsfreien Tag automatisch auf die Ganztagsdarstellung zurück", () => {
     render(
       <VertretungDayList
+        title="Termine am Mi 09.09."
         instances={[undisturbedInstance]}
         gaps={[]}
         acknowledged={[]}
@@ -272,14 +399,87 @@ describe("VertretungDayList", () => {
     );
 
     expect(
-      screen.getByText("Keine Störungen an diesem Tag"),
+      screen.getByText("An diesem Tag ist keine Lücke offen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Wie geplant" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Lesen")).toBeInTheDocument();
+  });
+
+  it("nennt als Ergebnis den nächsten Tag mit offenen Lücken und führt dorthin", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={[undisturbedInstance]}
+        gaps={[]}
+        acknowledged={[]}
+        gapsAvailable
+        nextOpenDay={{ label: "Do 10.09.", count: 2, onSelect }}
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage
+        onEdit={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Am Do 10.09. sind noch 2 Lücken offen."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Do 10.09. zeigen" }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={[undisturbedInstance]}
+        gaps={[]}
+        acknowledged={[]}
+        gapsAvailable
+        nextOpenDay={null}
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage
+        onEdit={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText("Auch sonst ist in dieser Woche keine Lücke offen."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /zeigen$/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt kein Ergebnis, solange eine Lücke offen ist", () => {
+    render(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={allInstances}
+        gaps={gaps}
+        acknowledged={acknowledged}
+        gapsAvailable
+        nextOpenDay={null}
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage
+        onEdit={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Offene Lücken" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("An diesem Tag ist keine Lücke offen"),
+    ).not.toBeInTheDocument();
   });
 
   it("zeigt einen schlichten Empty-State ohne Instanzen", () => {
     render(
       <VertretungDayList
+        title="Termine am Mi 09.09."
         instances={[]}
         gaps={[]}
         acknowledged={[]}
@@ -306,6 +506,7 @@ describe("VertretungDayList", () => {
     });
     render(
       <VertretungDayList
+        title="Termine am Mi 09.09."
         instances={[gapInstance, multipleAbsences]}
         gaps={[]}
         acknowledged={[]}
@@ -332,6 +533,7 @@ describe("VertretungDayList", () => {
   it("entwarnt und fällt ohne verfügbare Lückendaten nicht auf den ganzen Tag zurück", () => {
     render(
       <VertretungDayList
+        title="Termine am Mi 09.09."
         instances={[undisturbedInstance]}
         gaps={[]}
         acknowledged={[]}
@@ -347,15 +549,88 @@ describe("VertretungDayList", () => {
       screen.getByText("Störungslage konnte nicht vollständig geprüft werden"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("Keine Störungen an diesem Tag"),
+      screen.queryByText("An diesem Tag ist keine Lücke offen"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Offene Lücken" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("Lesen")).not.toBeInTheDocument();
   });
 
-  it("löst onEdit mit der Instanz-ID aus und zeigt ohne canManage 'Details' statt 'Bearbeiten'", () => {
+  it("zeigt ohne Lückendaten den Hinweis des Aufrufers und nur, was die Termine selbst sagen", () => {
+    render(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={allInstances}
+        gaps={[]}
+        acknowledged={[]}
+        gapsAvailable={false}
+        gapsNotice={<p>Der Tag ist vorbei.</p>}
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage={false}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Der Tag ist vorbei.")).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Störungslage konnte nicht vollständig geprüft werden",
+      ),
+    ).not.toBeInTheDocument();
+    // Abwesenheit und Absage stehen in den Terminen selbst; was nur die
+    // Lückendaten wissen (quittiert, offen), behauptet die Liste nicht.
+    const ids = screen
+      .getAllByTestId(/vertretung-day-list-row-/)
+      .map((row) =>
+        row.dataset.testid?.replace("vertretung-day-list-row-", ""),
+      );
+    expect(ids).toEqual(["10", "20", "40"]);
+    expect(screen.queryAllByRole("heading", { level: 3 })).toEqual([]);
+  });
+
+  it("sagt Lesenutzern, wer Vertretungen einträgt", () => {
+    const { rerender } = render(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={allInstances}
+        gaps={gaps}
+        acknowledged={acknowledged}
+        gapsAvailable
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage={false}
+        onEdit={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Termine am Mi 09.09." }),
+    ).toBeInTheDocument();
+    const hint = "Nur zur Ansicht. Vertretungen trägt die Leitung ein.";
+    expect(screen.getByText(hint)).toBeInTheDocument();
+
+    rerender(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={allInstances}
+        gaps={gaps}
+        acknowledged={acknowledged}
+        gapsAvailable
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage
+        onEdit={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(hint)).not.toBeInTheDocument();
+  });
+
+  it("löst onEdit mit der Instanz-ID aus: 'Besetzen' an der offenen Lücke, sonst 'Bearbeiten', ohne canManage 'Details'", () => {
     const onEdit = vi.fn();
     const { rerender } = render(
       <VertretungDayList
+        title="Termine am Mi 09.09."
         instances={allInstances}
         gaps={gaps}
         acknowledged={acknowledged}
@@ -367,12 +642,22 @@ describe("VertretungDayList", () => {
       />,
     );
 
+    // Die offene Lücke nennt das Ergebnis des Klicks, der Name der Zeile
+    // gehört zum vorgelesenen Namen des Knopfs.
     const row = screen.getByTestId("vertretung-day-list-row-10");
-    fireEvent.click(within(row).getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.click(
+      within(row).getByRole("button", { name: /^Besetzen: Frühstück/ }),
+    );
     expect(onEdit).toHaveBeenCalledWith("10");
+    const settledRow = screen.getByTestId("vertretung-day-list-row-20");
+    fireEvent.click(
+      within(settledRow).getByRole("button", { name: /^Bearbeiten: / }),
+    );
+    expect(onEdit).toHaveBeenLastCalledWith("20");
 
     rerender(
       <VertretungDayList
+        title="Termine am Mi 09.09."
         instances={allInstances}
         gaps={gaps}
         acknowledged={acknowledged}
@@ -388,11 +673,11 @@ describe("VertretungDayList", () => {
     // Kalenderspalte; der Verlauf muss ohne schedules:manage lesbar bleiben) —
     // aber nicht unter dem irreführenden Label "Bearbeiten".
     expect(
-      screen.queryByRole("button", { name: "Bearbeiten" }),
+      screen.queryByRole("button", { name: /^(Bearbeiten|Besetzen)/ }),
     ).not.toBeInTheDocument();
     const readOnlyRow = screen.getByTestId("vertretung-day-list-row-10");
     fireEvent.click(
-      within(readOnlyRow).getByRole("button", { name: "Details" }),
+      within(readOnlyRow).getByRole("button", { name: /^Details: / }),
     );
     expect(onEdit).toHaveBeenLastCalledWith("10");
   });

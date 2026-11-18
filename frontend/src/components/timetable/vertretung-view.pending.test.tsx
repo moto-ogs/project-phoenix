@@ -171,16 +171,17 @@ async function startCancel() {
   openBlock("d=2026-07-16&block=43");
   const view = render(<VertretungView />);
 
-  fireEvent.click(screen.getByRole("radio", { name: /Block absagen/ }));
-  const save = screen.getByRole("button", { name: "Speichern" });
-  // Die Reichweite des Elternhinweises lädt erst; bis dahin ist Speichern zu.
+  fireEvent.click(screen.getByRole("button", { name: "Absage" }));
+  // Der Abschluss nennt sein Ergebnis (#7493).
+  const save = screen.getByRole("button", { name: "Block absagen" });
+  // Die Reichweite des Elternhinweises lädt erst; bis dahin ist der Knopf zu.
   await waitFor(() => expect(save).toBeEnabled());
   fireEvent.click(save);
   expect(mockApplyDeviations).toHaveBeenCalledWith(
     "43",
     expect.objectContaining({ cancel: true }),
   );
-  expectSlideOverSaveLocked("Fussball", ["Abbrechen", "Speichere …"]);
+  expectSlideOverSaveLocked("Fussball", ["Abbrechen", "Sage ab …"]);
 
   const resolveCancelled = () =>
     answer.resolve({

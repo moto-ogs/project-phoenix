@@ -16,8 +16,7 @@ export type VertretungDayListMode = "stoerungen" | "ganzer-tag";
  * filtert (#2031). Vorher stand er in der Kopfleiste der Seite, optisch
  * identisch mit dem Ansichts-Umschalter "Tag | Woche" direkt darüber: zwei
  * gleich aussehende Pillenleisten mit völlig verschiedener Wirkung. Jetzt sitzt
- * er auf der Fläche, die er verändert, und trägt die Unterstrich-Variante,
- * damit man ihn nicht mehr mit dem Ansichtswechsel verwechselt.
+ * er im Kopf der Karte, die er verändert, neben ihrer Überschrift (#7493).
  */
 interface VertretungListFilterProps {
   readonly mode: VertretungDayListMode;
@@ -32,22 +31,16 @@ export function VertretungListFilter({
   allLabel,
 }: VertretungListFilterProps) {
   return (
-    // Kein eigener Rahmen und kein vertikales Padding am Wrapper: die
-    // Unterstrich-Variante bringt ihre Trennlinie selbst mit. Zwei Linien
-    // wenige Pixel übereinander sahen gequetscht aus. Das Padding sitzt an der
-    // TabsList, damit die Linie über die volle Kartenbreite läuft, die
-    // Beschriftungen aber auf der Textkante der Zeilen darunter stehen.
-    <div className="shrink-0">
-      <SegmentedControl
-        className="px-3 pt-3"
-        ariaLabel="Liste filtern"
-        value={mode}
-        onChange={(next) => onModeChange(next as VertretungDayListMode)}
-        items={[
-          { value: "stoerungen", label: "Nur Störungen" },
-          { value: "ganzer-tag", label: allLabel },
-        ]}
-      />
-    </div>
+    // Sitzt im Kopf der Karte, die er filtert (`SectionCard` `action`): das
+    // Polster kommt von dort.
+    <SegmentedControl
+      ariaLabel="Liste filtern"
+      value={mode}
+      onChange={(next) => onModeChange(next as VertretungDayListMode)}
+      items={[
+        { value: "stoerungen", label: "Nur Störungen" },
+        { value: "ganzer-tag", label: allLabel },
+      ]}
+    />
   );
 }

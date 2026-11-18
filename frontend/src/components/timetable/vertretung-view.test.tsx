@@ -269,6 +269,8 @@ interface SwrState {
   };
   gapsError?: Error;
   gapsLoading?: boolean;
+  /** Wochenwechsel: SWR reicht die Lücken der vorigen Woche weiter. */
+  gapsLoadingWithPreviousData?: boolean;
   staffData?: Array<{ id: string; name: string }>;
   staffError?: Error;
   /** Dienstplan-Übersicht für den Abdeckungshinweis; ohne sie kein Hinweis. */
@@ -296,6 +298,7 @@ function setupSWR(state: SwrState = {}) {
     },
     gapsError,
     gapsLoading = false,
+    gapsLoadingWithPreviousData = false,
     staffData = [{ id: "11", name: "Ada Staff" }],
     staffError,
     coverageData,
@@ -312,6 +315,9 @@ function setupSWR(state: SwrState = {}) {
     }
     if (key.startsWith("vertretung-gaps")) {
       if (gapsLoading) return { isLoading: true };
+      if (gapsLoadingWithPreviousData) {
+        return { data: gapsData, isLoading: true };
+      }
       return { data: gapsData, error: gapsError, isLoading: gapsLoading };
     }
     if (key.startsWith("vertretung-week")) {
@@ -402,8 +408,38 @@ describe("VertretungView", () => {
       "aria-pressed",
       "true",
     );
-    const props = mockDayListProps.mock.calls.at(-1)?.[0];
-    expect(props.instances).toEqual([]);
+    // Der Montag der Folgewoche hat keine Termine: das ist der Leerzustand
+    // des Gerüsts, nicht eine leere Liste neben einem leeren Raster (#7493).
+    expect(screen.getByText("Keine Termine an diesem Tag")).toBeInTheDocument();
+    expect(screen.queryByTestId("day-list")).not.toBeInTheDocument();
+    expect(screen.queryByText("grid-click")).not.toBeInTheDocument();
+  });
+
+  it("führt aus dem Leerzustand in den Betreuungsplan, aber nur mit Planungsrecht", () => {
+    mockSearch.value = "d=2026-07-17"; // Freitag ohne Termine
+    const { unmount } = render(<VertretungView />);
+
+    expect(
+      screen.getByRole("link", { name: "Betreuungsplan öffnen" }),
+    ).toHaveAttribute("href", "/acme/betreuungsplan?d=2026-07-17");
+    // Null Termine sagt der Leerzustand, die Statuszeile wiederholt es nicht.
+    expect(screen.queryByText("Termine")).not.toBeInTheDocument();
+    unmount();
+
+    mockUseSession.mockReturnValue({
+      data: { user: { permissions: ["schedules:read"] } },
+      status: "authenticated",
+    });
+    render(<VertretungView />);
+    // Ohne Aktion steht der Leerzustand als ein Satz.
+    expect(
+      screen.getByText(
+        "Keine Termine an diesem Tag. Für diesen Zeitraum ist nichts geplant.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Betreuungsplan öffnen" }),
+    ).not.toBeInTheDocument();
   });
 
   it("snaps a weekend day of another week to Monday on a weekday although the weekend follows Friday", () => {
@@ -622,22 +658,68 @@ describe("VertretungView", () => {
     );
   });
 
-  it("shows placeholders (never a fabricated 0) for a fully past day", () => {
+  it("zeigt für einen vollständig vergangenen Tag keine Lückenzahl (nie eine erfundene 0) und sagt, warum", () => {
     mockSearch.value = "d=2026-06-15"; // Woche komplett in der Vergangenheit
+    setupSWR({
+      weekData: {
+        from: "2026-06-15",
+        to: "2026-06-21",
+        instances: [makeInstance({ id: "7", date: "2026-06-15" })],
+      },
+    });
     render(<VertretungView />);
 
-    expect(screen.getByText("Offen: –")).toBeInTheDocument();
-    expect(screen.getByText("Quittiert: –")).toBeInTheDocument();
-    expect(screen.queryByText("Offen: 0")).not.toBeInTheDocument();
-    expect(screen.queryByText("Quittiert: 0")).not.toBeInTheDocument();
-    expect(mockDayListProps.mock.calls.at(-1)?.[0].gapsAvailable).toBe(false);
+    // Weder die Statuszeile noch ein Tag der Leiste behauptet eine Zahl.
+    expect(screen.queryByText(/offene Lücken?/)).not.toBeInTheDocument();
+    expect(screen.queryByText("bewusst unbesetzt")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Mo 15.06." }),
+    ).toBeInTheDocument();
+    const props = mockDayListProps.mock.calls.at(-1)?.[0];
+    expect(props.gapsAvailable).toBe(false);
+    // Ein vergangener Tag ist kein Ladefehler: die Liste bekommt den Satz
+    // dafür, keinen Platzhalter.
+    render(<>{props.gapsNotice}</>);
+    expect(
+      screen.getByText(
+        "Der Tag ist vorbei. Offene Lücken zeigt moto nur ab heute.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("passes unavailable gaps to the list while the gaps request is still loading", () => {
     setupSWR({ gapsLoading: true });
     render(<VertretungView />);
 
-    expect(mockDayListProps.mock.calls.at(-1)?.[0].gapsAvailable).toBe(false);
+    const props = mockDayListProps.mock.calls.at(-1)?.[0];
+    expect(props.gapsAvailable).toBe(false);
+    // Laden ist ein Platzhalter, kein Hinweis und kein Ergebnis.
+    expect(props.gapsLoading).toBe(true);
+    expect(props.gapsNotice).toBeUndefined();
+    expect(props.nextOpenDay).toBeUndefined();
+  });
+
+  it("behauptet beim Wochenwechsel nichts aus den Daten der vorigen Woche", () => {
+    // SWR reicht beim Wechsel die alten Daten weiter (`keepPreviousData`).
+    // Auf die neue Woche gefiltert wären das null Lücken und null Termine.
+    setupSWR({ gapsLoadingWithPreviousData: true });
+    const { unmount } = render(<VertretungView />);
+
+    const props = mockDayListProps.mock.calls.at(-1)?.[0];
+    expect(props.gapsAvailable).toBe(false);
+    expect(props.gapsLoading).toBe(true);
+    expect(props.nextOpenDay).toBeUndefined();
+    expect(screen.queryByText(/offene Lücken?/)).not.toBeInTheDocument();
+    unmount();
+
+    setupSWR({ weekLoading: true });
+    mockSearch.value = "d=2026-07-17"; // Freitag: in den alten Daten leer
+    render(<VertretungView />);
+    expect(screen.getByRole("status", { busy: true })).toBeInTheDocument();
+    expect(
+      screen.queryByText("Keine Termine an diesem Tag"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Termine")).not.toBeInTheDocument();
   });
 
   it("passes unavailable gaps to the list when the gaps request fails", () => {
@@ -647,7 +729,7 @@ describe("VertretungView", () => {
     expect(mockDayListProps.mock.calls.at(-1)?.[0].gapsAvailable).toBe(false);
   });
 
-  it("zeigt einen Ladefehler der Lücken über der Liste, mit Wiederholen nur der Lücken", async () => {
+  it("gibt einen Ladefehler der Lücken in die Liste, der sie fehlen, mit Wiederholen nur der Lücken", async () => {
     setupSWR({
       gapsError: new ApiError("gaps down", 503, {
         code: "general.unavailable",
@@ -655,12 +737,19 @@ describe("VertretungView", () => {
     });
     render(<VertretungView />);
 
-    expect(
-      await screen.findByText(
-        catalogText("general.unavailable", "die Liste der offenen Lücken"),
-      ),
-    ).toBeInTheDocument();
+    // Der Fehler steht einmal, in der Liste (#7493): nicht mehr zusätzlich
+    // als eigener Hinweis über dem Inhalt.
+    const text = catalogText(
+      "general.unavailable",
+      "die Liste der offenen Lücken",
+    );
+    await waitFor(() =>
+      expect(mockDayListProps.mock.calls.at(-1)?.[0].gapsNotice).toBeDefined(),
+    );
     expect(screen.getByTestId("day-list")).toBeInTheDocument();
+    expect(screen.queryByText(text)).not.toBeInTheDocument();
+    render(<>{mockDayListProps.mock.calls.at(-1)?.[0].gapsNotice}</>);
+    expect(screen.getByText(text)).toBeInTheDocument();
     expect(mockToastError).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
@@ -1000,8 +1089,48 @@ describe("VertretungView", () => {
       "42",
       "43",
     ]);
-    // Der Zähler der Kontextleiste zählt in der Wochenansicht die Woche.
-    expect(screen.getByText("Offen: 2")).toBeInTheDocument();
+    // Die Statuszeile zählt in der Wochenansicht die Woche, einmal. Das
+    // Fenster beginnt heute (Mittwoch), das sagt die Angabe dazu.
+    const stats = screen.getByText("offene Lücken ab heute").parentElement;
+    expect(stats).toHaveTextContent("2 offene Lücken ab heute");
+    expect(screen.queryByText(/^Offen:/)).not.toBeInTheDocument();
+    // Eine Null bei „bewusst unbesetzt“ ändert keine Entscheidung.
+    expect(screen.queryByText("bewusst unbesetzt")).not.toBeInTheDocument();
+  });
+
+  it("nennt die offenen Lücken des Tages einmal mit Namen in der Statuszeile, die Tagesleiste zeigt die Woche", () => {
+    setupSWR({
+      gapsData: {
+        from: "2026-07-15",
+        to: "2026-07-19",
+        gaps: [
+          { instanceId: "42", date: "2026-07-15" },
+          { instanceId: "43", date: "2026-07-16" },
+        ],
+        acknowledged: [{ instanceId: "44", date: "2026-07-15" }],
+      },
+    });
+    render(<VertretungView />);
+
+    expect(
+      screen.getByRole("button", { name: "Mi 15.07., 1 offene Lücke" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: "Do 16.07., 1 offene Lücke" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("offene Lücke").parentElement).toHaveTextContent(
+      "1 offene Lücke",
+    );
+    // Das Bedienband wiederholt die Zahl nicht mehr.
+    expect(screen.queryByText(/^Offen:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Quittiert:/)).not.toBeInTheDocument();
+    // „Bewusst unbesetzt“ steht an keinem Tag der Leiste, also hier.
+    expect(
+      screen.getByText("bewusst unbesetzt").parentElement,
+    ).toHaveTextContent("1 bewusst unbesetzt");
+    // Das Ergebnis der Liste kennt den nächsten Tag mit offenen Lücken.
+    const next = mockDayListProps.mock.calls.at(-1)?.[0].nextOpenDay;
+    expect(next).toMatchObject({ label: "Do 16.07.", count: 1 });
   });
 
   it("zeigt am Wochenende keine erfundenen Wochenzähler für ein leeres sichtbares Lückenfenster", () => {
@@ -1020,10 +1149,10 @@ describe("VertretungView", () => {
     mockSearch.value = "d=2026-07-17&view=woche";
     render(<VertretungView />);
 
-    expect(screen.getByText("Offen: –")).toBeInTheDocument();
-    expect(screen.getByText("Quittiert: –")).toBeInTheDocument();
-    expect(screen.queryByText("Offen: 0")).not.toBeInTheDocument();
-    expect(screen.queryByText("Quittiert: 0")).not.toBeInTheDocument();
+    // Anker: die Woche ist geladen und zeigt ihre Termine.
+    expect(screen.getByText("Termine")).toBeInTheDocument();
+    expect(screen.queryByText(/offene Lücken?/)).not.toBeInTheDocument();
+    expect(screen.queryByText("bewusst unbesetzt")).not.toBeInTheDocument();
   });
 
   it("öffnet aus der Wochenliste denselben Editor wie die Tagesansicht", () => {
@@ -1043,7 +1172,8 @@ describe("VertretungView", () => {
 
     const thursday = screen.getByTestId("vertretung-week-list-day-2026-07-16");
     fireEvent.click(
-      within(thursday).getByRole("button", { name: "Bearbeiten" }),
+      // Für den Termin ist niemand eingeteilt: kein „Besetzen“.
+      within(thursday).getByRole("button", { name: /^Bearbeiten: Fussball/ }),
     );
 
     expect(new URLSearchParams(window.location.search).get("block")).toBe("43");
@@ -1187,7 +1317,7 @@ describe("VertretungView", () => {
       ).toBeInTheDocument();
     });
 
-    it("zählt nicht in die Störungszähler", () => {
+    it("zählt nicht in die Lückenzahlen", () => {
       authenticateWithOverviewAccess();
       setupSWR({
         coverageData: {
@@ -1197,8 +1327,20 @@ describe("VertretungView", () => {
       });
       render(<VertretungView />);
 
-      expect(screen.getByText("Offen: 0")).toBeInTheDocument();
-      expect(screen.getByText("Quittiert: 0")).toBeInTheDocument();
+      // Anker: der Hinweis ist da. Trotzdem trägt kein Tag eine offene
+      // Lücke, und die Liste bekommt keine.
+      expect(
+        screen.getByText("1 Einsatz ist nicht durch den Dienstplan abgedeckt."),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Mi 15.07." }),
+      ).toBeInTheDocument();
+      expect(mockDayListProps.mock.calls.at(-1)?.[0].gaps).toEqual([]);
+      mockSearch.value = "view=woche";
+      render(<VertretungView />);
+      expect(
+        screen.getByText("offene Lücken ab heute").parentElement,
+      ).toHaveTextContent("0 offene Lücken ab heute");
     });
 
     it("bleibt still ohne die Rechte der Dienstplan-Übersicht", () => {
@@ -1286,6 +1428,11 @@ describe("VertretungView", () => {
       authenticateWithOverviewAccess();
       mockSearch.value = "d=2026-07-14";
       setupSWR({
+        weekData: {
+          from: "2026-07-13",
+          to: "2026-07-19",
+          instances: [makeInstance({ id: "41", date: "2026-07-14" })],
+        },
         coverageData: {
           dienstplanInUse: true,
           assignments: [coverageAssignment({ date: "2026-07-14" })],

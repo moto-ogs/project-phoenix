@@ -22,7 +22,10 @@ import {
   blockPlaceLine,
   blockStaffEntries,
 } from "~/components/timetable/block-staff-names";
-import { CoverageIndicator } from "~/components/ui/planning/coverage-indicator";
+import {
+  CoverageIndicator,
+  type CoverageState,
+} from "~/components/ui/planning/coverage-indicator";
 import { PlanBlock } from "~/components/ui/planning/plan-block";
 import { TIMETABLE_NEUTRAL_COLOR } from "~/components/timetable/timetable-colors";
 import { OverbookedBadge } from "~/components/activities/occupancy-badges";
@@ -53,11 +56,25 @@ interface InstanceBlockProps {
    */
   isGap?: boolean;
   /**
+   * Besetzung, wie die aufrufende Fläche sie zählt. Der Vertretungsplan
+   * zählt „da von geplant“ (#7493): seine Liste nennt dieselbe Zahl, und
+   * zwei verschiedene Brüche am selben Termin ließen offen, welcher die
+   * Lücke ist. Ohne Angabe zeigt der Block „eingeteilt von benötigt“.
+   */
+  staffing?: BlockStaffing;
+  /**
    * Personal-ID → voller Name. Damit zeigt der Block, wer ihn betreut
    * (#3817); ohne Namen bleibt es bei den Zahlen und der Zeile
    * „N abwesend · Ersatz“.
    */
   staffNames?: ReadonlyMap<string, string>;
+}
+
+/** Besetzung eines Blocks in der Zählweise der aufrufenden Fläche. */
+export interface BlockStaffing {
+  readonly state: CoverageState;
+  readonly current: number;
+  readonly total: number;
 }
 
 const EMPTY_STAFF_NAMES: ReadonlyMap<string, string> = new Map();
@@ -93,6 +110,7 @@ export function InstanceBlock({
   isSelected,
   onClick,
   isGap = false,
+  staffing,
   staffNames = EMPTY_STAFF_NAMES,
 }: InstanceBlockProps) {
   const showTimetableCounts = useShowTimetableCounts();
@@ -225,6 +243,17 @@ export function InstanceBlock({
           note="bewusst unbesetzt"
         />
       );
+    } else if (staffing) {
+      if (staffing.total > 0) {
+        coverage = (
+          <CoverageIndicator
+            size="sm"
+            state={staffing.state}
+            current={staffing.current}
+            total={staffing.total}
+          />
+        );
+      }
     } else if (instance.requiredStaffCount > 0) {
       coverage = (
         <CoverageIndicator

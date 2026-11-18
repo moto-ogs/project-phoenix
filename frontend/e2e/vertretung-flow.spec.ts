@@ -246,7 +246,7 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
 
       // --- Save 1: Person abwesend melden (Ereignis `absence`) ------------
       deviationPosts = 0;
-      await row.getByRole("button", { name: "Bearbeiten" }).click();
+      await row.getByRole("button", { name: /^Bearbeiten/ }).click();
       await expect(dialog).toBeVisible();
       assertUrlVocabulary(page, "nach Editor-Öffnen");
       await expect(dialog.getByText(title)).toBeVisible();
@@ -268,7 +268,9 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       await expect(
         dialog.getByRole("checkbox", { name: new RegExp(otherTitle) }),
       ).not.toBeChecked();
-      await dialog.getByRole("button", { name: "Speichern" }).click();
+      await dialog
+        .getByRole("button", { name: "Speichern", exact: true })
+        .click();
       expect((await save1).ok()).toBeTruthy();
       await expect(dialog).toBeHidden({ timeout: 10000 });
       expect(deviationPosts, "Save 1 = genau ein Speicher-POST").toBe(1);
@@ -284,7 +286,9 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       // (ApplySubstitute -> logSubstitutionEvent); der Verlauf soll aber beide
       // Ereignisse zeigen. Jeder Speichervorgang bleibt ein einziger Request.
       deviationPosts = 0;
-      await row.getByRole("button", { name: "Bearbeiten" }).click();
+      // Die abwesende Person ohne Ersatz macht den Termin zur offenen Lücke:
+      // seine Zeile nennt jetzt das Ergebnis des Klicks (#7493).
+      await row.getByRole("button", { name: /^Besetzen/ }).click();
       await expect(dialog).toBeVisible();
 
       const picker = dialog.getByRole("combobox", { name: /Vertretung für/ });
@@ -302,7 +306,10 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
         (res) =>
           res.request().method() === "POST" && SUBSTITUTIONS_RE.test(res.url()),
       );
-      await dialog.getByRole("button", { name: "Speichern" }).click();
+      // Mit gewählter Ersatzperson heißt der Abschluss nach seinem Ergebnis.
+      await dialog
+        .getByRole("button", { name: "Vertretung speichern", exact: true })
+        .click();
       expect((await save2).ok()).toBeTruthy();
       await expect(dialog).toBeHidden({ timeout: 10000 });
       expect(deviationPosts, "Save 2 = genau ein Speicher-POST").toBe(1);
@@ -374,7 +381,9 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
       // belegt, dass die View nach dem Seitenaufruf wieder interaktiv ist.
       await expect(row).toBeVisible(DATA);
       await page
-        .getByLabel(new RegExp(`${target.dd}\\.${target.mm}\\.$`))
+        // Ein Tag mit offenen Lücken nennt sie im vorgelesenen Namen:
+        // „Do 19.11., 2 offene Lücken“.
+        .getByLabel(new RegExp(`${target.dd}\\.${target.mm}\\.(,|$)`))
         .click();
       await expect
         .poll(() => new URL(page.url()).searchParams.get("d"))

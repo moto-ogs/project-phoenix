@@ -19,10 +19,20 @@
  * bereits gesetztem Ersatz bleibt die Störung sichtbar. Bei gleicher
  * Startzeit ordnet ein Schwere-Sekundärschlüssel: offene Lücke vor
  * Abwesenheit-mit-Ersatz vor quittiert vor abgesagt.
+ *
+ * Reihenfolge der Arbeit (#7493): die Liste gruppiert nach dem, was zu tun
+ * ist. Zuerst die offenen Lücken, dann, was schon geregelt ist (Ersatz,
+ * bewusst unbesetzt, abgesagt), zuletzt die Termine wie geplant. Ist keine
+ * Lücke offen, steht an der Stelle der ersten Gruppe ein Ergebnis mit dem
+ * nächsten Tag, an dem noch etwas offen ist.
  */
+
+import { CircleCheck } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Alert } from "~/components/ui/alert";
 import { EmptyState } from "~/components/ui/empty-state";
+import { ListGroupHeader } from "~/components/ui/list-group-header";
 import { SectionCard } from "~/components/ui/section-card";
 import { Button } from "~/components/ui/button";
 import {
@@ -56,7 +66,17 @@ export interface StaffTriple {
   readonly absent: number;
 }
 
+/** Der nächste andere Tag der Woche, an dem noch eine Lücke offen ist. */
+export interface VertretungNextOpenDay {
+  /** Wie der Tag in der Wochenleiste heißt, z. B. "Do 19.11.". */
+  readonly label: string;
+  readonly count: number;
+  readonly onSelect: () => void;
+}
+
 export interface VertretungDayListProps {
+  /** Überschrift der Karte: sagt, wessen Termine sie zeigt. */
+  title: string;
   /** Alle Instanzen des angezeigten Tages. */
   instances: EnrichedInstance[];
   /** Offene Lücken des Tages (GapsResponse.gaps, bereits tagesgefiltert). */
@@ -65,6 +85,19 @@ export interface VertretungDayListProps {
   acknowledged: GapInstance[];
   /** Ob offene und quittierte Lücken für den angezeigten Tag geladen wurden. */
   gapsAvailable: boolean;
+  /**
+   * Was die Liste zeigt, solange `gapsAvailable` falsch ist: der Ladefehler
+   * mit „Wiederholen“ oder der Satz für einen vergangenen Tag. Ohne Angabe
+   * der allgemeine Hinweis.
+   */
+  gapsNotice?: ReactNode;
+  /** Die Lücken laden noch: Platzhalter statt einer Aussage zur Besetzung. */
+  gapsLoading?: boolean;
+  /**
+   * Für den Ergebniszustand „keine Lücke offen“: wo es weitergeht. `null`
+   * heißt, in der geladenen Woche ist sonst nichts offen.
+   */
+  nextOpenDay?: VertretungNextOpenDay | null;
   /**
    * Anzeigenamen fürs Personal. InstanceStaffSummary trägt nur eine staffId,
    * keinen Namen — die Zeilen "Person abwesend" / "Ersatzkräfte: Namen" brauchen
@@ -212,7 +245,7 @@ export function VertretungRowList({
   onEdit: (instanceId: string) => void;
 }) {
   return (
-    <ul className="divide-y divide-gray-200">
+    <ul className="divide-y divide-gray-100">
       {rows.map((row) => (
         <VertretungDayListRow
           key={row.instance.id}
@@ -226,11 +259,36 @@ export function VertretungRowList({
   );
 }
 
+/** Was mit einer Zeile zu tun ist: besetzen, nichts mehr, oder nie etwas. */
+function groupRowsByTask(rows: ClassifiedRow[]) {
+  return {
+    open: rows.filter((row) => row.coverageState === "gap"),
+    settled: rows.filter(
+      (row) => row.isDisturbed && row.coverageState !== "gap",
+    ),
+    planned: rows.filter((row) => !row.isDisturbed),
+  };
+}
+
+/** Innenkante der Karte: Titel, Gruppenköpfe und Zeilen stehen auf einer Linie. */
+const LIST_INSET = "compact:px-4 px-5 max-sm:px-4";
+
+function nextOpenDayText(next: VertretungNextOpenDay | null): string {
+  if (next === null) return "Auch sonst ist in dieser Woche keine Lücke offen.";
+  return next.count === 1
+    ? `Am ${next.label} ist noch 1 Lücke offen.`
+    : `Am ${next.label} sind noch ${next.count} Lücken offen.`;
+}
+
 export function VertretungDayList({
+  title,
   instances,
   gaps,
   acknowledged,
   gapsAvailable,
+  gapsNotice,
+  gapsLoading = false,
+  nextOpenDay,
   staffNames,
   mode,
   onModeChange,
@@ -244,18 +302,26 @@ export function VertretungDayList({
       onModeChange={onModeChange}
       allLabel="Ganzer Tag"
     />
-  ) : null;
-
-  if (instances.length === 0) {
-    return (
-      <SectionCard padding="none" overflow="visible" className={className}>
-        {filter}
-        <div className="px-4 py-2">
-          <EmptyState variant="compact" title="Keine Termine an diesem Tag" />
-        </div>
-      </SectionCard>
+  ) : undefined;
+  const rowList = (rows: ClassifiedRow[]) => (
+    <VertretungRowList
+      rows={rows}
+      staffNames={staffNames}
+      canManage={canManage}
+      onEdit={onEdit}
+    />
+  );
+  const group = (heading: string, rows: ClassifiedRow[]) =>
+    rows.length === 0 ? null : (
+      <section>
+        <ListGroupHeader
+          title={heading}
+          meta={rows.length}
+          className={LIST_INSET}
+        />
+        {rowList(rows)}
+      </section>
     );
-  }
 
   const classified = classifyInstances(
     instances,
@@ -263,35 +329,114 @@ export function VertretungDayList({
     acknowledged,
     gapsAvailable,
   );
-  const disturbed = classified.filter((row) => row.isDisturbed);
-  // Ohne Gaps kann der Client nicht wissen, ob ein ansonsten unauffälliger
-  // Block unterbesetzt ist. Deshalb weder Entwarnung noch Ganztags-Fallback.
-  const showAll =
-    mode === "ganzer-tag" || (gapsAvailable && disturbed.length === 0);
-  const visibleRows = showAll ? classified : disturbed;
+  const { open, settled, planned } = groupRowsByTask(classified);
+  const wholeDay = mode === "ganzer-tag";
+
+  const gapsUnavailableNotice = (
+    <div className={`${LIST_INSET} pb-3`}>
+      {gapsNotice ?? (
+        <Alert
+          type="warning"
+          message="Störungslage konnte nicht vollständig geprüft werden"
+        />
+      )}
+    </div>
+  );
+
+  let body: ReactNode;
+  if (instances.length === 0) {
+    body = (
+      <div className={`${LIST_INSET} pb-3`}>
+        <EmptyState variant="compact" title="Keine Termine an diesem Tag" />
+      </div>
+    );
+  } else if (wholeDay) {
+    // „Ganzer Tag“ ist der Tag in seiner Reihenfolge: nach Uhrzeit, ohne
+    // Gruppen. Die Arbeitssicht mit den Gruppen ist „Nur Störungen“.
+    body = (
+      <>
+        {!gapsAvailable && gapsUnavailableNotice}
+        {rowList(classified)}
+      </>
+    );
+  } else if (gapsAvailable) {
+    body = (
+      <>
+        <section>
+          <ListGroupHeader
+            title="Offene Lücken"
+            // Die Null sagt schon das Ergebnis darunter.
+            meta={open.length > 0 ? open.length : undefined}
+            className={LIST_INSET}
+          />
+          {open.length > 0 ? (
+            rowList(open)
+          ) : (
+            // Ergebnis statt leerer Gruppe: was erreicht ist und wo es
+            // weitergeht.
+            <div className={`${LIST_INSET} py-2`}>
+              <EmptyState
+                variant="compact"
+                tone="success"
+                icon={<CircleCheck aria-hidden="true" />}
+                title="An diesem Tag ist keine Lücke offen"
+                description={
+                  nextOpenDay === undefined
+                    ? undefined
+                    : nextOpenDayText(nextOpenDay)
+                }
+                action={
+                  nextOpenDay ? (
+                    <Button
+                      type="button"
+                      variant="surface"
+                      size="compact"
+                      tooltip="Zeigt den Tag mit den nächsten offenen Lücken."
+                      onClick={nextOpenDay.onSelect}
+                    >
+                      {nextOpenDay.label} zeigen
+                    </Button>
+                  ) : undefined
+                }
+              />
+            </div>
+          )}
+        </section>
+        {group("Schon geregelt", settled)}
+        {/* Ein Tag ganz ohne Störung zeigt seine Termine trotzdem, damit die
+            Fläche nicht leer bleibt. */}
+        {open.length === 0 &&
+          settled.length === 0 &&
+          group("Wie geplant", planned)}
+      </>
+    );
+  } else {
+    // Ohne Lückendaten behauptet die Liste keine offene oder besetzte Lage:
+    // sie zeigt nur, was die Termine selbst sagen (Abwesenheit, Absage), und
+    // fällt nicht auf den ganzen Tag zurück.
+    body = (
+      <>
+        {gapsUnavailableNotice}
+        {rowList(settled)}
+      </>
+    );
+  }
 
   return (
-    <SectionCard padding="none" overflow="visible" className={className}>
-      {filter}
-      {!gapsAvailable && (
-        <div className="border-b border-gray-200 p-3">
-          <Alert
-            type="warning"
-            message="Störungslage konnte nicht vollständig geprüft werden"
-          />
-        </div>
-      )}
-      {gapsAvailable && disturbed.length === 0 && (
-        <div className="border-b border-gray-200 px-3 py-2">
-          <EmptyState variant="compact" title="Keine Störungen an diesem Tag" />
-        </div>
-      )}
-      <VertretungRowList
-        rows={visibleRows}
-        staffNames={staffNames}
-        canManage={canManage}
-        onEdit={onEdit}
-      />
+    <SectionCard
+      title={title}
+      description={
+        canManage
+          ? undefined
+          : "Nur zur Ansicht. Vertretungen trägt die Leitung ein."
+      }
+      action={filter}
+      // Die Platzhalter des Ladezustands behalten den Innenrand der Karte.
+      flush={!(gapsLoading && instances.length > 0)}
+      loading={gapsLoading && instances.length > 0}
+      className={className}
+    >
+      {body}
     </SectionCard>
   );
 }
@@ -321,6 +466,17 @@ function VertretungDayListRow({
   // Störungsvermerke — die Vermerke selbst bleiben
   // ohnehin aus, weil ihre Bedingungen für eine ungestörte Zeile nie zutreffen.
   const titleClass = isDisturbed ? "text-gray-900" : "text-gray-500";
+  const isOpenGap = coverageState === "gap";
+  // Eine Lücke ohne eingeteilte Person lässt sich hier nicht besetzen: es
+  // gibt niemanden zu vertreten. Die Zeile sagt das, statt „0/0“ zu zeigen,
+  // und verspricht kein „Besetzen“.
+  const nobodyPlanned = isOpenGap && triple.planned === 0;
+  const canFill = isOpenGap && !nobodyPlanned;
+  const rowAction = !canManage
+    ? "Details"
+    : canFill
+      ? "Besetzen"
+      : "Bearbeiten";
   const placeLine = blockPlaceLine(instance);
   const staffEntries = isCancelled
     ? []
@@ -341,14 +497,16 @@ function VertretungDayListRow({
   return (
     <li
       data-testid={`vertretung-day-list-row-${instance.id}`}
-      className="flex flex-col gap-1.5 p-3"
+      className={`flex flex-col gap-1.5 ${LIST_INSET} py-3`}
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex flex-col gap-0.5">
+      {/* Kein Umbruch: der Knopf bleibt bei jeder Titellänge oben rechts an
+          derselben Stelle, der Text bricht in seiner Spalte um. */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className={`text-xs font-medium tabular-nums ${timeClass}`}>
             {instance.startTime}–{instance.endTime}
           </span>
-          <span className={`text-xs font-semibold ${titleClass}`}>
+          <span className={`text-sm font-semibold ${titleClass}`}>
             {instance.title}
           </span>
           {/* #3817: Raum, Gruppe und wer eingeteilt ist, ohne den Editor zu
@@ -362,39 +520,58 @@ function VertretungDayListRow({
             Kalenderspalte, und der Verlauf muss ohne schedules:manage lesbar
             bleiben (Kriterium 8). Der Editor selbst rendert ohne canManage
             nur Lese-Inhalte.
-            Mit Verwaltungsrechten ist "Bearbeiten" die Hauptaktion der Zeile
-            und trägt deshalb die weiße Kit-Fläche mit Rahmen (#2029). Ohne die
-            Rechte bleibt "Details" die ruhigere Ghost-Variante, damit ein
-            reiner Lesezugriff nicht wie eine Aufforderung zum Ändern wirkt. */}
+            Mit Verwaltungsrechten trägt die Zeile einer offenen Lücke die
+            Hauptaktion der Seite und nennt ihr Ergebnis: „Besetzen“ (#7493).
+            Was schon geregelt ist, behält „Bearbeiten“ auf der weißen
+            Kit-Fläche mit Rahmen (#2029). Ohne die Rechte bleibt „Details“
+            die ruhigere Ghost-Variante, damit ein reiner Lesezugriff nicht
+            wie eine Aufforderung zum Ändern wirkt. */}
         <Button
           type="button"
-          variant={canManage ? "outline" : "ghost"}
+          variant={canManage ? (canFill ? "primary" : "outline") : "ghost"}
           size="compact"
           tooltip={
             canManage
               ? "Öffnet Abwesenheit und Ersatz für diesen Termin."
               : "Zeigt Besetzung und Verlauf dieses Termins."
           }
+          aria-label={`${rowAction}: ${instance.title}, ${instance.startTime}`}
+          className="shrink-0"
           onClick={() => onEdit(instance.id)}
         >
-          {canManage ? "Bearbeiten" : "Details"}
+          {rowAction}
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <CoverageIndicator
-          state={coverageState}
-          current={triple.present}
-          total={triple.planned}
-          note={
-            coverageState === "acknowledged" ? "bewusst unbesetzt" : undefined
-          }
-        />
-        <span className="text-xs text-gray-500 tabular-nums">
-          Soll {triple.planned} · Ist {triple.present} · Abwesend{" "}
-          {triple.absent}
-        </span>
-      </div>
+      {nobodyPlanned ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <CoverageIndicator
+            state="gap"
+            label="Niemand eingeteilt"
+            title="Für diesen Termin ist niemand eingeteilt"
+          />
+          {canManage && (
+            <span className="text-xs text-gray-500">
+              Personal trägst du im Betreuungsplan ein.
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          <CoverageIndicator
+            state={coverageState}
+            current={triple.present}
+            total={triple.planned}
+            note={
+              coverageState === "acknowledged" ? "bewusst unbesetzt" : undefined
+            }
+          />
+          <span className="text-xs text-gray-500 tabular-nums">
+            Soll {triple.planned} · Ist {triple.present} · Abwesend{" "}
+            {triple.absent}
+          </span>
+        </div>
+      )}
 
       {hasAbsence && (
         <div className="flex flex-col gap-1 text-xs text-gray-600">

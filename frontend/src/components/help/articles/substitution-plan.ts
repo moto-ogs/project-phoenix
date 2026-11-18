@@ -14,21 +14,24 @@ export function substitutionPlanTopic(): HelpTopic {
     steps: [
       "Klappe in der Seitenleiste `Planung` auf.",
       "Öffne `Vertretungsplan`.",
-      "Wähle oben `Tag` oder `Woche`.",
-      "Wähle den Einsatz, der vertreten werden soll.",
+      "Wähle oben den Tag. Die Zahl an einem Tag zeigt, wie viele Lücken dort offen sind.",
+      "Wähle unter `Offene Lücken` bei dem Termin `Besetzen`.",
       "Wähle die Person, die übernimmt.",
-      "Speichere die Vertretung.",
+      "Wähle `Vertretung speichern`.",
     ],
-    result: "Die vertretende Person sieht den Einsatz unter `Mein Kalender`.",
+    result:
+      "Der Termin steht jetzt unter `Schon geregelt`. Die vertretende Person sieht den Einsatz unter `Mein Kalender`.",
     notes: [
       "Mit `Sammel-Vertretung` trägst du mehrere Einsätze auf einmal ein.",
       "Auch ein `Dienst` ohne Kinder lässt sich vertreten. Sind weniger Personen da als unter `Benötigtes Personal` eingetragen, zeigt der Plan eine Lücke.",
     ],
     differences: [
+      "Mit `Woche` siehst du alle Tage untereinander. Tippe auf einen Tag, um ihn einzeln zu öffnen.",
+      "Steht bei dir `Details` statt `Besetzen`? Dann darfst du den Plan ansehen, aber nicht ändern.",
       "`Übergaben` im `Tagesbetrieb` ist etwas anderes: dort übergibst du Gruppen für heute. Unter `Vertretungen heute` siehst du dort auch die Vertretungen des Tages.",
     ],
     troubleshootingDetails: [
-      "Fehlt der Einsatz? Dann ist er noch nicht im Betreuungsplan angelegt.",
+      "Fehlt der Termin? Dann ist er noch nicht im Betreuungsplan angelegt.",
       "Eine externe Person steht nicht zur Wahl? Externe Personen übernehmen keine Vertretung.",
     ],
     related: [
