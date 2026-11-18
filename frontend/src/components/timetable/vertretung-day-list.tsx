@@ -256,25 +256,33 @@ export function rowStaffing(row: ClassifiedRow): {
   total: number;
   missing: number | null;
   canFill: boolean;
+  needsAssignment: boolean;
 } {
   const { planned, present } = row.triple;
   if (row.coverageState !== "gap") {
-    return { current: present, total: planned, missing: 0, canFill: false };
-  }
-  if (present < planned) {
     return {
       current: present,
       total: planned,
-      missing: planned - present,
-      canFill: true,
+      missing: 0,
+      canFill: false,
+      needsAssignment: false,
     };
   }
-  const total = Math.max(row.instance.requiredStaffCount, planned);
+  // Nur ein Dienst hat eine Mindestbesetzung, die über die Einteilung
+  // hinausgehen kann (Backend: DutyMinimumStaff).
+  const minimum =
+    row.instance.activityType === "duty" ? row.instance.requiredStaffCount : 0;
+  const total = Math.max(minimum, planned);
+  // Fehlt eine eingeteilte Person, lässt sie sich hier vertreten. Reicht die
+  // Einteilung selbst nicht, hilft nur der Betreuungsplan; beides kann
+  // zugleich gelten.
+  const canFill = present < planned;
   return {
     current: present,
     total,
     missing: total > present ? total - present : null,
-    canFill: false,
+    canFill,
+    needsAssignment: planned < total || !canFill,
   };
 }
 
@@ -525,9 +533,9 @@ function VertretungDayListRow({
   const staffing = rowStaffing(row);
   const nobodyPlanned = isOpenGap && triple.planned === 0;
   const canFill = staffing.canFill;
-  // Zu wenig eingeteilt statt jemand abwesend: der Weg führt in den
-  // Betreuungsplan, nicht zu einer Ersatzperson.
-  const needsAssignment = isOpenGap && !canFill;
+  // Zu wenig eingeteilt: der Weg führt in den Betreuungsplan, auch wenn
+  // zusätzlich eine eingeteilte Person fehlt.
+  const needsAssignment = staffing.needsAssignment;
   const missingText =
     staffing.missing === null
       ? "Zu wenig Personal eingeteilt"
@@ -607,48 +615,52 @@ function VertretungDayListRow({
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        {nobodyPlanned ? (
-          <CoverageIndicator
-            state="gap"
-            label="Niemand eingeteilt"
-            title="Für diesen Termin ist niemand eingeteilt"
-          />
-        ) : (
-          <>
-            {/* In Worten statt als nackter Bruch: „3 von 4 da“. Eine Zahl je
-                Zeile (#7493); die Worte daneben sagen, was bei einer Lücke
-                fehlt. Wer fehlt, steht darunter mit Namen. */}
+      {/* Ein abgesagter Termin braucht niemanden: keine Besetzungszahl, wie
+          im Raster. */}
+      {!isCancelled && (
+        <div className="flex flex-wrap items-center gap-3">
+          {nobodyPlanned ? (
             <CoverageIndicator
-              state={coverageState}
-              label={`${staffing.current} von ${staffing.total} da`}
-              title={`${staffing.current} von ${staffing.total} Personen da`}
-              note={
-                coverageState === "acknowledged"
-                  ? "bewusst unbesetzt"
-                  : undefined
-              }
+              state="gap"
+              label="Niemand eingeteilt"
+              title="Für diesen Termin ist niemand eingeteilt"
             />
-            {isOpenGap && (
-              <span className="text-xs font-medium text-gray-700">
-                {missingText}
-              </span>
-            )}
-          </>
-        )}
-        {/* Der Hinweis nennt einen anderen Ort, also führt er dorthin
-            (#7054). */}
-        {needsAssignment && carePlanHref !== undefined && (
-          <ButtonLink
-            href={carePlanHref}
-            variant="surface"
-            size="compact"
-            tooltip="Öffnet den Betreuungsplan an diesem Tag, um Personal einzuteilen."
-          >
-            Im Betreuungsplan einteilen
-          </ButtonLink>
-        )}
-      </div>
+          ) : (
+            <>
+              {/* In Worten statt als nackter Bruch: „3 von 4 da“. Eine Zahl je
+                  Zeile (#7493); die Worte daneben sagen, was bei einer Lücke
+                  fehlt. Wer fehlt, steht darunter mit Namen. */}
+              <CoverageIndicator
+                state={coverageState}
+                label={`${staffing.current} von ${staffing.total} da`}
+                title={`${staffing.current} von ${staffing.total} Personen da`}
+                note={
+                  coverageState === "acknowledged"
+                    ? "bewusst unbesetzt"
+                    : undefined
+                }
+              />
+              {isOpenGap && (
+                <span className="text-xs font-medium text-gray-700">
+                  {missingText}
+                </span>
+              )}
+            </>
+          )}
+          {/* Der Hinweis nennt einen anderen Ort, also führt er dorthin
+              (#7054). */}
+          {needsAssignment && carePlanHref !== undefined && (
+            <ButtonLink
+              href={carePlanHref}
+              variant="surface"
+              size="compact"
+              tooltip="Öffnet den Betreuungsplan an diesem Tag, um Personal einzuteilen."
+            >
+              Im Betreuungsplan einteilen
+            </ButtonLink>
+          )}
+        </div>
+      )}
 
       {hasAbsence && (
         <div className="flex flex-col gap-1 text-xs text-gray-600">

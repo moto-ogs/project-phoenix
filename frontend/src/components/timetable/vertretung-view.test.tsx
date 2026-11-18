@@ -1003,7 +1003,7 @@ describe("VertretungView", () => {
           instanceId: "44",
           title: "Bus",
           startTime: "16:00",
-          action: "absent",
+          action: "marked_absent",
         },
       ],
       warnings: [],

@@ -176,6 +176,13 @@ export function InstanceBlock({
     hasSubstitute ? "Ersatz" : null,
   ].filter((detail): detail is string => detail !== null);
 
+  // Ein kurzer Block hat keine Fußzeile: die Besetzung der aufrufenden
+  // Fläche steht dann wenigstens im Tooltip.
+  const staffingLine =
+    staffing && staffing.total > 0 && !isCancelled
+      ? [`Besetzung: ${staffing.current} von ${staffing.total} da`]
+      : [];
+
   const edgeColor = isUnderstaffedAck
     ? ACK_EDGE_COLOR
     : instance.planningTrackColor;
@@ -417,6 +424,7 @@ export function InstanceBlock({
       title={[
         `${instance.title}, ${instance.startTime} – ${instance.endTime}`,
         ...detailLines,
+        ...staffingLine,
       ].join("\n")}
       onClick={onClick}
       className="overflow-hidden"

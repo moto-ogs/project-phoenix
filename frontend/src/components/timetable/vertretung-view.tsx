@@ -167,13 +167,19 @@ function deviationSuccessMessage(
   );
 
   // Eine neue Vertretung nennt ihr Ergebnis: wer wen vertritt (#7493).
-  // Gezählt werden die Termine der Vertretung selbst, nicht jeder Termin,
-  // den das Speichern berührt hat (eine Abwesenheit ohne Ersatz zählt nicht
-  // als vertreten). Kommt etwas anderes dazu, bleibt es beim allgemeinen
+  // Gezählt werden die vertretenen Termine, nicht jeder Termin, den das
+  // Speichern berührt hat (eine Abwesenheit ohne Ersatz zählt nicht als
+  // vertreten). Kommt etwas anderes dazu, bleibt es beim allgemeinen
   // Satz.
   const substitution =
     input.substitutions?.length === 1 ? input.substitutions[0] : undefined;
-  const substitutedCount = substitution?.instanceIds?.length ?? 0;
+  // Aus der Antwort gezählt: „Alle noch offenen Termine“ schickt keine
+  // Termin-IDs mit, die Antwort nennt je Termin, was geschah.
+  const substitutedCount = new Set(
+    result.affectedInstances
+      .filter((affected) => affected.action === "substituted")
+      .map((affected) => affected.instanceId),
+  ).size;
   if (
     substitution &&
     substitutedCount > 0 &&

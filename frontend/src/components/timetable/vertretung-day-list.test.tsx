@@ -632,6 +632,7 @@ describe("VertretungDayList", () => {
       title: "Busaufsicht",
       startTime: "16:00",
       endTime: "16:30",
+      activityType: "duty",
       requiredStaffCount: 3,
       staff: [
         { staffId: "1", isPrimary: true, isAbsent: false, isSubstitute: false },
@@ -675,6 +676,63 @@ describe("VertretungDayList", () => {
     expect(
       screen.queryByRole("button", { name: /^Besetzen/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("bietet bei einem Dienst mit Abwesenheit und zu wenig Einteilung beides an", () => {
+    // Drei gebraucht, zwei eingeteilt, eine Person fehlt: vertreten hilft,
+    // füllt den Dienst aber nicht.
+    const duty = makeInstance({
+      id: "81",
+      title: "Busaufsicht",
+      startTime: "16:00",
+      endTime: "16:30",
+      activityType: "duty",
+      requiredStaffCount: 3,
+      staff: [
+        { staffId: "1", isPrimary: true, isAbsent: true, isSubstitute: false },
+        {
+          staffId: "2",
+          isPrimary: false,
+          isAbsent: false,
+          isSubstitute: false,
+        },
+      ],
+    });
+    render(
+      <VertretungDayList
+        title="Termine am Mi 09.09."
+        instances={[duty]}
+        gaps={[
+          makeGap({
+            instanceId: "81",
+            title: "Busaufsicht",
+            startTime: "16:00",
+            endTime: "16:30",
+            assignedStaffCount: 2,
+            absentStaffCount: 1,
+            presentStaffCount: 1,
+            plannedStaffCount: 2,
+          }),
+        ]}
+        acknowledged={[]}
+        gapsAvailable
+        staffNames={staffNames}
+        mode="stoerungen"
+        canManage
+        onEdit={vi.fn()}
+        carePlanHrefFor={(dateISO) => `/acme/betreuungsplan?d=${dateISO}`}
+      />,
+    );
+
+    const row = screen.getByTestId("vertretung-day-list-row-81");
+    expect(within(row).getByText("1 von 3 da")).toBeInTheDocument();
+    expect(within(row).getByText("2 Personen fehlen")).toBeInTheDocument();
+    expect(
+      within(row).getByRole("button", { name: /^Besetzen: Busaufsicht/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(row).getByRole("link", { name: "Im Betreuungsplan einteilen" }),
+    ).toBeInTheDocument();
   });
 
   it("nennt den Knopf eines vergangenen oder abgesagten Termins 'Details', wie der Editor ihn zeigt", () => {
