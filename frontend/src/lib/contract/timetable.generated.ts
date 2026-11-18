@@ -30,6 +30,7 @@ import {
   type HomeworkFeedbackRequest,
   type InstanceConflictWarning,
   type OperationPlannedInstance,
+  type PatchAttendanceRequest,
 } from "./shared.generated";
 
 /** Go: timetablehttp.ConflictAckResponse */
@@ -1345,13 +1346,6 @@ export interface rosterDeviationsResponse {
 export const rosterDeviationsResponseSchema: z.ZodType<rosterDeviationsResponse, unknown> = object<rosterDeviationsResponse>({
   deviations: nullable(arr(rosterDeviationResponseSchema)),
 });
-
-/** Go: timetablehttp.PatchAttendanceRequest */
-export interface PatchAttendanceRequest {
-  status?: string | null;
-  substatus?: unknown | null;
-  note?: unknown | null;
-}
 
 /** Go: timetablehttp.AttendanceResponse */
 export interface AttendanceResponse {

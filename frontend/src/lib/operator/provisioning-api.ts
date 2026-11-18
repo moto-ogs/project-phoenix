@@ -153,7 +153,7 @@ class OperatorProvisioningService {
     data: UpdateOrganizationRequest,
   ): Promise<Organization> {
     const result = await operatorFetch<BackendOrganization>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(id)}`,
+      `/api/operator/organizations/${encodeURIComponent(id)}`,
       { method: "PUT", body: data },
     );
     return mapOrganization(result);
@@ -161,7 +161,7 @@ class OperatorProvisioningService {
 
   async updateSchool(id: string, data: UpdateSchoolRequest): Promise<School> {
     const result = await operatorFetch<BackendSchool>(
-      `/api/operator/provisioning/schools/${encodeURIComponent(id)}`,
+      `/api/operator/schools/${encodeURIComponent(id)}`,
       { method: "PUT", body: data },
     );
     return mapSchool(result);
@@ -357,7 +357,7 @@ class OperatorProvisioningService {
 
   async deleteDevice(deviceId: string): Promise<void> {
     await operatorFetch<null>(
-      `/api/operator/provisioning/devices/${encodeURIComponent(deviceId)}`,
+      `/api/operator/devices/${encodeURIComponent(deviceId)}`,
       { method: "DELETE" },
     );
   }
@@ -457,14 +457,14 @@ class OperatorProvisioningService {
 
   async getSchoolPWAUsage(schoolId: string): Promise<SchoolPWAUsage> {
     const data = await operatorFetch<BackendSchoolPWAUsage>(
-      `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/pwa-usage`,
+      `/api/operator/schools/${encodeURIComponent(schoolId)}/pwa-usage`,
     );
     return mapSchoolPWAUsage(data);
   }
 
   async listSchoolPersons(schoolId: string): Promise<OperatorPerson[]> {
     const data = await operatorFetch<BackendOperatorPerson[]>(
-      `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/persons`,
+      `/api/operator/schools/${encodeURIComponent(schoolId)}/persons`,
     );
     return data.map(mapOperatorPerson);
   }
@@ -480,7 +480,7 @@ class OperatorProvisioningService {
 
   async softDeletePerson(personId: string): Promise<void> {
     await operatorFetch<null>(
-      `/api/operator/provisioning/persons/${encodeURIComponent(personId)}`,
+      `/api/operator/persons/${encodeURIComponent(personId)}`,
       { method: "DELETE" },
     );
   }
@@ -510,14 +510,14 @@ class OperatorProvisioningService {
   async resolveUnregisteredTagScan(id: string, note?: string): Promise<void> {
     const body = note ? { note } : {};
     await operatorFetch<BackendUnregisteredTagScan>(
-      `/api/operator/provisioning/unregistered-tag-scans/${encodeURIComponent(id)}/resolve`,
+      `/api/operator/unregistered-tag-scans/${encodeURIComponent(id)}/resolve`,
       { method: "POST", body },
     );
   }
 
   async softDeleteOrganization(id: string): Promise<void> {
     await operatorFetch(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(id)}`,
+      `/api/operator/organizations/${encodeURIComponent(id)}`,
       { method: "DELETE" },
     );
   }
@@ -530,10 +530,9 @@ class OperatorProvisioningService {
   }
 
   async softDeleteSchool(id: string): Promise<void> {
-    await operatorFetch(
-      `/api/operator/provisioning/schools/${encodeURIComponent(id)}`,
-      { method: "DELETE" },
-    );
+    await operatorFetch(`/api/operator/schools/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
   }
 
   async restoreSchool(id: string): Promise<void> {

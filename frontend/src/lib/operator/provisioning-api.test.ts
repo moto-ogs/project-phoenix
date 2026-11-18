@@ -132,7 +132,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.updateOrganization("5", updateData);
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/5",
+        "/api/operator/organizations/5",
         { method: "PUT", body: updateData },
       );
     });
@@ -225,7 +225,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.updateSchool("10", updateData);
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10",
+        "/api/operator/schools/10",
         { method: "PUT", body: updateData },
       );
     });
@@ -814,7 +814,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listSchoolPersons("10");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10/persons",
+        "/api/operator/schools/10/persons",
       );
     });
 
@@ -824,7 +824,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listSchoolPersons("10/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10%2Fevil/persons",
+        "/api/operator/schools/10%2Fevil/persons",
       );
     });
 
@@ -868,7 +868,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeletePerson("42");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/persons/42",
+        "/api/operator/persons/42",
         { method: "DELETE" },
       );
     });
@@ -879,7 +879,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeletePerson("42/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/persons/42%2Fevil",
+        "/api/operator/persons/42%2Fevil",
         { method: "DELETE" },
       );
     });
@@ -939,7 +939,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeleteSchool("10");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10",
+        "/api/operator/schools/10",
         { method: "DELETE" },
       );
     });
@@ -950,7 +950,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeleteSchool("10/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10%2Fevil",
+        "/api/operator/schools/10%2Fevil",
         { method: "DELETE" },
       );
     });
@@ -1003,7 +1003,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeleteOrganization("77");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/77",
+        "/api/operator/organizations/77",
         { method: "DELETE" },
       );
     });
@@ -1014,7 +1014,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeleteOrganization("77/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/77%2Fevil",
+        "/api/operator/organizations/77%2Fevil",
         { method: "DELETE" },
       );
     });
@@ -1322,7 +1322,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.resolveUnregisteredTagScan("300");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/unregistered-tag-scans/300/resolve",
+        "/api/operator/unregistered-tag-scans/300/resolve",
         { method: "POST", body: {} },
       );
     });
@@ -1339,7 +1339,7 @@ describe("OperatorProvisioningService", () => {
       );
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/unregistered-tag-scans/300%2Funsafe/resolve",
+        "/api/operator/unregistered-tag-scans/300%2Funsafe/resolve",
         { method: "POST", body: { note: "Assigned to new card" } },
       );
     });

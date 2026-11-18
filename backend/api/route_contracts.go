@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+	"reflect"
+
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
@@ -11,7 +13,6 @@ import (
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
-	"reflect"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
@@ -40,6 +41,7 @@ import (
 	reviewStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/requestreview/http"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
+	settingsOperatorAPI "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	presenceStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
@@ -54,6 +56,7 @@ import (
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	holidayClosureHTTP "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
+	staffPersonMergeHTTP "github.com/moto-ogs/project-phoenix/workflows/staffpersonmerge/http"
 	deleteStudentsHTTP "github.com/moto-ogs/project-phoenix/workflows/studentdeletion/http"
 	traegerCatalogHTTP "github.com/moto-ogs/project-phoenix/workflows/traegercatalog/http"
 )
@@ -192,6 +195,9 @@ func operatorContractMounts() []contractMount {
 		{"/operator/organizations/{id}/staff-release", workforceTraegerStaff.ReleaseRouteContracts()},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
 		{"/operator/devices", provisioningOperatorAPI.DeviceRouteContracts()},
+		{"/operator/staff-person-merges", staffPersonMergeHTTP.RouteContracts()},
+		{"/operator/schools/{id}/settings", settingsOperatorAPI.SchoolRouteContracts(configModels.SettingsSchema{})},
+		{"/operator/organizations/{id}/traeger-settings", settingsOperatorAPI.TraegerRouteContracts(configModels.SettingsSchema{})},
 	}
 }
 
@@ -227,6 +233,8 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[timetableHTTP.NullableInt64Slice]():  contract.ReadsValue,
 		reflect.TypeFor[timetableHTTP.NullableStringSlice](): contract.ReadsValue,
 		reflect.TypeFor[timetableHTTP.NullableStr]():         contract.ReadsValue,
+		// A school update tells an absent child quota from null (#3567).
+		reflect.TypeFor[provisioningOperatorAPI.ChildQuotaField](): contract.ReadsValue,
 	}
 	// Appointments keeps its own day type.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date]()}
@@ -270,7 +278,11 @@ func notificationRouteContracts(portal common.PortalScope) []common.RouteContrac
 // operator package may not import the contract types, so it hands over the
 // answer type only.
 func unregisteredTagScanRouteContracts() []common.RouteContract {
+	resolveRequest, resolveResponse := tagScanOperatorAPI.ResolveTypes()
 	return []common.RouteContract{{
+		Method: "POST", Pattern: "/{id}/resolve", Portals: []common.PortalScope{common.PortalOperator},
+		Request: resolveRequest, Response: resolveResponse,
+	}, {
 		Method: "GET", Pattern: "/", Portals: []common.PortalScope{common.PortalOperator},
 		Query: []common.QueryParam{
 			{Name: "school_id", Kind: common.QueryID}, {Name: "organization_id", Kind: common.QueryID},

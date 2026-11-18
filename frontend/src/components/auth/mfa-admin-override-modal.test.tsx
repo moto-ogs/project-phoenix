@@ -221,9 +221,7 @@ describe("MFAAdminOverrideModal", () => {
     const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(1);
     const [url, init] = calls[0] as [string, RequestInit];
-    expect(url).toBe(
-      "/api/operator/provisioning/organizations/7/traeger-members/42/mfa",
-    );
+    expect(url).toBe("/api/operator/organizations/7/traeger-members/42/mfa");
     expect(init.method).toBe("DELETE");
     expect(JSON.parse(init.body as string)).toEqual({
       reason: "Gesperrt nach Fehlversuchen",

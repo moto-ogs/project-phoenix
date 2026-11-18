@@ -265,6 +265,17 @@ export const OrganizationAccountSchema: z.ZodType<OrganizationAccount, unknown> 
   school_name: str,
 });
 
+/** Go: operator.MFAAdminOverrideSetRequest */
+export interface MFAAdminOverrideSetRequest {
+  override?: string;
+  reason?: string;
+}
+
+/** Go: operator.MFAAdminResetRequest */
+export interface MFAAdminResetRequest {
+  reason?: string;
+}
+
 /** Go: organizationtenancy.OperatorDevice */
 export interface OperatorDevice {
   id: string;
@@ -302,6 +313,31 @@ export const OperatorDeviceSchema: z.ZodType<OperatorDevice, unknown> = object<O
   updated_at: instant,
 });
 
+/** Go: operator.OperatorListItem */
+export interface OperatorListItem {
+  id: string;
+  email: string;
+  display_name: string;
+  active: boolean;
+  last_login?: string;
+  deactivated_at?: string;
+  deletion_due_at?: string;
+  created_at: string;
+  is_self: boolean;
+}
+
+export const OperatorListItemSchema: z.ZodType<OperatorListItem, unknown> = object<OperatorListItem>({
+  id: int64StringOrNumber,
+  email: str,
+  display_name: str,
+  active: bool,
+  last_login: optional(instant),
+  deactivated_at: optional(instant),
+  deletion_due_at: optional(instant),
+  created_at: instant,
+  is_self: bool,
+});
+
 /** Go: organizationtenancy.Organization */
 export interface Organization {
   id: string;
@@ -325,6 +361,39 @@ export const OrganizationSchema: z.ZodType<Organization, unknown> = object<Organ
   deleted_at: optional(instant),
   settings: optional(str),
   test_system: bool,
+});
+
+/** Go: organizationtenancy.OperatorPerson */
+export interface OperatorPerson {
+  id: string;
+  first_name: string;
+  last_name: string;
+  has_account: boolean;
+  account_email?: string;
+  has_rfid_card: boolean;
+  is_staff: boolean;
+  is_student: boolean;
+  school_id: string;
+  school_name: string;
+  organization_id: string;
+  organization_name: string;
+  created_at: string;
+}
+
+export const OperatorPersonSchema: z.ZodType<OperatorPerson, unknown> = object<OperatorPerson>({
+  id: int64StringOrNumber,
+  first_name: str,
+  last_name: str,
+  has_account: bool,
+  account_email: optional(str),
+  has_rfid_card: bool,
+  is_staff: bool,
+  is_student: bool,
+  school_id: int64StringOrNumber,
+  school_name: str,
+  organization_id: int64StringOrNumber,
+  organization_name: str,
+  created_at: instant,
 });
 
 /** Go: organizationtenancy.SchoolSummary */
@@ -391,6 +460,136 @@ export interface TraegerStaffRelease {
 export const TraegerStaffReleaseSchema: z.ZodType<TraegerStaffRelease, unknown> = object<TraegerStaffRelease>({
   representation: str,
   released_at: instant,
+});
+
+/** Go: records.ValidationRules */
+export interface ValidationRules {
+  required?: boolean;
+  allow_empty?: boolean;
+  min?: number;
+  max?: number;
+  pattern?: string;
+  max_length?: number;
+}
+
+export const ValidationRulesSchema: z.ZodType<ValidationRules, unknown> = object<ValidationRules>({
+  required: optional(bool),
+  allow_empty: optional(bool),
+  min: optional(num),
+  max: optional(num),
+  pattern: optional(str),
+  max_length: optional(safeInt),
+});
+
+/** Go: records.Dependency */
+export interface Dependency {
+  key: string;
+  condition: string;
+  value: unknown | null;
+}
+
+export const DependencySchema: z.ZodType<Dependency, unknown> = object<Dependency>({
+  key: str,
+  condition: str,
+  value: nullable(json),
+});
+
+/** Go: records.SelectOption */
+export interface SelectOption {
+  label: string;
+  value: unknown | null;
+}
+
+export const SelectOptionSchema: z.ZodType<SelectOption, unknown> = object<SelectOption>({
+  label: str,
+  value: nullable(json),
+});
+
+/** Go: records.SelectOptions */
+export interface SelectOptions {
+  static?: SelectOption[];
+}
+
+export const SelectOptionsSchema: z.ZodType<SelectOptions, unknown> = object<SelectOptions>({
+  static: optional(arr(SelectOptionSchema)),
+});
+
+/** Go: records.ResolvedSetting */
+export interface ResolvedSetting {
+  key: string;
+  label: string;
+  description: string;
+  placeholder?: string;
+  type: string;
+  default: unknown | null;
+  value: unknown | null;
+  is_default: boolean;
+  writable: boolean;
+  visible: boolean;
+  sort_order: number;
+  access_policy: string;
+  levels: string;
+  source: string;
+  traeger_changed_at?: string;
+  validation?: ValidationRules;
+  depends_on?: Dependency;
+  options?: SelectOptions;
+}
+
+export const ResolvedSettingSchema: z.ZodType<ResolvedSetting, unknown> = object<ResolvedSetting>({
+  key: str,
+  label: str,
+  description: str,
+  placeholder: optional(str),
+  type: str,
+  default: nullable(json),
+  value: nullable(json),
+  is_default: bool,
+  writable: bool,
+  visible: bool,
+  sort_order: safeInt,
+  access_policy: str,
+  levels: str,
+  source: str,
+  traeger_changed_at: optional(instant),
+  validation: optional(ValidationRulesSchema),
+  depends_on: optional(DependencySchema),
+  options: optional(SelectOptionsSchema),
+});
+
+/** Go: records.SchemaCategory */
+export interface SchemaCategory {
+  key: string;
+  label: string;
+  items: (ResolvedSetting | null)[] | null;
+}
+
+export const SchemaCategorySchema: z.ZodType<SchemaCategory, unknown> = object<SchemaCategory>({
+  key: str,
+  label: str,
+  items: nullable(arr(nullable(ResolvedSettingSchema))),
+});
+
+/** Go: records.SchemaTab */
+export interface SchemaTab {
+  key: string;
+  label: string;
+  categories: (SchemaCategory | null)[] | null;
+}
+
+export const SchemaTabSchema: z.ZodType<SchemaTab, unknown> = object<SchemaTab>({
+  key: str,
+  label: str,
+  categories: nullable(arr(nullable(SchemaCategorySchema))),
+});
+
+/** Go: records.SettingsSchema */
+export interface SettingsSchema {
+  tabs: (SchemaTab | null)[] | null;
+}
+
+export const SettingsSchemaSchema: z.ZodType<SettingsSchema, unknown> = object<SettingsSchema>({
+  tabs: nullable(arr(nullable(SchemaTabSchema))),
 });
 
 /** Go: organizationtenancy.School */
@@ -1552,6 +1751,13 @@ export const OperationRosterSchema: z.ZodType<OperationRoster, unknown> = object
   can_report_absence: bool,
   can_record_homework_feedback: bool,
 });
+
+/** Go: timetablehttp.PatchAttendanceRequest */
+export interface PatchAttendanceRequest {
+  status?: string | null;
+  substatus?: unknown | null;
+  note?: unknown | null;
+}
 
 /** Go: timetablehttp.CompleteOperationRequest */
 export interface CompleteOperationRequest {
@@ -2802,4 +3008,31 @@ export const SEPADebitSchema: z.ZodType<SEPADebit, unknown> = object<SEPADebit>(
   notice_id: optional(int64StringOrNumber),
   notice_month: optional(calendarDate),
   message_id: optional(str),
+});
+
+/** Go: workforce.TraegerStaffProof */
+export interface TraegerStaffProof {
+  type_id: string;
+  type_name: string;
+  mandatory: boolean;
+  police_certificate: boolean;
+  held: boolean;
+  status: string;
+  presented_on?: string;
+  issued_on?: string;
+  no_relevant_entry: boolean;
+  expires_on?: string;
+}
+
+export const TraegerStaffProofSchema: z.ZodType<TraegerStaffProof, unknown> = object<TraegerStaffProof>({
+  type_id: int64StringOrNumber,
+  type_name: str,
+  mandatory: bool,
+  police_certificate: bool,
+  held: bool,
+  status: str,
+  presented_on: optional(str),
+  issued_on: optional(str),
+  no_relevant_entry: bool,
+  expires_on: optional(str),
 });

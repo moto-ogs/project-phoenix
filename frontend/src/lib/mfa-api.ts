@@ -307,7 +307,7 @@ function operatorAdminMFAUrl(
   accountId: string,
   suffix: string,
 ): string {
-  return `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/mfa${suffix}`;
+  return `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/mfa${suffix}`;
 }
 
 export async function operatorAdminResetMFA(
@@ -333,7 +333,7 @@ export async function operatorAdminResetTraegerMFA(
   reason: string,
 ): Promise<void> {
   await postJson<unknown>(
-    `/api/operator/provisioning/organizations/${encodeURIComponent(organizationId)}/traeger-members/${encodeURIComponent(accountId)}/mfa`,
+    `/api/operator/organizations/${encodeURIComponent(organizationId)}/traeger-members/${encodeURIComponent(accountId)}/mfa`,
     { reason },
     { method: "DELETE", allowEmptyBody: true },
   );

@@ -384,6 +384,64 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/operator/accounts/{accountId}/tenants/{tenantId}",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "AccountTenantAccessEntry"
+        }
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/announcements/{id}",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/caterers/{id}/accounts/{accountId}/mfa",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAAdminResetRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/devices/{id}",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/invitations/{id}",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/organizations/{id}",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/operator/organizations/{id}/beleg-retention/suspensions/{suspensionId}",
       "portals": [
         "platform"
@@ -414,6 +472,141 @@
       "pattern": "/operator/organizations/{id}/traeger-members/invitations/{invitationId}",
       "portals": [
         "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/organizations/{id}/traeger-members/{accountId}/mfa",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "resetTraegerMemberMFARequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/organizations/{id}/traeger-settings/values/{key}",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/persons/{id}",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/schools/{id}",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "json"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/schools/{id}/accounts/{accountId}/mfa/",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAAdminResetRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/parent/me/children/{studentId}/care-exception",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/parent/me/children/{studentId}/consents/photo",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ChildConsentResponse"
+        }
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/parent/me/children/{studentId}/meal-participation/{date}",
+      "portals": [
+        "parent"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/parent/me/children/{studentId}/parent-conferences/{conferenceId}/booking",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ParentConferenceCancelledResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/parent/me/children/{studentId}/related-accounts/{guardianProfileId}",
+      "portals": [
+        "parent"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/parent/me/notification-preferences/",
+      "portals": [
+        "parent"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/parent/me/push/subscriptions",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "endpoint",
+          "kind": "string"
+        }
       ],
       "no_data": true
     },
@@ -604,6 +797,23 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/traeger/closing-days/{id}",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "holiday_bookings_token",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerClosingDayDeleted"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/traeger/contracts/{id}",
       "portals": [
         "org"
@@ -712,6 +922,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/traeger/settings/values/{key}",
+      "portals": [
+        "org"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/traeger/staff-planning/records/{id}/schools/{schoolId}/shifts/{shiftId}",
       "portals": [
         "org"
@@ -725,6 +943,20 @@
         "org"
       ],
       "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/traeger/staff-proofs/records/{id}/{typeId}",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TraegerStaffProof"
+        }
+      }
     },
     {
       "method": "DELETE",
@@ -4020,6 +4252,76 @@
     },
     {
       "method": "GET",
+      "pattern": "/operator/accounts/{accountId}/mfa/global-override",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "MFAGlobalOverrideStateResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/accounts/{accountId}/tenants",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "AccountTenantAccessEntry"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/accounts/{accountId}/tenants/{tenantId}/roles",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RoleOption"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/announcements/",
+      "portals": [
+        "platform"
+      ],
+      "query": [
+        {
+          "name": "include_inactive",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OperatorAnnouncementResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/announcements/{id}",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorAnnouncementResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/operator/announcements/{id}/stats",
       "portals": [
         "platform"
@@ -4119,6 +4421,17 @@
       "response": {
         "kind": "ref",
         "ref": "DeviceTransferStatus"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/invitations/",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "InvitationsListResponse"
       }
     },
     {
@@ -4269,6 +4582,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/operator/organizations/{id}/traeger-settings/schema",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SettingsSchema"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/operator/profile/",
       "portals": [
         "platform"
@@ -4350,6 +4674,27 @@
     },
     {
       "method": "GET",
+      "pattern": "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "json"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/schools/{id}/accounts/{accountId}/mfa/",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "MFAAdminStateResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/operator/schools/{id}/devices",
       "portals": [
         "platform"
@@ -4364,6 +4709,31 @@
     },
     {
       "method": "GET",
+      "pattern": "/operator/schools/{id}/persons",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OperatorPerson"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/schools/{id}/pwa-usage",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolPWAUsage"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/operator/schools/{id}/settings/booking-authority-impact",
       "portals": [
         "platform"
@@ -4371,6 +4741,42 @@
       "response": {
         "kind": "ref",
         "ref": "BookingAuthorityImpact"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/schools/{id}/settings/schema",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SettingsSchema"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/schools/{id}/settings/values/{key}/reveal",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "revealedSettingValue"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/staff-person-merges/{schoolId}",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffPersonMergeCandidate"
+        }
       }
     },
     {
@@ -4516,6 +4922,30 @@
     },
     {
       "method": "GET",
+      "pattern": "/parent/me/children/{studentId}/care-exception",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "CareExceptionResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/me/children/{studentId}/care-offerings",
       "portals": [
         "parent"
@@ -4640,6 +5070,27 @@
           "kind": "ref",
           "ref": "MasterDataChangeResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/children/{studentId}/meal-participation",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "MealParticipationResponse"
       }
     },
     {
@@ -4805,6 +5256,39 @@
           "kind": "ref",
           "ref": "SharedDocumentResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/documents/{organizationId}/contracts/{contractId}/family-children",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractFamilyChildren"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/documents/{organizationId}/contracts/{contractId}/notice",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractNoticeOptions"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SEPAMandateView"
       }
     },
     {
@@ -4978,6 +5462,28 @@
       "response": {
         "kind": "ref",
         "ref": "declarationProofResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/news/{announcementId}/survey",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SurveyFormResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/notification-preferences/",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ParentPreferenceOverview"
       }
     },
     {
@@ -7108,6 +7614,21 @@
       }
     },
     {
+      "method": "PATCH",
+      "pattern": "/school/supervisions/{id}/students/{student_id}/attendance",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PatchAttendanceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperationRosterRow"
+      }
+    },
+    {
       "method": "POST",
       "pattern": "/api/absence-types/",
       "portals": [
@@ -8978,6 +9499,39 @@
     },
     {
       "method": "POST",
+      "pattern": "/operator/accounts/{accountId}/tenants",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "grantAccountTenantAccessRequest"
+      },
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "AccountTenantAccessEntry"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/announcements/",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CreateAnnouncementRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorAnnouncementResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/operator/announcements/{id}/publish",
       "portals": [
         "platform"
@@ -9044,6 +9598,48 @@
         "platform"
       ],
       "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/invitations/",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CreateInvitationRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/invitations/{id}/resend",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/operators/{id}/deactivate",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorListItem"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/operators/{id}/reactivate",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorListItem"
+      }
     },
     {
       "method": "POST",
@@ -9227,6 +9823,20 @@
     },
     {
       "method": "POST",
+      "pattern": "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "updateCaregiverCapabilityRequest"
+      },
+      "response": {
+        "kind": "json"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/operator/schools/{id}/create-account",
       "portals": [
         "platform"
@@ -9262,6 +9872,33 @@
         "platform"
       ],
       "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/staff-person-merges/{schoolId}",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "Request"
+      },
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/unregistered-tag-scans/{id}/resolve",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "resolveUnregisteredTagScanRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "scanResponse"
+      }
     },
     {
       "method": "POST",
@@ -9308,6 +9945,21 @@
       "response": {
         "kind": "ref",
         "ref": "ParentInvitationStatusResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/me/children/{studentId}/care-exception",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SubmitCareExceptionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PickupChangeRequestResponse"
       }
     },
     {
@@ -9446,6 +10098,36 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/me/documents/{organizationId}/contracts/{contractId}/notice",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ContractNoticeInput"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ContractNoticeOptions"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SEPAMandateInput"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SEPAMandateView"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview",
       "portals": [
         "parent"
@@ -9547,6 +10229,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/me/news/{announcementId}/survey",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "parentSurveyAnswersRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SurveySubmittedResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/me/notifications/feed/read-all",
       "portals": [
         "parent"
@@ -9566,6 +10263,18 @@
         "kind": "ref",
         "ref": "notificationFeedCountResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/me/push/subscriptions",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "parentPushSubscriptionRequest"
+      },
+      "no_data": true
     },
     {
       "method": "POST",
@@ -11979,6 +12688,51 @@
     },
     {
       "method": "PUT",
+      "pattern": "/operator/accounts/{accountId}/mfa/global-override",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAAdminOverrideSetRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/operator/accounts/{accountId}/tenants/{tenantId}",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "updateAccountTenantRoleRequest"
+      },
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "AccountTenantAccessEntry"
+        }
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/operator/announcements/{id}",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "UpdateAnnouncementRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorAnnouncementResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/operator/billing/key-day",
       "portals": [
         "platform"
@@ -11990,6 +12744,21 @@
       "response": {
         "kind": "ref",
         "ref": "billingKeyDayResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/operator/organizations/{id}",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "updateOrganizationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "Organization"
       }
     },
     {
@@ -12009,6 +12778,18 @@
     },
     {
       "method": "PUT",
+      "pattern": "/operator/organizations/{id}/traeger-settings/values/{key}",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "setSchoolSettingRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
       "pattern": "/operator/profile/",
       "portals": [
         "platform"
@@ -12021,6 +12802,33 @@
         "kind": "ref",
         "ref": "OperatorResponse"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/operator/schools/{id}",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "updateSchoolRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "School"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/operator/schools/{id}/accounts/{accountId}/mfa/override",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAAdminOverrideSetRequest"
+      },
+      "no_data": true
     },
     {
       "method": "PUT",
@@ -12062,6 +12870,20 @@
       "response": {
         "kind": "ref",
         "ref": "CareScheduleResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/parent/me/children/{studentId}/consents/photo",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ChildConsentResponse"
+        }
       }
     },
     {
@@ -12126,6 +12948,63 @@
     },
     {
       "method": "PUT",
+      "pattern": "/parent/me/children/{studentId}/meal-participation",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ReplaceMealParticipationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MealPlanSavedResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/parent/me/children/{studentId}/meal-participation/weeks/{date}",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SetMealParticipationDayRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MealWeekChangeResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/parent/me/children/{studentId}/meal-participation/{date}",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SetMealParticipationDayRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/parent/me/children/{studentId}/parent-conferences/{conferenceId}/booking",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "parentConferenceBookingRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ParentConferenceOffer"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/parent/me/children/{studentId}/pickup-change-requests/{requestId}",
       "portals": [
         "parent"
@@ -12153,6 +13032,33 @@
         "kind": "ref",
         "ref": "requestSharingResponse"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/parent/me/documents/{organizationId}/contracts/{contractId}/family-children",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "familyChildrenRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ContractFamilyChildren"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/parent/me/notification-preferences/{type}",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "parentPreferenceRequest"
+      },
+      "no_data": true
     },
     {
       "method": "PUT",
@@ -12588,6 +13494,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/traeger/closing-days/{id}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerClosingDayRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ClosingDay"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/traeger/contract-notices/{id}/ends-on",
       "portals": [
         "org"
@@ -13019,6 +13940,18 @@
     },
     {
       "method": "PUT",
+      "pattern": "/traeger/settings/values/{key}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "setValueRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
       "pattern": "/traeger/staff-planning/records/{id}/shifts/{shiftId}",
       "portals": [
         "org"
@@ -13030,6 +13963,24 @@
       "response": {
         "kind": "ref",
         "ref": "TraegerPlanningShift"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/staff-proofs/records/{id}/{typeId}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ProofRequest"
+      },
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TraegerStaffProof"
+        }
       }
     },
     {
@@ -14026,6 +14977,128 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AccountTenantAccessEntry",
+      "go_type": "operator.AccountTenantAccessEntry",
+      "fields": [
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "organization_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "activated_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "deactivated_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "has_person",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_staff",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "roles",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AccountTenantRole"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AccountTenantRole",
+      "go_type": "operator.AccountTenantRole",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "base_role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_portal",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -20737,6 +21810,85 @@
       ]
     },
     {
+      "name": "CareExceptionResponse",
+      "go_type": "parent.CareExceptionResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "pickup_absent",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "arrival_absent",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "departure_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "excused_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "CareExclusion",
       "go_type": "parentbilling.CareExclusion",
       "fields": [
@@ -27091,6 +28243,60 @@
       ]
     },
     {
+      "name": "ContractFamilyChildren",
+      "go_type": "care.ContractFamilyChildren",
+      "fields": [
+        {
+          "name": "confirmed_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "stated_children",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "stated_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "confirmed_children",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "valid_until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "can_state",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "ContractList",
       "go_type": "carecontract.ContractList",
       "fields": [
@@ -27119,6 +28325,223 @@
           "name": "has_more",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractNotice",
+      "go_type": "care.ContractNotice",
+      "fields": [
+        {
+          "name": "dispatched_on",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "termination_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "channel",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "declared_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "received_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "recipient",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirmation_text",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_decision",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_decided_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "end_notice_text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractNoticeInput",
+      "go_type": "care.ContractNoticeInput",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_ends_on",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "termination_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractNoticeOptions",
+      "go_type": "care.ContractNoticeOptions",
+      "fields": [
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "traeger_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "modules",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "terms",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ordinary_ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "special_ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "withdrawal_until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "early_start",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "notice",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "ContractNotice"
           }
         }
       ]
@@ -28357,6 +29780,90 @@
       ]
     },
     {
+      "name": "CreateAnnouncementRequest",
+      "go_type": "operatorannouncements.CreateAnnouncementRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "severity",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expires_at",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "target_roles",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "target_org_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "target_tenant_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "CreateContractRequest",
       "go_type": "traegerstaff.CreateContractRequest",
       "request": true,
@@ -28461,6 +29968,28 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CreateInvitationRequest",
+      "go_type": "operator.CreateInvitationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         }
       ]
@@ -30662,6 +32191,37 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employment",
+      "go_type": "staffpersonmerge.Employment",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "deleted_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
           }
         }
       ]
@@ -39136,6 +40696,36 @@
       ]
     },
     {
+      "name": "InvitationsListResponse",
+      "go_type": "operator.InvitationsListResponse",
+      "fields": [
+        {
+          "name": "invitations",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "PendingOperatorInvitationResponse"
+            }
+          }
+        },
+        {
+          "name": "operators",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "OperatorListItem"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "InvoiceHistory",
       "go_type": "parentbilling.InvoiceHistory",
       "fields": [
@@ -40089,6 +41679,77 @@
       ]
     },
     {
+      "name": "MFAAdminOverrideSetRequest",
+      "go_type": "operator.MFAAdminOverrideSetRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "override",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFAAdminResetRequest",
+      "go_type": "operator.MFAAdminResetRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFAAdminStateResponse",
+      "go_type": "operator.MFAAdminStateResponse",
+      "fields": [
+        {
+          "name": "enrolled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "override",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFAGlobalOverrideStateResponse",
+      "go_type": "operator.MFAGlobalOverrideStateResponse",
+      "fields": [
+        {
+          "name": "enrolled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "override",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "Mailing",
       "go_type": "carecontract.Mailing",
       "fields": [
@@ -40511,6 +42172,124 @@
       ]
     },
     {
+      "name": "MealParticipationDayResponse",
+      "go_type": "parent.MealParticipationDayResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "participating",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "regular_participating",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "changeable",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_register",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_cancel",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "register_until",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "cancel_until",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MealParticipationResponse",
+      "go_type": "parent.MealParticipationResponse",
+      "fields": [
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cutoff_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "model",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "schedule_changeable",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sick_cancels_after_deadline",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "MealParticipationDayResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "MealPlanEntryResponse",
       "go_type": "parent.MealPlanEntryResponse",
       "fields": [
@@ -40541,6 +42320,44 @@
         },
         {
           "name": "allergens",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MealPlanSavedResponse",
+      "go_type": "parent.MealPlanSavedResponse",
+      "fields": [
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MealWeekChangeResponse",
+      "go_type": "parent.MealWeekChangeResponse",
+      "fields": [
+        {
+          "name": "changed",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "locked",
           "schema": {
             "kind": "array",
             "nullable": true,
@@ -43669,6 +45486,123 @@
       ]
     },
     {
+      "name": "OperatorAnnouncementResponse",
+      "go_type": "operatorannouncements.OperatorAnnouncementResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "severity",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "published_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_roles",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "target_org_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "target_tenant_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "created_by",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "OperatorDevice",
       "go_type": "organizationtenancy.OperatorDevice",
       "fields": [
@@ -43763,6 +45697,69 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperatorListItem",
+      "go_type": "operator.OperatorListItem",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "last_login",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "deactivated_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "deletion_due_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "is_self",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -44672,6 +46669,24 @@
       ]
     },
     {
+      "name": "PWAPortalUsage",
+      "go_type": "organizationtenancy.PWAPortalUsage",
+      "fields": [
+        {
+          "name": "standalone_users",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "eligible_users",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "Page",
       "go_type": "requestreview.Page",
       "fields": [
@@ -44929,6 +46944,18 @@
         {
           "name": "end_time",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentConferenceCancelledResponse",
+      "go_type": "parent.ParentConferenceCancelledResponse",
+      "fields": [
+        {
+          "name": "status",
           "schema": {
             "kind": "string"
           }
@@ -45469,6 +47496,71 @@
           "schema": {
             "kind": "json",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentPreferenceOverview",
+      "go_type": "parent.ParentPreferenceOverview",
+      "fields": [
+        {
+          "name": "tenant_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "types",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ParentPreferenceState"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentPreferenceState",
+      "go_type": "parent.ParentPreferenceState",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "available",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -46495,6 +48587,76 @@
       ]
     },
     {
+      "name": "PendingOperatorInvitationResponse",
+      "go_type": "operator.PendingOperatorInvitationResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_by",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "creator_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "email_sent_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "email_error",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email_retry_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "PeriodWarning",
       "go_type": "timetablehttp.PeriodWarning",
       "fields": [
@@ -46557,6 +48719,69 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PersonSnapshot",
+      "go_type": "staffpersonmerge.PersonSnapshot",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "account_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -48333,6 +50558,41 @@
       ]
     },
     {
+      "name": "ProofRequest",
+      "go_type": "traegerstaff.ProofRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "presented_on",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "issued_on",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "no_relevant_entry",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "expires_on",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ProofTypeRequest",
       "go_type": "traegerstaff.ProofTypeRequest",
       "request": true,
@@ -49482,6 +51742,24 @@
       ]
     },
     {
+      "name": "ReplaceMealParticipationRequest",
+      "go_type": "parent.ReplaceMealParticipationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ReportDistrictRequest",
       "go_type": "traeger.ReportDistrictRequest",
       "request": true,
@@ -49569,6 +51847,32 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Request",
+      "go_type": "staffpersonmerge.Request",
+      "request": true,
+      "fields": [
+        {
+          "name": "school_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "cases",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Selection"
+            }
           }
         }
       ]
@@ -50039,6 +52343,36 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoleOption",
+      "go_type": "operator.RoleOption",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_portal",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -53199,6 +55533,32 @@
       ]
     },
     {
+      "name": "SchoolPWAUsage",
+      "go_type": "organizationtenancy.SchoolPWAUsage",
+      "fields": [
+        {
+          "name": "window_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "staff",
+          "schema": {
+            "kind": "ref",
+            "ref": "PWAPortalUsage"
+          }
+        },
+        {
+          "name": "parent",
+          "schema": {
+            "kind": "ref",
+            "ref": "PWAPortalUsage"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolParentConferenceList",
       "go_type": "portal.SchoolParentConferenceList",
       "fields": [
@@ -53978,6 +56338,34 @@
       ]
     },
     {
+      "name": "Selection",
+      "go_type": "staffpersonmerge.Selection",
+      "request": true,
+      "fields": [
+        {
+          "name": "donor_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "keeper_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "revision",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SendRequest",
       "go_type": "carecontracthttp.SendRequest",
       "request": true,
@@ -54400,6 +56788,21 @@
               "kind": "ref",
               "ref": "BreakDurationUpdate"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SetMealParticipationDayRequest",
+      "go_type": "parent.SetMealParticipationDayRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "participating",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
           }
         }
       ]
@@ -55050,6 +57453,26 @@
           "name": "needs_reason",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Side",
+      "go_type": "staffpersonmerge.Side",
+      "fields": [
+        {
+          "name": "person",
+          "schema": {
+            "kind": "ref",
+            "ref": "PersonSnapshot"
+          }
+        },
+        {
+          "name": "employment",
+          "schema": {
+            "kind": "ref",
+            "ref": "Employment"
           }
         }
       ]
@@ -56233,6 +58656,32 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffPersonMergeCandidate",
+      "go_type": "staffpersonmerge.StaffPersonMergeCandidate",
+      "fields": [
+        {
+          "name": "keeper",
+          "schema": {
+            "kind": "ref",
+            "ref": "Side"
+          }
+        },
+        {
+          "name": "donor",
+          "schema": {
+            "kind": "ref",
+            "ref": "Side"
+          }
+        },
+        {
+          "name": "revision",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -59085,6 +61534,79 @@
       ]
     },
     {
+      "name": "SubmitCareExceptionRequest",
+      "go_type": "parent.SubmitCareExceptionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "departure_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "recipient_guardian_profile_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "pickup_person_guardian_profile_id",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "signature",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "declarationSignatureRequest"
+          }
+        }
+      ]
+    },
+    {
       "name": "SubmitChildRequest",
       "go_type": "enrollmenthttp.SubmitChildRequest",
       "request": true,
@@ -59642,6 +62164,43 @@
           "name": "started_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SurveyFormResponse",
+      "go_type": "parent.SurveyFormResponse",
+      "fields": [
+        {
+          "name": "survey",
+          "schema": {
+            "kind": "ref",
+            "ref": "parentSurveyFormSurvey"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "participated",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SurveySubmittedResponse",
+      "go_type": "parent.SurveySubmittedResponse",
+      "fields": [
+        {
+          "name": "submitted",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -60880,6 +63439,18 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerClosingDayDeleted",
+      "go_type": "staffcalendarhttp.TraegerClosingDayDeleted",
+      "fields": [
+        {
+          "name": "notified_families",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -64804,6 +67375,98 @@
       ]
     },
     {
+      "name": "UpdateAnnouncementRequest",
+      "go_type": "operatorannouncements.UpdateAnnouncementRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "severity",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "active",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expires_at",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "target_roles",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "target_org_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "target_tenant_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "UpdateContractRequest",
       "go_type": "traegerstaff.UpdateContractRequest",
       "request": true,
@@ -68203,6 +70866,28 @@
       ]
     },
     {
+      "name": "childQuotaRequest",
+      "go_type": "operator.childQuotaRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "bundles",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "bundle_size",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "childQuotaResponse",
       "go_type": "students.childQuotaResponse",
       "fields": [
@@ -71127,6 +73812,20 @@
       ]
     },
     {
+      "name": "familyChildrenRequest",
+      "go_type": "parent.familyChildrenRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "children",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "familyProtectionResponse",
       "go_type": "students.familyProtectionResponse",
       "fields": [
@@ -71244,6 +73943,48 @@
           "name": "unread_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "grantAccountTenantAccessRequest",
+      "go_type": "operator.grantAccountTenantAccessRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "role_id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -73653,6 +76394,20 @@
       ]
     },
     {
+      "name": "parentConferenceBookingRequest",
+      "go_type": "parent.parentConferenceBookingRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "parentDeclarationChildResponse",
       "go_type": "parent.parentDeclarationChildResponse",
       "fields": [
@@ -73756,6 +76511,64 @@
       ]
     },
     {
+      "name": "parentPreferenceRequest",
+      "go_type": "parent.parentPreferenceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "parentPushSubscriptionKeys",
+      "go_type": "parent.parentPushSubscriptionKeys",
+      "request": true,
+      "fields": [
+        {
+          "name": "p256dh",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "auth",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "parentPushSubscriptionRequest",
+      "go_type": "parent.parentPushSubscriptionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "endpoint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "keys",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "parentPushSubscriptionKeys"
+          }
+        }
+      ]
+    },
+    {
       "name": "parentRequestConflictResolvedResponse",
       "go_type": "careplanhttp.parentRequestConflictResolvedResponse",
       "fields": [
@@ -73799,6 +76612,178 @@
           "name": "approved_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "parentSurveyAnswerRequest",
+      "go_type": "parent.parentSurveyAnswerRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "question_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "option_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "scale_value",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "text",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "parentSurveyAnswersRequest",
+      "go_type": "parent.parentSurveyAnswersRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "answers",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "parentSurveyAnswerRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "parentSurveyFormSurvey",
+      "go_type": "parent.parentSurveyFormSurvey",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "intro",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "anonymous",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "questions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "parentSurveyQuestionResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "parentSurveyOptionResponse",
+      "go_type": "parent.parentSurveyOptionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "parentSurveyQuestionResponse",
+      "go_type": "parent.parentSurveyQuestionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "prompt",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "required",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "options",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "parentSurveyOptionResponse"
+            }
           }
         }
       ]
@@ -75797,6 +78782,20 @@
       ]
     },
     {
+      "name": "resetTraegerMemberMFARequest",
+      "go_type": "operator.resetTraegerMemberMFARequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "resolveConflictBody",
       "go_type": "careplanhttp.resolveConflictBody",
       "request": true,
@@ -75926,6 +78925,20 @@
       ]
     },
     {
+      "name": "resolveUnregisteredTagScanRequest",
+      "go_type": "operator.resolveUnregisteredTagScanRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "respondRequest",
       "go_type": "parent.respondRequest",
       "request": true,
@@ -75953,6 +78966,19 @@
           "optional": true,
           "schema": {
             "kind": "instant",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "revealedSettingValue",
+      "go_type": "operator.revealedSettingValue",
+      "fields": [
+        {
+          "name": "value",
+          "schema": {
+            "kind": "json",
             "nullable": true
           }
         }
@@ -76528,6 +79554,36 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "setSchoolSettingRequest",
+      "go_type": "operator.setSchoolSettingRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "value",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "setValueRequest",
+      "go_type": "settingshttp.setValueRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "value",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
           }
         }
       ]
@@ -79357,6 +82413,20 @@
       ]
     },
     {
+      "name": "updateAccountTenantRoleRequest",
+      "go_type": "operator.updateAccountTenantRoleRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "role_id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id"
+          }
+        }
+      ]
+    },
+    {
       "name": "updateBillingKeyDayRequest",
       "go_type": "operator.updateBillingKeyDayRequest",
       "request": true,
@@ -79367,6 +82437,34 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "updateCaregiverCapabilityRequest",
+      "go_type": "operator.updateCaregiverCapabilityRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -79575,6 +82673,127 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "updateOrganizationRequest",
+      "go_type": "operator.updateOrganizationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "updateSchoolRequest",
+      "go_type": "operator.updateSchoolRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "organization_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "zip",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "hidden",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "child_quota",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "childQuotaRequest"
           }
         }
       ]

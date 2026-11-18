@@ -28,14 +28,16 @@ const withBody =
   (handler: Handler) =>
   async (request: NextRequest, context: { params: Promise<unknown> }) => {
     sessionReads++;
-    const body: unknown = await request.json();
+    // Like parseRequestBody: an empty body reads as {}.
+    const text = await request.text();
+    const body: unknown = text ? JSON.parse(text) : {};
     return Response.json({
       data: await handler(request, body, "token", await context.params),
     });
   };
 const portal = {
   get: noBody,
-  del: noBody,
+  delWithBody: withBody,
   post: withBody,
   put: withBody,
   patch: withBody,
@@ -176,6 +178,13 @@ describe("makeCatalogProxy", () => {
     api.mockResolvedValueOnce(undefined);
     expect(await data(await call("DELETE", ["rows", "1"]))).toBeNull();
     expect(sessionReads).toBe(1);
+    expect(api.mock.calls[0]?.[3]).toBeUndefined();
+  });
+
+  it("sends the body of a DELETE that carries one", async () => {
+    api.mockResolvedValueOnce(undefined);
+    await call("DELETE", ["rows", "1"], "", { reason: "lost phone" });
+    expect(api.mock.calls[0]?.[3]).toEqual({ reason: "lost phone" });
   });
 
   it.each([

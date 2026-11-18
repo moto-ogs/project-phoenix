@@ -9,13 +9,16 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 )
 
-// pushSubscriptionRequest mirrors the browser's PushSubscription JSON.
-type pushSubscriptionRequest struct {
-	Endpoint string `json:"endpoint"`
-	Keys     struct {
-		P256dh string `json:"p256dh"`
-		Auth   string `json:"auth"`
-	} `json:"keys"`
+// parentPushSubscriptionRequest mirrors the browser's PushSubscription JSON.
+type parentPushSubscriptionRequest struct {
+	Endpoint string                     `json:"endpoint"`
+	Keys     parentPushSubscriptionKeys `json:"keys"`
+}
+
+// parentPushSubscriptionKeys are the browser's encryption keys of a subscription.
+type parentPushSubscriptionKeys struct {
+	P256dh string `json:"p256dh"`
+	Auth   string `json:"auth"`
 }
 
 // getPushPublicKey returns the VAPID public key the browser subscribes with.
@@ -37,7 +40,7 @@ func (rs *Resource) subscribePush(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
-	req := pushSubscriptionRequest{}
+	req := parentPushSubscriptionRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

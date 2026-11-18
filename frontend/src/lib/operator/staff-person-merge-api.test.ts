@@ -47,7 +47,7 @@ describe("staff person repair API", () => {
     fetchOperator.mockResolvedValueOnce(undefined);
     await executeStaffPersonMerges("6", cases, true);
     expect(fetchOperator).toHaveBeenLastCalledWith(
-      "/api/operator/provisioning/staff-person-merges/6",
+      "/api/operator/staff-person-merges/6",
       {
         method: "POST",
         body: {

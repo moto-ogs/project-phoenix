@@ -27,7 +27,7 @@ type mergeRaceAudit struct {
 	ledger func(context.Context) bool
 }
 
-func (a mergeRaceAudit) RecordStaffPersonMerge(ctx context.Context, _, _ int64, _ staffpersonmerge.Candidate) error {
+func (a mergeRaceAudit) RecordStaffPersonMerge(ctx context.Context, _, _ int64, _ staffpersonmerge.StaffPersonMergeCandidate) error {
 	select {
 	case a.held <- a.ledger(ctx):
 	default:
@@ -152,7 +152,7 @@ func TestStaffPersonMergeAndOffboardingDoNotDeadlock(t *testing.T) {
 	merge, err := mergeCompose.New(peopleCompose.NewStaffPersonMerge(time.Now), membershipCompose.NewStaffPersonMerge(), audit,
 		func(context.Context) int64 { return operator.ID })
 	require.NoError(t, err)
-	var candidates []staffpersonmerge.Candidate
+	var candidates []staffpersonmerge.StaffPersonMergeCandidate
 	require.NoError(t, testpkg.WithinAdminContext(t, context.Background(), db, func(ctx context.Context) error {
 		candidates, err = merge.Preview(ctx, testpkg.Tenant(t), net.IPv4(127, 0, 0, 1))
 		return err

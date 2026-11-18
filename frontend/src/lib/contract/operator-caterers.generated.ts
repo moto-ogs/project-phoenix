@@ -2,10 +2,15 @@
 import { z } from "zod";
 import {
   bool,
+  noData,
   object,
+  requestBody,
   str,
   success,
 } from "./runtime";
+import {
+  type MFAAdminResetRequest,
+} from "./shared.generated";
 
 /** Go: operator.CatererSecurityResponse */
 export interface CatererSecurityResponse {
@@ -25,6 +30,13 @@ export const CatererSecurityResponseSchema: z.ZodType<CatererSecurityResponse, u
 });
 
 export const routes = {
+  "DELETE /operator/caterers/{id}/accounts/{accountId}/mfa": {
+    method: "DELETE",
+    pattern: "/operator/caterers/{id}/accounts/{accountId}/mfa",
+    portals: ["platform"],
+    request: requestBody<MFAAdminResetRequest>(),
+    response: noData,
+  },
   "GET /operator/caterers": {
     method: "GET",
     pattern: "/operator/caterers",
