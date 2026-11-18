@@ -72,22 +72,22 @@ function focusTargetOf(target: HTMLElement): HTMLElement {
  */
 export function JumpButton({
   targetId,
+  reveal,
   tooltip,
   children,
-  reveal,
   "aria-label": ariaLabel,
 }: Readonly<{
   /** `id` of the card, section or field to bring into view. */
   targetId: string;
+  /**
+   * Shows the place first when it is not on the screen, such as the page tab
+   * that holds it (#7410). The jump follows once the place is rendered.
+   */
+  reveal?: () => void;
   /** What the click does, as „Springt zu …“ (frontend-ui-kit.md). */
   tooltip: string;
   /** Names the place: „Zu den Eltern“, „Zum Feld E-Mail“. */
   children: ReactNode;
-  /**
-   * Shows the place first when it sits in a closed tab of the page (#7408).
-   * The jump follows once the opened tab is drawn.
-   */
-  reveal?: () => void;
   "aria-label"?: string;
 }>) {
   return (
@@ -98,12 +98,9 @@ export function JumpButton({
       aria-label={ariaLabel}
       tooltip={tooltip}
       onClick={() => {
-        if (!reveal) {
-          jumpTo(targetId);
-          return;
-        }
+        if (jumpTo(targetId) || !reveal) return;
         reveal();
-        // React draws the state of a click before the next frame.
+        // React renders the revealed place before the next frame.
         requestAnimationFrame(() => jumpTo(targetId));
       }}
     >

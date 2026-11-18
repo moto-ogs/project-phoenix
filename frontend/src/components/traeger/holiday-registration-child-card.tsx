@@ -67,7 +67,6 @@ import {
   childSchoolLabel,
   formatHolidayWeek,
 } from "./holiday-registration-format";
-import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
 const logger = createLogger({ component: "HolidayRegistrationChildCard" });
 
@@ -171,11 +170,11 @@ export function HolidayRegistrationChildCard({
         type="button"
         variant="outline"
         size="md"
-        aria-label={`Angaben von ${child.firstName} ${child.lastName} ändern`}
-        tooltip="Öffnet die Angaben des Kindes zum Ändern."
+        aria-label={`Angaben von ${child.firstName} ${child.lastName} bearbeiten`}
+        tooltip="Öffnet die Angaben des Kindes zum Bearbeiten."
         onClick={onEdit}
       >
-        Ändern
+        Bearbeiten
       </Button>
     );
 
@@ -190,7 +189,7 @@ export function HolidayRegistrationChildCard({
   return (
     <SectionCard
       id={holidayRegistrationChildCardId(child.id)}
-      leading={<ConceptIconTile concept={childrenConcept} />}
+      concept={childrenConcept}
       title={`${child.firstName} ${child.lastName}`}
       description={`Geboren am ${formatDate(child.birthDate)}, ${childSchoolLabel(child, names)}`}
       footer={
