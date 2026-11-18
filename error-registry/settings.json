@@ -29,6 +29,12 @@
       "legacy": "settings.booking_authority_blocked"
     },
     {
+      "code": "settings.enrollment_privacy_notice_missing",
+      "class": "input",
+      "parameters": [],
+      "legacy": "settings.enrollment_privacy_notice_missing"
+    },
+    {
       "code": "settings.invalid_value",
       "class": "input",
       "parameters": [],
