@@ -494,11 +494,11 @@ func (p PushSubscriptionCleanup) DeleteUnboundByAccount(ctx context.Context, acc
 	return p.Subscriptions.DeleteUnboundByAccountForPortal(ctx, accountID, tenantID, portal)
 }
 
-func (p PushSubscriptionCleanup) ListLinks(ctx context.Context) ([]identityaccess.PushSubscriptionLink, error) {
+func (p PushSubscriptionCleanup) ListLinks(ctx context.Context, afterID int64, limit int) ([]identityaccess.PushSubscriptionLink, error) {
 	if p.Subscriptions == nil {
 		return nil, nil
 	}
-	links, err := p.Subscriptions.ListSessionLinks(ctx)
+	links, err := p.Subscriptions.ListSessionLinks(ctx, afterID, limit)
 	result := make([]identityaccess.PushSubscriptionLink, len(links))
 	for i, link := range links {
 		result[i] = identityaccess.PushSubscriptionLink(link)

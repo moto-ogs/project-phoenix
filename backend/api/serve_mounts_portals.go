@@ -119,6 +119,7 @@ func newOperatorRouter(
 	provisioning organizationtenancy.OperatorProvisioning, caregivers peoplePorts.CaregiverCapabilityService,
 	lifecycle carePlanModule.CareLifecycle, communication communicationModule.Capability,
 	students importModels.RowImporter[importModels.StudentImportRow], traegerSettings settingsOperatorAPI.TraegerOperations,
+	demoPlans studentpresence.DemoCareDays,
 	now func() time.Time,
 ) (chi.Router, error) {
 	tagScanReview := tagScanOperatorAPI.NewResource(tagScanOperatorAPI.Config{
@@ -176,7 +177,7 @@ func newOperatorRouter(
 		limiters,
 		mergeRoutes,
 		newSampleChildrenRoute(provisioning, students),
-		newDemoPresenceHistoryRoute(db, viper.GetString("app_env")),
+		newDemoPresenceHistoryRoute(db, viper.GetString("app_env"), demoPlans),
 		now,
 	), nil
 }

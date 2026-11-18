@@ -243,3 +243,17 @@ Abschluss, liegt ihr Schreibstempel nach `completed_at`. Reopen erkennt
 die Änderung auf derselben Datenbankuhr wie Änderungen an Teilnahmen und
 Planzeilen. Die Migration stellt beim Rollback den früheren Trigger wieder
 her.
+
+## Nachtrag 2026-11-18: Das Arbeitszeitprotokoll ordnet nach dem Datenbankstempel
+
+Seit #7383 stempelt PostgreSQL beim Schreiben `audit_recorded_at`.
+Die bestehende Sicht nimmt diesen Zeitpunkt für Datumsauswahl, Anzeige,
+Sortierung und Cursor. Die Wiedereröffnung eines Monats erhält ihren
+eigenen Stempel. Gruppen aus mehreren Feldänderungen oder Monatsabschlüssen
+behalten ihren bisherigen Gruppenschlüssel und zeigen den ersten
+Datenbankstempel der Gruppe. Arbeitsdaten, Entscheidungszeit und die Zeit
+des ursprünglichen Monatsabschlusses bleiben in ihren bisherigen Spalten.
+
+Altzeilen haben keinen solchen Stempel. Ihre gespeicherten Zeiten bleiben
+sichtbar und dienen weiterhin der Sortierung. Ein Nachtrag könnte den
+Zeitpunkt der ursprünglichen Schreibanweisung nicht rekonstruieren.

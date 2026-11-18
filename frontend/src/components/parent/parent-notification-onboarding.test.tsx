@@ -13,6 +13,10 @@ import {
 } from "~/test/push-public-key-mock";
 import { ModalProvider } from "~/components/ui/modal-context";
 import { ParentNotificationOnboarding } from "./parent-notification-onboarding";
+import { resetSWRScope } from "~/lib/swr/scope";
+
+// The dialog reads the preferences through the shared cache: real SWR.
+vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   fetchPreferences: vi.fn(),
@@ -91,6 +95,7 @@ const ENABLED_PREFERENCES = {
 describe("ParentNotificationOnboarding", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSWRScope({ revalidate: false });
     localStorage.clear();
     vi.stubGlobal("Notification", { permission: "default" });
     mocks.needsIOSInstall.mockReturnValue(false);
@@ -303,6 +308,8 @@ describe("ParentNotificationOnboarding", () => {
     expect(mocks.subscribePush).not.toHaveBeenCalled();
     unmount();
 
+    // A new page load: the cache of the first one is gone.
+    resetSWRScope({ revalidate: false });
     mocks.fetchPreferences.mockResolvedValue(ENABLED_PREFERENCES);
     renderOnboarding();
     // Anker: mit eingeschalteten Benachrichtigungen erscheint derselbe Knopf.

@@ -19,7 +19,6 @@ type (
 	StatisticsAccessEvent = ports.StatisticsAccessEvent
 	StatisticsRoom        = ports.StatisticsRoom
 	StatisticsStudent     = ports.StatisticsStudent
-	HolidayPeriod         = ports.HolidayPeriod
 	CourseInstance        = ports.CourseInstance
 	CourseParticipation   = ports.CourseParticipation
 	StatusDay             = ports.StatusDay
@@ -34,8 +33,6 @@ type StatisticsDependencies struct {
 	StatusDays      ports.StatusDays
 	Courses         ports.CourseStatistics
 	Holidays        ports.HolidayDates
-	ClosingDays     ports.ClosingDayDates
-	Periods         ports.HolidayPeriods
 	CalendarDays    ports.CareCalendarDays // ClosingDays and Periods in one statement (#5994)
 	Students        ports.StatisticsStudents
 	Rooms           ports.StatisticsRooms
@@ -45,6 +42,7 @@ type StatisticsDependencies struct {
 	// The contract (#4683), then the holiday booking (#5994) replace the Soll on the days they cover; nil keeps it.
 	ContractCareDays ports.ContractCareDays
 	HolidayCareDays  ports.HolidayCareDays
+	DemoHistory      bool
 	Logger           *slog.Logger
 	Now              func() time.Time // injectable for tests; nil means time.Now
 }
@@ -62,8 +60,6 @@ func NewStatistics(deps StatisticsDependencies) (studentpresence.StatisticsRepor
 		StatusDays:          deps.StatusDays,
 		Courses:             deps.Courses,
 		Holidays:            deps.Holidays,
-		ClosingDays:         deps.ClosingDays,
-		Periods:             deps.Periods,
 		CalendarDays:        deps.CalendarDays,
 		Students:            deps.Students,
 		Rooms:               deps.Rooms,
@@ -72,6 +68,7 @@ func NewStatistics(deps StatisticsDependencies) (studentpresence.StatisticsRepor
 		PrivacyConsents:     presence,
 		PlannedCareDays:     statistics.WithHolidayCareDays(statistics.WithContractCareDays(deps.PlannedCareDays, deps.ContractCareDays), deps.HolidayCareDays),
 		AttendanceIntervals: postgres.New(databaseRuntime(deps.DB), now),
+		DemoHistory:         deps.DemoHistory,
 		Logger:              deps.Logger,
 		Now:                 now,
 	}), nil

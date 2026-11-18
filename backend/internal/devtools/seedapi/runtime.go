@@ -21,8 +21,10 @@ type Runtime struct {
 	// full parent rights (seedFamilyAppAccountsStep). Later steps answer
 	// polls and declarations and write messages as them; empty until that
 	// step ran, which DeferHistory moves behind the parent steps.
-	FamilyAccounts      []ParentCredentials
-	Enrollment          SeedEnrollmentState
+	FamilyAccounts []ParentCredentials
+	Enrollment     SeedEnrollmentState
+	// demoPresenceDays supply the feedback step with the visits just seeded.
+	demoPresenceDays    []PastPresenceDay
 	DeferredSeedPending bool
 	Values              map[string]any
 	// TraegerLock is SeedOptions.TraegerLock.

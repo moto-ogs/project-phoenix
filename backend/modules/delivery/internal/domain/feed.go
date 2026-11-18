@@ -72,9 +72,9 @@ type SchoolAudienceMember struct {
 	StudentIDs []int64
 }
 
-// TraegerFeedEntry is an entry of the Träger bell (#7146) with the school it
-// is about.
-type TraegerFeedEntry struct {
+// SchoolFeedEntry is an entry of a bell across schools, of the Träger-Portal
+// (#7146) or the caterer portal (#7147), with the school it is about.
+type SchoolFeedEntry struct {
 	FeedEntry
 	SchoolName string
 }

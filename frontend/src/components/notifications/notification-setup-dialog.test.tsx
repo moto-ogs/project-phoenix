@@ -12,6 +12,11 @@ import {
   setupStorageKey,
 } from "./notification-setup-dialog";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { NotificationPreferencesSection } from "~/components/settings/notification-preferences-section";
+import { resetSWRScope } from "~/lib/swr/scope";
+
+// The dialog reads the preferences through the shared cache: real SWR.
+vi.unmock("swr");
 
 // The shared error path shows failures through the toast provider (#2517);
 // the component refreshes the scoped cache, which needs the session.
@@ -36,6 +41,7 @@ function renderWithToast(
 const mocks = vi.hoisted(() => ({
   fetchPreferences: vi.fn(),
   setPreference: vi.fn(),
+  disableAll: vi.fn(),
   needsIOSInstall: vi.fn(),
   isPushSupported: vi.fn(),
   syncSubscription: vi.fn(),
@@ -51,6 +57,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("~/lib/notification-preferences-api", () => ({
   fetchNotificationPreferences: mocks.fetchPreferences,
   setNotificationPreference: mocks.setPreference,
+  disableAllNotificationPreferences: mocks.disableAll,
 }));
 
 vi.mock("~/lib/push-api", () => ({
@@ -89,6 +96,7 @@ function renderDialog(props: {
 describe("NotificationSetupDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSWRScope({ revalidate: false });
     localStorage.clear();
     vi.stubGlobal("Notification", { permission: "default" });
     mocks.needsIOSInstall.mockReturnValue(false);
@@ -150,6 +158,23 @@ describe("NotificationSetupDialog", () => {
       "school",
       TEST_PUSH_PUBLIC_KEY,
     );
+  });
+
+  it("shares one preferences request with the settings card", async () => {
+    renderWithToast(
+      <ModalProvider>
+        <NotificationPreferencesSection portal="tenant" />
+        <NotificationSetupDialog accountId="42" portal="tenant" />
+      </ModalProvider>,
+    );
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Benachrichtigungen aktivieren",
+      }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Abholung")).toBeInTheDocument();
+    expect(mocks.fetchPreferences).toHaveBeenCalledOnce();
   });
 
   it("explains the home-screen step first on iPhone and iPad", async () => {

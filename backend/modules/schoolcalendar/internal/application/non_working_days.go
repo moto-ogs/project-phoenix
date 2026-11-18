@@ -30,15 +30,6 @@ func (h TenantHolidays) HolidayDates(ctx context.Context, from, to calendar.Date
 	return calendarDateSet(h.Calendar.TenantHolidayDates(ctx, from.String(), to.String()))
 }
 
-// TenantClosingDays expands the school's closure ranges into a date set.
-type TenantClosingDays struct {
-	Calendar schoolcalendar.NonWorkingDayQuery
-}
-
-func (c TenantClosingDays) ClosingDayDates(ctx context.Context, from, to calendar.Date) (map[calendar.Date]bool, error) {
-	return calendarDateSet(c.Calendar.ClosingDayDates(ctx, from.String(), to.String()))
-}
-
 func calendarDateSet(values map[string]bool, err error) (map[calendar.Date]bool, error) {
 	if err != nil {
 		return nil, err
@@ -74,10 +65,6 @@ func NewNonWorkingDays(source schoolcalendar.NonWorkingDayQuery) NonWorkingDays 
 
 func NewTenantHolidays(source schoolcalendar.NonWorkingDayQuery) TenantHolidays {
 	return TenantHolidays{Calendar: source}
-}
-
-func NewTenantClosingDays(source schoolcalendar.NonWorkingDayQuery) TenantClosingDays {
-	return TenantClosingDays{Calendar: source}
 }
 
 func NewCalendarPeriodIDs(source schoolcalendar.Query) CalendarPeriodIDs {

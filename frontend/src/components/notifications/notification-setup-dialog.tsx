@@ -21,7 +21,7 @@ import {
 } from "~/lib/notification-preferences-api";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
-import { useInvalidateMatching } from "~/lib/swr";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import {
   isPushConfigurationMissing,
@@ -55,6 +55,14 @@ const REMIND_LATER_MS = 7 * 24 * 60 * 60 * 1000;
 const ACTION_CLASS = "w-full sm:w-auto";
 
 type SetupMode = "enable" | "install-ios" | "install-android" | "denied";
+
+/**
+ * This device reached the step that needs the account's preferences;
+ * `subscribed` is undefined until its push subscription is checked.
+ */
+interface PreferencesCheck {
+  readonly subscribed: boolean | undefined;
+}
 
 interface StoredDecision {
   readonly done?: boolean;
@@ -113,6 +121,15 @@ export function NotificationSetupDialog({
   const pushKey = usePushPublicKey(portal);
   const [mode, setMode] = useState<SetupMode | null>(null);
   const [types, setTypes] = useState<NotificationPreferenceType[]>([]);
+  const [check, setCheck] = useState<PreferencesCheck | null>(null);
+  // The same cached read as the settings card: on the settings page both
+  // share one request instead of one each (#7429 did the same for the key).
+  // Within a page load the card's answer is current, so it is not read again.
+  const { data: preferences, error: preferencesError } = useSWRAuth(
+    check ? tenantAdminKeys.notificationPreferences(portal) : null,
+    () => fetchNotificationPreferences(portal),
+    { revalidateIfStale: false },
+  );
   const [busy, setBusy] = useState(false);
   // Fehler bleiben im offenen Dialog (#2517). Ein API-Fehler zeigt im OGS-
   // und Schulportal den Katalogtext; das Elternportal und Ablehnungen des
@@ -205,20 +222,16 @@ export function NotificationSetupDialog({
 
       try {
         const publicKey = pushKey.require();
-        const [preferences, subscription] = await Promise.all([
-          fetchNotificationPreferences(portal),
-          syncExistingPushSubscription(portal, publicKey),
-        ]);
-        if (!active) return;
-        if (!preferences.tenant_enabled) return;
-        setTypes(preferences.types);
-        const hasEnabledType = preferences.types.some(
-          (type) => type.available && type.enabled,
+        // Starts the preferences read beside the subscription check.
+        if (active) setCheck({ subscribed: undefined });
+        const subscription = await syncExistingPushSubscription(
+          portal,
+          publicKey,
         );
-        if (!subscription || !hasEnabledType) setMode("enable");
-        else writeDecision(storageKey, { done: true });
+        if (active) setCheck({ subscribed: Boolean(subscription) });
       } catch (err) {
         // Same: a failed background check only means the dialog stays shut.
+        if (active) setCheck(null);
         if (isPushConfigurationMissing(err)) return;
         logger.warn("notification_setup_check_failed", {
           portal,
@@ -240,6 +253,31 @@ export function NotificationSetupDialog({
     restartToken,
     storageKey,
   ]);
+
+  // Decides once both answers are there, then stops reading.
+  useEffect(() => {
+    if (check?.subscribed === undefined) return;
+    if (preferences === undefined) {
+      if (preferencesError === undefined) return;
+      setCheck(null);
+      logger.warn("notification_setup_check_failed", {
+        portal,
+        error:
+          preferencesError instanceof Error
+            ? preferencesError.message
+            : String(preferencesError),
+      });
+      return;
+    }
+    setCheck(null);
+    if (!preferences.tenant_enabled) return;
+    setTypes(preferences.types);
+    const hasEnabledType = preferences.types.some(
+      (type) => type.available && type.enabled,
+    );
+    if (!check.subscribed || !hasEnabledType) setMode("enable");
+    else writeDecision(storageKey, { done: true });
+  }, [check, portal, preferences, preferencesError, storageKey]);
 
   const remindLater = () => {
     writeDecision(storageKey, { remindAfter: Date.now() + REMIND_LATER_MS });

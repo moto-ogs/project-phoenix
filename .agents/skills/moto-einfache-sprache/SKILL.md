@@ -22,7 +22,7 @@ Diese Zielgruppenbeschreibung ist intern. Sie taucht nie in Commits, PR-Texten, 
 4. **Fehlertexte beruhigen.** Muster: "Das hat leider nicht geklappt. Bitte versuche es noch einmal." Keine Schuldzuweisung, kein Fachjargon, keine Fehlercodes.
 5. **Anleitungen als nummerierbare Mini-Schritte** in der Reihenfolge, in der man sie sieht ("Unten auf das Teilen-Symbol tippen, dann ‚Zum Home-Bildschirm' wählen").
 6. **Konkrete Wörter aus dem Schulalltag**: Kind, Gruppe, Abholung, Krankmeldung, Gerät, Tablet. Die App heißt "moto", nicht "die Anwendung" oder "das System".
-7. **Du-Form, nie „Sie“ ([ADR 0292](../../../docs/adr/0292-moto-spricht-alle-nutzer-mit-du-an.md)).** „du/dein/dir/dich“ klein, an mehrere Personen „ihr/euch/euer“. Freundlich und sachlich, deutsch mit Umlauten (ä/ö/ü/ß). Keine em-dashes. Buttons benennen die Aktion in einem Wort oder zwei ("Einschalten", "Ändern", "Speichern").
+7. **Du-Form, nie „Sie“ ([ADR 0293](../../../docs/adr/0293-moto-spricht-alle-nutzer-mit-du-an.md)).** „du/dein/dir/dich“ klein, an mehrere Personen „ihr/euch/euer“. Freundlich und sachlich, deutsch mit Umlauten (ä/ö/ü/ß). Keine em-dashes. Buttons benennen die Aktion in einem Wort oder zwei ("Einschalten", "Ändern", "Speichern").
 8. **Weglassen schlägt Erklären.** Erklärtext, der keine Entscheidung oder Handlung verändert, fliegt raus. Eine Karte braucht selten mehr als einen Satz unter der Überschrift.
 
 ## Selbsttest vor dem Abschluss

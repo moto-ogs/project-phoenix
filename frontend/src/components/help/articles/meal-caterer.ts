@@ -32,6 +32,7 @@ export function mealCatererTopic(): HelpTopic {
       "Den Link sieht nur der Caterer. Er gilt 14 Tage.",
       "Der Caterer sieht nur Zahlen: je Tag und, wenn du so bestellst, je Klasse. Namen sieht er nur, wenn du unter `Einstellungen` → `Datenschutz` `Namen der Kinder für den Caterer` einschaltest.",
       "Der Caterer kann eine Bestellung nur bestätigen. Dann steht bei dir `Vom Caterer bestätigt`.",
+      "Ändert sich das Essen eines Tages, an dem Kinder ein Essen gebucht haben, sieht dein Caterer einen Hinweis in seiner Glocke oben rechts. Das gilt auch für jeden neuen, geänderten oder gelöschten Schließtag. So plant er die Mengen. Die Schalter `Hinweis bei geändertem Speiseplan` und `Benachrichtigung bei Schließtagen` unter `Einstellungen` gelten auch für ihn.",
       "Beliefert der Caterer schon andere Schulen, bestätigt er mit seinem Passwort. Deine Schule kommt dann zu seinen Schulen dazu.",
       "Sein Passwort ändert der Caterer selbst. Er öffnet oben rechts sein Menü und wählt `Konto`. Hat er es vergessen, wählt er bei der Anmeldung `Passwort vergessen?`.",
       "Im `Konto` kann der Caterer auch die `Zwei-Faktor-Anmeldung` einschalten. Das ist freiwillig. Dann gibt er bei der Anmeldung zusätzlich einen Code aus seiner E-Mail ein. Statt Passwort und Code kann er auch einen Passkey nutzen.",

@@ -151,22 +151,52 @@ type traegerNotificationFeed struct {
 	deliveryContract.TraegerNotificationFeed
 }
 
-func (f traegerNotificationFeed) Page(ctx context.Context, organizationID, accountID int64, cursor string, limit int) (notificationsHTTP.TraegerFeedPage, error) {
+func (f traegerNotificationFeed) Page(ctx context.Context, organizationID, accountID int64, cursor string, limit int) (notificationsHTTP.SchoolFeedPage, error) {
 	page, err := f.TraegerNotificationFeed.Page(ctx, organizationID, accountID, cursor, limit)
-	if err != nil {
-		return notificationsHTTP.TraegerFeedPage{}, err
-	}
-	out := notificationsHTTP.TraegerFeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]notificationsHTTP.TraegerFeedEntry, len(page.Entries))}
-	for i, entry := range page.Entries {
-		out.Entries[i] = notificationsHTTP.TraegerFeedEntry{
-			FeedEntry: notificationsHTTP.FeedEntry(entry.NotificationFeedEntry), SchoolID: entry.SchoolID, SchoolName: entry.SchoolName,
-		}
-	}
-	return out, nil
+	return schoolFeedPage(page), err
 }
 func (traegerNotificationFeed) IsNotFound(err error) bool {
 	return errors.Is(err, deliveryContract.ErrNotificationFeedEntryNotFound)
 }
 func (traegerNotificationFeed) IsInvalidCursor(err error) bool {
 	return errors.Is(err, deliveryContract.ErrInvalidNotificationFeedCursor)
+}
+
+// NewCatererNotificationHTTP binds Delivery's bell of the caterer portal
+// (#7147) to the HTTP adapter.
+func NewCatererNotificationHTTP(feed deliveryContract.CatererNotificationFeed) *notificationsHTTP.CatererFeedResource {
+	var port notificationsHTTP.CatererFeedService
+	if feed != nil {
+		port = catererNotificationFeed{CatererNotificationFeed: feed}
+	}
+	return notificationsHTTP.NewCatererFeedResource(port, notificationHTTPRuntime())
+}
+
+// catererNotificationFeed translates the caterer bell's page onto the HTTP
+// adapter's types.
+type catererNotificationFeed struct {
+	deliveryContract.CatererNotificationFeed
+}
+
+func (f catererNotificationFeed) Page(ctx context.Context, accountID int64, cursor string, limit int) (notificationsHTTP.SchoolFeedPage, error) {
+	page, err := f.CatererNotificationFeed.Page(ctx, accountID, cursor, limit)
+	return schoolFeedPage(page), err
+}
+func (catererNotificationFeed) IsNotFound(err error) bool {
+	return errors.Is(err, deliveryContract.ErrNotificationFeedEntryNotFound)
+}
+func (catererNotificationFeed) IsInvalidCursor(err error) bool {
+	return errors.Is(err, deliveryContract.ErrInvalidNotificationFeedCursor)
+}
+
+// schoolFeedPage maps a page of a bell across schools, with each entry's
+// school, onto the HTTP adapter's page; a failed read maps to no page.
+func schoolFeedPage(page deliveryContract.SchoolNotificationFeedPage) notificationsHTTP.SchoolFeedPage {
+	out := notificationsHTTP.SchoolFeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]notificationsHTTP.SchoolFeedEntry, len(page.Entries))}
+	for i, entry := range page.Entries {
+		out.Entries[i] = notificationsHTTP.SchoolFeedEntry{
+			FeedEntry: notificationsHTTP.FeedEntry(entry.NotificationFeedEntry), SchoolID: entry.SchoolID, SchoolName: entry.SchoolName,
+		}
+	}
+	return out
 }

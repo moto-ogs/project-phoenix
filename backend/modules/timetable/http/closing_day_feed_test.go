@@ -67,8 +67,10 @@ func newClosingFeedFixtureIn(t *testing.T, db *bun.DB, tenantID int64) *closingF
 	require.True(t, ok)
 	traeger, ok := notifier.(deliveryContract.TraegerFeedNotifier)
 	require.True(t, ok)
+	caterer, ok := notifier.(deliveryContract.CatererFeedNotifier)
+	require.True(t, ok)
 	calendar, err := api.NewSchoolCalendarWithClosingDayNotices(database, settings.Settings, owners.DeliveryNotifications{
-		Notifier: notifier, Preferences: module.NotificationPreferences, SchoolAudience: audience, TraegerNotices: traeger,
+		Notifier: notifier, Preferences: module.NotificationPreferences, SchoolAudience: audience, TraegerNotices: traeger, CatererNotices: caterer,
 	}, closingFeedToday)
 	require.NoError(t, err)
 	// Equal bounds open the push window all day, so the test does not depend

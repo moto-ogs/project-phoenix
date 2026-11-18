@@ -448,7 +448,7 @@ func (s *Store) QueueStaffDocumentFileCleanup(ctx context.Context, value domain.
 	}
 	row := &staffDocumentFileCleanupRow{
 		TenantID: value.TenantID, StaffID: value.StaffID, FilenameStored: value.FilenameStored,
-		RetryAfter: value.RetryAfter, CleanedAt: value.CleanedAt,
+		RetryAfter: value.RetryAfter,
 	}
 	if row.TenantID == 0 {
 		row.TenantID = scope.TenantID
@@ -497,27 +497,27 @@ func (s *Store) ListQueuedStaffDocumentFileCleanups(ctx context.Context, staffID
 	return result, stats, nil
 }
 
-func (s *Store) CompleteStaffDocumentFileCleanup(ctx context.Context, id int64, at time.Time) (domain.OperationStats, error) {
+func (s *Store) CompleteStaffDocumentFileCleanup(ctx context.Context, id int64) (domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
 		return domain.OperationStats{}, err
 	}
 	query := withTenant(db.NewUpdate().Model((*staffDocumentFileCleanupRow)(nil)).
 		ModelTableExpr(tableStaffDocumentFileCleanups+` AS "staff_document_file_cleanup"`).
-		Set("cleaned_at = ?", at).
+		Set("cleaned_at = "+staffDocumentRetentionClock).
 		Where(`"staff_document_file_cleanup".id = ?`, id).
 		Where(`"staff_document_file_cleanup".cleaned_at IS NULL`), aliasStaffDocumentFileCleanup, scope)
 	return execAffected(ctx, query, "complete staff document file cleanup")
 }
 
-func (s *Store) CompleteStaffDocumentFileCleanupByFilename(ctx context.Context, filename string, at time.Time) (domain.OperationStats, error) {
+func (s *Store) CompleteStaffDocumentFileCleanupByFilename(ctx context.Context, filename string) (domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
 		return domain.OperationStats{}, err
 	}
 	query := withTenant(db.NewUpdate().Model((*staffDocumentFileCleanupRow)(nil)).
 		ModelTableExpr(tableStaffDocumentFileCleanups+` AS "staff_document_file_cleanup"`).
-		Set("cleaned_at = ?", at).
+		Set("cleaned_at = "+staffDocumentRetentionClock).
 		Where(`"staff_document_file_cleanup".filename_stored = ?`, filename).
 		Where(`"staff_document_file_cleanup".cleaned_at IS NULL`), aliasStaffDocumentFileCleanup, scope)
 	return execAffected(ctx, query, "complete staff document file cleanup by filename")

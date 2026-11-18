@@ -34,6 +34,10 @@ const (
 	// notification feed only: the portal has no push devices and no live
 	// channel, and no person decides them, so no portal offers them.
 	PortalTraeger = "traeger"
+	// PortalCaterer is the caterer portal (#7147). Like the Träger-Portal's,
+	// its types write the notification feed only: the portal has no push
+	// devices and no live channel.
+	PortalCaterer = "caterer"
 )
 
 // Channels a notification type is delivered over.
@@ -239,9 +243,9 @@ func RegisterType(def TypeDefinition) {
 	}
 	switch def.Portal {
 	case PortalStaff, PortalParent:
-	case PortalTraeger:
+	case PortalTraeger, PortalCaterer:
 		if !def.Feed || def.DefaultOn || def.Permission != "" || def.SchoolPortal || def.Channel != "" {
-			panic("notifications: Träger type " + def.Key + " must be a feed type without push, permission or other portal")
+			panic("notifications: " + def.Portal + " type " + def.Key + " must be a feed type without push, permission or other portal")
 		}
 	case PortalSchool:
 		// A school-only type is already offered there; SchoolPortal only
@@ -276,8 +280,8 @@ func validateTypeChannel(def TypeDefinition) {
 		if def.DefaultOn && def.Permission == "" && def.Portal != PortalParent {
 			panic("notifications: default-on type " + def.Key + " needs a permission")
 		}
-		if def.Feed && def.Portal != PortalStaff && def.Portal != PortalParent && def.Portal != PortalTraeger {
-			panic("notifications: feed type " + def.Key + " needs the staff, parent or Träger portal")
+		if def.Feed && def.Portal != PortalStaff && def.Portal != PortalParent && def.Portal != PortalTraeger && def.Portal != PortalCaterer {
+			panic("notifications: feed type " + def.Key + " needs the staff, parent, Träger or caterer portal")
 		}
 	case ChannelEmail:
 		// An e-mail type is addressed by permission, not by a relation to a
@@ -399,6 +403,7 @@ func init() {
 	registerStaffNoticeTypes()
 	registerRoomChangeTypes()
 	registerSchoolClosingDayTypes()
+	registerCatererTypes()
 }
 
 // registerStaffAppointmentTypes registers the staff notices about the

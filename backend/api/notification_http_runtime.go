@@ -29,6 +29,14 @@ func notificationHTTPRuntime() notificationsHTTP.Runtime {
 			register(r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)))
 		})
 	}
+	runtime.ProtectedCaterer = func(r chi.Router, register func(chi.Router)) {
+		// The bell opens its own administrative unit across the schools the
+		// caterer supplies (#7147); the session carries no school.
+		r.Group(func(r chi.Router) {
+			CatererSessionChain(r)
+			register(r)
+		})
+	}
 	runtime.OrganizationID = tenant.OrgFromContext
 	runtime.TenantOperation = common.TenantOperationMiddleware
 	runtime.TenantID = tenant.FromContext
