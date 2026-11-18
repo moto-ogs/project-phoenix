@@ -289,6 +289,17 @@ interface PlanningDayChipProps {
   readonly dateLabel: string;
   /** Kleine Zähler-Ziffer, z. B. Anzahl offener Lücken. */
   readonly count?: number;
+  /**
+   * Markierung ohne Zahl: bei einem Zähler über null steht nur der Punkt,
+   * die Ziffer nicht. Für einen Tag, dessen Zahl die Seite schon sichtbar
+   * nennt (Vertretungsplan: die Statuszeile zählt den gewählten Tag), damit
+   * dieselbe Zahl nicht zweimal im Kopf steht. Die Ziffer behält ihren
+   * Platz, unsichtbar: sonst würde der Chip schmaler und die Tage rechts
+   * davon rückten bei jedem Tageswechsel nach. Die Zahl gehört dann in
+   * `aria-label`, denn vorgelesen wird sie nicht. Ohne Zähler über null
+   * bleibt der Chip wie immer still.
+   */
+  readonly countDotOnly?: boolean;
   readonly selected?: boolean;
   readonly onClick?: () => void;
   readonly className?: string;
@@ -322,6 +333,7 @@ export function PlanningDayChip({
   weekdayLabel,
   dateLabel,
   count,
+  countDotOnly = false,
   selected = false,
   onClick,
   className,
@@ -360,6 +372,7 @@ export function PlanningDayChip({
   }, [selected, stacked]);
 
   const quietText = selected ? "text-white/80" : "text-gray-500";
+  const hasCount = count !== undefined && count > 0;
 
   return (
     <Button
@@ -408,17 +421,31 @@ export function PlanningDayChip({
         </>
       ) : (
         <>
-          <span className="font-medium">{weekdayLabel}</span>
+          {/* Die Leerzeichen zeichnet die Flexbox nicht (Abstand: `gap`),
+              aber sie trennen die Wörter im Text des Knopfs. Ohne sie liest
+              sich der Tag als „Mi15.07.“ und passt nicht mehr zu einem
+              `aria-label` wie „Mi 15.07., 1 offene Lücke“ (axe
+              label-content-name-mismatch). */}
+          <span className="font-medium">{weekdayLabel}</span>{" "}
           <span className="tabular-nums">{dateLabel}</span>
-          {count !== undefined && count > 0 ? (
-            <span className="inline-flex items-center gap-1 font-semibold tabular-nums">
-              <span
-                aria-hidden
-                className="h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: PLANNING_COLORS.gap }}
-              />
-              {count}
-            </span>
+          {hasCount ? (
+            <>
+              {" "}
+              <span className="inline-flex items-center gap-1 font-semibold tabular-nums">
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: PLANNING_COLORS.gap }}
+                />
+                {countDotOnly ? (
+                  <span aria-hidden className="invisible">
+                    {count}
+                  </span>
+                ) : (
+                  count
+                )}
+              </span>
+            </>
           ) : null}
         </>
       )}

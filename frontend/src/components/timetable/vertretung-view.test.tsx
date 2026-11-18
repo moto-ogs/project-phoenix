@@ -1197,15 +1197,21 @@ describe("VertretungView", () => {
     });
     render(<VertretungView />);
 
-    expect(
-      screen.getByRole("button", { name: "Mi 15.07., 1 offene Lücke" }),
-    ).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.getByRole("button", { name: "Do 16.07., 1 offene Lücke" }),
-    ).toBeInTheDocument();
+    const selectedDay = screen.getByRole("button", {
+      name: "Mi 15.07., 1 offene Lücke",
+    });
+    expect(selectedDay).toHaveAttribute("aria-pressed", "true");
+    const otherDay = screen.getByRole("button", {
+      name: "Do 16.07., 1 offene Lücke",
+    });
     expect(screen.getByText("offene Lücke").parentElement).toHaveTextContent(
       "1 offene Lücke",
     );
+    // Die Zahl des gewählten Tags steht nur in der Statuszeile: sein Chip
+    // trägt den Punkt, die Ziffer hält nur ihren Platz. Die anderen Tage
+    // zeigen ihre Zahl.
+    expect(within(selectedDay).getByText("1")).toHaveClass("invisible");
+    expect(within(otherDay).getByText("1")).not.toHaveClass("invisible");
     // Das Bedienband wiederholt die Zahl nicht mehr.
     expect(screen.queryByText(/^Offen:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Quittiert:/)).not.toBeInTheDocument();
@@ -1216,6 +1222,35 @@ describe("VertretungView", () => {
     // Das Ergebnis der Liste kennt den nächsten Tag mit offenen Lücken.
     const next = mockDayListProps.mock.calls.at(-1)?.[0].nextOpenDay;
     expect(next).toMatchObject({ label: "Do 16.07.", count: 1 });
+  });
+
+  it("nimmt die Zahl aus dem Chip des gewählten Tags, auch nach einem Tageswechsel", () => {
+    setupSWR({
+      gapsData: {
+        from: "2026-07-15",
+        to: "2026-07-19",
+        gaps: [
+          { instanceId: "42", date: "2026-07-15" },
+          { instanceId: "43", date: "2026-07-16" },
+        ],
+        acknowledged: [],
+      },
+    });
+    mockSearch.value = "d=2026-07-16";
+    render(<VertretungView />);
+
+    // Der Wechsel auf Donnerstag nimmt dessen Zahl aus der Leiste; Mittwoch
+    // bekommt seine zurück.
+    const thursday = screen.getByRole("button", {
+      name: "Do 16.07., 1 offene Lücke",
+    });
+    expect(thursday).toHaveAttribute("aria-pressed", "true");
+    expect(within(thursday).getByText("1")).toHaveClass("invisible");
+    expect(
+      within(
+        screen.getByRole("button", { name: "Mi 15.07., 1 offene Lücke" }),
+      ).getByText("1"),
+    ).not.toHaveClass("invisible");
   });
 
   it("zeigt am Wochenende keine erfundenen Wochenzähler für ein leeres sichtbares Lückenfenster", () => {

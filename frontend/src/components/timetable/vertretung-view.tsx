@@ -766,6 +766,9 @@ function VertretungContent() {
   // Statuszeile der Kopfkarte: Zeitraum und die Zahlen der sichtbaren
   // Ansicht.
   const scopeInstanceCount = visibleInstances.length;
+  // Nennt die Statuszeile die offenen Lücken? In der Tagesansicht sind das
+  // die des gewählten Tags; sein Chip zeigt dann nur den Punkt (#7493).
+  const statusLineNamesGaps = !countsUnavailable && scopeInstanceCount > 0;
   const statusItems = [
     // Kein Datum in der Statuszeile: Woche und Tag trägt das Bedienband
     // direkt darunter, mit Pfeilen. Zweimal dieselbe Angabe in der
@@ -782,17 +785,17 @@ function VertretungContent() {
         ]),
     // Die offenen Lücken stehen hier einmal, mit ihrem Namen (#7493); das
     // Bedienband wiederholt sie nicht mehr. Die Tagesleiste darunter zeigt
-    // ihre Verteilung über die Woche.
-    ...(countsUnavailable || scopeInstanceCount === 0
-      ? []
-      : [
+    // ihre Verteilung über die Woche, am gewählten Tag nur als Punkt.
+    ...(statusLineNamesGaps
+      ? [
           {
             value: openCount,
             label: `${openCount === 1 ? "offene Lücke" : "offene Lücken"}${
               countsClamped ? " ab heute" : ""
             }`,
           },
-        ]),
+        ]
+      : []),
     // Ein fehlgeschlagener Abruf lässt die Zahl nicht still verschwinden:
     // „13 Termine“ allein läse sich wie ein vollständiger Stand.
     ...(gapsFailed && scopeInstanceCount > 0
@@ -1007,6 +1010,11 @@ function VertretungContent() {
                 weekdayLabel={getGermanWeekdayShort(day)}
                 dateLabel={dayChipLabel(day)}
                 count={count}
+                // Die Zahl des gewählten Tags steht schon in der Statuszeile;
+                // der Punkt sagt weiter, dass an ihm etwas offen ist.
+                countDotOnly={
+                  !isWeekView && iso === dayISO && statusLineNamesGaps
+                }
                 selected={iso === dayISO}
                 onClick={() => goToDay(iso)}
                 aria-label={dayChipAriaLabel(day, count)}
