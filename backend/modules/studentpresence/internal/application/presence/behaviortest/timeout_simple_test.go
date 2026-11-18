@@ -83,7 +83,7 @@ func TestUpdateSessionActivity(t *testing.T) {
 		session, err := service.StartActivitySessionWithSupervisors(ctx, activity.ID, device.ID, []int64{staff.ID}, &room.ID)
 		require.NoError(t, err)
 
-		err = service.EndActivitySession(ctx, session.ID)
+		_, err = service.EndActivitySession(ctx, session.ID)
 		require.NoError(t, err)
 
 		// ACT: Try to update the ended session

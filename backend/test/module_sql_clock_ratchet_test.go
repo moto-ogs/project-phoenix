@@ -189,8 +189,8 @@ var moduleSQLClockBudget = map[string]int{
 	// Named exception on the database clock (ADR 0281): statementClock (1),
 	// the clock_timestamp() of CompletionTimestamp (completed_at, read after
 	// the completion's own writes), which Reopen orders against the updated_at
-	// of supervisor, attendance and plan rows, and of updated_at of
-	// schedule.instance_students, the plan side of that comparison. The same
+	// of attendance and plan rows, and supervisors in legacy snapshots. It
+	// also stamps schedule.instance_students for the plan-side comparison. The same
 	// constant ends the window of a switched-off staff notice
 	// (databaseDayCutoff, ADR 0281 point 3): the trigger stamps its
 	// updated_at.

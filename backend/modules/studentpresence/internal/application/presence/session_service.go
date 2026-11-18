@@ -77,9 +77,11 @@ func getDeviceIDString(deviceID *int64) string {
 	return fmt.Sprintf("%d", *deviceID)
 }
 
-// EndActivitySession ends an active activity session
-func (s *service) EndActivitySession(ctx context.Context, activeGroupID int64) error {
+// EndActivitySession closes the session and returns the supervision IDs
+// changed by the same guarded command.
+func (s *service) EndActivitySession(ctx context.Context, activeGroupID int64) ([]int64, error) {
 	var broadcasts sessionEndSSEData
+	var supervisorIDs []int64
 	err := s.runInSessionTx(ctx, func(txCtx context.Context) error {
 		if err := s.SchoolPresence.PrepareVisitWrites(txCtx, studentpresence.VisitWriteScope{GroupIDs: []int64{activeGroupID}}); err != nil {
 			return err
@@ -91,14 +93,14 @@ func (s *service) EndActivitySession(ctx context.Context, activeGroupID int64) e
 		if !group.IsActive() {
 			return &ActiveError{Op: "EndActivitySession", Err: ErrActiveGroupAlreadyEnded}
 		}
-		broadcasts, err = s.endActivitySessionLocked(txCtx, group)
+		broadcasts, supervisorIDs, err = s.endActivitySessionLocked(txCtx, group)
 		return err
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	s.queueActivitySessionEndBroadcasts(ctx, activeGroupID, broadcasts)
-	return nil
+	return supervisorIDs, nil
 }
 
 // sessionEndSSEData is everything the session-end SSE events need, read
@@ -138,22 +140,23 @@ func (s *service) collectActivityEndSSE(ctx context.Context, group *ports.Active
 	return activityEndSSEData{RoomID: group.RoomID, ActivityName: activityName, RoomName: roomName}, nil
 }
 
-func (s *service) endActivitySessionLocked(ctx context.Context, group *ports.ActiveGroup) (sessionEndSSEData, error) {
+func (s *service) endActivitySessionLocked(ctx context.Context, group *ports.ActiveGroup) (sessionEndSSEData, []int64, error) {
 	activeGroupID := group.ID
 	// Collect active visits before mutating them for the SSE payloads.
 	visitsToNotify, err := s.collectActiveVisitsForSSE(ctx, activeGroupID)
 	if err != nil {
-		return sessionEndSSEData{}, &ActiveError{Op: "EndActivitySession", Err: ErrDatabaseOperation}
+		return sessionEndSSEData{}, nil, &ActiveError{Op: "EndActivitySession", Err: ErrDatabaseOperation}
 	}
 
-	if _, err := s.closeGroupSession(ctx, "EndActivitySession", activeGroupID); err != nil {
-		return sessionEndSSEData{}, err
+	ended, err := s.closeGroupSession(ctx, "EndActivitySession", activeGroupID)
+	if err != nil {
+		return sessionEndSSEData{}, nil, err
 	}
 	endData, err := s.collectActivityEndSSE(ctx, group)
 	if err != nil {
-		return sessionEndSSEData{}, &ActiveError{Op: "EndActivitySession", Err: err}
+		return sessionEndSSEData{}, nil, &ActiveError{Op: "EndActivitySession", Err: err}
 	}
-	return sessionEndSSEData{Visits: visitsToNotify, End: endData}, nil
+	return sessionEndSSEData{Visits: visitsToNotify, End: endData}, ended.EndedSupervisorIDs, nil
 }
 
 // closeGroupSession is the one presence write behind every session end in

@@ -42002,7 +42002,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.SessionEnder.EndActivitySession",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Presence.EndActivitySession; modules/studentpresence.Presence (supplied contract method). ",
+      "reason": "The guarded Student Presence session end returns IDs of the supervision rows it closes so Timetable can version those rows in its completion snapshot. The command uses the same tenant unit, locks, writes and after-commit events (#7383).",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.EndActivitySession",
       "target_owner": "student-presence"

@@ -89,7 +89,8 @@ func sessionEndScanCases() []sessionEndScanCase {
 			return f.active.EndActiveGroupSession(ctx, f.scanStay)
 		}},
 		{"presence_end", func(ctx context.Context, _ *testing.T, f bulkMoveScanFixture) error {
-			return f.active.EndActivitySession(ctx, f.scanStay)
+			_, err := f.active.EndActivitySession(ctx, f.scanStay)
+			return err
 		}},
 		{"timeout", func(ctx context.Context, t *testing.T, f bulkMoveScanFixture) error {
 			var id int64

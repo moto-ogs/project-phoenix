@@ -243,7 +243,7 @@ func TestActivitySessionConflictDetection(t *testing.T) {
 		assert.Equal(t, activityGroup.ID, *currentSession.GroupID)
 
 		// End session
-		err = service.EndActivitySession(ctx, session.ID)
+		_, err = service.EndActivitySession(ctx, session.ID)
 		require.NoError(t, err)
 
 		// Verify no current session
@@ -285,7 +285,7 @@ func TestSessionLifecycle(t *testing.T) {
 		assert.Equal(t, session.ID, currentSession.ID)
 
 		// End session
-		err = service.EndActivitySession(ctx, session.ID)
+		_, err = service.EndActivitySession(ctx, session.ID)
 		require.NoError(t, err)
 
 		// Verify session is ended
@@ -301,7 +301,7 @@ func TestSessionLifecycle(t *testing.T) {
 	t.Run("end non-existent session returns error", func(t *testing.T) {
 		nonExistentID := int64(99999)
 
-		err := service.EndActivitySession(ctx, nonExistentID)
+		_, err := service.EndActivitySession(ctx, nonExistentID)
 		assert.Error(t, err, "Expected error when ending non-existent session")
 	})
 }
