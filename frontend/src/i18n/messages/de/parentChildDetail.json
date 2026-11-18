@@ -51,7 +51,7 @@
     "lastName": "Nachname",
     "salutationLabel": "Anrede",
     "salutationNone": "Keine Angabe",
-    "salutationHint": "Freiwillig. Mit Anrede schreiben wir zum Beispiel „Guten Tag Frau Klein“.",
+    "salutationHint": "Freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit „Liebe Karin“ oder „Lieber Jonas“.",
     "email": "E-Mail",
     "street": "Straße und Hausnummer",
     "postalCode": "PLZ",

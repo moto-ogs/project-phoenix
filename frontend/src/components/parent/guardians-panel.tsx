@@ -312,8 +312,8 @@ export default function GuardiansPanel({
       savedSuffix: t("guardians.savedButStale"),
     });
 
-  // A dialog calls this after its write went through. The own name and form
-  // of address also feed the greeting, which reads the account profile.
+  // A dialog calls this after its write went through. The own name also
+  // feeds the greeting, which reads the account profile.
   const invalidate = useInvalidateMatching();
   const handleSaved = useCallback(
     async (text: string) => {

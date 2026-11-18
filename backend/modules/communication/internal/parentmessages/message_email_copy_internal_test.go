@@ -83,15 +83,15 @@ func TestMessageEmailCopyNamesTheSchoolsCareTerm(t *testing.T) {
 }
 
 // The chosen form of address (#7362) is a German convention: other languages
-// keep first and last name, and so does German without a choice.
+// stay neutral with first and last name, and so does German without a choice.
 func TestMessageEmailCopyGreetsWithTheChosenSalutation(t *testing.T) {
 	t.Parallel()
 
 	greeting := func(locale, salutation string) string {
 		return messageEmailCopy(locale, salutation, "Anna", "Nowak", "", "", "OGS", deliveryPolicy.ParentDeliveryPolicy{}).Greeting
 	}
-	assert.Equal(t, "Guten Tag Frau Nowak,", greeting("de", "ms"))
-	assert.Equal(t, "Guten Tag Herr Nowak,", greeting("de", "mr"))
+	assert.Equal(t, "Liebe Anna,", greeting("de", "ms"))
+	assert.Equal(t, "Lieber Anna,", greeting("de", "mr"))
 	assert.Equal(t, "Guten Tag Anna Nowak,", greeting("de", ""))
 	assert.Equal(t, "Hello Anna Nowak,", greeting("en", "ms"))
 }

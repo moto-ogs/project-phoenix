@@ -21,10 +21,8 @@ import (
 // keeps the anonymous cookie/Accept-Language locale instead of snapping to the
 // default.
 type ParentProfileResponse struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	// Salutation is the chosen form of address (ms, mr), absent without one.
-	Salutation   string  `json:"salutation,omitempty"`
+	FirstName    string  `json:"first_name"`
+	LastName     string  `json:"last_name"`
 	PortalLocale *string `json:"portal_locale"`
 }
 
@@ -38,7 +36,6 @@ func profileResponse(profile *parentService.Profile) ParentProfileResponse {
 		if profile != nil {
 			response.FirstName = profile.FirstName
 			response.LastName = profile.LastName
-			response.Salutation = profile.Salutation
 		}
 		return response
 	}
@@ -46,7 +43,6 @@ func profileResponse(profile *parentService.Profile) ParentProfileResponse {
 	return ParentProfileResponse{
 		FirstName:    profile.FirstName,
 		LastName:     profile.LastName,
-		Salutation:   profile.Salutation,
 		PortalLocale: &locale,
 	}
 }

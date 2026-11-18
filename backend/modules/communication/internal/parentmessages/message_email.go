@@ -209,8 +209,9 @@ func NewParentMessageRenderer(cfg ParentMessageRendererConfig, policy deliveryPo
 }
 
 // messageEmailCopy picks the mail's wording. Only the German greeting uses
-// the chosen form of address ("Guten Tag Frau Klein,"); every other language
-// keeps first and last name.
+// the chosen form of address ("Liebe Karin,", "Lieber Jonas,"); without a
+// choice and in every other language it stays neutral with first and last
+// name.
 func messageEmailCopy(locale, salutation, firstName, lastName, schoolName, childName, careTerm string, policy deliveryPorts.LocaleNormalizer) parentMessageEmailCopy {
 	name := strings.TrimSpace(firstName + " " + lastName)
 	school := strings.TrimSpace(schoolName)
@@ -229,7 +230,7 @@ func messageEmailCopy(locale, salutation, firstName, lastName, schoolName, child
 	case "uk":
 		return ukrainianMessageEmailCopy(name, school, child, careTerm)
 	default:
-		return germanMessageEmailCopy(textnorm.GermanFormalName(salutation, firstName, lastName), school, child, careTerm)
+		return germanMessageEmailCopy(textnorm.GermanGreeting(salutation, firstName, lastName)+",", school, child, careTerm)
 	}
 }
 
@@ -373,10 +374,10 @@ func ukrainianMessageEmailCopy(name, school, child, term string) parentMessageEm
 	}
 }
 
-func germanMessageEmailCopy(name, school, child, term string) parentMessageEmailCopy {
+func germanMessageEmailCopy(greeting, school, child, term string) parentMessageEmailCopy {
 	return parentMessageEmailCopy{
 		Subject: "Neue Nachricht von der " + term, Kicker: "Neue Nachricht",
-		Greeting: localizedGreeting("Guten Tag", name, ","),
+		Greeting: greeting,
 		Intro:    localizedMessageIntro("Die "+term, school, "hat Ihnen eine Nachricht geschrieben", "zu", child),
 		Reply:    "Antworten", FallbackHint: "Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:",
 		PreferenceHint: "Sie erhalten diese E-Mail, weil Sie in moto als sorgeberechtigte Person hinterlegt sind. In der App können Sie unter „Benachrichtigungen“ einstellen, worüber wir Sie informieren.",

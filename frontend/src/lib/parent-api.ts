@@ -137,7 +137,6 @@ export interface EnrollablePhase {
 export interface ParentProfile {
   readonly first_name?: string;
   readonly last_name?: string;
-  readonly salutation?: Salutation;
   // null = the guardian has never picked a parents-portal language, so the
   // client keeps the anonymous cookie/Accept-Language locale.
   readonly portal_locale: AppLocale | null;

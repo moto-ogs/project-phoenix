@@ -257,7 +257,7 @@ describe("GuardiansPanel", () => {
     expect(select).toHaveTextContent("Herr");
     expect(
       screen.getByText(
-        "Freiwillig. Mit Anrede schreiben wir zum Beispiel „Guten Tag Frau Klein“.",
+        "Freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit „Liebe Karin“ oder „Lieber Jonas“.",
       ),
     ).toBeVisible();
     fireEvent.click(select);

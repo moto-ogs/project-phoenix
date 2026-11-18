@@ -2,19 +2,19 @@ package textnorm
 
 import "testing"
 
-func TestGermanFormalName(t *testing.T) {
+func TestGermanGreeting(t *testing.T) {
 	t.Parallel()
 	cases := []struct{ salutation, first, last, want string }{
-		{SalutationMs, "Karin", "Klein", "Frau Klein"},
-		{SalutationMr, " Jonas ", " Klein ", "Herr Klein"},
-		{"", "Karin", "Klein", "Karin Klein"},
-		{"unknown", "Karin", "Klein", "Karin Klein"},
-		{SalutationMs, "Karin", "", "Karin"},
-		{SalutationMr, "", "", ""},
+		{SalutationMs, "Karin", "Klein", "Liebe Karin"},
+		{SalutationMr, " Jonas ", " Klein ", "Lieber Jonas"},
+		{"", "Karin", "Klein", "Guten Tag Karin Klein"},
+		{"unknown", "Karin", "Klein", "Guten Tag Karin Klein"},
+		{SalutationMs, "", "Klein", "Guten Tag Klein"},
+		{SalutationMr, "", "", "Guten Tag"},
 	}
 	for _, c := range cases {
-		if got := GermanFormalName(c.salutation, c.first, c.last); got != c.want {
-			t.Errorf("GermanFormalName(%q, %q, %q) = %q, want %q", c.salutation, c.first, c.last, got, c.want)
+		if got := GermanGreeting(c.salutation, c.first, c.last); got != c.want {
+			t.Errorf("GermanGreeting(%q, %q, %q) = %q, want %q", c.salutation, c.first, c.last, got, c.want)
 		}
 	}
 }

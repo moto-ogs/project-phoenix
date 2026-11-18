@@ -269,10 +269,6 @@ func TestUpdateGuardianContact_SalutationIsThePersonsOwnChoice(t *testing.T) {
 	require.NotNil(t, stored(chain.GuardianProfileID))
 	assert.Equal(t, "ms", *stored(chain.GuardianProfileID))
 
-	profile, err := svc.GetProfile(ctx, chain.AccountID)
-	require.NoError(t, err)
-	assert.Equal(t, "ms", profile.Salutation, "the portal greets with the chosen form of address")
-
 	own.Salutation = nil
 	updated, err = svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
 	require.NoError(t, err)

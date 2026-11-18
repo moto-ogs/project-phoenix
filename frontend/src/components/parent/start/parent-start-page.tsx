@@ -36,7 +36,6 @@ import {
   getParentCalendar,
   type CalendarEvent,
 } from "~/lib/personal-calendar-api";
-import { greetingName } from "~/lib/salutation";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { pickupConcept } from "~/lib/concepts/pickup";
@@ -170,7 +169,6 @@ const EMPTY_DATA: StartData = {
 
 export function ParentStartPage() {
   const t = useCareTermTranslations("parentStart");
-  const locale = useLocale();
   const { profile } = useShellAuth();
   const childrenResource = useParentChildren();
   const featuresResource = useParentFeatures(childrenResource.data);
@@ -193,12 +191,7 @@ export function ParentStartPage() {
     children: childrenResource.data ?? EMPTY_DATA.children,
     features: featuresResource.data ?? EMPTY_DATA.features,
     today: todayResource.data ?? EMPTY_DATA.today,
-    firstName: greetingName({
-      locale,
-      salutation: accountProfile.data?.salutation,
-      firstName: accountProfile.data?.first_name,
-      lastName: accountProfile.data?.last_name,
-    }),
+    firstName: accountProfile.data?.first_name?.trim() ?? "",
   };
   const { error: loadError, failure } = useSwrResourceLoadError(
     [childrenResource, featuresResource, todayResource],

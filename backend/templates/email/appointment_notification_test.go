@@ -33,7 +33,7 @@ func TestAppointmentNotificationTemplate_Renders(t *testing.T) {
 		"SchoolName":        "OGS Musterschule",
 		"GuardianFirstName": "Erika",
 		"GuardianLastName":  "Mustermann",
-		"GuardianName":      "Frau Mustermann",
+		"Greeting":          "Liebe Erika",
 		"PortalURL":         "https://parents.example.com",
 		"LogoURL":           "https://example.com/school-logo.png",
 		"MotoLogoURL":       "https://example.com/moto.png",
@@ -45,7 +45,7 @@ func TestAppointmentNotificationTemplate_Renders(t *testing.T) {
 		"Elternabend",
 		"02.04.2026, 18:00–19:30 Uhr",
 		"Aula",
-		"Guten Tag Frau Mustermann,",
+		"Liebe Erika,",
 		"https://parents.example.com",
 		"OGS Musterschule",
 	} {

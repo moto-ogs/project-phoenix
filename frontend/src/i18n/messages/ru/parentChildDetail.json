@@ -51,7 +51,7 @@
     "lastName": "Фамилия",
     "salutationLabel": "Обращение",
     "salutationNone": "Не указано",
-    "salutationHint": "Необязательно. С обращением письма на немецком начинаются, например, так: «Guten Tag Frau Klein».",
+    "salutationHint": "Необязательно. С обращением письма на немецком начинаются, например, так: «Liebe Karin» или «Lieber Jonas».",
     "email": "E-mail",
     "street": "Улица и номер дома",
     "postalCode": "Индекс",

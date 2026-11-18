@@ -3,7 +3,7 @@ package textnorm
 import "strings"
 
 // The forms of address a person may choose for themselves. The empty string
-// means no choice: every greeting then keeps first and last name.
+// means no choice: every greeting then stays neutral.
 const (
 	SalutationMs = "ms"
 	SalutationMr = "mr"
@@ -15,18 +15,20 @@ func ValidSalutation(value string) bool {
 	return value == "" || value == SalutationMs || value == SalutationMr
 }
 
-// GermanFormalName is how a German greeting names the person: "Frau Klein"
-// or "Herr Klein" with a chosen form of address and a last name, else first
-// and last name. It is empty when the person has no name.
-func GermanFormalName(salutation, firstName, lastName string) string {
+// GermanGreeting is the opening of a German mail, without the closing comma.
+// A chosen form of address picks the gendered word and stays on first-name
+// terms: "Liebe Karin", "Lieber Jonas". Without a choice, or without a first
+// name, the greeting is neutral: "Guten Tag Karin Klein", or "Guten Tag" for
+// a person without a name.
+func GermanGreeting(salutation, firstName, lastName string) string {
 	first, last := strings.TrimSpace(firstName), strings.TrimSpace(lastName)
-	if last != "" {
+	if first != "" {
 		switch salutation {
 		case SalutationMs:
-			return "Frau " + last
+			return "Liebe " + first
 		case SalutationMr:
-			return "Herr " + last
+			return "Lieber " + first
 		}
 	}
-	return strings.TrimSpace(first + " " + last)
+	return strings.TrimSpace("Guten Tag " + strings.TrimSpace(first+" "+last))
 }

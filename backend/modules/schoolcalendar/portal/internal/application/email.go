@@ -72,7 +72,7 @@ func NewAppointmentRenderer(cfg EmailConfig) func(context.Context, *ports.EmailO
 				"SchoolName":        schoolName,
 				"GuardianFirstName": first,
 				"GuardianLastName":  last,
-				"GuardianName":      textnorm.GermanFormalName(salutation, first, last),
+				"Greeting":          textnorm.GermanGreeting(salutation, first, last),
 				"PortalURL":         portalURL,
 				"LogoURL":           logoURL,
 				"MotoLogoURL":       motoLogoURL,
@@ -173,7 +173,7 @@ func payloadInt64Slice(raw any) []int64 {
 // sentence for each appointment e-mail kind.
 //
 // The intro is a COMPLETE sentence that already names the sender, and it
-// continues the "Guten Tag Frau Schneider," greeting — hence lower case. The
+// continues the "Guten Tag Erika Mustermann," greeting — hence lower case. The
 // template used to glue a "die {Schule}: " prefix in front of a sentence that
 // did not expect one, which produced "die OGS Musterschule: ein Termin wurde
 // abgesagt." Naming the school inside the sentence is the only way the two

@@ -76,8 +76,9 @@ Profil- und Kontoadresse je Elternkontakt samt Stopp.
 
 Migration 20261117221357 ergänzt `users.guardian_profiles.salutation` (#7362):
 die Anrede, die eine sorgeberechtigte Person im Eltern-Portal freiwillig für
-sich selbst wählt (`ms` = Frau, `mr` = Herr, leer = keine Angabe). Sie dient nur
-der Ansprache in Begrüßungen; ohne Angabe bleibt es bei Vor- und Nachname. Das
+sich selbst wählt (`ms` = Frau, `mr` = Herr, leer = keine Angabe). Sie wählt nur
+das Grußwort deutscher E-Mails („Liebe“/„Lieber“ mit Vornamen); ohne Angabe
+bleibt die Begrüßung neutral. Das
 Feld gehört zum Elternkontakt und wird mit ihm zurückgegeben und gelöscht.
 
 Migration 1.15.727 ergänzt `platform.realtime_notifications` (#5504): eine

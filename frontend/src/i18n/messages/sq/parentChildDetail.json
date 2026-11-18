@@ -51,7 +51,7 @@
     "lastName": "Mbiemri",
     "salutationLabel": "Forma e drejtimit",
     "salutationNone": "Pa të dhënë",
-    "salutationHint": "Vullnetare. Me formën e drejtimit, mesazhet në gjermanisht fillojnë p.sh. me „Guten Tag Frau Klein“.",
+    "salutationHint": "Vullnetare. Me formën e drejtimit, email-et në gjermanisht fillojnë p.sh. me „Liebe Karin“ ose „Lieber Jonas“.",
     "email": "E-mail",
     "street": "Rruga dhe numri",
     "postalCode": "Kodi postar",
