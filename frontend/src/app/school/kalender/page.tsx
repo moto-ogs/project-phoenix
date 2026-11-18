@@ -79,6 +79,7 @@ import { SCHOOL_PARENT_CONFERENCES_ROUTE } from "~/lib/parent-conferences";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { schoolPath } from "~/lib/school-url";
 import { useSWRAuth } from "~/lib/swr";
+import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 
 const logger = createLogger({ component: "SchoolCalendarPage" });
 
@@ -117,7 +118,7 @@ export default function SchoolCalendarPage() {
     [referenceDate, viewMode],
   );
   const calendarKey = session
-    ? `school-calendar-${toISODate(range.from)}-${toISODate(range.to)}`
+    ? schoolPortalKeys.calendar(toISODate(range.from), toISODate(range.to))
     : null;
   const { data, error, isLoading, mutate } = useSWRAuth<SchoolCalendarResponse>(
     calendarKey,

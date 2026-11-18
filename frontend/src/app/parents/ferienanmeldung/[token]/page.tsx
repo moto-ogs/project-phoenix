@@ -94,6 +94,7 @@ export default function HolidayRegistrationPage({ params }: PageProps) {
     }
   }, [token]);
 
+  // oxlint-disable-next-line swr/no-effect-load -- holiday registration token page, open without a session (a parent session only prefills); ~/lib/swr has no public reader
   useEffect(() => {
     // Wait for the session, so a parent's form starts prefilled.
     if (status === "loading") return;

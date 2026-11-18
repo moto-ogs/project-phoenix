@@ -100,12 +100,7 @@ export function CreateSchoolModal({
         });
         return;
       }
-      if (
-        !schoolName.trim() ||
-        !schoolSlug.trim() ||
-        !schoolSubdomain.trim() ||
-        !schoolEmail.trim()
-      )
+      if (!schoolName.trim() || !schoolSlug.trim() || !schoolSubdomain.trim())
         return;
       if (!isValidSlug(schoolSlug)) {
         const hint =
@@ -131,7 +126,7 @@ export function CreateSchoolModal({
           ...(schoolCity && { city: schoolCity.trim() }),
           ...(schoolZip && { zip: schoolZip.trim() }),
           ...(schoolPhone && { phone: schoolPhone.trim() }),
-          email: schoolEmail.trim(),
+          ...(schoolEmail.trim() && { email: schoolEmail.trim() }),
           federal_state: schoolFederalState,
           ...(schoolHidden && { hidden: true }),
         });
@@ -192,8 +187,7 @@ export function CreateSchoolModal({
               !schoolFederalState ||
               !schoolName.trim() ||
               !schoolSlug.trim() ||
-              !schoolSubdomain.trim() ||
-              !schoolEmail.trim()
+              !schoolSubdomain.trim()
             }
             variant="primary"
             size="md"
@@ -361,7 +355,6 @@ export function CreateSchoolModal({
                   onChange={(e) => setSchoolEmail(e.target.value)}
                   maxLength={255}
                   label="E-Mail"
-                  required
                   error={formErrors.fieldError("email")}
                   controlSize="compact"
                 />

@@ -140,7 +140,11 @@ type GuardianDirectory interface {
 type GuardianInvitationStore interface {
 	// InvalidateGuardianInvitations ends open links. Contact changes also
 	// invalidate pending approvals; replacing a mailed link must preserve them.
-	InvalidateGuardianInvitations(ctx context.Context, guardianProfileID int64, now time.Time, includePendingApprovals bool) error
+	// The links end at the database time of the write.
+	InvalidateGuardianInvitations(ctx context.Context, guardianProfileID int64, includePendingApprovals bool) error
+	// DatabaseTime reads the database clock every instant of the table lives
+	// on (ADR 0285, Nachtrag), in the transaction of ctx.
+	DatabaseTime(ctx context.Context) (time.Time, domain.OperationStats, error)
 	// LockGuardianAccountEmail serializes guardian provisioning across schools,
 	// including when no account row exists. Held until the caller's transaction ends.
 	LockGuardianAccountEmail(ctx context.Context, email string) error
@@ -150,10 +154,10 @@ type GuardianInvitationStore interface {
 	ListPendingGuardianApprovals(ctx context.Context) ([]domain.GuardianInvitation, error)
 	// ListOpenGuardianInvitations returns the invitations of the profiles
 	// that are still going somewhere: redeemable or awaiting a decision.
-	ListOpenGuardianInvitations(ctx context.Context, guardianProfileIDs []int64, now time.Time) ([]domain.GuardianInvitation, error)
+	ListOpenGuardianInvitations(ctx context.Context, guardianProfileIDs []int64) ([]domain.GuardianInvitation, error)
 	// ListRedeemableGuardianInvitations returns the invitations of the
 	// school in context whose link can still be spent.
-	ListRedeemableGuardianInvitations(ctx context.Context, now time.Time) ([]domain.GuardianInvitation, error)
+	ListRedeemableGuardianInvitations(ctx context.Context) ([]domain.GuardianInvitation, error)
 	InsertGuardianInvitation(ctx context.Context, invitation domain.GuardianInvitation) (domain.GuardianInvitation, error)
 	// UpdateGuardianInvitation writes the invitation only while it is still
 	// unaccepted and carries the approval status and expiry the caller read;
@@ -162,8 +166,9 @@ type GuardianInvitationStore interface {
 	// AcceptGuardianInvitation stamps the acceptance and reports whether the
 	// invitation was still unaccepted and still carried the link token it was
 	// looked up by, so a token is spent exactly once and a replaced link
-	// never (#6495).
-	AcceptGuardianInvitation(ctx context.Context, id int64, token string, acceptedAt time.Time) (bool, error)
+	// never (#6495). It judges the expiry at its own database time, after
+	// it holds the row lock.
+	AcceptGuardianInvitation(ctx context.Context, id int64, token string) (bool, error)
 
 	AccountProvisioning
 }

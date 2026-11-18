@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useMemo } from "react";
+import { redirect, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Eye, Info } from "lucide-react";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
@@ -28,13 +29,21 @@ import {
   type FormSchema,
   type PublicFormSchema,
 } from "~/lib/enrollment-form-schema-api";
-import { useApiLoadError } from "~/contexts/ToastContext";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useFreshSWR } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { FormSkeleton, SkeletonRegion } from "~/components/ui/page-skeletons";
 import { Skeleton } from "~/components/ui/skeleton";
 
+const PHASE_GONE = new Error("Diese Anmeldephase gibt es nicht mehr.");
+
 export default function EnrollmentPreviewPage() {
+  const { status } = useSession();
+  const tenantPath = useTenantAwarePath();
+  // This public URL previews protected configuration, not a public form.
+  if (status === "unauthenticated") return redirect(tenantPath("/"));
   return (
     <Suspense fallback={null}>
       <EnrollmentPreviewPageContent />
@@ -55,113 +64,123 @@ function EnrollmentPreviewPageContent() {
   const tenantPath = useTenantAwarePath();
   const resolvedGradeLevelMax = tenant?.gradeLevelMax;
   const gradeLevelMax = supportedGradeLevelMax(resolvedGradeLevelMax);
-  const [schema, setSchema] = useState<FormSchema | null>(null);
-  const [assignedPhaseCount, setAssignedPhaseCount] = useState(0);
-  const [activeAssignedPhaseCount, setActiveAssignedPhaseCount] = useState(0);
-  // The phases using this template, for the links to their parents' view.
-  // null: the list could not be loaded; the page then names the menu path.
-  const [assignedPhases, setAssignedPhases] = useState<Phase[] | null>([]);
-  const [enrollmentEnabled, setEnrollmentEnabled] = useState(false);
-  const [previewPhase, setPreviewPhase] = useState<Phase | null>(null);
-  const [previewOfferings, setPreviewOfferings] =
-    useState<PreviewCareOfferings>();
-  const [loading, setLoading] = useState(true);
   // Without a template in the address there is nothing to load: a fixed
   // hint, not an API error.
-  const [missingSchema, setMissingSchema] = useState(false);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const [loadAttempt, setLoadAttempt] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function loadPhasePreview(id: string) {
-      const phases = await listPhases();
-      const phase = phases.find((candidate) => candidate.id === id);
-      if (!phase) {
-        throw new Error("Diese Anmeldephase gibt es nicht mehr.");
-      }
+  const missingSchema = !schemaId && !phaseId && !isBasePreview;
+  // A preview shows the template as it is now, each time it opens: the
+  // school checks it right after editing it.
+  const phasesRead = useFreshSWR(
+    missingSchema ? null : enrollmentKeys.phases(),
+    () => listPhases(),
+    { shouldRetryOnError: false },
+  );
+  const phases = phasesRead.fresh ? phasesRead.data : undefined;
+  const requestedPhase = useMemo<Phase | null>(
+    () =>
+      phaseId
+        ? (phases?.find((candidate) => candidate.id === phaseId) ?? null)
+        : null,
+    [phaseId, phases],
+  );
+  const phaseGone =
+    phaseId !== null && phases !== undefined && requestedPhase === null;
+  const phaseBootstrapRead = useFreshSWR(
+    requestedPhase
+      ? enrollmentKeys.phasePreviewBootstrap(
+          requestedPhase.id,
+          requestedPhase.form_schema_id ?? null,
+        )
+      : null,
+    async () => {
       const result = await fetchPhasePreviewBootstrap({
-        phaseId: id,
-        schemaId: phase.form_schema_id,
+        phaseId: requestedPhase?.id ?? "",
+        schemaId: requestedPhase?.form_schema_id,
       });
-      if (cancelled) return;
-      const config = result.phase_offerings;
-      if (!config || typeof result.enrollment_enabled !== "boolean") {
+      if (
+        !result.phase_offerings ||
+        typeof result.enrollment_enabled !== "boolean"
+      ) {
         throw new Error("Phase preview configuration is missing");
       }
-      setPreviewPhase(phase);
-      setSchema(result.schema);
-      setEnrollmentEnabled(result.enrollment_enabled);
-      setPreviewOfferings({
-        offerings: config.offerings,
-        careOfferingSelectionMode: config.care_offering_selection_mode,
-        eligibleGradeLevels: config.eligible_grade_levels,
-        schoolClass: config.school_class,
-        collectGradeLevel: config.collect_grade_level,
-        careOfferingsEnabled: config.care_offerings_enabled,
-      });
-    }
-    async function load() {
-      if (!schemaId && !phaseId) {
-        if (!isBasePreview) {
-          setMissingSchema(true);
-          setLoading(false);
-          return;
-        }
-      }
-      setLoading(true);
-      setPreviewPhase(null);
-      setPreviewOfferings(undefined);
-      setMissingSchema(false);
-      clearLoadError();
-      try {
-        if (phaseId) {
-          await loadPhasePreview(phaseId);
-          return;
-        }
-        const [result, phases] = await Promise.all([
-          fetchEnrollmentPreviewBootstrap({ schemaId, base: isBasePreview }),
-          // The phase links are a help, not the preview itself: without them
-          // the page still shows the form and names the way to the phase.
-          listPhases().catch(() => null),
-        ]);
-        if (cancelled) return;
-        setAssignedPhases(
-          phases?.filter((phase) =>
+      return result;
+    },
+    { shouldRetryOnError: false },
+  );
+  const templateBootstrapRead = useFreshSWR(
+    !missingSchema && !phaseId
+      ? enrollmentKeys.formPreviewBootstrap(schemaId, isBasePreview)
+      : null,
+    () => fetchEnrollmentPreviewBootstrap({ schemaId, base: isBasePreview }),
+    { shouldRetryOnError: false },
+  );
+  const phaseBootstrap = phaseBootstrapRead.fresh
+    ? phaseBootstrapRead.data
+    : undefined;
+  const templateBootstrap = templateBootstrapRead.fresh
+    ? templateBootstrapRead.data
+    : undefined;
+  // The phase shows with its own configuration only, as one answer.
+  const previewPhase = phaseBootstrap ? requestedPhase : null;
+  const bootstrap = phaseId ? phaseBootstrap : templateBootstrap;
+  const schema: FormSchema | null = bootstrap?.schema ?? null;
+  const assignedPhaseCount = templateBootstrap?.assigned_phase_count ?? 0;
+  const activeAssignedPhaseCount =
+    templateBootstrap?.active_assigned_phase_count ?? 0;
+  const enrollmentEnabled = phaseBootstrap?.enrollment_enabled === true;
+  // The phases using this template, for the links to their parents' view.
+  // null: the list could not be loaded; the page then names the menu path.
+  // The phase links are a help, not the preview itself: without them the
+  // page still shows the form and names the way to the phase.
+  const assignedPhases = useMemo<Phase[] | null>(
+    () =>
+      phasesRead.fresh && phasesRead.error !== undefined
+        ? null
+        : (phases ?? []).filter((phase) =>
             isBasePreview && !schemaId
               ? !phase.form_schema_id
               : phase.form_schema_id === schemaId,
-          ) ?? null,
-        );
-        setSchema(result.schema);
-        setAssignedPhaseCount(result.assigned_phase_count);
-        setActiveAssignedPhaseCount(result.active_assigned_phase_count);
-      } catch (err) {
-        if (cancelled) return;
-        void showLoadError(err, {
-          object: "die Vorschau",
-          retry: () => setLoadAttempt((n) => n + 1),
-        });
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+          ),
+    [phasesRead.fresh, phasesRead.error, phases, isBasePreview, schemaId],
+  );
+  const offeringConfig = phaseBootstrap?.phase_offerings;
+  const previewOfferings = useMemo<PreviewCareOfferings | undefined>(
+    () =>
+      offeringConfig
+        ? {
+            offerings: offeringConfig.offerings,
+            careOfferingSelectionMode:
+              offeringConfig.care_offering_selection_mode,
+            eligibleGradeLevels: offeringConfig.eligible_grade_levels,
+            schoolClass: offeringConfig.school_class,
+            collectGradeLevel: offeringConfig.collect_grade_level,
+            careOfferingsEnabled: offeringConfig.care_offerings_enabled,
+          }
+        : undefined,
+    [offeringConfig],
+  );
+  const failure: unknown = phaseId
+    ? (phasesRead.error ??
+      (phaseGone ? PHASE_GONE : undefined) ??
+      phaseBootstrapRead.error)
+    : templateBootstrapRead.error;
+  const loadError = useSwrLoadError(failure, "die Vorschau", () => {
+    if (phaseId) {
+      void phasesRead.mutate();
+      if (requestedPhase) void phaseBootstrapRead.mutate();
+      return;
     }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isBasePreview,
-    phaseId,
-    schemaId,
-    loadAttempt,
-    clearLoadError,
-    showLoadError,
-  ]);
+    void phasesRead.mutate();
+    void templateBootstrapRead.mutate();
+  });
+  // The schema preview also waits for the phase links (failing or not), as
+  // one load; the error waits for its catalog text.
+  const loading =
+    !missingSchema &&
+    (failure !== undefined
+      ? loadError === null
+      : phaseId
+        ? phaseBootstrap === undefined
+        : templateBootstrap === undefined || !phasesRead.fresh);
 
   const previewSchema = useMemo<PublicFormSchema | null>(() => {
     if (!schema) return null;

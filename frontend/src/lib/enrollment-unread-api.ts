@@ -5,16 +5,16 @@
  */
 
 import { mutate } from "~/lib/swr";
+import { shellResourceKeys } from "~/lib/swr/shell-keys";
 
 /**
- * SWR-Schlüssel des Zählers; useEnrollmentsUnread hängt das Konto an,
+ * Jeder Schlüssel des Zählers: useEnrollmentsUnread hängt das Konto an,
  * useSWRAuth stellt die Schule davor.
  */
-export const ENROLLMENTS_UNREAD_SWR_KEY = "enrollments-unread-count";
-
 function isEnrollmentsUnreadKey(key: unknown): boolean {
   return (
-    typeof key === "string" && key.includes(`${ENROLLMENTS_UNREAD_SWR_KEY}:`)
+    typeof key === "string" &&
+    key.includes(`${shellResourceKeys.enrollmentsUnreadPrefix}:`)
   );
 }
 

@@ -107,6 +107,500 @@ export interface preferenceRequest {
   enabled?: boolean | null;
 }
 
+/** Go: announcement.deletedResponse */
+export interface deletedResponse {
+  deleted: boolean;
+}
+
+export const deletedResponseSchema: z.ZodType<deletedResponse, unknown> = z.object({
+  deleted: z.boolean(),
+});
+
+/** Go: announcement.targetResponse */
+export interface targetResponse {
+  target_type: string;
+  ref_id?: string;
+  ref_text?: string;
+}
+
+export const targetResponseSchema: z.ZodType<targetResponse, unknown> = z.object({
+  target_type: z.string(),
+  ref_id: z.string().optional(),
+  ref_text: z.string().optional(),
+});
+
+/** Go: announcement.optionResponse */
+export interface optionResponse {
+  id: string;
+  label: string;
+}
+
+export const optionResponseSchema: z.ZodType<optionResponse, unknown> = z.object({
+  id: z.string(),
+  label: z.string(),
+});
+
+/** Go: announcement.announcementResponse */
+export interface announcementResponse {
+  id: string;
+  title: string;
+  body: string;
+  priority: string;
+  link_url?: string;
+  requires_acknowledgement: boolean;
+  send_email: boolean;
+  status: string;
+  published_at?: string;
+  expires_at?: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+  targets: targetResponse[] | null;
+  response_type: string;
+  response_deadline?: string;
+  options: optionResponse[] | null;
+  delivery_mode: string;
+  email_audience: string;
+  system_kind?: string;
+  sender_name?: string;
+  sender_school_class?: string;
+  reminder_at?: string;
+  reminder_text?: string;
+  reminder_sent_at?: string;
+  declaration_kind?: string;
+  declaration_signers?: string;
+  declaration_requires_password?: boolean;
+  declaration_requires_signature?: boolean;
+  declaration_locked_attachments?: boolean;
+}
+
+export const announcementResponseSchema: z.ZodType<announcementResponse, unknown> = z.object({
+  id: z.string(),
+  title: z.string(),
+  body: z.string(),
+  priority: z.string(),
+  link_url: z.string().optional(),
+  requires_acknowledgement: z.boolean(),
+  send_email: z.boolean(),
+  status: z.string(),
+  published_at: instant.optional(),
+  expires_at: instant.optional(),
+  active: z.boolean(),
+  created_at: instant,
+  updated_at: instant,
+  targets: z.array(targetResponseSchema).nullable(),
+  response_type: z.string(),
+  response_deadline: instant.optional(),
+  options: z.array(optionResponseSchema).nullable(),
+  delivery_mode: z.string(),
+  email_audience: z.string(),
+  system_kind: z.string().optional(),
+  sender_name: z.string().optional(),
+  sender_school_class: z.string().optional(),
+  reminder_at: instant.optional(),
+  reminder_text: z.string().optional(),
+  reminder_sent_at: instant.optional(),
+  declaration_kind: z.string().optional(),
+  declaration_signers: z.string().optional(),
+  declaration_requires_password: z.boolean().optional(),
+  declaration_requires_signature: z.boolean().optional(),
+  declaration_locked_attachments: z.boolean().optional(),
+});
+
+/** Go: announcement.letterPlaceholderResponse */
+export interface letterPlaceholderResponse {
+  name: string;
+  label: string;
+  example: string;
+}
+
+export const letterPlaceholderResponseSchema: z.ZodType<letterPlaceholderResponse, unknown> = z.object({
+  name: z.string(),
+  label: z.string(),
+  example: z.string(),
+});
+
+/** Go: announcement.declarationSignerResponse */
+export interface declarationSignerResponse {
+  account_id: string;
+  first_name: string;
+  last_name: string;
+  action: string | null;
+  submitted_at: string | null;
+}
+
+export const declarationSignerResponseSchema: z.ZodType<declarationSignerResponse, unknown> = z.object({
+  account_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  action: z.string().nullable(),
+  submitted_at: instant.nullable(),
+});
+
+/** Go: announcement.declarationAttachmentResponse */
+export interface declarationAttachmentResponse {
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  sha256: string;
+}
+
+export const declarationAttachmentResponseSchema: z.ZodType<declarationAttachmentResponse, unknown> = z.object({
+  filename: z.string(),
+  content_type: z.string(),
+  size_bytes: safeInt,
+  sha256: z.string(),
+});
+
+/** Go: announcement.declarationVersionResponse */
+export interface declarationVersionResponse {
+  id: string;
+  version_no: number;
+  title: string;
+  body: string;
+  content_hash: string;
+  published_at: string;
+  attachments: declarationAttachmentResponse[] | null;
+  integrity_ok: boolean;
+}
+
+export const declarationVersionResponseSchema: z.ZodType<declarationVersionResponse, unknown> = z.object({
+  id: z.string(),
+  version_no: safeInt,
+  title: z.string(),
+  body: z.string(),
+  content_hash: z.string(),
+  published_at: instant,
+  attachments: z.array(declarationAttachmentResponseSchema).nullable(),
+  integrity_ok: z.boolean(),
+});
+
+/** Go: announcement.declarationChildResponse */
+export interface declarationChildResponse {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  school_class: string;
+  state: string;
+  signers: declarationSignerResponse[] | null;
+}
+
+export const declarationChildResponseSchema: z.ZodType<declarationChildResponse, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  school_class: z.string(),
+  state: z.string(),
+  signers: z.array(declarationSignerResponseSchema).nullable(),
+});
+
+/** Go: announcement.declarationSignatureResponse */
+export interface declarationSignatureResponse {
+  method: string;
+  typed_name: string | null;
+  signed_at: string;
+  integrity_ok: boolean;
+}
+
+export const declarationSignatureResponseSchema: z.ZodType<declarationSignatureResponse, unknown> = z.object({
+  method: z.string(),
+  typed_name: z.string().nullable(),
+  signed_at: instant,
+  integrity_ok: z.boolean(),
+});
+
+/** Go: announcement.declarationSubmissionResponse */
+export interface declarationSubmissionResponse {
+  id: string;
+  student_id: string;
+  student_first_name: string;
+  student_last_name: string;
+  signer_name: string;
+  guardian_role: string;
+  action: string;
+  method: string;
+  password_confirmed: boolean;
+  version_no: number;
+  content_hash: string;
+  record_hash: string;
+  submitted_at: string;
+  integrity_ok: boolean;
+  signature: declarationSignatureResponse | null;
+}
+
+export const declarationSubmissionResponseSchema: z.ZodType<declarationSubmissionResponse, unknown> = z.object({
+  id: z.string(),
+  student_id: z.string(),
+  student_first_name: z.string(),
+  student_last_name: z.string(),
+  signer_name: z.string(),
+  guardian_role: z.string(),
+  action: z.string(),
+  method: z.string(),
+  password_confirmed: z.boolean(),
+  version_no: safeInt,
+  content_hash: z.string(),
+  record_hash: z.string(),
+  submitted_at: instant,
+  integrity_ok: z.boolean(),
+  signature: declarationSignatureResponseSchema.nullable(),
+});
+
+/** Go: announcement.declarationStatusResponse */
+export interface declarationStatusResponse {
+  kind: string;
+  signers: string;
+  requires_password: boolean;
+  requires_signature: boolean;
+  deadline: string | null;
+  current_version: declarationVersionResponse | null;
+  versions: declarationVersionResponse[] | null;
+  summary: Record<string, number> | null;
+  children: declarationChildResponse[] | null;
+  submissions: declarationSubmissionResponse[] | null;
+  integrity_ok: boolean;
+}
+
+export const declarationStatusResponseSchema: z.ZodType<declarationStatusResponse, unknown> = z.object({
+  kind: z.string(),
+  signers: z.string(),
+  requires_password: z.boolean(),
+  requires_signature: z.boolean(),
+  deadline: instant.nullable(),
+  current_version: declarationVersionResponseSchema.nullable(),
+  versions: z.array(declarationVersionResponseSchema).nullable(),
+  summary: z.record(z.string(), safeInt).nullable(),
+  children: z.array(declarationChildResponseSchema).nullable(),
+  submissions: z.array(declarationSubmissionResponseSchema).nullable(),
+  integrity_ok: z.boolean(),
+});
+
+/** Go: announcement.letterRecipientResponse */
+export interface letterRecipientResponse {
+  first_name: string;
+  last_name: string;
+  email?: string;
+  email_status: string;
+  mail_outcome?: string;
+  address_mark?: string;
+  stopped?: boolean;
+  stop_shared?: boolean;
+  departed?: boolean;
+  mailed_to?: string;
+  provider_block?: string;
+  reachability: string;
+  last_error?: string;
+  sent_at?: string;
+}
+
+export const letterRecipientResponseSchema: z.ZodType<letterRecipientResponse, unknown> = z.object({
+  first_name: z.string(),
+  last_name: z.string(),
+  email: z.string().optional(),
+  email_status: z.string(),
+  mail_outcome: z.string().optional(),
+  address_mark: z.string().optional(),
+  stopped: z.boolean().optional(),
+  stop_shared: z.boolean().optional(),
+  departed: z.boolean().optional(),
+  mailed_to: z.string().optional(),
+  provider_block: z.string().optional(),
+  reachability: z.string(),
+  last_error: z.string().optional(),
+  sent_at: instant.optional(),
+});
+
+/** Go: announcement.letterChildResponse */
+export interface letterChildResponse {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  school_class: string;
+  fulfilled: boolean;
+  can_confirm: boolean;
+  acknowledged_at?: string;
+  acknowledged_by?: string;
+}
+
+export const letterChildResponseSchema: z.ZodType<letterChildResponse, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  school_class: z.string(),
+  fulfilled: z.boolean(),
+  can_confirm: z.boolean(),
+  acknowledged_at: instant.optional(),
+  acknowledged_by: z.string().optional(),
+});
+
+/** Go: communication.ParentAnnouncementLetterSummary */
+export interface ParentAnnouncementLetterSummary {
+  children_total: number;
+  children_confirmable: number;
+  children_fulfilled: number;
+  children_open: number;
+  children_without_portal: number;
+  recipients_total: number;
+  emails_sent: number;
+  emails_delivered: number;
+  emails_delayed: number;
+  emails_address_check: number;
+  emails_stopped: number;
+  emails_provider_blocked: number;
+  emails_resendable: number;
+  emails_pending: number;
+  emails_failed: number;
+  without_email: number;
+  without_portal: number;
+}
+
+export const ParentAnnouncementLetterSummarySchema: z.ZodType<ParentAnnouncementLetterSummary, unknown> = z.object({
+  children_total: safeInt,
+  children_confirmable: safeInt,
+  children_fulfilled: safeInt,
+  children_open: safeInt,
+  children_without_portal: safeInt,
+  recipients_total: safeInt,
+  emails_sent: safeInt,
+  emails_delivered: safeInt,
+  emails_delayed: safeInt,
+  emails_address_check: safeInt,
+  emails_stopped: safeInt,
+  emails_provider_blocked: safeInt,
+  emails_resendable: safeInt,
+  emails_pending: safeInt,
+  emails_failed: safeInt,
+  without_email: safeInt,
+  without_portal: safeInt,
+});
+
+/** Go: announcement.letterStatusResponse */
+export interface letterStatusResponse {
+  recipients: letterRecipientResponse[] | null;
+  children: letterChildResponse[] | null;
+  summary: ParentAnnouncementLetterSummary;
+}
+
+export const letterStatusResponseSchema: z.ZodType<letterStatusResponse, unknown> = z.object({
+  recipients: z.array(letterRecipientResponseSchema).nullable(),
+  children: z.array(letterChildResponseSchema).nullable(),
+  summary: ParentAnnouncementLetterSummarySchema,
+});
+
+/** Go: announcement.recipientResponse */
+export interface recipientResponse {
+  account_id: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  read_at?: string;
+  acknowledged_at?: string;
+}
+
+export const recipientResponseSchema: z.ZodType<recipientResponse, unknown> = z.object({
+  account_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  status: z.string(),
+  read_at: instant.optional(),
+  acknowledged_at: instant.optional(),
+});
+
+/** Go: announcement.statsResponse */
+export interface statsResponse {
+  target_count: number;
+  read_count: number;
+  acknowledged_count: number;
+  recorded: boolean;
+}
+
+export const statsResponseSchema: z.ZodType<statsResponse, unknown> = z.object({
+  target_count: safeInt,
+  read_count: safeInt,
+  acknowledged_count: safeInt,
+  recorded: z.boolean(),
+});
+
+/** Go: announcement.targetRequest */
+export interface targetRequest {
+  target_type?: string;
+  ref_id?: string | null;
+  ref_text?: string | null;
+}
+
+/** Go: announcement.announcementRequest */
+export interface announcementRequest {
+  title?: string;
+  body?: string;
+  priority?: string;
+  link_url?: string | null;
+  requires_acknowledgement?: boolean;
+  send_email?: boolean;
+  expires_at?: string | null;
+  targets?: targetRequest[] | null;
+  response_type?: string;
+  response_deadline?: string | null;
+  options?: string[] | null;
+  delivery_mode?: string;
+  email_audience?: string;
+  reminder_at?: string | null;
+  reminder_text?: string | null;
+  declaration_kind?: string;
+  declaration_signers?: string;
+  declaration_requires_password?: boolean;
+  declaration_requires_signature?: boolean;
+}
+
+/** Go: announcement.letterPreviewRequest */
+export interface letterPreviewRequest {
+  body?: string;
+  student_id?: string;
+}
+
+/** Go: announcement.letterPreviewChild */
+export interface letterPreviewChild {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  school_class: string;
+}
+
+export const letterPreviewChildSchema: z.ZodType<letterPreviewChild, unknown> = z.object({
+  student_id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  school_class: z.string(),
+});
+
+/** Go: announcement.letterPreviewResponse */
+export interface letterPreviewResponse {
+  body: string;
+  child: letterPreviewChild;
+}
+
+export const letterPreviewResponseSchema: z.ZodType<letterPreviewResponse, unknown> = z.object({
+  body: z.string(),
+  child: letterPreviewChildSchema,
+});
+
+/** Go: announcement.remindedResponse */
+export interface remindedResponse {
+  reminded_count: number;
+}
+
+export const remindedResponseSchema: z.ZodType<remindedResponse, unknown> = z.object({
+  reminded_count: safeInt,
+});
+
+/** Go: announcement.resentResponse */
+export interface resentResponse {
+  resent_count: number;
+}
+
+export const resentResponseSchema: z.ZodType<resentResponse, unknown> = z.object({
+  resent_count: safeInt,
+});
+
 /** Go: staffmessaging.InboxThreadResponse */
 export interface InboxThreadResponse {
   thread_id: string;

@@ -61,14 +61,9 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Planned: Story = {
-  // axe meldet hier noch heading-order, scrollable-region-focusable; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
-};
+export const Planned: Story = {};
 
 export const Active: Story = {
-  // axe meldet hier noch heading-order, scrollable-region-focusable; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance({
       status: "active",
@@ -78,8 +73,6 @@ export const Active: Story = {
 };
 
 export const Completed: Story = {
-  // axe meldet hier noch heading-order, scrollable-region-focusable; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance({
       status: "completed",
@@ -88,8 +81,6 @@ export const Completed: Story = {
 };
 
 export const Cancelled: Story = {
-  // axe meldet hier noch heading-order, scrollable-region-focusable; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance({
       status: "cancelled",
@@ -98,8 +89,6 @@ export const Cancelled: Story = {
 };
 
 export const WithConflictsAndAbsences: Story = {
-  // axe meldet hier noch heading-order, scrollable-region-focusable; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     instance: makeInstance({
       staffCount: 2,

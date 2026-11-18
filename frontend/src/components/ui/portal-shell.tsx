@@ -39,6 +39,11 @@ interface PortalShellProps {
    */
   readonly contentClassName?: string;
   readonly topLayer?: ReactNode;
+  /**
+   * Text des Sprunglinks „Zum Inhalt“ in der Sprache der Fläche; ein
+   * übersetztes Portal (Eltern) gibt ihn mit (#7112).
+   */
+  readonly skipLinkLabel?: string;
   readonly sidebar: ReactNode;
   readonly bottomNav: ReactNode;
   readonly children: ReactNode;
@@ -50,6 +55,7 @@ export function PortalShell({
   backgroundClassName = "",
   contentClassName = "",
   topLayer,
+  skipLinkLabel = "Zum Inhalt",
   sidebar,
   bottomNav,
   children,
@@ -82,7 +88,7 @@ export function PortalShell({
           }
           className={`fixed start-3 top-3 ${Z_LAYER.sheet} -translate-y-20 focus-visible:translate-y-0`}
         >
-          Zum Inhalt
+          {skipLinkLabel}
         </ButtonLink>
         <NavigationProgressBar />
         <div

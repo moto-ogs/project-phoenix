@@ -283,6 +283,9 @@ export function FieldEditorRow({
   const target = field.target || null;
   const isTargetField = target !== null;
   const isInfo = field.type === "information";
+  // Each control names its question; n buttons „Frage entfernen“ in a row
+  // say nothing about which one they remove (#7112).
+  const itemName = `${isInfo ? "Infotext" : "Frage"} ${index + 1}`;
   const displayLabel = isInfo
     ? field.label.trim() || "Infotext"
     : target
@@ -473,7 +476,7 @@ export function FieldEditorRow({
                   }
                   variant="surface"
                   size="icon"
-                  aria-label="Frage nach oben verschieben"
+                  aria-label={`${itemName} nach oben verschieben`}
                   tooltip="Setzt die Frage im Elternformular eine Stelle weiter nach oben."
                 >
                   <ArrowUp className="h-4 w-4" aria-hidden="true" />
@@ -489,7 +492,7 @@ export function FieldEditorRow({
                   }
                   variant="surface"
                   size="icon"
-                  aria-label="Frage nach unten verschieben"
+                  aria-label={`${itemName} nach unten verschieben`}
                   tooltip="Setzt die Frage im Elternformular eine Stelle weiter nach unten."
                 >
                   <ArrowDown className="h-4 w-4" aria-hidden="true" />
@@ -500,7 +503,7 @@ export function FieldEditorRow({
                   disabled={disabled}
                   variant="outline_danger"
                   size="icon"
-                  aria-label="Frage entfernen"
+                  aria-label={`${itemName} entfernen`}
                   disabledReason={disabledReason}
                   tooltip="Entfernt die Frage sofort aus dem Entwurf der Vorlage."
                 >
@@ -508,7 +511,7 @@ export function FieldEditorRow({
                 </Button>
                 {fold ? (
                   <SectionCollapseToggle
-                    title={`${isInfo ? "Infotext" : "Frage"} ${index + 1}`}
+                    title={itemName}
                     collapsed={!open}
                     controls={bodyId}
                     onToggle={fold.onToggle}

@@ -86,7 +86,7 @@ describe("WeeklyCalendarGrid holiday care", () => {
     const head = wednesday.closest("div.flex-col");
     expect(head).not.toBeNull();
     expect(
-      within(head as HTMLElement).getByText(/Schließtag/),
+      within(head as HTMLElement).getByText("Schließtag · Pädagogischer Tag"),
     ).toBeInTheDocument();
     expect(
       within(head as HTMLElement).queryByText(/Ferienbetreuung/),

@@ -501,7 +501,8 @@ describe("StaffPage", () => {
       name: /Anträge von Mitarbeitenden/,
     });
     expect(link).toHaveAttribute("href", "/test-tenant/anfragen");
-    expect(screen.getByLabelText("2 offene Anträge")).toBeInTheDocument();
+    // The count is part of the link's name (#7112).
+    expect(link).toHaveAccessibleName(/ 2 offene Anträge$/);
   });
 
   it("hides the Anfragen pointer without vacation:approve", () => {

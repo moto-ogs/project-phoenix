@@ -14,12 +14,16 @@ import { SentrySessionContext } from "~/components/auth/sentry-session-context";
 import { ModuleBookingAudienceProvider } from "~/contexts/ToastContext";
 import { TenantAuthWrapper } from "~/components/auth/tenant-auth-wrapper";
 import { PushSubscriptionSync } from "~/components/notifications/service-worker-registrar";
-import { announcementKeys } from "~/lib/swr/shell-keys";
+import { announcementKeys, shellResourceKeys } from "~/lib/swr/shell-keys";
 import { USER_CONTEXT_SWR_KEY } from "~/lib/hooks/use-user-context";
 import { REMINDERS_SWR_KEY } from "~/lib/reminders-api";
 import { primeSessionCache } from "~/lib/session-cache";
 import { SESSION_PROVIDER_POLL_SECONDS } from "~/lib/session-provider-poll";
-import { ShellSeedProvider, type ShellBootstrap } from "~/lib/shell-seed";
+import {
+  ShellSeedProvider,
+  type ShellBootstrap,
+  type ShellCounts,
+} from "~/lib/shell-seed";
 import {
   authGeneration,
   scopedSWRKey,
@@ -69,11 +73,22 @@ function ModuleBookingAudienceBridge({
   );
 }
 
+// The badge each server count seeds (useUnreadCount readers).
+const COUNT_KEYS: Record<keyof ShellCounts, (accountId: string) => string> = {
+  staffAbsencesPending: shellResourceKeys.staffAbsencesPending,
+  messagesUnread: shellResourceKeys.messagesUnread,
+  teamChatUnread: shellResourceKeys.teamChatUnread,
+  changeRequestsPending: shellResourceKeys.changeRequestsPending,
+  enrollmentRequestsPending: shellResourceKeys.enrollmentRequestsPending,
+  careWithdrawalsPending: shellResourceKeys.careWithdrawalsPending,
+};
+
 /**
  * Shell entries whose readers never revalidate on mount (#4989): the header
  * bell polls the reminders, the sidebar badge reloads today's staff notices
  * on focus and after an acknowledgement, and the home block only shows them.
- * The user context is immutable SWR; settings changes, SSE events and the
+ * The badge counts reload on their refresh events and on focus. The user
+ * context is immutable SWR; settings changes, SSE events and the
  * guardian-approval retry invalidate it.
  */
 export function shellOwnedEntries(shell: ShellBootstrap, tenantSlug: string) {
@@ -90,6 +105,12 @@ export function shellOwnedEntries(shell: ShellBootstrap, tenantSlug: string) {
   if (shell.staffNoticesToday) {
     entries[scopedSWRKey(scope, staffNoticesTodayKey(shell.accountId))] =
       shell.staffNoticesToday;
+  }
+  for (const [name, key] of Object.entries(COUNT_KEYS)) {
+    const count = shell.counts[name as keyof ShellCounts];
+    if (count !== undefined) {
+      entries[scopedSWRKey(scope, key(shell.accountId))] = count;
+    }
   }
   return entries;
 }

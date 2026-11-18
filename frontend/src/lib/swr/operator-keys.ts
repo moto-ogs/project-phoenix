@@ -18,4 +18,15 @@ export const operatorKeys = {
   /** One account's account-wide second-factor override (`operatorAdminGetGlobalMFAOverride`). */
   accountGlobalMfaOverride: (accountId: string) =>
     `operator-account-global-mfa-override-${encodeURIComponent(accountId)}`,
+  /** The schools one account can reach, with status and roles (#1021). */
+  accountTenantAccess: (accountId: string) =>
+    `operator-account-tenant-access-${encodeURIComponent(accountId)}`,
+  /** The roles an operator can give one account at each of the schools. */
+  accountAssignableRoles: (accountId: string, schoolIds: readonly string[]) =>
+    `operator-account-assignable-roles-${encodeURIComponent(accountId)}-${[
+      ...schoolIds,
+    ]
+      .sort()
+      .map(encodeURIComponent)
+      .join(",")}`,
 } as const;

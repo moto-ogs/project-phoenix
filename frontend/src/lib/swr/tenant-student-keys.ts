@@ -2,7 +2,21 @@
  * OGS-Portal, Kinder: Akten-Unterseiten, Listen, Importe, Gruppen- und Raumseiten.
  * Keys describe the response, not its screen; a family prefix ends in `-`.
  */
+import { resourceKey } from "./resource-key";
+
 export const tenantStudentKeys = {
+  /**
+   * One page of the school's children for these filters (`fetchStudents`),
+   * e.g. a picker's name search or a choice list's page. Filtering out
+   * children a screen already shows stays outside the cache.
+   */
+  studentPage: (filters: object) => resourceKey("student-page-", filters),
+  /**
+   * Every child of the school as a sorted choice list (all pages), per
+   * opening scope (a supervision block): a block switch reads it anew.
+   */
+  studentChoices: (scope: string) =>
+    `student-choices-${encodeURIComponent(scope)}`,
   /** The open care withdrawal of one child (`fetchStudentCareWithdrawal`). */
   careWithdrawal: (studentId: string) =>
     `student-care-withdrawal-${encodeURIComponent(studentId)}`,
@@ -64,4 +78,21 @@ export const tenantStudentKeys = {
   /** The correction trail of one child's closed block (`fetchAttendanceCorrections`). */
   attendanceCorrections: (instanceId: string, studentId: string) =>
     `attendance-corrections-${encodeURIComponent(instanceId)}-${encodeURIComponent(studentId)}`,
+  /** Die Einträge der Klassenliste (`fetchClassListEntries`). */
+  classListEntries: () => "class-list-entries",
+  /** Klassen, die die Klassenliste vorschlägt (`fetchClassSuggestions`). */
+  classListClassSuggestions: () => "class-list-class-suggestions",
+  /** Die angelegten Kinder neben der Klassenliste (`fetchRosterStudents`). */
+  classListRosterStudents: () => "class-list-roster-students",
+  /** Prefix of every page of ended care (`fetchEndedCare`). */
+  endedCareFamily: "students-ended-care",
+  /** One page of ended care for one search. */
+  endedCare: (page: number, search: string) =>
+    `students-ended-care:${page}:${search}`,
+  /**
+   * Today's Mensa/HA tracking indicators of these children; the SSE hook
+   * refreshes every key containing "tracking-indicators-".
+   */
+  trackingIndicators: (studentIdsKey: string) =>
+    `tracking-indicators-${studentIdsKey}`,
 } as const;

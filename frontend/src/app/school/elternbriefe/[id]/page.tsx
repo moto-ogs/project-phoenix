@@ -34,6 +34,7 @@ import {
 } from "~/lib/school-parent-letters";
 import { schoolPath } from "~/lib/school-url";
 import { useSWRAuth } from "~/lib/swr";
+import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import { StatusBadge } from "~/components/ui/status-badge";
 
 type LifecycleAction = "publish" | "unpublish" | "delete" | null;
@@ -52,7 +53,7 @@ export default function SchoolParentLetterPage() {
     isLoading,
     mutate,
   } = useSWRAuth<Announcement | undefined>(
-    session ? `school-parent-letter-${letterId}` : null,
+    session ? schoolPortalKeys.parentLetter(letterId) : null,
     () => fetchAnnouncement(letterId, SCHOOL_PARENT_LETTERS_BASE),
     { revalidateOnFocus: false },
   );

@@ -625,7 +625,7 @@ function useScheduleData(
   const canRead = hasPermission(session, "schedules:read");
   const canManage = hasPermission(session, "schedules:manage");
   const result = useSWRAuth<ScheduleSubstitutionOverview>(
-    canRead ? `substitution-schedule-${today}` : null,
+    canRead ? tenantListKeys.substitutionSchedule(today) : null,
     () => substitutionService.fetchScheduleOverview(today, today),
     { keepPreviousData: true },
   );

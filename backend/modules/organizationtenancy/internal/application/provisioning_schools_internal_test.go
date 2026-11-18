@@ -163,6 +163,19 @@ func TestProvisioningCreateSchool(t *testing.T) {
 		assert.Zero(t, h.tx.adminRuns)
 	})
 
+	t.Run("creates a school without contact email", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		h.addOrg(1, "Talent", "talent", false)
+		input := validCreateSchool(1)
+		input.Email = ""
+
+		created, err := h.svc.CreateSchool(context.Background(), input, testOperatorID, operatorIP)
+
+		require.NoError(t, err, "the contact address is optional")
+		assert.Empty(t, created.Email)
+	})
+
 	t.Run("does not change the caller's input", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t)
@@ -180,9 +193,7 @@ func TestProvisioningCreateSchool(t *testing.T) {
 		"missing name":            func(s *organizationtenancy.CreateSchool) { s.Name = "  " },
 		"invalid slug":            func(s *organizationtenancy.CreateSchool) { s.Slug = "-bad-" },
 		"reserved subdomain":      func(s *organizationtenancy.CreateSchool) { s.Subdomain = "api" },
-		// Replies from parents reach the school only through this address (#2872).
-		"missing contact email": func(s *organizationtenancy.CreateSchool) { s.Email = "" },
-		"invalid contact email": func(s *organizationtenancy.CreateSchool) { s.Email = "Schule <info@burbach.test>" },
+		"invalid contact email":   func(s *organizationtenancy.CreateSchool) { s.Email = "Schule <info@burbach.test>" },
 		// The Träger-Portal host (#4649) never names a school.
 		"Träger-Portal subdomain": func(s *organizationtenancy.CreateSchool) { s.Subdomain = "traeger" },
 	} {
@@ -445,8 +456,22 @@ func TestProvisioningUpdateSchool(t *testing.T) {
 
 		updated, err := h.svc.UpdateSchool(context.Background(), 10, changes, testOperatorID, operatorIP)
 
-		require.NoError(t, err, "a school created before #2872 must stay editable until the address is added")
+		require.NoError(t, err, "the contact address is optional")
 		assert.Equal(t, "Burbach Nord", updated.Name)
+		require.Len(t, h.engine.updates, 1)
+		assert.Empty(t, h.engine.updates[0].Email)
+	})
+
+	t.Run("clears the contact email", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		h.addOrg(1, "Talent", "talent", false)
+		h.addSchool(10, 1, "Burbach", "burbach").Email = "info@burbach.test"
+
+		updated, err := h.svc.UpdateSchool(context.Background(), 10, schoolChanges(1), testOperatorID, operatorIP)
+
+		require.NoError(t, err, "the contact address is optional")
+		assert.Empty(t, updated.Email)
 		require.Len(t, h.engine.updates, 1)
 		assert.Empty(t, h.engine.updates[0].Email)
 	})
@@ -617,18 +642,6 @@ func TestProvisioningUpdateSchool(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				var invalid *organizationtenancy.InvalidProvisioningDataError
 				require.ErrorAs(t, err, &invalid)
-			},
-		},
-		"cleared contact email": {
-			seed: func(h *provisioningHarness) {
-				h.addOrg(1, "Talent", "talent", false)
-				h.addSchool(10, 1, "Burbach", "burbach").Email = "info@burbach.test"
-			},
-			changes: schoolChanges(1),
-			check: func(t *testing.T, err error) {
-				var invalid *organizationtenancy.InvalidProvisioningDataError
-				require.ErrorAs(t, err, &invalid)
-				require.ErrorIs(t, err, organizationtenancy.ErrInvalidSchool)
 			},
 		},
 		"invalid new contact email": {

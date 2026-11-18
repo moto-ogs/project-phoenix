@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import type { UseUnreadCountOptions } from "./use-unread-count";
 
+/** The key and options the hook handed useUnreadCount. */
+type Captured = UseUnreadCountOptions & { key: string | null };
+
 const {
   mockUseSession,
   mockUseShellAuth,
@@ -37,17 +40,17 @@ vi.mock("~/lib/tenant-context", () => ({
 }));
 
 vi.mock("./use-unread-count", () => ({
-  useUnreadCount: (opts: UseUnreadCountOptions): unknown =>
-    mockUseUnreadCount(opts) as unknown,
+  useUnreadCount: (key: string | null, opts: UseUnreadCountOptions): unknown =>
+    mockUseUnreadCount({ key, ...opts }) as unknown,
 }));
 
 import { useChangeRequestsPending } from "./use-change-requests-pending";
 
 /** Renders the hook and returns the options it passed to useUnreadCount. */
-function capturedOptions(): UseUnreadCountOptions {
+function capturedOptions(): Captured {
   renderHook(() => useChangeRequestsPending());
   expect(mockUseUnreadCount).toHaveBeenCalledTimes(1);
-  return mockUseUnreadCount.mock.calls[0]![0] as UseUnreadCountOptions;
+  return mockUseUnreadCount.mock.calls[0]![0] as Captured;
 }
 
 beforeEach(() => {
@@ -110,12 +113,12 @@ describe("useChangeRequestsPending", () => {
     expect(opts.refetchOnFocus).toBe(true);
   });
 
-  it("scopes the cache key by tenant slug and account id (no cross-tenant leak)", () => {
+  // useSWRAuth prefixes school and account (no cross-tenant leak); the key
+  // carries the account.
+  it("binds the key to the account", () => {
     mockUseChangeRequestAccess.mockReturnValue({
       canReviewParentRequests: true,
     });
-    expect(capturedOptions().cacheKey).toBe(
-      "change_requests_pending_count:testschool:7",
-    );
+    expect(capturedOptions().key).toBe("badge-change-requests-pending:7");
   });
 });

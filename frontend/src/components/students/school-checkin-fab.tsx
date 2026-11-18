@@ -111,9 +111,9 @@ export function SchoolCheckinFab({
         onClick={onToggle}
         disabled={disabled}
         aria-pressed={isActive}
-        aria-label={label}
         tooltip={isActive ? CHECKIN_HINTS.finish : CHECKIN_HINTS.start}
         data-checkin-fab-variant={resolved}
+        data-checkin-toggle={isActive ? undefined : ""}
         data-checkin-fab-active={isActive || undefined}
         variant={isActive ? "success" : "surface"}
         size={resolved === "floating" ? "base" : "md"}
@@ -140,20 +140,21 @@ export function SchoolCheckinFab({
             >
               <span>Fertig</span>
               <span className="tabular-nums opacity-90">· {successCount}</span>
+              <span className="sr-only">: {label}</span>
             </motion.span>
           ) : (
             <motion.span key="idle-label" {...animationProps}>
               An- &amp; Abmelden
+              {/* The visible word leads the name (WCAG 2.5.3, #7112). */}
+              <span className="sr-only">: {label}</span>
             </motion.span>
           )}
         </AnimatePresence>
 
         {pendingCount > 0 ? (
-          <span
-            className="text-moto-green-strong absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-white shadow-sm"
-            aria-label={`${pendingCount} Aktionen laufen`}
-          >
+          <span className="text-moto-green-strong absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-white shadow-sm">
             <SpinnerIcon className="size-3" />
+            <span className="sr-only">{`, ${pendingCount} Aktionen laufen`}</span>
           </span>
         ) : null}
       </Button>

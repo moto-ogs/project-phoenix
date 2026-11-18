@@ -437,7 +437,7 @@ func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"deleted": true}, "Announcement deleted")
+	common.Respond(w, r, http.StatusOK, deletedResponse{Deleted: true}, "Announcement deleted")
 }
 
 func (rs *Resource) publish(w http.ResponseWriter, r *http.Request) {
@@ -713,7 +713,7 @@ func (rs *Resource) remindUnanswered(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"reminded_count": count}, "Reminder sent")
+	common.Respond(w, r, http.StatusOK, remindedResponse{RemindedCount: count}, "Reminder sent")
 }
 
 // resendFailed re-queues only the failed mails. Deliberately a separate endpoint
@@ -730,7 +730,7 @@ func (rs *Resource) resendFailed(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"resent_count": count}, "Failed e-mails re-queued")
+	common.Respond(w, r, http.StatusOK, resentResponse{ResentCount: count}, "Failed e-mails re-queued")
 }
 
 func decodeInput(w http.ResponseWriter, r *http.Request) (announcementService.ParentAnnouncementInput, bool) {

@@ -376,9 +376,8 @@ describe("HolidayFormEditor (#5198)", () => {
     fireEvent.click(choice(/^Pro Kind abfragen/, 1));
     // Move the yes/no question first, then let the other one depend on it.
     fireEvent.click(
-      screen.getAllByRole("button", {
-        name: "Frage nach oben verschieben",
-      })[1]!,
+      // Each control names its question (#7112).
+      screen.getByRole("button", { name: "Frage 2 nach oben verschieben" }),
     );
     // The yes/no question itself has nothing to depend on; only the second
     // question offers the condition.

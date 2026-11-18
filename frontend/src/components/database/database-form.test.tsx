@@ -8,8 +8,32 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import type { ComponentProps } from "react";
+import {
+  render as renderPlain,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
+import type { ComponentProps, ReactElement, ReactNode } from "react";
+import { useSWRAuth } from "~/lib/swr";
+import { databaseKeys } from "~/lib/swr/portal-keys";
+import { SWRConfig } from "~/lib/swr/testing";
+
+// Loaded select options read through the shared cache; each render gets its
+// own.
+vi.unmock("swr");
+
+function Providers({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderPlain(ui, { wrapper: Providers });
+}
 import {
   getDefaultValueForField,
   isEmptyValue,
@@ -735,6 +759,61 @@ describe("DatabaseForm", () => {
     expect(screen.getByText("Test Field").parentElement?.className).toContain(
       "text-moto-red",
     );
+  });
+
+  it("removes previously loaded choices after their reader refuses access", async () => {
+    const options = vi
+      .fn()
+      .mockResolvedValueOnce([{ value: "7", label: "Raum Blau" }])
+      .mockRejectedValueOnce(
+        new ApiError("forbidden", 403, { code: "general.permission" }),
+      );
+    function FormWithRefresh() {
+      const { mutate: refresh } = useSWRAuth(
+        databaseKeys.formFieldOptions("room_id"),
+        options,
+      );
+      return (
+        <>
+          <DatabaseForm
+            {...defaultProps}
+            sections={[
+              {
+                title: "Gruppendetails",
+                fields: [
+                  {
+                    name: "room_id",
+                    label: "Gruppenraum",
+                    type: "select",
+                    options,
+                  },
+                ],
+              },
+            ]}
+          />
+          <button onClick={() => void refresh()}>Auswahl aktualisieren</button>
+        </>
+      );
+    }
+    render(<FormWithRefresh />);
+    await waitFor(() =>
+      expect(screen.getByRole("combobox")).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole("combobox"));
+    expect(
+      await screen.findByRole("option", { name: "Raum Blau" }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Auswahl aktualisieren" }),
+    );
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Auswahl „Gruppenraum“"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "Raum Blau" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows a failed option load with the catalog text instead of an empty choice and retries it", async () => {

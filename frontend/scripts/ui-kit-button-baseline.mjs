@@ -46,19 +46,19 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/planning/plan-block.tsx",
-    lines: [210],
+    lines: [215],
     reason: "Planungsblock im Raster: Kachel, kein Knopf",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/portal-bottom-nav.tsx",
-    lines: [401, 443],
+    lines: [425, 467],
     reason: "Navigationszeilen im „Mehr“-Blatt der unteren Leiste",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/guardians/guardian-picker-panel.tsx",
-    lines: [326],
+    lines: [308],
     reason: "Trefferzeile der Erziehungsberechtigten-Suche: Auswahlzeile",
   },
   {
@@ -76,7 +76,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/files/files-page.tsx",
-    lines: [159],
+    lines: [160],
     reason: "Ordner-Navigation (aria-current), Navigationszeile",
   },
   {
@@ -94,14 +94,14 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-button-override",
     file: "src/app/[tenant]/(protected)/time-tracking/page.tsx",
-    lines: [834, 871, 977, 1165],
+    lines: [836, 873, 979, 1167],
     reason:
       "Pausen-Stepper −/+ und Stempelknöpfe Abwesenheit/Ausstempeln der Zeiterfassung (#5529: nicht angleichen)",
   },
   {
     rule: "no-button-override",
     file: "src/components/parent/calendar/parent-calendar-page.tsx",
-    lines: [593, 868],
+    lines: [593, 869],
     reason:
       "Termin-Zeilen und Monats-Chips im Elternkalender, optisch Listeneinträge (#5529: nicht angleichen)",
   },
@@ -126,7 +126,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/companion-picker.tsx",
-    lines: [406],
+    lines: [391],
     reason: "Suchtreffer zum Auswählen: Auswahlzeile",
   },
   {
@@ -138,7 +138,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/planned-status-days-modal.tsx",
-    lines: [1106],
+    lines: [1094],
     reason: "Kalendertag zum Umschalten: Kalender-/Auswahlzelle",
   },
   {

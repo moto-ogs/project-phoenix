@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render as rtlRender,
@@ -7,7 +8,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -16,13 +17,18 @@ const mocks = vi.hoisted(() => ({
   fetchSlotListOptions: vi.fn(),
   fetchSlotListPreview: vi.fn(),
   exportSlotList: vi.fn(),
+  session: {
+    data: { user: { id: "1", scope: "tenant" }, expires: "2099-01-01" },
+    status: "authenticated",
+  },
 }));
 
+vi.unmock("swr");
+
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({
-    data: { user: { token: "token" } },
-    status: "authenticated",
-  }),
+  // One session object, as the provider hands out: the shared cache scopes
+  // its keys by it.
+  useSession: () => mocks.session,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -48,6 +54,8 @@ vi.mock("~/lib/slot-lists-api", async (importOriginal) => ({
 }));
 
 import { ToastProvider } from "~/contexts/ToastContext";
+import { resetSWRScope } from "~/lib/swr/scope";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import {
   SlotListExportSupersededError,
@@ -59,8 +67,16 @@ import { catalogText } from "~/test/error-catalog-text";
 
 import SlotListsPage from "./page";
 
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
+
 function render(ui: ReactElement) {
-  return rtlRender(ui, { wrapper: ToastProvider });
+  return rtlRender(ui, { wrapper: Providers });
 }
 
 // Ohne Datum im Link zeigt die Seite den Testtag.
@@ -116,6 +132,14 @@ const SLOTS_CHANGED_NOTICE =
 const PRINT_BLOCKED_NOTICE =
   "Das Druckfenster konnte nicht geöffnet werden. Bitte laden Sie die Liste als PDF herunter.";
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 async function openExportMenuAndPick(label: string) {
   fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
   fireEvent.click(await screen.findByRole("menuitem", { name: label }));
@@ -124,6 +148,7 @@ async function openExportMenuAndPick(label: string) {
 describe("SlotListsPage error paths (#2516)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSWRScope({ revalidate: false });
     mocks.search.value = "";
     mocks.fetchSlotListOptions.mockResolvedValue(options);
     mocks.fetchSlotListPreview.mockResolvedValue(preview);
@@ -256,6 +281,61 @@ describe("SlotListsPage error paths (#2516)", () => {
     );
   });
 
+  it("keeps the recovery options response after an export drift refusal", async () => {
+    const recovery = deferred<SlotListOptionsResult>();
+    mocks.fetchSlotListOptions
+      .mockResolvedValueOnce(options)
+      .mockResolvedValueOnce(options)
+      .mockReturnValueOnce(recovery.promise);
+    mocks.exportSlotList.mockRejectedValueOnce(
+      new ApiError("drift", 409, { code: "timetable.slot_list_drifted" }),
+    );
+    render(<SlotListsPage />);
+    await screen.findByText("Mia Muster");
+    await openExportMenuAndPick("PDF herunterladen");
+    expect(await screen.findByText(LIST_CHANGED_NOTICE)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mocks.fetchSlotListOptions).toHaveBeenCalledTimes(3),
+    );
+    await act(async () => recovery.resolve({ ...options, slots: [] }));
+    expect(
+      await screen.findByText("Für dieses Datum sind keine Angebote geplant."),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mocks.fetchSlotListPreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ instance_ids: [] }),
+      ),
+    );
+  });
+
+  it("does not overwrite an options refresh that started during an export", async () => {
+    const refresh = deferred<SlotListOptionsResult>();
+    const exporting = deferred<void>();
+    mocks.fetchSlotListOptions
+      .mockResolvedValueOnce(options)
+      .mockResolvedValueOnce(options)
+      .mockReturnValueOnce(refresh.promise);
+    mocks.exportSlotList.mockReturnValueOnce(exporting.promise);
+    render(<SlotListsPage />);
+    await screen.findByText("Mia Muster");
+    await openExportMenuAndPick("PDF herunterladen");
+    await waitFor(() => expect(mocks.exportSlotList).toHaveBeenCalledTimes(1));
+    act(() => window.dispatchEvent(new Event("focus")));
+    await waitFor(() =>
+      expect(mocks.fetchSlotListOptions).toHaveBeenCalledTimes(3),
+    );
+    await act(async () => exporting.resolve());
+    await act(async () => refresh.resolve({ ...options, slots: [] }));
+    expect(
+      await screen.findByText("Für dieses Datum sind keine Angebote geplant."),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mocks.fetchSlotListPreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ instance_ids: [] }),
+      ),
+    );
+  });
+
   it("reports a failed check before the export as a toast with retry", async () => {
     render(<SlotListsPage />);
     await screen.findByText("Mia Muster");
@@ -285,9 +365,20 @@ describe("SlotListsPage error paths (#2516)", () => {
       slots: [{ ...options.slots[0]!, title: "Basketball" }],
     });
 
+    mocks.fetchSlotListPreview.mockResolvedValue({
+      ...preview,
+      slots: [{ ...options.slots[0]!, title: "Basketball" }],
+      rows: [{ ...preview.rows[0]!, name: "Ben Beispiel", slot: "Basketball" }],
+      signature: "sig-renamed",
+    });
+    const previewCallsBefore = mocks.fetchSlotListPreview.mock.calls.length;
     await openExportMenuAndPick("PDF herunterladen");
 
     expect(await screen.findByText(SLOTS_CHANGED_NOTICE)).toBeInTheDocument();
+    expect(await screen.findByText("Ben Beispiel")).toBeInTheDocument();
+    expect(mocks.fetchSlotListPreview.mock.calls.length).toBeGreaterThan(
+      previewCallsBefore,
+    );
     expect(mocks.exportSlotList).not.toHaveBeenCalled();
   });
 

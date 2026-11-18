@@ -46,6 +46,8 @@ import {
 } from "~/lib/shift-helpers";
 import { startOfWeek } from "~/lib/staff-metrics-helpers";
 import { useSWRAuth } from "~/lib/swr";
+import { databaseKeys } from "~/lib/swr/portal-keys";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { getWeekNumber } from "~/lib/time-tracking-helpers";
 import { parseTimeToMinutes } from "~/lib/timetable-helpers";
@@ -59,13 +61,9 @@ import { parseTimeToMinutes } from "~/lib/timetable-helpers";
 // reduced-permission sums deliberately load Monday-Sunday because raw shifts,
 // unlike server summaries, are limited to the requested range.
 
-// Keep the key format in lockstep with use-dienstplan-data.ts. The overview
+// The keys come from the same factory as use-dienstplan-data.ts. The overview
 // path shares its ordinary Mon-Fri windows with the week view; the raw-shift
 // path uses a distinct full-week key so weekend work is not undercounted.
-const overviewKey = (from: string, to: string): string =>
-  `dienstplan-overview-${from}-${to}`;
-const shiftsKey = (from: string, to: string): string =>
-  `dienstplan-shifts-${from}-${to}`;
 
 // A half-year is ~20–26 weeks, i.e. that many overview/shift requests. The
 // module-local semaphore caps concurrent network calls so a mount does not
@@ -283,7 +281,9 @@ function HalbjahrColumnData({
     error: overviewError,
     mutate: mutateOverview,
   } = useSWRAuth<StaffScheduleOverview>(
-    reducedPath ? null : overviewKey(overviewFrom, overviewTo),
+    reducedPath
+      ? null
+      : tenantDailyKeys.dienstplanOverview(overviewFrom, overviewTo),
     () =>
       withSlot(() => staffShiftService.getOverview(overviewFrom, overviewTo)),
   );
@@ -293,7 +293,7 @@ function HalbjahrColumnData({
     error: shiftsError,
     mutate: mutateShifts,
   } = useSWRAuth<StaffShift[]>(
-    reducedPath ? shiftsKey(shiftsFrom, shiftsTo) : null,
+    reducedPath ? tenantDailyKeys.dienstplanShifts(shiftsFrom, shiftsTo) : null,
     () => withSlot(() => staffShiftService.getShifts(shiftsFrom, shiftsTo)),
   );
 
@@ -613,7 +613,7 @@ export function DienstplanHalbjahrGrid({
     // Gleicher SWR-Key wie Dienstplan-Kontextzeile und Betreuungsplan: nach
     // Anlegen/Bearbeiten/Löschen eines Zeitraums genügt ein mutate auf diesen
     // Key, damit auch die Halbjahres-Sicht frische Spalten zeigt.
-    "database-calendar-periods-list",
+    databaseKeys.calendarPeriods(),
     () => calendarPeriodService.list(),
   );
   const periodsLoad = useApiLoadError();

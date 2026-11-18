@@ -318,8 +318,8 @@ const ROW_ACTION_BASELINE = new Map(
       "Gericht entfernen@885",
     ],
     "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
-      "Antwort entfernen@1687",
-      "Entfernen@2101",
+      "Antwort entfernen@1688",
+      "Entfernen@2102",
     ],
     "src/components/enrollment/care-offerings-editor.tsx": [
       "Bedingung löschen@2037",
@@ -332,7 +332,7 @@ const ROW_ACTION_BASELINE = new Map(
     "src/components/staff/stammdaten-section-forms.tsx": [
       "Qualifikation entfernen@478",
     ],
-    "src/components/students/companion-picker.tsx": ["entfernen@297"],
+    "src/components/students/companion-picker.tsx": ["entfernen@282"],
     "src/components/students/student-create-modal.tsx": [
       "Erziehungsberechtigte/n entfernen@793",
     ],
@@ -1220,7 +1220,7 @@ const OWN_OBJECT_ENTRY_EXCEPTIONS = new Map(
   Object.entries({
     // Teilentschuldigungen genau dieses Kindes an genau diesen Tagen.
     "src/components/students/planned-status-days-modal.tsx": [
-      "Bearbeiten@1369",
+      "Bearbeiten@1357",
     ],
   }),
 );
@@ -1572,7 +1572,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
     // seinen eigenen Fuß (BAUARTEN-SPEC Bauart 2 Regel 4, #3115); die Anzeige
     // liegt auf der Route `parent-announcements/[id]`.
     "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
-      "Umfrage bearbeiten Neue Umfrage Elternbrief bearbeiten Neuer Elternbrief Einverständnis bearbeiten Neues Einverständnis Elternmitteilung bearbeiten Neue Elternmitteilung@1581",
+      "Umfrage bearbeiten Neue Umfrage Elternbrief bearbeiten Neuer Elternbrief Einverständnis bearbeiten Neues Einverständnis Elternmitteilung bearbeiten Neue Elternmitteilung@1582",
     ],
     // Einträge ohne eigene Objektansicht (Termin, Schließtag,
     // Kalenderzeitraum, Jahrgangswechsel, Klassenlisteneintrag,
@@ -1583,7 +1583,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Termin bearbeiten Termin erstellen@1065",
     ],
     "src/app/[tenant]/(protected)/database/students/class-list/page.tsx": [
-      "edit Eintrag bearbeiten Klassenlisteneintrag anlegen@611",
+      "edit Eintrag bearbeiten Klassenlisteneintrag anlegen@615",
     ],
     // Seit #5604 gilt die Regel im Schul- und Operator-Portal. Diese Formulare
     // haben keine eigene Objektroute; ein Umbau geht über das Seitengerüst
@@ -1595,10 +1595,10 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Träger bearbeiten@86",
     ],
     "src/app/operator/provisioning/edit-school-modal.tsx": [
-      "Schule bearbeiten@163",
+      "Schule bearbeiten@154",
     ],
     "src/app/school/kalender/page.tsx": [
-      "Schultermin anlegen Schultermin bearbeiten@334",
+      "Schultermin anlegen Schultermin bearbeiten@335",
     ],
     "src/components/database/grade-transitions/transition-editor.tsx": [
       "Schuljahreswechsel bearbeiten Neuer Schuljahreswechsel@268",
@@ -1610,7 +1610,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1039",
     ],
     "src/components/files/folder-modal.tsx": [
-      "Ordner bearbeiten Neuer Ordner@156",
+      "Ordner bearbeiten Neuer Ordner@157",
     ],
     "src/components/planning/closing-day-modal.tsx": [
       "Schließtag bearbeiten Schließtag anlegen@154",

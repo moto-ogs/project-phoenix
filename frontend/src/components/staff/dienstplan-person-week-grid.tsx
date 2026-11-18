@@ -741,8 +741,12 @@ function ShiftBlock({
   const label = shiftLabel(shift, typesById);
   const widthPercent = 100 / columnCount;
   const isShort = duration < 45;
-  const ariaParts = [`${timeRange} ${label}`];
-  if (shift.breakMinutes > 0) ariaParts.push(`Pause ${shift.breakMinutes} min`);
+  const showBreak = !isShort && shift.breakMinutes > 0 && duration >= 75;
+  // Zeit und Titel zeigt der Block; hier steht, was er nicht zeigt (#7112).
+  const ariaParts: string[] = [];
+  if (shift.breakMinutes > 0 && !showBreak) {
+    ariaParts.push(`Pause ${shift.breakMinutes} min`);
+  }
   if (shift.cancelled) ariaParts.push("fällt aus");
   if (shift.originShiftId != null) ariaParts.push("Vertretung");
   const showSeriesIcon = !shift.cancelled && shift.seriesId != null;
@@ -779,7 +783,7 @@ function ShiftBlock({
           ) : undefined
         }
         footer={
-          !isShort && shift.breakMinutes > 0 && duration >= 75 ? (
+          showBreak ? (
             <span className="text-xs text-gray-600">
               Pause {shift.breakMinutes} min
             </span>
@@ -788,7 +792,18 @@ function ShiftBlock({
         className={`flex h-full flex-col overflow-hidden ${isShort ? "justify-center" : "justify-start"}`}
         interactive={onEdit !== undefined}
         onClick={onEdit}
-        aria-label={ariaParts.join(", ")}
+        details={
+          [
+            ...ariaParts,
+            ...(showSeriesIcon
+              ? [
+                  shift.detached
+                    ? "Serie, für diese Woche angepasst"
+                    : "Teil einer Serie",
+                ]
+              : []),
+          ].join(", ") || undefined
+        }
       />
     </div>
   );
