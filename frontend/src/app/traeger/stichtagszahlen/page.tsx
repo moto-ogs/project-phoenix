@@ -132,7 +132,7 @@ function schoolColumns(
             {row.school.name}
           </NavigationLink>
           {row.school.city ? (
-            <span className="block text-xs text-gray-500 max-md:hidden">
+            <span className="block text-sm text-gray-500 max-md:hidden">
               {row.school.city}
             </span>
           ) : null}

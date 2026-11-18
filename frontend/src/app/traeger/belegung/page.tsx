@@ -76,7 +76,7 @@ function SchoolCell({ school }: Readonly<{ school: TraegerSchoolOccupancy }>) {
         {school.name}
       </NavigationLink>
       {school.city ? (
-        <span className="block text-xs text-gray-500 max-md:hidden">
+        <span className="block text-sm text-gray-500 max-md:hidden">
           {school.city}
         </span>
       ) : null}

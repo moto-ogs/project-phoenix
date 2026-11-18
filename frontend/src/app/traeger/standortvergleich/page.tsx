@@ -41,8 +41,8 @@ import {
   spread,
 } from "~/components/traeger/comparison-model";
 import {
-  daysBetween,
   shiftDays,
+  shiftWindow,
   utilizationPresets,
   windowLength,
 } from "~/components/traeger/utilization-model";
@@ -337,15 +337,8 @@ function TraegerComparisonContent() {
     from: parseISODate(period.from),
     to: parseISODate(period.to),
   };
-  const length = windowLength(period);
-  const canShiftForward = period.to < today;
-  const shift = (direction: number) => {
-    let to = shiftDays(period.to, direction * length);
-    if (to > today) to = today;
-    const delta = daysBetween(period.to, to);
-    if (delta === 0) return;
-    changeWindow({ from: shiftDays(period.from, delta), to });
-  };
+  const previousWindow = shiftWindow(period, -1, { max: today });
+  const nextWindow = shiftWindow(period, 1, { max: today });
   const onDefault =
     period.from === defaultWindow.from && period.to === defaultWindow.to;
   const schoolCount = allSchools.length || schools.length;
@@ -439,8 +432,10 @@ function TraegerComparisonContent() {
               embedded
             />
           }
-          onPrevious={() => shift(-1)}
-          onNext={canShiftForward ? () => shift(1) : undefined}
+          onPrevious={
+            previousWindow ? () => changeWindow(previousWindow) : undefined
+          }
+          onNext={nextWindow ? () => changeWindow(nextWindow) : undefined}
           previousLabel="Zeitraum davor"
           nextLabel="Zeitraum danach"
           onToday={onDefault ? undefined : () => changeWindow(defaultWindow)}
