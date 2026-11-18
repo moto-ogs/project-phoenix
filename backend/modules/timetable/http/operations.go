@@ -419,9 +419,7 @@ func (rs *Resource) webSpontaneousActivitiesEnabled(r *http.Request) (bool, erro
 }
 
 func (rs *Resource) operationsComplete(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		ConfirmedPresentStudentIDs []int64 `json:"confirmed_present_student_ids"`
-	}
+	var body CompleteOperationRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("confirmed_present_student_ids is required")))
 		return

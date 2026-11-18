@@ -473,9 +473,12 @@ func (s *Store) SetNumberRange(ctx context.Context, organizationID int64, servic
 	return row.numberRange(), nil
 }
 
-// ReserveNumbers raises the counter by count in one statement. The row stays
-// locked until the transaction ends; a rollback returns the numbers, so the
-// numbers of committed invoices have no gap.
+// ReserveNumbers raises the counter by count in one statement, from the
+// last issued number or from the start value of the counter when that is
+// larger (#7358). Both stand on the counter row, which the statement holds
+// until the transaction ends: a release that waits for a start value sees
+// it, and a rollback returns the numbers, so the numbers of committed
+// invoices have no gap.
 func (s *Store) ReserveNumbers(ctx context.Context, organizationID int64, service string, year, count int) (int64, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
@@ -485,7 +488,8 @@ func (s *Store) ReserveNumbers(ctx context.Context, organizationID int64, servic
 	if err := db.NewRaw(`INSERT INTO parent_billing.number_range_counters AS counter (organization_id, service, year, last_number, updated_at)
 		VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT (organization_id, service, year)
-		DO UPDATE SET last_number = counter.last_number + EXCLUDED.last_number, updated_at = EXCLUDED.updated_at
+		DO UPDATE SET last_number = GREATEST(counter.last_number, COALESCE(counter.start_number, 1) - 1) + EXCLUDED.last_number,
+			updated_at = EXCLUDED.updated_at
 		RETURNING last_number`, organizationID, service, year, count, s.now()).Scan(ctx, &last); err != nil {
 		return 0, err
 	}

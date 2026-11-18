@@ -50,7 +50,7 @@ export interface SupervisionStudentSheet {
 }
 
 interface BackendSupervisionStudentSheet {
-  student_id: number;
+  student_id: string | number;
   first_name: string;
   last_name: string;
   school_class?: string;

@@ -35,7 +35,7 @@ func CalendarReminderDelivery(source CalendarReminderSource) ports.DeliveryDepen
 					if profile == nil {
 						continue
 					}
-					audience.Profiles[profileID] = &ports.GuardianProfile{ID: profile.ID, AccountID: profile.AccountID, Email: profile.Email, FirstName: profile.FirstName, LastName: profile.LastName, PortalLocale: profile.PortalLocale}
+					audience.Profiles[profileID] = &ports.GuardianProfile{ID: profile.ID, AccountID: profile.AccountID, Email: profile.Email, FirstName: profile.FirstName, LastName: profile.LastName, Salutation: profile.Salutation, PortalLocale: profile.PortalLocale}
 				}
 				result[id] = audience
 			}

@@ -139,7 +139,16 @@ export async function fetchClassDaySchool(
   const response = await authFetch<ProxyResponse<ClassDayReport>>(
     `/api/school/class-day?${params.toString()}`,
   );
-  return response.data;
+  // The catalog proxy hands student_id out as a string (ADR 0270); the view
+  // and the writes of this page keep the number Go still reads.
+  const report = response.data;
+  return {
+    ...report,
+    rows: (report.rows ?? []).map((row) => ({
+      ...row,
+      student_id: Number(row.student_id),
+    })),
+  };
 }
 
 // Tagesausnahme einer Klasse aus moto schule (#2970). Der Klassenname reist
@@ -552,7 +561,7 @@ interface BackendAbsenceList {
   school_days: number;
   children?: Array<
     BackendAbsenceListCounts & {
-      student_id: number;
+      student_id: string | number;
       first_name: string;
       last_name: string;
     }

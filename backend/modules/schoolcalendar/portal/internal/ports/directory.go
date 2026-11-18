@@ -28,7 +28,9 @@ type GuardianProfile struct {
 	AccountID           *int64
 	Email               *string
 	FirstName, LastName string
-	PortalLocale        *string
+	// Salutation is the chosen form of address (ms, mr), empty without one.
+	Salutation   string
+	PortalLocale *string
 }
 type StudentGuardian struct {
 	GuardianProfileID, StudentID int64

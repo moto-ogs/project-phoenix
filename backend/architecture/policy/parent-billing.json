@@ -253,6 +253,10 @@
       "write_owner": "parent-billing"
     },
     {
+      "name": "parent_billing.number_range_starts",
+      "write_owner": "parent-billing"
+    },
+    {
       "name": "parent_billing.number_ranges",
       "write_owner": "parent-billing"
     },

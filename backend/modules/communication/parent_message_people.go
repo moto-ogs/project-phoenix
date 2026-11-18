@@ -35,8 +35,10 @@ func (r parentMessagePeople) FindStaffSenderName(ctx context.Context, id int64) 
 
 // ParentMessageGuardianContact retains the original mail/name/locale facts.
 type ParentMessageGuardianContact struct {
-	FirstName    string
-	LastName     string
+	FirstName string
+	LastName  string
+	// Salutation is the chosen form of address (ms, mr), empty without one.
+	Salutation   string
 	Email        *string
 	PortalLocale *string
 }

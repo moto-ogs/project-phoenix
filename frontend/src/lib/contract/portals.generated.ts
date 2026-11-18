@@ -5,9 +5,11 @@ import { routes as notifications } from "./notifications.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
 import { routes as parentAnnouncements } from "./parent-announcements.generated";
 import { routes as parentMe } from "./parent-me.generated";
+import { routes as schoolClassDay } from "./school-class-day.generated";
 import { routes as schoolNotifications } from "./school-notifications.generated";
 import { routes as schoolParentLetters } from "./school-parent-letters.generated";
 import { routes as schoolStaffMessages } from "./school-staff-messages.generated";
+import { routes as schoolSupervisions } from "./school-supervisions.generated";
 import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as students } from "./students.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
@@ -58,6 +60,28 @@ export const portalRoutes = {
     operatorBilling["PUT /operator/billing/key-day"],
   ],
   school: [
+    schoolClassDay["DELETE /school/class-day/absence-reports/{schoolClass}/{date}/students/{studentId}"],
+    schoolClassDay["DELETE /school/class-day/arrival-exceptions/{schoolClass}/{date}"],
+    schoolClassDay["DELETE /school/class-day/day-hints/{schoolClass}/{date}"],
+    schoolClassDay["DELETE /school/class-day/day-hints/{schoolClass}/{date}/students/{studentId}"],
+    schoolClassDay["DELETE /school/class-day/handover/{schoolClass}/{date}"],
+    schoolClassDay["DELETE /school/class-day/homework/{schoolClass}/{homeworkId}"],
+    schoolClassDay["GET /school/class-day/"],
+    schoolClassDay["GET /school/class-day/absence-list"],
+    schoolClassDay["GET /school/class-day/arrival-exceptions"],
+    schoolClassDay["GET /school/class-day/arrival-exceptions/block-start"],
+    schoolClassDay["GET /school/class-day/classes"],
+    schoolClassDay["GET /school/class-day/school-day"],
+    schoolClassDay["GET /school/class-day/shared-notes/{schoolClass}/students/{studentId}"],
+    schoolClassDay["POST /school/class-day/class-trips/{schoolClass}"],
+    schoolClassDay["POST /school/class-day/homework/{schoolClass}"],
+    schoolClassDay["PUT /school/class-day/absence-reports/{schoolClass}/{date}/students/{studentId}"],
+    schoolClassDay["PUT /school/class-day/arrival-exceptions/{schoolClass}/{date}"],
+    schoolClassDay["PUT /school/class-day/day-hints/{schoolClass}/{date}"],
+    schoolClassDay["PUT /school/class-day/day-hints/{schoolClass}/{date}/students/{studentId}"],
+    schoolClassDay["PUT /school/class-day/handover/{schoolClass}/{date}"],
+    schoolClassDay["PUT /school/class-day/homework/{schoolClass}/{homeworkId}"],
+    schoolClassDay["PUT /school/class-day/morning-attendance/{schoolClass}/{date}"],
     schoolNotifications["DELETE /school/notifications/preferences/"],
     schoolNotifications["DELETE /school/notifications/push/subscriptions"],
     schoolNotifications["GET /school/notifications/feed/"],
@@ -90,6 +114,14 @@ export const portalRoutes = {
     schoolStaffMessages["POST /school/staff-messages/threads/open"],
     schoolStaffMessages["POST /school/staff-messages/threads/{threadID}"],
     schoolStaffMessages["POST /school/staff-messages/threads/{threadID}/leave"],
+    schoolSupervisions["GET /school/supervisions/"],
+    schoolSupervisions["GET /school/supervisions/{id}/roster"],
+    schoolSupervisions["GET /school/supervisions/{id}/students/{student_id}/sheet"],
+    schoolSupervisions["POST /school/supervisions/{id}/complete"],
+    schoolSupervisions["POST /school/supervisions/{id}/start"],
+    schoolSupervisions["POST /school/supervisions/{id}/students/{student_id}/check-in"],
+    schoolSupervisions["POST /school/supervisions/{id}/students/{student_id}/check-out"],
+    schoolSupervisions["PUT /school/supervisions/{id}/students/{student_id}/homework-feedback"],
   ],
   tenant: [
     notifications["DELETE /api/notifications/preferences/"],
