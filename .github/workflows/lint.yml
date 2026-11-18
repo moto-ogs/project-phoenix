@@ -229,11 +229,12 @@ jobs:
       # pass-through route file (#2352).
       - name: Refuse new pass-through route files
         if: github.event_name == 'pull_request'
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        # The checkout is the merge of the PR into its base. Its first parent
+        # is the base that merge was built on; base.sha can be older and
+        # would blame this PR for routes that landed on the base since.
         run: |
-          git fetch --no-tags --depth=1 origin "$BASE_SHA"
-          node scripts/check-proxy-routes.mjs "$BASE_SHA"
+          git fetch --no-tags --depth=2 origin "$GITHUB_SHA"
+          node scripts/check-proxy-routes.mjs HEAD^1
 
       - name: Enable corepack
         run: corepack enable
