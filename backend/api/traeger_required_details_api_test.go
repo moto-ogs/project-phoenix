@@ -58,12 +58,14 @@ func TestTraegerRequiredDetailsNameOnlyWhatTheBookedModulesNeed(t *testing.T) {
 	assert.Equal(t, []string{"letterhead", "bank_account", "sepa_creditor", "number_range_holiday", "number_range_care"},
 		requiredDetails(t, f, office.token))
 
-	// A letterhead of blanks is no letterhead.
+	// A letterhead of blanks or without an address is incomplete.
 	setLetterhead := func(text string) {
 		rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, "/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": text})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	setLetterhead(" \n ")
+	assert.Contains(t, requiredDetails(t, f, office.token), "letterhead")
+	setLetterhead("Träger ohne Anschrift")
 	assert.Contains(t, requiredDetails(t, f, office.token), "letterhead")
 	setLetterhead(traegerTestLetterhead)
 	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, "/traeger/master-data/bank-accounts", masterDataBankAccount{

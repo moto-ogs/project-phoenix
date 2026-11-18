@@ -839,12 +839,14 @@ func TestCareContractWithoutALetterheadIsNotSent(t *testing.T) {
 	created := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created
 	require.Len(t, created, 1)
 	id := created[0].ID
-	// A letterhead of blanks names no address either.
-	setTraegerLetterhead(t, f.reviewFixture, "  \n ")
-	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{id}})
-	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
-	code, _ := registrationRefusalOf(t, rec)
-	assert.Equal(t, "care_contract.letterhead_missing", code)
+	// A letterhead of blanks or without an address is incomplete.
+	for _, text := range []string{"  \n ", "Träger ohne Anschrift"} {
+		setTraegerLetterhead(t, f.reviewFixture, text)
+		rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{id}})
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		code, _ := registrationRefusalOf(t, rec)
+		assert.Equal(t, "care_contract.letterhead_missing", code)
+	}
 	detail := decodeSchoolPortalData[careContractDetailBody](t, traegerJSON(t, f.traeger, token, http.MethodGet, contractPath(id, ""), nil).Body.Bytes())
 	assert.Equal(t, "entwurf", detail.Status)
 	assert.False(t, detail.DocumentFrozen)

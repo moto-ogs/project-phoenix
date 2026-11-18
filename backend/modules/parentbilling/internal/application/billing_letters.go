@@ -387,8 +387,8 @@ func mailSenderName(ctx context.Context, post parentbilling.BillingLetterPost, o
 	return firstLine(textLines(text)), nil
 }
 
-// missingSender tells whether the letterhead names no sender. A letter, a
-// notice and their mail name the Träger from it (#7177).
+// missingSender tells whether the letterhead lacks the Träger's name and
+// address. A letter, a notice and their mail name the Träger from it (#7177).
 func missingSender(head parentbilling.Letterhead) bool {
-	return strings.TrimSpace(head.SenderText) == ""
+	return len(textLines(head.SenderText)) < 2
 }

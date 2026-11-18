@@ -5,12 +5,11 @@
 // keine Rechnungen oder Bescheide. Das Backend nennt nur Angaben, deren Modul
 // eine Schule des Trägers gebucht hat.
 
-import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { hasPermission } from "~/lib/auth-utils";
-import { createLogger } from "~/lib/logger";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchTraegerRequiredDetails,
@@ -19,8 +18,6 @@ import {
 import { TRAEGER_ROLE_LABELS, type TraegerRole } from "~/lib/traeger-roles";
 import { traegerPath } from "~/lib/traeger-url";
 import { useTraegerResource } from "./use-traeger-resource";
-
-const logger = createLogger({ component: "TraegerRequiredDetailsNotice" });
 
 const SETTINGS_RIGHT = "traeger_settings:manage";
 const BILLING_RIGHT = "traeger_billing:manage";
@@ -75,25 +72,18 @@ const PAGES = [
 /**
  * Names the missing details with a link to the page where the viewer enters
  * them. A detail the viewer may not enter names the role that does.
- * Shows nothing while loading, after a failed read or once nothing is
- * missing.
+ * Shows nothing while loading or once nothing is missing. A failed read stays
+ * visible with the shared retry action.
  */
 export function TraegerRequiredDetailsNotice() {
   const { data: session } = useSession();
-  const { data, failure } = useTraegerResource(
+  const { data, error } = useTraegerResource(
     traegerKeys.requiredDetails(),
     fetchTraegerRequiredDetails,
     "die Pflichtangaben",
   );
-  useEffect(() => {
-    // The hint only adds to the page; the school list carries the page's
-    // own load error. A failed read leaves the hint out and is logged.
-    if (!failure) return;
-    logger.warn("traeger_required_details_load_failed", {
-      error: failure instanceof Error ? failure.message : String(failure),
-    });
-  }, [failure]);
-  if (failure || !data || data.length === 0) return null;
+  if (error) return <LoadErrorAlert error={error} />;
+  if (!data || data.length === 0) return null;
   const can = (detail: TraegerRequiredDetail) =>
     hasPermission(session ?? null, DETAILS[detail].right);
   const links = PAGES.filter((page) =>

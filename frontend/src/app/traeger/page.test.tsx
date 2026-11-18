@@ -131,6 +131,27 @@ describe("TraegerSchoolsPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows a failed required-details check and retries it", async () => {
+    mockFetchSchools.mockResolvedValue([AM_BACH]);
+    mockFetchRequiredDetails
+      .mockRejectedValueOnce(
+        new ApiError("unavailable", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValueOnce([]);
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Pflichtangaben"),
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+
+    await waitFor(() =>
+      expect(mockFetchRequiredDetails).toHaveBeenCalledTimes(2),
+    );
+  });
+
   it("lists every school of the Träger as a read-only table", async () => {
     mockFetchSchools.mockResolvedValue([
       {

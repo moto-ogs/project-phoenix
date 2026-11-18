@@ -239,10 +239,7 @@ func (l *CareNoticeLetters) MailCareNoticeLetters(ctx context.Context, reviewer 
 	if err != nil {
 		return parentbilling.BillingLetterSeries{}, err
 	}
-	traeger, err := l.traegerName(ctx, reviewer.OrganizationID)
-	if err != nil {
-		return parentbilling.BillingLetterSeries{}, err
-	}
+	var traeger string
 	var series parentbilling.BillingLetterSeries
 	var queued []int64
 	for _, notice := range current.notices {
@@ -259,6 +256,12 @@ func (l *CareNoticeLetters) MailCareNoticeLetters(ctx context.Context, reviewer 
 		case !sameNoticeRecipient(notice, recipients):
 			series.RecipientChanged++
 			continue
+		}
+		if traeger == "" {
+			traeger, err = l.traegerName(ctx, reviewer.OrganizationID)
+			if err != nil {
+				return parentbilling.BillingLetterSeries{}, err
+			}
 		}
 		if err := l.send(ctx, reviewer, &current, notice, traeger); err != nil {
 			return parentbilling.BillingLetterSeries{}, err

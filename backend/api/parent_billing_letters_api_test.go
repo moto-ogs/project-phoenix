@@ -109,20 +109,22 @@ func brandTraegerOffice(t *testing.T, portal *traegerPortalHandler, office traeg
 }
 
 // requireLettersNeedTheLetterhead pins #7177: a letter names the Träger as
-// its sender from the letterhead, so with a letterhead of blanks create
-// refuses with its own code and stores nothing. The letterhead is restored
-// afterwards.
+// its sender from the letterhead, so a blank letterhead or one without an
+// address refuses with its own code and stores nothing. The letterhead is
+// restored afterwards.
 func requireLettersNeedTheLetterhead(t *testing.T, portal *traegerPortalHandler, administration string, create func() *httptest.ResponseRecorder) {
 	t.Helper()
 	setLetterhead := func(text string) {
 		rec := traegerJSON(t, portal, administration, http.MethodPut, "/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": text})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
-	setLetterhead(" \n ")
-	rec := create()
-	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
-	code, _ := registrationRefusalOf(t, rec)
-	assert.Equal(t, "parent_billing.letterhead_missing", code)
+	for _, text := range []string{" \n ", "Träger ohne Anschrift"} {
+		setLetterhead(text)
+		rec := create()
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		code, _ := registrationRefusalOf(t, rec)
+		assert.Equal(t, "parent_billing.letterhead_missing", code)
+	}
 	setLetterhead(traegerTestLetterhead)
 }
 
