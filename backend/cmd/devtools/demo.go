@@ -12,10 +12,12 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	seedapi "github.com/moto-ogs/project-phoenix/internal/devtools/seedapi"
 	"github.com/moto-ogs/project-phoenix/internal/devtools/simulate"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -270,13 +272,42 @@ func loadDemoSchool(ctx context.Context, schools *DemoRuntime, slug, baseURL str
 	}
 	neighbours := make([]*seedapi.NeighbourAttendanceTicker, 0, len(contract.NeighbourAttendance))
 	for _, neighbour := range contract.NeighbourAttendance {
-		neighbours = append(neighbours, seedapi.NewNeighbourAttendanceTicker(neighbour, schools.seedAdapter(baseURL, false)))
+		if neighbour.SchoolID <= 0 || neighbour.StaffID <= 0 {
+			continue
+		}
+		neighbours = append(neighbours, seedapi.NewNeighbourAttendanceTicker(neighbour, schools.seedAdapter(baseURL, false), neighbourOpenStays(schools, neighbour)))
 	}
 	return &demoSchool{
 		slug: slug, schoolID: saved.SchoolID, seedJSON: saved.SeedJSON, state: state, client: client, ticker: ticker,
 		visitorID: seedapi.VisitorAccountID(profile), visitorParentID: visitorParentID,
 		traegerID: profile.Organization.ID, neighbours: neighbours,
 	}, nil
+}
+
+func neighbourOpenStays(runtime *DemoRuntime, school demoprofile.NeighbourAttendance) func(context.Context, timezone.Date) ([]string, error) {
+	students := make(map[int64]bool, len(school.Children))
+	for _, child := range school.Children {
+		students[child.StudentID] = true
+	}
+	return func(ctx context.Context, day timezone.Date) ([]string, error) {
+		var rows []DemoVisit
+		ctx = tenant.WithTenantID(tenant.WithUnitOfWork(ctx, runtime.TenantRuntime()), school.SchoolID)
+		err := tenant.WithinCurrentTenant(ctx, func(ctx context.Context) error {
+			var err error
+			rows, err = runtime.LatestDemoVisits(ctx, 0, day.String(), day.String())
+			return err
+		})
+		if err != nil {
+			return nil, err
+		}
+		var ids []string
+		for _, row := range rows {
+			if row.OpenSchoolStayBy == school.StaffID && students[row.StudentID] {
+				ids = append(ids, strconv.FormatInt(row.StudentID, 10))
+			}
+		}
+		return ids, nil
+	}
 }
 
 // tick signs the school's admin in when due and executes one tick.

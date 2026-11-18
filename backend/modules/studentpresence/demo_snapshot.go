@@ -10,6 +10,8 @@ type DemoVisit struct {
 	StudentID   int64
 	Active, Web bool
 	ChangedAt   time.Time
+	// OpenSchoolStayBy is the recorder of the latest stay when it is open.
+	OpenSchoolStayBy int64
 }
 
 // DemoVisits reads the demo snapshot of current occupancy and latest

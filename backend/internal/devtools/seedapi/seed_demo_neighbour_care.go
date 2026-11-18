@@ -131,7 +131,17 @@ func (n demoNeighbourSchool) seedRoster(rt *Runtime, groups map[string]SeedEntit
 			})
 		}
 	}
+	// At this point the school's only staff member is the synthetic admin.
+	staff, err := listSeedStaffIDs(rt)
+	if err != nil {
+		return err
+	}
+	if len(staff) != 1 {
+		return fmt.Errorf("expected one neighbour school admin, got %d staff members", len(staff))
+	}
 	rt.neighbourAttendance = append(rt.neighbourAttendance, demoprofile.NeighbourAttendance{
+		SchoolID:   rt.Bootstrap.SchoolID,
+		StaffID:    staff[0],
 		TenantSlug: rt.Bootstrap.TenantSlug,
 		Admin:      makeBootstrapSeedState(rt.Bootstrap).SchoolAdmin,
 		Children:   children,
