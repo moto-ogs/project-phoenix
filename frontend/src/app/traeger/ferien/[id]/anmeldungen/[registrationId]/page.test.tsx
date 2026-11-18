@@ -576,6 +576,36 @@ describe("TraegerHolidayRegistrationPage", () => {
     expect(screen.getByText("Herunterladen")).toBeInTheDocument();
   });
 
+  it("keeps only non-interactive header chrome after metadata access is refused", async () => {
+    mockSchools.mockRejectedValue(
+      new ApiError("forbidden", 403, { code: "general.permission" }),
+    );
+    render(
+      <ToastProvider>
+        <TraegerHolidayRegistrationPage />
+      </ToastProvider>,
+    );
+
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Schulen"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Anmeldung von Eva Muster",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Bestätigen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Weitere Aktionen" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+  });
+
   describe("tabs and head actions (#7410)", () => {
     function renderPage() {
       render(
