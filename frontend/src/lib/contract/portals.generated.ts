@@ -3,9 +3,17 @@ import { routes as absenceTypes } from "./absence-types.generated";
 import { routes as catererNotifications } from "./caterer-notifications.generated";
 import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as notifications } from "./notifications.generated";
+import { routes as operatorAccounts } from "./operator-accounts.generated";
+import { routes as operatorAnnouncements } from "./operator-announcements.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
+import { routes as operatorCaterers } from "./operator-caterers.generated";
 import { routes as operatorDevices } from "./operator-devices.generated";
+import { routes as operatorOrganizations } from "./operator-organizations.generated";
+import { routes as operatorProfile } from "./operator-profile.generated";
+import { routes as operatorRoles } from "./operator-roles.generated";
 import { routes as operatorSchools } from "./operator-schools.generated";
+import { routes as operatorStats } from "./operator-stats.generated";
+import { routes as operatorUnregisteredTagScans } from "./operator-unregistered-tag-scans.generated";
 import { routes as parentAnnouncements } from "./parent-announcements.generated";
 import { routes as parentMe } from "./parent-me.generated";
 import { routes as schoolCalendar } from "./school-calendar.generated";
@@ -225,12 +233,66 @@ export const portalRoutes = {
     parentMe["POST /parent/me/calendar/recipients/{recipientId}/response"],
   ],
   platform: [
+    operatorAccounts["GET /operator/accounts"],
+    operatorAnnouncements["GET /operator/announcements/{id}/stats"],
+    operatorAnnouncements["GET /operator/announcements/{id}/views"],
+    operatorAnnouncements["POST /operator/announcements/{id}/publish"],
+    operatorBilling["GET /operator/billing/key-date-counts"],
     operatorBilling["GET /operator/billing/key-day"],
     operatorBilling["PUT /operator/billing/key-day"],
+    operatorCaterers["GET /operator/caterers"],
+    operatorDevices["GET /operator/devices/"],
     operatorDevices["GET /operator/devices/{id}/history"],
+    operatorDevices["GET /operator/devices/{id}/transfer-status"],
+    operatorDevices["POST /operator/devices/"],
     operatorDevices["POST /operator/devices/{id}/block"],
+    operatorDevices["POST /operator/devices/{id}/set-api-key"],
+    operatorDevices["POST /operator/devices/{id}/transfer"],
     operatorDevices["POST /operator/devices/{id}/unblock"],
+    operatorOrganizations["DELETE /operator/organizations/{id}/beleg-retention/suspensions/{suspensionId}"],
+    operatorOrganizations["DELETE /operator/organizations/{id}/erasure-order"],
+    operatorOrganizations["DELETE /operator/organizations/{id}/staff-release"],
+    operatorOrganizations["DELETE /operator/organizations/{id}/traeger-members/invitations/{invitationId}"],
+    operatorOrganizations["GET /operator/organizations/"],
+    operatorOrganizations["GET /operator/organizations/summaries"],
+    operatorOrganizations["GET /operator/organizations/{id}/accounts"],
+    operatorOrganizations["GET /operator/organizations/{id}/beleg-retention"],
+    operatorOrganizations["GET /operator/organizations/{id}/devices"],
+    operatorOrganizations["GET /operator/organizations/{id}/erasure-order"],
+    operatorOrganizations["GET /operator/organizations/{id}/persons"],
+    operatorOrganizations["GET /operator/organizations/{id}/schools"],
+    operatorOrganizations["GET /operator/organizations/{id}/staff-release"],
+    operatorOrganizations["GET /operator/organizations/{id}/traeger-members"],
+    operatorOrganizations["GET /operator/organizations/{id}/traeger-members/invitations"],
+    operatorOrganizations["POST /operator/organizations/"],
+    operatorOrganizations["POST /operator/organizations/test-traeger"],
+    operatorOrganizations["POST /operator/organizations/{id}/beleg-retention/clarification-reviews"],
+    operatorOrganizations["POST /operator/organizations/{id}/beleg-retention/instructions"],
+    operatorOrganizations["POST /operator/organizations/{id}/beleg-retention/suspensions"],
+    operatorOrganizations["POST /operator/organizations/{id}/erasure-order"],
+    operatorOrganizations["POST /operator/organizations/{id}/restore"],
+    operatorOrganizations["POST /operator/organizations/{id}/sample-children"],
+    operatorOrganizations["POST /operator/organizations/{id}/staff-release"],
+    operatorOrganizations["POST /operator/organizations/{id}/traeger-members"],
+    operatorOrganizations["POST /operator/organizations/{id}/traeger-members/invitations"],
+    operatorOrganizations["POST /operator/organizations/{id}/traeger-members/invitations/{invitationId}/resend"],
+    operatorOrganizations["PUT /operator/organizations/{id}/erasure-order/records"],
+    operatorProfile["GET /operator/profile/"],
+    operatorProfile["PUT /operator/profile/"],
+    operatorRoles["GET /operator/roles"],
+    operatorSchools["GET /operator/schools/"],
+    operatorSchools["GET /operator/schools/required-details"],
+    operatorSchools["GET /operator/schools/summaries"],
+    operatorSchools["GET /operator/schools/{id}/accounts"],
+    operatorSchools["GET /operator/schools/{id}/devices"],
+    operatorSchools["GET /operator/schools/{id}/settings/booking-authority-impact"],
+    operatorSchools["POST /operator/schools/"],
+    operatorSchools["POST /operator/schools/{id}/create-account"],
+    operatorSchools["POST /operator/schools/{id}/invite-admin"],
+    operatorSchools["POST /operator/schools/{id}/restore"],
     operatorSchools["PUT /operator/schools/{id}/device-slots"],
+    operatorStats["GET /operator/stats"],
+    operatorUnregisteredTagScans["GET /operator/unregistered-tag-scans/"],
   ],
   school: [
     schoolCalendar["DELETE /school/calendar/appointments/{appointmentId}"],

@@ -9,6 +9,7 @@ func BillingRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/key-day", Portals: operator, Response: billingKeyDayResponse{}},
 		{Method: "PUT", Pattern: "/key-day", Portals: operator, Request: updateBillingKeyDayRequest{}, Response: billingKeyDayResponse{}},
+		billingKeyDateCountContract(),
 	}
 }
 

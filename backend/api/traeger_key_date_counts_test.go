@@ -120,6 +120,17 @@ func TestTraegerKeyDateCountsShowTheNumbersOfTheOperatorReport(t *testing.T) {
 	operator := operatorRowsOf(report, bach, linden, foreign)
 	require.Len(t, operator[bach], 2)
 	require.Len(t, operator[foreign], 2, "the operator report holds the other Träger's school")
+	operatorPortal := operatorBillingRoutes(billing, ctx, testpkg.CreateTestOperator(t, db).ID)
+	var listed []struct {
+		SchoolID       string `json:"school_id"`
+		ActiveStudents int    `json:"active_students"`
+	}
+	operatorPortal.call(t, http.MethodGet, "/operator/billing/key-date-counts", nil, &listed)
+	assert.Len(t, listed, len(report), "the operator portal lists the operator report")
+	assert.Contains(t, listed, struct {
+		SchoolID       string `json:"school_id"`
+		ActiveStudents int    `json:"active_students"`
+	}{fmt.Sprint(bach), 3}, "the school at the brook in October, its id a string")
 
 	require.Len(t, got.Schools, 2)
 	assert.Equal(t, "OGS Am Bach", got.Schools[0].Name, "ordered by name")
@@ -180,6 +191,22 @@ func TestTraegerKeyDateCountsShowTheNumbersOfTheOperatorReport(t *testing.T) {
 	assertTraegerListFormats(t, router, answer.AccessToken, "/traeger/schools/key-date-counts/export", "stichtagszahlen")
 	stranger := traegerOccupancyRequest(t, router, fmt.Sprintf("/traeger/schools/key-date-counts/export?school=%d", foreign), answer.AccessToken, nil)
 	assert.Equal(t, http.StatusNotFound, stranger.Code, stranger.Body.String())
+
+	// The key day applies to the next capture; this database is the test's
+	// own, so the change reaches no other test.
+	var keyDay struct {
+		KeyDay      int    `json:"key_day"`
+		NextKeyDate string `json:"next_key_date"`
+	}
+	operatorPortal.call(t, http.MethodPut, "/operator/billing/key-day", map[string]int{"key_day": 20}, &keyDay)
+	assert.Equal(t, 20, keyDay.KeyDay)
+	keyDay.KeyDay = 0
+	operatorPortal.call(t, http.MethodGet, "/operator/billing/key-day", nil, &keyDay)
+	assert.Equal(t, 20, keyDay.KeyDay, "the operator reads the stored key day")
+	assert.Equal(t, "20", keyDay.NextKeyDate[len(keyDay.NextKeyDate)-2:])
+	stored, err := billing.BillingKeyDay(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 20, stored.Day)
 }
 
 func TestTraegerKeyDateCountsWithoutCaptureListTheSchools(t *testing.T) {

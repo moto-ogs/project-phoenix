@@ -2,9 +2,14 @@
 import { z } from "zod";
 import {
   instant,
+  int64StringOrNumber,
   noData,
+  requestBody,
   success,
 } from "./runtime";
+import {
+  OperatorDeviceSchema,
+} from "./shared.generated";
 
 /** Go: operator.deviceHistoryChange */
 export interface deviceHistoryChange {
@@ -38,18 +43,102 @@ export const deviceHistoryResponseSchema: z.ZodType<deviceHistoryResponse, unkno
   school_name: z.string(),
 });
 
+/** Go: organizationtenancy.DeviceTransferSession */
+export interface DeviceTransferSession {
+  id: string;
+  started_at: string;
+  activity_name?: string;
+  room_name?: string;
+}
+
+export const DeviceTransferSessionSchema: z.ZodType<DeviceTransferSession, unknown> = z.object({
+  id: int64StringOrNumber,
+  started_at: instant,
+  activity_name: z.string().optional(),
+  room_name: z.string().optional(),
+});
+
+/** Go: organizationtenancy.DeviceTransferStatus */
+export interface DeviceTransferStatus {
+  can_transfer: boolean;
+  is_online: boolean;
+  is_protected: boolean;
+  last_seen?: string;
+  active_session?: DeviceTransferSession;
+}
+
+export const DeviceTransferStatusSchema: z.ZodType<DeviceTransferStatus, unknown> = z.object({
+  can_transfer: z.boolean(),
+  is_online: z.boolean(),
+  is_protected: z.boolean(),
+  last_seen: instant.optional(),
+  active_session: DeviceTransferSessionSchema.optional(),
+});
+
+/** Go: operator.createDeviceRequest */
+export interface createDeviceRequest {
+  school_id?: number;
+  device_id?: string;
+  device_type?: string;
+  name?: string;
+  api_key?: string;
+}
+
+/** Go: operator.setDeviceAPIKeyRequest */
+export interface setDeviceAPIKeyRequest {
+  api_key?: string;
+}
+
+/** Go: operator.transferDeviceRequest */
+export interface transferDeviceRequest {
+  target_school_id?: number;
+}
+
 export const routes = {
+  "GET /operator/devices/": {
+    method: "GET",
+    pattern: "/operator/devices/",
+    portals: ["platform"],
+    response: success(z.array(OperatorDeviceSchema)),
+  },
   "GET /operator/devices/{id}/history": {
     method: "GET",
     pattern: "/operator/devices/{id}/history",
     portals: ["platform"],
     response: success(z.array(deviceHistoryResponseSchema)),
   },
+  "GET /operator/devices/{id}/transfer-status": {
+    method: "GET",
+    pattern: "/operator/devices/{id}/transfer-status",
+    portals: ["platform"],
+    response: success(DeviceTransferStatusSchema),
+  },
+  "POST /operator/devices/": {
+    method: "POST",
+    pattern: "/operator/devices/",
+    portals: ["platform"],
+    request: requestBody<createDeviceRequest>(),
+    response: success(OperatorDeviceSchema),
+  },
   "POST /operator/devices/{id}/block": {
     method: "POST",
     pattern: "/operator/devices/{id}/block",
     portals: ["platform"],
     response: noData,
+  },
+  "POST /operator/devices/{id}/set-api-key": {
+    method: "POST",
+    pattern: "/operator/devices/{id}/set-api-key",
+    portals: ["platform"],
+    request: requestBody<setDeviceAPIKeyRequest>(),
+    response: success(OperatorDeviceSchema),
+  },
+  "POST /operator/devices/{id}/transfer": {
+    method: "POST",
+    pattern: "/operator/devices/{id}/transfer",
+    portals: ["platform"],
+    request: requestBody<transferDeviceRequest>(),
+    response: success(OperatorDeviceSchema),
   },
   "POST /operator/devices/{id}/unblock": {
     method: "POST",

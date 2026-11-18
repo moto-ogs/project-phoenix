@@ -83,28 +83,28 @@ import {
 class OperatorProvisioningService {
   async getStats(): Promise<ProvisioningStats> {
     const data = await operatorFetch<BackendProvisioningStats>(
-      "/api/operator/provisioning/stats",
+      "/api/operator/stats",
     );
     return mapProvisioningStats(data);
   }
 
   async listOrganizationSummaries(): Promise<OrganizationSummary[]> {
     const data = await operatorFetch<BackendOrganizationSummary[]>(
-      "/api/operator/provisioning/organizations/summaries",
+      "/api/operator/organizations/summaries",
     );
     return data.map(mapOrganizationSummary);
   }
 
   async listSchoolSummaries(): Promise<SchoolSummary[]> {
     const data = await operatorFetch<BackendSchoolSummary[]>(
-      "/api/operator/provisioning/schools/summaries",
+      "/api/operator/schools/summaries",
     );
     return data.map(mapSchoolSummary);
   }
 
   async listSchoolRequiredDetails(): Promise<SchoolRequiredDetails[]> {
     const data = await operatorFetch<BackendSchoolRequiredDetails[]>(
-      "/api/operator/provisioning/schools/required-details",
+      "/api/operator/schools/required-details",
     );
     return data.map(mapSchoolRequiredDetails);
   }
@@ -113,14 +113,14 @@ class OperatorProvisioningService {
     organizationId: string,
   ): Promise<SchoolSummary[]> {
     const data = await operatorFetch<BackendSchoolSummary[]>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(organizationId)}/schools`,
+      `/api/operator/organizations/${encodeURIComponent(organizationId)}/schools`,
     );
     return data.map(mapSchoolSummary);
   }
 
   async listOrganizations(): Promise<Organization[]> {
     const data = await operatorFetch<BackendOrganization[]>(
-      "/api/operator/provisioning/organizations",
+      "/api/operator/organizations",
     );
     return data.map(mapOrganization);
   }
@@ -129,24 +129,22 @@ class OperatorProvisioningService {
     data: CreateOrganizationRequest,
   ): Promise<Organization> {
     const result = await operatorFetch<BackendOrganization>(
-      "/api/operator/provisioning/organizations",
+      "/api/operator/organizations",
       { method: "POST", body: data },
     );
     return mapOrganization(result);
   }
 
   async listSchools(): Promise<School[]> {
-    const data = await operatorFetch<BackendSchool[]>(
-      "/api/operator/provisioning/schools",
-    );
+    const data = await operatorFetch<BackendSchool[]>("/api/operator/schools");
     return data.map(mapSchool);
   }
 
   async createSchool(data: CreateSchoolRequest): Promise<School> {
-    const result = await operatorFetch<BackendSchool>(
-      "/api/operator/provisioning/schools",
-      { method: "POST", body: data },
-    );
+    const result = await operatorFetch<BackendSchool>("/api/operator/schools", {
+      method: "POST",
+      body: data,
+    });
     return mapSchool(result);
   }
 
@@ -171,14 +169,14 @@ class OperatorProvisioningService {
 
   async listSchoolAccounts(schoolId: string): Promise<SchoolAccount[]> {
     const data = await operatorFetch<BackendSchoolAccount[]>(
-      `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/accounts`,
+      `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts`,
     );
     return data.map(mapSchoolAccount);
   }
 
   async listOrganizationAccounts(orgId: string): Promise<OrgAccount[]> {
     const data = await operatorFetch<BackendOrgAccount[]>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/accounts`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/accounts`,
     );
     return data.map(mapOrgAccount);
   }
@@ -193,7 +191,7 @@ class OperatorProvisioningService {
 
   async listTraegerMembers(orgId: string): Promise<TraegerMember[]> {
     const data = await operatorFetch<BackendTraegerMember[]>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/traeger-members`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members`,
     );
     return data.map(mapTraegerMember);
   }
@@ -203,7 +201,7 @@ class OperatorProvisioningService {
     data: AssignTraegerMemberRequest,
   ): Promise<TraegerMember> {
     const result = await operatorFetch<BackendTraegerMember>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/traeger-members`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members`,
       { method: "POST", body: data },
     );
     return mapTraegerMember(result);
@@ -218,7 +216,7 @@ class OperatorProvisioningService {
     data: InviteTraegerMemberRequest,
   ): Promise<void> {
     await operatorFetch<unknown>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations`,
       { method: "POST", body: data },
     );
   }
@@ -226,7 +224,7 @@ class OperatorProvisioningService {
   /** Open and expired invitations into the Träger-Büro (#5749). */
   async listTraegerInvitations(orgId: string): Promise<TraegerInvitation[]> {
     const data = await operatorFetch<BackendTraegerInvitation[]>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations`,
     );
     return data.map(mapTraegerInvitation);
   }
@@ -240,7 +238,7 @@ class OperatorProvisioningService {
     invitationId: string,
   ): Promise<TraegerInvitation> {
     const result = await operatorFetch<BackendTraegerInvitation>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations/${encodeURIComponent(invitationId)}/resend`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations/${encodeURIComponent(invitationId)}/resend`,
       { method: "POST" },
     );
     return mapTraegerInvitation(result);
@@ -252,7 +250,7 @@ class OperatorProvisioningService {
     invitationId: string,
   ): Promise<void> {
     await operatorFetch<unknown>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations/${encodeURIComponent(invitationId)}`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations/${encodeURIComponent(invitationId)}`,
       { method: "DELETE" },
     );
   }
@@ -261,7 +259,7 @@ class OperatorProvisioningService {
     orgId: string,
   ): Promise<TraegerErasureOrder | null> {
     const data = await operatorFetch<unknown>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/erasure-order`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/erasure-order`,
     );
     return isBackendTraegerErasureOrder(data)
       ? mapTraegerErasureOrder(data)
@@ -273,7 +271,7 @@ class OperatorProvisioningService {
     data: RecordTraegerErasureOrderRequest,
   ): Promise<TraegerErasureOrder> {
     const result = await operatorFetch<unknown>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/erasure-order`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/erasure-order`,
       { method: "POST", body: data },
     );
     if (!isBackendTraegerErasureOrder(result)) {
@@ -287,7 +285,7 @@ class OperatorProvisioningService {
     data: RecordTraegerErasureOrderRecordsRequest,
   ): Promise<TraegerErasureOrder> {
     const result = await operatorFetch<unknown>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/erasure-order/records`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/erasure-order/records`,
       { method: "PUT", body: data },
     );
     if (!isBackendTraegerErasureOrder(result)) {
@@ -298,7 +296,7 @@ class OperatorProvisioningService {
 
   async withdrawTraegerErasureOrder(orgId: string): Promise<void> {
     await operatorFetch<unknown>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/erasure-order`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/erasure-order`,
       { method: "DELETE" },
     );
   }
@@ -307,7 +305,7 @@ class OperatorProvisioningService {
     data: CreateTestTraegerRequest,
   ): Promise<TestTraeger> {
     const result = await operatorFetch<BackendTestTraeger>(
-      "/api/operator/provisioning/organizations/test-traeger",
+      "/api/operator/organizations/test-traeger",
       { method: "POST", body: data },
     );
     return mapTestTraeger(result);
@@ -315,7 +313,7 @@ class OperatorProvisioningService {
 
   async createSampleChildren(orgId: string): Promise<SampleChildrenResult> {
     const result = await operatorFetch<BackendSampleChildrenResult>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/sample-children`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/sample-children`,
       { method: "POST", body: {} },
     );
     return mapSampleChildrenResult(result);
@@ -323,35 +321,35 @@ class OperatorProvisioningService {
 
   async listAllAccounts(): Promise<OrgAccount[]> {
     const data = await operatorFetch<BackendOrgAccount[]>(
-      "/api/operator/provisioning/accounts",
+      "/api/operator/accounts",
     );
     return data.map(mapOrgAccount);
   }
 
   async listAllDevices(): Promise<OperatorDevice[]> {
     const data = await operatorFetch<BackendOperatorDevice[]>(
-      "/api/operator/provisioning/devices",
+      "/api/operator/devices",
     );
     return data.map((device) => mapOperatorDevice(device));
   }
 
   async listSchoolDevices(schoolId: string): Promise<OperatorDevice[]> {
     const data = await operatorFetch<BackendOperatorDevice[]>(
-      `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/devices`,
+      `/api/operator/schools/${encodeURIComponent(schoolId)}/devices`,
     );
     return data.map((device) => mapOperatorDevice(device));
   }
 
   async listOrganizationDevices(orgId: string): Promise<OperatorDevice[]> {
     const data = await operatorFetch<BackendOperatorDevice[]>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/devices`,
+      `/api/operator/organizations/${encodeURIComponent(orgId)}/devices`,
     );
     return data.map((device) => mapOperatorDevice(device));
   }
 
   async createDevice(data: CreateDeviceRequest): Promise<OperatorDevice> {
     const result = await operatorFetch<BackendOperatorDevice>(
-      "/api/operator/provisioning/devices",
+      "/api/operator/devices",
       { method: "POST", body: data },
     );
     return mapOperatorDevice(result, true);
@@ -369,7 +367,7 @@ class OperatorProvisioningService {
     apiKey?: string,
   ): Promise<OperatorDevice> {
     const result = await operatorFetch<BackendOperatorDevice>(
-      `/api/operator/provisioning/devices/${encodeURIComponent(deviceId)}/set-api-key`,
+      `/api/operator/devices/${encodeURIComponent(deviceId)}/set-api-key`,
       { method: "POST", body: apiKey ? { api_key: apiKey } : {} },
     );
     return mapOperatorDevice(result, true);
@@ -379,7 +377,7 @@ class OperatorProvisioningService {
     deviceId: string,
   ): Promise<DeviceTransferStatus> {
     const result = await operatorFetch<BackendDeviceTransferStatus>(
-      `/api/operator/provisioning/devices/${encodeURIComponent(deviceId)}/transfer-status`,
+      `/api/operator/devices/${encodeURIComponent(deviceId)}/transfer-status`,
     );
     return mapDeviceTransferStatus(result);
   }
@@ -426,7 +424,7 @@ class OperatorProvisioningService {
     targetSchoolId: string,
   ): Promise<OperatorDevice> {
     const result = await operatorFetch<BackendOperatorDevice>(
-      `/api/operator/provisioning/devices/${encodeURIComponent(deviceId)}/transfer`,
+      `/api/operator/devices/${encodeURIComponent(deviceId)}/transfer`,
       {
         method: "POST",
         body: { target_school_id: Number(targetSchoolId) },
@@ -440,7 +438,7 @@ class OperatorProvisioningService {
     data: InviteAdminRequest,
   ): Promise<Invitation> {
     const result = await operatorFetch<BackendInvitation>(
-      `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/invite-admin`,
+      `/api/operator/schools/${encodeURIComponent(schoolId)}/invite-admin`,
       { method: "POST", body: data },
     );
     return mapInvitation(result);
@@ -450,8 +448,8 @@ class OperatorProvisioningService {
     schoolId: string,
     data: CreateAccountRequest,
   ): Promise<{ id: string; email: string }> {
-    const result = await operatorFetch<{ id: number; email: string }>(
-      `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/create-account`,
+    const result = await operatorFetch<{ id: number | string; email: string }>(
+      `/api/operator/schools/${encodeURIComponent(schoolId)}/create-account`,
       { method: "POST", body: data },
     );
     return { id: result.id.toString(), email: result.email };
@@ -475,7 +473,7 @@ class OperatorProvisioningService {
     organizationId: string,
   ): Promise<OperatorPerson[]> {
     const data = await operatorFetch<BackendOperatorPerson[]>(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(organizationId)}/persons`,
+      `/api/operator/organizations/${encodeURIComponent(organizationId)}/persons`,
     );
     return data.map(mapOperatorPerson);
   }
@@ -504,7 +502,7 @@ class OperatorProvisioningService {
     }
     const suffix = params.toString() ? `?${params.toString()}` : "";
     const data = await operatorFetch<BackendUnregisteredTagScan[]>(
-      `/api/operator/provisioning/unregistered-tag-scans${suffix}`,
+      `/api/operator/unregistered-tag-scans${suffix}`,
     );
     return data.map(mapUnregisteredTagScan);
   }
@@ -526,7 +524,7 @@ class OperatorProvisioningService {
 
   async restoreOrganization(id: string): Promise<void> {
     await operatorFetch(
-      `/api/operator/provisioning/organizations/${encodeURIComponent(id)}/restore`,
+      `/api/operator/organizations/${encodeURIComponent(id)}/restore`,
       { method: "POST" },
     );
   }
@@ -540,7 +538,7 @@ class OperatorProvisioningService {
 
   async restoreSchool(id: string): Promise<void> {
     await operatorFetch(
-      `/api/operator/provisioning/schools/${encodeURIComponent(id)}/restore`,
+      `/api/operator/schools/${encodeURIComponent(id)}/restore`,
       { method: "POST" },
     );
   }
@@ -548,9 +546,10 @@ class OperatorProvisioningService {
   async listSystemRoles(): Promise<
     { id: string; name: string; isSystem: boolean }[]
   > {
-    const result = await operatorFetch<
-      { id: string; name: string; is_system: boolean }[]
-    >(`/api/operator/provisioning/roles`);
+    const result =
+      await operatorFetch<{ id: string; name: string; is_system: boolean }[]>(
+        `/api/operator/roles`,
+      );
     return result.map((r) => ({
       id: r.id,
       name: r.name,

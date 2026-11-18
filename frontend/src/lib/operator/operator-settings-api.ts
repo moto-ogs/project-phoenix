@@ -37,7 +37,7 @@ export async function fetchBookingAuthorityImpact(
   schoolId: string,
 ): Promise<BookingAuthorityImpact> {
   const wire = await operatorFetch<BookingAuthorityImpactWire>(
-    `/api/operator/provisioning/schools/${schoolId}/settings/booking-authority-impact`,
+    `/api/operator/schools/${schoolId}/settings/booking-authority-impact`,
     { method: "GET" },
   );
   return {

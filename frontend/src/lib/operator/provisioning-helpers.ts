@@ -95,8 +95,8 @@ export function mapOrganizationSummary(
 }
 
 export interface BackendSchoolSummary {
-  id: number;
-  organization_id: number;
+  id: number | string;
+  organization_id: number | string;
   organization_name: string;
   name: string;
   slug: string;
@@ -219,7 +219,7 @@ export function summaryToSchool(summary: SchoolSummary): School {
 }
 
 export interface BackendOrganization {
-  id: number;
+  id: number | string;
   name: string;
   slug: string;
   active: boolean;
@@ -234,8 +234,8 @@ export interface BackendOrganization {
 }
 
 export interface BackendSchool {
-  id: number;
-  organization_id: number;
+  id: number | string;
+  organization_id: number | string;
   name: string;
   slug: string;
   subdomain: string;
@@ -256,16 +256,16 @@ export interface BackendSchool {
 }
 
 export interface BackendInvitation {
-  id: number;
+  id: number | string;
   email: string;
-  role_id: number;
+  role_id: number | string;
   role_name?: string;
   expires_at: string;
   first_name?: string | null;
   last_name?: string | null;
   position?: string | null;
   caregiver_enabled?: boolean;
-  created_by: number;
+  created_by: number | string;
   creator?: string;
   delivery_status: string;
   email_sent_at?: string | null;
@@ -326,7 +326,7 @@ export interface Invitation {
 // Account types for operator school accounts listing
 
 export interface BackendSchoolAccount {
-  account_id: number;
+  account_id: number | string;
   email: string;
   active: boolean;
   first_name: string;
@@ -375,7 +375,7 @@ export function mapSchoolAccount(data: BackendSchoolAccount): SchoolAccount {
 // Org-level account types (includes school context)
 
 export interface BackendOrgAccount extends BackendSchoolAccount {
-  school_id: number;
+  school_id: number | string;
   school_name: string;
 }
 
@@ -430,7 +430,7 @@ export function mapTestTraeger(data: BackendTestTraeger): TestTraeger {
 export interface BackendSampleChildrenResult {
   created_count: number;
   schools: {
-    school_id: number;
+    school_id: number | string;
     created_count: number;
     skipped_count: number;
   }[];
@@ -593,7 +593,7 @@ export interface UpdateSchoolRequest {
 
 // What a school still lacks of its required details (#7174).
 export interface BackendSchoolRequiredDetails {
-  school_id: number;
+  school_id: number | string;
   reply_address_missing: boolean;
 }
 
@@ -625,7 +625,7 @@ export interface CreateDeviceRequest {
 // Device types for operator device listing
 
 export interface BackendOperatorDevice {
-  id: number;
+  id: number | string;
   device_id: string;
   device_type: string;
   name?: string;
@@ -634,9 +634,9 @@ export interface BackendOperatorDevice {
   masked_api_key: string;
   last_seen?: string;
   is_online: boolean;
-  school_id: number;
+  school_id: number | string;
   school_name: string;
-  organization_id: number;
+  organization_id: number | string;
   organization_name: string;
   created_at: string;
   updated_at: string;
@@ -753,7 +753,7 @@ export function isValidSlug(slug: string): boolean {
 // Person types for operator person listing + soft delete
 
 export interface BackendOperatorPerson {
-  id: number;
+  id: number | string;
   first_name: string;
   last_name: string;
   has_account: boolean;
@@ -761,9 +761,9 @@ export interface BackendOperatorPerson {
   has_rfid_card: boolean;
   is_staff: boolean;
   is_student: boolean;
-  school_id: number;
+  school_id: number | string;
   school_name: string;
-  organization_id: number;
+  organization_id: number | string;
   organization_name: string;
   created_at: string;
 }
@@ -805,8 +805,8 @@ export function mapOperatorPerson(data: BackendOperatorPerson): OperatorPerson {
 }
 
 export interface BackendUnregisteredTagScan {
-  id: number;
-  tenant_id: number;
+  id: number | string;
+  tenant_id: number | string;
   tag_uid: string;
   device_id?: number | null;
   scanned_at: string;
@@ -815,9 +815,9 @@ export interface BackendUnregisteredTagScan {
   resolution_note?: string | null;
   created_at: string;
   updated_at: string;
-  school_id: number;
+  school_id: number | string;
   school_name: string;
-  organization_id: number;
+  organization_id: number | string;
   organization_name: string;
   device_identifier?: string | null;
   device_name?: string | null;
@@ -887,7 +887,7 @@ export const TRAEGER_MEMBER_STATUS_LABELS: Readonly<
 };
 
 export interface BackendTraegerMember {
-  account_id: number;
+  account_id: number | string;
   email: string;
   status: TraegerMemberStatus;
   roles: string[];
@@ -928,7 +928,7 @@ export type InviteTraegerMemberRequest = AssignTraegerMemberRequest;
  * deletes it later.
  */
 export interface BackendTraegerInvitation {
-  id: number;
+  id: number | string;
   email: string;
   roles: string[];
   expires_at: string;
@@ -958,12 +958,12 @@ export function mapTraegerInvitation(
 // Löschauftrag eines deaktivierten Trägers (#4657). Kalenderdaten bleiben
 // "YYYY-MM-DD"-Strings.
 export interface BackendTraegerErasureOrder {
-  id: number;
-  organization_id: number;
+  id: number | string;
+  organization_id: number | string;
   order_reference: string;
   confirmed_on: string;
   erase_not_before: string;
-  recorded_by: number;
+  recorded_by: number | string;
   recorded_at: string;
   started_at?: string | null;
   records_choice?: TraegerRecordsChoice | "";
@@ -1016,7 +1016,9 @@ export function isBackendTraegerErasureOrder(
   return (
     typeof data === "object" &&
     data !== null &&
-    typeof (data as { id?: unknown }).id === "number"
+    // The catalog proxy delivers the id as a string (#2352); the old
+    // route answered a number.
+    ["number", "string"].includes(typeof (data as { id?: unknown }).id)
   );
 }
 

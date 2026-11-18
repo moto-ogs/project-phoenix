@@ -79,3 +79,12 @@ func (h *bookingAuthorityImpact) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	}
 	h.surface.Respond(w, r, http.StatusOK, impact, "Booking authority impact retrieved successfully")
 }
+
+// BookingAuthorityImpactRouteContracts registers the operator's review of a
+// school's switch to booking-led care (ADR 0270, #2352), relative to the
+// /operator/schools/{id}/settings mount.
+func BookingAuthorityImpactRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/booking-authority-impact", Portals: []common.PortalScope{common.PortalOperator}, Response: careplan.BookingAuthorityImpact{}},
+	}
+}

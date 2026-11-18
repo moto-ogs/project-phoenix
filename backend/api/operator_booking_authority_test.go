@@ -44,14 +44,17 @@ func newOperatorBookingAuthorityRoutes(t *testing.T) (*bun.DB, OperatorSettingsT
 		Settings:   module.OperatorSchoolSettings(module.SettingsSideEffects.Dispatch),
 		OperatorID: operatorIDFromSession,
 	})
+	// Mounted under the production path, as the operator portal calls it.
 	router := chi.NewRouter()
-	router.Method(http.MethodGet, "/schools/{id}/settings/booking-authority-impact", newBookingAuthorityImpact(careLifecycle, calendar.TodayDate))
-	router.Put("/schools/{id}/settings/values/{key}", settingsRoutes.SetSchoolSettingValue)
-	router.Delete("/schools/{id}/settings/values/{key}", settingsRoutes.ResetSchoolSettingValue)
+	router.Route("/operator", func(router chi.Router) {
+		router.Method(http.MethodGet, "/schools/{id}/settings/booking-authority-impact", newBookingAuthorityImpact(careLifecycle, calendar.TodayDate))
+		router.Put("/schools/{id}/settings/values/{key}", settingsRoutes.SetSchoolSettingValue)
+		router.Delete("/schools/{id}/settings/values/{key}", settingsRoutes.ResetSchoolSettingValue)
+	})
 	account := testpkg.CreateTestAccount(t, db, "operator")
 	operator := sessiontoken.AppClaims{ID: int(account.ID), Scope: "platform"}
 	serve := func(method, suffix string, body any) *httptest.ResponseRecorder {
-		path := fmt.Sprintf("/schools/%d%s", testpkg.Tenant(t), suffix)
+		path := fmt.Sprintf("/operator/schools/%d%s", testpkg.Tenant(t), suffix)
 		req := testutil.NewAuthenticatedRequest(t, method, path, body, testutil.WithClaims(t, operator))
 		return testutil.ExecuteRequest(router, req)
 	}

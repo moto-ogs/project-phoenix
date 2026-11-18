@@ -22,7 +22,7 @@ interface BackendState {
 }
 
 const base = (orgId: string) =>
-  `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/staff-release`;
+  `/api/operator/organizations/${encodeURIComponent(orgId)}/staff-release`;
 
 export const traegerStaffReleaseService = {
   async getState(orgId: string): Promise<TraegerStaffReleaseState> {

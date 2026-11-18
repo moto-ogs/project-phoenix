@@ -8,6 +8,29 @@ import {
   success,
 } from "./runtime";
 
+/** Go: operator.billingKeyDateCountResponse */
+export interface billingKeyDateCountResponse {
+  school_id: string;
+  school_name: string;
+  organization_name: string;
+  period: string;
+  key_date: string;
+  active_students: number;
+  active_terminals: number;
+  recorded_at: string;
+}
+
+export const billingKeyDateCountResponseSchema: z.ZodType<billingKeyDateCountResponse, unknown> = z.object({
+  school_id: z.string(),
+  school_name: z.string(),
+  organization_name: z.string(),
+  period: z.string(),
+  key_date: z.string(),
+  active_students: safeInt,
+  active_terminals: safeInt,
+  recorded_at: instant,
+});
+
 /** Go: operator.billingKeyDayResponse */
 export interface billingKeyDayResponse {
   key_day: number;
@@ -27,6 +50,12 @@ export interface updateBillingKeyDayRequest {
 }
 
 export const routes = {
+  "GET /operator/billing/key-date-counts": {
+    method: "GET",
+    pattern: "/operator/billing/key-date-counts",
+    portals: ["platform"],
+    response: success(z.array(billingKeyDateCountResponseSchema)),
+  },
   "GET /operator/billing/key-day": {
     method: "GET",
     pattern: "/operator/billing/key-day",
