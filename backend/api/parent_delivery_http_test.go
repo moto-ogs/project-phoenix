@@ -16,7 +16,7 @@ import (
 
 func TestParentDeliveryPublicErrorsKeepDiagnosticsAndCause(t *testing.T) {
 	t.Parallel()
-	source := deliveryCompose.NewPushSubscriptionService(nil, nil, nil, deliveryCompose.VAPIDConfig{}, nil)
+	source := deliveryCompose.NewPushSubscriptionService(nil, nil, deliveryCompose.VAPIDConfig{}, nil)
 	_, original := source.PublicKey()
 	_, translated := bindParentPushSubscriptions(source).PublicKey()
 	require.ErrorIs(t, translated, parentAPI.ErrWebPushNotConfigured)

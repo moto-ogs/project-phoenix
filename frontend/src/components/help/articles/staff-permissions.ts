@@ -54,7 +54,7 @@ export function staffPermissionsTopic(): HelpTopic {
       "`Wie Verwaltung` gibt fast alle Rechte der Verwaltung. Einiges kann nur die Rolle `Verwaltung` selbst, zum Beispiel Mitteilungen an Eltern schreiben.",
       "Eine Rolle aus `Wie Lehrkraft` arbeitet wie die Rolle `Lehrkraft` in moto schule. Wer sie hat, meldet sich dort an. Später lässt sie sich nicht gegen eine andere Rolle tauschen.",
       "Bei manchen Rechten steht ein Hinweis. Damit kann eine Person Rollen, Konten oder Einstellungen ändern. Gib diese Rechte nur der Leitung.",
-      "`Position` im Reiter `Konto` ist nur ein Text für die Personalliste. Sie ändert keine Rechte.",
+      "`Position` im Reiter `Konto` ist nur ein Text für die Personalliste. Sie ändert keine Rechte. Die Liste zeigt sie passend zum `Geschlecht` aus den Stammdaten, etwa `Betreuerin` statt `Betreuer`. Ohne Angabe steht `Betreuer:in`.",
       "Unter `Datenverwaltung` → `Berechtigungen` siehst du alle verfügbaren Rechte. Diese Übersicht kannst du nur ansehen. Die Rechte einer eigenen Rolle änderst du unter `Rollen`.",
       "Die Rolle entscheidet auch darüber, welche Menüpunkte jemand sieht.",
       // ADR 0091: die zwei Zugangsstufen externer Personen sind feste Rollen.

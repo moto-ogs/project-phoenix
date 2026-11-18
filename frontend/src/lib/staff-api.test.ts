@@ -1337,6 +1337,7 @@ describe("staff-api", () => {
         email: " lea@example.test ",
         organization: "Musikschule",
         access: "supervise",
+        gender: "female",
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -1350,6 +1351,7 @@ describe("staff-api", () => {
         email: "lea@example.test",
         organization: "Musikschule",
         access: "supervise",
+        gender: "female",
       });
       expect(staff).toMatchObject({
         id: "88",

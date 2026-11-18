@@ -25,6 +25,7 @@ export function traegerStaffContractsTopic(): HelpTopic {
         title: "Vertrag anlegen",
         steps: [
           "Öffne die Akte im Reiter `Akten`.",
+          "Öffne den Reiter `Verträge und Zeit`.",
           "Wähle bei `Arbeitsverträge` den Knopf `Vertrag anlegen`.",
           "Wähle die Art: `Teilzeit`, `Vollzeit`, `Minijob`, `Übungsleiter` oder `Ehrenamt`.",
           "Wähle den `Ersten Tag`. Den `Letzten Tag` lässt du leer, wenn der Vertrag unbefristet ist.",

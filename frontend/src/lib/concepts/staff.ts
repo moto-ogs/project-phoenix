@@ -3,7 +3,7 @@ import { defineMotoConcept } from "./define";
 
 export const staffConcept = defineMotoConcept(
   "staff",
-  "Mitarbeiter",
+  "Mitarbeitende",
   IdentificationCardIcon,
   "orange",
   "core",

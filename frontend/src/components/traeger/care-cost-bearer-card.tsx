@@ -7,7 +7,6 @@
 // Rechnungsnummern. Die Seite lädt die Karte erst, wenn ein Kostenträger im
 // Lauf etwas übernimmt.
 
-import { HandCoins } from "lucide-react";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { downloadBlob } from "~/lib/file-download";
@@ -58,10 +57,9 @@ export function CareCostBearerCard({
 
   return (
     <CostBearerTotalsCard
-      icon={HandCoins}
       title="Kostenträger"
       titleBadge={
-        <StatusBadge tone="blue" label={`${formatEuro(sum)} übernommen`} />
+        <StatusBadge tone="gray" label={`${formatEuro(sum)} übernommen`} />
       }
       amountHeader="Übernimmt"
       description={

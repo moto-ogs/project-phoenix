@@ -178,10 +178,10 @@ export const activitiesConfig = defineEntityConfig<Activity>({
         fields: [
           {
             name: "supervisor_id",
-            label: "Hauptbetreuer",
+            label: "Hauptbetreuung",
             type: "select",
             required: false,
-            placeholder: "Kein Hauptbetreuer",
+            placeholder: "Keine Hauptbetreuung",
             optionsResource: "activity-supervisor-choice",
             options: async () => {
               // Not getSupervisors(): it answers a failure with an empty
@@ -258,14 +258,14 @@ export const activitiesConfig = defineEntityConfig<Activity>({
         title: "Betreuer",
         items: [
           {
-            label: "Hauptbetreuer",
+            label: "Hauptbetreuung",
             value: (activity: Activity) => {
               const primary = activity.supervisors?.find(
                 (s: ActivitySupervisor) => s.is_primary,
               );
               return primary
                 ? `${primary.first_name ?? ""} ${primary.last_name ?? ""}`.trim()
-                : "Kein Hauptbetreuer zugewiesen";
+                : "Keine Hauptbetreuung eingetragen";
             },
           },
           {
@@ -366,7 +366,7 @@ export const activitiesConfig = defineEntityConfig<Activity>({
         );
         return primary
           ? `${primary.first_name ?? ""} ${primary.last_name ?? ""}`.trim()
-          : "Kein Hauptbetreuer";
+          : "Keine Hauptbetreuung";
       },
       description: (activity: Activity) => {
         if (activity.is_open_ags) {

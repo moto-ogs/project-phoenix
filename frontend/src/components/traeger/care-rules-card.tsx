@@ -179,7 +179,7 @@ export function CareRulesCard({
                       items={[
                         {
                           icon: <Pencil className="size-4" aria-hidden />,
-                          label: "Ändern",
+                          label: "Bearbeiten",
                           description: "Monate, Schulen und Wirkung der Regel",
                           onClick: () => onEdit(rule),
                         },

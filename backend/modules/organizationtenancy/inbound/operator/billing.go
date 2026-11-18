@@ -49,6 +49,8 @@ type billingKeyDayResponse struct {
 	KeyDay      int       `json:"key_day"`
 	NextKeyDate string    `json:"next_key_date" contract:"date"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	// Overrides are the own key days of Träger and schools (#7301).
+	Overrides []billingKeyDayOverrideResponse `json:"overrides"`
 }
 
 type billingKeyDateCountResponse struct {
@@ -74,7 +76,10 @@ func (req *updateBillingKeyDayRequest) Bind(_ *http.Request) error {
 }
 
 func toBillingKeyDayResponse(keyDay organizationtenancy.BillingKeyDay) billingKeyDayResponse {
-	return billingKeyDayResponse{KeyDay: keyDay.Day, NextKeyDate: keyDay.NextKeyDate, UpdatedAt: keyDay.UpdatedAt}
+	return billingKeyDayResponse{
+		KeyDay: keyDay.Day, NextKeyDate: keyDay.NextKeyDate, UpdatedAt: keyDay.UpdatedAt,
+		Overrides: toBillingKeyDayOverrideResponses(keyDay.Overrides),
+	}
 }
 
 func toBillingKeyDateCountResponse(count organizationtenancy.BillingKeyDateCount) billingKeyDateCountResponse {
@@ -100,20 +105,10 @@ func (rs *BillingResource) GetKeyDay(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, toBillingKeyDayResponse(keyDay), "Billing key day retrieved successfully")
 }
 
-// UpdateKeyDay changes the billing key day. PUT /operator/billing/key-day.
+// UpdateKeyDay changes the key day of every school. PUT
+// /operator/billing/key-day.
 func (rs *BillingResource) UpdateKeyDay(w http.ResponseWriter, r *http.Request) {
-	req := &updateBillingKeyDayRequest{}
-	if err := render.Bind(r, req); err != nil {
-		common.RenderError(w, r, common.OperatorInvalidRequest(err))
-		return
-	}
-	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)
-	keyDay, err := rs.service.SetBillingKeyDay(r.Context(), *req.KeyDay, operatorID)
-	if err != nil {
-		common.RenderError(w, r, rs.billingError(r, err))
-		return
-	}
-	common.Respond(w, r, http.StatusOK, toBillingKeyDayResponse(keyDay), "Billing key day updated successfully")
+	rs.setKeyDay(w, r, nil, true)
 }
 
 // ListKeyDateCounts returns every captured month. GET
@@ -144,6 +139,102 @@ func (rs *BillingResource) SeedKeyDateCounts(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	common.Respond(w, r, http.StatusCreated, map[string]int{"written": written}, "Demo-Stichtagszahlen erfasst")
+}
+
+// The scopes of an own key day.
+const (
+	BillingKeyDayScopeOrganization = "organization"
+	BillingKeyDayScopeSchool       = "school"
+)
+
+// billingKeyDayOverrideResponse is the own key day of one Träger or one
+// school (#7301). Scope is "organization" or "school"; OrganizationID is the
+// Träger of a school or the Träger itself, OrganizationName a school's Träger
+// and empty for a Träger.
+type billingKeyDayOverrideResponse struct {
+	Scope            string    `json:"scope"`
+	ID               common.ID `json:"id"`
+	OrganizationID   common.ID `json:"organization_id"`
+	Name             string    `json:"name"`
+	OrganizationName string    `json:"organization_name"`
+	KeyDay           int       `json:"key_day"`
+	NextKeyDate      string    `json:"next_key_date" contract:"date"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+func toBillingKeyDayOverrideResponses(overrides []organizationtenancy.BillingKeyDayOverride) []billingKeyDayOverrideResponse {
+	result := make([]billingKeyDayOverrideResponse, 0, len(overrides))
+	for _, override := range overrides {
+		response := billingKeyDayOverrideResponse{
+			Scope: BillingKeyDayScopeOrganization, OrganizationID: common.ID(override.TraegerID),
+			Name: override.Name, OrganizationName: override.OrganizationName,
+			KeyDay: override.Day, NextKeyDate: override.NextKeyDate, UpdatedAt: override.UpdatedAt,
+		}
+		switch {
+		case override.SchoolID != nil:
+			response.Scope, response.ID = BillingKeyDayScopeSchool, common.ID(*override.SchoolID)
+		case override.OrganizationID != nil:
+			response.ID = common.ID(*override.OrganizationID)
+		}
+		result = append(result, response)
+	}
+	return result
+}
+
+// SetOrganizationKeyDay gives a Träger its own key day. PUT
+// /operator/billing/key-day-overrides/organizations/{organizationId}.
+func (rs *BillingResource) SetOrganizationKeyDay(w http.ResponseWriter, r *http.Request) {
+	rs.setKeyDayOverride(w, r, "organizationId", false, true)
+}
+
+// ResetOrganizationKeyDay hands a Träger back to the day of every school.
+// DELETE /operator/billing/key-day-overrides/organizations/{organizationId}.
+func (rs *BillingResource) ResetOrganizationKeyDay(w http.ResponseWriter, r *http.Request) {
+	rs.setKeyDayOverride(w, r, "organizationId", false, false)
+}
+
+// SetSchoolKeyDay gives a school its own key day. PUT
+// /operator/billing/key-day-overrides/schools/{schoolId}.
+func (rs *BillingResource) SetSchoolKeyDay(w http.ResponseWriter, r *http.Request) {
+	rs.setKeyDayOverride(w, r, "schoolId", true, true)
+}
+
+// ResetSchoolKeyDay hands a school back to its Träger's day. DELETE
+// /operator/billing/key-day-overrides/schools/{schoolId}.
+func (rs *BillingResource) ResetSchoolKeyDay(w http.ResponseWriter, r *http.Request) {
+	rs.setKeyDayOverride(w, r, "schoolId", true, false)
+}
+
+// setKeyDayOverride sets the own day of the Träger or school the path names
+// to the day of the body (set) or resets it (no body).
+func (rs *BillingResource) setKeyDayOverride(w http.ResponseWriter, r *http.Request, param string, school, set bool) {
+	id, err := common.ParseIDParam(r, param)
+	if err != nil {
+		common.RenderError(w, r, common.OperatorInvalidRequest(err))
+		return
+	}
+	rs.setKeyDay(w, r, &organizationtenancy.BillingKeyDayTarget{ID: id, School: school}, set)
+}
+
+// setKeyDay applies the day of the body (set) or the reset (no body) to the
+// key day of every school (no target) or to the own day of the target.
+func (rs *BillingResource) setKeyDay(w http.ResponseWriter, r *http.Request, target *organizationtenancy.BillingKeyDayTarget, set bool) {
+	var day *int
+	if set {
+		req := &updateBillingKeyDayRequest{}
+		if err := render.Bind(r, req); err != nil {
+			common.RenderError(w, r, common.OperatorInvalidRequest(err))
+			return
+		}
+		day = req.KeyDay
+	}
+	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)
+	keyDay, err := rs.service.SetBillingKeyDay(r.Context(), organizationtenancy.BillingKeyDayChange{Target: target, Day: day}, operatorID)
+	if err != nil {
+		common.RenderError(w, r, rs.billingError(r, err))
+		return
+	}
+	common.Respond(w, r, http.StatusOK, toBillingKeyDayResponse(keyDay), "Billing key day updated successfully")
 }
 
 var billingMonthPattern = regexp.MustCompile(`^\d{4}-(0[1-9]|1[0-2])$`)
@@ -256,8 +347,13 @@ func sanitizeCSVCell(value string) string {
 // billingError answers a refused key day with 400 and logs every other
 // failure before it answers 500 without details.
 func (rs *BillingResource) billingError(r *http.Request, err error) render.Renderer {
-	if errors.Is(err, organizationtenancy.ErrInvalidBillingKeyDay) {
+	switch {
+	case errors.Is(err, organizationtenancy.ErrInvalidBillingKeyDay):
 		return common.OperatorInvalidField(common.CodeBillingInvalidKeyDay, "key_day", err.Error())
+	case errors.Is(err, organizationtenancy.ErrOrganizationNotFound):
+		return common.OperatorRejection(http.StatusNotFound, common.CodeProvisioningOrganizationNotFound, "Organization not found")
+	case errors.Is(err, organizationtenancy.ErrSchoolNotFound):
+		return common.OperatorRejection(http.StatusNotFound, common.CodeProvisioningSchoolNotFound, "School not found")
 	}
 	rs.logger.ErrorContext(r.Context(), "operator billing request failed",
 		"path", r.URL.Path,

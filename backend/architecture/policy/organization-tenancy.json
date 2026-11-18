@@ -119,6 +119,10 @@
       "write_owner": "organization-tenancy"
     },
     {
+      "name": "platform.billing_key_day_overrides",
+      "write_owner": "organization-tenancy"
+    },
+    {
       "name": "platform.organizations",
       "write_owner": "organization-tenancy"
     },

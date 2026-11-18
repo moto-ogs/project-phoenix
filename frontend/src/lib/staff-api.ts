@@ -1,5 +1,6 @@
 // Staff API service for fetching all staff members and their supervision status
 
+import type { RoleForm } from "~/lib/position-title";
 import { sessionFetch } from "./session-cache";
 import { createLogger } from "~/lib/logger";
 import {
@@ -38,6 +39,8 @@ export interface BackendStaffResponse {
   lastName: string;
   specialization?: string | null;
   role: string | null;
+  /** Form der Position aus den Stammdaten (`feminine`/`masculine`), fehlt ohne Angabe. */
+  role_form?: RoleForm | null;
   qualifications: string | null;
   account_role?: string | null;
   /** Gespeicherter Avatar-Pfad des Kontos; nur ob er da ist, zählt. */
@@ -118,6 +121,7 @@ export interface Staff {
   /** Profilbild über `/api/staff/[id]/avatar`, fehlt ohne Bild (#4432). */
   avatarUrl?: string;
   role?: string; // Display role (custom position from teacher profile)
+  roleForm?: RoleForm; // Form der Position aus den Stammdaten
   accountRole?: string; // Auth role (Admin/Betreuer/Extern)
   specialization?: string;
   qualifications?: string;
@@ -158,6 +162,8 @@ interface ExternalStaffInput {
   access: ExternalAccess;
   email?: string;
   organization?: string;
+  /** Stammdaten gender; left out when nobody chose one. */
+  gender?: StammdatenGender;
 }
 
 export interface StaffFilters {
@@ -405,6 +411,7 @@ function mapStaffMember(
     lastName: staff.lastName,
     email: undefined,
     role: staff.role ?? undefined,
+    roleForm: staff.role_form ?? undefined,
     accountRole: staff.account_role ?? undefined,
     specialization: staff.specialization?.trim() ?? undefined,
     qualifications: staff.qualifications ?? undefined,
@@ -482,6 +489,7 @@ export function mapStaffRecord(staff: BackendStaffResponse): Staff {
     email: undefined,
     avatarUrl: staffAvatarUrl(staff.id, staff.avatar),
     role: staff.role ?? undefined,
+    roleForm: staff.role_form ?? undefined,
     accountRole: staff.account_role ?? undefined,
     specialization: staff.specialization?.trim() ?? undefined,
     qualifications: staff.qualifications ?? undefined,
@@ -584,6 +592,7 @@ class StaffService {
         last_name: input.lastName.trim(),
         organization: input.organization?.trim() ?? "",
         access: input.access,
+        ...(input.gender ? { gender: input.gender } : {}),
         ...(input.access === "none"
           ? {}
           : { email: input.email?.trim() ?? "" }),

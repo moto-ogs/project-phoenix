@@ -231,7 +231,16 @@ func TestPushSubscriptionRepository(t *testing.T) {
 
 		chainCtx := testpkg.TenantContext(chain.TenantID)
 		childEndpoint := fmt.Sprintf("https://fcm.googleapis.com/fcm/send/child-%d", time.Now().UnixNano())
-		require.NoError(t, testpkg.TenantCommand1(t, chainCtx, db, repo.RegisterSubscription, newSubscription(t, chain.AccountID, deliveryModels.PushPortalParent, childEndpoint)))
+		require.NoError(t, testpkg.WithAdminTx(t, chainCtx, db, func(ctx context.Context, _ bun.Tx) error {
+			sub := newSubscription(t, chain.AccountID, deliveryModels.PushPortalParent, childEndpoint)
+			sub.TenantID = 0
+			return repo.RegisterSubscription(ctx, sub)
+		}))
+		t.Cleanup(func() {
+			assert.NoError(t, testpkg.WithAdminTx(t, chainCtx, db, func(ctx context.Context, _ bun.Tx) error {
+				return repo.DeleteParentByAccountEndpoint(ctx, chain.AccountID, childEndpoint)
+			}))
+		})
 
 		subs, err := testpkg.TenantQuery2(t, chainCtx, db, repo.FindForGuardians, []int64{chain.AccountID}, []int64{chain.StudentID})
 		require.NoError(t, err)

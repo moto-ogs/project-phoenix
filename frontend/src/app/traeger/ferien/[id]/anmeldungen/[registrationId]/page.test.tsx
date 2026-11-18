@@ -34,9 +34,15 @@ import {
 } from "~/test/fixtures/holiday-registrations";
 import { HOLIDAY_CONSENT_TEXTS } from "~/test/fixtures/holiday-consent-texts";
 
+const { mockReplace, searchQuery } = vi.hoisted(() => ({
+  mockReplace: vi.fn(),
+  searchQuery: { current: "" },
+}));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: mockReplace }),
   useParams: () => ({ id: "5", registrationId: "7" }),
+  usePathname: () => "/traeger/ferien/5/anmeldungen/7",
+  useSearchParams: () => new URLSearchParams(searchQuery.current),
 }));
 vi.mock("~/lib/traeger-api", () => ({
   fetchHolidayPeriod: () => Promise.resolve(HOLIDAY_PERIOD),
@@ -105,6 +111,23 @@ vi.mock("~/lib/traeger-sibling-groups-api", () => ({
 }));
 
 import TraegerHolidayRegistrationPage from "./page";
+
+/** Opens the page on its tab `tab`, as a bookmark does (#7410). */
+function onTab(tab: "kind" | "eltern" | "nachweise") {
+  searchQuery.current = `tab=${tab}`;
+}
+
+/** Switches to the tab `name` of the page (#7410). */
+async function openTab(name: string) {
+  fireEvent.click(await screen.findByRole("tab", { name }));
+}
+
+/** Opens the menu of the page head (#7410). */
+async function openHeadMenu() {
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Weitere Aktionen" }),
+  );
+}
 import {
   expectPageReloadedAfterRefusal,
   resetPageReloads,
@@ -112,6 +135,8 @@ import {
 
 describe("TraegerHolidayRegistrationPage", () => {
   beforeEach(() => {
+    searchQuery.current = "";
+    mockReplace.mockReset();
     mockKnown.mockReset();
     mockKnown.mockResolvedValue(new Map());
     mockRegistration.mockReset().mockResolvedValue(HOLIDAY_REGISTRATION);
@@ -200,6 +225,9 @@ describe("TraegerHolidayRegistrationPage", () => {
     }
 
     async function confirmSplit() {
+      if (!screen.queryByRole("button", { name: "Trennen" })) {
+        await openTab("Übersicht");
+      }
       fireEvent.click(await screen.findByRole("button", { name: "Trennen" }));
       expect(
         await screen.findByText("Von den Geschwistern trennen?"),
@@ -315,9 +343,9 @@ describe("TraegerHolidayRegistrationPage", () => {
             siblings: SIBLINGS,
           });
           mockSplit.mockResolvedValue(undefined);
+          onTab("kind");
           renderPage();
           expect(await screen.findByText("Erdnüsse")).toBeVisible();
-          expect(screen.getByText("eva@example.org")).toBeVisible();
           expect(screen.getByText("Oma Muster")).toBeVisible();
           const read = refused === "health" ? mockHealth : mockRegistration;
           resetPageReloads();
@@ -325,8 +353,12 @@ describe("TraegerHolidayRegistrationPage", () => {
             new ApiError("refused", 403, { code: "general.permission" }),
           );
           if (action === "split") await confirmSplit();
-          else
+          else {
+            // From the tab „Kind“ the first click shows the status (#7410).
             fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+            await screen.findByRole("heading", { name: "Status" });
+            fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+          }
 
           // #6801: the page loads anew; its first load shows the refusal.
           await expectPageReloadedAfterRefusal();
@@ -351,6 +383,7 @@ describe("TraegerHolidayRegistrationPage", () => {
           invalidate = useInvalidateMatching();
           return null;
         }
+        onTab("kind");
         renderPage(<Probe />);
         expect(await screen.findByText("Erdnüsse")).toBeVisible();
         const pending = deferred<typeof HOLIDAY_REGISTRATION>();
@@ -362,6 +395,7 @@ describe("TraegerHolidayRegistrationPage", () => {
             (key) => key === traegerKeys.holidayRegistration("5", "7"),
           );
         });
+        await openTab("Eltern");
         expect(screen.getByText("eva@example.org")).toBeVisible();
         await act(async () => {
           pending.reject(
@@ -371,6 +405,7 @@ describe("TraegerHolidayRegistrationPage", () => {
           );
         });
         expect(screen.getByText("eva@example.org")).toBeVisible();
+        await openTab("Kind");
         expect(screen.getByText("Erdnüsse")).toBeVisible();
       });
 
@@ -384,6 +419,7 @@ describe("TraegerHolidayRegistrationPage", () => {
           siblings: SIBLINGS,
         });
         mockSplit.mockResolvedValue(undefined);
+        onTab("kind");
         renderPage();
         expect(await screen.findByText("Erdnüsse")).toBeVisible();
         mockRegistration.mockRejectedValueOnce(
@@ -398,6 +434,10 @@ describe("TraegerHolidayRegistrationPage", () => {
             `${catalogText("enrollment.holiday_registration_not_found", "die Anzeige der Anmeldung")} ${SAVED_BUT_STALE_SUFFIX}`,
           ),
         ).toBeVisible();
+        // The page withdraws every tab, not only the one in view.
+        expect(
+          screen.queryByRole("tab", { name: "Kind" }),
+        ).not.toBeInTheDocument();
         expect(screen.queryByText("Erdnüsse")).not.toBeInTheDocument();
         expect(screen.queryByText("eva@example.org")).not.toBeInTheDocument();
       });
@@ -453,6 +493,7 @@ describe("TraegerHolidayRegistrationPage", () => {
     });
 
     it("asks to check the invoice when a cancelled sibling changed the amount (#5662)", async () => {
+      onTab("nachweise");
       mockRegistration.mockResolvedValue({
         ...HOLIDAY_REGISTRATION,
         status: "confirmed",
@@ -500,7 +541,180 @@ describe("TraegerHolidayRegistrationPage", () => {
       screen.getByRole("link", { name: /Zurück zu den Anmeldungen/ }),
     ).toHaveAttribute("href", "/traeger/ferien/5/anmeldungen");
   });
+  describe("tabs and head actions (#7410)", () => {
+    function renderPage() {
+      render(
+        <ToastProvider>
+          <TraegerHolidayRegistrationPage />
+        </ToastProvider>,
+      );
+    }
+
+    it("orders the cards in four tabs and keeps the tab in the address", async () => {
+      renderPage();
+
+      const tabs = await screen.findAllByRole("tab");
+      expect(tabs.map((tab) => tab.textContent)).toEqual([
+        "Übersicht",
+        "Kind",
+        "Eltern",
+        "Nachweise und Beitrag",
+      ]);
+      // Übersicht: status, criteria and history; the parents stand elsewhere.
+      expect(screen.getByRole("heading", { name: "Status" })).toBeVisible();
+      expect(screen.getByRole("heading", { name: "Verlauf" })).toBeVisible();
+      expect(
+        screen.queryByRole("heading", { name: "Eltern" }),
+      ).not.toBeInTheDocument();
+
+      await openTab("Kind");
+      expect(mockReplace).toHaveBeenLastCalledWith("?tab=kind", {
+        scroll: false,
+      });
+      expect(
+        screen.getByRole("heading", { name: "Notfallkontakte und Abholung" }),
+      ).toBeVisible();
+      expect(
+        screen.queryByRole("heading", { name: "Status" }),
+      ).not.toBeInTheDocument();
+
+      await openTab("Nachweise und Beitrag");
+      expect(mockReplace).toHaveBeenLastCalledWith("?tab=nachweise", {
+        scroll: false,
+      });
+      expect(
+        screen.getByRole("heading", { name: "Ferienbeitrag" }),
+      ).toBeVisible();
+
+      // The first tab needs no entry in the address.
+      await openTab("Übersicht");
+      expect(mockReplace).toHaveBeenLastCalledWith("?", { scroll: false });
+    });
+
+    it("opens the tab the address names", async () => {
+      onTab("eltern");
+      renderPage();
+
+      expect(
+        await screen.findByRole("heading", { name: "Eltern" }),
+      ).toBeVisible();
+      expect(screen.getByRole("tab", { name: "Eltern" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      expect(
+        screen.queryByRole("heading", { name: "Status" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("uses the tab from a later URL navigation", async () => {
+      const page = render(
+        <ToastProvider>
+          <TraegerHolidayRegistrationPage />
+        </ToastProvider>,
+      );
+
+      await openTab("Kind");
+      expect(screen.getByRole("tab", { name: "Kind" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+
+      // A history navigation replaces the URL while this client component
+      // remains mounted. Its tab, not the earlier click, must win (#7410).
+      onTab("eltern");
+      page.rerender(
+        <ToastProvider>
+          <TraegerHolidayRegistrationPage />
+        </ToastProvider>,
+      );
+
+      expect(
+        await screen.findByRole("heading", { name: "Eltern" }),
+      ).toBeVisible();
+      expect(screen.getByRole("tab", { name: "Eltern" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
+
+    it("shows „Bestätigen“ as the only head action and the rest in the menu", async () => {
+      renderPage();
+
+      const card = (
+        await screen.findByRole("heading", { name: "Status" })
+      ).closest("section")!;
+      // The status card carries no action of its own any more.
+      for (const name of ["Bestätigen", "Stornieren", "Einfrieren"]) {
+        expect(
+          within(card).queryByRole("button", { name }),
+        ).not.toBeInTheDocument();
+      }
+      expect(
+        screen.getByRole("button", { name: "Bestätigen" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Stornieren" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Anmeldung herunterladen" }),
+      ).not.toBeInTheDocument();
+
+      await openHeadMenu();
+      expect(
+        screen.getAllByRole("menuitem").map((item) => item.textContent),
+      ).toEqual([
+        expect.stringMatching(/^Einfrieren/),
+        expect.stringMatching(/^PDF/),
+        expect.stringMatching(/^Stornieren/),
+      ]);
+      expect(screen.getByText("Herunterladen")).toBeInTheDocument();
+    });
+
+    it("shows the status first when „Bestätigen“ is chosen on another tab", async () => {
+      onTab("kind");
+      renderPage();
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Bestätigen" }),
+      );
+
+      // The first click only shows payer and debtor number; nothing is sent.
+      expect(
+        await screen.findByRole("heading", { name: "Status" }),
+      ).toBeVisible();
+      expect(mockReplace).toHaveBeenCalledWith("?", { scroll: false });
+      expect(mockConfirm).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+      await waitFor(() => expect(mockConfirm).toHaveBeenCalledTimes(1));
+    });
+
+    it("leads to the missing debtor number at „Bestätigen“", async () => {
+      mockConfirmationSettings.mockResolvedValue({
+        debtorNumberRequired: true,
+      });
+      renderPage();
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Bestätigen" }),
+      );
+
+      const field = await screen.findByRole("textbox", {
+        name: /^Debitorennummer/,
+      });
+      await waitFor(() =>
+        expect(field).toHaveAccessibleDescription(
+          expect.stringContaining("Bitte gib die Debitorennummer ein."),
+        ),
+      );
+      await waitFor(() => expect(field).toHaveFocus());
+      expect(mockConfirm).not.toHaveBeenCalled();
+    });
+  });
+
   it("asks to check the school of a child another school knows (#6683)", async () => {
+    onTab("kind");
     mockKnown.mockResolvedValue(new Map([["10", "32"]]));
     render(
       <ToastProvider>
@@ -597,8 +811,10 @@ describe("TraegerHolidayRegistrationPage", () => {
     ).closest("section");
     expect(card).not.toBeNull();
     expect(within(card!).getByText("10 4711")).toBeInTheDocument();
+    // The change of the number stands in the menu of the head (#7410).
+    await openHeadMenu();
     expect(
-      within(card!).getByRole("button", { name: "Debitorennummer ändern" }),
+      screen.getByRole("menuitem", { name: /^Debitorennummer bearbeiten/ }),
     ).toBeEnabled();
     expect(screen.getByText(/Debitorennummer 10 4710$/)).toBeInTheDocument();
     expect(screen.getByText("Debitorennummer geändert")).toBeInTheDocument();
@@ -611,6 +827,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("opens the uploaded proofs of benefits from their own card (#5238)", async () => {
+    onTab("nachweise");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       benefitsDeclared: true,
@@ -661,6 +878,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("asks the office to collect a proof the parents did not upload (#5238)", async () => {
+    onTab("nachweise");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       benefitsDeclared: true,
@@ -681,16 +899,16 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("offers the upload of a paper proof without the statement on benefits (#5238, #5627)", async () => {
+    onTab("nachweise");
     render(
       <ToastProvider>
         <TraegerHolidayRegistrationPage />
       </ToastProvider>,
     );
     expect(
-      await screen.findByRole("heading", { name: "Eltern" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Nachweis für den Leistungsbezug" }),
+      await screen.findByRole("heading", {
+        name: "Nachweis für den Leistungsbezug",
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -776,13 +994,16 @@ describe("TraegerHolidayRegistrationPage", () => {
       await screen.findByRole("button", { name: "Zu den Eltern" }),
     );
 
-    const parents = screen.getByRole("heading", { name: "Eltern" });
-    expect(parents).toHaveFocus();
+    // The parents stand on their own tab; the notice opens it (#7410).
+    const parents = await screen.findByRole("heading", { name: "Eltern" });
+    await waitFor(() => expect(parents).toHaveFocus());
+    expect(mockReplace).toHaveBeenCalledWith("?tab=eltern", { scroll: false });
     expect(scrolled).toHaveBeenCalledWith({ block: "start" });
-    expect(scrolled.mock.contexts[0]).toBe(parents.closest("section"));
+    expect(scrolled.mock.contexts).toContain(parents.closest("section"));
   });
 
   it("shows no mail warning while the mails are on their way (#6737)", async () => {
+    onTab("eltern");
     mockRegistration.mockResolvedValue(HOLIDAY_REGISTRATION);
     render(
       <ToastProvider>
@@ -796,6 +1017,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("lists every mail of the registration with its status (#6976)", async () => {
+    onTab("eltern");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       mails: [
@@ -860,6 +1082,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("keeps two closing day notices apart by their date (#6976)", async () => {
+    onTab("eltern");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       mails: [
@@ -909,6 +1132,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("says what the parents did when they reported a mail or unsubscribed (#6976)", async () => {
+    onTab("eltern");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       mails: [
@@ -1033,6 +1257,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("shows no mail section before any mail exists (#6976)", async () => {
+    onTab("eltern");
     mockRegistration.mockResolvedValue({ ...HOLIDAY_REGISTRATION, mails: [] });
     render(
       <ToastProvider>
@@ -1071,9 +1296,9 @@ describe("TraegerHolidayRegistrationPage", () => {
       ),
     ).toBeInTheDocument();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Anmeldung herunterladen" }),
-    );
+    // The download stands in the menu of the head (#7410).
+    await openHeadMenu();
+    expect(screen.getByText("Herunterladen")).toBeInTheDocument();
     // Without the right to see health information there is no such file.
     expect(
       screen.queryByRole("menuitem", { name: "PDF mit Gesundheitsangaben" }),
@@ -1101,9 +1326,7 @@ describe("TraegerHolidayRegistrationPage", () => {
       </ToastProvider>,
     );
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Anmeldung herunterladen" }),
-    );
+    await openHeadMenu();
     fireEvent.click(
       await screen.findByRole("menuitem", {
         name: "PDF mit Gesundheitsangaben",
@@ -1119,6 +1342,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("shows the declaration with name, custody, version and its texts (#5626)", async () => {
+    onTab("eltern");
     render(
       <ToastProvider>
         <TraegerHolidayRegistrationPage />
@@ -1158,6 +1382,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("names a registration from before the declaration without texts (#5626)", async () => {
+    onTab("eltern");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       custodyConfirmedAt: null,
@@ -1188,6 +1413,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("shows the second guardian only in its own contact card", async () => {
+    onTab("eltern");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       secondGuardian: {
@@ -1215,6 +1441,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("shows the postal address with the contact details of the parent (#5625)", async () => {
+    onTab("eltern");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       guardianAddress: {
@@ -1237,6 +1464,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("names no address when the registration has none (#5625)", async () => {
+    onTab("eltern");
     render(
       <ToastProvider>
         <TraegerHolidayRegistrationPage />
@@ -1249,6 +1477,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("reads the health information only with the right „Gesundheitsangaben sehen“ (#4722)", async () => {
+    onTab("kind");
     render(
       <ToastProvider>
         <TraegerHolidayRegistrationPage />
@@ -1267,6 +1496,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("performs a new audited health read on immediate revisits before showing health data", async () => {
+    onTab("kind");
     sessionPermissions.current = [
       "traeger_enrollment:manage",
       "traeger_health:read",
@@ -1291,6 +1521,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("shows the health information to the right (#4722)", async () => {
+    onTab("kind");
     sessionPermissions.current = [
       "traeger_enrollment:manage",
       "traeger_health:read",
@@ -1309,6 +1540,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("links to billing settings only with the right Abrechnung (#5685)", async () => {
+    onTab("nachweise");
     sessionPermissions.current = ["traeger_enrollment:manage"];
     const page = render(
       <ToastProvider>
@@ -1358,6 +1590,7 @@ describe("TraegerHolidayRegistrationPage", () => {
   });
 
   it("shows the answers with the labels of the form version the parents answered (#5198)", async () => {
+    onTab("kind");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       form: {
@@ -1425,6 +1658,7 @@ describe("TraegerHolidayRegistrationPage", () => {
     expect(screen.getByText("Allgemeine Angaben")).toBeInTheDocument();
   });
   it("shows pinned legal acknowledgements with Berlin time and German PDF actions", async () => {
+    onTab("kind");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       form: {
@@ -1510,6 +1744,8 @@ describe("TraegerHolidayRegistrationPage", () => {
 
 describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
   beforeEach(() => {
+    searchQuery.current = "";
+    mockReplace.mockReset();
     mockRegistration.mockResolvedValue(HOLIDAY_REGISTRATION);
     mockConfirmationSettings.mockResolvedValue({ debtorNumberRequired: false });
     mockEdit.mockReset();
@@ -1523,13 +1759,16 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
   });
 
   async function openParentsEdit() {
+    onTab("eltern");
     render(
       <ToastProvider>
         <TraegerHolidayRegistrationPage />
       </ToastProvider>,
     );
     fireEvent.click(
-      await screen.findByRole("button", { name: "Angaben der Eltern ändern" }),
+      await screen.findByRole("button", {
+        name: "Angaben der Eltern bearbeiten",
+      }),
     );
     const heading = await screen.findByRole("heading", {
       name: "Angaben ändern",
@@ -1547,7 +1786,7 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
     // Only one card is edited at a time.
     expect(
       screen.queryByRole("button", {
-        name: "Notfallkontakte und Abholung ändern",
+        name: "Notfallkontakte und Abholung bearbeiten",
       }),
     ).not.toBeInTheDocument();
     expect(edit.getByLabelText(/^Telefon/)).toHaveValue("0151 2345678");
@@ -1594,6 +1833,13 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
     });
     fireEvent.click(edit.getByRole("button", { name: "Änderung speichern" }));
 
+    // Back in the display: the card shows the saved values.
+    expect(await screen.findByText("0151 9999999")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Angaben ändern" }),
+    ).not.toBeInTheDocument();
+    // The history stands on the first tab (#7410).
+    await openTab("Übersicht");
     expect(
       await screen.findByText(
         ": E-Mail des Elternteils, Telefon des Elternteils, Nachname von Kind 1",
@@ -1613,14 +1859,10 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
         secondGuardian: null,
       },
     });
-    // Back in the display: the card shows the saved values.
-    expect(screen.getByText("0151 9999999")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: "Angaben ändern" }),
-    ).not.toBeInTheDocument();
   });
 
   it("changes one child and sends no health answer", async () => {
+    onTab("kind");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       form: {
@@ -1670,7 +1912,7 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
     );
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Angaben von Lia Muster ändern",
+        name: "Angaben von Lia Muster bearbeiten",
       }),
     );
     const heading = await screen.findByRole("heading", {
@@ -1722,6 +1964,7 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
       };
       mockRegistration.mockResolvedValue(registration);
       mockEdit.mockResolvedValueOnce(registration);
+      onTab("kind");
       render(
         <ToastProvider>
           <TraegerHolidayRegistrationPage />
@@ -1729,7 +1972,7 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
       );
       fireEvent.click(
         await screen.findByRole("button", {
-          name: "Angaben von Lia Muster ändern",
+          name: "Angaben von Lia Muster bearbeiten",
         }),
       );
       const school = await screen.findByRole("combobox", { name: /^Schule/ });
@@ -1753,6 +1996,7 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
   );
 
   it("drops a contact entry whose fields are all empty", async () => {
+    onTab("kind");
     mockEdit.mockResolvedValueOnce(HOLIDAY_REGISTRATION);
     render(
       <ToastProvider>
@@ -1761,7 +2005,7 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
     );
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Notfallkontakte und Abholung ändern",
+        name: "Notfallkontakte und Abholung bearbeiten",
       }),
     );
     const heading = await screen.findByRole("heading", {
@@ -1796,6 +2040,7 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
   });
 
   it("changes the postal address with the rules of its form and says an invoice keeps the old one (#5625)", async () => {
+    onTab("eltern");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       status: "confirmed",
@@ -1854,13 +2099,16 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
         },
       }),
     );
+    await screen.findByRole("heading", { name: "Eltern" });
+    await openTab("Übersicht");
     expect(
       await screen.findByText(": Anschrift", { exact: false }),
     ).toBeInTheDocument();
     contributionOverride.current = null;
   });
 
-  it("offers no „Ändern“ on a cancelled registration and says why", async () => {
+  it("offers no „Bearbeiten“ on a cancelled registration and says why", async () => {
+    onTab("eltern");
     mockRegistration.mockResolvedValue({
       ...HOLIDAY_REGISTRATION,
       status: "cancelled",
@@ -1876,7 +2124,7 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /ändern$/ }),
+      screen.queryByRole("button", { name: /bearbeiten$/ }),
     ).not.toBeInTheDocument();
   });
 });

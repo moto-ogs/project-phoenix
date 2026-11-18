@@ -22,7 +22,7 @@ export function staffRecordTopic(): HelpTopic {
         title: "Die Akte öffnen",
         steps: [
           "Klappe in der Seitenleiste `Team` auf.",
-          "Öffne `Mitarbeiter`.",
+          "Öffne `Mitarbeitende`.",
           "Gib den Namen in das Feld `Name suchen` ein.",
           "Wähle die Karte der Person.",
         ],

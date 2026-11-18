@@ -108,8 +108,8 @@ describe("breadcrumb-utils", () => {
         expect(getPageTitle("/active-supervisions")).toBe("Aktuelle Aufsicht");
       });
 
-      it("should return 'Mitarbeiter' for /staff", () => {
-        expect(getPageTitle("/staff")).toBe("Mitarbeiter");
+      it("should return 'Mitarbeitende' for /staff", () => {
+        expect(getPageTitle("/staff")).toBe("Mitarbeitende");
       });
 
       it("should return 'Dienstplan' for /dienstplan", () => {

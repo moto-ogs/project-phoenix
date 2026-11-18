@@ -81,11 +81,11 @@ func NewTenantPreferenceService(runtime tenant.UnitOfWork, consent ConsentStore,
 
 // NewTenantPushSubscriptionService is NewPushSubscriptionService over the
 // tenant unit of work.
-func NewTenantPushSubscriptionService(runtime tenant.UnitOfWork, db *bun.DB, repo deliveryPorts.PushSubscriptionRepository, accountTenants GuardianSchools, vapid VAPIDConfig, logger *slog.Logger) (PushSubscriptionService, error) {
-	if err := requireTenantRuntime("push subscriptions", runtime, db != nil && repo != nil && accountTenants != nil); err != nil {
+func NewTenantPushSubscriptionService(runtime tenant.UnitOfWork, db *bun.DB, repo deliveryPorts.PushSubscriptionRepository, vapid VAPIDConfig, logger *slog.Logger) (PushSubscriptionService, error) {
+	if err := requireTenantRuntime("push subscriptions", runtime, db != nil && repo != nil); err != nil {
 		return nil, err
 	}
-	service := NewPushSubscriptionService(db, repo, accountTenants, vapid, logger).(*pushSubscriptionService)
+	service := NewPushSubscriptionService(db, repo, vapid, logger).(*pushSubscriptionService)
 	service.tenantRuntime = &runtime
 	return service, nil
 }

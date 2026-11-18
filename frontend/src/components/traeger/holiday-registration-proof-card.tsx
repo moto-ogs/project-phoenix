@@ -20,7 +20,6 @@ import {
   uploadHolidayProof,
 } from "~/lib/traeger-holiday-registrations-api";
 import { documentsConcept } from "~/lib/concepts/documents";
-import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
 const logger = createLogger({ component: "HolidayRegistrationProofCard" });
 
@@ -69,7 +68,7 @@ export function HolidayRegistrationProofCard({
 
   return (
     <SectionCard
-      leading={<ConceptIconTile concept={documentsConcept} />}
+      concept={documentsConcept}
       title="Nachweis für den Leistungsbezug"
       actions={
         canUpload ? (

@@ -438,7 +438,7 @@ describe("Sidebar", () => {
       // Common items visible to all users
       expect(screen.getByText("Aktivitäten")).toBeInTheDocument();
       expect(screen.getByText("Räume")).toBeInTheDocument();
-      expect(screen.getByText("Mitarbeiter")).toBeInTheDocument();
+      expect(screen.getByText("Mitarbeitende")).toBeInTheDocument();
       // Einstellungen is admin-only (requiresAdmin: true in sidebar nav items)
     });
 
@@ -881,7 +881,7 @@ describe("Sidebar", () => {
       expect(activitiesLink).toHaveClass("bg-gray-100");
     });
 
-    it("highlights Dienstplan without also highlighting Mitarbeiter", () => {
+    it("highlights Dienstplan without also highlighting Mitarbeitende", () => {
       mockUsePathname.mockReturnValue("/dienstplan");
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
@@ -889,7 +889,7 @@ describe("Sidebar", () => {
       render(<Sidebar />);
 
       const dienstplanLink = screen.getByText("Dienstplan").closest("a");
-      const staffLink = screen.getByText("Mitarbeiter").closest("a");
+      const staffLink = screen.getByText("Mitarbeitende").closest("a");
       expect(dienstplanLink).toHaveClass("bg-gray-100");
       expect(staffLink).not.toHaveClass("bg-gray-100");
     });
@@ -2590,7 +2590,7 @@ describe("Sidebar", () => {
       expect(screen.queryByText("Alle Kinder")).not.toBeInTheDocument();
       expect(screen.queryByText("Aktivitäten")).not.toBeInTheDocument();
       expect(screen.queryByText("Räume")).not.toBeInTheDocument();
-      expect(screen.queryByText("Mitarbeiter")).not.toBeInTheDocument();
+      expect(screen.queryByText("Mitarbeitende")).not.toBeInTheDocument();
     });
 
     it("renders with custom className in operator mode", () => {
@@ -2868,10 +2868,10 @@ describe("Sidebar", () => {
       expect(screen.queryByText(/Aktuelle Aufsicht/)).not.toBeInTheDocument();
     });
 
-    it("keeps Kindersuche and Mitarbeiter visible (not binary-hidden)", () => {
+    it("keeps Kindersuche and Mitarbeitende visible (not binary-hidden)", () => {
       render(<Sidebar />);
       expect(screen.getByText("Alle Kinder")).toBeInTheDocument();
-      expect(screen.getByText("Mitarbeiter")).toBeInTheDocument();
+      expect(screen.getByText("Mitarbeitende")).toBeInTheDocument();
     });
   });
 
@@ -2985,7 +2985,7 @@ describe("Sidebar", () => {
       render(<Sidebar />);
 
       // Anker: die Staff-Navigation ist geladen.
-      expect(screen.getByText("Mitarbeiter")).toBeInTheDocument();
+      expect(screen.getByText("Mitarbeitende")).toBeInTheDocument();
       expect(screen.queryByText("Zeiterfassung")).not.toBeInTheDocument();
       expect(screen.queryByText(/nicht gebucht/)).not.toBeInTheDocument();
     });
@@ -3171,7 +3171,7 @@ describe("Sidebar", () => {
     // Route ein anderes Recht verlangt, wären für sie Sackgassen.
     const EXTERN_GATED_LABELS = [
       "Alle Kinder",
-      "Mitarbeiter",
+      "Mitarbeitende",
       "Zeiterfassung",
       "Nachrichten",
       "Räume",
@@ -3213,7 +3213,7 @@ describe("Sidebar", () => {
 
         expect(screen.getByText("Alle Kinder")).toBeInTheDocument();
         expect(screen.getByText("Räume")).toBeInTheDocument();
-        for (const label of ["Nachrichten", "Notfall", "Mitarbeiter"]) {
+        for (const label of ["Nachrichten", "Notfall", "Mitarbeitende"]) {
           expect(screen.queryByText(label)).not.toBeInTheDocument();
         }
       } finally {
@@ -3299,7 +3299,7 @@ describe("Sidebar", () => {
       // Anker: die Staff-Navigation ist geladen (Mitarbeiter über
       // users:read; die Zeiterfassung hängt seit #4573 selbst an
       // time_tracking:own).
-      expect(screen.getByText("Mitarbeiter")).toBeInTheDocument();
+      expect(screen.getByText("Mitarbeitende")).toBeInTheDocument();
       expect(screen.queryByText("Mein Dienstplan")).not.toBeInTheDocument();
     });
 
@@ -3726,7 +3726,7 @@ describe("Sidebar", () => {
       expect(screen.getByText("Hinweise der Leitung")).toBeInTheDocument();
       expect(screen.getByText("Hilfe")).toBeInTheDocument();
       expect(screen.queryByText("Aktivitäten")).not.toBeInTheDocument();
-      expect(screen.queryByText("Mitarbeiter")).not.toBeInTheDocument();
+      expect(screen.queryByText("Mitarbeitende")).not.toBeInTheDocument();
       expect(screen.queryByText("Team-Chat")).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /Tagesbetrieb/ }),
@@ -4295,7 +4295,7 @@ describe("Sidebar", () => {
       render(<Sidebar />);
 
       // Anker: die Staff-Navigation ist geladen.
-      expect(screen.getByText("Mitarbeiter")).toBeInTheDocument();
+      expect(screen.getByText("Mitarbeitende")).toBeInTheDocument();
       expect(controlsNaming(/ungelesene Anmeldungen/)).toHaveLength(0);
     });
   });

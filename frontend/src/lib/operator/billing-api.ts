@@ -1,6 +1,7 @@
 import { apiErrorFromResponse, transportFetch } from "../api-error";
 import { operatorFetch } from "./api-helpers";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
+import type { billingKeyDayOverrideResponse } from "~/lib/contract/operator-billing.generated";
 
 /**
  * Operator billing report (#2791): the key day that applies to every school
@@ -11,6 +12,7 @@ interface BackendBillingKeyDay {
   key_day: number;
   next_key_date: string;
   updated_at: string;
+  overrides?: billingKeyDayOverrideResponse[] | null;
 }
 
 interface BackendBillingKeyDateCount {
@@ -29,6 +31,8 @@ export interface BillingKeyDay {
   /** Next key date as YYYY-MM-DD. */
   nextKeyDate: string;
   updatedAt: string;
+  /** Own key days of Träger and schools, Träger before their schools. */
+  overrides: BillingKeyDayOverride[];
 }
 
 export interface BillingKeyDateCount {
@@ -45,6 +49,27 @@ export interface BillingKeyDateCount {
   recordedAt: string;
 }
 
+/** Whose own key day an override is (#7301). */
+export type BillingKeyDayScope = "organization" | "school";
+
+/**
+ * The own key day of one Träger or one school (#7301). A school's day wins
+ * over its Träger's, a Träger's over the day of every school.
+ */
+export interface BillingKeyDayOverride {
+  scope: BillingKeyDayScope;
+  id: string;
+  /** The Träger of a school, or the Träger itself. */
+  organizationId: string;
+  name: string;
+  /** The Träger of a school; empty for a Träger. */
+  organizationName: string;
+  keyDay: number;
+  /** Next key date as YYYY-MM-DD. */
+  nextKeyDate: string;
+  updatedAt: string;
+}
+
 /** The key day may be 1 to 28, so every month has it. */
 export const BILLING_KEY_DAY_MIN = 1;
 export const BILLING_KEY_DAY_MAX = 28;
@@ -54,6 +79,7 @@ function mapBillingKeyDay(data: BackendBillingKeyDay): BillingKeyDay {
     keyDay: data.key_day,
     nextKeyDate: data.next_key_date,
     updatedAt: data.updated_at,
+    overrides: (data.overrides ?? []).map(mapBillingKeyDayOverride),
   };
 }
 
@@ -70,6 +96,26 @@ export function mapBillingKeyDateCount(
     activeTerminals: data.active_terminals,
     recordedAt: data.recorded_at,
   };
+}
+
+function mapBillingKeyDayOverride(
+  data: billingKeyDayOverrideResponse,
+): BillingKeyDayOverride {
+  return {
+    scope: data.scope === "school" ? "school" : "organization",
+    id: data.id,
+    organizationId: data.organization_id,
+    name: data.name,
+    organizationName: data.organization_name,
+    keyDay: data.key_day,
+    nextKeyDate: data.next_key_date,
+    updatedAt: data.updated_at,
+  };
+}
+
+function overridePath(scope: BillingKeyDayScope, id: string): string {
+  const segment = scope === "school" ? "schools" : "organizations";
+  return `/api/operator/billing/key-day-overrides/${segment}/${encodeURIComponent(id)}`;
 }
 
 /** YYYY-MM of a period (YYYY-MM-01). */
@@ -89,6 +135,31 @@ export const operatorBillingService = {
     const data = await operatorFetch<BackendBillingKeyDay>(
       "/api/operator/billing/key-day",
       { method: "PUT", body: { key_day: keyDay } },
+    );
+    return mapBillingKeyDay(data);
+  },
+
+  /** Gives a Träger or a school its own key day; answers the key day. */
+  async setKeyDayOverride(
+    scope: BillingKeyDayScope,
+    id: string,
+    keyDay: number,
+  ): Promise<BillingKeyDay> {
+    const data = await operatorFetch<BackendBillingKeyDay>(
+      overridePath(scope, id),
+      { method: "PUT", body: { key_day: keyDay } },
+    );
+    return mapBillingKeyDay(data);
+  },
+
+  /** Hands a Träger or a school back to the next level. */
+  async resetKeyDayOverride(
+    scope: BillingKeyDayScope,
+    id: string,
+  ): Promise<BillingKeyDay> {
+    const data = await operatorFetch<BackendBillingKeyDay>(
+      overridePath(scope, id),
+      { method: "DELETE" },
     );
     return mapBillingKeyDay(data);
   },

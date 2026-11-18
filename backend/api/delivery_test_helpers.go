@@ -85,6 +85,7 @@ func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
 	router.Mount("/school/notifications", notifications.SchoolRouter())
 	parents := parentAPI.NewResource(parentAPI.ResourceConfig{
 		Now:         time.Now,
+		Push:        bindParentPushSubscriptions(m.PushSubscriptions),
 		Preferences: bindParentPreferences(m.NotificationPreferences),
 		Feed:        bindParentNotificationFeed(m.GuardianFeed),
 	})
@@ -95,11 +96,7 @@ func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
 }
 
 func NewPushSubscriptionTestService(db transactionruntime.Database, unit tenant.UnitOfWork, vapid deliveryCompose.VAPIDConfig) (deliveryCompose.PushSubscriptionService, error) {
-	identity, err := NewIdentityAccessForTests(db)
-	if err != nil {
-		return nil, err
-	}
-	return deliveryCompose.NewTenantPushSubscriptionService(unit, db.Pool(), deliveryCompose.NewPushSubscriptionRepository(db.Pool()), identity, vapid, slog.Default())
+	return deliveryCompose.NewTenantPushSubscriptionService(unit, db.Pool(), deliveryCompose.NewPushSubscriptionRepository(db.Pool()), vapid, slog.Default())
 }
 
 func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWork) (DeliveryTestModule, error) {
@@ -145,7 +142,7 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}
-	push, err := deliveryCompose.NewTenantPushSubscriptionService(unit, db.Pool(), pushRepo, members, vapid, logger)
+	push, err := deliveryCompose.NewTenantPushSubscriptionService(unit, db.Pool(), pushRepo, vapid, logger)
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}

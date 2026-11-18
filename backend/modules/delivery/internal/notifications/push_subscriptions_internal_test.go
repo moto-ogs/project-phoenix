@@ -11,7 +11,6 @@ import (
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	deliveryModels "github.com/moto-ogs/project-phoenix/modules/delivery/subscriptions"
 	"github.com/moto-ogs/project-phoenix/tenant"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -31,16 +30,11 @@ type recordingPushRepository struct {
 	err             error
 	deleteParentErr error
 	deleteSchoolErr error
-	failAfter       int
-	deleteFailAfter int
 }
 
 func (r *recordingPushRepository) RegisterSubscription(_ context.Context, sub *deliveryModels.PushSubscription) error {
 	r.upserted = append(r.upserted, sub)
 	r.operations = append(r.operations, fmt.Sprintf("upsert:%d", sub.TenantID))
-	if r.failAfter > 0 && len(r.upserted) < r.failAfter {
-		return nil
-	}
 	return r.err
 }
 
@@ -48,9 +42,6 @@ func (r *recordingPushRepository) DeleteByEndpoint(ctx context.Context, accountI
 	r.deletedAccount = accountID
 	r.deletedEndpoint = endpoint
 	r.deletedTenants = append(r.deletedTenants, tenant.FromContext(ctx))
-	if r.deleteFailAfter > 0 && len(r.deletedTenants) < r.deleteFailAfter {
-		return nil
-	}
 	return r.err
 }
 
@@ -61,13 +52,16 @@ func (r *recordingPushRepository) DeleteSchoolByEndpoint(ctx context.Context, ac
 	return r.err
 }
 
+func (r *recordingPushRepository) LockParentEndpoint(context.Context, string) error {
+	r.operations = append(r.operations, "lock")
+	return nil
+}
+
 func (r *recordingPushRepository) DeleteParentByAccountEndpoint(ctx context.Context, accountID int64, endpoint string) error {
+	r.operations = append(r.operations, "remove")
 	r.deletedAccount = accountID
 	r.deletedEndpoint = endpoint
 	r.deletedTenants = append(r.deletedTenants, tenant.FromContext(ctx))
-	if r.deleteFailAfter > 0 && len(r.deletedTenants) < r.deleteFailAfter {
-		return nil
-	}
 	return r.err
 }
 
@@ -83,19 +77,6 @@ func (r *recordingPushRepository) DeleteSchoolByEndpointAcrossTenants(_ context.
 	return r.deleteSchoolErr
 }
 
-type accountTenantRepositoryStub struct {
-	mappings []int64
-	err      error
-	find     func(context.Context, int64) ([]int64, error)
-}
-
-func (r accountTenantRepositoryStub) ListGuardianSchoolIDs(ctx context.Context, accountID int64) ([]int64, error) {
-	if r.find != nil {
-		return r.find(ctx, accountID)
-	}
-	return r.mappings, r.err
-}
-
 func validPushInput() PushSubscriptionInput {
 	return PushSubscriptionInput{
 		Endpoint:  "https://fcm.googleapis.com/fcm/send/device",
@@ -108,25 +89,25 @@ func validPushInput() PushSubscriptionInput {
 func TestPushSubscriptionServiceStaffLifecycle(t *testing.T) {
 	t.Parallel()
 	t.Run("reports configuration state", func(t *testing.T) {
-		unconfigured := newMockPushSubscriptionService(t, nil, nil, nil, VAPIDConfig{}, nil)
+		unconfigured := newMockPushSubscriptionService(t, nil, nil, VAPIDConfig{}, nil)
 		_, err := unconfigured.PublicKey()
 		require.ErrorIs(t, err, ErrWebPushNotConfigured)
 
-		configured := newMockPushSubscriptionService(t, nil, nil, nil, testVAPID(), nil)
+		configured := newMockPushSubscriptionService(t, nil, nil, testVAPID(), nil)
 		key, err := configured.PublicKey()
 		require.NoError(t, err)
 		assert.Equal(t, "pub", key)
 	})
 
 	t.Run("rejects subscribe without VAPID keys", func(t *testing.T) {
-		service := newMockPushSubscriptionService(t, nil, nil, nil, VAPIDConfig{}, nil)
+		service := newMockPushSubscriptionService(t, nil, nil, VAPIDConfig{}, nil)
 		err := service.Subscribe(context.Background(), 42, validPushInput())
 		require.ErrorIs(t, err, ErrWebPushNotConfigured)
 	})
 
 	t.Run("validates and stores staff subscription", func(t *testing.T) {
 		repo := &recordingPushRepository{}
-		service := newMockPushSubscriptionService(t, nil, repo, nil, testVAPID(), nil)
+		service := newMockPushSubscriptionService(t, nil, repo, testVAPID(), nil)
 		ctx := tenant.WithTenantID(context.Background(), 42)
 
 		input := validPushInput()
@@ -147,7 +128,7 @@ func TestPushSubscriptionServiceStaffLifecycle(t *testing.T) {
 
 	t.Run("forwards repository errors and unsubscribe", func(t *testing.T) {
 		repo := &recordingPushRepository{err: errPushRepository}
-		service := newMockPushSubscriptionService(t, nil, repo, nil, testVAPID(), nil)
+		service := newMockPushSubscriptionService(t, nil, repo, testVAPID(), nil)
 		ctx := tenant.WithTenantID(context.Background(), 42)
 
 		require.ErrorIs(t, service.Subscribe(ctx, 42, validPushInput()), errPushRepository)
@@ -161,87 +142,53 @@ func TestPushSubscriptionServiceStaffLifecycle(t *testing.T) {
 func TestPushSubscriptionServiceParentLifecycle(t *testing.T) {
 	t.Parallel()
 	t.Run("rejects subscribe without VAPID keys", func(t *testing.T) {
-		service := newMockPushSubscriptionService(t, nil, nil, nil, VAPIDConfig{}, nil)
+		service := newMockPushSubscriptionService(t, nil, nil, VAPIDConfig{}, nil)
 		err := service.SubscribeParent(context.Background(), 42, validPushInput())
 		require.ErrorIs(t, err, ErrWebPushNotConfigured)
 	})
 
-	db := testpkg.SetupTestDB(t)
-
-	var tenantID int64
-	require.NoError(t, db.NewSelect().
-		ColumnExpr("id").
-		TableExpr("platform.schools").
-		OrderExpr("id ASC").
-		Limit(1).
-		Scan(context.Background(), &tenantID))
-	require.Positive(t, tenantID)
-
-	mappings := accountTenantRepositoryStub{
-		mappings: []int64{tenantID},
-	}
-
-	t.Run("reports mapping lookup errors and missing mappings", func(t *testing.T) {
-		service := newMockPushSubscriptionService(t, db, nil, accountTenantRepositoryStub{err: errPushRepository}, testVAPID(), nil)
-		err := service.SubscribeParent(context.Background(), 42, validPushInput())
-		require.ErrorIs(t, err, errPushRepository)
-		assert.ErrorContains(t, err, "resolving guardian tenant mappings")
-
-		service = newMockPushSubscriptionService(t, db, nil, accountTenantRepositoryStub{}, testVAPID(), nil)
-		err = service.SubscribeParent(context.Background(), 42, validPushInput())
-		require.EqualError(t, err, "account has no active school mapping")
-	})
-
-	t.Run("stores and removes a parent subscription in each tenant", func(t *testing.T) {
+	t.Run("stores and removes one parent device without a school", func(t *testing.T) {
 		repo := &recordingPushRepository{}
-		service := newMockPushSubscriptionService(t, db, repo, mappings, testVAPID(), nil)
+		service := newMockPushSubscriptionService(t, nil, repo, testVAPID(), nil)
 
-		require.NoError(t, service.SubscribeParent(context.Background(), 42, validPushInput()))
+		input := validPushInput()
+		input.TokenFamilyID = "parent-family"
+		require.NoError(t, service.SubscribeParent(context.Background(), 42, input))
 		require.Len(t, repo.upserted, 1)
-		assert.Equal(t, tenantID, repo.upserted[0].TenantID)
+		assert.Zero(t, repo.upserted[0].TenantID)
 		assert.Equal(t, deliveryModels.PushPortalParent, repo.upserted[0].Portal)
-		assert.Equal(t, validPushInput().Endpoint, repo.reboundEndpoint)
-		assert.Equal(t, []string{"clear", fmt.Sprintf("upsert:%d", tenantID)}, repo.operations)
+		assert.Equal(t, input.TokenFamilyID, repo.upserted[0].TokenFamilyID)
+		assert.Equal(t, input.Endpoint, repo.reboundEndpoint)
+		assert.Equal(t, []string{"clear", "upsert:0"}, repo.operations)
 
-		require.NoError(t, service.UnsubscribeParent(context.Background(), 42, validPushInput().Endpoint))
+		require.NoError(t, service.UnsubscribeParent(context.Background(), 42, input.Endpoint))
 		assert.Equal(t, int64(42), repo.deletedAccount)
-		assert.Equal(t, validPushInput().Endpoint, repo.deletedEndpoint)
+		assert.Equal(t, input.Endpoint, repo.deletedEndpoint)
+		assert.Equal(t, []int64{0}, repo.deletedTenants)
+		assert.Equal(t, []string{"clear", "upsert:0", "lock", "remove"}, repo.operations)
 	})
 
-	t.Run("reports validation and tenant repository errors", func(t *testing.T) {
-		repo := &recordingPushRepository{}
-		service := newMockPushSubscriptionService(t, db, repo, mappings, testVAPID(), nil)
+	t.Run("reports validation and repository errors", func(t *testing.T) {
+		repo := &recordingPushRepository{err: errPushRepository}
+		service := newMockPushSubscriptionService(t, nil, repo, testVAPID(), nil)
 		invalid := validPushInput()
 		invalid.Endpoint = "invalid"
 		err := service.SubscribeParent(context.Background(), 42, invalid)
 		require.ErrorIs(t, err, ErrInvalidPushSubscription)
 		assert.ErrorContains(t, err, "endpoint must be an https URL")
 
-		repo.err = errPushRepository
-		err = service.SubscribeParent(context.Background(), 42, validPushInput())
-		require.ErrorIs(t, err, errPushRepository)
-		assert.ErrorContains(t, err, "registering push subscription for tenant")
-
-		err = service.UnsubscribeParent(context.Background(), 42, validPushInput().Endpoint)
-		require.ErrorIs(t, err, errPushRepository)
-		assert.ErrorContains(t, err, "removing push subscription for tenant")
+		require.ErrorIs(t, service.SubscribeParent(context.Background(), 42, validPushInput()), errPushRepository)
+		require.ErrorIs(t, service.UnsubscribeParent(context.Background(), 42, validPushInput().Endpoint), errPushRepository)
 	})
 
 	t.Run("reports previous binding cleanup errors", func(t *testing.T) {
 		repo := &recordingPushRepository{deleteParentErr: errPushRepository}
-		service := newMockPushSubscriptionService(t, db, repo, mappings, testVAPID(), nil)
+		service := newMockPushSubscriptionService(t, nil, repo, testVAPID(), nil)
 
 		err := service.SubscribeParent(context.Background(), 42, validPushInput())
 		require.ErrorIs(t, err, errPushRepository)
 		assert.ErrorContains(t, err, "clearing previous parent push subscription bindings")
 		assert.Empty(t, repo.upserted)
-	})
-
-	t.Run("reports unsubscribe mapping lookup errors", func(t *testing.T) {
-		service := newMockPushSubscriptionService(t, db, nil, accountTenantRepositoryStub{err: errPushRepository}, testVAPID(), nil)
-		err := service.UnsubscribeParent(context.Background(), 42, validPushInput().Endpoint)
-		require.ErrorIs(t, err, errPushRepository)
-		assert.ErrorContains(t, err, "resolving guardian tenant mappings")
 	})
 }
 
@@ -258,59 +205,12 @@ func TestPushSubscriptionServiceParentSubscribeIsAtomic(t *testing.T) {
 	mock.ExpectExec("SET LOCAL ROLE phoenix_admin").WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectRollback()
 
-	repo := &recordingPushRepository{err: errPushRepository, failAfter: 2}
-	mappingLookupInTx := false
-	mappings := accountTenantRepositoryStub{
-		find: func(ctx context.Context, _ int64) ([]int64, error) {
-			_, mappingLookupInTx = tenant.TransactionFromContext(ctx)
-			return []int64{
-				41,
-				42,
-			}, nil
-		},
-	}
-	service := newMockPushSubscriptionService(t, db, repo, mappings, testVAPID(), nil)
+	repo := &recordingPushRepository{err: errPushRepository}
+	service := newMockPushSubscriptionService(t, db, repo, testVAPID(), nil)
 
 	err = service.SubscribeParent(context.Background(), 77, validPushInput())
 
 	require.ErrorIs(t, err, errPushRepository)
-	assert.True(t, mappingLookupInTx)
-	require.Len(t, repo.upserted, 2)
-	assert.Equal(t, int64(41), repo.upserted[0].TenantID)
-	assert.Equal(t, int64(42), repo.upserted[1].TenantID)
-	require.NoError(t, mock.ExpectationsWereMet(), "a later tenant failure must roll back the whole registration")
-}
-
-func TestPushSubscriptionServiceParentUnsubscribeIsAtomic(t *testing.T) {
-	t.Parallel()
-	sqlDB, mock, err := sqlmock.New()
-	require.NoError(t, err)
-	db := bun.NewDB(sqlDB, pgdialect.New())
-	t.Cleanup(func() {
-		_ = sqlDB.Close()
-	})
-
-	mock.ExpectBegin()
-	mock.ExpectExec("SET LOCAL ROLE phoenix_admin").WillReturnResult(sqlmock.NewResult(0, 0))
-	mock.ExpectRollback()
-
-	repo := &recordingPushRepository{err: errPushRepository, deleteFailAfter: 2}
-	mappingLookupInTx := false
-	mappings := accountTenantRepositoryStub{
-		find: func(ctx context.Context, _ int64) ([]int64, error) {
-			_, mappingLookupInTx = tenant.TransactionFromContext(ctx)
-			return []int64{
-				41,
-				42,
-			}, nil
-		},
-	}
-	service := newMockPushSubscriptionService(t, db, repo, mappings, testVAPID(), nil)
-
-	err = service.UnsubscribeParent(context.Background(), 77, validPushInput().Endpoint)
-
-	require.ErrorIs(t, err, errPushRepository)
-	assert.True(t, mappingLookupInTx)
-	assert.Equal(t, []int64{41, 42}, repo.deletedTenants)
-	require.NoError(t, mock.ExpectationsWereMet(), "a later tenant failure must roll back the whole removal")
+	assert.Equal(t, []string{"clear", "upsert:0"}, repo.operations)
+	require.NoError(t, mock.ExpectationsWereMet(), "insertion failure must roll back the previous binding’s removal")
 }

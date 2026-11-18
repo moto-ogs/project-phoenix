@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -123,6 +124,12 @@ type TeacherResponse struct {
 	TeacherID      int64  `json:"teacher_id"`
 	Specialization string `json:"specialization,omitempty"`
 	Role           string `json:"role,omitempty"`
+	// RoleForm names the grammatical form the free-text Role takes for this
+	// person: "feminine" or "masculine", from the gender in the personnel
+	// record. Omitted without a stated gender, for "diverse" (the inclusive
+	// form is the default then, so the value would only disclose it) and
+	// without a Role.
+	RoleForm       string `json:"role_form,omitempty"`
 	Qualifications string `json:"qualifications,omitempty"`
 }
 
@@ -179,14 +186,17 @@ const (
 // ExternalStaffRequest records an external caregiver (#3823) with an access
 // level (#4573, ADR 0091): name, optionally the organization they come from,
 // the access ("none" | "view" | "supervise") and, for view and supervise,
-// the e-mail address the invitation goes to. The workflow validates access
+// the e-mail address the invitation goes to, and optionally the Stammdaten
+// gender ("female" | "male" | "diverse"). The workflow validates access
 // and address, so its refusals carry the field codes
-// (staff.external_access_invalid, staff.external_email_*).
+// (staff.external_access_invalid, staff.external_email_*); an unknown gender
+// is refused here on field gender (general.input).
 type ExternalStaffRequest struct {
 	FirstName    string `json:"first_name"`
 	LastName     string `json:"last_name"`
 	Email        string `json:"email,omitempty"`
 	Organization string `json:"organization,omitempty"`
+	Gender       string `json:"gender,omitempty"`
 	Access       string `json:"access"`
 }
 
@@ -196,6 +206,7 @@ func (req *ExternalStaffRequest) Bind(*http.Request) error {
 	req.LastName = strings.TrimSpace(req.LastName)
 	req.Email = strings.TrimSpace(req.Email)
 	req.Organization = strings.TrimSpace(req.Organization)
+	req.Gender = strings.TrimSpace(req.Gender)
 	req.Access = strings.TrimSpace(req.Access)
 	switch {
 	case req.FirstName == "":
@@ -207,7 +218,7 @@ func (req *ExternalStaffRequest) Bind(*http.Request) error {
 	case len([]rune(req.Organization)) > maxExternalOrganizationLength:
 		return fmt.Errorf("organization must not exceed %d characters", maxExternalOrganizationLength)
 	}
-	return nil
+	return validation.ValidateStruct(req, validation.Field(&req.Gender, validation.In("female", "male", "diverse")))
 }
 
 // ExternalInvitationRequest is the body of „Konto einladen“ (#4573): the
@@ -291,6 +302,20 @@ type enrichment struct {
 	// invitationPending: an open invitation names the staff member's person
 	// (#4573); only read for external caregivers without an account.
 	invitationPending bool
+	// roleForm: see TeacherResponse.RoleForm.
+	roleForm string
+}
+
+// roleFormFor maps the stated gender to the form of the position. Only
+// female and male pick a form; everything else keeps the default.
+func roleFormFor(gender string) string {
+	switch gender {
+	case "female":
+		return "feminine"
+	case "male":
+		return "masculine"
+	}
+	return ""
 }
 
 func newPersonResponse(person *Person, email, avatar string) *PersonResponse {
@@ -372,6 +397,9 @@ func buildTeacherResponse(access staffFieldAccess, staff schoolmembership.Staff,
 		Specialization: strings.TrimSpace(teacher.Specialization),
 		Role:           teacher.Role,
 		Qualifications: teacher.Qualifications,
+	}
+	if strings.TrimSpace(teacher.Role) != "" {
+		response.RoleForm = data.roleForm
 	}
 	// Free-text qualifications are personnel data; Specialization and Role
 	// are the pedagogical labels the group and substitution screens display.

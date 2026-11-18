@@ -257,6 +257,10 @@ func mountOperatorBillingRoutes(r chi.Router, billing *provisioningOperatorAPI.B
 	r.Route("/billing", func(r chi.Router) {
 		r.Get("/key-day", billing.GetKeyDay)
 		r.Put("/key-day", billing.UpdateKeyDay)
+		r.Put("/key-day-overrides/organizations/{organizationId}", billing.SetOrganizationKeyDay)
+		r.Delete("/key-day-overrides/organizations/{organizationId}", billing.ResetOrganizationKeyDay)
+		r.Put("/key-day-overrides/schools/{schoolId}", billing.SetSchoolKeyDay)
+		r.Delete("/key-day-overrides/schools/{schoolId}", billing.ResetSchoolKeyDay)
 		r.Get("/key-date-counts", billing.ListKeyDateCounts)
 		r.Get("/key-date-counts/export", billing.ExportKeyDateCounts)
 		r.Post("/key-date-counts/seed", billing.SeedKeyDateCounts)

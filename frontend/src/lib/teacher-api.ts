@@ -1,5 +1,6 @@
 // This file contains the Teacher API service and related types
 
+import type { RoleForm } from "~/lib/position-title";
 import { sessionFetch } from "./session-cache";
 import {
   ApiError,
@@ -91,7 +92,7 @@ function buildStaffRequestBody(
 ): string {
   if (!/^\d+$/.test(personId)) {
     throw new Error(
-      "Der Mitarbeiter-Datensatz konnte nicht angelegt werden: ungültige Personen-ID.",
+      "Der Personal-Datensatz konnte nicht angelegt werden: ungültige Personen-ID.",
     );
   }
   return JSON.stringify({ person_id: personId, ...fields });
@@ -134,6 +135,8 @@ export interface Teacher {
   avatar?: string | null; // Avatar path from account
   specialization?: string | null;
   role?: string | null;
+  /** Form der Position aus den Stammdaten (`feminine`/`masculine`), fehlt ohne Angabe. */
+  role_form?: RoleForm | null;
   account_role?: string | null;
   qualifications?: string | null;
   tag_id?: string | null;

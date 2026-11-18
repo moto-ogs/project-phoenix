@@ -83,7 +83,54 @@ vi.mock("~/lib/traeger-contributions-api", async (importOriginal) => ({
   },
 }));
 
-import { HolidayRegistrationStatusCard } from "./holiday-registration-status-card";
+import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
+import {
+  HolidayRegistrationStatusScope,
+  type HolidayRegistrationStatusProps,
+} from "./holiday-registration-status-card";
+
+/**
+ * The status as the page shows it (#7410): „Bestätigen“ in the head, every
+ * other action in the menu of the head, the card and its dialogs.
+ */
+function StatusInPage(props: HolidayRegistrationStatusProps) {
+  return (
+    <HolidayRegistrationStatusScope {...props}>
+      {(status) => (
+        <>
+          {status.confirmAction}
+          {status.menuItems.length + status.cancelItems.length > 0 ? (
+            <OverflowMenu
+              items={[...status.menuItems, ...status.cancelItems]}
+            />
+          ) : null}
+          {status.card}
+          {status.overlays}
+        </>
+      )}
+    </HolidayRegistrationStatusScope>
+  );
+}
+
+/** Opens the menu of the head and returns its entry `name`. */
+function menuEntry(name: string): HTMLElement {
+  if (!screen.queryByRole("menu")) {
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
+  }
+  return screen.getByRole("menuitem", { name: new RegExp(`^${name}`) });
+}
+
+/** The entry `name` of the menu of the head, or null; closes the menu. */
+function queryMenuEntry(name: string | RegExp): HTMLElement | null {
+  const trigger = screen.queryByRole("button", { name: "Weitere Aktionen" });
+  if (!trigger) return null;
+  if (!screen.queryByRole("menu")) fireEvent.click(trigger);
+  const entry = screen.queryByRole("menuitem", {
+    name: typeof name === "string" ? new RegExp(`^${name}`) : name,
+  });
+  fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+  return entry;
+}
 
 function renderCard(
   registration: HolidayRegistrationDetail,
@@ -95,7 +142,7 @@ function renderCard(
   const onExemptionChange = vi.fn();
   render(
     <ToastProvider>
-      <HolidayRegistrationStatusCard
+      <StatusInPage
         periodId="5"
         registration={registration}
         contribution={contribution}
@@ -151,7 +198,7 @@ describe("HolidayRegistrationStatusCard", () => {
     ) =>
       render(
         <ToastProvider>
-          <HolidayRegistrationStatusCard
+          <StatusInPage
             periodId="5"
             registration={registration}
             contribution={HOLIDAY_CONTRIBUTION}
@@ -207,9 +254,7 @@ describe("HolidayRegistrationStatusCard", () => {
         status: "confirmed",
         debtorNumber: "OLD",
       });
-      fireEvent.click(
-        screen.getByRole("button", { name: "Debitorennummer ändern" }),
-      );
+      fireEvent.click(menuEntry("Debitorennummer bearbeiten"));
       fireEvent.change(
         screen.getByRole("textbox", { name: /^Debitorennummer/ }),
         { target: { value: "60104" } },
@@ -227,9 +272,7 @@ describe("HolidayRegistrationStatusCard", () => {
         mockSetChildNumbers.mockResolvedValue([]);
         renderPerChild({ ...HOLIDAY_REGISTRATION, status }, true);
         if (status === "confirmed")
-          fireEvent.click(
-            screen.getByRole("button", { name: "Nummern der Kinder ändern" }),
-          );
+          fireEvent.click(menuEntry("Nummern der Kinder bearbeiten"));
         fireEvent.change(screen.getByLabelText(/^Noah Muster/), {
           target: { value: "601032" },
         });
@@ -251,9 +294,7 @@ describe("HolidayRegistrationStatusCard", () => {
       renderPerChild({ ...HOLIDAY_REGISTRATION, status: "confirmed" });
 
       expect(screen.getByText("60101")).toBeInTheDocument();
-      fireEvent.click(
-        screen.getByRole("button", { name: "Nummern der Kinder ändern" }),
-      );
+      fireEvent.click(menuEntry("Nummern der Kinder bearbeiten"));
       fireEvent.change(screen.getByLabelText(/^Noah Muster/), {
         target: { value: "60103" },
       });
@@ -326,7 +367,9 @@ describe("HolidayRegistrationStatusCard", () => {
     expect(exemptionChoice).not.toBeChecked();
     fireEvent.click(exemptionChoice);
     expect(onExemptionChange).toHaveBeenCalledWith(true);
-    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+    const confirmAction = screen.getByRole("button", { name: "Bestätigen" });
+    expect(confirmAction).toBeEnabled();
+    fireEvent.click(confirmAction);
 
     await waitFor(() => expect(onReload).toHaveBeenCalled());
     expect(mockConfirm).toHaveBeenCalledWith("5", "7", false);
@@ -357,7 +400,7 @@ describe("HolidayRegistrationStatusCard", () => {
   it("waits with the confirmation until the preview is computed again", () => {
     render(
       <ToastProvider>
-        <HolidayRegistrationStatusCard
+        <StatusInPage
           periodId="5"
           registration={HOLIDAY_REGISTRATION}
           contribution={HOLIDAY_CONTRIBUTION}
@@ -377,6 +420,32 @@ describe("HolidayRegistrationStatusCard", () => {
         name: /Von der Zahlung befreien \(Leistungsbezug\)/,
       }),
     ).toBeChecked();
+  });
+
+  it("opens the overview while the contribution preview is pending on another tab", () => {
+    const onReveal = vi.fn();
+    render(
+      <ToastProvider>
+        <StatusInPage
+          periodId="5"
+          registration={HOLIDAY_REGISTRATION}
+          contribution={HOLIDAY_CONTRIBUTION}
+          previewPending
+          cardShown={false}
+          onReveal={onReveal}
+          exemption={false}
+          onExemptionChange={vi.fn()}
+          onChanged={vi.fn()}
+          onReload={vi.fn(() => Promise.resolve())}
+          onDebtorNumberChanged={vi.fn(() => Promise.resolve())}
+        />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+
+    expect(onReveal).toHaveBeenCalledOnce();
+    expect(mockConfirm).not.toHaveBeenCalled();
   });
 
   it("lets a cost bearer pay instead of the family and confirms with it", async () => {
@@ -400,7 +469,7 @@ describe("HolidayRegistrationStatusCard", () => {
     };
     const { rerender } = render(
       <ToastProvider>
-        <HolidayRegistrationStatusCard {...props} costBearerId={null} />
+        <StatusInPage {...props} costBearerId={null} />
       </ToastProvider>,
     );
 
@@ -412,7 +481,7 @@ describe("HolidayRegistrationStatusCard", () => {
 
     rerender(
       <ToastProvider>
-        <HolidayRegistrationStatusCard {...props} costBearerId="4" />
+        <StatusInPage {...props} costBearerId="4" />
       </ToastProvider>,
     );
     expect(
@@ -485,7 +554,7 @@ describe("HolidayRegistrationStatusCard", () => {
     mockCancel.mockResolvedValue(undefined);
     const { onReload, onChanged } = renderCard(HOLIDAY_REGISTRATION);
 
-    fireEvent.click(screen.getByRole("button", { name: "Stornieren" }));
+    fireEvent.click(menuEntry("Stornieren"));
     expect(mockCancel).not.toHaveBeenCalled();
     expect(
       await screen.findByText("Anmeldung stornieren?"),
@@ -537,7 +606,7 @@ describe("HolidayRegistrationStatusCard", () => {
       const onReload = failingReload();
       renderCard(HOLIDAY_REGISTRATION, vi.fn(), HOLIDAY_CONTRIBUTION, onReload);
 
-      fireEvent.click(screen.getByRole("button", { name: "Stornieren" }));
+      fireEvent.click(menuEntry("Stornieren"));
       await screen.findByText("Anmeldung stornieren?");
       fireEvent.click(
         screen.getByRole("button", { name: "Anmeldung stornieren" }),
@@ -554,7 +623,7 @@ describe("HolidayRegistrationStatusCard", () => {
       const onDebtorNumberChanged = failingReload();
       render(
         <ToastProvider>
-          <HolidayRegistrationStatusCard
+          <StatusInPage
             periodId="5"
             registration={{
               ...HOLIDAY_REGISTRATION,
@@ -571,9 +640,7 @@ describe("HolidayRegistrationStatusCard", () => {
           />
         </ToastProvider>,
       );
-      fireEvent.click(
-        screen.getByRole("button", { name: "Debitorennummer eintragen" }),
-      );
+      fireEvent.click(menuEntry("Debitorennummer eintragen"));
       fireEvent.change(
         screen.getByRole("textbox", { name: /Debitorennummer/ }),
         {
@@ -606,7 +673,7 @@ describe("HolidayRegistrationStatusCard", () => {
       ],
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Stornieren" }));
+    fireEvent.click(menuEntry("Stornieren"));
 
     expect(
       await screen.findByText(
@@ -620,21 +687,21 @@ describe("HolidayRegistrationStatusCard", () => {
     renderCard({ ...HOLIDAY_REGISTRATION, status: "confirmed", frozen: true });
 
     expect(screen.getByText(/Sie ist eingefroren\./)).toBeInTheDocument();
-    // Besides reopening only the way to the double-registered child (#7054).
-    expect(
-      screen.getByRole("button", { name: "Wieder öffnen" }),
-    ).toBeInTheDocument();
+    // Besides the menu of the head only the way to the double-registered
+    // child (#7054); the menu offers reopening alone (#7410).
     expect(
       screen.getByRole("button", { name: "Zum Kind" }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("button")).toHaveLength(2);
+    expect(menuEntry("Wieder öffnen")).toBeInTheDocument();
+    expect(screen.getAllByRole("menuitem")).toHaveLength(1);
   });
 
   it("freezes an open registration", async () => {
     mockChange.mockResolvedValue({ ...HOLIDAY_REGISTRATION, frozen: true });
     renderCard(HOLIDAY_REGISTRATION);
 
-    fireEvent.click(screen.getByRole("button", { name: "Einfrieren" }));
+    fireEvent.click(menuEntry("Einfrieren"));
 
     await waitFor(() =>
       expect(mockChange).toHaveBeenCalledWith("5", "7", "freeze"),
@@ -678,7 +745,7 @@ describe("HolidayRegistrationStatusCard", () => {
     function renderWithSwitch(debtorNumberRequired: boolean) {
       render(
         <ToastProvider>
-          <HolidayRegistrationStatusCard
+          <StatusInPage
             periodId="5"
             registration={HOLIDAY_REGISTRATION}
             contribution={HOLIDAY_CONTRIBUTION}
@@ -729,7 +796,7 @@ describe("HolidayRegistrationStatusCard", () => {
       mockConfirm.mockResolvedValue({ ...HOLIDAY_CONTRIBUTION, frozen: true });
       render(
         <ToastProvider>
-          <HolidayRegistrationStatusCard
+          <StatusInPage
             periodId="5"
             registration={HOLIDAY_REGISTRATION}
             contribution={{
@@ -757,7 +824,7 @@ describe("HolidayRegistrationStatusCard", () => {
       mockConfirm.mockResolvedValue({ ...HOLIDAY_CONTRIBUTION, frozen: true });
       const card = (siblingDebtorNumber: string, registrationId = "7") => (
         <ToastProvider>
-          <HolidayRegistrationStatusCard
+          <StatusInPage
             periodId="5"
             registration={{ ...HOLIDAY_REGISTRATION, id: registrationId }}
             contribution={{ ...HOLIDAY_CONTRIBUTION, siblingDebtorNumber }}
@@ -833,7 +900,7 @@ describe("HolidayRegistrationStatusCard", () => {
     it("keeps Enter in the field from confirming while the preview is computed again", () => {
       render(
         <ToastProvider>
-          <HolidayRegistrationStatusCard
+          <StatusInPage
             periodId="5"
             registration={HOLIDAY_REGISTRATION}
             contribution={HOLIDAY_CONTRIBUTION}
@@ -896,7 +963,7 @@ describe("HolidayRegistrationStatusCard", () => {
       const onDebtorNumberChanged = vi.fn(() => Promise.resolve());
       render(
         <ToastProvider>
-          <HolidayRegistrationStatusCard
+          <StatusInPage
             periodId="5"
             registration={{ ...CONFIRMED, debtorNumber }}
             contribution={{ ...HOLIDAY_CONTRIBUTION, invoiced }}
@@ -922,9 +989,7 @@ describe("HolidayRegistrationStatusCard", () => {
           /Ohne Nummer steht im Schreiben die Rechnungsnummer als Verwendungszweck\./,
         ),
       ).toBeInTheDocument();
-      fireEvent.click(
-        screen.getByRole("button", { name: "Debitorennummer eintragen" }),
-      );
+      fireEvent.click(menuEntry("Debitorennummer eintragen"));
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       const field = screen.getByRole("textbox", { name: /Debitorennummer/ });
       expect(field).toHaveFocus();
@@ -956,9 +1021,7 @@ describe("HolidayRegistrationStatusCard", () => {
       renderConfirmed("10 4711");
 
       expect(screen.getByText("10 4711")).toBeInTheDocument();
-      fireEvent.click(
-        screen.getByRole("button", { name: "Debitorennummer ändern" }),
-      );
+      fireEvent.click(menuEntry("Debitorennummer bearbeiten"));
       const field = screen.getByRole("textbox", { name: /Debitorennummer/ });
       expect(field).toHaveValue("10 4711");
       fireEvent.change(field, { target: { value: "" } });
@@ -974,9 +1037,7 @@ describe("HolidayRegistrationStatusCard", () => {
     it("discards the draft on Abbrechen", () => {
       renderConfirmed("10 4711");
 
-      fireEvent.click(
-        screen.getByRole("button", { name: "Debitorennummer ändern" }),
-      );
+      fireEvent.click(menuEntry("Debitorennummer bearbeiten"));
       fireEvent.change(
         screen.getByRole("textbox", { name: /Debitorennummer/ }),
         { target: { value: "10 4712" } },
@@ -1000,9 +1061,7 @@ describe("HolidayRegistrationStatusCard", () => {
       );
       renderConfirmed("10 4711");
 
-      fireEvent.click(
-        screen.getByRole("button", { name: "Debitorennummer ändern" }),
-      );
+      fireEvent.click(menuEntry("Debitorennummer bearbeiten"));
       fireEvent.change(
         screen.getByRole("textbox", { name: /Debitorennummer/ }),
         { target: { value: "10 4712" } },
@@ -1025,20 +1084,14 @@ describe("HolidayRegistrationStatusCard", () => {
         ),
       ).toBeInTheDocument();
       expect(screen.getByText("10 4711")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Einfrieren" }),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: /Debitorennummer/ }),
-      ).not.toBeInTheDocument();
+      expect(menuEntry("Einfrieren")).toBeInTheDocument();
+      expect(queryMenuEntry(/Debitorennummer/)).not.toBeInTheDocument();
     });
 
     it("shows no debtor number while the switch is off and none is set", () => {
       renderConfirmed("", false);
 
-      expect(
-        screen.getByRole("button", { name: "Einfrieren" }),
-      ).toBeInTheDocument();
+      expect(menuEntry("Einfrieren")).toBeInTheDocument();
       expect(screen.queryByText(/Debitorennummer/)).not.toBeInTheDocument();
     });
   });
@@ -1049,7 +1102,7 @@ describe("HolidayRegistrationStatusCard", () => {
     it("names the format at the field, opens the number keyboard and refuses another format before it confirms", async () => {
       render(
         <ToastProvider>
-          <HolidayRegistrationStatusCard
+          <StatusInPage
             periodId="5"
             registration={HOLIDAY_REGISTRATION}
             contribution={HOLIDAY_CONTRIBUTION}
@@ -1090,7 +1143,7 @@ describe("HolidayRegistrationStatusCard", () => {
         });
         render(
           <ToastProvider>
-            <HolidayRegistrationStatusCard
+            <StatusInPage
               periodId="5"
               registration={HOLIDAY_REGISTRATION}
               contribution={{
@@ -1121,7 +1174,7 @@ describe("HolidayRegistrationStatusCard", () => {
     it("checks a manually entered number even when a legacy number is inherited", async () => {
       render(
         <ToastProvider>
-          <HolidayRegistrationStatusCard
+          <StatusInPage
             periodId="5"
             registration={HOLIDAY_REGISTRATION}
             contribution={{
@@ -1154,7 +1207,7 @@ describe("HolidayRegistrationStatusCard", () => {
     it("keeps the plain field without a format", () => {
       render(
         <ToastProvider>
-          <HolidayRegistrationStatusCard
+          <StatusInPage
             periodId="5"
             registration={HOLIDAY_REGISTRATION}
             contribution={HOLIDAY_CONTRIBUTION}
@@ -1193,7 +1246,7 @@ describe("HolidayRegistrationStatusCard", () => {
       const onReload = vi.fn(() => Promise.resolve());
       render(
         <ToastProvider>
-          <HolidayRegistrationStatusCard
+          <StatusInPage
             periodId="5"
             registration={registration}
             contribution={HOLIDAY_CONTRIBUTION}
@@ -1325,9 +1378,7 @@ describe("HolidayRegistrationStatusCard", () => {
         .mockResolvedValueOnce("99");
       renderWithFamily({ ...HOLIDAY_REGISTRATION, status: "confirmed" }, true);
 
-      fireEvent.click(
-        screen.getByRole("button", { name: "Debitorennummer eintragen" }),
-      );
+      fireEvent.click(menuEntry("Debitorennummer eintragen"));
       fireEvent.change(
         screen.getByRole("textbox", { name: /^Debitorennummer/ }),
         {

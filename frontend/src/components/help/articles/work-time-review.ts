@@ -11,7 +11,7 @@ export function workTimeReviewTopic(): HelpTopic {
     id: HELP_TOPICS.leadWorkTimeReview,
     title: "Arbeitszeiten des Teams prüfen",
     question: "Wie prüfe ich Arbeitszeiten, Urlaub und Korrekturen?",
-    summary: "Zeiten stehen bei `Mitarbeiter`, Anträge unter `Anfragen`.",
+    summary: "Zeiten stehen bei `Mitarbeitende`, Anträge unter `Anfragen`.",
     group: "personal",
     audience: "lead",
     icon: "Clock3",
@@ -21,7 +21,7 @@ export function workTimeReviewTopic(): HelpTopic {
         title: "Zeiten des Teams ansehen",
         steps: [
           "Klappe in der Seitenleiste `Team` auf.",
-          "Öffne `Mitarbeiter`.",
+          "Öffne `Mitarbeitende`.",
           "Wähle oben den Reiter `Zeitkonten`.",
           "Lies in der `Einrichtungs-Übersicht` die Zahlen für `Woche` oder `Monat`.",
           "Filtere die Liste bei Bedarf nach `Minusstunden`, `Plusstunden` oder `über +20 Std.`.",
@@ -32,7 +32,7 @@ export function workTimeReviewTopic(): HelpTopic {
       {
         title: "Eine einzelne Zeit korrigieren",
         steps: [
-          "Öffne `Mitarbeiter` und wähle die Person.",
+          "Öffne `Mitarbeitende` und wähle die Person.",
           "Wähle den Reiter `Zeiterfassung`.",
           "Öffne den Eintrag, den du ändern möchtest.",
           "Ändere die Zeiten. Unter `Pausen` änderst du jede Dauer einzeln.",

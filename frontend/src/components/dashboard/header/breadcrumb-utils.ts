@@ -39,7 +39,7 @@ const detailRouteTitles: Array<{
   {
     basePath: "/staff/",
     rootPath: "/staff",
-    title: "Mitarbeiter Details",
+    title: "Person",
   },
   // Die Raumseite (#3115); den Namen setzt die Seite selbst über den
   // Breadcrumb-Kontext.

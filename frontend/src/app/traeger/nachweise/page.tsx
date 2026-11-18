@@ -158,7 +158,10 @@ function useProofListView(loaded: StaffProofList | null) {
       render: (entry) => (
         <span className="block min-w-0">
           <NavigationLink
-            href={traegerPath(`/traeger/personal/${entry.recordId}`)}
+            // Öffnet die Akte direkt im Reiter „Nachweise“ (#7414).
+            href={traegerPath(
+              `/traeger/personal/${entry.recordId}?tab=nachweise`,
+            )}
             className="font-medium text-gray-900 hover:underline"
           >
             {staffTableName(entry)}

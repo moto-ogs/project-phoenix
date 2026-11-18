@@ -197,6 +197,9 @@ type directory struct {
 	accountRole map[int64]string
 	email       map[int64]string
 	avatar      map[int64]string
+	// gender holds the stated gender per staff ID; it only picks the form
+	// of the position and never leaves the adapter itself.
+	gender map[int64]string
 	// invited holds the person IDs an open invitation names (#4573).
 	invited map[int64]bool
 }
@@ -226,8 +229,11 @@ func (rs *Resource) withInvitations(ctx context.Context, d directory, members []
 	return d
 }
 
-func (rs *Resource) loadDirectory(ctx context.Context, accountIDs []int64) directory {
+func (rs *Resource) loadDirectory(ctx context.Context, staffIDs, accountIDs []int64) directory {
 	return directory{
+		gender: rs.stringMap(ctx, "staff gender map", func(ctx context.Context) (map[int64]string, error) {
+			return rs.runtime.StaffGenders(ctx, staffIDs)
+		}),
 		present:     rs.presentSet(ctx),
 		workStatus:  rs.stringMap(ctx, "work status map", rs.runtime.WorkStatusMap),
 		absence:     rs.stringMap(ctx, "absence map", rs.runtime.AbsenceMap),
@@ -253,6 +259,7 @@ func (d directory) enrich(staff schoolmembership.Staff, person *Person, personne
 	if person != nil {
 		data.invitationPending = d.invited[person.ID]
 	}
+	data.roleForm = roleFormFor(d.gender[staff.ID])
 	if person != nil && person.AccountID != nil {
 		data.accountRole = d.accountRole[*person.AccountID]
 		data.email = d.email[*person.AccountID]
