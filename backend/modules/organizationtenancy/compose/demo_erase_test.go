@@ -680,7 +680,7 @@ func retireVisitorOrder(t *testing.T, db *bun.DB, schoolID int64, accounts visit
 	require.NoError(t, err)
 	schools, err := NewDemoSchools(db)
 	require.NoError(t, err)
-	slug := orderDemoSchool(t, db, "OGS Nord")
+	slug := orderDemoSchool(t, db, fmt.Sprintf("OGS Nord %d", schoolID))
 	_, err = queue.ClaimDemoSchoolOrder(ctx)
 	require.NoError(t, err)
 	require.NoError(t, schools.RememberDemoSchool(ctx, slug, organizationtenancy.DemoSchoolState{
@@ -926,12 +926,36 @@ func TestDemoSchoolQueueRevokesSharedVisitorAccessOnlyInRetiredSchools(t *testin
 	assert.Equal(t, len(accountIDs), active, "a shared account stays usable outside the retired school")
 }
 
+// Each scenario creates independent schools and reaches a terminal order.
+// Run the queue scenarios serially inside one disposable database clone.
+func TestDemoSchoolQueueErasesRetiredSchoolRecords(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupIsolatedTestDB(t)
+	cases := []struct {
+		name string
+		run  func(*testing.T, *bun.DB)
+	}{
+		{"realtime notifications", testDemoSchoolQueueErasesTheRealtimeNotificationsOfTheRetiredSchool},
+		{"care contracts", testDemoSchoolQueueErasesTheCareContractsOfTheRetiredSchool},
+		{"fee notices", testDemoSchoolQueueErasesTheFeeNoticesOfTheRetiredSchool},
+		{"family debtor numbers", testDemoSchoolQueueErasesTheFamilyDebtorNumbersOfTheVisitor},
+		{"SEPA mandates", testDemoSchoolQueueErasesTheSEPAMandatesOfTheRetiredSchool},
+		{"monthly rows", testDemoSchoolQueueErasesTheMonthlyRowsOfTheRetiredSchool},
+		{"meal months", testDemoSchoolQueueErasesTheMealMonthsOfTheRetiredSchool},
+		{"review changes", testDemoSchoolQueueErasesTheReviewChangesOfTheRetiredSchool},
+		{"issued corrections", testDemoSchoolQueueErasesTheIssuedCorrectionsOfTheRetiredSchool},
+	}
+	for _, scenario := range cases {
+		if !t.Run(scenario.name, func(t *testing.T) { scenario.run(t, db) }) {
+			return // A failed case may have left an order in the shared queue.
+		}
+	}
+}
+
 // A retired demo school keeps no short-lived copy of an in-app notification:
 // its title or text can name the visitor (#5504, #5540). Another school's
 // copy stays.
-func TestDemoSchoolQueueErasesTheRealtimeNotificationsOfTheRetiredSchool(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
+func testDemoSchoolQueueErasesTheRealtimeNotificationsOfTheRetiredSchool(t *testing.T, db *bun.DB) {
 	schoolID, _ := testpkg.CreateTestTenant(t, db)
 	openID, _ := testpkg.CreateTestTenant(t, db)
 	accounts := leaveVisitorTraces(t, db, schoolID)
@@ -979,9 +1003,7 @@ func careContractRows(t *testing.T, db *bun.DB, schoolID int64) map[string]int {
 // and the mailing name the visitor, and so does the Träger mail that carried
 // the contract. Nothing of the contract stays, its trail neither. A school of
 // the same Träger that is still open keeps its contract.
-func TestDemoSchoolQueueErasesTheCareContractsOfTheRetiredSchool(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
+func testDemoSchoolQueueErasesTheCareContractsOfTheRetiredSchool(t *testing.T, db *bun.DB) {
 	schoolID, _ := testpkg.CreateTestTenant(t, db)
 	openID := schoolOfOrganization(t, db, schoolID, false)
 	accounts := leaveVisitorTraces(t, db, schoolID)
@@ -1041,9 +1063,7 @@ func careNoticeRows(t *testing.T, db *bun.DB, schoolID int64) (notices, months, 
 // name. Their months go with them, the reads of their runs before the
 // contracts they name. A school of the same Träger that is still open keeps
 // all of them.
-func TestDemoSchoolQueueErasesTheFeeNoticesOfTheRetiredSchool(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
+func testDemoSchoolQueueErasesTheFeeNoticesOfTheRetiredSchool(t *testing.T, db *bun.DB) {
 	schoolID, _ := testpkg.CreateTestTenant(t, db)
 	openID := schoolOfOrganization(t, db, schoolID, false)
 	accounts := leaveVisitorTraces(t, db, schoolID)
@@ -1207,9 +1227,7 @@ func leaveFamilyDebtorNumbers(t *testing.T, db *bun.DB, schoolID int64) (visitor
 // the contract would only detach (trg_family_billing_detach), each with its
 // trail. A family that keeps a registration keeps its number, and so does
 // a family the retired school never knew.
-func TestDemoSchoolQueueErasesTheFamilyDebtorNumbersOfTheVisitor(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
+func testDemoSchoolQueueErasesTheFamilyDebtorNumbersOfTheVisitor(t *testing.T, db *bun.DB) {
 	schoolID, _ := testpkg.CreateTestTenant(t, db)
 	accounts := leaveVisitorTraces(t, db, schoolID)
 	visitorFamilies, visitorEvents, keptFamilies, keptEvents := leaveFamilyDebtorNumbers(t, db, schoolID)
@@ -1243,9 +1261,7 @@ func sepaMandateRows(t *testing.T, db *bun.DB, schoolID int64) (mandates, events
 // go with the visitor (#4695), also a revoked mandate of another holder and
 // trail entries without any name: all hang on the contract the erasure
 // deletes.
-func TestDemoSchoolQueueErasesTheSEPAMandatesOfTheRetiredSchool(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
+func testDemoSchoolQueueErasesTheSEPAMandatesOfTheRetiredSchool(t *testing.T, db *bun.DB) {
 	schoolID, _ := testpkg.CreateTestTenant(t, db)
 	accounts := leaveVisitorTraces(t, db, schoolID)
 	_, err := db.NewRaw(`WITH contract AS (
@@ -1293,9 +1309,7 @@ func remainingRows(t *testing.T, db *bun.DB, table string, ids []int64) int {
 // of a monthly run that showed its contracts go with the visitor (1.15.805):
 // the positions with their invoices, the reads before the contracts they
 // name. A school of the same Träger that is still open keeps both.
-func TestDemoSchoolQueueErasesTheMonthlyRowsOfTheRetiredSchool(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
+func testDemoSchoolQueueErasesTheMonthlyRowsOfTheRetiredSchool(t *testing.T, db *bun.DB) {
 	schoolID, _ := testpkg.CreateTestTenant(t, db)
 	openID := schoolOfOrganization(t, db, schoolID, false)
 	accounts := leaveVisitorTraces(t, db, schoolID)
@@ -1330,9 +1344,7 @@ func mealMonthRows(t *testing.T, db *bun.DB, schoolID int64) (months, children, 
 // without a name and the Mensa positions of its invoices go with the
 // visitor (1.15.811). A school of the same Träger that is still open keeps
 // them.
-func TestDemoSchoolQueueErasesTheMealMonthsOfTheRetiredSchool(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
+func testDemoSchoolQueueErasesTheMealMonthsOfTheRetiredSchool(t *testing.T, db *bun.DB) {
 	schoolID, _ := testpkg.CreateTestTenant(t, db)
 	openID := schoolOfOrganization(t, db, schoolID, false)
 	accounts := leaveVisitorTraces(t, db, schoolID)
@@ -1368,9 +1380,7 @@ func careAmendmentRows(t *testing.T, db *bun.DB, schoolID int64) []int64 {
 // the visitor (1.15.821), also an amount change that names no one but ties
 // the contract to its reason, and the revocation of it. A school of the
 // same Träger that is still open keeps its changes.
-func TestDemoSchoolQueueErasesTheReviewChangesOfTheRetiredSchool(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
+func testDemoSchoolQueueErasesTheReviewChangesOfTheRetiredSchool(t *testing.T, db *bun.DB) {
 	schoolID, _ := testpkg.CreateTestTenant(t, db)
 	openID := schoolOfOrganization(t, db, schoolID, false)
 	accounts := leaveVisitorTraces(t, db, schoolID)
@@ -1423,9 +1433,7 @@ func issuedCorrection(t *testing.T, db *bun.DB, schoolID int64) int64 {
 // the visitor of a retired demo school is erased (#6197): its trigger
 // refuses every other delete, but lets the cascade from the invoice through.
 // The open school of the same Träger keeps its issued correction.
-func TestDemoSchoolQueueErasesTheIssuedCorrectionsOfTheRetiredSchool(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
+func testDemoSchoolQueueErasesTheIssuedCorrectionsOfTheRetiredSchool(t *testing.T, db *bun.DB) {
 	schoolID, _ := testpkg.CreateTestTenant(t, db)
 	openID := schoolOfOrganization(t, db, schoolID, false)
 	accounts := leaveVisitorTraces(t, db, schoolID)
