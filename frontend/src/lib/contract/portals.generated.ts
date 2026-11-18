@@ -6,6 +6,7 @@ import { routes as enrollment } from "./enrollment.generated";
 import { routes as files } from "./files.generated";
 import { routes as guardians } from "./guardians.generated";
 import { routes as holidayClosureNotices } from "./holiday-closure-notices.generated";
+import { routes as mealCaterer } from "./meal-caterer.generated";
 import { routes as messages } from "./messages.generated";
 import { routes as notifications } from "./notifications.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
@@ -194,6 +195,10 @@ export const portalRoutes = {
     guardians["PUT /api/guardians/{id}/phone-numbers/{phoneId}"],
     holidayClosureNotices["GET /api/holiday-closure-notices/"],
     holidayClosureNotices["POST /api/holiday-closure-notices/{id}/notify"],
+    mealCaterer["DELETE /api/meal-caterer/invitations/{invitationId}"],
+    mealCaterer["DELETE /api/meal-caterer/supply"],
+    mealCaterer["GET /api/meal-caterer/"],
+    mealCaterer["POST /api/meal-caterer/invitations"],
     messages["GET /api/messages/group-threads"],
     messages["GET /api/messages/group-threads/audience"],
     messages["GET /api/messages/group-threads/{groupThreadId}"],

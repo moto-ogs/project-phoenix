@@ -67,6 +67,25 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/meal-caterer/invitations/{invitationId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/meal-caterer/supply",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SupplyEndedResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/notifications/preferences/",
       "portals": [
         "tenant"
@@ -424,6 +443,17 @@
           "kind": "ref",
           "ref": "NoticeResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-caterer/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolCatererResponse"
       }
     },
     {
@@ -1913,6 +1943,21 @@
       "response": {
         "kind": "ref",
         "ref": "NoticeResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/meal-caterer/invitations",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "inviteRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "InvitationResponse"
       }
     },
     {
@@ -6959,6 +7004,89 @@
       ]
     },
     {
+      "name": "InvitationResponse",
+      "go_type": "catererportalhttp.InvitationResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "caterer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delivery_address",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "accepted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "revoked_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "mail_outcome",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_mark",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "provider_block",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "InvoiceLayout",
       "go_type": "templates.InvoiceLayout",
       "fields": [
@@ -10097,6 +10225,31 @@
       ]
     },
     {
+      "name": "SchoolCatererResponse",
+      "go_type": "catererportalhttp.SchoolCatererResponse",
+      "fields": [
+        {
+          "name": "supply",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "SupplyResponse"
+          }
+        },
+        {
+          "name": "invitations",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "InvitationResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolDayChild",
       "go_type": "classday.SchoolDayChild",
       "fields": [
@@ -12517,6 +12670,42 @@
       ]
     },
     {
+      "name": "SupplyEndedResponse",
+      "go_type": "catererportalhttp.SupplyEndedResponse",
+      "fields": [
+        {
+          "name": "ended",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SupplyResponse",
+      "go_type": "catererportalhttp.SupplyResponse",
+      "fields": [
+        {
+          "name": "caterer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delivery_address",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "TeacherHint",
       "go_type": "presenceprojectionhttp.TeacherHint",
       "fields": [
@@ -14607,6 +14796,34 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "inviteRequest",
+      "go_type": "catererportalhttp.inviteRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "caterer_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delivery_address",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

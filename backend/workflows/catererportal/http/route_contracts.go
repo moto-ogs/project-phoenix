@@ -24,3 +24,21 @@ func RouteContracts() []common.RouteContract {
 		},
 	}
 }
+
+// SupplyEndedResponse says whether ending the supply ended a running one.
+type SupplyEndedResponse struct {
+	Ended bool `json:"ended"`
+}
+
+// SchoolRouteContracts registers the school's side of its caterer, with
+// patterns relative to /api/meal-caterer. The delivery list answers a file
+// and keeps its route file.
+func SchoolRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Response: SchoolCatererResponse{}},
+		{Method: "POST", Pattern: "/invitations", Portals: portals, Request: inviteRequest{}, Response: InvitationResponse{}},
+		{Method: "DELETE", Pattern: "/invitations/{invitationId}", Portals: portals, NoData: true},
+		{Method: "DELETE", Pattern: "/supply", Portals: portals, Response: SupplyEndedResponse{}},
+	}
+}
