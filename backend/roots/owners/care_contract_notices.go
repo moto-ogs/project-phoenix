@@ -32,6 +32,7 @@ func NewCareContractNoticePorts(settings CareContractNoticeSettings, delivery de
 	return careContractCompose.NoticePorts{
 		Templates:  careContractNoticeTemplates{settings: settings},
 		Post:       careContractNoticePost{delivery: delivery},
+		Sender:     CareContractSender{Settings: settings},
 		Addressees: addressees,
 		Holidays:   holidays,
 	}

@@ -441,7 +441,7 @@ func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer,
 	}
 	// The withdrawal notice of the contract and of its signing page takes
 	// the Träger's address from the letterhead (#7177).
-	if len(textLines(head.SenderText)) < 2 {
+	if letterheadMissing(head.SenderText) {
 		return carecontract.ErrLetterheadMissing
 	}
 	file, documentID, err := c.frozenDocument(ctx, reviewer, record)
