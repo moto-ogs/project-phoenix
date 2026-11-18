@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"net/http"
 	"testing"
 
@@ -49,9 +50,10 @@ func setupSettingsModuleWithHook(t *testing.T, hook *settingsValueSetHook) *sett
 		RequestActor: func(context.Context) (int64, int64, []string) {
 			return testpkg.Tenant(t), 1, []string{"config:read", "config:update", "config:manage"}
 		},
-		Editable:  func(context.Context) bool { return true },
-		Success:   testutil.RespondSuccess,
-		NoContent: testutil.RespondNoContent,
+		Editable: func(context.Context) bool { return true },
+		// The shared envelope, so every answer is held to the contract.
+		Success:   common.Respond,
+		NoContent: common.RespondNoContent,
 		Failure:   testutil.RespondError,
 	})
 	homeLayouts, ok := svc.Settings.(settingsHTTP.HomeLayoutOperations)
@@ -117,7 +119,7 @@ func TestSettingsSetHomeLayout_LegacyPayloadPreservesArrangement(t *testing.T) {
 	t.Parallel()
 
 	ctx := setupSettingsModule(t)
-	router := ctx.resource.SettingsRouter()
+	router := testpkg.MountedQueryBudgetRouter("/api/settings", ctx.resource.SettingsRouter())
 
 	currentPayload := map[string]interface{}{
 		"overrides": map[string]bool{"section.birthdays": false},
@@ -172,6 +174,25 @@ func TestSettingsSetHomeLayout_LegacyPayloadPreservesArrangement(t *testing.T) {
 	data, ok = response["data"].(map[string]interface{})
 	require.True(t, ok)
 	assert.Empty(t, data["blocks"])
+
+	// The school prescribes a block, and the person returns to the
+	// recommended start page.
+	req = testutil.NewAuthenticatedRequest(t, "PUT", "/home-layout/policies", map[string]interface{}{
+		"policies": map[string]string{"section.staff_notices": "required"},
+	}, testutil.WithTestTenant(t))
+	rr = testutil.ExecuteRequest(router, req)
+	testutil.AssertSuccessResponse(t, rr, 200)
+	req = testutil.NewAuthenticatedRequest(t, "DELETE", "/home-layout", nil, testutil.WithTestTenant(t))
+	rr = testutil.ExecuteRequest(router, req)
+	require.Equal(t, 204, rr.Code, rr.Body.String())
+	req = testutil.NewAuthenticatedRequest(t, "GET", "/home-layout", nil, testutil.WithTestTenant(t))
+	rr = testutil.ExecuteRequest(router, req)
+	testutil.AssertSuccessResponse(t, rr, 200)
+	response = testutil.ParseJSONResponse(t, rr.Body.Bytes())
+	data, ok = response["data"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Empty(t, data["overrides"], "the reset drops the person's deviations")
+	assert.Equal(t, map[string]interface{}{"section.staff_notices": "required"}, data["policies"])
 }
 
 // The demo seeder writes the device PIN into schools with NFC off. The PIN's

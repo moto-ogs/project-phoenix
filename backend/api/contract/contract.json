@@ -135,6 +135,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/settings/home-layout",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/staff-pool/blocks/{id}",
       "portals": [
         "tenant"
@@ -948,6 +956,50 @@
       "response": {
         "kind": "ref",
         "ref": "Status"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/settings/device-pin-status",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DevicePINStatus"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/settings/home-layout",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HomeLayoutResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/settings/payroll-status",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PayrollStatus"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/settings/school-contact-email",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "schoolContactEmailResponse"
       }
     },
     {
@@ -3214,6 +3266,30 @@
         "kind": "ref",
         "ref": "Status"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/settings/home-layout",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "homeLayoutOverridesRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/settings/home-layout/policies",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "homeBlockPoliciesRequest"
+      },
+      "no_data": true
     },
     {
       "method": "PUT",
@@ -6319,6 +6395,25 @@
       ]
     },
     {
+      "name": "DevicePINStatus",
+      "go_type": "records.DevicePINStatus",
+      "fields": [
+        {
+          "name": "setup_required",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "EnrollablePhaseResponse",
       "go_type": "parent.EnrollablePhaseResponse",
       "fields": [
@@ -7656,6 +7751,79 @@
           "name": "account_status",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HomeBlockPlacement",
+      "go_type": "records.HomeBlockPlacement",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "span",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "col",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "row",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HomeLayoutResponse",
+      "go_type": "settingshttp.HomeLayoutResponse",
+      "fields": [
+        {
+          "name": "overrides",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "blocks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HomeBlockPlacement"
+            }
+          }
+        },
+        {
+          "name": "policies",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "can_manage_policies",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -10054,6 +10222,152 @@
           "name": "iban_masked",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PayrollCategoryStatus",
+      "go_type": "records.PayrollCategoryStatus",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "unit",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "unit_required",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "setting_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "unit_setting_key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PayrollDispatchSettings",
+      "go_type": "records.PayrollDispatchSettings",
+      "fields": [
+        {
+          "name": "auto",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "channel",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "format",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PayrollStatus",
+      "go_type": "records.PayrollStatus",
+      "fields": [
+        {
+          "name": "categories",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PayrollCategoryStatus"
+            }
+          }
+        },
+        {
+          "name": "beraternummer",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mandantennummer",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "lodas_header_complete",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "configured_categories",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "total_categories",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "staff_total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "staff_without_personnel_number",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "dispatch",
+          "schema": {
+            "kind": "ref",
+            "ref": "PayrollDispatchSettings"
           }
         }
       ]
@@ -16265,6 +16579,89 @@
       ]
     },
     {
+      "name": "homeBlockPoliciesRequest",
+      "go_type": "settingshttp.homeBlockPoliciesRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "policies",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "homeLayoutBlockRequest",
+      "go_type": "settingshttp.homeLayoutBlockRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "span",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "col",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "row",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "homeLayoutOverridesRequest",
+      "go_type": "settingshttp.homeLayoutOverridesRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "overrides",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "blocks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "homeLayoutBlockRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "inviteRequest",
       "go_type": "catererportalhttp.inviteRequest",
       "request": true,
@@ -17052,6 +17449,18 @@
           "name": "resent_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "schoolContactEmailResponse",
+      "go_type": "settingshttp.schoolContactEmailResponse",
+      "fields": [
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

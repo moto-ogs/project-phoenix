@@ -26,6 +26,7 @@ import { routes as schoolParentLetters } from "./school-parent-letters.generated
 import { routes as schoolSetup } from "./school-setup.generated";
 import { routes as schoolStaffMessages } from "./school-staff-messages.generated";
 import { routes as schoolSupervisions } from "./school-supervisions.generated";
+import { routes as settings } from "./settings.generated";
 import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as staffOnboarding } from "./staff-onboarding.generated";
 import { routes as staffPool } from "./staff-pool.generated";
@@ -270,6 +271,13 @@ export const portalRoutes = {
     schoolSetup["POST /api/school-setup/complete"],
     schoolSetup["PUT /api/school-setup/dismissal"],
     schoolSetup["PUT /api/school-setup/steps/{step}"],
+    settings["DELETE /api/settings/home-layout"],
+    settings["GET /api/settings/device-pin-status"],
+    settings["GET /api/settings/home-layout"],
+    settings["GET /api/settings/payroll-status"],
+    settings["GET /api/settings/school-contact-email"],
+    settings["PUT /api/settings/home-layout"],
+    settings["PUT /api/settings/home-layout/policies"],
     staffMessages["GET /api/staff-messages/"],
     staffMessages["GET /api/staff-messages/recipients"],
     staffMessages["GET /api/staff-messages/threads/{threadID}"],

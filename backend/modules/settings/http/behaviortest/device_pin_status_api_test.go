@@ -17,7 +17,7 @@ import (
 func TestDevicePINStatusAPI(t *testing.T) {
 	t.Parallel()
 	ctx := setupSettingsModule(t)
-	router := ctx.resource.SettingsRouter()
+	router := testpkg.MountedQueryBudgetRouter("/api/settings", ctx.resource.SettingsRouter())
 
 	status := func(t *testing.T) string {
 		t.Helper()
@@ -67,7 +67,7 @@ func TestDevicePINStatusAPI(t *testing.T) {
 func TestDevicePINRejectsTrivialValue(t *testing.T) {
 	t.Parallel()
 	ctx := setupSettingsModule(t)
-	router := ctx.resource.SettingsRouter()
+	router := testpkg.MountedQueryBudgetRouter("/api/settings", ctx.resource.SettingsRouter())
 
 	put := testutil.NewAuthenticatedRequest(t, "PUT", "/values/"+records.KeyOGSDevicePIN,
 		map[string]any{"value": "1234"}, testutil.WithTestTenant(t))

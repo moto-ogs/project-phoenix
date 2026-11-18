@@ -29,6 +29,7 @@ import (
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
+	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
@@ -68,6 +69,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/api", schoolSetupRouteContracts()},
 		{"/api/staff-pool", workforceTraegerStaff.SchoolPoolRouteContracts()},
 		{"/api", mealPlanRouteContracts()},
+		{"/api/settings", settingsHTTP.RouteContracts()},
 		// The platform announcements' http role may not import the contract
 		// types; the root names their answer.
 		{"/api/platform", []common.RouteContract{
