@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,7 +31,7 @@ func TestAvailableRoomsUsesDeviceTenantComposition(t *testing.T) {
 	require.NoError(t, err)
 	deviceAuth := testutil.NewDeviceAuthenticators(devices.IoT.Fleet(), schools, auth)
 	resource := iotcompose.NewResource(iotcompose.ServiceDependencies{Runtime: NewIoTHTTPRuntime(time.Now), ErrorReports: NewIoTErrorReporter(nil, nil),
-		Administration:           NewIoTAdministration(devicefleet.NewAdministration(devices.IoT.Fleet(), time.Now), time.Now),
+		Administration:           NewIoTAdministration(devicefleet.NewAdministration(devices.IoT.Fleet(), time.Now), routerRemovalSessions{}, slog.Default(), time.Now),
 		Configuration:            data.Configuration,
 		Rooms:                    data.RoomAvailability,
 		FeedbackService:          feedback.Feedback,

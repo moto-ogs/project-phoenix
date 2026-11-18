@@ -17,6 +17,9 @@ func NewResource(iotService devicefleet.Administration, runtime Runtime) *Resour
 	if runtime.Now == nil {
 		panic("device routes: the clock is required")
 	}
+	if runtime.ActiveSession == nil || runtime.ConflictWithDetails == nil || runtime.AuditRemoval == nil {
+		panic("device routes: the removal guard, its conflict answer and its audit are required")
+	}
 	return &Resource{
 		IoTService: iotService,
 		runtime:    runtime,

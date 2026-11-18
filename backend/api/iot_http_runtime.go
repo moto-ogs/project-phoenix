@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	dataAPI "github.com/moto-ogs/project-phoenix/modules/devicescan/http/data"
 	sessionsAPI "github.com/moto-ogs/project-phoenix/modules/devicescan/http/sessions"
 	staffclockAPI "github.com/moto-ogs/project-phoenix/modules/devicescan/http/staffclock"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -50,8 +53,52 @@ func renderIoTErrorReportFailure(w http.ResponseWriter, r *http.Request, status 
 	}
 }
 
-func iotDevicesRuntime(now func() time.Time) devicesAPI.Runtime {
-	return devicesAPI.Runtime{ParseID: common.ParseIDParam, Now: now, Permission: common.RequiresPermission, Success: common.Respond, Failure: renderIoTDataFailure, ConflictOnField: renderIoTConflictOnField, ConstraintViolation: transactionFailures.IsConstraintViolation}
+func iotDevicesRuntime(sessions DeviceRemovalSessions, logger *slog.Logger, now func() time.Time) devicesAPI.Runtime {
+	return devicesAPI.Runtime{ParseID: common.ParseIDParam, Now: now, Permission: common.RequiresPermission, Success: common.Respond, Failure: renderIoTDataFailure, ConflictOnField: renderIoTConflictOnField, ConstraintViolation: transactionFailures.IsConstraintViolation,
+		ConflictWithDetails: func(w http.ResponseWriter, r *http.Request, err error, code string, details map[string]any) {
+			common.RenderError(w, r, common.ErrorConflictWithDetails(err, code, details))
+		},
+		ActiveSession: deviceRemovalSession(sessions),
+		AuditRemoval:  deviceRemovalAudit(logger),
+	}
+}
+
+// DeviceRemovalSessions is the Student Presence read the device removal
+// guard needs (#2319): the open sessions a device runs.
+type DeviceRemovalSessions interface {
+	QueryLiveGroups(context.Context, studentpresence.LiveGroupFilter) ([]studentpresence.LiveGroup, error)
+}
+
+// deviceRemovalSession reads the device's open kiosk session in the
+// request's tenant transaction.
+func deviceRemovalSession(sessions DeviceRemovalSessions) func(context.Context, int64) (*devicesAPI.RemovalSession, error) {
+	return func(ctx context.Context, deviceRowID int64) (*devicesAPI.RemovalSession, error) {
+		open, err := sessions.QueryLiveGroups(ctx, studentpresence.LiveGroupFilter{DeviceID: &deviceRowID, OpenOnly: true, Limit: 1})
+		if err != nil || len(open) == 0 {
+			return nil, err
+		}
+		return &devicesAPI.RemovalSession{ID: open[0].ID, StartedAt: open[0].StartTime, RoomID: open[0].RoomID}, nil
+	}
+}
+
+// deviceRemovalAudit writes the removal outcome to the structured audit
+// log: who removed or tried to remove which device of which school. The
+// entry carries no credential.
+func deviceRemovalAudit(logger *slog.Logger) func(*http.Request, devicesAPI.RemovalAudit) {
+	return func(r *http.Request, entry devicesAPI.RemovalAudit) {
+		attrs := []any{
+			"audit", "device_removal",
+			"outcome", entry.Outcome,
+			"tenant_id", tenant.FromContext(r.Context()),
+			"account_id", sessiontoken.ClaimsFromCtx(r.Context()).ID,
+			"device_row_id", entry.DeviceRowID,
+			"device_id", entry.DeviceID,
+		}
+		if entry.SessionID != nil {
+			attrs = append(attrs, "session_id", *entry.SessionID)
+		}
+		logger.InfoContext(r.Context(), "device removal", attrs...)
+	}
 }
 
 func iotSessionRuntime(now func() time.Time) sessionsAPI.Runtime {

@@ -54,16 +54,21 @@ func captureMealRead(t *testing.T, api *goldenRuntime, counter *testpkg.QueryCou
 	return response, counter.Measurement(withoutSessionCheck(t, queries))
 }
 
-func mealReadSnapshot(t *testing.T) []string {
+func prepareMealReadSnapshot(t *testing.T) func() map[string]string {
 	t.Helper()
+	db := testpkg.SetupTestDB(t)
 	tables := []string{"meal_plan_entries", "meal_orders", "meal_order_days", "meal_order_lines", "meal_order_changes", "meal_order_change_counters", "meal_participation_schedules", "meal_participation_overrides", "meal_registration_changes", "meal_sickness_status_history"}
-	rows := make([]string, 0, len(tables))
+	queries := make(testpkg.SnapshotQueries, len(tables))
 	for _, table := range tables {
-		var data string
-		require.NoError(t, testpkg.SetupTestDB(t).NewRaw(`SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text), '[]'::jsonb)::text FROM schedule.`+table+` AS r WHERE tenant_id = ?`, testpkg.Tenant(t)).Scan(testpkg.Ctx(t), &data))
-		rows = append(rows, table+":"+data)
+		queries[table] = testpkg.TableSnapshotQuery(db, "schedule."+table, "r.tenant_id = $1")
 	}
-	return rows
+	read := queries.Prepare(t, db)
+	return func() map[string]string {
+		t.Helper()
+		rows, err := read(testpkg.Ctx(t), testpkg.Tenant(t))
+		require.NoError(t, err)
+		return rows
+	}
 }
 
 func mealExportText(t *testing.T, response *httptest.ResponseRecorder) string {
@@ -126,9 +131,10 @@ func checkStaffMealPlanReadBudgets(t *testing.T, api *goldenRuntime) {
 		}
 	}
 	recorded := map[string]testpkg.QueryMeasurement{}
+	snapshot := prepareMealReadSnapshot(t)
 	run := func(children int) map[string]int {
 		t.Helper()
-		before := mealReadSnapshot(t)
+		before := snapshot()
 		counts := map[string]int{}
 		response, queries := get("/api/meal-plan/?week_start=" + monday.String())
 		var week struct {
@@ -258,7 +264,7 @@ func checkStaffMealPlanReadBudgets(t *testing.T, api *goldenRuntime) {
 			counts[scenario] = len(queries.Statements)
 			recorded[scenario] = queries
 		}
-		assert.Equal(t, before, mealReadSnapshot(t), "reads preserve every tenant-owned meal row")
+		assert.Equal(t, before, snapshot(), "reads preserve every tenant-owned meal row")
 		t.Logf("MEAL_MEASURE children=%d counts=%v", children, counts)
 		return counts
 	}
@@ -295,13 +301,14 @@ func checkParentMealPlanReadBudget(t *testing.T, api *goldenRuntime) {
 	// crossing Sunday midnight still requests an allowed week.
 	monday := calendar.TodayDate().StartOfISOWeek().AddDays(7)
 	counts := []int{}
+	snapshot := prepareMealReadSnapshot(t)
 	var captureRouteQueries testpkg.QueryMeasurement
 	for _, size := range []int{3, 8} {
 		for i := len(counts) * 3; i < size; i++ {
 			_, err := db.ExecContext(testpkg.Ctx(t), `INSERT INTO schedule.meal_plan_entries (tenant_id,date,position,dish,allergens) VALUES (?,?,?,?,ARRAY['gluten'])`, chain.TenantID, monday, i, fmt.Sprintf("Elterngericht%02d", i))
 			require.NoError(t, err)
 		}
-		before := mealReadSnapshot(t)
+		before := snapshot()
 		response, queries := get(fmt.Sprintf("/parent/me/children/%d/meal-plan?week_start=%s", chain.StudentID, monday))
 		var result struct {
 			Data []struct {
@@ -319,7 +326,7 @@ func checkParentMealPlanReadBudget(t *testing.T, api *goldenRuntime) {
 			assert.Equal(t, fmt.Sprintf("Elterngericht%02d", i), row.Dish)
 			assert.Equal(t, []string{"gluten"}, row.Allergens)
 		}
-		assert.Equal(t, before, mealReadSnapshot(t))
+		assert.Equal(t, before, snapshot())
 		counts = append(counts, len(queries.Statements))
 		captureRouteQueries = queries
 	}

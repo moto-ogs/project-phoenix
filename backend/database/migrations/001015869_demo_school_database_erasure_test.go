@@ -157,6 +157,7 @@ var demoErasureSchoolTablesOutsideThePlan = map[string]struct {
 func TestRetiredDemoSchoolIsErasedFromTheDatabaseAfterNinetyDaysOnly(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
+	snapshot := prepareErasureSnapshot(t, db)
 	due := testpkg.Tenant(t)
 	early, _ := testpkg.CreateTestTenant(t, db)
 	active, _ := testpkg.CreateTestTenant(t, db)
@@ -191,7 +192,7 @@ func TestRetiredDemoSchoolIsErasedFromTheDatabaseAfterNinetyDaysOnly(t *testing.
 	kept := []int64{early, active, ordered, filesPending, realRetired, realActive}
 	before := map[int64]map[string]string{}
 	for _, school := range kept {
-		before[school] = erasureSnapshot(t, db, school)
+		before[school] = snapshot(school)
 	}
 	typed := textOccurrences(t, db, token)
 	require.NotEmpty(t, typed, "the fixture must hold the typed text before the erasure")
@@ -209,7 +210,7 @@ func TestRetiredDemoSchoolIsErasedFromTheDatabaseAfterNinetyDaysOnly(t *testing.
 	assert.EqualValues(t, 1, result.RowCounts["platform.schools"], "exactly the school root")
 
 	// Catalog: every table of the erasure plan holds no row of the school.
-	for table, rows := range erasureSnapshot(t, db, due) {
+	for table, rows := range snapshot(due) {
 		assert.Equal(t, "[]", rows, "due demo school: %s", table)
 	}
 	var roots int
@@ -230,7 +231,7 @@ func TestRetiredDemoSchoolIsErasedFromTheDatabaseAfterNinetyDaysOnly(t *testing.
 	assert.NotContains(t, evidence.RowCounts, token, "evidence holds counts only")
 
 	for _, school := range kept {
-		assert.Equal(t, before[school], erasureSnapshot(t, db, school), "school %d keeps every row", school)
+		assert.Equal(t, before[school], snapshot(school), "school %d keeps every row", school)
 	}
 	var alive int
 	require.NoError(t, db.NewRaw(`SELECT count(*) FROM auth.accounts WHERE id IN (?, ?, ?) AND personal_data_erased_at IS NULL`,
@@ -288,11 +289,12 @@ func assertOnlyClassifiedTablesNameSchool(t *testing.T, db *bun.DB, schoolID int
 func TestRetiredDemoSchoolDatabaseErasureRollsBackAndResumes(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
+	snapshot := prepareErasureSnapshot(t, db)
 	due := testpkg.Tenant(t)
 	seedErasureSchool(t, db, due)
 	recordDemoOrigin(t, db, due)
 	retireSchool(t, db, due, 91, true)
-	before := erasureSnapshot(t, db, due)
+	before := snapshot(due)
 	erasureExec(t, db, `CREATE FUNCTION platform.fail_demo_erasure_fixture() RETURNS trigger LANGUAGE plpgsql AS $$
 		BEGIN RAISE EXCEPTION 'synthetic detail must not escape'; END $$;
 		CREATE TRIGGER fail_demo_erasure_fixture BEFORE DELETE ON users.persons FOR EACH ROW EXECUTE FUNCTION platform.fail_demo_erasure_fixture()`)
@@ -301,7 +303,7 @@ func TestRetiredDemoSchoolDatabaseErasureRollsBackAndResumes(t *testing.T) {
 	require.Equal(t, "failed", failed.Status)
 	assert.Equal(t, "P0001", failed.ErrorCode)
 	assert.Empty(t, failed.RowCounts)
-	assert.Equal(t, before, erasureSnapshot(t, db, due), "every deletion rolls back")
+	assert.Equal(t, before, snapshot(due), "every deletion rolls back")
 	var erasedAt *string
 	require.NoError(t, db.NewRaw(`SELECT db_erased_at::text FROM platform.demo_school_file_erasures WHERE school_id = ?`, due).Scan(t.Context(), &erasedAt))
 	assert.Nil(t, erasedAt, "a failure writes no evidence")
@@ -317,11 +319,12 @@ func TestRetiredDemoSchoolDatabaseErasureRollsBackAndResumes(t *testing.T) {
 func TestRetiredDemoSchoolDatabaseErasureWaitsForALockedTable(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
+	snapshot := prepareErasureSnapshot(t, db)
 	due := testpkg.Tenant(t)
 	seedErasureSchool(t, db, due)
 	recordDemoOrigin(t, db, due)
 	retireSchool(t, db, due, 91, true)
-	before := erasureSnapshot(t, db, due)
+	before := snapshot(due)
 
 	holder, err := db.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
@@ -330,7 +333,7 @@ func TestRetiredDemoSchoolDatabaseErasureWaitsForALockedTable(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "busy", eraseRetiredDemoSchool(t, db, due).Status)
-	assert.Equal(t, before, erasureSnapshot(t, db, due))
+	assert.Equal(t, before, snapshot(due))
 	require.NoError(t, holder.Rollback())
 	assert.Equal(t, []int64{due}, dueRetiredDemoSchoolDatabases(t, db), "the school stays due")
 	assert.Equal(t, "erased", eraseRetiredDemoSchool(t, db, due).Status)

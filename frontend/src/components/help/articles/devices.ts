@@ -38,6 +38,17 @@ export function devicesTopic(): HelpTopic {
           "Wähle `Erstellen`.",
         ],
       },
+      {
+        title: "Ein Gerät entfernen",
+        description:
+          "Zum Beispiel, wenn ein Tablet kaputt ist oder nicht mehr gebraucht wird.",
+        steps: [
+          "Wähle das Gerät aus der Liste.",
+          "Wähle oben rechts `Entfernen`.",
+          "Lies, was beim Entfernen passiert.",
+          "Wähle `Ja, entfernen` und danach `Gerät entfernen`.",
+        ],
+      },
     ],
     result:
       "Du siehst für jedes Gerät, ob es erreichbar ist und wo es zuletzt stand.",
@@ -45,6 +56,7 @@ export function devicesTopic(): HelpTopic {
       "Steht bei `Letzter Standort` `Noch nicht verwendet`, wurde am Gerät noch nichts gescannt.",
       "Nach dem Anlegen zeigt moto einmalig einen Zugangscode. Nur das Gerät braucht ihn.",
       "Gib diesen Code nicht weiter. Er ist danach nicht mehr zu sehen.",
+      "Ein entferntes Gerät kann sich nicht mehr anmelden. Bisherige Anwesenheiten bleiben erhalten.",
     ],
     differences: [
       "Arbeitet deine OGS ohne NFC, fehlt `Geräte` in der `Datenverwaltung`.",
@@ -52,6 +64,7 @@ export function devicesTopic(): HelpTopic {
     troubleshootingDetails: [
       "Ein Gerät meldet sich nicht? Prüfe `Verbindung` und `Status` in der Liste.",
       "`Offline` und der Strom stimmt? Prüfe das WLAN am Standort des Geräts.",
+      "Entfernen klappt nicht, weil eine Sitzung läuft? Beende die Sitzung am Gerät und versuche es noch einmal.",
     ],
     related: [
       HELP_TOPICS.leadNfcSettings,

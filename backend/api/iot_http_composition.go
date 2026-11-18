@@ -80,10 +80,11 @@ func bindIoTHostSessionEnd(end sessionsAPI.EndSession) iotCompose.EndSession {
 }
 
 // NewIoTAdministration mounts the same native Device Fleet resource in its
-// JWT/tenant group; now is the root's clock.
-func NewIoTAdministration(administration devicefleet.Administration, now func() time.Time) iotCompose.Administration {
+// JWT/tenant group: sessions guard removal against an open kiosk session,
+// logger records removal outcomes, now is the root's clock.
+func NewIoTAdministration(administration devicefleet.Administration, sessions DeviceRemovalSessions, logger *slog.Logger, now func() time.Time) iotCompose.Administration {
 	return func(r chi.Router, withTx iotCompose.Middleware) {
-		devicesResource := devicesAPI.NewResource(administration, iotDevicesRuntime(now))
+		devicesResource := devicesAPI.NewResource(administration, iotDevicesRuntime(sessions, logger, now))
 		r.With(withTx).Mount("/", devicesResource.Router())
 	}
 }
