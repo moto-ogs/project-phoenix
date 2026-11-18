@@ -94,6 +94,15 @@ describe("useFixedLayersFollowViewport", () => {
     expect(shift()).toBe("");
   });
 
+  it("does not lift the layers while the keyboard starts to open", () => {
+    // The viewport already shrank, but WebKit has not reported the pan yet.
+    setup({ height: 800, offsetTop: 0 });
+
+    renderHook(() => useFixedLayersFollowViewport());
+
+    expect(shift()).toBe("");
+  });
+
   it("leaves a pinch zoom alone", () => {
     setup({ height: 437, offsetTop: 300, scale: 2 });
 

@@ -42,11 +42,13 @@ export function useFixedLayersFollowViewport() {
     const measure = () => {
       const zoomed = Math.abs(vv.scale - 1) >= 0.01;
       const keyboardOpen = window.innerHeight - vv.height > KEYBOARD_MIN_PX;
+      // The bug only ever leaves the layers too high. A smaller gap the
+      // other way is a keyboard still opening, not a shift to correct.
       const shift =
         zoomed || keyboardOpen
           ? 0
           : Math.round(vv.offsetTop + vv.height - window.innerHeight);
-      if (Math.abs(shift) < 1) {
+      if (shift < 1) {
         root.style.removeProperty(FIXED_LAYER_SHIFT_VAR);
       } else {
         root.style.setProperty(FIXED_LAYER_SHIFT_VAR, `${shift}px`);

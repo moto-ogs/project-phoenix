@@ -4,13 +4,13 @@ import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 
 import { cn } from "~/lib/utils";
+import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 import { useSheetAboveKeyboard } from "./hooks/useSheetAboveKeyboard";
 import {
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   Z_LAYER,
 } from "./overlay-styles";
-import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 type DrawerDirection = "bottom" | "left";
 
@@ -52,7 +52,7 @@ const DrawerOverlay = React.forwardRef<
   <DrawerPrimitive.Overlay
     ref={ref}
     className={cn(
-      `fixed inset-0 ${Z_LAYER.sheet}`,
+      `fixed inset-0 ${Z_LAYER.sheet} ${FIXED_LAYER_SHIFT}`,
       OVERLAY_BACKDROP_TINT_CLASS,
       OVERLAY_BACKDROP_BLUR_CLASS,
       className,
@@ -69,7 +69,8 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 // outer edge is flush against the viewport so nothing's there to round.
 // Width caps live in className overrides at the call site.
 const directionContentClasses: Record<DrawerDirection, string> = {
-  bottom: `fixed inset-x-0 bottom-0 mt-24 flex h-auto max-h-[90vh] flex-col rounded-t-2xl ${FIXED_LAYER_SHIFT}`,
+  bottom:
+    "fixed inset-x-0 bottom-0 mt-24 flex h-auto max-h-[90vh] flex-col rounded-t-2xl",
   left: "fixed inset-y-0 left-0 flex h-full w-full max-w-lg flex-col",
 };
 
@@ -104,7 +105,7 @@ const DrawerContent = React.forwardRef<
           else if (ref) ref.current = node;
         }}
         className={cn(
-          `${Z_LAYER.sheet} border-0 bg-white`,
+          `${Z_LAYER.sheet} ${FIXED_LAYER_SHIFT} border-0 bg-white`,
           fullScreen && direction === "bottom"
             ? FULL_SCREEN_BOTTOM_CLASSES
             : directionContentClasses[direction],

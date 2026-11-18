@@ -15,7 +15,6 @@ import { FieldLabel } from "../field-label";
 import { MultiSelect } from "../multi-select";
 import { InfoSection } from "../info-section";
 import { Button } from "../button";
-import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 // Viewport Y just below the sticky app topbar — the line the panel docks to.
 // Measured live so it tracks the topbar's responsive + scroll-shrink heights.
@@ -375,7 +374,7 @@ export function FilterPanel({
     ? isDesktopPlacement
       ? ""
       : "inset-x-3 md:inset-x-auto md:right-4 md:w-96"
-    : `fixed inset-x-3 bottom-[calc(6rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh-7rem-env(safe-area-inset-bottom))] md:inset-x-auto md:top-[6rem] md:right-4 md:bottom-auto md:w-96 ${FIXED_LAYER_SHIFT}`;
+    : "fixed inset-x-3 bottom-[calc(6rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh-7rem-env(safe-area-inset-bottom))] md:inset-x-auto md:top-[6rem] md:right-4 md:bottom-auto md:w-96";
 
   const panel = (
     <>
