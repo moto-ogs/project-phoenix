@@ -42,13 +42,15 @@ Speicher erreichen, etwa über Routing an den Host mit dem Volume.
    oder der Bucket für die App nicht geprüft werden kann. `UPLOADS_BACKEND`
    erst beim Wechsel auf `s3` setzen.
 3. Für den Wechsel und den späteren Betrieb zusammengehörige DB- und
-   Datei-Sicherungen samt Wiederherstellung vorbereiten und prüfen. Die
-   bestehenden [täglichen Sicherungen](daily-backup.md) und
-   [Release-Snapshots](release-backup-rollback.md) erfassen das lokale
-   Upload-Volume. Sie erfassen keine Dateien, die nur im Bucket liegen. Nach
-   dem Wechsel muss auch ein Rollback die zum DB-Snapshot gehörenden
-   Bucket-Dateien wiederherstellen. Erst mit geprüfter Sicherung und
-   Wiederherstellung der Bucket-Dateien auf S3 umstellen.
+   Datei-Sicherungen samt Wiederherstellung vorbereiten und prüfen. Beide
+   Verfahren folgen der Einstellung des Dienstes `server`: Die
+   [tägliche Sicherung](daily-backup.md#uploads-im-s3-modus) sichert im
+   S3-Modus den Bucket und stellt ihn in einen neuen, leeren Bucket her.
+   [Release-Snapshots](release-backup-rollback.md#s3-upload-bucket) kopieren
+   den Bucket bei gestoppter App mit; ein Rollback setzt ihn auf den Stand des
+   DB-Snapshots zurück. Vor dem Wechsel muss die tägliche Sicherung auf dem
+   Server laufen. Erst nach einer geprüften Wiederherstellung der
+   Bucket-Dateien auf S3 umstellen.
 
 ## Kopieren und prüfen
 
@@ -66,7 +68,8 @@ Speicher erreichen, etwa über Routing an den Host mit dem Volume.
 
    ```bash
    export RCLONE_CONFIG_UPLOADS_TYPE=s3 RCLONE_CONFIG_UPLOADS_PROVIDER=Other
-   export RCLONE_CONFIG_UPLOADS_ENV_AUTH=false RCLONE_CONFIG_UPLOADS_ACL=private
+   export RCLONE_CONFIG_UPLOADS_ENV_AUTH=false
+   unset RCLONE_CONFIG_UPLOADS_ACL
    export RCLONE_CONFIG_UPLOADS_ENDPOINT="$UPLOADS_S3_ENDPOINT"
    export RCLONE_CONFIG_UPLOADS_REGION="$UPLOADS_S3_REGION"
    export RCLONE_CONFIG_UPLOADS_ACCESS_KEY_ID="$UPLOADS_S3_ACCESS_KEY"
@@ -78,6 +81,10 @@ Speicher erreichen, etwa über Routing an den Host mit dem Volume.
    rclone --config /dev/null --no-unicode-normalization check "$UPLOADS_ROOT" "$UPLOADS_REMOTE" \
      --exclude '.replace-*' --download
    ```
+
+   Die ACL bleibt ungesetzt. Der private Bucket und seine Zugriffsregeln
+   schützen die Objekte; Buckets mit deaktivierten ACLs weisen eine explizite
+   Objekt-ACL ab.
 
    `copy` behält vorhandene, übereinstimmende Objekte und überträgt fehlende.
    Den gleichen Aufruf nach einem Abbruch mit der gleichen schreibgeschützten

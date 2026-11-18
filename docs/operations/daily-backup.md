@@ -6,8 +6,8 @@ Release-Snapshots bleiben getrennte Rollback-Punkte, keine Tagessicherung.
 ## Stand und Grenzen
 
 **Im Code umgesetzt:** Online-Dump der einzelnen Datenbank `postgres` mit
-Schema, Daten und ACLs, Rollen ohne Passwörter, gesamtes Upload-Volume samt
-versteckten Dateien, SHA-256-Manifest, age-Verschlüsselung, S3-Transport mit
+Schema, Daten und ACLs, Rollen ohne Passwörter, gesamte Upload-Ablage samt
+versteckten Dateien (Upload-Volume oder im S3-Modus der Bucket), SHA-256-Manifest, age-Verschlüsselung, S3-Transport mit
 vollständigem Download-/Hashvergleich und altersbasierte Bereinigung.
 Nicht gesichert wird das Volume `phoenix-<env>-data-return` mit den
 verschlüsselten, zum Abruf freigegebenen Rückgabepaketen (ADR 0203). Ein
@@ -29,6 +29,8 @@ Wiederherstellung nach Volume-Verlust, Rollen-Dumps ohne Passwörter, anschließ
 SCRAM-Anmeldung mit neu gesetzten Passwörtern aller drei LOGIN-Rollen, Mandantentrennung
 durch RLS, Dateien einschließlich versteckter Dateien, Altersbereinigung und
 Fehlerfälle. Es testet keinen echten S3-Anbieter und keine produktiven Daten.
+`devbox run -- node --test scripts/daily-backup-s3.integration.test.mjs` prüft
+den S3-Modus gegen einen lokalen S3-Endpunkt (`rclone serve s3`).
 
 **Produktiv nachzuweisen:** Einrichtung, tägliche Ausführung, separater
 deutscher Rechenzentrumsstandort, Zugangsrechte, Schlüsselverwahrung,
@@ -52,6 +54,41 @@ Dateilöschungen können zu fehlenden Referenzen führen. Beim Restore muss der
 Mensch deshalb zusätzlich DB-Dateiverweise und tatsächliche Dateien abgleichen;
 ein fehlerhafter Abgleich verhindert die Freigabe. Änderungen an Dateien
 während des Archivierens können den Sicherungslauf abbrechen.
+
+## Uploads im S3-Modus
+
+Die Sicherung erfasst die Upload-Ablage, die die App tatsächlich nutzt. Dazu
+liest sie `UPLOADS_BACKEND` und `UPLOADS_S3_*` aus der Umgebung des bestehenden
+`server`-Containers, nachdem sie `.release-operation.lock` erworben hat.
+Noch nicht ausgerollte Änderungen in `.env` bestimmen die Sicherung nicht.
+Fehlt der Container oder lässt sich seine Umgebung nicht lesen, bricht der
+Lauf ab. Der Bucket-Schlüssel bleibt bei der App; `backup.env` darf keine
+`UPLOADS_*`-Werte enthalten, sonst bricht der Lauf mit `step=configuration` ab.
+
+- **Sicherung:** Bei `UPLOADS_BACKEND=s3` kopiert rclone den ganzen Bucket in
+  den Klartextbereich (tmpfs) und packt ihn als `uploads.tar.gz` mit demselben
+  Aufbau wie das Volume: Objektschlüssel werden relative Pfade, Namen bleiben
+  Byte für Byte erhalten. Das Manifest trägt `"uploads": "bucket"`.
+  `BACKUP_UPLOADS_VOLUME` ist dann nicht nötig. Das alte Volume aus der Zeit
+  vor dem Wechsel sichert der Lauf nicht mehr; es behält seinen eigenen
+  Aufbewahrungsweg ([Umzug](shared-upload-storage.md)). Ein Sicherungsziel im
+  selben Bucket weist das Skript ab.
+- **Konsistenz:** Wie beim Volume bleibt die App online. Datenbank und Bucket
+  sind nicht atomar; ein während der Kopie gelöschtes Objekt kann den Lauf
+  abbrechen.
+- **Platz:** Kopie und Archiv liegen kurz gleichzeitig im tmpfs. Die
+  Reservierung `2 × (DB-Größe + Upload-Größe) + 512 MiB` deckt das; als
+  Upload-Größe die Bucket-Größe ansetzen.
+- **Wiederherstellung:** Ziel ist ein neuer, leerer, privater Bucket ohne
+  Versionierung. In der Restore-Umgebung dafür `UPLOADS_BACKEND=s3` und die
+  `UPLOADS_S3_*`-Werte dieses Buckets setzen, statt `BACKUP_UPLOADS_VOLUME`.
+  Das Skript prüft vor dem ersten Schreibzugriff, dass der Bucket leer ist,
+  lädt mit `--immutable` hoch und vergleicht danach mit `check --download`.
+  Ein Bucket-Bundle geht nur in einen Bucket, ein Volume-Bundle nur in ein
+  Volume; sonst endet der Lauf mit `step=fresh_target`. Für den Rückweg auf
+  ein Volume zuerst in einen Bucket herstellen und dann nach dem
+  [Umzugsverfahren](shared-upload-storage.md#wiederherstellung-und-löschung)
+  kopieren.
 
 ## Einrichtung durch einen Menschen
 
@@ -96,8 +133,9 @@ installiert oder aktiviert nichts. Der Mensch führt die Befehle aus.
    auf installierte Werkzeuge setzen. `BACKUP_COMPOSE_FILE` ist der absolute
    Pfad zur bestehenden Compose-Datei; daneben liegt ihre vorhandene `.env`,
    die Compose nur liest und die nicht gesichert wird. `BACKUP_PROJECT` ist
-   exakt deren Compose-Projektname, `BACKUP_UPLOADS_VOLUME` das tatsächliche
-   Upload-Volume (gegen den Mount von `server` prüfen).
+   exakt deren Compose-Projektname, `BACKUP_UPLOADS_VOLUME` bei lokaler Ablage
+   das tatsächliche Upload-Volume (gegen den Mount von `server` prüfen). Im
+   S3-Modus bleibt es leer, siehe [Uploads im S3-Modus](#uploads-im-s3-modus).
    `BACKUP_TARGET` hat die Form `moto:bucket/umgebungs-praefix`;
    Provider, HTTPS-Endpunkt, Region und beide Zugangswerte sind Pflicht.
    `BACKUP_RETENTION_DAYS` ist eine ganze Zahl 1 bis 90, ohne impliziten Default.
@@ -373,7 +411,9 @@ weder den Produktionshost noch den Monitoring-Host dafür gelesen.
 
    `BACKUP_COMPOSE_FILE=/srv/moto-restore/compose.yml`, eine eigene
    `BACKUP_PROJECT`-Kennung und `BACKUP_UPLOADS_VOLUME` auf einen neuen,
-   **noch nicht existierenden** Upload-Volume-Namen setzen. Das Skript erstellt
+   **noch nicht existierenden** Upload-Volume-Namen setzen. Für ein Bundle aus
+   dem S3-Modus stattdessen einen neuen, leeren Bucket über `UPLOADS_BACKEND=s3`
+   und `UPLOADS_S3_*` angeben, nie den Bucket von Staging oder Produktion. Das Skript erstellt
    dieses Volume erst beim Restore; es ist nicht an einen App-Dienst gebunden.
    Der DB-Cluster muss frisch sein: nur initdb-Rollen, leere Datenbank `postgres`.
    App-Image/Schema-Version aus dem getrennten Release-Inventar festhalten;

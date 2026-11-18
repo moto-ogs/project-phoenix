@@ -58,7 +58,11 @@ INSERT INTO records VALUES (41, '${marker}'), (42, '${marker}');`);
   assert.notEqual(result.status, 0); assert.match(result.stdout, /backup_result=failed step=workspace_capacity/);
   assert.deepEqual(readdirSync(remote).sort(), [old, 'unrelated'].sort());
   assert.deepEqual(readdirSync(work), []);
+  // Pending S3 settings must not hide the active local uploads from the backup.
+  const servingSettings = readFileSync(join(root, '.env'), 'utf8');
+  writeFileSync(join(root, '.env'), servingSettings + 'UPLOADS_BACKEND=s3\n');
   result = backup();
+  writeFileSync(join(root, '.env'), servingSettings);
   assert.equal(result.status, 0, result.stdout);
   assert.match(result.stdout, /backup_result=ok step=complete/);
   const names = readdirSync(remote);
@@ -199,6 +203,7 @@ exec '${realDocker}' "$@"
   assert.notEqual(result.status, 0);
   assert(!result.stdout.includes(marker));
   // Local transport still uses rclone; inject a real non-directory upload target.
+  dc('create', 'server'); // This restored cluster is now the backup source.
   const blocked = join(root, 'blocked'); writeFileSync(blocked, 'not a directory');
   result = backup({ BACKUP_UPLOADS_VOLUME: restoredVolume, BACKUP_TARGET: join(blocked, 'child') });
   assert.notEqual(result.status, 0); assert.match(result.stdout, /backup_result=failed step=upload/);
