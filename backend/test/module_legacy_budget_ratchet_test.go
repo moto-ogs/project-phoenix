@@ -354,7 +354,7 @@ var moduleLegacyFileBudgets = map[string]int{
 
 // ADR 0289: the maintenance seal constructors of the sealed document files in
 // modules/careplan/compose (+13) and modules/workforce/compose (+6).
-const moduleComposeBudgetTotal = 13663
+const moduleComposeBudgetTotal = 13660
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -519,7 +519,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0269: the default day of the real clock (+4).
 	// ADR 0278: the calendar import of the notices' day clock (+1) and the
 	// root's clock of the Records (+6).
-	"modules/schoolcalendar/compose":        169,
+	"modules/schoolcalendar/compose":        166,
 	"modules/schoolcalendar/portal/compose": 112,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0151: the school figure constructor (+6).
