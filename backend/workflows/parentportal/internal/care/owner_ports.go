@@ -62,6 +62,7 @@ const (
 	GuardianFieldEmergencyContact  = "is_emergency_contact"
 	GuardianFieldFirstName         = "first_name"
 	GuardianFieldLastName          = "last_name"
+	GuardianFieldSalutation        = "salutation"
 	GuardianFieldEmail             = "email"
 	GuardianFieldAddressStreet     = "address_street"
 	GuardianFieldAddressCity       = "address_city"
@@ -107,6 +108,7 @@ func deref[T any](p *T) T {
 type GuardianContactRecord struct {
 	FirstName              string
 	LastName               string
+	Salutation             *string
 	Email                  *string
 	AddressStreet          *string
 	AddressCity            *string

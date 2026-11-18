@@ -6759,6 +6759,16 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
         ],
       },
       {
+        title: "Die eigene Anrede wählen",
+        description:
+          "Die Anrede ist freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit `Liebe Karin` oder `Lieber Jonas`, ohne Anrede mit `Guten Tag` und Ihrem Namen.",
+        steps: [
+          "Tippen Sie bei Ihrem eigenen Namen auf den Stift `Bearbeiten`.",
+          "Wählen Sie bei `Anrede` `Frau`, `Herr` oder `Keine Angabe`.",
+          "Tippen Sie auf `Speichern`.",
+        ],
+      },
+      {
         title: "Einer Person App-Zugang geben",
         steps: [
           "Gehen Sie zur Karte `Verbundene Konten`.",
@@ -6776,6 +6786,7 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
       "Das Abholrecht wegnehmen geht sofort und ohne Unterschrift.",
       "Holt jemand nur an einem einzigen Tag ab? Dann ändern Sie die Abholung für diesen Tag.",
       "Ein Kontakt braucht kein eigenes Konto. Zum Beispiel Oma oder Opa.",
+      "Eine Anrede wählt jede Person nur für sich selbst. Bei anderen Kontakten fehlt das Feld.",
       "Eine E-Mail beim Kontakt lädt niemanden ein. Der App-Zugang ist ein eigener Schritt.",
     ],
     differences: [
@@ -11202,6 +11213,9 @@ export const traegerBillingRunTopic =
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "FileText",
+      image: "/help/screens/traeger-naechste-rechnungsnummer.webp",
+      imageAlt:
+        "Die Karte Rechnungsnummern der Ferien: Muster, nächste Nummer und letzte laufende Nummer, darunter der Verlauf mit Zeitpunkt und Person.",
       requirements: [
         "Ihre Rolle im Träger-Büro ist Abrechnung. Nur diese Rolle sieht in der Navigation die Bereiche unter `Finanzen`.",
         "Der Ferienzeitraum ist veröffentlicht, und die Anmeldungen sind bestätigt.",
@@ -11217,6 +11231,18 @@ export const traegerBillingRunTopic =
             "Wählen Sie bei `Rechnungsnummern der Ferien` den Knopf `Muster festlegen`.",
             "Tragen Sie das Muster ein, zum Beispiel FE-{JJJJ}-{NNNN}. {NNNN} ist die laufende Nummer, {JJJJ} das Jahr.",
             "Wählen Sie `Speichern`.",
+          ],
+        },
+        {
+          title: "Nummern aus dem bisherigen Programm fortführen",
+          description:
+            "Nur nötig, wenn Ihre Rechnungen nicht bei 1 beginnen sollen.",
+          steps: [
+            "Wählen Sie bei `Rechnungsnummern der Ferien` den Knopf `Nächste Nummer ändern`.",
+            "Tragen Sie die Nummer nach der letzten Rechnung Ihres bisherigen Programms ein, zum Beispiel 7100.",
+            "Prüfen Sie darunter, welche Nummer die nächste Rechnung bekommt.",
+            "Wählen Sie `Speichern`.",
+            "Mit `Verlauf ansehen` sehen Sie, wer die Nummer wann geändert hat.",
           ],
         },
         {
@@ -12038,6 +12064,17 @@ export const traegerCareMonthsTopic =
             "Wählen Sie bei `Rechnungsnummern der Monatsbeiträge` den Knopf `Muster festlegen`.",
             "Tragen Sie ein Muster ein, zum Beispiel MB-{JJJJ}-{NNNN}. Nehmen Sie ein anderes Kürzel als bei den Ferien.",
             "Wählen Sie `Speichern`.",
+          ],
+        },
+        {
+          title: "Nummern aus dem bisherigen Programm fortführen",
+          description:
+            "Nur nötig, wenn Ihre Rechnungen nicht bei 1 beginnen sollen.",
+          steps: [
+            "Wählen Sie bei `Rechnungsnummern der Monatsbeiträge` den Knopf `Nächste Nummer ändern`.",
+            "Tragen Sie die Nummer nach der letzten Rechnung Ihres bisherigen Programms ein.",
+            "Wählen Sie `Speichern`.",
+            "Mit `Verlauf ansehen` sehen Sie, wer die Nummer wann geändert hat.",
           ],
         },
         {

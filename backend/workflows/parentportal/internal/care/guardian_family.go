@@ -157,6 +157,7 @@ func projectChildGuardian(profile *GuardianProfile, link *GuardianRelationship, 
 		PickupWeekdays:     normalizedWeekdays(link.PickupWeekdays),
 		HasAccount:         hasAccount,
 		IsSelf:             isSelf,
+		Salutation:         ownSalutation(profile, isSelf),
 		// Contact editing needs the edit permission and an unprotected target that
 		// is not a full guardian (real legal guardians are school/self-managed).
 		// The caller's own profile is always editable regardless of reach/role.
@@ -189,6 +190,14 @@ func projectChildGuardian(profile *GuardianProfile, link *GuardianRelationship, 
 	}
 	applyGuardianContactDetails(g, profile, phones)
 	return g
+}
+
+// ownSalutation shows the form of address only to the person who chose it.
+func ownSalutation(profile *GuardianProfile, isSelf bool) string {
+	if !isSelf || profile.Salutation == nil {
+		return ""
+	}
+	return *profile.Salutation
 }
 
 // applyGuardianContactDetails copies the personal contact identifiers (email,

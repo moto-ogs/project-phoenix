@@ -17,7 +17,7 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 	var paths []string
 	var childMessages []map[string]any
 	var staffReplies []map[string]any
-	var mealException, contact, pickupUpdate, masterDataRequest map[string]any
+	var mealException, contact, ownContact, pickupUpdate, masterDataRequest map[string]any
 	var appointments []map[string]any
 	var groupThreads []map[string]any
 	var pickupStatements []map[string]any
@@ -81,6 +81,11 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 			request := decode()
 			pickupSignatures = append(pickupSignatures, request["signature"].(map[string]any))
 			_, _ = fmt.Fprint(w, `{"status":"success","data":{"id":"96"}}`)
+		case r.URL.Path == "/parent/me/children/44/guardians" && r.Method == seedHTTPMethodGet:
+			_, _ = fmt.Fprint(w, `{"status":"success","data":[{"guardian_profile_id":"93","first_name":"Gisela","last_name":"Hahn","is_self":false},{"guardian_profile_id":"90","first_name":"Karin","last_name":"Klein","email":"karin@example.test","phones":[{"phone_number":"0151 1","phone_type":"mobile","is_primary":true}],"is_self":true}]}`)
+		case r.URL.Path == "/parent/me/children/44/guardians/90/contact":
+			ownContact = decode()
+			_, _ = fmt.Fprint(w, `{"status":"success","data":null}`)
 		case r.URL.Path == "/parent/me/children/44/guardians":
 			contact = decode()
 			pickupSignatures = append(pickupSignatures, contact["pickup_signature"].(map[string]any))
@@ -139,6 +144,9 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 		"/api/settings/values/guardians.parent_invite_mode",
 		"/parent/me/children/44/related-accounts",
 		"/api/settings/values/guardians.parent_invite_mode",
+		// The parent chooses a form of address for their own profile (#7362).
+		"/parent/me/children/44/guardians",
+		"/parent/me/children/44/guardians/90/contact",
 		// A new photo consent needs child photos switched on (#7208): on for
 		// the grant, the parent withdraws, back to the default.
 		"/api/settings/values/operations.student_photos_enabled",
@@ -202,6 +210,9 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 	assert.Equal(t, map[string]any{
 		"can_pickup": false, "is_emergency_contact": true, "pickup_notes": "Nur nach telefonischer Rücksprache",
 	}, pickupUpdate, "the pickup permission comes from the confirmed signed request (#4780), the note from this update")
+	assert.Equal(t, "ms", ownContact["salutation"], "the parent chooses a form of address for their own profile (#7362)")
+	assert.Equal(t, "Klein", ownContact["last_name"], "the contact write sends back what the profile holds")
+	assert.Len(t, ownContact["phones"], 1)
 	assert.Equal(t, []any{map[string]any{"phone_number": "+49 172 5550778", "phone_type": "mobile", "is_primary": true}}, contact["phones"],
 		"a mobile number without a second label")
 	assert.Equal(t, []any{map[string]any{

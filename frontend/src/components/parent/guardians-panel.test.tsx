@@ -244,6 +244,55 @@ describe("GuardiansPanel", () => {
     );
   });
 
+  it("offers the form of address on the own profile and saves the choice", async () => {
+    mocks.listChildGuardians.mockResolvedValue([
+      { ...editableGuardian, is_self: true, salutation: "mr" },
+    ]);
+    render(
+      <GuardiansPanel studentId="42" canInvite={false} canRemove={false} />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    const select = screen.getByRole("combobox", { name: "Anrede" });
+    expect(select).toHaveTextContent("Herr");
+    expect(
+      screen.getByText(
+        "Freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit „Liebe Karin“ oder „Lieber Jonas“.",
+      ),
+    ).toBeVisible();
+    fireEvent.click(select);
+    fireEvent.click(screen.getByRole("option", { name: "Frau" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(mocks.updateGuardianContact).toHaveBeenCalledWith(
+        "42",
+        "7",
+        expect.objectContaining({ salutation: "ms" }),
+      );
+    });
+  });
+
+  it("offers no form of address for another person's contact", async () => {
+    render(
+      <GuardiansPanel studentId="42" canInvite={false} canRemove={false} />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    expect(screen.getByLabelText("Vorname")).toBeVisible();
+    expect(
+      screen.queryByRole("combobox", { name: "Anrede" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(mocks.updateGuardianContact).toHaveBeenCalledTimes(1);
+    });
+    expect(mocks.updateGuardianContact.mock.calls[0]?.[2]).not.toHaveProperty(
+      "salutation",
+    );
+  });
+
   it("explains access in a dialog and sends the invitation", async () => {
     mocks.inviteRelatedAccount.mockResolvedValue({
       outcome: "invited",

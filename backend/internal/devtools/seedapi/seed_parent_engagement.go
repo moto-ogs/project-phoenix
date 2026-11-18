@@ -28,6 +28,7 @@ func (seedParentEngagementStep) Run(ctx context.Context, rt *Runtime) error {
 		func() error { return seedParentNotificationPreferences(rt, auth) },
 		func() error { return seedParentGroupThreads(rt, auth, studentID) },
 		func() error { return seedParentGuardianChanges(rt, auth, studentID) },
+		func() error { return seedParentSalutation(rt, auth, studentID) },
 		func() error { return seedParentPhotoConsentHistory(rt, auth, studentID) },
 		func() error { return seedParentMasterData(rt, auth, studentID) },
 		func() error { return seedParentMealParticipation(rt, auth, studentID) },

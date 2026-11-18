@@ -14,8 +14,10 @@ type GuardianPortalContact struct {
 	GuardianProfileID, TenantID, AccountID int64
 	FirstName, LastName                    string
 	Email, PortalLocale                    *string
-	StudentID                              *int64
-	PortalPermission                       json.RawMessage
+	// Salutation is the form of address the person chose (ms, mr), nil without one.
+	Salutation       *string
+	StudentID        *int64
+	PortalPermission json.RawMessage
 }
 
 // GuardianPortalContacts queries requested profiles or profiles linked to the

@@ -422,3 +422,61 @@ Anmeldung und Leistung“ gilt dann je Anmeldung, Kind und Leistung.
 5. Briefe, Mails, SEPA-Lastschriften, DATEV und Sollstellung bleiben je
    Rechnung; Eltern mit mehreren Kindern bekommen mehrere Rechnungen. Ein
    Brief nennt weiter nie Kinder einer anderen Anmeldung.
+
+## Nachtrag 2026-11-17: Startwert je Nummernkreis (#7358)
+
+Ein Träger, der aus einem anderen Programm wechselt, führt dessen
+Rechnungsnummern fort (SJR Pforzheim, Anschluss an OGS Connect zum
+01.01.2027). Punkt 5 kannte nur das Muster; der Zähler begann immer bei 1.
+
+- **Startwert.** `parent_billing.number_range_counters.start_number` hält je
+  Träger, Leistung und Jahr (0 ohne Jahr im Muster) die Nummer, die die
+  nächste Rechnung mindestens bekommt. Ein Zähler darf damit vor seiner ersten
+  Rechnung bestehen (`last_number` 0).
+- **Verlauf.** `parent_billing.number_range_starts` hält jeden gesetzten
+  Startwert mit Konto und Zeitpunkt. Zeilen werden nur angefügt.
+- **Zähler bleibt, was er ist.** `last_number` bleibt die letzte vergebene
+  Nummer. Die Vergabe aus Punkt 6 nimmt in ihrer einen Anweisung das Größere
+  aus letzter Nummer und Startwert und zählt von dort (`GREATEST`). Ein
+  Startwert kann eine Nummer deshalb nie zurücksetzen; die lückenlose Vergabe
+  bei parallelen Freigaben bleibt unverändert.
+- **Eine Sperre.** Startwert und letzte Nummer stehen auf derselben Zeile.
+  Das Setzen prüft und schreibt in einer Anweisung
+  (`INSERT … ON CONFLICT DO UPDATE … WHERE last_number < start_number`) und
+  hält die Zeile bis zum Ende der Transaktion. Eine Freigabe, die auf einen
+  Startwert wartet, zählt danach von ihm; ein Startwert, der auf eine Freigabe
+  wartet, wird gegen deren Nummern geprüft. Verworfen: der Startwert nur in
+  der Verlaufstabelle, als Unterabfrage der Vergabe. Die Unterabfrage liest
+  den Stand vor dem Warten, und vor der ersten Rechnung gäbe es keine Zeile
+  zum Sperren.
+- **Regel.** Erlaubt ist ein Wert von 1 bis 99999999 über der letzten
+  vergebenen Nummer des Zählers von heute. Vor der ersten Rechnung lässt sich
+  der Startwert deshalb frei setzen und korrigieren, danach nur nach oben. Ein
+  Wert bis zur letzten Nummer ist 409
+  `parent_billing.number_range_start_taken` und nennt diese Nummer; ein Wert
+  außerhalb des Bereichs ist 400 `parent_billing.number_range_start_invalid`.
+  Ohne Muster gibt es keinen Zähler
+  (409 `parent_billing.number_range_missing`).
+- **Jahr.** Ein Muster mit Jahr zählt weiter jedes Jahr ab 1. Ein Startwert
+  gilt für den Zähler des laufenden Jahres; das Folgejahr beginnt wieder bei 1.
+  Wer eine Reihe über die Jahre fortführt, nimmt ein Muster ohne Jahr.
+- **Anzeige.** `GET /traeger/number-ranges` nennt je Leistung die nächste
+  Nummer (`example`, `next_number`), die letzte vergebene (`last_number`) und
+  den Verlauf (`starts`) der Leistung mit Zeitpunkt und Person, auch die
+  Startwerte früherer Jahre und eines früheren Musters (diese als bloße
+  Zahl): `set_by_you` für die
+  lesende Person, sonst der Name der Mitgliedschaft beim Träger
+  (`ExportActorNames`, wie im Exportprotokoll). Die Liste nennt damit Namen
+  aus dem Träger-Büro und bleibt hinter dem Recht „Abrechnung“.
+- **Recht und Grenze.** `PUT /traeger/number-ranges/{service}/start` liegt
+  hinter dem Recht „Abrechnung“ in der Träger-Transaktion; die Zeilen eines
+  anderen Trägers sieht niemand (RLS). Kein neuer Owner, keine neue Regel.
+- **Nicht gebaut.** Eine gemeinsame Reihe für Monats- und Ferienrechnungen und
+  ein eigener Nummernkreis für Gutschriften warten auf die Antwort des SJR
+  (offene Fragen in #7358). Bis dahin trennt das Muster die Kreise.
+- **Register.** Migration `20261118071714` (Spalte `start_number`, Prüfung
+  `last_number >= 0`, Verlaufstabelle); ein `data_object`
+  (`parent_billing.number_range_starts`) für `parent-billing`;
+  Datenlebenszyklus, Aufbewahrung und Rückgaberegister je ein Eintrag; die
+  Zeilen gehen mit dem Träger. Eine schreibende Route im Route-Golden und in
+  der Nutzungsanalyse als `notCaptured` (Träger, keine Schule).

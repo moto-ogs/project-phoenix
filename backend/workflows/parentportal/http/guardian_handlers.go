@@ -14,10 +14,13 @@ import (
 // child: profile-level contact data plus the per-child pickup relationship,
 // annotated with what the caller may edit. int64 IDs are stringified.
 type childGuardianResponse struct {
-	GuardianProfileID  string                  `json:"guardian_profile_id"`
-	StudentGuardianID  string                  `json:"student_guardian_id"`
-	FirstName          string                  `json:"first_name"`
-	LastName           string                  `json:"last_name"`
+	GuardianProfileID string `json:"guardian_profile_id"`
+	StudentGuardianID string `json:"student_guardian_id"`
+	FirstName         string `json:"first_name"`
+	LastName          string `json:"last_name"`
+	// Salutation is the caller's own chosen form of address (ms, mr); absent
+	// for other guardians and without a choice (#7362).
+	Salutation         string                  `json:"salutation,omitempty"`
 	Email              string                  `json:"email,omitempty"`
 	Phones             []guardianPhoneResponse `json:"phones"`
 	AddressStreet      string                  `json:"address_street,omitempty"`
@@ -61,8 +64,11 @@ type guardianPhoneResponse struct {
 // /parent/me/children/{studentId}/guardians/{guardianProfileId}/contact.
 // Profile fields and the phone list are replaced wholesale.
 type updateGuardianContactRequest struct {
-	FirstName         string                 `json:"first_name"`
-	LastName          string                 `json:"last_name"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	// Salutation applies to the caller's own profile only: omitted keeps the
+	// stored choice, "" clears it, "ms" or "mr" sets it.
+	Salutation        *string                `json:"salutation"`
 	Email             *string                `json:"email"`
 	AddressStreet     *string                `json:"address_street"`
 	AddressCity       *string                `json:"address_city"`
@@ -206,6 +212,7 @@ func guardianContactInput(body updateGuardianContactRequest) parentService.Guard
 	input := parentService.GuardianContactInput{
 		FirstName:         body.FirstName,
 		LastName:          body.LastName,
+		Salutation:        body.Salutation,
 		Email:             body.Email,
 		AddressStreet:     body.AddressStreet,
 		AddressCity:       body.AddressCity,
@@ -275,6 +282,7 @@ func guardianResponse(g *parentService.ChildGuardian) childGuardianResponse {
 		StudentGuardianID:         strconv.FormatInt(g.StudentGuardianID, 10),
 		FirstName:                 g.FirstName,
 		LastName:                  g.LastName,
+		Salutation:                g.Salutation,
 		Email:                     g.Email,
 		Phones:                    phones,
 		AddressStreet:             g.AddressStreet,
