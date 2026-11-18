@@ -26,6 +26,11 @@ const (
 type jobScope struct {
 	moduleSettingKey string
 	retention        bool
+	// holdsSchool: the job reminds the school's people by name. It holds its
+	// school under a share lock and skips a retired one (#7478), so a demo
+	// retirement, which hides the school and erases its visitor in one
+	// transaction, never misses a reminder read before its commit.
+	holdsSchool bool
 }
 
 var (
@@ -104,8 +109,8 @@ var workerJobScopes = map[ports.JobID]jobScope{
 	"auto-checkout":  {moduleSettingKey: settingModuleZeiterfassung},
 
 	// Eltern-App: reminders that reach parents by mail and push.
-	"appointment-reminders":  {moduleSettingKey: settingModuleElternApp},
-	"announcement-reminders": {moduleSettingKey: settingModuleElternApp},
+	"appointment-reminders":  {moduleSettingKey: settingModuleElternApp, holdsSchool: true},
+	"announcement-reminders": {moduleSettingKey: settingModuleElternApp, holdsSchool: true},
 
 	// Mittagessen: freeze orders and record late changes for the caterer.
 	"meal-orders": {moduleSettingKey: settingModuleMittagessen},
@@ -150,5 +155,35 @@ func (s *Scheduler) runIfModuleBooked(ctx context.Context, opName string, tenant
 		)
 		return nil
 	}
+	live, err := s.holdSchool(ctx, opName, tenantID)
+	if err != nil || !live {
+		return err
+	}
 	return fn()
+}
+
+var errSchoolHoldRequired = errors.New("school hold needs the tenant directory")
+
+// holdSchool holds the school of a job that reminds its people by name and
+// reports whether it is still live (#7478). Other jobs answer true without
+// a read. A failed read fails the school for this tick.
+func (s *Scheduler) holdSchool(ctx context.Context, opName string, tenantID int64) (bool, error) {
+	jobID := workerJobID(ctx, ports.JobID(opName))
+	if !workerJobScopes[jobID].holdsSchool {
+		return true, nil
+	}
+	if isNilDependency(s.schoolRepo) {
+		return false, fmt.Errorf("%s: %w", jobID, errSchoolHoldRequired)
+	}
+	live, err := s.schoolRepo.HoldLiveSchool(ctx, tenantID)
+	if err != nil {
+		return false, fmt.Errorf("hold school for %s: %w", jobID, err)
+	}
+	if !live {
+		s.getLogger().Debug("worker job skipped: school retired",
+			slog.String("operation", opName),
+			slog.Int64("tenant_id", tenantID),
+		)
+	}
+	return live, nil
 }
