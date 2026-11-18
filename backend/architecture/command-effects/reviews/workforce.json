@@ -8983,6 +8983,17 @@
     },
     {
       "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.RemovePrivate",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentObjectRemover.RemovePrivate",
+      "reason": "Remove the validated document name in the current tenant namespace through the configured byte backend. The durable Workforce cleanup intent remains until successful removal.",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce.StaffAdmin.ActivateQueuedStaffDocumentFileCleanup",
       "classification": "platform",
       "effect": "scope",
@@ -17157,6 +17168,17 @@
       "reason": "Read object bytes after Workforce has authorized the document; Delivery opens sealed bytes without changing storage.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.OpenPrivate",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.RemovePrivate",
+      "reason": "Remove the validated document name in the current tenant namespace through the configured byte backend. The durable Workforce cleanup intent remains until successful removal.",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
       "target_owner": "delivery-platform"
     },
     {

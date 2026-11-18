@@ -6465,6 +6465,14 @@
       "target_owner": "delivery-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.RemovePrivate",
+      "binding_digest": "053cef465e23a2a3f1fbdf0bd54d1d4b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocumentObjectRemover.RemovePrivate",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce.StaffAdmin.ActivateQueuedStaffDocumentFileCleanup",
       "binding_digest": "7a6c8ff404e55844be841dd54eba4baf",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffDocuments.ActivateQueuedStaffDocumentFileCleanup",
@@ -12318,6 +12326,14 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.OpenPrivate",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.OpenPrivate",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
+      "binding_digest": "053cef465e23a2a3f1fbdf0bd54d1d4b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.StaffDocumentObjects.RemovePrivate",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/objects.PrivateUploads.RemovePrivate",
       "target_owner": "delivery-platform"
     },
     {
