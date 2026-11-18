@@ -127,6 +127,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/staff-pool/blocks/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/surveys/{surveyId}",
       "portals": [
         "tenant"
@@ -894,6 +902,23 @@
       "response": {
         "kind": "ref",
         "ref": "StaffStatus"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff-pool/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "week",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PoolWeek"
       }
     },
     {
@@ -2281,6 +2306,21 @@
       "response": {
         "kind": "ref",
         "ref": "ThreadDetailResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff-pool/blocks",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "blockRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PoolBlock"
       }
     },
     {
@@ -9529,6 +9569,184 @@
       ]
     },
     {
+      "name": "PoolBlock",
+      "go_type": "workforce.PoolBlock",
+      "fields": [
+        {
+          "name": "id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "own",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "lifted",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PoolProofStatus",
+      "go_type": "workforce.PoolProofStatus",
+      "fields": [
+        {
+          "name": "type_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_on",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PoolSpringer",
+      "go_type": "workforce.PoolSpringer",
+      "fields": [
+        {
+          "name": "staff_record_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pool_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pool_until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "proofs",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PoolProofStatus"
+            }
+          }
+        },
+        {
+          "name": "blocks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PoolBlock"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PoolWeek",
+      "go_type": "workforce.PoolWeek",
+      "fields": [
+        {
+          "name": "week_start",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "today",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "available",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "springers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PoolSpringer"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "PreferenceOverview",
       "go_type": "notifications.PreferenceOverview",
       "fields": [
@@ -14403,6 +14621,41 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "blockRequest",
+      "go_type": "traegerstaff.blockRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_record_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

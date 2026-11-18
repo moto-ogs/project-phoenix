@@ -26,6 +26,7 @@ import { routes as schoolStaffMessages } from "./school-staff-messages.generated
 import { routes as schoolSupervisions } from "./school-supervisions.generated";
 import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as staffOnboarding } from "./staff-onboarding.generated";
+import { routes as staffPool } from "./staff-pool.generated";
 import { routes as students } from "./students.generated";
 import { routes as surveys } from "./surveys.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
@@ -270,6 +271,9 @@ export const portalRoutes = {
     staffOnboarding["GET /api/staff-onboarding/"],
     staffOnboarding["PUT /api/staff-onboarding/dismissal"],
     staffOnboarding["PUT /api/staff-onboarding/steps/{step}"],
+    staffPool["DELETE /api/staff-pool/blocks/{id}"],
+    staffPool["GET /api/staff-pool/"],
+    staffPool["POST /api/staff-pool/blocks"],
     students["GET /api/students/"],
     students["GET /api/students/{id}"],
     students["POST /api/students/"],
