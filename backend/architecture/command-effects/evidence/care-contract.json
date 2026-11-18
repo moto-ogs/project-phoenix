@@ -25,6 +25,14 @@
       "target_owner": "parent-billing"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractFamilyNumbers.DecideImportedFamilyChildren",
+      "binding_digest": "1d47c62810e965a04753748f28816652",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractFamilyChildren.DecideImportedFamilyChildren",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/parentbilling.ContractFamilyChildren.DecideImportedFamilyChildren",
+      "target_owner": "parent-billing"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractDocumentNotices.EnqueueContractDocumentNotice",
       "binding_digest": "ee8511c1bf2291f629d1e22553d6c507",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.DocumentNotices.EnqueueContractDocumentNotice",

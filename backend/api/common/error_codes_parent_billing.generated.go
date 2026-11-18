@@ -86,6 +86,10 @@ const CodeParentBillingExportRunEmpty = "parent_billing.export_run_empty"
 const CodeParentBillingExportRunNotFound = "parent_billing.export_run_not_found"
 const CodeParentBillingFamilyBillingInvalid = "parent_billing.family_billing_invalid"
 const CodeParentBillingFamilyBillingNotFound = "parent_billing.family_billing_not_found"
+const CodeParentBillingFamilyChildrenImportChanged = "parent_billing.family_children_import_changed"
+const CodeParentBillingFamilyChildrenImportFileInvalid = "parent_billing.family_children_import_file_invalid"
+const CodeParentBillingFamilyChildrenImportFileTooLarge = "parent_billing.family_children_import_file_too_large"
+const CodeParentBillingFamilyChildrenImportMappingInvalid = "parent_billing.family_children_import_mapping_invalid"
 const CodeParentBillingFamilyChildrenInvalid = "parent_billing.family_children_invalid"
 const CodeParentBillingFamilyChildrenNotFound = "parent_billing.family_children_not_found"
 const CodeParentBillingFamilyDebtorNumberConflict = "parent_billing.family_debtor_number_conflict"
@@ -220,6 +224,10 @@ var errorCodeClassesParentBilling = []errorCodeClass{
 	{CodeParentBillingExportRunNotFound, "business_rejection"},
 	{CodeParentBillingFamilyBillingInvalid, "input"},
 	{CodeParentBillingFamilyBillingNotFound, "business_rejection"},
+	{CodeParentBillingFamilyChildrenImportChanged, "business_rejection"},
+	{CodeParentBillingFamilyChildrenImportFileInvalid, "input"},
+	{CodeParentBillingFamilyChildrenImportFileTooLarge, "input"},
+	{CodeParentBillingFamilyChildrenImportMappingInvalid, "input"},
 	{CodeParentBillingFamilyChildrenInvalid, "input"},
 	{CodeParentBillingFamilyChildrenNotFound, "business_rejection"},
 	{CodeParentBillingFamilyDebtorNumberConflict, "business_rejection"},

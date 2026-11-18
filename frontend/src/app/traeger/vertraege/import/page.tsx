@@ -72,6 +72,13 @@ function doneDescription(done: ContractImportResult): string {
         : `${counts.debtorNumbers} Debitorennummern eingetragen`,
     );
   }
+  if (counts.familyChildren > 0) {
+    parts.push(
+      counts.familyChildren === 1
+        ? "1 Kinderzahl bestätigt"
+        : `${counts.familyChildren} Kinderzahlen bestätigt`,
+    );
+  }
   const withoutEmail = contractsWithoutEmail(done);
   const paper =
     withoutEmail > 0
@@ -309,6 +316,7 @@ export default function TraegerContractImportPage() {
                 unmapped={result.unmapped}
                 schools={result.schools}
                 debtorNumberScope={result.debtorNumberScope}
+                familyChildrenAllowed={result.familyChildrenAllowed}
                 disabled={applying}
                 onChange={remap}
               />

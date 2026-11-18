@@ -1209,7 +1209,8 @@ jobs:
           echo "demo schools with monthly invoices and a DATEV file of their own: ${billed}"
           test "${billed}" = 3
 
-      # Demo visitors are erased (#4048): hide the three schools as the
+      # Demo visitors are erased (#4048): hide every school of the three
+      # orders, including their neighbours (ADR 0271), as the
       # expiry does 14 days after their last use, let the demo process run its
       # expiry, and search every text column of the database for the visitor.
       # A new place the seed copies the visitor's name to fails here; add it
@@ -1223,8 +1224,12 @@ jobs:
         run: |
           psql "${DB_DSN}" -v ON_ERROR_STOP=1 -c \
             'DELETE FROM platform.operator_mfa_email_challenges WHERE consumed_at IS NOT NULL'
-          schools=$(psql "${DB_DSN}" -At -c "SELECT tenant_id FROM platform.demo_school_states WHERE name LIKE 'ogs-smoke-%' ORDER BY tenant_id")
-          test "$(echo "${schools}" | wc -w)" = 3
+          schools_query="SELECT DISTINCT school.id FROM platform.schools AS school
+            JOIN platform.demo_school_states AS state
+              ON school.id = state.tenant_id OR school.organization_id = state.traeger_id
+            WHERE state.name LIKE 'ogs-smoke-%'"
+          schools=$(psql "${DB_DSN}" -At -c "${schools_query} ORDER BY school.id")
+          test "$(echo "${schools}" | wc -w)" = 9
           for school in ${schools}; do
             for kind in files announcement-attachments student-documents staff-documents enrollment-uploads avatars; do
               mkdir -p "public/uploads/${kind}/${school}/smoke" && echo smoke > "public/uploads/${kind}/${school}/smoke/orphan.txt"
@@ -1235,7 +1240,7 @@ jobs:
           done
           psql "${DB_DSN}" -v ON_ERROR_STOP=1 -c \
             "UPDATE platform.schools SET deleted_at = NOW() - INTERVAL '2 hours'
-             WHERE id IN (SELECT tenant_id FROM platform.demo_school_states WHERE name LIKE 'ogs-smoke-%')"
+             WHERE id IN (${schools_query})"
           # The erasure starts no order after 250 ms and leaves the rest to its
           # next run; with their own contracts and invoices (#6621) three
           # schools can take two runs.

@@ -1088,6 +1088,14 @@ export const ERROR_CATALOG = {
         "Empfänger und Zahlung konnten nicht gespeichert werden. Bitte prüfe deine Eingaben.",
       "parent_billing.family_billing_not_found":
         "Diese Abweichung gibt es nicht mehr. Bitte lade die Seite neu.",
+      "parent_billing.family_children_import_changed":
+        "Seit der Vorschau hat sich etwas geändert. Bitte prüfe die Vorschau noch einmal und übernimm dann.",
+      "parent_billing.family_children_import_file_invalid":
+        "Die Datei lässt sich nicht lesen. Bitte wähle eine CSV-Datei mit Überschriften.",
+      "parent_billing.family_children_import_file_too_large":
+        "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
+      "parent_billing.family_children_import_mapping_invalid":
+        "Bitte ordne zuerst alle Pflichtspalten zu.",
       "parent_billing.family_children_invalid":
         "Bitte gib eine ganze Zahl von 1 bis 20 an.",
       "parent_billing.family_children_not_found":

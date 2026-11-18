@@ -50,6 +50,9 @@ type reviewedMonth struct {
 	conflicts int
 	// free counts the run's contracts a free month bills nothing for.
 	free int
+	// uncountedContracts are the invoices the release issues for families
+	// without a confirmed number (#7356).
+	uncountedContracts []parentbilling.CareUncountedContract
 }
 
 // reviewed computes the preview of a calculated run with the rule of the
@@ -89,7 +92,7 @@ func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbillin
 		duplicates: []parentbilling.CareDuplicate{}, mealGaps: []parentbilling.CareMealGap{},
 		mealUnbilled: []parentbilling.CareMealUnbilled{}, mealChanged: []parentbilling.CareMealChanged{}, dueDates: month.dueDates, deviations: month.deviations,
 		mandates: month.mandates, childNumbers: month.childNumbers},
-		excluded: []parentbilling.CareInvoice{}}
+		excluded: []parentbilling.CareInvoice{}, uncountedContracts: []parentbilling.CareUncountedContract{}}
 	review.uncounted = uncountedInRun(month.uncountedSchools, inRun)
 	review.billed = countInRun(month.billedBySchool, inRun)
 	review.free = countInRun(month.freeBySchool, inRun)
@@ -97,6 +100,13 @@ func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbillin
 	for _, invoice := range month.invoices {
 		if !inRun(invoice.SchoolID) {
 			continue
+		}
+		// An excluded invoice still belongs to a family the run counts as
+		// uncounted, so the list names it too.
+		if slices.Contains(month.uncountedSchools[invoice.FamilyEmail], invoice.SchoolID) && !namesContract(review.uncountedContracts, invoice.ContractID) {
+			review.uncountedContracts = append(review.uncountedContracts, parentbilling.CareUncountedContract{
+				ContractID: invoice.ContractID, SchoolName: invoice.SchoolName, ChildFirstName: invoice.ChildFirstName,
+				ChildLastName: invoice.ChildLastName, Status: month.uncountedStates[invoice.FamilyEmail]})
 		}
 		if exclusion, ok := exclusions[careInvoiceKeyOf(invoice)]; ok {
 			invoice.Exclusion = &exclusion
@@ -119,6 +129,12 @@ func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbillin
 		}
 	}
 	return review
+}
+
+// namesContract tells whether the list names a contract already: a Mensa
+// invoice of its own repeats the contract of its care invoice.
+func namesContract(contracts []parentbilling.CareUncountedContract, contractID int64) bool {
+	return slices.ContainsFunc(contracts, func(contract parentbilling.CareUncountedContract) bool { return contract.ContractID == contractID })
 }
 
 // narrowFeeNotices keeps the Jahresbescheide of the run's schools that
@@ -466,7 +482,7 @@ func (c *CareBilling) reviewDetail(ctx context.Context, reviewer parentbilling.H
 	detail.FreeOfCharge = review.free
 	detail.Duplicates, detail.MealGaps, detail.MealUnbilled = review.duplicates, review.mealGaps, review.mealUnbilled
 	detail.MealChanged = review.mealChanged
-	detail.UncountedFamilies = review.uncounted
+	detail.UncountedFamilies, detail.UncountedContracts = review.uncounted, review.uncountedContracts
 	detail.FeeNoticeContracts = len(review.feeNotices)
 	detail.FeeNoticeHeld = review.feeNoticeHeld
 	detail.Invoices = append(review.invoices, review.excluded...)

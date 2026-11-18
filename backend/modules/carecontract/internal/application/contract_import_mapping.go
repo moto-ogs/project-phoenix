@@ -22,7 +22,7 @@ var contractImportFields = []string{
 	carecontract.ContractImportFieldEffectiveFrom, carecontract.ContractImportFieldEndsOn,
 	carecontract.ContractImportFieldConcludedOn, carecontract.ContractImportFieldPartyFirstName,
 	carecontract.ContractImportFieldPartyLastName, carecontract.ContractImportFieldPartyEmail,
-	carecontract.ContractImportFieldDebtorNumber,
+	carecontract.ContractImportFieldDebtorNumber, carecontract.ContractImportFieldFamilyChildren,
 }
 
 // contractImportRequired are the fields every import needs a column for;
@@ -60,6 +60,10 @@ var contractImportHeaderNames = map[string][]string{
 		"emailerziehungsberechtigte", "emailvertragspartner"},
 	carecontract.ContractImportFieldDebtorNumber: {"debitorennummer", "kinderdebitorennummer", "debitornummer", "debitor",
 		"debitorennr", "debitornr", "kundennummer", "personenkonto", "debtornumber"},
+	// OGS Connect calls it "Anzahl der Kinder in der Familie unter 18 Jahren".
+	carecontract.ContractImportFieldFamilyChildren: {"anzahlderkinderinderfamilieunter18jahren", "anzahlkinderinderfamilieunter18jahren",
+		"anzahlderkinderinderfamilie", "anzahlkinderinderfamilie", "kinderinderfamilie", "anzahlkinderunter18", "anzahlderkinderunter18",
+		"kinderunter18", "anzahlkinder", "anzahlderkinder", "kinderzahl", "kinderanzahl", "familienkinder", "familychildren"},
 }
 
 // suggestContractImportMapping maps each field to the first header with one
@@ -92,6 +96,7 @@ func suggestContractImportMapping(headers []string) carecontract.ContractImportM
 		PartyLastName:  found[carecontract.ContractImportFieldPartyLastName],
 		PartyEmail:     found[carecontract.ContractImportFieldPartyEmail],
 		DebtorNumber:   found[carecontract.ContractImportFieldDebtorNumber],
+		FamilyChildren: found[carecontract.ContractImportFieldFamilyChildren],
 	}}
 }
 
@@ -110,6 +115,7 @@ func contractImportHeaders(columns carecontract.ContractImportColumns) map[strin
 		carecontract.ContractImportFieldPartyLastName:  columns.PartyLastName,
 		carecontract.ContractImportFieldPartyEmail:     columns.PartyEmail,
 		carecontract.ContractImportFieldDebtorNumber:   columns.DebtorNumber,
+		carecontract.ContractImportFieldFamilyChildren: columns.FamilyChildren,
 	}
 }
 

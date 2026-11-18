@@ -10,14 +10,16 @@ import TraegerKinderzahlPage from "./page";
 
 vi.unmock("swr");
 
-const { fetchFamilyChildren, confirmFamilyChildren } = vi.hoisted(() => ({
-  fetchFamilyChildren: vi.fn(),
-  confirmFamilyChildren: vi.fn(),
-}));
+const { fetchFamilyChildren, confirmFamilyChildren, removeFamilyChildren } =
+  vi.hoisted(() => ({
+    fetchFamilyChildren: vi.fn(),
+    confirmFamilyChildren: vi.fn(),
+    removeFamilyChildren: vi.fn(),
+  }));
 vi.mock("~/lib/traeger-family-children-api", () => ({
   fetchFamilyChildren,
   confirmFamilyChildren,
-  removeFamilyChildren: vi.fn(),
+  removeFamilyChildren,
 }));
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
@@ -29,6 +31,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const stated: FamilyChildren = {
+  contractId: "31",
   recipientFirstName: "Eva",
   recipientLastName: "Beispiel",
   recipientEmail: "eva@example.org",
@@ -53,6 +56,7 @@ const stated: FamilyChildren = {
   status: "stated",
 };
 const confirmed: FamilyChildren = {
+  contractId: "32",
   recipientFirstName: "Jonas",
   recipientLastName: "Muster",
   recipientEmail: "jonas@example.org",
@@ -126,6 +130,116 @@ describe("TraegerKinderzahlPage", () => {
         validFrom: `${TEST_CLOCK_TODAY.slice(0, 8)}01`,
         validUntil: null,
       }),
+    );
+  });
+
+  it("lists a contract without a mail address as a family of its own", async () => {
+    const imported: FamilyChildren = {
+      contractId: "77",
+      recipientFirstName: "",
+      recipientLastName: "",
+      recipientEmail: "",
+      children: [
+        {
+          contractId: "77",
+          schoolName: "OGS Birkenfeld",
+          childFirstName: "Noah",
+          childLastName: "Zeller",
+        },
+      ],
+      count: null,
+      status: "missing",
+    };
+    renderPage({ ...data, families: [imported] });
+    expect(
+      await screen.findByText("Familie von Noah Zeller"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Vertrag Nr. 77 · ohne E-Mail"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Aus Datei nachtragen" }),
+    ).toHaveAttribute("href", "/abrechnung/kinderzahl/import");
+
+    confirmFamilyChildren.mockResolvedValue({ ...data, families: [imported] });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Kinderzahl: Familie von Noah Zeller",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Kinderzahl bestätigen/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Kinderzahl bestätigen" }),
+    );
+    await vi.waitFor(() =>
+      expect(confirmFamilyChildren).toHaveBeenCalledWith(
+        expect.objectContaining({ contractId: "77", children: 1 }),
+      ),
+    );
+  });
+
+  it("asks the office when the contracts of a family bring different numbers", async () => {
+    renderPage({
+      ...data,
+      families: [{ ...stated, count: null, status: "differing" }],
+    });
+    const checks = (
+      await screen.findByRole("heading", { name: "Zu prüfen" })
+    ).closest("section") as HTMLElement;
+    expect(
+      within(checks).getByText(/nennen verschiedene Kinderzahlen/),
+    ).toBeInTheDocument();
+    expect(
+      within(checks).getByText("Verschiedene Angaben"),
+    ).toBeInTheDocument();
+    removeFamilyChildren.mockResolvedValue({ ...data, families: [] });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Kinderzahl: Eva Beispiel" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Kinderzahl entfernen/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Ja, entfernen" }),
+    );
+    fireEvent.click(
+      await within(dialog).findByRole("button", { name: "Entfernen" }),
+    );
+    await vi.waitFor(() =>
+      expect(removeFamilyChildren).toHaveBeenCalledWith(stated.contractId),
+    );
+  });
+
+  it("shows a parental correction alongside the carried confirmation in the modal", async () => {
+    renderPage({
+      ...data,
+      families: [
+        {
+          ...stated,
+          status: "changed",
+          count: {
+            ...stated.count!,
+            confirmedChildren: 2,
+            confirmedAt: "2026-09-01T08:00:00Z",
+            validFrom: "2026-09-01",
+          },
+        },
+      ],
+    });
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Kinderzahl von Eva Beispiel prüfen",
+      }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Bisher bestätigt")).toBeInTheDocument();
+    expect(within(dialog).getByText("2 Kinder")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Kinder in der Familie/)).toHaveValue(
+      "3",
     );
   });
 

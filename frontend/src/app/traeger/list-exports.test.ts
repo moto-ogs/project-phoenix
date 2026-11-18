@@ -81,6 +81,7 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/abrechnung/exporte/konten": "Einstellungen",
   "/abrechnung/jahresbescheide/[id]/bescheid/[contractId]": "Dokument",
   "/abrechnung/jahresbescheide/[id]/lastschrift": "Schritt eines Laufs",
+  "/abrechnung/kinderzahl/import": "Import",
   "/abrechnung/lastschrift/[contractId]": "Einzelansicht",
   "/abrechnung/lastschrift/import": "Import",
   "/abrechnung/mensa": "Einstellungen",

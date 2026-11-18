@@ -26,8 +26,11 @@ type FamilyChildrenStore interface {
 	StateFamilyChildren(ctx context.Context, organizationID, accountID int64, family string, contractID int64, children int,
 		statedAt *time.Time) (id int64, applied bool, err error)
 	ConfirmFamilyChildren(ctx context.Context, organizationID, accountID int64, family string, input parentbilling.FamilyChildrenInput) (int64, error)
-	DeleteFamilyChildren(ctx context.Context, organizationID int64, family string) (parentbilling.FamilyChildCount, error)
+	DeleteFamilyChildren(ctx context.Context, organizationID int64, families []string) ([]parentbilling.FamilyChildTarget, error)
 	InsertFamilyChildEvents(ctx context.Context, organizationID int64, event parentbilling.FamilyChildEvent, targets []parentbilling.FamilyChildTarget) error
+	// ConfirmImportedFamilyChildren stores the numbers a file names as
+	// confirmed, each family once, and records each in its trail (#7356).
+	ConfirmImportedFamilyChildren(ctx context.Context, organizationID, accountID int64, numbers []parentbilling.ImportedFamilyChildren) error
 	ListContributionRules(ctx context.Context, organizationID int64, service string) ([]parentbilling.ContributionRule, error)
 	// LockCareBilling holds the monthly billing of the Träger until the
 	// transaction ends, so a release counts a family before or after a
@@ -47,6 +50,7 @@ var (
 	_ parentbilling.FamilyChildrenOffice          = (*FamilyNumbers)(nil)
 	_ parentbilling.ParentFamilyChildrenStatement = (*FamilyNumbers)(nil)
 	_ parentbilling.ContractFamilyChildren        = (*FamilyNumbers)(nil)
+	_ parentbilling.ContractImportFamilyChildren  = (*FamilyNumbers)(nil)
 )
 
 // NewFamilyChildren builds the numbers of the families.
@@ -97,21 +101,16 @@ func (f *FamilyNumbers) FamilyChildren(ctx context.Context, reviewer parentbilli
 	// hangs on: a family that stated its number on a contract not yet in
 	// force still needs the check of the Abrechnung.
 	contracts := evidenceContracts(versions)
-	ids := make([]int64, 0, len(contracts)+len(counts))
+	ids := make([]int64, 0, len(contracts))
 	for _, contract := range contracts {
 		ids = append(ids, contract.ContractID)
 	}
-	for _, count := range counts {
-		if !slices.Contains(ids, count.ContractID) {
-			ids = append(ids, count.ContractID)
-		}
-	}
-	recipients, err := f.contracts.Recipients(ctx, reviewer.OrganizationID, ids)
+	recipients, err := f.contracts.Recipients(ctx, reviewer.OrganizationID, familyRecipientContracts(ids, counts))
 	if err != nil {
 		return parentbilling.FamilyChildrenSet{}, fmt.Errorf("parent billing: read the contract parties: %w", err)
 	}
 	families := groupFamilies(versions, recipients, counts, today)
-	if err := f.recordFamilyReads(ctx, reviewer, families); err != nil {
+	if err := f.recordFamilyReads(ctx, reviewer, counts); err != nil {
 		return parentbilling.FamilyChildrenSet{}, err
 	}
 	counting, err := f.rulesCountingFamily(ctx, reviewer.OrganizationID)
@@ -137,59 +136,107 @@ func (f *FamilyNumbers) rulesCountingFamily(ctx context.Context, organizationID 
 	return counting, nil
 }
 
-// groupFamilies groups the contracts by the address of their invoice's
-// recipient. A contract without an address is a family of its own and has
-// no number, so it is left out.
+// groupFamilies groups the contracts by their family: the address of their
+// invoice's recipient, and for a contract without one the contract itself
+// (#7356, ADR 0232 point 7). Each family shows the number that belongs to
+// it today (numbersByFamily).
 func groupFamilies(versions []parentbilling.CareContractVersion, recipients map[int64]parentbilling.CareRecipient,
 	counts []parentbilling.FamilyChildCount, today calendar.Date,
 ) []parentbilling.FamilyChildren {
+	grouped := familyGroups{recipients: recipients, byKey: map[string]*parentbilling.FamilyChildren{}}
+	grouped.addContracts(versions)
+	grouped.addNumbers(counts, today)
+	families := make([]parentbilling.FamilyChildren, 0, len(grouped.order))
+	for _, key := range grouped.order {
+		found := grouped.byKey[key]
+		if found.Status == "" {
+			found.Status = familyChildrenStatus(found.Count, today)
+		}
+		if found.Differing {
+			found.Status = parentbilling.FamilyChildrenDiffering
+		}
+		families = append(families, *found)
+	}
+	slices.SortFunc(families, func(a, b parentbilling.FamilyChildren) int {
+		return firstNonZero(compareOrdered(familySortName(a), familySortName(b)),
+			compareOrdered(a.RecipientFirstName, b.RecipientFirstName), compareOrdered(a.RecipientEmail, b.RecipientEmail),
+			compareOrdered(a.ContractID, b.ContractID))
+	})
+	return families
+}
+
+// familyGroups collects the families of the list by their key, in the
+// order they come up.
+type familyGroups struct {
+	recipients map[int64]parentbilling.CareRecipient
+	byKey      map[string]*parentbilling.FamilyChildren
+	order      []string
+}
+
+// family answers the family of a key; a new one is named by the contract
+// and shows the recipient of its invoice.
+func (g *familyGroups) family(key string, contractID int64) *parentbilling.FamilyChildren {
+	if found, ok := g.byKey[key]; ok {
+		return found
+	}
+	recipient := g.recipients[contractID]
+	found := &parentbilling.FamilyChildren{ContractID: contractID, RecipientFirstName: recipient.FirstName,
+		RecipientLastName: recipient.LastName, RecipientEmail: strings.TrimSpace(recipient.Email),
+		Children: []parentbilling.FamilyContractChild{}}
+	g.byKey[key] = found
+	g.order = append(g.order, key)
+	return found
+}
+
+// addContracts gives every family its children with a contract, each child
+// once.
+func (g *familyGroups) addContracts(versions []parentbilling.CareContractVersion) {
 	byContract, contractOrder := versionsByContract(versions)
 	children := childKeys(byContract, contractOrder)
 	seen := map[string]bool{}
-	byKey := map[string]*parentbilling.FamilyChildren{}
-	var order []string
 	for _, contract := range evidenceContracts(versions) {
-		recipient := recipients[contract.ContractID]
-		key := familyKey(recipient.Email)
-		if key == "" || seen[key+"|"+children[contract.ContractID]] {
+		key := parentbilling.ContractFamilyKey(g.recipients[contract.ContractID].Email, contract.ContractID)
+		if seen[key+"|"+children[contract.ContractID]] {
 			continue
 		}
 		seen[key+"|"+children[contract.ContractID]] = true
-		family, ok := byKey[key]
-		if !ok {
-			family = &parentbilling.FamilyChildren{RecipientFirstName: recipient.FirstName, RecipientLastName: recipient.LastName,
-				RecipientEmail: strings.TrimSpace(recipient.Email), Children: []parentbilling.FamilyContractChild{}}
-			byKey[key] = family
-			order = append(order, key)
-		}
-		family.Children = append(family.Children, parentbilling.FamilyContractChild{ContractID: contract.ContractID,
+		found := g.family(key, contract.ContractID)
+		found.Children = append(found.Children, parentbilling.FamilyContractChild{ContractID: contract.ContractID,
 			SchoolName: contract.SchoolName, ChildFirstName: contract.ChildFirstName, ChildLastName: contract.ChildLastName})
 	}
-	for i := range counts {
-		family, ok := byKey[counts[i].FamilyEmail]
-		if !ok {
-			// A number without a contract in force, for example stated on a
-			// sent contract: the family shows with the recipient of that
-			// contract and no child with a contract yet.
-			recipient := recipients[counts[i].ContractID]
-			family = &parentbilling.FamilyChildren{RecipientFirstName: recipient.FirstName, RecipientLastName: recipient.LastName,
-				RecipientEmail: counts[i].FamilyEmail, Children: []parentbilling.FamilyContractChild{}}
-			byKey[counts[i].FamilyEmail] = family
-			order = append(order, counts[i].FamilyEmail)
-		}
-		family.Count = &counts[i]
-	}
-	families := make([]parentbilling.FamilyChildren, 0, len(order))
+}
+
+// addNumbers gives every family the number that belongs to it today. A
+// number without a contract in force, for example stated on a sent
+// contract, shows its family with the recipient of that contract and no
+// child with a contract yet.
+func (g *familyGroups) addNumbers(counts []parentbilling.FamilyChildCount, today calendar.Date) {
+	numbers, order := numbersByFamily(counts, g.recipients)
 	for _, key := range order {
-		family := byKey[key]
-		family.Status = familyChildrenStatus(family.Count, today)
-		families = append(families, *family)
+		count, differing := numbers[key].countOn(today)
+		if count == nil && !differing {
+			continue
+		}
+		contractID := numbers[key].contractID()
+		if count != nil {
+			contractID = count.ContractID
+		}
+		found := g.family(key, contractID)
+		if len(found.Children) == 0 && !parentbilling.IsContractFamily(key) {
+			found.RecipientEmail = key
+		}
+		found.Count, found.Differing = count, differing
+		found.Status = numbers[key].statusOn(count, today)
 	}
-	slices.SortFunc(families, func(a, b parentbilling.FamilyChildren) int {
-		return firstNonZero(compareOrdered(a.RecipientLastName, b.RecipientLastName),
-			compareOrdered(a.RecipientFirstName, b.RecipientFirstName), compareOrdered(a.RecipientEmail, b.RecipientEmail))
-	})
-	return families
+}
+
+// familySortName sorts a family by the last name of its invoice's
+// recipient, and one without a recipient by its first child.
+func familySortName(family parentbilling.FamilyChildren) string {
+	if family.RecipientLastName != "" || len(family.Children) == 0 {
+		return family.RecipientLastName
+	}
+	return family.Children[0].ChildLastName
 }
 
 // familyChildrenStatus is the state of a number today; the most urgent
@@ -249,14 +296,12 @@ func firstGap(count *parentbilling.FamilyChildCount, day calendar.Date) (calenda
 	return day, true
 }
 
-// recordFamilyReads records the read of every number shown, on the contract
-// it hangs on.
-func (f *FamilyNumbers) recordFamilyReads(ctx context.Context, reviewer parentbilling.HolidayReviewer, families []parentbilling.FamilyChildren) error {
+// recordFamilyReads records every source shown in the family list, including
+// a statement combined with another contract's confirmation.
+func (f *FamilyNumbers) recordFamilyReads(ctx context.Context, reviewer parentbilling.HolidayReviewer, counts []parentbilling.FamilyChildCount) error {
 	var targets []parentbilling.FamilyChildTarget
-	for _, family := range families {
-		if family.Count != nil {
-			targets = append(targets, parentbilling.FamilyChildTarget{ContractID: family.Count.ContractID, CountID: &family.Count.ID})
-		}
+	for _, count := range counts {
+		targets = append(targets, parentbilling.FamilyChildTarget{ContractID: count.ContractID, CountID: &count.ID})
 	}
 	event := parentbilling.FamilyChildEvent{Action: parentbilling.FamilyChildEventRead, Actor: parentbilling.FamilyChildActorOffice,
 		AccountID: reviewer.AccountID}
@@ -314,21 +359,46 @@ func (f *FamilyNumbers) RemoveFamilyChildren(ctx context.Context, reviewer paren
 	if err := f.store.LockCareBilling(ctx, reviewer.OrganizationID); err != nil {
 		return parentbilling.FamilyChildrenSet{}, fmt.Errorf("parent billing: hold the monthly billing: %w", err)
 	}
-	removed, err := f.store.DeleteFamilyChildren(ctx, reviewer.OrganizationID, family)
+	removed, err := f.removeFamilyNumbers(ctx, reviewer.OrganizationID, family, contractID)
 	if err != nil {
 		return parentbilling.FamilyChildrenSet{}, err
 	}
 	event := parentbilling.FamilyChildEvent{Action: parentbilling.FamilyChildEventDelete, Actor: parentbilling.FamilyChildActorOffice,
 		AccountID: reviewer.AccountID}
-	target := parentbilling.FamilyChildTarget{ContractID: removed.ContractID}
-	if err := f.store.InsertFamilyChildEvents(ctx, reviewer.OrganizationID, event, []parentbilling.FamilyChildTarget{target}); err != nil {
+	if err := f.store.InsertFamilyChildEvents(ctx, reviewer.OrganizationID, event, removed); err != nil {
 		return parentbilling.FamilyChildrenSet{}, fmt.Errorf("parent billing: record family child count removal: %w", err)
 	}
 	return f.FamilyChildren(ctx, reviewer)
 }
 
+// removeFamilyNumbers removes every number of the family of a contract: its
+// own and those its contracts brought along when the family got its mail
+// address (#7356). Else a number the office removed would give way to an
+// older one. It answers the contracts the removed numbers hung on.
+func (f *FamilyNumbers) removeFamilyNumbers(ctx context.Context, organizationID int64, family string, contractID int64) ([]parentbilling.FamilyChildTarget, error) {
+	counts, err := f.store.FamilyChildCounts(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	recipients, err := f.contracts.Recipients(ctx, organizationID, familyRecipientContracts([]int64{contractID}, counts))
+	if err != nil {
+		return nil, fmt.Errorf("parent billing: read the contract parties: %w", err)
+	}
+	numbers, _ := numbersByFamily(counts, recipients)
+	found, ok := numbers[family]
+	if !ok {
+		return nil, parentbilling.ErrFamilyChildrenNotFound
+	}
+	all := found.all()
+	keys := make([]string, len(all))
+	for i, count := range all {
+		keys[i] = count.FamilyEmail
+	}
+	return f.store.DeleteFamilyChildren(ctx, organizationID, keys)
+}
+
 // familyOfContract is the family of a contract of the Träger: the address
-// of its invoice's recipient.
+// of its invoice's recipient, else the contract itself (#7356).
 func (f *FamilyNumbers) familyOfContract(ctx context.Context, organizationID, contractID int64) (string, error) {
 	if contractID <= 0 {
 		return "", parentbilling.ErrFamilyChildrenNotFound
@@ -341,11 +411,7 @@ func (f *FamilyNumbers) familyOfContract(ctx context.Context, organizationID, co
 	if !ok {
 		return "", parentbilling.ErrFamilyChildrenNotFound
 	}
-	family := familyKey(recipient.Email)
-	if family == "" {
-		return "", parentbilling.ErrFamilyWithoutAddress
-	}
-	return family, nil
+	return parentbilling.ContractFamilyKey(recipient.Email, contractID), nil
 }
 
 func validFamilyChildrenInput(input parentbilling.FamilyChildrenInput) error {

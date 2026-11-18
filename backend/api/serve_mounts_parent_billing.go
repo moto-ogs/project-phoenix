@@ -138,8 +138,9 @@ func NewBillingTermsHTTP(settings TraegerBrandingSettings, details parentbilling
 }
 
 // NewCareBillingHTTP binds the monthly contribution of the care contract
-// (#4684), its rule chain (#4685), the children of the families (#5918) and
-// its Mensa prices (#4686) to the right "Abrechnung", to the versions in force
+// (#4684), its rule chain (#4685), the children of the families (#5918) with
+// their numbers from a file (#7356) and its Mensa prices (#4686) to the right
+// "Abrechnung", to the versions in force
 // and the parties of the Betreuungsvertrag in the caller's Träger transaction,
 // to the schools of the Träger, to its month rule and to the released Mensa
 // months of Meal Plan; its letters, their mail and Storno to the letterhead of
@@ -156,7 +157,8 @@ func NewCareBillingHTTP(organizations HolidayOrganizations, settings TraegerBran
 	letters := parentBillingCompose.NewCareLetters(newParentBillingLetterheads(settings), contracts, post, post, bankData, today, now)
 	requireBilling, lists := common.RequiresPermission(identityaccess.TraegerRightBillingManage), traegerListRenderer(NewSimpleListRenderer())
 	return parentBillingHTTP.NewCareBillingResource(billing, billing, letters, requireBilling, lists), parentBillingHTTP.NewCareReductionResource(reductions, requireBilling, lists),
-		parentBillingHTTP.NewCareMealTariffResource(billing, requireBilling), parentBillingHTTP.NewFamilyChildrenResource(reductions, requireBilling, lists)
+		parentBillingHTTP.NewCareMealTariffResource(billing, requireBilling), parentBillingHTTP.NewFamilyChildrenResource(reductions,
+			parentBillingCompose.NewFamilyChildrenImports(contracts, parentBillingCareSchools{organizations: organizations}, today, now), requireBilling, lists)
 }
 
 // NewCareNoticeHTTP binds the Jahresbescheide of the monthly care (#6219,

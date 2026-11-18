@@ -71,3 +71,40 @@ func careContractFamilyError(err error) error {
 	}
 	return err
 }
+
+var _ carecontract.ContractFamilyChildren = CareContractFamilyNumbers{}
+
+// DecideImportedFamilyChildren hands the numbers an import of contracts
+// names to the Elternabrechnung (#7356) and names its decisions in the
+// words of the import: a number outside its range is invalid, rows that
+// disagree are one status.
+func (n CareContractFamilyNumbers) DecideImportedFamilyChildren(ctx context.Context, reviewer carecontract.Reviewer,
+	numbers []carecontract.ImportedFamilyChildren, save bool) ([]carecontract.ImportedFamilyChildrenDecision, error) {
+	rows := make([]parentbilling.ImportedFamilyChildren, len(numbers))
+	for i, number := range numbers {
+		rows[i] = parentbilling.ImportedFamilyChildren{Line: number.Line, FamilyEmail: number.FamilyEmail, ContractID: number.ContractID,
+			Children: number.Children, ValidFrom: number.ValidFrom, Witness: number.Witness}
+	}
+	decided, err := n.Numbers.DecideImportedFamilyChildren(ctx,
+		parentbilling.HolidayReviewer{OrganizationID: reviewer.OrganizationID, AccountID: reviewer.AccountID}, rows, save)
+	if err != nil {
+		return nil, careContractFamilyError(err)
+	}
+	decisions := make([]carecontract.ImportedFamilyChildrenDecision, len(decided))
+	for i, decision := range decided {
+		decisions[i] = carecontract.ImportedFamilyChildrenDecision{Line: decision.Line}
+		switch decision.Status {
+		case parentbilling.ImportedChildrenNew:
+			decisions[i].Status = carecontract.ContractFamilyChildrenNew
+		case parentbilling.ImportedChildrenSame:
+			decisions[i].Status = carecontract.ContractFamilyChildrenSame
+		case parentbilling.ImportedChildrenDiffers:
+			decisions[i].Status = carecontract.ContractFamilyChildrenDiffers
+		case parentbilling.ImportedChildrenRowsDiffer:
+			decisions[i].Status = carecontract.ContractFamilyChildrenRowsDiffer
+		default:
+			decisions[i].Invalid = true
+		}
+	}
+	return decisions, nil
+}
