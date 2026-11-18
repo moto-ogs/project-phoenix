@@ -48,8 +48,9 @@ func ContractDocument() (contract.Document, error) {
 		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
 		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
-		{"/traeger/notifications", traegerNotificationRouteContracts()},
+		{"/traeger/notifications", schoolFeedRouteContracts(common.PortalTraeger)},
 		{"/caterer", catererPortalHTTP.RouteContracts()},
+		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
 	}
 	catalog, err := RouteCatalog()
 	if err != nil {
@@ -115,14 +116,15 @@ func notificationRouteContracts(portal common.PortalScope) []common.RouteContrac
 	)
 }
 
-// traegerNotificationRouteContracts registers the bell of the Träger-Portal
-// (#7146), with patterns relative to its /traeger/notifications mount.
-func traegerNotificationRouteContracts() []common.RouteContract {
+// schoolFeedRouteContracts registers the bell of a portal across schools,
+// the Träger-Portal's (#7146) or the caterer portal's (#7147), with patterns
+// relative to its /notifications mount.
+func schoolFeedRouteContracts(portal common.PortalScope) []common.RouteContract {
 	types := notificationsHTTP.RouteContractTypes()
-	portals := []common.PortalScope{common.PortalTraeger}
+	portals := []common.PortalScope{portal}
 	page := []common.QueryParam{{Name: "limit", Kind: common.QueryInt}, {Name: "cursor", Kind: common.QueryString}}
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/feed/", Portals: portals, Query: page, Response: types.TraegerFeedPage},
+		{Method: "GET", Pattern: "/feed/", Portals: portals, Query: page, Response: types.SchoolFeedPage},
 		{Method: "GET", Pattern: "/feed/unread-count", Portals: portals, Response: types.FeedCount},
 		{Method: "POST", Pattern: "/feed/read-all", Portals: portals, Response: types.FeedCount},
 		{Method: "POST", Pattern: "/feed/{id}/read", Portals: portals, Response: types.FeedCount},

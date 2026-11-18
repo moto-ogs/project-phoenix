@@ -3,9 +3,6 @@ package notifications
 import (
 	"context"
 	"errors"
-	"fmt"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
@@ -15,13 +12,8 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// The bell of the Träger-Portal (#7146). A Träger entry is an entry of the
-// notification feed in the school it is about, written in that school's
-// tenant transaction like every other entry, so row-level security, the
-// school's erasure and the 30-day retention apply unchanged. The Träger-Büro
-// reads the entries of all schools of its Träger in one bell. The portal has
-// neither push devices nor a live channel: its bell reloads the count on
-// every page change and every minute.
+// The bell of the Träger-Portal (#7146): the Träger-Büro reads the entries
+// of all schools of its Träger in one bell (school_feed.go).
 
 var (
 	_ contract.TraegerFeedNotifier     = (*router)(nil)
@@ -29,72 +21,9 @@ var (
 )
 
 // NotifyTraeger writes a notice into the Träger bell of the named accounts in
-// the caller's tenant transaction of the event's school. It applies the
-// school's notification flag, its booked modules and the type's school switch
-// as Notify does for the staff types; an event the school switched off
-// writes nothing and returns ErrDisabled for the notification flag. An
-// updated unread entry of the same object within the bundle window moves to
-// the top instead of adding a second one.
+// the caller's tenant transaction of the event's school (notifySchoolFeed).
 func (r *router) NotifyTraeger(ctx context.Context, event contract.TraegerFeedEvent) error {
-	if r.feedReader == nil || r.now == nil || r.store == nil {
-		return errors.New("notification feed is not configured")
-	}
-	def, err := traegerFeedType(event)
-	if err != nil {
-		return err
-	}
-	if len(event.AccountIDs) == 0 {
-		return nil
-	}
-	internal := Event{Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: event.DeepLink,
-		RelatedType: event.RelatedType, RelatedID: event.RelatedID, Audience: Audience{TenantID: event.TenantID}}
-	if err := r.requireEnabledEvent(ctx, &internal); err != nil {
-		return err
-	}
-	if def.TenantGate != "" {
-		enabled, err := r.settings.ResolveBoolForTenant(ctx, event.TenantID, def.TenantGate)
-		if err != nil {
-			return fmt.Errorf("resolving notification type gate: %w", err)
-		}
-		if !enabled {
-			return nil
-		}
-	}
-	now := r.now()
-	content := domain.FeedEntryContent{Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: event.DeepLink,
-		RelatedType: event.RelatedType, RelatedID: event.RelatedID}
-	recipients := slices.Clone(event.AccountIDs)
-	slices.Sort(recipients)
-	recipients = slices.Compact(recipients)
-	if _, err := r.store.PublishFeedEntries(ctx, event.TenantID, content, feedBundleTypes(def), recipients, now, now.Add(-domain.FeedBundleWindow)); err != nil {
-		return fmt.Errorf("write Träger notification feed: %w", err)
-	}
-	return nil
-}
-
-// traegerFeedType checks the shape of a Träger notice: a registered Träger
-// type, the school, an app-relative link and the object it is about.
-func traegerFeedType(event contract.TraegerFeedEvent) (TypeDefinition, error) {
-	def, known := GetType(event.Type)
-	if !known || def.Portal != PortalTraeger {
-		return TypeDefinition{}, fmt.Errorf("%w: %s", ErrUnknownNotificationType, event.Type)
-	}
-	switch {
-	case event.TenantID <= 0:
-		return TypeDefinition{}, errors.New("traeger notification feed requires the school")
-	case event.Title == "":
-		return TypeDefinition{}, errors.New("traeger notification feed requires a title")
-	case event.DeepLink == "" || !appRelative(event.DeepLink):
-		return TypeDefinition{}, errors.New("traeger notification feed requires an app-relative deep link")
-	case event.RelatedType == "" || event.RelatedID <= 0:
-		return TypeDefinition{}, errors.New("traeger notification feed requires the object it is about")
-	}
-	for _, accountID := range event.AccountIDs {
-		if accountID <= 0 {
-			return TypeDefinition{}, errors.New("traeger notification feed requires positive account ids")
-		}
-	}
-	return def, nil
+	return r.notifySchoolFeed(ctx, PortalTraeger, event)
 }
 
 // traegerFeed serves a Träger member the bell across the schools of the
@@ -127,31 +56,6 @@ func (r *router) TraegerFeed() contract.TraegerNotificationFeed {
 	return r.traeger
 }
 
-// traegerFeedTypes are the types the Träger bell shows.
-func traegerFeedTypes() []string {
-	defs := typesOfPortal(PortalTraeger)
-	types := make([]string, 0, len(defs))
-	for _, def := range defs {
-		types = append(types, def.Key)
-	}
-	return types
-}
-
-// typesOfPortal lists the feed types registered for a portal that offers
-// no preferences.
-func typesOfPortal(portal string) []TypeDefinition {
-	typeMu.RLock()
-	defer typeMu.RUnlock()
-	var defs []TypeDefinition
-	for _, def := range typeRegistry {
-		if def.Portal == portal && def.Feed {
-			defs = append(defs, def)
-		}
-	}
-	slices.SortFunc(defs, func(a, b TypeDefinition) int { return strings.Compare(a.Key, b.Key) })
-	return defs
-}
-
 func (f *traegerFeed) inAdminTx(ctx context.Context, organizationID, accountID int64, fn func(context.Context) error) error {
 	if organizationID <= 0 || accountID <= 0 {
 		return errors.New("traeger notification feed: Träger and account are required")
@@ -162,95 +66,46 @@ func (f *traegerFeed) inAdminTx(ctx context.Context, organizationID, accountID i
 	})
 }
 
+// session binds the bell's unit and statements to the Träger and account
+// of the session.
+func (f *traegerFeed) session(organizationID, accountID int64) (schoolFeedUnit, schoolFeedStatements) {
+	unit := func(ctx context.Context, fn func(context.Context) error) error {
+		return f.inAdminTx(ctx, organizationID, accountID, fn)
+	}
+	return unit, schoolFeedStatements{
+		count: func(ctx context.Context, types []string) (int, error) {
+			return f.store.CountUnreadTraegerFeedEntries(ctx, organizationID, accountID, types)
+		},
+		list: func(ctx context.Context, types []string, after *domain.FeedCursor, limit int) ([]domain.SchoolFeedEntry, error) {
+			return f.store.ListTraegerFeedEntries(ctx, organizationID, accountID, types, after, limit)
+		},
+		markOne: func(ctx context.Context, types []string, entryID int64, now time.Time) (bool, error) {
+			return f.store.MarkTraegerFeedEntryRead(ctx, organizationID, accountID, types, entryID, now)
+		},
+		markAll: func(ctx context.Context, types []string, now time.Time) (int, error) {
+			return f.store.MarkAllTraegerFeedEntriesRead(ctx, organizationID, accountID, types, now)
+		},
+	}
+}
+
 func (f *traegerFeed) Page(ctx context.Context, organizationID, accountID int64, cursor string, limit int) (contract.TraegerNotificationFeedPage, error) {
-	if limit <= 0 {
-		limit = FeedDefaultPageSize
-	}
-	after, err := decodeFeedCursor(cursor)
-	if err != nil {
-		return contract.TraegerNotificationFeedPage{}, err
-	}
-	return f.read(ctx, organizationID, accountID, after, min(limit, FeedMaxPageSize))
+	unit, statements := f.session(organizationID, accountID)
+	return pageSchoolFeed(ctx, unit, statements, feedTypesOfPortal(PortalTraeger), cursor, limit)
 }
 
 // UnreadCount is the read of a page without entries.
 func (f *traegerFeed) UnreadCount(ctx context.Context, organizationID, accountID int64) (int, error) {
-	page, err := f.read(ctx, organizationID, accountID, nil, 0)
+	unit, statements := f.session(organizationID, accountID)
+	page, err := readSchoolFeed(ctx, unit, statements, feedTypesOfPortal(PortalTraeger), nil, 0)
 	return page.UnreadCount, err
 }
 
-// read loads the unread count and up to limit entries after the cursor in
-// one administrative transaction; a limit of 0 loads the count only.
-func (f *traegerFeed) read(ctx context.Context, organizationID, accountID int64, after *domain.FeedCursor, limit int) (contract.TraegerNotificationFeedPage, error) {
-	types := traegerFeedTypes()
-	var page contract.TraegerNotificationFeedPage
-	err := f.inAdminTx(ctx, organizationID, accountID, func(txCtx context.Context) error {
-		var err error
-		if page.UnreadCount, err = f.store.CountUnreadTraegerFeedEntries(txCtx, organizationID, accountID, types); err != nil || limit == 0 {
-			return err
-		}
-		entries, err := f.store.ListTraegerFeedEntries(txCtx, organizationID, accountID, types, after, limit+1)
-		if err != nil {
-			return err
-		}
-		page.Entries, page.NextCursor = traegerFeedPageEntries(entries, limit)
-		return nil
-	})
-	if err != nil {
-		return contract.TraegerNotificationFeedPage{}, err
-	}
-	return page, nil
-}
-
 func (f *traegerFeed) MarkRead(ctx context.Context, organizationID, accountID, entryID int64) (int, error) {
-	types := traegerFeedTypes()
-	var count int
-	err := f.inAdminTx(ctx, organizationID, accountID, func(txCtx context.Context) error {
-		found, err := f.store.MarkTraegerFeedEntryRead(txCtx, organizationID, accountID, types, entryID, f.now())
-		if err != nil {
-			return err
-		}
-		if !found {
-			return ErrFeedEntryNotFound
-		}
-		count, err = f.store.CountUnreadTraegerFeedEntries(txCtx, organizationID, accountID, types)
-		return err
-	})
-	return count, err
+	unit, statements := f.session(organizationID, accountID)
+	return markSchoolFeedEntryRead(ctx, unit, statements, feedTypesOfPortal(PortalTraeger), entryID, f.now())
 }
 
 func (f *traegerFeed) MarkAllRead(ctx context.Context, organizationID, accountID int64) (int, error) {
-	types := traegerFeedTypes()
-	var count int
-	err := f.inAdminTx(ctx, organizationID, accountID, func(txCtx context.Context) error {
-		if _, err := f.store.MarkAllTraegerFeedEntriesRead(txCtx, organizationID, accountID, types, f.now()); err != nil {
-			return err
-		}
-		var err error
-		count, err = f.store.CountUnreadTraegerFeedEntries(txCtx, organizationID, accountID, types)
-		return err
-	})
-	return count, err
-}
-
-// traegerFeedPageEntries turns up to limit+1 loaded entries into a page: the
-// extra one only says that a next page exists.
-func traegerFeedPageEntries(entries []domain.TraegerFeedEntry, limit int) ([]contract.TraegerNotificationFeedEntry, string) {
-	cursor := ""
-	if len(entries) > limit {
-		last := entries[limit-1]
-		cursor = encodeFeedCursor(domain.FeedCursor{UpdatedAt: last.UpdatedAt, ID: last.ID})
-		entries = entries[:limit]
-	}
-	page := make([]contract.TraegerNotificationFeedEntry, 0, len(entries))
-	for _, entry := range entries {
-		page = append(page, contract.TraegerNotificationFeedEntry{
-			NotificationFeedEntry: FeedEntry{
-				ID: entry.ID, Type: entry.Type, Title: entry.Title, Body: entry.Body, DeepLink: entry.DeepLink,
-				CreatedAt: entry.CreatedAt, UpdatedAt: entry.UpdatedAt, ReadAt: entry.ReadAt,
-			},
-			SchoolID: entry.TenantID, SchoolName: entry.SchoolName,
-		})
-	}
-	return page, cursor
+	unit, statements := f.session(organizationID, accountID)
+	return markAllSchoolFeedRead(ctx, unit, statements, feedTypesOfPortal(PortalTraeger), f.now())
 }

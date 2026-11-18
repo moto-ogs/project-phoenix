@@ -26,6 +26,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
+	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -64,7 +65,9 @@ func newMenuChangeFixture(t *testing.T) *menuChangeFixture {
 	require.NoError(t, err)
 	people := api.NewPeopleRepositorySuiteFactory(database)
 	directory := owners.MustNewPeopleDirectory(database)
-	notices := owners.NewMealPlanChangeNotices(directory, owners.DeliveryNotifications{Notifier: notifier, Preferences: module.NotificationPreferences})
+	caterer, ok := notifier.(deliveryContract.CatererFeedNotifier)
+	require.True(t, ok)
+	notices := owners.NewMealPlanChangeNotices(directory, owners.DeliveryNotifications{Notifier: notifier, Preferences: module.NotificationPreferences, CatererNotices: caterer})
 	require.NotNil(t, notices)
 	now := func() time.Time { return menuChangeToday.BerlinMidnight().Add(10 * time.Hour) }
 	meals, err := owners.BuildMealPlanAtForTests(database, settings.Settings, owners.NewStudentRootReads(people.Student), directory, notices, now)

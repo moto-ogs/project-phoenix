@@ -137,6 +137,17 @@ func TraegerTestClaims(accountID int, organizationID int64, roles, rights []stri
 	}
 }
 
+// CatererTestClaims returns the claims of a caterer-portal session (ADR
+// 0077): scope caterer, no school, as the caterer login mints them.
+func CatererTestClaims(accountID int) sessiontoken.AppClaims {
+	return sessiontoken.AppClaims{
+		ID:    accountID,
+		Sub:   "kueche@example.com",
+		Roles: []string{"caterer"},
+		Scope: tenant.ScopeCaterer,
+	}
+}
+
 // TestTokenAuth returns the signer of the seeded test configuration.
 func TestTokenAuth(tb testing.TB) *sessiontoken.TokenAuth {
 	tb.Helper()

@@ -37,12 +37,16 @@ type mealPlanChangePreferences interface {
 // notification feed: every guardian holding parent_portal.access for one of
 // the children gets a feed entry about them, and a push follows in the
 // guardian's language for who switched the type on, while the day lies within
-// the push window the Meal Plan decided.
+// the push window the Meal Plan decided. The caterer that supplies the school
+// reads the change in the bell of the caterer portal, without push (#7147).
 type mealPlanChangeNotices struct {
 	guardians   peopledirectory.GuardianPortalContacts
 	notifier    staffPushRouter
 	preferences mealPlanChangePreferences
-	now         func() time.Time
+	// caterer writes the entry of the caterer bell (#7147); nil leaves the
+	// caterer out.
+	caterer catererFeedNotifier
+	now     func() time.Time
 }
 
 // NewMealPlanChangeNotices binds the notices over the school's guardians and
@@ -52,7 +56,8 @@ func NewMealPlanChangeNotices(guardians peopledirectory.GuardianPortalContacts, 
 	if guardians == nil || notifications.Notifier == nil || notifications.Preferences == nil {
 		return nil
 	}
-	return mealPlanChangeNotices{guardians: guardians, notifier: notifications.Notifier, preferences: notifications.Preferences, now: time.Now}
+	return mealPlanChangeNotices{guardians: guardians, notifier: notifications.Notifier, preferences: notifications.Preferences,
+		caterer: notifications.CatererNotices, now: time.Now}
 }
 
 // mealPlanChangeAudience is the guardians of one language with the booked
@@ -101,6 +106,13 @@ func (n mealPlanChangeNotices) audience(ctx context.Context, change mealplanModu
 }
 
 func (n mealPlanChangeNotices) NotifyMenuChanged(ctx context.Context, change mealplanModule.MenuChange) error {
+	week, err := calendar.ParseDate(string(change.WeekStart))
+	if err != nil {
+		return fmt.Errorf("meal plan change: week: %w", err)
+	}
+	if err := n.notifyCaterer(ctx, change, week); err != nil {
+		return err
+	}
 	byLocale, accounts, err := n.audience(ctx, change)
 	if err != nil || len(accounts) == 0 {
 		return err
@@ -110,10 +122,6 @@ func (n mealPlanChangeNotices) NotifyMenuChanged(ctx context.Context, change mea
 		if push, err = n.preferences.FilterOptedIn(ctx, deliveryContract.NotificationMealPlanChanged, accounts); err != nil {
 			return fmt.Errorf("meal plan change: filter recipients: %w", err)
 		}
-	}
-	week, err := calendar.ParseDate(string(change.WeekStart))
-	if err != nil {
-		return fmt.Errorf("meal plan change: week: %w", err)
 	}
 	parentPolicy := deliveryPolicy.ParentDeliveryPolicy{}
 	locales := make([]string, 0, len(byLocale))
@@ -150,6 +158,29 @@ func (n mealPlanChangeNotices) NotifyMenuChanged(ctx context.Context, change mea
 		}
 	}
 	return nil
+}
+
+// notifyCaterer tells the caterer that supplies the school about the changed
+// week (#7147). Like the families' entry it is about the week, so changes to
+// several days of one week bundle into one entry while it is unread.
+func (n mealPlanChangeNotices) notifyCaterer(ctx context.Context, change mealplanModule.MenuChange, week calendar.Date) error {
+	title, body := catererMealPlanChangedCopy(week)
+	if err := notifyCaterer(ctx, n.caterer, catererFeedNotice{
+		Type: deliveryContract.NotificationCatererMealPlanChanged, TenantID: tenant.FromContext(ctx), ActorID: change.ActorAccountID,
+		Title: title, Body: body, RelatedType: mealPlanChangeRelatedType, RelatedID: mealPlanWeekID(week),
+	}); err != nil {
+		return fmt.Errorf("meal plan change: %w", err)
+	}
+	return nil
+}
+
+// catererMealPlanChangedCopy is the caterer's entry about a changed week:
+// which week, and what to check. It names no child; the caterer portal is
+// German only.
+func catererMealPlanChangedCopy(monday calendar.Date) (string, string) {
+	return "Speiseplan geändert", fmt.Sprintf(
+		"Die Schule hat den Speiseplan für die Woche vom %s bis %s geändert. Bitte prüfen Sie Ihre Planung.",
+		monday.Format("02.01."), monday.AddDays(4).Format("02.01.2006"))
 }
 
 // mealPlanWeekID is the object ID of a week: its Monday as YYYYMMDD.
