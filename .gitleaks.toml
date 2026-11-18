@@ -147,6 +147,12 @@ commits = [
     "34b3a67cb80aa92fd0db15ff388607366a79c4e0",
     # Backend RFID documentation
     "955ff7a910b13354375a5984c407471aa5854716",
+    # Retired AUTH_JWT_SECRET test value in CI-only workflows
+    "7e293e9277f9a45f0d2f9547a6dd9f5c79f3d3d5",
+    "b5a26287ab910b32b588b77529bf63ff8db53d15",
+    "9d2069a9a5e9f0c7e5cee5d262d37c8d31afff22",
+    "47d52f12c5fa8cb6917e32c1d0eca764a6db0cb7",
+    "e663377e98b5d2a63d9c9199e38f6f1fe9c182a0",
 ]
 
 # =============================================================================
