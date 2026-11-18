@@ -7,6 +7,7 @@ import { Eye, Info } from "lucide-react";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { EnrollmentForm } from "~/components/enrollment/enrollment-form";
+import { previewNeedsSchoolLegalTexts } from "~/components/enrollment/enrollment-form-consent";
 import type { PreviewCareOfferings } from "~/components/enrollment/enrollment-form-config";
 import {
   PublicEnrollmentBrand,
@@ -25,6 +26,7 @@ import { useTenantAwarePath } from "~/lib/tenant-path";
 import { supportedGradeLevelMax } from "~/lib/grade-level";
 import {
   fetchEnrollmentPreviewBootstrap,
+  fetchPublicLegalTexts,
   schemaToPublicFormSchema,
   type FormSchema,
   type PublicFormSchema,
@@ -60,7 +62,7 @@ function EnrollmentPreviewPageContent() {
   const phaseId = searchParams.get("phaseId");
   const schemaId = searchParams.get("schemaId");
   const isBasePreview = searchParams.get("base") === "1";
-  const { tenant } = useTenant();
+  const { tenant, tenantSlug } = useTenant();
   const tenantPath = useTenantAwarePath();
   const resolvedGradeLevelMax = tenant?.gradeLevelMax;
   const gradeLevelMax = supportedGradeLevelMax(resolvedGradeLevelMax);
@@ -158,12 +160,30 @@ function EnrollmentPreviewPageContent() {
         : undefined,
     [offeringConfig],
   );
-  const failure: unknown = phaseId
-    ? (phasesRead.error ??
-      (phaseGone ? PHASE_GONE : undefined) ??
-      phaseBootstrapRead.error)
-    : templateBootstrapRead.error;
+  const previewSchema = useMemo<PublicFormSchema | null>(() => {
+    if (!schema) return null;
+    return schemaToPublicFormSchema(schema);
+  }, [schema]);
+
+  // A template without legal blocks of its own shows the school's texts, as
+  // the live form does. A failed read stops the preview instead of showing
+  // a form without them.
+  const needsSchoolLegalTexts =
+    bootstrap !== undefined && previewNeedsSchoolLegalTexts(previewSchema);
+  const legalRead = useFreshSWR(
+    needsSchoolLegalTexts ? enrollmentKeys.publicLegalTexts(tenantSlug) : null,
+    () => fetchPublicLegalTexts(tenantSlug),
+    { shouldRetryOnError: false },
+  );
+  const schoolLegalTexts = legalRead.fresh ? legalRead.data : undefined;
+  const failure: unknown =
+    (phaseId
+      ? (phasesRead.error ??
+        (phaseGone ? PHASE_GONE : undefined) ??
+        phaseBootstrapRead.error)
+      : templateBootstrapRead.error) ?? legalRead.error;
   const loadError = useSwrLoadError(failure, "die Vorschau", () => {
+    if (needsSchoolLegalTexts) void legalRead.mutate();
     if (phaseId) {
       void phasesRead.mutate();
       if (requestedPhase) void phaseBootstrapRead.mutate();
@@ -178,14 +198,10 @@ function EnrollmentPreviewPageContent() {
     !missingSchema &&
     (failure !== undefined
       ? loadError === null
-      : phaseId
-        ? phaseBootstrap === undefined
-        : templateBootstrap === undefined || !phasesRead.fresh);
-
-  const previewSchema = useMemo<PublicFormSchema | null>(() => {
-    if (!schema) return null;
-    return schemaToPublicFormSchema(schema);
-  }, [schema]);
+      : (phaseId
+          ? phaseBootstrap === undefined
+          : templateBootstrap === undefined || !phasesRead.fresh) ||
+        (needsSchoolLegalTexts && schoolLegalTexts === undefined));
 
   const previewStatus = previewPhase
     ? phasePreviewStatus(previewPhase, enrollmentEnabled)
@@ -275,6 +291,7 @@ function EnrollmentPreviewPageContent() {
               previewMode
               previewSchema={previewSchema}
               previewOfferings={previewOfferings}
+              previewLegalTexts={schoolLegalTexts}
               skipCaptcha
             />
           )}

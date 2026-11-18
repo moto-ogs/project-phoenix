@@ -15,6 +15,7 @@ type GuardianNotificationProfile struct {
 	Email        *string
 	FirstName    string
 	LastName     string
+	Salutation   string
 	PortalLocale *string
 }
 
@@ -61,7 +62,7 @@ func (s *service) GuardianNotificationAudiences(ctx context.Context, appointment
 			}
 			audience.Profiles[id] = &GuardianNotificationProfile{
 				ID: profile.ID, AccountID: profile.AccountID, Email: profile.Email,
-				FirstName: profile.FirstName, LastName: profile.LastName, PortalLocale: profile.PortalLocale,
+				FirstName: profile.FirstName, LastName: profile.LastName, Salutation: profile.Salutation, PortalLocale: profile.PortalLocale,
 			}
 		}
 		for id, students := range value.studentsByGuardian {

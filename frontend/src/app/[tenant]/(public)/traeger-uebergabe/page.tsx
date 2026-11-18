@@ -57,7 +57,6 @@ export default function TraegerHandoffPage() {
     return () => globalThis.clearTimeout(timer);
   }, [sessionChecked]);
 
-  // oxlint-disable-next-line swr/no-effect-load -- redeems the one-time Träger handoff token from the fragment through signIn before any session exists; a write, not a cacheable read
   useEffect(() => {
     if (!sessionChecked) return;
     // The token works once: the fragment is read once and redeemed once. A

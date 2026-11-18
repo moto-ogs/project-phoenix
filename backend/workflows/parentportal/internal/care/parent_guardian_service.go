@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // Field length bounds for guardian contact edits. Generous but finite so a
@@ -92,6 +94,9 @@ type ChildGuardian struct {
 	// 5 = Friday); nil means every day (#4780).
 	PickupWeekdays []int
 	PickupNotes    string
+	// Salutation is the caller's own chosen form of address; empty for
+	// every other guardian and without a choice.
+	Salutation string
 	// HasAccount is true when the guardian holds their own portal login. Such
 	// guardians' contact data is read-only to other parents.
 	HasAccount bool
@@ -141,8 +146,12 @@ type GuardianPhone struct {
 // GuardianContactInput is the validated payload for a contact edit. Profile
 // fields are replaced wholesale; Phones replaces the entire phone list.
 type GuardianContactInput struct {
-	FirstName         string
-	LastName          string
+	FirstName string
+	LastName  string
+	// Salutation is the form of address the person chose for themselves
+	// (#7362): nil leaves it as stored, "" clears it. Only the caller's own
+	// profile takes it; nobody chooses it for someone else.
+	Salutation        *string
 	Email             *string
 	AddressStreet     *string
 	AddressCity       *string
@@ -200,6 +209,9 @@ func validateContactInput(input *GuardianContactInput) error {
 	}
 	if err := normalizeContactEmail(input); err != nil {
 		return err
+	}
+	if input.Salutation != nil && !textnorm.ValidSalutation(*input.Salutation) {
+		return fmt.Errorf("%w: unknown salutation", ErrGuardianContactInvalid)
 	}
 	for _, addr := range []*string{input.AddressStreet, input.AddressCity, input.AddressPostalCode} {
 		if addr != nil && utf8.RuneCountInString(*addr) > maxGuardianAddrLen {

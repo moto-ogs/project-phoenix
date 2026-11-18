@@ -9,7 +9,6 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ConsentCheckbox } from "~/components/ui/consent-checkbox";
 import {
-  fetchPublicLegalTexts,
   type PublicFormSchema,
   type PublicLegalBlock,
   type PublicLegalTexts,
@@ -157,15 +156,23 @@ function LegalDetailsButton({
  * Resolves the legal blocks an admin preview shows. Template-owned blocks
  * win; base previews and templates without enabled blocks fall back to the
  * tenant-wide legal settings — the same resolution the live form uses, so
- * the preview can never omit blocks the live form will require.
+ * the preview can never omit blocks the live form will require. The preview
+ * page reads the tenant-wide texts and hands them in as `schoolTexts`.
  */
-export async function resolvePreviewLegalTexts(
-  tenantSlug: string,
+export function resolvePreviewLegalTexts(
   schema: PublicFormSchema | null,
-): Promise<PublicLegalTexts> {
+  schoolTexts: PublicLegalTexts | undefined,
+): PublicLegalTexts {
   const fromTemplate = previewLegalTexts(schema);
   if (fromTemplate.blocks.length > 0) return fromTemplate;
-  return fetchPublicLegalTexts(tenantSlug);
+  return schoolTexts ?? fromTemplate;
+}
+
+/** Does this template preview need the tenant-wide legal texts? */
+export function previewNeedsSchoolLegalTexts(
+  schema: PublicFormSchema | null,
+): boolean {
+  return previewLegalTexts(schema).blocks.length === 0;
 }
 
 function previewLegalTexts(schema: PublicFormSchema | null): PublicLegalTexts {

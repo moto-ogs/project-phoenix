@@ -6,9 +6,9 @@
     {{if .ExistingAccount}}
     <h1>Ihr Zugang zum Eltern-Portal</h1>
     {{if .FirstName}}
-    <p>Sehr geehrte/r {{.FirstName}} {{.LastName}},</p>
+    <p>Guten Tag {{.FirstName}} {{.LastName}},</p>
     {{else}}
-    <p>Sehr geehrte Damen und Herren,</p>
+    <p>Guten Tag,</p>
     {{end}}
     <p>Im <strong>Eltern-Portal</strong> von moto sehen Sie jetzt die Informationen zu Ihren Kindern.</p>
     <p>Sie haben schon ein Konto bei moto. Sie brauchen kein neues Konto.</p>
@@ -27,9 +27,9 @@
     {{else}}
     <h1>Einladung zum Eltern-Portal</h1>
     {{if .FirstName}}
-    <p>Sehr geehrte/r {{.FirstName}} {{.LastName}},</p>
+    <p>Guten Tag {{.FirstName}} {{.LastName}},</p>
     {{else}}
-    <p>Sehr geehrte Damen und Herren,</p>
+    <p>Guten Tag,</p>
     {{end}}
     <p>Sie wurden zum <strong>Eltern-Portal</strong> von moto eingeladen. Mit diesem Zugang können Sie die Informationen {{if .StudentNames}}zu {{if eq (len .StudentNames) 1}}Ihrem Kind{{else}}Ihren Kindern{{end}}{{else}}zu Ihren Kindern{{end}} einsehen und erhalten wichtige Benachrichtigungen.</p>
 

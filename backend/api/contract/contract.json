@@ -35,6 +35,54 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/school/class-day/absence-reports/{schoolClass}/{date}/students/{studentId}",
+      "portals": [
+        "school"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/school/class-day/arrival-exceptions/{schoolClass}/{date}",
+      "portals": [
+        "school"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/school/class-day/day-hints/{schoolClass}/{date}",
+      "portals": [
+        "school"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/school/class-day/day-hints/{schoolClass}/{date}/students/{studentId}",
+      "portals": [
+        "school"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/school/class-day/handover/{schoolClass}/{date}",
+      "portals": [
+        "school"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/school/class-day/homework/{schoolClass}/{homeworkId}",
+      "portals": [
+        "school"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/school/notifications/preferences/",
       "portals": [
         "school"
@@ -553,6 +601,137 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/class-day/",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "class",
+          "kind": "string"
+        },
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DayReport"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/class-day/absence-list",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "class",
+          "kind": "string"
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AbsenceListReport"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/class-day/arrival-exceptions",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "class",
+          "kind": "string"
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ArrivalExceptionListResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/class-day/arrival-exceptions/block-start",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "class",
+          "kind": "string"
+        },
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ArrivalExceptionBlockStartResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/class-day/classes",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ClassesResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/class-day/school-day",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolDayReport"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/class-day/shared-notes/{schoolClass}/students/{studentId}",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StudentSharedNotes"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/school/notifications/feed/",
       "portals": [
         "school"
@@ -1055,6 +1234,36 @@
     },
     {
       "method": "POST",
+      "pattern": "/school/class-day/class-trips/{schoolClass}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ClassTripRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ClassTripResult"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/class-day/homework/{schoolClass}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HomeworkRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "DayHomework"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/school/notifications/feed/read-all",
       "portals": [
         "school"
@@ -1390,6 +1599,96 @@
     },
     {
       "method": "PUT",
+      "pattern": "/school/class-day/absence-reports/{schoolClass}/{date}/students/{studentId}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AbsenceReportRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/school/class-day/arrival-exceptions/{schoolClass}/{date}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ArrivalExceptionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ArrivalExceptionResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/school/class-day/day-hints/{schoolClass}/{date}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "DayHintRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/school/class-day/day-hints/{schoolClass}/{date}/students/{studentId}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "DayHintRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/school/class-day/handover/{schoolClass}/{date}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ClassHandoverRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/school/class-day/homework/{schoolClass}/{homeworkId}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HomeworkRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "DayHomework"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/school/class-day/morning-attendance/{schoolClass}/{date}",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MorningAttendanceRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
       "pattern": "/school/notifications/preferences/{type}",
       "portals": [
         "school"
@@ -1586,6 +1885,292 @@
     }
   ],
   "types": [
+    {
+      "name": "AbsenceListChild",
+      "go_type": "classday.AbsenceListChild",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absent_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "excused_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unexcused_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "not_recorded_days",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AbsenceListCounts",
+      "go_type": "classday.AbsenceListCounts",
+      "fields": [
+        {
+          "name": "absent_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "excused_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unexcused_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "not_recorded_days",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AbsenceListReport",
+      "go_type": "classday.AbsenceListReport",
+      "fields": [
+        {
+          "name": "available_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "incomplete",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "period_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "counted_until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "school_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AbsenceListChild"
+            }
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "AbsenceListCounts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AbsenceReportRequest",
+      "go_type": "classdayhttp.AbsenceReportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ArrivalExceptionBlockStartResponse",
+      "go_type": "classdayhttp.ArrivalExceptionBlockStartResponse",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ArrivalExceptionListResponse",
+      "go_type": "classdayhttp.ArrivalExceptionListResponse",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "can_edit",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "exceptions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ArrivalExceptionResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ArrivalExceptionRequest",
+      "go_type": "classdayhttp.ArrivalExceptionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ArrivalExceptionResponse",
+      "go_type": "classdayhttp.ArrivalExceptionResponse",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "arrival_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "origin",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
     {
       "name": "ArrivalScheduleRequestItem",
       "go_type": "careplanhttp.ArrivalScheduleRequestItem",
@@ -1795,6 +2380,147 @@
       ]
     },
     {
+      "name": "ClassHandoverRequest",
+      "go_type": "classdayhttp.ClassHandoverRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "present_student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "absent_student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassTripRequest",
+      "go_type": "classdayhttp.ClassTripRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "return_time",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassTripResult",
+      "go_type": "classday.ClassTripResult",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "date_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassesResponse",
+      "go_type": "classdayhttp.ClassesResponse",
+      "fields": [
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "can_write_arrival_exception",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_report_class_trip",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "weekend_follows_friday",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_view_school_day",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "CompanionEntry",
       "go_type": "careplanhttp.CompanionEntry",
       "request": true,
@@ -1843,6 +2569,505 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayArrivalException",
+      "go_type": "classday.DayArrivalException",
+      "fields": [
+        {
+          "name": "arrival_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "origin",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayHandover",
+      "go_type": "classday.DayHandover",
+      "fields": [
+        {
+          "name": "handed_over_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "handed_over_by",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absent_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayHint",
+      "go_type": "classday.DayHint",
+      "fields": [
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "author_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "own",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayHintRequest",
+      "go_type": "classdayhttp.DayHintRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayHomework",
+      "go_type": "classday.DayHomework",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "subject",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayHomeworkFeedback",
+      "go_type": "classday.DayHomeworkFeedback",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayMorningAttendance",
+      "go_type": "classday.DayMorningAttendance",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayReport",
+      "go_type": "classday.DayReport",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "phase_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrollment_known",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "DayTotals"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DayRow"
+            }
+          }
+        },
+        {
+          "name": "class_arrival_exception",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "DayArrivalException"
+          }
+        },
+        {
+          "name": "class_day_hints",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "DayHint"
+            }
+          }
+        },
+        {
+          "name": "can_write_day_hints",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_record_morning_attendance",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "homework",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "DayHomework"
+            }
+          }
+        },
+        {
+          "name": "can_write_homework",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_read_shared_notes",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "handover",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "DayHandover"
+          }
+        },
+        {
+          "name": "can_hand_over",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_report_absences",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayRow",
+      "go_type": "classday.DayRow",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "list_entry",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "list_entry_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "without_care_place",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "registered",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "stays_today",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "offerings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "arrival",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "departure",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_changed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pickup_regular",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reported_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "day_hints",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "DayHint"
+            }
+          }
+        },
+        {
+          "name": "morning_attendance",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "DayMorningAttendance"
+          }
+        },
+        {
+          "name": "homework_feedback",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "DayHomeworkFeedback"
+          }
+        },
+        {
+          "name": "handover_absent",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "unreported",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "status_by_school",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayTotals",
+      "go_type": "classday.DayTotals",
+      "fields": [
+        {
+          "name": "students",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "staying",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "leaving",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "absent",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "list_entries",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -1941,6 +3166,35 @@
           "schema": {
             "kind": "enum",
             "ref": "EnrollmentPhaseAudience"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HomeworkRequest",
+      "go_type": "classdayhttp.HomeworkRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subject",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -2165,6 +3419,53 @@
             "elem": {
               "kind": "ref",
               "ref": "AttachmentResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MorningAttendanceMarkRequest",
+      "go_type": "classdayhttp.MorningAttendanceMarkRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "list_entry_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MorningAttendanceRequest",
+      "go_type": "classdayhttp.MorningAttendanceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "marks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "MorningAttendanceMarkRequest"
             }
           }
         }
@@ -2819,6 +4120,250 @@
       ]
     },
     {
+      "name": "SchoolDayChild",
+      "go_type": "classday.SchoolDayChild",
+      "fields": [
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "list_entry",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "list_entry_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "without_care_place",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "missing",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "unreported",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "status_by_school",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "after_school",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "changed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolDayClass",
+      "go_type": "classday.SchoolDayClass",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "SchoolDayTotals"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDayChild"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolDayReport",
+      "go_type": "classday.SchoolDayReport",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "enrollment_known",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "SchoolDayTotals"
+          }
+        },
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDayClass"
+            }
+          }
+        },
+        {
+          "name": "can_report_absences",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolDayTotals",
+      "go_type": "classday.SchoolDayTotals",
+      "fields": [
+        {
+          "name": "students",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "staying",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "leaving",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "absent",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "list_entries",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "missing",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unreported",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "sick",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "excused",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "class_trip",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolResponse",
       "go_type": "catererportalhttp.SchoolResponse",
       "fields": [
@@ -2855,6 +4400,69 @@
               "kind": "ref",
               "ref": "SchoolResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SharedNote",
+      "go_type": "classday.SharedNote",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subject_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "author_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "edited",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -4342,6 +5950,47 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentSharedNotes",
+      "go_type": "classday.StudentSharedNotes",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SharedNote"
+            }
           }
         }
       ]

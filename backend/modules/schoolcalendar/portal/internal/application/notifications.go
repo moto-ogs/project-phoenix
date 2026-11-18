@@ -44,6 +44,7 @@ const (
 	apptPayloadRecipient   = "recipient_email"
 	apptPayloadFirstName   = "first_name"
 	apptPayloadLastName    = "last_name"
+	apptPayloadSalutation  = "salutation"
 	apptPayloadTitle       = "title"
 	apptPayloadWhen        = "when_text"
 	apptPayloadLocation    = "location"
@@ -144,6 +145,7 @@ func (c appointmentEmailContent) payload(profile *ports.GuardianProfile) map[str
 		apptPayloadRecipient:   *profile.Email,
 		apptPayloadFirstName:   profile.FirstName,
 		apptPayloadLastName:    profile.LastName,
+		apptPayloadSalutation:  profile.Salutation,
 		apptPayloadTitle:       c.title,
 		apptPayloadWhen:        c.when,
 		apptPayloadLocation:    c.location,
