@@ -28,7 +28,7 @@ import {
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { formatDate } from "~/lib/date-helpers";
@@ -565,13 +565,18 @@ export default function TraegerStaffProofsPage() {
       title="Personalnachweise"
       info={INFO}
       stats={
-        list
-          ? [
-              `${formatCount(list.counts.expired)} abgelaufen`,
-              `${formatCount(list.counts.missing)} fehlen`,
-              `${formatCount(list.counts.expiringSoon)} laufen bald ab`,
-            ].join(" · ")
-          : undefined
+        list ? (
+          <TenantPageStats
+            items={[
+              { value: formatCount(list.counts.expired), label: "abgelaufen" },
+              { value: formatCount(list.counts.missing), label: "fehlen" },
+              {
+                value: formatCount(list.counts.expiringSoon),
+                label: "laufen bald ab",
+              },
+            ]}
+          />
+        ) : undefined
       }
       statsLoading={loading}
       loading={loading}

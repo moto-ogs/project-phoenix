@@ -44,14 +44,17 @@ export default function TraegerCareNoticePage() {
       backHref={traegerPath(`/traeger/abrechnung/jahresbescheide/${runId}`)}
       backLabel="Zurück zum Jahreslauf"
       printHideHeader
+      info={
+        notice && draft
+          ? "Der Bescheid ist ein Entwurf: Nummer und Datum kommen beim Ausstellen."
+          : undefined
+      }
       stats={
-        notice ? (
-          <span className="text-sm text-gray-600">
-            {draft
-              ? "Entwurf: Nummer und Datum kommen beim Ausstellen."
-              : `Nr. ${notice.number} vom ${notice.issuedOn ? formatDate(notice.issuedOn) : "–"}`}
-          </span>
-        ) : null
+        notice
+          ? draft
+            ? "Entwurf"
+            : `Nr. ${notice.number} vom ${notice.issuedOn ? formatDate(notice.issuedOn) : "–"}`
+          : null
       }
       statsLoading={loading}
       actions={

@@ -59,7 +59,10 @@ vi.mock("~/lib/traeger-holiday-allocation-api", async (original) => ({
   fetchHolidayAllocation: () => fetchBoard(),
   decideHolidayAllocation: (...args: unknown[]) => decide(...args),
 }));
-vi.mock("~/components/ui/tenant-page", () => ({
+vi.mock("~/components/ui/tenant-page", async (original) => ({
+  TenantPageStats: (
+    await original<typeof import("~/components/ui/tenant-page")>()
+  ).TenantPageStats,
   TenantPage: ({
     stats,
     actions,

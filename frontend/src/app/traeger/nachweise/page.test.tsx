@@ -120,9 +120,10 @@ describe("TraegerStaffProofsPage", () => {
 
   it("lists what is open first and counts it in the status line", async () => {
     renderPage();
+    // Statuszeile: drei Paare ohne Trennpunkt (#7402).
     expect(
-      await screen.findByText("1 abgelaufen · 1 fehlen · 1 laufen bald ab"),
-    ).toBeInTheDocument();
+      (await screen.findByText("laufen bald ab")).parentElement?.parentElement,
+    ).toHaveTextContent("1abgelaufen1fehlen1laufen bald ab");
     expect(
       screen.getByRole("link", { name: "Mira Sommer" }),
     ).toBeInTheDocument();

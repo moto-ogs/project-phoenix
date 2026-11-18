@@ -134,10 +134,16 @@ describe("TraegerHolidayRegistrationsPage", () => {
     renderPage();
 
     // Anker: die Zahlen stehen einzeln, ohne Trennpunkte dazwischen (#5684).
-    expect(await screen.findByText("2 Anmeldungen")).toBeInTheDocument();
-    expect(screen.getByText("1 eingegangen")).toBeInTheDocument();
-    expect(screen.getByText("0 bestätigt")).toBeInTheDocument();
-    expect(screen.getByText("1 storniert")).toBeInTheDocument();
+    // Statuszeile: die Zahlen je Status; die Summe trägt der Reiter (#7402).
+    expect(
+      (await screen.findByText("eingegangen")).parentElement,
+    ).toHaveTextContent("1eingegangen");
+    expect(screen.getByText("bestätigt").parentElement).toHaveTextContent(
+      "0bestätigt",
+    );
+    expect(screen.getByText("storniert").parentElement).toHaveTextContent(
+      "1storniert",
+    );
     expect(screen.queryByText(/·/)).not.toBeInTheDocument();
     const table = within(screen.getByRole("table"));
     expect(table.getByText("Eva Muster")).toBeInTheDocument();

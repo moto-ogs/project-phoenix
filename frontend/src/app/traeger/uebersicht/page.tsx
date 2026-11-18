@@ -34,7 +34,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import NavigationLink from "~/components/ui/navigation-link";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { StatCard } from "~/components/ui/stat-card";
-import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { TenantPage } from "~/components/ui/tenant-page";
 import {
   SCHOOL_SWITCH_MISSING_HINT,
   useOpenTraegerSchool,
@@ -546,16 +546,7 @@ export default function TraegerDashboardPage() {
         </>
       }
       stats={
-        snapshot ? (
-          <TenantPageStats
-            items={[
-              {
-                value: `Stand ${formatBerlinTime(snapshot.total.asOf)} Uhr`,
-                label: "",
-              },
-            ]}
-          />
-        ) : null
+        snapshot ? `Stand ${formatBerlinTime(snapshot.total.asOf)} Uhr` : null
       }
       statsLoading={loading}
       error={error}

@@ -7,7 +7,6 @@
 // Eine tageweise gebuchte Woche hat ihre Plätze an jedem Tag (#4701): ein
 // Kind bekommt seinen Platz, wenn alle seine Tage frei sind.
 
-import { Hourglass } from "lucide-react";
 import { useRef, useState } from "react";
 import {
   HOLIDAY_REGISTRATION_STATUS_LABELS,
@@ -546,16 +545,5 @@ function HolidayCapacityEditor({
         stretchOnPhone
       />
     </form>
-  );
-}
-
-/** Kurzer Hinweis für die Statuszeile, wenn Kinder warten. */
-export function WaitlistFact({ count }: Readonly<{ count: number }>) {
-  if (count === 0) return null;
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <Hourglass className="h-4 w-4" aria-hidden="true" />
-      {waitingLabel(count)} auf einen Platz
-    </span>
   );
 }

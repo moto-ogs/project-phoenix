@@ -20,7 +20,10 @@ vi.mock("~/lib/traeger-holiday-registrations-api", async (original) => ({
   >()),
   fetchHolidayWeekPlaces: () => fetchPlaces(),
 }));
-vi.mock("~/components/ui/tenant-page", () => ({
+vi.mock("~/components/ui/tenant-page", async (original) => ({
+  TenantPageStats: (
+    await original<typeof import("~/components/ui/tenant-page")>()
+  ).TenantPageStats,
   TenantPage: ({
     stats,
     children,
@@ -67,9 +70,10 @@ describe("holiday places summary", () => {
         <HolidayPlacesPage />
       </TraegerResourceTestProvider>,
     );
+    // Zahl und Text sind ein Paar der Statuszeile (#7402).
     expect(
-      await screen.findByText("1 Kind wartet auf einen Platz"),
-    ).toBeInTheDocument();
+      (await screen.findByText("Kind wartet auf einen Platz")).parentElement,
+    ).toHaveTextContent("1Kind wartet auf einen Platz");
     expect(screen.getAllByRole("link", { name: /Tom Platz/ })).toHaveLength(3);
 
     // #7304: the week cards sit in one grid, so the last one keeps its height.

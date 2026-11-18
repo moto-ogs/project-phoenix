@@ -67,9 +67,8 @@ import { ExportMenu } from "~/components/ui/export-menu";
 import { ConfirmationModal } from "~/components/ui/modal";
 import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
-import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   useApiErrorDisplay,
   useApiLoadError,
@@ -514,7 +513,23 @@ export default function TraegerHolidayRegistrationPage() {
       backLabel="Zurück zu den Anmeldungen"
       stats={
         registration ? (
-          <HolidayHeadFacts>
+          <TenantPageStats
+            items={[
+              { label: `Nr. ${registration.id}` },
+              ...(period ? [{ label: period.name }] : []),
+              {
+                label: `Eingegangen am ${formatBerlinDate(registration.submittedAt)}`,
+              },
+            ]}
+          />
+        ) : null
+      }
+      statsLoading={!registration && !loadError}
+      actions={
+        registration ? (
+          <>
+            {/* Der Status steht als Plakette neben der Kopfaktion, nicht in
+                der Statuszeile (#7402). */}
             <StatusBadge
               tone={HOLIDAY_REGISTRATION_STATUS_TONES[registration.status]}
               label={HOLIDAY_REGISTRATION_STATUS_LABELS[registration.status]}
@@ -522,23 +537,13 @@ export default function TraegerHolidayRegistrationPage() {
             {registration.frozen ? (
               <StatusBadge tone="gray" label="Eingefroren" />
             ) : null}
-            <span>Nr. {registration.id}</span>
-            {period ? <span>{period.name}</span> : null}
-            <span>
-              Eingegangen am {formatBerlinDate(registration.submittedAt)}
-            </span>
-          </HolidayHeadFacts>
-        ) : null
-      }
-      statsLoading={!registration && !loadError}
-      actions={
-        registration ? (
-          <ExportMenu
-            ariaLabel="Anmeldung herunterladen"
-            options={pdf.options}
-            busyKey={pdf.busyKey}
-            onSelect={(option) => void pdf.download(option.key)}
-          />
+            <ExportMenu
+              ariaLabel="Anmeldung herunterladen"
+              options={pdf.options}
+              busyKey={pdf.busyKey}
+              onSelect={(option) => void pdf.download(option.key)}
+            />
+          </>
         ) : null
       }
       error={loadError}

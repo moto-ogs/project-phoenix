@@ -26,7 +26,7 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FileTypeIcon } from "~/components/ui/file-type-icon";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatBerlinDate } from "~/lib/date-helpers";
@@ -134,14 +134,15 @@ export default function TraegerDocumentsPage() {
       info="Hier teilen Sie vorhandene Dokumente und Listen mit Eltern und Schulen, zum Beispiel eine Hausordnung oder einen Elternbrief. Ein hochgeladenes Dokument sieht noch niemand. Erst wenn Sie es freigeben, finden Eltern es in der Eltern-App und die OGS-Leitung in moto unter „Dateien“. Hochladen, freigeben und löschen darf, wer die Rolle „Dokumente“ hat."
       stats={
         documents.length > 0 ? (
-          <span className="flex flex-wrap items-center gap-2">
-            <span>
-              {documents.length === 1
-                ? "1 Dokument"
-                : `${documents.length} Dokumente`}
-            </span>
-            <StatusBadge label={`${released} freigegeben`} tone="green" />
-          </span>
+          <TenantPageStats
+            items={[
+              {
+                value: documents.length,
+                label: documents.length === 1 ? "Dokument" : "Dokumente",
+              },
+              { value: released, label: "freigegeben" },
+            ]}
+          />
         ) : null
       }
       statsLoading={isLoading}

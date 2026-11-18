@@ -54,7 +54,6 @@ import {
   exclusionColumn,
 } from "~/components/traeger/care-run-review-lazy";
 import { formatEuro } from "~/components/traeger/contribution-format";
-import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
@@ -64,7 +63,7 @@ import { SectionCard } from "~/components/ui/section-card";
 import { billingConcept } from "~/lib/concepts/billing";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { runDocumentKindLabel } from "~/components/traeger/run-document-kind";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { numberPatternPreview } from "~/components/traeger/billing-format";
@@ -425,54 +424,58 @@ export default function TraegerCareRunPage() {
       backLabel="Zurück zu den Monatsbeiträgen"
       stats={
         run ? (
-          <HolidayHeadFacts>
-            <StatusBadge
-              label={CARE_RUN_STATUS_LABELS[run.status]}
-              tone={CARE_RUN_STATUS_TONES[run.status]}
+          discarded ? (
+            `Verworfen am ${run.discardedAt ? formatDate(run.discardedAt) : "–"}`
+          ) : (
+            <TenantPageStats
+              items={[
+                {
+                  value: run.previewCount,
+                  label: run.previewCount === 1 ? "Rechnung" : "Rechnungen",
+                },
+                { value: formatEuro(run.previewCents), label: "" },
+              ]}
             />
-            {discarded ? (
-              <span>
-                Verworfen am{" "}
-                {run.discardedAt ? formatDate(run.discardedAt) : "–"}
-              </span>
-            ) : (
-              <span className="tabular-nums">
-                {invoiceCountLabel(run.previewCount)} ·{" "}
-                {formatEuro(run.previewCents)}
-              </span>
-            )}
-          </HolidayHeadFacts>
+          )
         ) : null
       }
       statsLoading={loading}
       actions={
-        empty ? (
-          <Button
-            type="button"
-            variant="outline_danger"
-            size="md"
-            tooltip="moto fragt vorher nach, dann ist der Monat frei für einen neuen Lauf."
-            onClick={() => setConfirmingDiscard(true)}
-          >
-            Leeren Lauf verwerfen
-          </Button>
-        ) : preview ? (
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled={!canRelease}
-            disabledReason={releaseBlockReason(run)}
-            tooltip={
-              run.previewCount === 0
-                ? "moto fragt vorher nach, dann ist der Lauf ohne Rechnungen abgeschlossen."
-                : "moto fragt vorher nach, dann sind alle Rechnungen mit Nummer festgeschrieben."
-            }
-            onClick={() => setConfirming(true)}
-          >
-            Lauf freigeben
-          </Button>
-        ) : undefined
+        <>
+          {run ? (
+            <StatusBadge
+              label={CARE_RUN_STATUS_LABELS[run.status]}
+              tone={CARE_RUN_STATUS_TONES[run.status]}
+            />
+          ) : null}
+          {empty ? (
+            <Button
+              type="button"
+              variant="outline_danger"
+              size="md"
+              tooltip="moto fragt vorher nach, dann ist der Monat frei für einen neuen Lauf."
+              onClick={() => setConfirmingDiscard(true)}
+            >
+              Leeren Lauf verwerfen
+            </Button>
+          ) : preview ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              disabled={!canRelease}
+              disabledReason={releaseBlockReason(run)}
+              tooltip={
+                run.previewCount === 0
+                  ? "moto fragt vorher nach, dann ist der Lauf ohne Rechnungen abgeschlossen."
+                  : "moto fragt vorher nach, dann sind alle Rechnungen mit Nummer festgeschrieben."
+              }
+              onClick={() => setConfirming(true)}
+            >
+              Lauf freigeben
+            </Button>
+          ) : undefined}
+        </>
       }
       error={loadError}
       loading={loading}

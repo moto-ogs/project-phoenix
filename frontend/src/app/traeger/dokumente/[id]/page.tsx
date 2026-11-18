@@ -36,7 +36,7 @@ import {
   ResponsiveActionRow,
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import {
   useApiErrorDisplay,
   useApiFormError,
@@ -162,19 +162,22 @@ export default function TraegerDocumentPage() {
       backLabel="Zurück zu den Dokumenten"
       stats={
         document ? (
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="truncate">{document.fileName}</span>
-            <span aria-hidden="true">·</span>
-            <span>{documentFileFacts(document)}</span>
-            <span aria-hidden="true">·</span>
-            <span>hochgeladen am {formatBerlinDate(document.createdAt)}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {document.reads === 0
-                ? "noch nicht geöffnet"
-                : `${document.reads}-mal geöffnet`}
-            </span>
-          </span>
+          <TenantPageStats
+            items={[
+              {
+                label: `${document.fileName} (${documentFileFacts(document)})`,
+              },
+              {
+                label: `hochgeladen am ${formatBerlinDate(document.createdAt)}`,
+              },
+              {
+                label:
+                  document.reads === 0
+                    ? "noch nicht geöffnet"
+                    : `${document.reads}-mal geöffnet`,
+              },
+            ]}
+          />
         ) : null
       }
       statsLoading={isLoading}

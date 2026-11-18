@@ -7,7 +7,8 @@
 
 import { useParams } from "next/navigation";
 import {
-  HolidayPeriodStatusLine,
+  HolidayPeriodStatusBadge,
+  holidayPeriodStats,
   holidayPeriodTabs,
 } from "~/components/traeger/holiday-period-head";
 import { HolidayFormEditor } from "~/components/traeger/holiday-form-editor";
@@ -18,7 +19,7 @@ import {
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { billingConcept } from "~/lib/concepts/billing";
 import { ButtonLink } from "~/components/ui/button";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
@@ -62,12 +63,14 @@ export default function TraegerHolidayFormPage() {
       }
       stats={
         period && form ? (
-          <HolidayPeriodStatusLine period={period}>
-            <span>
-              Formular Version {form.version}, gespeichert am{" "}
-              {formatBerlinDate(form.createdAt)}
-            </span>
-          </HolidayPeriodStatusLine>
+          <TenantPageStats
+            items={[
+              ...holidayPeriodStats(period),
+              {
+                label: `Formular Version ${form.version}, gespeichert am ${formatBerlinDate(form.createdAt)}`,
+              },
+            ]}
+          />
         ) : null
       }
       statsLoading={!(period && form) && !loadError}
@@ -78,21 +81,24 @@ export default function TraegerHolidayFormPage() {
         period?.allocationMode,
       )}
       actions={
-        billingHref ? (
-          <ButtonLink
-            href={billingHref}
-            variant="outline"
-            size="md"
-            tooltip={HOLIDAY_BILLING_HINT}
-          >
-            <MotoConceptIcon
-              concept={billingConcept}
-              size={18}
-              className="mr-2"
-            />
-            Zur Abrechnung
-          </ButtonLink>
-        ) : null
+        <>
+          {period ? <HolidayPeriodStatusBadge period={period} /> : null}
+          {billingHref ? (
+            <ButtonLink
+              href={billingHref}
+              variant="outline"
+              size="md"
+              tooltip={HOLIDAY_BILLING_HINT}
+            >
+              <MotoConceptIcon
+                concept={billingConcept}
+                size={18}
+                className="mr-2"
+              />
+              Zur Abrechnung
+            </ButtonLink>
+          ) : null}
+        </>
       }
       error={loadError}
       loading={!loadError && !(period && form)}

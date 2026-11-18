@@ -11,11 +11,9 @@ import { CareLetterPanel } from "~/components/traeger/care-letter-panel";
 import {
   NOTICE_KIND_LABELS,
   NOTICE_KIND_TONES,
-  noticeCountLabel,
 } from "~/components/traeger/care-notice-format";
 import { canSendMail } from "~/components/traeger/billing-mail-status";
 import { formatEuro } from "~/components/traeger/contribution-format";
-import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
 import { LetterSendCell } from "~/components/traeger/letter-send-cell";
 import {
   TraegerListExportMenu,
@@ -38,7 +36,7 @@ import {
 } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
@@ -392,15 +390,22 @@ export default function TraegerCareNoticeDeliveryPage() {
       backLabel="Zurück zum Jahreslauf"
       stats={
         run ? (
-          <HolidayHeadFacts>
-            <span className="tabular-nums">
-              {noticeCountLabel(run.previewCount)} ·{" "}
-              {formatEuro(run.previewCents)}
-            </span>
-            {run.issuedOn ? (
-              <span>Ausgestellt am {formatBerlinDate(run.issuedOn)}</span>
-            ) : null}
-          </HolidayHeadFacts>
+          <TenantPageStats
+            items={[
+              {
+                value: run.previewCount,
+                label: run.previewCount === 1 ? "Bescheid" : "Bescheide",
+              },
+              { value: formatEuro(run.previewCents), label: "" },
+              ...(run.issuedOn
+                ? [
+                    {
+                      label: `Ausgestellt am ${formatBerlinDate(run.issuedOn)}`,
+                    },
+                  ]
+                : []),
+            ]}
+          />
         ) : null
       }
       statsLoading={loading}

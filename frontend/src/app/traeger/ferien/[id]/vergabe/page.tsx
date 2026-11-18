@@ -26,7 +26,6 @@ import {
 import { HolidayAllocationWeekCard } from "~/components/traeger/holiday-allocation-week";
 import {
   HOLIDAY_CRITERIA_HINT,
-  HolidayHeadFacts,
   holidayPeriodTabs,
 } from "~/components/traeger/holiday-period-head";
 import { schoolNames } from "~/components/traeger/holiday-registration-format";
@@ -42,7 +41,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { focusStepHeading } from "~/components/ui/use-step-focus";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
@@ -223,18 +222,22 @@ export default function TraegerHolidayAllocationPage() {
       }
       stats={
         board ? (
-          <HolidayHeadFacts>
-            <span>
-              {pendingTotal === 1
-                ? "1 Anmeldung offen"
-                : `${pendingTotal} Anmeldungen offen`}
-            </span>
-            <span>
-              {board.decisions.length === 1
-                ? "1 Entscheidung"
-                : `${board.decisions.length} Entscheidungen`}
-            </span>
-          </HolidayHeadFacts>
+          <TenantPageStats
+            items={[
+              {
+                value: pendingTotal,
+                label:
+                  pendingTotal === 1 ? "Anmeldung offen" : "Anmeldungen offen",
+              },
+              {
+                value: board.decisions.length,
+                label:
+                  board.decisions.length === 1
+                    ? "Entscheidung"
+                    : "Entscheidungen",
+              },
+            ]}
+          />
         ) : null
       }
       statsLoading={byCriteria && !board && !loadError}

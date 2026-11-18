@@ -107,47 +107,49 @@ export default function TraegerCatalogPhasePage() {
       backLabel="Zurück zu den Anmeldephasen"
       info="Jede Schule bekommt eine eigene Kopie dieser Anmeldephase. Die Schule darf sie ändern oder ausschalten; ihre Änderungen bleiben. Entfernen können Sie die Kopie nur hier mit „Zurückziehen“."
       stats={
-        phase ? (
-          <span className="flex flex-wrap items-center gap-2">
-            {serviceRange(
+        phase
+          ? serviceRange(
               phase.draft.serviceStartDate,
               phase.draft.serviceEndDate,
-            )}
+            )
+          : null
+      }
+      statsLoading={!phase && !loadError}
+      actions={
+        <>
+          {phase ? (
             <StatusBadge
               {...(pending && !withdrawn
                 ? { label: "Änderungen nicht übertragen", tone: "warning" }
                 : phaseStatusBadge(phase))}
             />
-          </span>
-        ) : null
-      }
-      statsLoading={!phase && !loadError}
-      actions={
-        phase ? (
-          <>
-            <ButtonLink
-              href={previewHref}
-              variant="primary"
-              size="md"
-              tooltip="Zeigt, was die Schulen bekommen, noch ohne etwas zu übertragen."
-            >
-              Vorschau ansehen
-            </ButtonLink>
-            {withdrawn ? null : (
-              <OverflowMenu
-                ariaLabel="Weitere Aktionen für die Anmeldephase"
-                items={[
-                  {
-                    label: "Zurückziehen",
-                    description: "Aus allen Schulen entfernen",
-                    destructive: true,
-                    onClick: () => setWithdrawOpen(true),
-                  },
-                ]}
-              />
-            )}
-          </>
-        ) : null
+          ) : null}
+          {phase ? (
+            <>
+              <ButtonLink
+                href={previewHref}
+                variant="primary"
+                size="md"
+                tooltip="Zeigt, was die Schulen bekommen, noch ohne etwas zu übertragen."
+              >
+                Vorschau ansehen
+              </ButtonLink>
+              {withdrawn ? null : (
+                <OverflowMenu
+                  ariaLabel="Weitere Aktionen für die Anmeldephase"
+                  items={[
+                    {
+                      label: "Zurückziehen",
+                      description: "Aus allen Schulen entfernen",
+                      destructive: true,
+                      onClick: () => setWithdrawOpen(true),
+                    },
+                  ]}
+                />
+              )}
+            </>
+          ) : null}
+        </>
       }
       error={shownError}
       loading={!loadError && !(phase && schools)}
