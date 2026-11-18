@@ -57,6 +57,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/api/enrollment/phases", enrollmentHTTP.PhaseRouteContracts()},
 		{"/api/holiday-closure-notices", holidayClosureNoticeHTTP.SchoolRouteContracts()},
 		{"/api/rooms", roomsHTTP.RouteContracts()},
+		{"/api/traeger-documents", organizationTenancyTraeger.SchoolDocumentRouteContracts()},
 		// The platform announcements' http role may not import the contract
 		// types; the root names their answer.
 		{"/api/platform", []common.RouteContract{

@@ -5,8 +5,49 @@ import {
   int64StringOrNumber,
   noData,
   requestBody,
+  safeInt,
   success,
 } from "./runtime";
+
+/** Go: organizationtenancy.TraegerDocumentRelease */
+export interface TraegerDocumentRelease {
+  id: string;
+  audience: string;
+  school_id: string | null;
+  group_id: string | null;
+  group_name: string;
+  released_at: string;
+}
+
+export const TraegerDocumentReleaseSchema: z.ZodType<TraegerDocumentRelease, unknown> = z.object({
+  id: int64StringOrNumber,
+  audience: z.string(),
+  school_id: int64StringOrNumber.nullable(),
+  group_id: int64StringOrNumber.nullable(),
+  group_name: z.string(),
+  released_at: instant,
+});
+
+/** Go: organizationtenancy.SharedDocument */
+export interface SharedDocument {
+  id: string;
+  title: string;
+  file_name: string;
+  content_type: string;
+  size_bytes: number;
+  released_at: string;
+  releases: TraegerDocumentRelease[] | null;
+}
+
+export const SharedDocumentSchema: z.ZodType<SharedDocument, unknown> = z.object({
+  id: int64StringOrNumber,
+  title: z.string(),
+  file_name: z.string(),
+  content_type: z.string(),
+  size_bytes: safeInt,
+  released_at: instant,
+  releases: z.array(TraegerDocumentReleaseSchema).nullable(),
+});
 
 /** Go: organizationtenancy.TraegerDocumentGroup */
 export interface TraegerDocumentGroup {
@@ -39,25 +80,6 @@ export interface ReleaseRequest {
   group_id?: number | null;
 }
 
-/** Go: organizationtenancy.TraegerDocumentRelease */
-export interface TraegerDocumentRelease {
-  id: string;
-  audience: string;
-  school_id: string | null;
-  group_id: string | null;
-  group_name: string;
-  released_at: string;
-}
-
-export const TraegerDocumentReleaseSchema: z.ZodType<TraegerDocumentRelease, unknown> = z.object({
-  id: int64StringOrNumber,
-  audience: z.string(),
-  school_id: int64StringOrNumber.nullable(),
-  group_id: int64StringOrNumber.nullable(),
-  group_name: z.string(),
-  released_at: instant,
-});
-
 export const routes = {
   "DELETE /traeger/documents/{id}": {
     method: "DELETE",
@@ -70,6 +92,12 @@ export const routes = {
     pattern: "/traeger/documents/{id}/releases/{releaseId}",
     portals: ["org"],
     response: noData,
+  },
+  "GET /api/traeger-documents/": {
+    method: "GET",
+    pattern: "/api/traeger-documents/",
+    portals: ["tenant"],
+    response: success(z.array(SharedDocumentSchema)),
   },
   "GET /traeger/documents/audiences": {
     method: "GET",

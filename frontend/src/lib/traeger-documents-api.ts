@@ -95,7 +95,7 @@ interface BackendDocument {
 }
 
 interface BackendSharedDocument {
-  id: number;
+  id: BackendId;
   title: string;
   file_name: string;
   content_type: string;

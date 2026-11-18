@@ -1067,6 +1067,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/traeger-documents/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SharedDocument"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/work-time-models/",
       "portals": [
         "tenant"
@@ -10276,6 +10290,59 @@
             "elem": {
               "kind": "ref",
               "ref": "SchoolResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SharedDocument",
+      "go_type": "organizationtenancy.SharedDocument",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "file_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "released_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "releases",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerDocumentRelease"
             }
           }
         }

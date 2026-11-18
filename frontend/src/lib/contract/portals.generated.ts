@@ -265,6 +265,7 @@ export const portalRoutes = {
     surveys["POST /api/surveys/{surveyId}/publish"],
     surveys["POST /api/surveys/{surveyId}/remind"],
     surveys["PUT /api/surveys/{surveyId}"],
+    traegerDocuments["GET /api/traeger-documents/"],
     workTimeModels["DELETE /api/work-time-models/{id}"],
     workTimeModels["GET /api/work-time-models/"],
     workTimeModels["GET /api/work-time-models/staff-facts"],
