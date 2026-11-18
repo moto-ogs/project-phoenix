@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Alert } from "~/components/ui/alert";
@@ -22,6 +22,8 @@ import { clientEnv } from "~/env.client";
 import { credentialError, INVITATION_REFUSALS } from "./credential-error";
 
 const logger = createLogger({ component: "InvitationOwnerAccept" });
+const neverChanges = () => () => undefined;
+const browserPortal = () => portalOfHost(window.location.host);
 
 export function InvitationOwnerAcceptForm({
   token,
@@ -48,9 +50,13 @@ export function InvitationOwnerAcceptForm({
   const [addressStatus, setAddressStatus] = useState<
     "idle" | "loading" | "error" | "ready"
   >("idle");
-  // Renders only in the browser: the page loads the invitation first. A
-  // choice that leads back to this portal would only reload the page (#7369).
-  const currentPortal = portalOfHost(window.location.host);
+  // A choice that leads back to this portal would only reload the page
+  // (#7369). The host is known in the browser only.
+  const currentPortal = useSyncExternalStore(
+    neverChanges,
+    browserPortal,
+    () => null,
+  );
 
   function openInvitationAt(url: URL) {
     url.pathname = "/invite";
