@@ -30,7 +30,7 @@ export function traegerBriefkopfTopic(): HelpTopic {
           "Tragen Sie bei `Absender im Briefkopf` Name und Anschrift ein. Jede Zeile im Feld ist eine Zeile im Brief. Die erste Zeile steht fett und in Ihrer Farbe.",
           "Klicken Sie bei `Farbe für Briefe und Rechnungen` auf eine der Farben.",
           "Passt keine Farbe, wählen Sie `Eigene Farbe`. Klicken Sie dann auf den farbigen Kreis und wählen Sie Ihre Farbe. Steht im Logo-Entwurf ein Farbcode, tragen Sie ihn in das Feld daneben ein: eine Raute und sechs Zeichen.",
-          "Tragen Sie bei `Fußzeile` zum Beispiel Vorstand, Amtsgericht und Steuernummer ein, jede Angabe in eine eigene Zeile.",
+          "Tragen Sie bei `Fußzeile` zum Beispiel Vorstand, Amtsgericht und Steuernummer ein. Auch eine zweite Bankverbindung und Ihr Hinweis zur Umsatzsteuer können dort stehen. Schreiben Sie jede Angabe in eine eigene Zeile.",
           "moto speichert jedes Feld von selbst.",
         ],
       },

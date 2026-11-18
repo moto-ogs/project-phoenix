@@ -63,7 +63,7 @@ type bankDataBatch func(ctx context.Context, cursor int64) (scanned, changed int
 func runBankDataRekeyJob(ctx context.Context, job parentbilling.BankDataRekey, recipients exporttransfer.RecipientRekey,
 	organizationID int64, batchSize int, output io.Writer,
 ) error {
-	for _, source := range []string{"mandates", "debits", "consents", "debit_files"} {
+	for _, source := range []string{"mandates", "debits", "consents", "debit_files", "care_invoices", "documents"} {
 		batch := func(ctx context.Context, cursor int64) (int, int, int64, error) {
 			result, err := bankDataRekeyBatch(ctx, job, organizationID, source, cursor, batchSize)
 			return result.Scanned, result.Changed, result.LastID, err
