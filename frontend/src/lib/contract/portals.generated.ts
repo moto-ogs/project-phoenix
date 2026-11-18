@@ -5,6 +5,7 @@ import { routes as notifications } from "./notifications.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
 import { routes as parentAnnouncements } from "./parent-announcements.generated";
 import { routes as parentMe } from "./parent-me.generated";
+import { routes as schoolCalendar } from "./school-calendar.generated";
 import { routes as schoolClassDay } from "./school-class-day.generated";
 import { routes as schoolNotifications } from "./school-notifications.generated";
 import { routes as schoolParentLetters } from "./school-parent-letters.generated";
@@ -53,13 +54,30 @@ export const portalRoutes = {
     traegerReportTemplates["PUT /traeger/report-templates/{id}"],
   ],
   parent: [
+    parentMe["GET /parent/me/calendar"],
+    parentMe["GET /parent/me/calendar/appointments/{appointmentId}/overview"],
+    parentMe["GET /parent/me/calendar/feed"],
     parentMe["GET /parent/me/enrollable-schools"],
+    parentMe["POST /parent/me/calendar/feed/rotate"],
+    parentMe["POST /parent/me/calendar/recipients/{recipientId}/response"],
   ],
   platform: [
     operatorBilling["GET /operator/billing/key-day"],
     operatorBilling["PUT /operator/billing/key-day"],
   ],
   school: [
+    schoolCalendar["DELETE /school/calendar/appointments/{appointmentId}"],
+    schoolCalendar["DELETE /school/calendar/parent-conferences/{conferenceId}"],
+    schoolCalendar["GET /school/calendar/feed"],
+    schoolCalendar["GET /school/calendar/my"],
+    schoolCalendar["GET /school/calendar/parent-conferences"],
+    schoolCalendar["GET /school/calendar/parent-conferences/{conferenceId}"],
+    schoolCalendar["POST /school/calendar/appointments"],
+    schoolCalendar["POST /school/calendar/feed/rotate"],
+    schoolCalendar["POST /school/calendar/parent-conferences"],
+    schoolCalendar["POST /school/calendar/recipients/{recipientId}/response"],
+    schoolCalendar["PUT /school/calendar/appointments/{appointmentId}"],
+    schoolCalendar["PUT /school/calendar/parent-conferences/{conferenceId}"],
     schoolClassDay["DELETE /school/class-day/absence-reports/{schoolClass}/{date}/students/{studentId}"],
     schoolClassDay["DELETE /school/class-day/arrival-exceptions/{schoolClass}/{date}"],
     schoolClassDay["DELETE /school/class-day/day-hints/{schoolClass}/{date}"],

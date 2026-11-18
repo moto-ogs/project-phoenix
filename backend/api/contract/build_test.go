@@ -194,6 +194,8 @@ func TestBuildRejects(t *testing.T) {
 		"a request type that reads itself":          {[]Registration{post(ownReader{})}, Options{Identifiers: identifiers}, "has its own UnmarshalJSON"},
 		"a reader entry nothing uses":               {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Readers: map[reflect.Type]string{reflect.TypeFor[ownReader](): ReadsFields}}, "reader contract.ownReader"},
 		"an enum field nothing uses":                {[]Registration{strayEnum}, Options{Identifiers: identifiers}, "enum field inner.gone"},
+		"a day type entry nothing uses":             {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Dates: []reflect.Type{reflect.TypeFor[ownDay]()}}, "day type contract.ownDay"},
+		"an owner's day type without an entry":      {[]Registration{get("/api/rows/", dayRow{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -225,6 +227,36 @@ func TestARequestBodyHasOnlyOptionalFields(t *testing.T) {
 	for name, field := range fieldsOf(t, doc, "body") {
 		assert.Truef(t, field.Optional, "%s", name)
 	}
+}
+
+// ownDay is a day type an owner keeps beside calendar.Date: it writes
+// "YYYY-MM-DD" and its zero value as null.
+type ownDay string
+
+func (d ownDay) MarshalJSON() ([]byte, error) {
+	if d == "" {
+		return []byte("null"), nil
+	}
+	return json.Marshal(string(d))
+}
+
+type dayRow struct {
+	Day      ownDay            `json:"day"`
+	Optional ownDay            `json:"optional,omitempty"`
+	Until    *ownDay           `json:"until,omitempty"`
+	Answers  map[ownDay]string `json:"answers,omitempty"`
+}
+
+func TestARootNamedDayTypeTravelsAsADate(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{get("/api/rows/", dayRow{})}, Options{Identifiers: identifiers, Dates: []reflect.Type{reflect.TypeFor[ownDay]()}})
+	require.NoError(t, err)
+	fields := fieldsOf(t, doc, "dayRow")
+	assert.Equal(t, Schema{Kind: KindDate, Nullable: true}, fields["day"].Schema, "the zero value renders as null")
+	assert.Equal(t, Schema{Kind: KindDate}, fields["optional"].Schema, "omitempty leaves the empty day out")
+	assert.True(t, fields["optional"].Optional)
+	assert.Equal(t, Schema{Kind: KindDate}, fields["until"].Schema)
+	assert.Equal(t, KindMap, fields["answers"].Schema.Kind, "a day keys a map as its string")
 }
 
 func TestARequestTypeNamesWhatGoReads(t *testing.T) {

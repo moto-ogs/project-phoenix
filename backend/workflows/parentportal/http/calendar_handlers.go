@@ -29,11 +29,7 @@ func (rs *Resource) listMyCalendar(w http.ResponseWriter, r *http.Request) {
 		renderParentCalendarError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{
-		"from":   from.String(),
-		"to":     to.String(),
-		"events": events,
-	}, "Calendar events retrieved")
+	common.Respond(w, r, http.StatusOK, ParentCalendarResponse{From: from, To: to, Events: events}, "Calendar events retrieved")
 }
 
 func (rs *Resource) respondToCalendarInvitation(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +54,7 @@ func (rs *Resource) respondToCalendarInvitation(w http.ResponseWriter, r *http.R
 		renderParentCalendarError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"status": req.Status}, "Invitation response updated")
+	common.Respond(w, r, http.StatusOK, ParentInvitationStatusResponse{Status: req.Status}, "Invitation response updated")
 }
 
 func (rs *Resource) calendarAppointmentOverview(w http.ResponseWriter, r *http.Request) {
@@ -130,10 +126,7 @@ func (rs *Resource) calendarFeedURL(w http.ResponseWriter, r *http.Request) {
 		renderParentCalendarError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{
-		"url":        httpsURL,
-		"webcal_url": webcalURL,
-	}, "Calendar feed URL retrieved")
+	common.Respond(w, r, http.StatusOK, ParentCalendarFeedResponse{URL: httpsURL, WebcalURL: webcalURL}, "Calendar feed URL retrieved")
 }
 
 func (rs *Resource) rotateCalendarFeed(w http.ResponseWriter, r *http.Request) {
@@ -150,10 +143,7 @@ func (rs *Resource) rotateCalendarFeed(w http.ResponseWriter, r *http.Request) {
 		renderParentCalendarError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{
-		"url":        httpsURL,
-		"webcal_url": webcalURL,
-	}, "Calendar feed URL rotated")
+	common.Respond(w, r, http.StatusOK, ParentCalendarFeedResponse{URL: httpsURL, WebcalURL: webcalURL}, "Calendar feed URL rotated")
 }
 
 func parseParentCalendarRange(w http.ResponseWriter, r *http.Request) (timezone.Date, timezone.Date, bool) {
