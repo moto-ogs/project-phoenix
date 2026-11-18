@@ -385,7 +385,7 @@ question) lives in the dashboard descriptions.
 | Dashboard | Deployment | Questions | Link |
 | --- | --- | --- | --- |
 | Nutzung je Standort (home dashboard, pinned) | `moto-app.de` | How many schools use moto, on which days, for which flows, who slows down | <https://eu.posthog.com/project/140838/dashboard/1046428> |
-| OGS-App | `moto-app.de` | Most used pages per day with navigation name and time on page, actions per role, where users go from the start page, feature reach, rarely used pages, dead and rage clicks | created by the sync |
+| OGS-App | `moto-app.de` | Most used pages per day with navigation name and time on page, actions per role, where users go from the start page, which tab of „Alle Kinder“ people switch to (`child_scope_tab_selected`, #5046), feature reach, rarely used pages, dead and rage clicks | created by the sync |
 | Eltern-App | `moto-app.de` | The same for parents; parents have no school | created by the sync |
 | Schul-App | `moto-app.de` | The same for teachers in the school portal | created by the sync |
 | Caterer-Portal | `moto-app.de` | What caterers save (invitation accepted, order confirmed) by action, with days per school and schools, days with a confirmed order per school (table with school ID), the same summed over all schools per week, invitations, acceptances and ends per week (counted per school and day, every day including weekends: caterers plan then too); no page views (capture rule in the section on the school switch above) | created by the sync |
@@ -423,6 +423,11 @@ der Startseite?“ counts page changes (`$prev_pageview_pathname`) instead.
 
 The feature areas (Funktionsbereiche) are `FEATURES` in the script; the test
 fails for a route template without an area, so a new page needs one.
+Clicks the browser reports inside a page (the tab of „Alle Kinder“, the
+bell) are no feature use of their own: the page view already counts the
+area, so they stand in `NO_FEATURE_EVENTS`. The tab event fires only when a
+person switches to another tab, never for the tab a page opens on; how often
+„Alle Kinder“ opened at all is in the page table.
 
 The demo funnel starts with the link request (`demo_link_requested` from the
 backend). The click on „Demo starten" before it happens on the website,

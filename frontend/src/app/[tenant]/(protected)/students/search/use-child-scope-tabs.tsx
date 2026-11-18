@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import type { OverflowMenuItem } from "~/components/ui/page-header/types";
 import type { TenantPageProps } from "~/components/ui/tenant-page";
+import { trackEvent } from "~/lib/analytics";
 import { hasEffectiveAdminScope, isCaregiver } from "~/lib/auth-utils";
 import { useUserContext } from "~/lib/hooks/use-user-context";
 import { useOptionalSupervision } from "~/lib/supervision-context";
@@ -17,6 +18,7 @@ import {
   MY_GROUPS_SCOPE,
   activeChildScope,
   buildChildScopeTabs,
+  childScopeAnalyticsValue,
   roomIdFromScope,
   type ScopeRoom,
 } from "./child-scope-tabs";
@@ -86,20 +88,37 @@ export function useChildScopeTabs({
     [ownGroupIds, rooms],
   );
 
+  const activeScope = activeChildScope({
+    selectedGroupIds,
+    roomId,
+    ownGroupIds,
+  });
+
   const tabs: TenantPageProps["tabs"] = items
     ? {
         label: "Welche Kinder",
         // Gruppe und Raum stehen in der Adresse, also auch im Seitentitel.
         inUrl: true,
         items,
-        value: activeChildScope({ selectedGroupIds, roomId, ownGroupIds }),
+        value: activeScope,
         onChange: (scope) => {
+          // Nutzungsanalyse (#5046): nur ein Wechsel durch die Person zählt,
+          // nicht der Reiter beim Öffnen der Seite und nicht ein zweiter
+          // Klick auf den schon aktiven Reiter.
+          const track = () => {
+            const tracked = childScopeAnalyticsValue(scope);
+            if (scope !== activeScope && tracked) {
+              trackEvent("child_scope_tab_selected", { child_scope: tracked });
+            }
+          };
           if (scope === ALL_CHILDREN_SCOPE) {
+            track();
             setGroupIds([]);
             clearRoom();
             return;
           }
           if (scope === MY_GROUPS_SCOPE) {
+            track();
             clearRoom();
             setGroupIds([...ownGroupIds]);
             return;
@@ -107,6 +126,7 @@ export function useChildScopeTabs({
           const scopeRoomId = roomIdFromScope(scope);
           const room = rooms.find((candidate) => candidate.id === scopeRoomId);
           if (!room) return;
+          track();
           setGroupIds([]);
           setRoom(room.id, room.name);
         },
