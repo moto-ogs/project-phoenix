@@ -385,7 +385,7 @@ describe("Vertragsimport", () => {
     await screen.findByText("4 Verträge übernommen");
     expect(
       screen.getByText(
-        /2 davon ohne Mail-Adresse: Diese Familien bekommen ihre Rechnungen auf Papier\./,
+        /2 Verträge ohne Mail-Adresse: Diesen Familien geben Sie die Rechnungen auf Papier\./,
       ),
     ).toBeInTheDocument();
   });

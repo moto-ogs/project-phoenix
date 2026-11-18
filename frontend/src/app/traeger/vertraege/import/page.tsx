@@ -75,7 +75,7 @@ function doneDescription(done: ContractImportResult): string {
   const withoutEmail = contractsWithoutEmail(done);
   const paper =
     withoutEmail > 0
-      ? ` ${withoutEmail} davon ohne Mail-Adresse: Diese Familien bekommen ihre Rechnungen auf Papier.`
+      ? ` ${contractCountLabel(withoutEmail)} ohne Mail-Adresse: Diesen Familien geben Sie die Rechnungen auf Papier.`
       : "";
   return `${parts.join(", ")}.${paper} Sie finden die Verträge unter Verträge mit dem Stand „Aktiv“.`;
 }
