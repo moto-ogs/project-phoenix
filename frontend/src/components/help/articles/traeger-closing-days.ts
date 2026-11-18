@@ -57,7 +57,7 @@ export function traegerClosingDaysTopic(): HelpTopic {
         steps: [
           "Wähle in der Navigation `Schließtage`.",
           "Wähle oben das Jahr.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
           "Die Datei enthält die Schließtage dieses Jahres mit Grund und Schulen.",
         ],
       },

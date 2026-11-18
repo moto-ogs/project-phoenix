@@ -23,8 +23,8 @@ import {
 } from "~/components/traeger/closing-day-holiday-impact";
 import { TraegerHolidayClosureNotices } from "~/components/traeger/traeger-holiday-closure-notices";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useClosingDayHolidayImpact } from "~/components/traeger/use-closing-day-holiday-impact";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
@@ -37,6 +37,7 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
+import { SectionLabel } from "~/components/ui/section-label";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -274,6 +275,17 @@ export default function TraegerClosingDaysPage() {
     { value: String(thisYear), label: String(thisYear) },
     { value: String(thisYear + 1), label: String(thisYear + 1) },
   ];
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/closing-days/export", format, {
+        from,
+        to,
+      }),
+    scope: traegerExportScope(),
+    fallbackName: `schliesstage-${year}`,
+    errorObject: "die Schließtage",
+    unavailable: closingDays.length === 0,
+  });
 
   return (
     <TenantPage
@@ -306,40 +318,26 @@ export default function TraegerClosingDaysPage() {
           onChange={(next) => setYear(Number(next))}
         />
       }
+      overflowMenu={exportItems}
       actions={
-        <>
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerList("/api/traeger/closing-days/export", format, {
-                from,
-                to,
-              })
+        canManage ? (
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            onClick={beginCreate}
+            disabled={schools.length === 0}
+            tooltip="Plant einen Schließtag für eine oder alle Schulen und informiert betroffene Familien."
+            disabledReason={
+              data
+                ? "Deinem Träger ist noch keine Schule zugeordnet. Das übernimmt das moto-Team."
+                : undefined
             }
-            scope={traegerExportScope()}
-            ariaLabel={`Schließtage ${year} herunterladen`}
-            fallbackName={`schliesstage-${year}`}
-            errorObject="die Schließtage"
-            unavailable={closingDays.length === 0}
-          />
-          {canManage ? (
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              onClick={beginCreate}
-              disabled={schools.length === 0}
-              tooltip="Plant einen Schließtag für eine oder alle Schulen und informiert betroffene Familien."
-              disabledReason={
-                data
-                  ? "Deinem Träger ist noch keine Schule zugeordnet. Das übernimmt das moto-Team."
-                  : undefined
-              }
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Schließtag anlegen
-            </Button>
-          ) : null}
-        </>
+          >
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Schließtag anlegen
+          </Button>
+        ) : null
       }
       overlays={
         <>
@@ -430,102 +428,96 @@ export default function TraegerClosingDaysPage() {
         </>
       }
     >
-      <div className="flex flex-col gap-6">
-        {canManage ? (
-          <TraegerHolidayClosureNotices
-            pending={pending ?? undefined}
-            loadError={pending ? null : pendingResponse.error}
-            schoolName={schoolName}
-            reload={pendingResponse.mutate}
-          />
-        ) : null}
-        <SectionCard
-          title="Schließtage des Trägers"
-          concept={closingDaysConcept}
-          description="An diesen Tagen ist die OGS der genannten Schulen zu."
-          loading={calendarLoading}
-        >
-          {closingDays.length === 0 ? (
-            <EmptyState
-              icon={
-                <ConceptIconTile concept={closingDaysConcept} size="page" />
-              }
-              title={`Keine Schließtage in ${year}`}
-              description={
-                canManage
-                  ? "Lege oben einen Schließtag an, zum Beispiel einen Brückentag."
-                  : "Das Träger-Büro hat für dieses Jahr keine Schließtage geplant."
-              }
-            />
-          ) : (
-            <DataTable
-              columns={columns}
-              rows={[...closingDays]}
-              getRowKey={(day) => day.id}
-              defaultSortKey="range"
-              defaultSortDirection="asc"
-              stackedOnMobile
-            />
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title={`Jahresübersicht ${year}`}
-          concept={calendarConcept}
-          description="Feiertage und Schließtage aller Schulen auf einen Blick."
-          loading={calendarLoading}
-        >
-          <TraegerYearCalendar year={year} marks={marks} todayISO={today} />
-        </SectionCard>
-
-        <SectionCard
-          title="Feiertage nach Bundesland"
-          concept={calendarConcept}
-          description="Nur zur Information. Stimmt das Bundesland einer Schule nicht, schreibe dem moto-Team."
-          loading={calendarLoading}
-        >
-          <div
-            className={
-              regions.length > 1
-                ? "grid grid-cols-1 gap-6 lg:grid-cols-2"
-                : "grid grid-cols-1 gap-6"
+      {canManage ? (
+        <TraegerHolidayClosureNotices
+          pending={pending ?? undefined}
+          loadError={pending ? null : pendingResponse.error}
+          schoolName={schoolName}
+          reload={pendingResponse.mutate}
+        />
+      ) : null}
+      <SectionCard
+        title="Schließtage des Trägers"
+        concept={closingDaysConcept}
+        description="An diesen Tagen ist die OGS der genannten Schulen zu."
+        loading={calendarLoading}
+      >
+        {closingDays.length === 0 ? (
+          <EmptyState
+            icon={<ConceptIconTile concept={closingDaysConcept} size="page" />}
+            title={`Keine Schließtage in ${year}`}
+            description={
+              canManage
+                ? "Lege oben einen Schließtag an, zum Beispiel einen Brückentag."
+                : "Das Träger-Büro hat für dieses Jahr keine Schließtage geplant."
             }
-          >
-            {regions.map((region) => (
-              <section key={region.code} aria-label={region.name}>
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    {region.name}
-                  </h3>
-                  <StatusBadge
-                    label={`${region.holidays.length} Feiertage`}
-                    tone="blue"
-                  />
-                </div>
-                <p className="mb-3 text-xs text-gray-500">
-                  Gilt für:{" "}
-                  {schoolsInState(schools, region.code)
-                    .map((school) => school.name)
-                    .join(", ")}
-                </p>
-                <ul className="divide-y divide-gray-100">
-                  {region.holidays.map((holiday) => (
-                    <li
-                      key={holiday.date}
-                      className="flex items-baseline justify-between gap-3 py-2 text-sm"
-                    >
-                      <span className="text-gray-900">{holiday.name}</span>
-                      <span className="whitespace-nowrap text-gray-500 tabular-nums">
-                        {formatDayWithWeekday(holiday.date)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        </SectionCard>
-      </div>
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={[...closingDays]}
+            getRowKey={(day) => day.id}
+            defaultSortKey="range"
+            defaultSortDirection="asc"
+            stackedOnMobile
+          />
+        )}
+      </SectionCard>
+
+      <SectionCard
+        title={`Jahresübersicht ${year}`}
+        concept={calendarConcept}
+        description="Feiertage und Schließtage aller Schulen auf einen Blick."
+        loading={calendarLoading}
+      >
+        <TraegerYearCalendar year={year} marks={marks} todayISO={today} />
+      </SectionCard>
+
+      <SectionCard
+        title="Feiertage nach Bundesland"
+        concept={calendarConcept}
+        description="Nur zur Information. Stimmt das Bundesland einer Schule nicht, schreibe dem moto-Team."
+        loading={calendarLoading}
+      >
+        <div
+          className={
+            regions.length > 1
+              ? "grid grid-cols-1 gap-6 lg:grid-cols-2"
+              : "grid grid-cols-1 gap-6"
+          }
+        >
+          {regions.map((region) => (
+            <section key={region.code} aria-label={region.name}>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <SectionLabel as="h3">{region.name}</SectionLabel>
+                <StatusBadge
+                  label={`${region.holidays.length} Feiertage`}
+                  tone="gray"
+                />
+              </div>
+              <p className="mb-3 text-sm text-gray-500">
+                Gilt für:{" "}
+                {schoolsInState(schools, region.code)
+                  .map((school) => school.name)
+                  .join(", ")}
+              </p>
+              <ul className="divide-y divide-gray-100">
+                {region.holidays.map((holiday) => (
+                  <li
+                    key={holiday.date}
+                    className="flex items-baseline justify-between gap-3 py-2 text-sm"
+                  >
+                    <span className="text-gray-900">{holiday.name}</span>
+                    <span className="whitespace-nowrap text-gray-500 tabular-nums">
+                      {formatDayWithWeekday(holiday.date)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      </SectionCard>
     </TenantPage>
   );
 }

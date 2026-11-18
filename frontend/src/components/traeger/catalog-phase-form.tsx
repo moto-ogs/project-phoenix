@@ -206,6 +206,7 @@ export function CatalogPhaseForm({
         <FormErrorAlert message={formErrors.error} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
+            controlSize="compact"
             name="name"
             label="Name"
             required

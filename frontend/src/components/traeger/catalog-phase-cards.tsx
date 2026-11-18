@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { ButtonLink } from "~/components/ui/button";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
@@ -132,7 +133,7 @@ export function CatalogSchoolsCard({
 }
 
 /** The state of one offering of the phase. */
-function offeringStatus(offering: TraegerOffering): Badge {
+export function offeringStatus(offering: TraegerOffering): Badge {
   if (offering.withdrawnAt) return { label: "Zurückgezogen", tone: "gray" };
   if (offering.released === null) {
     return { label: "Noch nicht übertragen", tone: "warning" };
@@ -155,6 +156,42 @@ function priceSummary(offering: TraegerOffering): string {
       ? formatEuro(low)
       : `${formatEuro(low)} bis ${formatEuro(high)}`;
   return `${range} ${scale ? "nach Tagen je Woche" : "je Wochentag"}`;
+}
+
+/**
+ * An offering that can no longer change, read only: a withdrawn offering, or
+ * every offering of a withdrawn phase. The list opens it like every other row.
+ */
+export function CatalogOfferingSummary({
+  offering,
+  phaseWithdrawn,
+}: Readonly<{ offering: TraegerOffering; phaseWithdrawn: boolean }>) {
+  const { fields } = offering.draft;
+  return (
+    <SectionCard
+      title="Betreuungsangebot"
+      description={
+        offering.withdrawnAt
+          ? "Ein zurückgezogenes Angebot lässt sich nicht mehr ändern."
+          : phaseWithdrawn
+            ? "Die Anmeldephase ist zurückgezogen. Ihre Angebote lassen sich nicht mehr ändern."
+            : undefined
+      }
+    >
+      <DataGrid>
+        <DataField label="Tage">{weekdayList(fields.availableDays)}</DataField>
+        <DataField label="Monatspreis">{priceSummary(offering)}</DataField>
+        <DataField label="Plätze">
+          {fields.capacity === null ? "Ohne Grenze" : fields.capacity}
+        </DataField>
+        {fields.description ? (
+          <DataField label="Beschreibung" fullWidth>
+            {fields.description}
+          </DataField>
+        ) : null}
+      </DataGrid>
+    </SectionCard>
+  );
 }
 
 export function CatalogOfferingsCard({
@@ -277,14 +314,8 @@ export function CatalogOfferingsCard({
         getRowKey={(offering) => offering.id}
         stackedOnMobile
         rowHasInteractiveControls
-        onRowClick={
-          editable
-            ? (offering) => {
-                if (!offering.withdrawnAt) {
-                  router.push(traegerPath(`${base}/${offering.id}`));
-                }
-              }
-            : undefined
+        onRowClick={(offering) =>
+          router.push(traegerPath(`${base}/${offering.id}`))
         }
         emptyState={
           <EmptyState
