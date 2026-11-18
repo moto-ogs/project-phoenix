@@ -55,8 +55,8 @@ var moduleSQLClockBudget = map[string]int{
 	// (operator ledger, Träger account ledger, Träger document downloads),
 	// whose cutoff the database computes.
 	"modules/auditlog": 1,
-	// Only the finished student document cleanups (1): their database
-	// function guards the cutoff with the database clock (1.15.606).
+	// cleanupDatabaseClock (1): stamps completed student document cleanups
+	// and supplies the cutoff that the database function guards (1.15.606).
 	"modules/careplan": 1,
 	// Named exceptions on the database clock: the message retention of ADR
 	// 0277 (7), since PostgreSQL stamps and orders the messages and threads;
