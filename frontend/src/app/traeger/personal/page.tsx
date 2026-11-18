@@ -129,22 +129,25 @@ const RECORD_COLUMNS: DataTableColumn<StaffRecordSummary>[] = [
   {
     key: "employments",
     header: "Einsatzorte",
-    render: (record) => (
-      <span className="flex max-w-full min-w-0 flex-wrap gap-1.5">
-        {record.employments.map((employment) => (
-          <StatusBadge
-            key={`${employment.schoolId}-${employment.staffId}`}
-            label={
-              employment.active
-                ? employment.schoolName
-                : `${employment.schoolName} (beendet)`
-            }
-            tone={employment.active ? "outline" : "gray"}
-            wrap
-          />
-        ))}
-      </span>
-    ),
+    render: (record) =>
+      record.employments.length === 0 ? (
+        <span className="text-sm text-gray-500">–</span>
+      ) : (
+        <span className="flex max-w-full min-w-0 flex-wrap gap-1.5">
+          {record.employments.map((employment) => (
+            <StatusBadge
+              key={`${employment.schoolId}-${employment.staffId}`}
+              label={
+                employment.active
+                  ? employment.schoolName
+                  : `${employment.schoolName} (beendet)`
+              }
+              tone={employment.active ? "outline" : "gray"}
+              wrap
+            />
+          ))}
+        </span>
+      ),
     sortValue: (record) => record.employments.length,
     stacked: "field",
   },
@@ -531,7 +534,7 @@ function StaffRecordsContent() {
           ? {
               value: query,
               onChange: setQuery,
-              placeholder: "Name oder Personalnummer suchen…",
+              placeholder: "Name oder Nummer suchen…",
             }
           : undefined
       }

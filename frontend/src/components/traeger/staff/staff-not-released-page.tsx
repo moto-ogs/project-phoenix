@@ -8,7 +8,7 @@
 import { FeatureOffPage } from "~/components/ui/feature-off-page";
 
 /** Wer freischaltet und wann: die Bedingung aus ADR 0089. */
-export const STAFF_RELEASE_CONDITION =
+const STAFF_RELEASE_CONDITION =
   "Das moto-Team schaltet Personal beim Träger frei, sobald dein Träger bestätigt hat: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung.";
 
 export function StaffNotReleasedPage({

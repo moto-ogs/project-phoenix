@@ -403,9 +403,7 @@ describe("TraegerStaffRecordsPage", () => {
     });
     renderPage();
     expect(await screen.findByText("Mira Sommer")).toBeInTheDocument();
-    const [search] = screen.getAllByPlaceholderText(
-      "Name oder Personalnummer suchen…",
-    );
+    const [search] = screen.getAllByPlaceholderText("Name oder Nummer suchen…");
 
     fireEvent.change(search!, { target: { value: "brandt" } });
     await waitFor(() => expect(screen.queryByText("Mira Sommer")).toBeNull());
