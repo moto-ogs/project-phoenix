@@ -31,16 +31,18 @@ func TestFileStoreCleanerSweepsOnTheWorkersClock(t *testing.T) {
 		return queue.Queue(txCtx, "/uploads/student-photos/worker-clock.jpg")
 	}))
 
+	before := testpkg.DatabaseNow(t, admin)
 	var removed int
 	require.NoError(t, testpkg.WithinTenantTransaction(ctx, admin, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
 		removed, err = newFileStoreCleaner(db, nil, slog.New(slog.DiscardHandler), now)(txCtx)
 		return err
 	}))
+	after := testpkg.DatabaseNow(t, admin)
 	assert.Equal(t, 1, removed, "the intent is due by the Worker's clock")
 
 	var cleanedAt *time.Time
 	require.NoError(t, admin.NewRaw(`SELECT cleaned_at FROM documents.file_cleanup WHERE tenant_id = ? AND filename_stored = ?`,
 		testpkg.Tenant(t), "worker-clock.jpg").Scan(ctx, &cleanedAt))
 	require.NotNil(t, cleanedAt)
-	assert.True(t, cleanedAt.Equal(at), "the sweep settles with the Worker's clock")
+	assert.True(t, !cleanedAt.Before(before) && !cleanedAt.After(after), "retention ages the settlement on the database clock")
 }

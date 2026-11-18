@@ -545,9 +545,16 @@ func TestDeleteFolderQueuesCleanupForItsFiles(t *testing.T) {
 	assert.Equal(t, 1, pending, "the stored object has an immediately eligible cleanup intent")
 
 	// The scheduler pass reclaims the object and settles the intent.
+	before := testpkg.DatabaseNow(t, c.db)
 	removed, err := c.files.CleanupOrphanedFiles(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, 1, removed)
+
+	var cleanedAt time.Time
+	require.NoError(t, c.db.NewSelect().TableExpr("documents.file_cleanup").Column("cleaned_at").
+		Where("owner_id = ?", folder).Scan(ctx, &cleanedAt))
+	assert.False(t, cleanedAt.Before(before), "the intent uses the database retention clock")
+	assert.False(t, cleanedAt.After(testpkg.DatabaseNow(t, c.db)), "the stamp is not in the future")
 }
 
 // rlsKey names the column a two-tenant RLS check selects on one table and the

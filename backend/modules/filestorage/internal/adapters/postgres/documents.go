@@ -129,7 +129,7 @@ var attachmentsTable = documentTable[*attachmentRow]{
 }
 
 // DocumentStore implements ports.DocumentStore over one document table. now
-// stamps a soft delete and the removal of the bytes.
+// stamps a soft delete. The database stamps byte removal for retention.
 type DocumentStore[R documentRow] struct {
 	database Database
 	table    documentTable[R]
@@ -286,7 +286,7 @@ func (s *DocumentStore[R]) MarkBytesDeleted(ctx context.Context, documentID int6
 	}
 	started := time.Now()
 	result, err := s.table.updateRows(db).
-		Set(`file_deleted_at = ?`, s.now()).
+		Set(`file_deleted_at = `+databaseClock).
 		Where(`"document".id = ?`, documentID).
 		Where(`"document".tenant_id = ?`, tenantID).
 		Where(`"document".file_deleted_at IS NULL`).

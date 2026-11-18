@@ -98,8 +98,8 @@ var moduleSQLClockBudget = map[string]int{
 	"modules/exporttransfer": 9,
 	// databaseClock (1, ADR 0281, Nachtrag): the finished file and attachment
 	// cleanups and the removed files: their security-definer functions guard
-	// the cutoff with the database clock (1.15.606), so the cutoff is taken
-	// from statement_timestamp().
+	// the cutoff with the database clock (1.15.606). The same
+	// statement_timestamp() stamps cleaned_at and file_deleted_at.
 	"modules/filestorage": 1,
 	// The Springer access windows (3, ADR 0251): the security-definer
 	// function auth.account_tenant_admitted admits a window on the database
