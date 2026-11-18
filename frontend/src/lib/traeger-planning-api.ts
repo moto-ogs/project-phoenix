@@ -74,6 +74,14 @@ export interface TraegerPlanningPerson {
    * Schule: die Vorlage für die Schichten (#7381).
    */
   readonly sollDays: readonly TraegerPlanningSollDay[];
+  /**
+   * Ganze Abwesenheitstage je Schule, ohne die Art: Eine Schicht dort sagt
+   * moto sofort ab, also gibt es keinen Vorschlag (#7381).
+   */
+  readonly absentDays: readonly {
+    readonly schoolId: string;
+    readonly date: string;
+  }[];
   readonly warnings: readonly WorkingTimeWarning[];
 }
 
@@ -152,6 +160,7 @@ interface BackendPerson {
   soll_minutes: number | null;
   soll_days?:
     { school_id: number | string; date: string; minutes: number }[] | null;
+  absent_days?: { school_id: number | string; date: string }[] | null;
   warnings: unknown;
 }
 
@@ -224,6 +233,10 @@ function mapPlanningWeek(week: BackendWeek): TraegerPlanningWeek {
         schoolId: String(day.school_id),
         date: day.date.slice(0, 10),
         minutes: day.minutes,
+      })),
+      absentDays: (person.absent_days ?? []).map((day) => ({
+        schoolId: String(day.school_id),
+        date: day.date.slice(0, 10),
       })),
       warnings: mapWorkingTimeWarnings(person.warnings),
     })),

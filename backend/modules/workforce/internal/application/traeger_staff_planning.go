@@ -31,6 +31,8 @@ type planningPerson struct {
 	soll   map[string]int
 	// sollDays is the Soll by school and day of the shown week.
 	sollDays []workforce.TraegerPlanningSollDay
+	// absentDays are the full absence days by school of the shown week.
+	absentDays []workforce.TraegerPlanningAbsentDay
 }
 
 // planningScene is what the week view reads in the Träger transaction.
@@ -143,6 +145,10 @@ func (t *TraegerStaff) readPlanningSchool(ctx context.Context, actor workforce.T
 		person := people[live[shift.StaffID]]
 		person.shifts = append(person.shifts, planningShift(shift, school))
 	}
+	for _, day := range view.AbsentDays {
+		person := people[live[day.StaffID]]
+		person.absentDays = append(person.absentDays, workforce.TraegerPlanningAbsentDay{SchoolID: school.ID, Date: day.Date})
+	}
 	for _, day := range view.Soll {
 		person := people[day.StaffRecordID]
 		person.soll[day.Date.StartOfISOWeek().String()] += day.Minutes
@@ -206,7 +212,8 @@ func (p *planningPerson) public(rules workforce.TraegerPlanningRules, monday cal
 		return strings.Compare(a.StartTime, b.StartTime)
 	})
 	person := workforce.TraegerPlanningPerson{RecordID: p.record.ID, FirstName: p.record.FirstName, LastName: p.record.LastName,
-		Sites: p.sites, Shifts: []workforce.TraegerPlanningShift{}, SollDays: p.weekSollDays(), Warnings: []workforce.ShiftWorkingTimeWarning{}}
+		Sites: p.sites, Shifts: []workforce.TraegerPlanningShift{}, SollDays: p.weekSollDays(),
+		AbsentDays: append([]workforce.TraegerPlanningAbsentDay{}, p.absentDays...), Warnings: []workforce.ShiftWorkingTimeWarning{}}
 	slots := make([]domain.PlanSlot, 0, len(p.shifts))
 	for _, shift := range p.shifts {
 		if shift.Cancelled {

@@ -10,6 +10,7 @@ import type {
   TraegerPlanningPerson,
   TraegerPlanningRules,
   TraegerPlanningSchool,
+  TraegerPlanningShift,
 } from "~/lib/traeger-planning-api";
 import type { WorkingTimeWarning } from "~/lib/working-time";
 
@@ -134,13 +135,21 @@ export function warningsOfDay(
 /** Beginn eines Vorschlags, wenn die Person an der Schule diese Woche noch keine Schicht hat. */
 const SUGGESTION_DEFAULT_START = "08:00";
 
+/** Lücke zu einer Schicht davor am selben Tag: Weg und Pause (zählt ab 15 Min.). */
+const SUGGESTION_GAP_MINUTES = 30;
+
+/** Ein Teil einer Pause zählt erst ab 15 Minuten, wie im Backend. */
+const MINIMUM_BREAK_PART = 15;
+
+const LAST_MINUTE = 23 * 60 + 59;
+
 /** Ein Vorschlag aus dem Arbeitsvertrag für einen Tag an einer Schule (#7381). */
 export interface ContractSuggestion {
   readonly schoolId: string;
   readonly schoolName: string;
   /** "YYYY-MM-DD" */
   readonly date: string;
-  /** Soll des Tages an dieser Schule, netto. */
+  /** Vorgeschlagene Arbeitszeit, netto: Soll des Tages, höchstens der Rest der Woche. */
   readonly minutes: number;
   /** "HH:MM" */
   readonly startTime: string;
@@ -167,14 +176,77 @@ function minutesToClock(total: number): string {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
-const LAST_MINUTE = 23 * 60 + 59;
+/** Ein belegter Zeitraum eines Tages in Minuten, mit seiner Pause. */
+interface Busy {
+  readonly start: number;
+  readonly end: number;
+  readonly breakMinutes: number;
+}
+
+/**
+ * Der übliche Beginn der Person an der Schule: der häufigste Beginn ihrer
+ * Schichten dort in der Woche, bei Gleichstand der früheste. Ein einzelner
+ * Abendtermin verschiebt so nicht jeden Vorschlag.
+ */
+function usualStart(shifts: readonly TraegerPlanningShift[]): string {
+  const counts = new Map<string, number>();
+  for (const shift of shifts) {
+    counts.set(shift.startTime, (counts.get(shift.startTime) ?? 0) + 1);
+  }
+  let best: string | null = null;
+  for (const [start, count] of counts) {
+    const bestCount = best === null ? 0 : (counts.get(best) ?? 0);
+    if (
+      best === null ||
+      count > bestCount ||
+      (count === bestCount && start < best)
+    ) {
+      best = start;
+    }
+  }
+  return best ?? SUGGESTION_DEFAULT_START;
+}
+
+/** Schiebt den Beginn hinter jede Überschneidung, mit Lücke für Weg und Pause. */
+function freeStart(
+  start: number,
+  length: number,
+  busy: readonly Busy[],
+): number {
+  let candidate = start;
+  for (const slot of busy) {
+    if (candidate < slot.end && slot.start < candidate + length) {
+      candidate = slot.end + SUGGESTION_GAP_MINUTES;
+    }
+  }
+  return candidate;
+}
+
+/** Pausen eines Tages: die eingetragenen und jede Lücke ab 15 Minuten. */
+function dayBreaks(busy: readonly Busy[]): number {
+  let breaks = 0;
+  busy.forEach((slot, index) => {
+    breaks += slot.breakMinutes;
+    const previous = busy[index - 1];
+    if (previous && slot.start - previous.end >= MINIMUM_BREAK_PART) {
+      breaks += slot.start - previous.end;
+    }
+  });
+  return breaks;
+}
+
+const byStart = (a: Busy, b: Busy) => a.start - b.start;
 
 /**
  * Die Vorschläge des Vertrags für einen Tag: je Schule mit Soll, an der die
- * Person an diesem Tag noch keine Schicht hat. Vergangene Tage bekommen
- * keinen Vorschlag. Der Beginn ist der Beginn der ersten Schicht der Person
- * an dieser Schule in der Woche, sonst 08:00; das Ende folgt aus Soll und
- * gesetzlicher Pause.
+ * Person an diesem Tag noch keine Schicht hat und nicht abwesend ist.
+ * Vergangene Tage bekommen keinen Vorschlag, und keiner führt über das Soll
+ * der Woche.
+ *
+ * Der Beginn ist der übliche Beginn der Person an dieser Schule in der Woche,
+ * sonst 08:00. Liegt dort schon eine Schicht oder ein früherer Vorschlag des
+ * Tages, beginnt der Vorschlag 30 Minuten nach deren Ende. Die Pause folgt
+ * aus der Arbeitszeit des ganzen Tages an allen Schulen, wie die Prüfung.
  */
 export function contractSuggestions(
   person: TraegerPlanningPerson,
@@ -182,29 +254,65 @@ export function contractSuggestions(
   todayIso: string,
 ): ContractSuggestion[] {
   if (date < todayIso) return [];
+  let remaining =
+    person.sollMinutes === null
+      ? 0
+      : person.sollMinutes - person.plannedMinutes;
   const active = person.shifts.filter((shift) => !shift.cancelled);
-  return person.sollDays.flatMap((day) => {
-    if (day.date !== date || day.minutes <= 0) return [];
+  const busy: Busy[] = active
+    .filter((shift) => shift.date === date)
+    .map((shift) => ({
+      start: clockToMinutes(shift.startTime),
+      end: clockToMinutes(shift.endTime),
+      breakMinutes: shift.breakMinutes,
+    }))
+    .sort(byStart);
+  const result: ContractSuggestion[] = [];
+  for (const day of person.sollDays) {
+    if (remaining <= 0) break;
+    if (day.date !== date || day.minutes <= 0) continue;
     const site = person.sites.find((entry) => entry.schoolId === day.schoolId);
-    if (!site) return [];
-    const atSchool = active.filter((shift) => shift.schoolId === day.schoolId);
-    if (atSchool.some((shift) => shift.date === date)) return [];
-    const startTime = atSchool[0]?.startTime ?? SUGGESTION_DEFAULT_START;
-    const breakMinutes = requiredBreak(day.minutes);
-    const end = Math.min(
-      clockToMinutes(startTime) + day.minutes + breakMinutes,
-      LAST_MINUTE,
+    if (!site) continue;
+    const absent = person.absentDays.some(
+      (entry) => entry.schoolId === day.schoolId && entry.date === date,
     );
-    return [
-      {
-        schoolId: day.schoolId,
-        schoolName: site.schoolName,
-        date,
-        minutes: day.minutes,
-        startTime,
-        endTime: minutesToClock(end),
-        breakMinutes,
-      },
-    ];
-  });
+    if (absent) continue;
+    const atSchool = active.filter((shift) => shift.schoolId === day.schoolId);
+    if (atSchool.some((shift) => shift.date === date)) continue;
+    const minutes = Math.min(day.minutes, remaining);
+    const dayNet = busy.reduce(
+      (sum, slot) => sum + slot.end - slot.start - slot.breakMinutes,
+      0,
+    );
+    let breakMinutes = requiredBreak(minutes);
+    const start = freeStart(
+      clockToMinutes(usualStart(atSchool)),
+      minutes + breakMinutes,
+      busy,
+    );
+    // Fehlt dem ganzen Tag noch Pause, trägt dieser Vorschlag den Rest.
+    const placed = [
+      ...busy,
+      { start, end: start + minutes + breakMinutes, breakMinutes },
+    ].sort(byStart);
+    breakMinutes += Math.max(
+      0,
+      requiredBreak(dayNet + minutes) - dayBreaks(placed),
+    );
+    const end = Math.min(start + minutes + breakMinutes, LAST_MINUTE);
+    if (end - start - breakMinutes < minutes) continue;
+    busy.push({ start, end, breakMinutes });
+    busy.sort(byStart);
+    remaining -= minutes;
+    result.push({
+      schoolId: day.schoolId,
+      schoolName: site.schoolName,
+      date,
+      minutes,
+      startTime: minutesToClock(start),
+      endTime: minutesToClock(end),
+      breakMinutes,
+    });
+  }
+  return result;
 }

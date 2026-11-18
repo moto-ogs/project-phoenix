@@ -78,7 +78,10 @@ const MIRA: TraegerPlanningPerson = {
     { schoolId: "1", date: "2026-09-07", minutes: 300 },
     { schoolId: "1", date: "2026-09-08", minutes: 300 },
     { schoolId: "1", date: "2026-09-10", minutes: 420 },
+    // Friday at Süd: on vacation, so no suggestion.
+    { schoolId: "2", date: "2026-09-11", minutes: 240 },
   ],
+  absentDays: [{ schoolId: "2", date: "2026-09-11" }],
   warnings: [
     {
       kind: "rest_period",
