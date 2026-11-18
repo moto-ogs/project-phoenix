@@ -21,7 +21,7 @@ func TestTraegerCatalogPreviewRefusesBilledPricesWithoutKeepingCopies(t *testing
 	testpkg.OwnTraegerCatalog(t, db, office.organization)
 	testpkg.OwnTenantRows(t, db, office.schools...)
 	router := traegerCatalogRouter(t, db, catalogFailedTariffs{err: parentbilling.ErrCareTariffMonthBilled})
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/catalog/phases", map[string]any{"name": "Vorschau", "kind": "school_year", "service_start_date": "2027-08-01", "service_end_date": "2028-07-31", "all_schools": true})
+	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/catalog/phases", map[string]any{"name": "Vorschau", "kind": "school_year", "service_start_date": "2030-08-01", "service_end_date": "2031-07-31", "all_schools": true})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	phase := decodeSchoolPortalData[catalogPhaseBody](t, rec.Body.Bytes())
 	path := fmt.Sprintf("/traeger/catalog/phases/%d", phase.ID)
@@ -53,7 +53,7 @@ func TestTraegerCatalogCarriesActiveFlagsAndKeepsSchoolDeviations(t *testing.T) 
 	testpkg.OwnTraegerCareContracts(t, db, office.organization)
 	testpkg.OwnTenantRows(t, db, office.schools...)
 	router := traegerCatalogRouter(t, db)
-	fields := map[string]any{"name": "Aktiv", "kind": "school_year", "service_start_date": "2027-08-01", "service_end_date": "2028-07-31", "all_schools": true}
+	fields := map[string]any{"name": "Aktiv", "kind": "school_year", "service_start_date": "2030-08-01", "service_end_date": "2031-07-31", "all_schools": true}
 	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/catalog/phases", fields)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	phase := decodeSchoolPortalData[catalogPhaseBody](t, rec.Body.Bytes())

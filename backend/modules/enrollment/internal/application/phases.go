@@ -314,7 +314,9 @@ func (s *Phases) update(ctx context.Context, phase *enrollment.Phase) (enrollmen
 // changed, so Update can resync offering-sourced templates after the write
 // (#2147 review). The recurrence lock is taken before the existing row is
 // read and stays held for the whole update transaction. It returns the
-// stored phase, so the update can tell where its window was.
+// stored phase, so the update can tell where its window was. A changed window
+// must also stay within the service period bounds (#5658); this is the one
+// place an update compares its window with the stored row.
 func (s *Phases) validateCareOfferingPhaseUpdate(ctx context.Context, phase *enrollment.Phase) (*enrollment.Phase, bool, error) {
 	locked, err := enrollment.NewPhaseBoundsReader(s.deps.Records, s.deps.LockTemplateRecurrence).LockedPhase(ctx, phase.ID)
 	if errors.Is(err, enrollment.ErrPhaseBoundsLock) {
