@@ -11,13 +11,15 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 )
 
-func fingerprintEnrollmentLegalPDF(ctx context.Context, tenantID int64, documentURL string) (string, error) {
+type enrollmentLegalPDFs struct{ files objects.UploadFiles }
+
+func (p enrollmentLegalPDFs) fingerprint(ctx context.Context, tenantID int64, documentURL string) (string, error) {
 	storedURL, ok := enrollment.NormalizeTenantLegalDocumentURL(documentURL, tenantID)
 	if !ok {
 		return "", nil
 	}
 	dir, filename := path.Split(storedURL)
-	file, _, err := (objects.UploadFiles{}).Open(ctx, "public"+strings.TrimSuffix(dir, "/"), filename)
+	file, _, err := p.files.Open(ctx, "public"+strings.TrimSuffix(dir, "/"), filename)
 	if errors.Is(err, objects.ErrNotFound) {
 		return "", nil
 	}

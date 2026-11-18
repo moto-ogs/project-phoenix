@@ -8,6 +8,7 @@ import (
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
+	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -25,7 +26,7 @@ func NewEnrollmentIntake(src EnrollmentIntakeSources) *enrollmentCompose.Intake 
 		GuardianHold: src.GuardianHold, Outbox: src.OutboxEnqueuer,
 		Settings: intakeSettings(src.Settings), AdminSubscribers: src.AdminSubscribers, ManualDecider: src.ManualDecider,
 		ParentChanges: src.ParentChanges, Uploads: src.Uploads, Signatures: EnrollmentSignatures{Ledger: SignatureLedger()},
-		Random: securityruntime.FillRandom, Fingerprint: securityruntime.Fingerprint, LegalPDFFingerprint: fingerprintEnrollmentLegalPDF,
+		Random: securityruntime.FillRandom, Fingerprint: securityruntime.Fingerprint, LegalPDFFingerprint: (enrollmentLegalPDFs{files: src.LegalFiles}).fingerprint,
 		FrontendURL: src.FrontendURL, ParentsURL: src.ParentsURL, Logger: src.Logger, FamilyChildrenPurpose: src.FamilyChildrenPurpose,
 		LockTemplateRecurrence: src.LockTemplateRecurrence, Now: src.Now,
 	})
@@ -64,7 +65,7 @@ func NewEnrollmentChangeRequests(src EnrollmentChangeRequestSources) enrollmentO
 		CompanionLockBusy: peopledirectory.TranslateStudentWriteError(peopledirectory.ErrCompanionLockBusy), People: people,
 		GuardianInvitations: src.GuardianInvitations,
 		Settings:            intakeSettings(src.Settings), Outbox: src.OutboxEnqueuer,
-		Fingerprint: securityruntime.Fingerprint, LegalPDFFingerprint: fingerprintEnrollmentLegalPDF,
+		Fingerprint: securityruntime.Fingerprint, LegalPDFFingerprint: (enrollmentLegalPDFs{files: src.LegalFiles}).fingerprint,
 		FrontendURL: src.FrontendURL, ParentsURL: src.ParentsURL, Logger: src.Logger,
 		LockTemplateRecurrence: src.LockTemplateRecurrence, Now: src.Now,
 	}
@@ -161,6 +162,8 @@ type EnrollmentIntakeSources struct {
 	ParentChanges enrollmentCompose.RequestParentChanges
 	// Uploads stores the files parents attach (#4783); nil refuses uploads.
 	Uploads enrollmentOwner.RequestUploadRecords
+	// LegalFiles is the same file store that publishes the enrollment PDFs.
+	LegalFiles objects.UploadFiles
 	// FrontendURL is the base of the staff links, ParentsURL of the
 	// parent-facing ones; it falls back to FrontendURL.
 	FrontendURL string
@@ -202,6 +205,7 @@ type EnrollmentChangeRequestSources struct {
 	Decisions            enrollmentOwner.ApprovedChildChanges
 	BookingGates         enrollmentCompose.CareBookingGates
 	CompanionGraphLocker enrollmentCompose.CompanionGraphCoordinator
+	LegalFiles           objects.UploadFiles
 	Settings             EnrollmentIntakeSettings
 	OutboxEnqueuer       enrollmentCompose.MailOutbox
 	FrontendURL          string

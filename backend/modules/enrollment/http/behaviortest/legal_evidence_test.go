@@ -1,7 +1,6 @@
 package enrollmenthttp_test
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -23,20 +22,22 @@ func TestSubmissionFreezesTheBytesOfLinkedTerms(t *testing.T) {
 
 	const pdf = "%PDF-1.7\nArchived participation terms.\n"
 	const digest = "6b8794899b1a94bb2334ae24efbd27b87f1a8b7d33ef8cadcee234ea8dc0cc85"
-	files := objects.UploadFiles{}
+	files, err := objects.NewUploadFiles(objects.NewLocal(t.TempDir()))
+	require.NoError(t, err)
 	filename := fmt.Sprintf("%d_terms.pdf", tenantID)
 	path, err := files.SaveNamed(strings.NewReader(pdf), "public/uploads/enrollment-legal-documents", filename, false)
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, files.RemoveUploadContext(context.Background(), path)) })
 
 	documentURL := enrollment.EnrollmentLegalDocumentUploadPrefix + filepath.Base(path)
 	env.settings.boolValues[settingKeyLegalTermsEnabled] = true
 	env.settings.stringValues["enrollment.legal_agb_display_mode"] = "pdf"
 	env.settings.stringValues["enrollment.legal_agb_document_url"] = documentURL
 
-	result, err := env.svc.Submit(ctx, validSubmission(t, env.phaseID))
+	env.config.LegalFiles = files
+	service := newTestRequestService(env.config)
+	result, err := service.Submit(ctx, validSubmission(t, env.phaseID))
 	require.NoError(t, err)
-	stored, _, err := env.svc.GetByStatusToken(ctx, result.Request.StatusToken)
+	stored, _, err := service.GetByStatusToken(ctx, result.Request.StatusToken)
 	require.NoError(t, err)
 	require.Len(t, stored.LegalBlocksSnapshot, 1)
 	require.Len(t, stored.LegalBlocksSnapshot[0].Blocks, 1)
