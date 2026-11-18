@@ -1,7 +1,5 @@
 package api
 
-// Benchmark baseline for the PostgreSQL fixture comparison.
-
 import (
 	"context"
 	"encoding/json"
@@ -193,7 +191,7 @@ func TestParentMealMessageWritesRefuseBeforeTheSchool(t *testing.T) {
 		require.Equal(t, "403 care.child_not_linked", got.answer, route)
 		require.False(t, got.reachedSchool(), "%s: %q", route, got.stmts)
 	}
-	require.True(t, rig.sameRows(f.TenantID, start, 1), "nothing stored")
+	require.True(t, rig.waitForRows(f.TenantID, start), "nothing stored")
 }
 
 // TestParentMealMessageWritesRefuseUnderTheLock: the meal plan's own checks
@@ -226,7 +224,7 @@ func TestParentMealMessageWritesRefuseUnderTheLock(t *testing.T) {
 		require.True(t, got.reachedSchool(), c.name)
 		require.Equal(t, c.settings, got.readSettingsAfterLock(), "%s: %q", c.name, got.stmts)
 	}
-	require.True(t, rig.sameRows(f.TenantID, start, 1), "nothing stored")
+	require.True(t, rig.waitForRows(f.TenantID, start), "nothing stored")
 
 	// Only the locked day would change: the deadline has passed.
 	for _, day := range []calendar.Date{mealWriteTuesday, mealWriteWednesday, mealWriteThursday, mealWriteFriday} {
@@ -234,7 +232,7 @@ func TestParentMealMessageWritesRefuseUnderTheLock(t *testing.T) {
 	}
 	start = rig.rows(t, f.TenantID, true)
 	require.Equal(t, "409 meals.participation_cutoff_passed", rig.send(t, mealWeek(f.StudentID, childReadToday, false), f.token).answer)
-	require.True(t, rig.sameRows(f.TenantID, start, 1), "nothing stored")
+	require.True(t, rig.waitForRows(f.TenantID, start), "nothing stored")
 
 	// Registration off: the input is still checked first, without a
 	// setting.
@@ -256,7 +254,7 @@ func TestParentMealMessageWritesRefuseUnderTheLock(t *testing.T) {
 		require.Equal(t, "403 meals.registration_disabled", rig.send(t, mealWriteCallFor(route, f), f.token).answer, route)
 	}
 	rig.registration(t, true)
-	require.True(t, rig.sameRows(f.TenantID, start, 1), "nothing stored")
+	require.True(t, rig.waitForRows(f.TenantID, start), "nothing stored")
 }
 
 // TestParentMealMessageWritesStoreTheirWrite: each success stores exactly
@@ -341,7 +339,7 @@ func TestParentMealMessageWritesPersistNothingWhenCancelled(t *testing.T) {
 		rec := rig.call(t, ctx, mealWriteCallFor(route, f), f.token)
 		cancel()
 		require.Equal(t, 499, rec.Code, "%s: %s", route, rec.Body.String())
-		require.True(t, rig.sameRows(f.TenantID, startCmp, 1), "%s: nothing stored", route)
+		require.True(t, rig.waitForRows(f.TenantID, startCmp), "%s: nothing stored", route)
 		rig.restore(t, f.TenantID, start)
 	}
 }

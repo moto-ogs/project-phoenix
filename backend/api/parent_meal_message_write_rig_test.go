@@ -1,7 +1,5 @@
 package api
 
-// Benchmark baseline for the PostgreSQL fixture comparison.
-
 import (
 	"context"
 	"database/sql"
@@ -305,8 +303,9 @@ func (t writeFaultTx) Rollback() error {
 // the owners' test doubles only through functions.
 type mealWriteRig struct {
 	childReadRig
-	super  *bun.DB
-	faults *writeFaults
+	super        *bun.DB
+	faults       *writeFaults
+	readSnapshot *sql.Stmt
 	// broadcasts counts the read receipts sent to the school.
 	broadcasts func() int
 	// openThread opens the family's team conversation.
@@ -359,7 +358,7 @@ func newMealWriteRig(t *testing.T) mealWriteRig {
 	})
 	require.NoError(t, settings.Settings.SetValue(testpkg.Ctx(t), settingsModule.KeyParentMessageLeadershipEnabled, true, nil, nil))
 	return mealWriteRig{
-		childReadRig: rig, super: super, faults: faults,
+		childReadRig: rig, super: super, faults: faults, readSnapshot: prepareMealWriteSnapshot(t, super),
 		broadcasts: func() int { return len(broadcaster.Calls()) },
 		openThread: func(t *testing.T, f mealWriteFamily) int64 {
 			t.Helper()
@@ -496,22 +495,18 @@ var mealWriteTables = []string{
 
 // volatileColumns are generated anew by every write (identities, clock
 // defaults), so state comparisons leave them out.
-const volatileColumns = `ARRAY['id','order_id','created_at','updated_at','changed_at','frozen_at','detected_at']`
+const volatileColumns = `{id,order_id,created_at,updated_at,changed_at,frozen_at,detected_at}`
 
 // rows is the persisted state of the school: raw for restoring, or without
 // volatile columns for comparing.
 func (r mealWriteRig) rows(t *testing.T, tenantID int64, comparable bool) map[string]string {
 	t.Helper()
-	out := make(map[string]string, len(mealWriteTables))
-	for _, table := range mealWriteTables {
-		row := `to_jsonb(t)`
-		if comparable {
-			row = `to_jsonb(t) - ` + volatileColumns
-		}
-		var raw string
-		require.NoError(t, r.super.NewRaw(fmt.Sprintf(`SELECT coalesce(jsonb_agg(%s ORDER BY (%s)::text), '[]'::jsonb)::text FROM %s t WHERE tenant_id = ?`, row, row, table), tenantID).Scan(context.Background(), &raw))
-		out[table] = raw
+	omittedColumns := "{}"
+	if comparable {
+		omittedColumns = volatileColumns
 	}
+	out, err := r.rowsOf(tenantID, omittedColumns)
+	require.NoError(t, err)
 	return out
 }
 
@@ -538,32 +533,54 @@ func (r mealWriteRig) restore(t *testing.T, tenantID int64, dump map[string]stri
 	}))
 }
 
-// sameRows reports whether the comparable state equals want; with wait > 0
-// it polls up to ten seconds: a connection the pool dropped may still hold
-// its transaction for a moment.
-func (r mealWriteRig) sameRows(tenantID int64, want map[string]string, wait int) bool {
+// waitForRows polls for the expected state for up to ten seconds. A
+// connection the pool dropped may still hold its transaction for a moment.
+func (r mealWriteRig) waitForRows(tenantID int64, want map[string]string) bool {
 	deadline := time.Now().Add(10 * time.Second)
 	for {
-		got, err := r.rowsOf(tenantID)
+		got, err := r.rowsOf(tenantID, volatileColumns)
 		if err == nil && equalRows(got, want) {
 			return true
 		}
-		if wait == 0 || time.Now().After(deadline) {
+		if time.Now().After(deadline) {
 			return false
 		}
 		time.Sleep(25 * time.Millisecond)
 	}
 }
 
-func (r mealWriteRig) rowsOf(tenantID int64) (map[string]string, error) {
-	out := make(map[string]string, len(mealWriteTables))
+func prepareMealWriteSnapshot(t *testing.T, db *bun.DB) *sql.Stmt {
+	t.Helper()
+	selects := make([]string, 0, len(mealWriteTables))
 	for _, table := range mealWriteTables {
-		row := `to_jsonb(t) - ` + volatileColumns
-		var raw string
-		if err := r.super.NewRaw(fmt.Sprintf(`SELECT coalesce(jsonb_agg(%s ORDER BY (%s)::text), '[]'::jsonb)::text FROM %s t WHERE tenant_id = ?`, row, row, table), tenantID).Scan(context.Background(), &raw); err != nil {
+		selects = append(selects, fmt.Sprintf(`SELECT '%s'::text,
+			coalesce(jsonb_agg(snapshot ORDER BY snapshot::text), '[]'::jsonb)::text
+			FROM (SELECT to_jsonb(t) - $2::text[] AS snapshot FROM %s t WHERE tenant_id = $1) AS tenant_rows`, table, table))
+	}
+	stmt, err := db.DB.PrepareContext(context.Background(), strings.Join(selects, "\nUNION ALL\n"))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, stmt.Close()) })
+	return stmt
+}
+
+// rowsOf reads all tables in one snapshot. A prepared statement lets
+// PostgreSQL reuse its plan across the scenario's fault cells.
+func (r mealWriteRig) rowsOf(tenantID int64, omittedColumns string) (map[string]string, error) {
+	rows, err := r.readSnapshot.QueryContext(context.Background(), tenantID, omittedColumns)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	out := make(map[string]string, len(mealWriteTables))
+	for rows.Next() {
+		var table, snapshot string
+		if err := rows.Scan(&table, &snapshot); err != nil {
 			return nil, err
 		}
-		out[table] = raw
+		out[table] = snapshot
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return out, nil
 }
@@ -638,7 +655,7 @@ func (r mealWriteRig) rowCounts(t *testing.T, tenantID int64) map[string]int {
 // identityColumns name the school, child, accounts, rows and instants,
 // which differ between two databases; what is left is the success state
 // development and this branch must share.
-const identityColumns = `ARRAY['id','order_id','created_at','updated_at','changed_at','frozen_at','detected_at','tenant_id','student_id','account_id','changed_by_account_id','thread_id','last_read_message_id','last_read_at']`
+const identityColumns = `{id,order_id,created_at,updated_at,changed_at,frozen_at,detected_at,tenant_id,student_id,account_id,changed_by_account_id,thread_id,last_read_message_id,last_read_at}`
 
 // successStatesDir holds the success states recorded on development, one
 // file per scenario group, each naming the development commit it came from.
@@ -665,12 +682,11 @@ var recordedSuccessStates sync.Map // group → *sync.Map of scenario → state
 
 func (r mealWriteRig) successState(t *testing.T, tenantID int64) string {
 	t.Helper()
+	rows, err := r.rowsOf(tenantID, identityColumns)
+	require.NoError(t, err)
 	var parts []string
 	for _, table := range mealWriteTables {
-		row := `to_jsonb(t) - ` + identityColumns
-		var raw string
-		require.NoError(t, r.super.NewRaw(fmt.Sprintf(`SELECT coalesce(jsonb_agg(%s ORDER BY (%s)::text), '[]'::jsonb)::text FROM %s t WHERE tenant_id = ?`, row, row, table), tenantID).Scan(context.Background(), &raw))
-		parts = append(parts, table+"="+raw)
+		parts = append(parts, table+"="+rows[table])
 	}
 	return strings.Join(parts, "\n")
 }
