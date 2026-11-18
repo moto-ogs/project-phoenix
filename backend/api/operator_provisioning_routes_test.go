@@ -47,6 +47,7 @@ func newOperatorProvisioningRoutes(t *testing.T) operatorProvisioningRoutes {
 	service := buildOperatorProvisioning(t, db)
 	resource := provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{
 		Service: service, RequiredDetails: service.RequiredDetails, DeviceBlocking: service.DeviceBlocking,
+		DeviceHistory: service.DeviceHistory, DeviceSlots: service.DeviceSlots,
 	})
 	operator := chi.NewRouter()
 	mountOperatorProvisioningRoutes(operator, resource, nil)
@@ -225,6 +226,23 @@ func TestOperatorRoutesBlockAndUnblockADevice(t *testing.T) {
 	status, unblockedHash := f.storedDevice(t, device.ID)
 	assert.Equal(t, "active", status)
 	assert.Equal(t, hash, unblockedHash, "the unblocked device keeps its key")
+
+	// The history names what happened to the device, newest first.
+	var history []struct {
+		Action   string `json:"action"`
+		SchoolID string `json:"school_id"`
+	}
+	f.call(t, http.MethodGet, fmt.Sprintf("/operator/devices/%d/history", device.ID), nil, &history)
+	require.NotEmpty(t, history)
+	for _, entry := range history {
+		assert.Equal(t, fmt.Sprint(schoolID), entry.SchoolID)
+	}
+
+	// The school's device limit is stored as the operator sets it.
+	f.call(t, http.MethodPut, fmt.Sprintf("/operator/schools/%d/device-slots", schoolID), map[string]any{"device_slots": 3}, nil)
+	var slots int
+	require.NoError(t, f.db.NewSelect().TableExpr("platform.schools").Column("device_slots").Where("id = ?", schoolID).Scan(testpkg.Ctx(t), &slots))
+	assert.Equal(t, 3, slots)
 }
 
 // operatorBillingRoutes mounts the operator's billing routes under
