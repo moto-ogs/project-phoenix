@@ -348,6 +348,13 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 			return err
 		}
 	}
+	letterhead, err := n.sender.TraegerLetterhead(ctx, d.organizationID)
+	if err != nil {
+		return fmt.Errorf("care contract: letterhead: %w", err)
+	}
+	if letterheadMissing(letterhead) {
+		return carecontract.ErrLetterheadMissing
+	}
 	traeger := strings.TrimSpace(firstText(d.traeger, record.Version.Terms.ContractPartner))
 	template, err := n.templates.NoticeTemplate(ctx, d.organizationID, templateKind(*notice))
 	if err != nil {
@@ -366,23 +373,16 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 	if err != nil {
 		return err
 	}
-	letterhead, err := n.sender.TraegerLetterhead(ctx, d.organizationID)
+	outboxID, err := n.post.EnqueueNoticeMail(ctx, carecontract.NoticeMail{
+		OrganizationID: d.organizationID, ContractID: d.contractID, Recipient: address,
+		GuardianName: fullName(party.FirstName, party.LastName), TraegerName: traeger, Kind: notice.Kind,
+		ConfirmationText: text, IdempotencyKey: fmt.Sprintf("care-contract-notice:%d", noticeID),
+	})
 	if err != nil {
-		return fmt.Errorf("care contract: letterhead: %w", err)
+		return fmt.Errorf("care contract: enqueue confirmation: %w", err)
 	}
-	var outboxID int64
-	if !letterheadMissing(letterhead) {
-		outboxID, err = n.post.EnqueueNoticeMail(ctx, carecontract.NoticeMail{
-			OrganizationID: d.organizationID, ContractID: d.contractID, Recipient: address,
-			GuardianName: fullName(party.FirstName, party.LastName), TraegerName: traeger, Kind: notice.Kind,
-			ConfirmationText: text, IdempotencyKey: fmt.Sprintf("care-contract-notice:%d", noticeID),
-		})
-		if err != nil {
-			return fmt.Errorf("care contract: enqueue confirmation: %w", err)
-		}
-		if err := n.notices.SetNoticeOutbox(ctx, d.organizationID, noticeID, outboxID); err != nil {
-			return err
-		}
+	if err := n.notices.SetNoticeOutbox(ctx, d.organizationID, noticeID, outboxID); err != nil {
+		return err
 	}
 	action, details := noticeTrail(*notice, d.channel, record.Version.ID, noticeID, outboxID)
 	return trailContract(ctx, n.store, d.organizationID, d.accountID, record, action, details)

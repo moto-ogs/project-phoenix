@@ -181,10 +181,9 @@ func TestCareContractNoticeNeedsTheRightStaysWithItsTraegerAndIsAudited(t *testi
 	}
 }
 
-// TestCareContractNoticeWithoutALetterheadIsRecordedWithoutAMail preserves
-// the parent's declaration while a missing current sender blocks only its
-// confirmation mail.
-func TestCareContractNoticeWithoutALetterheadIsRecordedWithoutAMail(t *testing.T) {
+// TestCareContractNoticeWithoutALetterheadIsNotRecorded keeps a declaration
+// retryable after the Träger repairs the sender needed for its confirmation.
+func TestCareContractNoticeWithoutALetterheadIsNotRecorded(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Kündigung ohne Briefkopf")
 	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
@@ -197,8 +196,11 @@ func TestCareContractNoticeWithoutALetterheadIsRecordedWithoutAMail(t *testing.T
 	path := "/traeger/contract-notices/" + strconv.FormatInt(contract, 10)
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, path, map[string]any{"kind": "kuendigung",
 		"termination_kind": "ordentlich", "received_on": concludedOn.String()})
-	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, carecontract.StatusTerminated, decodeSchoolPortalData[noticeOptionsBody](t, rec.Body.Bytes()).Status)
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), "care_contract.letterhead_missing")
+	var status string
+	require.NoError(t, f.db.NewRaw(`SELECT status FROM care_contract.contracts WHERE id = ?`, contract).Scan(context.Background(), &status))
+	assert.Equal(t, carecontract.StatusActive, status)
 	var mails int
 	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM platform.email_outbox WHERE organization_id = ? AND kind = ? AND related_entity_id = ?`,
 		f.office.organization, carecontract.MailKindNotice, contract).Scan(context.Background(), &mails))

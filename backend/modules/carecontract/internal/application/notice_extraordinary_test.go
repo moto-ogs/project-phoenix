@@ -116,6 +116,19 @@ func TestExtraordinaryTerminationWaitsForTheTraegersEnd(t *testing.T) {
 	assert.Equal(t, 1, trail)
 }
 
+// A parent's declaration is accepted only with the confirmation it promises:
+// otherwise the parent can repeat it after the Träger repairs the letterhead.
+func TestParentDeclarationWithoutLetterheadRollsBackForRetry(t *testing.T) {
+	t.Parallel()
+	f := newNoticeFixture(t, "Träger Erklärung ohne Briefkopf", noticeToday)
+	f.notices.sender = noticeSender{letterhead: "Träger e.V."}
+
+	_, err := f.parentDeclare(terminate)
+	require.ErrorIs(t, err, carecontract.ErrLetterheadMissing)
+	assert.Empty(t, f.post.mails)
+	assert.Equal(t, noticeState{status: carecontract.StatusActive}, f.state(t))
+}
+
 // The parents name a reason only with an extraordinary termination, and
 // always with it; the Träger sets no end on an ordinary termination.
 func TestExtraordinaryTerminationNeedsItsReason(t *testing.T) {
