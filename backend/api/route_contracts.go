@@ -12,8 +12,10 @@ import (
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
+	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
+	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
@@ -50,6 +52,16 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/api/messages", parentMessagingAPI.RouteContracts()},
 		{"/api/guardians", guardianRouteContracts()},
 		{"/api/files", filestoreAPI.RouteContracts()},
+		{"/api/enrollment/phases", enrollmentHTTP.PhaseRouteContracts()},
+		// The platform announcements' http role may not import the contract
+		// types; the root names their answer.
+		{"/api/platform", []common.RouteContract{
+			{Method: "GET", Pattern: "/announcements/unread", Portals: []common.PortalScope{common.PortalTenant}, Response: []platformAnnouncementsHTTP.AnnouncementResponse{}},
+			{Method: "POST", Pattern: "/announcements/{id}/dismiss", Portals: []common.PortalScope{common.PortalTenant}, NoData: true},
+		}},
+		// Delivery's http role may not import the contract types; the report
+		// answers no data.
+		{"/api/pwa", []common.RouteContract{{Method: "POST", Pattern: "/usage", Portals: []common.PortalScope{common.PortalTenant}, NoData: true}}},
 		{"/api/announcement-attachments", filestoreAPI.AnnouncementAttachmentRouteContracts()},
 		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
 		// Class Day owns the child sheet the supervision route answers with.

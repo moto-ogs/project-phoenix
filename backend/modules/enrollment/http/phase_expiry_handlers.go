@@ -17,7 +17,7 @@ type PhaseExpiryWarningResponse struct {
 	SourcePhaseName    string  `json:"source_phase_name"`
 	SuccessorPhaseID   *string `json:"successor_phase_id,omitempty"`
 	SuccessorPhaseName *string `json:"successor_phase_name,omitempty"`
-	FirstAffectedDate  string  `json:"first_affected_date"`
+	FirstAffectedDate  string  `json:"first_affected_date" contract:"date"`
 	AffectedChildren   int     `json:"affected_children"`
 	UnresolvedChildren int     `json:"unresolved_children"`
 	State              string  `json:"state"`

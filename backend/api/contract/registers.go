@@ -70,6 +70,7 @@ type EnumSpec struct {
 // legacyNumericIDs names the fields that still travel as numbers on the
 // wire, as "package.Type.GoField".
 var legacyNumericIDs = []string{
+	"platformannouncements.AnnouncementResponse.ID",
 	"appointments.Appointment.ID",
 	"appointments.Appointment.OrganizerStaffID",
 	"appointments.Appointment.TenantID",

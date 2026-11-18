@@ -42,7 +42,7 @@ const TYPE_HEADERS: Record<
 };
 
 interface UnreadAnnouncement {
-  id: number;
+  id: number | string;
   title: string;
   content: string;
   type: string;
@@ -59,9 +59,9 @@ export function AnnouncementModal() {
   const [queuedAnnouncements, setQueuedAnnouncements] = useState<
     UnreadAnnouncement[]
   >([]);
-  const dismissedIdsRef = useRef<Set<number>>(new Set());
+  const dismissedIdsRef = useRef<Set<string>>(new Set());
   // Track IDs the user has seen (closed without dismissing) to avoid re-opening
-  const closedIdsRef = useRef<Set<number>>(new Set());
+  const closedIdsRef = useRef<Set<string>>(new Set());
 
   // Show modal when we have announcements - capture stable snapshot
   useEffect(() => {
@@ -69,7 +69,8 @@ export function AnnouncementModal() {
       // Filter out any we've already dismissed or closed in this session
       const unprocessed = announcements.filter(
         (a) =>
-          !dismissedIdsRef.current.has(a.id) && !closedIdsRef.current.has(a.id),
+          !dismissedIdsRef.current.has(String(a.id)) &&
+          !closedIdsRef.current.has(String(a.id)),
       );
       if (unprocessed.length > 0) {
         setQueuedAnnouncements(unprocessed);
@@ -85,7 +86,7 @@ export function AnnouncementModal() {
     if (!current) return;
 
     // Track this ID as dismissed locally
-    dismissedIdsRef.current.add(current.id);
+    dismissedIdsRef.current.add(String(current.id));
 
     // Send dismiss to backend (fire-and-forget, don't block UI)
     dismiss(current.id).catch((error) => {
@@ -108,9 +109,9 @@ export function AnnouncementModal() {
   // Dismiss all queued announcements on the backend so they don't reappear on next login
   const handleClose = useCallback(() => {
     for (const a of queuedAnnouncements) {
-      closedIdsRef.current.add(a.id);
-      if (!dismissedIdsRef.current.has(a.id)) {
-        dismissedIdsRef.current.add(a.id);
+      closedIdsRef.current.add(String(a.id));
+      if (!dismissedIdsRef.current.has(String(a.id))) {
+        dismissedIdsRef.current.add(String(a.id));
         dismiss(a.id).catch((error) => {
           logger.error("announcement_dismiss_failed", {
             error: error instanceof Error ? error.message : String(error),

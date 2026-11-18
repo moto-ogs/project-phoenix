@@ -2,6 +2,7 @@
 import { routes as announcementAttachments } from "./announcement-attachments.generated";
 import { routes as catererNotifications } from "./caterer-notifications.generated";
 import { routes as catererSchools } from "./caterer-schools.generated";
+import { routes as enrollment } from "./enrollment.generated";
 import { routes as files } from "./files.generated";
 import { routes as guardians } from "./guardians.generated";
 import { routes as messages } from "./messages.generated";
@@ -10,6 +11,8 @@ import { routes as operatorBilling } from "./operator-billing.generated";
 import { routes as operatorDevices } from "./operator-devices.generated";
 import { routes as parentAnnouncements } from "./parent-announcements.generated";
 import { routes as parentMe } from "./parent-me.generated";
+import { routes as platform } from "./platform.generated";
+import { routes as pwa } from "./pwa.generated";
 import { routes as schoolCalendar } from "./school-calendar.generated";
 import { routes as schoolClassDay } from "./school-class-day.generated";
 import { routes as schoolNotifications } from "./school-notifications.generated";
@@ -154,6 +157,7 @@ export const portalRoutes = {
   ],
   tenant: [
     announcementAttachments["DELETE /api/announcement-attachments/{announcementId}/{attachmentId}"],
+    enrollment["GET /api/enrollment/phases/expiry-warnings"],
     files["DELETE /api/files/folders/{folderId}"],
     files["DELETE /api/files/folders/{folderId}/files/{fileId}"],
     files["GET /api/files/audience"],
@@ -225,6 +229,9 @@ export const portalRoutes = {
     parentAnnouncements["POST /api/parent-announcements/{announcementId}/resend-failed"],
     parentAnnouncements["POST /api/parent-announcements/{announcementId}/unpublish"],
     parentAnnouncements["PUT /api/parent-announcements/{announcementId}"],
+    platform["GET /api/platform/announcements/unread"],
+    platform["POST /api/platform/announcements/{id}/dismiss"],
+    pwa["POST /api/pwa/usage"],
     staffMessages["GET /api/staff-messages/"],
     staffMessages["GET /api/staff-messages/recipients"],
     staffMessages["GET /api/staff-messages/threads/{threadID}"],

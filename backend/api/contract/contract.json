@@ -257,6 +257,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/enrollment/phases/expiry-warnings",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PhaseExpiryWarningResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/files/audience",
       "portals": [
         "tenant"
@@ -691,6 +705,20 @@
       "response": {
         "kind": "ref",
         "ref": "statsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/platform/announcements/unread",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "AnnouncementResponse"
+        }
       }
     },
     {
@@ -1948,6 +1976,22 @@
         "kind": "ref",
         "ref": "announcementResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/platform/announcements/{id}/dismiss",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/pwa/usage",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
     },
     {
       "method": "POST",
@@ -3283,6 +3327,55 @@
         {
           "name": "status",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AnnouncementResponse",
+      "go_type": "platformannouncements.AnnouncementResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "severity",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "published_at",
           "schema": {
             "kind": "string"
           }
@@ -8414,6 +8507,68 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PhaseExpiryWarningResponse",
+      "go_type": "enrollmenthttp.PhaseExpiryWarningResponse",
+      "fields": [
+        {
+          "name": "source_phase_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source_phase_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "successor_phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "successor_phase_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_affected_date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "affected_children",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unresolved_children",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "state",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "overdue",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
