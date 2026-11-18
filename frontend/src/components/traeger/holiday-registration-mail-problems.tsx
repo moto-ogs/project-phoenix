@@ -113,6 +113,7 @@ export function HolidayRegistrationMailProblemsAlert({
   outcomes,
   cancelled,
   parentsSectionId,
+  revealParents,
 }: Readonly<{
   problems: readonly HolidayRegistrationMailProblem[];
   /** What became of each mail; it decides whether the address may be wrong. */
@@ -123,6 +124,8 @@ export function HolidayRegistrationMailProblemsAlert({
    * there, so the notice leads to it (#6999).
    */
   parentsSectionId: string;
+  /** Shows the parents' card first when another tab holds it (#7410). */
+  revealParents?: () => void;
 }>) {
   if (problems.length === 0) return null;
   return (
@@ -130,6 +133,7 @@ export function HolidayRegistrationMailProblemsAlert({
       action={
         <JumpButton
           targetId={parentsSectionId}
+          reveal={revealParents}
           tooltip="Springt zu Telefon und E-Mail-Adresse der Eltern."
         >
           Zu den Eltern
