@@ -4146,7 +4146,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
-      "binding_digest": "61e5d268f4957f80d6f515c86d91126c",
+      "binding_digest": "fc97b44ad6b9ae414274360f656db363",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
@@ -4154,7 +4154,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
-      "binding_digest": "8ba64e852f7e8af5b8363a5235d7ed88",
+      "binding_digest": "947ae5f90ebe56f6401f06440894f445",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchoolForShare",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
+      "binding_digest": "da936280777b535c2e7b03831c361957",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
@@ -4162,10 +4170,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
-      "binding_digest": "9707f4246546c9d1830693cb65f92d9c",
+      "binding_digest": "61156e31c21769a97b0323f3456e9321",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolQuery.FindSchool",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchoolForShare",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollSchools.School",
+      "binding_digest": "5886400265c410b63510ea6e542abb59",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollSchools.School",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
     },
     {

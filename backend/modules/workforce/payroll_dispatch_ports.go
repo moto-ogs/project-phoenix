@@ -124,6 +124,9 @@ type PayrollMail interface {
 type PayrollSchool struct {
 	Name      string
 	Subdomain string
+	// Retired: the school is deleted or, as a demo school, hidden by its
+	// retirement (deleted_at). The reminders send it nothing (#7478).
+	Retired bool
 }
 
 // PayrollSchools reads the school of a tenant.
