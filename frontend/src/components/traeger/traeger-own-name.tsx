@@ -26,7 +26,7 @@ export function useTraegerOwnName(membership: TraegerMembershipKey | null): {
   const profile = useTraegerResource(
     membership ? traegerKeys.profile() : null,
     fetchTraegerProfile,
-    "Ihr Konto",
+    "Dein Konto",
   ).data;
   return { name: profile?.name.trim() || undefined };
 }

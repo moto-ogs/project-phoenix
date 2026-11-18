@@ -191,7 +191,7 @@ export function RoomCheckinDialog({
         .map((candidate) => candidate.name);
       setSelected(skippedIds);
       formError.invalid(
-        `${placed} ${placed === 1 ? "Kind ist" : "Kinder sind"} jetzt in ${roomName}. Nicht angemeldet: ${names.join(", ")}. Prüfen Sie die Angaben dieser Kinder.`,
+        `${placed} ${placed === 1 ? "Kind ist" : "Kinder sind"} jetzt in ${roomName}. Nicht angemeldet: ${names.join(", ")}. Prüfe die Angaben dieser Kinder.`,
       );
       await onDone();
       return;
@@ -243,7 +243,7 @@ export function RoomCheckinDialog({
             size="md"
             onClick={() => void submit()}
             disabled={count === 0}
-            disabledReason="Wählen Sie zuerst mindestens ein Kind aus."
+            disabledReason="Wähle zuerst mindestens ein Kind aus."
             isLoading={saving}
             loadingText="Melde an …"
             tooltip={`Meldet die ausgewählten Kinder sofort an und setzt sie in ${roomName}.`}
@@ -278,8 +278,8 @@ export function RoomCheckinDialog({
             }
             description={
               query.trim()
-                ? "Prüfen Sie die Schreibweise."
-                : `Es gibt gerade kein Kind, das Sie in ${roomName} anmelden können.`
+                ? "Prüfe die Schreibweise."
+                : `Es gibt gerade kein Kind, das du in ${roomName} anmelden kannst.`
             }
           />
         ) : (

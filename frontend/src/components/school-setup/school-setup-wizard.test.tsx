@@ -295,7 +295,7 @@ describe("SchoolSetupWizard", () => {
     expect(
       screen.getByRole("button", { name: /^Erste Person ins Team einladen/ }),
     ).toHaveAttribute("aria-expanded", "true");
-    expect(screen.queryByText("So arbeitet Ihre OGS")).not.toBeInTheDocument();
+    expect(screen.queryByText("So arbeitet deine OGS")).not.toBeInTheDocument();
     unmount();
 
     render(<SchoolSetupWizard />);
@@ -382,7 +382,7 @@ describe("SchoolSetupWizard", () => {
     render(<SchoolSetupWizard />);
     expect(
       screen.getByText(
-        /Die Anleitungen zu allen Schritten finden Sie jederzeit/,
+        /Die Anleitungen zu allen Schritten findest du jederzeit/,
       ),
     ).toBeInTheDocument();
 
@@ -391,7 +391,7 @@ describe("SchoolSetupWizard", () => {
     );
     expect(api.setSchoolSetupDismissed).not.toHaveBeenCalled();
     expect(
-      screen.getByText(/Sie können sie nicht wieder einblenden/),
+      screen.getByText(/Du kannst sie nicht wieder einblenden/),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
@@ -415,7 +415,7 @@ describe("SchoolSetupWizard", () => {
       screen.getByRole("button", { name: "Nicht mehr anzeigen" }),
     );
 
-    expect(screen.getByText(/in allen OGS Ihres Trägers/)).toBeInTheDocument();
+    expect(screen.getByText(/in allen OGS deines Trägers/)).toBeInTheDocument();
   });
 
   it("offers the parent tour only once there is a child", () => {
@@ -704,7 +704,7 @@ describe("SchoolSetupWizard", () => {
       name: "Einladung wählen",
     });
     expect(menuStop).toHaveTextContent("Station 5 von 7");
-    expect(menuStop).toHaveTextContent("Wählen Sie „Personal einladen“.");
+    expect(menuStop).toHaveTextContent("Wähle „Personal einladen“.");
     await waitForHighlight();
 
     // Der Eintrag öffnet das Fenster, das Menü schließt sich.
@@ -803,7 +803,7 @@ describe("SchoolSetupWizard", () => {
     });
     await waitForHighlight();
     expect(clickStop).toHaveTextContent(
-      "Klicken Sie auf die grün umrandete Stelle.",
+      "Klicke auf die grün umrandete Stelle.",
     );
     expect(
       document.querySelector(".motion-safe\\:animate-pulse"),
@@ -1029,7 +1029,7 @@ describe("SchoolSetupWizard", () => {
 
     expect(
       await screen.findByText(
-        /Die Tour ist beendet, weil Sie eine andere Seite/,
+        /Die Tour ist beendet, weil du eine andere Seite/,
       ),
     ).toBeInTheDocument();
     // Neu starten geht mit demselben Knopf.
@@ -1143,7 +1143,7 @@ describe("SchoolSetupWizard", () => {
       render(<SchoolSetupWizard />);
 
       expect(
-        screen.getByText(/Tragen Sie für jede Person im Team/),
+        screen.getByText(/Trage für jede Person im Team/),
       ).toBeInTheDocument();
       expect(screen.queryByRole("progressbar", { name: /Soll/ })).toBeNull();
       expect(screen.queryByRole("alert")).toBeNull();

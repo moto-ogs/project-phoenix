@@ -232,7 +232,7 @@ describe("GuardianNoticeFields", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Failed to fetch/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Sie können trotzdem absagen/)).toBeVisible();
+    expect(screen.getByText(/Du kannst trotzdem absagen/)).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(await screen.findByLabelText(CHECKBOX_LABEL)).toBeChecked();

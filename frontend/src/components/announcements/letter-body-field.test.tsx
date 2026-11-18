@@ -123,7 +123,7 @@ describe("LetterBodyField", () => {
 
     expect(
       await screen.findByText(
-        "Diese Platzhalter kennt moto nicht: {{allergien}}, {gruppe}}. Bitte nehmen Sie nur Platzhalter aus der Liste.",
+        "Diese Platzhalter kennt moto nicht: {{allergien}}, {gruppe}}. Bitte nimm nur Platzhalter aus der Liste.",
       ),
     ).toBeInTheDocument();
     expect(

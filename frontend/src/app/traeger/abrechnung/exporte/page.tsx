@@ -66,7 +66,7 @@ import { traegerPath } from "~/lib/traeger-url";
 const logger = createLogger({ component: "TraegerFinanceExportsPage" });
 
 const INFO =
-  "Hier laden Sie die Sollstellung für Ihre Kämmerei und die DATEV-Datei für Ihr Steuerbüro herunter. Welche Spalten die Sollstellung hat, legen Sie unter „Feldzuordnung“ fest. Jede Datei bekommt eine neue Nummer und steht im Protokoll.";
+  "Hier lädst du die Sollstellung für deine Kämmerei und die DATEV-Datei für dein Steuerbüro herunter. Welche Spalten die Sollstellung hat, legst du unter „Feldzuordnung“ fest. Jede Datei bekommt eine neue Nummer und steht im Protokoll.";
 
 /** What the page shows, once runs, protocol and settings are there. */
 function exportsData(
@@ -155,7 +155,7 @@ function MorePages({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-sm text-gray-600">
-        Sie sehen {shown} von {total} {noun}.
+        Du siehst {shown} von {total} {noun}.
       </p>
       <Button
         type="button"
@@ -429,7 +429,7 @@ export default function TraegerFinanceExportsPage() {
           ) : null}
           <SectionCard
             title="Dateien je Lauf"
-            description="Die Sollstellung ist für Ihre Kämmerei, die DATEV-Datei für Ihr Steuerbüro. Die DATEV-Datei enthält nur neue Buchungen."
+            description="Die Sollstellung ist für deine Kämmerei, die DATEV-Datei für dein Steuerbüro. Die DATEV-Datei enthält nur neue Buchungen."
             action={
               <TraegerListExportMenu
                 download={(format) =>

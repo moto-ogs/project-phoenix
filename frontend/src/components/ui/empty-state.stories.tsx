@@ -52,7 +52,7 @@ export const ResultSuccess: Story = {
     tone: "success",
     icon: <Check aria-hidden="true" />,
     title: "Konto erstellt",
-    description: "Sie werden gleich weitergeleitet.",
+    description: "Du wirst gleich weitergeleitet.",
   },
 };
 

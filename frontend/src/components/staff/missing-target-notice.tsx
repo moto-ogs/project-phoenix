@@ -106,7 +106,7 @@ export function MissingTargetDialogNotice({
       announce="polite"
       message={`Für ${staffName} ist im ${monthLabel} kein Soll hinterlegt. ${entryLabel} zählt in diesem Monat deshalb 0 Stunden. Gilt später ein Soll für diese Tage, rechnet moto die Stunden nach. ${
         canSetTarget
-          ? "Das Soll legen Sie in der Personalakte unter „Arbeitszeitmodell“ fest."
+          ? "Das Soll legst du in der Personalakte unter „Arbeitszeitmodell“ fest."
           : MISSING_TARGET_OWNER
       }`}
       action={

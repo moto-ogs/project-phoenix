@@ -588,7 +588,7 @@ describe("CatererOverviewPage (#3873)", () => {
       .getByRole("heading", { name: "OGS Nord" })
       .closest("section")!;
     expect(await within(north).findByRole("alert")).toHaveTextContent(
-      "Sie beliefern diese Schule nicht mehr",
+      "Du belieferst diese Schule nicht mehr",
     );
     mocks.fetchCatererOrders.mockImplementation(
       () => new Promise(() => undefined),
@@ -602,7 +602,7 @@ describe("CatererOverviewPage (#3873)", () => {
 
   it.each([
     ["meals.order_not_found", 404, "Diese Bestellung gibt es nicht."],
-    ["meals.not_supplied", 403, "Sie beliefern diese Schule nicht mehr."],
+    ["meals.not_supplied", 403, "Du belieferst diese Schule nicht mehr."],
   ] as const)(
     "keeps unrelated readable windows after confirmation returns %s",
     async (code, status, message) => {
@@ -828,7 +828,7 @@ describe("CatererOverviewPage (#3873)", () => {
     render(<CatererOverviewPage />, { wrapper: ToastProvider });
 
     const sentence = await screen.findByText(
-      "Sie beliefern zurzeit keine Schule. Sobald eine Schule Sie einlädt, sehen Sie hier ihre Bestellungen.",
+      "Du belieferst zurzeit keine Schule. Sobald eine Schule dich einlädt, siehst du hier ihre Bestellungen.",
     );
     const card = screen
       .getByRole("heading", { name: "Bestellungen für Küche am Markt" })
@@ -1011,7 +1011,7 @@ describe("CatererOverviewPage (#3873)", () => {
       within(north).getAllByRole("button", { name: "Erhalten bestätigen" })[0]!,
     );
     const messages = await screen.findAllByText(
-      "Sie beliefern diese Schule nicht mehr. Bitte fragen Sie die Schule.",
+      "Du belieferst diese Schule nicht mehr. Bitte frage die Schule.",
     );
     expect(messages[0]).toBeVisible();
     expect(
@@ -1042,7 +1042,7 @@ describe("CatererOverviewPage (#3873)", () => {
       name: "Wiederholen",
     });
     expect(
-      within(south).queryByText(/laden Sie die Seite neu/),
+      within(south).queryByText(/lade die Seite neu/),
     ).not.toBeInTheDocument();
 
     southFails = false;

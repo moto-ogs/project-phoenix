@@ -160,7 +160,7 @@ export function ChildQuotaModal({
       event?.preventDefault();
       const result = validateChildQuotaDraft({ bundles, bundleSize });
       if (!result.ok) {
-        invalid("Bitte prüfen Sie die markierten Felder.", {
+        invalid("Bitte prüfe die markierten Felder.", {
           [FIELD_NAMES[result.field]]: result.error,
         });
         return;

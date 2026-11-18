@@ -542,8 +542,8 @@ type personalReminderCopy struct {
 var reminderCopyByType = map[string]personalReminderCopy{
 	TypePickupUpcoming: {
 		title:    "Abholung steht an",
-		singular: "Ein Kind aus Ihrer Aufsicht wird bald abgeholt.",
-		plural:   "%d Kinder aus Ihrer Aufsicht werden bald abgeholt.",
+		singular: "Ein Kind aus deiner Aufsicht wird bald abgeholt.",
+		plural:   "%d Kinder aus deiner Aufsicht werden bald abgeholt.",
 	},
 	TypePickupOverdue: {
 		title:    "Abholung überfällig",
@@ -553,8 +553,8 @@ var reminderCopyByType = map[string]personalReminderCopy{
 	},
 	TypeActivityStart: {
 		title:    "Aktivität beginnt",
-		singular: "In einem Raum Ihrer Aufsicht beginnt gleich eine Aktivität.",
-		plural:   "In Ihren Räumen beginnen gleich %d Aktivitäten.",
+		singular: "In einem Raum deiner Aufsicht beginnt gleich eine Aktivität.",
+		plural:   "In deinen Räumen beginnen gleich %d Aktivitäten.",
 	},
 	TypeActivityOverdue: {
 		title:    "Aktivität nicht gestartet",
@@ -569,9 +569,9 @@ var reminderCopyByType = map[string]personalReminderCopy{
 		urgent:   true,
 	},
 	TypeMyActivityStarting: {
-		title:    "Ihr Einsatz beginnt",
-		singular: "Einer Ihrer geplanten Einsätze beginnt gleich.",
-		plural:   "%d Ihrer geplanten Einsätze beginnen gleich.",
+		title:    "Dein Einsatz beginnt",
+		singular: "Einer deiner geplanten Einsätze beginnt gleich.",
+		plural:   "%d deiner geplanten Einsätze beginnen gleich.",
 	},
 }
 

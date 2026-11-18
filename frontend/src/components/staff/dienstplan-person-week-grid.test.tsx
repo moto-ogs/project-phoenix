@@ -333,11 +333,11 @@ describe("DienstplanPersonWeekGrid read-only", () => {
       /^08:00–12:00\s*GT$/,
     );
     expect(
-      screen.queryByText(/Ziehen Sie über die Viertelstunden/),
+      screen.queryByText(/Ziehe über die Viertelstunden/),
     ).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        /Nur zur Information\. Ihre Schichten plant die Leitung/,
+        /Nur zur Information\. Deine Schichten plant die Leitung/,
       ),
     ).toBeInTheDocument();
     expect(screen.getByTestId("person-week-day-2026-07-06")).not.toHaveClass(

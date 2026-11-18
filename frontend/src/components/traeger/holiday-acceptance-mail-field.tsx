@@ -56,8 +56,8 @@ export function HolidayAcceptanceMailField({
   error?: string;
   onChange: (text: string) => void;
 }>) {
-  const traegerName = useShellAuthSafe()?.brandLabel ?? "Ihr Träger";
-  const periodName = draft.name.trim() || "Ihr Ferienzeitraum";
+  const traegerName = useShellAuthSafe()?.brandLabel ?? "Dein Träger";
+  const periodName = draft.name.trim() || "Dein Ferienzeitraum";
   const text = draft.acceptanceMailText.trim();
   const used = [...draft.acceptanceMailText].length;
 
@@ -66,7 +66,7 @@ export function HolidayAcceptanceMailField({
       <div>
         <SectionLabel as="h3">Annahme-Mail an Eltern</SectionLabel>
         <p className="text-sm text-gray-600">
-          Eltern bekommen diese E-Mail, wenn Sie ihre Anmeldung bestätigen.
+          Eltern bekommen diese E-Mail, wenn du ihre Anmeldung bestätigst.
           Kinder, Wochen und Zeitmodell setzt moto selbst ein.
         </p>
       </div>
@@ -126,13 +126,13 @@ export function HolidayAcceptanceMailField({
               </div>
               <div className="space-y-2">
                 <p className="text-base font-semibold text-gray-900">
-                  Ihre Ferienanmeldung ist bestätigt
+                  Deine Ferienanmeldung ist bestätigt
                 </p>
                 <p>Guten Tag Eva Beispiel,</p>
                 <p>
                   der Träger{" "}
                   <strong className="text-gray-900">{traegerName}</strong> hat
-                  Ihre Anmeldung für{" "}
+                  deine Anmeldung für{" "}
                   <strong className="text-gray-900">{periodName}</strong>{" "}
                   bestätigt.
                 </p>
@@ -152,8 +152,8 @@ export function HolidayAcceptanceMailField({
                 </InsetPanel>
               ) : (
                 <InsetPanel dashed padding="sm" className="text-gray-500">
-                  Hier steht Ihr Text. Ohne Text bekommen Eltern die E-Mail ohne
-                  Hinweise.
+                  Hier steht dein Text. Ohne Text bekommen Eltern die E-Mail
+                  ohne Hinweise.
                 </InsetPanel>
               )}
               <div className="space-y-1 text-center">

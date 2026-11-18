@@ -141,7 +141,7 @@ export function LetterBodyField({
                 variant="outline"
                 size="compact"
                 disabled={disabled}
-                tooltip={`Setzt „${p.label}“ dort in den Text, wo Sie schreiben.`}
+                tooltip={`Setzt „${p.label}“ dort in den Text, wo du schreibst.`}
                 onClick={() => insert(p.name)}
                 className="gap-1"
               >
@@ -157,7 +157,7 @@ export function LetterBodyField({
             type="warning"
             size="compact"
             announce="polite"
-            message={`Diese Platzhalter kennt moto nicht: ${unknown.join(", ")}. Bitte nehmen Sie nur Platzhalter aus der Liste.`}
+            message={`Diese Platzhalter kennt moto nicht: ${unknown.join(", ")}. Bitte nimm nur Platzhalter aus der Liste.`}
           />
         )}
       </div>

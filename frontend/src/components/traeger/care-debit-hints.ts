@@ -66,7 +66,7 @@ export function debitHints(items: readonly DebitItem[]): DebitHint[] {
     } else if (payment?.mandate?.noticeShort) {
       hints.push({
         item,
-        text: `Abbuchung schon am ${formatDate(payment.dueOn)}. Das ist früher als Ihre Vorabankündigung erlaubt.`,
+        text: `Abbuchung schon am ${formatDate(payment.dueOn)}. Das ist früher als deine Vorabankündigung erlaubt.`,
         dueTooSoon: true,
       });
     }
@@ -159,7 +159,7 @@ export function debitOpenPoints(
       ? null
       : earliest
         ? `${familiesLabel(tooEarly)}: ${day ? `Abbuchung am ${formatDate(day)} ist zu früh` : "Abbuchung zu früh"}, frühestens am ${formatDate(earliest)}.`
-        : `${familiesLabel(tooEarly)}: Abbuchung früher als Ihre Vorabankündigung erlaubt.`,
+        : `${familiesLabel(tooEarly)}: Abbuchung früher als deine Vorabankündigung erlaubt.`,
     halted.length === 0
       ? null
       : creditorMissing
@@ -210,7 +210,7 @@ function tooEarlyText(
         : `${prenotificationDays}\u00A0Tage`;
   const rule =
     prenotificationDays === null
-      ? "Ihre Vorabankündigung braucht mehr Vorlauf."
+      ? "Deine Vorabankündigung braucht mehr Vorlauf."
       : issuedOn
         ? `Abbuchung frühestens am ${formatDate(earliestDebitDay(issuedOn, prenotificationDays))}, ${span} nach dem Rechnungsdatum.`
         : `Abbuchung frühestens ${span} nach dem Rechnungsdatum.`;

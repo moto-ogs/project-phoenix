@@ -456,7 +456,7 @@ export function StudentCreateModal({
       schoolClass: true,
     });
     if (Object.keys(fieldErrors).length === 0) return true;
-    errors.invalid("Bitte prüfen Sie die markierten Felder.", fieldErrors);
+    errors.invalid("Bitte prüfe die markierten Felder.", fieldErrors);
     return false;
   };
 
@@ -635,13 +635,13 @@ export function StudentCreateModal({
               {mode === "student" && careDaysSource === "bookings" ? (
                 <Alert
                   type="info"
-                  message="Die Betreuungstage dieser Schule kommen aus Buchungen. Legen Sie ein Kind mit OGS-Betreuung deshalb unter Anmeldephasen mit „Manuelle Anmeldung“ an."
+                  message="Die Betreuungstage dieser Schule kommen aus Buchungen. Lege ein Kind mit OGS-Betreuung deshalb unter Anmeldephasen mit „Manuelle Anmeldung“ an."
                   action={
                     <ButtonLink
                       href={tenantPath("/enrollment-phases")}
                       variant="surface"
                       size="compact"
-                      tooltip="Wechselt zu den Anmeldephasen, Ihre Eingaben hier gehen verloren."
+                      tooltip="Wechselt zu den Anmeldephasen, deine Eingaben hier gehen verloren."
                     >
                       Anmeldephasen öffnen
                     </ButtonLink>
@@ -660,7 +660,7 @@ export function StudentCreateModal({
                           Für Kinder der Klasse ohne Platz in der OGS. Sie
                           stehen in der Kinderliste und in der Klassenansicht (
                           <span className="font-medium">Keine Betreuung</span>
-                          ). Danach können Sie die Eltern in die Eltern-App
+                          ). Danach kannst du die Eltern in die Eltern-App
                           einladen. Gruppe, Abholung und Betreuungszeiten gibt
                           es für diese Kinder nicht.
                         </>

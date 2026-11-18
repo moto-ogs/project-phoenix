@@ -91,7 +91,7 @@ function SettingsContent() {
         empty={{
           title: "Keine Einstellungen verfügbar.",
           description:
-            "Für Ihre Rolle ist hier nichts freigegeben. Wenden Sie sich an Ihre Leitung, wenn Sie Einstellungen ändern müssen.",
+            "Für deine Rolle ist hier nichts freigegeben. Wende dich an deine Leitung, wenn du Einstellungen ändern musst.",
         }}
       />
     );
@@ -110,7 +110,7 @@ function SettingsContent() {
         <div className="mb-4">
           <Alert
             type="info"
-            message="Diese Einstellung gibt es nur für Schulen mit NFC-Tablets. Ihre Schule nutzt keine NFC-Tablets."
+            message="Diese Einstellung gibt es nur für Schulen mit NFC-Tablets. Deine Schule nutzt keine NFC-Tablets."
           />
         </div>
       ) : null}

@@ -60,7 +60,7 @@ function SupervisionDetails({
     return (
       <Alert
         type="info"
-        message="Sie beaufsichtigen diese Betreuung nicht mehr. Deshalb können Sie niemanden hinzufügen."
+        message="Du beaufsichtigst diese Betreuung nicht mehr. Deshalb kannst du niemanden hinzufügen."
       />
     );
   return (
@@ -284,10 +284,10 @@ function addBlockedReason(
 ): string | undefined {
   if (!overview) return undefined;
   if (!overview.canAssign)
-    return "Sie beaufsichtigen diese Betreuung nicht mehr.";
+    return "Du beaufsichtigst diese Betreuung nicht mehr.";
   if (targetCount === 0)
-    return "Es gibt niemanden mehr, den Sie eintragen können.";
-  if (!selectedStaffId) return "Wählen Sie zuerst eine Person aus.";
+    return "Es gibt niemanden mehr, den du eintragen kannst.";
+  if (!selectedStaffId) return "Wähle zuerst eine Person aus.";
   return undefined;
 }
 

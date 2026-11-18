@@ -7,7 +7,7 @@
 
     <p>Guten Tag {{.GuardianFirstName}} {{.GuardianLastName}},</p>
 
-    <p>vielen Dank für Ihre Anmeldung.{{if .PhaseName}} Phase: <strong>{{.PhaseName}}</strong>.{{end}} Aktuell sind die Kapazitäten ausgeschöpft, deshalb haben wir Ihre Anmeldung auf die Warteliste aufgenommen.</p>
+    <p>vielen Dank für deine Anmeldung.{{if .PhaseName}} Phase: <strong>{{.PhaseName}}</strong>.{{end}} Aktuell sind die Kapazitäten ausgeschöpft, deshalb haben wir deine Anmeldung auf die Warteliste aufgenommen.</p>
 
     {{if .ChildNames}}
     <div class="highlight-box">
@@ -24,18 +24,18 @@
     <p style="margin-top: 16px; font-size: 14px;"><strong>Anmerkung der Schule:</strong> {{.StatusReason}}</p>
     {{end}}
 
-    <p style="margin-top: 16px;">Wir benachrichtigen Sie, sobald sich der Status ändert. Den aktuellen Stand können Sie jederzeit hier einsehen:</p>
+    <p style="margin-top: 16px;">Wir benachrichtigen dich, sobald sich der Status ändert. Den aktuellen Stand kannst du jederzeit hier einsehen:</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.StatusURL}}">Anmeldungsstatus ansehen</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopiere bitte diesen Link:</p>
     <div class="link-box">
         <a href="{{.StatusURL}}">{{.StatusURL}}</a>
     </div>
 
-    <p class="security-note">Bei Rückfragen können Sie sich jederzeit direkt an die Schule wenden.</p>
+    <p class="security-note">Bei Rückfragen kannst du dich jederzeit direkt an die Schule wenden.</p>
 </div>
 
 {{template "footer" .}}

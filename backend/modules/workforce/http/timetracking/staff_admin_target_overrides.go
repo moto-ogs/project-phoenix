@@ -31,13 +31,13 @@ func (req targetOverrideRequest) fields() (workforce.StaffTargetOverrideFields, 
 	fields := workforce.StaffTargetOverrideFields{StartDate: req.StartDate, EndDate: req.EndDate}
 	switch {
 	case req.DailyMinutes != nil && req.WeekdayMinutes != nil:
-		return fields, targetOverrideRequestError("Bitte geben Sie entweder Stunden pro Tag oder Stunden für die Wochentage ein.")
+		return fields, targetOverrideRequestError("Bitte gib entweder Stunden pro Tag oder Stunden für die Wochentage ein.")
 	case req.DailyMinutes != nil:
 		fields.DailyMinutes = *req.DailyMinutes
 	case req.WeekdayMinutes != nil:
 		fields.WeekdayMinutes = req.WeekdayMinutes
 	default:
-		return fields, targetOverrideRequestError("Bitte geben Sie Stunden pro Tag oder Stunden für die Wochentage ein.")
+		return fields, targetOverrideRequestError("Bitte gib Stunden pro Tag oder Stunden für die Wochentage ein.")
 	}
 	return fields, nil
 }

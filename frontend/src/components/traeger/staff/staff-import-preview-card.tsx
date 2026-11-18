@@ -163,13 +163,13 @@ export function StaffImportPreviewCard({
       description={
         disabled
           ? "Die Vorschau zeigt den letzten geprüften Stand. Übernehmen geht erst nach der Prüfung."
-          : "So würde moto jede Zeile übernehmen. Geändert wird erst, wenn Sie übernehmen."
+          : "So würde moto jede Zeile übernehmen. Geändert wird erst, wenn du übernimmst."
       }
       footer={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-gray-600">
             {problems > 0
-              ? `${staffImportRowsLabel(problems)} ${problems === 1 ? "bleibt" : "bleiben"} draußen. Korrigieren Sie die Datei und laden Sie sie neu.`
+              ? `${staffImportRowsLabel(problems)} ${problems === 1 ? "bleibt" : "bleiben"} draußen. Korrigiere die Datei und lade sie neu.`
               : "Jede Zeile passt. Bestehende Werte ändert moto nie."}
           </p>
           <Button

@@ -126,7 +126,7 @@ describe("SchoolVacationHints (#5345)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Weihnachtsferien vom 23.12.2026 bis 06.01.2027: In dieser Zeit sind 12 Regeltermine geplant. Findet in dieser Zeit Betreuung statt? Wenn nicht, sagen Sie die Termine ab oder tragen Sie Schließtage ein.",
+        "Weihnachtsferien vom 23.12.2026 bis 06.01.2027: In dieser Zeit sind 12 Regeltermine geplant. Findet in dieser Zeit Betreuung statt? Wenn nicht, sage die Termine ab oder trage Schließtage ein.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -138,7 +138,7 @@ describe("SchoolVacationHints (#5345)", () => {
 
   it("counts a running vacation from today on", () => {
     expect(vacationHintMessage(autumn)).toBe(
-      "Herbstferien vom 17.10.2026 bis 31.10.2026: In dieser Zeit ist noch 1 Regeltermin geplant. Findet in dieser Zeit Betreuung statt? Wenn nicht, sagen Sie die Termine ab oder tragen Sie Schließtage ein.",
+      "Herbstferien vom 17.10.2026 bis 31.10.2026: In dieser Zeit ist noch 1 Regeltermin geplant. Findet in dieser Zeit Betreuung statt? Wenn nicht, sage die Termine ab oder trage Schließtage ein.",
     );
   });
 
@@ -162,7 +162,7 @@ describe("SchoolVacationHints (#5345)", () => {
         name: "Pfingstferien",
       }),
     ).toBe(
-      "Pfingstferien am 18.05.2027: In dieser Zeit ist 1 Regeltermin geplant. Findet in dieser Zeit Betreuung statt? Wenn nicht, sagen Sie die Termine ab oder tragen Sie Schließtage ein.",
+      "Pfingstferien am 18.05.2027: In dieser Zeit ist 1 Regeltermin geplant. Findet in dieser Zeit Betreuung statt? Wenn nicht, sage die Termine ab oder trage Schließtage ein.",
     );
   });
 

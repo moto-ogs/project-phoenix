@@ -177,15 +177,15 @@ export function BillingLettersModal<T = BillingLetters>({
     formErrors.clear();
     const fields: Record<string, string> = {};
     if (hasLegacy && !dueDate)
-      fields.payment_due_on = "Bitte geben Sie ein Datum an.";
+      fields.payment_due_on = "Bitte gib ein Datum an.";
     else if (hasLegacy && !dueDateValid)
       fields.payment_due_on =
-        "Bitte geben Sie ein gültiges Datum ab heute im Format TT.MM.JJJJ ein.";
+        "Bitte gib ein gültiges Datum ab heute im Format TT.MM.JJJJ ein.";
     if (incomplete >= 0)
       fields.emergency_contacts =
-        "Bitte geben Sie zu jeder Notfallnummer Betreuung und Telefon an.";
+        "Bitte gib zu jeder Notfallnummer Betreuung und Telefon an.";
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", fields);
+      formErrors.invalid("Bitte prüfe deine Angaben.", fields);
       return null;
     }
     return {
@@ -295,7 +295,7 @@ export function BillingLettersModal<T = BillingLetters>({
       >
         <p className="text-sm text-gray-700">
           {source?.intro ??
-            "Jede Familie bekommt ein Schreiben mit ihrer Rechnung. Ihre Hinweise stehen in allen Schreiben. Danach lässt sich nichts mehr ändern."}
+            "Jede Familie bekommt ein Schreiben mit ihrer Rechnung. Deine Hinweise stehen in allen Schreiben. Danach lässt sich nichts mehr ändern."}
         </p>
         {deadlines ? (
           <DataField label="Fälligkeiten">
@@ -323,7 +323,7 @@ export function BillingLettersModal<T = BillingLetters>({
           label={source?.notesLabel ?? "Hinweise für die Eltern (freiwillig)"}
           placeholder={
             source?.notesPlaceholder ??
-            "Zum Beispiel: Bitte denken Sie an Frühstück, Wechselkleidung und Hausschuhe.\nKinder mit ansteckenden Krankheiten bleiben zu Hause."
+            "Zum Beispiel: Bitte denkt an Frühstück, Wechselkleidung und Hausschuhe.\nKinder mit ansteckenden Krankheiten bleiben zu Hause."
           }
           rows={5}
           value={notes}

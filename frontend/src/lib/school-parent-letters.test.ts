@@ -59,9 +59,9 @@ describe("school parent letter draft", () => {
         kind: "info",
       }),
     ).toEqual({
-      school_class: "Bitte wählen Sie eine Klasse.",
-      title: "Bitte geben Sie einen Betreff ein.",
-      body: "Bitte schreiben Sie einen Text.",
+      school_class: "Bitte wähle eine Klasse.",
+      title: "Bitte gib einen Betreff ein.",
+      body: "Bitte schreibe einen Text.",
     });
     expect(schoolParentLetterFieldErrors(draft)).toEqual({});
   });

@@ -558,9 +558,7 @@ function KontoEditForm({
         saving={saving}
         disabled={requiredNameMissing || roleAssignmentLoading}
         disabledReason={
-          requiredNameMissing
-            ? "Geben Sie zuerst Vor- und Nachnamen ein."
-            : undefined
+          requiredNameMissing ? "Gib zuerst Vor- und Nachnamen ein." : undefined
         }
         saveTooltip={
           editing.canEditRole
@@ -616,17 +614,17 @@ function RoleField({
         </p>
         {canDeleteStaff ? (
           <div className="text-xs text-gray-600">
-            <p>So geben Sie der Person eine andere Rolle:</p>
+            <p>So gibst du der Person eine andere Rolle:</p>
             <ol className="mt-1 list-decimal space-y-0.5 pl-5">
-              <li>Öffnen Sie oben rechts das Menü mit den drei Punkten.</li>
-              <li>Wählen Sie „Löschen“.</li>
-              <li>Laden Sie die Person danach neu ein.</li>
+              <li>Öffne oben rechts das Menü mit den drei Punkten.</li>
+              <li>Wähle „Löschen“.</li>
+              <li>Lade die Person danach neu ein.</li>
             </ol>
           </div>
         ) : (
           <p className="text-xs text-gray-600">
             Für eine andere Rolle wird die Person gelöscht und neu eingeladen.
-            Das kann nur, wer Personal löschen darf. Fragen Sie zum Beispiel die
+            Das kann nur, wer Personal löschen darf. Frage zum Beispiel die
             Schulleitung.
           </p>
         )}
@@ -678,7 +676,7 @@ function EmailActions({
           variant="outline"
           size="compact"
           onClick={handleMailto}
-          tooltip="Öffnet Ihr E-Mail-Programm mit einer Nachricht an diese Person."
+          tooltip="Öffnet dein E-Mail-Programm mit einer Nachricht an diese Person."
         >
           Schreiben
         </Button>

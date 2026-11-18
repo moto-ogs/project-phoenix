@@ -158,7 +158,7 @@ describe("existingChildChoiceOptions for the manual enrollment", () => {
       {
         value: "new",
         label: "Als neues Kind anlegen",
-        description: "Wählen Sie dies nur, wenn es ein anderes Kind ist.",
+        description: "Wähle dies nur, wenn es ein anderes Kind ist.",
       },
     ]);
   });
@@ -229,7 +229,7 @@ describe("a duplicate of another enrollment of the phase", () => {
     expect(existingChildHint(child, "Emre Kaya")).toEqual({
       title: "Mara Papier ist in dieser Phase schon angemeldet",
       message:
-        "Derya Kaya hat Mara schon angemeldet. Ist es dasselbe Kind, lehnen Sie diese Anmeldung ab. Tragen Sie Emre Kaya dann in der Akte als Elternteil ein.",
+        "Derya Kaya hat Mara schon angemeldet. Ist es dasselbe Kind, lehne diese Anmeldung ab. Trage Emre Kaya dann in der Akte als Elternteil ein.",
       duplicate: true,
       listsCandidates: true,
     });
@@ -247,7 +247,7 @@ describe("a duplicate of another enrollment of the phase", () => {
     expect(options[0]).toMatchObject({
       disabled: true,
       disabledReason:
-        "Das Kind ist in dieser Phase schon angemeldet. Lehnen Sie diese Anmeldung ab.",
+        "Das Kind ist in dieser Phase schon angemeldet. Lehne diese Anmeldung ab.",
       description:
         "Mara Papier · Klasse 1a · geboren am 01.03.2019 · schon angemeldet von Derya Kaya",
     });
@@ -255,7 +255,7 @@ describe("a duplicate of another enrollment of the phase", () => {
     expect(
       existingChildChoiceDescription(child, { canRejectDuplicate: true }),
     ).toBe(
-      "Derya Kaya hat Mara Papier in dieser Phase schon angemeldet. Ist es dasselbe Kind, lehnen Sie diese Anmeldung als doppelt ab.",
+      "Derya Kaya hat Mara Papier in dieser Phase schon angemeldet. Ist es dasselbe Kind, lehne diese Anmeldung als doppelt ab.",
     );
   });
 

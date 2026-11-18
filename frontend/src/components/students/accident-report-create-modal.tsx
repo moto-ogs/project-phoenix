@@ -63,7 +63,7 @@ export function AccidentReportCreateModal({
   const save = async () => {
     const errors = accidentReportDraftErrors(draft);
     if (Object.keys(errors).length > 0) {
-      formError.invalid("Bitte füllen Sie die markierten Felder aus.", errors);
+      formError.invalid("Bitte fülle die markierten Felder aus.", errors);
       return;
     }
     await submission.run(async (op) => {
@@ -123,7 +123,7 @@ export function AccidentReportCreateModal({
         <p className="text-sm text-gray-600">
           {correctsReportId
             ? "Die unterschriebene Fassung bleibt erhalten. Die Korrektur muss neu unterschrieben werden."
-            : "Danach unterschreibt die Leitung die Unfallanzeige. Das PDF können Sie an die Unfallkasse weitergeben."}
+            : "Danach unterschreibt die Leitung die Unfallanzeige. Das PDF kannst du an die Unfallkasse weitergeben."}
         </p>
         <AccidentReportFormFields
           draft={draft}

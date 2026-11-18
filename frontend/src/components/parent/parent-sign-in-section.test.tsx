@@ -66,14 +66,14 @@ describe("ParentSignInSection", () => {
     expect(await screen.findByText("Ausgeschaltet")).toBeVisible();
     expect(screen.getByText("So funktioniert es")).toBeVisible();
     expect(
-      screen.getByText(/Wenden Sie sich an Ihre Schule\. Das moto-Team/),
+      screen.getByText(/Wende dich an deine Schule\. Das moto-Team/),
     ).toBeVisible();
     expect(screen.queryByText("Gemerkte Geräte")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Einschalten" }));
     expect(
       await screen.findByText(
-        "Wir haben einen Code an p***@example.com geschickt. Geben Sie die 6 Ziffern ein.",
+        "Wir haben einen Code an p***@example.com geschickt. Gib die 6 Ziffern ein.",
       ),
     ).toBeVisible();
     fireEvent.change(screen.getByLabelText("Code aus der E-Mail"), {
@@ -98,7 +98,7 @@ describe("ParentSignInSection", () => {
 
     expect(
       await screen.findByText(
-        "Die Anmeldung mit Code können Sie einschalten, sobald Ihr Konto zu einer Schule gehört.",
+        "Die Anmeldung mit Code kannst du einschalten, sobald dein Konto zu einer Schule gehört.",
       ),
     ).toBeVisible();
     expect(
@@ -118,7 +118,7 @@ describe("ParentSignInSection", () => {
     renderSection();
 
     fireEvent.click(await screen.findByRole("button", { name: "Ausschalten" }));
-    fireEvent.change(screen.getByLabelText("Ihr Passwort"), {
+    fireEvent.change(screen.getByLabelText("Dein Passwort"), {
       target: { value: "secret" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Ausschalten" }));

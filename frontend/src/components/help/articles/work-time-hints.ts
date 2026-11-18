@@ -19,33 +19,33 @@ export function workTimeHintsTopic(): HelpTopic {
       {
         title: "Hinweise finden",
         steps: [
-          "Klappen Sie in der Seitenleiste `Team` auf und öffnen Sie `Zeiterfassung`.",
-          "Lesen Sie in der Tabelle `Zeiterfassung` die Spalte `Hinweis`.",
-          "Lesen Sie unter jeder Woche die Zeile `Summe KW`.",
+          "Klappe in der Seitenleiste `Team` auf und öffne `Zeiterfassung`.",
+          "Lies in der Tabelle `Zeiterfassung` die Spalte `Hinweis`.",
+          "Lies unter jeder Woche die Zeile `Summe KW`.",
         ],
       },
       {
         title: "Diese Hinweise gibt es",
         ordered: false,
         steps: [
-          "`Pause zu kurz`: Nach 6 Stunden Arbeit sind 30 Minuten Pause nötig, nach 9 Stunden 45 Minuten. Der Hinweis nennt, wie viel nötig war und wie viel Sie gemacht haben.",
+          "`Pause zu kurz`: Nach 6 Stunden Arbeit sind 30 Minuten Pause nötig, nach 9 Stunden 45 Minuten. Der Hinweis nennt, wie viel nötig war und wie viel du gemacht hast.",
           "`Mehr als 10 Std. gearbeitet`: An einem Tag sind höchstens 10 Stunden Arbeit erlaubt.",
           "`Mehr als 48 Std. in der Woche`: Das steht in der Zeile `Summe KW` der Woche.",
         ],
       },
     ],
     result:
-      "Sie sehen, an welchen Tagen und in welchen Wochen die Arbeitszeit nicht zum Arbeitszeitgesetz passt.",
+      "Du siehst, an welchen Tagen und in welchen Wochen die Arbeitszeit nicht zum Arbeitszeitgesetz passt.",
     notes: [
-      "Die Hinweise sperren nichts. Sie können weiter ein- und ausstempeln.",
+      "Die Hinweise sperren nichts. Du kannst weiter ein- und ausstempeln.",
       "Es zählen nur Pausen ab 15 Minuten. Zwei Pausen von 10 Minuten zählen nicht.",
       "Eine Lücke von mindestens 15 Minuten zwischen zwei Arbeitsblöcken zählt als Pause.",
-      "Während Sie arbeiten, zeigt die `Stempeluhr` den Hinweis, sobald er gilt. Während einer laufenden Pause erscheint kein Pausen-Hinweis.",
+      "Während du arbeitest, zeigt die `Stempeluhr` den Hinweis, sobald er gilt. Während einer laufenden Pause erscheint kein Pausen-Hinweis.",
       "Ein Arbeitsblock über Mitternacht zählt zu dem Tag, an dem er begann.",
     ],
     differences: [
       "Im Monat reicht die erste oder letzte Woche über den Monatsrand. `Summe KW` zählt dann die ganze Woche.",
-      "Korrigieren Sie einen Tag, prüft moto ihn nach dem Speichern neu. Der Hinweis im Dialog zeigt den bisher gespeicherten Stand.",
+      "Korrigierst du einen Tag, prüft moto ihn nach dem Speichern neu. Der Hinweis im Dialog zeigt den bisher gespeicherten Stand.",
       SIMPLE_NAV_DIFFERENCE,
     ],
     related: [

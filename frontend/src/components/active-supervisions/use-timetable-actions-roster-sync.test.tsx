@@ -104,7 +104,7 @@ describe("useTimetableActions roster sync after a saved action", () => {
     expect(shownError).toBe(failure);
     expect(shownOptions).toMatchObject({
       object: "die Anwesenheitsliste",
-      messageSuffix: "Ihre Änderung ist gespeichert.",
+      messageSuffix: "Deine Änderung ist gespeichert.",
       action: { label: "Liste neu laden" },
     });
 
@@ -140,7 +140,7 @@ describe("useTimetableActions roster sync after a saved action", () => {
     expect(showActionError).toHaveBeenCalledTimes(2);
     expect(showActionError.mock.calls[1]![1]).toMatchObject({
       object: "die Anwesenheitsliste",
-      messageSuffix: "Ihre Änderung ist gespeichert.",
+      messageSuffix: "Deine Änderung ist gespeichert.",
       action: { label: "Liste neu laden" },
     });
   });

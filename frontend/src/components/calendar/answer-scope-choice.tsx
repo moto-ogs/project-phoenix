@@ -22,7 +22,7 @@ export function AnswerScopeChoice({
 }: Readonly<{
   value: AnswerScope;
   onChange: (next: AnswerScope) => void;
-  /** „Ihre Antwort gilt für“ */
+  /** „Deine Antwort gilt für“ */
   legend: string;
   /** „Nur am Mi., 25.11.“ */
   occurrenceLabel: string;

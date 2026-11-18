@@ -135,7 +135,7 @@ it("asks for the password again when the destination changes", async () => {
   await saveChanges(user);
   expect(
     await screen.findByText(
-      /moto schickt es nur an die Adresse, für die Sie es eingegeben haben/,
+      /moto schickt es nur an die Adresse, für die du es eingegeben hast/,
     ),
   ).toBeInTheDocument();
   expect(api.saveExportRecipient).not.toHaveBeenCalled();
@@ -200,7 +200,7 @@ it("removes the recipient only after the question and names what goes back to th
   );
   expect(
     await screen.findByText(
-      /Sollstellung und Lastschriftdatei können Sie danach nur herunterladen/,
+      /Sollstellung und Lastschriftdatei kannst du danach nur herunterladen/,
     ),
   ).toBeInTheDocument();
   expect(api.deleteExportRecipient).not.toHaveBeenCalled();

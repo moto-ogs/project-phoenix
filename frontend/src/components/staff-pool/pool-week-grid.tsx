@@ -222,7 +222,7 @@ export function PoolWeekGrid({
     return [
       {
         key: "own",
-        label: "Von Ihrer Schule geblockt",
+        label: "Von deiner Schule geblockt",
         color: LOCATION_COLORS.GROUP_ROOM,
       },
       {
@@ -273,7 +273,7 @@ export function PoolWeekGrid({
           label="Vom Träger aufgehoben"
           color={LOCATION_COLORS.GROUP_ROOM}
           status="cancelled"
-          title={`${timeRange}: Ihr Träger hat diese Blockung aufgehoben. Die Zeit ist wieder frei.`}
+          title={`${timeRange}: dein Träger hat diese Blockung aufgehoben. Die Zeit ist wieder frei.`}
         />
       );
     }
@@ -283,12 +283,12 @@ export function PoolWeekGrid({
           key={`own-${block.id}`}
           size="compact"
           timeRange={timeRange}
-          label="Ihre Schule"
+          label="Deine Schule"
           color={LOCATION_COLORS.GROUP_ROOM}
-          title={`${timeRange}, von Ihrer Schule geblockt`}
+          title={`${timeRange}, von deiner Schule geblockt`}
           interactive
           onClick={() => onOpenBlock(springer, block)}
-          details="von Ihrer Schule geblockt. Blockung aufheben"
+          details="von deiner Schule geblockt. Blockung aufheben"
         />
       );
     }
@@ -390,7 +390,7 @@ export function PoolWeekGrid({
   return (
     <div>
       <p id={scrollHintId} className="mb-2 text-xs text-gray-600 sm:hidden">
-        Wischen Sie zur Seite, um weitere Tage zu sehen.
+        Wische zur Seite, um weitere Tage zu sehen.
       </p>
       <ResourceGrid
         columns={columns}

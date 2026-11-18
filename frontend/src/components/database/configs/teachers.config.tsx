@@ -251,8 +251,8 @@ export const teachersConfig = defineEntityConfig<Teacher>({
               if (!teacher.account_id) {
                 return (
                   <div className="text-sm text-gray-500">
-                    Kein Konto verknüpft - Erstellen Sie ein Konto, um
-                    Zugriffsrechte zu verwalten
+                    Kein Konto verknüpft - Erstelle ein Konto, um Zugriffsrechte
+                    zu verwalten
                   </div>
                 );
               }
@@ -269,7 +269,7 @@ export const teachersConfig = defineEntityConfig<Teacher>({
                     </div>
                   )}
                   <div className="mt-2 text-xs text-gray-500">
-                    Verwenden Sie die Aktionsbuttons oben, um Rollen und
+                    Verwende die Aktionsbuttons oben, um Rollen und
                     Berechtigungen zu verwalten
                   </div>
                 </div>
@@ -284,7 +284,7 @@ export const teachersConfig = defineEntityConfig<Teacher>({
 
   list: {
     title: "Personal auswählen",
-    description: "Verwalten Sie Profile des Personals und Zuordnungen",
+    description: "Verwalte Profile des Personals und Zuordnungen",
     searchPlaceholder: "Personal suchen…",
 
     // Frontend search for small dataset
@@ -370,7 +370,7 @@ export const teachersConfig = defineEntityConfig<Teacher>({
   labels: {
     createButton: "Neues Personal anlegen",
     deleteConfirmation:
-      "Sind Sie sicher, dass Sie dieses Personal löschen möchten?",
+      "Bist du sicher, dass du dieses Personal löschen möchtest?",
     emptyState: "Kein Personal gefunden",
   },
 
@@ -380,8 +380,7 @@ export const teachersConfig = defineEntityConfig<Teacher>({
       return {
         type: "credentials" as const,
         title: "Personal erfolgreich erstellt!",
-        message:
-          "Bitte notieren Sie sich die folgenden temporären Zugangsdaten:",
+        message: "Bitte notiere dir die folgenden temporären Zugangsdaten:",
         credentials: {
           email: result.temporaryCredentials.email,
           password: result.temporaryCredentials.password,

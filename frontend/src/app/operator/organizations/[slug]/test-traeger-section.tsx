@@ -58,7 +58,7 @@ export function TestTraegerSection({
   return (
     <SectionCard
       title="Testsystem"
-      description="Dieser Träger ist ein Test-Träger. Seine Test-Schulen enthalten nur erfundene Beispielkinder. „Beispielkinder anlegen“ ergänzt fehlende Kinder; ein Kind mit geändertem Namen oder geänderter Klasse gilt dabei als fehlend. Zum Löschen deaktivieren Sie den Träger und erfassen im Reiter „Löschauftrag“ den Auftrag."
+      description="Dieser Träger ist ein Test-Träger. Seine Test-Schulen enthalten nur erfundene Beispielkinder. „Beispielkinder anlegen“ ergänzt fehlende Kinder; ein Kind mit geändertem Namen oder geänderter Klasse gilt dabei als fehlend. Zum Löschen deaktivierst du den Träger und erfasst im Reiter „Löschauftrag“ den Auftrag."
       action={
         organizationActive ? (
           <Button

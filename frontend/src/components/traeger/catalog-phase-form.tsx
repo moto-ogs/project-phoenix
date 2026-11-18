@@ -99,12 +99,12 @@ type FieldErrors = Record<string, string>;
 /** The checks the form makes before it sends; the backend checks again. */
 export function validatePhaseInput(input: TraegerPhaseInput): FieldErrors {
   const errors: FieldErrors = {};
-  if (!input.name.trim()) errors.name = "Bitte geben Sie einen Namen ein.";
+  if (!input.name.trim()) errors.name = "Bitte gib einen Namen ein.";
   if (!input.serviceStartDate) {
-    errors.service_start_date = "Bitte wählen Sie den ersten Tag.";
+    errors.service_start_date = "Bitte wähle den ersten Tag.";
   }
   if (!input.serviceEndDate) {
-    errors.service_end_date = "Bitte wählen Sie den letzten Tag.";
+    errors.service_end_date = "Bitte wähle den letzten Tag.";
   } else if (
     input.serviceStartDate &&
     input.serviceEndDate < input.serviceStartDate
@@ -119,7 +119,7 @@ export function validatePhaseInput(input: TraegerPhaseInput): FieldErrors {
     errors.enrollment_close_at = "Das Ende liegt vor dem Beginn.";
   }
   if (!input.allSchools && input.schoolIds.length === 0) {
-    errors.school_ids = "Bitte wählen Sie mindestens eine Schule.";
+    errors.school_ids = "Bitte wähle mindestens eine Schule.";
   }
   return errors;
 }
@@ -165,7 +165,7 @@ export function CatalogPhaseForm({
     formErrors.clear();
     const found = validatePhaseInput(draft);
     if (Object.keys(found).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", found);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", found);
       return;
     }
     setSaving(true);
@@ -347,7 +347,7 @@ export function CatalogPhaseForm({
           error={fieldError("school_ids")}
           hint={
             draft.allSchools
-              ? "Auch eine Schule, die später zu Ihrem Träger kommt, bekommt die Anmeldephase."
+              ? "Auch eine Schule, die später zu deinem Träger kommt, bekommt die Anmeldephase."
               : "Nur die gewählten Schulen bekommen die Anmeldephase."
           }
         >

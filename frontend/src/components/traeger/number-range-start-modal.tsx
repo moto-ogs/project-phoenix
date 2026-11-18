@@ -61,19 +61,19 @@ export function NumberRangeStartModal({
   const hint =
     lastNumber > 0
       ? `Die letzte laufende Nummer ist ${lastNumber}. Die neue Nummer muss größer sein.`
-      : "Noch keine Rechnung ausgestellt. Sie können jede Zahl ab 1 nehmen.";
+      : "Noch keine Rechnung ausgestellt. Du kannst jede Zahl ab 1 nehmen.";
 
   const submit = async () => {
     formErrors.clear();
     if (number === null) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", {
-        next_number: "Bitte geben Sie eine ganze Zahl von 1 bis 99999999 ein.",
+      formErrors.invalid("Bitte prüfe deine Angaben.", {
+        next_number: "Bitte gib eine ganze Zahl von 1 bis 99999999 ein.",
       });
       return;
     }
     if (number <= lastNumber) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", {
-        next_number: `Die letzte laufende Nummer ist ${lastNumber}. Bitte geben Sie eine größere Nummer ein.`,
+      formErrors.invalid("Bitte prüfe deine Angaben.", {
+        next_number: `Die letzte laufende Nummer ist ${lastNumber}. Bitte gib eine größere Nummer ein.`,
       });
       return;
     }
@@ -109,7 +109,7 @@ export function NumberRangeStartModal({
           onSave={() => formRef.current?.requestSubmit()}
           saving={pending.pending}
           disabled={number === nextNumber}
-          disabledReason="Ändern Sie zuerst die Nummer."
+          disabledReason="Ändere zuerst die Nummer."
         />
       }
     >
@@ -149,8 +149,8 @@ export function NumberRangeStartModal({
         </InsetPanel>
         <ul className="list-disc space-y-1 pl-5 text-sm text-gray-600">
           <li>
-            Sie wechseln von einem anderen Programm? Nehmen Sie die Nummer nach
-            der letzten Rechnung Ihres bisherigen Programms.
+            Du wechselst von einem anderen Programm? Nimm die Nummer nach der
+            letzten Rechnung deines bisherigen Programms.
           </li>
           {year > 0 ? (
             <li>

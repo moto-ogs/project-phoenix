@@ -181,7 +181,7 @@ describe("HolidayRegistrationStatusCard", () => {
       ).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
       expect(
-        await screen.findByText("Bitte geben Sie die Debitorennummer ein."),
+        await screen.findByText("Bitte gib die Debitorennummer ein."),
       ).toBeInTheDocument();
       expect(mockConfirm).not.toHaveBeenCalled();
 
@@ -275,7 +275,7 @@ describe("HolidayRegistrationStatusCard", () => {
 
     expect(
       screen.getByText(
-        "Vielleicht doppelt angemeldet: Lia Muster. Die andere Anmeldung öffnen Sie beim Kind.",
+        "Vielleicht doppelt angemeldet: Lia Muster. Die andere Anmeldung öffnest du beim Kind.",
       ),
     ).toBeInTheDocument();
     // „Zum Kind“ leads to Lia's card on the page (#7054).
@@ -339,7 +339,7 @@ describe("HolidayRegistrationStatusCard", () => {
 
     expect(
       screen.getByText(
-        "Die Eltern geben an, dass sie Leistungen beziehen. Bitte prüfen Sie den Nachweis.",
+        "Die Eltern geben an, dass sie Leistungen beziehen. Bitte prüfe den Nachweis.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -454,7 +454,7 @@ describe("HolidayRegistrationStatusCard", () => {
 
     expect(
       screen.getByText(
-        /Die Eltern geben an, dass sie Leistungen beziehen\. Am ersten gebuchten Tag gilt keine Befreiungsregel\. Sie legen sie unter/,
+        /Die Eltern geben an, dass sie Leistungen beziehen\. Am ersten gebuchten Tag gilt keine Befreiungsregel\. Du legst sie unter/,
       ),
     ).toBeInTheDocument();
     expect(
@@ -669,7 +669,7 @@ describe("HolidayRegistrationStatusCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
     expect(
       await screen.findByText(
-        "Die Anmeldung ist eingefroren. Wählen Sie zuerst „Wieder öffnen“.",
+        "Die Anmeldung ist eingefroren. Wähle zuerst „Wieder öffnen“.",
       ),
     ).toBeInTheDocument();
   });
@@ -718,7 +718,7 @@ describe("HolidayRegistrationStatusCard", () => {
       fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
 
       expect(
-        await screen.findByText("Bitte geben Sie die Debitorennummer ein."),
+        await screen.findByText("Bitte gib die Debitorennummer ein."),
       ).toBeInTheDocument();
       expect(field).toHaveAttribute("aria-invalid", "true");
       await waitFor(() => expect(field).toHaveFocus());
@@ -826,7 +826,7 @@ describe("HolidayRegistrationStatusCard", () => {
       );
       await waitFor(() => expect(field).toHaveFocus());
       expect(
-        screen.getByText("Bitte prüfen Sie die Debitorennummer."),
+        screen.getByText("Bitte prüfe die Debitorennummer."),
       ).toBeInTheDocument();
     });
 
@@ -965,7 +965,7 @@ describe("HolidayRegistrationStatusCard", () => {
       fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
       expect(
-        await screen.findByText("Bitte geben Sie die Debitorennummer ein."),
+        await screen.findByText("Bitte gib die Debitorennummer ein."),
       ).toBeInTheDocument();
       expect(field).toHaveAttribute("aria-invalid", "true");
       expect(mockChangeDebtorNumber).not.toHaveBeenCalled();
@@ -1273,7 +1273,7 @@ describe("HolidayRegistrationStatusCard", () => {
       await waitFor(() => expect(onReload).toHaveBeenCalled());
       expect(mockFamilyChoice).toHaveBeenLastCalledWith("keep");
       expect(mockConfirmDebtorNumber).toHaveBeenLastCalledWith("99");
-      expect(screen.queryByText(/Bitte prüfen Sie/)).toBeNull();
+      expect(screen.queryByText(/Bitte prüfe /)).toBeNull();
     });
 
     it("shows every conflicting family before replacing their numbers", async () => {

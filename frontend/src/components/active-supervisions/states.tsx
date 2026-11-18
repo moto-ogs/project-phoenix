@@ -94,7 +94,7 @@ export function NoActiveSupervisionAccessView() {
       empty={{
         icon: <MotoConceptIcon concept={roomsConcept} size={48} />,
         title: "Keine aktive Raum-Aufsicht",
-        description: `Sie sind aktuell in keinem Raum als Live-Aktivität registriert. Starten Sie eine Aktivität ${
+        description: `Du bist aktuell in keinem Raum als Live-Aktivität registriert. Starte eine Aktivität ${
           nfcEnabled ? "an einem Terminal" : "in der Web-App"
         }, um Live-Raumdaten einzusehen.`,
       }}
@@ -127,7 +127,7 @@ export function EmptyRoomsView({
           <EmptyState
             icon={<MotoConceptIcon concept={roomsConcept} size={48} />}
             title="Keine aktive Raum-Aufsicht"
-            description="Sie beaufsichtigen aktuell keinen Raum."
+            description="Du beaufsichtigst aktuell keinen Raum."
           />
         </SectionCard>
       </div>
@@ -158,7 +158,7 @@ export function ReleaseSupervisionModal({
         <Alert
           type="warning"
           announce="off"
-          message="Sie werden nicht mehr als Aufsicht angezeigt. Der Schulhof bleibt für alle Betreuungskräfte offen. Dort steht dann, dass niemand die Aufsicht hat."
+          message="Du wirst nicht mehr als Aufsicht angezeigt. Der Schulhof bleibt für alle Betreuungskräfte offen. Dort steht dann, dass niemand die Aufsicht hat."
         />
       </div>
     </ConfirmationModal>

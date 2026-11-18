@@ -138,7 +138,7 @@ export function OwnSupervisionView() {
   const { currentTimetableRoster } = roster;
   const loadError = useSwrLoadError(
     day.error ?? upcoming.error ?? ownSessions.error ?? roster.rosterError,
-    "Ihre Aufsicht",
+    "Deine Aufsicht",
     () =>
       Promise.all([
         mutateDay(),
@@ -212,7 +212,7 @@ export function OwnSupervisionView() {
             value: `session:${block.activeGroupId}`,
             label: block.title,
           })),
-          label: "Ihre laufenden Aufsichten",
+          label: "Deine laufenden Aufsichten",
         }
       : undefined;
 
@@ -318,7 +318,7 @@ export function OwnSupervisionView() {
           <EmptyState
             icon={<MotoConceptIcon concept={roomsConcept} size={48} />}
             title="Keine laufende Aufsicht"
-            description="Starten Sie Ihren Termin unter „Als Nächstes“. Dann sehen Sie hier die Kinderliste."
+            description="Starte deinen Termin unter „Als Nächstes“. Dann siehst du hier die Kinderliste."
           />
         </SectionCard>
       ) : null}

@@ -17,7 +17,7 @@ export function holidayGuestsTopic(): HelpTopic {
     title: "Feriengäste betreuen",
     question: "Wo sehe ich Notfall und Abholung eines Feriengasts?",
     summary:
-      "In den Ferien kommen Kinder anderer Schulen in Ihre OGS. Sie stehen in der Feriengruppe.",
+      "In den Ferien kommen Kinder anderer Schulen in deine OGS. Sie stehen in der Feriengruppe.",
     group: "gruppen",
     audience: ["caregiver", "lead"],
     icon: "SunHorizon",
@@ -25,28 +25,27 @@ export function holidayGuestsTopic(): HelpTopic {
     imageAlt:
       "Notfall, Abholung, Gesundheit und Angaben aus der Ferienanmeldung bei einem Feriengast.",
     requirements: [
-      "Ihre OGS richtet eine Ferienwoche für den Träger aus.",
+      "Deine OGS richtet eine Ferienwoche für den Träger aus.",
       "Die Leitung hat unter `Ferienwochen` eine Feriengruppe gewählt.",
       "Die Ferienwoche hat begonnen. Vorher stehen Feriengäste in keiner Liste, auch nicht unter `Alle Kinder`.",
     ],
     steps: [
-      "Öffnen Sie die Feriengruppe. Unter dem Namen jedes Feriengasts steht seine Schule, zum Beispiel `Gast aus Grundschule am See`.",
-      "Melden Sie Feriengäste an und ab wie jedes andere Kind.",
-      "Öffnen Sie die Karte eines Feriengasts.",
-      "Lesen Sie unter `Betreuung` die Woche und die gebuchte Zeit.",
+      "Öffne die Feriengruppe. Unter dem Namen jedes Feriengasts steht seine Schule, zum Beispiel `Gast aus Grundschule am See`.",
+      "Melde Feriengäste an und ab wie jedes andere Kind.",
+      "Öffne die Karte eines Feriengasts.",
+      "Lies unter `Betreuung` die Woche und die gebuchte Zeit.",
       "Unter `Notfall` stehen die Eltern und weitere Kontakte. Unter `Abholung` steht, wer das Kind außer den Eltern abholen darf.",
       "Unter `Gesundheit` stehen Allergien, Medikamente und weitere Hinweise der Eltern.",
       "Unter `Angaben aus der Ferienanmeldung` steht zum Beispiel, ob das Kind allein nach Hause gehen darf.",
     ],
-    result:
-      "Sie wissen, wann das Kind gehen darf und wen Sie im Notfall anrufen.",
+    result: "Du weißt, wann das Kind gehen darf und wen du im Notfall anrufst.",
     notes: [
-      "Denselben Hinweis `Gast aus …` sehen Sie unter `Alle Kinder`, in der Aufsicht und auf der Karte des Kindes. Steht nur `Feriengast` da, haben die Eltern keine Schule genannt.",
-      "Die Gesundheitsangaben stehen auch in den `Gesundheitsinformationen` des Feriengasts. Sie sehen sie also auch in der Gruppe und in der `Gesundheitsliste`.",
+      "Denselben Hinweis `Gast aus …` siehst du unter `Alle Kinder`, in der Aufsicht und auf der Karte des Kindes. Steht nur `Feriengast` da, haben die Eltern keine Schule genannt.",
+      "Die Gesundheitsangaben stehen auch in den `Gesundheitsinformationen` des Feriengasts. Du siehst sie also auch in der Gruppe und in der `Gesundheitsliste`.",
       "Vor der Ferienwoche ist die Feriengruppe leer. Dort steht dann, wie viele Kinder dazukommen und ab wann. Zum Beispiel `Feriengruppe: 3 Kinder kommen ab 04.01.2027 dazu.`",
-      "Kinder Ihrer OGS sind keine Feriengäste. Sie bleiben in ihrer Gruppe. Notfall, Abholung und Zeiten aus der Anmeldung stehen in ihrer Kinderakte unter `Angaben aus der Ferienanmeldung`.",
-      "Mehr als Betreuung, Notfall, Abholung, Gesundheit und die freigegebenen Angaben sehen Sie von einem Feriengast nicht. Die übrigen Angaben bleiben beim Träger.",
-      "Jeder Blick auf Notfall und Abholung steht im Zugriffsprotokoll Ihrer OGS.",
+      "Kinder deiner OGS sind keine Feriengäste. Sie bleiben in ihrer Gruppe. Notfall, Abholung und Zeiten aus der Anmeldung stehen in ihrer Kinderakte unter `Angaben aus der Ferienanmeldung`.",
+      "Mehr als Betreuung, Notfall, Abholung, Gesundheit und die freigegebenen Angaben siehst du von einem Feriengast nicht. Die übrigen Angaben bleiben beim Träger.",
+      "Jeder Blick auf Notfall und Abholung steht im Zugriffsprotokoll deiner OGS.",
     ],
     differences: [
       "Nach dem letzten Tag der Woche steht der Feriengast nicht mehr in der Gruppe und nicht mehr im Check-in. Seine Angaben bleiben noch 7 Tage zum Nachlesen. Die Gesundheitsangaben nicht: Sie sind nach dem letzten Tag der Woche gelöscht.",
@@ -57,7 +56,7 @@ export function holidayGuestsTopic(): HelpTopic {
       "Ist die Feriengruppe leer? Vor dem ersten Tag der Ferienwoche ist das richtig. Die Feriengäste kommen am ersten Tag von selbst dazu.",
       "Fehlt die Feriengruppe unter `Gruppen`? Hat sie keine eigenen Kinder, steht sie dort erst ab dem ersten Tag der Woche.",
       "Fehlt ein Feriengast? Anmeldungen bestätigt der Träger. Neu bestätigte Kinder kommen innerhalb einer Stunde in die Gruppe.",
-      "Sehen Sie `Notfall` und `Abholung` nicht? Dafür brauchen Sie das Recht, die Angaben der Kinder zu lesen. Fragen Sie Ihre Leitung.",
+      "Siehst du `Notfall` und `Abholung` nicht? Dafür brauchst du das Recht, die Angaben der Kinder zu lesen. Frage deine Leitung.",
     ],
     related: [HELP_TOPICS.webAttendance, HELP_TOPICS.ownGroups],
   };

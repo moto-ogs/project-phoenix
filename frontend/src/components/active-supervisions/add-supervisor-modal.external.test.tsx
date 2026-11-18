@@ -273,7 +273,7 @@ describe("AddSupervisorModal external caregivers", () => {
     renderModal();
 
     expect(
-      await screen.findByText(/Deshalb können Sie niemanden hinzufügen/),
+      await screen.findByText(/Deshalb kannst du niemanden hinzufügen/),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Externe Person eintragen" }),

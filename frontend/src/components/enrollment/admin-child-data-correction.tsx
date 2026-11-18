@@ -64,13 +64,13 @@ export function AdminChildDataCorrection({
     const parsedGrade = grade === "" ? undefined : Number(grade);
     if (parsedGrade !== undefined && !Number.isInteger(parsedGrade)) {
       errors.invalid("Die Klassenstufe muss eine ganze Zahl sein.", {
-        target_grade_level: "Bitte geben Sie eine ganze Zahl ein.",
+        target_grade_level: "Bitte gib eine ganze Zahl ein.",
       });
       return;
     }
     if (!reason.trim()) {
-      errors.invalid("Bitte geben Sie einen Grund für die Korrektur an.", {
-        reason: "Bitte geben Sie einen Grund an.",
+      errors.invalid("Bitte gib einen Grund für die Korrektur an.", {
+        reason: "Bitte gib einen Grund an.",
       });
       return;
     }

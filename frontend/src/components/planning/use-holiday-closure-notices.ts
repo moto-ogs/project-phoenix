@@ -60,13 +60,13 @@ export function noticeStatusView(
       return notice.changed
         ? {
             badge: { label: "Geändert", tone: "warning" },
-            hint: "Der Schließtag wurde geändert. Bitte prüfen Sie den Hinweis.",
+            hint: "Der Schließtag wurde geändert. Bitte prüfe den Hinweis.",
           }
         : { badge: null, hint: "Die Eltern wurden noch nicht informiert." };
     case "sending":
       return {
         badge: { label: "Wird gesendet", tone: "blue" },
-        hint: "Bitte warten Sie.",
+        hint: "Bitte warte.",
       };
     case "no_mail":
       return {
@@ -81,12 +81,12 @@ export function noticeStatusView(
     case "failed":
       return {
         badge: { label: "Nicht angekommen", tone: "red" },
-        hint: "Bitte versuchen Sie es erneut.",
+        hint: "Bitte versuche es erneut.",
       };
     case "unknown":
       return {
         badge: { label: "Ergebnis unbekannt", tone: "warning" },
-        hint: "Bitte lassen Sie den Versand vom moto-Team prüfen.",
+        hint: "Bitte lass den Versand vom moto-Team prüfen.",
       };
   }
 }
@@ -142,16 +142,16 @@ export function useNoticeNotify(
             break;
           case "failed":
             showMessage(
-              "Der Versand hat nicht geklappt. Bitte versuchen Sie es erneut.",
+              "Der Versand hat nicht geklappt. Bitte versuche es erneut.",
             );
             break;
           case "unknown":
             info(
-              "Ergebnis unbekannt. Bitte lassen Sie den Versand vom moto-Team prüfen.",
+              "Ergebnis unbekannt. Bitte lass den Versand vom moto-Team prüfen.",
             );
             break;
           case "suggested":
-            info("Der Hinweis wurde geändert. Bitte prüfen Sie ihn erneut.");
+            info("Der Hinweis wurde geändert. Bitte prüfe ihn erneut.");
             break;
           case "sending":
             success(sendingToast(notice.families));

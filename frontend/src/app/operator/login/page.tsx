@@ -114,7 +114,7 @@ export default function OperatorLoginPage() {
   return (
     <AuthShell
       title="Operator Dashboard"
-      subtitle="Melden Sie sich an, um Plattformbetrieb, Träger und Schulen zu verwalten."
+      subtitle="Melde dich an, um Plattformbetrieb, Träger und Schulen zu verwalten."
       variant="operator"
       brand={<OperatorBrand />}
     >

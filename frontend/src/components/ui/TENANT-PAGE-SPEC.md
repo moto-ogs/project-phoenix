@@ -211,7 +211,7 @@ lg:flex-col`), sonst wächst nur die Hülle und die Fläche bleibt kurz.
     Infos" — wohin die Kachel führt, sagt ihr `aria-label`. In Tabellen
     steht „Nachname, Vorname" (alphabetisch sortierbar), auf Kacheln
     „Vorname Nachname".
-12. **Texte**: Sie-Form, echte Umlaute, keine Gender-Doppelpunkte, `…` statt
+12. **Texte**: Du-Form, echte Umlaute, keine Gender-Doppelpunkte, `…` statt
     `...`, „…" als Anführungszeichen. Bindestrich nie als Gedankenstrich.
 13. **Verhalten bleibt gleich.** Diese Umstellung ist Layout, keine fachliche
     Änderung. Keine Berechtigungsprüfung, kein Datenabruf, keine Sortierung

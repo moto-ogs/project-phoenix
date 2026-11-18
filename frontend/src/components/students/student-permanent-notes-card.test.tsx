@@ -25,7 +25,7 @@ describe("StudentPermanentNotesCard", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste der Hinweise ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Liste der Hinweise ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(

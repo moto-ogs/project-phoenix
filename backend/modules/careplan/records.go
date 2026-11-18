@@ -31,7 +31,7 @@ var (
 	ErrCareExitInvalidReason  = errors.New("care plan: invalid care exit reason")
 	ErrCareExitNoteRequired   = errors.New("care plan: care exit reason note is required")
 	ErrCareExitNoteNotAllowed = errors.New("care plan: care exit reason note is not allowed")
-	ErrCareExitNoteTooLong    = errors.New("die Begründung ist zu lang. Bitte kürzen Sie sie")
+	ErrCareExitNoteTooLong    = errors.New("die Begründung ist zu lang. Bitte kürze sie")
 	ErrInvalidCareExit        = errors.New("invalid care exit")
 	ErrInvalidCompanion       = errors.New("invalid student companion")
 	ErrInvalidCareDocument    = errors.New("invalid student care document")

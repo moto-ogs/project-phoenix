@@ -540,7 +540,7 @@ describe("DatabasePage", () => {
     // Im Alltag kostet der Satz keine Kartenzeile (#4385); die Grenze zu
     // „Alle Kinder" bleibt auf der Seite (ADR 0008).
     expect(
-      screen.queryByText(/Hier legen Sie Kinder, Personal, Räume/),
+      screen.queryByText(/Hier legst du Kinder, Personal, Räume/),
     ).toBeNull();
 
     fireEvent.click(
@@ -551,7 +551,7 @@ describe("DatabasePage", () => {
       name: "Erklärung zu Datenverwaltung",
     });
     expect(panel).toHaveTextContent(
-      /Hier legen Sie Kinder, Personal, Räume und Gruppen an/,
+      /Hier legst du Kinder, Personal, Räume und Gruppen an/,
     );
     expect(
       within(panel).getByRole("link", { name: "Alle Kinder" }),

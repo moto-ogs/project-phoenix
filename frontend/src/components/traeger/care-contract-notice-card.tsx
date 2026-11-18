@@ -132,7 +132,7 @@ export function CareContractNoticeCard({
       title="Vertrag beenden"
       description={
         endPending
-          ? "Die Eltern haben außerordentlich gekündigt. Prüfen Sie ihren Grund."
+          ? "Die Eltern haben außerordentlich gekündigt. Prüfe ihren Grund."
           : notice
             ? "So haben die Eltern den Vertrag beendet."
             : "Kündigung oder Widerruf der Eltern."
@@ -242,7 +242,7 @@ function EndDecisionActions({
           Vertragsende festlegen
         </Button>
         <p className="text-center text-sm text-gray-500">
-          Sie erkennen den Grund an und wählen den letzten Tag.
+          Du erkennst den Grund an und wählst den letzten Tag.
         </p>
       </div>
       <div className="space-y-1.5">
@@ -253,7 +253,7 @@ function EndDecisionActions({
           className="w-full"
           onClick={onReject}
           disabled={!reinterpretedEndsOn}
-          disabledReason="Das neue Vertragsende fehlt noch. Bitte laden Sie die Seite neu."
+          disabledReason="Das neue Vertragsende fehlt noch. Bitte lade die Seite neu."
           tooltip="Benachrichtigt die Eltern über das neue Vertragsende, moto fragt vorher nach."
         >
           Grund nicht anerkennen
@@ -265,7 +265,7 @@ function EndDecisionActions({
         </p>
       </div>
       <p className="border-t border-gray-100 pt-3 text-center text-sm text-gray-500">
-        Die Eltern bekommen Ihre Entscheidung per E-Mail und in der Eltern-App.
+        Die Eltern bekommen deine Entscheidung per E-Mail und in der Eltern-App.
       </p>
     </div>
   );
@@ -324,7 +324,7 @@ function longWithdrawal(until: string): boolean {
 /** Why the end notice did not go out, in the words the office reads. */
 const END_NOTICE_NOT_SENT_REASONS = {
   letterhead_missing:
-    "Im Briefkopf fehlt der Absender. Tragen Sie ihn unter „Briefkopf und Vorlagen“ ein.",
+    "Im Briefkopf fehlt der Absender. Trage ihn unter „Briefkopf und Vorlagen“ ein.",
   missing_student:
     "Der Vertrag ist mit keinem Kind aus den „Kinderdaten“ der Schule verknüpft.",
   no_permitted_address:
@@ -400,7 +400,7 @@ function NoticeFacts({
         <Alert
           type="warning"
           title="Die Mitteilung zum Vertragsende ging nicht raus"
-          message={`${END_NOTICE_NOT_SENT_REASONS[notice.endNoticeNotSentReason ?? "unknown"]} Schicken Sie den Eltern die Mitteilung unten per Brief.`}
+          message={`${END_NOTICE_NOT_SENT_REASONS[notice.endNoticeNotSentReason ?? "unknown"]} Schicke den Eltern die Mitteilung unten per Brief.`}
         />
       ) : null}
       {notice.endNoticeText ? (

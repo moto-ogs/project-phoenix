@@ -29,7 +29,7 @@ export function OwnQualificationsSection() {
   return (
     <SectionCard
       title="Meine Nachweise"
-      description="Nur zur Information. Einen neuen Nachweis geben Sie bei der Leitung ab."
+      description="Nur zur Information. Einen neuen Nachweis gibst du bei der Leitung ab."
     >
       <QualificationEntryList entries={data} />
     </SectionCard>

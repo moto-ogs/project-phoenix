@@ -62,7 +62,7 @@ const ERROR_FIX_TARGETS: Partial<Record<ErrorCode, FixTarget>> = {
   "calendar.federal_state_missing": {
     path: "/settings?tab=operations&highlight=operations.federal_state",
     label: "Bundesland eintragen",
-    tooltip: "Öffnet die Einstellungen beim Bundesland Ihrer Schule.",
+    tooltip: "Öffnet die Einstellungen beim Bundesland deiner Schule.",
     permitted: leadsSchool,
   },
   "enrollment.form_grade_collection_required": GRADE_COLLECTION,

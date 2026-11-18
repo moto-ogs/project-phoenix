@@ -39,7 +39,7 @@ func TestCareLetterCarriesTheSEPAPrenotification(t *testing.T) {
 		assert.Contains(t, text, want)
 	}
 	assert.NotContains(t, text, "DE89370400440532013000", "the letter never prints the full IBAN")
-	assert.NotContains(t, text, "Bitte überweisen Sie", "a direct debit asks for no transfer")
+	assert.NotContains(t, text, "Bitte überweise", "a direct debit asks for no transfer")
 }
 
 // The pre-notification announces what the family pays: the rest after the
@@ -62,7 +62,7 @@ func TestDirectDebitWithoutMandateKeepsTheShortSentence(t *testing.T) {
 	t.Parallel()
 	content := sepaInvoice()
 	content.invoice.Payment.Mandate = nil
-	assert.Equal(t, "Wir buchen 54,01 € am 18.01.2027 von Ihrem Konto ab. Verwendungszweck: Rechnungsnummer MB-2027-0001. Sie müssen nichts überweisen.",
+	assert.Equal(t, "Wir buchen 54,01 € am 18.01.2027 von eurem Konto ab. Verwendungszweck: Rechnungsnummer MB-2027-0001. Ihr müsst nichts überweisen.",
 		carePaymentText(content))
 }
 
@@ -122,7 +122,7 @@ func TestDirectDebitForwardingDependsOnTheNamedRecipients(t *testing.T) {
 		content.invoice.Recipient.Kind = tc.kind
 		content.invoice.Recipient.SecondName = tc.second
 		content.accountHolder = tc.holder
-		assert.Equal(t, tc.wantsForwarding, strings.Contains(carePaymentText(content), "geben Sie dieses Schreiben bitte weiter"), tc)
+		assert.Equal(t, tc.wantsForwarding, strings.Contains(carePaymentText(content), "gebt dieses Schreiben bitte weiter"), tc)
 	}
 }
 
@@ -139,6 +139,6 @@ func TestHolidayInvoiceIncludesTheNoticeWithACustomTemplate(t *testing.T) {
 	}
 	text := strings.Join(body, "\n")
 	assert.Contains(t, text, "Kontoinhaber: Jan Muster")
-	assert.Contains(t, text, "Sind Sie nicht der Kontoinhaber? Dann geben Sie dieses Schreiben bitte weiter.")
+	assert.Contains(t, text, "Seid ihr nicht der Kontoinhaber? Dann gebt dieses Schreiben bitte weiter.")
 	assert.Equal(t, 1, strings.Count(text, "Mandatsreferenz:"))
 }

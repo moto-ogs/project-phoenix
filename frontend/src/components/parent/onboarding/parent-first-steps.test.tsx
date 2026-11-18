@@ -40,7 +40,7 @@ describe("ParentFirstSteps", () => {
     );
     expect(
       screen.getByText(
-        "Hier finden Sie Angaben, Betreuungszeiten, Heimwege und Erziehungsberechtigte.",
+        "Hier findest du Angaben, Betreuungszeiten, Heimwege und Erziehungsberechtigte.",
       ),
     ).toBeInTheDocument();
     expect(

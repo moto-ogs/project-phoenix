@@ -60,7 +60,7 @@ describe("FamilyBillingForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Felder."),
+      await screen.findByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
     expect(
       screen.getByText("Bitte eine Postleitzahl mit 5 Ziffern eingeben."),

@@ -173,8 +173,8 @@ export function NotificationsSheet({
           <DrawerTitle>Benachrichtigungen</DrawerTitle>
           <DrawerDescription className="sr-only">
             {feedOnly
-              ? "Hinweise für Sie."
-              : "Erinnerungen und Hinweise für Sie."}
+              ? "Hinweise für dich."
+              : "Erinnerungen und Hinweise für dich."}
           </DrawerDescription>
           <Button
             type="button"

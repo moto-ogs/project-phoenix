@@ -26,7 +26,7 @@ describe("validateChildQuotaDraft", () => {
       expect(result).toEqual({
         ok: false,
         field: "bundles",
-        error: "Bitte geben Sie eine ganze Zahl von 1 bis 1000 ein.",
+        error: "Bitte gib eine ganze Zahl von 1 bis 1000 ein.",
       });
     },
   );
@@ -38,7 +38,7 @@ describe("validateChildQuotaDraft", () => {
       expect(result).toEqual({
         ok: false,
         field: "bundleSize",
-        error: "Bitte geben Sie eine ganze Zahl von 1 bis 1000 ein.",
+        error: "Bitte gib eine ganze Zahl von 1 bis 1000 ein.",
       });
     },
   );

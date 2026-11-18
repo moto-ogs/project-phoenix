@@ -179,7 +179,7 @@ function PreviewInput({ field }: Readonly<{ field: FormField }>) {
 export function FormPreviewFrame({
   header,
   title,
-  intro = "Bitte füllen Sie das Formular vollständig aus.",
+  intro = "Bitte fülle das Formular vollständig aus.",
   submitLabel = "Anmeldung absenden",
   sticky = true,
   headerInside = false,

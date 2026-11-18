@@ -37,7 +37,7 @@ describe("OpenWithdrawalCard", () => {
 
     expect(
       screen.getByText(
-        "Letzter Betreuungstag ist der 12.11.2026. Bis dahin bleibt alles wie gebucht. Tragen Sie das Ende jetzt mit „Betreuung beenden“ ein.",
+        "Letzter Betreuungstag ist der 12.11.2026. Bis dahin bleibt alles wie gebucht. Trage das Ende jetzt mit „Betreuung beenden“ ein.",
       ),
     ).toBeInTheDocument();
   });
@@ -61,7 +61,7 @@ describe("OpenWithdrawalCard", () => {
 
     expect(
       screen.getByText(
-        "Seit dem 01.09.2026 ist kein Betreuungstag mehr gebucht. Tragen Sie das Ende jetzt mit „Betreuung beenden“ ein.",
+        "Seit dem 01.09.2026 ist kein Betreuungstag mehr gebucht. Trage das Ende jetzt mit „Betreuung beenden“ ein.",
       ),
     ).toBeInTheDocument();
   });

@@ -35,7 +35,7 @@ import { traegerPath } from "~/lib/traeger-url";
 const EXPORTS_PATH = "/traeger/abrechnung/exporte";
 
 const INFO =
-  "Ihr Steuerbüro bucht die Beiträge auf Erlöskonten und Kostenstellen. Legen Sie hier fest, welche Leistung wohin gehört. Eine Rechnung hält die Werte beim Ausstellen fest. Eine Änderung gilt nur für neue Rechnungen.";
+  "Dein Steuerbüro bucht die Beiträge auf Erlöskonten und Kostenstellen. Lege hier fest, welche Leistung wohin gehört. Eine Rechnung hält die Werte beim Ausstellen fest. Eine Änderung gilt nur für neue Rechnungen.";
 
 export default function TraegerBookingAccountsPage() {
   const today = useBerlinToday();
@@ -97,7 +97,7 @@ export default function TraegerBookingAccountsPage() {
             <Alert
               type="warning"
               title="Das Standard-Erlöskonto fehlt"
-              message="Ohne Standard-Erlöskonto gibt es keine DATEV-Datei. Tragen Sie es in den DATEV-Werten ein."
+              message="Ohne Standard-Erlöskonto gibt es keine DATEV-Datei. Trage es in den DATEV-Werten ein."
               action={
                 <ButtonLink
                   href={traegerPath(DATEV_SETTINGS_PATH)}

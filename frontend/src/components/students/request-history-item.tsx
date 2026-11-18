@@ -214,7 +214,7 @@ export function RequestHistoryItem({
       type="button"
       variant="ghost"
       size="md"
-      tooltip="Öffnet ein Fenster, in dem Sie die Entscheidung ändern."
+      tooltip="Öffnet ein Fenster, in dem du die Entscheidung änderst."
       onClick={onCorrect}
     >
       Entscheidung korrigieren

@@ -54,7 +54,7 @@ export default function TraegerHolidayFormPage() {
       backLabel="Zurück zu den Ferien"
       info={
         <p>
-          Hier legen Sie fest, was Eltern bei der Ferienanmeldung zusätzlich
+          Hier legst du fest, was Eltern bei der Ferienanmeldung zusätzlich
           angeben. Name, Geburtsdatum, Schule, Wochen, Gesundheit, Kontakte und
           Zustimmungen fragt die Anmeldung immer ab. Jedes Speichern legt eine
           neue Version an. Schon abgeschickte Anmeldungen behalten ihre Version.

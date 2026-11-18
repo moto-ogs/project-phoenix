@@ -309,7 +309,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
     const viewer = screen.getByRole("dialog", { name: "elternbrief.docx" });
     expect(
       within(viewer).getByText(
-        "Diese Datei lässt sich hier nicht anzeigen. Laden Sie sie herunter, um sie zu öffnen.",
+        "Diese Datei lässt sich hier nicht anzeigen. Lade sie herunter, um sie zu öffnen.",
       ),
     ).toBeInTheDocument();
     expect(within(viewer).getByText("Word · 24 KB")).toBeInTheDocument();

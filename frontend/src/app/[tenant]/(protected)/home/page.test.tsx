@@ -430,7 +430,7 @@ describe("Startseite", () => {
 
     // Anker: die Standardansicht der Betreuungskraft ist geladen.
     expect(
-      await screen.findByText("Ihre Startseite ist leer"),
+      await screen.findByText("Deine Startseite ist leer"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Kein Zugriff")).not.toBeInTheDocument();
     // Ohne Rechte auf die Betriebszahlen bleiben die Kennzahlen weg; die

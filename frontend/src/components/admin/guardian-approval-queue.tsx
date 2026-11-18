@@ -412,7 +412,7 @@ export default function GuardianApprovalQueue({
         confirmVariant="danger"
       >
         <p className="text-sm text-gray-600">
-          Möchten Sie die Anfrage für{" "}
+          Möchtest du die Anfrage für{" "}
           <span className="font-medium text-gray-900">
             {rejectTarget?.guardianName ||
               rejectTarget?.guardianEmail ||

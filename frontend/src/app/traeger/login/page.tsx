@@ -52,7 +52,7 @@ const logger = createLogger({ component: "TraegerLoginPage" });
 
 const SHELL_COPY = {
   title: "Willkommen im Träger-Portal",
-  subtitle: "Melden Sie sich mit Ihrem moto-Konto an.",
+  subtitle: "Melde dich mit deinem moto-Konto an.",
 } as const;
 
 interface EnrollmentStep {
@@ -209,7 +209,7 @@ function LoginForm() {
         <AuthProgress
           state="checking"
           title="Einen Moment bitte"
-          description="moto prüft Ihre Anmeldung."
+          description="moto prüft deine Anmeldung."
         />
       </AuthShell>
     );
@@ -240,7 +240,7 @@ function LoginForm() {
           ) : null}
           <Alert
             type="info"
-            message="Die Schule verlangt eine Anmeldung mit Code. Melden Sie sich dafür zuerst ab."
+            message="Die Schule verlangt eine Anmeldung mit Code. Melde dich dafür zuerst ab."
           />
           <Button
             type="button"
@@ -248,8 +248,8 @@ function LoginForm() {
             size="field"
             className="w-full"
             isLoading={endingSession}
-            loadingText="Sie werden abgemeldet …"
-            tooltip="Meldet Sie ab. Danach melden Sie sich mit dem Code aus Ihrer E-Mail an."
+            loadingText="Du wirst abgemeldet …"
+            tooltip="Meldet dich ab. Danach meldest du dich mit dem Code aus deiner E-Mail an."
             onClick={() => void endSession()}
           >
             Abmelden und mit Code anmelden
@@ -308,8 +308,7 @@ function LoginForm() {
           <FormErrorAlert message={choice.errors.error} />
           <fieldset className="space-y-3 border-0 p-0">
             <legend className="mb-2 text-sm font-medium text-gray-700">
-              Sie gehören zu mehreren Trägern. Welchen Träger möchten Sie
-              öffnen?
+              Du gehörst zu mehreren Trägern. Welchen Träger möchtest du öffnen?
             </legend>
             {choices.map((choice) => (
               <ChoiceTile
@@ -363,7 +362,7 @@ function LoginForm() {
             withCode ? (
               <Alert
                 type="info"
-                message="Die Schule verlangt eine Anmeldung mit Code. Geben Sie nach dem Passwort den Code aus Ihrer E-Mail ein."
+                message="Die Schule verlangt eine Anmeldung mit Code. Gib nach dem Passwort den Code aus deiner E-Mail ein."
               />
             ) : undefined
           }
@@ -385,7 +384,7 @@ export default function TraegerLoginPage() {
           <AuthProgress
             state="checking"
             title="Einen Moment bitte"
-            description="moto prüft Ihre Anmeldung."
+            description="moto prüft deine Anmeldung."
           />
         </AuthShell>
       }

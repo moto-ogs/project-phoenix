@@ -31,13 +31,13 @@ const KIND_HINT: Readonly<Record<DocumentKind, string>> = {
     "Bestätigt die Anmeldung und nennt den Betrag. Mit Hinweisen und Notfallnummern.",
   invoice: "Nennt Leistung, Betrag und Zahlungsfrist.",
   fee_notice:
-    "Setzt den Beitrag fest. Mit der Rechtsbehelfsbelehrung aus Ihrer Vorlage.",
+    "Setzt den Beitrag fest. Mit der Rechtsbehelfsbelehrung aus deiner Vorlage.",
 };
 
 const SERVICE_DESCRIPTION = {
   holiday:
-    "Gilt für die Schreiben der Ferienläufe. Nach der Wahl speichern Sie unten.",
-  care: "Gilt für die Schreiben der Monatsläufe. Nach der Wahl speichern Sie unten.",
+    "Gilt für die Schreiben der Ferienläufe. Nach der Wahl speicherst du unten.",
+  care: "Gilt für die Schreiben der Monatsläufe. Nach der Wahl speicherst du unten.",
 } as const;
 
 export function DocumentKindCard({

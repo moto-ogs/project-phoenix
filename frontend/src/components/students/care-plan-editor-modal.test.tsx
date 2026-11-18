@@ -391,7 +391,7 @@ describe("CarePlanEditorModal", () => {
 
     expect(
       await screen.findByText(
-        "Bitte ändern Sie zuerst eine Zeit oder die Abholart.",
+        "Bitte ändere zuerst eine Zeit oder die Abholart.",
       ),
     ).toBeInTheDocument();
     expect(onSubmitException).not.toHaveBeenCalled();
@@ -408,7 +408,7 @@ describe("CarePlanEditorModal", () => {
     save();
 
     expect(
-      await screen.findByText("Bitte geben Sie eine gültige Ankunftszeit ein."),
+      await screen.findByText("Bitte gib eine gültige Ankunftszeit ein."),
     ).toBeInTheDocument();
     expect(onSubmitException).not.toHaveBeenCalled();
   });
@@ -553,7 +553,7 @@ describe("CarePlanEditorModal", () => {
     fireEvent.click(rowButton(draft));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Die Notiz konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",
+      "Die Notiz konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
     );
     expect(toastError).not.toHaveBeenCalled();
     expect(draft).toHaveValue("Bitte klingeln");
@@ -678,7 +678,7 @@ describe("CarePlanEditorModal", () => {
     expect(onResetPickupToOffering).toHaveBeenCalledWith(1, "2026-05-25");
 
     const message =
-      "Die Abholung ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.";
+      "Die Abholung ist gerade nicht erreichbar. Bitte versuche es erneut.";
     expect(await screen.findByRole("alert")).toHaveTextContent(message);
     expect(toastError).not.toHaveBeenCalled();
 
@@ -704,7 +704,7 @@ describe("CarePlanEditorModal", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Die gebuchte Abholzeit können Sie erst ab 10.11.2026 übernehmen. Bis 09.11.2026 gilt an diesem Wochentag noch die eingetragene Zeit.",
+      "Die gebuchte Abholzeit kannst du erst ab 10.11.2026 übernehmen. Bis 09.11.2026 gilt an diesem Wochentag noch die eingetragene Zeit.",
     );
   });
 

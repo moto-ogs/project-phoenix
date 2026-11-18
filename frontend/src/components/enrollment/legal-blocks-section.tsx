@@ -138,12 +138,12 @@ export function LegalBlocksSection({
     if (!file) return;
     const problem = enrollmentDocumentProblem(file);
     if (problem === "not_pdf") {
-      showMessage("Bitte wählen Sie eine PDF-Datei aus.");
+      showMessage("Bitte wähle eine PDF-Datei aus.");
       return;
     }
     if (problem === "too_large") {
       showMessage(
-        `Die Datei ist größer als ${MAX_ENROLLMENT_DOCUMENT_SIZE_LABEL}. Bitte wählen Sie eine kleinere Datei.`,
+        `Die Datei ist größer als ${MAX_ENROLLMENT_DOCUMENT_SIZE_LABEL}. Bitte wähle eine kleinere Datei.`,
       );
       return;
     }
@@ -443,8 +443,8 @@ export function LegalBlocksSection({
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">
             {customOnly
-              ? "Hier ergänzen Sie Hinweise, PDFs und freiwillige Einwilligungen für diesen Zeitraum. Die festen Zustimmungen bleiben bestehen."
-              : "Die vier Standardblöcke starten mit den Texten aus den Einstellungen. Hier blenden Sie sie für diese Vorlage aus oder bearbeiten bewusst eine Abweichung. Eigene Zustimmungen bleiben direkt an diese Vorlage gebunden."}
+              ? "Hier ergänzt du Hinweise, PDFs und freiwillige Einwilligungen für diesen Zeitraum. Die festen Zustimmungen bleiben bestehen."
+              : "Die vier Standardblöcke starten mit den Texten aus den Einstellungen. Hier blendest du sie für diese Vorlage aus oder bearbeitest bewusst eine Abweichung. Eigene Zustimmungen bleiben direkt an diese Vorlage gebunden."}
           </p>
           {customOnly ? (
             // Said once for every entry below, not in each PDF part.
@@ -466,7 +466,7 @@ export function LegalBlocksSection({
           <Alert
             type="warning"
             announce="off"
-            message="Die Datenschutzinformation ist in dieser Vorlage deaktiviert. Stellen Sie sicher, dass Eltern die Datenschutzhinweise auf anderem Weg erhalten, zum Beispiel über den Elternbrief."
+            message="Die Datenschutzinformation ist in dieser Vorlage deaktiviert. Stelle sicher, dass Eltern die Datenschutzhinweise auf anderem Weg erhalten, zum Beispiel über den Elternbrief."
           />
         </div>
       ) : null}
@@ -692,7 +692,7 @@ function AGBTemplateSourceEditor({
               <p className="mt-0.5 text-sm text-gray-600">
                 {hasDocument
                   ? "Diese PDF wird in dieser Formularvorlage als Link angezeigt."
-                  : "Laden Sie die AGB / Teilnahmebedingungen als PDF hoch."}
+                  : "Lade die AGB / Teilnahmebedingungen als PDF hoch."}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">

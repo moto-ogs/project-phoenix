@@ -171,7 +171,7 @@ describe("AdminEnrollmentsPage (#3778)", () => {
         );
       });
       expect(mocks.toastSuccess).toHaveBeenCalledWith(
-        "Sie bekommen keine E-Mail mehr bei neuen Anmeldungen.",
+        "Du bekommst keine E-Mail mehr bei neuen Anmeldungen.",
       );
       expect(await openEmailEntry()).toHaveAttribute("aria-checked", "false");
     });
@@ -187,7 +187,7 @@ describe("AdminEnrollmentsPage (#3778)", () => {
 
       await waitFor(() => {
         expect(mocks.toastSuccess).toHaveBeenCalledWith(
-          "Sie bekommen jetzt bei jeder neuen Anmeldung eine E-Mail.",
+          "Du bekommst jetzt bei jeder neuen Anmeldung eine E-Mail.",
         );
       });
       expect(mocks.setEmailSubscription).toHaveBeenCalledWith(

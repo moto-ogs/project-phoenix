@@ -37,7 +37,7 @@ export function BinaryModeGuard({
     return (
       <FeatureOffPage
         title={title}
-        description="Ihre Schule erfasst nur, ob ein Kind da ist oder nicht. Räume und Aktivitäten werden dabei nicht geführt."
+        description="Deine Schule erfasst nur, ob ein Kind da ist oder nicht. Räume und Aktivitäten werden dabei nicht geführt."
       />
     );
   }

@@ -50,7 +50,7 @@ describe("LogoutModal", () => {
     ).not.toHaveProperty("tagName", "H1");
     expect(
       within(dialog).getByText(
-        "Möchten Sie sich wirklich von Ihrem Konto abmelden?",
+        "Möchtest du dich wirklich von deinem Konto abmelden?",
       ),
     ).toBeVisible();
   });

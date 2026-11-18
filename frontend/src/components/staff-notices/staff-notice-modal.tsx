@@ -151,7 +151,7 @@ export function StaffNoticeModal({
   const handleSubmit = async () => {
     const fields = noticeFieldErrors(form);
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
 
@@ -340,7 +340,7 @@ export function StaffNoticeModal({
 /** Prüfung vor dem Senden. Schlüssel sind die Feldnamen des Backends. */
 function noticeFieldErrors(form: FormState): Record<string, string> {
   const fields: Record<string, string> = {};
-  if (!form.title.trim()) fields.title = "Bitte geben Sie einen Titel an.";
+  if (!form.title.trim()) fields.title = "Bitte gib einen Titel an.";
   if (form.validUntil && form.validUntil < form.validFrom)
     fields.valid_until = "Das Ende darf nicht vor dem Beginn liegen.";
   return fields;

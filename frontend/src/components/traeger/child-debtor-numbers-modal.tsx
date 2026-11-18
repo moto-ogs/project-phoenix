@@ -86,7 +86,7 @@ export function ChildDebtorNumbersModal({
       if (error) invalid[fieldName(index)] = error;
     });
     if (Object.keys(invalid).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", invalid);
+      formErrors.invalid("Bitte prüfe deine Angaben.", invalid);
       return;
     }
     const changed = children.flatMap((child, index) => {

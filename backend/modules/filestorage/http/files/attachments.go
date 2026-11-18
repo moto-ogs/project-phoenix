@@ -28,7 +28,7 @@ import (
 // Beide Meldungen erreichen eine Person in der Schule und sagen, was als
 // Nächstes zu tun ist, nicht nur, dass etwas fehlgeschlagen ist.
 var (
-	errAnnouncementPublished = errors.New("die Mitteilung ist schon veröffentlicht. Ziehen Sie sie zurück, um Anhänge zu ändern")
+	errAnnouncementPublished = errors.New("die Mitteilung ist schon veröffentlicht. Ziehe sie zurück, um Anhänge zu ändern")
 	errAttachmentLimit       = errors.New("diese Mitteilung hat schon die höchstmögliche Zahl an Anhängen")
 )
 

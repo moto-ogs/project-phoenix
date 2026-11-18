@@ -2,6 +2,6 @@
   "retry": "Wiederholen",
   "copyRequestId": "Vorgangskennung kopieren",
   "requestId": "Vorgangskennung: {requestId}",
-  "crash": "{object} konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
-  "fieldCheck": "Bitte prüfen Sie dieses Feld."
+  "crash": "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
+  "fieldCheck": "Bitte prüfe dieses Feld."
 }

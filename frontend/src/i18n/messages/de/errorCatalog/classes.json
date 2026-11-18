@@ -1,7 +1,7 @@
 {
-  "input": "{object} konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",
-  "permission": "Für {object} fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
-  "business_rejection": "{object} konnte nicht geändert werden. Bitte prüfen Sie den aktuellen Stand.",
-  "unavailable": "{object} ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
-  "server": "{object} konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut."
+  "input": "{object} konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
+  "permission": "Für {object} fehlt dir die Berechtigung. Bitte frage die Schule.",
+  "business_rejection": "{object} konnte nicht geändert werden. Bitte prüfe den aktuellen Stand.",
+  "unavailable": "{object} ist gerade nicht erreichbar. Bitte versuche es erneut.",
+  "server": "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut."
 }

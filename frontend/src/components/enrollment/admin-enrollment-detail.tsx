@@ -960,7 +960,7 @@ function ChildInformationCard({
           <Alert
             type="warning"
             announce="off"
-            message="Beim Schuljahreswechsel war das Kinderkontingent voll. Darum wurde dieses Kind nicht automatisch verlängert. Bitte entscheiden Sie selbst."
+            message="Beim Schuljahreswechsel war das Kinderkontingent voll. Darum wurde dieses Kind nicht automatisch verlängert. Bitte entscheide selbst."
           />
         ) : null}
         {terminal ? null : (
@@ -1305,7 +1305,7 @@ function summarizeChildren(children: AdminRequestChild[]) {
 // A mounted page must recheck the plan before reporting an overdue failure.
 function weeklyPlanMessage(on: string, today: string): string {
   if (on < today) {
-    return `Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung sollten ab ${formatPlainDate(on)} gelten. moto konnte sie noch nicht übernehmen. Darum gelten noch die bisherigen. moto versucht es jede Stunde neu. Bleibt dieser Hinweis, melden Sie sich bitte beim moto-Team.`;
+    return `Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung sollten ab ${formatPlainDate(on)} gelten. moto konnte sie noch nicht übernehmen. Darum gelten noch die bisherigen. moto versucht es jede Stunde neu. Bleibt dieser Hinweis, melde dich bitte beim moto-Team.`;
   }
   return on === today
     ? "Abholzeiten, Betreuungstage und Heimweg aus dieser Anmeldung gelten ab heute. moto übernimmt sie im Lauf des Tages."

@@ -66,7 +66,7 @@ export function SepaImportMappingCard({
   return (
     <SectionCard
       title="Spalten zuordnen"
-      description="Wählen Sie für jedes Feld die Spalte aus Ihrer Datei. moto hat schon passende Spalten vorgeschlagen."
+      description="Wähle für jedes Feld die Spalte aus deiner Datei. moto hat schon passende Spalten vorgeschlagen."
     >
       <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
         {IMPORT_FIELDS.map((field) => (
@@ -120,7 +120,7 @@ export function SepaImportMappingCard({
             }
             disabled={disabled}
             label={`Alle Mandate gehören zu unserer Gläubiger-ID ${creditorId}`}
-            hint="Ihre Datei hat keine Spalte mit der Gläubiger-ID. Bestätigen Sie, dass jedes Mandat für diese Gläubiger-ID unterschrieben wurde."
+            hint="Deine Datei hat keine Spalte mit der Gläubiger-ID. Bestätige, dass jedes Mandat für diese Gläubiger-ID unterschrieben wurde."
           />
         ) : null}
       </div>

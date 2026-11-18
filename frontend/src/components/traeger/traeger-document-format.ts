@@ -81,12 +81,12 @@ export function schoolReleaseAudienceLabel(
   if (release.audience === "schools") {
     return release.schoolId === null
       ? "Alle Schulen des Trägers"
-      : "Ihre Schule";
+      : "Deine Schule";
   }
   if (release.groupId !== null) {
     return `Eltern der Gruppe „${release.groupName}“`;
   }
   return release.schoolId === null
     ? "Eltern an allen Schulen"
-    : "Eltern Ihrer Schule";
+    : "Eltern deiner Schule";
 }

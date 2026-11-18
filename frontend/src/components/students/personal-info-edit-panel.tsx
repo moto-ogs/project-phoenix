@@ -482,7 +482,7 @@ export function PersonalInfoEditPanel({
     // die echte überschreiben (Bauart 2: ein Speichern, das nichts verliert).
     if (privacyConsentStatus !== "ready") {
       errors.invalid(
-        "Die Einwilligung ist noch nicht geladen. Bitte laden Sie sie zuerst.",
+        "Die Einwilligung ist noch nicht geladen. Bitte lade sie zuerst.",
       );
       return;
     }
@@ -491,7 +491,7 @@ export function PersonalInfoEditPanel({
     // to object) is the only reading that cannot lose someone else's work.
     if (companionsStale) {
       errors.invalid(
-        "Die Laufgemeinschaft wurde inzwischen geändert. Bitte laden Sie sie neu.",
+        "Die Laufgemeinschaft wurde inzwischen geändert. Bitte lade sie neu.",
       );
       return;
     }
@@ -518,9 +518,9 @@ export function PersonalInfoEditPanel({
         (day) => !coveredDays.has(day),
       )
     ) {
-      errors.invalid("Bitte prüfen Sie den Heimweg.", {
+      errors.invalid("Bitte prüfe den Heimweg.", {
         departure_companion_note:
-          "Bitte wählen Sie ein Kind oder schreiben Sie, mit wem das Kind nach Hause geht.",
+          "Bitte wähle ein Kind oder schreibe, mit wem das Kind nach Hause geht.",
       });
       return;
     }
@@ -735,7 +735,7 @@ export function PersonalInfoEditPanel({
         tooltip="Speichert die geänderten Angaben des Kindes."
         disabledReason={
           privacyConsentStatus === "error"
-            ? "Laden Sie zuerst die Einwilligung neu."
+            ? "Lade zuerst die Einwilligung neu."
             : undefined
         }
       >
@@ -771,7 +771,7 @@ export function PersonalInfoEditPanel({
               type="button"
               variant="primary"
               size="compact"
-              tooltip="Lädt die Laufgemeinschaft neu und verwirft Ihre Änderungen daran."
+              tooltip="Lädt die Laufgemeinschaft neu und verwirft deine Änderungen daran."
               onClick={() => {
                 errors.clear();
                 refreshFromRemote();
@@ -786,7 +786,7 @@ export function PersonalInfoEditPanel({
         <div className="space-y-1">
           <LoadErrorAlert error={companionsLoadError} />
           <p className="text-xs text-gray-600">
-            Andere Angaben können Sie trotzdem speichern. Die Laufgemeinschaft
+            Andere Angaben kannst du trotzdem speichern. Die Laufgemeinschaft
             bleibt dabei unverändert.
           </p>
         </div>
@@ -829,7 +829,7 @@ export function PersonalInfoEditPanel({
                 tooltip="Ergänzt „Anderes Kind“ im Heimweg des verknüpften Kindes und speichert."
                 disabledReason={
                   companionsStale
-                    ? "Laden Sie zuerst die Laufgemeinschaft neu."
+                    ? "Lade zuerst die Laufgemeinschaft neu."
                     : undefined
                 }
                 onClick={() => {

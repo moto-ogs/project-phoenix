@@ -212,7 +212,7 @@ describe("PasswordChangeModal", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Bitte füllen Sie alle Felder aus/i),
+        screen.getByText(/Bitte fülle alle Felder aus/i),
       ).toBeInTheDocument();
     });
   });
@@ -571,7 +571,7 @@ describe("PasswordChangeModal", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Bitte füllen Sie alle Felder aus/i),
+          screen.getByText(/Bitte fülle alle Felder aus/i),
         ).toBeInTheDocument();
         expect(scrollIntoViewMock).toHaveBeenCalledWith({
           behavior: "smooth",
@@ -603,7 +603,7 @@ describe("PasswordChangeModal", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Bitte füllen Sie alle Felder aus/i),
+          screen.getByText(/Bitte fülle alle Felder aus/i),
         ).toBeInTheDocument();
       });
 

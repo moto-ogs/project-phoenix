@@ -88,7 +88,7 @@ var reminders_init_aktivitaeten_1Definitions = []config.Definition{
 	{
 		Key:             config.KeyRemindersActivityOverdueEnabled,
 		Label:           "Überfällige Aktivität",
-		Description:     "Zeigt eine Erinnerung an, wenn eine geplante Aktivität nicht rechtzeitig gestartet wurde. Wann das ist, legen Sie unter „Betrieb“ beim Betreuungsplan fest.",
+		Description:     "Zeigt eine Erinnerung an, wenn eine geplante Aktivität nicht rechtzeitig gestartet wurde. Wann das ist, legst du unter „Betrieb“ beim Betreuungsplan fest.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:read",
@@ -114,7 +114,7 @@ var reminders_init_aktivitaeten_1Definitions = []config.Definition{
 	{
 		Key:             config.KeyRemindersActivityRunningOverMinutes,
 		Label:           "Nachlauf in Minuten",
-		Description:     "Wie viele Minuten nach dem geplanten Ende die Erinnerung erscheint. Beendet moto Termine automatisch, wählen Sie hier weniger Minuten als den Puffer unter „Betrieb“.",
+		Description:     "Wie viele Minuten nach dem geplanten Ende die Erinnerung erscheint. Beendet moto Termine automatisch, wähle hier weniger Minuten als den Puffer unter „Betrieb“.",
 		Type:            config.FieldNumber,
 		Default:         10,
 		ReadPermission:  "config:read",

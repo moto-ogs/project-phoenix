@@ -173,7 +173,7 @@ function StudentsPageContent() {
   );
 
   const errorMessage = studentsError
-    ? "Fehler beim Laden der Kinder. Bitte versuchen Sie es später erneut."
+    ? "Fehler beim Laden der Kinder. Bitte versuche es später erneut."
     : null;
 
   useEffect(() => {
@@ -375,7 +375,7 @@ function StudentsPageContent() {
         // The child exists, but the consent input is lost (#5970): the notice
         // stays until closed and leads to the child's page to enter it again.
         toastWarning(
-          `„${displayName}“ ist angelegt. Die Angaben unter Datenschutz wurden aber nicht gespeichert. Bitte öffnen Sie das Kind und tragen Sie sie dort nach.`,
+          `„${displayName}“ ist angelegt. Die Angaben unter Datenschutz wurden aber nicht gespeichert. Bitte öffne das Kind und trage sie dort nach.`,
           {
             duration: 0,
             action: {
@@ -469,9 +469,9 @@ function StudentsPageContent() {
                     // das Kind KANN es geben, es ist nur nicht mehr in
                     // Betreuung (#2487).
                     canDeleteStudents
-                    ? "Versuchen Sie andere Suchkriterien oder Filter. Kinder, deren Betreuung beendet ist, stehen im Menü oben rechts unter Beendete Betreuungen."
-                    : "Versuchen Sie andere Suchkriterien oder Filter."
-                  : "Legen Sie das erste Kind an, um mit der Betreuung zu starten.",
+                    ? "Versuche andere Suchkriterien oder Filter. Kinder, deren Betreuung beendet ist, stehen im Menü oben rechts unter Beendete Betreuungen."
+                    : "Versuche andere Suchkriterien oder Filter."
+                  : "Lege das erste Kind an, um mit der Betreuung zu starten.",
               icon: (
                 <MotoDuotoneIcon
                   icon={childrenConcept.icon}

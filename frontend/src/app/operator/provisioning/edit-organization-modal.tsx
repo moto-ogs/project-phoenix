@@ -47,7 +47,7 @@ export function EditOrganizationModal({
       if (!isValidSlug(orgSlug)) {
         const hint =
           "Slug darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten.";
-        invalid("Bitte prüfen Sie die markierten Felder.", { slug: hint });
+        invalid("Bitte prüfe die markierten Felder.", { slug: hint });
         return;
       }
       setOrgSaving(true);

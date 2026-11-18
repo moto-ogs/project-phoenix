@@ -406,7 +406,7 @@ describe("ParentCalendarPage", () => {
     expect(within(responses).getByText("3")).toBeInTheDocument();
     expect(within(responses).getByText("5")).toBeInTheDocument();
     expect(
-      within(responses).getByText("Namen anderer Eltern sehen Sie nicht."),
+      within(responses).getByText("Namen anderer Eltern siehst du nicht."),
     ).toBeInTheDocument();
     // #6987: die Zahlen gelten für den geöffneten Termin der Reihe.
     expect(mockedOverview).toHaveBeenCalledWith("appointment-1", "2026-08-19");
@@ -415,7 +415,7 @@ describe("ParentCalendarPage", () => {
     ).toHaveAttribute("aria-pressed", "true");
     expect(
       within(dialog).getByText(
-        "Ihre Antwort gilt für alle Termine dieser Reihe.",
+        "Deine Antwort gilt für alle Termine dieser Reihe.",
       ),
     ).toBeInTheDocument();
 
@@ -666,7 +666,7 @@ describe("ParentCalendarPage", () => {
     );
     const dialog = screen.getByRole("dialog", { name: "Elternabend" });
     expect(
-      within(dialog).getByText("Sie bekommen dazu keine Erinnerung."),
+      within(dialog).getByText("Du bekommst dazu keine Erinnerung."),
     ).toBeInTheDocument();
   });
 

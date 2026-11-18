@@ -45,7 +45,7 @@ const SERVICES = {
   care: {
     title: "Rechnungsnummern der Monatsbeiträge",
     description:
-      "Eigener Nummernkreis für die Monatsbeiträge. Nehmen Sie ein anderes Kürzel als bei den Ferien.",
+      "Eigener Nummernkreis für die Monatsbeiträge. Nimm ein anderes Kürzel als bei den Ferien.",
     defaultPattern: "MB-{JJJJ}-{NNNN}",
     save: saveCareNumberRange,
     saveStart: saveCareNumberRangeStart,
@@ -88,8 +88,8 @@ export function NumberRangeCard({
   const submit = async () => {
     formErrors.clear();
     if (!pattern.trim()) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", {
-        pattern: "Bitte geben Sie ein Muster an.",
+      formErrors.invalid("Bitte prüfe deine Angaben.", {
+        pattern: "Bitte gib ein Muster an.",
       });
       return;
     }
@@ -218,7 +218,7 @@ export function NumberRangeCard({
         </>
       ) : (
         <p className="text-sm text-gray-700">
-          Noch kein Muster. Ohne Muster können Sie keinen Lauf freigeben.
+          Noch kein Muster. Ohne Muster kannst du keinen Lauf freigeben.
         </p>
       )}
       <FormModal

@@ -108,7 +108,7 @@ describe("ParentFamilyChildrenCard", () => {
     });
     expect(
       await screen.findByText(
-        "Bis zur Unterschrift können Sie die Zahl hier ändern.",
+        "Bis zur Unterschrift kannst du die Zahl hier ändern.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ein Kind mehr" }));
@@ -151,11 +151,11 @@ describe("ParentFamilyChildrenCard", () => {
     );
     expect(
       await screen.findByText(
-        "Ihr Kind ist angenommen. Die Zahl ändern Sie jetzt in Ihrem Betreuungsvertrag.",
+        "Dein Kind ist angenommen. Die Zahl änderst du jetzt in deinem Betreuungsvertrag.",
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Der Träger prüft sie, wenn Ihr Vertrag kommt/),
+      screen.getByText(/Der Träger prüft sie, wenn dein Vertrag kommt/),
     ).toBeInTheDocument();
   });
 

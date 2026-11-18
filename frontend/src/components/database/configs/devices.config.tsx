@@ -75,12 +75,12 @@ function ApiKeyField({ device }: Readonly<{ device: Device }>) {
             void copy(device.api_key!).then((ok) => {
               if (!ok) {
                 showMessage(
-                  "Der Schlüssel konnte nicht kopiert werden. Bitte zeigen Sie ihn an und kopieren Sie ihn selbst.",
+                  "Der Schlüssel konnte nicht kopiert werden. Bitte zeige ihn an und kopiere ihn selbst.",
                 );
               }
             });
           }}
-          tooltip="Kopiert den Schlüssel, damit Sie ihn am Gerät einfügen."
+          tooltip="Kopiert den Schlüssel, damit du ihn am Gerät einfügst."
         >
           {copied ? "Kopiert" : "Kopieren"}
         </Button>
@@ -88,7 +88,7 @@ function ApiKeyField({ device }: Readonly<{ device: Device }>) {
       <Alert
         type="info"
         message={
-          'Der Schlüssel ist verborgen. Mit „Anzeigen" machen Sie ihn sichtbar.'
+          'Der Schlüssel ist verborgen. Mit „Anzeigen" machst du ihn sichtbar.'
         }
       />
     </div>
@@ -311,6 +311,6 @@ export const devicesConfig = defineEntityConfig<Device>({
     editModalTitle: "Gerät bearbeiten",
     detailModalTitle: "Gerätedetails",
     deleteConfirmation:
-      "Sind Sie sicher, dass Sie dieses Gerät löschen möchten? Dieser Vorgang kann nicht rückgängig gemacht werden.",
+      "Bist du sicher, dass du dieses Gerät löschen möchtest? Dieser Vorgang kann nicht rückgängig gemacht werden.",
   },
 });

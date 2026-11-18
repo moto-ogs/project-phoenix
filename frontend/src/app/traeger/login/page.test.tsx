@@ -165,7 +165,7 @@ describe("TraegerLoginPage", () => {
 
     expect(
       screen.getByText(
-        "Die Schule verlangt eine Anmeldung mit Code. Geben Sie nach dem Passwort den Code aus Ihrer E-Mail ein.",
+        "Die Schule verlangt eine Anmeldung mit Code. Gib nach dem Passwort den Code aus deiner E-Mail ein.",
       ),
     ).toBeInTheDocument();
     submitCredentials();
@@ -216,7 +216,7 @@ describe("TraegerLoginPage", () => {
 
     expect(
       await screen.findByText(
-        "Die Schule verlangt eine Anmeldung mit Code. Geben Sie nach dem Passwort den Code aus Ihrer E-Mail ein.",
+        "Die Schule verlangt eine Anmeldung mit Code. Gib nach dem Passwort den Code aus deiner E-Mail ein.",
       ),
     ).toBeInTheDocument();
     expect(recoverableErrors).not.toHaveBeenCalled();
@@ -261,7 +261,7 @@ describe("TraegerLoginPage", () => {
 
     expect(
       screen.getByText(
-        "Die Schule verlangt eine Anmeldung mit Code. Geben Sie nach dem Passwort den Code aus Ihrer E-Mail ein.",
+        "Die Schule verlangt eine Anmeldung mit Code. Gib nach dem Passwort den Code aus deiner E-Mail ein.",
       ),
     ).toBeInTheDocument();
     expect(sessionStorage.getItem("moto.traeger.sign-in-with-code")).toBe("1");
@@ -290,7 +290,7 @@ describe("TraegerLoginPage", () => {
     });
     expect(
       screen.getByText(
-        "Die Schule verlangt eine Anmeldung mit Code. Melden Sie sich dafür zuerst ab.",
+        "Die Schule verlangt eine Anmeldung mit Code. Melde dich dafür zuerst ab.",
       ),
     ).toBeInTheDocument();
     expect(mockSignOut).not.toHaveBeenCalled();
@@ -348,7 +348,7 @@ describe("TraegerLoginPage", () => {
 
     expect(
       await screen.findByText(
-        "Kein Zugriff auf Ihre E-Mails? Wenden Sie sich an das moto-Team. Im Träger-Portal ist der Code immer Pflicht.",
+        "Kein Zugriff auf deine E-Mails? Wende dich an das moto-Team. Im Träger-Portal ist der Code immer Pflicht.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(
@@ -493,7 +493,7 @@ describe("TraegerLoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Link senden" }));
 
     expect(
-      await screen.findByText("Bitte prüfen Sie Ihr Postfach"),
+      await screen.findByText("Bitte prüfe dein Postfach"),
     ).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/traeger/auth/password-reset",
@@ -521,15 +521,13 @@ describe("TraegerLoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anmelden" }));
 
     expect(
-      await screen.findByText(
-        "Bitte geben Sie E-Mail-Adresse und Passwort ein.",
-      ),
+      await screen.findByText("Bitte gib E-Mail-Adresse und Passwort ein."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Bitte geben Sie Ihre E-Mail-Adresse ein."),
+      screen.getByText("Bitte gib deine E-Mail-Adresse ein."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Bitte geben Sie Ihr Passwort ein."),
+      screen.getByText("Bitte gib dein Passwort ein."),
     ).toBeInTheDocument();
     expect(mockLogin).not.toHaveBeenCalled();
 
@@ -538,7 +536,7 @@ describe("TraegerLoginPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Anmelden" }));
     expect(
-      (await screen.findAllByText("Bitte geben Sie Ihr Passwort ein."))[0],
+      (await screen.findAllByText("Bitte gib dein Passwort ein."))[0],
     ).toBeInTheDocument();
     expect(mockLogin).not.toHaveBeenCalled();
   });

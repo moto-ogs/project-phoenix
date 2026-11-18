@@ -143,7 +143,7 @@ export function HolidayHomeSchoolBookings({
 
   return (
     <SectionCard
-      title="Ihre Kinder in Ferienwochen anderer OGS"
+      title="Deine Kinder in Ferienwochen anderer OGS"
       description="Nur zur Information. Der Träger hat diese Anmeldungen bestätigt. Änderungen macht der Träger."
       action={
         unassigned.length > 0 ? (
@@ -163,15 +163,15 @@ export function HolidayHomeSchoolBookings({
           stackedOnMobile
           emptyState={
             <EmptyState
-              title="Kein Kind Ihrer OGS ist für eine andere OGS bestätigt"
-              description="Hier stehen Kinder Ihrer OGS, deren Anmeldung der Träger für eine andere OGS bestätigt hat. Offene oder abgesagte Anmeldungen und Plätze auf der Warteliste stehen hier nicht. Nach dem letzten Tag der Woche steht das Kind nicht mehr hier."
+              title="Kein Kind deiner OGS ist für eine andere OGS bestätigt"
+              description="Hier stehen Kinder deiner OGS, deren Anmeldung der Träger für eine andere OGS bestätigt hat. Offene oder abgesagte Anmeldungen und Plätze auf der Warteliste stehen hier nicht. Nach dem letzten Tag der Woche steht das Kind nicht mehr hier."
             />
           }
         />
         {unassigned.length > 0 && (
           <p className="text-sm text-gray-600">
             „Nicht zugeordnet“: moto findet kein Kind oder mehrere Kinder mit
-            diesem Namen und Geburtsdatum. Prüfen Sie die Kinderakte.
+            diesem Namen und Geburtsdatum. Prüfe die Kinderakte.
           </p>
         )}
       </div>

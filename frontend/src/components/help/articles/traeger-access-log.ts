@@ -8,33 +8,33 @@ export function traegerAccessLogTopic(): HelpTopic {
     title: "Zugriffsprotokoll lesen",
     question: "Wie sehe ich, wer Daten gelesen oder geändert hat?",
     summary:
-      "Das Zugriffsprotokoll zeigt, wer an Ihren Schulen Daten von Kindern, Eltern oder Personal gelesen oder geändert hat.",
+      "Das Zugriffsprotokoll zeigt, wer an deinen Schulen Daten von Kindern, Eltern oder Personal gelesen oder geändert hat.",
     group: "auswertung",
     audience: "traeger",
     icon: "ShieldCheck",
     requirements: [
-      "Sie haben im Träger-Büro die Rolle Verwaltung. Nur diese Rolle darf das Protokoll lesen.",
+      "Du hast im Träger-Büro die Rolle Verwaltung. Nur diese Rolle darf das Protokoll lesen.",
     ],
     steps: [],
     instructionGroups: [
       {
         title: "Protokoll ansehen",
         steps: [
-          "Melden Sie sich im Träger-Portal an.",
-          "Wählen Sie unten in der Navigation `Einstellungen`.",
-          "Wählen Sie `Zugriffsprotokoll`.",
-          "Wählen Sie den Zeitraum. Am Anfang sind es die letzten 30 Tage.",
-          "Wählen Sie bei Bedarf eine Schule und eine Person.",
-          "Wählen Sie `Gelesen` oder `Geändert`, wenn Sie nur eine Art sehen möchten.",
-          "Gibt es mehr Einträge? Wählen Sie unten `Weitere Einträge laden`.",
+          "Melde dich im Träger-Portal an.",
+          "Wähle unten in der Navigation `Einstellungen`.",
+          "Wähle `Zugriffsprotokoll`.",
+          "Wähle den Zeitraum. Am Anfang sind es die letzten 30 Tage.",
+          "Wähle bei Bedarf eine Schule und eine Person.",
+          "Wähle `Gelesen` oder `Geändert`, wenn du nur eine Art sehen möchtest.",
+          "Gibt es mehr Einträge? Wähle unten `Weitere Einträge laden`.",
         ],
       },
       {
         title: "Herunterladen",
         description: "Für einen Nachweis, zum Ablegen oder für eine Tabelle.",
         steps: [
-          "Stellen Sie die Filter ein.",
-          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Stelle die Filter ein.",
+          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
           "moto lädt eine Datei mit allen Einträgen zu den Filtern herunter.",
         ],
       },
@@ -42,18 +42,18 @@ export function traegerAccessLogTopic(): HelpTopic {
     result:
       "Jede Zeile zeigt Zeitpunkt, Person, Schule, Art und welche Daten es waren.",
     notes: [
-      "Auch Ihr Lesen steht im Protokoll. Die Schule sieht so, dass das Träger-Büro hineingeschaut hat.",
+      "Auch dein Lesen steht im Protokoll. Die Schule sieht so, dass das Träger-Büro hineingeschaut hat.",
       "Auch Ferienanmeldungen stehen im Protokoll. Das ist jedes Öffnen einer Anmeldung oder eines Nachweises, jeder Export und jede Änderung. Bei Schule steht dann `Träger (keine Schule)`.",
       "Löscht moto eine Ferienanmeldung, löscht es auch ihre Einträge im Protokoll. Nach dem Ende der Ferien löscht moto alle Einträge zu diesen Ferien.",
     ],
     differences: [
       "Auf dem Handy steht `Zugriffsprotokoll` in den Einstellungen unter `Mehr`.",
-      "Sie sehen in den Einstellungen kein `Zugriffsprotokoll`? Dann hat Ihre Rolle kein Recht dazu.",
+      "Du siehst in den Einstellungen kein `Zugriffsprotokoll`? Dann hat deine Rolle kein Recht dazu.",
       "Steht bei Person `Unbekannte Person`? Zu diesem Konto kennt moto an der Schule keinen Namen, zum Beispiel bei Eltern.",
     ],
     troubleshootingDetails: [
-      "moto sagt, der Export habe zu viele Einträge? Wählen Sie einen kürzeren Zeitraum oder eine Schule.",
-      "Sie brauchen das Recht für Ihr Konto? Wenden Sie sich an das moto-Team.",
+      "moto sagt, der Export habe zu viele Einträge? Wähle einen kürzeren Zeitraum oder eine Schule.",
+      "Du brauchst das Recht für dein Konto? Wende dich an das moto-Team.",
     ],
     related: [HELP_TOPICS.traegerLogin],
   };

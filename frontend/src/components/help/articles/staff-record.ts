@@ -21,10 +21,10 @@ export function staffRecordTopic(): HelpTopic {
       {
         title: "Die Akte öffnen",
         steps: [
-          "Klappen Sie in der Seitenleiste `Team` auf.",
-          "Öffnen Sie `Mitarbeiter`.",
-          "Geben Sie den Namen in das Feld `Name suchen` ein.",
-          "Wählen Sie die Karte der Person.",
+          "Klappe in der Seitenleiste `Team` auf.",
+          "Öffne `Mitarbeiter`.",
+          "Gib den Namen in das Feld `Name suchen` ein.",
+          "Wähle die Karte der Person.",
         ],
       },
       {
@@ -32,13 +32,13 @@ export function staffRecordTopic(): HelpTopic {
         description:
           "Ohne Modell und ohne Sonderarbeitszeit hat die Person kein Soll. Dann zählen Krankheit, Urlaub und Fortbildung 0 Stunden. Gearbeitete Zeit zählt ganz als Plus.",
         steps: [
-          "Wählen Sie oben `Arbeitszeitmodell`.",
-          "Wählen Sie rechts `Bearbeiten`.",
-          "Wählen Sie `Vorlage zuweisen` für ein Modell, das mehrere Personen teilen. Vorlagen legen Sie unter `Datenverwaltung` › `Arbeitszeitmodelle` an. Dort ordnen Sie eine Vorlage auch mehreren Personen auf einmal zu.",
-          "Oder wählen Sie `Eigenes Modell` nur für diese Person.",
-          "Wählen Sie bei `Rotation` zum Beispiel `Standard (1 Woche)` oder `A/B-Wochen (2 Wochen)`.",
-          "Tragen Sie je Wochentag die Stunden ein, zum Beispiel `4,45`.",
-          "Wählen Sie `Speichern`.",
+          "Wähle oben `Arbeitszeitmodell`.",
+          "Wähle rechts `Bearbeiten`.",
+          "Wähle `Vorlage zuweisen` für ein Modell, das mehrere Personen teilen. Vorlagen legst du unter `Datenverwaltung` › `Arbeitszeitmodelle` an. Dort ordnest du eine Vorlage auch mehreren Personen auf einmal zu.",
+          "Oder wähle `Eigenes Modell` nur für diese Person.",
+          "Wähle bei `Rotation` zum Beispiel `Standard (1 Woche)` oder `A/B-Wochen (2 Wochen)`.",
+          "Trage je Wochentag die Stunden ein, zum Beispiel `4,45`.",
+          "Wähle `Speichern`.",
         ],
       },
       {
@@ -59,19 +59,19 @@ export function staffRecordTopic(): HelpTopic {
     notes: [
       "Qualifikationen sind Nachweise wie Erste Hilfe am Kind, Rettungsfähigkeit oder erweitertes Führungszeugnis, jeweils mit Ablaufdatum. Wie moto daran erinnert, steht unter `Nachweise`.",
       "Die Personalnummer braucht die spätere Abrechnung. Ohne sie fehlt die Person dort.",
-      "In der `Übersicht` buchen Sie unter `Stundenkonto-Verwaltung` Auszahlung, Freizeitausgleich oder einen Eröffnungssaldo.",
-      "Ein Soll gilt ab seinem Startdatum. Beginnt es rückwirkend, rechnet moto auch frühere Tage gegen das Soll. Das Stundenkonto kann dann ins Minus rutschen. Legen Sie das Startdatum deshalb bewusst fest.",
+      "In der `Übersicht` buchst du unter `Stundenkonto-Verwaltung` Auszahlung, Freizeitausgleich oder einen Eröffnungssaldo.",
+      "Ein Soll gilt ab seinem Startdatum. Beginnt es rückwirkend, rechnet moto auch frühere Tage gegen das Soll. Das Stundenkonto kann dann ins Minus rutschen. Lege das Startdatum deshalb bewusst fest.",
     ],
     differences: [
-      "Ändern Sie eine Vorlage, wirkt das künftig auf alle Personen mit dieser Zuordnung.",
+      "Änderst du eine Vorlage, wirkt das künftig auf alle Personen mit dieser Zuordnung.",
       "Den Bereich `Klassen` gibt es nur bei Lehrkräften.",
       "Bankverbindung und Steuernummer sind verborgen. Jeder Abruf wird festgehalten.",
-      "Bei `Personalnummer` oder `Bank & Steuer` steht: „führt der Träger in seiner Personalakte“. Dann pflegt die Personalverwaltung des Trägers diese Werte. Sie sehen die Personalnummer und ändern sie nicht.",
+      "Bei `Personalnummer` oder `Bank & Steuer` steht: „führt der Träger in seiner Personalakte“. Dann pflegt die Personalverwaltung des Trägers diese Werte. Du siehst die Personalnummer und änderst sie nicht.",
     ],
     troubleshootingDetails: [
-      "Ein Krankheitstag zählt 0 Stunden? Dann fehlt das Soll. Tragen Sie es unter `Arbeitszeitmodell` ein.",
-      "Ein Saldo stimmt nicht? Prüfen Sie zuerst das `Arbeitszeitmodell`.",
-      "Ein Bereich fehlt Ihnen? Dann fehlt Ihrer Rolle das Recht dafür.",
+      "Ein Krankheitstag zählt 0 Stunden? Dann fehlt das Soll. Trage es unter `Arbeitszeitmodell` ein.",
+      "Ein Saldo stimmt nicht? Prüfe zuerst das `Arbeitszeitmodell`.",
+      "Ein Bereich fehlt dir? Dann fehlt deiner Rolle das Recht dafür.",
     ],
     related: [
       HELP_TOPICS.leadWorkTimeTemplates,

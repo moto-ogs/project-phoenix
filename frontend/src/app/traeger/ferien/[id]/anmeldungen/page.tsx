@@ -928,8 +928,8 @@ export default function TraegerHolidayRegistrationsPage() {
           type="warning"
           message={
             duplicates === 1
-              ? "In einer Anmeldung ist ein Kind vielleicht doppelt angemeldet. Prüfen Sie die markierte Anmeldung."
-              : `In ${duplicates} Anmeldungen ist ein Kind vielleicht doppelt angemeldet. Prüfen Sie die markierten Anmeldungen.`
+              ? "In einer Anmeldung ist ein Kind vielleicht doppelt angemeldet. Prüfe die markierte Anmeldung."
+              : `In ${duplicates} Anmeldungen ist ein Kind vielleicht doppelt angemeldet. Prüfe die markierten Anmeldungen.`
           }
         />
       ) : null}
@@ -980,16 +980,16 @@ export default function TraegerHolidayRegistrationsPage() {
             icon={<ClipboardList className="h-12 w-12" aria-hidden="true" />}
             title={
               needle
-                ? "Keine Anmeldung passt zu Ihrer Suche."
+                ? "Keine Anmeldung passt zu deiner Suche."
                 : filtered
                   ? "Zu diesen Filtern gibt es keine Anmeldung."
                   : "Es ist noch keine Anmeldung eingegangen."
             }
             description={
               needle
-                ? "Prüfen Sie die Schreibweise oder suchen Sie nach der Nummer."
+                ? "Prüfe die Schreibweise oder suche nach der Nummer."
                 : filtered
-                  ? "Wählen Sie andere Filter."
+                  ? "Wähle andere Filter."
                   : "Eltern melden ihre Kinder über den Link für Eltern an."
             }
           />
@@ -1005,7 +1005,7 @@ export default function TraegerHolidayRegistrationsPage() {
           label={`${registrationCount(selected.size)} ausgewählt.`}
           description={
             selected.size === 1
-              ? "Zum Zusammenführen als Geschwister wählen Sie eine weitere Anmeldung derselben Familie."
+              ? "Zum Zusammenführen als Geschwister wähle eine weitere Anmeldung derselben Familie."
               : "Als Geschwister zählen ihre Kinder beim Ferienbeitrag zusammen."
           }
           onClear={() => setSelected(new Set())}

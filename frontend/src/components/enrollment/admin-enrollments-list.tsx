@@ -300,7 +300,7 @@ function ChangeRequestsOverview({
   return (
     <SectionCard
       title="Änderungsanfragen"
-      description="Familien können nach einer Entscheidung Korrekturen einreichen. Offene Anfragen prüfen Sie gesammelt im Anfragen-Modul."
+      description="Familien können nach einer Entscheidung Korrekturen einreichen. Offene Anfragen prüfst du gesammelt im Anfragen-Modul."
       leading={
         <ConceptIconTile concept={parentConversationsConcept} size="section" />
       }
@@ -399,7 +399,7 @@ function EnrollmentPhaseOverview({
         {/* Leerzustand als EmptyState statt als loser Textblock mit Button. */}
         <EmptyState
           title="Noch keine Anmeldephase"
-          description="Legen Sie zuerst eine Anmeldephase an. Danach sehen Sie hier, welche Phasen laufen und wie viele Anmeldungen eingegangen sind."
+          description="Lege zuerst eine Anmeldephase an. Danach siehst du hier, welche Phasen laufen und wie viele Anmeldungen eingegangen sind."
           action={
             <ButtonLink
               href={tenantPath("/enrollment-phases")}
@@ -420,7 +420,7 @@ function EnrollmentPhaseOverview({
     <SectionCard
       id="enrollment-phase-overview"
       title="Anmeldephasen und Eingänge"
-      description="Wählen Sie eine Phase aus, um die eingegangenen Anmeldungen zu prüfen und zu bearbeiten."
+      description="Wähle eine Phase aus, um die eingegangenen Anmeldungen zu prüfen und zu bearbeiten."
       actions={
         <>
           <ButtonLink
@@ -617,7 +617,7 @@ function EnrollmentSetupGuide({
     {
       title: "Online-Anmeldung einschalten",
       description:
-        "Schaltet den Link für Eltern frei. Sie finden ihn dann in den Einstellungen.",
+        "Schaltet den Link für Eltern frei. Du findest ihn dann in den Einstellungen.",
       href: tenantPath("/settings?tab=enrollment&highlight=enrollment.enabled"),
       action: enrollmentEnabled ? "Einstellungen prüfen" : "Einschalten",
       hint: "Öffnet die Einstellungen zur Online-Anmeldung.",
@@ -664,7 +664,7 @@ function EnrollmentSetupGuide({
     {
       title: "Anmeldeformular festlegen",
       description:
-        "Wählen Sie in der Anmeldephase das Basisformular oder eine eigene Vorlage aus.",
+        "Wähle in der Anmeldephase das Basisformular oder eine eigene Vorlage aus.",
       href: tenantPath(
         activePhaseCount === 0 ? "/enrollment-phases" : "/enrollment-form",
       ),
@@ -681,7 +681,7 @@ function EnrollmentSetupGuide({
     {
       title: "Elternansicht testen",
       description:
-        "Öffnen Sie die öffentliche Anmeldung und senden Sie eine Testanmeldung ab.",
+        "Öffne die öffentliche Anmeldung und sende eine Testanmeldung ab.",
       href: tenantPath("/anmeldung"),
       action: "Preview öffnen",
       hint: "Öffnet die Anmeldung so, wie Eltern sie sehen.",
@@ -719,7 +719,7 @@ function EnrollmentSetupGuide({
                 Online-Anmeldung eingerichtet
               </span>
               <span className="mt-0.5 block text-sm text-gray-500">
-                {setupSummary}. Für neue Zeiträume arbeiten Sie unten mit
+                {setupSummary}. Für neue Zeiträume arbeitest du unten mit
                 Anmeldephasen.
               </span>
             </span>
@@ -756,8 +756,8 @@ function EnrollmentSetupGuide({
                     </h2>
                     <p className="mt-1 max-w-2xl text-sm text-gray-600">
                       {setupComplete
-                        ? "Die grundlegende Online-Anmeldung ist eingerichtet. Für neue Halbjahre, Ferienbetreuung oder andere Zeiträume legen Sie unten eine neue Anmeldephase an oder bearbeiten eine bestehende."
-                        : "Starten Sie hier, wenn Sie neue Halbjahresanmeldungen, Ferienbetreuung oder andere Anmeldezeiträume konfigurieren möchten. Das Basisformular ist immer vorhanden."}
+                        ? "Die grundlegende Online-Anmeldung ist eingerichtet. Für neue Halbjahre, Ferienbetreuung oder andere Zeiträume legst du unten eine neue Anmeldephase an oder bearbeitest eine bestehende."
+                        : "Starte hier, wenn du neue Halbjahresanmeldungen, Ferienbetreuung oder andere Anmeldezeiträume konfigurieren möchtest. Das Basisformular ist immer vorhanden."}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
@@ -853,7 +853,7 @@ function EnrollmentSetupGuide({
                     {setupComplete
                       ? "Die Einrichtung bleibt als Referenz erhalten. Der laufende Alltag passiert unten in der Phasenübersicht."
                       : nextActionStep?.status === "blocked"
-                        ? "Legen Sie zuerst eine aktive Anmeldephase und ein Betreuungsangebot an."
+                        ? "Lege zuerst eine aktive Anmeldephase und ein Betreuungsangebot an."
                         : nextActionStep?.description}
                   </p>
                 </div>
@@ -913,8 +913,8 @@ function EnrollmentSetupGuide({
                 <div className="text-xs leading-relaxed text-gray-500">
                   Für den Elternlink sind Aktivierung, Anmeldephase und
                   Betreuungsangebote entscheidend. Jede Anmeldephase nutzt
-                  entweder das Basisformular oder eine eigene Vorlage. Legen Sie
-                  zuerst eine Phase an und prüfen Sie dort die Formularauswahl.
+                  entweder das Basisformular oder eine eigene Vorlage. Lege
+                  zuerst eine Phase an und prüfe dort die Formularauswahl.
                 </div>
               </div>
             </aside>

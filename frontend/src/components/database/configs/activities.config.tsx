@@ -416,6 +416,6 @@ export const activitiesConfig = defineEntityConfig<Activity>({
     createModalTitle: "Neue Aktivität",
     detailModalTitle: "Aktivitätsdetails",
     deleteConfirmation:
-      "Sind Sie sicher, dass Sie diese Aktivität löschen möchten?",
+      "Bist du sicher, dass du diese Aktivität löschen möchtest?",
   },
 });

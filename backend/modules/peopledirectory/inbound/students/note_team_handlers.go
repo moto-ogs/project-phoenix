@@ -40,7 +40,7 @@ type StudentNoteSharedPush struct {
 
 const (
 	studentNoteSharedTitle = "Notiz für das Team"
-	studentNoteSharedBody  = "Jemand aus dem Team hat eine Notiz zu einem Kind mit Ihnen geteilt."
+	studentNoteSharedBody  = "Jemand aus dem Team hat eine Notiz zu einem Kind mit dir geteilt."
 )
 
 // studentNotesDeepLink opens the child's notes, where the marker clears.

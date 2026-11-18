@@ -45,15 +45,15 @@ export function groupEmptyState({
     icon: <MotoConceptIcon concept={childrenConcept} size={48} />,
     title: `Keine Kinder in ${groupName ?? "dieser Gruppe"}`,
     description: severalGroups
-      ? "Dieser Gruppe ist noch kein Kind zugeordnet. Ordnen Sie ein Kind in der Kindersuche zu, oder wählen Sie oben eine andere Gruppe."
-      : "Dieser Gruppe ist noch kein Kind zugeordnet. Ordnen Sie ein Kind in der Kindersuche dieser Gruppe zu.",
+      ? "Dieser Gruppe ist noch kein Kind zugeordnet. Ordne ein Kind in der Kindersuche zu, oder wähle oben eine andere Gruppe."
+      : "Dieser Gruppe ist noch kein Kind zugeordnet. Ordne ein Kind in der Kindersuche dieser Gruppe zu.",
     action: (
       <Button
         type="button"
         variant="outline"
         size="md"
         onClick={onOpenSearch}
-        tooltip="Öffnet die Kindersuche, dort ordnen Sie Kinder der Gruppe zu."
+        tooltip="Öffnet die Kindersuche, dort ordnest du Kinder der Gruppe zu."
       >
         Zur Kindersuche
       </Button>

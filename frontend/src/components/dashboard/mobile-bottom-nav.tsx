@@ -546,7 +546,7 @@ export function MobileBottomNav(props: MobileBottomNavProps) {
 function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
   // Ungelesene Anmeldungen (#3778) an der Zeile „Anmeldungen" im Menü.
   const { unreadCount: enrollmentsUnreadCount } = useEnrollmentsUnread();
-  // „Neu für Sie“: geteilte Notizen (#6854) und geänderte Abholzeiten
+  // „Neu für dich“: geteilte Notizen (#6854) und geänderte Abholzeiten
   // (#6855). Unter 1024 px gibt es keine Kopfzeile, also trägt „Mehr“ den
   // roten Zähler und das Menü die Liste.
   const staffNews = useStaffNews();
@@ -990,7 +990,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                 tone="red"
                 size="sm"
                 max={NOTIFICATIONS_BADGE_MAX}
-                ariaLabel={`${moreBadgeCount} neu für Sie`}
+                ariaLabel={`${moreBadgeCount} neu für dich`}
                 className="absolute -top-1 -right-2"
               />
             ) : null,
@@ -1036,7 +1036,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                     </span>
                   </ButtonLink>
                 ) : null}
-                {/* „Neu für Sie“ (#6854, #6855) ganz oben: hierher führt der
+                {/* „Neu für dich“ (#6854, #6855) ganz oben: hierher führt der
                     rote Zähler am Knopf „Mehr“. */}
                 {mode === "teacher" && staffNews.length > 0 ? (
                   <div className="space-y-2">
@@ -1169,7 +1169,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                   {isSessionExpired ? (
                     <Alert
                       type="warning"
-                      message="Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
+                      message="Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."
                     />
                   ) : null}
                   {mode !== "parent" ? <RefreshButton drawer /> : null}
@@ -1186,7 +1186,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                       variant="ghost"
                       size="md"
                       className="w-full justify-start gap-3"
-                      tooltip="Zeigt Ihre Erinnerungen und Hinweise."
+                      tooltip="Zeigt deine Erinnerungen und Hinweise."
                     >
                       <Bell
                         className="h-5 w-5 text-gray-600"
@@ -1241,7 +1241,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                     variant={isActiveRoute(profileUrl) ? "surface" : "ghost"}
                     size="md"
                     className="w-full justify-start gap-3"
-                    tooltip="Öffnet Ihr Profil mit Name, Bild und Passwort."
+                    tooltip="Öffnet dein Profil mit Name, Bild und Passwort."
                   >
                     <MobileNavIcon
                       item={{ iconKey: "profile" }}
@@ -1260,7 +1260,7 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                   variant="ghost"
                   size="md"
                   className="w-full justify-start gap-3"
-                  tooltip="Meldet Sie auf diesem Gerät ab, moto fragt vorher nach."
+                  tooltip="Meldet dich auf diesem Gerät ab, moto fragt vorher nach."
                 >
                   <MobileNavIcon
                     item={{ iconKey: "profile", concept: logoutConcept }}

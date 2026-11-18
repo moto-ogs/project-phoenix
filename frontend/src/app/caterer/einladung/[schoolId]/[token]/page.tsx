@@ -89,7 +89,7 @@ export default function CatererInvitationPage() {
     return (
       <AuthShell
         title="Konto einrichten"
-        subtitle="Wir prüfen Ihre Einladung."
+        subtitle="Wir prüfen deine Einladung."
         variant="tenant"
         brand={<MotoBrand />}
         formMaxWidth="max-w-[32rem]"
@@ -107,12 +107,12 @@ export default function CatererInvitationPage() {
       subtitle={
         invitation
           ? [
-              `${invitation.schoolName || "Eine Schule"} lädt Sie ein.`,
+              `${invitation.schoolName || "Eine Schule"} lädt dich ein.`,
               invitation.addressTaken
                 ? ""
                 : existing
-                  ? "Bestätigen Sie mit Ihrem Passwort."
-                  : "Wählen Sie Ihr Passwort.",
+                  ? "Bestätige mit deinem Passwort."
+                  : "Wähle dein Passwort.",
             ]
               .filter(Boolean)
               .join(" ")
@@ -125,7 +125,7 @@ export default function CatererInvitationPage() {
       {invitation?.addressTaken ? (
         <Alert
           type="info"
-          message="Diese E-Mail-Adresse gehört schon zu einem anderen moto-Konto. Ein Caterer-Konto braucht eine eigene Adresse. Bitte fragen Sie die Schule nach einer Einladung an eine andere Adresse."
+          message="Diese E-Mail-Adresse gehört schon zu einem anderen moto-Konto. Ein Caterer-Konto braucht eine eigene Adresse. Bitte frage die Schule nach einer Einladung an eine andere Adresse."
         />
       ) : invitation ? (
         <AcceptForm schoolId={schoolId} token={token} invitation={invitation} />
@@ -153,9 +153,7 @@ function acceptFieldErrors(
   confirmPassword: string,
 ): Record<string, string> {
   if (existing) {
-    return password === ""
-      ? { password: "Bitte geben Sie Ihr Passwort ein." }
-      : {};
+    return password === "" ? { password: "Bitte gib dein Passwort ein." } : {};
   }
   if (!PASSWORD_RULES.every((rule) => rule.test(password))) {
     return {
@@ -193,7 +191,7 @@ function AcceptForm({
   const submit = async () => {
     const fields = acceptFieldErrors(existing, password, confirmPassword);
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
     setSubmitting(true);
@@ -277,7 +275,7 @@ function AcceptForm({
           icon={<Check aria-hidden="true" />}
           titleAs="h3"
           title={existing ? "Schule hinzugefügt" : "Konto erstellt"}
-          description="Sie werden gleich weitergeleitet."
+          description="Du wirst gleich weitergeleitet."
         />
       </div>
     );

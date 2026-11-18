@@ -24,7 +24,7 @@ export default function NewTraegerCatalogOfferingPage() {
   return (
     <TenantPage
       title="Neues Betreuungsangebot"
-      info="Die Schulen bekommen das Angebot, wenn Sie die Anmeldephase freigeben und übertragen."
+      info="Die Schulen bekommen das Angebot, wenn du die Anmeldephase freigibst und überträgst."
       back
       backHref={phaseHref}
       backLabel={
@@ -41,7 +41,7 @@ export default function NewTraegerCatalogOfferingPage() {
           onSaved={() => {
             void invalidate(traegerKeys.catalogFamily);
             success(
-              "Das Angebot ist angelegt. Die Schulen bekommen es, wenn Sie übertragen.",
+              "Das Angebot ist angelegt. Die Schulen bekommen es, wenn du überträgst.",
             );
             router.push(phaseHref);
           }}

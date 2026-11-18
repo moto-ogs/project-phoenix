@@ -1,7 +1,7 @@
 {
   "button": "Anfrage teilen",
   "title": "Anfrage mit anderen teilen",
-  "privacyHint": "Nur ausgewählte Sorgeberechtigte sehen Ihre Anfrage und die Antwort der {careTerm}.",
+  "privacyHint": "Nur ausgewählte Sorgeberechtigte sehen deine Anfrage und die Antwort der {careTerm}.",
   "recipientLegend": "Anfrage teilen (optional)",
   "protected": "Diese Anfrage bleibt privat. Die {careTerm} hat den Familienschutz eingeschaltet.",
   "noRecipients": "Es gibt keine weiteren Sorgeberechtigten mit Zugang zur Eltern-App.",
@@ -12,8 +12,8 @@
   "close": "Fenster schließen",
   "errorObjectRecipients": "die Liste der Empfänger",
   "errorObjectSelection": "die Auswahl",
-  "optionsHint": "Sie können die Anfrage trotzdem senden und später teilen.",
-  "buttonTooltip": "Öffnet ein Fenster, in dem Sie wählen, wer die Anfrage sieht.",
+  "optionsHint": "Du kannst die Anfrage trotzdem senden und später teilen.",
+  "buttonTooltip": "Öffnet ein Fenster, in dem du wählst, wer die Anfrage sieht.",
   "saveTooltip": "Speichert, wer die Anfrage und die Antwort sehen darf.",
   "closeTooltip": "Schließt das Fenster, die Auswahl bleibt unverändert."
 }

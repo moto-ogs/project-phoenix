@@ -56,7 +56,7 @@ func directDebitText(amountCents int64, due calendar.Date, reference string, man
 	holder, recipient, secondRecipient string,
 ) string {
 	if mandate == nil {
-		return fmt.Sprintf("Wir buchen %s am %s von Ihrem Konto ab. Verwendungszweck: %s. Sie müssen nichts überweisen.",
+		return fmt.Sprintf("Wir buchen %s am %s von eurem Konto ab. Verwendungszweck: %s. Ihr müsst nichts überweisen.",
 			formatEuro(amountCents), germanDate(due), reference)
 	}
 	lines := []string{
@@ -69,10 +69,10 @@ func directDebitText(amountCents int64, due calendar.Date, reference string, man
 	lines = append(lines,
 		"Konto: "+mandate.IBANMasked+" · Mandatsreferenz: "+mandate.Reference,
 		"Gläubiger-ID: "+mandate.CreditorID+" · Verwendungszweck: "+reference,
-		"Sie müssen nichts überweisen. Am Abbuchungstag muss genug Geld auf dem Konto sein.",
+		"Ihr müsst nichts überweisen. Am Abbuchungstag muss genug Geld auf dem Konto sein.",
 	)
 	if holder != "" && !sameBillingName(holder, recipient) && !sameBillingName(holder, secondRecipient) {
-		lines = append(lines, "Sind Sie nicht der Kontoinhaber? Dann geben Sie dieses Schreiben bitte weiter.")
+		lines = append(lines, "Seid ihr nicht der Kontoinhaber? Dann gebt dieses Schreiben bitte weiter.")
 	}
 	return strings.Join(lines, "\n")
 }
@@ -165,5 +165,5 @@ func billingSalutation(kind, firstName, lastName string) string {
 	if kind == parentbilling.RecipientPayer {
 		return "Guten Tag " + fullName(firstName, lastName) + ","
 	}
-	return "Sehr geehrte Familie " + strings.TrimSpace(lastName) + ","
+	return "Liebe Familie " + strings.TrimSpace(lastName) + ","
 }

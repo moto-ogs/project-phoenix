@@ -56,7 +56,7 @@ export function EmailConfirmContent() {
       window.history.replaceState({}, "", window.location.pathname);
     } else {
       invalidConfirm(
-        "Der Link enthält keinen Bestätigungscode. Bitte öffnen Sie den Link aus der E-Mail erneut.",
+        "Der Link enthält keinen Bestätigungscode. Bitte öffne den Link aus der E-Mail erneut.",
       );
       setState("error");
     }

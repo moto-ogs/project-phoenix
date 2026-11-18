@@ -47,10 +47,8 @@ function acceptFieldErrors(
   passwordsMatch: boolean,
 ): Record<string, string> {
   const fields: Record<string, string> = {};
-  if (!firstName.trim())
-    fields.first_name = "Bitte geben Sie Ihren Vornamen an.";
-  if (!lastName.trim())
-    fields.last_name = "Bitte geben Sie Ihren Nachnamen an.";
+  if (!firstName.trim()) fields.first_name = "Bitte gib deinen Vornamen an.";
+  if (!lastName.trim()) fields.last_name = "Bitte gib deinen Nachnamen an.";
   if (!passwordOk) {
     fields.password = "Das Passwort erfüllt noch nicht alle Anforderungen.";
   } else if (!passwordsMatch) {
@@ -109,7 +107,7 @@ export function InvitationAcceptForm({
       password === confirmPassword,
     );
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
     formErrors.clear();
@@ -218,10 +216,10 @@ export function InvitationAcceptForm({
         title="Konto erstellt"
         description={
           signOutRetryFailed
-            ? "Die vorherige Sitzung konnte nicht beendet werden. Bitte löschen Sie die Websitedaten in Ihren Browsereinstellungen oder versuchen Sie es später erneut."
+            ? "Die vorherige Sitzung konnte nicht beendet werden. Bitte lösche die Websitedaten in deinen Browsereinstellungen oder versuche es später erneut."
             : signOutFailed
               ? "Die vorherige Sitzung konnte nicht automatisch beendet werden."
-              : "Bitte melden Sie sich mit Ihren neuen Zugangsdaten an."
+              : "Bitte melde dich mit deinen neuen Zugangsdaten an."
         }
         action={
           signOutFailed && !signOutRetryFailed ? (

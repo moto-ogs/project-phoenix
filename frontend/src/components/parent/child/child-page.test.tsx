@@ -81,7 +81,7 @@ vi.mock("~/components/parent/child-master-data", () => ({
       <div data-testid={`section-${area}`}>
         {area === "details" && `Angaben zu ${childName}`}
         {area === "departure" && `Heimweg von ${childName}`}
-        {area === "contact" && "Ihre Kontaktdaten"}
+        {area === "contact" && "Deine Kontaktdaten"}
       </div>
     );
   },
@@ -506,7 +506,7 @@ describe("ChildPage Fehlerweg (#2518)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Ihr Kind hat keinen Platz in der OGS. Abholung, Betreuungszeiten, Essen und Nachrichten an die OGS gibt es deshalb hier nicht.",
+        "Dein Kind hat keinen Platz in der OGS. Abholung, Betreuungszeiten, Essen und Nachrichten an die OGS gibt es deshalb hier nicht.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("section-care")).not.toBeInTheDocument();

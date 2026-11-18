@@ -232,7 +232,7 @@ export function StepWiederholung({
                   className="min-w-[44px]"
                   onClick={() => normalizeLegacyWeekend(iso)}
                   aria-label={`Alten Wochenendtag ${weekdayLabel(iso)} zu Montag ändern`}
-                  tooltip="Verlegt die Serie von diesem Tag auf Montag, sobald Sie speichern."
+                  tooltip="Verlegt die Serie von diesem Tag auf Montag, sobald du speicherst."
                 >
                   {weekdayLabel(iso)} zu Mo
                 </Button>
@@ -317,7 +317,7 @@ export function StepWiederholung({
       {isSeriesFlow && calendarPeriods.length === 0 && (
         <Alert
           type="warning"
-          message="Für diese Woche gibt es keinen aktiven Planungszeitraum. Legen Sie zuerst oben im Plan einen Zeitraum an."
+          message="Für diese Woche gibt es keinen aktiven Planungszeitraum. Lege zuerst oben im Plan einen Zeitraum an."
         />
       )}
     </>

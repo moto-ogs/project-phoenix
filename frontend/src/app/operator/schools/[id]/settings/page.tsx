@@ -176,7 +176,7 @@ function OperatorSchoolSettingsPageContent({ params }: PageProps) {
       back
       backHref={backHref}
       backLabel={backLabel}
-      info="Sie bearbeiten diese Einstellungen als Operator stellvertretend für die Schule."
+      info="Du bearbeitest diese Einstellungen als Operator stellvertretend für die Schule."
       loading={loading}
       loadingLabel="Einstellungen werden geladen…"
       overlays={
@@ -225,8 +225,8 @@ function OperatorSchoolSettingsPageContent({ params }: PageProps) {
                   ))}
                 </ul>
                 <p className="mt-2">
-                  Bitte klären Sie diese Buchungen zuerst. Das Aktivieren kann
-                  nicht übersprungen werden.
+                  Bitte kläre diese Buchungen zuerst. Das Aktivieren kann nicht
+                  übersprungen werden.
                 </p>
               </div>
             ) : null}

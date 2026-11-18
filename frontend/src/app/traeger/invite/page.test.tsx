@@ -106,12 +106,10 @@ describe("TraegerInvitePage", () => {
       await screen.findByText("Die Passwörter stimmen nicht überein."),
     ).toBeInTheDocument();
     // #4693: the name is required.
-    expect(
-      screen.getByText("Bitte geben Sie Ihren Namen ein."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Bitte gib deinen Namen ein.")).toBeInTheDocument();
     expect(mocks.acceptTraegerInvitation).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText(/Ihr Name/), {
+    fireEvent.change(screen.getByLabelText(/Dein Name/), {
       target: { value: "  Eva Müller " },
     });
     fireEvent.change(screen.getByLabelText("Passwort wiederholen"), {
@@ -145,12 +143,12 @@ describe("TraegerInvitePage", () => {
     renderPage();
 
     fireEvent.change(
-      await screen.findByLabelText("Passwort Ihres moto-Kontos"),
+      await screen.findByLabelText("Passwort deines moto-Kontos"),
       {
         target: { value: "Falsch1234%" },
       },
     );
-    fireEvent.change(screen.getByLabelText(/Ihr Name/), {
+    fireEvent.change(screen.getByLabelText(/Dein Name/), {
       target: { value: "Eva Müller" },
     });
     // Anker: das Feld für das bestehende Konto ist da, eine Wiederholung nicht.
@@ -183,7 +181,7 @@ describe("TraegerInvitePage", () => {
     // #5670: the Träger office has no school; the one message names who
     // invited the person and is not repeated below.
     expect(screen.getAllByText(/eingeladen hat/)).toHaveLength(1);
-    expect(screen.queryByText(/Ihre Schule/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Deine Schule/)).not.toBeInTheDocument();
   });
 
   // Quorum #4937: the link is spent once accepted; a failed sign-in must not
@@ -200,7 +198,7 @@ describe("TraegerInvitePage", () => {
     fireEvent.change(screen.getByLabelText("Passwort wiederholen"), {
       target: { value: "Sicher1234%" },
     });
-    fireEvent.change(screen.getByLabelText(/Ihr Name/), {
+    fireEvent.change(screen.getByLabelText(/Dein Name/), {
       target: { value: "Eva Müller" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Einladung annehmen" }));
@@ -223,16 +221,16 @@ describe("TraegerInvitePage", () => {
     );
     renderPage();
 
-    fireEvent.change(await screen.findByLabelText(/Ihr Name/), {
+    fireEvent.change(await screen.findByLabelText(/Dein Name/), {
       target: { value: "Eva Müller" },
     });
-    fireEvent.change(screen.getByLabelText("Passwort Ihres moto-Kontos"), {
+    fireEvent.change(screen.getByLabelText("Passwort deines moto-Kontos"), {
       target: { value: "Sicher1234%" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Einladung annehmen" }));
 
     await waitFor(() =>
-      expect(screen.getByLabelText(/Ihr Name/)).toHaveAttribute(
+      expect(screen.getByLabelText(/Dein Name/)).toHaveAttribute(
         "aria-invalid",
         "true",
       ),

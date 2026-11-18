@@ -86,7 +86,7 @@ function WithoutEmailAlert({
       announce="polite"
       icon={<MailX className="h-5 w-5" />}
       title={`${contractCountLabel(count)} ohne Mail-Adresse`}
-      message="Sie können sie trotzdem übernehmen. Für diese Familien gilt dann:"
+      message="Du kannst sie trotzdem übernehmen. Für diese Familien gilt dann:"
       details={
         <>
           <ul className="mt-1 list-disc space-y-0.5 pl-5">
@@ -96,8 +96,8 @@ function WithoutEmailAlert({
           </ul>
           <p className="mt-2 font-medium">
             {emailColumnMapped
-              ? "Haben Sie die Adressen? Dann tragen Sie sie in die Datei ein. Laden Sie die Datei danach noch einmal."
-              : "Hat Ihre Datei eine Spalte mit Mail-Adressen? Ordnen Sie sie oben bei „E-Mail der Eltern“ zu."}
+              ? "Hast du die Adressen? Dann trage sie in die Datei ein. Lade die Datei danach noch einmal."
+              : "Hat deine Datei eine Spalte mit Mail-Adressen? Ordne sie oben bei „E-Mail der Eltern“ zu."}
           </p>
         </>
       }
@@ -136,7 +136,7 @@ function footerText(result: ContractImportResult): string {
     return "Alle Kinder der Datei haben schon ihren Vertrag.";
   }
   if (left > 0) {
-    return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Korrigieren Sie die Datei und laden Sie sie noch einmal.`;
+    return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Korrigiere die Datei und lade sie noch einmal.`;
   }
   return "Die Verträge gelten sofort als abgeschlossen. Eltern bekommen keine Mail.";
 }
@@ -258,7 +258,7 @@ export function CareContractImportPreviewCard({
       description={
         disabled
           ? "Die Vorschau zeigt den letzten geprüften Stand. Übernehmen ist erst nach der Prüfung möglich."
-          : "So würde moto jede Zeile übernehmen. Gespeichert wird erst, wenn Sie übernehmen."
+          : "So würde moto jede Zeile übernehmen. Gespeichert wird erst, wenn du übernimmst."
       }
       footer={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

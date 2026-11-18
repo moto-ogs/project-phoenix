@@ -405,7 +405,7 @@ describe("OfferingRequestReviewItem", () => {
     await confirmApproval();
 
     await expectDialogError(
-      "Die Anfrage konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+      "Die Anfrage konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
     );
     fireEvent.click(screen.getByRole("button", { name: /Wiederholen/ }));
     await waitFor(() => expect(onDecided).toHaveBeenCalled());
@@ -747,7 +747,7 @@ describe("OfferingRequestReviewItem", () => {
     );
 
     await expectErrorToast(
-      "Die Anfrage ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+      "Die Anfrage ist gerade nicht erreichbar. Bitte versuche es erneut.",
     );
     // The opt-out did not take effect: the hint is still shown.
     expect(
@@ -898,7 +898,7 @@ describe("OfferingRequestReviewItem", () => {
       ).toHaveTextContent("Di, ab 02.02.2027 · 8 Termine");
       expect(
         screen.getByText(
-          "Nach der Freigabe: Öffnen Sie den Betreuungsplan. Entfernen Sie Lara Beispiel an den genannten Tagen aus diesen Gruppen oder ändern Sie die Gruppentage.",
+          "Nach der Freigabe: Öffne den Betreuungsplan. Entferne Lara Beispiel an den genannten Tagen aus diesen Gruppen oder ändere die Gruppentage.",
         ),
       ).toBeInTheDocument();
     });

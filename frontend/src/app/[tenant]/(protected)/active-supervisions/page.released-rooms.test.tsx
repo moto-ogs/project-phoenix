@@ -1354,7 +1354,7 @@ describe("open-room tab onTabChange callback", () => {
     expect(screen.queryByText("Theo Tanz")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Tanzen" })).toBeInTheDocument();
     expect(
-      screen.getByText("13:00–14:00 Uhr · Sie sind hier nicht eingeplant."),
+      screen.getByText("13:00–14:00 Uhr · Du bist hier nicht eingeplant."),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Sporthalle" })).toBeVisible();
     expect(within(pageHead()).getByText("1 Kind")).toBeVisible();
@@ -1494,7 +1494,7 @@ describe("open-room tab onTabChange callback", () => {
     render(<MeinRaumPage />);
 
     expect(
-      await screen.findByText("Sie beaufsichtigen aktuell keinen Raum."),
+      await screen.findByText("Du beaufsichtigst aktuell keinen Raum."),
     ).toBeInTheDocument();
     expect(screen.queryByText("Offener Raum")).not.toBeInTheDocument();
     expect(
@@ -1716,7 +1716,7 @@ describe("released room with running blocks (#3281)", () => {
       ).toHaveAttribute("aria-expanded", "false");
     }
     expect(
-      screen.getAllByText(/Uhr · Sie sind hier nicht eingeplant\.$/),
+      screen.getAllByText(/Uhr · Du bist hier nicht eingeplant\.$/),
     ).toHaveLength(3);
 
     // The head counts every child in the room once: the blocks' and the
@@ -1973,9 +1973,7 @@ describe("RoleGuard integration", () => {
 
     render(<MeinRaumPage />);
 
-    expect(
-      screen.getByText("Ihnen fehlt eine Berechtigung"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Dir fehlt eine Berechtigung")).toBeInTheDocument();
   });
 
   it("renders content for non-admin users", async () => {
@@ -1988,7 +1986,7 @@ describe("RoleGuard integration", () => {
     render(<MeinRaumPage />);
 
     expect(
-      screen.queryByText("Ihnen fehlt eine Berechtigung"),
+      screen.queryByText("Dir fehlt eine Berechtigung"),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("sse-boundary")).toBeInTheDocument();
   });
@@ -2018,7 +2016,7 @@ describe("RoleGuard integration", () => {
 
     // Admin with rooms should pass the gate and render content
     expect(
-      screen.queryByText("Ihnen fehlt eine Berechtigung"),
+      screen.queryByText("Dir fehlt eine Berechtigung"),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("sse-boundary")).toBeInTheDocument();
   });
@@ -2046,7 +2044,7 @@ describe("RoleGuard integration", () => {
     render(<MeinRaumPage />);
 
     expect(
-      screen.queryByText("Ihnen fehlt eine Berechtigung"),
+      screen.queryByText("Dir fehlt eine Berechtigung"),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("sse-boundary")).toBeInTheDocument();
   });
@@ -2081,9 +2079,7 @@ describe("RoleGuard integration", () => {
 
     render(<MeinRaumPage />);
 
-    expect(
-      screen.getByText("Ihnen fehlt eine Berechtigung"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Dir fehlt eine Berechtigung")).toBeInTheDocument();
   });
 
   it("shows loading state while supervision is loading for admin", async () => {

@@ -77,7 +77,7 @@ vi.mock("~/components/holiday-registration/holiday-registration-form", () => ({
 
 import HolidayRegistrationPage from "./page";
 
-const HINT = "Felder mit * müssen Sie ausfüllen.";
+const HINT = "Felder mit * musst du ausfüllen.";
 
 async function renderPage() {
   await act(async () => {
@@ -120,7 +120,7 @@ describe("HolidayRegistrationPage", () => {
     await renderPage();
 
     expect(
-      screen.getByText("Sie haben schon die Eltern-App?"),
+      screen.getByText("Du hast schon die Eltern-App?"),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Anmelden" })).toHaveAttribute(
       "href",
@@ -135,7 +135,7 @@ describe("HolidayRegistrationPage", () => {
     // Anker: the offer header is still rendered; the hint belongs to the form.
     expect(screen.getByText("Winterferien 2027")).toBeInTheDocument();
     expect(
-      screen.queryByText("Sie haben schon die Eltern-App?"),
+      screen.queryByText("Du hast schon die Eltern-App?"),
     ).not.toBeInTheDocument();
   });
 
@@ -150,7 +150,7 @@ describe("HolidayRegistrationPage", () => {
       screen.getByRole("link", { name: "Zurück zur Eltern-App" }),
     ).toHaveAttribute("href", "/");
     expect(
-      screen.queryByText("Sie haben schon die Eltern-App?"),
+      screen.queryByText("Du hast schon die Eltern-App?"),
     ).not.toBeInTheDocument();
   });
 

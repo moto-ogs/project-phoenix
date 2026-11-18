@@ -50,7 +50,7 @@ var staffMessagingErrorRules = []common.ErrorRule{
 	}},
 	{Target: communication.ErrStaffMessageCounterpartUnavailable, Render: func(_ error) render.Renderer {
 		return common.ErrorConflictMessageWithCode(
-			"Diese Person gehört nicht mehr zu Ihrer Schule. Sie können hier nicht mehr schreiben.",
+			"Diese Person gehört nicht mehr zu deiner Schule. Du kannst hier nicht mehr schreiben.",
 			common.CodeCommunicationStaffCounterpartUnavailable,
 		)
 	}},
@@ -59,10 +59,10 @@ var staffMessagingErrorRules = []common.ErrorRule{
 		// ODER das Konto gehoert keiner Mitarbeiterin (etwa einem Elternteil).
 		// "gehoert nicht mehr zu dieser Schule" waere im zweiten Fall schlicht
 		// falsch - Sorgeberechtigte gehoeren dazu, sind nur keine Kolleginnen.
-		return common.ErrorConflictMessage("Diese Person können Sie nicht anschreiben.")
+		return common.ErrorConflictMessage("Diese Person kannst du nicht anschreiben.")
 	}},
 	{Target: communication.ErrStaffMessageSelfConversation, Render: func(_ error) render.Renderer {
-		return common.ErrorInvalidRequestMessage("Sie können sich nicht selbst schreiben.")
+		return common.ErrorInvalidRequestMessage("Du kannst dir nicht selbst schreiben.")
 	}},
 	{Target: communication.ErrStaffMessageEmptyBody, Render: func(_ error) render.Renderer {
 		return common.ErrorInvalidRequestMessage("Die Nachricht darf nicht leer sein.")
@@ -76,7 +76,7 @@ var staffMessagingErrorRules = []common.ErrorRule{
 		return common.ErrorForbiddenMessageWithCode("Lehrkräfte können keinen Gruppenchat anlegen.", common.CodeCommunicationStaffGroupCreateForbidden)
 	}},
 	{Target: communication.ErrStaffMessageGroupManageForbidden, Render: func(_ error) render.Renderer {
-		return common.ErrorForbiddenMessageWithCode("Sie dürfen diesen Gruppenchat nicht ändern.", common.CodeCommunicationStaffGroupManageForbidden)
+		return common.ErrorForbiddenMessageWithCode("Du darfst diesen Gruppenchat nicht ändern.", common.CodeCommunicationStaffGroupManageForbidden)
 	}},
 	{Target: communication.ErrStaffMessageGroupNameInvalid, Render: func(err error) render.Renderer {
 		maxCharacters, ok := communication.StaffGroupNameInvalidMaxCharacters(err)
@@ -90,7 +90,7 @@ var staffMessagingErrorRules = []common.ErrorRule{
 		)
 	}},
 	{Target: communication.ErrStaffMessageGroupMembersRequired, Render: func(_ error) render.Renderer {
-		return common.ErrorInvalidRequestMessageWithCode("Bitte wählen Sie mindestens eine neue Person aus.", common.CodeCommunicationStaffGroupMembersRequired)
+		return common.ErrorInvalidRequestMessageWithCode("Bitte wähle mindestens eine neue Person aus.", common.CodeCommunicationStaffGroupMembersRequired)
 	}},
 	{Target: communication.ErrStaffMessageGroupTooLarge, Render: func(err error) render.Renderer {
 		maxMembers, ok := communication.StaffGroupTooLargeMaxMembers(err)
@@ -104,7 +104,7 @@ var staffMessagingErrorRules = []common.ErrorRule{
 		)
 	}},
 	{Target: communication.ErrStaffMessagingNoActor, Render: func(_ error) render.Renderer {
-		return common.ErrorForbiddenMessage("Bitte melden Sie sich erneut an.")
+		return common.ErrorForbiddenMessage("Bitte melde dich erneut an.")
 	}},
 }
 
@@ -120,7 +120,7 @@ func renderStaffMessagingError(w http.ResponseWriter, r *http.Request, err error
 }
 
 // currentAccountID returns the caller's account id, or 0 when absent. Used only
-// to decorate the inbox preview with "Sie: "; authorization never depends on it.
+// to decorate the inbox preview with "Du: "; authorization never depends on it.
 func currentAccountID(r *http.Request) int64 {
 	if id := sessiontoken.ActorAccountIDFromCtx(r.Context()); id != nil {
 		return *id

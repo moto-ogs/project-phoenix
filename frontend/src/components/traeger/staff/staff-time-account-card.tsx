@@ -111,7 +111,7 @@ function closeBlocker(account: TraegerTimeAccount): string | null {
     (school) => school.byTraeger && school.laterClosed,
   );
   if (later?.laterClosed) {
-    return `An der Schule ${later.schoolName} ist ${isoMonthLabel(later.laterClosed)} schon abgeschlossen. Öffnen Sie zuerst diesen Monat.`;
+    return `An der Schule ${later.schoolName} ist ${isoMonthLabel(later.laterClosed)} schon abgeschlossen. Öffne zuerst diesen Monat.`;
   }
   return null;
 }
@@ -121,7 +121,7 @@ function reopenBlocker(account: TraegerTimeAccount): string | null {
     (school) => school.closedByTraeger && school.laterClosed,
   );
   return later?.laterClosed
-    ? `Öffnen Sie zuerst ${isoMonthLabel(later.laterClosed)}. Monate öffnen Sie vom neuesten an.`
+    ? `Öffne zuerst ${isoMonthLabel(later.laterClosed)}. Monate öffnest du vom neuesten an.`
     : null;
 }
 
@@ -274,7 +274,7 @@ export function StaffTimeAccountCard({
           className="gap-2"
           disabled={Boolean(reopenBlocked)}
           disabledReason={reopenBlocked ?? undefined}
-          tooltip="Hebt Ihren Abschluss an allen Schulen auf. moto fragt vorher nach."
+          tooltip="Hebt deinen Abschluss an allen Schulen auf. moto fragt vorher nach."
           onClick={() => setDialog("reopen")}
         >
           <LockOpen className="h-4 w-4" aria-hidden />
@@ -393,7 +393,7 @@ export function StaffTimeAccountCard({
             <>
               <p>
                 Der Abschluss schreibt das Stundenkonto an{" "}
-                <strong>jeder Schule mit Ihrem Vertrag</strong> zum Monatsende
+                <strong>jeder Schule mit deinem Vertrag</strong> zum Monatsende
                 fest.
               </p>
               <p>
@@ -404,7 +404,7 @@ export function StaffTimeAccountCard({
             </>
           }
           submitLabel="Monat abschließen"
-          submitTooltip="Schreibt den Monat an allen Schulen mit Ihrem Vertrag fest."
+          submitTooltip="Schreibt den Monat an allen Schulen mit deinem Vertrag fest."
           successMessage={`${shownLabel} ist abgeschlossen.`}
           onSubmit={async (reason) => {
             try {
@@ -430,8 +430,8 @@ export function StaffTimeAccountCard({
           description={
             <>
               <p>
-                Hebt den Abschluss an <strong>jeder Schule</strong> auf, die Sie
-                abgeschlossen haben.
+                Hebt den Abschluss an <strong>jeder Schule</strong> auf, die du
+                abgeschlossen hast.
               </p>
               <p>
                 Danach ändern die Schulen den Monat wieder. Das wirkt auf alle

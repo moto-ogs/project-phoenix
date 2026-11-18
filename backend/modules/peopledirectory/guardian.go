@@ -34,7 +34,7 @@ var (
 	ErrGuardianLinkConflict = errors.New("guardian is linked to students")
 	// ErrPayerRemovalRequiresFinancial refuses to unlink the child's payer
 	// without the financial permission. The text is diagnostic detail.
-	ErrPayerRemovalRequiresFinancial = errors.New("diese Person ist als Zahler für das Kind eingetragen. Zum Entfernen ist die Berechtigung für Bankverbindungen nötig. Bitte wenden Sie sich an die Schulleitung")
+	ErrPayerRemovalRequiresFinancial = errors.New("diese Person ist als Zahler für das Kind eingetragen. Zum Entfernen ist die Berechtigung für Bankverbindungen nötig. Bitte wende dich an die Schulleitung")
 
 	// Payment input errors (#2608); each one maps to a German sentence in the
 	// HTTP adapter.

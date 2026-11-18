@@ -110,10 +110,10 @@ describe("holiday criteria editor (#4700)", () => {
       screen.getByRole("button", { name: "Kriterien speichern" }),
     );
     expect(
-      await screen.findByText("Bitte geben Sie einen Namen ein."),
+      await screen.findByText("Bitte gib einen Namen ein."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Bitte schreiben Sie die Frage an die Eltern."),
+      screen.getByText("Bitte schreibe die Frage an die Eltern."),
     ).toBeInTheDocument();
     expect(save).not.toHaveBeenCalled();
   });
@@ -160,7 +160,7 @@ describe("holiday criteria editor (#4700)", () => {
       screen.getByRole("button", { name: "Kriterien speichern" }),
     );
     expect(
-      await screen.findByText(/Bitte prüfen Sie Ihre Angaben\./),
+      await screen.findByText(/Bitte prüfe deine Angaben\./),
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByLabelText(/^Name/)).toHaveAttribute(

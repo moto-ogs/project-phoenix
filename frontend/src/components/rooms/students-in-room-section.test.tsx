@@ -1224,7 +1224,7 @@ describe("StudentsInRoomSection", () => {
 
       expect(
         screen.getByText(
-          "Zur Auswahl stehen nur Räume, die Sie selbst beaufsichtigen.",
+          "Zur Auswahl stehen nur Räume, die du selbst beaufsichtigst.",
         ),
       ).toBeInTheDocument();
       fireEvent.click(

@@ -82,7 +82,7 @@ export default function TraegerErmaessigungenPage() {
   return (
     <TenantPage
       title={billingAreaTitle("ermaessigungen")}
-      info="Hier legen Sie fest, wann Familien weniger zahlen. Der Monatslauf rechnet in dieser Reihenfolge: Preis aus der Preisliste, Einkommensstufe, Geschwister, Alleinerziehende, Höchstbetrag. Jede Ermäßigung steht als eigene Zeile auf der Rechnung."
+      info="Hier legst du fest, wann Familien weniger zahlen. Der Monatslauf rechnet in dieser Reihenfolge: Preis aus der Preisliste, Einkommensstufe, Geschwister, Alleinerziehende, Höchstbetrag. Jede Ermäßigung steht als eigene Zeile auf der Rechnung."
       stats={
         data && data.rules.length > 0 ? (
           <TenantPageStats
@@ -143,7 +143,7 @@ export default function TraegerErmaessigungenPage() {
         <EmptyState
           icon={<Tags className="h-12 w-12" aria-hidden="true" />}
           title="Noch keine Schule."
-          description="Ermäßigungen gibt es für die Schulen Ihres Trägers."
+          description="Ermäßigungen gibt es für die Schulen deines Trägers."
         />
       ) : null}
       {/* Equal rule cards in a grid: grids do not grow (TenantPage body

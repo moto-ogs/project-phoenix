@@ -82,7 +82,7 @@ export function useExportRun<F extends ExportFileFormat>({
         // Der Browser hat das neue Fenster blockiert. Das ist kein Fehler
         // der Schule oder des Servers, deshalb ein eigener Hinweis.
         formErrors.invalid(
-          "Das Druckfenster ging nicht auf. Bitte erlauben Sie neue Fenster für moto.",
+          "Das Druckfenster ging nicht auf. Bitte erlaube neue Fenster für moto.",
         );
         return;
       }

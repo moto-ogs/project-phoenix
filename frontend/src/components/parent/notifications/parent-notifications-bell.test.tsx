@@ -168,7 +168,7 @@ describe("ParentNotificationsBell", () => {
 
     const row = await screen.findByText("Fußball-AG am Dienstag entfällt");
     expect(
-      screen.getByRole("region", { name: "Für Ihre Kinder" }),
+      screen.getByRole("region", { name: "Für deine Kinder" }),
     ).toBeInTheDocument();
     expect(parentApi.markRead).not.toHaveBeenCalled();
     expect(mockTrack).toHaveBeenCalledWith("notification_bell_opened");

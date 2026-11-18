@@ -86,7 +86,7 @@ export default function TraegerHolidayPeriodsPage() {
   return (
     <TenantPage
       title="Ferienbetreuung"
-      info="Hier planen Sie die Ferienbetreuung für die Schulen Ihres Trägers. Ein neuer Ferienzeitraum ist zuerst ein Entwurf. Eltern melden ihre Kinder erst an, wenn Sie ihn veröffentlicht haben."
+      info="Hier planst du die Ferienbetreuung für die Schulen deines Trägers. Ein neuer Ferienzeitraum ist zuerst ein Entwurf. Eltern melden ihre Kinder erst an, wenn du ihn veröffentlicht hast."
       stats={
         periods.length > 0 ? (
           <HolidayHeadFacts>
@@ -152,7 +152,7 @@ export default function TraegerHolidayPeriodsPage() {
           <EmptyState
             icon={<CalendarDays className="h-12 w-12" aria-hidden="true" />}
             title="Noch kein Ferienzeitraum."
-            description="Legen Sie oben einen Ferienzeitraum an. Danach planen Sie die Wochen."
+            description="Lege oben einen Ferienzeitraum an. Danach planst du die Wochen."
           />
         }
       />

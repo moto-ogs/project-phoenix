@@ -109,7 +109,7 @@ describe("ParentEnrollPicker", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Wählen Sie eine Schule und eine Anmeldephase, um Ihr Kind anzumelden.",
+        "Wähle eine Schule und eine Anmeldephase, um dein Kind anzumelden.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -117,7 +117,7 @@ describe("ParentEnrollPicker", () => {
     ).not.toBeInTheDocument();
 
     // Section labels, rendered once the schools have loaded
-    expect(await screen.findByText("Ihre Schulen")).toBeInTheDocument();
+    expect(await screen.findByText("Deine Schulen")).toBeInTheDocument();
     expect(screen.getByText("Weitere Schulen")).toBeInTheDocument();
 
     // School headings

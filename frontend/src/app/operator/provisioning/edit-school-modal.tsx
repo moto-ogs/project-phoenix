@@ -86,8 +86,8 @@ export function EditSchoolModal({
       // constraint validation, so an Enter-submit with a cleared organization
       // lands here and must produce a visible error instead of a silent return.
       if (!schoolOrgId) {
-        const hint = "Bitte wählen Sie einen Träger aus.";
-        invalid("Bitte prüfen Sie die markierten Felder.", {
+        const hint = "Bitte wähle einen Träger aus.";
+        invalid("Bitte prüfe die markierten Felder.", {
           organization_id: hint,
         });
         return;
@@ -97,13 +97,13 @@ export function EditSchoolModal({
       if (!isValidSlug(schoolSlug)) {
         const hint =
           "Slug darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten.";
-        invalid("Bitte prüfen Sie die markierten Felder.", { slug: hint });
+        invalid("Bitte prüfe die markierten Felder.", { slug: hint });
         return;
       }
       if (!isValidSlug(schoolSubdomain)) {
         const hint =
           "Subdomain darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten.";
-        invalid("Bitte prüfen Sie die markierten Felder.", { subdomain: hint });
+        invalid("Bitte prüfe die markierten Felder.", { subdomain: hint });
         return;
       }
       setSchoolSaving(true);

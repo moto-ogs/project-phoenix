@@ -227,11 +227,11 @@ describe("AnnouncementReminderDialog (#3162)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Bitte prüfen Sie die markierten Felder.",
+      "Bitte prüfe die markierten Felder.",
     );
     // Der Hinweis steht am Tag, das Feld ist markiert.
     expect(
-      screen.getByText("Bitte wählen Sie einen Tag für die Erinnerung."),
+      screen.getByText("Bitte wähle einen Tag für die Erinnerung."),
     ).toBeInTheDocument();
     expect(updateMock).not.toHaveBeenCalled();
   });

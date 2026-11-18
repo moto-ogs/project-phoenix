@@ -36,39 +36,39 @@ const OPEN_REASONS: Readonly<
 > = {
   unclear: {
     title: "Ergebnis unklar",
-    hint: "Die Antwort kam nicht an. Öffnen Sie die Anmeldung und prüfen Sie den Status.",
+    hint: "Die Antwort kam nicht an. Öffne die Anmeldung und prüfe den Status.",
   },
   failed: {
     title: "Hat nicht geklappt",
-    hint: "Öffnen Sie die Anmeldung und bestätigen Sie sie dort.",
+    hint: "Öffne die Anmeldung und bestätige sie dort.",
   },
   changed: {
     title: "Inzwischen geändert",
-    hint: "Die Anmeldung wurde gerade geändert. Öffnen Sie sie und prüfen Sie den Stand.",
+    hint: "Die Anmeldung wurde gerade geändert. Öffne sie und prüfe den Stand.",
   },
   interrupted: {
     title: "Noch nicht bestätigt",
-    hint: "moto konnte nicht weiter bestätigen. Laden Sie die Seite neu und versuchen Sie es noch einmal.",
+    hint: "moto konnte nicht weiter bestätigen. Lade die Seite neu und versuche es noch einmal.",
   },
   stopped: {
     title: "Angehalten",
-    hint: "Sie haben das Bestätigen angehalten. Diese Anmeldungen sind noch nicht bestätigt.",
+    hint: "Du hast das Bestätigen angehalten. Diese Anmeldungen sind noch nicht bestätigt.",
   },
   place_open: {
     title: "Platz noch offen",
-    hint: "Entscheiden Sie zuerst im Reiter „Vergabe“ über den Platz.",
+    hint: "Entscheide zuerst im Reiter „Vergabe“ über den Platz.",
   },
   payer_open: {
     title: "Wer bezahlt, ist offen",
-    hint: "Die Eltern geben Leistungsbezug an. Prüfen Sie den Nachweis und wählen Sie in der Anmeldung, wer bezahlt.",
+    hint: "Die Eltern geben Leistungsbezug an. Prüfe den Nachweis und wähle in der Anmeldung, wer bezahlt.",
   },
   duplicate: {
     title: "Vielleicht doppelt angemeldet",
-    hint: "Prüfen Sie zuerst, ob ein Kind zweimal angemeldet ist.",
+    hint: "Prüfe zuerst, ob ein Kind zweimal angemeldet ist.",
   },
   debtor_number_missing: {
     title: "Debitorennummer fehlt",
-    hint: "Tragen Sie die Nummer in der Anmeldung ein und bestätigen Sie dort.",
+    hint: "Trage die Nummer in der Anmeldung ein und bestätige dort.",
   },
   not_received: {
     title: "Schon bestätigt oder storniert",
@@ -296,7 +296,7 @@ export function HolidayBulkConfirmModal({
         isOpen={isOpen}
         onClose={close}
         title="Anmeldungen werden bestätigt"
-        description="Bitte lassen Sie diese Seite bis zum Ende offen."
+        description="Bitte lasse diese Seite bis zum Ende offen."
         isDismissDisabled
         busy
         mobileSheet
@@ -378,8 +378,8 @@ export function HolidayBulkConfirmModal({
           ) : (
             <p className="text-sm text-gray-700">
               {outstanding === 1
-                ? "1 Anmeldung bleibt offen. Prüfen Sie die Gründe unten."
-                : `${registrationCount(outstanding)} bleiben offen. Prüfen Sie die Gründe unten.`}
+                ? "1 Anmeldung bleibt offen. Prüfe die Gründe unten."
+                : `${registrationCount(outstanding)} bleiben offen. Prüfe die Gründe unten.`}
             </p>
           )}
           <RegistrationGroups
@@ -425,7 +425,7 @@ export function HolidayBulkConfirmModal({
       isOpen={isOpen}
       onClose={close}
       title="Keine Anmeldung lässt sich hier bestätigen"
-      description="Prüfen Sie die Gründe bei den Anmeldungen."
+      description="Prüfe die Gründe bei den Anmeldungen."
       mobileSheet
       footer={
         <Button

@@ -26,14 +26,14 @@ func NewMailRenderers(accounts enrollment.HolidayAcceptanceAccounts, parentsURL 
 		Rejected:                 decodingRenderer(decisionRenderer("Anmeldung abgelehnt", "enrollment-rejected.html")),
 		DecisionDigest:           decodingRenderer(renderDecisionDigest),
 		ChangeRequestSubmitted:   decodingRenderer(changeRequestRenderer("Neue Änderungsanfrage", "enrollment-change-request-submitted.html")),
-		ChangeRequestQuestion:    decodingRenderer(changeRequestRenderer("Rückfrage zu Ihrer Änderungsanfrage", "enrollment-change-request-question.html")),
+		ChangeRequestQuestion:    decodingRenderer(changeRequestRenderer("Rückfrage zu deiner Änderungsanfrage", "enrollment-change-request-question.html")),
 		ChangeRequestParentReply: decodingRenderer(changeRequestRenderer("Antwort auf Änderungsanfrage", "enrollment-change-request-parent-reply.html")),
 		ChangeRequestApproved:    decodingRenderer(changeRequestRenderer("Änderungsanfrage übernommen", "enrollment-change-request-approved.html")),
 		ChangeRequestRejected:    decodingRenderer(changeRequestRenderer("Änderungsanfrage abgelehnt", "enrollment-change-request-rejected.html")),
 		RolloverOptIn: decodingRenderer(rolloverRenderer(rolloverRendererSpec{
 			errLabel:         "opt_in",
 			template:         "enrollment-rollover-opt-in.html",
-			bareSubject:      "Bitte bestätigen Sie die Anmeldung",
+			bareSubject:      "Bitte bestätige die Anmeldung",
 			phaseSubject:     "Bitte bestätigen: Anmeldung %s",
 			phaseFullSubject: "Bitte bestätigen: Anmeldung %s - %s",
 		})),
@@ -313,7 +313,7 @@ func renderHolidayParentAccountOffer(ctx context.Context, kind string, raw json.
 	return &enrollment.RenderedMail{
 		SenderName: schoolSender(payload.TraegerName),
 		Recipient:  payload.Recipient,
-		Subject:    "Ihr Elternkonto für die Ferienbetreuung",
+		Subject:    "Dein Elternkonto für die Ferienbetreuung",
 		Template:   "holiday-parent-account-offer.html",
 		Content: map[string]any{
 			"GuardianName": payload.GuardianName,
@@ -591,7 +591,7 @@ func decisionRenderer(subject, templateName string) payloadRenderer {
 // renderDecisionDigest renders the single request-level summary emitted
 // after every child has a parent-visible final decision.
 func renderDecisionDigest(kind string, payload map[string]any) (*enrollment.RenderedMail, error) {
-	mail, err := renderDecisionMail(kind, payload, "Entscheidung zu Ihrer Anmeldung", "enrollment-decision-digest.html")
+	mail, err := renderDecisionMail(kind, payload, "Entscheidung zu deiner Anmeldung", "enrollment-decision-digest.html")
 	if err != nil {
 		return nil, err
 	}

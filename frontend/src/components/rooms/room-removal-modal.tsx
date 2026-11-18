@@ -50,14 +50,14 @@ function blockingRows(impact: RoomRemovalImpact): ImpactRow[] {
       key: "active_session",
       icon: <PlayCircle aria-hidden />,
       label: "Aktivität läuft gerade",
-      hint: "Beenden Sie sie zuerst.",
+      hint: "Beende sie zuerst.",
       value: "jetzt",
     },
     impact.care_offering && {
       key: "care_offering",
       icon: <HeartHandshake aria-hidden />,
       label: "Betreuungsangebot",
-      hint: "Wählen Sie im Angebot einen anderen Raum.",
+      hint: "Wähle im Angebot einen anderen Raum.",
       value: "1",
     },
     refs.activity_groups > 0 && {
@@ -67,7 +67,7 @@ function blockingRows(impact: RoomRemovalImpact): ImpactRow[] {
         refs.activity_groups === 1
           ? "Aktivität plant diesen Raum"
           : "Aktivitäten planen diesen Raum",
-      hint: "Wählen Sie bei der Aktivität einen anderen Raum.",
+      hint: "Wähle bei der Aktivität einen anderen Raum.",
       value: String(refs.activity_groups),
     },
     refs.upcoming_blocks > 0 && {
@@ -75,7 +75,7 @@ function blockingRows(impact: RoomRemovalImpact): ImpactRow[] {
       icon: <CalendarClock aria-hidden />,
       label:
         refs.upcoming_blocks === 1 ? "Kommender Termin" : "Kommende Termine",
-      hint: "Verlegen oder sagen Sie sie im Betreuungsplan ab.",
+      hint: "Verlege oder sage sie im Betreuungsplan ab.",
       value: String(refs.upcoming_blocks),
     },
     refs.education_groups > 0 && {
@@ -85,14 +85,14 @@ function blockingRows(impact: RoomRemovalImpact): ImpactRow[] {
         refs.education_groups === 1
           ? "Gruppe hat hier ihren Raum"
           : "Gruppen haben hier ihren Raum",
-      hint: "Wählen Sie bei der Gruppe einen anderen Raum.",
+      hint: "Wähle bei der Gruppe einen anderen Raum.",
       value: String(refs.education_groups),
     },
     refs.devices > 0 && {
       key: "devices",
       icon: <Tablet aria-hidden />,
       label: refs.devices === 1 ? "Gerät steht hier" : "Geräte stehen hier",
-      hint: "Ordnen Sie das Gerät einem anderen Raum zu.",
+      hint: "Ordne das Gerät einem anderen Raum zu.",
       value: String(refs.devices),
     },
   ];
@@ -257,8 +257,8 @@ export function RoomRemovalModal({
           message={
             <>
               <span className="font-medium">{roomName}</span> wird noch
-              gebraucht. Planen Sie die Punkte unten um. Danach können Sie den
-              Raum entfernen.
+              gebraucht. Plane die Punkte unten um. Danach kannst du den Raum
+              entfernen.
             </>
           }
         />
@@ -269,7 +269,7 @@ export function RoomRemovalModal({
         <p>
           <span className="font-medium">{roomName}</span> verschwindet aus allen
           Listen und Auswahlfeldern. Vergangene Termine und Anwesenheiten
-          behalten den Raum. Den Namen können Sie für einen neuen Raum nutzen.
+          behalten den Raum. Den Namen kannst du für einen neuen Raum nutzen.
         </p>
       );
     }

@@ -119,7 +119,7 @@ const PAGE: NotificationFeedPage = {
       id: "1",
       type: "caterer_meal_plan_changed",
       title: "Speiseplan geändert",
-      body: "Die Schule hat den Speiseplan für die Woche vom 10.06. bis 14.06.2030 geändert. Bitte prüfen Sie Ihre Planung.",
+      body: "Die Schule hat den Speiseplan für die Woche vom 10.06. bis 14.06.2030 geändert. Bitte prüfe deine Planung.",
       deepLink: "/caterer",
       createdAt: "2026-09-09T09:00:00Z",
       updatedAt: "2026-09-09T09:00:00Z",

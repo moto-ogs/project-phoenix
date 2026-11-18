@@ -132,7 +132,7 @@ function makeStatusDay(over: Partial<StatusDay>): StatusDay {
 // override the UI never managed to prefill.
 
 const LOAD_ERROR_DE =
-  "Die aktuell hinterlegten Zeiten konnten nicht geladen werden. Bitte laden Sie die Seite neu und versuchen Sie es erneut.";
+  "Die aktuell hinterlegten Zeiten konnten nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.";
 
 function renderModal(
   overrides: Partial<React.ComponentProps<typeof PickupTimeModal>> = {},
@@ -421,7 +421,7 @@ describe("PickupTimeModal — failed preload guard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anfrage senden" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bitte tragen Sie eine Abholzeit ein oder wählen Sie eine Abholart.",
+      "Bitte trage eine Abholzeit ein oder wähle eine Abholart.",
     );
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -486,7 +486,7 @@ describe("PickupTimeModal — failed preload guard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anfrage senden" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bitte geben Sie kurz an, warum sich die Abholzeit ändert.",
+      "Bitte gib kurz an, warum sich die Abholzeit ändert.",
     );
     expect(reasonInput).toHaveAttribute("aria-invalid", "true");
     expect(reasonInput).toHaveFocus();
@@ -824,7 +824,7 @@ describe("PickupTimeModal — Änderungsfrist für heute", () => {
 
     expect(
       screen.getByText(
-        "Die Abholzeit für heute können Sie bis 11:00 Uhr ändern.",
+        "Die Abholzeit für heute kannst du bis 11:00 Uhr ändern.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -844,7 +844,7 @@ describe("PickupTimeModal — Änderungsfrist für heute", () => {
 
     expect(
       screen.queryByText(
-        "Die Abholzeit für heute können Sie bis 11:00 Uhr ändern.",
+        "Die Abholzeit für heute kannst du bis 11:00 Uhr ändern.",
       ),
     ).not.toBeInTheDocument();
   });
@@ -866,7 +866,7 @@ describe("PickupTimeModal — Änderungsfrist für heute", () => {
 
     expect(
       screen.getByText(
-        "Für heute geht das nur bis 11:00 Uhr. Bitte wenden Sie sich an die OGS. Andere Tage können Sie weiter ändern.",
+        "Für heute geht das nur bis 11:00 Uhr. Bitte wende dich an die OGS. Andere Tage kannst du weiter ändern.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -896,7 +896,7 @@ describe("PickupTimeModal — Änderungsfrist für heute", () => {
   };
 
   const LOCK_NOTICE =
-    "Für heute geht das nur bis 11:00 Uhr. Bitte wenden Sie sich an die OGS. Andere Tage können Sie weiter ändern.";
+    "Für heute geht das nur bis 11:00 Uhr. Bitte wende dich an die OGS. Andere Tage kannst du weiter ändern.";
 
   it("bietet nach der Frist kein Zurücknehmen einer heutigen Änderung an", () => {
     renderLocked({ careExceptions: [todayGuardianChange] });
@@ -1002,7 +1002,7 @@ describe("PickupTimeModal — Änderungsfrist für heute", () => {
 // vor der Eingabe; andere Tage bleiben offen.
 describe("PickupTimeModal — Betreuungsende", () => {
   const CARE_DAY_ENDED =
-    "Die Betreuung ist für heute schon zu Ende. Die Abholzeit für heute können Sie nicht mehr ändern. Andere Tage können Sie weiter ändern.";
+    "Die Betreuung ist für heute schon zu Ende. Die Abholzeit für heute kannst du nicht mehr ändern. Andere Tage kannst du weiter ändern.";
 
   function renderEnded(
     overrides: Partial<React.ComponentProps<typeof PickupTimeModal>> = {},
@@ -1172,7 +1172,7 @@ describe("SickNoteModal — Abmeldegrund", () => {
     );
     expect(
       screen.getByText(
-        "Melden Sie Ihr Kind für die ausgewählten Tage ab. Die Schule sieht die Abmeldung.",
+        "Melde dein Kind für die ausgewählten Tage ab. Die Schule sieht die Abmeldung.",
       ),
     ).toBeInTheDocument();
 
@@ -1180,7 +1180,7 @@ describe("SickNoteModal — Abmeldegrund", () => {
       screen.getByRole("button", { name: "Krankmeldung senden" }),
     );
     expect(
-      await screen.findAllByText("Bitte geben Sie einen kurzen Hinweis ein."),
+      await screen.findAllByText("Bitte gib einen kurzen Hinweis ein."),
     ).not.toHaveLength(0);
     fireEvent.change(screen.getByRole("textbox", { name: "Grund / Hinweis" }), {
       target: { value: "Fieber" },
@@ -1197,7 +1197,9 @@ describe("SickNoteModal — Abmeldegrund", () => {
     render(<SickNoteModal onClose={vi.fn()} onSubmit={vi.fn()} />);
 
     expect(
-      screen.getByText("Für Krankheitstage. Die OGS erhält Ihre Krankmeldung."),
+      screen.getByText(
+        "Für Krankheitstage. Die OGS erhält deine Krankmeldung.",
+      ),
     ).toBeInTheDocument();
     // The global next-intl mock does not evaluate ICU plural expressions. Its
     // raw output proves the neutral plural key was selected.
@@ -1220,7 +1222,7 @@ describe("SickNoteModal — Abmeldegrund", () => {
     // Doppelung aus Hinweiskasten und Tageszeile ist weg.
     expect(
       screen.getByText(
-        "Sie fragen die Abwesenheit für die ausgewählten Tage an.",
+        "Du fragst die Abwesenheit für die ausgewählten Tage an.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -1286,7 +1288,7 @@ describe("SickNoteModal — Abmeldegrund", () => {
     expect(await screen.findByText("Anfrage gesendet")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Die OGS muss die Abwesenheit noch bestätigen. Bis dahin gilt Ihr Kind als erwartet.",
+        "Die OGS muss die Abwesenheit noch bestätigen. Bis dahin gilt dein Kind als erwartet.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -1351,7 +1353,7 @@ describe("SickNoteModal — Abmeldegrund", () => {
     expect(reasonField).toHaveAttribute("aria-invalid", "true");
     expect(reasonField).toHaveFocus();
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bitte geben Sie einen kurzen Hinweis für die OGS ein.",
+      "Bitte gib einen kurzen Hinweis für die OGS ein.",
     );
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -1455,7 +1457,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Die freien Tage sind gemeldet. Für die anderen Tage prüft die OGS Ihre Meldung. Bis dahin gilt ihr Eintrag.",
+        "Die freien Tage sind gemeldet. Für die anderen Tage prüft die OGS deine Meldung. Bis dahin gilt ihr Eintrag.",
       ),
     ).toBeInTheDocument();
   });
@@ -1489,7 +1491,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
     );
     expect(
       await screen.findByText(
-        "Die OGS hat für diese Tage schon etwas eingetragen. Sie prüft Ihre Meldung. Bis dahin gilt ihr Eintrag.",
+        "Die OGS hat für diese Tage schon etwas eingetragen. Sie prüft deine Meldung. Bis dahin gilt ihr Eintrag.",
       ),
     ).toBeInTheDocument();
   });
@@ -1516,7 +1518,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(
       await screen.findByText(
-        "Die Schule hat für diese Tage schon etwas eingetragen. Sie prüft Ihre Meldung. Bis dahin gilt ihr Eintrag.",
+        "Die Schule hat für diese Tage schon etwas eingetragen. Sie prüft deine Meldung. Bis dahin gilt ihr Eintrag.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/OGS/)).toBeNull();
@@ -1573,7 +1575,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
     );
 
     expect(
-      screen.getByText(/Ihr Kind wird für diesen Tag abgemeldet\./),
+      screen.getByText(/Dein Kind wird für diesen Tag abgemeldet\./),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Anfrage an die OGS/)).not.toBeInTheDocument();
   });
@@ -1624,7 +1626,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
     send();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Die OGS hat gerade etwas für einen der Tage eingetragen. Bitte senden Sie die Meldung noch einmal.",
+      "Die OGS hat gerade etwas für einen der Tage eingetragen. Bitte sende die Meldung noch einmal.",
     );
   });
 });
@@ -2333,7 +2335,7 @@ describe("Dialoge in Elternsprache", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anfrage senden" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bitte tragen Sie eine Abholzeit ein.",
+      "Bitte trage eine Abholzeit ein.",
     );
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -2539,14 +2541,14 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
     expect(
       (
         await screen.findAllByText(
-          "Bitte unterschreiben Sie und tippen Sie auf „Unterschrift bestätigen“.",
+          "Bitte unterschreibe und tippe auf „Unterschrift bestätigen“.",
         )
       ).length,
     ).toBeGreaterThan(0);
     expect(onSubmit).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Namen tippen" }));
-    fireEvent.change(screen.getByLabelText("Ihr Vor- und Nachname"), {
+    fireEvent.change(screen.getByLabelText("Dein Vor- und Nachname"), {
       target: { value: "Sabine Muster" },
     });
     fireEvent.click(
@@ -2601,7 +2603,7 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
 
     expect(
       await screen.findByText(
-        catalogText("general.unavailable", "Ihre Erlaubnis"),
+        catalogText("general.unavailable", "Deine Erlaubnis"),
       ),
     ).toBeInTheDocument();
     expect(
@@ -2624,7 +2626,7 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Namen tippen" }),
     );
-    fireEvent.change(screen.getByLabelText("Ihr Vor- und Nachname"), {
+    fireEvent.change(screen.getByLabelText("Dein Vor- und Nachname"), {
       target: { value: "Sabine Muster" },
     });
     fireEvent.click(
@@ -2661,7 +2663,7 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Namen tippen" }),
     );
-    fireEvent.change(screen.getByLabelText("Ihr Vor- und Nachname"), {
+    fireEvent.change(screen.getByLabelText("Dein Vor- und Nachname"), {
       target: { value: "Sabine Muster" },
     });
     fireEvent.click(
@@ -2673,7 +2675,7 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
     expect(
       (
         await screen.findAllByText(
-          "Bitte unterschreiben Sie und tippen Sie auf „Unterschrift bestätigen“.",
+          "Bitte unterschreibe und tippe auf „Unterschrift bestätigen“.",
         )
       ).length,
     ).toBeGreaterThan(0);

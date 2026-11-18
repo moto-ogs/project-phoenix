@@ -480,7 +480,7 @@ var operations_init_anwesenheit_erfassen_9Definitions = []config.Definition{
 	{
 		Key:             config.KeyPresenceMode,
 		Label:           "Was wird erfasst?",
-		Description:     "Wählen Sie, ob auch der Aufenthaltsort erfasst wird.",
+		Description:     "Wähle, ob auch der Aufenthaltsort erfasst wird.",
 		Type:            config.FieldSelect,
 		Default:         config.PresenceModeDetailed,
 		ReadPermission:  "config:read",

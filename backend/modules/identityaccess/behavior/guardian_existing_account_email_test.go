@@ -44,11 +44,11 @@ func TestEnqueueExistingAccountEmail_RendersPortalLoginHint(t *testing.T) {
 	render := owners.NewGuardianInvitationRenderer(owners.GuardianInvitationRendererConfig{})
 	msg, err := render(context.Background(), req.Payload)
 	require.NoError(t, err)
-	assert.Equal(t, "Ihr Zugang zum Eltern-Portal – OGS Musterschule", msg.Subject)
+	assert.Equal(t, "Dein Zugang zum Eltern-Portal – OGS Musterschule", msg.Subject)
 	assert.Equal(t, "guardian-invitation.html", msg.Template)
 
 	body := renderGuardianTemplate(t, msg)
-	assert.Contains(t, body, "Ihr Zugang zum Eltern-Portal")
+	assert.Contains(t, body, "Dein Zugang zum Eltern-Portal")
 	assert.Contains(t, body, "Olga Muster")
 	assert.Contains(t, body, "bisherigen Zugangsdaten")
 	assert.Contains(t, body, `href="https://eltern.example.test/login"`)

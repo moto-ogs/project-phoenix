@@ -110,7 +110,7 @@ function getClosingDayWarningMessage(
       count === 1
         ? "1 Termin dieser Serie fällt auf einen Schließtag"
         : `${count} Termine dieser Serie fallen auf Schließtage`;
-    return `Hinweis: ${days}, zuerst am ${date}${reason}. Beim Speichern wählen Sie, ob sie ausfallen.`;
+    return `Hinweis: ${days}, zuerst am ${date}${reason}. Beim Speichern wählst du, ob sie ausfallen.`;
   }
   return `Hinweis: Am ${date} ist ein Schließtag hinterlegt${reason}. Planen ist weiterhin möglich.`;
 }
@@ -528,7 +528,7 @@ export function TimetableEventModal({
         isOpen={isOpen && choiceDialogOpen}
         onClose={onClose}
         title="Wiederholenden Termin ändern"
-        description={`Der Termin am ${formatDate(initialInstance.date)} gehört zu einem Regeltermin. Wählen Sie zuerst, welchen Umfang Sie bearbeiten möchten.`}
+        description={`Der Termin am ${formatDate(initialInstance.date)} gehört zu einem Regeltermin. Wähle zuerst, welchen Umfang du bearbeiten möchtest.`}
         // Erneut versuchen heißt, den Umfang noch einmal zu wählen.
         error={saveError}
         options={[
@@ -881,7 +881,7 @@ export function TimetableEventModal({
                 type="button"
                 variant="outline_danger"
                 size="md"
-                tooltip="Löscht den Regeltermin ab einem Tag, den Sie wählen. moto fragt vorher nach."
+                tooltip="Löscht den Regeltermin ab einem Tag, den du wählst. moto fragt vorher nach."
                 onClick={openSeriesDeleteConfirm}
                 className="w-full sm:w-auto"
               >
@@ -1087,8 +1087,8 @@ export function TimetableEventModal({
                   ? "1 Termin dieser Serie wurde einzeln angepasst. "
                   : `${lostEdits.result.count} Termine dieser Serie wurden einzeln angepasst. `}
                 {lostEdits.scope === "following"
-                  ? "Wenn Sie diesen und alle folgenden Termine ändern, gehen diese Anpassungen verloren:"
-                  : "Wenn Sie alle Termine der Serie ändern, gehen diese Anpassungen verloren:"}
+                  ? "Wenn du diesen und alle folgenden Termine änderst, gehen diese Anpassungen verloren:"
+                  : "Wenn du alle Termine der Serie änderst, gehen diese Anpassungen verloren:"}
               </p>
               <InsetPanel
                 as="ul"
@@ -1114,7 +1114,7 @@ export function TimetableEventModal({
                 ))}
               </InsetPanel>
               <p className="text-xs leading-relaxed text-gray-500">
-                Notieren Sie sich diese Termine, um sie anschließend erneut
+                Notiere dir diese Termine, um sie anschließend erneut
                 anzupassen.
               </p>
             </div>

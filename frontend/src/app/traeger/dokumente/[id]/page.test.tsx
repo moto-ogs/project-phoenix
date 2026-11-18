@@ -144,7 +144,7 @@ function confirmDeletion(dialog: HTMLElement) {
   });
   expect(confirm).toBeDisabled();
   fireEvent.change(
-    within(dialog).getByLabelText("Tippen Sie zur Bestätigung LÖSCHEN ein:"),
+    within(dialog).getByLabelText("Tippe zur Bestätigung LÖSCHEN ein:"),
     { target: { value: "LÖSCHEN" } },
   );
   fireEvent.click(confirm);

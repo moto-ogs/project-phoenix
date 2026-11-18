@@ -143,7 +143,7 @@ describe("NotificationSetupDialog", () => {
 
     expect(
       await screen.findByText(
-        "Schalten Sie Benachrichtigungen ein. moto meldet sich dann bei wichtigen Ereignissen, auch wenn die App geschlossen ist.",
+        "Schalte Benachrichtigungen ein. moto meldet sich dann bei wichtigen Ereignissen, auch wenn die App geschlossen ist.",
       ),
     ).toBeInTheDocument();
   });

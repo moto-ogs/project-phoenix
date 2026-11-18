@@ -36,7 +36,7 @@ var (
 	ErrCannotRemovePrimaryGuardian      = errors.New("the primary guardian cannot be removed by a parent")
 	ErrCannotRemoveStaffManagedGuardian = errors.New("staff-managed guardian contacts cannot be removed by a parent")
 	ErrCannotRemoveOwnAccess            = errors.New("a parent cannot remove their own access to a child")
-	ErrCannotRemovePayerGuardian        = errors.New("diese Person ist als Zahler für das Kind eingetragen und kann nicht entfernt werden. Bitte wenden Sie sich an die Schule")
+	ErrCannotRemovePayerGuardian        = errors.New("diese Person ist als Zahler für das Kind eingetragen und kann nicht entfernt werden. Bitte wende dich an die Schule")
 	ErrInviteSocialWorkerManaged        = errors.New("a social-worker contact is managed by the school and cannot be invited to the parents portal")
 	ErrGuardianInvitationNotFound       = errors.New("invitation not found")
 	ErrGuardianInvitationExpired        = errors.New("invitation has expired")

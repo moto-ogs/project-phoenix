@@ -518,7 +518,7 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
     render(<MeinRaumPage />);
 
     expect(
-      await screen.findByText(/Ihnen fehlt eine Berechtigung/),
+      await screen.findByText(/Dir fehlt eine Berechtigung/),
     ).toBeInTheDocument();
     expect(dashboardHook).not.toHaveBeenCalled();
   });

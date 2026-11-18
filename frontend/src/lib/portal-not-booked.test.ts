@@ -11,13 +11,13 @@ describe("portalNotBookedExplanation", () => {
       expect(text, code).not.toMatch(/moto-Team|moto team/i);
     }
     expect(portalNotBookedExplanation("parent", "de")).toBe(
-      "Ihre Schule nutzt das Elternportal zurzeit nicht. Bei Fragen wenden Sie sich bitte an Ihre Schule.",
+      "Deine Schule nutzt das Elternportal zurzeit nicht. Bei Fragen wende dich bitte an deine Schule.",
     );
   });
 
   it("explains the school portal in German", () => {
     expect(portalNotBookedExplanation("school", "en")).toBe(
-      "Ihre Schule nutzt moto schule zurzeit nicht. Bei Fragen wenden Sie sich bitte an Ihre OGS-Verwaltung.",
+      "Deine Schule nutzt moto schule zurzeit nicht. Bei Fragen wende dich bitte an deine OGS-Verwaltung.",
     );
   });
 });

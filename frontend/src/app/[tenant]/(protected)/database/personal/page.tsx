@@ -149,7 +149,7 @@ function TeachersPageContent() {
   const refreshTeachers = useTenantMutateMatching([staffKeys.family]);
 
   const error = teachersError
-    ? "Fehler beim Laden des Personals. Bitte versuchen Sie es später erneut."
+    ? "Fehler beim Laden des Personals. Bitte versuche es später erneut."
     : null;
 
   // Statuszeile des Seitenkopfs aus der bereits geladenen Personalliste.
@@ -499,8 +499,8 @@ function TeachersPageContent() {
             }
             description={
               searchTerm
-                ? "Versuchen Sie andere Suchkriterien."
-                : "Laden Sie die erste Person ein, damit sie sich anmelden kann."
+                ? "Versuche andere Suchkriterien."
+                : "Lade die erste Person ein, damit sie sich anmelden kann."
             }
             icon={
               <MotoDuotoneIcon

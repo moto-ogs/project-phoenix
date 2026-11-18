@@ -478,7 +478,7 @@ function HomeContent() {
               size="md"
               disabled={saving}
               onClick={cancelEditing}
-              tooltip="Verwirft Ihre Änderungen an der Startseite."
+              tooltip="Verwirft deine Änderungen an der Startseite."
             >
               Abbrechen
             </Button>
@@ -488,7 +488,7 @@ function HomeContent() {
               size="md"
               disabled={saving}
               onClick={save}
-              tooltip="Speichert die neue Anordnung Ihrer Startseite."
+              tooltip="Speichert die neue Anordnung deiner Startseite."
             >
               Fertig
             </Button>
@@ -564,11 +564,11 @@ function HomeContent() {
 
       {placements.length === 0 && !editing ? (
         <EmptyState
-          title="Ihre Startseite ist leer"
+          title="Deine Startseite ist leer"
           description={
             saved.available.length === 0
-              ? "Für Ihre Berechtigungen gibt es hier noch keine Bausteine. Ihre Leitung kann Ihnen weitere Bereiche freischalten."
-              : "Sie haben alle Bausteine entfernt."
+              ? "Für deine Berechtigungen gibt es hier noch keine Bausteine. Deine Leitung kann dir weitere Bereiche freischalten."
+              : "Du hast alle Bausteine entfernt."
           }
           action={
             saved.available.length > 0 ? (

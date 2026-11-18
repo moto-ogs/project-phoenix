@@ -93,13 +93,11 @@ const DEFAULT_COPY = {
   passkey: "Mit Passkey anmelden",
   errorObject: "die Anmeldung",
   passkeyErrorObject: "die Anmeldung mit Passkey",
-  missingEmail: "Bitte geben Sie Ihre E-Mail-Adresse ein.",
-  missingPassword: "Bitte geben Sie Ihr Passwort ein.",
-  missingCredentials: "Bitte geben Sie E-Mail-Adresse und Passwort ein.",
-  rateLimited:
-    "Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.",
-  sessionExpired:
-    "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+  missingEmail: "Bitte gib deine E-Mail-Adresse ein.",
+  missingPassword: "Bitte gib dein Passwort ein.",
+  missingCredentials: "Bitte gib E-Mail-Adresse und Passwort ein.",
+  rateLimited: "Zu viele Anmeldeversuche. Bitte versuche es später erneut.",
+  sessionExpired: "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
 } as const satisfies PasswordLoginCopy &
   Required<Pick<PasswordLoginCopy, "passkey" | "passkeyErrorObject">>;
 

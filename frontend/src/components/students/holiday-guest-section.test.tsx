@@ -289,7 +289,7 @@ describe("HolidayGuestSection", () => {
 
     expect(
       screen.getByText(
-        "Notfall, Abholung und Gesundheit sieht, wer die Angaben der Kinder lesen darf. Bitte fragen Sie Ihre Leitung.",
+        "Notfall, Abholung und Gesundheit sieht, wer die Angaben der Kinder lesen darf. Bitte frage deine Leitung.",
       ),
     ).toBeInTheDocument();
     expect(sheetMock).not.toHaveBeenCalled();

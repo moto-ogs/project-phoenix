@@ -18,7 +18,7 @@ export function ModuleLockMark({
   return (
     <span
       className={`relative inline-flex shrink-0 items-center text-gray-500 ${className}`}
-      title="Ihre Schule hat dieses Modul nicht gebucht"
+      title="Deine Schule hat dieses Modul nicht gebucht"
     >
       <LockSimpleIcon size={14} weight="bold" aria-hidden="true" />
       <span className="sr-only">, nicht gebucht</span>

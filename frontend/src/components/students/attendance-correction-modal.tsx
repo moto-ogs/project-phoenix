@@ -126,15 +126,13 @@ export function AttendanceCorrectionModal({
   const handleSubmit = async () => {
     errors.clear();
     if (trimmedReason === "") {
-      errors.invalid("Bitte geben Sie einen Grund für die Korrektur an.", {
-        reason: "Bitte geben Sie einen Grund an.",
+      errors.invalid("Bitte gib einen Grund für die Korrektur an.", {
+        reason: "Bitte gib einen Grund an.",
       });
       return;
     }
     if (nothingChanged) {
-      errors.invalid(
-        "Es gibt nichts zu speichern. Bitte ändern Sie zuerst etwas.",
-      );
+      errors.invalid("Es gibt nichts zu speichern. Bitte ändere zuerst etwas.");
       return;
     }
 
@@ -201,7 +199,7 @@ export function AttendanceCorrectionModal({
             size="md"
             onClick={() => void handleSubmit()}
             disabled={saving}
-            tooltip="Ändert den Eintrag und speichert Ihren Namen, die Uhrzeit und den Grund."
+            tooltip="Ändert den Eintrag und speichert deinen Namen, die Uhrzeit und den Grund."
           >
             {saving ? "Wird gespeichert …" : "Speichern"}
           </Button>
@@ -211,7 +209,7 @@ export function AttendanceCorrectionModal({
       <div className="space-y-4">
         <p className="text-sm text-gray-600">
           {slot.title} am {slot.date}, {slot.startTime}–{slot.endTime}. Dieser
-          Termin ist abgeschlossen. Ihre Änderung wird mit Ihrem Namen, der
+          Termin ist abgeschlossen. Deine Änderung wird mit deinem Namen, der
           Uhrzeit und dem Grund gespeichert.
         </p>
 

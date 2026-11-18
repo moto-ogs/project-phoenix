@@ -114,9 +114,9 @@ export function RecordNoticeModal({
     !choices || optionsError
       ? undefined
       : kind === "widerruf" && !dispatchedOn
-        ? "Tragen Sie zuerst ein, wann die Eltern den Widerruf abgesendet haben."
+        ? "Trage zuerst ein, wann die Eltern den Widerruf abgesendet haben."
         : extraordinary && !reason.trim()
-          ? "Tragen Sie zuerst den Grund der Eltern ein."
+          ? "Trage zuerst den Grund der Eltern ein."
           : undefined;
 
   const submit = async () => {
@@ -338,7 +338,7 @@ export function RecordNoticeModal({
                       {TERMINATION_KIND_LABELS.ausserordentlich}
                     </span>
                     <span className="block font-normal text-gray-500">
-                      Das Vertragsende legen Sie nach der Prüfung fest.
+                      Das Vertragsende legst du nach der Prüfung fest.
                     </span>
                   </span>
                 </ChoiceTile>
@@ -500,7 +500,7 @@ export function SetNoticeEndModal({
             variant="primary"
             size="md"
             disabled={saving || !endsOn}
-            disabledReason="Wählen Sie zuerst den letzten Tag des Vertrags."
+            disabledReason="Wähle zuerst den letzten Tag des Vertrags."
             tooltip="Legt das Vertragsende fest und teilt es den Eltern mit."
             isLoading={saving}
             loadingText="Wird eingetragen …"
@@ -536,7 +536,7 @@ export function SetNoticeEndModal({
         </div>
         <Alert
           type="warning"
-          message="Bis zu diesem Tag gilt die gebuchte Betreuung. Die Eltern bekommen das Datum per E-Mail und in der Eltern-App. Sie können es danach nicht mehr ändern."
+          message="Bis zu diesem Tag gilt die gebuchte Betreuung. Die Eltern bekommen das Datum per E-Mail und in der Eltern-App. Du kannst es danach nicht mehr ändern."
         />
       </form>
     </FormModal>
@@ -627,7 +627,7 @@ export function RejectReasonModal({
         </DataGrid>
         <Alert
           type="info"
-          message="Die Eltern bekommen eine Mitteilung mit dem neuen Vertragsende per E-Mail und in der Eltern-App. Den Text legen Sie unter Einstellungen › Allgemein › Betreuungsverträge fest."
+          message="Die Eltern bekommen eine Mitteilung mit dem neuen Vertragsende per E-Mail und in der Eltern-App. Den Text legst du unter Einstellungen › Allgemein › Betreuungsverträge fest."
           action={
             // A new tab keeps this dialog open (#7054).
             <ButtonLink
@@ -643,7 +643,7 @@ export function RejectReasonModal({
         />
         <Alert
           type="warning"
-          message="Sie können die Entscheidung danach nicht mehr ändern."
+          message="Du kannst die Entscheidung danach nicht mehr ändern."
         />
       </div>
     </ConfirmationModal>

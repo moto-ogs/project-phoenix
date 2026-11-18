@@ -8,30 +8,30 @@ export function parentConferenceTopic(): HelpTopic {
     title: "Einen Termin am Elternsprechtag buchen",
     question: "Wie buche ich einen Termin bei der Lehrkraft?",
     summary:
-      "Bietet die Lehrkraft einen Elternsprechtag an, buchen Sie eine freie Zeit für Ihr Kind.",
+      "Bietet die Lehrkraft einen Elternsprechtag an, buchst du eine freie Zeit für dein Kind.",
     group: "nachrichten",
     audience: "parent",
     icon: "CalendarPlus",
     steps: [
-      "Tippen Sie unten auf `Mein Kind`.",
-      "Haben Sie mehrere Kinder, wählen Sie oben das Kind.",
-      "Wählen Sie bei `Elternsprechtag` die Schaltfläche `Termin buchen`.",
-      "Tippen Sie unter `Freie Zeiten` auf eine Uhrzeit.",
+      "Tippe unten auf `Mein Kind`.",
+      "Hast du mehrere Kinder, wähle oben das Kind.",
+      "Wähle bei `Elternsprechtag` die Schaltfläche `Termin buchen`.",
+      "Tippe unter `Freie Zeiten` auf eine Uhrzeit.",
     ],
     result:
-      "Der Termin ist gebucht. Er steht in Ihrem Kalender, und Sie bekommen eine Nachricht.",
+      "Der Termin ist gebucht. Er steht in deinem Kalender, und du bekommst eine Nachricht.",
     notes: [
-      "Sie buchen einen Termin je Kind. Haben Sie zwei Kinder in der Klasse, buchen Sie für jedes Kind einzeln.",
-      "Tippen Sie auf eine andere Zeit, um Ihren Termin zu verschieben. Mit `Termin absagen` sagen Sie ab.",
+      "Du buchst einen Termin je Kind. Hast du zwei Kinder in der Klasse, buche für jedes Kind einzeln.",
+      "Tippe auf eine andere Zeit, um deinen Termin zu verschieben. Mit `Termin absagen` sagst du ab.",
     ],
     differences: [
-      "Sie sehen Zeiten ohne Schaltflächen? Für dieses Kind dürfen Sie nicht buchen. Fragen Sie bei Bedarf die Schule.",
-      "Sie sehen nur freie Zeiten. Was andere Familien gebucht haben, sehen Sie nicht.",
-      "Ändert die Lehrkraft den Tag oder sagt ihn ab, bekommen Sie eine Nachricht.",
+      "Du siehst Zeiten ohne Schaltflächen? Für dieses Kind darfst du nicht buchen. Frage bei Bedarf die Schule.",
+      "Du siehst nur freie Zeiten. Was andere Familien gebucht haben, siehst du nicht.",
+      "Ändert die Lehrkraft den Tag oder sagt ihn ab, bekommst du eine Nachricht.",
     ],
     troubleshootingDetails: [
-      "Sie sehen keinen `Elternsprechtag`? Dann bietet die Lehrkraft der Klasse zurzeit keinen an.",
-      "Sie können nicht mehr buchen oder absagen? Bis 24 Stunden vor dem Termin ist das in der App möglich. Danach wenden Sie sich direkt an die Lehrkraft.",
+      "Du siehst keinen `Elternsprechtag`? Dann bietet die Lehrkraft der Klasse zurzeit keinen an.",
+      "Du kannst nicht mehr buchen oder absagen? Bis 24 Stunden vor dem Termin ist das in der App möglich. Danach wende dich direkt an die Lehrkraft.",
     ],
     related: [HELP_TOPICS.parentCalendar, HELP_TOPICS.parentChildOverview],
   };

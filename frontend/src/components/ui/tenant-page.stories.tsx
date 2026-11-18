@@ -66,7 +66,7 @@ export const InfoOpened: Story = {
   args: {
     title: "Kinder",
     stats: "116 Kinder · 107 zuhause · 9 krank",
-    info: "Hier sehen Sie alle Kinder Ihrer Schule und wo sie gerade sind.",
+    info: "Hier siehst du alle Kinder deiner Schule und wo sie gerade sind.",
     children: (
       <SectionCard title="Liste">
         <p className="text-sm text-gray-600">Inhalt der Seite</p>
@@ -313,7 +313,7 @@ export const ProminentWithLeading: Story = {
         <Users className="h-6 w-6 text-gray-600" aria-hidden />
       </span>
     ),
-    info: "Ihre Startseite zeigt, was heute ansteht.",
+    info: "Deine Startseite zeigt, was heute ansteht.",
     stats: "Mittwoch, 9. September",
     children: pageContent,
   },

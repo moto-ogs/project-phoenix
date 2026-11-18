@@ -73,7 +73,7 @@ export function FormerEmploymentDetails({
       <Alert
         type="info"
         announce="off"
-        message="Diese Beschäftigung ist beendet. Sie können die Angaben nur lesen."
+        message="Diese Beschäftigung ist beendet. Du kannst die Angaben nur lesen."
       />
       {tab === "beschaeftigung" && (
         <SectionCard
@@ -150,7 +150,7 @@ function FormerEmploymentTimes({ staff }: Readonly<{ staff: Staff }>) {
   return (
     <SectionCard
       title="Zeiterfassung"
-      description="Hier sehen Sie die erfassten Arbeitszeiten der früheren Beschäftigung."
+      description="Hier siehst du die erfassten Arbeitszeiten der früheren Beschäftigung."
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Button

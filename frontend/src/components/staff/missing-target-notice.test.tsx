@@ -43,7 +43,7 @@ describe("MissingTargetDialogNotice", () => {
         /Für Ben Brandt ist im September 2026 kein Soll hinterlegt\./,
       ),
     ).toHaveTextContent(
-      "Die Krankmeldung zählt in diesem Monat deshalb 0 Stunden. Gilt später ein Soll für diese Tage, rechnet moto die Stunden nach. Das Soll legen Sie in der Personalakte unter „Arbeitszeitmodell“ fest.",
+      "Die Krankmeldung zählt in diesem Monat deshalb 0 Stunden. Gilt später ein Soll für diese Tage, rechnet moto die Stunden nach. Das Soll legst du in der Personalakte unter „Arbeitszeitmodell“ fest.",
     );
     expect(mocks.args).toEqual(["7", "2026-09-09", true]);
     // A new tab keeps the dialog and its entries (#7054).

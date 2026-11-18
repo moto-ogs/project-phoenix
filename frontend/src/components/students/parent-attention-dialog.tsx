@@ -120,7 +120,7 @@ function ConversationCard({
             variant="surface"
             size="compact"
             onClick={onAnswer}
-            tooltip="Öffnet die Unterhaltung, dort können Sie antworten."
+            tooltip="Öffnet die Unterhaltung, dort kannst du antworten."
           >
             Antworten
           </Button>

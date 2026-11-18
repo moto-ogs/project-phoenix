@@ -235,9 +235,9 @@ export function careOfferingAvailabilityRuleError(
 ): string | null {
   if (!rule) return null;
   if (rule.conditions.length === 0)
-    return "Fügen Sie mindestens eine Bedingung hinzu.";
+    return "Füge mindestens eine Bedingung hinzu.";
   if (rule.match !== "all" && rule.match !== "any") {
-    return "Wählen Sie eine gültige Verknüpfung.";
+    return "Wähle eine gültige Verknüpfung.";
   }
   for (const [index, condition] of rule.conditions.entries()) {
     if (condition.source !== "grade_level") {
@@ -247,7 +247,7 @@ export function careOfferingAvailabilityRuleError(
       return `Bedingung ${index + 1}: unbekannter Operator.`;
     }
     if (condition.value.length === 0) {
-      return `Bedingung ${index + 1}: Wählen Sie mindestens eine Klassenstufe.`;
+      return `Bedingung ${index + 1}: Wähle mindestens eine Klassenstufe.`;
     }
     if (
       gradeLevelMax !== null &&

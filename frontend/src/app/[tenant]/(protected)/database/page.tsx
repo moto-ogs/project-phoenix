@@ -320,8 +320,8 @@ function DatabaseContent() {
         // nutzt, braucht den Satz nicht mehr, deshalb liegt er hinter dem
         // Info-Knopf statt in einer eigenen Karte (#4385).
         <p>
-          Hier legen Sie Kinder, Personal, Räume und Gruppen an und pflegen ihre
-          Daten. Wer heute da ist, sehen Sie unter{" "}
+          Hier legst du Kinder, Personal, Räume und Gruppen an und pflegst ihre
+          Daten. Wer heute da ist, siehst du unter{" "}
           <Link
             href={tenantPath("/students/search")}
             className="font-medium text-gray-900 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900"

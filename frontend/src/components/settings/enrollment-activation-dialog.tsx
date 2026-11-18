@@ -76,7 +76,7 @@ function MissingNoticeStep({ onClose }: Readonly<{ onClose: () => void }>) {
         Eltern müssen bei der Anmeldung eine Datenschutzinformation lesen. Sie
         fehlt noch.{" "}
         {canWriteNotice
-          ? "Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein. Danach können Sie die Online-Anmeldung einschalten."
+          ? "Schalte unter „Rechtstexte“ die Datenschutzinformation ein und trage den Text ein. Danach kannst du die Online-Anmeldung einschalten."
           : ENROLLMENT_PRIVACY_NOTICE_WHO_ACTS}
       </p>
     </ConfirmationModal>
@@ -152,7 +152,7 @@ function RecipientsStep({
         <FormErrorAlert message={errors.error} />
         <Input
           label="Empfänger für neue Anmeldungen"
-          hint="Diese Adressen bekommen bei jeder neuen Anmeldung eine E-Mail. Mehrere Adressen trennen Sie mit einem Komma. Das Feld darf leer bleiben."
+          hint="Diese Adressen bekommen bei jeder neuen Anmeldung eine E-Mail. Mehrere Adressen trennst du mit einem Komma. Das Feld darf leer bleiben."
           type="text"
           inputMode="email"
           autoComplete="email"

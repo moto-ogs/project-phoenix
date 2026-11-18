@@ -347,7 +347,7 @@ function OpenRoomBlock({
       description={withOverbookedHint(
         section.isOwn
           ? `${blockTimeRange({ ...block, status: "active" })} Uhr`
-          : `${blockTimeRange({ ...block, status: "active" })} Uhr · Sie sind hier nicht eingeplant.`,
+          : `${blockTimeRange({ ...block, status: "active" })} Uhr · Du bist hier nicht eingeplant.`,
         occupancy,
         nfcEnabled,
       )}

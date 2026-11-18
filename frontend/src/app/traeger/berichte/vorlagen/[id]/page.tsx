@@ -29,7 +29,7 @@ export default function EditReportTemplatePage() {
   return (
     <TenantPage
       title={template?.name ?? "Vorlage"}
-      info="Änderungen gelten für jeden Bericht, den Sie danach mit dieser Vorlage erstellen."
+      info="Änderungen gelten für jeden Bericht, den du danach mit dieser Vorlage erstellst."
       back
       backHref={listHref}
       backLabel="Zurück zu den Berichten"
@@ -40,7 +40,7 @@ export default function EditReportTemplatePage() {
           ? {
               title: "Vorlage nicht gefunden",
               description:
-                "Vielleicht hat jemand sie gelöscht. Unter „Berichte“ stehen alle Vorlagen Ihres Trägers.",
+                "Vielleicht hat jemand sie gelöscht. Unter „Berichte“ stehen alle Vorlagen deines Trägers.",
             }
           : null
       }

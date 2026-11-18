@@ -102,7 +102,7 @@ export function MessageMailBadge({ outcome }: { outcome?: MailOutcome }) {
 
 /** Where the school fixes an address a mail to a family ran into. */
 const ADDRESS_AT_GUARDIAN =
-  "Welche Adresse betroffen ist, sehen Sie beim Kind unter „Erziehungsberechtigte“.";
+  "Welche Adresse betroffen ist, siehst du beim Kind unter „Erziehungsberechtigte“.";
 
 /**
  * The next step when the mail of a conversation message did not arrive. The

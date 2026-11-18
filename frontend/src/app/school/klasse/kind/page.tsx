@@ -118,8 +118,7 @@ function SharedNotes({
         nothingChosen
           ? {
               title: "Kein Kind ausgewählt",
-              description:
-                "Öffnen Sie die Beobachtungen über die Klassenseite.",
+              description: "Öffne die Beobachtungen über die Klassenseite.",
             }
           : null
       }
@@ -127,7 +126,7 @@ function SharedNotes({
       {data ? (
         <SectionCard
           title="Beobachtungen der OGS"
-          description="Die OGS hat diese Notizen für Sie freigegeben. Sie können sie nur lesen."
+          description="Die OGS hat diese Notizen für dich freigegeben. Du kannst sie nur lesen."
         >
           {data.notes.length === 0 ? (
             <EmptyState

@@ -79,7 +79,7 @@ export function GuardianDeleteModal({
       scope={
         canFullDelete
           ? {
-              label: "Was möchten Sie tun?",
+              label: "Was möchtest du tun?",
               name: "guardian-delete-scope",
               value: scope,
               onChange: (value) =>
@@ -124,7 +124,7 @@ export function GuardianDeleteModal({
               mode: "textConfirm",
               expected: guardianName,
               inputId: "guardian-full-delete-confirm",
-              label: "Geben Sie zur Bestätigung den Namen ein:",
+              label: "Gib zur Bestätigung den Namen ein:",
               placeholder: guardianName,
               preview: guardianName,
             }

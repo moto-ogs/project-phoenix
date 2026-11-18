@@ -207,11 +207,11 @@ export function FilteredBulkArrivalModal({
   );
   // Warum Speichern gesperrt ist; ohne Grund ist es frei (#6765).
   const blockReason = classTimesError
-    ? "Laden Sie zuerst die Zeiten der Klasse neu."
+    ? "Lade zuerst die Zeiten der Klasse neu."
     : !hasAnyTime
-      ? "Tragen Sie zuerst mindestens eine Zeit ein."
+      ? "Trage zuerst mindestens eine Zeit ein."
       : hasInvalidEntry
-        ? "Schreiben Sie jede Uhrzeit so: 14:30."
+        ? "Schreibe jede Uhrzeit so: 14:30."
         : undefined;
   const collisionMessage = `${childCountLabel(collisionCount)} ${collisionCount === 1 ? "hat" : "haben"} eigene Ankunftszeiten. ${
     isClassTimetable
@@ -223,12 +223,12 @@ export function FilteredBulkArrivalModal({
     if (isClassTimetable && (classTimesLoading || classTimesError)) return;
     formErrors.clear();
     if (!hasAnyTime) {
-      formErrors.invalid("Bitte tragen Sie mindestens eine Zeit ein.");
+      formErrors.invalid("Bitte trage mindestens eine Zeit ein.");
       return;
     }
     if (hasInvalidEntry) {
       formErrors.invalid(
-        "Eine Uhrzeit stimmt nicht. Bitte schreiben Sie sie so: 14:30.",
+        "Eine Uhrzeit stimmt nicht. Bitte schreibe sie so: 14:30.",
       );
       return;
     }
@@ -363,7 +363,7 @@ export function FilteredBulkArrivalModal({
         ) : null}
         {showDayView ? null : isClassTimetable ? (
           <div className="space-y-2 text-sm text-gray-600">
-            <p>Tragen Sie den Unterrichtsschluss für jeden Wochentag ein.</p>
+            <p>Trage den Unterrichtsschluss für jeden Wochentag ein.</p>
             <p>
               Die Klassenzeit gilt, wenn ein Kind keine eigene Ankunftszeit hat.
             </p>

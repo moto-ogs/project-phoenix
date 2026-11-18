@@ -383,7 +383,7 @@ describe("FilesPage documents of the Träger (#4692)", () => {
       await screen.findByRole("heading", { name: /Vom Träger/ }),
     ).toBeInTheDocument();
     expect(screen.getByText("Hausordnung 2026/27")).toBeInTheDocument();
-    expect(screen.getByText("Eltern Ihrer Schule")).toBeInTheDocument();
+    expect(screen.getByText("Eltern deiner Schule")).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
         name: "Herunterladen: Hausordnung 2026/27",

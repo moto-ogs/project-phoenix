@@ -59,7 +59,7 @@ describe("DenyAbsenceModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ablehnen" }));
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Felder."),
+      await screen.findByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
     const field = screen.getByLabelText("Begründung");
     expect(field).toHaveAttribute("aria-invalid", "true");

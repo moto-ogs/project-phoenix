@@ -90,11 +90,11 @@ export function StaffLinkModal({
     formErrors.clear();
     if (missing.length > 0) {
       formErrors.invalid(
-        "Bitte wählen Sie bei jedem Feld, welcher Wert gilt.",
+        "Bitte wähle bei jedem Feld, welcher Wert gilt.",
         Object.fromEntries(
           missing.map((field) => [
             `choice-${field.field}`,
-            "Bitte wählen Sie einen Wert.",
+            "Bitte wähle einen Wert.",
           ]),
         ),
       );

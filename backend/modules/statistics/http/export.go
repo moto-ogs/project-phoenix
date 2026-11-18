@@ -181,7 +181,7 @@ func buildRoomExportDocument(report *studentpresence.StatisticsReport) ExportDoc
 		doc.Filters = []string{
 			"Raumhistorie ist ausgeschaltet.",
 			"Raumstatistiken brauchen das eingeschaltete Anwesenheitsprotokoll.",
-			"Ihre Administration kann es unter Einstellungen > Datenschutz einschalten.",
+			"Deine Administration kann es unter Einstellungen > Datenschutz einschalten.",
 		}
 		return doc
 	}

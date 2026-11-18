@@ -16,7 +16,7 @@ export const STALE_DATA_SUFFIX =
 
 /** Says that the write held, whatever the failed reload reported (#6636). */
 export const SAVED_BUT_STALE_SUFFIX =
-  "Ihre Änderung ist gespeichert. Nur die Anzeige ist noch nicht aktuell.";
+  "Deine Änderung ist gespeichert. Nur die Anzeige ist noch nicht aktuell.";
 
 /**
  * The `refresh` of `useRefreshAfterWrite`, handed to a dialog that closes

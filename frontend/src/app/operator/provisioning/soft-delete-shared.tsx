@@ -315,7 +315,7 @@ export function SoftDeleteConfirmationModal<T extends SoftDeletable>({
       title={`${entityLabel} löschen`}
       description={
         <p>
-          Möchten Sie {entityArticleAccusative}{" "}
+          Möchtest du {entityArticleAccusative}{" "}
           <span className="font-medium">{target.name}</span> wirklich löschen?
         </p>
       }
@@ -397,7 +397,7 @@ export function RestoreConfirmationModal<T extends SoftDeletable>({
       isConfirmDisabled={confirmDisabled}
     >
       <p className="text-sm text-gray-600">
-        Möchten Sie {entityArticleAccusative} &quot;{target?.name}&quot;
+        Möchtest du {entityArticleAccusative} &quot;{target?.name}&quot;
         wiederherstellen? {entityPronounNominative} wird in{" "}
         {entityPossessiveAccusative} vorherigen Zustand zurückversetzt.
       </p>

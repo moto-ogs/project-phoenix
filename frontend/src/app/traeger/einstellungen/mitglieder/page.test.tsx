@@ -254,7 +254,7 @@ describe("TraegerAccountsPage", () => {
     const [kasse] = await screen.findAllByText("kasse@traeger.example");
     expect(kasse).toBeInTheDocument();
     expect(screen.getAllByText("Abrechnung")[0]).toBeInTheDocument();
-    expect(screen.getAllByText("(Sie)")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("(Du)")[0]).toBeInTheDocument();
     expect(screen.getByText("Offene Einladungen")).toBeInTheDocument();
     expect(screen.getAllByText("neu@traeger.example")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Nur lesen")[0]).toBeInTheDocument();
@@ -272,9 +272,7 @@ describe("TraegerAccountsPage", () => {
     );
     // Without an address and a role nothing is sent.
     expect(
-      await within(dialog).findByText(
-        "Bitte wählen Sie mindestens eine Rolle.",
-      ),
+      await within(dialog).findByText("Bitte wähle mindestens eine Rolle."),
     ).toBeInTheDocument();
     expect(api.inviteTraegerAccount).not.toHaveBeenCalled();
 
@@ -558,7 +556,7 @@ describe("TraegerAccountsPage", () => {
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
     expect(
-      await within(dialog).findAllByText("Bitte geben Sie einen Namen ein."),
+      await within(dialog).findAllByText("Bitte gib einen Namen ein."),
     ).not.toHaveLength(0);
     expect(api.changeTraegerMemberName).not.toHaveBeenCalled();
 
@@ -651,10 +649,10 @@ describe("TraegerAccountsPage", () => {
 
     expect(
       await screen.findByText(
-        "Für die Liste der Personen fehlt Ihnen die Berechtigung. Bitte fragen Sie die Leitung Ihres Träger-Büros.",
+        "Für die Liste der Personen fehlt dir die Berechtigung. Bitte frage die Leitung deines Träger-Büros.",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/fragen Sie die Schule/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/frage die Schule/)).not.toBeInTheDocument();
     expect(screen.queryByText("kasse@traeger.example")).not.toBeInTheDocument();
   });
 

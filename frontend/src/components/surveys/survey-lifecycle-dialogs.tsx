@@ -148,7 +148,7 @@ export function PublishSurveyDialog({ survey, onClose, onDone }: DialogProps) {
         )}
         <p className="font-medium text-gray-900">
           Danach lässt sich nichts mehr ändern, auch nicht, ob die Umfrage
-          anonym ist. Sie können sie nur noch beenden.
+          anonym ist. Du kannst sie nur noch beenden.
         </p>
       </div>
     </ConfirmationModal>
@@ -230,7 +230,7 @@ export function RemindSurveyDialog({
           Alle, die bei „{survey.title}“ noch nicht teilgenommen haben, bekommen
           eine Erinnerung.
         </p>
-        <p>Sie erfahren nur die Zahl, nicht wer das ist.</p>
+        <p>Du erfährst nur die Zahl, nicht wer das ist.</p>
       </div>
     </ConfirmationModal>
   );
@@ -259,7 +259,7 @@ export function DeleteSurveyDialog({ survey, onClose, onDone }: DialogProps) {
       }
       description={
         <>
-          Möchten Sie die Umfrage
+          Möchtest du die Umfrage
           <span className="font-medium text-gray-900"> „{survey.title}“ </span>
           wirklich löschen?{" "}
           {withAnswers
@@ -273,7 +273,7 @@ export function DeleteSurveyDialog({ survey, onClose, onDone }: DialogProps) {
               mode: "textConfirm",
               expected: "LÖSCHEN",
               inputId: "confirm-delete-survey",
-              label: "Tippen Sie zur Bestätigung LÖSCHEN ein:",
+              label: "Tippe zur Bestätigung LÖSCHEN ein:",
               placeholder: "LÖSCHEN",
             }
           : { mode: "twoStep" }

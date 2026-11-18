@@ -26,8 +26,8 @@ const logger = createLogger({ component: "HolidayRegistrationProofCard" });
 
 function emptyText(registration: HolidayRegistrationDetail): string {
   return registration.benefitsDeclared
-    ? "Die Eltern haben keinen Nachweis hochgeladen. Bitte fordern Sie ihn bei der Familie an. Bringt die Familie ihn auf Papier, laden Sie ihn hier hoch."
-    : "Kein Nachweis. Bringt eine Familie mit Leistungsbezug den Nachweis auf Papier, laden Sie ihn hier hoch.";
+    ? "Die Eltern haben keinen Nachweis hochgeladen. Bitte fordere ihn bei der Familie an. Bringt die Familie ihn auf Papier, lade ihn hier hoch."
+    : "Kein Nachweis. Bringt eine Familie mit Leistungsbezug den Nachweis auf Papier, lade ihn hier hoch.";
 }
 
 export function HolidayRegistrationProofCard({

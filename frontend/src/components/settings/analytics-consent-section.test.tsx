@@ -140,7 +140,7 @@ describe("AnalyticsConsentSection", () => {
     await renderCard(answer(true), { schoolAllows: false });
 
     expect(
-      screen.getByText(/Ihre Schule hat die Nutzungsanalyse ausgeschaltet/),
+      screen.getByText(/Deine Schule hat die Nutzungsanalyse ausgeschaltet/),
     ).toBeInTheDocument();
     // The choice stays the person's own.
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
@@ -149,7 +149,7 @@ describe("AnalyticsConsentSection", () => {
   it("names the recordings only with the school's Analyse-Freigabe", async () => {
     await renderCard(answer(null), { freigabe: true });
     expect(
-      screen.getByText(/Ihre Schule hat zusätzlich Aufzeichnungen erlaubt/),
+      screen.getByText(/Deine Schule hat zusätzlich Aufzeichnungen erlaubt/),
     ).toBeInTheDocument();
   });
 

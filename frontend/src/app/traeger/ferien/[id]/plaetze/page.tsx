@@ -71,17 +71,17 @@ export default function TraegerHolidayPlacesPage() {
       info={
         period?.allocationMode === "criteria" ? (
           <p>
-            Hier legen Sie fest, wie viele Kinder in einer Woche mitmachen
-            können. Die Plätze vergibt Ihr Büro im Reiter „Vergabe“. moto
-            sortiert die Anmeldungen dafür nach Ihren Kriterien vor. Wird später
-            ein Platz frei, rückt das nächste Kind der Warteliste automatisch
-            nach. Seine Eltern bekommen eine E-Mail. Kinder auf der Warteliste
-            oder mit offenem Platz zahlen nichts und stehen nicht auf der Liste
-            der OGS.
+            Hier legst du fest, wie viele Kinder in einer Woche mitmachen
+            können. Die Plätze vergibt dein Büro im Reiter „Vergabe“. moto
+            sortiert die Anmeldungen dafür nach deinen Kriterien vor. Wird
+            später ein Platz frei, rückt das nächste Kind der Warteliste
+            automatisch nach. Seine Eltern bekommen eine E-Mail. Kinder auf der
+            Warteliste oder mit offenem Platz zahlen nichts und stehen nicht auf
+            der Liste der OGS.
           </p>
         ) : (
           <p>
-            Hier legen Sie fest, wie viele Kinder in einer Woche mitmachen
+            Hier legst du fest, wie viele Kinder in einer Woche mitmachen
             können. Plätze gehen in der Reihenfolge, in der die Anmeldungen
             eingehen. Ist eine Woche voll, kommt das Kind auf die Warteliste.
             Wird ein Platz frei, rückt das nächste Kind automatisch nach. Seine
@@ -134,7 +134,7 @@ export default function TraegerHolidayPlacesPage() {
           ? {
               title: "Noch keine Wochen",
               description:
-                "Legen Sie zuerst im Reiter „Planung“ die Wochen der Ferien an.",
+                "Lege zuerst im Reiter „Planung“ die Wochen der Ferien an.",
             }
           : undefined
       }

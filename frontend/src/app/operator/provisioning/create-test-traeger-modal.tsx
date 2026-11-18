@@ -73,7 +73,7 @@ export function CreateTestTraegerModal({
       event.preventDefault();
       if (!complete) return;
       if (!isValidSlug(slug.trim())) {
-        invalid("Bitte prüfen Sie die markierten Felder.", {
+        invalid("Bitte prüfe die markierten Felder.", {
           slug: "Slug darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten.",
         });
         return;
@@ -116,7 +116,7 @@ export function CreateTestTraegerModal({
           });
           // oxlint-disable-next-line bauart/no-toast-form-error -- Kein Formularfehler: der Träger ist angelegt, der Dialog schließt, die Meldung nennt den Folgeschritt auf der Seite des Trägers.
           toastWarning(
-            "Der Test-Träger ist angelegt, die Beispielkinder fehlen noch. Legen Sie sie auf der Seite des Trägers an.",
+            "Der Test-Träger ist angelegt, die Beispielkinder fehlen noch. Lege sie auf der Seite des Trägers an.",
           );
         }
         // Eine späte Antwort schließt und navigiert nicht mehr, wenn der Dialog

@@ -227,7 +227,7 @@ describe("ParentBottomNav", () => {
     const dialog = screen.getByRole("dialog");
     expect(
       within(dialog).getByText(
-        "Möchten Sie sich wirklich von Ihrem Konto abmelden?",
+        "Möchtest du dich wirklich von deinem Konto abmelden?",
       ),
     ).toBeVisible();
     expect(logoutMock).not.toHaveBeenCalled();

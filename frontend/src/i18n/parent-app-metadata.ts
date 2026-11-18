@@ -4,7 +4,7 @@ const parentAppMetadata = {
   de: {
     name: "moto Eltern",
     description:
-      "Die Betreuung Ihres Kindes im Blick: Tagesstatus, Nachrichten an die OGS, Krankmeldung und Termine.",
+      "Die Betreuung deines Kindes im Blick: Tagesstatus, Nachrichten an die OGS, Krankmeldung und Termine.",
   },
   en: {
     name: "moto Parent Portal",

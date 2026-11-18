@@ -27,7 +27,7 @@ function SchoolSettingsContent() {
         <>
           <NotificationPreferencesSection
             portal="school"
-            description="Wählen Sie zuerst die Themen. Dann erlauben Sie die Hinweise auf diesem Gerät."
+            description="Wähle zuerst die Themen. Dann erlaubst du die Hinweise auf diesem Gerät."
           />
           <PushNotificationSection portal="school" />
         </>

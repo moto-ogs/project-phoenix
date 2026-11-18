@@ -7,24 +7,24 @@ export function teacherStartSupervisionTopic(): HelpTopic {
     id: HELP_TOPICS.teacherStartSupervision,
     title: "Eine Aufsicht starten",
     question: "Wie starte ich meine Aufsicht?",
-    summary: "Mit dem Start sehen Sie die Kinder, die zu Ihnen gehören.",
+    summary: "Mit dem Start siehst du die Kinder, die zu dir gehören.",
     group: "aufsicht",
     audience: "teacher",
     icon: "Clock3",
     steps: [
-      "Öffnen Sie `Meine Aufsichten`.",
-      "Wählen Sie die Aufsicht, die jetzt beginnt.",
-      "Wählen Sie `Aufsicht starten`.",
+      "Öffne `Meine Aufsichten`.",
+      "Wähle die Aufsicht, die jetzt beginnt.",
+      "Wähle `Aufsicht starten`.",
     ],
     result: "moto zeigt danach die Kinder dieser Aufsicht mit ihren Angaben.",
     notes: [
-      "Starten können Sie erst kurz vor dem Beginn, nicht schon am Morgen.",
+      "Starten kannst du erst kurz vor dem Beginn, nicht schon am Morgen.",
     ],
     differences: [
       "Ist `Aufsicht starten` grau, ist es noch zu früh oder die Aufsicht läuft schon.",
     ],
     troubleshootingDetails: [
-      "Der Knopf fehlt ganz? Dann ist diese Aufsicht nicht Ihre. Prüfen Sie die Übersicht.",
+      "Der Knopf fehlt ganz? Dann ist diese Aufsicht nicht deine. Prüfe die Übersicht.",
     ],
     related: [
       HELP_TOPICS.teacherSupervision,

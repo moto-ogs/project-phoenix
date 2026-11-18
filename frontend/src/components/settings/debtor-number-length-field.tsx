@@ -64,7 +64,7 @@ export function DebtorNumberLengthField({
   const max = parseDigits(maxText);
   const problem =
     min === null || max === null
-      ? `Bitte geben Sie eine Zahl von 1 bis ${DEBTOR_NUMBER_MAX_LENGTH} ein.`
+      ? `Bitte gib eine Zahl von 1 bis ${DEBTOR_NUMBER_MAX_LENGTH} ein.`
       : null;
   const example = debtorNumberExample(
     debtorNumberFormat(true, min ?? storedMin, max ?? storedMax),
@@ -175,8 +175,8 @@ export function DebtorNumberLengthField({
         </div>
         <FieldErrorHint id={`${fieldId}-problem`} message={problem} live />
         <p id={`${fieldId}-note`} className="text-xs text-gray-600">
-          Für genau 5 Ziffern tragen Sie bei von und bis 5 ein. Gespeicherte
-          Nummern bleiben, wie sie sind.
+          Für genau 5 Ziffern trage bei von und bis 5 ein. Gespeicherte Nummern
+          bleiben, wie sie sind.
         </p>
       </InsetPanel>
     </div>

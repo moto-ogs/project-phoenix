@@ -141,7 +141,7 @@ export function describeWorkingTimeWarning(
     case "rest_period":
       return `Vor ${day}: nur ${planned} Ruhezeit. Nötig sind ${limit}.`;
     case "rest_shortened":
-      return `Vor ${day}: ${planned} Ruhezeit statt ${limit}. Planen Sie dafür einen Ausgleich ein.`;
+      return `Vor ${day}: ${planned} Ruhezeit statt ${limit}. Plane dafür einen Ausgleich ein.`;
     case "above_soll":
       return `Woche ab ${day}: ${planned} geplant. Das Soll ist ${limit}.`;
   }

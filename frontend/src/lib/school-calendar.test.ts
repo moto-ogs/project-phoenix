@@ -82,7 +82,7 @@ describe("schoolAppointmentFieldErrors", () => {
     };
 
     expect(schoolAppointmentFieldErrors(draft, true)).toEqual({
-      classes: "Bitte wählen Sie mindestens eine Klasse.",
+      classes: "Bitte wähle mindestens eine Klasse.",
     });
     // Beim Ändern liest das Backend die Eltern nicht.
     expect(schoolAppointmentFieldErrors(draft, false)).toEqual({});
@@ -107,7 +107,7 @@ describe("schoolAppointmentFieldErrors", () => {
         emptySchoolAppointmentDraft("2026-09-09"),
         true,
       ),
-    ).toEqual({ title: "Bitte geben Sie einen Titel ein." });
+    ).toEqual({ title: "Bitte gib einen Titel ein." });
   });
 });
 
