@@ -82,7 +82,7 @@ export function traegerCareMonthsTopic(): HelpTopic {
           "Die Rechnung steht jetzt unter `Ausgeschlossen`. Sie zählt nicht zur Summe und bekommt bei der Freigabe keine Nummer. Die andere Rechnung des Kindes bleibt im Lauf.",
           "Mit `Wieder aufnehmen` nimmst du genau diese Rechnung zurück in den Lauf.",
           "Sind alle Rechnungen ausgeschlossen, wähle trotzdem `Lauf freigeben`. Der Lauf schließt ohne Rechnungen und gibt die Schulen wieder frei. Die Gründe bleiben im Verlauf. Ein neuer Lauf kann diese Kinder abrechnen.",
-          "Das Rechnungsdatum änderst du bei `Rechnungsdatum` mit `Ändern`.",
+          "Das Rechnungsdatum änderst du bei `Rechnungsdatum` mit `Bearbeiten`.",
         ],
       },
       {

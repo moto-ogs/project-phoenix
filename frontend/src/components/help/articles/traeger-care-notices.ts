@@ -80,7 +80,7 @@ export function traegerCareNoticesTopic(): HelpTopic {
           "Die Jahresläufe, die Bescheide eines Laufs und den Versand lädst du als Datei herunter.",
         steps: [
           "Wähle `Abrechnungsläufe` und dann den Reiter `Jahresbescheide`. Für die Bescheide öffnest du einen Jahreslauf, für den Versand dort `An Familien senden`.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "In der Liste der Jahresläufe wählst du `Herunterladen`. Im Jahreslauf und im Versand wählst du das Menü mit den drei Punkten. Wähle dann `PDF`, `Excel` oder `CSV`.",
           "Die Bescheide und der Versand enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
         ],
       },

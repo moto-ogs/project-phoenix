@@ -34,7 +34,7 @@ export function traegerBillingTermsTopic(): HelpTopic {
           "Ein Lauf kann ein festes Datum haben, bis zu dem alle Familien zahlen. Das geht nur vor der Freigabe.",
         steps: [
           "Öffne den Lauf unter `Abrechnungsläufe`, im Reiter `Monatsbeiträge` oder `Ferien`.",
-          "Beim Monatslauf wählst du in der Karte `Monatslauf` beim Feld `Fällig` den Knopf `Ändern`. Beim Ferienlauf wählst du `Fälligkeiten ändern`. Es öffnet sich eine eigene Seite.",
+          "Wähle im Monatslauf in der Karte `Monatslauf`, im Ferienlauf in der Karte `Abrechnungslauf` den Knopf `Fälligkeiten bearbeiten`. Es öffnet sich eine eigene Seite.",
           "Wähle je Zahlungsweg ein Datum. Ohne Datum gilt das Zahlungsziel der Leistung.",
           "Wähle `Speichern`. Du kommst zurück zum Lauf. Bei `Fällig` steht jetzt das Datum.",
         ],

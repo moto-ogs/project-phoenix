@@ -241,6 +241,18 @@ function CareInvoiceAmendPage() {
               actionLayout="responsive"
             />
           ) : null}
+          {someOff ? (
+            <Alert
+              type="info"
+              message={
+                amendmentSettingsLink
+                  ? "Weitere Änderungen schaltest du in den Einstellungen der Abrechnung ein."
+                  : "Weitere Änderungen schaltet in den Einstellungen der Abrechnung ein, wer das Recht „Einstellungen“ hat."
+              }
+              action={amendmentSettingsLink}
+              actionLayout="responsive"
+            />
+          ) : null}
           <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
             <CareAmendedInvoiceCard
               invoice={invoice}
@@ -258,12 +270,6 @@ function CareInvoiceAmendPage() {
                   kind="care-invoices"
                   invoiceId={invoice.id}
                 />
-              ) : null}
-              {someOff ? (
-                <p className="px-1 text-sm text-gray-600">
-                  Weitere Änderungen schaltet dein Träger in den Einstellungen
-                  der Abrechnung ein.
-                </p>
               ) : null}
             </div>
           </div>

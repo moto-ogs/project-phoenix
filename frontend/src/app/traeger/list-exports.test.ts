@@ -21,7 +21,8 @@ const TRAEGER_DIR = path.join(SRC_DIR, "app", "traeger");
 
 /**
  * Listen und Berichte mit Download. „page“: Die Seite selbst nutzt
- * `TraegerListExportMenu` oder `TRAEGER_LIST_FORMAT_OPTIONS`. Sonst nennt der
+ * `TraegerListExportMenu`, `useTraegerListExportItems` oder
+ * `TRAEGER_LIST_FORMAT_OPTIONS`. Sonst nennt der
  * Wert die Komponente unter `src/`, die den Download der Liste trägt.
  */
 const LIST_EXPORTS: Readonly<Record<string, string>> = {
@@ -144,6 +145,9 @@ const pages = collectPages(TRAEGER_DIR).map((file) => {
 function offersEveryFormat(source: string): boolean {
   return (
     source.includes("<TraegerListExportMenu") ||
+    // The page-menu form of the same download (#7403) builds its entries
+    // from TRAEGER_LIST_FORMAT_OPTIONS.
+    source.includes("useTraegerListExportItems(") ||
     source.includes("TRAEGER_LIST_FORMAT_OPTIONS") ||
     /exportFormatOptions\(\[\s*"pdf",\s*"xlsx",\s*"csv",?\s*\]\)/.test(source)
   );

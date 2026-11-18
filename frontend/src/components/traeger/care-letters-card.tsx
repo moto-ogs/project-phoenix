@@ -7,14 +7,8 @@
 // Schreiben, auch nur die der Familien ohne E-Mail. Die Mail und das Fach
 // „Dokumente“ der Eltern-App bekommen dieselbe Datei.
 
-import { ChevronDown, Printer } from "lucide-react";
-import { useLayoutEffect, useState } from "react";
+import { Printer } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { ConfirmationModal } from "~/components/ui/modal";
-import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { SectionCard } from "~/components/ui/section-card";
 import type { useApiLoadError } from "~/contexts/ToastContext";
 import type { InvoicePayment } from "~/lib/traeger-billing-terms-api";
 import type { LetterSource } from "./billing-letters-modal";
@@ -24,7 +18,11 @@ import {
   LettersCreateCard,
   LettersFacts,
 } from "./billing-letters-card";
-import { LetterSendState, lettersToSend } from "./letter-send-state";
+import {
+  LetterDeliveryCard,
+  LetterDeliveryPending,
+} from "./letter-delivery-card";
+import { lettersToSend } from "./letter-send-state";
 import {
   type CareLetters,
   createCareLetters,
@@ -72,21 +70,11 @@ export function CareLettersCard({
   onSendAll: () => Promise<void>;
   onPrint: (withoutEmailOnly: boolean) => void;
 }>) {
-  const [confirming, setConfirming] = useState(false);
-  useLayoutEffect(() => {
-    if (!letters) setConfirming(false);
-  }, [letters]);
-
   // Bestätigte Schreiben bleiben bei einem Ladefehler stehen; der Fehler
-  // steht darüber (#6652).
-  if (loadError && !letters) {
-    return (
-      <SectionCard title={TITLE}>
-        <LoadErrorAlert error={loadError} actionLayout="responsive" />
-      </SectionCard>
-    );
+  // steht darüber (#6652). Laden und Fehler ohne Liste zeigt die Karte.
+  if (!letters) {
+    return <LetterDeliveryPending title={TITLE} loadError={loadError} />;
   }
-  if (!letters) return <SectionCard title={TITLE} loading />;
 
   const source: LetterSource<CareLetters> = {
     create: (input) => createCareLetters(runId, input),
@@ -137,101 +125,64 @@ export function CareLettersCard({
   ];
 
   return (
-    <SectionCard
+    <LetterDeliveryCard
       title={TITLE}
       description="Jede Familie bekommt ihr Schreiben per E-Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es auch dort unter „Dokumente“, wenn das Kind einen Schülerdatensatz hat. Familien ohne E-Mail gibst du das gedruckte Schreiben."
-      actions={
-        <div className="flex flex-wrap gap-2">
-          <OverflowMenu
-            ariaLabel="Schreiben drucken"
-            triggerButton={{ variant: "outline", size: "md" }}
-            triggerClassName="gap-2 whitespace-nowrap"
-            triggerContent={
-              printing ? (
-                "Wird erstellt …"
-              ) : (
-                <>
-                  Drucken
-                  <ChevronDown className="h-4 w-4" aria-hidden />
-                </>
-              )
-            }
-            disabled={printing !== null}
-            items={printItems}
-          />
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            isLoading={sendingAll}
-            loadingText="Wird gesendet …"
-            disabled={toSend === 0}
-            disabledReason={
-              summary.letters === 0
-                ? "Es gibt noch kein Schreiben zum Senden."
-                : summary.withoutEmail >= summary.notSent && summary.sent === 0
-                  ? "Keine Familie hat eine E-Mail-Adresse. Drucke die Schreiben."
-                  : "Alle Schreiben mit E-Mail-Adresse sind schon gesendet."
-            }
-            tooltip="Sendet allen Familien mit E-Mail-Adresse ihr Schreiben, moto fragt vorher nach."
-            onClick={() => setConfirming(true)}
-          >
-            An alle senden
-          </Button>
-        </div>
-      }
-    >
-      <div className="space-y-5">
-        <LoadErrorAlert error={loadError} actionLayout="responsive" />
-        <LetterSendState summary={summary} />
-        {summary.withoutInbox > 0 ? (
-          <Alert type="info" message={withoutInboxNote(summary.withoutInbox)} />
-        ) : null}
-        {toSend === 0 && summary.letters > 0 ? (
-          <p className="text-sm text-gray-600">
-            Alle Schreiben mit E-Mail-Adresse sind gesendet. Einzelne Schreiben
-            sendest du erneut über das Menü ihrer Rechnung.
-          </p>
-        ) : null}
-        <LettersFacts
-          paymentDueOn={letters.letters.paymentDueOn}
-          payments={payments}
-          createdAt={letters.letters.createdAt}
-          notes={letters.letters.notes}
-          notesLabel="Hinweis für die Familien"
-          emptyNotes="Keiner"
-        />
-      </div>
-      <ConfirmationModal
-        isOpen={confirming}
-        title="An alle senden?"
-        confirmText={
-          toSend === 1 ? "1 Schreiben senden" : `${toSend} Schreiben senden`
-        }
-        isConfirmLoading={sendingAll}
-        loadingText="Wird gesendet …"
-        onClose={() => setConfirming(false)}
-        onConfirm={() => {
-          void onSendAll().finally(() => setConfirming(false));
-        }}
-      >
-        <div className="space-y-3 text-sm text-gray-700">
-          <p>
-            {toSend === 1
-              ? "1 Schreiben geht jetzt per E-Mail an die Familie."
-              : `${toSend} Schreiben gehen jetzt per E-Mail an die Familien.`}{" "}
-            Mit einem Konto in der Eltern-App liegt es auch dort unter
-            „Dokumente“.
-          </p>
-          {summary.withoutEmail > 0 ? (
+      summary={summary}
+      loadError={loadError}
+      printAriaLabel="Schreiben drucken"
+      printItems={printItems}
+      printing={printing !== null}
+      sendAll={{
+        sending: sendingAll,
+        disabledReason:
+          summary.letters === 0
+            ? "Es gibt noch kein Schreiben zum Senden."
+            : summary.withoutEmail >= summary.notSent && summary.sent === 0
+              ? "Keine Familie hat eine E-Mail-Adresse. Drucke die Schreiben."
+              : "Alle Schreiben mit E-Mail-Adresse sind schon gesendet.",
+        tooltip:
+          "Sendet allen Familien mit E-Mail-Adresse ihr Schreiben, moto fragt vorher nach.",
+        confirmText:
+          toSend === 1 ? "1 Schreiben senden" : `${toSend} Schreiben senden`,
+        confirmBody: (
+          <>
             <p>
-              {familyCount(summary.withoutEmail)} ohne E-Mail-Adresse{" "}
-              {summary.withoutEmail === 1 ? "bekommt" : "bekommen"} nichts.
-              Drucke deren Schreiben über „Drucken“.
+              {toSend === 1
+                ? "1 Schreiben geht jetzt per E-Mail an die Familie."
+                : `${toSend} Schreiben gehen jetzt per E-Mail an die Familien.`}{" "}
+              Mit einem Konto in der Eltern-App liegt es auch dort unter
+              „Dokumente“.
             </p>
-          ) : null}
-        </div>
-      </ConfirmationModal>
-    </SectionCard>
+            {summary.withoutEmail > 0 ? (
+              <p>
+                {familyCount(summary.withoutEmail)} ohne E-Mail-Adresse{" "}
+                {summary.withoutEmail === 1 ? "bekommt" : "bekommen"} nichts.
+                Drucke deren Schreiben über „Drucken“.
+              </p>
+            ) : null}
+          </>
+        ),
+        onConfirm: onSendAll,
+      }}
+    >
+      {summary.withoutInbox > 0 ? (
+        <Alert type="info" message={withoutInboxNote(summary.withoutInbox)} />
+      ) : null}
+      {toSend === 0 && summary.letters > 0 ? (
+        <p className="text-sm text-gray-600">
+          Alle Schreiben mit E-Mail-Adresse sind gesendet. Einzelne Schreiben
+          sendest du erneut über das Menü ihrer Rechnung.
+        </p>
+      ) : null}
+      <LettersFacts
+        paymentDueOn={letters.letters.paymentDueOn}
+        payments={payments}
+        createdAt={letters.letters.createdAt}
+        notes={letters.letters.notes}
+        notesLabel="Hinweis für die Familien"
+        emptyNotes="Keiner"
+      />
+    </LetterDeliveryCard>
   );
 }

@@ -3,15 +3,16 @@
 // Der Versand der Bestätigungsschreiben eines Laufs (#4670): jede Familie
 // bekommt ihr Schreiben als PDF im Anhang einer Mail, an alle auf einmal
 // oder einzeln. Je Familie steht, ob die Mail raus ist; eine Mail, die nicht
-// ankam, lässt sich erneut senden. Alle Schreiben lassen sich in einer Datei
-// drucken, für Familien ohne E-Mail.
+// ankam, lässt sich über das Menü ihrer Zeile erneut senden. Alle Schreiben
+// lassen sich in einer Datei drucken, für Familien ohne E-Mail. Aufbau wie
+// der Versand der übrigen Läufe (#7406).
 
 import { useState } from "react";
-import { Button } from "~/components/ui/button";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { Loading } from "~/components/ui/loading";
-import { SectionCard } from "~/components/ui/section-card";
-import { StatusBadge } from "~/components/ui/status-badge";
+import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
+import {
+  type OverflowMenuItem,
+  OverflowMenu,
+} from "~/components/ui/page-header/OverflowMenu";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
@@ -29,11 +30,10 @@ import {
   printBillingLetters,
 } from "~/lib/traeger-billing-api";
 import { BILLING_DOCUMENT_KIND_LABELS } from "./billing-format";
-import {
-  canSendMail,
-  mailBadge,
-  mailStatusDetail,
-} from "./billing-mail-status";
+import { canSendMail, letterSendCounts } from "./billing-mail-status";
+import { LetterDeliveryCard } from "./letter-delivery-card";
+import { LetterSendCell } from "./letter-send-cell";
+import { type LetterSendCounts, lettersToSend } from "./letter-send-state";
 import { useTraegerResource } from "./use-traeger-resource";
 
 const logger = createLogger({ component: "BillingMailCard" });
@@ -57,6 +57,100 @@ function seriesMessage(series: LetterSeries): string {
     );
   }
   return parts.join(" ");
+}
+
+/** Why „An alle senden“ has nothing to send. */
+function sendAllBlockReason(summary: LetterSendCounts): string {
+  if (summary.letters === 0) return "Es gibt noch kein Schreiben zum Senden.";
+  if (summary.notSent > 0) {
+    return "Den übrigen Familien fehlt eine Mail-Adresse. Drucke deren Schreiben.";
+  }
+  return "Alle Schreiben mit Mail-Adresse sind schon gesendet.";
+}
+
+/** „Storno FE-0004“; an invoice goes by its number alone. */
+function letterName(mailing: LetterMailing): string {
+  return mailing.kind === "cancellation" || mailing.kind === "credit"
+    ? `${BILLING_DOCUMENT_KIND_LABELS[mailing.kind]} ${mailing.number}`
+    : mailing.number;
+}
+
+function rowMenuItems(
+  mailing: LetterMailing,
+  busy: boolean,
+  onSend: (mailing: LetterMailing) => void,
+): OverflowMenuItem[] {
+  if (busy || !canSendMail(mailing)) return [];
+  return [
+    {
+      label: mailing.status === "not_sent" ? "Senden" : "Erneut senden",
+      description:
+        mailing.status === "not_sent"
+          ? "Sendet der Familie sofort ihr Schreiben per Mail."
+          : "Sendet der Familie sofort ihr Schreiben noch einmal per Mail.",
+      onClick: () => onSend(mailing),
+    },
+  ];
+}
+
+function mailColumns(
+  busy: boolean,
+  onSend: (mailing: LetterMailing) => void,
+): DataTableColumn<LetterMailing>[] {
+  return [
+    {
+      key: "family",
+      header: "Familie",
+      stacked: "title",
+      render: (mailing) => (
+        <div className="min-w-0">
+          <p className="font-medium text-gray-900">
+            {mailing.recipientFirstName} {mailing.recipientLastName}
+          </p>
+          <p className="text-xs break-all text-gray-600">
+            {mailing.recipientEmail || "Keine Mail-Adresse"}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "letter",
+      header: "Schreiben",
+      stacked: "field",
+      className: "tabular-nums text-gray-900",
+      render: letterName,
+    },
+    {
+      key: "send",
+      header: "An die Familie",
+      stacked: "field",
+      className: "w-56 align-top",
+      render: (mailing) => (
+        <LetterSendCell
+          letter={mailing}
+          printInstruction="Bitte drucke das Schreiben."
+        />
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      stacked: "meta",
+      stackedLabel: false,
+      className: "align-top",
+      render: (mailing) => {
+        const items = rowMenuItems(mailing, busy, onSend);
+        return items.length > 0 ? (
+          <OverflowMenu
+            ariaLabel={`Aktionen für das Schreiben an ${mailing.recipientFirstName} ${mailing.recipientLastName}`}
+            triggerSize="sm"
+            items={items}
+          />
+        ) : null;
+      },
+    },
+  ];
 }
 
 export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
@@ -136,107 +230,71 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
     }
   };
 
-  const failed = mailings?.some((mailing) => mailing.status === "failed");
+  const summary = mailings ? letterSendCounts(mailings) : null;
+  const toSend = summary ? lettersToSend(summary) : 0;
 
   return (
-    <SectionCard
+    <LetterDeliveryCard
       title="Versand per Mail"
       description="Jede Familie bekommt ihr Schreiben als PDF im Anhang einer Mail. Hat sie mit dieser Adresse ein Konto in der Eltern-App, liegt es auch dort unter „Dokumente“. Familien ohne E-Mail gibst du das gedruckte Schreiben."
-      actions={
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="md"
-            isLoading={printing}
-            loadingText="Wird erstellt …"
-            tooltip="Lädt alle Schreiben in einer PDF zum Drucken herunter."
-            onClick={() => void print()}
-          >
-            Alle Schreiben drucken
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            isLoading={sendingAll}
-            loadingText="Wird gesendet …"
-            disabled={!mailings}
-            tooltip="Sendet jeder Familie mit Mail-Adresse sofort ihr noch nicht gesendetes Schreiben."
-            onClick={() => void sendAll()}
-          >
-            An alle Familien senden
-          </Button>
-        </div>
-      }
+      summary={summary}
+      loadError={loadError}
+      printAriaLabel="Schreiben drucken"
+      printItems={[
+        {
+          label: "Alle Schreiben drucken",
+          description: "Lädt alle Schreiben in einer PDF zum Drucken herunter",
+          onClick: () => void print(),
+        },
+      ]}
+      printing={printing}
+      sendAll={{
+        sending: sendingAll,
+        disabledReason: summary ? sendAllBlockReason(summary) : "",
+        tooltip:
+          "moto fragt vorher nach, dann gehen die Schreiben per Mail an die Familien.",
+        confirmText:
+          toSend === 1 ? "1 Schreiben senden" : `${toSend} Schreiben senden`,
+        confirmBody: (
+          <>
+            <p>
+              {toSend === 1
+                ? "1 Schreiben geht jetzt per Mail an die Familie."
+                : `${toSend} Schreiben gehen jetzt per Mail an die Familien.`}{" "}
+              Mit einem Konto in der Eltern-App liegt es auch dort unter
+              „Dokumente“.
+            </p>
+            {summary && summary.withoutEmail > 0 ? (
+              <p>
+                {summary.withoutEmail === 1
+                  ? "1 Familie ohne Mail-Adresse bekommt nichts."
+                  : `${summary.withoutEmail} Familien ohne Mail-Adresse bekommen nichts.`}{" "}
+                Drucke deren Schreiben über „Drucken“.
+              </p>
+            ) : null}
+          </>
+        ),
+        onConfirm: sendAll,
+      }}
     >
-      {loadError ? (
-        <LoadErrorAlert error={loadError} />
-      ) : mailings ? (
-        <div className="space-y-3">
-          <p className="text-sm text-gray-700">
-            „An alle Familien senden“ schickt nur Mails, die noch nicht gesendet
-            sind.
-            {failed
-              ? " Kam eine Mail nicht an, sende sie erneut. Stimmt die Adresse nicht, drucke das Schreiben."
-              : null}
-          </p>
-          <ul className="divide-y divide-gray-100">
-            {mailings.map((mailing) => (
-              <li
-                key={mailing.documentId}
-                className="flex flex-wrap items-center justify-between gap-2 py-3"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900">
-                    {mailing.recipientFirstName} {mailing.recipientLastName}
-                    <span className="ml-2 font-normal text-gray-500">
-                      {mailing.kind === "cancellation" ||
-                      mailing.kind === "credit"
-                        ? `${BILLING_DOCUMENT_KIND_LABELS[mailing.kind]} ${mailing.number}`
-                        : mailing.number}
-                    </span>
-                  </p>
-                  <p className="truncate text-sm text-gray-600">
-                    {mailing.recipientEmail ||
-                      "Keine Mail-Adresse: Bitte drucke das Schreiben."}
-                  </p>
-                </div>
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <StatusBadge {...mailBadge(mailing)} />
-                  {mailStatusDetail(mailing) ? (
-                    <span className="text-sm text-gray-600">
-                      {mailStatusDetail(mailing)}
-                    </span>
-                  ) : null}
-                  {canSendMail(mailing) ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="compact"
-                      isLoading={sendingOne === mailing.documentId}
-                      loadingText="Wird gesendet …"
-                      disabled={sendingOne !== null || sendingAll}
-                      tooltip={
-                        mailing.status === "not_sent"
-                          ? "Sendet der Familie sofort ihr Schreiben per Mail."
-                          : "Sendet der Familie sofort ihr Schreiben noch einmal per Mail."
-                      }
-                      onClick={() => void sendOne(mailing)}
-                    >
-                      {mailing.status === "not_sent"
-                        ? "Senden"
-                        : "Erneut senden"}
-                    </Button>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <Loading />
-      )}
-    </SectionCard>
+      <p className="text-sm text-gray-700">
+        „An alle senden“ schickt nur Mails, die noch nicht gesendet sind.
+        {summary && summary.failed > 0
+          ? " Kam eine Mail nicht an, sende sie über das Menü ihrer Zeile erneut. Stimmt die Adresse nicht, drucke das Schreiben."
+          : null}
+      </p>
+      {mailings ? (
+        <DataTable
+          columns={mailColumns(
+            sendingOne !== null || sendingAll,
+            (mailing) => void sendOne(mailing),
+          )}
+          rows={[...mailings]}
+          getRowKey={(mailing) => mailing.documentId}
+          stackedOnMobile
+          caption="Jede Zeile ist das Schreiben an eine Familie."
+        />
+      ) : null}
+    </LetterDeliveryCard>
   );
 }

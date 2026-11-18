@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
@@ -62,6 +68,36 @@ const FAMILIES: LetterMailing[] = [
   }),
 ];
 
+/** The list of letters; the state tiles above it carry the same words. */
+async function letterTable() {
+  return within(await screen.findByRole("table"));
+}
+
+/** The row menus that offer a send, one per family that can get a mail. */
+function rowMenus() {
+  return screen.queryAllByRole("button", {
+    name: /^Aktionen für das Schreiben an /,
+  });
+}
+
+/** Opens the row menu of one family and returns its entries. */
+async function openRowMenu(name: string) {
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: `Aktionen für das Schreiben an ${name}`,
+    }),
+  );
+  return screen.findAllByRole("menuitem");
+}
+
+/** „An alle senden“, then the confirmation. */
+async function sendToAll(confirm: string) {
+  const sendAll = await screen.findByRole("button", { name: "An alle senden" });
+  await waitFor(() => expect(sendAll).toBeEnabled());
+  fireEvent.click(sendAll);
+  fireEvent.click(await screen.findByRole("button", { name: confirm }));
+}
+
 function renderCard() {
   render(
     <TraegerResourceTestProvider>
@@ -85,25 +121,28 @@ describe("BillingMailCard", () => {
     ]);
     renderCard();
 
-    expect(await screen.findByText("Storno FE-0004")).toBeInTheDocument();
-    expect(screen.getByText("Gutschrift FE-0005")).toBeInTheDocument();
-    expect(screen.getByText("FE-0001")).toBeInTheDocument();
+    const table = await letterTable();
+    expect(table.getByText("Storno FE-0004")).toBeInTheDocument();
+    expect(table.getByText("Gutschrift FE-0005")).toBeInTheDocument();
+    expect(table.getByText("FE-0001")).toBeInTheDocument();
   });
 
   it("shows the state of the mail of every family", async () => {
     renderCard();
 
-    expect(await screen.findByText("Nicht gesendet")).toBeInTheDocument();
-    expect(screen.getByText("Nicht angekommen")).toBeInTheDocument();
-    expect(screen.getByText("Gesendet")).toBeInTheDocument();
-    expect(screen.getByText("am 09.09.2026, 10:01 Uhr")).toBeInTheDocument();
+    const table = await letterTable();
+    expect(table.getByText("Nicht gesendet")).toBeInTheDocument();
+    expect(table.getByText("Nicht angekommen")).toBeInTheDocument();
+    expect(table.getByText("Gesendet")).toBeInTheDocument();
+    expect(table.getByText("am 09.09.2026, 10:01 Uhr")).toBeInTheDocument();
     expect(
-      screen.getByText(/Kam eine Mail nicht an, sende sie erneut/),
+      screen.getByText(/Kam eine Mail nicht an, sende sie über das Menü/),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Senden" })).toBeInTheDocument();
+    expect(screen.getByText("1 von 3 Schreiben gesendet")).toBeInTheDocument();
+    expect(rowMenus()).toHaveLength(3);
     expect(
-      screen.getAllByRole("button", { name: "Erneut senden" }),
-    ).toHaveLength(2);
+      (await openRowMenu("Eva Muster")).map((item) => item.textContent),
+    ).toEqual([expect.stringContaining("Senden")]);
     expect(api.fetchLetterMailings).toHaveBeenCalledWith("9");
   });
 
@@ -131,14 +170,14 @@ describe("BillingMailCard", () => {
     ]);
     renderCard();
 
-    expect(await screen.findByText("Gesendet")).toBeInTheDocument();
-    expect(screen.getByText("Zugestellt")).toBeInTheDocument();
-    expect(screen.getByText("Verzögert")).toBeInTheDocument();
-    expect(screen.getByText("Nicht zustellbar")).toBeInTheDocument();
-    expect(screen.getByText(/nicht noch einmal/)).toBeInTheDocument();
-    expect(
-      screen.getAllByRole("button", { name: "Erneut senden" }),
-    ).toHaveLength(3);
+    const table = await letterTable();
+    expect(table.getByText("Gesendet")).toBeInTheDocument();
+    expect(table.getByText("Zugestellt")).toBeInTheDocument();
+    expect(table.getByText("Verzögert")).toBeInTheDocument();
+    expect(table.getByText("Nicht zustellbar")).toBeInTheDocument();
+    expect(table.getByText(/nicht noch einmal/)).toBeInTheDocument();
+    // Every family but the delayed one can get the mail again.
+    expect(rowMenus()).toHaveLength(3);
   });
 
   it.each([
@@ -159,12 +198,11 @@ describe("BillingMailCard", () => {
       ]);
       renderCard();
 
-      expect(await screen.findByText(label)).toBeInTheDocument();
-      expect(screen.queryByText("Gesendet")).toBeNull();
-      expect(screen.getByText(/drucke das Schreiben/)).toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: "Erneut senden" }),
-      ).toBeNull();
+      const table = await letterTable();
+      expect(table.getByText(label)).toBeInTheDocument();
+      expect(table.queryByText("Gesendet")).toBeNull();
+      expect(table.getByText(/drucke das Schreiben/)).toBeInTheDocument();
+      expect(rowMenus()).toHaveLength(0);
     },
   );
 
@@ -182,8 +220,8 @@ describe("BillingMailCard", () => {
 
     expect(await screen.findByText(/besteht nicht mehr/)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Erneut senden" }),
-    ).toBeInTheDocument();
+      (await openRowMenu("Eva Muster")).map((item) => item.textContent),
+    ).toEqual([expect.stringContaining("Erneut senden")]);
   });
 
   it("offers nothing while the block cannot be read", async () => {
@@ -199,7 +237,7 @@ describe("BillingMailCard", () => {
     renderCard();
 
     expect(await screen.findByText(/später noch einmal/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Erneut senden" })).toBeNull();
+    expect(rowMenus()).toHaveLength(0);
   });
 
   it("offers the resend again after a delay ran past its limit", async () => {
@@ -215,8 +253,8 @@ describe("BillingMailCard", () => {
 
     expect(await screen.findByText("Überfällig")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Erneut senden" }),
-    ).toBeInTheDocument();
+      (await openRowMenu("Eva Muster")).map((item) => item.textContent),
+    ).toEqual([expect.stringContaining("Erneut senden")]);
   });
 
   it("offers no send while a mail waits and none without an address", async () => {
@@ -230,15 +268,18 @@ describe("BillingMailCard", () => {
     ]);
     renderCard();
 
-    expect(await screen.findByText("Wird gesendet")).toBeInTheDocument();
+    const table = await letterTable();
+    expect(table.getByText("Wird gesendet")).toBeInTheDocument();
+    expect(table.getByText("Keine Mail-Adresse")).toBeInTheDocument();
+    expect(table.getByText("Bitte drucke das Schreiben.")).toBeInTheDocument();
     expect(
-      screen.getByText("Keine Mail-Adresse: Bitte drucke das Schreiben."),
+      screen.getByRole("button", { name: "Schreiben drucken" }),
     ).toBeInTheDocument();
+    expect(rowMenus()).toHaveLength(0);
+    // Nothing left that a mail could reach: the send to all is blocked.
     expect(
-      screen.getByRole("button", { name: "Alle Schreiben drucken" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Senden" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Erneut senden" })).toBeNull();
+      screen.getByRole("button", { name: "An alle senden" }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   it("keeps the status short and explains a forgotten result beside it", async () => {
@@ -258,8 +299,8 @@ describe("BillingMailCard", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Erneut senden" }),
-    ).toBeInTheDocument();
+      (await openRowMenu("Eva Muster")).map((item) => item.textContent),
+    ).toEqual([expect.stringContaining("Erneut senden")]);
   });
 
   it("mails every family and reports what it sent", async () => {
@@ -270,13 +311,8 @@ describe("BillingMailCard", () => {
     });
     renderCard();
 
-    // Der Knopf steht schon im Ladezustand da, gesperrt bis die Liste geladen
-    // ist. Ein Klick davor verpufft, also erst auf die Freigabe warten (#6312).
-    const sendAll = await screen.findByRole("button", {
-      name: "An alle Familien senden",
-    });
-    await waitFor(() => expect(sendAll).toBeEnabled());
-    fireEvent.click(sendAll);
+    // moto fragt vorher nach; gesendet wird die eine offene Mail (#7406).
+    await sendToAll("1 Schreiben senden");
 
     await waitFor(() =>
       expect(api.mailBillingLetters).toHaveBeenCalledWith("9"),
@@ -311,12 +347,9 @@ describe("BillingMailCard", () => {
         <InvoiceHistory />
       </TraegerResourceTestProvider>,
     );
-    const sendAll = await screen.findByRole("button", {
-      name: "An alle Familien senden",
-    });
-    await waitFor(() => expect(sendAll).toBeEnabled());
+    await screen.findByRole("button", { name: "An alle senden" });
     expect(readHistory).toHaveBeenCalledTimes(1);
-    fireEvent.click(sendAll);
+    await sendToAll("1 Schreiben senden");
 
     await waitFor(() => expect(readHistory).toHaveBeenCalledTimes(2));
   });
@@ -327,9 +360,7 @@ describe("BillingMailCard", () => {
     );
     renderCard();
 
-    fireEvent.click(
-      (await screen.findAllByRole("button", { name: "Erneut senden" }))[0]!,
-    );
+    fireEvent.click((await openRowMenu("Ben Kraus"))[0]!);
 
     expect(
       await screen.findByText("Die Mail an Familie Kraus wird jetzt gesendet."),
@@ -345,7 +376,7 @@ describe("BillingMailCard", () => {
     );
     renderCard();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Senden" }));
+    fireEvent.click((await openRowMenu("Eva Muster"))[0]!);
 
     expect(
       await screen.findByText(
@@ -363,7 +394,10 @@ describe("BillingMailCard", () => {
     renderCard();
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Alle Schreiben drucken" }),
+      await screen.findByRole("button", { name: "Schreiben drucken" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Alle Schreiben drucken/ }),
     );
 
     await waitFor(() =>
