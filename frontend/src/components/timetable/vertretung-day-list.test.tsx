@@ -603,7 +603,7 @@ describe("VertretungDayList", () => {
       screen
         .getAllByRole("heading", { level: 3 })
         .map((heading) => heading.textContent),
-    ).toEqual(["Ausfälle"]);
+    ).toEqual(["Abwesend oder abgesagt"]);
   });
 
   it("sagt Lesenutzern, wer Vertretungen einträgt", () => {

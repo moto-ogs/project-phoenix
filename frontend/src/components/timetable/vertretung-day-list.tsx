@@ -341,11 +341,7 @@ export function VertretungDayList({
   const group = (heading: string, rows: ClassifiedRow[]) =>
     rows.length === 0 ? null : (
       <section>
-        <ListGroupHeader
-          title={heading}
-          meta={rows.length}
-          className={LIST_INSET}
-        />
+        <ListGroupHeader title={heading} className={LIST_INSET} />
         {rowList(rows)}
       </section>
     );
@@ -390,12 +386,9 @@ export function VertretungDayList({
     body = (
       <>
         <section>
-          <ListGroupHeader
-            title="Offene Lücken"
-            // Die Null sagt schon das Ergebnis darunter.
-            meta={open.length > 0 ? open.length : undefined}
-            className={LIST_INSET}
-          />
+          {/* Ohne Zahl: die steht in der Statuszeile der Seite, und eine
+              Zahl steht einmal (#7493). */}
+          <ListGroupHeader title="Offene Lücken" className={LIST_INSET} />
           {open.length > 0 ? (
             rowList(open)
           ) : (
@@ -445,7 +438,7 @@ export function VertretungDayList({
       <>
         {gapsUnavailableNotice}
         {/* Die Überschrift sagt, dass das nicht die geprüfte Lage ist. */}
-        {group("Ausfälle", settled)}
+        {group("Abwesend oder abgesagt", settled)}
       </>
     );
   }
@@ -551,15 +544,16 @@ function VertretungDayListRow({
             Kalenderspalte, und der Verlauf muss ohne schedules:manage lesbar
             bleiben (Kriterium 8). Der Editor selbst rendert ohne canManage
             nur Lese-Inhalte.
-            Mit Verwaltungsrechten trägt die Zeile einer offenen Lücke die
-            Hauptaktion der Seite und nennt ihr Ergebnis: „Besetzen“ (#7493).
-            Was schon geregelt ist, behält „Bearbeiten“ auf der weißen
-            Kit-Fläche mit Rahmen (#2029). Ohne die Rechte bleibt „Details“
+            Mit Verwaltungsrechten nennt die Zeile einer offenen Lücke das
+            Ergebnis des Klicks: „Besetzen“ (#7493). Was schon geregelt ist,
+            heißt „Bearbeiten“. Beide tragen die weiße Kit-Fläche mit Rahmen
+            (#2029): gleichrangige Zeilenaktionen sehen gleich aus, und eine
+            Liste mit sieben Lücken hat nicht sieben Primärknöpfe. Ohne die Rechte bleibt „Details“
             die ruhigere Ghost-Variante, damit ein reiner Lesezugriff nicht
             wie eine Aufforderung zum Ändern wirkt. */}
         <Button
           type="button"
-          variant={canManage ? (canFill ? "primary" : "outline") : "ghost"}
+          variant={canManage ? "outline" : "ghost"}
           size="compact"
           tooltip={
             canManage
