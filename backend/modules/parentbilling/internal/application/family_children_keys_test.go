@@ -66,6 +66,80 @@ func TestEqualCarriedFamilyCountsShowTheCurrentValidity(t *testing.T) {
 	assert.Nil(t, families[0].Count.ValidUntil)
 }
 
+func TestCarriedFamilyCoverageIncludesScheduledChanges(t *testing.T) {
+	t.Parallel()
+	from, today, future, until := calendar.NewDate(2026, 8, 1), calendar.NewDate(2026, 11, 18), calendar.NewDate(2026, 11, 20), calendar.NewDate(2026, 11, 25)
+	for _, tc := range []struct {
+		name     string
+		children int
+		until    *calendar.Date
+		want     string
+		end      *calendar.Date
+		ownFrom  *calendar.Date
+	}{
+		{"same number expires", 2, &until, parentbilling.FamilyChildrenExpiring, &until, nil},
+		{"changed number expires", 3, &until, parentbilling.FamilyChildrenExpiring, ptr(future.AddDays(-1)), nil},
+		{"changed number stays confirmed", 3, nil, parentbilling.FamilyChildrenConfirmed, ptr(future.AddDays(-1)), nil},
+		{"own confirmation follows carried change", 3, nil, parentbilling.FamilyChildrenUpcoming, nil, ptr(future.AddDays(10))},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			counts := []parentbilling.FamilyChildCount{{ID: 1, ContractID: 1, FamilyEmail: "contract:1",
+				ConfirmedChildren: ptr(tc.children), ValidFrom: &future, ValidUntil: tc.until,
+				Confirmations: []parentbilling.FamilyChildConfirmation{{Children: ptr(2), ValidFrom: &from}}}}
+			if tc.ownFrom != nil {
+				counts = append(counts, parentbilling.FamilyChildCount{ID: 2, ContractID: 1, FamilyEmail: "family@example.org",
+					ConfirmedChildren: ptr(2), ValidFrom: tc.ownFrom})
+			}
+			families := groupFamilies(nil, map[int64]parentbilling.CareRecipient{1: {Email: "family@example.org"}}, counts, today)
+			require.Len(t, families, 1)
+			assert.Equal(t, tc.want, families[0].Status)
+			assert.Equal(t, ptr(2), families[0].Count.ConfirmedChildren)
+			assert.Equal(t, tc.end, families[0].Count.ValidUntil)
+			assert.Equal(t, &future, counts[0].ValidFrom, "projection preserves the stored schedule")
+		})
+	}
+}
+
+func TestExpiredCarriedNumberDoesNotContradictTheCurrentNumber(t *testing.T) {
+	t.Parallel()
+	from, today := calendar.NewDate(2027, 1, 1), calendar.NewDate(2027, 1, 10)
+	counts := []parentbilling.FamilyChildCount{
+		{ID: 1, ContractID: 1, FamilyEmail: "contract:1", ConfirmedChildren: ptr(2), ValidFrom: &from},
+		{ID: 2, ContractID: 2, FamilyEmail: "contract:2", ConfirmedChildren: ptr(3), ValidFrom: &from, ValidUntil: ptr(today.AddDays(-1))},
+	}
+	recipients := map[int64]parentbilling.CareRecipient{1: {Email: "family@example.org"}, 2: {Email: "family@example.org"}}
+	for _, ordered := range [][]parentbilling.FamilyChildCount{counts, {counts[1], counts[0]}} {
+		families := groupFamilies(nil, recipients, ordered, today)
+		require.Len(t, families, 1)
+		assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status)
+		assert.False(t, families[0].Differing)
+		require.NotNil(t, families[0].Count)
+		assert.Equal(t, ptr(2), families[0].Count.ConfirmedChildren)
+	}
+}
+
+func TestCarriedCoverageChecksChangesInsideAnotherOpenConfirmation(t *testing.T) {
+	t.Parallel()
+	from, today, future, until := calendar.NewDate(2026, 8, 1), calendar.NewDate(2026, 11, 18), calendar.NewDate(2026, 11, 20), calendar.NewDate(2026, 11, 25)
+	counts := []parentbilling.FamilyChildCount{
+		{ID: 1, ContractID: 1, FamilyEmail: "contract:1", ConfirmedChildren: ptr(2), ValidFrom: &from},
+		{ID: 2, ContractID: 2, FamilyEmail: "contract:2", ConfirmedChildren: ptr(3), ValidFrom: &future, ValidUntil: &until,
+			Confirmations: []parentbilling.FamilyChildConfirmation{{Children: ptr(2), ValidFrom: &from}}},
+	}
+	recipients := map[int64]parentbilling.CareRecipient{1: {Email: "family@example.org"}, 2: {Email: "family@example.org"}}
+	for _, ordered := range [][]parentbilling.FamilyChildCount{counts, {counts[1], counts[0]}} {
+		families := groupFamilies(nil, recipients, ordered, today)
+		require.Len(t, families, 1)
+		assert.Equal(t, parentbilling.FamilyChildrenExpiring, families[0].Status)
+		assert.Equal(t, ptr(future.AddDays(-1)), families[0].Count.ValidUntil)
+		families = groupFamilies(nil, recipients, ordered, future)
+		assert.Equal(t, parentbilling.FamilyChildrenDiffering, families[0].Status)
+		families = groupFamilies(nil, recipients, ordered, until.AddDays(1))
+		assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status)
+		assert.Equal(t, ptr(2), families[0].Count.ConfirmedChildren)
+	}
+}
+
 func TestBroughtFamilyNumbersKeepTheLongestConfirmation(t *testing.T) {
 	t.Parallel()
 	today := calendar.NewDate(2027, 1, 10)

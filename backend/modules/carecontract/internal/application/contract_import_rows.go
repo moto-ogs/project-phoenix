@@ -20,6 +20,8 @@ import (
 const (
 	maxImportNameLength  = 100
 	maxImportEmailLength = 320
+	// The CSV column accepts the receiving capability's range (ADR 0288).
+	maxImportFamilyChildren = 20
 )
 
 // earliestImportDay bounds the dates a file may name: a year before it is a
@@ -155,14 +157,15 @@ func (r rowReader) date(field string, required bool) *calendar.Date {
 }
 
 // familyChildren reads how many children the family has (#7356): a whole
-// number, nil for an empty cell. The Elternabrechnung checks its range.
+// number from 1 to 20, nil for an empty or invalid cell. Rejecting its range
+// here keeps an invalid row out of duplicate detection.
 func (r rowReader) familyChildren() *int {
 	value := strings.TrimSpace(r.check.index.cell(r.cells, carecontract.ContractImportFieldFamilyChildren))
 	if value == "" {
 		return nil
 	}
 	number, err := strconv.Atoi(value)
-	if err != nil {
+	if err != nil || number < 1 || number > maxImportFamilyChildren {
 		r.problem(carecontract.ContractImportFieldFamilyChildren, carecontract.ContractImportProblemInvalid)
 		return nil
 	}

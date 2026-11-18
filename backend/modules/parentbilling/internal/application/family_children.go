@@ -149,7 +149,9 @@ func groupFamilies(versions []parentbilling.CareContractVersion, recipients map[
 	families := make([]parentbilling.FamilyChildren, 0, len(grouped.order))
 	for _, key := range grouped.order {
 		found := grouped.byKey[key]
-		found.Status = familyChildrenStatus(found.Count, today)
+		if found.Status == "" {
+			found.Status = familyChildrenStatus(found.Count, today)
+		}
 		if found.Differing {
 			found.Status = parentbilling.FamilyChildrenDiffering
 		}
@@ -224,6 +226,7 @@ func (g *familyGroups) addNumbers(counts []parentbilling.FamilyChildCount, today
 			found.RecipientEmail = key
 		}
 		found.Count, found.Differing = count, differing
+		found.Status = numbers[key].statusOn(count, today)
 	}
 }
 

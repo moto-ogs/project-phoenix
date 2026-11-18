@@ -114,9 +114,8 @@ func (n *familyNumbers) decided() bool {
 	return n.own != nil && n.own.ConfirmedChildren != nil
 }
 
-// count is the number the office sees for the family: its own, else the one
-// its contracts brought along. differing reports contracts that brought
-// different confirmations; then no number is the family's.
+// count protects the stored confirmations during import, including future
+// ones. The office's dated view resolves them separately in countOn.
 func (n *familyNumbers) count() (count *parentbilling.FamilyChildCount, differing bool) {
 	if n.decided() || len(n.brought) == 0 {
 		return n.own, false
@@ -139,7 +138,7 @@ func (n *familyNumbers) count() (count *parentbilling.FamilyChildCount, differin
 // statement for the office. Import decisions keep count's longest validity
 // so that they also protect confirmations scheduled for a later day.
 func (n *familyNumbers) countOn(day calendar.Date) (*parentbilling.FamilyChildCount, bool) {
-	count, differing := n.count()
+	count, _ := n.count()
 	ownStarted := false
 	if n.decided() {
 		_, ownStarted = n.own.InForceOn(day)
@@ -147,14 +146,46 @@ func (n *familyNumbers) countOn(day calendar.Date) (*parentbilling.FamilyChildCo
 	if !ownStarted && n.broughtDifferOn(day) {
 		return n.withStatement(nil), true
 	}
-	if !n.decided() && !differing {
+	if !n.decided() {
 		if current := n.broughtCoverageOn(day); current != nil {
 			count = current
 		}
 	} else if n.decided() && !ownStarted {
 		count = n.withBroughtCoverage(day)
 	}
-	return n.withStatement(count), differing
+	return n.withStatement(count), false
+}
+
+// statusOn follows the carried timeline until an own confirmation starts,
+// distinguishing a gap from a scheduled change of number.
+func (n *familyNumbers) statusOn(count *parentbilling.FamilyChildCount, day calendar.Date) string {
+	status := familyChildrenStatus(count, day)
+	if n.decided() {
+		if _, started := n.own.InForceOn(day); started {
+			return status
+		}
+	}
+	if status != parentbilling.FamilyChildrenConfirmed && status != parentbilling.FamilyChildrenUpcoming && status != parentbilling.FamilyChildrenExpiring {
+		return status
+	}
+	if _, valid := n.confirmedOn(day); !valid {
+		return status
+	}
+	for _, change := range familyNumberChangesAfter(n.all(), day) {
+		if change.After(day.AddDays(parentbilling.FamilyChildrenExpiryNotice + 1)) {
+			break
+		}
+		if _, valid := n.confirmedOn(change); !valid {
+			return parentbilling.FamilyChildrenExpiring
+		}
+	}
+	if status == parentbilling.FamilyChildrenExpiring {
+		if count.ValidFrom.After(day) {
+			return parentbilling.FamilyChildrenUpcoming
+		}
+		return parentbilling.FamilyChildrenConfirmed
+	}
+	return status
 }
 
 // broughtDifferOn checks the confirmations that actually hold on the day,
@@ -203,15 +234,42 @@ func (n *familyNumbers) broughtCoverageOn(day calendar.Date) *parentbilling.Fami
 	if count == nil || (count.ValidUntil != nil && count.ValidUntil.Before(day)) {
 		return count
 	}
-	for count.ValidUntil != nil {
-		next := n.broughtOn(count.ValidUntil.AddDays(1))
-		if next == nil || !sameConfirmation(count, next) ||
-			(next.ValidUntil != nil && !next.ValidUntil.After(*count.ValidUntil)) {
-			break
+	for _, change := range familyNumberChangesAfter(n.brought, day) {
+		next := n.broughtOn(change)
+		if next == nil || n.broughtDifferOn(change) || !sameConfirmation(count, next) ||
+			(next.ValidUntil != nil && next.ValidUntil.Before(change)) {
+			until := change.AddDays(-1)
+			count.ValidUntil = &until
+			return count
 		}
-		count.ValidUntil = next.ValidUntil
 	}
+	count.ValidUntil = nil
 	return count
+}
+
+// familyNumberChangesAfter lists all boundaries at which a confirmation can
+// start, supersede another or expire. Obsolete boundaries change no outcome.
+func familyNumberChangesAfter(counts []*parentbilling.FamilyChildCount, day calendar.Date) []calendar.Date {
+	seen := map[calendar.Date]bool{}
+	for _, count := range counts {
+		for _, confirmation := range confirmations(count) {
+			if confirmation.Children == nil || confirmation.ValidFrom == nil {
+				continue
+			}
+			if confirmation.ValidFrom.After(day) {
+				seen[*confirmation.ValidFrom] = true
+			}
+			if confirmation.ValidUntil != nil && !confirmation.ValidUntil.Before(day) {
+				seen[confirmation.ValidUntil.AddDays(1)] = true
+			}
+		}
+	}
+	changes := make([]calendar.Date, 0, len(seen))
+	for change := range seen {
+		changes = append(changes, change)
+	}
+	slices.Sort(changes)
+	return changes
 }
 
 // broughtOn chooses a confirmation valid today, else the last expired one.

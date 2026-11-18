@@ -65,6 +65,25 @@ func importCheckOf(t *testing.T, running ...ports.ContractChild) *contractImport
 	return newContractImportCheck(index, schools, templates, running, importToday)
 }
 
+func TestInvalidFamilyCountDoesNotReserveTheChildForImport(t *testing.T) {
+	t.Parallel()
+	for _, value := range []string{"0", "21"} {
+		t.Run(value, func(t *testing.T) {
+			check := importCheckOf(t)
+			check.index.fields[carecontract.ContractImportFieldFamilyChildren] = len(importHeaders)
+			invalid := check.candidate(append(importRow(nil), value), 2)
+			assert.Equal(t, carecontract.ContractImportInvalid, invalid.row.Status)
+			assert.Equal(t, []string{"family_children:invalid"}, problemsOf(invalid.row))
+			valid := check.candidate(append(importRow(nil), "2"), 3)
+			assert.Equal(t, carecontract.ContractImportReady, valid.row.Status)
+			assert.Equal(t, 3, valid.contract.Line)
+			repeated := check.candidate(append(importRow(nil), "20"), 4)
+			assert.Equal(t, carecontract.ContractImportConflict, repeated.row.Status)
+			assert.Equal(t, 3, repeated.row.RepeatsLine)
+		})
+	}
+}
+
 func problemsOf(row carecontract.ContractImportRow) []string {
 	problems := []string{}
 	for _, problem := range row.Problems {
